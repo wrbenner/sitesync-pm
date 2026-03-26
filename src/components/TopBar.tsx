@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Bell, Cloud, Droplets } from 'lucide-react';
-import { colors, spacing, typography, borderRadius, shadows } from '../styles/theme';
-import { Dot } from './Primitives';
+import { colors, spacing, typography, borderRadius, transitions, layout } from '../styles/theme';
 
 interface TopBarProps {
   onSearch?: (query: string) => void;
@@ -10,6 +9,22 @@ interface TopBarProps {
 export const TopBar: React.FC<TopBarProps> = ({ onSearch }) => {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchValue, setSearchValue] = useState('');
+  const [cmdPressed, setCmdPressed] = useState(false);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+      if (e.key === 'Escape') {
+        setSearchOpen(false);
+        setSearchValue('');
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
 
   const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && onSearch) {
@@ -20,52 +35,73 @@ export const TopBar: React.FC<TopBarProps> = ({ onSearch }) => {
   return (
     <header
       style={{
+        position: 'fixed',
+        top: 0,
+        left: layout.sidebarWidth,
+        right: 0,
+        height: layout.topbarHeight,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: `${spacing.lg} ${spacing.xl}`,
-        backgroundColor: colors.white,
-        borderBottom: `1px solid ${colors.border}`,
-        height: '64px',
-        boxShadow: shadows.xs,
-        marginLeft: '260px',
-        transition: 'margin-left 200ms ease-in-out',
-      }}
+        padding: `0 ${spacing['6']}`,
+        background: `${colors.canvas}E0`,
+        backdropFilter: 'blur(20px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+        borderBottom: `1px solid ${colors.borderFaint}`,
+        zIndex: 50,
+        transition: `left ${transitions.base}`,
+      } as React.CSSProperties}
     >
-      {/* Search Bar */}
-      <div style={{ display: 'flex', alignItems: 'center', flex: 1, maxWidth: '400px' }}>
+      {/* Search */}
+      <div style={{ display: 'flex', alignItems: 'center', flex: 1, maxWidth: '380px' }}>
         {searchOpen ? (
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: spacing.md,
+              gap: spacing['2'],
               width: '100%',
-              backgroundColor: colors.lightBackground,
-              padding: `${spacing.sm} ${spacing.md}`,
+              background: colors.surfaceElevated,
+              padding: `6px ${spacing['3']}`,
               borderRadius: borderRadius.md,
-              border: `1px solid ${colors.border}`,
+              border: `1px solid ${colors.signal}`,
+              boxShadow: `0 0 0 3px ${colors.signalDim}`,
             }}
           >
-            <Search size={16} color={colors.textTertiary} />
+            <Search size={13} color={colors.textTertiary} style={{ flexShrink: 0 }} />
             <input
               type="text"
-              placeholder="Search Cmd+K"
+              placeholder="Search anything..."
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
               onKeyDown={handleSearch}
-              onBlur={() => setSearchOpen(false)}
+              onBlur={() => { setSearchOpen(false); setSearchValue(''); }}
               autoFocus
               style={{
                 flex: 1,
                 border: 'none',
-                backgroundColor: 'transparent',
+                background: 'transparent',
                 outline: 'none',
                 fontSize: typography.fontSize.base,
                 fontFamily: typography.fontFamily,
                 color: colors.textPrimary,
               }}
             />
+            <kbd
+              style={{
+                fontSize: '10px',
+                padding: '2px 5px',
+                background: colors.surfaceBorder,
+                border: `1px solid ${colors.borderSubtle}`,
+                borderRadius: borderRadius.sm,
+                color: colors.textTertiary,
+                fontFamily: typography.fontFamilyMono,
+                letterSpacing: '0.02em',
+                flexShrink: 0,
+              }}
+            >
+              esc
+            </kbd>
           </div>
         ) : (
           <button
@@ -73,61 +109,81 @@ export const TopBar: React.FC<TopBarProps> = ({ onSearch }) => {
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: spacing.md,
-              padding: `${spacing.sm} ${spacing.md}`,
-              backgroundColor: colors.lightBackground,
-              border: `1px solid ${colors.border}`,
+              gap: spacing['2'],
+              padding: `6px ${spacing['3']}`,
+              background: colors.surfaceElevated,
+              border: `1px solid ${colors.borderFaint}`,
               borderRadius: borderRadius.md,
               cursor: 'pointer',
               fontSize: typography.fontSize.base,
-              color: colors.textSecondary,
+              color: colors.textTertiary,
               fontFamily: typography.fontFamily,
-              transition: `all ${spacing.md}`,
+              transition: `all ${transitions.fast}`,
+              width: '220px',
             }}
             onMouseEnter={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.border;
+              const el = e.currentTarget as HTMLButtonElement;
+              el.style.borderColor = colors.borderModerate;
+              el.style.color = colors.textSecondary;
             }}
             onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.lightBackground;
+              const el = e.currentTarget as HTMLButtonElement;
+              el.style.borderColor = colors.borderFaint;
+              el.style.color = colors.textTertiary;
             }}
           >
-            <Search size={16} />
-            <span>Search</span>
+            <Search size={13} style={{ flexShrink: 0 }} />
+            <span style={{ flex: 1, textAlign: 'left' }}>Search...</span>
             <kbd
               style={{
-                marginLeft: 'auto',
-                fontSize: typography.fontSize.xs,
-                padding: `2px 4px`,
-                backgroundColor: colors.white,
-                border: `1px solid ${colors.border}`,
+                fontSize: '10px',
+                padding: '1px 5px',
+                background: colors.surfaceBorder,
+                border: `1px solid ${colors.borderFaint}`,
                 borderRadius: borderRadius.sm,
                 color: colors.textTertiary,
+                fontFamily: typography.fontFamilyMono,
+                flexShrink: 0,
               }}
             >
-              Cmd+K
+              ⌘K
             </kbd>
           </button>
         )}
       </div>
 
-      {/* Right Section */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xl, marginLeft: spacing.xl }}>
-        {/* Workers on Site */}
+      {/* Right cluster */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: spacing['4'] }}>
+
+        {/* Live site signal */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: spacing.sm,
-            padding: `${spacing.sm} ${spacing.md}`,
-            backgroundColor: colors.lightBackground,
-            borderRadius: borderRadius.md,
+            gap: spacing['2'],
+            padding: `5px ${spacing['3']}`,
+            background: colors.surfaceElevated,
+            border: `1px solid ${colors.borderFaint}`,
+            borderRadius: borderRadius.full,
           }}
         >
-          <Dot color={colors.tealSuccess} pulse size={8} />
           <span
             style={{
-              fontSize: typography.fontSize.sm,
+              width: 6,
+              height: 6,
+              borderRadius: '50%',
+              background: colors.positive,
+              display: 'block',
+              animation: 'pulse-dot 2.5s ease-in-out infinite',
+              flexShrink: 0,
+            }}
+          />
+          <span
+            style={{
+              fontSize: typography.fontSize.xs,
               color: colors.textSecondary,
+              fontVariantNumeric: 'tabular-nums',
+              whiteSpace: 'nowrap',
             }}
           >
             187 on site
@@ -139,79 +195,99 @@ export const TopBar: React.FC<TopBarProps> = ({ onSearch }) => {
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: spacing.sm,
-            padding: `${spacing.sm} ${spacing.md}`,
-            backgroundColor: colors.lightBackground,
-            borderRadius: borderRadius.md,
-            fontSize: typography.fontSize.sm,
-            color: colors.textSecondary,
+            gap: spacing['1'],
+            fontSize: typography.fontSize.xs,
+            color: colors.textTertiary,
           }}
         >
-          <Cloud size={16} />
-          <span>78F Clear</span>
-          <Droplets size={14} color={colors.blue} />
-          <span>Rain Thu</span>
+          <Cloud size={13} />
+          <span>78°</span>
+          <span style={{ color: colors.borderModerate, margin: `0 2px` }}>·</span>
+          <Droplets size={12} color={colors.info} />
+          <span style={{ color: colors.info }}>Rain Thu</span>
         </div>
+
+        {/* Divider */}
+        <div
+          style={{
+            width: 1,
+            height: 20,
+            background: colors.borderFaint,
+          }}
+        />
 
         {/* Notifications */}
         <button
           style={{
             position: 'relative',
-            width: 36,
-            height: 36,
-            backgroundColor: colors.lightBackground,
-            border: 'none',
+            width: 32,
+            height: 32,
+            background: 'transparent',
+            border: `1px solid ${colors.borderFaint}`,
             borderRadius: borderRadius.md,
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            transition: `background-color ${spacing.md}`,
+            transition: `all ${transitions.fast}`,
+            color: colors.textTertiary,
           }}
           onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.border;
+            const el = e.currentTarget as HTMLButtonElement;
+            el.style.background = colors.surfaceElevated;
+            el.style.borderColor = colors.borderSubtle;
+            el.style.color = colors.textSecondary;
           }}
           onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.lightBackground;
+            const el = e.currentTarget as HTMLButtonElement;
+            el.style.background = 'transparent';
+            el.style.borderColor = colors.borderFaint;
+            el.style.color = colors.textTertiary;
           }}
         >
-          <Bell size={18} color={colors.textPrimary} />
+          <Bell size={14} />
           <span
             style={{
               position: 'absolute',
-              top: '4px',
-              right: '4px',
-              width: '8px',
-              height: '8px',
-              backgroundColor: colors.red,
+              top: '6px',
+              right: '6px',
+              width: '5px',
+              height: '5px',
+              background: colors.signal,
               borderRadius: '50%',
+              border: `1.5px solid ${colors.canvas}`,
             }}
           />
         </button>
 
-        {/* User Avatar */}
+        {/* Avatar */}
         <button
           style={{
-            width: 36,
-            height: 36,
-            backgroundColor: `linear-gradient(135deg, ${colors.primaryOrange} 0%, #FF9C42 100%)`,
-            border: 'none',
+            width: 28,
+            height: 28,
+            background: colors.signalDim,
+            border: `1px solid rgba(232,128,74,0.3)`,
             borderRadius: borderRadius.md,
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: colors.white,
-            fontSize: typography.fontSize.sm,
+            color: colors.signal,
+            fontSize: '10px',
             fontWeight: typography.fontWeight.semibold,
             fontFamily: typography.fontFamily,
-            transition: `transform 150ms ease-in-out`,
+            letterSpacing: '0.02em',
+            transition: `all ${transitions.fast}`,
           }}
           onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.05)';
+            const el = e.currentTarget as HTMLButtonElement;
+            el.style.background = 'rgba(232,128,74,0.2)';
+            el.style.borderColor = colors.signal;
           }}
           onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)';
+            const el = e.currentTarget as HTMLButtonElement;
+            el.style.background = colors.signalDim;
+            el.style.borderColor = 'rgba(232,128,74,0.3)';
           }}
         >
           WB

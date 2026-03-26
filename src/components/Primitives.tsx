@@ -1,107 +1,94 @@
 import React from 'react';
-import { colors, spacing, typography, borderRadius, shadows } from '../styles/theme';
+import { colors, spacing, typography, borderRadius, shadows, transitions } from '../styles/theme';
 
-// Dot - Status indicator with optional pulse
+// Dot
 interface DotProps {
   color?: string;
   pulse?: boolean;
   size?: number;
 }
-
-export const Dot: React.FC<DotProps> = ({ color = colors.green, pulse = false, size = 8 }) => (
+export const Dot: React.FC<DotProps> = ({ color = colors.positive, pulse = false, size = 6 }) => (
   <div
     style={{
-      width: `${size}px`,
-      height: `${size}px`,
+      width: size,
+      height: size,
       borderRadius: '50%',
-      backgroundColor: color,
-      animation: pulse ? 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' : 'none',
+      background: color,
+      flexShrink: 0,
+      animation: pulse ? 'pulse-dot 2.5s ease-in-out infinite' : 'none',
     }}
   />
 );
 
-// Tag - Colored badge
+// Tag
 interface TagProps {
   label: string;
   color?: string;
   backgroundColor?: string;
   fontSize?: string;
 }
-
 export const Tag: React.FC<TagProps> = ({
   label,
-  color = colors.textPrimary,
-  backgroundColor = colors.lightBackground,
+  color = colors.textSecondary,
+  backgroundColor = colors.surfaceElevated,
   fontSize = typography.fontSize.xs,
 }) => (
   <span
     style={{
-      display: 'inline-block',
-      padding: `${spacing.xs} ${spacing.sm}`,
+      display: 'inline-flex',
+      alignItems: 'center',
+      padding: `2px ${spacing['2']}`,
       borderRadius: borderRadius.sm,
-      backgroundColor,
+      background: backgroundColor,
       color,
       fontSize,
       fontWeight: typography.fontWeight.medium,
       whiteSpace: 'nowrap',
+      letterSpacing: '-0.01em',
     }}
   >
     {label}
   </span>
 );
 
-// Status Tag - For RFI/Submittal status
+// StatusTag
+type StatusType = 'pending' | 'approved' | 'under_review' | 'revise_resubmit' | 'complete' | 'active' | 'closed';
 interface StatusTagProps {
-  status: 'pending' | 'approved' | 'under_review' | 'revise_resubmit' | 'complete' | 'active' | 'closed';
+  status: StatusType;
   label?: string;
 }
-
+const statusConfig: Record<StatusType, { bg: string; color: string; text: string }> = {
+  pending:        { bg: colors.cautionDim,  color: colors.caution,   text: 'Pending' },
+  approved:       { bg: colors.positiveDim, color: colors.positive,  text: 'Approved' },
+  under_review:   { bg: colors.infoDim,     color: colors.info,      text: 'In Review' },
+  revise_resubmit:{ bg: colors.criticalDim, color: colors.critical,  text: 'Revise' },
+  complete:       { bg: colors.positiveDim, color: colors.positive,  text: 'Complete' },
+  active:         { bg: colors.positiveDim, color: colors.positive,  text: 'Active' },
+  closed:         { bg: colors.surfaceElevated, color: colors.textTertiary, text: 'Closed' },
+};
 export const StatusTag: React.FC<StatusTagProps> = ({ status, label }) => {
-  const statusConfig: Record<string, { bg: string; color: string; text: string }> = {
-    pending: { bg: '#FEF3C7', color: '#92400E', text: 'Pending' },
-    approved: { bg: '#DCFCE7', color: '#166534', text: 'Approved' },
-    under_review: { bg: '#E0E7FF', color: '#3730A3', text: 'Under Review' },
-    revise_resubmit: { bg: '#FEE2E2', color: '#991B1B', text: 'Revise & Resubmit' },
-    complete: { bg: '#DCFCE7', color: '#166534', text: 'Complete' },
-    active: { bg: '#DCFCE7', color: '#166534', text: 'Active' },
-    closed: { bg: '#F3F4F6', color: '#374151', text: 'Closed' },
-  };
-  const config = statusConfig[status];
-
-  return (
-    <Tag
-      label={label || config.text}
-      color={config.color}
-      backgroundColor={config.bg}
-    />
-  );
+  const c = statusConfig[status];
+  return <Tag label={label || c.text} color={c.color} backgroundColor={c.bg} />;
 };
 
-// Priority Tag - For RFI/Punch priority
+// PriorityTag
+type PriorityType = 'low' | 'medium' | 'high' | 'critical';
 interface PriorityTagProps {
-  priority: 'low' | 'medium' | 'high' | 'critical';
+  priority: PriorityType;
   label?: string;
 }
-
+const priorityConfig: Record<PriorityType, { bg: string; color: string; text: string }> = {
+  low:      { bg: colors.infoDim,     color: colors.info,     text: 'Low' },
+  medium:   { bg: colors.cautionDim,  color: colors.caution,  text: 'Medium' },
+  high:     { bg: 'rgba(232,128,74,0.12)', color: colors.signal, text: 'High' },
+  critical: { bg: colors.criticalDim, color: colors.critical, text: 'Critical' },
+};
 export const PriorityTag: React.FC<PriorityTagProps> = ({ priority, label }) => {
-  const priorityConfig: Record<string, { bg: string; color: string; text: string }> = {
-    low: { bg: '#DBEAFE', color: '#1E40AF', text: 'Low' },
-    medium: { bg: '#FEF3C7', color: '#92400E', text: 'Medium' },
-    high: { bg: '#FED7AA', color: '#9A3412', text: 'High' },
-    critical: { bg: '#FEE2E2', color: '#991B1B', text: 'Critical' },
-  };
-  const config = priorityConfig[priority];
-
-  return (
-    <Tag
-      label={label || config.text}
-      color={config.color}
-      backgroundColor={config.bg}
-    />
-  );
+  const c = priorityConfig[priority];
+  return <Tag label={label || c.text} color={c.color} backgroundColor={c.bg} />;
 };
 
-// Btn - Button
+// Btn
 interface BtnProps {
   children: React.ReactNode;
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
@@ -112,7 +99,6 @@ interface BtnProps {
   icon?: React.ReactNode;
   iconPosition?: 'left' | 'right';
 }
-
 export const Btn: React.FC<BtnProps> = ({
   children,
   variant = 'primary',
@@ -123,141 +109,137 @@ export const Btn: React.FC<BtnProps> = ({
   icon,
   iconPosition = 'left',
 }) => {
-  const variants = {
-    primary: {
-      bg: colors.primaryOrange,
-      color: colors.white,
-      hover: '#E66B0F',
-    },
-    secondary: {
-      bg: colors.border,
-      color: colors.textPrimary,
-      hover: '#D1D5DB',
-    },
-    ghost: {
-      bg: 'transparent',
-      color: colors.textPrimary,
-      hover: colors.lightBackground,
-    },
-    danger: {
-      bg: colors.red,
-      color: colors.white,
-      hover: '#DC2626',
-    },
+  const variantStyles = {
+    primary:   { bg: colors.signal,           color: colors.white,        hover: colors.signalHover,       border: 'transparent' },
+    secondary: { bg: colors.surfaceElevated,  color: colors.textSecondary, hover: colors.surfaceHover,    border: colors.borderSubtle },
+    ghost:     { bg: 'transparent',           color: colors.textSecondary, hover: colors.surfaceElevated,  border: 'transparent' },
+    danger:    { bg: colors.criticalDim,       color: colors.critical,     hover: 'rgba(224,82,82,0.2)',   border: colors.critical },
+  };
+  const sizeStyles = {
+    sm: { padding: `5px ${spacing['3']}`,  fontSize: typography.fontSize.xs, gap: spacing['1'] },
+    md: { padding: `7px ${spacing['4']}`,  fontSize: typography.fontSize.base, gap: spacing['2'] },
+    lg: { padding: `10px ${spacing['5']}`, fontSize: typography.fontSize.md, gap: spacing['2'] },
   };
 
-  const sizes = {
-    sm: {
-      padding: `${spacing.xs} ${spacing.md}`,
-      fontSize: typography.fontSize.sm,
-    },
-    md: {
-      padding: `${spacing.sm} ${spacing.lg}`,
-      fontSize: typography.fontSize.base,
-    },
-    lg: {
-      padding: `${spacing.md} ${spacing.xl}`,
-      fontSize: typography.fontSize.lg,
-    },
-  };
-
-  const variantStyle = variants[variant];
-  const sizeStyle = sizes[size];
+  const v = variantStyles[variant];
+  const s = sizeStyles[size];
 
   return (
     <button
       onClick={onClick}
       disabled={disabled}
       style={{
-        display: 'flex',
+        display: 'inline-flex',
         width: fullWidth ? '100%' : 'auto',
-        padding: sizeStyle.padding,
-        fontSize: sizeStyle.fontSize,
-        fontWeight: typography.fontWeight.medium,
-        fontFamily: typography.fontFamily,
-        backgroundColor: variantStyle.bg,
-        color: variantStyle.color,
-        border: 'none',
-        borderRadius: borderRadius.md,
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        opacity: disabled ? 0.5 : 1,
-        transition: `background-color 150ms ease-in-out`,
         alignItems: 'center',
         justifyContent: 'center',
-        gap: spacing.sm,
+        gap: s.gap,
+        padding: s.padding,
+        fontSize: s.fontSize,
+        fontWeight: typography.fontWeight.medium,
+        fontFamily: typography.fontFamily,
+        letterSpacing: '-0.01em',
+        background: v.bg,
+        color: v.color,
+        border: `1px solid ${v.border}`,
+        borderRadius: borderRadius.md,
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        opacity: disabled ? 0.4 : 1,
+        transition: `all ${transitions.fast}`,
+        whiteSpace: 'nowrap',
       } as React.CSSProperties}
       onMouseEnter={(e) => {
-        if (!disabled) {
-          (e.currentTarget as HTMLButtonElement).style.backgroundColor = variantStyle.hover;
-        }
+        if (!disabled) (e.currentTarget as HTMLButtonElement).style.background = v.hover;
       }}
       onMouseLeave={(e) => {
-        (e.currentTarget as HTMLButtonElement).style.backgroundColor = variantStyle.bg;
+        if (!disabled) (e.currentTarget as HTMLButtonElement).style.background = v.bg;
       }}
     >
-      {icon && iconPosition === 'left' && <span>{icon}</span>}
+      {icon && iconPosition === 'left' && icon}
       {children}
-      {icon && iconPosition === 'right' && <span>{icon}</span>}
+      {icon && iconPosition === 'right' && icon}
     </button>
   );
 };
 
-// Card - Container component
+// Card
 interface CardProps {
   children: React.ReactNode;
   padding?: string;
   onClick?: () => void;
+  noBorder?: boolean;
 }
-
-export const Card: React.FC<CardProps> = ({ children, padding = spacing.lg, onClick }) => (
+export const Card: React.FC<CardProps> = ({ children, padding = spacing['5'], onClick, noBorder = false }) => (
   <div
     onClick={onClick}
     style={{
-      backgroundColor: colors.cardBackground,
-      borderRadius: borderRadius.lg,
+      background: colors.surface,
+      borderRadius: borderRadius.xl,
       padding,
-      border: `1px solid ${colors.border}`,
-      boxShadow: shadows.sm,
+      border: noBorder ? 'none' : `1px solid ${colors.borderFaint}`,
       cursor: onClick ? 'pointer' : 'default',
-      transition: onClick ? 'box-shadow 150ms ease-in-out' : 'none',
+      transition: onClick ? `all ${transitions.fast}` : 'none',
     }}
     onMouseEnter={(e) => {
       if (onClick) {
-        (e.currentTarget as HTMLDivElement).style.boxShadow = shadows.md;
+        const el = e.currentTarget as HTMLDivElement;
+        el.style.borderColor = colors.borderSubtle;
+        el.style.background = colors.surfaceElevated;
       }
     }}
     onMouseLeave={(e) => {
-      (e.currentTarget as HTMLDivElement).style.boxShadow = shadows.sm;
+      if (onClick) {
+        const el = e.currentTarget as HTMLDivElement;
+        el.style.borderColor = colors.borderFaint;
+        el.style.background = colors.surface;
+      }
     }}
   >
     {children}
   </div>
 );
 
-// SectionHeader - Section heading
+// SectionHeader
 interface SectionHeaderProps {
   title: string;
   subtitle?: string;
   action?: React.ReactNode;
+  eyebrow?: string;
 }
-
-export const SectionHeader: React.FC<SectionHeaderProps> = ({ title, subtitle, action }) => (
+export const SectionHeader: React.FC<SectionHeaderProps> = ({ title, subtitle, action, eyebrow }) => (
   <div
     style={{
       display: 'flex',
       justifyContent: 'space-between',
-      alignItems: 'flex-start',
-      marginBottom: spacing.lg,
+      alignItems: 'flex-end',
+      marginBottom: spacing['4'],
+      paddingBottom: spacing['3'],
+      borderBottom: `1px solid ${colors.borderFaint}`,
     }}
   >
     <div>
+      {eyebrow && (
+        <p
+          style={{
+            fontSize: typography.fontSize.xs,
+            fontWeight: typography.fontWeight.medium,
+            color: colors.signal,
+            letterSpacing: typography.letterSpacing.widest,
+            textTransform: 'uppercase',
+            margin: `0 0 4px`,
+          }}
+        >
+          {eyebrow}
+        </p>
+      )}
       <h2
         style={{
-          fontSize: typography.fontSize['3xl'],
-          fontWeight: typography.fontWeight.bold,
+          fontSize: typography.fontSize.xl,
+          fontWeight: typography.fontWeight.semibold,
           color: colors.textPrimary,
           margin: 0,
-          marginBottom: subtitle ? spacing.xs : 0,
+          letterSpacing: typography.letterSpacing.tight,
+          lineHeight: 1.2,
         }}
       >
         {title}
@@ -265,9 +247,10 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({ title, subtitle, a
       {subtitle && (
         <p
           style={{
-            fontSize: typography.fontSize.base,
-            color: colors.textSecondary,
-            margin: 0,
+            fontSize: typography.fontSize.sm,
+            color: colors.textTertiary,
+            margin: `4px 0 0`,
+            letterSpacing: '-0.01em',
           }}
         >
           {subtitle}
@@ -278,7 +261,7 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({ title, subtitle, a
   </div>
 );
 
-// MetricBox - Metric display card
+// MetricBox — the soul of the dashboard
 interface MetricBoxProps {
   label: string;
   value: string | number;
@@ -286,8 +269,9 @@ interface MetricBoxProps {
   change?: number;
   changeLabel?: string;
   icon?: React.ReactNode;
+  accent?: boolean;
+  status?: 'positive' | 'caution' | 'critical' | 'neutral';
 }
-
 export const MetricBox: React.FC<MetricBoxProps> = ({
   label,
   value,
@@ -295,135 +279,141 @@ export const MetricBox: React.FC<MetricBoxProps> = ({
   change,
   changeLabel,
   icon,
-}) => (
-  <Card padding={spacing.lg}>
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'flex-start',
-        justifyContent: 'space-between',
-        marginBottom: spacing.sm,
-      }}
-    >
-      <p
-        style={{
-          fontSize: typography.fontSize.sm,
-          color: colors.textSecondary,
-          margin: 0,
-          fontWeight: typography.fontWeight.medium,
-        }}
-      >
-        {label}
-      </p>
-      {icon && <div style={{ fontSize: '20px' }}>{icon}</div>}
-    </div>
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'baseline',
-        gap: spacing.xs,
-        marginBottom: change !== undefined ? spacing.sm : 0,
-      }}
-    >
-      <p
-        style={{
-          fontSize: typography.fontSize['3xl'],
-          fontWeight: typography.fontWeight.bold,
-          color: colors.textPrimary,
-          margin: 0,
-        }}
-      >
-        {value}
-      </p>
-      {unit && (
-        <p
-          style={{
-            fontSize: typography.fontSize.base,
-            color: colors.textSecondary,
-            margin: 0,
-          }}
-        >
-          {unit}
-        </p>
-      )}
-    </div>
-    {change !== undefined && changeLabel && (
-      <p
-        style={{
-          fontSize: typography.fontSize.sm,
-          color: change >= 0 ? colors.green : colors.red,
-          margin: 0,
-        }}
-      >
-        {change >= 0 ? '+' : ''}{change}% {changeLabel}
-      </p>
-    )}
-  </Card>
-);
-
-// AIRing - Circular score indicator
-interface AIRingProps {
-  score: number;
-  label?: string;
-  size?: number;
-}
-
-export const AIRing: React.FC<AIRingProps> = ({ score, label, size = 80 }) => {
-  const circumference = 2 * Math.PI * 35;
-  const strokeDashoffset = circumference - (score / 100) * circumference;
-  const color = score >= 80 ? colors.green : score >= 60 ? colors.amber : colors.red;
+  accent = false,
+  status = 'neutral',
+}) => {
+  const statusColor = {
+    positive: colors.positive,
+    caution: colors.caution,
+    critical: colors.critical,
+    neutral: colors.textTertiary,
+  }[status];
 
   return (
     <div
       style={{
+        background: colors.surface,
+        border: `1px solid ${accent ? colors.signalDim : colors.borderFaint}`,
+        borderRadius: borderRadius.xl,
+        padding: spacing['5'],
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'center',
-        gap: spacing.sm,
+        gap: spacing['2'],
+        transition: `border-color ${transitions.fast}`,
+        position: 'relative',
+        overflow: 'hidden',
       }}
     >
-      <div style={{ position: 'relative', width: size, height: size }}>
-        <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r="35"
-            fill="none"
-            stroke={colors.border}
-            strokeWidth="4"
-          />
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r="35"
-            fill="none"
-            stroke={color}
-            strokeWidth="4"
-            strokeDasharray={circumference}
-            strokeDashoffset={strokeDashoffset}
-            strokeLinecap="round"
-            style={{ transition: 'stroke-dashoffset 300ms ease-in-out' }}
-          />
-        </svg>
+      {accent && (
         <div
           style={{
             position: 'absolute',
             top: 0,
             left: 0,
-            width: '100%',
-            height: '100%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexDirection: 'column',
+            right: 0,
+            height: '1px',
+            background: `linear-gradient(90deg, transparent, ${colors.signal}60, transparent)`,
+          }}
+        />
+      )}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <p
+          style={{
+            fontSize: typography.fontSize.xs,
+            fontWeight: typography.fontWeight.medium,
+            color: colors.textTertiary,
+            margin: 0,
+            letterSpacing: typography.letterSpacing.wide,
+            textTransform: 'uppercase',
+          }}
+        >
+          {label}
+        </p>
+        {icon && <div style={{ color: statusColor, opacity: 0.8 }}>{icon}</div>}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: spacing['1'] }}>
+        <p
+          style={{
+            fontSize: typography.fontSize['4xl'],
+            fontWeight: typography.fontWeight.bold,
+            color: colors.textPrimary,
+            margin: 0,
+            letterSpacing: typography.letterSpacing.tighter,
+            lineHeight: 1,
+            fontVariantNumeric: 'tabular-nums',
+          }}
+        >
+          {value}
+        </p>
+        {unit && (
+          <p
+            style={{
+              fontSize: typography.fontSize.sm,
+              color: colors.textTertiary,
+              margin: 0,
+              letterSpacing: '-0.01em',
+            }}
+          >
+            {unit}
+          </p>
+        )}
+      </div>
+      {change !== undefined && changeLabel && (
+        <p
+          style={{
+            fontSize: typography.fontSize.xs,
+            color: change >= 0 ? colors.positive : colors.critical,
+            margin: 0,
+            letterSpacing: '-0.01em',
+          }}
+        >
+          {change >= 0 ? '+' : ''}{change}% {changeLabel}
+        </p>
+      )}
+    </div>
+  );
+};
+
+// AIRing
+interface AIRingProps {
+  score: number;
+  label?: string;
+  size?: number;
+}
+export const AIRing: React.FC<AIRingProps> = ({ score, label, size = 80 }) => {
+  const r = 32;
+  const circ = 2 * Math.PI * r;
+  const offset = circ - (score / 100) * circ;
+  const color = score >= 80 ? colors.positive : score >= 60 ? colors.caution : colors.critical;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['2'] }}>
+      <div style={{ position: 'relative', width: size, height: size }}>
+        <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
+          <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={colors.borderSubtle} strokeWidth="3" />
+          <circle
+            cx={size/2} cy={size/2} r={r} fill="none"
+            stroke={color} strokeWidth="3"
+            strokeDasharray={circ}
+            strokeDashoffset={offset}
+            strokeLinecap="round"
+            style={{ transition: `stroke-dashoffset ${transitions.slow}` }}
+          />
+        </svg>
+        <div
+          style={{
+            position: 'absolute', inset: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}
         >
           <p
             style={{
-              fontSize: typography.fontSize['2xl'],
+              fontSize: typography.fontSize.xl,
               fontWeight: typography.fontWeight.bold,
               color: colors.textPrimary,
               margin: 0,
+              letterSpacing: '-0.03em',
+              fontVariantNumeric: 'tabular-nums',
             }}
           >
             {score}
@@ -431,14 +421,7 @@ export const AIRing: React.FC<AIRingProps> = ({ score, label, size = 80 }) => {
         </div>
       </div>
       {label && (
-        <p
-          style={{
-            fontSize: typography.fontSize.sm,
-            color: colors.textSecondary,
-            margin: 0,
-            textAlign: 'center',
-          }}
-        >
+        <p style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, margin: 0, textAlign: 'center' }}>
           {label}
         </p>
       )}
@@ -446,34 +429,30 @@ export const AIRing: React.FC<AIRingProps> = ({ score, label, size = 80 }) => {
   );
 };
 
-// TableHeader - Table header row
+// TableHeader
 interface TableHeaderProps {
   columns: Array<{ label: string; width?: string }>;
 }
-
 export const TableHeader: React.FC<TableHeaderProps> = ({ columns }) => (
   <div
     style={{
       display: 'grid',
       gridTemplateColumns: columns.map((c) => c.width || '1fr').join(' '),
-      gap: spacing.md,
-      padding: `${spacing.md} ${spacing.lg}`,
-      backgroundColor: colors.lightBackground,
-      borderBottom: `1px solid ${colors.border}`,
-      borderTopLeftRadius: borderRadius.lg,
-      borderTopRightRadius: borderRadius.lg,
+      gap: spacing['3'],
+      padding: `${spacing['2']} ${spacing['5']}`,
+      borderBottom: `1px solid ${colors.borderFaint}`,
     }}
   >
     {columns.map((col, i) => (
       <p
         key={i}
         style={{
-          fontSize: typography.fontSize.sm,
+          fontSize: '10px',
           fontWeight: typography.fontWeight.semibold,
-          color: colors.textSecondary,
+          color: colors.textTertiary,
           margin: 0,
           textTransform: 'uppercase',
-          letterSpacing: '0.5px',
+          letterSpacing: typography.letterSpacing.widest,
         }}
       >
         {col.label}
@@ -482,38 +461,73 @@ export const TableHeader: React.FC<TableHeaderProps> = ({ columns }) => (
   </div>
 );
 
-// TableRow - Table data row
+// TableRow
 interface TableRowProps {
   columns: Array<{ content: React.ReactNode; width?: string }>;
   onClick?: () => void;
   divider?: boolean;
 }
-
 export const TableRow: React.FC<TableRowProps> = ({ columns, onClick, divider = true }) => (
   <div
     onClick={onClick}
     style={{
       display: 'grid',
       gridTemplateColumns: columns.map((c) => c.width || '1fr').join(' '),
-      gap: spacing.md,
-      padding: `${spacing.md} ${spacing.lg}`,
-      borderBottom: divider ? `1px solid ${colors.border}` : 'none',
-      backgroundColor: colors.cardBackground,
+      gap: spacing['3'],
+      padding: `${spacing['3']} ${spacing['5']}`,
+      borderBottom: divider ? `1px solid ${colors.borderFaint}` : 'none',
+      background: colors.surface,
       cursor: onClick ? 'pointer' : 'default',
-      transition: onClick ? 'background-color 150ms ease-in-out' : 'none',
+      transition: `background ${transitions.fast}`,
       alignItems: 'center',
     }}
     onMouseEnter={(e) => {
-      if (onClick) {
-        (e.currentTarget as HTMLDivElement).style.backgroundColor = colors.lightBackground;
-      }
+      if (onClick) (e.currentTarget as HTMLDivElement).style.background = colors.surfaceElevated;
     }}
     onMouseLeave={(e) => {
-      (e.currentTarget as HTMLDivElement).style.backgroundColor = colors.cardBackground;
+      if (onClick) (e.currentTarget as HTMLDivElement).style.background = colors.surface;
     }}
   >
-    {columns.map((col, i) => (
-      <div key={i}>{col.content}</div>
-    ))}
+    {columns.map((col, i) => <div key={i}>{col.content}</div>)}
+  </div>
+);
+
+// Divider
+export const Divider: React.FC<{ vertical?: boolean }> = ({ vertical = false }) => (
+  <div
+    style={{
+      background: colors.borderFaint,
+      width: vertical ? '1px' : '100%',
+      height: vertical ? '100%' : '1px',
+      flexShrink: 0,
+    }}
+  />
+);
+
+// Avatar
+interface AvatarProps {
+  initials: string;
+  size?: number;
+  color?: string;
+}
+export const Avatar: React.FC<AvatarProps> = ({ initials, size = 28, color = colors.signal }) => (
+  <div
+    style={{
+      width: size,
+      height: size,
+      borderRadius: borderRadius.md,
+      background: `${color}20`,
+      border: `1px solid ${color}40`,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      color,
+      fontSize: size <= 28 ? '10px' : typography.fontSize.xs,
+      fontWeight: typography.fontWeight.semibold,
+      letterSpacing: '0.02em',
+      flexShrink: 0,
+    }}
+  >
+    {initials}
   </div>
 );
