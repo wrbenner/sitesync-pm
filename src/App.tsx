@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, useState, useEffect } from 'react';
-import { HashRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { HashRouter, Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Home, LayoutGrid, FileText, HelpCircle, ClipboardList, Calendar,
@@ -11,7 +11,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { Sidebar } from './components/Sidebar';
 import { MobileLayout } from './components/layout/MobileLayout';
 import { OfflineBanner } from './components/ui/OfflineBanner';
-import { useUiStore, useAIAnnotationStore } from './stores';
+import { useUiStore, useAIAnnotationStore, useAuthStore, useProjectContext } from './stores';
 import { tasks, rfis, directory } from './data/mockData';
 import { colors, layout } from './styles/theme';
 import { pageTransition } from './components/transitions/variants';
@@ -22,6 +22,7 @@ import { ShortcutOverlay } from './components/ui/ShortcutOverlay';
 import { ExportCenter } from './components/export/ExportCenter';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import type { Shortcut } from './hooks/useKeyboardShortcuts';
+import { isSupabaseConfigured } from './lib/supabase';
 
 // Lazy loaded pages
 const Dashboard = lazy(() => import('./pages/Dashboard').then((m) => ({ default: m.Dashboard })));
@@ -46,6 +47,14 @@ const TimeMachine = lazy(() => import('./pages/TimeMachine').then((m) => ({ defa
 const ProjectHealth = lazy(() => import('./pages/ProjectHealth').then((m) => ({ default: m.ProjectHealth })));
 const Onboarding = lazy(() => import('./pages/Onboarding').then((m) => ({ default: m.Onboarding })));
 const NotFound = lazy(() => import('./pages/errors/NotFound').then((m) => ({ default: m.NotFound })));
+
+// Auth pages
+const Login = lazy(() => import('./pages/auth/Login').then((m) => ({ default: m.Login })));
+const Register = lazy(() => import('./pages/auth/Register').then((m) => ({ default: m.Register })));
+
+// Admin pages
+const UserManagement = lazy(() => import('./pages/admin/UserManagement').then((m) => ({ default: m.UserManagement })));
+const ProjectSettingsPage = lazy(() => import('./pages/admin/ProjectSettings').then((m) => ({ default: m.ProjectSettings })));
 
 const typographyConfig = { fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' };
 
@@ -88,6 +97,26 @@ function AnimatedPage({ children }: { children: React.ReactNode }) {
   );
 }
 
+// Auth guard: redirects to login if not authenticated (only when Supabase is configured)
+function RequireAuth({ children }: { children: React.ReactNode }) {
+  const { profile, loading, initialized } = useAuthStore();
+
+  if (!initialized || loading) {
+    return <PageLoader />;
+  }
+
+  // If Supabase is not configured, allow access (development mode)
+  if (!isSupabaseConfigured) {
+    return <>{children}</>;
+  }
+
+  if (!profile) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <>{children}</>;
+}
+
 function AppRoutes() {
   const location = useLocation();
 
@@ -95,28 +124,38 @@ function AppRoutes() {
     <AnimatePresence mode="wait">
       <Suspense fallback={<PageLoader />}>
         <Routes location={location} key={location.pathname}>
-          <Route path="/" element={<AnimatedPage><Dashboard /></AnimatedPage>} />
-          <Route path="/dashboard" element={<AnimatedPage><Dashboard /></AnimatedPage>} />
-          <Route path="/tasks" element={<AnimatedPage><Tasks /></AnimatedPage>} />
-          <Route path="/drawings" element={<AnimatedPage><Drawings /></AnimatedPage>} />
-          <Route path="/rfis" element={<AnimatedPage><RFIs /></AnimatedPage>} />
-          <Route path="/submittals" element={<AnimatedPage><Submittals /></AnimatedPage>} />
-          <Route path="/schedule" element={<AnimatedPage><Schedule /></AnimatedPage>} />
-          <Route path="/lookahead" element={<AnimatedPage><Lookahead /></AnimatedPage>} />
-          <Route path="/budget" element={<AnimatedPage><Budget /></AnimatedPage>} />
-          <Route path="/daily-log" element={<AnimatedPage><DailyLog /></AnimatedPage>} />
-          <Route path="/field-capture" element={<AnimatedPage><FieldCapture /></AnimatedPage>} />
-          <Route path="/punch-list" element={<AnimatedPage><PunchList /></AnimatedPage>} />
-          <Route path="/crews" element={<AnimatedPage><Crews /></AnimatedPage>} />
-          <Route path="/directory" element={<AnimatedPage><Directory /></AnimatedPage>} />
-          <Route path="/meetings" element={<AnimatedPage><Meetings /></AnimatedPage>} />
-          <Route path="/files" element={<AnimatedPage><Files /></AnimatedPage>} />
-          <Route path="/copilot" element={<AnimatedPage><AICopilot /></AnimatedPage>} />
-          <Route path="/activity" element={<AnimatedPage><Activity /></AnimatedPage>} />
-          <Route path="/time-machine" element={<AnimatedPage><TimeMachine /></AnimatedPage>} />
-          <Route path="/project-health" element={<AnimatedPage><ProjectHealth /></AnimatedPage>} />
-          <Route path="/onboarding" element={<AnimatedPage><Onboarding /></AnimatedPage>} />
-          <Route path="/vision" element={<AnimatedPage><Vision /></AnimatedPage>} />
+          {/* Auth routes (no guard) */}
+          <Route path="/login" element={<AnimatedPage><Login /></AnimatedPage>} />
+          <Route path="/register" element={<AnimatedPage><Register /></AnimatedPage>} />
+
+          {/* Protected routes */}
+          <Route path="/" element={<RequireAuth><AnimatedPage><Dashboard /></AnimatedPage></RequireAuth>} />
+          <Route path="/dashboard" element={<RequireAuth><AnimatedPage><Dashboard /></AnimatedPage></RequireAuth>} />
+          <Route path="/tasks" element={<RequireAuth><AnimatedPage><Tasks /></AnimatedPage></RequireAuth>} />
+          <Route path="/drawings" element={<RequireAuth><AnimatedPage><Drawings /></AnimatedPage></RequireAuth>} />
+          <Route path="/rfis" element={<RequireAuth><AnimatedPage><RFIs /></AnimatedPage></RequireAuth>} />
+          <Route path="/submittals" element={<RequireAuth><AnimatedPage><Submittals /></AnimatedPage></RequireAuth>} />
+          <Route path="/schedule" element={<RequireAuth><AnimatedPage><Schedule /></AnimatedPage></RequireAuth>} />
+          <Route path="/lookahead" element={<RequireAuth><AnimatedPage><Lookahead /></AnimatedPage></RequireAuth>} />
+          <Route path="/budget" element={<RequireAuth><AnimatedPage><Budget /></AnimatedPage></RequireAuth>} />
+          <Route path="/daily-log" element={<RequireAuth><AnimatedPage><DailyLog /></AnimatedPage></RequireAuth>} />
+          <Route path="/field-capture" element={<RequireAuth><AnimatedPage><FieldCapture /></AnimatedPage></RequireAuth>} />
+          <Route path="/punch-list" element={<RequireAuth><AnimatedPage><PunchList /></AnimatedPage></RequireAuth>} />
+          <Route path="/crews" element={<RequireAuth><AnimatedPage><Crews /></AnimatedPage></RequireAuth>} />
+          <Route path="/directory" element={<RequireAuth><AnimatedPage><Directory /></AnimatedPage></RequireAuth>} />
+          <Route path="/meetings" element={<RequireAuth><AnimatedPage><Meetings /></AnimatedPage></RequireAuth>} />
+          <Route path="/files" element={<RequireAuth><AnimatedPage><Files /></AnimatedPage></RequireAuth>} />
+          <Route path="/copilot" element={<RequireAuth><AnimatedPage><AICopilot /></AnimatedPage></RequireAuth>} />
+          <Route path="/activity" element={<RequireAuth><AnimatedPage><Activity /></AnimatedPage></RequireAuth>} />
+          <Route path="/time-machine" element={<RequireAuth><AnimatedPage><TimeMachine /></AnimatedPage></RequireAuth>} />
+          <Route path="/project-health" element={<RequireAuth><AnimatedPage><ProjectHealth /></AnimatedPage></RequireAuth>} />
+          <Route path="/onboarding" element={<RequireAuth><AnimatedPage><Onboarding /></AnimatedPage></RequireAuth>} />
+          <Route path="/vision" element={<RequireAuth><AnimatedPage><Vision /></AnimatedPage></RequireAuth>} />
+
+          {/* Admin routes */}
+          <Route path="/admin/team" element={<RequireAuth><AnimatedPage><UserManagement /></AnimatedPage></RequireAuth>} />
+          <Route path="/admin/project-settings" element={<RequireAuth><AnimatedPage><ProjectSettingsPage /></AnimatedPage></RequireAuth>} />
+
           <Route path="*" element={<AnimatedPage><NotFound /></AnimatedPage>} />
         </Routes>
       </Suspense>
@@ -126,11 +165,35 @@ function AppRoutes() {
 
 function AppContent() {
   const { sidebarCollapsed, setSidebarCollapsed, setActiveView } = useUiStore();
+  const { initialize, company } = useAuthStore();
+  const { loadProjects } = useProjectContext();
   const navigate = useNavigate();
   const location = useLocation();
   const isMobile = useIsMobile();
 
+  // Initialize auth on mount
+  useEffect(() => {
+    initialize();
+  }, []);
+
+  // Load projects when company is available
+  useEffect(() => {
+    if (company?.id) {
+      loadProjects(company.id);
+    }
+  }, [company?.id]);
+
   const activeView = location.pathname.replace('/', '') || 'dashboard';
+
+  // Show auth pages without layout
+  const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
+  if (isAuthPage) {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <AppRoutes />
+      </Suspense>
+    );
+  }
 
   const handleNavigate = (view: string) => {
     setActiveView(view);
