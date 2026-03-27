@@ -8,3 +8,5 @@ export { useProjectContext } from './projectContextStore';
 export { useRfiStore } from './rfiStore';
 export { useSubmittalStore } from './submittalStore';
 export { useFileStore } from './fileStore';
+export { useBudgetStore } from './budgetStore';
+export { useCopilotStore } from './copilotStore';

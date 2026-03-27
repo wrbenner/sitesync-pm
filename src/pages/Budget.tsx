@@ -1,10 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PageContainer, Card, SectionHeader, MetricBox, ProgressBar, StatusTag, DetailPanel, RelatedItems, Skeleton, useToast } from '../components/Primitives';
 import { Btn } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
-import { useQuery } from '../hooks/useQuery';
-import { getCostData } from '../api/endpoints/budget';
-import { getProject } from '../api/endpoints/projects';
 import { useAppNavigate, getRelatedItemsForChangeOrder } from '../utils/connections';
 import { AIAnnotationIndicator } from '../components/ai/AIAnnotation';
 import { PredictiveAlertBanner } from '../components/ai/PredictiveAlert';
@@ -12,7 +9,10 @@ import { getAnnotationsForEntity, getPredictiveAlertsForPage } from '../data/aiA
 import { Treemap } from '../components/budget/Treemap';
 import { SCurve } from '../components/budget/SCurve';
 import { EarnedValueDashboard } from '../components/budget/EarnedValueDashboard';
-import { Download, AlertTriangle, ChevronRight } from 'lucide-react';
+import { BudgetUpload } from '../components/budget/BudgetUpload';
+import { Download, AlertTriangle, ChevronRight, Upload } from 'lucide-react';
+import { useBudgetStore } from '../stores/budgetStore';
+import { useProjectContext } from '../stores/projectContextStore';
 
 const fmt = (n: number): string => {
   if (n >= 1000000) return `$${(n / 1000000).toFixed(1)}M`;
@@ -23,12 +23,22 @@ const fmt = (n: number): string => {
 export const Budget: React.FC = () => {
   const appNavigate = useAppNavigate();
   const { addToast } = useToast();
-  const { data: costData, loading: costLoading } = useQuery('costData', getCostData);
-  const { data: projectData, loading: projectLoading } = useQuery('projectData', getProject);
-  const [selectedCO, setSelectedCO] = useState<NonNullable<typeof costData>['changeOrders'][0] | null>(null);
+  const { divisions, changeOrders, loading: budgetLoading, loadBudget, getSummary } = useBudgetStore();
+  const { activeProject } = useProjectContext();
+  const [selectedCO, setSelectedCO] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'earned-value'>('overview');
+  const [showImport, setShowImport] = useState(false);
 
-  if (costLoading || projectLoading || !costData || !projectData) {
+  useEffect(() => {
+    if (activeProject?.id) {
+      loadBudget(activeProject.id);
+    }
+  }, [activeProject?.id]);
+
+  const summary = getSummary();
+  const totalValue = summary.totalBudget || 47500000;
+
+  if (budgetLoading || !activeProject) {
     return (
       <PageContainer title="Budget" subtitle="Loading...">
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing.lg, marginBottom: spacing['2xl'] }}>
@@ -57,22 +67,20 @@ export const Budget: React.FC = () => {
 
   const pageAlerts = getPredictiveAlertsForPage('budget');
 
-  const committed = costData.divisions.reduce((sum, d) => sum + d.committed, 0);
-  const spent = costData.divisions.reduce((sum, d) => sum + d.spent, 0);
-  const remaining = projectData.totalValue - spent - committed;
+  const committed = summary.totalCommitted;
+  const spent = summary.totalSpent;
+  const remaining = totalValue - spent - committed;
 
-  // Fix 4: Extended change orders
-  const allChangeOrders = [
-    ...costData.changeOrders,
-    { id: 4, coNumber: 'CO-004', title: 'Lobby marble upgrade per owner request', amount: 78000, status: 'pending_approval' },
-    { id: 5, coNumber: 'CO-005', title: 'Fire suppression system modifications', amount: 42000, status: 'approved' },
-  ];
+  const allChangeOrders = changeOrders.map((co) => ({
+    id: co.id,
+    coNumber: `CO-${String(co.co_number).padStart(3, '0')}`,
+    title: co.title,
+    amount: co.amount,
+    status: co.status === 'approved' ? 'approved' : 'pending_approval',
+  }));
 
-  const approvedTotal = allChangeOrders.filter(co => co.status === 'approved').reduce((s, co) => s + co.amount, 0);
-
-  // Fix 5: Contingency
-  const consumed = approvedTotal;
-  const contingencyRemaining = 3800000 - consumed;
+  const approvedTotal = changeOrders.filter(co => co.status === 'approved').reduce((s, co) => s + co.amount, 0);
+  const contingencyRemaining = summary.contingency - approvedTotal;
 
   const pillBase: React.CSSProperties = {
     padding: `${spacing['1']} ${spacing['3']}`,
@@ -88,8 +96,13 @@ export const Budget: React.FC = () => {
   return (
     <PageContainer
       title="Budget"
-      subtitle={`${fmt(spent)} spent of ${fmt(projectData.totalValue)} total`}
-      actions={<Btn variant="secondary" size="sm" icon={<Download size={14} />} onClick={() => addToast('info', 'Exporting budget data to CSV...')}>Export CSV</Btn>}
+      subtitle={`${fmt(spent)} spent of ${fmt(totalValue)} total`}
+      actions={
+        <div style={{ display: 'flex', gap: spacing.sm }}>
+          <Btn variant="secondary" size="sm" icon={<Upload size={14} />} onClick={() => setShowImport(true)}>Import Budget</Btn>
+          <Btn variant="secondary" size="sm" icon={<Download size={14} />} onClick={() => addToast('info', 'Exporting budget data to CSV...')}>Export CSV</Btn>
+        </div>
+      }
     >
       {pageAlerts.map((alert) => (
         <PredictiveAlertBanner key={alert.id} alert={alert} />
@@ -104,7 +117,7 @@ export const Budget: React.FC = () => {
           marginBottom: spacing['4'],
         }}
       >
-        <MetricBox label="Total Project" value={fmt(projectData.totalValue)} />
+        <MetricBox label="Total Project" value={fmt(totalValue)} />
         <MetricBox label="Spent to Date" value={fmt(spent)} />
         <MetricBox label="Committed" value={fmt(committed)} />
         <MetricBox label="Remaining" value={fmt(remaining)} />
@@ -115,7 +128,7 @@ export const Budget: React.FC = () => {
         <p style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.4px', margin: 0, marginBottom: spacing['2'] }}>Contingency Drawdown</p>
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
           <div style={{ flex: 1, height: 12, backgroundColor: colors.surfaceInset, borderRadius: borderRadius.full, overflow: 'hidden', display: 'flex' }}>
-            <div style={{ width: `${(consumed / 3800000) * 100}%`, height: '100%', backgroundColor: colors.statusPending, borderRadius: borderRadius.full }} />
+            <div style={{ width: `${(approvedTotal / 3800000) * 100}%`, height: '100%', backgroundColor: colors.statusPending, borderRadius: borderRadius.full }} />
           </div>
           <span style={{ fontSize: typography.fontSize.caption, color: colors.textSecondary, whiteSpace: 'nowrap', flexShrink: 0 }}>
             {fmt(contingencyRemaining)} of $3.8M remaining
@@ -154,15 +167,15 @@ export const Budget: React.FC = () => {
           {/* Cost Distribution Treemap */}
           <SectionHeader title="Cost Distribution" action={<span style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], fontSize: typography.fontSize.caption, color: colors.primaryOrange, fontWeight: typography.fontWeight.medium, cursor: 'pointer' }}>Click to drill down <ChevronRight size={12} /></span>} />
           <Card padding={spacing['5']}>
-            <Treemap divisions={costData.divisions} />
+            <Treemap divisions={divisions.map((d) => ({ id: parseInt(d.id.replace(/\D/g, '')) || 0, name: d.name, budget: d.budgeted_amount, spent: d.spent, committed: d.committed }))} />
           </Card>
 
           {/* Fix 1: Division Health */}
           <div style={{ marginTop: spacing['4'] }}>
             <SectionHeader title="Division Health" />
             <Card padding={spacing['4']}>
-              {costData.divisions.map((division) => {
-                const pct = Math.round((division.spent / division.budget) * 100);
+              {divisions.map((division) => {
+                const pct = Math.round((division.spent / division.budgeted_amount) * 100);
                 const isAtRisk = pct >= 90;
                 return (
                   <div key={division.id} style={{
@@ -198,7 +211,7 @@ export const Budget: React.FC = () => {
           <div style={{ marginTop: spacing['5'] }}>
             <SectionHeader title="Cumulative Cost (S Curve)" />
             <Card padding={spacing['5']}>
-              <SCurve totalBudget={projectData.totalValue} spent={spent} />
+              <SCurve totalBudget={totalValue} spent={spent} />
             </Card>
           </div>
 
@@ -297,7 +310,7 @@ export const Budget: React.FC = () => {
         <>
           <SectionHeader title="Earned Value Analysis" />
           <Card padding={spacing['5']}>
-            <EarnedValueDashboard totalBudget={projectData.totalValue} spent={spent} progress={Math.round((spent / projectData.totalValue) * 100)} />
+            <EarnedValueDashboard totalBudget={totalValue} spent={spent} progress={Math.round((spent / totalValue) * 100)} />
           </Card>
         </>
       )}
@@ -321,6 +334,7 @@ export const Budget: React.FC = () => {
           </div>
         )}
       </DetailPanel>
+      <BudgetUpload open={showImport} onClose={() => setShowImport(false)} onSuccess={() => addToast('success', 'Budget imported successfully')} />
     </PageContainer>
   );
 };
