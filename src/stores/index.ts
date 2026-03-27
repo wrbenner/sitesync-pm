@@ -14,3 +14,7 @@ export { useDailyLogStore } from './dailyLogStore';
 export { useFieldCaptureStore } from './fieldCaptureStore';
 export { usePunchListStore } from './punchListStore';
 export { useCrewStore } from './crewStore';
+export { useMeetingStore } from './meetingStore';
+export { useDirectoryStore } from './directoryStore';
+export { useScheduleStore } from './scheduleStore';
+export { useActivityStore } from './activityStore';
