@@ -1,0 +1,693 @@
+import React, { useState, useMemo } from 'react';
+import {
+  Plus,
+  Search,
+  Calendar,
+  MessageSquare,
+  Paperclip,
+  X,
+  ArrowRight,
+} from 'lucide-react';
+import {
+  Btn,
+  Card,
+  Avatar,
+  PriorityTag,
+  TabBar,
+  Modal,
+  ProgressBar,
+  PageContainer,
+  RelatedItems,
+  Skeleton,
+  useToast,
+} from '../components/Primitives';
+import { colors, spacing, typography, borderRadius, shadows, transitions } from '../styles/theme';
+import { useQuery } from '../hooks/useQuery';
+import { getTasks } from '../api/endpoints/tasks';
+import { useAppNavigate, getRelatedItemsForTask } from '../utils/connections';
+import { AIAnnotationIndicator } from '../components/ai/AIAnnotation';
+import { PredictiveAlertBanner } from '../components/ai/PredictiveAlert';
+import { getAnnotationsForEntity, getPredictiveAlertsForPage } from '../data/aiAnnotations';
+
+type TaskStatus = 'todo' | 'in_progress' | 'in_review' | 'done';
+type TaskPriority = 'low' | 'medium' | 'high' | 'critical';
+
+const statusConfig: Record<TaskStatus, { label: string; color: string; dotColor: string }> = {
+  todo: { label: 'To Do', color: '#92400E', dotColor: colors.statusPending },
+  in_progress: { label: 'In Progress', color: '#1E40AF', dotColor: colors.statusInfo },
+  in_review: { label: 'In Review', color: '#7C3AED', dotColor: colors.statusReview },
+  done: { label: 'Done', color: '#166534', dotColor: colors.statusActive },
+};
+
+const columns: TaskStatus[] = ['todo', 'in_progress', 'in_review', 'done'];
+const priorities: Array<TaskPriority | 'all'> = ['all', 'critical', 'high', 'medium', 'low'];
+
+const assigneeMap: Record<string, { name: string; initials: string; company: string }> = {
+  MP: { name: 'Mike Patterson', initials: 'MP', company: 'Turner Construction' },
+  JL: { name: 'Jennifer Lee', initials: 'JL', company: 'Lee Engineering' },
+  DK: { name: 'David Kumar', initials: 'DK', company: 'Kumar Electrical' },
+  RA: { name: 'Robert Anderson', initials: 'RA', company: 'Anderson Concrete' },
+  TR: { name: 'Thomas Rodriguez', initials: 'TR', company: 'Rodriguez Plumbing' },
+  KW: { name: 'Karen Williams', initials: 'KW', company: 'Quality HVAC Services' },
+};
+
+export const Tasks: React.FC = () => {
+  const { data: fetchedTasks, loading } = useQuery('tasks', getTasks);
+  type TaskList = Awaited<ReturnType<typeof getTasks>>;
+  const [localTasks, setLocalTasks] = useState<TaskList>([]);
+  const [initialized, setInitialized] = useState(false);
+
+  // Sync fetched data into local state once loaded
+  React.useEffect(() => {
+    if (fetchedTasks && !initialized) {
+      setLocalTasks(fetchedTasks);
+      setInitialized(true);
+    }
+  }, [fetchedTasks, initialized]);
+  const [viewMode, setViewMode] = useState<'board' | 'list'>('board');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterPriority, setFilterPriority] = useState<TaskPriority | 'all'>('all');
+  const [selectedTask, setSelectedTask] = useState<NonNullable<typeof localTasks>[0] | null>(null);
+  const [showNewTask, setShowNewTask] = useState(false);
+  const [newTitle, setNewTitle] = useState('');
+  const [newPriority, setNewPriority] = useState<TaskPriority>('medium');
+  const [newAssignee, setNewAssignee] = useState('');
+  const [criticalFilter, setCriticalFilter] = useState(false);
+  const [myTasksOnly, setMyTasksOnly] = useState(false);
+  const { addToast } = useToast();
+  const appNavigate = useAppNavigate();
+
+  const filteredTasks = useMemo(() => {
+    return localTasks.filter((t) => {
+      const matchesSearch = searchQuery === '' ||
+        t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        t.tags.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+      const matchesPriority = filterPriority === 'all' || t.priority === filterPriority;
+      const matchesMy = !myTasksOnly || t.assignee.initials === 'MP';
+      if (criticalFilter) return matchesSearch && matchesPriority && matchesMy && (t.priority === 'critical' || t.priority === 'high');
+      return matchesSearch && matchesPriority && matchesMy;
+    });
+  }, [localTasks, searchQuery, filterPriority, criticalFilter, myTasksOnly]);
+
+  const tasksByStatus = useMemo(() => {
+    const grouped: Record<TaskStatus, typeof localTasks> = { todo: [], in_progress: [], in_review: [], done: [] };
+    filteredTasks.forEach((t) => grouped[t.status].push(t));
+    return grouped;
+  }, [filteredTasks]);
+
+  const formatDue = (dateStr: string) => {
+    const days = Math.ceil((new Date(dateStr).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    if (days < 0) return { text: `${Math.abs(days)}d overdue`, color: colors.white, bg: colors.statusCritical };
+    if (days === 0) return { text: 'Due today', color: colors.white, bg: colors.statusPending };
+    if (days <= 2) return { text: `${days}d left`, color: colors.statusPending, bg: `${colors.statusPending}14` };
+    return { text: `${days}d left`, color: colors.textTertiary, bg: 'transparent' };
+  };
+
+  const priorityDotColor: Record<string, string> = {
+    critical: colors.statusCritical,
+    high: colors.statusPending,
+    medium: colors.statusInfo,
+    low: colors.textTertiary,
+  };
+
+  const renderTaskCard = (task: typeof localTasks[0]) => {
+    const due = formatDue(task.dueDate);
+    const isCriticalPath = task.tags.some(t => ['structural', 'critical path', 'mechanical', 'electrical'].some(k => t.toLowerCase().includes(k)));
+    return (
+      <div
+        key={task.id}
+        draggable
+        onClick={() => setSelectedTask(task)}
+        style={{
+          backgroundColor: colors.surfaceRaised,
+          borderRadius: borderRadius.lg,
+          padding: spacing.lg,
+          cursor: 'grab',
+          boxShadow: shadows.base,
+          transition: `box-shadow ${transitions.quick}, transform ${transitions.quick}`,
+          position: 'relative',
+          minHeight: '140px',
+        }}
+        onMouseEnter={(e) => {
+          (e.currentTarget as HTMLDivElement).style.boxShadow = shadows.md;
+          (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-1px)';
+        }}
+        onMouseLeave={(e) => {
+          (e.currentTarget as HTMLDivElement).style.boxShadow = shadows.base;
+          (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)';
+        }}
+      >
+        {/* Priority dot */}
+        <div
+          style={{
+            position: 'absolute',
+            top: spacing.lg,
+            right: spacing.lg,
+            width: 6,
+            height: 6,
+            borderRadius: borderRadius.full,
+            backgroundColor: priorityDotColor[task.priority],
+          }}
+        />
+
+        {/* Title */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.sm, paddingRight: spacing.lg }}>
+          <p style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, margin: 0, lineHeight: typography.lineHeight.normal }}>
+            {task.title}
+          </p>
+          {getAnnotationsForEntity('task', task.id).map((ann) => (
+            <AIAnnotationIndicator key={ann.id} annotation={ann} inline />
+          ))}
+        </div>
+
+        {/* Tags */}
+        {task.tags.length > 0 ? (
+          <div style={{ display: 'flex', gap: spacing.xs, marginBottom: spacing.md, flexWrap: 'wrap' }}>
+            {task.tags.slice(0, 2).map((tag) => (
+              <span key={tag} style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, backgroundColor: colors.surfaceFlat, padding: `1px ${spacing.sm}`, borderRadius: borderRadius.full }}>
+                {tag}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <div style={{ height: '20px', marginBottom: spacing.md }} />
+        )}
+
+        {/* Critical Path flag */}
+        {isCriticalPath && (
+          <div style={{ marginBottom: spacing.md }}>
+            <span style={{ fontSize: typography.fontSize.xs, color: colors.statusCritical, backgroundColor: `${colors.statusCritical}0A`, padding: '1px 6px', borderRadius: borderRadius.full, fontWeight: typography.fontWeight.semibold }}>Critical Path</span>
+          </div>
+        )}
+
+        {/* Subtask progress */}
+        {task.subtasks.total > 0 && (
+          <div style={{ marginBottom: spacing.md }}>
+            <ProgressBar
+              value={task.subtasks.completed}
+              max={task.subtasks.total}
+              height={3}
+              color={task.subtasks.completed === task.subtasks.total ? colors.tealSuccess : colors.statusInfo}
+            />
+            <span style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, marginTop: spacing.xs, display: 'block' }}>
+              {task.subtasks.completed}/{task.subtasks.total}
+            </span>
+          </div>
+        )}
+
+        {/* Footer */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Avatar initials={task.assignee.initials} size={24} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: spacing.md }}>
+            {task.commentsCount > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                <MessageSquare size={11} color={colors.textTertiary} />
+                <span style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary }}>{task.commentsCount}</span>
+              </div>
+            )}
+            <span style={{ fontSize: typography.fontSize.xs, color: due.color, backgroundColor: due.bg, padding: due.bg !== 'transparent' ? '1px 6px' : '0', borderRadius: borderRadius.full, fontWeight: typography.fontWeight.medium }}>
+              {due.text}
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderBoard = () => (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing.lg, alignItems: 'start' }}>
+      {columns.map((status) => {
+        const config = statusConfig[status];
+        const columnTasks = tasksByStatus[status];
+        return (
+          <div key={status}>
+            {/* Column header with colored top border */}
+            <div
+              style={{
+                borderTop: `3px solid ${config.dotColor}`,
+                borderRadius: `${borderRadius.md} ${borderRadius.md} 0 0`,
+                padding: `${spacing.md} ${spacing.lg}`,
+                marginBottom: spacing.md,
+                backgroundColor: colors.surfaceFlat,
+                borderBottomLeftRadius: borderRadius.md,
+                borderBottomRightRadius: borderRadius.md,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
+                <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+                  {config.label}
+                </span>
+                <span style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary }}>
+                  {columnTasks.length}
+                </span>
+              </div>
+              <button
+                onClick={() => setShowNewTask(true)}
+                style={{
+                  width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  backgroundColor: 'transparent', border: 'none', borderRadius: borderRadius.sm,
+                  cursor: 'pointer', color: colors.textTertiary, transition: `color ${transitions.quick}`,
+                }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = colors.textPrimary; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = colors.textTertiary; }}
+              >
+                <Plus size={14} />
+              </button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.md }}>
+              {columnTasks.map(renderTaskCard)}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  const renderList = () => (
+    <Card padding="0">
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '2fr 140px 120px 120px 100px 80px',
+          padding: `${spacing.md} ${spacing.xl}`,
+          borderBottom: `1px solid ${colors.borderLight}`,
+        }}
+      >
+        {['Task', 'Assignee', 'Status', 'Priority', 'Due', ''].map((h) => (
+          <p key={h} style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textTertiary, margin: 0 }}>
+            {h}
+          </p>
+        ))}
+      </div>
+      {filteredTasks.map((task, idx) => {
+        const due = formatDue(task.dueDate);
+        const sc = statusConfig[task.status];
+        return (
+          <div
+            key={task.id}
+            onClick={() => setSelectedTask(task)}
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '2fr 140px 120px 120px 100px 80px',
+              padding: `${spacing.lg} ${spacing.xl}`,
+              borderBottom: idx < filteredTasks.length - 1 ? `1px solid ${colors.borderLight}` : 'none',
+              cursor: 'pointer',
+              transition: `background-color ${transitions.quick}`,
+              alignItems: 'center',
+            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = colors.surfaceFlat; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = colors.surfaceRaised; }}
+          >
+            <div>
+              <p style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, margin: 0 }}>
+                {task.title}
+              </p>
+              {task.subtasks.total > 0 && (
+                <span style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary }}>{task.subtasks.completed}/{task.subtasks.total} subtasks</span>
+              )}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
+              <Avatar initials={task.assignee.initials} size={24} />
+              <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{task.assignee.name.split(' ')[0]}</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
+              <div style={{ width: 7, height: 7, borderRadius: borderRadius.full, backgroundColor: sc.dotColor }} />
+              <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{sc.label}</span>
+            </div>
+            <PriorityTag priority={task.priority} />
+            <span style={{ fontSize: typography.fontSize.sm, color: due.color, backgroundColor: due.bg, padding: due.bg !== 'transparent' ? '1px 6px' : '0', borderRadius: borderRadius.full, fontWeight: typography.fontWeight.medium }}>{due.text}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: spacing.md }}>
+              {task.commentsCount > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                  <MessageSquare size={12} color={colors.textTertiary} />
+                  <span style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary }}>{task.commentsCount}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </Card>
+  );
+
+  const renderDetailPanel = () => {
+    if (!selectedTask) return null;
+    const due = formatDue(selectedTask.dueDate);
+
+    return (
+      <div
+        style={{
+          position: 'fixed', top: 0, right: 0, bottom: 0, width: '520px',
+          backgroundColor: colors.surfaceRaised, boxShadow: shadows.lg,
+          zIndex: 1040, overflowY: 'auto',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: `${spacing.lg} ${spacing.xl}`, position: 'sticky', top: 0, backgroundColor: colors.surfaceRaised, zIndex: 1 }}>
+          <button
+            onClick={() => setSelectedTask(null)}
+            style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', border: 'none', borderRadius: borderRadius.md, cursor: 'pointer', color: colors.textTertiary, transition: `background-color ${transitions.quick}` }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.surfaceFlat; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'; }}
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div style={{ padding: `0 ${spacing.xl} ${spacing.xl}` }}>
+          <h2 style={{ fontSize: typography.fontSize['4xl'], fontWeight: typography.fontWeight.bold, color: colors.textPrimary, margin: 0, marginBottom: spacing.xl, lineHeight: typography.lineHeight.tight, letterSpacing: '-0.3px' }}>
+            {selectedTask.title}
+          </h2>
+
+          {/* Meta rows */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.lg, marginBottom: spacing['2xl'] }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>Assignee</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
+                <Avatar initials={selectedTask.assignee.initials} size={24} />
+                <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary }}>{selectedTask.assignee.name}</span>
+              </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>Company</span>
+              <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{selectedTask.assignee.company}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>Priority</span>
+              <PriorityTag priority={selectedTask.priority} />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>Due</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
+                <Calendar size={14} color={due.color} />
+                <span style={{ fontSize: typography.fontSize.sm, color: due.color, fontWeight: typography.fontWeight.medium }}>
+                  {new Date(selectedTask.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </span>
+              </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>Status</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
+                <div style={{ width: 7, height: 7, borderRadius: borderRadius.full, backgroundColor: statusConfig[selectedTask.status].dotColor }} />
+                <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{statusConfig[selectedTask.status].label}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Description */}
+          <div style={{ marginBottom: spacing['2xl'] }}>
+            <h3 style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing.sm }}>Description</h3>
+            <p style={{ fontSize: typography.fontSize.base, color: colors.textSecondary, margin: 0, lineHeight: typography.lineHeight.relaxed }}>
+              {selectedTask.description}
+            </p>
+          </div>
+
+          {/* Subtasks */}
+          {selectedTask.subtasks.total > 0 && (
+            <div style={{ marginBottom: spacing['2xl'] }}>
+              <h3 style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing.md }}>
+                Subtasks ({selectedTask.subtasks.completed}/{selectedTask.subtasks.total})
+              </h3>
+              <ProgressBar
+                value={selectedTask.subtasks.completed} max={selectedTask.subtasks.total} height={6}
+                color={selectedTask.subtasks.completed === selectedTask.subtasks.total ? colors.tealSuccess : colors.statusInfo}
+              />
+            </div>
+          )}
+
+          {/* Tags */}
+          <div style={{ marginBottom: spacing['2xl'] }}>
+            <h3 style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing.sm }}>Tags</h3>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: spacing.sm }}>
+              {selectedTask.tags.map((tag) => (
+                <span key={tag} style={{ fontSize: typography.fontSize.xs, color: colors.textSecondary, backgroundColor: colors.surfaceFlat, padding: `${spacing.xs} ${spacing.md}`, borderRadius: borderRadius.full }}>
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Linked Items */}
+          <div style={{ marginBottom: spacing['2xl'] }}>
+            <RelatedItems items={getRelatedItemsForTask(selectedTask.id)} onNavigate={appNavigate} />
+          </div>
+
+          {/* Activity summary */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: spacing.lg, padding: spacing.lg, backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.md, marginBottom: spacing['2xl'] }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
+              <MessageSquare size={14} color={colors.textTertiary} />
+              <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{selectedTask.commentsCount} comments</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
+              <Paperclip size={14} color={colors.textTertiary} />
+              <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{selectedTask.attachmentsCount} attachments</span>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div style={{ display: 'flex', gap: spacing.md }}>
+            {selectedTask.status !== 'done' && (
+              <Btn variant="primary" size="md" icon={<ArrowRight size={16} />} iconPosition="right">
+                {selectedTask.status === 'todo' ? 'Start Task' : selectedTask.status === 'in_progress' ? 'Move to Review' : 'Mark Complete'}
+              </Btn>
+            )}
+            <Btn variant="secondary" size="md" icon={<MessageSquare size={16} />}>Comment</Btn>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const pageAlerts = getPredictiveAlertsForPage('tasks');
+
+  if (loading || !localTasks || localTasks.length === 0 && !initialized) {
+    return (
+      <PageContainer title="Tasks" subtitle="Loading...">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.lg }}>
+          <Skeleton width="100%" height="48px" />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing.lg }}>
+            {[1, 2, 3, 4].map((col) => (
+              <div key={col} style={{ display: 'flex', flexDirection: 'column', gap: spacing.md }}>
+                <Skeleton width="100%" height="40px" />
+                <Skeleton width="100%" height="120px" />
+                <Skeleton width="100%" height="120px" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </PageContainer>
+    );
+  }
+
+  return (
+    <PageContainer
+      title="Tasks"
+      subtitle={`${localTasks.length} tasks · ${localTasks.filter((t) => t.status !== 'done').length} active`}
+      actions={<Btn variant="primary" size="md" icon={<Plus size={16} />} onClick={() => setShowNewTask(true)}>New Task</Btn>}
+    >
+      {pageAlerts.map((alert) => (
+        <PredictiveAlertBanner key={alert.id} alert={alert} onAction={() => setCriticalFilter(true)} />
+      ))}
+
+      {/* Critical filter active banner */}
+      {criticalFilter && (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: `${spacing.md} ${spacing.lg}`,
+          backgroundColor: `${colors.statusCritical}0A`,
+          borderRadius: borderRadius.md,
+          marginBottom: spacing.lg,
+        }}>
+          <span style={{ fontSize: typography.fontSize.sm, color: colors.statusCritical, fontWeight: typography.fontWeight.medium }}>
+            Showing critical and high priority tasks only
+          </span>
+          <button
+            onClick={() => setCriticalFilter(false)}
+            style={{
+              fontSize: typography.fontSize.sm,
+              fontFamily: typography.fontFamily,
+              fontWeight: typography.fontWeight.semibold,
+              color: colors.statusCritical,
+              backgroundColor: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              padding: `${spacing.xs} ${spacing.md}`,
+              borderRadius: borderRadius.full,
+              transition: `background-color ${transitions.quick}`,
+            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = `${colors.statusCritical}14`; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'; }}
+          >
+            Clear Filter
+          </button>
+        </div>
+      )}
+
+      {/* Toolbar */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: spacing.lg, marginBottom: spacing.xl, flexWrap: 'wrap' }}>
+        {/* Search */}
+        <div
+          style={{
+            display: 'flex', alignItems: 'center', gap: spacing.sm,
+            padding: `${spacing.sm} ${spacing.lg}`,
+            backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.full,
+            flex: '1 1 200px', maxWidth: '320px',
+          }}
+        >
+          <Search size={15} color={colors.textTertiary} />
+          <input
+            type="text" placeholder="Search tasks..." value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{ flex: 1, border: 'none', backgroundColor: 'transparent', outline: 'none', fontSize: typography.fontSize.base, fontFamily: typography.fontFamily, color: colors.textPrimary }}
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: colors.textTertiary, display: 'flex' }}>
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        {/* Priority pills */}
+        <div style={{ display: 'flex', gap: spacing.xs }}>
+          {priorities.map((p) => {
+            const isActive = filterPriority === p;
+            return (
+              <button
+                key={p}
+                onClick={() => setFilterPriority(p)}
+                style={{
+                  padding: `${spacing.xs} ${spacing.md}`,
+                  fontSize: typography.fontSize.sm,
+                  fontFamily: typography.fontFamily,
+                  fontWeight: isActive ? typography.fontWeight.semibold : typography.fontWeight.medium,
+                  backgroundColor: isActive ? colors.surfaceInset : 'transparent',
+                  color: isActive ? colors.textPrimary : colors.textTertiary,
+                  border: 'none',
+                  borderRadius: borderRadius.full,
+                  cursor: 'pointer',
+                  transition: `all ${transitions.quick}`,
+                  textTransform: 'capitalize',
+                }}
+              >
+                {p}
+              </button>
+            );
+          })}
+        </div>
+
+        <div style={{ flex: 1 }} />
+
+        {/* My Tasks toggle */}
+        <button
+          onClick={() => setMyTasksOnly(!myTasksOnly)}
+          style={{
+            padding: `${spacing.xs} ${spacing.lg}`,
+            fontSize: typography.fontSize.sm,
+            fontFamily: typography.fontFamily,
+            fontWeight: myTasksOnly ? typography.fontWeight.semibold : typography.fontWeight.medium,
+            backgroundColor: myTasksOnly ? colors.primaryOrange : 'transparent',
+            color: myTasksOnly ? colors.white : colors.textTertiary,
+            border: myTasksOnly ? 'none' : `1px solid ${colors.borderDefault}`,
+            borderRadius: borderRadius.full,
+            cursor: 'pointer',
+            transition: `all ${transitions.quick}`,
+          }}
+        >
+          My Tasks
+        </button>
+
+        {/* View Toggle */}
+        <TabBar
+          tabs={[{ id: 'board', label: 'Board' }, { id: 'list', label: 'List' }]}
+          activeTab={viewMode}
+          onChange={(id) => setViewMode(id as 'board' | 'list')}
+        />
+      </div>
+
+      {/* Content */}
+      {viewMode === 'board' ? renderBoard() : renderList()}
+
+      {/* Detail Panel */}
+      {selectedTask && (
+        <>
+          <div onClick={() => setSelectedTask(null)} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.2)', zIndex: 1039 }} />
+          {renderDetailPanel()}
+        </>
+      )}
+
+      {/* New Task Modal */}
+      <Modal open={showNewTask} onClose={() => setShowNewTask(false)} title="New Task">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xl }}>
+          <div>
+            <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textSecondary, marginBottom: spacing.sm }}>Title</label>
+            <input type="text" placeholder="What needs to be done?" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} autoFocus
+              style={{ width: '100%', padding: `${spacing.md} ${spacing.lg}`, fontSize: typography.fontSize.base, fontFamily: typography.fontFamily, border: 'none', backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.md, outline: 'none', boxSizing: 'border-box' }} />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing.lg }}>
+            <div>
+              <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textSecondary, marginBottom: spacing.sm }}>Priority</label>
+              <select value={newPriority} onChange={(e) => setNewPriority(e.target.value as TaskPriority)}
+                style={{ width: '100%', padding: `${spacing.md} ${spacing.lg}`, fontSize: typography.fontSize.base, fontFamily: typography.fontFamily, border: 'none', backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.md, outline: 'none' }}>
+                <option value="critical">Critical</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textSecondary, marginBottom: spacing.sm }}>Assignee</label>
+              <select value={newAssignee} onChange={(e) => setNewAssignee(e.target.value)}
+                style={{ width: '100%', padding: `${spacing.md} ${spacing.lg}`, fontSize: typography.fontSize.base, fontFamily: typography.fontFamily, border: 'none', backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.md, outline: 'none' }}>
+                <option value="">Select...</option>
+                <option value="MP">Mike Patterson</option>
+                <option value="JL">Jennifer Lee</option>
+                <option value="DK">David Kumar</option>
+                <option value="RA">Robert Anderson</option>
+                <option value="TR">Thomas Rodriguez</option>
+                <option value="KW">Karen Williams</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textSecondary, marginBottom: spacing.sm }}>Description</label>
+            <textarea placeholder="Add details..." rows={3}
+              style={{ width: '100%', padding: `${spacing.md} ${spacing.lg}`, fontSize: typography.fontSize.base, fontFamily: typography.fontFamily, border: 'none', backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.md, outline: 'none', resize: 'vertical', boxSizing: 'border-box' }} />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: spacing.md }}>
+            <Btn variant="ghost" size="md" onClick={() => setShowNewTask(false)}>Cancel</Btn>
+            <Btn variant="primary" size="md" onClick={() => {
+              if (!newTitle.trim()) {
+                addToast('error', 'Please enter a task title');
+                return;
+              }
+              const assignee = assigneeMap[newAssignee] || { name: 'Unassigned', initials: 'UA', company: '' };
+              const newTask = {
+                id: Date.now(),
+                title: newTitle.trim(),
+                description: '',
+                status: 'todo' as const,
+                priority: newPriority as 'low' | 'medium' | 'high' | 'critical',
+                assignee,
+                dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                tags: [] as string[],
+                commentsCount: 0,
+                attachmentsCount: 0,
+                createdDate: new Date().toISOString().split('T')[0],
+                subtasks: { total: 0, completed: 0 },
+                linkedItems: [] as { type: string; id: string }[],
+              };
+              setLocalTasks([newTask as typeof localTasks[0], ...localTasks]);
+              addToast('success', `Task created: ${newTask.title}`);
+              setShowNewTask(false);
+              setNewTitle('');
+              setNewPriority('medium');
+              setNewAssignee('');
+            }}>Create Task</Btn>
+          </div>
+        </div>
+      </Modal>
+    </PageContainer>
+  );
+};

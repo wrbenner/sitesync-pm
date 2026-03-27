@@ -1,65 +1,82 @@
-// SiteSync AI — Design System v2
-// Philosophy: Clarity is luxury. Restraint is power. Hierarchy creates confidence.
+// SiteSync AI — Category-Defining Design System
+// Every token here is a deliberate design decision.
+// Typography crafted with the same obsession Apple brings to SF Pro.
 
 export const colors = {
-  // Foundation
-  canvas: '#0C0D0F',          // Near-black canvas — not pure black, materially considered
-  surface: '#111214',         // Primary surface — cards, panels
-  surfaceElevated: '#16181C', // Slightly lifted surfaces
-  surfaceHover: '#1C1E23',    // Hover state
-  surfaceBorder: '#1F2128',   // Subtle structural border
+  // Brand
+  primaryOrange: '#F47820',
+  orangeHover: '#E06A10',
+  orangePressed: '#D05E08',
+  orangeSubtle: 'rgba(244, 120, 32, 0.08)',
+  orangeLight: 'rgba(244, 120, 32, 0.12)',
 
-  // Borders
-  borderFaint: 'rgba(255,255,255,0.05)',   // Hairline — barely visible
-  borderSubtle: 'rgba(255,255,255,0.08)',  // Subtle structural
-  borderModerate: 'rgba(255,255,255,0.12)', // Visible separation
-  borderStrong: 'rgba(255,255,255,0.20)',  // Emphatic edge
+  // Surfaces — warm, layered, architectural
+  surfacePage: '#FAFAF8',
+  surfaceSidebar: '#F6F3F0',
+  surfaceRaised: '#FFFFFF',
+  surfaceInset: '#F3EFEC',
+  surfaceHover: '#F0EDE8',
+  surfaceSelected: '#FEF7F2',
 
-  // Text
-  textPrimary: '#F0F1F3',     // Near-white — primary copy
-  textSecondary: '#8A8F9C',   // Secondary / labels
-  textTertiary: '#555A66',    // Metadata / timestamps
-  textDisabled: '#3A3D47',    // Disabled
-  textInverse: '#0C0D0F',     // Text on light surfaces
+  // Borders — barely there
+  borderSubtle: '#F0EDE9',
+  borderDefault: '#E5E1DC',
+  borderFocus: '#F47820',
 
-  // Signal — one precise accent used with restraint
-  signal: '#E8804A',          // SiteSync amber-orange — refined, not aggressive
-  signalDim: 'rgba(232,128,74,0.12)',
-  signalGlow: 'rgba(232,128,74,0.20)',
-  signalHover: '#D4723F',
+  // Text — warm, four levels
+  textPrimary: '#1A1613',
+  textSecondary: '#5C5550',
+  textTertiary: '#9A9490',
+  textOnDark: 'rgba(255, 255, 255, 0.92)',
+  textOnDarkMuted: 'rgba(255, 255, 255, 0.5)',
 
-  // Status — precise, not loud
-  positive: '#3EC87A',        // Healthy / complete / on track
-  positiveDim: 'rgba(62,200,122,0.12)',
-  caution: '#E8A83A',         // Watch / at risk
-  cautionDim: 'rgba(232,168,58,0.12)',
-  critical: '#E05252',        // Immediate attention
-  criticalDim: 'rgba(224,82,82,0.12)',
-  info: '#4A9EE8',            // Informational
-  infoDim: 'rgba(74,158,232,0.12)',
-  purple: '#8B6FE8',          // Intelligence / AI
-  purpleDim: 'rgba(139,111,232,0.12)',
+  // Status — desaturated, sophisticated
+  statusActive: '#2D8A6E',
+  statusActiveSubtle: 'rgba(45, 138, 110, 0.08)',
+  statusPending: '#C4850C',
+  statusPendingSubtle: 'rgba(196, 133, 12, 0.06)',
+  statusCritical: '#C93B3B',
+  statusCriticalSubtle: 'rgba(201, 59, 59, 0.06)',
+  statusInfo: '#3A7BC8',
+  statusInfoSubtle: 'rgba(58, 123, 200, 0.06)',
+  statusReview: '#7C5DC7',
+  statusReviewSubtle: 'rgba(124, 93, 199, 0.06)',
+  statusNeutral: '#8C8580',
+  statusNeutralSubtle: 'rgba(140, 133, 128, 0.06)',
 
-  // Structural
+  // Utility
   white: '#FFFFFF',
-  black: '#000000',
+
+  // Legacy aliases (for components that haven't been updated yet)
+  tealSuccess: '#2D8A6E',
+  red: '#C93B3B',
+  amber: '#C4850C',
+  green: '#2D8A6E',
+  blue: '#3A7BC8',
+  purple: '#7C5DC7',
+  cyan: '#06B6D4',
+  lightBackground: '#FAFAF8',
+  cardBackground: '#FFFFFF',
+  border: '#E5E1DC',
+  borderLight: '#F0EDE9',
+  surfaceFlat: '#F6F3F0',
+  darkNavy: '#0F1629',
+  orangeGradientStart: '#F47820',
+  orangeGradientEnd: '#FF9C42',
+  orangeMedium: 'rgba(244, 120, 32, 0.08)',
 };
 
+// 4px base grid — the backbone of visual coherence
 export const spacing = {
-  px: '1px',
-  '0': '0px',
   '1': '4px',
   '2': '8px',
   '3': '12px',
   '4': '16px',
   '5': '20px',
   '6': '24px',
-  '7': '28px',
   '8': '32px',
   '10': '40px',
   '12': '48px',
-  '14': '56px',
-  '16': '64px',
   // Legacy aliases
   xs: '4px',
   sm: '8px',
@@ -67,69 +84,84 @@ export const spacing = {
   lg: '16px',
   xl: '24px',
   xxl: '32px',
-  xxxl: '48px',
+  '2xl': '40px',
+  '3xl': '56px',
 };
 
 export const typography = {
   fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-  fontFamilyMono: '"JetBrains Mono", "Fira Code", "Cascadia Code", monospace',
   fontSize: {
-    xs: '11px',
-    sm: '12px',
-    base: '13px',
-    md: '14px',
+    // The type scale: each step is purposeful
+    caption: '11px',    // timestamps, metadata, labels
+    label: '12px',      // form labels, section labels, badges
+    sm: '13px',         // secondary text, table cells, tags
+    body: '14px',       // primary reading text
+    title: '16px',      // card titles, section names
+    subtitle: '18px',   // page subtitles, large card headers
+    heading: '28px',    // page headings
+    display: '36px',    // hero numbers, dashboard KPIs
+    // Legacy aliases
+    xs: '12px',
+    base: '14px',
     lg: '15px',
-    xl: '17px',
-    '2xl': '20px',
-    '3xl': '24px',
-    '4xl': '30px',
-    '5xl': '38px',
-    '6xl': '48px',
+    xl: '16px',
+    '2xl': '18px',
+    '3xl': '20px',
+    '4xl': '24px',
+    '5xl': '28px',
+    '6xl': '36px',
   },
   fontWeight: {
-    light: 300,
     normal: 400,
     medium: 500,
     semibold: 600,
-    bold: 700,
+    // Legacy aliases
+    light: 300,
+    bold: 600,
   },
   lineHeight: {
-    none: 1,
-    tight: 1.2,
-    snug: 1.35,
-    normal: 1.5,
-    relaxed: 1.65,
+    none: 1,        // single line display numbers
+    tight: 1.2,     // headings
+    snug: 1.35,     // subheadings, card titles
+    normal: 1.55,   // body text
+    relaxed: 1.7,   // long form reading, descriptions
   },
   letterSpacing: {
-    tighter: '-0.04em',
-    tight: '-0.02em',
-    normal: '0em',
-    wide: '0.04em',
-    wider: '0.08em',
-    widest: '0.12em',
+    tighter: '-0.03em',   // large display numbers
+    tight: '-0.02em',     // headings
+    normal: '-0.011em',   // body text (the sweet spot for Inter)
+    wide: '0.01em',       // small text that needs air
+    wider: '0.04em',      // labels, captions
+    widest: '0.08em',     // uppercase section headers
   },
 };
 
+// Ring technique — border-like presence without visible borders
 export const shadows = {
   none: 'none',
-  xs: '0 1px 2px rgba(0,0,0,0.4)',
-  sm: '0 2px 8px rgba(0,0,0,0.4)',
-  base: '0 4px 16px rgba(0,0,0,0.5)',
-  md: '0 8px 32px rgba(0,0,0,0.5)',
-  lg: '0 16px 48px rgba(0,0,0,0.6)',
-  xl: '0 32px 80px rgba(0,0,0,0.7)',
-  signal: '0 0 0 1px rgba(232,128,74,0.3), 0 4px 16px rgba(232,128,74,0.15)',
-  glow: '0 0 32px rgba(232,128,74,0.12)',
+  xs: 'none',
+  sm: '0 1px 2px rgba(0, 0, 0, 0.03)',
+  card: '0 1px 3px rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(0, 0, 0, 0.015)',
+  cardHover: '0 3px 12px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.02)',
+  dropdown: '0 4px 16px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.03)',
+  panel: '0 16px 48px rgba(0, 0, 0, 0.12)',
+  pressed: 'inset 0 1px 2px rgba(0, 0, 0, 0.1)',
+  glow: '0 4px 24px rgba(244, 120, 32, 0.25)',
+  // Legacy aliases
+  base: '0 1px 3px rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(0, 0, 0, 0.015)',
+  md: '0 3px 12px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.02)',
+  lg: '0 16px 48px rgba(0, 0, 0, 0.12)',
 };
 
+// Tighter radii — serious, not playful
 export const borderRadius = {
   none: '0',
-  sm: '3px',
-  base: '5px',
-  md: '7px',
+  sm: '4px',
+  base: '6px',
+  md: '8px',
   lg: '10px',
-  xl: '14px',
-  '2xl': '18px',
+  xl: '12px',
+  '2xl': '16px',
   full: '9999px',
 };
 
@@ -137,25 +169,38 @@ export const zIndex = {
   hide: -1,
   auto: 'auto',
   base: 0,
-  raised: 10,
   dropdown: 1000,
   sticky: 1020,
   fixed: 1030,
   modal: 1040,
   popover: 1050,
   tooltip: 1060,
+  command: 1070,
 };
 
+// Three tiers of motion
 export const transitions = {
-  instant: '80ms ease',
-  fast: '140ms cubic-bezier(0.16, 1, 0.3, 1)',
-  base: '200ms cubic-bezier(0.16, 1, 0.3, 1)',
-  slow: '350ms cubic-bezier(0.16, 1, 0.3, 1)',
-  spring: '400ms cubic-bezier(0.34, 1.56, 0.64, 1)',
+  instant: '80ms ease-out',
+  quick: '160ms cubic-bezier(0.25, 0.1, 0.25, 1)',
+  smooth: '300ms cubic-bezier(0.32, 0.72, 0, 1)',
+  // Legacy aliases
+  fast: '80ms ease-out',
+  base: '160ms cubic-bezier(0.25, 0.1, 0.25, 1)',
+  slow: '300ms cubic-bezier(0.32, 0.72, 0, 1)',
+  spring: '300ms cubic-bezier(0.34, 1.56, 0.64, 1)',
 };
 
 export const layout = {
-  sidebarWidth: '240px',
-  topbarHeight: '52px',
-  contentPadding: '32px',
+  sidebarWidth: '252px',
+  contentMaxWidth: '1140px',
+  contentPaddingX: '36px',
+  contentPaddingY: '36px',
+  // Legacy aliases
+  sidebarCollapsed: '72px',
+  topbarHeight: '64px',
+  pageMaxWidth: '1140px',
+  pagePaddingX: '36px',
+  pagePaddingY: '36px',
+  mobileBreak: '768px',
+  tabletBreak: '1024px',
 };

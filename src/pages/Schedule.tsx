@@ -1,212 +1,141 @@
-import React from 'react';
-import { AlertCircle, TrendingUp, Target } from 'lucide-react';
-import { Card, SectionHeader, MetricBox } from '../components/Primitives';
-import { colors, spacing, typography, borderRadius } from '../styles/theme';
-import { schedulePhases, metrics } from '../data/mockData';
+import React, { useState } from 'react';
+import { Sparkles } from 'lucide-react';
+import { PageContainer, Card, SectionHeader, MetricBox, Skeleton, Btn, useToast } from '../components/Primitives';
+import { colors, spacing, typography, borderRadius, shadows, transitions } from '../styles/theme';
+import { useQuery } from '../hooks/useQuery';
+import { getSchedulePhases } from '../api/endpoints/schedule';
+import { getMetrics } from '../api/endpoints/projects';
+import { PredictiveAlertBanner } from '../components/ai/PredictiveAlert';
+import { getPredictiveAlertsForPage } from '../data/aiAnnotations';
+import { GanttChart } from '../components/schedule/GanttChart';
 
 export const Schedule: React.FC = () => {
-  const today = new Date();
+  const { data: schedulePhases, loading: phasesLoading } = useQuery('schedulePhases', getSchedulePhases);
+  const { data: metrics, loading: metricsLoading } = useQuery('metrics', getMetrics);
+  const loading = phasesLoading || metricsLoading;
+  const [whatIfMode, setWhatIfMode] = useState(false);
+  const [recoveryExpanded, setRecoveryExpanded] = useState(false);
+  const { addToast } = useToast();
+
+  if (loading || !schedulePhases || !metrics) {
+    return (
+      <PageContainer title="Schedule" subtitle="Loading...">
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: spacing.lg,
+            marginBottom: spacing['2xl'],
+          }}
+        >
+          <Skeleton height="80px" />
+          <Skeleton height="80px" />
+          <Skeleton height="80px" />
+        </div>
+        <SectionHeader title="Project Timeline" />
+        <Card padding={spacing.xl}>
+          <Skeleton height="24px" width="60%" />
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} style={{ marginTop: spacing.md }}>
+              <Skeleton height="28px" />
+            </div>
+          ))}
+        </Card>
+      </PageContainer>
+    );
+  }
+  const pageAlerts = getPredictiveAlertsForPage('schedule');
 
   return (
-    <main
-      style={{
-        flex: 1,
-        overflow: 'auto',
-        backgroundColor: colors.lightBackground,
-        padding: spacing.xl,
-        marginLeft: '260px',
-      }}
+    <PageContainer
+      title="Schedule"
+      subtitle={`${metrics.daysBeforeSchedule} days ahead \u00B7 ${metrics.milestonesHit}/${metrics.milestoneTotal} milestones`}
     >
-      <SectionHeader title="Schedule" />
+      {pageAlerts.map((alert) => (
+        <PredictiveAlertBanner key={alert.id} alert={alert} onAction={() => setRecoveryExpanded(!recoveryExpanded)} />
+      ))}
+
+      {recoveryExpanded && (
+        <div style={{
+          padding: `${spacing['3']} ${spacing['4']}`, marginBottom: spacing['4'],
+          backgroundColor: `${colors.statusPending}06`, borderRadius: borderRadius.md,
+          border: `1px solid ${colors.statusPending}15`,
+          animation: 'slideInUp 200ms ease-out',
+        }}>
+          <p style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.statusPending, textTransform: 'uppercase', letterSpacing: '0.4px', margin: 0, marginBottom: spacing['2'] }}>Recovery Plan</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'] }}>
+            {[
+              'Authorize MEP overtime on floors 4 through 6 to recover 4 days of schedule float.',
+              'Redirect Exterior Crew D to secondary facade sections while RFI 004 is resolved.',
+              'Batch Tuesday RFI reviews with MEP consultant to reduce average response time by 40%.',
+            ].map((action, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: spacing['2'] }}>
+                <span style={{ fontSize: typography.fontSize.sm, color: colors.statusPending, fontWeight: typography.fontWeight.semibold }}>{i + 1}.</span>
+                <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, lineHeight: typography.lineHeight.relaxed }}>{action}</span>
+              </div>
+            ))}
+          </div>
+          <button onClick={() => setRecoveryExpanded(false)} style={{ marginTop: spacing['3'], padding: `${spacing['1']} ${spacing['3']}`, backgroundColor: 'transparent', border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base, fontSize: typography.fontSize.caption, fontFamily: typography.fontFamily, color: colors.textTertiary, cursor: 'pointer' }}>
+            Collapse
+          </button>
+        </div>
+      )}
 
       {/* Metrics */}
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          gridTemplateColumns: 'repeat(3, 1fr)',
           gap: spacing.lg,
-          marginBottom: spacing.xl,
+          marginBottom: spacing['2xl'],
         }}
       >
-        <MetricBox
-          label="Days Behind Schedule"
-          value={metrics.daysBeforeSchedule}
-          icon={<AlertCircle color={colors.green} />}
-        />
-        <MetricBox
-          label="Milestones Hit"
-          value={`${metrics.milestonesHit}/${metrics.milestoneTotal}`}
-          icon={<Target color={colors.blue} />}
-        />
-        <MetricBox
-          label="AI Confidence"
-          value={metrics.aiConfidenceLevel}
-          unit="%"
-          icon={<TrendingUp color={colors.green} />}
-        />
+        <MetricBox label="Days Ahead" value={metrics.daysBeforeSchedule} />
+        <MetricBox label="Milestones" value={`${metrics.milestonesHit}/${metrics.milestoneTotal}`} />
+        <MetricBox label="AI Confidence" value={metrics.aiConfidenceLevel} unit="%" />
       </div>
 
-      {/* Gantt Chart */}
-      <Card padding={spacing.lg}>
-        <h3
-          style={{
-            fontSize: typography.fontSize.lg,
-            fontWeight: typography.fontWeight.semibold,
-            color: colors.textPrimary,
-            margin: 0,
-            marginBottom: spacing.lg,
-          }}
-        >
-          Project Timeline
-        </h3>
-
-        {/* Timeline Container */}
-        <div style={{ overflowX: 'auto', marginBottom: spacing.lg }}>
-          <div
-            style={{
-              minWidth: '800px',
-              display: 'flex',
-              flexDirection: 'column',
-            }}
+      {/* Gantt */}
+      <div style={{ marginTop: spacing['5'] }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['3'] }}>
+          <SectionHeader title="Project Timeline" />
+          <Btn
+            variant={whatIfMode ? 'primary' : 'secondary'}
+            size="sm"
+            icon={<Sparkles size={14} />}
+            onClick={() => setWhatIfMode(!whatIfMode)}
           >
-            {/* Header */}
-            <div style={{ display: 'flex', marginBottom: spacing.md }}>
-              <div style={{ width: '150px', flexShrink: 0 }} />
-              <div
-                style={{
-                  flex: 1,
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  paddingRight: spacing.lg,
-                  fontSize: typography.fontSize.xs,
-                  color: colors.textTertiary,
-                  fontWeight: typography.fontWeight.semibold,
-                }}
-              >
-                {['Q3 2023', 'Q4 2023', 'Q1 2024', 'Q2 2024', 'Q3 2024', 'Q4 2024', 'Q1 2025', 'Q2 2025'].map(
-                  (q) => (
-                    <span key={q}>{q}</span>
-                  )
-                )}
-              </div>
-            </div>
-
-            {/* Phases */}
-            {schedulePhases.map((phase) => {
-              const startDate = new Date(phase.startDate);
-              const endDate = new Date(phase.endDate);
-              const totalDays = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24);
-              const daysPassed = (today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24);
-              const progressPercent = Math.min(100, Math.max(0, (daysPassed / totalDays) * 100));
-
-              const isCompleted = phase.completed;
-              const isBehind = !isCompleted && endDate < today;
-
-              return (
-                <div
-                  key={phase.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: spacing.md,
-                    paddingBottom: spacing.md,
-                    paddingTop: spacing.md,
-                    borderBottom: `1px solid ${colors.border}`,
-                  }}
-                >
-                  <div style={{ width: '150px', flexShrink: 0 }}>
-                    <p
-                      style={{
-                        fontSize: typography.fontSize.sm,
-                        fontWeight: typography.fontWeight.semibold,
-                        color: colors.textPrimary,
-                        margin: 0,
-                      }}
-                    >
-                      {phase.name}
-                    </p>
-                    <p
-                      style={{
-                        fontSize: typography.fontSize.xs,
-                        color: colors.textSecondary,
-                        margin: 0,
-                      }}
-                    >
-                      {phase.progress}%
-                    </p>
-                  </div>
-
-                  <div
-                    style={{
-                      flex: 1,
-                      height: '32px',
-                      backgroundColor: colors.lightBackground,
-                      borderRadius: borderRadius.sm,
-                      position: 'relative',
-                      overflow: 'hidden',
-                      border: `1px solid ${colors.border}`,
-                    }}
-                  >
-                    {/* Progress bar */}
-                    <div
-                      style={{
-                        height: '100%',
-                        width: `${progressPercent}%`,
-                        backgroundColor: isCompleted
-                          ? colors.tealSuccess
-                          : isBehind
-                            ? colors.red
-                            : phase.critical
-                              ? colors.primaryOrange
-                              : colors.blue,
-                        transition: 'width 300ms ease-in-out',
-                        borderRadius: borderRadius.sm,
-                      }}
-                    />
-
-                    {/* Today line */}
-                    {!isCompleted && (
-                      <div
-                        style={{
-                          position: 'absolute',
-                          top: 0,
-                          left: '50%',
-                          width: '2px',
-                          height: '100%',
-                          backgroundColor: colors.textPrimary,
-                          opacity: 0.3,
-                        }}
-                      />
-                    )}
-                  </div>
-
-                  {isBehind && (
-                    <span style={{ fontSize: typography.fontSize.xs, color: colors.red }}>
-                      Behind
-                    </span>
-                  )}
-                  {isCompleted && (
-                    <span style={{ fontSize: typography.fontSize.xs, color: colors.tealSuccess }}>
-                      Done
-                    </span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+            {whatIfMode ? 'Exit What If Mode' : 'What If Mode'}
+          </Btn>
         </div>
-
-        <p
-          style={{
-            fontSize: typography.fontSize.xs,
-            color: colors.textTertiary,
-            margin: 0,
-            marginTop: spacing.lg,
-          }}
-        >
-          Current date indicated by vertical line. Critical path phases shown in orange.
-        </p>
-      </Card>
-    </main>
+        <div style={{
+          backgroundColor: colors.surfaceRaised,
+          borderRadius: borderRadius.lg,
+          padding: spacing['5'],
+          boxShadow: whatIfMode ? `0 0 0 2px ${colors.statusPending}40` : shadows.card,
+          transition: `box-shadow ${transitions.quick}`,
+        }}>
+          {whatIfMode && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: spacing['2'],
+              padding: `${spacing['2']} ${spacing['3']}`, marginBottom: spacing['3'],
+              backgroundColor: `${colors.statusPending}08`, borderRadius: borderRadius.md,
+              border: `1px solid ${colors.statusPending}20`,
+            }}>
+              <Sparkles size={14} color={colors.statusPending} />
+              <span style={{ fontSize: typography.fontSize.sm, color: colors.statusPending, fontWeight: typography.fontWeight.medium }}>
+                What If Mode is active. Drag phase bars to simulate schedule changes and see cascade effects.
+              </span>
+            </div>
+          )}
+          <GanttChart
+            phases={schedulePhases}
+            whatIfMode={whatIfMode}
+            onPhaseClick={(phase) => addToast('info', `${phase.name}: ${phase.progress}% complete`)}
+            baselinePhases={schedulePhases}
+          />
+        </div>
+      </div>
+    </PageContainer>
   );
 };
