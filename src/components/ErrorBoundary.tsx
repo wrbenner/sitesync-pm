@@ -1,6 +1,7 @@
 import React from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { colors, spacing, typography } from '../styles/theme';
+import { captureException, addBreadcrumb } from '../lib/errorTracking';
 
 interface Props {
   children: React.ReactNode;
@@ -19,6 +20,14 @@ export class ErrorBoundary extends React.Component<Props, State> {
 
   static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    captureException(error, {
+      action: 'react_error_boundary',
+      extra: { componentStack: errorInfo.componentStack || '' },
+    });
+    addBreadcrumb('Error boundary caught error', 'error', { message: error.message });
   }
 
   render() {

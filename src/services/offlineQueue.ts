@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { captureException } from '../lib/errorTracking';
 
 export type SyncStatus = 'online' | 'offline' | 'syncing';
 
@@ -12,6 +13,31 @@ export interface QueuedMutation {
   retryCount: number;
 }
 
+const STORAGE_KEY = 'sitesync_offline_queue';
+const MAX_RETRIES = 5;
+const BASE_DELAY = 1000;
+
+/** Load persisted queue from localStorage */
+function loadPersistedQueue(): QueuedMutation[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return parsed.map((item: any) => ({ ...item, timestamp: new Date(item.timestamp) }));
+  } catch {
+    return [];
+  }
+}
+
+/** Persist queue to localStorage */
+function persistQueue(queue: QueuedMutation[]) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(queue));
+  } catch {
+    // Storage quota exceeded or unavailable
+  }
+}
+
 interface OfflineState {
   status: SyncStatus;
   queue: QueuedMutation[];
@@ -21,21 +47,21 @@ interface OfflineState {
   addToQueue: (mutation: Omit<QueuedMutation, 'id' | 'timestamp' | 'retryCount'>) => void;
   removeFromQueue: (id: string) => void;
   clearQueue: () => void;
-  simulateSync: () => Promise<void>;
+  processQueue: () => Promise<void>;
   simulateOffline: () => void;
   simulateOnline: () => void;
 }
 
 export const useOfflineStore = create<OfflineState>((set, get) => ({
-  status: 'online',
-  queue: [],
+  status: navigator.onLine ? 'online' : 'offline',
+  queue: loadPersistedQueue(),
   lastSyncTime: new Date(),
 
   setStatus: (status) => set({ status }),
 
-  addToQueue: (mutation) =>
-    set((s) => ({
-      queue: [
+  addToQueue: (mutation) => {
+    set((s) => {
+      const newQueue = [
         ...s.queue,
         {
           ...mutation,
@@ -43,32 +69,66 @@ export const useOfflineStore = create<OfflineState>((set, get) => ({
           timestamp: new Date(),
           retryCount: 0,
         },
-      ],
-    })),
+      ];
+      persistQueue(newQueue);
+      return { queue: newQueue };
+    });
+  },
 
-  removeFromQueue: (id) =>
-    set((s) => ({ queue: s.queue.filter((q) => q.id !== id) })),
+  removeFromQueue: (id) => {
+    set((s) => {
+      const newQueue = s.queue.filter((q) => q.id !== id);
+      persistQueue(newQueue);
+      return { queue: newQueue };
+    });
+  },
 
-  clearQueue: () => set({ queue: [] }),
+  clearQueue: () => {
+    persistQueue([]);
+    set({ queue: [] });
+  },
 
-  simulateSync: async () => {
+  processQueue: async () => {
     const { queue } = get();
     if (queue.length === 0) return;
+    if (!navigator.onLine) return;
 
     set({ status: 'syncing' });
 
-    // Simulate syncing each item with a delay
+    const remaining: QueuedMutation[] = [];
+
     for (const item of queue) {
-      await new Promise((resolve) => setTimeout(resolve, 400 + Math.random() * 300));
-      set((s) => ({ queue: s.queue.filter((q) => q.id !== item.id) }));
+      try {
+        // Attempt to process the mutation
+        // In production this would call the appropriate store method
+        // For now, simulate processing with a brief delay
+        await new Promise((resolve) => setTimeout(resolve, 200 + Math.random() * 200));
+
+        // Success: item is removed (not added to remaining)
+      } catch (err) {
+        const error = err instanceof Error ? err : new Error(String(err));
+
+        if (item.retryCount < MAX_RETRIES) {
+          // Exponential backoff delay before next retry
+          const delay = BASE_DELAY * Math.pow(2, item.retryCount);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          remaining.push({ ...item, retryCount: item.retryCount + 1 });
+        } else {
+          // Max retries exceeded, log and discard
+          captureException(error, {
+            action: 'offline_sync_failed',
+            extra: { entityType: item.entityType, type: item.type, retryCount: item.retryCount },
+          });
+        }
+      }
     }
 
-    set({ status: 'online', lastSyncTime: new Date() });
+    persistQueue(remaining);
+    set({ queue: remaining, status: 'online', lastSyncTime: new Date() });
   },
 
   simulateOffline: () => {
     set({ status: 'offline' });
-    // Add some sample queued items
     const sampleMutations: Omit<QueuedMutation, 'id' | 'timestamp' | 'retryCount'>[] = [
       { type: 'create', entityType: 'field_capture', data: { title: 'Floor 7 progress photo' } },
       { type: 'update', entityType: 'punch_item', entityId: 'PL-003', data: { status: 'in_progress' } },
@@ -78,6 +138,21 @@ export const useOfflineStore = create<OfflineState>((set, get) => ({
   },
 
   simulateOnline: () => {
-    get().simulateSync();
+    get().processQueue();
   },
 }));
+
+// Listen for online/offline browser events
+if (typeof window !== 'undefined') {
+  window.addEventListener('online', () => {
+    const store = useOfflineStore.getState();
+    store.setStatus('online');
+    if (store.queue.length > 0) {
+      store.processQueue();
+    }
+  });
+
+  window.addEventListener('offline', () => {
+    useOfflineStore.getState().setStatus('offline');
+  });
+}
