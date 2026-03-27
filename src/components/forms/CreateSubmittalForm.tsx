@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Send, ClipboardList } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
+import { UppyUploader } from '../files/UppyUploader';
 import { useSubmittalStore } from '../../stores/submittalStore';
 import { useProjectContext } from '../../stores/projectContextStore';
 import { useAuthStore } from '../../stores/authStore';
@@ -229,6 +230,17 @@ export function CreateSubmittalForm({ open, onClose, onSuccess }: CreateSubmitta
               style={inputStyle}
               onFocus={(e) => e.target.style.borderColor = colors.primaryOrange}
               onBlur={(e) => e.target.style.borderColor = colors.borderDefault}
+            />
+          </div>
+
+          {/* Attachments */}
+          <div>
+            <label style={labelStyle}>Attachments</label>
+            <UppyUploader
+              compact
+              onFilesSelected={() => {}}
+              accept=".pdf,.png,.jpg,.jpeg,.dwg,.xlsx,.docx"
+              label="Drop shop drawings, specs, or documents"
             />
           </div>
         </div>

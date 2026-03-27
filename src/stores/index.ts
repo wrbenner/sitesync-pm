@@ -7,3 +7,4 @@ export { useAuthStore } from './authStore';
 export { useProjectContext } from './projectContextStore';
 export { useRfiStore } from './rfiStore';
 export { useSubmittalStore } from './submittalStore';
+export { useFileStore } from './fileStore';

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Send, FileText } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
+import { UppyUploader } from '../files/UppyUploader';
 import { useRfiStore } from '../../stores/rfiStore';
 import { useProjectContext } from '../../stores/projectContextStore';
 import { useAuthStore } from '../../stores/authStore';
@@ -218,6 +219,17 @@ export function CreateRFIForm({ open, onClose, onSuccess }: CreateRFIFormProps) 
                 onBlur={(e) => e.target.style.borderColor = colors.borderDefault}
               />
             </div>
+          </div>
+
+          {/* Attachments */}
+          <div>
+            <label style={labelStyle}>Attachments</label>
+            <UppyUploader
+              compact
+              onFilesSelected={() => {}}
+              accept=".pdf,.png,.jpg,.jpeg,.dwg,.xlsx,.docx"
+              label="Drop files here or click to attach"
+            />
           </div>
 
           <div>
