@@ -1,27 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Users, Clock, ShieldCheck, Cloud, ChevronRight, Camera, Send, BarChart3, Sparkles } from 'lucide-react';
 import { PageContainer, Card, Btn, Skeleton, SectionHeader, useToast } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme';
-import { getDailyLogs } from '../api/endpoints/field';
-import { useQuery } from '../hooks/useQuery';
+import { useDailyLogStore } from '../stores/dailyLogStore';
+import { useProjectContext } from '../stores/projectContextStore';
 import { AutoNarrative } from '../components/dailylog/AutoNarrative';
 import { DayComparison } from '../components/dailylog/DayComparison';
 import { SignaturePad } from '../components/dailylog/SignaturePad';
 
 export const DailyLog: React.FC = () => {
   const { addToast } = useToast();
-  const { data: dailyLogHistory, loading } = useQuery('dailyLogs', getDailyLogs);
+  const { logs, entries, loading, loadLogs, signAndSubmit } = useDailyLogStore();
+  const { activeProject } = useProjectContext();
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
   const [showComparison, setShowComparison] = useState(false);
   const [showSignature, setShowSignature] = useState(false);
   const [signed, setSigned] = useState(false);
   const [compareDropdownOpen, setCompareDropdownOpen] = useState(false);
   const [compareMode, setCompareMode] = useState<'yesterday' | 'lastweek' | null>(null);
-  const [expandedIncident, setExpandedIncident] = useState<number | null>(null);
+  const [expandedIncident, setExpandedIncident] = useState<string | null>(null);
 
-  const incidentDetails: Record<number, string> = { 2: 'Slip/trip incident at Floor 6 stairwell. Worker treated on site. No lost time. Reported by Safety Coordinator. Corrective action: installed additional anti slip tape on all stairwell landings.' };
+  useEffect(() => {
+    if (activeProject?.id) {
+      loadLogs(activeProject.id);
+    }
+  }, [activeProject?.id]);
 
-  if (loading || !dailyLogHistory || dailyLogHistory.length === 0) {
+  if (loading || logs.length === 0) {
     return (
       <PageContainer title="Daily Log">
         <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['6'] }}>
@@ -36,16 +41,19 @@ export const DailyLog: React.FC = () => {
     );
   }
 
-  const today = dailyLogHistory[0];
-  const yesterday = dailyLogHistory[1];
-  const lastWeek = dailyLogHistory[4];
-  const previousDays = dailyLogHistory.slice(1);
+  const today = logs[0];
+  const yesterday = logs[1];
+  const lastWeek = logs[4];
+  const previousDays = logs.slice(1);
 
   const todayDate = new Date(today.date + 'T12:00:00');
   const todayFormatted = todayDate.toLocaleDateString('en-US', {
     weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
   });
 
+  // Get manpower and equipment entries for today's log
+  const todayManpower = entries.filter((e) => e.daily_log_id === today.id && e.entry_type === 'manpower');
+  const todayEquipment = entries.filter((e) => e.daily_log_id === today.id && e.entry_type === 'equipment');
   const todayMetrics = [
     { icon: <Users size={16} style={{ color: colors.textTertiary }} />, label: 'Workers', value: today.workers.toString(), valueColor: colors.textPrimary },
     { icon: <Clock size={16} style={{ color: colors.textTertiary }} />, label: 'Hours', value: today.manHours.toLocaleString(), valueColor: colors.textPrimary },
@@ -53,7 +61,6 @@ export const DailyLog: React.FC = () => {
     { icon: <Cloud size={16} style={{ color: colors.textTertiary }} />, label: 'Weather', value: today.weather, valueColor: colors.textPrimary },
   ];
 
-  // Simulated photo mosaic
   const todayPhotos = [
     { id: 1, gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', label: 'Steel Connection' },
     { id: 2, gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', label: 'Safety Gear' },
@@ -62,6 +69,22 @@ export const DailyLog: React.FC = () => {
     { id: 5, gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', label: 'Curtain Wall' },
     { id: 6, gradient: 'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)', label: 'Concrete Check' },
   ];
+
+  const manpowerColors: Record<string, string> = {
+    Concrete: colors.statusInfo,
+    Electrical: colors.statusPending,
+    Mechanical: colors.statusActive,
+    Steel: colors.primaryOrange,
+    Plumbing: colors.statusReview,
+    Carpentry: '#8B5E3C',
+    'General Labor': colors.textTertiary,
+  };
+
+  const equipmentStatusColors: Record<string, string> = {
+    Operating: colors.statusActive,
+    Active: colors.statusActive,
+    Standby: colors.statusPending,
+  };
 
   return (
     <PageContainer title="Daily Log" subtitle={todayFormatted} actions={
@@ -100,6 +123,7 @@ export const DailyLog: React.FC = () => {
             Productivity trending 8% above baseline this week. Concrete crew efficiency highest in project history.
           </p>
         </div>
+
         {/* Today's metrics */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'] }}>
           {todayMetrics.map((metric) => (
@@ -117,23 +141,21 @@ export const DailyLog: React.FC = () => {
         <Card>
           <SectionHeader title="Manpower by Trade" />
           <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'] }}>
-            {[
-              { trade: 'Concrete', count: 42, color: colors.statusInfo },
-              { trade: 'Electrical', count: 35, color: colors.statusPending },
-              { trade: 'Mechanical', count: 28, color: colors.statusActive },
-              { trade: 'Steel', count: 24, color: colors.primaryOrange },
-              { trade: 'Plumbing', count: 18, color: colors.statusReview },
-              { trade: 'Carpentry', count: 16, color: '#8B5E3C' },
-              { trade: 'General Labor', count: 24, color: colors.textTertiary },
-            ].map(t => (
-              <div key={t.trade} style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
-                <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, minWidth: '100px' }}>{t.trade}</span>
-                <div style={{ flex: 1, height: 8, backgroundColor: colors.surfaceInset, borderRadius: 4, overflow: 'hidden' }}>
-                  <div style={{ width: `${(t.count / 42) * 100}%`, height: '100%', backgroundColor: t.color, borderRadius: 4 }} />
+            {todayManpower.length > 0 ? todayManpower.map((entry) => {
+              const data = entry.data as { trade: string; count: number };
+              const maxCount = Math.max(...todayManpower.map((e) => (e.data as { count: number }).count));
+              return (
+                <div key={entry.id} style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
+                  <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, minWidth: '100px' }}>{data.trade}</span>
+                  <div style={{ flex: 1, height: 8, backgroundColor: colors.surfaceInset, borderRadius: 4, overflow: 'hidden' }}>
+                    <div style={{ width: `${(data.count / maxCount) * 100}%`, height: '100%', backgroundColor: manpowerColors[data.trade] || colors.statusInfo, borderRadius: 4 }} />
+                  </div>
+                  <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, minWidth: '24px', textAlign: 'right' }}>{data.count}</span>
                 </div>
-                <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, minWidth: '24px', textAlign: 'right' }}>{t.count}</span>
-              </div>
-            ))}
+              );
+            }) : (
+              <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0 }}>No manpower entries recorded yet</p>
+            )}
           </div>
         </Card>
 
@@ -144,19 +166,19 @@ export const DailyLog: React.FC = () => {
             {['Equipment', 'Qty', 'Location', 'Status'].map(h => (
               <span key={h} style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.4px', backgroundColor: colors.surfaceInset }}>{h}</span>
             ))}
-            {[
-              { name: 'Tower Crane', qty: 1, location: 'Roof', status: 'Operating', statusColor: colors.statusActive },
-              { name: 'Concrete Pump', qty: 2, location: 'Floor 9', status: 'Active', statusColor: colors.statusActive },
-              { name: 'Scissor Lifts', qty: 4, location: 'Floors 3 to 5', status: 'Active', statusColor: colors.statusActive },
-              { name: 'Generator', qty: 1, location: 'Basement', status: 'Standby', statusColor: colors.statusPending },
-            ].map(eq => (
-              <React.Fragment key={eq.name}>
-                <span style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.sm, color: colors.textPrimary, borderBottom: `1px solid ${colors.borderSubtle}` }}>{eq.name}</span>
-                <span style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.sm, color: colors.textSecondary, borderBottom: `1px solid ${colors.borderSubtle}`, textAlign: 'center' }}>{eq.qty}</span>
-                <span style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.sm, color: colors.textSecondary, borderBottom: `1px solid ${colors.borderSubtle}` }}>{eq.location}</span>
-                <span style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: eq.statusColor, borderBottom: `1px solid ${colors.borderSubtle}` }}>{eq.status}</span>
-              </React.Fragment>
-            ))}
+            {todayEquipment.length > 0 ? todayEquipment.map((entry) => {
+              const data = entry.data as { name: string; qty: number; location: string; status: string };
+              return (
+                <React.Fragment key={entry.id}>
+                  <span style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.sm, color: colors.textPrimary, borderBottom: `1px solid ${colors.borderSubtle}` }}>{data.name}</span>
+                  <span style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.sm, color: colors.textSecondary, borderBottom: `1px solid ${colors.borderSubtle}`, textAlign: 'center' }}>{data.qty}</span>
+                  <span style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.sm, color: colors.textSecondary, borderBottom: `1px solid ${colors.borderSubtle}` }}>{data.location}</span>
+                  <span style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: equipmentStatusColors[data.status] || colors.textSecondary, borderBottom: `1px solid ${colors.borderSubtle}` }}>{data.status}</span>
+                </React.Fragment>
+              );
+            }) : (
+              <span style={{ gridColumn: '1 / -1', padding: spacing['3'], fontSize: typography.fontSize.sm, color: colors.textTertiary }}>No equipment entries recorded yet</span>
+            )}
           </div>
         </Card>
 
@@ -170,7 +192,7 @@ export const DailyLog: React.FC = () => {
         />
 
         {/* Day Comparison */}
-        {showComparison && (
+        {showComparison && yesterday && lastWeek && (
           <Card>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['3'] }}>
               <SectionHeader title={compareMode === 'lastweek' ? 'vs Same Day Last Week' : 'vs Yesterday'} />
@@ -220,6 +242,7 @@ export const DailyLog: React.FC = () => {
             signerName="Walker Benner"
             signerTitle="Project Manager"
             onSign={() => {
+              signAndSubmit(today.id, 'signature-data');
               setSigned(true);
               setShowSignature(false);
               addToast('success', 'Daily log approved and sent to distribution list');
@@ -247,14 +270,15 @@ export const DailyLog: React.FC = () => {
             {previousDays.map((log, index) => {
               const logDate = new Date(log.date + 'T12:00:00');
               const formatted = logDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-              const isHovered = hoveredRow === log.id;
+              const isHovered = hoveredRow === index;
               const isLast = index === previousDays.length - 1;
+              const logIncidents = entries.filter((e) => e.daily_log_id === log.id && e.entry_type === 'incident');
 
               return (
                 <div
                   key={log.id}
                   onClick={() => addToast('info', `Viewing details for ${formatted}`)}
-                  onMouseEnter={() => setHoveredRow(log.id)}
+                  onMouseEnter={() => setHoveredRow(index)}
                   onMouseLeave={() => setHoveredRow(null)}
                   style={{
                     display: 'flex', alignItems: 'center',
@@ -276,9 +300,9 @@ export const DailyLog: React.FC = () => {
                         <button onClick={(e) => { e.stopPropagation(); setExpandedIncident(expandedIncident === log.id ? null : log.id); }} style={{ fontSize: typography.fontSize.label, color: colors.statusCritical, fontWeight: typography.fontWeight.medium, backgroundColor: 'transparent', border: 'none', cursor: 'pointer', fontFamily: typography.fontFamily, textDecoration: 'underline', padding: 0 }}>
                           {log.incidents} incident{log.incidents > 1 ? 's' : ''}
                         </button>
-                        {expandedIncident === log.id && incidentDetails[log.id] && (
+                        {expandedIncident === log.id && logIncidents.length > 0 && (
                           <div style={{ marginTop: spacing['2'], padding: `${spacing['2']} ${spacing['3']}`, backgroundColor: `${colors.statusCritical}06`, borderRadius: borderRadius.sm, borderLeft: `3px solid ${colors.statusCritical}`, animation: 'slideInUp 200ms ease-out' }}>
-                            <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: 0, lineHeight: typography.lineHeight.relaxed }}>{incidentDetails[log.id]}</p>
+                            <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: 0, lineHeight: typography.lineHeight.relaxed }}>{(logIncidents[0].data as { description: string }).description}</p>
                           </div>
                         )}
                       </div>
