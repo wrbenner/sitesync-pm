@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Camera, Mic, FileText, AlertTriangle, MapPin, ChevronRight, Sparkles } from 'lucide-react';
 import { PageContainer, Card, Btn, SectionHeader, useToast } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../styles/theme';
+import { useFieldCaptureStore } from '../stores/fieldCaptureStore';
+import { useProjectContext } from '../stores/projectContextStore';
 import { PhotoAnnotator } from '../components/field/PhotoAnnotator';
 import { VoiceRecorder } from '../components/field/VoiceRecorder';
 import { CaptureTimeline } from '../components/field/CaptureTimeline';
@@ -18,26 +20,10 @@ const issueTypes: { type: IssueType; label: string; color: string; template: str
 
 const locations = ['Floor 1', 'Floor 2', 'Floor 3', 'Floor 4', 'Floor 5', 'Floor 6', 'Floor 7', 'Floor 8', 'Floor 9', 'Floor 10', 'Floor 11', 'Floor 12', 'Lobby', 'Basement', 'Roof', 'Exterior'];
 
-const todayCaptures = [
-  { id: 101, type: 'photo' as const, title: 'Floor 7 Steel Connection', time: '8:45 AM', capturedBy: 'John Smith', location: 'Floor 7', aiCategory: 'Steel Connection' },
-  { id: 102, type: 'voice' as const, title: 'Safety observation at north entrance', time: '9:12 AM', capturedBy: 'Maria Garcia', preview: 'North entrance rebar exposed, needs capping', location: 'North Entrance', aiCategory: 'Safety' },
-  { id: 103, type: 'photo' as const, title: 'Completed drywall section L3', time: '10:30 AM', capturedBy: 'Robert Chen', location: 'Floor 3' },
-  { id: 104, type: 'text' as const, title: 'MEP coordination note', time: '11:15 AM', capturedBy: 'James Wilson', preview: 'Elevator shaft routing discussion with plumbing', location: 'Floor 5' },
-  { id: 105, type: 'issue' as const, title: 'Curtain wall panel alignment', time: '1:45 PM', capturedBy: 'Lisa Zhang', location: 'Exterior South', aiCategory: 'Issue' },
-  { id: 106, type: 'photo' as const, title: 'Concrete cure check, Floor 1', time: '2:30 PM', capturedBy: 'David Kumar', location: 'Floor 1', aiCategory: 'Progress' },
-];
-
-const previousCaptures = [
-  { id: 201, type: 'photo' as const, title: 'Floor 5 ductwork installation', time: 'Mar 25, 3:20 PM', capturedBy: 'Karen Williams', location: 'Floor 5', aiCategory: 'MEP Rough In' },
-  { id: 202, type: 'voice' as const, title: 'Waterproofing inspection notes', time: 'Mar 25, 11:45 AM', capturedBy: 'David Kumar', location: 'Basement' },
-  { id: 203, type: 'photo' as const, title: 'Parking garage striping layout', time: 'Mar 25, 9:00 AM', capturedBy: 'Robert Chen', location: 'Parking B1' },
-  { id: 204, type: 'photo' as const, title: 'Elevator shaft MEP routing', time: 'Mar 24, 2:15 PM', capturedBy: 'James Wilson', location: 'Floor 4', aiCategory: 'MEP Coordination' },
-  { id: 205, type: 'issue' as const, title: 'Fire door hardware missing', time: 'Mar 24, 10:30 AM', capturedBy: 'Thomas Rodriguez', location: 'Floor 3', aiCategory: 'Punch Item' },
-  { id: 206, type: 'voice' as const, title: 'Concrete strength test results', time: 'Mar 24, 8:45 AM', capturedBy: 'Mike Patterson', location: 'Floor 9' },
-];
-
 export const FieldCapture: React.FC = () => {
   const { addToast } = useToast();
+  const { loadCaptures, addCapture, getTodayCaptures, getPreviousCaptures } = useFieldCaptureStore();
+  const { activeProject } = useProjectContext();
   const [captureMode, setCaptureMode] = useState<CaptureMode>(null);
   const [showAnnotator, setShowAnnotator] = useState(false);
   const [showVoice, setShowVoice] = useState(false);
@@ -45,9 +31,17 @@ export const FieldCapture: React.FC = () => {
   const [quickTextValue, setQuickTextValue] = useState('');
   const [quickTextLocation, setQuickTextLocation] = useState('');
 
+  useEffect(() => {
+    if (activeProject?.id) {
+      loadCaptures(activeProject.id);
+    }
+  }, [activeProject?.id]);
+
+  const todayCaptures = getTodayCaptures();
+  const previousCaptures = getPreviousCaptures();
+
   const handlePhotoCapture = () => {
     setCaptureMode('photo');
-    // Simulate camera "capture" then open annotator
     setTimeout(() => {
       setCaptureMode(null);
       setShowAnnotator(true);
@@ -55,7 +49,19 @@ export const FieldCapture: React.FC = () => {
   };
 
   const handleQuickTextSend = () => {
-    if (!quickTextValue.trim()) return;
+    if (!quickTextValue.trim() || !activeProject) return;
+    const captureType = quickTextType === 'issue' ? 'issue' as const : 'text' as const;
+    addCapture({
+      project_id: activeProject.id,
+      capture_type: captureType,
+      title: quickTextValue.substring(0, 60),
+      description: quickTextValue,
+      location: quickTextLocation || 'Unspecified',
+      captured_by: 'Current User',
+      ai_category: quickTextType === 'safety' ? 'Safety' : quickTextType === 'issue' ? 'Issue' : null,
+      file_url: null,
+      transcript: null,
+    });
     addToast('success', `${quickTextType ? issueTypes.find((t) => t.type === quickTextType)?.label : 'Note'} captured`);
     setQuickTextValue('');
     setQuickTextType(null);
@@ -76,14 +82,36 @@ export const FieldCapture: React.FC = () => {
     text: `${colors.statusInfo}14`,
   };
 
+  const formatTime = (ts: string) => {
+    const d = new Date(ts);
+    const now = new Date();
+    if (d.toDateString() === now.toDateString()) {
+      return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    }
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ', ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  };
+
+  // Map store captures to CaptureTimeline format
+  const timelineEvents = todayCaptures.map((c) => ({
+    id: parseInt(c.id.replace(/\D/g, '')) || Date.now(),
+    type: c.capture_type as 'photo' | 'voice' | 'text' | 'issue',
+    title: c.title,
+    time: formatTime(c.created_at),
+    capturedBy: c.captured_by,
+    location: c.location,
+    aiCategory: c.ai_category || undefined,
+    preview: c.transcript || c.description,
+  }));
+
   return (
     <PageContainer title="Field Capture" subtitle="Capture photos, voice notes, and observations from the field">
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '12px 16px', marginBottom: '16px', backgroundColor: 'rgba(124, 93, 199, 0.04)', borderRadius: '8px', borderLeft: '3px solid #7C5DC7' }}>
         <Sparkles size={14} color="#7C5DC7" style={{ marginTop: 2, flexShrink: 0 }} />
         <p style={{ fontSize: '13px', color: '#1A1613', margin: 0, lineHeight: 1.5 }}>
-          AI Analysis: 85% of today's captures were auto categorized. 2 potential safety concerns flagged for review.
+          AI Analysis: {todayCaptures.filter((c) => c.ai_category).length > 0 ? `${Math.round((todayCaptures.filter((c) => c.ai_category).length / Math.max(todayCaptures.length, 1)) * 100)}% of today's captures were auto categorized.` : 'No captures yet today.'} {todayCaptures.filter((c) => c.ai_category === 'Safety').length > 0 ? `${todayCaptures.filter((c) => c.ai_category === 'Safety').length} potential safety concern${todayCaptures.filter((c) => c.ai_category === 'Safety').length > 1 ? 's' : ''} flagged for review.` : ''}
         </p>
       </div>
+
       {/* Quick Capture Bar */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: spacing['3'],
@@ -146,9 +174,7 @@ export const FieldCapture: React.FC = () => {
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
           <div style={{ width: '100%', maxWidth: '640px', aspectRatio: '4/3', position: 'relative', backgroundColor: '#1a1a2e' }}>
-            {/* Viewfinder guides */}
             <div style={{ position: 'absolute', top: '10%', left: '10%', width: '80%', height: '80%', border: '1px solid rgba(255,255,255,0.2)', borderRadius: borderRadius.md }}>
-              {/* Corner marks */}
               {['top-left', 'top-right', 'bottom-left', 'bottom-right'].map((pos) => (
                 <div key={pos} style={{
                   position: 'absolute',
@@ -162,12 +188,10 @@ export const FieldCapture: React.FC = () => {
                 }} />
               ))}
             </div>
-            {/* Center crosshair */}
             <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
               <div style={{ width: 20, height: 1, backgroundColor: 'rgba(255,255,255,0.4)' }} />
               <div style={{ width: 1, height: 20, backgroundColor: 'rgba(255,255,255,0.4)', position: 'absolute', top: -10, left: 10 }} />
             </div>
-            {/* Metadata overlay */}
             <div style={{ position: 'absolute', bottom: 16, left: 16, right: 16, display: 'flex', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
                 <MapPin size={12} color="rgba(255,255,255,0.6)" />
@@ -175,12 +199,6 @@ export const FieldCapture: React.FC = () => {
               </div>
               <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.6)' }}>Capturing...</span>
             </div>
-            {/* Flash animation */}
-            <div style={{
-              position: 'absolute', inset: 0, backgroundColor: 'white',
-              animation: 'fadeIn 100ms ease-out reverse',
-              opacity: 0, pointerEvents: 'none',
-            }} />
           </div>
         </div>
       )}
@@ -246,10 +264,14 @@ export const FieldCapture: React.FC = () => {
       <div style={{ marginTop: quickTextType ? spacing['4'] : 0 }}>
         <SectionHeader title="Today's Captures" action={<span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{todayCaptures.length} items</span>} />
         <Card>
-          <CaptureTimeline
-            events={todayCaptures}
-            onSelect={(event) => addToast('info', `Viewing: ${event.title}`)}
-          />
+          {timelineEvents.length > 0 ? (
+            <CaptureTimeline
+              events={timelineEvents}
+              onSelect={(event) => addToast('info', `Viewing: ${event.title}`)}
+            />
+          ) : (
+            <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0, padding: spacing['3'] }}>No captures yet today. Use the buttons above to start capturing.</p>
+          )}
         </Card>
       </div>
 
@@ -272,22 +294,22 @@ export const FieldCapture: React.FC = () => {
             >
               <div style={{
                 width: 32, height: 32, borderRadius: '50%',
-                backgroundColor: captureBgMap[capture.type] || `${colors.statusInfo}14`,
+                backgroundColor: captureBgMap[capture.capture_type] || `${colors.statusInfo}14`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
-                {captureIconMap[capture.type] || <FileText size={14} color={colors.statusInfo} />}
+                {captureIconMap[capture.capture_type] || <FileText size={14} color={colors.statusInfo} />}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], flexWrap: 'wrap' }}>
                   <p style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, margin: 0 }}>{capture.title}</p>
-                  {capture.aiCategory && (
+                  {capture.ai_category && (
                     <span title="Categorized by AI" style={{ display: 'inline-flex', alignItems: 'center', gap: 2, padding: '1px 6px', backgroundColor: `${colors.statusReview}12`, borderRadius: borderRadius.full, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.statusReview }}>
-                      <Sparkles size={10} /> {capture.aiCategory}
+                      <Sparkles size={10} /> {capture.ai_category}
                     </span>
                   )}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
-                  <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0 }}>{capture.capturedBy} · {capture.time}</p>
+                  <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0 }}>{capture.captured_by} · {formatTime(capture.created_at)}</p>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], marginTop: 2 }}>
                   <MapPin size={10} color={colors.textTertiary} />
@@ -295,7 +317,7 @@ export const FieldCapture: React.FC = () => {
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
-                {capture.type === 'photo' && (
+                {capture.capture_type === 'photo' && (
                   <button
                     onClick={(e) => { e.stopPropagation(); addToast('info', 'Select a drawing sheet to pin this photo'); }}
                     style={{
@@ -321,13 +343,44 @@ export const FieldCapture: React.FC = () => {
       {showAnnotator && (
         <PhotoAnnotator
           onClose={() => setShowAnnotator(false)}
-          onSave={() => addToast('success', 'Photo saved with annotations')}
+          onSave={() => {
+            if (activeProject) {
+              addCapture({
+                project_id: activeProject.id,
+                capture_type: 'photo',
+                title: 'New Photo Capture',
+                description: 'Photo captured from field',
+                location: 'Floor 7',
+                captured_by: 'Current User',
+                ai_category: null,
+                file_url: null,
+                transcript: null,
+              });
+            }
+            addToast('success', 'Photo saved with annotations');
+          }}
         />
       )}
       {showVoice && (
         <VoiceRecorder
           onClose={() => setShowVoice(false)}
-          onSave={(_transcript) => { addToast('success', 'Voice note saved'); setShowVoice(false); }}
+          onSave={(transcript) => {
+            if (activeProject) {
+              addCapture({
+                project_id: activeProject.id,
+                capture_type: 'voice',
+                title: transcript.substring(0, 60) || 'Voice Note',
+                description: transcript,
+                location: 'Unspecified',
+                captured_by: 'Current User',
+                ai_category: null,
+                file_url: null,
+                transcript,
+              });
+            }
+            addToast('success', 'Voice note saved');
+            setShowVoice(false);
+          }}
         />
       )}
     </PageContainer>

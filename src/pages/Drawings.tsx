@@ -1,12 +1,16 @@
-import React, { useState } from 'react';
-import { Upload, X, Sparkles, FileText } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Upload, X, Sparkles, FileText, Plus } from 'lucide-react';
 import { PageContainer, Card, Btn, Tag, Skeleton, useToast } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme';
-import { getDrawings } from '../api/endpoints/documents';
-import { useQuery } from '../hooks/useQuery';
 import { AIAnnotationIndicator } from '../components/ai/AIAnnotation';
 import { getAnnotationsForEntity } from '../data/aiAnnotations';
 import { DrawingViewer } from '../components/drawings/DrawingViewer';
+import { PdfViewer } from '../components/drawings/PdfViewer';
+import { UppyUploader } from '../components/files/UppyUploader';
+import { useFileStore } from '../stores/fileStore';
+import { useProjectContext } from '../stores/projectContextStore';
+import { useAuthStore } from '../stores/authStore';
+import type { LocalDrawing } from '../stores/fileStore';
 
 const disciplineColorMap: Record<string, string> = {
   Architectural: '#3A7BC8',
@@ -20,56 +24,37 @@ const disciplineColorMap: Record<string, string> = {
   'Interior Design': '#E07070',
 };
 
-const extraDrawings = [
-  { id: 7, setNumber: 'L-001', title: 'Landscape and Site Plan', discipline: 'Landscape', disciplineColor: 'green', revision: 'A', date: '2025-03-10', sheetCount: 3 },
-  { id: 8, setNumber: 'FP-001', title: 'Fire Protection System Layout', discipline: 'Fire Protection', disciplineColor: 'red', revision: 'B', date: '2025-03-14', sheetCount: 4 },
-  { id: 9, setNumber: 'C-001', title: 'Civil Grading and Drainage', discipline: 'Civil', disciplineColor: 'gray', revision: 'C', date: '2025-03-08', sheetCount: 2 },
-  { id: 10, setNumber: 'ID-001', title: 'Interior Design Lobby and Common Areas', discipline: 'Interior Design', disciplineColor: 'rose', revision: 'A', date: '2025-03-22', sheetCount: 6 },
-  { id: 11, setNumber: 'A-002', title: 'Floor Plans Levels 1 through 6', discipline: 'Architectural', disciplineColor: 'purple', revision: 'D', date: '2025-03-21', sheetCount: 12 },
-  { id: 12, setNumber: 'S-002', title: 'Connection Details and Schedules', discipline: 'Structural', disciplineColor: 'blue', revision: 'B', date: '2025-03-16', sheetCount: 8 },
-];
+const aiChanges: Record<string, number> = {};
+const linkedItems: Record<string, { rfis: number; submittals: number }> = {};
 
-const aiChanges: Record<number, number> = { 1: 3, 5: 2, 11: 4 };
-
-const linkedItems: Record<number, { rfis: number; submittals: number }> = {
-  1: { rfis: 1, submittals: 0 },
-  3: { rfis: 1, submittals: 1 },
-  4: { rfis: 1, submittals: 1 },
-  5: { rfis: 1, submittals: 0 },
-  11: { rfis: 2, submittals: 1 },
-};
-
-const lastViewed: Record<number, string> = {
-  1: '2h ago',
-  2: '1d ago',
-  3: '5h ago',
-  4: '3d ago',
-  5: '1h ago',
-  6: '2d ago',
-  7: 'Never',
-  8: 'Never',
-  9: '4d ago',
-  10: 'Never',
-  11: '30m ago',
-  12: '1d ago',
-};
-
-const gridColumns = '60px 80px 1fr 120px 80px 100px 70px 120px 100px 70px';
+const gridColumns = '60px 80px 1fr 120px 80px 100px 70px 120px 70px';
 
 export const Drawings: React.FC = () => {
   const { addToast } = useToast();
-  const { data: drawings, loading } = useQuery('drawings', getDrawings);
+  const { drawings, loading, loadDrawings, uploadDrawingSet } = useFileStore();
+  const { activeProject } = useProjectContext();
+  const { profile } = useAuthStore();
   const [filter, setFilter] = useState('All');
-  const [selectedDrawing, setSelectedDrawing] = useState<NonNullable<typeof drawings>[0] | null>(null);
-  const [viewerDrawing, setViewerDrawing] = useState<NonNullable<typeof drawings>[0] | null>(null);
-  const [sortField, setSortField] = useState<string>('setNumber');
+  const [selectedDrawing, setSelectedDrawing] = useState<LocalDrawing | null>(null);
+  const [viewerDrawing, setViewerDrawing] = useState<LocalDrawing | null>(null);
+  const [pdfFile, setPdfFile] = useState<{ file: string | File; title: string } | null>(null);
+  const [showUpload, setShowUpload] = useState(false);
+  const [uploadSetNumber, setUploadSetNumber] = useState('');
+  const [uploadTitle, setUploadTitle] = useState('');
+  const [uploadDiscipline, setUploadDiscipline] = useState('Architectural');
+  const [uploadFiles, setUploadFiles] = useState<File[]>([]);
+  const [sortField, setSortField] = useState<string>('set_number');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
 
   const disciplines = ['All', 'Architectural', 'Structural', 'Mechanical', 'Electrical', 'Plumbing', 'Landscape', 'Fire Protection', 'Civil', 'Interior Design'];
 
-  const allDrawings = [...(drawings || []), ...extraDrawings];
-  const filteredDrawings =
-    filter === 'All' ? allDrawings : allDrawings.filter((d) => d.discipline === filter);
+  useEffect(() => {
+    if (activeProject?.id) {
+      loadDrawings(activeProject.id);
+    }
+  }, [activeProject?.id]);
+
+  const filteredDrawings = filter === 'All' ? drawings : drawings.filter((d) => d.discipline === filter);
 
   const handleSort = (field: string) => {
     if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -86,15 +71,110 @@ export const Drawings: React.FC = () => {
     return sortDir === 'asc' ? aVal - bVal : bVal - aVal;
   });
 
+  const handleUploadSet = async () => {
+    if (!uploadSetNumber.trim() || !uploadTitle.trim() || !activeProject || !profile) {
+      addToast('error', 'Set number and title are required');
+      return;
+    }
+
+    const { error } = await uploadDrawingSet(
+      activeProject.id,
+      profile.id,
+      uploadSetNumber.trim(),
+      uploadTitle.trim(),
+      uploadDiscipline,
+      uploadFiles,
+    );
+
+    if (error) {
+      addToast('error', error);
+    } else {
+      addToast('success', `Drawing set ${uploadSetNumber} uploaded`);
+      setShowUpload(false);
+      setUploadSetNumber('');
+      setUploadTitle('');
+      setUploadFiles([]);
+    }
+  };
+
+  const handleViewSheet = (drawing: LocalDrawing) => {
+    // Check if any sheet has a localUrl (uploaded PDF)
+    const sheetWithPdf = drawing.sheets?.find((s) => s.localUrl);
+    if (sheetWithPdf?.localUrl) {
+      setPdfFile({ file: sheetWithPdf.localUrl, title: `${drawing.set_number}: ${drawing.title}` });
+    } else {
+      // Fall back to the canvas drawing viewer
+      setViewerDrawing(drawing);
+    }
+  };
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: `${spacing['2']} ${spacing['3']}`,
+    border: `1px solid ${colors.borderDefault}`,
+    borderRadius: borderRadius.base,
+    fontSize: typography.fontSize.sm,
+    color: colors.textPrimary,
+    backgroundColor: colors.surfacePage,
+    outline: 'none',
+    boxSizing: 'border-box',
+    fontFamily: typography.fontFamily,
+  };
+
   return (
     <PageContainer
       title="Drawings"
+      subtitle={`${drawings.length} drawing sets`}
       actions={
-        <Btn variant="primary" size="md" icon={<Upload size={16} />} onClick={() => addToast('success', 'Drawing set uploaded successfully')}>
+        <Btn variant="primary" size="md" icon={<Upload size={16} />} onClick={() => setShowUpload(!showUpload)}>
           Upload Set
         </Btn>
       }
     >
+      {/* Upload Drawing Set Panel */}
+      {showUpload && (
+        <Card>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing['4'] }}>
+            <h3 style={{ margin: 0, fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+              Upload Drawing Set
+            </h3>
+            <button onClick={() => setShowUpload(false)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: colors.textTertiary, display: 'flex' }}>
+              <X size={18} />
+            </button>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: spacing['3'], marginBottom: spacing['4'] }}>
+            <div>
+              <label style={{ display: 'block', fontSize: typography.fontSize.label, fontWeight: typography.fontWeight.medium, color: colors.textSecondary, marginBottom: spacing['1'] }}>Set Number *</label>
+              <input value={uploadSetNumber} onChange={(e) => setUploadSetNumber(e.target.value)} placeholder="e.g., A-003" style={inputStyle} />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: typography.fontSize.label, fontWeight: typography.fontWeight.medium, color: colors.textSecondary, marginBottom: spacing['1'] }}>Title *</label>
+              <input value={uploadTitle} onChange={(e) => setUploadTitle(e.target.value)} placeholder="Drawing set title" style={inputStyle} />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: typography.fontSize.label, fontWeight: typography.fontWeight.medium, color: colors.textSecondary, marginBottom: spacing['1'] }}>Discipline</label>
+              <select value={uploadDiscipline} onChange={(e) => setUploadDiscipline(e.target.value)} style={{ ...inputStyle, backgroundColor: colors.surfaceRaised }}>
+                {disciplines.filter((d) => d !== 'All').map((d) => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <UppyUploader
+            onFilesSelected={(files) => setUploadFiles((prev) => [...prev, ...files])}
+            accept=".pdf,.dwg,.dxf,.png,.jpg,.jpeg,.tiff"
+            label="Drop drawing sheets here (PDF, DWG, images)"
+          />
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: spacing['3'], marginTop: spacing['4'] }}>
+            <Btn variant="secondary" onClick={() => setShowUpload(false)}>Cancel</Btn>
+            <Btn onClick={handleUploadSet}>
+              <Plus size={14} style={{ marginRight: spacing['1'] }} />
+              Create Drawing Set
+            </Btn>
+          </div>
+        </Card>
+      )}
+
       <div
         style={{
           display: 'grid',
@@ -141,24 +221,21 @@ export const Drawings: React.FC = () => {
 
           {/* Drawings Table */}
           <Card padding="0">
-            {/* Custom sortable header */}
             <div style={{ display: 'grid', gridTemplateColumns: gridColumns, padding: `${spacing.md} ${spacing.lg}`, borderBottom: `1px solid ${colors.border}` }}>
-              {/* thumbnail col, no sort */}
               <span></span>
               {[
-                { field: 'setNumber', label: 'Set #' },
+                { field: 'set_number', label: 'Set #' },
                 { field: 'title', label: 'Title' },
                 { field: 'discipline', label: 'Discipline' },
-                { field: 'revision', label: 'Rev' },
-                { field: 'date', label: 'Date' },
-                { field: 'sheetCount', label: 'Sheets' },
+                { field: 'current_revision', label: 'Rev' },
+                { field: 'created_at', label: 'Date' },
+                { field: '', label: 'Sheets' },
                 { field: '', label: 'Linked' },
-                { field: '', label: 'Last Viewed' },
                 { field: '', label: '' },
               ].map((col, i) => (
                 <button key={col.label || `col-${i}`} onClick={() => col.field && handleSort(col.field)} style={{ display: 'flex', alignItems: 'center', gap: 2, border: 'none', backgroundColor: 'transparent', cursor: col.field ? 'pointer' : 'default', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textTertiary, fontFamily: typography.fontFamily, padding: 0 }}>
                   {col.label}
-                  {col.field && sortField === col.field && <span>{sortDir === 'asc' ? '↑' : '↓'}</span>}
+                  {col.field && sortField === col.field && <span>{sortDir === 'asc' ? '\u2191' : '\u2193'}</span>}
                 </button>
               ))}
             </div>
@@ -173,14 +250,15 @@ export const Drawings: React.FC = () => {
                 <Skeleton width="70px" height="14px" />
                 <Skeleton width="30px" height="14px" />
                 <Skeleton width="60px" height="14px" />
-                <Skeleton width="40px" height="14px" />
                 <Skeleton width="40px" height="22px" borderRadius="4px" />
               </div>
             ))}
             {!loading && sortedDrawings.map((drawing, index) => {
               const thumbColor = disciplineColorMap[drawing.discipline] || '#8C8580';
               const linked = linkedItems[drawing.id];
-              const viewed = lastViewed[drawing.id];
+              const sheetCount = drawing.sheets?.length ?? 0;
+              const formatDate = (d: string) => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
               return (
                 <div
                   key={drawing.id}
@@ -197,20 +275,15 @@ export const Drawings: React.FC = () => {
                   onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = colors.surfaceHover; }}
                   onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
                 >
-                  {/* Thumbnail */}
                   <div style={{ width: 48, height: 36, borderRadius: borderRadius.sm, backgroundColor: thumbColor, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold }}>
                     {drawing.discipline[0]}
                   </div>
-
-                  {/* Set # */}
                   <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
-                    {drawing.setNumber}
+                    {drawing.set_number}
                   </span>
-
-                  {/* Title */}
                   <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary }}>
                     {drawing.title}
-                    {getAnnotationsForEntity('drawing', drawing.id).map((ann) => (
+                    {getAnnotationsForEntity('drawing', parseInt(drawing.id.replace(/\D/g, '')) || 0).map((ann) => (
                       <AIAnnotationIndicator key={ann.id} annotation={ann} inline />
                     ))}
                     {aiChanges[drawing.id] && (
@@ -219,46 +292,26 @@ export const Drawings: React.FC = () => {
                       </span>
                     )}
                   </span>
-
-                  {/* Discipline */}
                   <Tag label={drawing.discipline} />
-
-                  {/* Revision */}
                   <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>
-                    Rev {drawing.revision}
+                    Rev {drawing.current_revision}
                   </span>
-
-                  {/* Date */}
                   <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>
-                    {drawing.date}
+                    {formatDate(drawing.created_at)}
                   </span>
-
-                  {/* Sheets */}
                   <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>
-                    {drawing.sheetCount}
+                    {sheetCount}
                   </span>
-
-                  {/* Linked */}
                   <span style={{ fontSize: typography.fontSize.sm }}>
                     {linked ? (
-                      <span
-                        style={{ color: colors.primaryOrange, cursor: 'pointer', fontSize: typography.fontSize.sm }}
-                        onClick={(e) => { e.stopPropagation(); addToast('info', 'Opening linked items for ' + drawing.setNumber); }}
-                      >
-                        {linked.rfis} RFIs · {linked.submittals} Sub
+                      <span style={{ color: colors.primaryOrange, cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); addToast('info', 'Opening linked items'); }}>
+                        {linked.rfis} RFIs
                       </span>
                     ) : (
-                      <span style={{ color: colors.textTertiary }}>—</span>
+                      <span style={{ color: colors.textTertiary }}>{'\u2014'}</span>
                     )}
                   </span>
-
-                  {/* Last Viewed */}
-                  <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>
-                    {viewed || '—'}
-                  </span>
-
-                  {/* View Button */}
-                  <Btn variant="ghost" size="sm" onClick={() => { setViewerDrawing(drawing); }}>View</Btn>
+                  <Btn variant="ghost" size="sm" onClick={() => { handleViewSheet(drawing); }}>View</Btn>
                 </div>
               );
             })}
@@ -266,7 +319,7 @@ export const Drawings: React.FC = () => {
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', textAlign: 'center' }}>
                 <FileText size={32} color="#A09890" style={{ marginBottom: '12px' }} />
                 <p style={{ fontSize: '14px', fontWeight: 500, color: '#1A1613', margin: 0, marginBottom: '4px' }}>No drawings match your filters</p>
-                <p style={{ fontSize: '13px', color: '#6B6560', margin: 0, marginBottom: '16px' }}>Try adjusting your discipline filter</p>
+                <p style={{ fontSize: '13px', color: '#6B6560', margin: 0, marginBottom: '16px' }}>Try adjusting your discipline filter or upload a new set</p>
                 <button onClick={() => setFilter('All')} style={{ padding: '6px 16px', backgroundColor: 'transparent', border: '1px solid #E5E1DC', borderRadius: '6px', fontSize: '13px', fontFamily: '"Inter", sans-serif', color: '#6B6560', cursor: 'pointer' }}>
                   Clear Filters
                 </button>
@@ -279,58 +332,18 @@ export const Drawings: React.FC = () => {
         {selectedDrawing && (
           <div style={{ position: 'sticky', top: spacing.xl, height: 'fit-content' }}>
             <Card padding={spacing.xl}>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'flex-start',
-                  marginBottom: spacing.xl,
-                }}
-              >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.xl }}>
                 <div>
-                  <p
-                    style={{
-                      fontSize: typography.fontSize.sm,
-                      color: colors.textTertiary,
-                      margin: 0,
-                      marginBottom: spacing.xs,
-                    }}
-                  >
-                    {selectedDrawing.setNumber}
+                  <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0, marginBottom: spacing.xs }}>
+                    {selectedDrawing.set_number}
                   </p>
-                  <h3
-                    style={{
-                      fontSize: typography.fontSize['2xl'],
-                      fontWeight: typography.fontWeight.bold,
-                      color: colors.textPrimary,
-                      margin: 0,
-                    }}
-                  >
+                  <h3 style={{ fontSize: typography.fontSize['2xl'], fontWeight: typography.fontWeight.bold, color: colors.textPrimary, margin: 0 }}>
                     {selectedDrawing.title}
                   </h3>
                 </div>
                 <button
                   onClick={() => setSelectedDrawing(null)}
-                  style={{
-                    width: 32,
-                    height: 32,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: 'transparent',
-                    border: 'none',
-                    borderRadius: borderRadius.md,
-                    cursor: 'pointer',
-                    color: colors.textTertiary,
-                    transition: `background-color ${transitions.quick}`,
-                    flexShrink: 0,
-                  }}
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.surfaceFlat;
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
-                  }}
+                  style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', border: 'none', borderRadius: borderRadius.md, cursor: 'pointer', color: colors.textTertiary, transition: `background-color ${transitions.quick}`, flexShrink: 0 }}
                 >
                   <X size={16} />
                 </button>
@@ -338,44 +351,54 @@ export const Drawings: React.FC = () => {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xl, marginBottom: spacing.xl }}>
                 <div>
-                  <p style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, margin: 0, marginBottom: spacing.xs }}>
-                    Discipline
-                  </p>
-                  <p style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, margin: 0 }}>
-                    {selectedDrawing.discipline}
-                  </p>
+                  <p style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, margin: 0, marginBottom: spacing.xs }}>Discipline</p>
+                  <p style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, margin: 0 }}>{selectedDrawing.discipline}</p>
                 </div>
                 <div>
-                  <p style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, margin: 0, marginBottom: spacing.xs }}>
-                    Revision
-                  </p>
-                  <p style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, margin: 0 }}>
-                    {selectedDrawing.revision}
-                  </p>
+                  <p style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, margin: 0, marginBottom: spacing.xs }}>Revision</p>
+                  <p style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, margin: 0 }}>{selectedDrawing.current_revision}</p>
                 </div>
                 <div>
-                  <p style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, margin: 0, marginBottom: spacing.xs }}>
-                    Date
-                  </p>
-                  <p style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, margin: 0 }}>
-                    {selectedDrawing.date}
-                  </p>
+                  <p style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, margin: 0, marginBottom: spacing.xs }}>Sheets</p>
+                  <p style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, margin: 0 }}>{selectedDrawing.sheets?.length ?? 0}</p>
                 </div>
-                <div>
-                  <p style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, margin: 0, marginBottom: spacing.xs }}>
-                    Sheets
-                  </p>
-                  <p style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, margin: 0 }}>
-                    {selectedDrawing.sheetCount}
-                  </p>
-                </div>
+                {selectedDrawing.sheets && selectedDrawing.sheets.length > 0 && (
+                  <div>
+                    <p style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, margin: 0, marginBottom: spacing.sm }}>Sheet List</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['1'] }}>
+                      {selectedDrawing.sheets.map((sheet) => (
+                        <div
+                          key={sheet.id}
+                          onClick={() => {
+                            if (sheet.localUrl) {
+                              setPdfFile({ file: sheet.localUrl, title: `${sheet.sheet_number}: ${sheet.title}` });
+                            }
+                          }}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: spacing['2'],
+                            padding: `${spacing['2']} ${spacing['3']}`,
+                            backgroundColor: colors.surfaceFlat,
+                            borderRadius: borderRadius.sm,
+                            cursor: sheet.localUrl ? 'pointer' : 'default',
+                            fontSize: typography.fontSize.sm,
+                            color: colors.textPrimary,
+                          }}
+                        >
+                          <FileText size={14} color={colors.textTertiary} />
+                          <span style={{ flex: 1 }}>{sheet.sheet_number}</span>
+                          <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{sheet.title}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm }}>
-                <Btn variant="primary" size="md" fullWidth onClick={() => setViewerDrawing(selectedDrawing)}>
+                <Btn variant="primary" size="md" fullWidth onClick={() => handleViewSheet(selectedDrawing)}>
                   Open Viewer
                 </Btn>
-                <Btn variant="secondary" size="md" fullWidth onClick={() => addToast('info', 'AI Scan initiated for ' + selectedDrawing.setNumber)}>
+                <Btn variant="secondary" size="md" fullWidth onClick={() => addToast('info', 'AI Scan initiated for ' + selectedDrawing.set_number)}>
                   AI Scan
                 </Btn>
               </div>
@@ -383,10 +406,26 @@ export const Drawings: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Canvas Drawing Viewer (existing) */}
       {viewerDrawing && (
         <DrawingViewer
-          drawing={viewerDrawing}
+          drawing={{
+            setNumber: viewerDrawing.set_number,
+            title: viewerDrawing.title,
+            discipline: viewerDrawing.discipline,
+            revision: viewerDrawing.current_revision,
+          }}
           onClose={() => setViewerDrawing(null)}
+        />
+      )}
+
+      {/* PDF Viewer */}
+      {pdfFile && (
+        <PdfViewer
+          file={pdfFile.file}
+          title={pdfFile.title}
+          onClose={() => setPdfFile(null)}
         />
       )}
     </PageContainer>

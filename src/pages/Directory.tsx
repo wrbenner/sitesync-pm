@@ -1,10 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Search, LayoutGrid, List, Mail, Phone, Building, ChevronRight, BarChart3 } from 'lucide-react';
 import { PageContainer, Card, SectionHeader, Avatar, Tag, Skeleton } from '../components/Primitives';
 import { Drawer } from '../components/Drawer';
 import { colors, spacing, typography, borderRadius, transitions, shadows } from '../styles/theme';
-import { getDirectory } from '../api/endpoints/people';
-import { useQuery } from '../hooks/useQuery';
+import { useDirectoryStore } from '../stores/directoryStore';
+import { useProjectContext } from '../stores/projectContextStore';
 
 const GROUP_ORDER = ['Owner', 'Design Team', 'Construction', 'Subcontractors'] as const;
 
@@ -142,9 +142,15 @@ const ViewToggle: React.FC<{
 );
 
 export const Directory: React.FC = () => {
-  const { data: directory, loading } = useQuery('directory', getDirectory);
+  const { activeProject } = useProjectContext();
+  const { entries: directory, loading, loadEntries } = useDirectoryStore();
+
+  useEffect(() => {
+    if (activeProject?.id) loadEntries(activeProject.id);
+  }, [activeProject?.id]);
+
   const [searchQuery, setSearchQuery] = useState('');
-  const [hoveredRow, setHoveredRow] = useState<number | null>(null);
+  const [hoveredRow, setHoveredRow] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
   const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
 
@@ -176,7 +182,7 @@ export const Directory: React.FC = () => {
     return directory.filter((entry) => entry.company === selectedCompany);
   }, [selectedCompany, directory]);
 
-  if (loading || !directory) {
+  if (loading && directory.length === 0) {
     return (
       <PageContainer title="Directory" subtitle="Loading...">
         <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['6'] }}>

@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Play, Square, Clock, Plus, ChevronRight, Sparkles, GripVertical, Users as UsersIcon } from 'lucide-react';
 import { PageContainer, Card, SectionHeader, Tag, Skeleton, useToast, Btn } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../styles/theme';
-import { getMeetings } from '../api/endpoints/people';
-import { useQuery } from '../hooks/useQuery';
+import { useMeetingStore } from '../stores/meetingStore';
+import { useProjectContext } from '../stores/projectContextStore';
 
 const meetingTypeLabel = (type: string) => {
   switch (type) {
@@ -80,7 +80,25 @@ function formatTimer(seconds: number): string {
 
 export const Meetings: React.FC = () => {
   const { addToast } = useToast();
-  const { data: meetings, loading } = useQuery('meetings', getMeetings);
+  const { activeProject } = useProjectContext();
+  const { meetings: rawMeetings, loading, loadMeetings } = useMeetingStore();
+
+  useEffect(() => {
+    if (activeProject?.id) loadMeetings(activeProject.id);
+  }, [activeProject?.id]);
+
+  // Map store shape to the shape expected by this page
+  const meetings = rawMeetings.map((m) => ({
+    id: m.id,
+    type: m.meeting_type,
+    title: m.title,
+    date: m.meeting_date,
+    time: m.meeting_time,
+    location: m.location || '',
+    attendeeCount: m.attendee_count,
+    status: m.status,
+    hasMinutes: m.has_minutes,
+  }));
 
   const [activeTab, setActiveTab] = useState<'upcoming' | 'calendar' | 'live'>('upcoming');
   const [liveMeeting, setLiveMeeting] = useState<any>(null);
@@ -135,7 +153,7 @@ export const Meetings: React.FC = () => {
     setActionInput('');
   };
 
-  if (loading || !meetings) {
+  if (loading && meetings.length === 0) {
     return (
       <PageContainer title="Meetings">
         <SectionHeader title="Upcoming" />

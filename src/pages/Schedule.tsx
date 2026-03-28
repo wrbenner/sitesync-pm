@@ -1,23 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sparkles } from 'lucide-react';
 import { PageContainer, Card, SectionHeader, MetricBox, Skeleton, Btn, useToast } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../styles/theme';
-import { useQuery } from '../hooks/useQuery';
-import { getSchedulePhases } from '../api/endpoints/schedule';
-import { getMetrics } from '../api/endpoints/projects';
+import { useScheduleStore } from '../stores/scheduleStore';
+import { useProjectContext } from '../stores/projectContextStore';
 import { PredictiveAlertBanner } from '../components/ai/PredictiveAlert';
 import { getPredictiveAlertsForPage } from '../data/aiAnnotations';
 import { GanttChart } from '../components/schedule/GanttChart';
 
 export const Schedule: React.FC = () => {
-  const { data: schedulePhases, loading: phasesLoading } = useQuery('schedulePhases', getSchedulePhases);
-  const { data: metrics, loading: metricsLoading } = useQuery('metrics', getMetrics);
-  const loading = phasesLoading || metricsLoading;
+  const { activeProject } = useProjectContext();
+  const { phases: schedulePhases, metrics, loading, loadSchedule } = useScheduleStore();
+
+  useEffect(() => {
+    if (activeProject?.id) loadSchedule(activeProject.id);
+  }, [activeProject?.id]);
+
   const [whatIfMode, setWhatIfMode] = useState(false);
   const [recoveryExpanded, setRecoveryExpanded] = useState(false);
   const { addToast } = useToast();
 
-  if (loading || !schedulePhases || !metrics) {
+  if (loading && schedulePhases.length === 0) {
     return (
       <PageContainer title="Schedule" subtitle="Loading...">
         <div

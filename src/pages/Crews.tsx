@@ -2,28 +2,28 @@ import React, { useState, useEffect } from 'react';
 import { BarChart3, MapPin, Award, AlertTriangle } from 'lucide-react';
 import { PageContainer, Card, ProgressBar, Skeleton, SectionHeader } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme';
-import { getCrews } from '../api/endpoints/people';
-import { useQuery } from '../hooks/useQuery';
+import { useCrewStore } from '../stores/crewStore';
+import { useProjectContext } from '../stores/projectContextStore';
 import { AIAnnotationIndicator } from '../components/ai/AIAnnotation';
 import { PredictiveAlertBanner } from '../components/ai/PredictiveAlert';
 import { getAnnotationsForEntity, getPredictiveAlertsForPage } from '../data/aiAnnotations';
 
-const crewColors: Record<number, string> = {
-  1: colors.statusInfo,
-  2: colors.statusActive,
-  3: colors.statusPending,
-  4: colors.statusReview,
-  5: colors.primaryOrange,
-  6: colors.statusNeutral,
+const crewColors: Record<string, string> = {
+  'crew-1': colors.statusInfo,
+  'crew-2': colors.statusActive,
+  'crew-3': colors.statusPending,
+  'crew-4': colors.statusReview,
+  'crew-5': colors.primaryOrange,
+  'crew-6': colors.statusNeutral,
 };
 
-const crewPositions: Record<number, { x: number; y: number }> = {
-  1: { x: 72, y: 22 },
-  2: { x: 35, y: 48 },
-  3: { x: 55, y: 72 },
-  4: { x: 88, y: 55 },
-  5: { x: 25, y: 28 },
-  6: { x: 48, y: 85 },
+const crewPositions: Record<string, { x: number; y: number }> = {
+  'crew-1': { x: 72, y: 22 },
+  'crew-2': { x: 35, y: 48 },
+  'crew-3': { x: 55, y: 72 },
+  'crew-4': { x: 88, y: 55 },
+  'crew-5': { x: 25, y: 28 },
+  'crew-6': { x: 48, y: 85 },
 };
 
 const certifications = [
@@ -34,50 +34,56 @@ const certifications = [
   { crew: 'Exterior Crew D', cert: 'Fall Protection', expires: '2025-04-01', status: 'expiring' },
 ];
 
-const crewTaskOverrides: Record<number, string[]> = {
-  1: ['Level 9 concrete pour', 'Formwork Floor 10'],
-  2: ['Ductwork installation floors 6 through 8', 'VAV box connections Floor 5'],
-  3: ['Electrical rough in floors 3 through 5', 'Panel installation Floor 2'],
-  4: ['Curtain wall installation floors 4 through 6'],
-  5: ['Steel erection floors 9 through 10', 'Connections Floor 8'],
-  6: ['Drywall taping Floor 2', 'Primer coat Lobby'],
+const crewTaskOverrides: Record<string, string[]> = {
+  'crew-1': ['Level 9 concrete pour', 'Formwork Floor 10'],
+  'crew-2': ['Ductwork installation floors 6 through 8', 'VAV box connections Floor 5'],
+  'crew-3': ['Electrical rough in floors 3 through 5', 'Panel installation Floor 2'],
+  'crew-4': ['Curtain wall installation floors 4 through 6'],
+  'crew-5': ['Steel erection floors 9 through 10', 'Connections Floor 8'],
+  'crew-6': ['Drywall taping Floor 2', 'Primer coat Lobby'],
 };
 
-const crewForemen: Record<number, string> = {
-  1: 'Mike Torres',
-  2: 'Sarah Chen',
-  3: 'Ray Johnson',
-  4: 'Carlos Mendez',
-  5: 'Dave Williams',
-  6: 'Lisa Park',
+const crewForemen: Record<string, string> = {
+  'crew-1': 'Mike Torres',
+  'crew-2': 'Sarah Chen',
+  'crew-3': 'Ray Johnson',
+  'crew-4': 'Carlos Mendez',
+  'crew-5': 'Dave Williams',
+  'crew-6': 'Lisa Park',
 };
 
-const crewCerts: Record<number, { label: string; color: string }[]> = {
-  1: [{ label: 'OSHA 30', color: colors.statusActive }, { label: 'First Aid', color: colors.statusInfo }],
-  2: [{ label: 'OSHA 30', color: colors.statusActive }],
-  3: [{ label: 'OSHA 30', color: colors.statusActive }, { label: 'First Aid', color: colors.statusInfo }],
-  4: [{ label: 'Training Due', color: colors.statusPending }],
-  5: [{ label: 'OSHA 30', color: colors.statusActive }],
-  6: [{ label: 'Training Due', color: colors.statusPending }],
+const crewCerts: Record<string, { label: string; color: string }[]> = {
+  'crew-1': [{ label: 'OSHA 30', color: colors.statusActive }, { label: 'First Aid', color: colors.statusInfo }],
+  'crew-2': [{ label: 'OSHA 30', color: colors.statusActive }],
+  'crew-3': [{ label: 'OSHA 30', color: colors.statusActive }, { label: 'First Aid', color: colors.statusInfo }],
+  'crew-4': [{ label: 'Training Due', color: colors.statusPending }],
+  'crew-5': [{ label: 'OSHA 30', color: colors.statusActive }],
+  'crew-6': [{ label: 'Training Due', color: colors.statusPending }],
 };
 
 export const Crews: React.FC = () => {
-  const { data: crews, loading } = useQuery('crews', getCrews);
+  const { crews, loading, loadCrews } = useCrewStore();
+  const { activeProject } = useProjectContext();
   const [activeTab, setActiveTab] = useState<'map' | 'cards' | 'performance'>('cards');
   const [dotPositions, setDotPositions] = useState(crewPositions);
-  const [hoveredCrew, setHoveredCrew] = useState<number | null>(null);
+  const [hoveredCrew, setHoveredCrew] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (activeProject?.id) {
+      loadCrews(activeProject.id);
+    }
+  }, [activeProject?.id]);
 
   // Simulated movement for map dots
   useEffect(() => {
     if (activeTab !== 'map') return;
     const interval = setInterval(() => {
       setDotPositions((prev) => {
-        const next: Record<number, { x: number; y: number }> = {};
+        const next: Record<string, { x: number; y: number }> = {};
         for (const key of Object.keys(prev)) {
-          const id = Number(key);
-          next[id] = {
-            x: Math.max(8, Math.min(92, prev[id].x + (Math.random() - 0.5) * 3)),
-            y: Math.max(8, Math.min(92, prev[id].y + (Math.random() - 0.5) * 3)),
+          next[key] = {
+            x: Math.max(8, Math.min(92, prev[key].x + (Math.random() - 0.5) * 3)),
+            y: Math.max(8, Math.min(92, prev[key].y + (Math.random() - 0.5) * 3)),
           };
         }
         return next;
@@ -86,7 +92,7 @@ export const Crews: React.FC = () => {
     return () => clearInterval(interval);
   }, [activeTab]);
 
-  if (loading || !crews) {
+  if (loading || crews.length === 0) {
     return (
       <PageContainer title="Crews" subtitle="Loading crews...">
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: spacing.lg }}>

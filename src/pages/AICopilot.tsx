@@ -1,222 +1,77 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { MessageSquare, Clock, Download, Clipboard, Share2, FileText } from 'lucide-react';
-import { PageContainer, Skeleton, useToast } from '../components/Primitives';
+import React, { useState, useRef, useEffect } from 'react';
+import { MessageSquare, Clock, Download, Clipboard, Share2, FileText, Send, Plus, Trash2, Key } from 'lucide-react';
+import { PageContainer, useToast } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme';
-import { getCostData } from '../api/endpoints/budget';
-import { getProject, getMetrics } from '../api/endpoints/projects';
-import { useQuery } from '../hooks/useQuery';
-import { ChatMessageBubble, AITypingIndicator } from '../components/ai/ChatMessage';
-import type { ChatMessageData } from '../components/ai/ChatMessage';
+import { useCopilotStore } from '../stores/copilotStore';
 import { SuggestedPrompts, getPromptsForPage } from '../components/ai/SuggestedPrompts';
-import { AIActionCard } from '../components/ai/AIActionCard';
-import { MentionInput } from '../components/activity/MentionInput';
-
-const DataRow: React.FC<{ label: string; value: string; valueColor?: string }> = ({
-  label, value, valueColor = colors.textPrimary,
-}) => (
-  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: `${spacing['2']} 0` }}>
-    <span style={{ fontSize: typography.fontSize.body, color: colors.textSecondary }}>{label}</span>
-    <span style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium, color: valueColor }}>{value}</span>
-  </div>
-);
-
-const conversationHistory = [
-  { id: 'c-1', title: 'Steel delivery delay analysis', time: 'Today', active: true, status: 'pending' as const },
-  { id: 'c-2', title: 'Weekly OAC meeting prep', time: 'Yesterday', status: 'complete' as const },
-  { id: 'c-3', title: 'Budget variance review', time: '2 days ago', status: 'complete' as const },
-  { id: 'c-4', title: 'Safety audit checklist', time: '3 days ago', status: 'pending' as const },
-  { id: 'c-5', title: 'MEP coordination issues', time: 'Last week', status: 'complete' as const },
-  { id: 'c-6', title: 'Crew reallocation options', time: 'Last week', status: 'info' as const },
-  { id: 'c-7', title: 'RFI response time analysis', time: '2 weeks ago', status: 'complete' as const },
-  { id: 'c-8', title: 'Weather impact forecast', time: '2 weeks ago', status: 'info' as const },
-];
-
-const statusDotColor: Record<string, string> = {
-  complete: colors.statusActive,
-  pending: colors.primaryOrange,
-  info: colors.textTertiary,
-};
-
-function buildInitialMessages(
-  costData: { divisions: { name: string; budget: number; spent: number; committed: number }[] },
-  metrics: { progress: number; budgetTotal: number; budgetSpent: number },
-  projectData: { name: string; daysRemaining: number },
-): ChatMessageData[] {
-  const budgetVariance = costData.divisions.map((d) => {
-    const variance = d.budget - d.spent - d.committed;
-    const pct = ((variance / d.budget) * 100).toFixed(1);
-    return { name: d.name, variance, pct };
-  });
-
-  return [
-    {
-      id: 1,
-      role: 'bot',
-      content: (
-        <div>
-          <p style={{ margin: 0, marginBottom: spacing['3'], lineHeight: typography.lineHeight.relaxed }}>
-            Good morning. Here is your project pulse for <strong>{projectData.name}</strong>. You are at {metrics.progress}% completion with {projectData.daysRemaining} days remaining. Three items need your attention today.
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['1'], padding: spacing['3'], backgroundColor: 'rgba(0,0,0,0.03)', borderRadius: borderRadius.md }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: spacing['2'] }}>
-              <span style={{ color: colors.statusCritical }}>1.</span>
-              <span>Steel delivery from Phoenix supplier delayed 2 weeks. Recovery options available.</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: spacing['2'] }}>
-              <span style={{ color: colors.statusPending }}>2.</span>
-              <span>RFI-004 awaiting structural engineer response. 3 days overdue.</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: spacing['2'] }}>
-              <span style={{ color: colors.statusInfo }}>3.</span>
-              <span>HVAC shop drawings (SUB-002) due for review by Friday.</span>
-            </div>
-          </div>
-          <AIActionCard
-            title="Expedite steel delivery"
-            description="Tulsa supplier available. $28K premium, net $19K savings vs delay costs."
-            actionLabel="Approve Expediting"
-            severity="critical"
-            onAction={() => {}}
-          />
-        </div>
-      ),
-      timestamp: new Date(Date.now() - 15 * 60 * 1000),
-    },
-    {
-      id: 2,
-      role: 'user',
-      content: <span>What is the status on the steel delivery delay?</span>,
-      timestamp: new Date(Date.now() - 12 * 60 * 1000),
-    },
-    {
-      id: 3,
-      role: 'bot',
-      content: (
-        <div>
-          <p style={{ margin: 0, marginBottom: spacing['3'], lineHeight: typography.lineHeight.relaxed }}>
-            The steel delivery delay is tied to <strong>RFI-004</strong>, submitted to Structural Systems Inc. The Phoenix supplier (Fabricator ABC Steel) is running 2 weeks behind due to mill capacity constraints.
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', padding: spacing['3'], backgroundColor: 'rgba(0,0,0,0.03)', borderRadius: borderRadius.md, marginBottom: spacing['3'] }}>
-            <DataRow label="Linked RFI" value="RFI-004" />
-            <DataRow label="Supplier" value="Fabricator ABC Steel (Phoenix)" />
-            <DataRow label="Delay Impact" value="14 calendar days" valueColor={colors.statusCritical} />
-            <DataRow label="Cost Impact" value="$28,000 expediting" valueColor={colors.statusPending} />
-            <DataRow label="Recovery Savings" value="$47,000 avoided delay costs" valueColor={colors.statusActive} />
-          </div>
-          <p style={{ margin: 0, marginBottom: spacing['2'], lineHeight: typography.lineHeight.relaxed }}>Recommended recovery options:</p>
-          <ul style={{ margin: 0, paddingLeft: spacing['5'] }}>
-            <li style={{ lineHeight: typography.lineHeight.relaxed, marginBottom: spacing['1'] }}>Expedite with Tulsa secondary supplier. 10 day delivery, $28K freight premium, net $19K savings.</li>
-            <li style={{ lineHeight: typography.lineHeight.relaxed, marginBottom: spacing['1'] }}>Accelerate parallel MEP rough in on floors 4 through 6 to absorb schedule float.</li>
-            <li style={{ lineHeight: typography.lineHeight.relaxed }}>Redirect exterior crew to secondary facade while steel is in transit.</li>
-          </ul>
-        </div>
-      ),
-      timestamp: new Date(Date.now() - 10 * 60 * 1000),
-    },
-    {
-      id: 4,
-      role: 'user',
-      content: <span>Show me budget variance by division</span>,
-      timestamp: new Date(Date.now() - 8 * 60 * 1000),
-    },
-    {
-      id: 5,
-      role: 'bot',
-      content: (
-        <div>
-          <p style={{ margin: 0, marginBottom: spacing['3'], lineHeight: typography.lineHeight.relaxed }}>
-            Here is the budget variance breakdown across all five divisions. Total project budget is <strong>${(metrics.budgetTotal / 1000000).toFixed(1)}M</strong> with ${(metrics.budgetSpent / 1000000).toFixed(1)}M spent to date.
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', padding: spacing['3'], backgroundColor: 'rgba(0,0,0,0.03)', borderRadius: borderRadius.md, marginBottom: spacing['3'] }}>
-            {budgetVariance.map((d) => (
-              <DataRow
-                key={d.name}
-                label={d.name}
-                value={`${d.variance >= 0 ? '+' : ''}$${(d.variance / 1000).toFixed(0)}K (${d.pct}%)`}
-                valueColor={d.variance >= 0 ? colors.statusActive : colors.statusCritical}
-              />
-            ))}
-          </div>
-          <p style={{ margin: 0, lineHeight: typography.lineHeight.relaxed }}>
-            Structural is nearly fully committed with minimal remaining contingency. Interior and Mechanical have the most uncommitted budget remaining.
-          </p>
-          <AIActionCard
-            title="Flag Structural for monitoring"
-            description="Any change orders will push Structural over budget. Recommend reallocating $200K from Interior contingency."
-            actionLabel="Create Budget Alert"
-            severity="warning"
-            onAction={() => {}}
-          />
-        </div>
-      ),
-      timestamp: new Date(Date.now() - 5 * 60 * 1000),
-    },
-  ];
-}
 
 export const AICopilot: React.FC = () => {
   const { addToast } = useToast();
-  const { data: costData, loading: costLoading } = useQuery('costData', getCostData);
-  const { data: metrics, loading: metricsLoading } = useQuery('metrics', getMetrics);
-  const { data: projectData, loading: projectLoading } = useQuery('project', getProject);
-  const loading = costLoading || metricsLoading || projectLoading;
+  const {
+    conversations,
+    activeConversationId,
+    isTyping,
+    apiKey,
+    setApiKey,
+    getActiveConversation,
+    createConversation,
+    setActiveConversation,
+    sendMessage,
+    deleteConversation,
+  } = useCopilotStore();
 
-  const initialMessages = useMemo<ChatMessageData[]>(() => {
-    if (!costData || !metrics || !projectData) return [];
-    return buildInitialMessages(costData, metrics, projectData);
-  }, [costData, metrics, projectData]);
-
-  const [messages, setMessages] = useState<ChatMessageData[]>([]);
-  const [isTyping, setIsTyping] = useState(false);
   const [showHistory, setShowHistory] = useState(true);
   const [exportOpen, setExportOpen] = useState(false);
+  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+  const [keyInput, setKeyInput] = useState('');
+  const [inputText, setInputText] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Sync initial messages
-  useEffect(() => {
-    if (initialMessages.length > 0 && messages.length === 0) {
-      setMessages(initialMessages);
-    }
-  }, [initialMessages]);
+  const activeConversation = getActiveConversation();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  useEffect(() => { scrollToBottom(); }, [messages, isTyping]);
+  useEffect(() => { scrollToBottom(); }, [activeConversation?.messages, isTyping]);
 
-  const sendMessage = (text: string) => {
-    const userMsg: ChatMessageData = {
-      id: Date.now(),
-      role: 'user',
-      content: <span>{text}</span>,
-      timestamp: new Date(),
-    };
-    setMessages((prev) => [...prev, userMsg]);
-    setIsTyping(true);
+  const handleSend = (text?: string) => {
+    const msg = text || inputText.trim();
+    if (!msg) return;
+    setInputText('');
+    sendMessage(msg);
+  };
 
-    setTimeout(() => {
-      setIsTyping(false);
-      const botMsg: ChatMessageData = {
-        id: Date.now() + 1,
-        role: 'bot',
-        content: (
-          <div>
-            <p style={{ margin: 0, lineHeight: typography.lineHeight.relaxed }}>
-              I am analyzing your request. Based on the current project data for Meridian Tower, here is what I found:
-            </p>
-            <p style={{ margin: 0, marginTop: spacing['3'], lineHeight: typography.lineHeight.relaxed, color: colors.textSecondary }}>
-              This is a simulated response. In production, this would connect to an AI model with full project context.
-            </p>
-          </div>
-        ),
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, botMsg]);
-    }, 1500 + Math.random() * 1000);
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  const handleSaveApiKey = () => {
+    if (keyInput.trim()) {
+      setApiKey(keyInput.trim());
+      addToast('success', 'API key saved. Copilot will now use Claude for responses.');
+    }
+    setShowApiKeyModal(false);
+    setKeyInput('');
   };
 
   const prompts = getPromptsForPage('dashboard');
+
+  const formatTime = (ts: string) => {
+    const d = new Date(ts);
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffMin = Math.floor(diffMs / 60000);
+    if (diffMin < 1) return 'Just now';
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffHr = Math.floor(diffMin / 60);
+    if (diffHr < 24) return `${diffHr}h ago`;
+    return d.toLocaleDateString();
+  };
 
   return (
     <PageContainer>
@@ -227,35 +82,55 @@ export const AICopilot: React.FC = () => {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['3'] }}>
               <span style={{ fontSize: typography.fontSize.label, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: typography.letterSpacing.wider }}>History</span>
               <button
-                style={{ padding: `${spacing['1']} ${spacing['2']}`, backgroundColor: colors.primaryOrange, color: 'white', border: 'none', borderRadius: borderRadius.base, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, fontFamily: typography.fontFamily, cursor: 'pointer' }}
+                onClick={() => createConversation()}
+                style={{ padding: `${spacing['1']} ${spacing['2']}`, backgroundColor: colors.primaryOrange, color: 'white', border: 'none', borderRadius: borderRadius.base, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, fontFamily: typography.fontFamily, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: spacing['1'] }}
               >
-                + New
+                <Plus size={10} /> New
               </button>
             </div>
             <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: spacing['1'] }}>
-              {conversationHistory.map((conv) => (
-                <button
-                  key={conv.id}
-                  style={{
-                    display: 'flex', alignItems: 'flex-start', gap: spacing['2'],
-                    padding: `${spacing['2']} ${spacing['3']}`,
-                    backgroundColor: conv.active ? colors.orangeSubtle : 'transparent',
-                    border: 'none', borderRadius: borderRadius.base,
-                    cursor: 'pointer', textAlign: 'left', fontFamily: typography.fontFamily,
-                    transition: `background-color ${transitions.instant}`,
-                  }}
-                  onMouseEnter={(e) => { if (!conv.active) (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.surfaceHover; }}
-                  onMouseLeave={(e) => { if (!conv.active) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'; }}
-                >
-                  <div style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: statusDotColor[conv.status] || colors.textTertiary, flexShrink: 0, marginTop: 5 }} />
-                  <MessageSquare size={13} color={conv.active ? colors.primaryOrange : colors.textTertiary} style={{ marginTop: 2, flexShrink: 0 }} />
-                  <div>
-                    <p style={{ fontSize: typography.fontSize.sm, color: conv.active ? colors.primaryOrange : colors.textPrimary, fontWeight: conv.active ? typography.fontWeight.medium : typography.fontWeight.normal, margin: 0, lineHeight: typography.lineHeight.snug }}>{conv.title}</p>
-                    <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0, marginTop: 1 }}>{conv.time}</p>
+              {conversations.map((conv) => {
+                const isActive = conv.id === activeConversationId;
+                return (
+                  <div
+                    key={conv.id}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: spacing['2'],
+                      padding: `${spacing['2']} ${spacing['3']}`,
+                      backgroundColor: isActive ? colors.orangeSubtle : 'transparent',
+                      borderRadius: borderRadius.base,
+                      cursor: 'pointer',
+                      transition: `background-color ${transitions.instant}`,
+                    }}
+                    onClick={() => setActiveConversation(conv.id)}
+                    onMouseEnter={(e) => { if (!isActive) (e.currentTarget as HTMLDivElement).style.backgroundColor = colors.surfaceHover; }}
+                    onMouseLeave={(e) => { if (!isActive) (e.currentTarget as HTMLDivElement).style.backgroundColor = 'transparent'; }}
+                  >
+                    <MessageSquare size={13} color={isActive ? colors.primaryOrange : colors.textTertiary} style={{ flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: typography.fontSize.sm, color: isActive ? colors.primaryOrange : colors.textPrimary, fontWeight: isActive ? typography.fontWeight.medium : typography.fontWeight.normal, margin: 0, lineHeight: typography.lineHeight.snug, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{conv.title}</p>
+                      <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0, marginTop: 1 }}>{formatTime(conv.updated_at)}</p>
+                    </div>
+                    {conversations.length > 1 && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); deleteConversation(conv.id); }}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 20, height: 20, backgroundColor: 'transparent', border: 'none', borderRadius: borderRadius.base, cursor: 'pointer', color: colors.textTertiary, opacity: 0.5, flexShrink: 0 }}
+                      >
+                        <Trash2 size={11} />
+                      </button>
+                    )}
                   </div>
-                </button>
-              ))}
+                );
+              })}
             </div>
+            {/* API Key config */}
+            <button
+              onClick={() => setShowApiKeyModal(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], padding: `${spacing['2']} ${spacing['3']}`, backgroundColor: 'transparent', border: `1px solid ${colors.borderSubtle}`, borderRadius: borderRadius.base, cursor: 'pointer', color: colors.textTertiary, fontSize: typography.fontSize.caption, fontFamily: typography.fontFamily, marginTop: spacing['3'] }}
+            >
+              <Key size={12} />
+              {apiKey ? 'API Key Set' : 'Set API Key'}
+            </button>
           </div>
         )}
 
@@ -276,6 +151,11 @@ export const AICopilot: React.FC = () => {
               <Clock size={12} />
               {showHistory ? 'Hide' : 'Show'} history
             </button>
+            {!apiKey && (
+              <span style={{ fontSize: typography.fontSize.caption, color: colors.statusPending, fontWeight: typography.fontWeight.medium }}>
+                Demo mode (set API key for live Claude responses)
+              </span>
+            )}
             <div style={{ marginLeft: 'auto', position: 'relative' }}>
               <button onClick={() => setExportOpen(!exportOpen)} title="Export conversation" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, backgroundColor: 'transparent', border: 'none', borderRadius: borderRadius.base, cursor: 'pointer', color: colors.textTertiary }}>
                 <Download size={14} />
@@ -301,47 +181,168 @@ export const AICopilot: React.FC = () => {
           </div>
 
           {/* Messages */}
-          <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: spacing['5'], marginBottom: spacing['4'] }}>
-            {loading && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'], padding: spacing['3'] }}>
-                <div style={{ display: 'flex', gap: spacing['3'] }}>
-                  <Skeleton width="28px" height="28px" borderRadius={borderRadius.full} />
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: spacing['2'] }}>
-                    <Skeleton height="16px" width="80%" />
-                    <Skeleton height="16px" width="60%" />
-                  </div>
-                </div>
+          <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: spacing['4'], marginBottom: spacing['4'], paddingRight: spacing['2'] }}>
+            {activeConversation?.messages.length === 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: spacing['3'], color: colors.textTertiary }}>
+                <MessageSquare size={32} />
+                <p style={{ fontSize: typography.fontSize.body, margin: 0 }}>Start a conversation with SiteSync AI Copilot</p>
               </div>
             )}
 
-            {messages.map((msg) => (
-              <ChatMessageBubble key={msg.id} message={msg} />
+            {activeConversation?.messages.map((msg) => (
+              <div key={msg.id} style={{ display: 'flex', gap: spacing['3'], flexDirection: msg.role === 'user' ? 'row-reverse' : 'row' }}>
+                {/* Avatar */}
+                <div style={{
+                  width: 28, height: 28, borderRadius: borderRadius.full, flexShrink: 0,
+                  backgroundColor: msg.role === 'assistant' ? colors.primaryOrange : colors.surfaceInset,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
+                  color: msg.role === 'assistant' ? 'white' : colors.textSecondary,
+                }}>
+                  {msg.role === 'assistant' ? 'AI' : 'You'}
+                </div>
+
+                {/* Message bubble */}
+                <div style={{
+                  maxWidth: '70%',
+                  padding: `${spacing['3']} ${spacing['4']}`,
+                  borderRadius: borderRadius.lg,
+                  backgroundColor: msg.role === 'user' ? colors.primaryOrange : colors.surfaceRaised,
+                  color: msg.role === 'user' ? 'white' : colors.textPrimary,
+                  fontSize: typography.fontSize.body,
+                  lineHeight: typography.lineHeight.relaxed,
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                }}>
+                  {msg.content}
+                  <div style={{
+                    fontSize: typography.fontSize.caption,
+                    color: msg.role === 'user' ? 'rgba(255,255,255,0.7)' : colors.textTertiary,
+                    marginTop: spacing['2'],
+                  }}>
+                    {formatTime(msg.timestamp)}
+                  </div>
+                </div>
+              </div>
             ))}
 
-            {isTyping && <AITypingIndicator />}
+            {isTyping && (
+              <div style={{ display: 'flex', gap: spacing['3'] }}>
+                <div style={{ width: 28, height: 28, borderRadius: borderRadius.full, flexShrink: 0, backgroundColor: colors.primaryOrange, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: 'white' }}>AI</div>
+                <div style={{ padding: `${spacing['3']} ${spacing['4']}`, borderRadius: borderRadius.lg, backgroundColor: colors.surfaceRaised, display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: colors.textTertiary, animation: 'pulse 1.4s infinite', animationDelay: '0s' }} />
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: colors.textTertiary, animation: 'pulse 1.4s infinite', animationDelay: '0.2s' }} />
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: colors.textTertiary, animation: 'pulse 1.4s infinite', animationDelay: '0.4s' }} />
+                </div>
+              </div>
+            )}
             <div ref={messagesEndRef} />
           </div>
 
           {/* Suggested prompts */}
-          <div style={{ marginBottom: spacing['5'] }}>
-            <SuggestedPrompts prompts={prompts} onSelect={(p) => {
-              const userMsg: ChatMessageData = { id: Date.now(), role: 'user', content: <span>{p}</span>, timestamp: new Date() };
-              setMessages((prev) => [...prev, userMsg]);
-              setIsTyping(true);
-              setTimeout(() => {
-                setIsTyping(false);
-                setMessages((prev) => [...prev, { id: Date.now() + 1, role: 'bot', content: (<div><p style={{ margin: 0, lineHeight: typography.lineHeight.relaxed }}>Analyzing: "{p}"</p><p style={{ margin: 0, marginTop: spacing['3'], lineHeight: typography.lineHeight.relaxed, color: colors.textSecondary }}>This is a simulated response for the prototype.</p></div>), timestamp: new Date() }]);
-              }, 1500);
-            }} />
-          </div>
+          {activeConversation && activeConversation.messages.length <= 1 && (
+            <div style={{ marginBottom: spacing['3'] }}>
+              <SuggestedPrompts prompts={prompts} onSelect={(p) => handleSend(p)} />
+            </div>
+          )}
 
           {/* Input */}
-          <MentionInput
-            onSend={(text) => sendMessage(text)}
-            placeholder="Ask about your project... Use @ to mention someone"
-          />
+          <div style={{
+            display: 'flex', alignItems: 'flex-end', gap: spacing['2'],
+            padding: spacing['3'],
+            backgroundColor: colors.surfaceRaised,
+            borderRadius: borderRadius.lg,
+            border: `1px solid ${colors.borderSubtle}`,
+          }}>
+            <textarea
+              ref={inputRef}
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Ask about your project..."
+              rows={1}
+              style={{
+                flex: 1, resize: 'none', border: 'none', outline: 'none',
+                backgroundColor: 'transparent', fontFamily: typography.fontFamily,
+                fontSize: typography.fontSize.body, color: colors.textPrimary,
+                lineHeight: typography.lineHeight.relaxed,
+                maxHeight: '120px',
+              }}
+            />
+            <button
+              onClick={() => handleSend()}
+              disabled={!inputText.trim() || isTyping}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: 32, height: 32, borderRadius: borderRadius.full,
+                backgroundColor: inputText.trim() && !isTyping ? colors.primaryOrange : colors.surfaceInset,
+                border: 'none', cursor: inputText.trim() && !isTyping ? 'pointer' : 'default',
+                color: inputText.trim() && !isTyping ? 'white' : colors.textTertiary,
+                flexShrink: 0,
+                transition: `all ${transitions.instant}`,
+              }}
+            >
+              <Send size={14} />
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* API Key Modal */}
+      {showApiKeyModal && (
+        <>
+          <div onClick={() => setShowApiKeyModal(false)} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 1000 }} />
+          <div style={{
+            position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+            backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.lg,
+            padding: spacing['5'], zIndex: 1001, width: '420px', maxWidth: '90vw',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
+          }}>
+            <h3 style={{ fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>
+              Configure AI Copilot
+            </h3>
+            <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: 0, marginBottom: spacing['4'], lineHeight: typography.lineHeight.relaxed }}>
+              Enter your Anthropic API key to enable live Claude responses. Without a key, the copilot uses intelligent demo responses.
+            </p>
+            <input
+              type="password"
+              value={keyInput}
+              onChange={(e) => setKeyInput(e.target.value)}
+              placeholder="sk-ant-..."
+              style={{
+                width: '100%', padding: `${spacing['2']} ${spacing['3']}`,
+                border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base,
+                fontSize: typography.fontSize.body, fontFamily: typography.fontFamily,
+                color: colors.textPrimary, backgroundColor: colors.surfacePage,
+                outline: 'none', boxSizing: 'border-box',
+              }}
+            />
+            <div style={{ display: 'flex', gap: spacing['2'], marginTop: spacing['4'], justifyContent: 'flex-end' }}>
+              {apiKey && (
+                <button
+                  onClick={() => { setApiKey(''); setShowApiKeyModal(false); addToast('info', 'API key removed. Using demo mode.'); }}
+                  style={{ padding: `${spacing['2']} ${spacing['3']}`, backgroundColor: 'transparent', border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, color: colors.statusCritical, cursor: 'pointer' }}
+                >
+                  Remove Key
+                </button>
+              )}
+              <button
+                onClick={() => setShowApiKeyModal(false)}
+                style={{ padding: `${spacing['2']} ${spacing['3']}`, backgroundColor: 'transparent', border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, color: colors.textSecondary, cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveApiKey}
+                style={{ padding: `${spacing['2']} ${spacing['3']}`, backgroundColor: colors.primaryOrange, border: 'none', borderRadius: borderRadius.base, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, color: 'white', cursor: 'pointer', fontWeight: typography.fontWeight.semibold }}
+              >
+                Save Key
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </PageContainer>
   );
 };
