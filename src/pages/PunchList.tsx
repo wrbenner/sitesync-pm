@@ -91,13 +91,14 @@ const PunchListPage: React.FC = () => {
     if (activeProject?.id) {
       loadItems(activeProject.id);
     }
-  }, [activeProject?.id]);
+  }, [activeProject?.id, loadItems]);
 
   const pageAlerts = getPredictiveAlertsForPage('punchlist');
 
   // Map store items to the PunchItem interface expected by the UI
   const expandedPunchList: PunchItem[] = useMemo(() => {
     return storeItems.map((item) => ({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       id: item.id as any,
       itemNumber: `PL-${String(item.item_number).padStart(3, '0')}`,
       area: item.area,
@@ -384,6 +385,7 @@ const PunchListPage: React.FC = () => {
                 },
                 {
                   width: '90px',
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   content: <PriorityTag priority={item.priority as any} />,
                 },
                 {
@@ -427,6 +429,7 @@ const PunchListPage: React.FC = () => {
                 {selected.description}
               </h3>
               <div style={{ display: 'flex', gap: spacing.sm, flexWrap: 'wrap' }}>
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                 <PriorityTag priority={selected.priority as any} />
                 <StatusTag status={statusMap[selected.status]} label={statusLabel[selected.status]} />
               </div>

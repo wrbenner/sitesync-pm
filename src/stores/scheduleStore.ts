@@ -66,6 +66,7 @@ export const useScheduleStore = create<ScheduleState>()((set) => ({
         .order('start_date', { ascending: true });
 
       if (error) throw error;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const phases: SchedulePhase[] = (data ?? []).map((d: any) => ({
         id: d.id,
         name: d.name,

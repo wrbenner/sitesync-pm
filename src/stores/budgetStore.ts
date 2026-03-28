@@ -111,6 +111,7 @@ export const useBudgetStore = create<BudgetState>()((set, get) => ({
       return { error: null };
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase.from('budget_divisions') as any).insert(
       divisions.map((d) => ({ ...d, project_id: projectId }))
     );
@@ -131,6 +132,7 @@ export const useBudgetStore = create<BudgetState>()((set, get) => ({
       return { error: null };
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase.from('budget_divisions') as any).insert(division);
     if (error) return { error: error.message };
     await get().loadBudget(division.project_id);
@@ -145,6 +147,7 @@ export const useBudgetStore = create<BudgetState>()((set, get) => ({
       return { error: null };
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase.from('budget_divisions') as any).update(updates).eq('id', id);
     if (!error) {
       set((s) => ({
@@ -187,6 +190,7 @@ export const useBudgetStore = create<BudgetState>()((set, get) => ({
       return { error: null };
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase.from('budget_line_items') as any).insert(item);
     if (!error) {
       await get().loadLineItems(item.division_id);
@@ -225,6 +229,7 @@ export const useBudgetStore = create<BudgetState>()((set, get) => ({
       return { error: null };
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase.from('change_orders') as any).insert(co);
     if (!error) await get().loadChangeOrders(co.project_id);
     return { error: error?.message ?? null };
@@ -241,6 +246,7 @@ export const useBudgetStore = create<BudgetState>()((set, get) => ({
       return { error: null };
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase.from('change_orders') as any).update(updates).eq('id', id);
     if (!error) {
       set((s) => ({

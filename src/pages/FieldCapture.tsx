@@ -35,7 +35,7 @@ export const FieldCapture: React.FC = () => {
     if (activeProject?.id) {
       loadCaptures(activeProject.id);
     }
-  }, [activeProject?.id]);
+  }, [activeProject?.id, loadCaptures]);
 
   const todayCaptures = getTodayCaptures();
   const previousCaptures = getPreviousCaptures();
@@ -93,7 +93,7 @@ export const FieldCapture: React.FC = () => {
 
   // Map store captures to CaptureTimeline format
   const timelineEvents = todayCaptures.map((c) => ({
-    id: parseInt(c.id.replace(/\D/g, '')) || Date.now(),
+    id: parseInt(c.id.replace(/\D/g, '')) || 0,
     type: c.capture_type as 'photo' | 'voice' | 'text' | 'issue',
     title: c.title,
     time: formatTime(c.created_at),

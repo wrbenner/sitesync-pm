@@ -147,7 +147,7 @@ export const Directory: React.FC = () => {
 
   useEffect(() => {
     if (activeProject?.id) loadEntries(activeProject.id);
-  }, [activeProject?.id]);
+  }, [activeProject?.id, loadEntries]);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);

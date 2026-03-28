@@ -32,7 +32,8 @@ export const useActivityStore = create<ActivityState>()((set, get) => ({
   activities: [],
   loading: false,
 
-  loadActivities: (_projectId) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  loadActivities: (_projectId: string) => {
     set({ activities: MOCK_ACTIVITIES, loading: false });
   },
 

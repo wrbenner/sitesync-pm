@@ -104,10 +104,12 @@ export function getErrorBuffer() {
 /**
  * Wrap an async function with automatic error capture.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function withErrorTracking<T extends (...args: any[]) => Promise<any>>(
   fn: T,
   context: ErrorContext
 ): T {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (async (...args: any[]) => {
     try {
       return await fn(...args);

@@ -72,7 +72,7 @@ export const Crews: React.FC = () => {
     if (activeProject?.id) {
       loadCrews(activeProject.id);
     }
-  }, [activeProject?.id]);
+  }, [activeProject?.id, loadCrews]);
 
   // Simulated movement for map dots
   useEffect(() => {

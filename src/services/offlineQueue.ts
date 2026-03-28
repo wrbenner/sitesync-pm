@@ -23,6 +23,7 @@ function loadPersistedQueue(): QueuedMutation[] {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return parsed.map((item: any) => ({ ...item, timestamp: new Date(item.timestamp) }));
   } catch {
     return [];

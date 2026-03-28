@@ -52,7 +52,7 @@ export const Drawings: React.FC = () => {
     if (activeProject?.id) {
       loadDrawings(activeProject.id);
     }
-  }, [activeProject?.id]);
+  }, [activeProject?.id, loadDrawings]);
 
   const filteredDrawings = filter === 'All' ? drawings : drawings.filter((d) => d.discipline === filter);
 

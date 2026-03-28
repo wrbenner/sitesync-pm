@@ -86,6 +86,7 @@ export const useFieldCaptureStore = create<FieldCaptureState>()((set, get) => ({
       return { error: null };
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase.from('field_captures') as any).insert(capture);
     if (error) return { error: error.message };
     await get().loadCaptures(capture.project_id);
@@ -98,6 +99,7 @@ export const useFieldCaptureStore = create<FieldCaptureState>()((set, get) => ({
       return { error: null };
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase.from('field_captures') as any).delete().eq('id', id);
     if (!error) {
       set((s) => ({ captures: s.captures.filter((c) => c.id !== id) }));

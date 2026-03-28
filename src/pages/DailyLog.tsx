@@ -24,7 +24,7 @@ export const DailyLog: React.FC = () => {
     if (activeProject?.id) {
       loadLogs(activeProject.id);
     }
-  }, [activeProject?.id]);
+  }, [activeProject?.id, loadLogs]);
 
   if (loading || logs.length === 0) {
     return (

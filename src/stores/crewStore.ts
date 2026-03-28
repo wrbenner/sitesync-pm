@@ -50,6 +50,7 @@ export const useCrewStore = create<CrewState>()((set, get) => ({
         .order('name');
 
       if (error) throw error;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const crews: CrewWithDetails[] = (data ?? []).map((c: any) => ({
         ...c,
         location: c.location || 'TBD',
@@ -74,6 +75,7 @@ export const useCrewStore = create<CrewState>()((set, get) => ({
       return { error: null };
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase.from('crews') as any).insert({
       project_id: crew.project_id,
       name: crew.name,
@@ -96,6 +98,7 @@ export const useCrewStore = create<CrewState>()((set, get) => ({
       return { error: null };
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase.from('crews') as any).update(updates).eq('id', id);
     if (!error) {
       set((s) => ({
@@ -111,6 +114,7 @@ export const useCrewStore = create<CrewState>()((set, get) => ({
       return { error: null };
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase.from('crews') as any).delete().eq('id', id);
     if (!error) {
       set((s) => ({ crews: s.crews.filter((c) => c.id !== id) }));

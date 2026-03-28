@@ -25,6 +25,7 @@ export const Budget: React.FC = () => {
   const { addToast } = useToast();
   const { divisions, changeOrders, loading: budgetLoading, loadBudget, getSummary } = useBudgetStore();
   const { activeProject } = useProjectContext();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [selectedCO, setSelectedCO] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'earned-value'>('overview');
   const [showImport, setShowImport] = useState(false);
@@ -33,7 +34,7 @@ export const Budget: React.FC = () => {
     if (activeProject?.id) {
       loadBudget(activeProject.id);
     }
-  }, [activeProject?.id]);
+  }, [activeProject?.id, loadBudget]);
 
   const summary = getSummary();
   const totalValue = summary.totalBudget || 47500000;

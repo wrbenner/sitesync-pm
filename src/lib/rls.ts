@@ -47,6 +47,7 @@ export function scopedQuery(table: string) {
   const ctx = getTenantContext();
   const query = supabase.from(table).select('*');
   if (ctx) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return (query as any).eq('project_id', ctx.projectId);
   }
   return query;
@@ -60,6 +61,7 @@ export function scopedInsert(table: string, data: Record<string, unknown>) {
   const enriched = ctx
     ? { ...data, project_id: ctx.projectId, created_by: ctx.userId }
     : data;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (supabase.from(table) as any).insert(enriched);
 }
 

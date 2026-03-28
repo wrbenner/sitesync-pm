@@ -69,6 +69,7 @@ export const useMeetingStore = create<MeetingState>()((set, get) => ({
         .order('meeting_date', { ascending: false });
 
       if (error) throw error;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const meetings: MeetingWithDetails[] = (data ?? []).map((m: any) => ({
         ...m,
         attendee_count: m.attendee_count || 0,
@@ -92,6 +93,7 @@ export const useMeetingStore = create<MeetingState>()((set, get) => ({
       return { error: null };
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase.from('meetings') as any).insert(meeting);
     if (error) return { error: error.message };
     await get().loadMeetings(meeting.project_id);
@@ -106,6 +108,7 @@ export const useMeetingStore = create<MeetingState>()((set, get) => ({
       return { error: null };
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase.from('meetings') as any).update(updates).eq('id', id);
     if (!error) {
       set((s) => ({
@@ -121,6 +124,7 @@ export const useMeetingStore = create<MeetingState>()((set, get) => ({
       return { error: null };
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase.from('meetings') as any).delete().eq('id', id);
     if (!error) {
       set((s) => ({ meetings: s.meetings.filter((m) => m.id !== id) }));

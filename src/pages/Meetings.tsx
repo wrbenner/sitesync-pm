@@ -85,7 +85,7 @@ export const Meetings: React.FC = () => {
 
   useEffect(() => {
     if (activeProject?.id) loadMeetings(activeProject.id);
-  }, [activeProject?.id]);
+  }, [activeProject?.id, loadMeetings]);
 
   // Map store shape to the shape expected by this page
   const meetings = rawMeetings.map((m) => ({

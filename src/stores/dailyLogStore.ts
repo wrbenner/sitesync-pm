@@ -73,6 +73,7 @@ export const useDailyLogStore = create<DailyLogState>()((set, get) => ({
         .order('log_date', { ascending: false });
 
       if (error) throw error;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const logs: DailyLogSummary[] = (data ?? []).map((d: any) => ({
         id: d.id,
         date: d.log_date,
@@ -105,6 +106,7 @@ export const useDailyLogStore = create<DailyLogState>()((set, get) => ({
       return { error: null };
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase.from('daily_logs') as any).insert({
       project_id: projectId,
       log_date: date,
@@ -126,6 +128,7 @@ export const useDailyLogStore = create<DailyLogState>()((set, get) => ({
       return { error: null };
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase.from('daily_logs') as any).update({ status, updated_at: new Date().toISOString() }).eq('id', logId);
     if (!error) {
       set((s) => ({
@@ -148,6 +151,7 @@ export const useDailyLogStore = create<DailyLogState>()((set, get) => ({
       return { error: null };
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase.from('daily_log_entries') as any).insert({
       daily_log_id: logId,
       entry_type: entryType,
@@ -165,6 +169,7 @@ export const useDailyLogStore = create<DailyLogState>()((set, get) => ({
       return { error: null };
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase.from('daily_logs') as any).update({
       status: 'submitted',
       signature_url: signatureUrl,

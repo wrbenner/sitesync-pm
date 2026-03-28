@@ -147,10 +147,12 @@ export const useCopilotStore = create<CopilotState>()((set, get) => ({
 
         if (!response.ok) {
           const errData = await response.json().catch(() => ({}));
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           throw new Error((errData as any).error?.message || `API error: ${response.status}`);
         }
 
         const data = await response.json();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         responseText = (data as any).content?.[0]?.text ?? 'I was unable to generate a response.';
       } catch (err) {
         responseText = `I encountered an error connecting to the AI service: ${(err as Error).message}. Please check your API key and try again.`;

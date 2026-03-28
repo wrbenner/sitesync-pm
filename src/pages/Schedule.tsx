@@ -14,7 +14,7 @@ export const Schedule: React.FC = () => {
 
   useEffect(() => {
     if (activeProject?.id) loadSchedule(activeProject.id);
-  }, [activeProject?.id]);
+  }, [activeProject?.id, loadSchedule]);
 
   const [whatIfMode, setWhatIfMode] = useState(false);
   const [recoveryExpanded, setRecoveryExpanded] = useState(false);

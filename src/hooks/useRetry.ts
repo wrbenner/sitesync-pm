@@ -13,6 +13,7 @@ interface RetryState<T> {
   error: Error | null;
   loading: boolean;
   retryCount: number;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   execute: (...args: any[]) => Promise<T | null>;
   reset: () => void;
 }
@@ -22,6 +23,7 @@ interface RetryState<T> {
  * Useful for network requests that may fail transiently.
  */
 export function useRetry<T>(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   fn: (...args: any[]) => Promise<T>,
   config: RetryConfig = {}
 ): RetryState<T> {
@@ -39,6 +41,7 @@ export function useRetry<T>(
   const abortRef = useRef(false);
 
   const execute = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     async (...args: any[]): Promise<T | null> => {
       setLoading(true);
       setError(null);

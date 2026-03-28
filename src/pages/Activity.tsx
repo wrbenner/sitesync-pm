@@ -49,7 +49,7 @@ export const Activity: React.FC = () => {
 
   useEffect(() => {
     if (activeProject?.id) loadActivities(activeProject.id);
-  }, [activeProject?.id]);
+  }, [activeProject?.id, loadActivities]);
 
   const filtered = getFiltered(activeFilter);
 

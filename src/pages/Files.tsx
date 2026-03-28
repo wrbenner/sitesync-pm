@@ -37,7 +37,7 @@ export const Files: React.FC = () => {
     if (activeProject?.id) {
       loadFiles(activeProject.id);
     }
-  }, [activeProject?.id]);
+  }, [activeProject?.id, loadFiles]);
 
   const filteredFiles = searchTerm
     ? files.filter((f) => f.name.toLowerCase().includes(searchTerm.toLowerCase()) || f.folder_path.toLowerCase().includes(searchTerm.toLowerCase()))

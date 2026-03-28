@@ -54,6 +54,7 @@ export const useDirectoryStore = create<DirectoryState>()((set, get) => ({
         .order('company', { ascending: true });
 
       if (error) throw error;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const entries: DirectoryEntry[] = (data ?? []).map((d: any) => ({
         id: d.id,
         project_id: d.project_id,
@@ -76,6 +77,7 @@ export const useDirectoryStore = create<DirectoryState>()((set, get) => ({
       return { error: null };
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase.from('directory') as any).insert({
       project_id: entry.project_id,
       company: entry.company,
@@ -97,6 +99,7 @@ export const useDirectoryStore = create<DirectoryState>()((set, get) => ({
       return { error: null };
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase.from('directory') as any).update(updates).eq('id', id);
     if (!error) {
       set((s) => ({
@@ -112,6 +115,7 @@ export const useDirectoryStore = create<DirectoryState>()((set, get) => ({
       return { error: null };
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase.from('directory') as any).delete().eq('id', id);
     if (!error) {
       set((s) => ({ entries: s.entries.filter((e) => e.id !== id) }));
