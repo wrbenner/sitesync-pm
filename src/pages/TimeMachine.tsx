@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Play, Pause, SkipForward, Columns, Flag, DollarSign, Users, HelpCircle, Camera, Calendar, Sparkles } from 'lucide-react';
-import { PageContainer, Card, Btn, ProgressBar, useToast } from '../components/Primitives';
+import { PageContainer, Card, Btn, ProgressBar } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme';
 import { useAnimatedNumber } from '../hooks/useAnimatedNumber';
 
@@ -51,7 +51,6 @@ const snapshotPhotos = [
 ];
 
 export const TimeMachine: React.FC = () => {
-  const { addToast: _addToast } = useToast();
   const [currentIndex, setCurrentIndex] = useState(snapshots.length - 1);
   const [playing, setPlaying] = useState(false);
   const [compareIndex, setCompareIndex] = useState<number | null>(null);

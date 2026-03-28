@@ -18,7 +18,7 @@ function yPos(val: number): number {
   return H - (val / maxVal) * H;
 }
 
-export const SCurve: React.FC<SCurveProps> = ({ totalBudget: _totalBudget, spent: _spent }) => {
+export const SCurve: React.FC<SCurveProps> = () => {
   const [animated, setAnimated] = useState(false);
   const [hovered, setHovered] = useState<number | null>(null);
 

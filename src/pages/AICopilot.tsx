@@ -166,18 +166,13 @@ export const AICopilot: React.FC = () => {
     return buildInitialMessages(costData, metrics, projectData);
   }, [costData, metrics, projectData]);
 
-  const [messages, setMessages] = useState<ChatMessageData[]>([]);
+  const [userMessages, setUserMessages] = useState<ChatMessageData[]>([]);
+  const messages = useMemo(() => [...initialMessages, ...userMessages], [initialMessages, userMessages]);
+  const setMessages = setUserMessages;
   const [isTyping, setIsTyping] = useState(false);
   const [showHistory, setShowHistory] = useState(true);
   const [exportOpen, setExportOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  // Sync initial messages
-  useEffect(() => {
-    if (initialMessages.length > 0 && messages.length === 0) {
-      setMessages(initialMessages);
-    }
-  }, [initialMessages]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });

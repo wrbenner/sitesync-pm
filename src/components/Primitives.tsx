@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { useState, useEffect, useContext, createContext, useCallback, useRef } from 'react';
 import { X, Search, CheckCircle, AlertTriangle, Info, XCircle, ChevronRight, LayoutGrid, HelpCircle, Calendar, DollarSign, User, Users, ClipboardList, FileText } from 'lucide-react';
 import type { RelatedItem, EntityType } from '../utils/connections';

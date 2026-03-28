@@ -327,7 +327,7 @@ export const FieldCapture: React.FC = () => {
       {showVoice && (
         <VoiceRecorder
           onClose={() => setShowVoice(false)}
-          onSave={(_transcript) => { addToast('success', 'Voice note saved'); setShowVoice(false); }}
+          onSave={() => { addToast('success', 'Voice note saved'); setShowVoice(false); }}
         />
       )}
     </PageContainer>

@@ -193,6 +193,7 @@ export const useRfiStore = create<RfiState>()((set, get) => ({
       return { error: null, rfi: newRfi };
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (supabase.from('rfis') as any)
       .insert({
         project_id: rfi.project_id,
@@ -224,6 +225,7 @@ export const useRfiStore = create<RfiState>()((set, get) => ({
       return { error: null };
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase.from('rfis') as any).update(updates).eq('id', rfiId);
     if (!error) {
       set((s) => ({
@@ -279,6 +281,7 @@ export const useRfiStore = create<RfiState>()((set, get) => ({
       return { error: null };
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase.from('rfi_responses') as any).insert({
       rfi_id: rfiId,
       user_id: userId,

@@ -177,6 +177,7 @@ export const useSubmittalStore = create<SubmittalState>()((set, get) => ({
       return { error: null, submittal: newSub };
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (supabase.from('submittals') as any)
       .insert({
         project_id: submittal.project_id,
@@ -199,6 +200,7 @@ export const useSubmittalStore = create<SubmittalState>()((set, get) => ({
     // Create reviewer entries if provided
     if (submittal.reviewer_ids?.length) {
       for (let i = 0; i < submittal.reviewer_ids.length; i++) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await (supabase.from('submittal_reviewers') as any).insert({
           submittal_id: newSub.id,
           user_id: submittal.reviewer_ids[i],
@@ -222,6 +224,7 @@ export const useSubmittalStore = create<SubmittalState>()((set, get) => ({
       return { error: null };
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase.from('submittals') as any).update(updates).eq('id', id);
     if (!error) {
       set((s) => ({
@@ -282,6 +285,7 @@ export const useSubmittalStore = create<SubmittalState>()((set, get) => ({
       return { error: null };
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase.from('submittal_reviewers') as any)
       .update({ status, reviewed_at: new Date().toISOString(), comments: comments ?? null })
       .eq('id', reviewerId);

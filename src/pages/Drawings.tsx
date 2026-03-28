@@ -77,7 +77,9 @@ export const Drawings: React.FC = () => {
   };
 
   const sortedDrawings = [...filteredDrawings].sort((a, b) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const aVal = (a as any)[sortField];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const bVal = (b as any)[sortField];
     if (aVal == null && bVal == null) return 0;
     if (aVal == null) return 1;

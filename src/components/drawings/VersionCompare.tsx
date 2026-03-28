@@ -16,7 +16,7 @@ const mockChanges = [
   { id: 3, x: 20, y: 70, w: 12, h: 8, label: 'Door swing reversed', severity: 'warning' as const },
 ];
 
-export const VersionCompare: React.FC<VersionCompareProps> = ({ currentRev, previousRev, drawingTitle: _drawingTitle }) => {
+export const VersionCompare: React.FC<VersionCompareProps> = ({ currentRev, previousRev }) => {
   const [mode, setMode] = useState<CompareMode>('overlay');
   const [opacity, setOpacity] = useState(50);
   const [showChanges, setShowChanges] = useState(true);

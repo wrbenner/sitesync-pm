@@ -69,7 +69,7 @@ export const Activity: React.FC = () => {
       {/* Post input */}
       <Card padding={spacing['4']}>
         <MentionInput
-          onSend={(_text) => addToast('success', 'Posted to activity feed')}
+          onSend={() => addToast('success', 'Posted to activity feed')}
           placeholder="Share an update with the team... Use @ to mention someone"
         />
       </Card>

@@ -8,6 +8,7 @@ import { useAppNavigate, getRelatedItemsForPunchItem } from '../utils/connection
 import { AIAnnotationIndicator } from '../components/ai/AIAnnotation';
 import { PredictiveAlertBanner } from '../components/ai/PredictiveAlert';
 import { getAnnotationsForEntity, getPredictiveAlertsForPage } from '../data/aiAnnotations';
+import type { Priority } from '../types/database';
 
 const statusMap: Record<string, 'pending' | 'active' | 'complete'> = {
   open: 'pending',
@@ -119,6 +120,7 @@ const PunchListPage: React.FC = () => {
   const pageAlerts = getPredictiveAlertsForPage('punchlist');
 
   const expandedPunchList: PunchItem[] = useMemo(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const base: PunchItem[] = (punchList || []).map((p: any) => ({
       ...p,
       photoCount: p.hasPhoto ? 2 : 0,
@@ -408,7 +410,7 @@ const PunchListPage: React.FC = () => {
                 },
                 {
                   width: '90px',
-                  content: <PriorityTag priority={item.priority as any} />,
+                  content: <PriorityTag priority={item.priority as Priority} />,
                 },
                 {
                   width: '100px',
@@ -451,7 +453,7 @@ const PunchListPage: React.FC = () => {
                 {selected.description}
               </h3>
               <div style={{ display: 'flex', gap: spacing.sm, flexWrap: 'wrap' }}>
-                <PriorityTag priority={selected.priority as any} />
+                <PriorityTag priority={selected.priority as Priority} />
                 <StatusTag status={statusMap[selected.status]} label={statusLabel[selected.status]} />
               </div>
             </div>

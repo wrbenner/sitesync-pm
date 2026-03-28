@@ -176,19 +176,45 @@ function AppContent() {
   // Initialize auth on mount
   useEffect(() => {
     initialize();
-  }, []);
+  }, [initialize]);
 
   // Load projects when company is available
   useEffect(() => {
     if (company?.id) {
       loadProjects(company.id);
     }
-  }, [company?.id]);
+  }, [company?.id, loadProjects]);
 
   const activeView = location.pathname.replace('/', '') || 'dashboard';
+  const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
+
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  const { toggleContextPanel } = useAIAnnotationStore();
+  const sidebarWidth = sidebarCollapsed ? layout.sidebarCollapsed : layout.sidebarWidth;
+
+  const handleNavigate = (view: string) => {
+    setActiveView(view);
+    navigate(`/${view}`);
+  };
+
+  // Keyboard shortcuts
+  const shortcuts: Shortcut[] = [
+    { key: '/', meta: true, description: 'Keyboard shortcuts', action: () => setShortcutsOpen((p) => !p) },
+    { key: 'b', meta: true, description: 'Toggle sidebar', action: () => setSidebarCollapsed(!sidebarCollapsed) },
+    { key: '.', meta: true, description: 'Toggle AI panel', action: toggleContextPanel },
+    { key: 'n', meta: true, description: 'New item', action: () => handleNavigate('tasks') },
+    { key: 'e', meta: true, description: 'Export', action: () => setExportOpen(true) },
+    { key: '1', meta: true, description: 'Dashboard', action: () => handleNavigate('dashboard') },
+    { key: '2', meta: true, description: 'Tasks', action: () => handleNavigate('tasks') },
+    { key: '3', meta: true, description: 'Schedule', action: () => handleNavigate('schedule') },
+    { key: '4', meta: true, description: 'Budget', action: () => handleNavigate('budget') },
+    { key: 'Escape', description: 'Close panels', action: () => { setNotificationsOpen(false); setShortcutsOpen(false); setExportOpen(false); } },
+  ];
+  useKeyboardShortcuts(shortcuts);
 
   // Show auth pages without layout
-  const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
   if (isAuthPage) {
     return (
       <Suspense fallback={<PageLoader />}>
@@ -196,11 +222,6 @@ function AppContent() {
       </Suspense>
     );
   }
-
-  const handleNavigate = (view: string) => {
-    setActiveView(view);
-    navigate(`/${view}`);
-  };
 
   const commandItems = [
     { id: 'nav-dashboard', label: 'Dashboard', section: 'Pages', icon: <Home size={16} />, onSelect: () => handleNavigate('dashboard') },
@@ -236,27 +257,6 @@ function AppContent() {
       icon: <Users size={16} />, onSelect: () => handleNavigate('directory'),
     })),
   ];
-
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [shortcutsOpen, setShortcutsOpen] = useState(false);
-  const [exportOpen, setExportOpen] = useState(false);
-  const { toggleContextPanel } = useAIAnnotationStore();
-  const sidebarWidth = sidebarCollapsed ? layout.sidebarCollapsed : layout.sidebarWidth;
-
-  // Keyboard shortcuts
-  const shortcuts: Shortcut[] = [
-    { key: '/', meta: true, description: 'Keyboard shortcuts', action: () => setShortcutsOpen((p) => !p) },
-    { key: 'b', meta: true, description: 'Toggle sidebar', action: () => setSidebarCollapsed(!sidebarCollapsed) },
-    { key: '.', meta: true, description: 'Toggle AI panel', action: toggleContextPanel },
-    { key: 'n', meta: true, description: 'New item', action: () => handleNavigate('tasks') },
-    { key: 'e', meta: true, description: 'Export', action: () => setExportOpen(true) },
-    { key: '1', meta: true, description: 'Dashboard', action: () => handleNavigate('dashboard') },
-    { key: '2', meta: true, description: 'Tasks', action: () => handleNavigate('tasks') },
-    { key: '3', meta: true, description: 'Schedule', action: () => handleNavigate('schedule') },
-    { key: '4', meta: true, description: 'Budget', action: () => handleNavigate('budget') },
-    { key: 'Escape', description: 'Close panels', action: () => { setNotificationsOpen(false); setShortcutsOpen(false); setExportOpen(false); } },
-  ];
-  useKeyboardShortcuts(shortcuts);
 
   // Mobile layout
   if (isMobile) {
