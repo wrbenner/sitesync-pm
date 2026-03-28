@@ -1,9 +1,13 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { X, Send, ClipboardList } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
 import { useSubmittalStore } from '../../stores/submittalStore';
 import { useProjectContext } from '../../stores/projectContextStore';
 import { useAuthStore } from '../../stores/authStore';
+import { createSubmittalSchema } from '../../schemas/submittal';
+import type { CreateSubmittalFormData } from '../../schemas/submittal';
 import type { Priority } from '../../types/database';
 
 interface CreateSubmittalFormProps {
@@ -23,64 +27,48 @@ export function CreateSubmittalForm({ open, onClose, onSuccess }: CreateSubmitta
   const { createSubmittal } = useSubmittalStore();
   const { activeProject } = useProjectContext();
   const { profile } = useAuthStore();
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [specSection, setSpecSection] = useState('');
-  const [priority, setPriority] = useState<Priority>('medium');
-  const [dueDate, setDueDate] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+    setError,
+  } = useForm<CreateSubmittalFormData>({
+    resolver: zodResolver(createSubmittalSchema),
+    defaultValues: { priority: 'medium' },
+  });
 
   if (!open) return null;
 
-  const handleSubmit = async (asDraft: boolean) => {
-    if (!title.trim()) {
-      setError('Title is required');
-      return;
-    }
+  const onSubmit = async (data: CreateSubmittalFormData, asDraft: boolean) => {
     if (!activeProject || !profile) return;
-
-    setSaving(true);
-    setError('');
 
     const { error: createError, submittal } = await createSubmittal({
       project_id: activeProject.id,
-      title: title.trim(),
-      description: description.trim() || undefined,
-      spec_section: specSection.trim() || undefined,
-      priority,
-      due_date: dueDate || undefined,
+      title: data.title.trim(),
+      description: data.description?.trim() || undefined,
+      spec_section: data.specSection?.trim() || undefined,
+      priority: data.priority,
+      due_date: data.dueDate || undefined,
       created_by: profile.id,
     });
 
     if (createError) {
-      setError(createError);
-      setSaving(false);
+      setError('root', { message: createError });
       return;
     }
 
-    // If not draft, immediately submit
     if (!asDraft && submittal) {
       await useSubmittalStore.getState().updateSubmittalStatus(submittal.id, 'submitted');
     }
 
-    setSaving(false);
-    resetForm();
-    onClose();
+    handleClose();
     onSuccess?.();
   };
 
-  const resetForm = () => {
-    setTitle('');
-    setDescription('');
-    setSpecSection('');
-    setPriority('medium');
-    setDueDate('');
-    setError('');
-  };
-
   const handleClose = () => {
-    resetForm();
+    reset();
     onClose();
   };
 
@@ -98,6 +86,11 @@ export function CreateSubmittalForm({ open, onClose, onSuccess }: CreateSubmitta
     transition: `border-color ${transitions.quick}`,
   };
 
+  const errorInputStyle: React.CSSProperties = {
+    ...inputStyle,
+    borderColor: colors.statusCritical,
+  };
+
   const labelStyle: React.CSSProperties = {
     display: 'block',
     fontSize: typography.fontSize.label,
@@ -105,6 +98,12 @@ export function CreateSubmittalForm({ open, onClose, onSuccess }: CreateSubmitta
     color: colors.textSecondary,
     marginBottom: spacing['1'],
     letterSpacing: typography.letterSpacing.wide,
+  };
+
+  const fieldErrorStyle: React.CSSProperties = {
+    fontSize: typography.fontSize.caption,
+    color: colors.statusCritical,
+    marginTop: '2px',
   };
 
   return (
@@ -156,7 +155,7 @@ export function CreateSubmittalForm({ open, onClose, onSuccess }: CreateSubmitta
 
         {/* Body */}
         <div style={{ padding: `${spacing['5']} ${spacing['6']}`, display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
-          {error && (
+          {errors.root && (
             <div style={{
               padding: spacing['3'],
               backgroundColor: colors.statusCriticalSubtle,
@@ -164,42 +163,41 @@ export function CreateSubmittalForm({ open, onClose, onSuccess }: CreateSubmitta
               color: colors.statusCritical,
               fontSize: typography.fontSize.sm,
             }}>
-              {error}
+              {errors.root.message}
             </div>
           )}
 
           <div>
             <label style={labelStyle}>Title *</label>
             <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              {...register('title')}
               placeholder="Submittal title (e.g., Structural Steel Shop Drawings)"
-              style={inputStyle}
+              style={errors.title ? errorInputStyle : inputStyle}
               onFocus={(e) => e.target.style.borderColor = colors.primaryOrange}
-              onBlur={(e) => e.target.style.borderColor = colors.borderDefault}
+              onBlur={(e) => { if (!errors.title) e.target.style.borderColor = colors.borderDefault; }}
               autoFocus
             />
+            {errors.title && <div style={fieldErrorStyle}>{errors.title.message}</div>}
           </div>
 
           <div>
             <label style={labelStyle}>Description</label>
             <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              {...register('description')}
               placeholder="Describe what is being submitted, reference spec sections and requirements..."
               rows={4}
-              style={{ ...inputStyle, resize: 'vertical' }}
+              style={{ ...(errors.description ? errorInputStyle : inputStyle), resize: 'vertical' as const }}
               onFocus={(e) => e.target.style.borderColor = colors.primaryOrange}
-              onBlur={(e) => e.target.style.borderColor = colors.borderDefault}
+              onBlur={(e) => { if (!errors.description) e.target.style.borderColor = colors.borderDefault; }}
             />
+            {errors.description && <div style={fieldErrorStyle}>{errors.description.message}</div>}
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['4'] }}>
             <div>
               <label style={labelStyle}>Spec Section</label>
               <input
-                value={specSection}
-                onChange={(e) => setSpecSection(e.target.value)}
+                {...register('specSection')}
                 placeholder="e.g., 05 12 00"
                 style={inputStyle}
                 onFocus={(e) => e.target.style.borderColor = colors.primaryOrange}
@@ -209,8 +207,7 @@ export function CreateSubmittalForm({ open, onClose, onSuccess }: CreateSubmitta
             <div>
               <label style={labelStyle}>Priority</label>
               <select
-                value={priority}
-                onChange={(e) => setPriority(e.target.value as Priority)}
+                {...register('priority')}
                 style={{ ...inputStyle, backgroundColor: colors.surfaceRaised }}
               >
                 {PRIORITY_OPTIONS.map((opt) => (
@@ -224,8 +221,7 @@ export function CreateSubmittalForm({ open, onClose, onSuccess }: CreateSubmitta
             <label style={labelStyle}>Due Date</label>
             <input
               type="date"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
+              {...register('dueDate')}
               style={inputStyle}
               onFocus={(e) => e.target.style.borderColor = colors.primaryOrange}
               onBlur={(e) => e.target.style.borderColor = colors.borderDefault}
@@ -256,8 +252,8 @@ export function CreateSubmittalForm({ open, onClose, onSuccess }: CreateSubmitta
             Cancel
           </button>
           <button
-            onClick={() => handleSubmit(true)}
-            disabled={saving}
+            onClick={handleSubmit((data) => onSubmit(data, true))}
+            disabled={isSubmitting}
             style={{
               padding: `${spacing['2']} ${spacing['4']}`,
               border: `1px solid ${colors.borderDefault}`,
@@ -266,15 +262,15 @@ export function CreateSubmittalForm({ open, onClose, onSuccess }: CreateSubmitta
               fontSize: typography.fontSize.sm,
               fontWeight: typography.fontWeight.medium,
               color: colors.textPrimary,
-              cursor: saving ? 'not-allowed' : 'pointer',
+              cursor: isSubmitting ? 'not-allowed' : 'pointer',
               fontFamily: typography.fontFamily,
             }}
           >
             Save as Draft
           </button>
           <button
-            onClick={() => handleSubmit(false)}
-            disabled={saving}
+            onClick={handleSubmit((data) => onSubmit(data, false))}
+            disabled={isSubmitting}
             style={{
               display: 'flex', alignItems: 'center', gap: spacing['2'],
               padding: `${spacing['2']} ${spacing['5']}`,
@@ -284,7 +280,7 @@ export function CreateSubmittalForm({ open, onClose, onSuccess }: CreateSubmitta
               fontSize: typography.fontSize.sm,
               fontWeight: typography.fontWeight.medium,
               color: '#fff',
-              cursor: saving ? 'not-allowed' : 'pointer',
+              cursor: isSubmitting ? 'not-allowed' : 'pointer',
               fontFamily: typography.fontFamily,
               transition: `background-color ${transitions.quick}`,
             }}
@@ -292,7 +288,7 @@ export function CreateSubmittalForm({ open, onClose, onSuccess }: CreateSubmitta
             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = colors.primaryOrange}
           >
             <Send size={14} />
-            {saving ? 'Creating...' : 'Submit'}
+            {isSubmitting ? 'Creating...' : 'Submit'}
           </button>
         </div>
       </div>

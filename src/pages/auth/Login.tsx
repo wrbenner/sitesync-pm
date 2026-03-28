@@ -1,29 +1,31 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { LogIn, Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
+import { loginSchema } from '../../schemas/auth';
+import type { LoginFormData } from '../../schemas/auth';
 
 export function Login() {
   const navigate = useNavigate();
   const { signIn, loading } = useAuthStore();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
+  const {
+    register,
+    handleSubmit: handleFormSubmit,
+    formState: { errors },
+    setError,
+  } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+  });
 
-    if (!email || !password) {
-      setError('Please enter your email and password.');
-      return;
-    }
-
-    const result = await signIn(email, password);
+  const handleSubmit = async (data: LoginFormData) => {
+    const result = await signIn(data.email, data.password);
     if (result.error) {
-      setError(result.error);
+      setError('root', { message: result.error });
     } else {
       navigate('/dashboard');
     }
@@ -83,8 +85,8 @@ export function Login() {
           padding: spacing['8'],
           border: `1px solid ${colors.borderSubtle}`,
         }}>
-          <form onSubmit={handleSubmit}>
-            {error && (
+          <form onSubmit={handleFormSubmit(handleSubmit)}>
+            {errors.root && (
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -97,7 +99,7 @@ export function Login() {
                 marginBottom: spacing['5'],
               }}>
                 <AlertCircle size={16} />
-                {error}
+                {errors.root.message}
               </div>
             )}
 
@@ -123,13 +125,12 @@ export function Login() {
                 }} />
                 <input
                   type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  {...register('email')}
                   placeholder="you@company.com"
                   style={{
                     width: '100%',
                     padding: `${spacing['3']} ${spacing['4']} ${spacing['3']} 40px`,
-                    border: `1px solid ${colors.borderDefault}`,
+                    border: `1px solid ${errors.email ? colors.statusCritical : colors.borderDefault}`,
                     borderRadius: borderRadius.md,
                     fontSize: typography.fontSize.body,
                     color: colors.textPrimary,
@@ -139,9 +140,14 @@ export function Login() {
                     boxSizing: 'border-box',
                   }}
                   onFocus={(e) => e.target.style.borderColor = colors.primaryOrange}
-                  onBlur={(e) => e.target.style.borderColor = colors.borderDefault}
+                  onBlur={(e) => { if (!errors.email) e.target.style.borderColor = colors.borderDefault; }}
                 />
               </div>
+              {errors.email && (
+                <div style={{ fontSize: typography.fontSize.caption, color: colors.statusCritical, marginTop: '2px' }}>
+                  {errors.email.message}
+                </div>
+              )}
             </div>
 
             {/* Password */}
@@ -186,13 +192,12 @@ export function Login() {
                 }} />
                 <input
                   type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  {...register('password')}
                   placeholder="Enter your password"
                   style={{
                     width: '100%',
                     padding: `${spacing['3']} 40px ${spacing['3']} 40px`,
-                    border: `1px solid ${colors.borderDefault}`,
+                    border: `1px solid ${errors.password ? colors.statusCritical : colors.borderDefault}`,
                     borderRadius: borderRadius.md,
                     fontSize: typography.fontSize.body,
                     color: colors.textPrimary,
@@ -202,7 +207,7 @@ export function Login() {
                     boxSizing: 'border-box',
                   }}
                   onFocus={(e) => e.target.style.borderColor = colors.primaryOrange}
-                  onBlur={(e) => e.target.style.borderColor = colors.borderDefault}
+                  onBlur={(e) => { if (!errors.password) e.target.style.borderColor = colors.borderDefault; }}
                 />
                 <button
                   type="button"
@@ -223,6 +228,11 @@ export function Login() {
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
+              {errors.password && (
+                <div style={{ fontSize: typography.fontSize.caption, color: colors.statusCritical, marginTop: '2px' }}>
+                  {errors.password.message}
+                </div>
+              )}
             </div>
 
             {/* Submit */}
