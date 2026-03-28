@@ -5,6 +5,13 @@ import { colors, spacing, typography, borderRadius, transitions } from '../style
 
 const TOTAL_STEPS = 6;
 
+// Pre-compute confetti positions to avoid Math.random() during render
+const CONFETTI_POSITIONS = Array.from({ length: 30 }).map(() => ({
+  left: 10 + Math.random() * 80,
+  top: Math.random() * 60,
+  rotation: Math.random() * 360,
+}));
+
 interface StepProps {
   onNext: () => void;
   onBack?: () => void;
@@ -141,15 +148,15 @@ const Step6Complete: React.FC<StepProps> = ({ onNext }) => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', textAlign: 'center', position: 'relative' }}>
       {/* Confetti simulation */}
-      {confetti && Array.from({ length: 30 }).map((_, i) => (
+      {confetti && CONFETTI_POSITIONS.map((pos, i) => (
         <div key={i} style={{
           position: 'absolute',
-          left: `${10 + Math.random() * 80}%`,
-          top: `${Math.random() * 60}%`,
+          left: `${pos.left}%`,
+          top: `${pos.top}%`,
           width: 8, height: 8,
           backgroundColor: [colors.primaryOrange, colors.statusActive, colors.statusInfo, colors.statusReview, colors.statusPending][i % 5],
           borderRadius: i % 2 === 0 ? '50%' : '2px',
-          transform: `rotate(${Math.random() * 360}deg)`,
+          transform: `rotate(${pos.rotation}deg)`,
           opacity: 0.7,
           animation: `fadeIn 0.3s ease-out ${i * 0.05}s both`,
         }} />

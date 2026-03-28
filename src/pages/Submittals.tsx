@@ -13,7 +13,9 @@ import type { ApprovalStep } from '../components/shared/ApprovalChain';
 import { useSubmittalStore } from '../stores/submittalStore';
 import { useProjectContext } from '../stores/projectContextStore';
 import { CreateSubmittalForm } from '../components/forms/CreateSubmittalForm';
-import type { Submittal } from '../types/database';
+import type { Submittal, SubmittalStatus } from '../types/database';
+
+type StatusTagStatus = 'pending' | 'approved' | 'under_review' | 'revise_resubmit' | 'complete' | 'active' | 'closed' | 'pending_approval';
 
 const STATUS_LABELS: Record<string, string> = {
   draft: 'Draft',
@@ -49,14 +51,14 @@ const Submittals: React.FC = () => {
     if (activeProject?.id) {
       loadSubmittals(activeProject.id);
     }
-  }, [activeProject?.id]);
+  }, [activeProject?.id, loadSubmittals]);
 
   // Load reviewers when selecting a submittal
   useEffect(() => {
     if (selectedId) {
       loadReviewers(selectedId);
     }
-  }, [selectedId]);
+  }, [selectedId, loadReviewers]);
 
   if (loading || !activeProject) {
     return (
@@ -129,7 +131,7 @@ const Submittals: React.FC = () => {
   };
 
   const handleStatusChange = async (subId: string, status: string) => {
-    const { error } = await updateSubmittalStatus(subId, status as any);
+    const { error } = await updateSubmittalStatus(subId, status as SubmittalStatus);
     if (error) { addToast('error', error); return; }
     addToast('success', `Status updated to ${STATUS_LABELS[status] ?? status}`);
   };
@@ -215,11 +217,11 @@ const Submittals: React.FC = () => {
                   },
                   {
                     width: '90px',
-                    content: <PriorityTag priority={sub.priority as any} />,
+                    content: <PriorityTag priority={sub.priority} />,
                   },
                   {
                     width: '140px',
-                    content: <StatusTag status={sub.status as any} label={STATUS_LABELS[sub.status]} />,
+                    content: <StatusTag status={sub.status as StatusTagStatus} label={STATUS_LABELS[sub.status]} />,
                   },
                   {
                     width: '100px',
@@ -255,7 +257,7 @@ const Submittals: React.FC = () => {
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs }}>
                 <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: colors.textTertiary }}>{subLabel(sub)}</span>
-                <PriorityTag priority={sub.priority as any} />
+                <PriorityTag priority={sub.priority} />
               </div>
               <div style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.sm, lineHeight: typography.lineHeight.snug }}>
                 {sub.title}
@@ -299,8 +301,8 @@ const Submittals: React.FC = () => {
                 {selected.title}
               </h3>
               <div style={{ display: 'flex', gap: spacing.sm, flexWrap: 'wrap' }}>
-                <PriorityTag priority={selected.priority as any} />
-                <StatusTag status={selected.status as any} label={STATUS_LABELS[selected.status]} />
+                <PriorityTag priority={selected.priority} />
+                <StatusTag status={selected.status as StatusTagStatus} label={STATUS_LABELS[selected.status]} />
                 {selected.revision_number > 1 && (
                   <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.statusCritical, backgroundColor: `${colors.statusCritical}08`, padding: '2px 8px', borderRadius: borderRadius.full }}>
                     Rev {selected.revision_number}

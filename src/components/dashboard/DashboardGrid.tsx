@@ -1,5 +1,8 @@
 import React, { useState, useCallback } from 'react';
-import { ResponsiveGridLayout, useContainerWidth } from 'react-grid-layout';
+import { ResponsiveGridLayout as _ResponsiveGridLayout, useContainerWidth } from 'react-grid-layout';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const ResponsiveGridLayout = _ResponsiveGridLayout as any;
 
 interface Layout {
   i: string;
@@ -164,6 +167,7 @@ export const DashboardGrid: React.FC = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [tipDismissed, setTipDismissed] = useState(() => localStorage.getItem('sitesync-tip-dismissed') === 'true');
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleLayoutChange = useCallback((_layout: any, allLayouts: any) => {
     setLayouts(allLayouts);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(allLayouts.lg || _layout));
@@ -281,7 +285,7 @@ export const DashboardGrid: React.FC = () => {
         onDragStop={() => setIsDragging(false)}
         containerPadding={[0, 0]}
         margin={[16, 16]}
-        {...{ draggableHandle: ".widget-drag-handle" } as any}
+        draggableHandle=".widget-drag-handle"
       >
         {activeWidgets.map((type) => {
           const WidgetComponent = widgetComponents[type];

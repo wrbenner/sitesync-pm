@@ -101,6 +101,7 @@ export const Meetings: React.FC = () => {
   }));
 
   const [activeTab, setActiveTab] = useState<'upcoming' | 'calendar' | 'live'>('upcoming');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [liveMeeting, setLiveMeeting] = useState<any>(null);
   const [liveTimer, setLiveTimer] = useState(0);
   const [liveAgendaIndex, setLiveAgendaIndex] = useState(0);
@@ -124,6 +125,7 @@ export const Meetings: React.FC = () => {
     };
   }, [liveMeeting]);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const startMeeting = (meeting: any) => {
     setLiveMeeting(meeting);
     setLiveTimer(0);

@@ -148,6 +148,7 @@ export const useProjectContext = create<ProjectContextState>()(
         }
 
         const { data, error } = await (supabase
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           .from('projects') as any)
           .insert({
             name: project.name,
@@ -171,6 +172,7 @@ export const useProjectContext = create<ProjectContextState>()(
         const newProject = data as Project;
 
         // Auto-add creator as project manager
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await (supabase.from('project_members') as any).insert({
           project_id: newProject.id,
           user_id: project.created_by,
@@ -196,6 +198,7 @@ export const useProjectContext = create<ProjectContextState>()(
           return { error: null };
         }
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { error } = await (supabase.from('projects') as any).update(updates).eq('id', projectId);
         if (!error) {
           set((s) => ({
@@ -209,6 +212,7 @@ export const useProjectContext = create<ProjectContextState>()(
       addMember: async (projectId, userId, role) => {
         if (!isSupabaseConfigured) return { error: null };
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { error } = await (supabase.from('project_members') as any).insert({
           project_id: projectId,
           user_id: userId,

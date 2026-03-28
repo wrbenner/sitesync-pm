@@ -34,45 +34,46 @@ export function UserManagement() {
 
   // Load company members
   React.useEffect(() => {
-    loadMembers();
-  }, [company?.id]);
-
-  const loadMembers = async () => {
     if (!company?.id) return;
 
-    if (!isSupabaseConfigured) {
-      // Mock members for development
-      setMembers([
-        { ...profile!, role: 'company_admin' },
-        {
-          id: 'user-2', company_id: company.id, email: 'mike@construction.com',
-          first_name: 'Mike', last_name: 'Patterson', role: 'superintendent',
-          avatar_url: null, phone: '(555) 234-5678', is_active: true,
-          created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-        },
-        {
-          id: 'user-3', company_id: company.id, email: 'sarah@construction.com',
-          first_name: 'Sarah', last_name: 'Chen', role: 'engineer',
-          avatar_url: null, phone: '(555) 345-6789', is_active: true,
-          created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-        },
-      ]);
-      return;
-    }
+    const doLoad = async () => {
+      if (!isSupabaseConfigured) {
+        // Mock members for development
+        setMembers([
+          { ...profile!, role: 'company_admin' },
+          {
+            id: 'user-2', company_id: company.id, email: 'mike@construction.com',
+            first_name: 'Mike', last_name: 'Patterson', role: 'superintendent',
+            avatar_url: null, phone: '(555) 234-5678', is_active: true,
+            created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+          },
+          {
+            id: 'user-3', company_id: company.id, email: 'sarah@construction.com',
+            first_name: 'Sarah', last_name: 'Chen', role: 'engineer',
+            avatar_url: null, phone: '(555) 345-6789', is_active: true,
+            created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+          },
+        ]);
+        return;
+      }
 
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('company_id', company.id)
-      .order('created_at');
+      const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('company_id', company.id)
+        .order('created_at');
 
-    if (data) setMembers(data as Profile[]);
-  };
+      if (data) setMembers(data as Profile[]);
+    };
+
+    doLoad();
+  }, [company?.id, profile]);
 
   const handleInvite = async () => {
     if (!inviteEmail || !company?.id) return;
 
     if (isSupabaseConfigured) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- invitations table not in DB types yet
       await (supabase.from('invitations') as any).insert({
         company_id: company.id,
         email: inviteEmail,

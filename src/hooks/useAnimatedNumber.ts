@@ -25,6 +25,7 @@ export function useAnimatedNumber(target: number, duration = 800): number {
 
     rafRef.current = requestAnimationFrame(animate);
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- value is intentionally read only at animation start via ref
   }, [target, duration]);
 
   return value;

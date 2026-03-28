@@ -246,7 +246,7 @@ export const Budget: React.FC = () => {
               {allChangeOrders.map((co, i) => (
                 <div
                   key={co.id}
-                  onClick={() => setSelectedCO(co as any)}
+                  onClick={() => setSelectedCO(co)}
                   style={{
                     display: 'grid',
                     gridTemplateColumns: '80px 1fr 120px 140px',

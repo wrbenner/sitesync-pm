@@ -5,28 +5,21 @@ import { colors, spacing, typography, borderRadius, shadows, transitions } from 
 
 export function ProjectSettings() {
   const { activeProject, updateProject, members, loadMembers } = useProjectContext();
-  const [name, setName] = useState('');
-  const [address, setAddress] = useState('');
-  const [projectType, setProjectType] = useState('');
-  const [totalValue, setTotalValue] = useState('');
-  const [description, setDescription] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [name, setName] = useState(() => activeProject?.name ?? '');
+  const [address, setAddress] = useState(() => activeProject?.address ?? '');
+  const [projectType, setProjectType] = useState(() => activeProject?.project_type ?? '');
+  const [totalValue, setTotalValue] = useState(() => activeProject?.total_value?.toString() ?? '');
+  const [description, setDescription] = useState(() => activeProject?.description ?? '');
+  const [startDate, setStartDate] = useState(() => activeProject?.start_date ?? '');
+  const [endDate, setEndDate] = useState(() => activeProject?.scheduled_end_date ?? '');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    if (activeProject) {
-      setName(activeProject.name);
-      setAddress(activeProject.address ?? '');
-      setProjectType(activeProject.project_type ?? '');
-      setTotalValue(activeProject.total_value?.toString() ?? '');
-      setDescription(activeProject.description ?? '');
-      setStartDate(activeProject.start_date ?? '');
-      setEndDate(activeProject.scheduled_end_date ?? '');
+    if (activeProject?.id) {
       loadMembers(activeProject.id);
     }
-  }, [activeProject?.id]);
+  }, [activeProject?.id, loadMembers]);
 
   const handleSave = async () => {
     if (!activeProject) return;
@@ -316,7 +309,7 @@ export function ProjectSettings() {
                     fontWeight: typography.fontWeight.medium,
                     color: colors.textPrimary,
                   }}>
-                    {(member as any).profile?.first_name ?? 'Team'} {(member as any).profile?.last_name ?? 'Member'}
+                    {member.profile?.first_name ?? 'Team'} {member.profile?.last_name ?? 'Member'}
                   </div>
                 </div>
                 <div style={{

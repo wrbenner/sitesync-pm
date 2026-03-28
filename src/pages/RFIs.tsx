@@ -12,7 +12,9 @@ import { useRfiStore } from '../stores/rfiStore';
 import { useProjectContext } from '../stores/projectContextStore';
 import { useAuthStore } from '../stores/authStore';
 import { CreateRFIForm } from '../components/forms/CreateRFIForm';
-import type { RFI } from '../types/database';
+import type { RFI, RfiStatus } from '../types/database';
+
+type StatusTagStatus = 'pending' | 'approved' | 'under_review' | 'revise_resubmit' | 'complete' | 'active' | 'closed' | 'pending_approval';
 
 const STATUS_LABELS: Record<string, string> = {
   draft: 'Draft',
@@ -48,6 +50,7 @@ const RFIs: React.FC = () => {
   const [responseText, setResponseText] = useState('');
   const perPage = 10;
   const { addToast } = useToast();
+  const [now] = useState(() => Date.now());
   const appNavigate = useAppNavigate();
 
   const pageAlerts = getPredictiveAlertsForPage('rfis');
@@ -56,14 +59,14 @@ const RFIs: React.FC = () => {
     if (activeProject?.id) {
       loadRfis(activeProject.id);
     }
-  }, [activeProject?.id]);
+  }, [activeProject?.id, loadRfis]);
 
   // Load responses when selecting an RFI
   useEffect(() => {
     if (selectedRfi) {
       loadResponses(selectedRfi.id);
     }
-  }, [selectedRfi?.id]);
+  }, [selectedRfi, loadResponses]);
 
   if (loading || !activeProject) {
     return (
@@ -115,7 +118,7 @@ const RFIs: React.FC = () => {
   };
 
   const handleStatusChange = async (rfiId: string, status: string) => {
-    const { error } = await updateRfiStatus(rfiId, status as any);
+    const { error } = await updateRfiStatus(rfiId, status as RfiStatus);
     if (error) {
       addToast('error', error);
     } else {
@@ -178,7 +181,7 @@ const RFIs: React.FC = () => {
         <Card padding="0">
           <TableHeader columns={columns} />
           {paginatedRfis.map((rfi, i) => {
-            const days = Math.ceil((Date.now() - new Date(rfi.created_at).getTime()) / (1000 * 60 * 60 * 24));
+            const days = Math.ceil((now - new Date(rfi.created_at).getTime()) / (1000 * 60 * 60 * 24));
             const dColor = days > 10 ? colors.statusCritical : days > 5 ? colors.statusPending : colors.statusActive;
             const annotations = getAnnotationsForEntity('rfi', rfi.rfi_number);
 
@@ -217,11 +220,11 @@ const RFIs: React.FC = () => {
                   },
                   {
                     width: '90px',
-                    content: <PriorityTag priority={rfi.priority as any} />,
+                    content: <PriorityTag priority={rfi.priority} />,
                   },
                   {
                     width: '120px',
-                    content: <StatusTag status={rfi.status as any} label={STATUS_LABELS[rfi.status]} />,
+                    content: <StatusTag status={rfi.status as StatusTagStatus} label={STATUS_LABELS[rfi.status]} />,
                   },
                   {
                     width: '70px',
@@ -273,12 +276,12 @@ const RFIs: React.FC = () => {
             <div style={{ padding: spacing['3'] }} onClick={() => setSelectedRfi(rfi)}>
               <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['2'] }}>
                 <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.primaryOrange }}>{rfiLabel(rfi)}</span>
-                <PriorityTag priority={rfi.priority as any} />
+                <PriorityTag priority={rfi.priority} />
               </div>
               <p style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>{rfi.title}</p>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
-                  {Math.ceil((Date.now() - new Date(rfi.created_at).getTime()) / (1000 * 60 * 60 * 24))}d open
+                  {Math.ceil((now - new Date(rfi.created_at).getTime()) / (1000 * 60 * 60 * 24))}d open
                 </span>
                 <span style={{ fontSize: typography.fontSize.caption, color: isOverdue(rfi.due_date) && rfi.status !== 'closed' ? colors.statusCritical : colors.textTertiary }}>
                   {rfi.due_date ? formatDate(rfi.due_date) : ''}
@@ -315,11 +318,11 @@ const RFIs: React.FC = () => {
             }}>
               <div>
                 <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, marginBottom: spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: typography.fontWeight.medium }}>Priority</div>
-                <PriorityTag priority={selectedRfi.priority as any} />
+                <PriorityTag priority={selectedRfi.priority} />
               </div>
               <div>
                 <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, marginBottom: spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: typography.fontWeight.medium }}>Status</div>
-                <StatusTag status={selectedRfi.status as any} label={STATUS_LABELS[selectedRfi.status]} />
+                <StatusTag status={selectedRfi.status as StatusTagStatus} label={STATUS_LABELS[selectedRfi.status]} />
               </div>
               <div>
                 <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, marginBottom: spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: typography.fontWeight.medium }}>Due Date</div>

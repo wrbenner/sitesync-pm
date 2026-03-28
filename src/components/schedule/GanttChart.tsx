@@ -35,10 +35,10 @@ const dependencies: Record<number, number[]> = {
   7: [6], // Finishes depends on Interior
 };
 
-export const GanttChart: React.FC<GanttChartProps> = ({ phases, whatIfMode, onPhaseClick, onPhaseDrag: _onPhaseDrag, baselinePhases }) => {
+export const GanttChart: React.FC<GanttChartProps> = ({ phases, whatIfMode, onPhaseClick, baselinePhases }) => {
   const [timeScale, setTimeScale] = useState<TimeScale>('quarter');
   const [hoveredPhase, setHoveredPhase] = useState<number | null>(null);
-  const [dragPhase, _setDragPhase] = useState<number | null>(null);
+  const [dragPhase] = useState<number | null>(null);
   const [showBaseline, setShowBaseline] = useState(false);
 
   const allStarts = phases.map((p) => new Date(p.startDate).getTime());

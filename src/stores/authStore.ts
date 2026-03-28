@@ -172,6 +172,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (!user) return { error: 'Not authenticated' };
 
     const { error } = await (supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .from('profiles') as any)
       .update(updates)
       .eq('id', user.id);
@@ -194,6 +195,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (!user) return { error: 'Not authenticated', company: null };
 
     const { data, error } = await (supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .from('companies') as any)
       .insert({ name, logo_url: null, subscription_tier: 'free' })
       .select()
@@ -205,6 +207,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     // Link user to company
     await (supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .from('profiles') as any)
       .update({ company_id: company.id, role: 'company_admin' })
       .eq('id', user.id);
