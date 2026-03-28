@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { X, Send, FileText } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
 import { UppyUploader } from '../files/UppyUploader';
 import { useRfiStore } from '../../stores/rfiStore';
 import { useProjectContext } from '../../stores/projectContextStore';
 import { useAuthStore } from '../../stores/authStore';
+import { createRfiSchema } from '../../schemas/rfi';
+import type { CreateRfiFormData } from '../../schemas/rfi';
 import type { Priority } from '../../types/database';
 
 interface CreateRFIFormProps {
@@ -24,64 +28,48 @@ export function CreateRFIForm({ open, onClose, onSuccess }: CreateRFIFormProps) 
   const { createRfi } = useRfiStore();
   const { activeProject } = useProjectContext();
   const { profile } = useAuthStore();
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [priority, setPriority] = useState<Priority>('medium');
-  const [dueDate, setDueDate] = useState('');
-  const [assignedTo, setAssignedTo] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+    setError,
+  } = useForm<CreateRfiFormData>({
+    resolver: zodResolver(createRfiSchema),
+    defaultValues: { priority: 'medium' },
+  });
 
   if (!open) return null;
 
-  const handleSubmit = async (asDraft: boolean) => {
-    if (!title.trim()) {
-      setError('Title is required');
-      return;
-    }
+  const onSubmit = async (data: CreateRfiFormData, asDraft: boolean) => {
     if (!activeProject || !profile) return;
-
-    setSaving(true);
-    setError('');
 
     const { error: createError, rfi } = await createRfi({
       project_id: activeProject.id,
-      title: title.trim(),
-      description: description.trim() || undefined,
-      priority,
-      due_date: dueDate || undefined,
-      assigned_to: assignedTo || undefined,
+      title: data.title.trim(),
+      description: data.description?.trim() || undefined,
+      priority: data.priority,
+      due_date: data.dueDate || undefined,
+      assigned_to: data.assignedTo || undefined,
       created_by: profile.id,
     });
 
     if (createError) {
-      setError(createError);
-      setSaving(false);
+      setError('root', { message: createError });
       return;
     }
 
-    // If not draft, immediately submit
     if (!asDraft && rfi) {
       await useRfiStore.getState().updateRfiStatus(rfi.id, 'submitted');
     }
 
-    setSaving(false);
-    resetForm();
-    onClose();
+    handleClose();
     onSuccess?.();
   };
 
-  const resetForm = () => {
-    setTitle('');
-    setDescription('');
-    setPriority('medium');
-    setDueDate('');
-    setAssignedTo('');
-    setError('');
-  };
-
   const handleClose = () => {
-    resetForm();
+    reset();
     onClose();
   };
 
@@ -99,6 +87,11 @@ export function CreateRFIForm({ open, onClose, onSuccess }: CreateRFIFormProps) 
     transition: `border-color ${transitions.quick}`,
   };
 
+  const errorInputStyle: React.CSSProperties = {
+    ...inputStyle,
+    borderColor: colors.statusCritical,
+  };
+
   const labelStyle: React.CSSProperties = {
     display: 'block',
     fontSize: typography.fontSize.label,
@@ -106,6 +99,12 @@ export function CreateRFIForm({ open, onClose, onSuccess }: CreateRFIFormProps) 
     color: colors.textSecondary,
     marginBottom: spacing['1'],
     letterSpacing: typography.letterSpacing.wide,
+  };
+
+  const fieldErrorStyle: React.CSSProperties = {
+    fontSize: typography.fontSize.caption,
+    color: colors.statusCritical,
+    marginTop: '2px',
   };
 
   return (
@@ -157,7 +156,7 @@ export function CreateRFIForm({ open, onClose, onSuccess }: CreateRFIFormProps) 
 
         {/* Body */}
         <div style={{ padding: `${spacing['5']} ${spacing['6']}`, display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
-          {error && (
+          {errors.root && (
             <div style={{
               padding: spacing['3'],
               backgroundColor: colors.statusCriticalSubtle,
@@ -165,42 +164,41 @@ export function CreateRFIForm({ open, onClose, onSuccess }: CreateRFIFormProps) 
               color: colors.statusCritical,
               fontSize: typography.fontSize.sm,
             }}>
-              {error}
+              {errors.root.message}
             </div>
           )}
 
           <div>
             <label style={labelStyle}>Title *</label>
             <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              {...register('title')}
               placeholder="What needs clarification?"
-              style={inputStyle}
+              style={errors.title ? errorInputStyle : inputStyle}
               onFocus={(e) => e.target.style.borderColor = colors.primaryOrange}
-              onBlur={(e) => e.target.style.borderColor = colors.borderDefault}
+              onBlur={(e) => { if (!errors.title) e.target.style.borderColor = colors.borderDefault; }}
               autoFocus
             />
+            {errors.title && <div style={fieldErrorStyle}>{errors.title.message}</div>}
           </div>
 
           <div>
             <label style={labelStyle}>Description</label>
             <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              {...register('description')}
               placeholder="Provide details about the request, reference specific drawings or specs..."
               rows={4}
-              style={{ ...inputStyle, resize: 'vertical' }}
+              style={{ ...(errors.description ? errorInputStyle : inputStyle), resize: 'vertical' as const }}
               onFocus={(e) => e.target.style.borderColor = colors.primaryOrange}
-              onBlur={(e) => e.target.style.borderColor = colors.borderDefault}
+              onBlur={(e) => { if (!errors.description) e.target.style.borderColor = colors.borderDefault; }}
             />
+            {errors.description && <div style={fieldErrorStyle}>{errors.description.message}</div>}
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['4'] }}>
             <div>
               <label style={labelStyle}>Priority</label>
               <select
-                value={priority}
-                onChange={(e) => setPriority(e.target.value as Priority)}
+                {...register('priority')}
                 style={{ ...inputStyle, backgroundColor: colors.surfaceRaised }}
               >
                 {PRIORITY_OPTIONS.map((opt) => (
@@ -212,8 +210,7 @@ export function CreateRFIForm({ open, onClose, onSuccess }: CreateRFIFormProps) 
               <label style={labelStyle}>Due Date</label>
               <input
                 type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
+                {...register('dueDate')}
                 style={inputStyle}
                 onFocus={(e) => e.target.style.borderColor = colors.primaryOrange}
                 onBlur={(e) => e.target.style.borderColor = colors.borderDefault}
@@ -235,8 +232,7 @@ export function CreateRFIForm({ open, onClose, onSuccess }: CreateRFIFormProps) 
           <div>
             <label style={labelStyle}>Assigned To (email or name)</label>
             <input
-              value={assignedTo}
-              onChange={(e) => setAssignedTo(e.target.value)}
+              {...register('assignedTo')}
               placeholder="Who should respond to this RFI?"
               style={inputStyle}
               onFocus={(e) => e.target.style.borderColor = colors.primaryOrange}
@@ -268,8 +264,8 @@ export function CreateRFIForm({ open, onClose, onSuccess }: CreateRFIFormProps) 
             Cancel
           </button>
           <button
-            onClick={() => handleSubmit(true)}
-            disabled={saving}
+            onClick={handleSubmit((data) => onSubmit(data, true))}
+            disabled={isSubmitting}
             style={{
               padding: `${spacing['2']} ${spacing['4']}`,
               border: `1px solid ${colors.borderDefault}`,
@@ -278,15 +274,15 @@ export function CreateRFIForm({ open, onClose, onSuccess }: CreateRFIFormProps) 
               fontSize: typography.fontSize.sm,
               fontWeight: typography.fontWeight.medium,
               color: colors.textPrimary,
-              cursor: saving ? 'not-allowed' : 'pointer',
+              cursor: isSubmitting ? 'not-allowed' : 'pointer',
               fontFamily: typography.fontFamily,
             }}
           >
             Save as Draft
           </button>
           <button
-            onClick={() => handleSubmit(false)}
-            disabled={saving}
+            onClick={handleSubmit((data) => onSubmit(data, false))}
+            disabled={isSubmitting}
             style={{
               display: 'flex', alignItems: 'center', gap: spacing['2'],
               padding: `${spacing['2']} ${spacing['5']}`,
@@ -296,7 +292,7 @@ export function CreateRFIForm({ open, onClose, onSuccess }: CreateRFIFormProps) 
               fontSize: typography.fontSize.sm,
               fontWeight: typography.fontWeight.medium,
               color: '#fff',
-              cursor: saving ? 'not-allowed' : 'pointer',
+              cursor: isSubmitting ? 'not-allowed' : 'pointer',
               fontFamily: typography.fontFamily,
               transition: `background-color ${transitions.quick}`,
             }}
@@ -304,7 +300,7 @@ export function CreateRFIForm({ open, onClose, onSuccess }: CreateRFIFormProps) 
             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = colors.primaryOrange}
           >
             <Send size={14} />
-            {saving ? 'Creating...' : 'Submit RFI'}
+            {isSubmitting ? 'Creating...' : 'Submit RFI'}
           </button>
         </div>
       </div>

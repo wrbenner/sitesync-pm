@@ -1,5 +1,6 @@
 import React, { Suspense, lazy, useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Home, LayoutGrid, FileText, HelpCircle, ClipboardList, Calendar,
@@ -23,6 +24,7 @@ import { ExportCenter } from './components/export/ExportCenter';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import type { Shortcut } from './hooks/useKeyboardShortcuts';
 import { isSupabaseConfigured } from './lib/supabase';
+import { queryClient } from './api/queryClient';
 
 // Lazy loaded pages
 const Dashboard = lazy(() => import('./pages/Dashboard').then((m) => ({ default: m.Dashboard })));
@@ -312,11 +314,13 @@ function AppContent() {
 
 function App() {
   return (
-    <ToastProvider>
-      <HashRouter>
-        <AppContent />
-      </HashRouter>
-    </ToastProvider>
+    <QueryClientProvider client={queryClient}>
+      <ToastProvider>
+        <HashRouter>
+          <AppContent />
+        </HashRouter>
+      </ToastProvider>
+    </QueryClientProvider>
   );
 }
 
