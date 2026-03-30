@@ -1,22 +1,15 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, transitions } from '../../../styles/theme';
-import { useQuery } from '../../../hooks/useQuery';
-import { getCrews } from '../../../api/endpoints/people';
+import { useProjectId } from '../../../hooks/useProjectId';
+import { useCrews } from '../../../hooks/queries';
 
 interface SparklineData {
-  crewId: number;
+  crewId: string;
   values: number[];
+  name: string;
+  size: number;
 }
-
-const sparklineData: SparklineData[] = [
-  { crewId: 1, values: [85, 88, 91, 87, 93, 90, 95, 92, 96, 94, 97, 96, 98, 98] },
-  { crewId: 2, values: [78, 80, 82, 81, 83, 84, 85, 83, 86, 84, 85, 85, 85, 85] },
-  { crewId: 3, values: [90, 88, 92, 91, 93, 90, 92, 91, 92, 92, 92, 92, 92, 92] },
-  { crewId: 4, values: [82, 80, 78, 80, 77, 79, 76, 78, 75, 77, 76, 78, 78, 78] },
-  { crewId: 5, values: [75, 78, 80, 82, 83, 85, 84, 86, 87, 86, 88, 88, 88, 88] },
-  { crewId: 6, values: [85, 84, 83, 82, 83, 82, 81, 82, 82, 81, 82, 82, 82, 82] },
-];
 
 function getTrend(values: number[]): 'up' | 'down' | 'flat' {
   const recent = values.slice(-5);
@@ -57,8 +50,32 @@ function Sparkline({ values, trend }: { values: number[]; trend: 'up' | 'down' |
   );
 }
 
-export const ProductivityPulseWidget: React.FC = () => {
-  const { data: crews } = useQuery('crews', getCrews);
+// Generate a synthetic sparkline from a productivity score
+function generateSparkline(score: number, seed: number): number[] {
+  const values: number[] = [];
+  let val = Math.max(50, score - 15 + (seed % 10));
+  for (let i = 0; i < 14; i++) {
+    val = Math.min(100, Math.max(40, val + (((seed * (i + 1) * 7) % 11) - 5)));
+    values.push(Math.round(val));
+  }
+  // Ensure last value matches actual score
+  values[values.length - 1] = score;
+  return values;
+}
+
+export const ProductivityPulseWidget: React.FC = React.memo(() => {
+  const projectId = useProjectId();
+  const { data: crews } = useCrews(projectId);
+
+  const sparklineData: SparklineData[] = useMemo(() => {
+    if (!crews) return [];
+    return crews.map((c, i) => ({
+      crewId: c.id,
+      name: c.name,
+      size: c.size ?? 0,
+      values: generateSparkline(c.productivity_score ?? 80, i + 1),
+    }));
+  }, [crews]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -72,8 +89,6 @@ export const ProductivityPulseWidget: React.FC = () => {
 
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: spacing['1'] }}>
         {sparklineData.map((data) => {
-          const crew = (crews || []).find((c) => c.id === data.crewId);
-          if (!crew) return null;
           const trend = getTrend(data.values);
           const TrendIcon = trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : Minus;
           const current = data.values[data.values.length - 1];
@@ -94,8 +109,8 @@ export const ProductivityPulseWidget: React.FC = () => {
               onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = 'transparent'; }}
             >
               <div style={{ width: 90, flexShrink: 0 }}>
-                <p style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{crew.name}</p>
-                <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0 }}>{crew.size} workers</p>
+                <p style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{data.name}</p>
+                <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0 }}>{data.size} workers</p>
               </div>
 
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -112,4 +127,4 @@ export const ProductivityPulseWidget: React.FC = () => {
       </div>
     </div>
   );
-};
+});

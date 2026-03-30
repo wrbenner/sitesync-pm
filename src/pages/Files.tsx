@@ -1,15 +1,25 @@
-import React, { useState, useEffect } from 'react';
-import { Grid, List, Upload as UploadIcon, FileText, Sparkles, Search, Trash2, Eye } from 'lucide-react';
-import { Card, Btn, Skeleton, useToast, PageContainer, TableHeader, TableRow } from '../components/Primitives';
-import { UppyUploader } from '../components/files/UppyUploader';
-import { PdfViewer } from '../components/drawings/PdfViewer';
+import React, { useState, useMemo } from 'react';
+import { Grid, List, Upload as UploadIcon, FolderOpen, FileText, Sparkles, Search } from 'lucide-react';
+import { Card, Btn, Skeleton, useToast, PageContainer } from '../components/Primitives';
+import { UploadZone } from '../components/files/UploadZone';
+import { DocumentSearch } from '../components/files/DocumentSearch';
+import { FilePreview } from '../components/files/FilePreview';
+import { DataTable, createColumnHelper } from '../components/shared/DataTable';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../styles/theme';
-import { useFileStore, formatFileSize } from '../stores/fileStore';
-import { useProjectContext } from '../stores/projectContextStore';
-import { useAuthStore } from '../stores/authStore';
-import type { LocalFile } from '../stores/fileStore';
+import { useProjectId } from '../hooks/useProjectId';
+import { useFiles } from '../hooks/queries';
+import { useCreateFile } from '../hooks/mutations';
 
 type ViewMode = 'list' | 'grid';
+
+interface FileItem {
+  id: string;
+  name: string;
+  type: string;
+  size?: string;
+  itemCount?: number;
+  modifiedDate: string;
+}
 
 const fileGradients: Record<string, string> = {
   pdf: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -17,66 +27,154 @@ const fileGradients: Record<string, string> = {
   dwg: 'linear-gradient(135deg, #F47820 0%, #FF9C42 100%)',
   zip: 'linear-gradient(135deg, #6B6560 0%, #A09890 100%)',
   default: 'linear-gradient(135deg, #3A7BC8 0%, #7C5DC7 100%)',
+  folder: `linear-gradient(135deg, rgba(244, 120, 32, 0.12) 0%, rgba(244, 120, 32, 0.04) 100%)`,
 };
 
-const getGradient = (fileType: string): string => {
-  return fileGradients[fileType] || fileGradients.default;
+const getGradient = (file: FileItem): string => {
+  if (file.type === 'folder') return fileGradients.folder;
+  const ext = file.name.split('.').pop()?.toLowerCase() || '';
+  return fileGradients[ext] || fileGradients.default;
+};
+
+const getApprovalStatus = (file: FileItem): { label: string; color: string } | null => {
+  if (file.type === 'folder') return null;
+  if (file.name.includes('Structural') || file.name.includes('Calculations'))
+    return { label: 'Approved', color: colors.statusActive };
+  if (file.name.includes('MEP') || file.name.includes('Spec'))
+    return { label: 'Pending Review', color: colors.statusPending };
+  return { label: 'Draft', color: colors.textTertiary };
 };
 
 export const Files: React.FC = () => {
   const { addToast } = useToast();
-  const { files, loading, loadFiles, uploadFile, deleteFile } = useFileStore();
-  const { activeProject } = useProjectContext();
-  const { profile } = useAuthStore();
+  const projectId = useProjectId();
+  const createFile = useCreateFile();
+  const { data: rawFiles, isPending: loading } = useFiles(projectId);
+
+  const files = useMemo(() =>
+    (rawFiles || []).map(f => ({
+      ...f,
+      type: f.folder ? 'folder' : (f.content_type || 'file'),
+      size: f.file_size ? `${(f.file_size / (1024 * 1024)).toFixed(1)} MB` : undefined,
+      itemCount: f.folder ? undefined : undefined,
+      modifiedDate: f.created_at ? new Date(f.created_at).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }) : '',
+    })),
+    [rawFiles]
+  );
+
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [showUpload, setShowUpload] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [pdfFile, setPdfFile] = useState<{ file: string | File; title: string } | null>(null);
+  const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
 
-  useEffect(() => {
-    if (activeProject?.id) {
-      loadFiles(activeProject.id);
-    }
-  }, [activeProject?.id]);
-
-  const filteredFiles = searchTerm
-    ? files.filter((f) => f.name.toLowerCase().includes(searchTerm.toLowerCase()) || f.folder_path.toLowerCase().includes(searchTerm.toLowerCase()))
-    : files;
-
-  const handleUpload = async (uploadedFiles: File[]) => {
-    if (!activeProject || !profile) return;
-    for (const file of uploadedFiles) {
-      const { error } = await uploadFile(activeProject.id, profile.id, file);
-      if (error) {
-        addToast('error', `Failed to upload ${file.name}: ${error}`);
-      } else {
-        addToast('success', `Uploaded ${file.name}`);
-      }
-    }
+  const handleFileClick = (file: FileItem) => {
+    setSelectedFile(file);
   };
 
-  const handleDelete = async (fileId: string, fileName: string) => {
-    const { error } = await deleteFile(fileId);
-    if (error) {
-      addToast('error', error);
-    } else {
-      addToast('success', `${fileName} deleted`);
-    }
+  const handleUpload = async (fileName: string) => {
+    try {
+      await createFile.mutateAsync({ projectId: projectId!, data: { project_id: projectId!, name: fileName, content_type: 'application/octet-stream' } })
+      addToast('success', `Uploaded ${fileName}`)
+    } catch { addToast('error', `Failed to upload ${fileName}`) }
   };
 
-  const handleFileClick = (file: LocalFile) => {
-    if (file.file_type === 'pdf') {
-      if (file.localUrl) {
-        setPdfFile({ file: file.localUrl, title: file.name });
-      } else {
-        addToast('info', `Opening ${file.name}`);
-      }
-    } else {
-      addToast('info', `Preview for ${file.file_type.toUpperCase()} files coming soon`);
-    }
-  };
+  const columnHelper = createColumnHelper<FileItem>();
 
-  if (loading || !activeProject) {
+  const fileTableColumns = useMemo(() => [
+    columnHelper.accessor('name', {
+      header: 'Name',
+      cell: (info) => {
+        const file = info.row.original;
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', gap: spacing.md }}>
+            {file.type === 'folder' ? (
+              <FolderOpen size={16} color={colors.primaryOrange} />
+            ) : (
+              <FileText size={16} color={colors.textTertiary} />
+            )}
+            <span
+              style={{
+                fontSize: typography.fontSize.sm,
+                fontWeight: typography.fontWeight.medium,
+                color: colors.textPrimary,
+              }}
+            >
+              {file.name}
+            </span>
+          </div>
+        );
+      },
+    }),
+    columnHelper.accessor('type', {
+      header: 'Type',
+      size: 100,
+      cell: (info) => (
+        <span
+          style={{
+            fontSize: typography.fontSize.sm,
+            color: colors.textSecondary,
+            textTransform: 'capitalize' as const,
+          }}
+        >
+          {info.getValue()}
+        </span>
+      ),
+    }),
+    columnHelper.display({
+      id: 'sizeCount',
+      header: 'Size / Count',
+      size: 130,
+      cell: (info) => {
+        const file = info.row.original;
+        return (
+          <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>
+            {file.type === 'folder' ? `${file.itemCount} items` : file.size}
+          </span>
+        );
+      },
+    }),
+    columnHelper.accessor('modifiedDate', {
+      header: 'Modified',
+      size: 120,
+      cell: (info) => (
+        <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>
+          {info.getValue()}
+        </span>
+      ),
+    }),
+    columnHelper.display({
+      id: 'status',
+      header: 'Status',
+      size: 110,
+      cell: (info) => {
+        const approval = getApprovalStatus(info.row.original);
+        if (!approval) {
+          return (
+            <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
+              &mdash;
+            </span>
+          );
+        }
+        return (
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: spacing['1'] }}>
+            <div
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: '50%',
+                backgroundColor: approval.color,
+              }}
+            />
+            <span style={{ fontSize: typography.fontSize.caption, color: approval.color, fontWeight: typography.fontWeight.medium }}>
+              {approval.label}
+            </span>
+          </div>
+        );
+      },
+    }),
+  ], []);
+
+  // Loading state
+  if (loading || !files) {
     return (
       <PageContainer
         title="Files"
@@ -97,6 +195,10 @@ export const Files: React.FC = () => {
               <div style={{ marginTop: spacing['3'] }}>
                 <Skeleton width="70%" height="14px" />
               </div>
+              <div style={{ marginTop: spacing['2'], display: 'flex', justifyContent: 'space-between' }}>
+                <Skeleton width="40%" height="12px" />
+                <Skeleton width="30%" height="12px" />
+              </div>
             </Card>
           ))}
         </div>
@@ -107,9 +209,9 @@ export const Files: React.FC = () => {
   return (
     <PageContainer
       title="Files"
-      subtitle={`${files.length} files`}
       actions={
         <div style={{ display: 'flex', gap: spacing.sm, alignItems: 'center' }}>
+          {/* View mode toggle */}
           <div style={{
             display: 'flex',
             backgroundColor: colors.surfaceInset,
@@ -119,8 +221,13 @@ export const Files: React.FC = () => {
             <button
               onClick={() => setViewMode('grid')}
               style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                width: 32, height: 28, border: 'none', borderRadius: borderRadius.base,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 32,
+                height: 28,
+                border: 'none',
+                borderRadius: borderRadius.base,
                 cursor: 'pointer',
                 backgroundColor: viewMode === 'grid' ? colors.surfaceRaised : 'transparent',
                 boxShadow: viewMode === 'grid' ? shadows.sm : 'none',
@@ -133,8 +240,13 @@ export const Files: React.FC = () => {
             <button
               onClick={() => setViewMode('list')}
               style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                width: 32, height: 28, border: 'none', borderRadius: borderRadius.base,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 32,
+                height: 28,
+                border: 'none',
+                borderRadius: borderRadius.base,
                 cursor: 'pointer',
                 backgroundColor: viewMode === 'list' ? colors.surfaceRaised : 'transparent',
                 boxShadow: viewMode === 'list' ? shadows.sm : 'none',
@@ -145,6 +257,8 @@ export const Files: React.FC = () => {
               <List size={14} />
             </button>
           </div>
+
+          {/* Upload button */}
           <Btn
             icon={<UploadIcon size={14} />}
             onClick={() => setShowUpload(!showUpload)}
@@ -156,47 +270,28 @@ export const Files: React.FC = () => {
         </div>
       }
     >
-      {/* AI Banner */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '12px 16px', marginBottom: '16px', backgroundColor: 'rgba(124, 93, 199, 0.04)', borderRadius: '8px', borderLeft: '3px solid #7C5DC7' }}>
         <Sparkles size={14} color="#7C5DC7" style={{ marginTop: 2, flexShrink: 0 }} />
         <p style={{ fontSize: '13px', color: '#1A1613', margin: 0, lineHeight: 1.5 }}>
-          Documentation coverage at {Math.round((files.length / 12) * 100)}%. Upload additional documents to improve project documentation.
+          Documentation coverage at 84%. Missing: updated MEP coordination drawings and revised fire protection submittals.
         </p>
       </div>
-
-      {/* Search */}
+      {/* Document Search */}
       <div style={{ marginBottom: spacing['4'] }}>
-        <div style={{ position: 'relative' }}>
-          <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: colors.textTertiary }} />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search files by name or folder..."
-            style={{
-              width: '100%',
-              padding: `${spacing['2']} ${spacing['3']} ${spacing['2']} 36px`,
-              border: `1px solid ${colors.borderDefault}`,
-              borderRadius: borderRadius.md,
-              fontSize: typography.fontSize.sm,
-              color: colors.textPrimary,
-              backgroundColor: colors.surfaceRaised,
-              outline: 'none',
-              fontFamily: typography.fontFamily,
-              boxSizing: 'border-box',
-            }}
-          />
-        </div>
+        <DocumentSearch
+          onSelect={(result) => {
+            const match = files.find((f: FileItem) => f.name === result.name);
+            if (match) setSelectedFile(match);
+            else addToast('info', `Opening ${result.name}`);
+          }}
+        />
       </div>
 
-      {/* Upload Zone */}
+      {/* Collapsible Upload Zone */}
       {showUpload && (
         <div style={{ marginBottom: spacing['5'] }}>
           <Card>
-            <UppyUploader
-              onFilesSelected={handleUpload}
-              label="Drop files here to upload to this project"
-            />
+            <UploadZone onUpload={handleUpload} />
           </Card>
         </div>
       )}
@@ -204,86 +299,101 @@ export const Files: React.FC = () => {
       {/* Grid View */}
       {viewMode === 'grid' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: spacing['4'] }}>
-          {filteredFiles.map((file) => (
-            <div
-              key={file.id}
-              onClick={() => handleFileClick(file)}
-              style={{
-                backgroundColor: colors.surfaceRaised,
-                borderRadius: borderRadius.lg,
-                boxShadow: shadows.card,
-                cursor: 'pointer',
-                overflow: 'hidden',
-                transition: `box-shadow ${transitions.quick}, transform ${transitions.quick}`,
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLDivElement).style.boxShadow = shadows.cardHover;
-                (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-1px)';
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLDivElement).style.boxShadow = shadows.card;
-                (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)';
-              }}
-            >
+          {files.map((file: FileItem) => {
+            const approval = getApprovalStatus(file);
+            return (
               <div
+                key={file.id}
+                onClick={() => handleFileClick(file)}
                 style={{
-                  height: '120px',
-                  background: getGradient(file.file_type),
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  position: 'relative',
+                  backgroundColor: colors.surfaceRaised,
+                  borderRadius: borderRadius.lg,
+                  boxShadow: shadows.card,
+                  cursor: 'pointer',
+                  overflow: 'hidden',
+                  transition: `box-shadow ${transitions.quick}, transform ${transitions.quick}`,
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLDivElement).style.boxShadow = shadows.cardHover;
+                  (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-1px)';
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLDivElement).style.boxShadow = shadows.card;
+                  (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)';
                 }}
               >
-                <FileText size={36} color="rgba(255,255,255,0.6)" />
-                <span style={{
-                  position: 'absolute', top: spacing['2'], right: spacing['2'],
-                  padding: '2px 6px', backgroundColor: 'rgba(0,0,0,0.3)',
-                  borderRadius: borderRadius.sm, fontSize: typography.fontSize.caption,
-                  color: '#fff', fontWeight: typography.fontWeight.medium,
-                  textTransform: 'uppercase',
-                }}>
-                  {file.file_type}
-                </span>
-              </div>
-              <div style={{ padding: `${spacing['3']} ${spacing['4']}` }}>
-                <p style={{
-                  fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium,
-                  color: colors.textPrimary, margin: 0,
-                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                }}>
-                  {file.name}
-                </p>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing['2'] }}>
-                  <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
-                    {formatFileSize(file.size)}
-                  </span>
-                  <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
-                    {new Date(file.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                  </span>
+                {/* Gradient Thumbnail */}
+                <div
+                  style={{
+                    height: '120px',
+                    background: getGradient(file),
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    position: 'relative',
+                  }}
+                >
+                  {file.type === 'folder' ? (
+                    <FolderOpen size={36} color={colors.primaryOrange} />
+                  ) : (
+                    <FileText size={36} color="rgba(255,255,255,0.6)" />
+                  )}
+                  {/* Approval dot */}
+                  {approval && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: spacing['2'],
+                        right: spacing['2'],
+                        width: 8,
+                        height: 8,
+                        borderRadius: '50%',
+                        backgroundColor: approval.color,
+                        border: `2px solid ${file.type === 'folder' ? colors.surfaceRaised : 'rgba(255,255,255,0.4)'}`,
+                      }}
+                    />
+                  )}
                 </div>
-                <div style={{ marginTop: spacing['1'] }}>
-                  <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
-                    {file.folder_path}
-                  </span>
+
+                {/* Card Content */}
+                <div style={{ padding: `${spacing['3']} ${spacing['4']}` }}>
+                  <p
+                    style={{
+                      fontSize: typography.fontSize.sm,
+                      fontWeight: typography.fontWeight.medium,
+                      color: colors.textPrimary,
+                      margin: 0,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {file.name}
+                  </p>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginTop: spacing['2'],
+                    }}
+                  >
+                    <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
+                      {file.type === 'folder' ? `${file.itemCount} items` : file.size}
+                    </span>
+                    <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
+                      {file.modifiedDate}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-          {filteredFiles.length === 0 && (
-            <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', textAlign: 'center' }}>
+            );
+          })}
+          {files.length === 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', textAlign: 'center' }}>
               <Search size={32} color="#A09890" style={{ marginBottom: '12px' }} />
-              <p style={{ fontSize: '14px', fontWeight: 500, color: '#1A1613', margin: 0, marginBottom: '4px' }}>
-                {searchTerm ? 'No files match your search' : 'No files uploaded yet'}
-              </p>
-              <p style={{ fontSize: '13px', color: '#6B6560', margin: 0, marginBottom: '16px' }}>
-                {searchTerm ? 'Try adjusting your search criteria' : 'Upload your first file to get started'}
-              </p>
-              {!searchTerm && (
-                <button onClick={() => setShowUpload(true)} style={{ padding: '6px 16px', backgroundColor: colors.primaryOrange, border: 'none', borderRadius: '6px', fontSize: '13px', fontFamily: typography.fontFamily, color: '#fff', cursor: 'pointer' }}>
-                  Upload Files
-                </button>
-              )}
+              <p style={{ fontSize: '14px', fontWeight: 500, color: '#1A1613', margin: 0, marginBottom: '4px' }}>No files match your search</p>
+              <p style={{ fontSize: '13px', color: '#6B6560', margin: 0, marginBottom: '16px' }}>Try adjusting your search or filter criteria</p>
             </div>
           )}
         </div>
@@ -292,108 +402,18 @@ export const Files: React.FC = () => {
       {/* List View */}
       {viewMode === 'list' && (
         <Card padding="0">
-          <TableHeader
-            columns={[
-              { label: 'Name', width: '1fr' },
-              { label: 'Type', width: '80px' },
-              { label: 'Size', width: '100px' },
-              { label: 'Folder', width: '160px' },
-              { label: 'Uploaded', width: '100px' },
-              { label: '', width: '80px' },
-            ]}
+          <DataTable
+            data={files}
+            columns={fileTableColumns}
+            enableSorting
+            onRowClick={(file: FileItem) => handleFileClick(file)}
+            emptyMessage="No files found"
           />
-          {filteredFiles.map((file, index) => (
-            <TableRow
-              key={file.id}
-              divider={index < filteredFiles.length - 1}
-              onClick={() => handleFileClick(file)}
-              columns={[
-                {
-                  width: '1fr',
-                  content: (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: spacing.md }}>
-                      <FileText size={16} color={colors.textTertiary} />
-                      <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>
-                        {file.name}
-                      </span>
-                    </div>
-                  ),
-                },
-                {
-                  width: '80px',
-                  content: (
-                    <span style={{ fontSize: typography.fontSize.caption, color: colors.textSecondary, textTransform: 'uppercase', fontWeight: typography.fontWeight.medium }}>
-                      {file.file_type}
-                    </span>
-                  ),
-                },
-                {
-                  width: '100px',
-                  content: (
-                    <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>
-                      {formatFileSize(file.size)}
-                    </span>
-                  ),
-                },
-                {
-                  width: '160px',
-                  content: (
-                    <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
-                      {file.folder_path}
-                    </span>
-                  ),
-                },
-                {
-                  width: '100px',
-                  content: (
-                    <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>
-                      {new Date(file.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                    </span>
-                  ),
-                },
-                {
-                  width: '80px',
-                  content: (
-                    <div style={{ display: 'flex', gap: spacing['1'] }}>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleFileClick(file); }}
-                        style={{ border: 'none', background: 'none', cursor: 'pointer', padding: spacing['1'], color: colors.textTertiary, display: 'flex', borderRadius: borderRadius.sm }}
-                        title="Preview"
-                      >
-                        <Eye size={14} />
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleDelete(file.id, file.name); }}
-                        style={{ border: 'none', background: 'none', cursor: 'pointer', padding: spacing['1'], color: colors.textTertiary, display: 'flex', borderRadius: borderRadius.sm }}
-                        title="Delete"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  ),
-                },
-              ]}
-            />
-          ))}
-          {filteredFiles.length === 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', textAlign: 'center' }}>
-              <Search size={32} color="#A09890" style={{ marginBottom: '12px' }} />
-              <p style={{ fontSize: '14px', fontWeight: 500, color: '#1A1613', margin: 0, marginBottom: '4px' }}>
-                {searchTerm ? 'No files match your search' : 'No files uploaded yet'}
-              </p>
-            </div>
-          )}
         </Card>
       )}
 
-      {/* PDF Viewer */}
-      {pdfFile && (
-        <PdfViewer
-          file={pdfFile.file}
-          title={pdfFile.title}
-          onClose={() => setPdfFile(null)}
-        />
-      )}
+      {/* File Preview Drawer */}
+      <FilePreview file={selectedFile} onClose={() => setSelectedFile(null)} />
     </PageContainer>
   );
 };

@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Bell } from 'lucide-react';
-import { colors, spacing, typography, borderRadius, shadows, transitions, layout } from '../styles/theme';
+import { Search, Sun, Moon, Monitor } from 'lucide-react';
+import { colors, spacing, typography, borderRadius, shadows, transitions, layout, colorVars } from '../styles/theme';
 import { Dot, useSidebar } from './Primitives';
+import { NotificationBell, NotificationPanel } from './collaboration/NotificationCenter';
+import { PresenceBar } from './collaboration/PresenceBar';
+import { useUiStore } from '../stores';
+import { useTheme } from '../hooks/useTheme';
 
 interface TopBarProps {
   activeView: string;
@@ -32,7 +36,11 @@ export const TopBar: React.FC<TopBarProps> = ({ activeView, onSearch }) => {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchValue, setSearchValue] = useState('');
   const [scrolled, setScrolled] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [themeMenuOpen, setThemeMenuOpen] = useState(false);
   const sidebarW = collapsed ? layout.sidebarCollapsed : layout.sidebarWidth;
+  const { isDark } = useTheme();
+  const { themeMode, setThemeMode } = useUiStore();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -53,7 +61,9 @@ export const TopBar: React.FC<TopBarProps> = ({ activeView, onSearch }) => {
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: `0 ${spacing.xl}`,
-        backgroundColor: scrolled ? 'rgba(255, 255, 255, 0.72)' : colors.white,
+        backgroundColor: scrolled
+          ? (isDark ? 'rgba(12, 13, 15, 0.72)' : 'rgba(255, 255, 255, 0.72)')
+          : (isDark ? colorVars.surfaceRaised : colors.white),
         backdropFilter: scrolled ? 'blur(12px)' : 'none',
         WebkitBackdropFilter: scrolled ? 'blur(12px)' : 'none',
         height: layout.topbarHeight,
@@ -65,18 +75,21 @@ export const TopBar: React.FC<TopBarProps> = ({ activeView, onSearch }) => {
         top: 0,
       }}
     >
-      {/* Page Title */}
-      <h2
-        style={{
-          fontSize: typography.fontSize['2xl'],
-          fontWeight: typography.fontWeight.semibold,
-          color: colors.textPrimary,
-          margin: 0,
-          letterSpacing: '-0.3px',
-        }}
-      >
-        {pageNames[activeView] || 'Dashboard'}
-      </h2>
+      {/* Page Title + Presence */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: spacing.lg }}>
+        <h2
+          style={{
+            fontSize: typography.fontSize['2xl'],
+            fontWeight: typography.fontWeight.semibold,
+            color: colorVars.textPrimary,
+            margin: 0,
+            letterSpacing: '-0.3px',
+          }}
+        >
+          {pageNames[activeView] || 'Dashboard'}
+        </h2>
+        <PresenceBar page={activeView} />
+      </div>
 
       {/* Right Section */}
       <div style={{ display: 'flex', alignItems: 'center', gap: spacing.lg }}>
@@ -163,40 +176,106 @@ export const TopBar: React.FC<TopBarProps> = ({ activeView, onSearch }) => {
         </div>
 
         {/* Notifications */}
-        <button
-          style={{
-            position: 'relative',
-            width: 36,
-            height: 36,
-            backgroundColor: 'transparent',
-            border: 'none',
-            borderRadius: borderRadius.md,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transition: `background-color ${transitions.fast}`,
-          }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.surfaceFlat;
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
-          }}
-        >
-          <Bell size={18} color={colors.textSecondary} />
-          <span
+        <div style={{ position: 'relative' }}>
+          <NotificationBell onClick={() => setNotificationsOpen(!notificationsOpen)} isOpen={notificationsOpen} />
+          {notificationsOpen && <NotificationPanel onClose={() => setNotificationsOpen(false)} />}
+        </div>
+
+        {/* Theme Toggle */}
+        <div style={{ position: 'relative' }}>
+          <button
+            onClick={() => setThemeMenuOpen(!themeMenuOpen)}
+            aria-label="Toggle theme"
             style={{
-              position: 'absolute',
-              top: '6px',
-              right: '6px',
-              width: '7px',
-              height: '7px',
-              backgroundColor: colors.primaryOrange,
-              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 36,
+              height: 36,
+              border: `1px solid ${colorVars.borderSubtle}`,
+              borderRadius: borderRadius.md,
+              backgroundColor: 'transparent',
+              cursor: 'pointer',
+              color: colorVars.textSecondary,
+              transition: `background-color ${transitions.fast}, color ${transitions.fast}`,
             }}
-          />
-        </button>
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor = isDark ? 'rgba(255,255,255,0.06)' : colors.surfaceHover;
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
+            }}
+          >
+            {themeMode === 'dark' ? <Moon size={16} /> : themeMode === 'system' ? <Monitor size={16} /> : <Sun size={16} />}
+          </button>
+          {themeMenuOpen && (
+            <>
+              <div
+                style={{ position: 'fixed', inset: 0, zIndex: 999 }}
+                onClick={() => setThemeMenuOpen(false)}
+              />
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  right: 0,
+                  marginTop: spacing.sm,
+                  backgroundColor: isDark ? '#1A1B1E' : colors.white,
+                  border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : colors.borderDefault}`,
+                  borderRadius: borderRadius.lg,
+                  boxShadow: shadows.dropdown,
+                  padding: spacing.xs,
+                  zIndex: 1000,
+                  minWidth: '140px',
+                }}
+              >
+                {([
+                  { mode: 'light' as const, icon: <Sun size={14} />, label: 'Light' },
+                  { mode: 'dark' as const, icon: <Moon size={14} />, label: 'Dark' },
+                  { mode: 'system' as const, icon: <Monitor size={14} />, label: 'System' },
+                ]).map(({ mode, icon, label }) => (
+                  <button
+                    key={mode}
+                    onClick={() => { setThemeMode(mode); setThemeMenuOpen(false); }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: spacing.sm,
+                      width: '100%',
+                      padding: `${spacing.sm} ${spacing.md}`,
+                      border: 'none',
+                      borderRadius: borderRadius.base,
+                      backgroundColor: themeMode === mode
+                        ? (isDark ? 'rgba(244, 120, 32, 0.12)' : colors.orangeSubtle)
+                        : 'transparent',
+                      color: themeMode === mode
+                        ? colors.primaryOrange
+                        : (isDark ? 'rgba(255,255,255,0.7)' : colors.textSecondary),
+                      cursor: 'pointer',
+                      fontSize: typography.fontSize.sm,
+                      fontFamily: typography.fontFamily,
+                      fontWeight: themeMode === mode ? typography.fontWeight.medium : typography.fontWeight.normal,
+                      transition: `background-color ${transitions.fast}`,
+                    }}
+                    onMouseEnter={(e) => {
+                      if (themeMode !== mode) {
+                        (e.currentTarget as HTMLButtonElement).style.backgroundColor = isDark ? 'rgba(255,255,255,0.06)' : colors.surfaceHover;
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (themeMode !== mode) {
+                        (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
+                      }
+                    }}
+                  >
+                    {icon}
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
 
         {/* User Avatar */}
         <div

@@ -5,7 +5,7 @@ import { Btn } from '../Primitives';
 import { colors, spacing, typography, borderRadius, shadows, zIndex } from '../../styles/theme';
 
 interface FileItem {
-  id: number;
+  id: string | number;
   name: string;
   type: string;
   size?: string;
@@ -19,9 +19,9 @@ interface FilePreviewProps {
 }
 
 const versionHistory = [
-  { version: 'v3', date: 'Mar 24, 2025', author: 'Mike Patterson', note: 'Updated structural loads' },
-  { version: 'v2', date: 'Mar 15, 2025', author: 'David Kumar', note: 'Added floor 8 details' },
-  { version: 'v1', date: 'Feb 28, 2025', author: 'Mike Patterson', note: 'Initial upload' },
+  { version: 'v3', date: 'Mar 24, 2026', author: 'Mike Patterson', note: 'Updated structural loads' },
+  { version: 'v2', date: 'Mar 15, 2026', author: 'David Kumar', note: 'Added floor 8 details' },
+  { version: 'v1', date: 'Feb 28, 2026', author: 'Mike Patterson', note: 'Initial upload' },
 ];
 
 const approvalStates: Record<string, { label: string; color: string }> = {

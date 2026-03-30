@@ -1,0 +1,1081 @@
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { supabase } from '../../lib/supabase'
+import posthog from '../../lib/analytics'
+import { useAuditedMutation, createOnError } from './createAuditedMutation'
+import { toast } from 'sonner'
+import Sentry from '../../lib/sentry'
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const from = (table: string) => supabase.from(table as any) as any
+
+// ── RFIs (Permission-checked + Audited) ──────────────────
+
+export function useCreateRFI() {
+  return useAuditedMutation<{ data: Record<string, unknown>; projectId: string }, { data: any; projectId: string }>({
+    permission: 'rfis.create',
+    action: 'create_rfi',
+    entityType: 'rfi',
+    getEntityTitle: (p) => (p.data.title as string) || undefined,
+    getNewValue: (p) => p.data,
+    mutationFn: async (params) => {
+      const { data, error } = await from('rfis').insert(params.data).select().single()
+      if (error) throw error
+      return { data, projectId: params.projectId }
+    },
+    invalidateKeys: (p, r) => [['rfis', r.projectId]],
+    analyticsEvent: 'rfi_created',
+    getAnalyticsProps: (p) => ({ project_id: p.projectId }),
+    errorMessage: 'Failed to create RFI',
+  })
+}
+
+export function useUpdateRFI() {
+  return useAuditedMutation<{ id: string; updates: Record<string, unknown>; projectId: string }, { projectId: string; id: string }>({
+    permission: 'rfis.edit',
+    action: 'update_rfi',
+    entityType: 'rfi',
+    getEntityId: (p) => p.id,
+    getNewValue: (p) => p.updates,
+    mutationFn: async ({ id, updates, projectId }) => {
+      const { error } = await from('rfis').update(updates).eq('id', id)
+      if (error) throw error
+      return { projectId, id }
+    },
+    invalidateKeys: (_, r) => [['rfis', r.projectId]],
+    analyticsEvent: 'rfi_updated',
+    getAnalyticsProps: (p) => ({ project_id: p.projectId }),
+    errorMessage: 'Failed to update RFI',
+  })
+}
+
+export function useDeleteRFI() {
+  return useAuditedMutation<{ id: string; projectId: string }, { projectId: string }>({
+    permission: 'rfis.edit',
+    action: 'delete_rfi',
+    entityType: 'rfi',
+    getEntityId: (p) => p.id,
+    mutationFn: async ({ id, projectId }) => {
+      const { error } = await from('rfis').delete().eq('id', id)
+      if (error) throw error
+      return { projectId }
+    },
+    invalidateKeys: (_, r) => [['rfis', r.projectId]],
+    analyticsEvent: 'rfi_deleted',
+    getAnalyticsProps: (p) => ({ project_id: p.projectId }),
+    errorMessage: 'Failed to delete RFI',
+  })
+}
+
+export function useCreateRFIResponse() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (params: { data: Record<string, unknown>; rfiId: string; projectId: string }) => {
+      const { data, error } = await from('rfi_responses').insert(params.data).select().single()
+      if (error) throw error
+      return { data, rfiId: params.rfiId, projectId: params.projectId }
+    },
+    onSuccess: (result: { rfiId: string; projectId: string }) => {
+      queryClient.invalidateQueries({ queryKey: ['rfis', result.projectId] })
+      queryClient.invalidateQueries({ queryKey: ['rfis', 'detail', result.rfiId] }) // FIX #1: detail page sees new response
+      queryClient.invalidateQueries({ queryKey: ['rfi_responses', result.rfiId] })
+      posthog.capture('rfi_response_created', { rfi_id: result.rfiId })
+    },
+    onError: createOnError('create_rfi_response'),
+  })
+}
+
+// ── Submittals ────────────────────────────────────────────
+
+export function useCreateSubmittal() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (params: { data: Record<string, unknown>; projectId: string }) => {
+      const { data, error } = await from('submittals').insert(params.data).select().single()
+      if (error) throw error
+      return { data, projectId: params.projectId }
+    },
+    onSuccess: (result: { projectId: string }) => {
+      queryClient.invalidateQueries({ queryKey: ['submittals', result.projectId] })
+      posthog.capture('submittal_created', { project_id: result.projectId })
+    },
+    onError: createOnError('create_submittal'),
+  })
+}
+
+export function useUpdateSubmittal() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, updates, projectId }: { id: string; updates: Record<string, unknown>; projectId: string }) => {
+      const { error } = await from('submittals').update(updates).eq('id', id)
+      if (error) throw error
+      return { projectId, id }
+    },
+    onSuccess: (result: { projectId: string; id: string }) => {
+      queryClient.invalidateQueries({ queryKey: ['submittals', result.projectId] })
+      queryClient.invalidateQueries({ queryKey: ['submittals', 'detail', result.id] }) // FIX #2: detail page
+      posthog.capture('submittal_updated', { project_id: result.projectId })
+    },
+    onError: createOnError('update_submittal'),
+  })
+}
+
+// ── Punch Items ───────────────────────────────────────────
+
+export function useCreatePunchItem() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (params: { data: Record<string, unknown>; projectId: string }) => {
+      const { data, error } = await from('punch_items').insert(params.data).select().single()
+      if (error) throw error
+      return { data, projectId: params.projectId }
+    },
+    onSuccess: (result: { projectId: string }) => {
+      queryClient.invalidateQueries({ queryKey: ['punch_items', result.projectId] })
+      posthog.capture('punch_item_created', { project_id: result.projectId })
+    },
+  })
+}
+
+export function useUpdatePunchItem() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, updates, projectId }: { id: string; updates: Record<string, unknown>; projectId: string }) => {
+      const { error } = await from('punch_items').update(updates).eq('id', id)
+      if (error) throw error
+      return { projectId }
+    },
+    onSuccess: (result: { projectId: string }) => {
+      queryClient.invalidateQueries({ queryKey: ['punch_items', result.projectId] })
+      posthog.capture('punch_item_updated', { project_id: result.projectId })
+    },
+  })
+}
+
+// ── Tasks ─────────────────────────────────────────────────
+
+export function useCreateTask() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (params: { data: Record<string, unknown>; projectId: string }) => {
+      const { data, error } = await from('tasks').insert(params.data).select().single()
+      if (error) throw error
+      return { data, projectId: params.projectId }
+    },
+    onSuccess: (result: { projectId: string }) => {
+      queryClient.invalidateQueries({ queryKey: ['tasks', result.projectId] })
+      posthog.capture('task_created', { project_id: result.projectId })
+    },
+  })
+}
+
+export function useUpdateTask() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, updates, projectId }: { id: string; updates: Record<string, unknown>; projectId: string }) => {
+      const { error } = await from('tasks').update(updates).eq('id', id)
+      if (error) throw error
+      return { projectId }
+    },
+    onSuccess: (result: { projectId: string }) => {
+      queryClient.invalidateQueries({ queryKey: ['tasks', result.projectId] })
+      posthog.capture('task_updated', { project_id: result.projectId })
+    },
+  })
+}
+
+export function useDeleteTask() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, projectId }: { id: string; projectId: string }) => {
+      const { error } = await from('tasks').delete().eq('id', id)
+      if (error) throw error
+      return { projectId }
+    },
+    onSuccess: (result: { projectId: string }) => {
+      queryClient.invalidateQueries({ queryKey: ['tasks', result.projectId] })
+      posthog.capture('task_deleted', { project_id: result.projectId })
+    },
+  })
+}
+
+// ── Daily Logs ────────────────────────────────────────────
+
+export function useCreateDailyLog() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (params: { data: Record<string, unknown>; projectId: string }) => {
+      const { data, error } = await from('daily_logs').insert(params.data).select().single()
+      if (error) throw error
+      return { data, projectId: params.projectId }
+    },
+    onSuccess: (result: { projectId: string }) => {
+      queryClient.invalidateQueries({ queryKey: ['daily_logs', result.projectId] })
+      posthog.capture('daily_log_created', { project_id: result.projectId })
+    },
+  })
+}
+
+export function useUpdateDailyLog() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, updates, projectId }: { id: string; updates: Record<string, unknown>; projectId: string }) => {
+      const { error } = await from('daily_logs').update(updates).eq('id', id)
+      if (error) throw error
+      return { projectId, id }
+    },
+    onSuccess: (result: { projectId: string; id: string }) => {
+      queryClient.invalidateQueries({ queryKey: ['daily_logs', result.projectId] })
+      queryClient.invalidateQueries({ queryKey: ['daily_logs', 'detail', result.id] }) // FIX #3
+      posthog.capture('daily_log_updated', { project_id: result.projectId })
+    },
+    onError: createOnError('update_daily_log'),
+  })
+}
+
+// ── Daily Log Entries ─────────────────────────────────────
+
+export function useCreateDailyLogEntry() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (params: { data: Record<string, unknown>; projectId: string }) => {
+      const { data, error } = await from('daily_log_entries').insert(params.data).select().single()
+      if (error) throw error
+      return { data, projectId: params.projectId }
+    },
+    onSuccess: (result: { projectId: string }) => {
+      queryClient.invalidateQueries({ queryKey: ['daily_logs', result.projectId] })
+      posthog.capture('daily_log_entry_created', { project_id: result.projectId })
+    },
+  })
+}
+
+export function useSubmitDailyLog() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, signatureUrl, projectId }: { id: string; signatureUrl?: string; projectId: string }) => {
+      const updates: Record<string, unknown> = { status: 'submitted', submitted_at: new Date().toISOString() }
+      if (signatureUrl) updates.superintendent_signature_url = signatureUrl
+      const { error } = await from('daily_logs').update(updates).eq('id', id)
+      if (error) throw error
+      return { projectId }
+    },
+    onSuccess: (result: { projectId: string }) => {
+      queryClient.invalidateQueries({ queryKey: ['daily_logs', result.projectId] })
+      posthog.capture('daily_log_submitted', { project_id: result.projectId })
+    },
+  })
+}
+
+export function useApproveDailyLog() {
+  return useAuditedMutation<{ id: string; signatureUrl?: string; userId: string; projectId: string }, { projectId: string }>({
+    permission: 'daily_log.approve',
+    action: 'approve_daily_log',
+    entityType: 'daily_log',
+    getEntityId: (p) => p.id,
+    getNewValue: (p) => ({ status: 'approved', approved_by: p.userId }),
+    mutationFn: async ({ id, signatureUrl, userId, projectId }) => {
+      const updates: Record<string, unknown> = {
+        status: 'approved', approved: true, approved_at: new Date().toISOString(), approved_by: userId,
+      }
+      if (signatureUrl) updates.manager_signature_url = signatureUrl
+      const { error } = await from('daily_logs').update(updates).eq('id', id)
+      if (error) throw error
+      return { projectId }
+    },
+    invalidateKeys: (p, r) => [['daily_logs', r.projectId], ['daily_logs', 'detail', p.id]], // FIX #4
+    analyticsEvent: 'daily_log_approved',
+    errorMessage: 'Failed to approve daily log',
+  })
+}
+
+export function useRejectDailyLog() {
+  return useAuditedMutation<{ id: string; comments: string; userId: string; projectId: string }, { projectId: string }>({
+    permission: 'daily_log.approve',
+    action: 'reject_daily_log',
+    entityType: 'daily_log',
+    getEntityId: (p) => p.id,
+    getNewValue: (p) => ({ status: 'rejected', comments: p.comments, rejected_by: p.userId }),
+    mutationFn: async ({ id, comments, userId, projectId }) => {
+      // FIX: Add rejected_at and rejected_by (were missing)
+      const { error } = await from('daily_logs').update({
+        status: 'rejected',
+        rejection_comments: comments,
+        approved: false,
+        rejected_at: new Date().toISOString(),
+        rejected_by: userId,
+      }).eq('id', id)
+      if (error) throw error
+      return { projectId }
+    },
+    invalidateKeys: (p, r) => [['daily_logs', r.projectId], ['daily_logs', 'detail', p.id]],
+    analyticsEvent: 'daily_log_rejected',
+    errorMessage: 'Failed to reject daily log',
+  })
+}
+
+// ── Change Orders ─────────────────────────────────────────
+
+export function useCreateChangeOrder() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (params: { data: Record<string, unknown>; projectId: string }) => {
+      const { data, error } = await from('change_orders').insert(params.data).select().single()
+      if (error) throw error
+      return { data, projectId: params.projectId }
+    },
+    onSuccess: (result: { projectId: string }) => {
+      queryClient.invalidateQueries({ queryKey: ['change_orders', result.projectId] })
+      posthog.capture('change_order_created', { project_id: result.projectId })
+    },
+  })
+}
+
+export function useUpdateChangeOrder() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, updates, projectId }: { id: string; updates: Record<string, unknown>; projectId: string }) => {
+      const { error } = await from('change_orders').update(updates).eq('id', id)
+      if (error) throw error
+      return { projectId }
+    },
+    onSuccess: (result: { projectId: string }) => {
+      queryClient.invalidateQueries({ queryKey: ['change_orders', result.projectId] })
+      posthog.capture('change_order_updated', { project_id: result.projectId })
+    },
+  })
+}
+
+export function usePromoteChangeOrder() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ sourceId, projectId, nextType }: { sourceId: string; projectId: string; nextType: 'cor' | 'co' }) => {
+      // Fetch the source CO
+      const { data: source, error: fetchError } = await supabase.from('change_orders' as any).select('*').eq('id', sourceId).single()
+      if (fetchError) throw fetchError
+      const src = source as any
+      // Create new CO at the next pipeline stage
+      const { data: promoted, error: createError } = await from('change_orders').insert({
+        project_id: projectId,
+        type: nextType,
+        title: src.title || src.description,
+        description: src.description,
+        amount: src.amount,
+        estimated_cost: src.estimated_cost || src.amount,
+        submitted_cost: src.submitted_cost || src.amount,
+        reason_code: src.reason_code,
+        schedule_impact_days: src.schedule_impact_days,
+        cost_code: src.cost_code,
+        budget_line_item_id: src.budget_line_item_id,
+        promoted_from_id: sourceId,
+        status: 'draft',
+        requested_by: src.requested_by,
+      }).select().single()
+      if (createError) throw createError
+      // Mark source as promoted
+      await from('change_orders').update({ promoted_at: new Date().toISOString() }).eq('id', sourceId)
+      return { data: promoted, projectId }
+    },
+    onSuccess: (result: { projectId: string }) => {
+      queryClient.invalidateQueries({ queryKey: ['change_orders', result.projectId] }) // FIX #5: all CO types
+      queryClient.invalidateQueries({ queryKey: ['costData'] })
+      queryClient.invalidateQueries({ queryKey: ['earned_value', result.projectId] }) // FIX #5: financials
+      queryClient.invalidateQueries({ queryKey: ['budget_items', result.projectId] })
+      posthog.capture('change_order_promoted', { project_id: result.projectId })
+    },
+    onError: createOnError('promote_change_order'),
+  })
+}
+
+export function useSubmitChangeOrder() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, userId, projectId }: { id: string; userId: string; projectId: string }) => {
+      const { error } = await from('change_orders').update({
+        status: 'pending_review',
+        submitted_by: userId,
+        submitted_at: new Date().toISOString(),
+      }).eq('id', id)
+      if (error) throw error
+      return { projectId }
+    },
+    onSuccess: (result: { projectId: string }) => {
+      queryClient.invalidateQueries({ queryKey: ['change_orders', result.projectId] })
+      queryClient.invalidateQueries({ queryKey: ['costData'] })
+      posthog.capture('change_order_submitted', { project_id: result.projectId })
+    },
+  })
+}
+
+export function useApproveChangeOrder() {
+  return useAuditedMutation<{ id: string; userId: string; comments?: string; approvedCost?: number; projectId: string }, { projectId: string }>({
+    permission: 'change_orders.approve',
+    action: 'approve_change_order',
+    entityType: 'change_order',
+    getEntityId: (p) => p.id,
+    getNewValue: (p) => ({ status: 'approved', approved_by: p.userId, approved_cost: p.approvedCost }),
+    mutationFn: async ({ id, userId, comments, approvedCost, projectId }) => {
+      const updates: Record<string, unknown> = {
+        status: 'approved', approved_by: userId,
+        approved_at: new Date().toISOString(),
+        approved_date: new Date().toISOString().slice(0, 10),
+      }
+      if (comments) updates.approval_comments = comments
+      if (approvedCost !== undefined) updates.approved_cost = approvedCost
+      const { error } = await from('change_orders').update(updates).eq('id', id)
+      if (error) throw error
+      return { projectId }
+    },
+    invalidateKeys: (_, r) => [['change_orders', r.projectId], ['costData'], ['budget_items', r.projectId], ['earned_value', r.projectId]],
+    analyticsEvent: 'change_order_approved',
+    errorMessage: 'Failed to approve change order',
+  })
+}
+
+export function useRejectChangeOrder() {
+  return useAuditedMutation<{ id: string; userId: string; comments: string; projectId: string }, { projectId: string }>({
+    permission: 'change_orders.approve',
+    action: 'reject_change_order',
+    entityType: 'change_order',
+    getEntityId: (p) => p.id,
+    getNewValue: (p) => ({ status: 'rejected', rejected_by: p.userId, comments: p.comments }),
+    mutationFn: async ({ id, userId, comments, projectId }) => {
+      const { error } = await from('change_orders').update({
+        status: 'rejected', rejected_by: userId, rejected_at: new Date().toISOString(), rejection_comments: comments,
+      }).eq('id', id)
+      if (error) throw error
+      return { projectId }
+    },
+    invalidateKeys: (_, r) => [['change_orders', r.projectId], ['costData']],
+    analyticsEvent: 'change_order_rejected',
+    errorMessage: 'Failed to reject change order',
+  })
+}
+
+// ── Meetings ──────────────────────────────────────────────
+
+export function useCreateMeeting() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (params: { data: Record<string, unknown>; projectId: string }) => {
+      const { data, error } = await from('meetings').insert(params.data).select().single()
+      if (error) throw error
+      return { data, projectId: params.projectId }
+    },
+    onSuccess: (result: { projectId: string }) => {
+      queryClient.invalidateQueries({ queryKey: ['meetings', result.projectId] })
+      posthog.capture('meeting_created', { project_id: result.projectId })
+    },
+  })
+}
+
+// ── Files ─────────────────────────────────────────────────
+
+export function useCreateFile() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (params: { data: Record<string, unknown>; projectId: string }) => {
+      const { data, error } = await from('files').insert(params.data).select().single()
+      if (error) throw error
+      return { data, projectId: params.projectId }
+    },
+    onSuccess: (result: { projectId: string }) => {
+      queryClient.invalidateQueries({ queryKey: ['files', result.projectId] })
+      posthog.capture('file_uploaded', { project_id: result.projectId })
+    },
+  })
+}
+
+export function useDeleteFile() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, projectId }: { id: string; projectId: string }) => {
+      const { error } = await from('files').delete().eq('id', id)
+      if (error) throw error
+      return { projectId }
+    },
+    onSuccess: (result: { projectId: string }) => {
+      // FIX #6: Use exact:false to catch ['files', projectId, folder] for all folder variations
+      queryClient.invalidateQueries({ queryKey: ['files', result.projectId], exact: false })
+      posthog.capture('file_deleted', { project_id: result.projectId })
+    },
+    onError: createOnError('delete_file'),
+  })
+}
+
+// ── Field Captures ────────────────────────────────────────
+
+export function useCreateFieldCapture() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (params: { data: Record<string, unknown>; projectId: string }) => {
+      const { data, error } = await from('field_captures').insert(params.data).select().single()
+      if (error) throw error
+      return { data, projectId: params.projectId }
+    },
+    onSuccess: (result: { projectId: string }) => {
+      queryClient.invalidateQueries({ queryKey: ['field_captures', result.projectId] })
+      posthog.capture('field_capture_created', { project_id: result.projectId })
+    },
+  })
+}
+
+// ── Directory Contacts ────────────────────────────────────
+
+export function useCreateDirectoryContact() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (params: { data: Record<string, unknown>; projectId: string }) => {
+      const { data, error } = await from('directory_contacts').insert(params.data).select().single()
+      if (error) throw error
+      return { data, projectId: params.projectId }
+    },
+    onSuccess: (result: { projectId: string }) => {
+      queryClient.invalidateQueries({ queryKey: ['directory_contacts', result.projectId] })
+      posthog.capture('directory_contact_created', { project_id: result.projectId })
+    },
+  })
+}
+
+// ── Crews ─────────────────────────────────────────────────
+
+export function useCreateCrew() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (params: { data: Record<string, unknown>; projectId: string }) => {
+      const { data, error } = await from('crews').insert(params.data).select().single()
+      if (error) throw error
+      return { data, projectId: params.projectId }
+    },
+    onSuccess: (result: { projectId: string }) => {
+      queryClient.invalidateQueries({ queryKey: ['crews', result.projectId] })
+      posthog.capture('crew_created', { project_id: result.projectId })
+    },
+  })
+}
+
+// ── Notifications ─────────────────────────────────────────
+
+export function useMarkNotificationRead() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, userId }: { id: string; userId: string }) => {
+      const { error } = await from('notifications').update({ read: true }).eq('id', id)
+      if (error) throw error
+      return { userId }
+    },
+    onSuccess: (result: { userId: string }) => {
+      queryClient.invalidateQueries({ queryKey: ['notifications', result.userId] })
+      posthog.capture('notification_read', { user_id: result.userId })
+    },
+  })
+}
+
+export function useMarkAllNotificationsRead() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      const { error } = await from('notifications').update({ read: true }).eq('user_id', userId).eq('read', false)
+      if (error) throw error
+      return { userId }
+    },
+    onSuccess: (result: { userId: string }) => {
+      queryClient.invalidateQueries({ queryKey: ['notifications', result.userId] })
+      posthog.capture('all_notifications_read', { user_id: result.userId })
+    },
+  })
+}
+
+// ── Activity Feed ─────────────────────────────────────────
+
+export function useCreateActivityFeedItem() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (params: { data: Record<string, unknown>; projectId: string }) => {
+      const { data, error } = await from('activity_feed').insert(params.data).select().single()
+      if (error) throw error
+      return { data, projectId: params.projectId }
+    },
+    onSuccess: (result: { projectId: string }) => {
+      queryClient.invalidateQueries({ queryKey: ['activity_feed', result.projectId] })
+      posthog.capture('activity_created', { project_id: result.projectId })
+    },
+  })
+}
+
+// ── Safety ───────────────────────────────────────────────
+
+export function useCreateCorrectiveAction() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (params: { data: Record<string, unknown>; projectId: string }) => {
+      const { data, error } = await from('corrective_actions').insert(params.data).select().single()
+      if (error) throw error
+      return { data, projectId: params.projectId }
+    },
+    onSuccess: (result: { projectId: string }) => {
+      queryClient.invalidateQueries({ queryKey: ['corrective_actions', result.projectId] })
+      queryClient.invalidateQueries({ queryKey: ['safety_overview', result.projectId] }) // FIX #7: cross-invalidate
+      queryClient.invalidateQueries({ queryKey: ['project_snapshots', result.projectId] })
+      posthog.capture('corrective_action_created', { project_id: result.projectId })
+    },
+    onError: createOnError('create_corrective_action'),
+  })
+}
+
+export function useUpdateCorrectiveAction() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, updates, projectId }: { id: string; updates: Record<string, unknown>; projectId: string }) => {
+      const { error } = await from('corrective_actions').update(updates).eq('id', id)
+      if (error) throw error
+      return { projectId }
+    },
+    onSuccess: (result: { projectId: string }) => {
+      queryClient.invalidateQueries({ queryKey: ['corrective_actions', result.projectId] })
+      posthog.capture('corrective_action_updated', { project_id: result.projectId })
+    },
+  })
+}
+
+export function useCreateSafetyInspection() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (params: { data: Record<string, unknown>; projectId: string }) => {
+      const { data, error } = await from('safety_inspections').insert(params.data).select().single()
+      if (error) throw error
+      return { data, projectId: params.projectId }
+    },
+    onSuccess: (result: { projectId: string }) => {
+      queryClient.invalidateQueries({ queryKey: ['safety_inspections', result.projectId] })
+      queryClient.invalidateQueries({ queryKey: ['safety_overview', result.projectId] }) // FIX #7
+      queryClient.invalidateQueries({ queryKey: ['corrective_actions', result.projectId] })
+      posthog.capture('safety_inspection_created', { project_id: result.projectId })
+    },
+    onError: createOnError('create_safety_inspection'),
+  })
+}
+
+export function useCreateIncident() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (params: { data: Record<string, unknown>; projectId: string }) => {
+      const { data, error } = await from('incidents').insert(params.data).select().single()
+      if (error) throw error
+      return { data, projectId: params.projectId }
+    },
+    onSuccess: (result: { projectId: string }) => {
+      queryClient.invalidateQueries({ queryKey: ['incidents', result.projectId] })
+      queryClient.invalidateQueries({ queryKey: ['safety_overview', result.projectId] }) // FIX #7
+      queryClient.invalidateQueries({ queryKey: ['daily_logs', result.projectId] }) // Incidents affect daily logs
+      queryClient.invalidateQueries({ queryKey: ['project_snapshots', result.projectId] })
+      posthog.capture('incident_reported', { project_id: result.projectId })
+    },
+    onError: createOnError('create_incident'),
+  })
+}
+
+// ── Documents ────────────────────────────────────────────
+
+export function useCreateDrawingMarkup() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (params: { data: Record<string, unknown>; drawingId: string }) => {
+      const { data, error } = await from('drawing_markups').insert(params.data).select().single()
+      if (error) throw error
+      return { data, drawingId: params.drawingId }
+    },
+    onSuccess: (result: { drawingId: string }) => {
+      queryClient.invalidateQueries({ queryKey: ['drawing_markups', result.drawingId] })
+      posthog.capture('drawing_markup_created', { drawing_id: result.drawingId })
+    },
+  })
+}
+
+export function useCreateTransmittal() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (params: { data: Record<string, unknown>; projectId: string }) => {
+      const { data, error } = await from('transmittals').insert(params.data).select().single()
+      if (error) throw error
+      return { data, projectId: params.projectId }
+    },
+    onSuccess: (result: { projectId: string }) => {
+      queryClient.invalidateQueries({ queryKey: ['transmittals', result.projectId] })
+      posthog.capture('transmittal_created', { project_id: result.projectId })
+    },
+  })
+}
+
+// ── AI Agents ────────────────────────────────────────────
+
+export function useApproveAgentAction() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, projectId, userId }: { id: string; projectId: string; userId: string }) => {
+      const { error } = await from('ai_agent_actions').update({
+        status: 'approved',
+        reviewed_by: userId,
+        reviewed_at: new Date().toISOString(),
+        applied: true,
+        applied_at: new Date().toISOString(),
+      }).eq('id', id)
+      if (error) throw error
+      return { projectId }
+    },
+    onSuccess: (result: { projectId: string }) => {
+      queryClient.invalidateQueries({ queryKey: ['ai_agent_actions', result.projectId] })
+      posthog.capture('agent_action_approved', { project_id: result.projectId })
+    },
+  })
+}
+
+export function useRejectAgentAction() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, projectId, userId }: { id: string; projectId: string; userId: string }) => {
+      const { error } = await from('ai_agent_actions').update({
+        status: 'rejected',
+        reviewed_by: userId,
+        reviewed_at: new Date().toISOString(),
+      }).eq('id', id)
+      if (error) throw error
+      return { projectId }
+    },
+    onSuccess: (result: { projectId: string }) => {
+      queryClient.invalidateQueries({ queryKey: ['ai_agent_actions', result.projectId] })
+      posthog.capture('agent_action_rejected', { project_id: result.projectId })
+    },
+  })
+}
+
+export function useUpdateAgentConfig() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, updates, projectId }: { id: string; updates: Record<string, unknown>; projectId: string }) => {
+      const { error } = await from('ai_agents').update(updates).eq('id', id)
+      if (error) throw error
+      return { projectId }
+    },
+    onSuccess: (result: { projectId: string }) => {
+      queryClient.invalidateQueries({ queryKey: ['ai_agents', result.projectId] })
+      posthog.capture('agent_config_updated', { project_id: result.projectId })
+    },
+  })
+}
+
+export function useRunAgent() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ agentType, projectId }: { agentType: string; projectId: string }) => {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+      if (!supabaseUrl) throw new Error('Supabase not configured')
+
+      const response = await fetch(`${supabaseUrl}/functions/v1/agent-runner`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agent_type: agentType, project_id: projectId, trigger: 'manual' }),
+      })
+      if (!response.ok) throw new Error('Agent execution failed')
+      return await response.json()
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['ai_agents', variables.projectId] })
+      queryClient.invalidateQueries({ queryKey: ['ai_agent_actions', variables.projectId] })
+      posthog.capture('agent_run_manual', { agent_type: _data?.agent_type, project_id: variables.projectId })
+    },
+  })
+}
+
+// ── Notification Preferences ─────────────────────────────
+
+export function useUpdateNotificationPreferences() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ userId, updates }: { userId: string; updates: Record<string, unknown> }) => {
+      const { data, error } = await from('notification_preferences').upsert({ user_id: userId, ...updates }).select().single()
+      if (error) throw error
+      return { data, userId }
+    },
+    onSuccess: (result: { userId: string }) => {
+      queryClient.invalidateQueries({ queryKey: ['notification_preferences', result.userId] })
+      posthog.capture('notification_preferences_updated')
+    },
+  })
+}
+
+// ── RFI Watchers ─────────────────────────────────────────
+
+export function useAddRFIWatcher() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ rfiId, userId }: { rfiId: string; userId: string }) => {
+      const { error } = await from('rfi_watchers').insert({ rfi_id: rfiId, user_id: userId })
+      if (error) throw error
+      return { rfiId }
+    },
+    onSuccess: (result: { rfiId: string }) => {
+      queryClient.invalidateQueries({ queryKey: ['rfi_watchers', result.rfiId] })
+    },
+  })
+}
+
+export function useRemoveRFIWatcher() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ rfiId, userId }: { rfiId: string; userId: string }) => {
+      const { error } = await from('rfi_watchers').delete().eq('rfi_id', rfiId).eq('user_id', userId)
+      if (error) throw error
+      return { rfiId }
+    },
+    onSuccess: (result: { rfiId: string }) => {
+      queryClient.invalidateQueries({ queryKey: ['rfi_watchers', result.rfiId] })
+    },
+  })
+}
+
+// ── Task Bulk Operations ─────────────────────────────────
+
+export function useBulkUpdateTasks() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ ids, updates, projectId }: { ids: string[]; updates: Record<string, unknown>; projectId: string }) => {
+      const { error } = await from('tasks').update(updates).in('id', ids)
+      if (error) throw error
+      return { projectId, count: ids.length }
+    },
+    onSuccess: (result: { projectId: string; count: number }) => {
+      queryClient.invalidateQueries({ queryKey: ['tasks', result.projectId] })
+      posthog.capture('tasks_bulk_updated', { project_id: result.projectId, count: result.count })
+    },
+  })
+}
+
+export function useBulkDeleteTasks() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ ids, projectId }: { ids: string[]; projectId: string }) => {
+      const { error } = await from('tasks').delete().in('id', ids)
+      if (error) throw error
+      return { projectId, count: ids.length }
+    },
+    onSuccess: (result: { projectId: string; count: number }) => {
+      queryClient.invalidateQueries({ queryKey: ['tasks', result.projectId] })
+      posthog.capture('tasks_bulk_deleted', { project_id: result.projectId, count: result.count })
+    },
+  })
+}
+
+export function useReorderTasks() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    // Optimistic: apply reorder instantly in the UI
+    onMutate: async ({ updates, projectId }) => {
+      await queryClient.cancelQueries({ queryKey: ['tasks', projectId] })
+      const previousTasks = queryClient.getQueryData(['tasks', projectId])
+      queryClient.setQueryData(['tasks', projectId], (old: any[]) => {
+        if (!Array.isArray(old)) return old
+        const orderMap = new Map(updates.map((u) => [u.id, u.sort_order]))
+        return old.map((t) => orderMap.has(t.id) ? { ...t, sort_order: orderMap.get(t.id) } : t)
+          .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+      })
+      return { previousTasks }
+    },
+    mutationFn: async ({ updates, projectId }: { updates: Array<{ id: string; sort_order: number }>; projectId: string }) => {
+      // ATOMIC: Use Supabase RPC to update all sort_orders in a single transaction.
+      // Falls back to individual updates if RPC not available.
+      try {
+        const { error } = await supabase.rpc('reorder_tasks', {
+          task_ids: updates.map((u) => u.id),
+          new_orders: updates.map((u) => u.sort_order),
+        })
+        if (error) throw error
+      } catch {
+        // Fallback: individual updates (non-atomic, last resort)
+        for (const { id, sort_order } of updates) {
+          const { error } = await from('tasks').update({ sort_order }).eq('id', id)
+          if (error) throw error
+        }
+      }
+      return { projectId }
+    },
+    onSuccess: (result: { projectId: string }) => {
+      queryClient.invalidateQueries({ queryKey: ['tasks', result.projectId] })
+    },
+    onError: (_err, { projectId }, context) => {
+      // Rollback optimistic update on failure
+      if (context?.previousTasks) {
+        queryClient.setQueryData(['tasks', projectId], context.previousTasks)
+      }
+      toast.error('Failed to reorder tasks')
+      Sentry.captureException(_err, { extra: { mutation: 'reorder_tasks' } })
+    },
+  })
+}
+
+export function useUpdateTaskDependencies() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ taskId, predecessorIds, projectId }: { taskId: string; predecessorIds: string[]; projectId: string }) => {
+      const { error } = await from('tasks').update({ predecessor_ids: predecessorIds }).eq('id', taskId)
+      if (error) throw error
+      return { projectId }
+    },
+    onSuccess: (result: { projectId: string }) => {
+      queryClient.invalidateQueries({ queryKey: ['tasks', result.projectId] })
+      queryClient.invalidateQueries({ queryKey: ['task_critical_path', result.projectId] })
+      posthog.capture('task_dependencies_updated', { project_id: result.projectId })
+    },
+  })
+}
+
+export function useApplyTaskTemplate() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ templateId, projectId }: { templateId: string; projectId: string }) => {
+      const { data: template, error: templateError } = await supabase
+        .from('task_templates' as any)
+        .select('*')
+        .eq('id', templateId)
+        .single()
+      if (templateError) throw templateError
+
+      const tmpl = template as any
+      const taskData = (tmpl.task_data as any[]) || []
+
+      // ATOMIC: Batch insert all tasks in a single operation
+      const taskRows = taskData.map((task: any) => ({
+        project_id: projectId,
+        title: task.title,
+        description: task.description || '',
+        status: 'todo',
+        priority: task.priority || 'medium',
+        estimated_hours: task.estimated_hours || null,
+        phase: tmpl.phase,
+      }))
+
+      const { data: created, error: insertError } = await from('tasks')
+        .insert(taskRows)
+        .select()
+      if (insertError) throw insertError
+
+      // Wire up predecessor relationships in a second pass
+      const createdTasks = (created || []) as any[]
+      const idMap = new Map<string, string>()
+      taskData.forEach((task: any, i: number) => {
+        if (createdTasks[i]) {
+          idMap.set(task.id || task.title, createdTasks[i].id)
+        }
+      })
+
+      for (const task of taskData) {
+        if (task.predecessors?.length) {
+          const createdId = idMap.get(task.id || task.title)
+          const predIds = task.predecessors.map((p: string) => idMap.get(p)).filter(Boolean)
+          if (createdId && predIds.length) {
+            await from('tasks').update({ predecessor_ids: predIds }).eq('id', createdId)
+          }
+        }
+      }
+
+      return { projectId, count: taskData.length, phase: tmpl.phase }
+    },
+    onSuccess: (result: { projectId: string; count: number; phase: string }) => {
+      queryClient.invalidateQueries({ queryKey: ['tasks', result.projectId] })
+      posthog.capture('task_template_applied', { project_id: result.projectId, count: result.count, phase: result.phase })
+    },
+    onError: createOnError('apply_task_template'),
+  })
+}
+
+// ── AI Insights ──────────────────────────────────────────
+
+export function useDismissInsight() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, projectId }: { id: string; projectId: string }) => {
+      const { error } = await from('ai_insights').update({ dismissed: true }).eq('id', id)
+      if (error) throw error
+      return { projectId }
+    },
+    onSuccess: (result: { projectId: string }) => {
+      queryClient.invalidateQueries({ queryKey: ['ai_insights', result.projectId] })
+      posthog.capture('insight_dismissed', { project_id: result.projectId })
+    },
+  })
+}
+
+export function useActOnInsight() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, action, projectId }: { id: string; action: string; projectId: string }) => {
+      const { error } = await from('ai_insights').update({
+        acted_on_at: new Date().toISOString(),
+        acted_on_action: action,
+      }).eq('id', id)
+      if (error) throw error
+      return { projectId }
+    },
+    onSuccess: (result: { projectId: string }) => {
+      queryClient.invalidateQueries({ queryKey: ['ai_insights', result.projectId] })
+      posthog.capture('insight_acted_on', { project_id: result.projectId })
+    },
+  })
+}
+
+// ── Integrations ─────────────────────────────────────────
+
+export function useConnectIntegration() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (params: { type: string; projectId: string; credentials: Record<string, unknown> }) => {
+      const { getProvider } = await import('../../services/integrations')
+      const provider = getProvider(params.type)
+      if (!provider) throw new Error(`No provider for integration type: ${params.type}`)
+      const result = await provider.connect(params.projectId, params.credentials)
+      if (result.error) throw new Error(result.error)
+      return { integrationId: result.integrationId, type: params.type }
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['integrations'] })
+      posthog.capture('integration_connected', { type: result.type })
+    },
+  })
+}
+
+export function useDisconnectIntegration() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (params: { integrationId: string; type: string }) => {
+      const { getProvider } = await import('../../services/integrations')
+      const provider = getProvider(params.type)
+      if (!provider) {
+        await from('integrations').update({ status: 'disconnected' }).eq('id', params.integrationId)
+      } else {
+        await provider.disconnect(params.integrationId)
+      }
+      return params
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['integrations'] })
+      posthog.capture('integration_disconnected', { type: result.type })
+    },
+  })
+}
+
+export function useSyncIntegration() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (params: { integrationId: string; type: string; direction?: 'import' | 'export' | 'bidirectional' }) => {
+      const { getProvider } = await import('../../services/integrations')
+      const provider = getProvider(params.type)
+      if (!provider) throw new Error(`No provider for integration type: ${params.type}`)
+      const result = await provider.sync(params.integrationId, params.direction ?? 'bidirectional')
+      return { ...result, type: params.type, integrationId: params.integrationId }
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['integrations'] })
+      queryClient.invalidateQueries({ queryKey: ['integration_sync_log'] })
+      posthog.capture('integration_synced', { type: result.type, synced: result.recordsSynced, failed: result.recordsFailed })
+    },
+  })
+}

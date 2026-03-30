@@ -7,6 +7,11 @@ import {
   Paperclip,
   X,
   ArrowRight,
+  GitBranch,
+  Zap,
+  Copy,
+  Trash2,
+  LayoutTemplate,
 } from 'lucide-react';
 import {
   Btn,
@@ -25,6 +30,9 @@ import { colors, spacing, typography, borderRadius, shadows, transitions } from 
 import { useQuery } from '../hooks/useQuery';
 import { getTasks } from '../api/endpoints/tasks';
 import { useAppNavigate, getRelatedItemsForTask } from '../utils/connections';
+import { useCreateTask, useUpdateTask, useBulkUpdateTasks, useBulkDeleteTasks, useApplyTaskTemplate } from '../hooks/mutations';
+import { useTaskCriticalPath, useTaskTemplates } from '../hooks/queries';
+import { useProjectId } from '../hooks/useProjectId';
 import { AIAnnotationIndicator } from '../components/ai/AIAnnotation';
 import { PredictiveAlertBanner } from '../components/ai/PredictiveAlert';
 import { getAnnotationsForEntity, getPredictiveAlertsForPage } from '../data/aiAnnotations';
@@ -74,8 +82,18 @@ export const Tasks: React.FC = () => {
   const [newAssignee, setNewAssignee] = useState('');
   const [criticalFilter, setCriticalFilter] = useState(false);
   const [myTasksOnly, setMyTasksOnly] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [showTemplates, setShowTemplates] = useState(false);
   const { addToast } = useToast();
   const appNavigate = useAppNavigate();
+  const projectId = useProjectId();
+  const createTask = useCreateTask();
+  const updateTask = useUpdateTask();
+  const bulkUpdate = useBulkUpdateTasks();
+  const bulkDelete = useBulkDeleteTasks();
+  const applyTemplate = useApplyTaskTemplate();
+  const { data: cpmResults } = useTaskCriticalPath(projectId);
+  const { data: templates } = useTaskTemplates();
 
   const filteredTasks = useMemo(() => {
     return localTasks.filter((t) => {
@@ -110,16 +128,61 @@ export const Tasks: React.FC = () => {
     low: colors.textTertiary,
   };
 
+  const toggleSelect = (taskId: number) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(taskId)) next.delete(taskId);
+      else next.add(taskId);
+      return next;
+    });
+  };
+
+  const handleBulkStatusChange = async (status: TaskStatus) => {
+    const ids = Array.from(selectedIds).map(String);
+    try {
+      await bulkUpdate.mutateAsync({ ids, updates: { status }, projectId: projectId! });
+      setLocalTasks(prev => prev.map(t => selectedIds.has(t.id) ? { ...t, status } : t));
+      setSelectedIds(new Set());
+      addToast('success', `${ids.length} tasks moved to ${statusConfig[status].label}`);
+    } catch {
+      addToast('error', 'Failed to update tasks');
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selectedIds).map(String);
+    try {
+      await bulkDelete.mutateAsync({ ids, projectId: projectId! });
+      setLocalTasks(prev => prev.filter(t => !selectedIds.has(t.id)));
+      setSelectedIds(new Set());
+      addToast('success', `${ids.length} tasks deleted`);
+    } catch {
+      addToast('error', 'Failed to delete tasks');
+    }
+  };
+
+  const handleApplyTemplate = async (templateId: string) => {
+    try {
+      await applyTemplate.mutateAsync({ templateId, projectId: projectId! });
+      addToast('success', 'Template tasks created');
+      setShowTemplates(false);
+    } catch {
+      addToast('error', 'Failed to apply template');
+    }
+  };
+
   const renderTaskCard = (task: typeof localTasks[0]) => {
     const due = formatDue(task.dueDate);
-    const isCriticalPath = task.tags.some(t => ['structural', 'critical path', 'mechanical', 'electrical'].some(k => t.toLowerCase().includes(k)));
+    const cpmResult = cpmResults?.get((task as any).uuid);
+    const isCriticalPath = cpmResult?.isCritical || task.is_critical_path;
     return (
       <div
         key={task.id}
         draggable
-        onClick={() => setSelectedTask(task)}
+        onClick={(e) => { if (e.shiftKey) { toggleSelect(task.id); } else { setSelectedTask(task); } }}
         style={{
-          backgroundColor: colors.surfaceRaised,
+          backgroundColor: selectedIds.has(task.id) ? `${colors.primaryOrange}08` : colors.surfaceRaised,
+          outline: selectedIds.has(task.id) ? `2px solid ${colors.primaryOrange}` : 'none',
           borderRadius: borderRadius.lg,
           padding: spacing.lg,
           cursor: 'grab',
@@ -173,10 +236,22 @@ export const Tasks: React.FC = () => {
           <div style={{ height: '20px', marginBottom: spacing.md }} />
         )}
 
-        {/* Critical Path flag */}
+        {/* Critical Path flag + float */}
         {isCriticalPath && (
-          <div style={{ marginBottom: spacing.md }}>
+          <div style={{ marginBottom: spacing.md, display: 'flex', alignItems: 'center', gap: spacing.xs }}>
             <span style={{ fontSize: typography.fontSize.xs, color: colors.statusCritical, backgroundColor: `${colors.statusCritical}0A`, padding: '1px 6px', borderRadius: borderRadius.full, fontWeight: typography.fontWeight.semibold }}>Critical Path</span>
+          </div>
+        )}
+        {!isCriticalPath && cpmResult && cpmResult.totalFloat > 0 && (
+          <div style={{ marginBottom: spacing.md }}>
+            <span style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, backgroundColor: colors.surfaceFlat, padding: '1px 6px', borderRadius: borderRadius.full }}>{cpmResult.totalFloat}d float</span>
+          </div>
+        )}
+        {/* Dependency indicator */}
+        {(task as any).predecessor_ids?.length > 0 && (
+          <div style={{ marginBottom: spacing.md, display: 'flex', alignItems: 'center', gap: spacing.xs }}>
+            <GitBranch size={10} color={colors.textTertiary} />
+            <span style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary }}>{(task as any).predecessor_ids.length} dep{(task as any).predecessor_ids.length > 1 ? 's' : ''}</span>
           </div>
         )}
 
@@ -417,6 +492,90 @@ export const Tasks: React.FC = () => {
             </div>
           )}
 
+          {/* Dependencies */}
+          {((selectedTask as any).predecessor_ids?.length > 0 || (selectedTask as any).successor_ids?.length > 0) && (
+            <div style={{ marginBottom: spacing['2xl'] }}>
+              <h3 style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing.md, display: 'flex', alignItems: 'center', gap: spacing.sm }}>
+                <GitBranch size={14} /> Dependencies
+              </h3>
+              {(selectedTask as any).predecessor_ids?.length > 0 && (
+                <div style={{ marginBottom: spacing.md }}>
+                  <span style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Predecessors</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs, marginTop: spacing.xs }}>
+                    {(selectedTask as any).predecessor_ids.map((pid: string) => {
+                      const pred = localTasks.find(t => (t as any).uuid === pid || String(t.id) === pid);
+                      return (
+                        <div key={pid} style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, padding: `${spacing.xs} ${spacing.sm}`, backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.sm }}>
+                          {pred ? pred.title : pid.slice(0, 8)}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              {(selectedTask as any).successor_ids?.length > 0 && (
+                <div>
+                  <span style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Successors</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs, marginTop: spacing.xs }}>
+                    {(selectedTask as any).successor_ids.map((sid: string) => {
+                      const succ = localTasks.find(t => (t as any).uuid === sid || String(t.id) === sid);
+                      return (
+                        <div key={sid} style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, padding: `${spacing.xs} ${spacing.sm}`, backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.sm }}>
+                          {succ ? succ.title : sid.slice(0, 8)}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* CPM Data */}
+          {(() => {
+            const cpm = cpmResults?.get((selectedTask as any).uuid);
+            if (!cpm) return null;
+            return (
+              <div style={{ marginBottom: spacing['2xl'], padding: spacing.lg, backgroundColor: cpm.isCritical ? `${colors.statusCritical}06` : colors.surfaceFlat, borderRadius: borderRadius.md, borderLeft: `3px solid ${cpm.isCritical ? colors.statusCritical : colors.statusInfo}` }}>
+                <h3 style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing.md, display: 'flex', alignItems: 'center', gap: spacing.sm }}>
+                  <Zap size={14} color={cpm.isCritical ? colors.statusCritical : colors.statusInfo} /> Schedule Analysis
+                </h3>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing.md }}>
+                  <div>
+                    <span style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary }}>Early Start</span>
+                    <p style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, margin: `${spacing.xs} 0 0`, fontWeight: typography.fontWeight.medium }}>Day {cpm.earlyStart}</p>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary }}>Early Finish</span>
+                    <p style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, margin: `${spacing.xs} 0 0`, fontWeight: typography.fontWeight.medium }}>Day {cpm.earlyFinish}</p>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary }}>Total Float</span>
+                    <p style={{ fontSize: typography.fontSize.sm, color: cpm.totalFloat === 0 ? colors.statusCritical : colors.textPrimary, margin: `${spacing.xs} 0 0`, fontWeight: typography.fontWeight.semibold }}>{cpm.totalFloat} days</p>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary }}>Critical Path</span>
+                    <p style={{ fontSize: typography.fontSize.sm, color: cpm.isCritical ? colors.statusCritical : colors.statusActive, margin: `${spacing.xs} 0 0`, fontWeight: typography.fontWeight.semibold }}>{cpm.isCritical ? 'Yes' : 'No'}</p>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Percent Complete */}
+          {(selectedTask as any).percent_complete != null && (
+            <div style={{ marginBottom: spacing['2xl'] }}>
+              <h3 style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing.md }}>Progress</h3>
+              <ProgressBar
+                value={(selectedTask as any).percent_complete}
+                max={100}
+                height={8}
+                color={(selectedTask as any).percent_complete === 100 ? colors.tealSuccess : colors.primaryOrange}
+              />
+              <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, marginTop: spacing.xs, display: 'block' }}>{(selectedTask as any).percent_complete}% complete</span>
+            </div>
+          )}
+
           {/* Tags */}
           <div style={{ marginBottom: spacing['2xl'] }}>
             <h3 style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing.sm }}>Tags</h3>
@@ -449,7 +608,24 @@ export const Tasks: React.FC = () => {
           {/* Actions */}
           <div style={{ display: 'flex', gap: spacing.md }}>
             {selectedTask.status !== 'done' && (
-              <Btn variant="primary" size="md" icon={<ArrowRight size={16} />} iconPosition="right">
+              <Btn variant="primary" size="md" icon={<ArrowRight size={16} />} iconPosition="right" onClick={async () => {
+                const nextStatus: Record<string, TaskStatus> = { todo: 'in_progress', in_progress: 'in_review', in_review: 'done' };
+                const newStatus = nextStatus[selectedTask.status];
+                if (!newStatus) return;
+                try {
+                  await updateTask.mutateAsync({
+                    id: String(selectedTask.id),
+                    updates: { status: newStatus },
+                    projectId: projectId!,
+                  });
+                  // Update local state so the UI reflects immediately
+                  setLocalTasks((prev: any[]) => prev.map((t: any) => t.id === selectedTask.id ? { ...t, status: newStatus } : t));
+                  setSelectedTask({ ...selectedTask, status: newStatus } as any);
+                  addToast('success', `Task moved to ${statusConfig[newStatus].label}`);
+                } catch {
+                  addToast('error', 'Failed to update task');
+                }
+              }}>
                 {selectedTask.status === 'todo' ? 'Start Task' : selectedTask.status === 'in_progress' ? 'Move to Review' : 'Mark Complete'}
               </Btn>
             )}
@@ -485,7 +661,12 @@ export const Tasks: React.FC = () => {
     <PageContainer
       title="Tasks"
       subtitle={`${localTasks.length} tasks · ${localTasks.filter((t) => t.status !== 'done').length} active`}
-      actions={<Btn variant="primary" size="md" icon={<Plus size={16} />} onClick={() => setShowNewTask(true)}>New Task</Btn>}
+      actions={
+        <div style={{ display: 'flex', gap: spacing.sm }}>
+          <Btn variant="ghost" size="md" icon={<LayoutTemplate size={16} />} onClick={() => setShowTemplates(true)}>Templates</Btn>
+          <Btn variant="primary" size="md" icon={<Plus size={16} />} onClick={() => setShowNewTask(true)}>New Task</Btn>
+        </div>
+      }
     >
       {pageAlerts.map((alert) => (
         <PredictiveAlertBanner key={alert.id} alert={alert} onAction={() => setCriticalFilter(true)} />
@@ -617,6 +798,72 @@ export const Tasks: React.FC = () => {
         </>
       )}
 
+      {/* Bulk Action Bar */}
+      {selectedIds.size > 0 && (
+        <div style={{
+          position: 'fixed', bottom: spacing.xl, left: '50%', transform: 'translateX(-50%)',
+          display: 'flex', alignItems: 'center', gap: spacing.md,
+          padding: `${spacing.md} ${spacing.xl}`,
+          backgroundColor: colors.darkNavy, color: colors.white,
+          borderRadius: borderRadius.lg, boxShadow: shadows.lg, zIndex: 1050,
+        }}>
+          <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold }}>{selectedIds.size} selected</span>
+          <div style={{ width: 1, height: 20, backgroundColor: 'rgba(255,255,255,0.2)' }} />
+          {(['todo', 'in_progress', 'in_review', 'done'] as TaskStatus[]).map(s => (
+            <button key={s} onClick={() => handleBulkStatusChange(s)} style={{
+              padding: `${spacing.xs} ${spacing.md}`, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
+              backgroundColor: 'rgba(255,255,255,0.1)', color: colors.white, border: 'none',
+              borderRadius: borderRadius.sm, cursor: 'pointer',
+            }}>{statusConfig[s].label}</button>
+          ))}
+          <div style={{ width: 1, height: 20, backgroundColor: 'rgba(255,255,255,0.2)' }} />
+          <button onClick={handleBulkDelete} style={{
+            padding: `${spacing.xs} ${spacing.md}`, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
+            backgroundColor: 'rgba(201,59,59,0.3)', color: '#ff8888', border: 'none',
+            borderRadius: borderRadius.sm, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: spacing.xs,
+          }}><Trash2 size={13} /> Delete</button>
+          <button onClick={() => setSelectedIds(new Set())} style={{
+            padding: `${spacing.xs} ${spacing.md}`, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
+            backgroundColor: 'transparent', color: 'rgba(255,255,255,0.6)', border: 'none',
+            cursor: 'pointer',
+          }}><X size={14} /></button>
+        </div>
+      )}
+
+      {/* Template Modal */}
+      <Modal open={showTemplates} onClose={() => setShowTemplates(false)} title="Apply Task Template">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.md }}>
+          <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0 }}>
+            Select a template to create a set of pre configured tasks with dependencies.
+          </p>
+          {(templates || []).map((tmpl: any) => (
+            <div key={tmpl.id} onClick={() => handleApplyTemplate(tmpl.id)} style={{
+              padding: spacing.lg, backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.md,
+              cursor: 'pointer', transition: `background-color ${transitions.quick}`,
+            }}
+              onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.backgroundColor = colors.surfaceInset; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.backgroundColor = colors.surfaceFlat; }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <p style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0 }}>{tmpl.name}</p>
+                  <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: `${spacing.xs} 0 0` }}>{tmpl.description || tmpl.phase}</p>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
+                  <span style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, backgroundColor: colors.surfaceRaised, padding: `${spacing.xs} ${spacing.sm}`, borderRadius: borderRadius.full }}>
+                    {(tmpl.task_data as any[])?.length || 0} tasks
+                  </span>
+                  <Copy size={14} color={colors.textTertiary} />
+                </div>
+              </div>
+            </div>
+          ))}
+          {(!templates || templates.length === 0) && (
+            <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, textAlign: 'center', padding: spacing.xl }}>No templates available</p>
+          )}
+        </div>
+      </Modal>
+
       {/* New Task Modal */}
       <Modal open={showNewTask} onClose={() => setShowNewTask(false)} title="New Task">
         <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xl }}>
@@ -657,7 +904,7 @@ export const Tasks: React.FC = () => {
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: spacing.md }}>
             <Btn variant="ghost" size="md" onClick={() => setShowNewTask(false)}>Cancel</Btn>
-            <Btn variant="primary" size="md" onClick={() => {
+            <Btn variant="primary" size="md" onClick={async () => {
               if (!newTitle.trim()) {
                 addToast('error', 'Please enter a task title');
                 return;
@@ -679,7 +926,15 @@ export const Tasks: React.FC = () => {
                 linkedItems: [] as { type: string; id: string }[],
               };
               setLocalTasks([newTask as typeof localTasks[0], ...localTasks]);
-              addToast('success', `Task created: ${newTask.title}`);
+              try {
+                await createTask.mutateAsync({
+                  projectId: projectId!,
+                  data: { project_id: projectId!, title: newTask.title, status: 'todo', priority: newPriority }
+                });
+                addToast('success', `Task created: ${newTask.title}`);
+              } catch {
+                addToast('error', 'Failed to create task');
+              }
               setShowNewTask(false);
               setNewTitle('');
               setNewPriority('medium');

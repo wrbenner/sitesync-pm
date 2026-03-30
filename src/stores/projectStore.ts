@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import * as api from '../api/endpoints/projects';
 
 export interface ProjectData {
   name: string;
@@ -40,8 +39,8 @@ interface ProjectState {
   loading: boolean;
   error: string | null;
 
-  loadProject: () => Promise<void>;
-  loadMetrics: () => Promise<void>;
+  setActiveProject: (project: ProjectData | null) => void;
+  setMetrics: (metrics: Metrics | null) => void;
 }
 
 export const useProjectStore = create<ProjectState>((set) => ({
@@ -50,22 +49,6 @@ export const useProjectStore = create<ProjectState>((set) => ({
   loading: false,
   error: null,
 
-  loadProject: async () => {
-    set({ loading: true, error: null });
-    try {
-      const data = await api.getProject();
-      set({ activeProject: data, loading: false });
-    } catch (e) {
-      set({ error: (e as Error).message, loading: false });
-    }
-  },
-
-  loadMetrics: async () => {
-    try {
-      const data = await api.getMetrics();
-      set({ metrics: data });
-    } catch (e) {
-      set({ error: (e as Error).message });
-    }
-  },
+  setActiveProject: (project) => set({ activeProject: project }),
+  setMetrics: (metrics) => set({ metrics }),
 }));

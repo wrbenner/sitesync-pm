@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Camera, Tag, Clock, User, X } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, transitions, zIndex } from '../../../styles/theme';
+import { useProjectId } from '../../../hooks/useProjectId';
+import { useFieldCaptures } from '../../../hooks/queries';
+import type { Json } from '../../../types/database';
 
 interface SitePhoto {
-  id: number;
+  id: string;
   imageUrl: string;
   title: string;
   capturedBy: string;
@@ -12,16 +15,44 @@ interface SitePhoto {
   aiTags: string[];
 }
 
-const photos: SitePhoto[] = [
-  { id: 1, imageUrl: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=400', title: 'Floor 7 Steel Connection', capturedBy: 'John Smith', timestamp: '2h ago', location: 'Floor 7, Grid B4', aiTags: ['structural', 'connection', 'progress'] },
-  { id: 2, imageUrl: 'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=400', title: 'Safety Gear Inspection', capturedBy: 'Maria Garcia', timestamp: '4h ago', location: 'North Entrance', aiTags: ['safety', 'PPE', 'inspection'] },
-  { id: 3, imageUrl: 'https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=400', title: 'Drywall Progress L3', capturedBy: 'Robert Chen', timestamp: '6h ago', location: 'Floor 3, Unit 301', aiTags: ['interior', 'drywall', 'progress'] },
-  { id: 4, imageUrl: 'https://images.unsplash.com/photo-1590644365607-1c5e8a1b6e07?w=400', title: 'MEP Coordination Point', capturedBy: 'James Wilson', timestamp: '8h ago', location: 'Floor 5, Mech Room', aiTags: ['MEP', 'coordination', 'issue'] },
-  { id: 5, imageUrl: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=400&q=80', title: 'Curtain Wall Panel 12', capturedBy: 'Lisa Zhang', timestamp: '1d ago', location: 'South Face, Level 6', aiTags: ['exterior', 'curtain wall', 'progress'] },
-  { id: 6, imageUrl: 'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=400&q=80', title: 'Concrete Cure Check', capturedBy: 'David Kumar', timestamp: '1d ago', location: 'Floor 1, Slab B', aiTags: ['structural', 'concrete', 'quality'] },
-];
+const defaultImage = 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=400';
 
-export const PhotoFeedWidget: React.FC = () => {
+function formatTimeAgo(dateStr: string | null): string {
+  if (!dateStr) return '';
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const hours = Math.floor(diff / 3600000);
+  if (hours < 1) return 'just now';
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+function parseAiTags(raw: Json | null): string[] {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw.filter((t): t is string => typeof t === 'string');
+  return [];
+}
+
+export const PhotoFeedWidget: React.FC = React.memo(() => {
+  const projectId = useProjectId();
+  const { data: captures } = useFieldCaptures(projectId);
+
+  const photos: SitePhoto[] = useMemo(() => {
+    if (!captures) return [];
+    return captures
+      .filter((c) => c.type === 'photo')
+      .slice(0, 6)
+      .map((c) => ({
+        id: c.id,
+        imageUrl: c.file_url || defaultImage,
+        title: c.content || 'Site Photo',
+        capturedBy: c.created_by || 'Field Team',
+        timestamp: formatTimeAgo(c.created_at),
+        location: c.location || '',
+        aiTags: parseAiTags(c.ai_tags),
+      }));
+  }, [captures]);
+
   const [selectedPhoto, setSelectedPhoto] = useState<SitePhoto | null>(null);
 
   return (
@@ -143,4 +174,4 @@ export const PhotoFeedWidget: React.FC = () => {
       )}
     </div>
   );
-};
+});

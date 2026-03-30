@@ -92,6 +92,16 @@ export const widgetDefinitions: WidgetDefinition[] = [
     minW: 3,
     minH: 3,
   },
+  {
+    type: 'bim-preview',
+    label: 'BIM Preview',
+    description: '3D site model preview with system overlay',
+    icon: '🏗️',
+    defaultW: 4,
+    defaultH: 3,
+    minW: 3,
+    minH: 2,
+  },
 ];
 
 // Lazy import map, resolved at render time by DashboardGrid

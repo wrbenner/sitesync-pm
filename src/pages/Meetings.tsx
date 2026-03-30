@@ -1,9 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Play, Square, Clock, Plus, ChevronRight, Sparkles, GripVertical, Users as UsersIcon } from 'lucide-react';
 import { PageContainer, Card, SectionHeader, Tag, Skeleton, useToast, Btn } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../styles/theme';
-import { useMeetingStore } from '../stores/meetingStore';
-import { useProjectContext } from '../stores/projectContextStore';
+import { ExportButton } from '../components/shared/ExportButton';
+import { toast } from 'sonner';
+import { useCreateMeeting } from '../hooks/mutations';
+import { useProjectId } from '../hooks/useProjectId';
+import { useMeetings } from '../hooks/queries';
+import CreateMeetingModal from '../components/forms/CreateMeetingModal';
 
 const meetingTypeLabel = (type: string) => {
   switch (type) {
@@ -80,27 +84,29 @@ function formatTimer(seconds: number): string {
 
 export const Meetings: React.FC = () => {
   const { addToast } = useToast();
-  const { activeProject } = useProjectContext();
-  const { meetings: rawMeetings, loading, loadMeetings } = useMeetingStore();
+  const projectId = useProjectId();
+  const createMeeting = useCreateMeeting();
+  const { data: rawMeetings, isPending: loading } = useMeetings(projectId);
 
-  useEffect(() => {
-    if (activeProject?.id) loadMeetings(activeProject.id);
-  }, [activeProject?.id]);
-
-  // Map store shape to the shape expected by this page
-  const meetings = rawMeetings.map((m) => ({
-    id: m.id,
-    type: m.meeting_type,
-    title: m.title,
-    date: m.meeting_date,
-    time: m.meeting_time,
-    location: m.location || '',
-    attendeeCount: m.attendee_count,
-    status: m.status,
-    hasMinutes: m.has_minutes,
-  }));
+  const meetings = useMemo(() =>
+    (rawMeetings || []).map(m => {
+      const d = m.date ? new Date(m.date) : null;
+      return {
+        ...m,
+        type: m.type || 'oac',
+        date: d ? d.toISOString().split('T')[0] : '',
+        time: d ? d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : '',
+        attendeeCount: m.duration_minutes || 0,
+        status: (m.notes?.includes('completed') ? 'completed' : 'scheduled') as 'completed' | 'scheduled',
+        hasMinutes: !!m.notes,
+        location: m.location || '',
+      };
+    }),
+    [rawMeetings]
+  );
 
   const [activeTab, setActiveTab] = useState<'upcoming' | 'calendar' | 'live'>('upcoming');
+  const [createOpen, setCreateOpen] = useState(false);
   const [liveMeeting, setLiveMeeting] = useState<any>(null);
   const [liveTimer, setLiveTimer] = useState(0);
   const [liveAgendaIndex, setLiveAgendaIndex] = useState(0);
@@ -153,7 +159,7 @@ export const Meetings: React.FC = () => {
     setActionInput('');
   };
 
-  if (loading && meetings.length === 0) {
+  if (loading || !meetings) {
     return (
       <PageContainer title="Meetings">
         <SectionHeader title="Upcoming" />
@@ -220,7 +226,15 @@ export const Meetings: React.FC = () => {
   };
 
   return (
-    <PageContainer title="Meetings">
+    <PageContainer title="Meetings" actions={
+      <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
+        <ExportButton
+          onExportCSV={() => toast.success('Meeting data exported as CSV')}
+          pdfFilename="SiteSync_Meetings"
+        />
+        <Btn onClick={() => setCreateOpen(true)}>New Meeting</Btn>
+      </div>
+    }>
       {/* Tab bar */}
       <div style={tabBarStyle}>
         {tabs.map((tab) => (
@@ -607,6 +621,14 @@ export const Meetings: React.FC = () => {
           )}
         </>
       )}
+      <CreateMeetingModal open={createOpen} onClose={() => setCreateOpen(false)} onSubmit={async (data) => {
+        try {
+          const dateTime = data.date && data.time ? `${data.date}T${data.time}` : data.date || null
+          await createMeeting.mutateAsync({ projectId: projectId!, data: { project_id: projectId!, title: data.title, type: data.type || 'oac', date: dateTime, location: data.location || null, duration_minutes: data.duration_minutes ? Number(data.duration_minutes) : 60 } })
+          toast.success('Created: ' + data.title)
+          setCreateOpen(false)
+        } catch { toast.error('Failed to create meeting') }
+      }} />
     </PageContainer>
   );
 };

@@ -31,7 +31,7 @@ function getRiskColor(likelihood: number, impact: number): string {
   return colors.statusActive;
 }
 
-export const RiskHeatmapWidget: React.FC = () => {
+export const RiskHeatmapWidget: React.FC = React.memo(() => {
   const [hoveredRisk, setHoveredRisk] = useState<Risk | null>(null);
   const gridSize = 5;
 
@@ -151,4 +151,4 @@ export const RiskHeatmapWidget: React.FC = () => {
       )}
     </div>
   );
-};
+});

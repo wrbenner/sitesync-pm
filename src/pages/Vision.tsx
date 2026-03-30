@@ -1,43 +1,47 @@
 import React from 'react';
-import { PageContainer, Card, SectionHeader, Btn, Skeleton } from '../components/Primitives';
+import { PageContainer, Card, SectionHeader, Btn } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
-import { getVisionContent } from '../api/endpoints/ai';
-import { useQuery } from '../hooks/useQuery';
+const visionContent = {
+  heading: 'The Construction Operating System',
+  pillars: [
+    {
+      id: 1,
+      title: 'AI Is the Product',
+      description: 'Not a feature bolted on. Every decision powered by construction intelligence.',
+    },
+    {
+      id: 2,
+      title: 'Zero Friction',
+      description: 'Capture data once, use it everywhere. Field first design meets desktop power.',
+    },
+    {
+      id: 3,
+      title: 'See Tomorrow',
+      description: 'Predictive insights. Risk flagged before it becomes a problem.',
+    },
+  ],
+  pricingDisruption: {
+    industry: {
+      title: 'Industry Standard',
+      basePrice: 2500,
+      perUser: 250,
+      perProject: 1500,
+    },
+    sitesync: {
+      title: 'SiteSync Platform',
+      basePrice: 499,
+    },
+  },
+  roadmap: [
+    { phase: 1, name: 'Field Intelligence', quarter: 'Q2 2026', features: 'Mobile capture, Real time insights, Crew coordination' },
+    { phase: 2, name: 'Predictive Analytics', quarter: 'Q3 2026', features: 'Schedule optimization, Risk forecasting, Budget trending' },
+    { phase: 3, name: 'Autonomous Workflows', quarter: 'Q4 2026', features: 'Auto RFI routing, Change order automation, Safety alerts' },
+    { phase: 4, name: 'Enterprise Integration', quarter: 'Q1 2026', features: 'ERP connectors, Custom APIs, Multi project dashboards' },
+  ],
+};
 
 export const Vision: React.FC = () => {
-  const { data: visionContent, loading } = useQuery('visionContent', getVisionContent);
   const pillarNumbers = ['01', '02', '03'];
-
-  if (loading || !visionContent) {
-    return (
-      <PageContainer title="Vision">
-        <div style={{ textAlign: 'center', marginBottom: spacing['3xl'], paddingTop: spacing.xl }}>
-          <Skeleton width="400px" height="48px" />
-          <div style={{ marginTop: spacing.lg }}>
-            <Skeleton width="560px" height="24px" />
-          </div>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: spacing.xl, marginBottom: spacing['3xl'] }}>
-          {[1, 2, 3].map((i) => (
-            <Card key={i} padding={spacing.xl}>
-              <Skeleton width="40px" height="40px" />
-              <div style={{ marginTop: spacing.xl }}><Skeleton width="80%" height="24px" /></div>
-              <div style={{ marginTop: spacing.md }}><Skeleton width="100%" height="48px" /></div>
-            </Card>
-          ))}
-        </div>
-        <Skeleton width="120px" height="24px" />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing.xl, marginTop: spacing.lg, marginBottom: spacing['3xl'] }}>
-          {[1, 2].map((i) => (
-            <Card key={i} padding={spacing.xl}>
-              <Skeleton width="60%" height="24px" />
-              <div style={{ marginTop: spacing.lg }}><Skeleton width="100%" height="80px" /></div>
-            </Card>
-          ))}
-        </div>
-      </PageContainer>
-    );
-  }
 
   return (
     <PageContainer title="Vision">

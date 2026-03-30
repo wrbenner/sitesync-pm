@@ -3,7 +3,7 @@ import { Camera, Mic, FileText, AlertTriangle } from 'lucide-react';
 import { colors, spacing, typography } from '../../styles/theme';
 
 interface CaptureEvent {
-  id: number;
+  id: number | string;
   type: 'photo' | 'voice' | 'text' | 'issue';
   title: string;
   time: string;

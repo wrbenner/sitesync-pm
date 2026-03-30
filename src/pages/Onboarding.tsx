@@ -37,7 +37,7 @@ const Step2Project: React.FC<StepProps> = ({ onNext, onBack, onSkip }) => (
       { label: 'Total Value', placeholder: '$47,500,000', value: '$47,500,000' },
       { label: 'Location', placeholder: 'Dallas, TX', value: 'Dallas, TX' },
       { label: 'Start Date', placeholder: '2023-06-15', value: '2023-06-15' },
-      { label: 'End Date', placeholder: '2025-12-31', value: '2025-12-31' },
+      { label: 'End Date', placeholder: '2026-12-31', value: '2026-12-31' },
     ].map((field) => (
       <div key={field.label} style={{ marginBottom: spacing['4'] }}>
         <label style={{ display: 'block', fontSize: typography.fontSize.label, fontWeight: typography.fontWeight.medium, color: colors.textSecondary, marginBottom: spacing['1'], textTransform: 'uppercase', letterSpacing: typography.letterSpacing.wider }}>{field.label}</label>

@@ -29,14 +29,8 @@ const disciplineLayers = [
   { id: 'electrical', label: 'Electrical', color: colors.statusPending },
 ];
 
-const mockIssuePins: IssuePin[] = [
-  { id: 'rfi-pin-1', type: 'rfi', x: 30, y: 35, label: 'RFI-004', detail: 'Structural connection at curtain wall interface', severity: 'critical' },
-  { id: 'rfi-pin-2', type: 'rfi', x: 65, y: 55, label: 'RFI-001', detail: 'Interior finish specification clarification', severity: 'warning' },
-  { id: 'punch-pin-1', type: 'punch', x: 45, y: 70, label: 'PL-001', detail: 'Lighting fixture not level in bedroom', severity: 'warning' },
-  { id: 'punch-pin-2', type: 'punch', x: 75, y: 25, label: 'PL-003', detail: 'Door closer adjustment needed', severity: 'info' },
-  { id: 'ai-pin-1', type: 'ai', x: 50, y: 40, label: 'MEP Clash', detail: 'Ductwork conflicts with structural beam at grid B4', severity: 'critical' },
-  { id: 'ai-pin-2', type: 'ai', x: 20, y: 60, label: 'Clearance Issue', detail: 'Fire exit corridor width may not meet code', severity: 'warning' },
-];
+// Issue pins loaded from drawing_markups table via parent page
+const mockIssuePins: IssuePin[] = [];
 
 export const DrawingViewer: React.FC<DrawingViewerProps> = ({ drawing, onClose }) => {
   const [zoom, setZoom] = useState(1);

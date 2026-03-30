@@ -1,6 +1,8 @@
-// SiteSync AI — Category-Defining Design System
-// Every token here is a deliberate design decision.
-// Typography crafted with the same obsession Apple brings to SF Pro.
+// SiteSync AI — Unified Design System
+// Single source of truth for all design tokens.
+// Every color, spacing, font, shadow, radius, and z-index value in the app comes from here.
+
+// ── Colors ───────────────────────────────────────────────
 
 export const colors = {
   // Brand
@@ -9,6 +11,18 @@ export const colors = {
   orangePressed: '#D05E08',
   orangeSubtle: 'rgba(244, 120, 32, 0.08)',
   orangeLight: 'rgba(244, 120, 32, 0.12)',
+
+  // Brand palette (full scale for charts, gradients, illustrations)
+  brand50: '#FEF5ED',
+  brand100: '#FDDCB8',
+  brand200: '#FBBD84',
+  brand300: '#F9974F',
+  brand400: '#F47820',
+  brand500: '#E06A10',
+  brand600: '#C45A0C',
+  brand700: '#A04808',
+  brand800: '#7C3606',
+  brand900: '#582604',
 
   // Surfaces — warm, layered, architectural
   surfacePage: '#FAFAF8',
@@ -64,19 +78,71 @@ export const colors = {
   orangeGradientStart: '#F47820',
   orangeGradientEnd: '#FF9C42',
   orangeMedium: 'rgba(244, 120, 32, 0.08)',
-};
+} as const;
+
+// ── Dark Mode Colors ─────────────────────────────────────
+
+export const darkColors = {
+  surfacePage: '#0C0D0F',
+  surfaceSidebar: '#111214',
+  surfaceRaised: '#1A1B1E',
+  surfaceInset: '#141518',
+  surfaceHover: '#1F2024',
+  surfaceSelected: '#2A1F16',
+  surfaceFlat: '#171819',
+  borderSubtle: 'rgba(255, 255, 255, 0.06)',
+  borderDefault: 'rgba(255, 255, 255, 0.1)',
+  borderLight: 'rgba(255, 255, 255, 0.06)',
+  textPrimary: 'rgba(255, 255, 255, 0.92)',
+  textSecondary: 'rgba(255, 255, 255, 0.6)',
+  textTertiary: 'rgba(255, 255, 255, 0.38)',
+  cardBackground: '#1A1B1E',
+  lightBackground: '#0C0D0F',
+  // Status colors stay the same in dark mode (high contrast on dark bg)
+} as const;
+
+// CSS custom property names for dark mode theming
+export const colorVars = {
+  surfacePage: 'var(--color-surfacePage, #FAFAF8)',
+  surfaceSidebar: 'var(--color-surfaceSidebar, #F6F3F0)',
+  surfaceRaised: 'var(--color-surfaceRaised, #FFFFFF)',
+  surfaceInset: 'var(--color-surfaceInset, #F3EFEC)',
+  surfaceHover: 'var(--color-surfaceHover, #F0EDE8)',
+  surfaceSelected: 'var(--color-surfaceSelected, #FEF7F2)',
+  surfaceFlat: 'var(--color-surfaceFlat, #F6F3F0)',
+  borderSubtle: 'var(--color-borderSubtle, #F0EDE9)',
+  borderDefault: 'var(--color-borderDefault, #E5E1DC)',
+  borderLight: 'var(--color-borderLight, #F0EDE9)',
+  textPrimary: 'var(--color-textPrimary, #1A1613)',
+  textSecondary: 'var(--color-textSecondary, #5C5550)',
+  textTertiary: 'var(--color-textTertiary, #9A9490)',
+} as const;
+
+// ── Spacing ──────────────────────────────────────────────
 
 // 4px base grid — the backbone of visual coherence
 export const spacing = {
+  '0': '0',
+  '0.5': '2px',
   '1': '4px',
+  '1.5': '6px',
   '2': '8px',
+  '2.5': '10px',
   '3': '12px',
+  '3.5': '14px',
   '4': '16px',
   '5': '20px',
   '6': '24px',
+  '7': '28px',
   '8': '32px',
+  '9': '36px',
   '10': '40px',
+  '11': '44px',
   '12': '48px',
+  '14': '56px',
+  '16': '64px',
+  '20': '80px',
+  '24': '96px',
   // Legacy aliases
   xs: '4px',
   sm: '8px',
@@ -86,20 +152,23 @@ export const spacing = {
   xxl: '32px',
   '2xl': '40px',
   '3xl': '56px',
-};
+  px: '1px',
+} as const;
+
+// ── Typography ───────────────────────────────────────────
 
 export const typography = {
   fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+  fontFamilyMono: '"JetBrains Mono", "Fira Code", monospace',
   fontSize: {
-    // The type scale: each step is purposeful
-    caption: '11px',    // timestamps, metadata, labels
-    label: '12px',      // form labels, section labels, badges
-    sm: '13px',         // secondary text, table cells, tags
-    body: '14px',       // primary reading text
-    title: '16px',      // card titles, section names
-    subtitle: '18px',   // page subtitles, large card headers
-    heading: '28px',    // page headings
-    display: '36px',    // hero numbers, dashboard KPIs
+    caption: '11px',
+    label: '12px',
+    sm: '13px',
+    body: '14px',
+    title: '16px',
+    subtitle: '18px',
+    heading: '28px',
+    display: '36px',
     // Legacy aliases
     xs: '12px',
     base: '14px',
@@ -115,28 +184,29 @@ export const typography = {
     normal: 400,
     medium: 500,
     semibold: 600,
+    bold: 700,
     // Legacy aliases
     light: 300,
-    bold: 600,
   },
   lineHeight: {
-    none: 1,        // single line display numbers
-    tight: 1.2,     // headings
-    snug: 1.35,     // subheadings, card titles
-    normal: 1.55,   // body text
-    relaxed: 1.7,   // long form reading, descriptions
+    none: 1,
+    tight: 1.2,
+    snug: 1.35,
+    normal: 1.55,
+    relaxed: 1.7,
   },
   letterSpacing: {
-    tighter: '-0.03em',   // large display numbers
-    tight: '-0.02em',     // headings
-    normal: '-0.011em',   // body text (the sweet spot for Inter)
-    wide: '0.01em',       // small text that needs air
-    wider: '0.04em',      // labels, captions
-    widest: '0.08em',     // uppercase section headers
+    tighter: '-0.03em',
+    tight: '-0.02em',
+    normal: '-0.011em',
+    wide: '0.01em',
+    wider: '0.04em',
+    widest: '0.08em',
   },
-};
+} as const;
 
-// Ring technique — border-like presence without visible borders
+// ── Shadows ──────────────────────────────────────────────
+
 export const shadows = {
   none: 'none',
   xs: 'none',
@@ -151,9 +221,10 @@ export const shadows = {
   base: '0 1px 3px rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(0, 0, 0, 0.015)',
   md: '0 3px 12px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.02)',
   lg: '0 16px 48px rgba(0, 0, 0, 0.12)',
-};
+} as const;
 
-// Tighter radii — serious, not playful
+// ── Border Radius ────────────────────────────────────────
+
 export const borderRadius = {
   none: '0',
   sm: '4px',
@@ -163,7 +234,9 @@ export const borderRadius = {
   xl: '12px',
   '2xl': '16px',
   full: '9999px',
-};
+} as const;
+
+// ── Z-Index ──────────────────────────────────────────────
 
 export const zIndex = {
   hide: -1,
@@ -176,9 +249,11 @@ export const zIndex = {
   popover: 1050,
   tooltip: 1060,
   command: 1070,
-};
+  toast: 1080,
+} as const;
 
-// Three tiers of motion
+// ── Transitions ──────────────────────────────────────────
+
 export const transitions = {
   instant: '80ms ease-out',
   quick: '160ms cubic-bezier(0.25, 0.1, 0.25, 1)',
@@ -188,19 +263,91 @@ export const transitions = {
   base: '160ms cubic-bezier(0.25, 0.1, 0.25, 1)',
   slow: '300ms cubic-bezier(0.32, 0.72, 0, 1)',
   spring: '300ms cubic-bezier(0.34, 1.56, 0.64, 1)',
-};
+} as const;
+
+// ── Layout ───────────────────────────────────────────────
 
 export const layout = {
   sidebarWidth: '252px',
+  sidebarCollapsed: '72px',
+  topbarHeight: '64px',
   contentMaxWidth: '1140px',
   contentPaddingX: '36px',
   contentPaddingY: '36px',
+  mobileBreak: '768px',
+  tabletBreak: '1024px',
   // Legacy aliases
-  sidebarCollapsed: '72px',
-  topbarHeight: '64px',
   pageMaxWidth: '1140px',
   pagePaddingX: '36px',
   pagePaddingY: '36px',
-  mobileBreak: '768px',
-  tabletBreak: '1024px',
+} as const;
+
+// ── Touch Targets ────────────────────────────────────────
+
+export const touchTarget = {
+  min: '44px',
+  comfortable: '48px',
+  field: '56px',
+} as const;
+
+// ── Semantic Color Helpers ───────────────────────────────
+
+// Status color map (construction industry standard)
+const statusColorMap: Record<string, { fg: string; bg: string }> = {
+  open: { fg: colors.statusInfo, bg: colors.statusInfoSubtle },
+  pending: { fg: colors.statusPending, bg: colors.statusPendingSubtle },
+  under_review: { fg: colors.statusPending, bg: colors.statusPendingSubtle },
+  approved: { fg: colors.statusActive, bg: colors.statusActiveSubtle },
+  rejected: { fg: colors.statusCritical, bg: colors.statusCriticalSubtle },
+  closed: { fg: colors.statusNeutral, bg: colors.statusNeutralSubtle },
+  draft: { fg: colors.textTertiary, bg: colors.statusNeutralSubtle },
+  in_progress: { fg: colors.statusInfo, bg: colors.statusInfoSubtle },
+  todo: { fg: colors.textTertiary, bg: colors.statusNeutralSubtle },
+  in_review: { fg: colors.statusPending, bg: colors.statusPendingSubtle },
+  done: { fg: colors.statusActive, bg: colors.statusActiveSubtle },
+  complete: { fg: colors.statusActive, bg: colors.statusActiveSubtle },
+  active: { fg: colors.statusActive, bg: colors.statusActiveSubtle },
+  resolved: { fg: colors.statusActive, bg: colors.statusActiveSubtle },
+  verified: { fg: colors.statusActive, bg: colors.statusActiveSubtle },
+  at_risk: { fg: colors.statusPending, bg: colors.statusPendingSubtle },
+  behind: { fg: colors.statusCritical, bg: colors.statusCriticalSubtle },
+  on_track: { fg: colors.statusActive, bg: colors.statusActiveSubtle },
+  answered: { fg: colors.statusActive, bg: colors.statusActiveSubtle },
+  resubmit: { fg: colors.statusPending, bg: colors.statusPendingSubtle },
+  void: { fg: colors.statusNeutral, bg: colors.statusNeutralSubtle },
+  submitted: { fg: colors.statusInfo, bg: colors.statusInfoSubtle },
 };
+
+export function getStatusColor(status: string): { fg: string; bg: string } {
+  return statusColorMap[status] ?? { fg: colors.textTertiary, bg: colors.statusNeutralSubtle };
+}
+
+// Priority color map
+const priorityColorMap: Record<string, { fg: string; bg: string }> = {
+  critical: { fg: colors.statusCritical, bg: colors.statusCriticalSubtle },
+  high: { fg: colors.primaryOrange, bg: colors.orangeSubtle },
+  medium: { fg: colors.statusPending, bg: colors.statusPendingSubtle },
+  low: { fg: colors.statusInfo, bg: colors.statusInfoSubtle },
+};
+
+export function getPriorityColor(priority: string): { fg: string; bg: string } {
+  return priorityColorMap[priority] ?? priorityColorMap.medium;
+}
+
+// Severity color map
+export function getSeverityColor(severity: string): { fg: string; bg: string } {
+  const map: Record<string, { fg: string; bg: string }> = {
+    critical: { fg: colors.statusCritical, bg: colors.statusCriticalSubtle },
+    warning: { fg: colors.statusPending, bg: colors.statusPendingSubtle },
+    info: { fg: colors.statusInfo, bg: colors.statusInfoSubtle },
+    success: { fg: colors.statusActive, bg: colors.statusActiveSubtle },
+  };
+  return map[severity] ?? map.info;
+}
+
+// ── Focus Ring Styles ────────────────────────────────────
+
+export const focusRing = {
+  outline: `2px solid ${colors.borderFocus}`,
+  outlineOffset: '2px',
+} as const;

@@ -40,23 +40,8 @@ const constraintIcons: Record<ConstraintType, React.ReactNode> = {
   equipment: <GripVertical size={12} />,
 };
 
-const mockWeather: Record<number, { icon: string; rain: boolean }> = {
-  0: { icon: '☀️', rain: false },
-  1: { icon: '⛅', rain: false },
-  2: { icon: '☁️', rain: false },
-  3: { icon: '🌧️', rain: true },
-  4: { icon: '⛅', rain: false },
-  5: { icon: '☀️', rain: false },
-  6: { icon: '☀️', rain: false },
-  7: { icon: '🌧️', rain: true },
-  8: { icon: '⛅', rain: false },
-  9: { icon: '☀️', rain: false },
-  10: { icon: '☀️', rain: false },
-  11: { icon: '⛅', rain: false },
-  12: { icon: '☀️', rain: false },
-  13: { icon: '☁️', rain: false },
-  14: { icon: '☀️', rain: false },
-};
+// Weather data comes from weather_records table via parent page
+const mockWeather: Record<number, { icon: string; rain: boolean }> = {};
 
 export const LookaheadBoard: React.FC<LookaheadBoardProps> = ({
   tasks, days, crews, weekView, onTaskMove, onConstraintToggle,

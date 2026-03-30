@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { CloudRain, Sun, Cloud, CloudSun, Droplets } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, transitions } from '../../../styles/theme';
+import { useProjectId } from '../../../hooks/useProjectId';
+import { useSchedulePhases } from '../../../hooks/queries';
 
 interface DayForecast {
   day: string;
@@ -13,12 +15,13 @@ interface DayForecast {
   conflict: string | null;
 }
 
-const forecast: DayForecast[] = [
-  { day: 'Mon', icon: 'sun', high: 82, low: 65, precipitation: 0, outdoorWork: 'Curtain wall install', impactScore: 95, conflict: null },
-  { day: 'Tue', icon: 'cloud-sun', high: 78, low: 62, precipitation: 10, outdoorWork: 'Steel erection', impactScore: 88, conflict: null },
-  { day: 'Wed', icon: 'cloud', high: 71, low: 58, precipitation: 30, outdoorWork: 'Exterior painting', impactScore: 65, conflict: 'Wind advisory, exterior work at risk' },
-  { day: 'Thu', icon: 'rain', high: 66, low: 54, precipitation: 85, outdoorWork: 'Concrete pour', impactScore: 12, conflict: 'Rain forecast. Concrete pour scheduled. 87% chance of delay.' },
-  { day: 'Fri', icon: 'cloud-sun', high: 74, low: 60, precipitation: 15, outdoorWork: 'Roofing', impactScore: 82, conflict: null },
+// Weather data stays hardcoded (no external API available)
+const baseForecast: Omit<DayForecast, 'outdoorWork' | 'conflict'>[] = [
+  { day: 'Mon', icon: 'sun', high: 82, low: 65, precipitation: 0, impactScore: 95 },
+  { day: 'Tue', icon: 'cloud-sun', high: 78, low: 62, precipitation: 10, impactScore: 88 },
+  { day: 'Wed', icon: 'cloud', high: 71, low: 58, precipitation: 30, impactScore: 65 },
+  { day: 'Thu', icon: 'rain', high: 66, low: 54, precipitation: 85, impactScore: 12 },
+  { day: 'Fri', icon: 'cloud-sun', high: 74, low: 60, precipitation: 15, impactScore: 82 },
 ];
 
 const weatherIcons = {
@@ -35,7 +38,27 @@ function getImpactColor(score: number): string {
   return colors.statusCritical;
 }
 
-export const WeatherImpactWidget: React.FC = () => {
+export const WeatherImpactWidget: React.FC = React.memo(() => {
+  const projectId = useProjectId();
+  const { data: phases } = useSchedulePhases(projectId);
+
+  // Merge real phase names into the weather forecast as "outdoor work" labels and conflicts
+  const forecast: DayForecast[] = useMemo(() => {
+    const activePhases = (phases || []).filter((p) => (p.status || '').toLowerCase() !== 'complete' && (p.percent_complete ?? 0) < 100);
+    const defaultLabels = ['Exterior work', 'Steel erection', 'Exterior painting', 'Concrete pour', 'Roofing'];
+
+    return baseForecast.map((day, i) => {
+      const phaseName = activePhases[i % activePhases.length]?.name || defaultLabels[i];
+      let conflict: string | null = null;
+      if (day.impactScore < 50) {
+        conflict = `Rain forecast. ${phaseName} scheduled. 87% chance of delay.`;
+      } else if (day.impactScore < 70) {
+        conflict = `Wind advisory, ${phaseName} at risk`;
+      }
+      return { ...day, outdoorWork: phaseName, conflict };
+    });
+  }, [phases]);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['4'] }}>
@@ -103,4 +126,4 @@ export const WeatherImpactWidget: React.FC = () => {
       )}
     </div>
   );
-};
+});

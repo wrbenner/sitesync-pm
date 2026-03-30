@@ -22,6 +22,7 @@ import { RiskHeatmapWidget } from './widgets/RiskHeatmapWidget';
 import { ProductivityPulseWidget } from './widgets/ProductivityPulseWidget';
 import { MilestoneTimelineWidget } from './widgets/MilestoneTimelineWidget';
 import { PhotoFeedWidget } from './widgets/PhotoFeedWidget';
+import { BIMPreviewWidget } from './widgets/BIMPreviewWidget';
 
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
@@ -35,6 +36,7 @@ const widgetComponents: Record<string, React.FC> = {
   'productivity-pulse': ProductivityPulseWidget,
   'milestone-timeline': MilestoneTimelineWidget,
   'photo-feed': PhotoFeedWidget,
+  'bim-preview': BIMPreviewWidget,
 };
 
 const STORAGE_KEY = 'sitesync-dashboard-layout';
@@ -49,6 +51,7 @@ const defaultWidgets = [
   'productivity-pulse',
   'milestone-timeline',
   'photo-feed',
+  'bim-preview',
 ];
 
 function getDefaultLayout(widgets: string[]): Layout[] {
@@ -275,13 +278,12 @@ export const DashboardGrid: React.FC = () => {
         cols={{ lg: 12, md: 8, sm: 4 }}
         rowHeight={80}
         onLayoutChange={handleLayoutChange}
-        isResizable
-        isDraggable
         onDragStart={() => setIsDragging(true)}
         onDragStop={() => setIsDragging(false)}
         containerPadding={[0, 0]}
         margin={[16, 16]}
-        {...{ draggableHandle: ".widget-drag-handle" } as any}
+        dragConfig={{ enabled: true, handle: ".widget-drag-handle" }}
+        resizeConfig={{ enabled: true }}
       >
         {activeWidgets.map((type) => {
           const WidgetComponent = widgetComponents[type];

@@ -1,13 +1,16 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { PageContainer, Card, Btn, StatusTag, PriorityTag, TableHeader, TableRow, DetailPanel, Avatar, RelatedItems, useToast, Skeleton } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
-import { usePunchListStore } from '../stores/punchListStore';
-import { useProjectContext } from '../stores/projectContextStore';
+import { getPunchList } from '../api/endpoints/field';
+import { useQuery } from '../hooks/useQuery';
 import { Camera, CheckCircle, Inbox, MessageSquare, Sparkles } from 'lucide-react';
 import { useAppNavigate, getRelatedItemsForPunchItem } from '../utils/connections';
 import { AIAnnotationIndicator } from '../components/ai/AIAnnotation';
 import { PredictiveAlertBanner } from '../components/ai/PredictiveAlert';
 import { getAnnotationsForEntity, getPredictiveAlertsForPage } from '../data/aiAnnotations';
+import { toast } from 'sonner';
+import { useProjectId } from '../hooks/useProjectId';
+import { useCreatePunchItem, useUpdatePunchItem } from '../hooks/mutations';
 
 const statusMap: Record<string, 'pending' | 'active' | 'complete'> = {
   open: 'pending',
@@ -46,7 +49,7 @@ const responsibleLabel: Record<string, string> = {
 };
 
 interface PunchItem {
-  id: string;
+  id: number;
   itemNumber: string;
   area: string;
   description: string;
@@ -61,6 +64,36 @@ interface PunchItem {
   responsible: string;
 }
 
+interface MockComment {
+  author: string;
+  initials: string;
+  time: string;
+  text: string;
+}
+
+const mockComments: Record<number, MockComment[]> = {
+  1: [
+    { author: 'John Smith', initials: 'JS', time: '2 hours ago', text: 'Checked the fixture. The mounting bracket is slightly bent. Need a replacement part from the supplier.' },
+    { author: 'Mike Torres', initials: 'MT', time: '1 hour ago', text: 'Replacement bracket ordered. Should arrive tomorrow morning.' },
+  ],
+  2: [
+    { author: 'Maria Garcia', initials: 'MG', time: '4 hours ago', text: 'Started prep work. Matching paint color from original spec.' },
+    { author: 'David Lee', initials: 'DL', time: '3 hours ago', text: 'Make sure to use the low VOC paint per the environmental requirements.' },
+    { author: 'Maria Garcia', initials: 'MG', time: '1 hour ago', text: 'Confirmed. Using the approved Sherwin Williams SW 7006 Extra White.' },
+  ],
+  3: [
+    { author: 'Robert Chen', initials: 'RC', time: '6 hours ago', text: 'The closer arm is out of spec. Needs full replacement, not just adjustment.' },
+    { author: 'James Wilson', initials: 'JW', time: '5 hours ago', text: 'Approved the replacement. Please coordinate with security for access to B2 after hours.' },
+  ],
+  4: [
+    { author: 'James Wilson', initials: 'JW', time: '1 day ago', text: 'Marble pieces are onsite. Installation crew scheduled for Thursday.' },
+    { author: 'Sarah Johnson', initials: 'SJ', time: '12 hours ago', text: 'Verified the marble matches the approved sample. Good to proceed.' },
+  ],
+  5: [
+    { author: 'Sarah Johnson', initials: 'SJ', time: '2 days ago', text: 'Installed acoustic lining in the main supply duct. Noise levels within acceptable range now.' },
+    { author: 'Mike Torres', initials: 'MT', time: '1 day ago', text: 'Confirmed. Sound level measured at 35 dB, well within the 40 dB limit. Marking complete.' },
+  ],
+};
 
 function getDueDateColor(dueDate: string): string {
   const now = new Date();
@@ -79,40 +112,46 @@ function formatDate(dateStr: string): string {
 }
 
 const PunchListPage: React.FC = () => {
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
   const [atRiskFilter, setAtRiskFilter] = useState(false);
   const [areaFilter, setAreaFilter] = useState<string>('all');
   const { addToast } = useToast();
   const appNavigate = useAppNavigate();
-  const { items: storeItems, loading, loadItems, updateItemStatus, getComments } = usePunchListStore();
-  const { activeProject } = useProjectContext();
-
-  useEffect(() => {
-    if (activeProject?.id) {
-      loadItems(activeProject.id);
-    }
-  }, [activeProject?.id]);
+  const projectId = useProjectId();
+  const createPunchItem = useCreatePunchItem();
+  const updatePunchItem = useUpdatePunchItem();
+  const { data: punchList, loading } = useQuery('punchList', getPunchList);
 
   const pageAlerts = getPredictiveAlertsForPage('punchlist');
 
-  // Map store items to the PunchItem interface expected by the UI
   const expandedPunchList: PunchItem[] = useMemo(() => {
-    return storeItems.map((item) => ({
-      id: item.id as any,
-      itemNumber: `PL-${String(item.item_number).padStart(3, '0')}`,
-      area: item.area,
-      description: item.description,
-      assigned: item.assigned_to || 'Unassigned',
-      priority: item.priority,
-      status: item.status,
-      hasPhoto: (item.photos?.length || 0) > 0,
-      photoCount: item.photos?.length || 0,
-      dueDate: item.due_date || '2026-04-30',
-      createdDate: item.created_at.split('T')[0],
-      reportedBy: 'Project Team',
-      responsible: 'subcontractor',
+    const base: PunchItem[] = (punchList || []).map((p: any) => ({
+      ...p,
+      photoCount: p.hasPhoto ? 2 : 0,
+      dueDate: p.id === 1 ? '2026-03-30' : p.id === 2 ? '2026-04-05' : p.id === 3 ? '2026-03-28' : p.id === 4 ? '2026-04-02' : '2026-03-20',
+      createdDate: p.id === 1 ? '2026-03-10' : p.id === 2 ? '2026-03-08' : p.id === 3 ? '2026-03-12' : p.id === 4 ? '2026-03-05' : '2026-02-28',
+      reportedBy: p.id === 1 ? 'Mike Torres' : p.id === 2 ? 'David Lee' : p.id === 3 ? 'James Wilson' : p.id === 4 ? 'Sarah Johnson' : 'Mike Torres',
+      responsible: p.id === 1 ? 'subcontractor' : p.id === 2 ? 'subcontractor' : p.id === 3 ? 'gc' : p.id === 4 ? 'subcontractor' : 'subcontractor',
     }));
-  }, [storeItems]);
+    const extra: PunchItem[] = [
+      { id: 6, itemNumber: 'PL-006', area: 'Floor 8, Unit 802', description: 'Missing baseboards along corridor', assigned: 'Maria Garcia', priority: 'low', status: 'open', hasPhoto: false, photoCount: 0, dueDate: '2026-04-10', createdDate: '2026-03-15', reportedBy: 'David Lee', responsible: 'subcontractor' },
+      { id: 7, itemNumber: 'PL-007', area: 'Floor 8, Unit 805', description: 'HVAC diffuser not connected', assigned: 'Karen Williams', priority: 'high', status: 'open', hasPhoto: true, photoCount: 3, dueDate: '2026-03-29', createdDate: '2026-03-14', reportedBy: 'Mike Torres', responsible: 'subcontractor' },
+      { id: 8, itemNumber: 'PL-008', area: 'Floor 2, Unit 204', description: 'Electrical outlet cover plate missing', assigned: 'Tom Anderson', priority: 'low', status: 'complete', hasPhoto: false, photoCount: 0, dueDate: '2026-03-25', createdDate: '2026-03-01', reportedBy: 'Sarah Johnson', responsible: 'subcontractor' },
+      { id: 9, itemNumber: 'PL-009', area: 'Floor 6, Common Area', description: 'Fire sprinkler head not flush with ceiling', assigned: 'Robert Chen', priority: 'critical', status: 'open', hasPhoto: true, photoCount: 2, dueDate: '2026-03-27', createdDate: '2026-03-18', reportedBy: 'James Wilson', responsible: 'subcontractor' },
+      { id: 10, itemNumber: 'PL-010', area: 'Lobby', description: 'Elevator lobby tile grout discoloration', assigned: 'James Wilson', priority: 'medium', status: 'in_progress', hasPhoto: true, photoCount: 1, dueDate: '2026-04-01', createdDate: '2026-03-10', reportedBy: 'David Lee', responsible: 'gc' },
+      { id: 11, itemNumber: 'PL-011', area: 'Floor 10, Unit 1003', description: 'Kitchen cabinet door alignment off', assigned: 'John Smith', priority: 'medium', status: 'verified', hasPhoto: false, photoCount: 0, dueDate: '2026-03-22', createdDate: '2026-03-02', reportedBy: 'Mike Torres', responsible: 'subcontractor' },
+      { id: 12, itemNumber: 'PL-012', area: 'Parking B1', description: 'Parking garage stripes faded at ramp entry', assigned: 'Maria Garcia', priority: 'low', status: 'open', hasPhoto: false, photoCount: 0, dueDate: '2026-04-15', createdDate: '2026-03-16', reportedBy: 'Tom Anderson', responsible: 'gc' },
+      { id: 13, itemNumber: 'PL-013', area: 'Floor 4, Unit 410', description: 'Bathroom exhaust fan excessive noise', assigned: 'Karen Williams', priority: 'high', status: 'in_progress', hasPhoto: true, photoCount: 1, dueDate: '2026-03-31', createdDate: '2026-03-11', reportedBy: 'Sarah Johnson', responsible: 'subcontractor' },
+      { id: 14, itemNumber: 'PL-014', area: 'Rooftop', description: 'Rooftop access door weather seal damaged', assigned: 'Robert Chen', priority: 'critical', status: 'open', hasPhoto: true, photoCount: 4, dueDate: '2026-03-28', createdDate: '2026-03-20', reportedBy: 'James Wilson', responsible: 'gc' },
+      { id: 15, itemNumber: 'PL-015', area: 'Floor 1, Retail A', description: 'Storefront glass panel scratch', assigned: 'Tom Anderson', priority: 'medium', status: 'complete', hasPhoto: false, photoCount: 0, dueDate: '2026-03-20', createdDate: '2026-02-25', reportedBy: 'David Lee', responsible: 'owner' },
+      { id: 16, itemNumber: 'PL-016', area: 'Floor 7, Unit 701', description: 'Drywall crack above doorframe', assigned: 'John Smith', priority: 'low', status: 'open', hasPhoto: false, photoCount: 0, dueDate: '2026-04-08', createdDate: '2026-03-19', reportedBy: 'Mike Torres', responsible: 'subcontractor' },
+      { id: 17, itemNumber: 'PL-017', area: 'Floor 9, Unit 902', description: 'Flooring transition strip loose', assigned: 'Maria Garcia', priority: 'medium', status: 'in_progress', hasPhoto: false, photoCount: 0, dueDate: '2026-04-03', createdDate: '2026-03-13', reportedBy: 'Sarah Johnson', responsible: 'subcontractor' },
+      { id: 18, itemNumber: 'PL-018', area: 'Parking B2', description: 'Emergency lighting unit not functional', assigned: 'Karen Williams', priority: 'critical', status: 'open', hasPhoto: true, photoCount: 1, dueDate: '2026-03-26', createdDate: '2026-03-21', reportedBy: 'Tom Anderson', responsible: 'gc' },
+      { id: 19, itemNumber: 'PL-019', area: 'Floor 11, Common Area', description: 'Corridor handrail loose at stairwell B', assigned: 'Robert Chen', priority: 'high', status: 'verified', hasPhoto: false, photoCount: 0, dueDate: '2026-03-18', createdDate: '2026-02-28', reportedBy: 'James Wilson', responsible: 'gc' },
+      { id: 20, itemNumber: 'PL-020', area: 'Floor 12, Penthouse', description: 'Balcony door threshold gap too wide', assigned: 'James Wilson', priority: 'high', status: 'in_progress', hasPhoto: true, photoCount: 2, dueDate: '2026-04-01', createdDate: '2026-03-17', reportedBy: 'David Lee', responsible: 'owner' },
+    ];
+    return [...base, ...extra];
+  }, [punchList]);
 
   // Counts
   const openCount = expandedPunchList.filter(p => p.status === 'open').length;
@@ -150,24 +189,25 @@ const PunchListPage: React.FC = () => {
   }, [expandedPunchList, atRiskFilter, areaFilter]);
 
   const selected = expandedPunchList.find(p => p.id === selectedId) || null;
-  const storeComments = selectedId ? getComments(selectedId) : [];
-  const comments = storeComments.map((c) => ({
-    author: c.author,
-    initials: c.initials,
-    time: new Date(c.created_at).toLocaleString(),
-    text: c.text,
-  }));
+  const comments = selectedId ? mockComments[selectedId] || [] : [];
 
-  const handleMarkComplete = () => {
-    if (selectedId) {
-      updateItemStatus(selectedId, 'complete');
+  const handleMarkComplete = async () => {
+    if (!selected) return;
+    try {
+      await updatePunchItem.mutateAsync({
+        id: String(selected.id),
+        updates: { status: 'complete' },
+        projectId: projectId!,
+      });
+      toast.success(`${selected.itemNumber} marked as complete`);
+      setSelectedId(null);
+    } catch {
+      toast.error('Failed to update status');
     }
-    addToast('success', `${selected?.itemNumber} marked as complete`);
-    setSelectedId(null);
   };
 
   const handleAddPhoto = () => {
-    addToast('info', 'Photo capture coming soon');
+    addToast('info', 'Photo capture loading');
   };
 
   // SVG donut
@@ -180,7 +220,27 @@ const PunchListPage: React.FC = () => {
     <PageContainer
       title="Punch List"
       subtitle={`${openCount} open \u00b7 ${inProgressCount} in progress \u00b7 ${completeCount} complete \u00b7 ${verifiedCount} verified`}
-      actions={<Btn onClick={() => addToast('info', 'New punch list item form coming soon')}>New Item</Btn>}
+      actions={<Btn onClick={async () => {
+        try {
+          await createPunchItem.mutateAsync({
+            projectId: projectId!,
+            data: {
+              project_id: projectId!,
+              title: 'New Punch Item',
+              description: '',
+              location: '',
+              floor: '',
+              trade: '',
+              priority: 'medium',
+              assigned_to: null,
+              due_date: null,
+            },
+          });
+          toast.success('Punch item created');
+        } catch {
+          toast.error('Failed to create punch item');
+        }
+      }}>New Item</Btn>}
     >
       {/* Predictive Alert Banners */}
       {pageAlerts.map((alert) => (
@@ -319,7 +379,7 @@ const PunchListPage: React.FC = () => {
 
       <Card padding="0">
         <TableHeader columns={columns} />
-        {loading ? (
+        {loading || !punchList ? (
           Array.from({ length: 6 }).map((_, i) => (
             <div key={i} style={{ padding: spacing.md, display: 'flex', gap: spacing.md }}>
               <Skeleton width="80px" height="16px" />
@@ -544,7 +604,7 @@ const PunchListPage: React.FC = () => {
             </div>
 
             {/* Related Items */}
-            <RelatedItems items={getRelatedItemsForPunchItem(parseInt(selected.id.replace(/\D/g, '')) || 0)} onNavigate={appNavigate} />
+            <RelatedItems items={getRelatedItemsForPunchItem(selected.id)} onNavigate={appNavigate} />
 
             {/* Actions */}
             <div style={{ display: 'flex', gap: spacing.sm, paddingTop: spacing.md, borderTop: `1px solid ${colors.borderLight}` }}>

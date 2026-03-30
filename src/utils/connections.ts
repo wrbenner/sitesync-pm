@@ -2,10 +2,6 @@
 // Every entity in the system can discover its related entities across all domains.
 
 import { useNavigate } from 'react-router-dom';
-import {
-  tasks, rfis, submittals, schedulePhases, costData, punchList,
-  crews, directory,
-} from '../data/mockData';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -19,6 +15,79 @@ export interface RelatedItem {
   label: string;
   subtitle: string;
   navigateTo: string;
+}
+
+// Minimal shapes for data the resolvers need (callers provide the actual arrays)
+
+export interface TaskData {
+  id: number;
+  title: string;
+  status: string;
+  tags: string[];
+  description: string;
+  assignee: { name: string; company: string };
+  linkedItems: { type: string; id: string }[];
+}
+
+export interface RfiData {
+  id: number;
+  rfiNumber: string;
+  title: string;
+  status: string;
+  from: string;
+  to: string;
+}
+
+export interface SubmittalData {
+  id: number;
+  submittalNumber: string;
+  title: string;
+  status: string;
+  from: string;
+}
+
+export interface SchedulePhaseData {
+  id: number;
+  name: string;
+  progress: number;
+}
+
+export interface CostDataShape {
+  divisions: { id: number; name: string; budget: number; spent: number; committed: number }[];
+  changeOrders: { id: number; coNumber: string; title: string; amount: number; status: string }[];
+}
+
+export interface PunchItemData {
+  id: number;
+  itemNumber: string;
+  description: string;
+  area: string;
+  status: string;
+  assigned: string;
+}
+
+export interface CrewData {
+  id: number;
+  name: string;
+  task: string;
+}
+
+export interface DirectoryData {
+  id: number;
+  contactName: string;
+  company: string;
+  role: string;
+}
+
+export interface ConnectionData {
+  tasks?: TaskData[];
+  rfis?: RfiData[];
+  submittals?: SubmittalData[];
+  schedulePhases?: SchedulePhaseData[];
+  costData?: CostDataShape;
+  punchList?: PunchItemData[];
+  crews?: CrewData[];
+  directory?: DirectoryData[];
 }
 
 // ─── Navigation Hook ────────────────────────────────────────────────────────
@@ -53,17 +122,17 @@ function matchKeywords(text: string, keywords: string[]): boolean {
   return keywords.some((kw) => lower.includes(kw));
 }
 
-function findPhase(text: string) {
+function findPhase(text: string, phases: SchedulePhaseData[]) {
   for (const [phaseName, keywords] of Object.entries(PHASE_KEYWORDS)) {
     if (matchKeywords(text, keywords)) {
-      const phase = schedulePhases.find((p) => p.name === phaseName);
+      const phase = phases.find((p) => p.name === phaseName);
       if (phase) return phase;
     }
   }
   return null;
 }
 
-function findDivision(text: string) {
+function findDivision(text: string, costData: CostDataShape) {
   for (const [divName, keywords] of Object.entries(DIVISION_KEYWORDS)) {
     if (matchKeywords(text, keywords)) {
       const div = costData.divisions.find((d) => d.name === divName);
@@ -81,7 +150,8 @@ function fmt(n: number): string {
 
 // ─── Resolvers ──────────────────────────────────────────────────────────────
 
-export function getRelatedItemsForRfi(rfiId: number): RelatedItem[] {
+export function getRelatedItemsForRfi(rfiId: number, data: ConnectionData = {}): RelatedItem[] {
+  const { rfis = [], tasks = [], schedulePhases = [], costData, directory = [] } = data;
   const rfi = rfis.find((r) => r.id === rfiId);
   if (!rfi) return [];
   const items: RelatedItem[] = [];
@@ -96,22 +166,21 @@ export function getRelatedItemsForRfi(rfiId: number): RelatedItem[] {
   });
 
   // Schedule phase
-  const phase = findPhase(searchText);
+  const phase = findPhase(searchText, schedulePhases);
   if (phase) {
     items.push({ entityType: 'schedule_phase', id: phase.id, label: `${phase.name} Phase`, subtitle: `${phase.progress}% complete`, navigateTo: 'schedule' });
   }
 
   // Change orders
-  costData.changeOrders.forEach((co) => {
-    if (matchKeywords(`${co.title} ${searchText}`, Object.values(DIVISION_KEYWORDS).flat().filter((kw) => matchKeywords(searchText, [kw])))) {
-      // Simpler: check if CO and RFI share domain keywords
+  if (costData) {
+    costData.changeOrders.forEach((co) => {
       const rfiDomain = Object.entries(DIVISION_KEYWORDS).find(([, kws]) => matchKeywords(searchText, kws));
       const coDomain = Object.entries(DIVISION_KEYWORDS).find(([, kws]) => matchKeywords(co.title, kws));
       if (rfiDomain && coDomain && rfiDomain[0] === coDomain[0]) {
         items.push({ entityType: 'change_order', id: co.id, label: `${co.coNumber}: ${co.title}`, subtitle: fmt(co.amount), navigateTo: 'budget' });
       }
-    }
-  });
+    });
+  }
 
   // People
   const fromPerson = directory.find((d) => d.company === rfi.from || d.role === rfi.from);
@@ -126,7 +195,8 @@ export function getRelatedItemsForRfi(rfiId: number): RelatedItem[] {
   return items;
 }
 
-export function getRelatedItemsForTask(taskId: number): RelatedItem[] {
+export function getRelatedItemsForTask(taskId: number, data: ConnectionData = {}): RelatedItem[] {
+  const { tasks = [], rfis = [], submittals = [], schedulePhases = [], directory = [], crews = [] } = data;
   const task = tasks.find((t) => t.id === taskId);
   if (!task) return [];
   const items: RelatedItem[] = [];
@@ -145,7 +215,7 @@ export function getRelatedItemsForTask(taskId: number): RelatedItem[] {
   });
 
   // Schedule phase
-  const phase = findPhase(searchText);
+  const phase = findPhase(searchText, schedulePhases);
   if (phase) {
     items.push({ entityType: 'schedule_phase', id: phase.id, label: `${phase.name} Phase`, subtitle: `${phase.progress}% complete`, navigateTo: 'schedule' });
   }
@@ -168,14 +238,15 @@ export function getRelatedItemsForTask(taskId: number): RelatedItem[] {
   return items;
 }
 
-export function getRelatedItemsForSubmittal(submittalId: number): RelatedItem[] {
+export function getRelatedItemsForSubmittal(submittalId: number, data: ConnectionData = {}): RelatedItem[] {
+  const { submittals = [], tasks = [], schedulePhases = [], directory = [], costData } = data;
   const sub = submittals.find((s) => s.id === submittalId);
   if (!sub) return [];
   const items: RelatedItem[] = [];
   const searchText = `${sub.title} ${sub.submittalNumber}`;
 
   // Phase
-  const phase = findPhase(searchText);
+  const phase = findPhase(searchText, schedulePhases);
   if (phase) {
     items.push({ entityType: 'schedule_phase', id: phase.id, label: `${phase.name} Phase`, subtitle: `${phase.progress}% complete`, navigateTo: 'schedule' });
   }
@@ -195,16 +266,19 @@ export function getRelatedItemsForSubmittal(submittalId: number): RelatedItem[] 
   }
 
   // Budget division
-  const div = findDivision(searchText);
-  if (div) {
-    items.push({ entityType: 'change_order', id: div.id, label: `${div.name} Division`, subtitle: `${fmt(div.spent)} of ${fmt(div.budget)}`, navigateTo: 'budget' });
+  if (costData) {
+    const div = findDivision(searchText, costData);
+    if (div) {
+      items.push({ entityType: 'change_order', id: div.id, label: `${div.name} Division`, subtitle: `${fmt(div.spent)} of ${fmt(div.budget)}`, navigateTo: 'budget' });
+    }
   }
 
   return items;
 }
 
-export function getRelatedItemsForChangeOrder(coId: number): RelatedItem[] {
-  const co = costData.changeOrders.find((c) => c.id === coId);
+export function getRelatedItemsForChangeOrder(coId: number | string, data: ConnectionData = {}): RelatedItem[] {
+  const { rfis = [], schedulePhases = [], costData } = data;
+  const co = costData?.changeOrders.find((c) => c.id === coId);
   if (!co) return [];
   const items: RelatedItem[] = [];
   const searchText = co.title;
@@ -219,28 +293,31 @@ export function getRelatedItemsForChangeOrder(coId: number): RelatedItem[] {
   });
 
   // Phase
-  const phase = findPhase(searchText);
+  const phase = findPhase(searchText, schedulePhases);
   if (phase) {
     items.push({ entityType: 'schedule_phase', id: phase.id, label: `${phase.name} Phase`, subtitle: `${phase.progress}% complete`, navigateTo: 'schedule' });
   }
 
   // Division
-  const div = findDivision(searchText);
-  if (div) {
-    items.push({ entityType: 'change_order', id: div.id, label: `${div.name} Budget`, subtitle: `${fmt(div.spent)} spent`, navigateTo: 'budget' });
+  if (costData) {
+    const div = findDivision(searchText, costData);
+    if (div) {
+      items.push({ entityType: 'change_order', id: div.id, label: `${div.name} Budget`, subtitle: `${fmt(div.spent)} spent`, navigateTo: 'budget' });
+    }
   }
 
   return items;
 }
 
-export function getRelatedItemsForPunchItem(itemId: number): RelatedItem[] {
+export function getRelatedItemsForPunchItem(itemId: number, data: ConnectionData = {}): RelatedItem[] {
+  const { punchList = [], tasks = [], schedulePhases = [], directory = [] } = data;
   const item = punchList.find((p) => p.id === itemId);
   if (!item) return [];
   const items: RelatedItem[] = [];
   const searchText = `${item.description} ${item.area}`;
 
   // Phase
-  const phase = findPhase(searchText);
+  const phase = findPhase(searchText, schedulePhases);
   if (phase) {
     items.push({ entityType: 'schedule_phase', id: phase.id, label: `${phase.name} Phase`, subtitle: `${phase.progress}% complete`, navigateTo: 'schedule' });
   }
@@ -292,7 +369,8 @@ export function getRelatedItemsForInsight(insightId: number): RelatedItem[] {
   return items;
 }
 
-export function getTasksForCrew(crewId: number): typeof tasks {
+export function getTasksForCrew(crewId: number, data: ConnectionData = {}): TaskData[] {
+  const { crews = [], tasks = [] } = data;
   const crew = crews.find((c) => c.id === crewId);
   if (!crew) return [];
 
@@ -312,7 +390,8 @@ export function getTasksForCrew(crewId: number): typeof tasks {
   }).slice(0, 2);
 }
 
-export function getPersonDetails(nameOrCompany: string) {
+export function getPersonDetails(nameOrCompany: string, data: ConnectionData = {}): DirectoryData | null {
+  const { directory = [] } = data;
   return directory.find((d) =>
     d.contactName.toLowerCase().includes(nameOrCompany.toLowerCase()) ||
     d.company.toLowerCase().includes(nameOrCompany.toLowerCase())

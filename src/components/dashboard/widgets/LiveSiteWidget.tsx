@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { MapPin, Users } from 'lucide-react';
 import { colors, spacing, typography, borderRadius } from '../../../styles/theme';
+import { useProjectId } from '../../../hooks/useProjectId';
+import { useCrews } from '../../../hooks/queries';
 
 interface CrewDot {
-  id: number;
+  id: string;
   name: string;
   trade: string;
   x: number;
@@ -13,25 +15,42 @@ interface CrewDot {
   status: 'active' | 'idle';
 }
 
-const initialCrews: CrewDot[] = [
-  { id: 1, name: 'Steel Crew A', trade: 'Structural', x: 72, y: 22, count: 14, color: colors.statusInfo, status: 'active' },
-  { id: 2, name: 'MEP Crew B', trade: 'Mechanical', x: 35, y: 48, count: 12, color: colors.statusActive, status: 'active' },
-  { id: 3, name: 'Electrical C', trade: 'Electrical', x: 55, y: 72, count: 8, color: colors.statusPending, status: 'active' },
-  { id: 4, name: 'Exterior D', trade: 'Exterior', x: 88, y: 55, count: 16, color: colors.statusReview, status: 'active' },
-  { id: 5, name: 'Framing E', trade: 'Interior', x: 25, y: 28, count: 11, color: colors.primaryOrange, status: 'active' },
-  { id: 6, name: 'Finishing F', trade: 'Finishes', x: 48, y: 85, count: 9, color: colors.statusNeutral, status: 'idle' },
-];
+const dotColors = [colors.statusInfo, colors.statusActive, colors.statusPending, colors.statusReview, colors.primaryOrange, colors.statusNeutral];
 
-const arrivals = [
-  { time: '6:45 AM', name: 'Steel Crew A', count: 14 },
-  { time: '6:52 AM', name: 'MEP Crew B', count: 12 },
-  { time: '7:00 AM', name: 'Exterior Crew D', count: 16 },
-  { time: '7:10 AM', name: 'Framing Crew E', count: 11 },
-];
+function buildCrewDots(data: ReturnType<typeof useCrews>['data']): CrewDot[] {
+  if (!data) return [];
+  return data.map((c, i) => ({
+    id: c.id,
+    name: c.name,
+    trade: c.trade || 'General',
+    x: 20 + ((i * 37) % 65),
+    y: 15 + ((i * 29) % 70),
+    count: c.size ?? 0,
+    color: dotColors[i % dotColors.length],
+    status: (c.status === 'idle' ? 'idle' : 'active') as 'active' | 'idle',
+  }));
+}
 
-export const LiveSiteWidget: React.FC = () => {
-  const [crews, setCrews] = useState(initialCrews);
-  const [hoveredCrew, setHoveredCrew] = useState<number | null>(null);
+export const LiveSiteWidget: React.FC = React.memo(() => {
+  const projectId = useProjectId();
+  const { data: crewData } = useCrews(projectId);
+  const initialCrews = useMemo(() => buildCrewDots(crewData), [crewData]);
+  const [crews, setCrews] = useState<CrewDot[]>([]);
+
+  // Sync when DB data arrives or changes
+  useEffect(() => {
+    if (initialCrews.length > 0) setCrews(initialCrews);
+  }, [initialCrews]);
+
+  const arrivals = useMemo(() => {
+    if (!crewData) return [];
+    const times = ['6:45 AM', '6:52 AM', '7:00 AM', '7:10 AM', '7:20 AM', '7:30 AM'];
+    return crewData
+      .filter((c) => c.status !== 'idle')
+      .slice(0, 6)
+      .map((c, i) => ({ time: times[i] || '7:30 AM', name: c.name, count: c.size ?? 0 }));
+  }, [crewData]);
+  const [hoveredCrew, setHoveredCrew] = useState<string | null>(null);
 
   // Simulated movement
   useEffect(() => {
@@ -151,4 +170,4 @@ export const LiveSiteWidget: React.FC = () => {
       </div>
     </div>
   );
-};
+});

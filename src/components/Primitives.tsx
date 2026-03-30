@@ -113,7 +113,7 @@ export const Card: React.FC<CardProps> = ({ children, padding = spacing['5'], on
     onMouseEnter={(e) => {
       if (onClick) {
         (e.currentTarget as HTMLDivElement).style.boxShadow = shadows.cardHover;
-        (e.currentTarget as HTMLDivElement).style.backgroundColor = '#FAFAF7';
+        (e.currentTarget as HTMLDivElement).style.backgroundColor = colors.surfaceHover;
       }
     }}
     onMouseLeave={(e) => {
@@ -139,6 +139,8 @@ interface BtnProps {
   fullWidth?: boolean;
   icon?: React.ReactNode;
   iconPosition?: 'left' | 'right';
+  'aria-label'?: string;
+  type?: 'button' | 'submit' | 'reset';
 }
 
 export const Btn: React.FC<BtnProps> = ({
@@ -150,12 +152,14 @@ export const Btn: React.FC<BtnProps> = ({
   fullWidth = false,
   icon,
   iconPosition = 'left',
+  'aria-label': ariaLabel,
+  type = 'button',
 }) => {
   const variants = {
     primary: {
       bg: colors.primaryOrange,
       color: colors.white,
-      hover: '#E06910',
+      hover: colors.orangeHover,
       border: 'none',
     },
     secondary: {
@@ -173,7 +177,7 @@ export const Btn: React.FC<BtnProps> = ({
     danger: {
       bg: colors.red,
       color: colors.white,
-      hover: '#DC2626',
+      hover: colors.statusCritical,
       border: 'none',
     },
   };
@@ -189,8 +193,10 @@ export const Btn: React.FC<BtnProps> = ({
 
   return (
     <button
+      type={type}
       onClick={onClick}
       disabled={disabled}
+      aria-label={ariaLabel}
       style={{
         display: 'inline-flex',
         width: fullWidth ? '100%' : 'auto',
@@ -429,7 +435,7 @@ export const TableHeader: React.FC<TableHeaderProps> = ({ columns }) => (
       borderBottom: `1px solid ${colors.borderDefault}`,
       position: 'sticky',
       top: 0,
-      backgroundColor: '#F9F7F4',
+      backgroundColor: colors.surfaceInset,
       zIndex: 10,
     }}
   >
@@ -695,7 +701,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   max = 100,
   height = 3,
   color = colors.primaryOrange,
-  bgColor = '#EFECE8',
+  bgColor = colors.surfaceInset,
 }) => (
   <div
     style={{

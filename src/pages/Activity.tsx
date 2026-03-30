@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Settings } from 'lucide-react';
 import { PageContainer, Card, useToast } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme';
 import { ActivityCard } from '../components/activity/ActivityCard';
+import type { ActivityItem } from '../components/activity/ActivityCard';
 import { MentionInput } from '../components/activity/MentionInput';
-import { useActivityStore, type ActivityEntry } from '../stores/activityStore';
-import { useProjectContext } from '../stores/projectContextStore';
+import { useProjectId } from '../hooks/useProjectId';
+import { useActivityFeed } from '../hooks/queries';
+import type { ActivityFeedItem } from '../types/database';
 
 type FilterType = 'all' | 'rfi' | 'submittal' | 'photo' | 'task' | 'budget' | 'schedule';
 
@@ -19,39 +21,82 @@ const filterOptions: { id: FilterType; label: string }[] = [
   { id: 'schedule', label: 'Schedule' },
 ];
 
-function groupByTime(items: ActivityEntry[]): { label: string; items: ActivityEntry[] }[] {
+function getInitials(name: string): string {
+  return name
+    .split(' ')
+    .map((w) => w[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+}
+
+function mapFeedItem(item: ActivityFeedItem): ActivityItem & { photoUrl?: string } {
+  const meta = (item.metadata ?? {}) as Record<string, unknown>;
+  const userName = (meta.user_name as string) || 'Unknown User';
+  const type = (item.type || 'task') as ActivityItem['type'];
+  const action = (meta.action as string) || '';
+  const photoUrl = (meta.photo_url as string) || undefined;
+
+  return {
+    id: typeof meta.numeric_id === 'number' ? meta.numeric_id : Math.abs(hashCode(item.id)),
+    type,
+    user: userName,
+    userInitials: getInitials(userName),
+    action,
+    target: item.title,
+    timestamp: new Date(item.created_at ?? Date.now()),
+    preview: item.body || undefined,
+    commentCount: typeof meta.comment_count === 'number' ? meta.comment_count : undefined,
+    photoUrl,
+  };
+}
+
+/** Simple string hash so we get a stable numeric id from the uuid */
+function hashCode(s: string): number {
+  let hash = 0;
+  for (let i = 0; i < s.length; i++) {
+    hash = (hash << 5) - hash + s.charCodeAt(i);
+    hash |= 0;
+  }
+  return hash;
+}
+
+function groupByTime(items: (ActivityItem & { photoUrl?: string })[]): { label: string; items: (ActivityItem & { photoUrl?: string })[] }[] {
   const now = Date.now();
-  const today: ActivityEntry[] = [];
-  const yesterday: ActivityEntry[] = [];
-  const thisWeek: ActivityEntry[] = [];
+  const today: (ActivityItem & { photoUrl?: string })[] = [];
+  const yesterday: (ActivityItem & { photoUrl?: string })[] = [];
+  const earlier: (ActivityItem & { photoUrl?: string })[] = [];
 
   items.forEach(item => {
     const hours = (now - item.timestamp.getTime()) / (1000 * 60 * 60);
     if (hours < 24) today.push(item);
     else if (hours < 48) yesterday.push(item);
-    else thisWeek.push(item);
+    else earlier.push(item);
   });
 
-  const groups: { label: string; items: ActivityEntry[] }[] = [];
+  const groups: { label: string; items: (ActivityItem & { photoUrl?: string })[] }[] = [];
   if (today.length) groups.push({ label: 'Today', items: today });
   if (yesterday.length) groups.push({ label: 'Yesterday', items: yesterday });
-  if (thisWeek.length) groups.push({ label: 'This Week', items: thisWeek });
+  if (earlier.length) groups.push({ label: 'Earlier', items: earlier });
   return groups;
 }
 
 export const Activity: React.FC = () => {
   const { addToast } = useToast();
-  const { activeProject } = useProjectContext();
-  const { activities, loadActivities, getFiltered } = useActivityStore();
+  const projectId = useProjectId();
+  const { data: rawActivities } = useActivityFeed(projectId);
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [following, setFollowing] = useState<Set<string>>(new Set(['rfi', 'task']));
   const [readItems, setReadItems] = useState<Set<number>>(new Set());
 
-  useEffect(() => {
-    if (activeProject?.id) loadActivities(activeProject.id);
-  }, [activeProject?.id]);
+  const activities = useMemo(
+    () => (rawActivities ?? []).map(mapFeedItem),
+    [rawActivities]
+  );
 
-  const filtered = getFiltered(activeFilter);
+  const filtered = activeFilter === 'all'
+    ? activities
+    : activities.filter((a) => a.type === activeFilter);
 
   const unreadCount = filtered.filter(i => !readItems.has(i.id)).length;
   const grouped = groupByTime(filtered);
@@ -103,7 +148,7 @@ export const Activity: React.FC = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
             <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textSecondary }}>Watching</span>
             <button
-              onClick={() => addToast('info', 'Notification preferences coming soon')}
+              onClick={() => addToast('info', 'Notification preferences feature pending configuration')}
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 width: 20, height: 20, backgroundColor: 'transparent', border: 'none',

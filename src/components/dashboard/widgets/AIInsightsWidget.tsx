@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Sparkles, ChevronRight, AlertTriangle, TrendingDown, Shield, CheckCircle } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, transitions } from '../../../styles/theme';
-import { useQuery } from '../../../hooks/useQuery';
-import { getAiInsights } from '../../../api/endpoints/ai';
+import { useProjectId } from '../../../hooks/useProjectId';
+import { useAIInsights } from '../../../hooks/queries';
 import { useAppNavigate } from '../../../utils/connections';
 
 type Category = 'all' | 'schedule' | 'budget' | 'safety' | 'quality';
@@ -15,34 +15,33 @@ const categoryConfig: Record<Category, { label: string; icon: React.ReactNode; c
   quality: { label: 'Quality', icon: <CheckCircle size={12} />, color: colors.statusActive },
 };
 
-const insightCategories: Record<number, Category> = {
-  1: 'schedule',
-  2: 'schedule',
-  3: 'quality',
-};
+function pageToCategory(page: string | null | undefined): Category {
+  if (!page) return 'schedule';
+  const p = page.toLowerCase();
+  if (p === 'budget') return 'budget';
+  if (p === 'safety' || p === 'daily-log') return 'safety';
+  if (p === 'quality' || p === 'punch-list') return 'quality';
+  return 'schedule';
+}
 
-const additionalInsights = [
-  { id: 101, severity: 'warning' as const, title: 'Budget contingency below 5% on Structural', description: 'Structural division has only $250K remaining. Any change orders will exceed budget.', category: 'budget' as const, route: 'budget' },
-  { id: 102, severity: 'info' as const, title: 'Safety audit due Friday', description: 'Quarterly safety audit scheduled. 3 open items from last inspection need resolution.', category: 'safety' as const, route: 'daily-log' },
-  { id: 103, severity: 'success' as const, title: 'MEP coordination ahead of schedule', description: 'Mechanical rough in on floors 4 through 6 is 2 days ahead. Opportunity to pull in interior framing.', category: 'schedule' as const, route: 'schedule' },
-];
-
-export const AIInsightsWidget: React.FC = () => {
+export const AIInsightsWidget: React.FC = React.memo(() => {
   const [activeCategory, setActiveCategory] = useState<Category>('all');
-  const { data: apiInsights } = useQuery('aiInsights', getAiInsights);
+  const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
+  const dismissInsight = (id: string) => setDismissedIds((prev) => new Set([...prev, id]));
+  const projectId = useProjectId();
+  const { data: rawInsights } = useAIInsights(projectId);
   const navigate = useAppNavigate();
 
-  const allInsights = [
-    ...(apiInsights || []).map((i) => ({
+  const allInsights = (rawInsights || [])
+    .filter((i) => !dismissedIds.has(i.id))
+    .map((i) => ({
       id: i.id,
-      severity: i.severity as 'warning' | 'info' | 'success',
-      title: i.title,
-      description: i.description,
-      category: insightCategories[i.id] || ('schedule' as Category),
-      route: 'dashboard',
-    })),
-    ...additionalInsights,
-  ];
+      severity: (i.severity || 'info') as 'warning' | 'info' | 'success' | 'critical',
+      title: i.message,
+      description: i.expanded_content || '',
+      category: pageToCategory(i.page),
+      route: i.action_link || 'dashboard',
+    }));
 
   const filtered = activeCategory === 'all'
     ? allInsights
@@ -120,10 +119,17 @@ export const AIInsightsWidget: React.FC = () => {
               <p style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, margin: 0, lineHeight: typography.lineHeight.snug }}>{insight.title}</p>
               <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{insight.description}</p>
             </div>
+            <button
+              onClick={(e) => { e.stopPropagation(); dismissInsight(insight.id); }}
+              title="Dismiss"
+              style={{ background: 'none', border: 'none', padding: 2, cursor: 'pointer', color: colors.textTertiary, flexShrink: 0, marginTop: 2, opacity: 0.5 }}
+            >
+              ×
+            </button>
             <ChevronRight size={14} color={colors.textTertiary} style={{ marginTop: 4, flexShrink: 0 }} />
           </div>
         ))}
       </div>
     </div>
   );
-};
+});

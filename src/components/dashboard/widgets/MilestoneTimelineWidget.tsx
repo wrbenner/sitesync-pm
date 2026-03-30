@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Flag } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, shadows } from '../../../styles/theme';
+import { useProjectId } from '../../../hooks/useProjectId';
+import { useSchedulePhases } from '../../../hooks/queries';
 
 type MilestoneStatus = 'hit' | 'at-risk' | 'missed' | 'upcoming';
 
 interface Milestone {
-  id: number;
+  id: string;
   name: string;
   date: string;
   status: MilestoneStatus;
@@ -13,16 +15,23 @@ interface Milestone {
   slackDays: number;
 }
 
-const milestones: Milestone[] = [
-  { id: 1, name: 'Foundation Complete', date: 'Dec 2023', status: 'hit', critical: true, slackDays: 3 },
-  { id: 2, name: 'Structure Topped Out', date: 'Aug 2024', status: 'hit', critical: true, slackDays: 0 },
-  { id: 3, name: 'MEP Rough In 50%', date: 'Jan 2025', status: 'hit', critical: true, slackDays: 4 },
-  { id: 4, name: 'Exterior Enclosed', date: 'Apr 2025', status: 'at-risk', critical: true, slackDays: -2 },
-  { id: 5, name: 'Interior Framing Done', date: 'Jul 2025', status: 'upcoming', critical: false, slackDays: 12 },
-  { id: 6, name: 'MEP Trim Out', date: 'Aug 2025', status: 'upcoming', critical: true, slackDays: 5 },
-  { id: 7, name: 'Finishes Complete', date: 'Nov 2025', status: 'upcoming', critical: false, slackDays: 8 },
-  { id: 8, name: 'Substantial Completion', date: 'Dec 2025', status: 'upcoming', critical: true, slackDays: 0 },
-];
+function phaseStatusToMilestone(status: string | null, percentComplete: number | null): MilestoneStatus {
+  const pct = percentComplete ?? 0;
+  if (pct >= 100) return 'hit';
+  const s = (status || '').toLowerCase();
+  if (s === 'complete' || s === 'completed') return 'hit';
+  if (s === 'delayed' || s === 'behind') return 'at-risk';
+  if (s === 'missed') return 'missed';
+  if (pct > 0 && s === 'at_risk') return 'at-risk';
+  return 'upcoming';
+}
+
+function formatDateLabel(dateStr: string | null): string {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${months[d.getMonth()]} ${d.getFullYear()}`;
+}
 
 const statusColors: Record<MilestoneStatus, string> = {
   hit: colors.statusActive,
@@ -38,8 +47,22 @@ const statusLabels: Record<MilestoneStatus, string> = {
   upcoming: 'Upcoming',
 };
 
-export const MilestoneTimelineWidget: React.FC = () => {
-  const [hoveredId, setHoveredId] = useState<number | null>(null);
+export const MilestoneTimelineWidget: React.FC = React.memo(() => {
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const projectId = useProjectId();
+  const { data: phases } = useSchedulePhases(projectId);
+
+  const milestones: Milestone[] = useMemo(() => {
+    if (!phases) return [];
+    return phases.map((p) => ({
+      id: p.id,
+      name: p.name,
+      date: formatDateLabel(p.end_date),
+      status: phaseStatusToMilestone(p.status, p.percent_complete),
+      critical: p.is_critical_path ?? false,
+      slackDays: 0,
+    }));
+  }, [phases]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -138,4 +161,4 @@ export const MilestoneTimelineWidget: React.FC = () => {
       </div>
     </div>
   );
-};
+});

@@ -1,0 +1,236 @@
+import { supabase } from './supabase'
+import { queryClient } from './queryClient'
+import { toast } from 'sonner'
+
+// All tables that support real-time project-scoped updates
+const PROJECT_TABLES = [
+  'rfis', 'rfi_responses', 'submittals', 'submittal_approvals',
+  'punch_items', 'tasks', 'daily_logs', 'daily_log_entries',
+  'activity_feed', 'crews', 'change_orders', 'budget_items',
+  'drawings', 'files', 'field_captures', 'meetings',
+  'schedule_phases', 'ai_insights', 'ai_agent_actions',
+  'directory_contacts', 'safety_inspections', 'incidents',
+  'corrective_actions',
+] as const
+
+// Friendly names for toast messages
+const TABLE_LABELS: Partial<Record<string, string>> = {
+  rfis: 'RFI',
+  submittals: 'Submittal',
+  tasks: 'Task',
+  punch_items: 'Punch Item',
+  daily_logs: 'Daily Log',
+  change_orders: 'Change Order',
+  meetings: 'Meeting',
+  drawings: 'Drawing',
+  files: 'File',
+  crews: 'Crew',
+  safety_inspections: 'Safety Inspection',
+}
+
+const EVENT_LABELS: Record<string, string> = {
+  INSERT: 'created',
+  UPDATE: 'updated',
+  DELETE: 'deleted',
+}
+
+// ── Project data subscriptions ─────────────────────────────
+
+export function subscribeToProject(projectId: string, currentUserId?: string) {
+  const channels: ReturnType<typeof supabase.channel>[] = []
+
+  for (const table of PROJECT_TABLES) {
+    const channel = supabase
+      .channel(`${table}_${projectId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table,
+        filter: `project_id=eq.${projectId}`,
+      }, (payload) => {
+        // Invalidate the relevant query cache
+        queryClient.invalidateQueries({ queryKey: [table, projectId] })
+
+        // For key tables, also invalidate related queries
+        if (table === 'rfi_responses') {
+          queryClient.invalidateQueries({ queryKey: ['rfis', projectId] })
+        }
+        if (table === 'daily_log_entries') {
+          queryClient.invalidateQueries({ queryKey: ['daily_logs', projectId] })
+        }
+        if (table === 'submittal_approvals') {
+          queryClient.invalidateQueries({ queryKey: ['submittals', projectId] })
+        }
+
+        // Show toast for changes made by other users
+        const record = (payload.new || payload.old) as Record<string, unknown> | null
+        const friendlyName = TABLE_LABELS[table]
+        const eventLabel = EVENT_LABELS[payload.eventType]
+
+        // Don't toast for changes the current user made (they already see them)
+        if (record && friendlyName && eventLabel) {
+          const changedBy = record.created_by || record.submitted_by || record.assigned_to
+          if (changedBy && changedBy !== currentUserId) {
+            const title = (record.title || record.name || record.number || '') as string
+            const label = title ? `${friendlyName} ${eventLabel}: ${title}` : `${friendlyName} ${eventLabel}`
+            const link = (record.id as string) ? `/${table.replace('_', '-')}` : undefined
+            toast.info(label, {
+              action: link ? { label: 'View', onClick: () => { window.location.hash = `#${link}` } } : undefined,
+              duration: 4000,
+            })
+          }
+        }
+      })
+      .subscribe()
+    channels.push(channel)
+  }
+
+  return () => {
+    channels.forEach((ch) => supabase.removeChannel(ch))
+  }
+}
+
+// ── Notification subscriptions ─────────────────────────────
+
+export function subscribeToNotifications(userId: string) {
+  const channel = supabase
+    .channel(`notifications_${userId}`)
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'notifications',
+      filter: `user_id=eq.${userId}`,
+    }, (payload) => {
+      queryClient.invalidateQueries({ queryKey: ['notifications', userId] })
+
+      const notification = payload.new as Record<string, unknown>
+
+      // Show desktop notification if permission granted
+      if (notification && typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+        new Notification('SiteSync PM', {
+          body: (notification.title as string) || 'New notification',
+          icon: '/sitesync-pm/icon-192.svg',
+        })
+      }
+
+      // Show in-app toast with click-through
+      if (notification?.title) {
+        const link = notification.link as string | undefined
+        toast.info(notification.title as string, {
+          description: (notification.body as string) || undefined,
+          action: link ? { label: 'View', onClick: () => { window.location.hash = `#${link}` } } : undefined,
+          duration: 6000,
+        })
+      }
+    })
+    .subscribe()
+
+  return () => {
+    supabase.removeChannel(channel)
+  }
+}
+
+// ── Presence tracking ──────────────────────────────────────
+
+export interface PresenceUser {
+  userId: string
+  name: string
+  initials: string
+  color: string
+  page: string
+  entityId?: string
+  lastSeen: number
+}
+
+const PRESENCE_COLORS = [
+  '#3A7BC8', '#2D8A6E', '#C4850C', '#7C5DC7', '#C93B3B',
+  '#06B6D4', '#F47820', '#8B5E3C', '#DC2626', '#4F46E5',
+]
+
+function getUserColor(userId: string): string {
+  let hash = 0
+  for (let i = 0; i < userId.length; i++) hash = ((hash << 5) - hash) + userId.charCodeAt(i)
+  return PRESENCE_COLORS[Math.abs(hash) % PRESENCE_COLORS.length]
+}
+
+let presenceChannel: ReturnType<typeof supabase.channel> | null = null
+let onPresenceChange: ((users: PresenceUser[]) => void) | null = null
+
+export function subscribeToPresence(
+  projectId: string,
+  userId: string,
+  userName: string,
+  userInitials: string,
+  currentPage: string,
+  onChange: (users: PresenceUser[]) => void,
+) {
+  onPresenceChange = onChange
+
+  // Clean up existing channel
+  if (presenceChannel) {
+    supabase.removeChannel(presenceChannel)
+  }
+
+  presenceChannel = supabase.channel(`presence_${projectId}`, {
+    config: { presence: { key: userId } },
+  })
+
+  presenceChannel
+    .on('presence', { event: 'sync' }, () => {
+      const state = presenceChannel!.presenceState()
+      const users: PresenceUser[] = []
+
+      for (const [key, presences] of Object.entries(state)) {
+        if (key === userId) continue // Skip self
+        const latest = (presences as any[])[0]
+        if (latest) {
+          users.push({
+            userId: key,
+            name: latest.name || 'Unknown',
+            initials: latest.initials || '??',
+            color: getUserColor(key),
+            page: latest.page || 'dashboard',
+            entityId: latest.entityId,
+            lastSeen: latest.lastSeen || Date.now(),
+          })
+        }
+      }
+
+      onPresenceChange?.(users)
+    })
+    .subscribe(async (status) => {
+      if (status === 'SUBSCRIBED') {
+        await presenceChannel!.track({
+          name: userName,
+          initials: userInitials,
+          page: currentPage,
+          lastSeen: Date.now(),
+        })
+      }
+    })
+
+  return () => {
+    if (presenceChannel) {
+      supabase.removeChannel(presenceChannel)
+      presenceChannel = null
+    }
+    onPresenceChange = null
+  }
+}
+
+export function updatePresencePage(page: string, entityId?: string) {
+  if (presenceChannel) {
+    presenceChannel.track({
+      page,
+      entityId,
+      lastSeen: Date.now(),
+    }).catch(() => {}) // Ignore errors on presence update
+  }
+}
+
+// Request desktop notification permission
+export function requestNotificationPermission() {
+  if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission()
+  }
+}

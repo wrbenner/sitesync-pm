@@ -21,7 +21,7 @@ const mockResults: Record<string, SearchResult[]> = {
   ],
   'safety': [
     { id: 5, name: 'Safety Documentation', type: 'folder', match: '18 items including incident reports and training records', category: 'Safety' },
-    { id: 6, name: 'Safety Audit Q1 2025.pdf', type: 'file', match: 'Quarterly safety audit results and findings', category: 'Reports' },
+    { id: 6, name: 'Safety Audit Q1 2026.pdf', type: 'file', match: 'Quarterly safety audit results and findings', category: 'Reports' },
   ],
 };
 

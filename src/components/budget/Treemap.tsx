@@ -3,7 +3,7 @@ import { ChevronLeft } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme';
 
 interface TreemapItem {
-  id: number;
+  id: string | number;
   name: string;
   budget: number;
   spent: number;
@@ -23,7 +23,7 @@ const divisionColors = [
   colors.primaryOrange,
 ];
 
-const mockChildren: Record<number, { name: string; amount: number; pct: number }[]> = {
+const mockChildren: Record<string | number, { name: string; amount: number; pct: number }[]> = {
   1: [
     { name: 'Steel Fabrication', amount: 4200000, pct: 48 },
     { name: 'Concrete Work', amount: 2800000, pct: 32 },
@@ -60,14 +60,15 @@ const mockChildren: Record<number, { name: string; amount: number; pct: number }
 const fmt = (n: number) => n >= 1000000 ? `$${(n / 1000000).toFixed(1)}M` : `$${(n / 1000).toFixed(0)}K`;
 
 export const Treemap: React.FC<TreemapProps> = ({ divisions }) => {
-  const [drillDown, setDrillDown] = useState<number | null>(null);
+  const [drillDown, setDrillDown] = useState<string | number | null>(null);
 
   const total = divisions.reduce((s, d) => s + d.budget, 0);
 
   if (drillDown !== null) {
     const div = divisions.find((d) => d.id === drillDown);
     const children = mockChildren[drillDown] || [];
-    const divColor = divisionColors[(drillDown - 1) % divisionColors.length];
+    const ddIndex = typeof drillDown === 'number' ? drillDown - 1 : 0;
+    const divColor = divisionColors[ddIndex % divisionColors.length];
 
     return (
       <div>
@@ -86,7 +87,7 @@ export const Treemap: React.FC<TreemapProps> = ({ divisions }) => {
           {div?.name} · {fmt(div?.budget || 0)}
         </p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: spacing['2'] }}>
-          {children.map((child, i) => (
+          {children.map((child: { name: string; amount: number; pct: number }, i: number) => (
             <div
               key={child.name}
               style={{

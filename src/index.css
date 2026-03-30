@@ -1,5 +1,49 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300..700&display=swap');
 
+/* ── CSS Custom Properties (light mode defaults) ──────── */
+:root {
+  --color-surfacePage: #FAFAF8;
+  --color-surfaceSidebar: #F6F3F0;
+  --color-surfaceRaised: #FFFFFF;
+  --color-surfaceInset: #F3EFEC;
+  --color-surfaceHover: #F0EDE8;
+  --color-surfaceSelected: #FEF7F2;
+  --color-surfaceFlat: #F6F3F0;
+  --color-borderSubtle: #F0EDE9;
+  --color-borderDefault: #E5E1DC;
+  --color-borderLight: #F0EDE9;
+  --color-textPrimary: #1A1613;
+  --color-textSecondary: #5C5550;
+  --color-textTertiary: #9A9490;
+  --color-cardBackground: #FFFFFF;
+  --color-lightBackground: #FAFAF8;
+
+  color-scheme: light dark;
+}
+
+/* Dark mode via data-theme attribute (set by useTheme hook) */
+[data-theme="dark"] {
+  --color-surfacePage: #0C0D0F;
+  --color-surfaceSidebar: #111214;
+  --color-surfaceRaised: #1A1B1E;
+  --color-surfaceInset: #141518;
+  --color-surfaceHover: #1F2024;
+  --color-surfaceSelected: #2A1F16;
+  --color-surfaceFlat: #171819;
+  --color-borderSubtle: rgba(255, 255, 255, 0.06);
+  --color-borderDefault: rgba(255, 255, 255, 0.1);
+  --color-borderLight: rgba(255, 255, 255, 0.06);
+  --color-textPrimary: rgba(255, 255, 255, 0.92);
+  --color-textSecondary: rgba(255, 255, 255, 0.6);
+  --color-textTertiary: rgba(255, 255, 255, 0.38);
+  --color-cardBackground: #1A1B1E;
+  --color-lightBackground: #0C0D0F;
+
+  color-scheme: dark;
+}
+
+/* ── Reset ────────────────────────────────────────────── */
+
 * {
   margin: 0;
   padding: 0;
@@ -15,8 +59,8 @@ body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: 14px;
   line-height: 1.6;
-  color: #1A1613;
-  background: #FAFAF8;
+  color: var(--color-textPrimary);
+  background: var(--color-surfacePage);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-feature-settings: 'cv01' 1, 'cv02' 1, 'ss01' 1;
@@ -43,14 +87,21 @@ p {
   text-wrap: pretty;
 }
 
-/* Focus — precise orange ring */
+/* ── Focus ────────────────────────────────────────────── */
+
+/* Precise orange ring for keyboard users */
 *:focus-visible {
   outline: 2px solid #F47820;
   outline-offset: 2px;
   border-radius: 4px;
 }
 
-button:focus:not(:focus-visible) {
+/* Don't show focus ring for mouse/pointer clicks */
+button:focus:not(:focus-visible),
+a:focus:not(:focus-visible),
+input:focus:not(:focus-visible),
+select:focus:not(:focus-visible),
+textarea:focus:not(:focus-visible) {
   outline: none;
 }
 
@@ -60,10 +111,16 @@ button, input, textarea, select {
   letter-spacing: -0.006em;
 }
 
-/* Animations — with prestige timing */
+/* ── Animations ───────────────────────────────────────── */
+
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: .4; }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 @keyframes fadeIn {
@@ -101,7 +158,21 @@ button, input, textarea, select {
   to { opacity: 1; transform: scale(1); }
 }
 
-/* Scrollbar — thin, near-invisible */
+/* ── Reduced Motion ───────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── Scrollbar ────────────────────────────────────────── */
+
 ::-webkit-scrollbar {
   width: 5px;
   height: 5px;
@@ -120,13 +191,23 @@ button, input, textarea, select {
   background: rgba(0, 0, 0, 0.18);
 }
 
-/* Selection — warm */
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.10);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+/* ── Selection ────────────────────────────────────────── */
+
 ::selection {
   background: rgba(244, 120, 32, 0.12);
   color: inherit;
 }
 
-/* Responsive */
+/* ── Responsive ───────────────────────────────────────── */
+
 @media (max-width: 768px) {
   .desktop-only { display: none !important; }
 }
@@ -139,7 +220,8 @@ button, input, textarea, select {
   .responsive-grid-2 { grid-template-columns: 1fr !important; }
 }
 
-/* React Grid Layout overrides */
+/* ── React Grid Layout overrides ──────────────────────── */
+
 .react-grid-item.react-grid-placeholder {
   background: rgba(244, 120, 32, 0.08) !important;
   border: 2px dashed rgba(244, 120, 32, 0.3) !important;

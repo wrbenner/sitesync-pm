@@ -1,6 +1,12 @@
 // Meridian Tower - 12 story mixed use building, Dallas TX
 // $47.5M project at 62% completion
 
+export type Priority = 'low' | 'medium' | 'high' | 'critical';
+export type RfiStatus = 'pending' | 'approved';
+export type SubmittalStatus = 'approved' | 'under_review' | 'revise_resubmit' | 'pending';
+export type PunchStatus = 'open' | 'in_progress' | 'complete';
+export type ChangeOrderStatus = 'approved' | 'pending_approval';
+
 export const projectData = {
   name: 'Meridian Tower',
   address: '3141 Maple Avenue, Dallas, TX 75201',
@@ -10,7 +16,7 @@ export const projectData = {
   completionPercentage: 62,
   daysRemaining: 154,
   startDate: '2023-06-15',
-  scheduledEndDate: '2025-12-31',
+  scheduledEndDate: '2026-12-31',
   actualEndDate: null,
   owner: 'Meridian Development LLC',
   architect: 'Morris Architects',
@@ -66,7 +72,7 @@ export const upcomingMeetings = [
     id: 1,
     type: 'oac',
     title: 'Owner Architect Contractor Meeting',
-    date: '2025-03-27',
+    date: '2026-03-27',
     time: '10:00 AM',
     location: 'Conference Room A',
     attendees: 12,
@@ -76,7 +82,7 @@ export const upcomingMeetings = [
     id: 2,
     type: 'safety',
     title: 'Weekly Safety Briefing',
-    date: '2025-03-27',
+    date: '2026-03-27',
     time: '8:00 AM',
     location: 'Site Trailer',
     attendees: 23,
@@ -86,7 +92,7 @@ export const upcomingMeetings = [
     id: 3,
     type: 'coordination',
     title: 'MEP Coordination',
-    date: '2025-03-28',
+    date: '2026-03-28',
     time: '2:00 PM',
     location: 'Virtual',
     attendees: 8,
@@ -102,7 +108,7 @@ export const drawings = [
     discipline: 'Architectural',
     disciplineColor: 'purple',
     revision: 'D',
-    date: '2025-03-20',
+    date: '2026-03-20',
     sheetCount: 4,
   },
   {
@@ -112,7 +118,7 @@ export const drawings = [
     discipline: 'Architectural',
     disciplineColor: 'purple',
     revision: 'C',
-    date: '2025-03-18',
+    date: '2026-03-18',
     sheetCount: 2,
   },
   {
@@ -122,7 +128,7 @@ export const drawings = [
     discipline: 'Structural',
     disciplineColor: 'blue',
     revision: 'B',
-    date: '2025-03-15',
+    date: '2026-03-15',
     sheetCount: 6,
   },
   {
@@ -132,7 +138,7 @@ export const drawings = [
     discipline: 'Mechanical',
     disciplineColor: 'amber',
     revision: 'A',
-    date: '2025-03-12',
+    date: '2026-03-12',
     sheetCount: 3,
   },
   {
@@ -142,7 +148,7 @@ export const drawings = [
     discipline: 'Electrical',
     disciplineColor: 'red',
     revision: 'C',
-    date: '2025-03-19',
+    date: '2026-03-19',
     sheetCount: 5,
   },
   {
@@ -152,12 +158,12 @@ export const drawings = [
     discipline: 'Plumbing',
     disciplineColor: 'green',
     revision: 'B',
-    date: '2025-03-17',
+    date: '2026-03-17',
     sheetCount: 2,
   },
 ];
 
-export const rfis = [
+export const rfis: Array<{ id: number; rfiNumber: string; title: string; from: string; to: string; priority: Priority; status: RfiStatus; dueDate: string; submitDate: string }> = [
   {
     id: 1,
     rfiNumber: 'RFI-001',
@@ -166,8 +172,8 @@ export const rfis = [
     to: 'Morris Architects',
     priority: 'high',
     status: 'pending',
-    dueDate: '2025-03-28',
-    submitDate: '2025-03-21',
+    dueDate: '2026-03-28',
+    submitDate: '2026-03-21',
   },
   {
     id: 2,
@@ -177,8 +183,8 @@ export const rfis = [
     to: 'Morris Architects',
     priority: 'medium',
     status: 'approved',
-    dueDate: '2025-03-27',
-    submitDate: '2025-03-19',
+    dueDate: '2026-03-27',
+    submitDate: '2026-03-19',
   },
   {
     id: 3,
@@ -188,8 +194,8 @@ export const rfis = [
     to: 'MEP Consultant',
     priority: 'high',
     status: 'pending',
-    dueDate: '2025-03-25',
-    submitDate: '2025-03-20',
+    dueDate: '2026-03-25',
+    submitDate: '2026-03-20',
   },
   {
     id: 4,
@@ -199,8 +205,8 @@ export const rfis = [
     to: 'Structural Engineer',
     priority: 'critical',
     status: 'pending',
-    dueDate: '2025-03-24',
-    submitDate: '2025-03-21',
+    dueDate: '2026-03-24',
+    submitDate: '2026-03-21',
   },
   {
     id: 5,
@@ -210,12 +216,12 @@ export const rfis = [
     to: 'MEP Consultant',
     priority: 'medium',
     status: 'approved',
-    dueDate: '2025-03-26',
-    submitDate: '2025-03-18',
+    dueDate: '2026-03-26',
+    submitDate: '2026-03-18',
   },
 ];
 
-export const submittals = [
+export const submittals: Array<{ id: number; submittalNumber: string; title: string; from: string; priority: Priority; status: SubmittalStatus; dueDate: string }> = [
   {
     id: 1,
     submittalNumber: 'SUB-001',
@@ -223,7 +229,7 @@ export const submittals = [
     from: 'Fabricator ABC Steel',
     priority: 'critical',
     status: 'approved',
-    dueDate: '2025-03-25',
+    dueDate: '2026-03-25',
   },
   {
     id: 2,
@@ -232,7 +238,7 @@ export const submittals = [
     from: 'HVAC Contractor',
     priority: 'high',
     status: 'under_review',
-    dueDate: '2025-03-28',
+    dueDate: '2026-03-28',
   },
   {
     id: 3,
@@ -241,7 +247,7 @@ export const submittals = [
     from: 'Hardware Supplier',
     priority: 'medium',
     status: 'revise_resubmit',
-    dueDate: '2025-03-29',
+    dueDate: '2026-03-29',
   },
   {
     id: 4,
@@ -250,7 +256,7 @@ export const submittals = [
     from: 'Electrical Supplier',
     priority: 'high',
     status: 'pending',
-    dueDate: '2025-03-27',
+    dueDate: '2026-03-27',
   },
 ];
 
@@ -286,7 +292,7 @@ export const schedulePhases = [
     id: 4,
     name: 'MEP',
     startDate: '2024-08-01',
-    endDate: '2025-03-31',
+    endDate: '2026-03-31',
     progress: 62,
     critical: true,
     completed: false,
@@ -295,7 +301,7 @@ export const schedulePhases = [
     id: 5,
     name: 'Exterior',
     startDate: '2024-07-15',
-    endDate: '2025-05-30',
+    endDate: '2026-05-30',
     progress: 55,
     critical: true,
     completed: false,
@@ -303,8 +309,8 @@ export const schedulePhases = [
   {
     id: 6,
     name: 'Interior',
-    startDate: '2025-02-01',
-    endDate: '2025-10-31',
+    startDate: '2026-02-01',
+    endDate: '2026-10-31',
     progress: 25,
     critical: false,
     completed: false,
@@ -312,8 +318,8 @@ export const schedulePhases = [
   {
     id: 7,
     name: 'Finishes',
-    startDate: '2025-06-01',
-    endDate: '2025-12-15',
+    startDate: '2026-06-01',
+    endDate: '2026-12-15',
     progress: 0,
     critical: false,
     completed: false,
@@ -369,26 +375,26 @@ export const costData = {
       coNumber: 'CO-001',
       title: 'Additional structural bracing per engineer review',
       amount: 125000,
-      status: 'approved',
+      status: 'approved' as ChangeOrderStatus,
     },
     {
       id: 2,
       coNumber: 'CO-002',
       title: 'HVAC system upgrade for improved efficiency',
       amount: 95000,
-      status: 'pending_approval',
+      status: 'pending_approval' as ChangeOrderStatus,
     },
     {
       id: 3,
       coNumber: 'CO-003',
       title: 'Electrical panel relocation',
       amount: 62000,
-      status: 'approved',
+      status: 'approved' as ChangeOrderStatus,
     },
   ],
 };
 
-export const punchList = [
+export const punchList: Array<{ id: number; itemNumber: string; area: string; description: string; assigned: string; priority: Priority; status: PunchStatus; hasPhoto: boolean }> = [
   {
     id: 1,
     itemNumber: 'PL-001',
@@ -576,7 +582,7 @@ export const meetings = [
     id: 1,
     type: 'oac',
     title: 'Owner Architect Contractor Meeting',
-    date: '2025-03-27',
+    date: '2026-03-27',
     time: '10:00 AM',
     location: 'Conference Room A',
     attendeeCount: 12,
@@ -587,7 +593,7 @@ export const meetings = [
     id: 2,
     type: 'safety',
     title: 'Weekly Safety Briefing',
-    date: '2025-03-27',
+    date: '2026-03-27',
     time: '8:00 AM',
     location: 'Site Trailer',
     attendeeCount: 23,
@@ -598,7 +604,7 @@ export const meetings = [
     id: 3,
     type: 'coordination',
     title: 'MEP Coordination Meeting',
-    date: '2025-03-28',
+    date: '2026-03-28',
     time: '2:00 PM',
     location: 'Virtual',
     attendeeCount: 8,
@@ -609,7 +615,7 @@ export const meetings = [
     id: 4,
     type: 'safety',
     title: 'Incident Review Follow up',
-    date: '2025-03-20',
+    date: '2026-03-20',
     time: '9:00 AM',
     location: 'Site Trailer',
     attendeeCount: 6,
@@ -620,7 +626,7 @@ export const meetings = [
     id: 5,
     type: 'oac',
     title: 'Monthly Progress Review',
-    date: '2025-03-19',
+    date: '2026-03-19',
     time: '2:00 PM',
     location: 'Conference Room A',
     attendeeCount: 14,
@@ -635,49 +641,49 @@ export const files = [
     name: 'Structural Calculations',
     type: 'folder',
     itemCount: 24,
-    modifiedDate: '2025-03-24',
+    modifiedDate: '2026-03-24',
   },
   {
     id: 2,
     name: 'MEP Specifications.pdf',
     type: 'file',
     size: '4.2 MB',
-    modifiedDate: '2025-03-23',
+    modifiedDate: '2026-03-23',
   },
   {
     id: 3,
     name: 'Budget Tracking',
     type: 'folder',
     itemCount: 12,
-    modifiedDate: '2025-03-26',
+    modifiedDate: '2026-03-26',
   },
   {
     id: 4,
     name: 'Safety Documentation',
     type: 'folder',
     itemCount: 18,
-    modifiedDate: '2025-03-25',
+    modifiedDate: '2026-03-25',
   },
   {
     id: 5,
     name: 'Schedule Baseline v3.xlsx',
     type: 'file',
     size: '2.1 MB',
-    modifiedDate: '2025-03-21',
+    modifiedDate: '2026-03-21',
   },
   {
     id: 6,
     name: 'Photos',
     type: 'folder',
     itemCount: 156,
-    modifiedDate: '2025-03-26',
+    modifiedDate: '2026-03-26',
   },
 ];
 
 export const dailyLogHistory = [
   {
     id: 1,
-    date: '2025-03-26',
+    date: '2026-03-26',
     workers: 187,
     manHours: 1496,
     incidents: 0,
@@ -686,7 +692,7 @@ export const dailyLogHistory = [
   },
   {
     id: 2,
-    date: '2025-03-25',
+    date: '2026-03-25',
     workers: 192,
     manHours: 1536,
     incidents: 1,
@@ -695,7 +701,7 @@ export const dailyLogHistory = [
   },
   {
     id: 3,
-    date: '2025-03-24',
+    date: '2026-03-24',
     workers: 185,
     manHours: 1480,
     incidents: 0,
@@ -704,7 +710,7 @@ export const dailyLogHistory = [
   },
   {
     id: 4,
-    date: '2025-03-23',
+    date: '2026-03-23',
     workers: 188,
     manHours: 1504,
     incidents: 0,
@@ -713,7 +719,7 @@ export const dailyLogHistory = [
   },
   {
     id: 5,
-    date: '2025-03-22',
+    date: '2026-03-22',
     workers: 190,
     manHours: 1520,
     incidents: 0,
@@ -1080,19 +1086,19 @@ export const visionContent = {
     {
       phase: 1,
       name: 'Field Intelligence',
-      quarter: 'Q2 2025',
+      quarter: 'Q2 2026',
       features: 'Mobile capture, Real time insights, Crew coordination',
     },
     {
       phase: 2,
       name: 'Predictive Analytics',
-      quarter: 'Q3 2025',
+      quarter: 'Q3 2026',
       features: 'Schedule optimization, Risk forecasting, Budget trending',
     },
     {
       phase: 3,
       name: 'Autonomous Workflows',
-      quarter: 'Q4 2025',
+      quarter: 'Q4 2026',
       features: 'Auto RFI routing, Change order automation, Safety alerts',
     },
     {

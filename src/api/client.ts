@@ -1,27 +1,31 @@
-// Mock API client with realistic delays
-// When switching to a real backend, replace this with actual fetch/axios calls.
+// Supabase API client wrapper with typed error handling.
 
-const DELAY_MIN = 200;
-const DELAY_MAX = 600;
+import { supabase } from '../lib/supabase'
+import type { Database } from '../types/database'
+import { transformSupabaseError } from './errors'
 
-function randomDelay(): number {
-  return DELAY_MIN + Math.random() * (DELAY_MAX - DELAY_MIN);
+type TableName = keyof Database['public']['Tables']
+
+// Typed query helper
+export async function supabaseQuery<T>(
+  table: TableName,
+  query: (q: ReturnType<typeof supabase.from>) => any
+): Promise<T> {
+  const { data, error } = await query(supabase.from(table as any) as any)
+  if (error) throw transformSupabaseError(error)
+  return data as T
 }
 
-export async function mockFetch<T>(data: T): Promise<T> {
-  return new Promise((resolve) => {
-    setTimeout(() => resolve(data), randomDelay());
-  });
+// Typed mutation helper
+export async function supabaseMutation<T>(
+  table: TableName,
+  mutation: (q: ReturnType<typeof supabase.from>) => any
+): Promise<T> {
+  const { data, error } = await mutation(supabase.from(table as any) as any)
+  if (error) throw transformSupabaseError(error)
+  return data as T
 }
 
-export async function mockFetchWithError<T>(data: T, errorRate = 0): Promise<T> {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      if (Math.random() < errorRate) {
-        reject(new Error('Network error. Please try again.'));
-      } else {
-        resolve(data);
-      }
-    }, randomDelay());
-  });
-}
+// Re-export for convenience
+export { supabase }
+export { ApiError, transformSupabaseError } from './errors'

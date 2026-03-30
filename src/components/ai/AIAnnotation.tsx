@@ -1,7 +1,7 @@
+import type { AIAnnotation as AIAnnotationType } from "../../data/aiAnnotations";
 import React, { useState } from 'react';
 import { Sparkles, X } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, shadows, transitions, zIndex } from '../../styles/theme';
-import type { AIAnnotation as AIAnnotationType } from '../../data/aiAnnotations';
 import { useAIAnnotationStore } from '../../stores';
 
 interface AIAnnotationIndicatorProps {

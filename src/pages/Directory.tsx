@@ -1,10 +1,15 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Search, LayoutGrid, List, Mail, Phone, Building, ChevronRight, BarChart3 } from 'lucide-react';
-import { PageContainer, Card, SectionHeader, Avatar, Tag, Skeleton } from '../components/Primitives';
+import { PageContainer, Card, SectionHeader, Avatar, Tag, Skeleton, Btn } from '../components/Primitives';
+import { ExportButton } from '../components/shared/ExportButton';
+import { toast } from 'sonner';
+import { useCreateDirectoryContact } from '../hooks/mutations';
+import { DataTable, createColumnHelper } from '../components/shared/DataTable';
 import { Drawer } from '../components/Drawer';
 import { colors, spacing, typography, borderRadius, transitions, shadows } from '../styles/theme';
-import { useDirectoryStore } from '../stores/directoryStore';
-import { useProjectContext } from '../stores/projectContextStore';
+import { useProjectId } from '../hooks/useProjectId';
+import { useDirectoryContacts } from '../hooks/queries';
+import AddContactModal from '../components/forms/AddContactModal';
 
 const GROUP_ORDER = ['Owner', 'Design Team', 'Construction', 'Subcontractors'] as const;
 
@@ -47,6 +52,59 @@ const ContactLink: React.FC<{ href: string; children: React.ReactNode }> = ({ hr
     </a>
   );
 };
+
+interface DirectoryEntry {
+  id: string;
+  company: string;
+  role: string;
+  contactName: string;
+  phone: string;
+  email: string;
+}
+
+const directoryColumnHelper = createColumnHelper<DirectoryEntry>();
+
+const directoryColumns = [
+  directoryColumnHelper.accessor('contactName', {
+    header: 'Name',
+    cell: (info) => (
+      <span style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
+        <Avatar initials={getInitials(info.getValue())} size={28} />
+        <span style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>
+          {info.getValue()}
+        </span>
+      </span>
+    ),
+  }),
+  directoryColumnHelper.accessor('company', {
+    header: 'Company',
+    cell: (info) => (
+      <span style={{ fontSize: typography.fontSize.body, color: colors.textSecondary }}>
+        {info.getValue()}
+      </span>
+    ),
+  }),
+  directoryColumnHelper.accessor('role', {
+    header: 'Role',
+    cell: (info) => <Tag label={info.getValue()} fontSize={typography.fontSize.caption} />,
+  }),
+  directoryColumnHelper.accessor('phone', {
+    header: 'Phone',
+    cell: (info) => (
+      <span style={{ fontSize: typography.fontSize.body, color: colors.textSecondary }}>
+        {info.getValue()}
+      </span>
+    ),
+  }),
+  directoryColumnHelper.accessor('email', {
+    header: 'Email',
+    cell: (info) => (
+      <ContactLink href={`mailto:${info.getValue()}`}>
+        {info.getValue()}
+      </ContactLink>
+    ),
+  }),
+];
 
 const IconButton: React.FC<{
   icon: React.ReactNode;
@@ -142,17 +200,27 @@ const ViewToggle: React.FC<{
 );
 
 export const Directory: React.FC = () => {
-  const { activeProject } = useProjectContext();
-  const { entries: directory, loading, loadEntries } = useDirectoryStore();
+  const projectId = useProjectId();
+  const createDirectoryContact = useCreateDirectoryContact();
+  const { data: rawDirectory, isPending: loading } = useDirectoryContacts(projectId);
 
-  useEffect(() => {
-    if (activeProject?.id) loadEntries(activeProject.id);
-  }, [activeProject?.id]);
+  const directory = useMemo(() =>
+    (rawDirectory || []).map(c => ({
+      ...c,
+      contactName: c.name,
+      phone: c.phone || '',
+      email: c.email || '',
+      company: c.company || '',
+      role: c.role || '',
+    })),
+    [rawDirectory]
+  );
 
   const [searchQuery, setSearchQuery] = useState('');
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
   const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const filtered = useMemo(() => {
     if (!directory) return [];
@@ -182,7 +250,7 @@ export const Directory: React.FC = () => {
     return directory.filter((entry) => entry.company === selectedCompany);
   }, [selectedCompany, directory]);
 
-  if (loading && directory.length === 0) {
+  if (loading || !directory) {
     return (
       <PageContainer title="Directory" subtitle="Loading...">
         <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['6'] }}>
@@ -202,7 +270,16 @@ export const Directory: React.FC = () => {
     <PageContainer
       title="Directory"
       subtitle={`${directory.length} contacts`}
-      actions={<ViewToggle viewMode={viewMode} onChange={setViewMode} />}
+      actions={
+        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
+          <ExportButton
+            onExportCSV={() => toast.success('Directory data exported as CSV')}
+            pdfFilename="SiteSync_Directory"
+          />
+          <ViewToggle viewMode={viewMode} onChange={setViewMode} />
+          <Btn onClick={() => setCreateOpen(true)}>Add Contact</Btn>
+        </div>
+      }
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['6'] }}>
         {/* Search */}
@@ -246,69 +323,13 @@ export const Directory: React.FC = () => {
                 <div key={groupName}>
                   <SectionHeader title={groupName} />
                   <Card padding="0">
-                    {entries.map((entry, index) => {
-                      const isHovered = hoveredRow === entry.id;
-                      const isLast = index === entries.length - 1;
-                      return (
-                        <div
-                          key={entry.id}
-                          onMouseEnter={() => setHoveredRow(entry.id)}
-                          onMouseLeave={() => setHoveredRow(null)}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            padding: `${spacing['3']} ${spacing['5']}`,
-                            gap: spacing['4'],
-                            backgroundColor: isHovered ? colors.surfaceHover : 'transparent',
-                            transition: `background-color ${transitions.quick}`,
-                            borderBottom: isLast ? 'none' : `1px solid ${colors.borderSubtle}`,
-                            cursor: 'default',
-                          }}
-                        >
-                          <Avatar initials={getInitials(entry.contactName)} size={28} />
-
-                          <span
-                            style={{
-                              fontSize: typography.fontSize.body,
-                              fontWeight: typography.fontWeight.medium,
-                              color: colors.textPrimary,
-                              minWidth: '140px',
-                            }}
-                          >
-                            {entry.contactName}
-                          </span>
-
-                          <span
-                            style={{
-                              fontSize: typography.fontSize.body,
-                              color: colors.textSecondary,
-                              flex: 1,
-                            }}
-                          >
-                            {entry.company}
-                          </span>
-
-                          <Tag
-                            label={entry.role}
-                            fontSize={typography.fontSize.caption}
-                          />
-
-                          <span
-                            style={{
-                              fontSize: typography.fontSize.body,
-                              color: colors.textSecondary,
-                              minWidth: '120px',
-                            }}
-                          >
-                            {entry.phone}
-                          </span>
-
-                          <ContactLink href={`mailto:${entry.email}`}>
-                            {entry.email}
-                          </ContactLink>
-                        </div>
-                      );
-                    })}
+                    <DataTable
+                      data={entries}
+                      columns={directoryColumns}
+                      enableSorting
+                      stickyHeader={false}
+                      getRowId={(row) => String(row.id)}
+                    />
                   </Card>
                 </div>
               );
@@ -604,6 +625,13 @@ export const Directory: React.FC = () => {
           </div>
         )}
       </Drawer>
+      <AddContactModal open={createOpen} onClose={() => setCreateOpen(false)} onSubmit={async (data) => {
+        try {
+          await createDirectoryContact.mutateAsync({ projectId: projectId!, data: { project_id: projectId!, name: data.name, company: data.company || null, role: data.role || null, trade: data.trade || null, email: data.email || null, phone: data.phone || null } })
+          toast.success('Created: ' + data.name)
+          setCreateOpen(false)
+        } catch { toast.error('Failed to create contact') }
+      }} />
     </PageContainer>
   );
 };

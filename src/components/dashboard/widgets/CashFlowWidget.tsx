@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { DollarSign } from 'lucide-react';
 import { colors, spacing, typography, borderRadius } from '../../../styles/theme';
+import { useProjectId } from '../../../hooks/useProjectId';
+import { useBudgetItems } from '../../../hooks/queries';
 
 interface DataPoint {
   month: string;
@@ -8,47 +10,70 @@ interface DataPoint {
   actual: number | null;
 }
 
-const cashFlowData: DataPoint[] = [
-  { month: 'Jun 23', planned: 2.1, actual: 1.8 },
-  { month: 'Sep 23', planned: 6.5, actual: 6.2 },
-  { month: 'Dec 23', planned: 12.0, actual: 11.4 },
-  { month: 'Mar 24', planned: 18.0, actual: 17.8 },
-  { month: 'Jun 24', planned: 24.5, actual: 24.1 },
-  { month: 'Sep 24', planned: 30.0, actual: 28.9 },
-  { month: 'Dec 24', planned: 35.5, actual: 34.2 },
-  { month: 'Mar 25', planned: 40.0, actual: 38.5 },
-  { month: 'Jun 25', planned: 43.5, actual: null },
-  { month: 'Sep 25', planned: 46.0, actual: null },
-  { month: 'Dec 25', planned: 47.5, actual: null },
-];
+function buildCashFlowFromBudget(items: ReturnType<typeof useBudgetItems>['data']): { data: DataPoint[]; maxVal: number } {
+  if (!items || items.length === 0) {
+    return { data: [], maxVal: 50 };
+  }
 
-const maxVal = 50;
+  // Build cumulative data points from budget divisions
+  let cumulativePlanned = 0;
+  let cumulativeActual = 0;
+  const hasActual = items.some((item) => (item.actual_amount ?? 0) > 0);
 
-function yPos(val: number, height: number): number {
-  return height - (val / maxVal) * height;
+  const points: DataPoint[] = items.map((item, i) => {
+    cumulativePlanned += (item.original_amount ?? 0) / 1_000_000;
+    cumulativeActual += (item.actual_amount ?? 0) / 1_000_000;
+    const shortName = item.division.length > 6 ? item.division.slice(0, 6) : item.division;
+    return {
+      month: shortName,
+      planned: Math.round(cumulativePlanned * 10) / 10,
+      actual: hasActual ? Math.round(cumulativeActual * 10) / 10 : (i < items.length * 0.7 ? Math.round(cumulativeActual * 10) / 10 : null),
+    };
+  });
+
+  const maxVal = Math.ceil((cumulativePlanned * 1.15) / 5) * 5 || 50;
+  return { data: points, maxVal };
 }
 
-export const CashFlowWidget: React.FC = () => {
+function yPos(val: number, height: number, max: number): number {
+  return height - (val / max) * height;
+}
+
+export const CashFlowWidget: React.FC = React.memo(() => {
   const [hovered, setHovered] = useState<number | null>(null);
+  const projectId = useProjectId();
+  const { data: budgetItems } = useBudgetItems(projectId);
+
+  const { data: cashFlowData, maxVal } = useMemo(() => buildCashFlowFromBudget(budgetItems), [budgetItems]);
 
   const chartWidth = 100; // percentage
   const chartHeight = 140;
+  if (cashFlowData.length < 2) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
+        <DollarSign size={24} color={colors.textTertiary} />
+        <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, marginTop: spacing['2'] }}>Loading budget data...</p>
+      </div>
+    );
+  }
   const stepX = chartWidth / (cashFlowData.length - 1);
 
   const plannedPath = cashFlowData
-    .map((d, i) => `${i === 0 ? 'M' : 'L'} ${i * stepX} ${yPos(d.planned, chartHeight)}`)
+    .map((d, i) => `${i === 0 ? 'M' : 'L'} ${i * stepX} ${yPos(d.planned, chartHeight, maxVal)}`)
     .join(' ');
 
   const actualPoints = cashFlowData.filter((d) => d.actual !== null);
   const actualPath = actualPoints
-    .map((d, i) => `${i === 0 ? 'M' : 'L'} ${cashFlowData.indexOf(d) * stepX} ${yPos(d.actual!, chartHeight)}`)
+    .map((d, i) => `${i === 0 ? 'M' : 'L'} ${cashFlowData.indexOf(d) * stepX} ${yPos(d.actual!, chartHeight, maxVal)}`)
     .join(' ');
 
   // Fill under actual
   const actualFill = actualPath + ` L ${cashFlowData.indexOf(actualPoints[actualPoints.length - 1]) * stepX} ${chartHeight} L 0 ${chartHeight} Z`;
 
-  const burnRate = '$1.2M/week';
-  const contingencyRemaining = '$3.8M';
+  const totalPlanned = budgetItems ? budgetItems.reduce((s, b) => s + (b.original_amount ?? 0), 0) : 0;
+  const totalActual = budgetItems ? budgetItems.reduce((s, b) => s + (b.actual_amount ?? 0), 0) : 0;
+  const contingencyRemaining = `$${((totalPlanned - totalActual) / 1_000_000).toFixed(1)}M`;
+  const burnRate = totalActual > 0 ? `$${(totalActual / 1_000_000 / 26).toFixed(1)}M/week` : '$0.0M/week';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -77,9 +102,12 @@ export const CashFlowWidget: React.FC = () => {
           style={{ width: '100%', height: '100%' }}
         >
           {/* Grid lines */}
-          {[10, 20, 30, 40].map((v) => (
-            <line key={v} x1={0} y1={yPos(v, chartHeight)} x2={chartWidth} y2={yPos(v, chartHeight)} stroke={colors.borderSubtle} strokeWidth="0.3" />
-          ))}
+          {[0.2, 0.4, 0.6, 0.8].map((frac) => {
+            const v = Math.round(maxVal * frac);
+            return (
+              <line key={v} x1={0} y1={yPos(v, chartHeight, maxVal)} x2={chartWidth} y2={yPos(v, chartHeight, maxVal)} stroke={colors.borderSubtle} strokeWidth="0.3" />
+            );
+          })}
 
           {/* Planned line (dashed) */}
           <path d={plannedPath} fill="none" stroke={colors.textTertiary} strokeWidth="0.8" strokeDasharray="2 2" opacity={0.5} />
@@ -96,7 +124,7 @@ export const CashFlowWidget: React.FC = () => {
               {d.actual !== null && (
                 <circle
                   cx={i * stepX}
-                  cy={yPos(d.actual, chartHeight)}
+                  cy={yPos(d.actual, chartHeight, maxVal)}
                   r={hovered === i ? 2.5 : 1.5}
                   fill={colors.primaryOrange}
                   stroke={colors.surfaceRaised}
@@ -157,4 +185,4 @@ export const CashFlowWidget: React.FC = () => {
       </div>
     </div>
   );
-};
+});

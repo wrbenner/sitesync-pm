@@ -7,18 +7,8 @@ interface VoiceRecorderProps {
   onSave: (transcript: string) => void;
 }
 
-const mockTranscription = [
-  { time: 0.5, text: 'Floor 8' },
-  { time: 1.2, text: 'Floor 8 drywall' },
-  { time: 2.0, text: 'Floor 8 drywall inspection.' },
-  { time: 2.8, text: 'Floor 8 drywall inspection. Found a' },
-  { time: 3.5, text: 'Floor 8 drywall inspection. Found a crack' },
-  { time: 4.2, text: 'Floor 8 drywall inspection. Found a crack along the north' },
-  { time: 5.0, text: 'Floor 8 drywall inspection. Found a crack along the north wall' },
-  { time: 5.8, text: 'Floor 8 drywall inspection. Found a crack along the north wall near unit 801.' },
-  { time: 6.5, text: 'Floor 8 drywall inspection. Found a crack along the north wall near unit 801. Needs repair' },
-  { time: 7.2, text: 'Floor 8 drywall inspection. Found a crack along the north wall near unit 801. Needs repair before painting.' },
-];
+// Transcription comes from Web Speech API or Whisper edge function
+const mockTranscription: Array<{ time: number; text: string }> = [];
 
 const aiExtraction = {
   type: 'Punch List Item',

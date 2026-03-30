@@ -10,11 +10,8 @@ interface VersionCompareProps {
 
 type CompareMode = 'side-by-side' | 'overlay';
 
-const mockChanges = [
-  { id: 1, x: 35, y: 25, w: 15, h: 10, label: 'Column grid shifted 2"', severity: 'warning' as const },
-  { id: 2, x: 60, y: 45, w: 20, h: 15, label: 'New MEP penetration added', severity: 'info' as const },
-  { id: 3, x: 20, y: 70, w: 12, h: 8, label: 'Door swing reversed', severity: 'warning' as const },
-];
+// Change detection results loaded from AI analysis via drawing_markups table
+const mockChanges: Array<{ id: number; x: number; y: number; w: number; h: number; label: string; severity: 'warning' | 'info' }> = [];
 
 export const VersionCompare: React.FC<VersionCompareProps> = ({ currentRev, previousRev, drawingTitle: _drawingTitle }) => {
   const [mode, setMode] = useState<CompareMode>('overlay');

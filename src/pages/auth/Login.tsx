@@ -1,279 +1,414 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { LogIn, Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
-import { useAuthStore } from '../../stores/authStore';
-import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
+import React, { useState } from 'react'
+import { useNavigate, Link } from 'react-router-dom'
+import { useAuth } from '../../hooks/useAuth'
+import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme'
 
-export function Login() {
-  const navigate = useNavigate();
-  const { signIn, loading } = useAuthStore();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+export const Login: React.FC = () => {
+  const navigate = useNavigate()
+  const { signIn, resetPassword } = useAuth()
+
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [showReset, setShowReset] = useState(false)
+  const [resetEmail, setResetEmail] = useState('')
+  const [resetSent, setResetSent] = useState(false)
+  const [resetError, setResetError] = useState<string | null>(null)
+  const [resetLoading, setResetLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
+    e.preventDefault()
+    setError(null)
+    setLoading(true)
 
-    if (!email || !password) {
-      setError('Please enter your email and password.');
-      return;
-    }
+    const { error: signInError } = await signIn(email, password)
 
-    const result = await signIn(email, password);
-    if (result.error) {
-      setError(result.error);
+    if (signInError) {
+      setError(signInError)
+      setLoading(false)
     } else {
-      navigate('/dashboard');
+      navigate('/dashboard')
     }
-  };
+  }
+
+  const handleReset = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setResetError(null)
+    setResetLoading(true)
+
+    const { error: err } = await resetPassword(resetEmail)
+
+    if (err) {
+      setResetError(err)
+    } else {
+      setResetSent(true)
+    }
+    setResetLoading(false)
+  }
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: `${spacing['3']} ${spacing['4']}`,
+    fontSize: typography.fontSize.body,
+    fontFamily: typography.fontFamily,
+    color: colors.textPrimary,
+    backgroundColor: colors.surfacePage,
+    border: `1px solid ${colors.borderDefault}`,
+    borderRadius: borderRadius.md,
+    outline: 'none',
+    transition: `border-color ${transitions.quick}`,
+    boxSizing: 'border-box' as const,
+    letterSpacing: typography.letterSpacing.normal,
+  }
+
+  const labelStyle: React.CSSProperties = {
+    display: 'block',
+    fontSize: typography.fontSize.label,
+    fontWeight: typography.fontWeight.medium,
+    color: colors.textSecondary,
+    marginBottom: spacing['2'],
+    letterSpacing: typography.letterSpacing.wide,
+  }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: colors.surfacePage,
-      fontFamily: typography.fontFamily,
-      padding: spacing['6'],
-    }}>
-      <div style={{
-        width: '100%',
-        maxWidth: '420px',
-      }}>
+    <div
+      style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: colors.surfacePage,
+        fontFamily: typography.fontFamily,
+      }}
+    >
+      <div
+        style={{
+          width: '100%',
+          maxWidth: '400px',
+          padding: spacing['8'],
+        }}
+      >
         {/* Logo / Brand */}
-        <div style={{ textAlign: 'center', marginBottom: spacing['10'] }}>
-          <div style={{
-            width: 48,
-            height: 48,
-            borderRadius: borderRadius.lg,
-            background: `linear-gradient(135deg, ${colors.primaryOrange}, #FF9C42)`,
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginBottom: spacing['4'],
-          }}>
-            <span style={{ color: '#fff', fontSize: '20px', fontWeight: 700 }}>S</span>
+        <div style={{ textAlign: 'center', marginBottom: spacing['8'] }}>
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '48px',
+              height: '48px',
+              borderRadius: borderRadius.lg,
+              backgroundColor: colors.primaryOrange,
+              marginBottom: spacing['4'],
+            }}
+          >
+            <span style={{ color: '#fff', fontWeight: typography.fontWeight.semibold, fontSize: typography.fontSize.title }}>S</span>
           </div>
-          <h1 style={{
-            fontSize: typography.fontSize.heading,
-            fontWeight: typography.fontWeight.semibold,
-            color: colors.textPrimary,
-            letterSpacing: typography.letterSpacing.tight,
-            margin: 0,
-          }}>
-            Welcome back
+          <h1
+            style={{
+              fontSize: typography.fontSize.heading,
+              fontWeight: typography.fontWeight.semibold,
+              color: colors.textPrimary,
+              margin: 0,
+              letterSpacing: typography.letterSpacing.tight,
+            }}
+          >
+            SiteSync AI
           </h1>
-          <p style={{
-            fontSize: typography.fontSize.body,
-            color: colors.textSecondary,
-            marginTop: spacing['2'],
-          }}>
-            Sign in to your SiteSync account
+          <p
+            style={{
+              fontSize: typography.fontSize.body,
+              color: colors.textTertiary,
+              margin: 0,
+              marginTop: spacing['2'],
+              letterSpacing: typography.letterSpacing.normal,
+            }}
+          >
+            Sign in to your account
           </p>
         </div>
 
-        {/* Login Card */}
-        <div style={{
-          backgroundColor: colors.surfaceRaised,
-          borderRadius: borderRadius.xl,
-          boxShadow: shadows.card,
-          padding: spacing['8'],
-          border: `1px solid ${colors.borderSubtle}`,
-        }}>
+        {/* Login Form */}
+        <div
+          style={{
+            backgroundColor: colors.surfaceRaised,
+            borderRadius: borderRadius.xl,
+            padding: spacing['8'],
+            boxShadow: shadows.card,
+          }}
+        >
           <form onSubmit={handleSubmit}>
             {error && (
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: spacing['2'],
-                padding: spacing['3'],
-                borderRadius: borderRadius.md,
-                backgroundColor: colors.statusCriticalSubtle,
-                color: colors.statusCritical,
-                fontSize: typography.fontSize.sm,
-                marginBottom: spacing['5'],
-              }}>
-                <AlertCircle size={16} />
+              <div
+                style={{
+                  padding: `${spacing['3']} ${spacing['4']}`,
+                  borderRadius: borderRadius.md,
+                  backgroundColor: colors.statusCriticalSubtle,
+                  color: colors.statusCritical,
+                  fontSize: typography.fontSize.sm,
+                  marginBottom: spacing['5'],
+                  lineHeight: typography.lineHeight.normal,
+                }}
+              >
                 {error}
               </div>
             )}
 
-            {/* Email */}
             <div style={{ marginBottom: spacing['5'] }}>
-              <label style={{
-                display: 'block',
-                fontSize: typography.fontSize.label,
-                fontWeight: typography.fontWeight.medium,
-                color: colors.textSecondary,
-                marginBottom: spacing['2'],
-                letterSpacing: typography.letterSpacing.wide,
-              }}>
-                Email
-              </label>
-              <div style={{ position: 'relative' }}>
-                <Mail size={16} style={{
-                  position: 'absolute',
-                  left: '12px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  color: colors.textTertiary,
-                }} />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@company.com"
-                  style={{
-                    width: '100%',
-                    padding: `${spacing['3']} ${spacing['4']} ${spacing['3']} 40px`,
-                    border: `1px solid ${colors.borderDefault}`,
-                    borderRadius: borderRadius.md,
-                    fontSize: typography.fontSize.body,
-                    color: colors.textPrimary,
-                    backgroundColor: colors.surfacePage,
-                    outline: 'none',
-                    transition: `border-color ${transitions.quick}`,
-                    boxSizing: 'border-box',
-                  }}
-                  onFocus={(e) => e.target.style.borderColor = colors.primaryOrange}
-                  onBlur={(e) => e.target.style.borderColor = colors.borderDefault}
-                />
-              </div>
+              <label style={labelStyle} htmlFor="login-email">Email</label>
+              <input
+                type="email" id="login-email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@company.com"
+                required
+                style={inputStyle}
+                onFocus={(e) => { e.currentTarget.style.borderColor = colors.borderFocus }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = colors.borderDefault }}
+              />
             </div>
 
-            {/* Password */}
             <div style={{ marginBottom: spacing['5'] }}>
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: spacing['2'],
-              }}>
-                <label style={{
-                  fontSize: typography.fontSize.label,
+              <label style={labelStyle} htmlFor="login-password">Password</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
+                required
+                style={inputStyle}
+                onFocus={(e) => { e.currentTarget.style.borderColor = colors.borderFocus }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = colors.borderDefault }}
+              />
+            </div>
+
+            <div style={{ textAlign: 'right', marginBottom: spacing['5'] }}>
+              <button
+                type="button"
+                onClick={() => { setShowReset(true); setResetEmail(email); setResetSent(false); setResetError(null) }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: colors.primaryOrange,
+                  fontSize: typography.fontSize.sm,
+                  fontFamily: typography.fontFamily,
+                  cursor: 'pointer',
+                  padding: 0,
                   fontWeight: typography.fontWeight.medium,
-                  color: colors.textSecondary,
-                  letterSpacing: typography.letterSpacing.wide,
-                }}>
-                  Password
-                </label>
-                <button
-                  type="button"
-                  onClick={() => {/* TODO: forgot password flow */}}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: colors.primaryOrange,
-                    fontSize: typography.fontSize.label,
-                    fontWeight: typography.fontWeight.medium,
-                    cursor: 'pointer',
-                    padding: 0,
-                  }}
-                >
-                  Forgot password?
-                </button>
-              </div>
-              <div style={{ position: 'relative' }}>
-                <Lock size={16} style={{
-                  position: 'absolute',
-                  left: '12px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  color: colors.textTertiary,
-                }} />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
-                  style={{
-                    width: '100%',
-                    padding: `${spacing['3']} 40px ${spacing['3']} 40px`,
-                    border: `1px solid ${colors.borderDefault}`,
-                    borderRadius: borderRadius.md,
-                    fontSize: typography.fontSize.body,
-                    color: colors.textPrimary,
-                    backgroundColor: colors.surfacePage,
-                    outline: 'none',
-                    transition: `border-color ${transitions.quick}`,
-                    boxSizing: 'border-box',
-                  }}
-                  onFocus={(e) => e.target.style.borderColor = colors.primaryOrange}
-                  onBlur={(e) => e.target.style.borderColor = colors.borderDefault}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  style={{
-                    position: 'absolute',
-                    right: '12px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'none',
-                    border: 'none',
-                    color: colors.textTertiary,
-                    cursor: 'pointer',
-                    padding: 0,
-                    display: 'flex',
-                  }}
-                >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
+                }}
+              >
+                Forgot Password?
+              </button>
             </div>
 
-            {/* Submit */}
             <button
               type="submit"
               disabled={loading}
               style={{
                 width: '100%',
-                padding: `${spacing['3']} ${spacing['6']}`,
-                backgroundColor: loading ? colors.textTertiary : colors.primaryOrange,
-                color: '#fff',
-                border: 'none',
-                borderRadius: borderRadius.md,
+                padding: `${spacing['3']} ${spacing['4']}`,
                 fontSize: typography.fontSize.body,
                 fontWeight: typography.fontWeight.semibold,
+                fontFamily: typography.fontFamily,
+                color: '#fff',
+                backgroundColor: loading ? colors.orangeHover : colors.primaryOrange,
+                border: 'none',
+                borderRadius: borderRadius.md,
                 cursor: loading ? 'not-allowed' : 'pointer',
                 transition: `background-color ${transitions.quick}`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: spacing['2'],
+                letterSpacing: typography.letterSpacing.normal,
+                opacity: loading ? 0.7 : 1,
               }}
-              onMouseEnter={(e) => { if (!loading) (e.target as HTMLElement).style.backgroundColor = colors.orangeHover; }}
-              onMouseLeave={(e) => { if (!loading) (e.target as HTMLElement).style.backgroundColor = colors.primaryOrange; }}
+              onMouseEnter={(e) => { if (!loading) e.currentTarget.style.backgroundColor = colors.orangeHover }}
+              onMouseLeave={(e) => { if (!loading) e.currentTarget.style.backgroundColor = colors.primaryOrange }}
             >
-              <LogIn size={16} />
-              {loading ? 'Signing in...' : 'Sign In'}
+              {loading ? 'Signing In...' : 'Sign In'}
             </button>
           </form>
         </div>
 
         {/* Sign up link */}
-        <p style={{
-          textAlign: 'center',
-          marginTop: spacing['6'],
-          fontSize: typography.fontSize.sm,
-          color: colors.textSecondary,
-        }}>
-          New to SiteSync?{' '}
+        <p
+          style={{
+            textAlign: 'center',
+            fontSize: typography.fontSize.sm,
+            color: colors.textTertiary,
+            marginTop: spacing['6'],
+            letterSpacing: typography.letterSpacing.normal,
+          }}
+        >
+          Don't have an account?{' '}
           <Link
-            to="/register"
+            to="/signup"
             style={{
               color: colors.primaryOrange,
-              fontWeight: typography.fontWeight.medium,
               textDecoration: 'none',
+              fontWeight: typography.fontWeight.medium,
             }}
           >
             Create an account
           </Link>
         </p>
       </div>
+
+      {/* Reset Password Modal */}
+      {showReset && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.4)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1040,
+          }}
+          onClick={() => setShowReset(false)}
+        >
+          <div
+            style={{
+              backgroundColor: colors.surfaceRaised,
+              borderRadius: borderRadius.xl,
+              padding: spacing['8'],
+              width: '100%',
+              maxWidth: '400px',
+              boxShadow: shadows.panel,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2
+              style={{
+                fontSize: typography.fontSize.title,
+                fontWeight: typography.fontWeight.semibold,
+                color: colors.textPrimary,
+                margin: 0,
+                marginBottom: spacing['2'],
+                letterSpacing: typography.letterSpacing.tight,
+              }}
+            >
+              Reset Password
+            </h2>
+            <p
+              style={{
+                fontSize: typography.fontSize.sm,
+                color: colors.textTertiary,
+                margin: 0,
+                marginBottom: spacing['6'],
+                lineHeight: typography.lineHeight.normal,
+              }}
+            >
+              Enter your email and we'll send you a link to reset your password.
+            </p>
+
+            {resetSent ? (
+              <div>
+                <div
+                  style={{
+                    padding: `${spacing['3']} ${spacing['4']}`,
+                    borderRadius: borderRadius.md,
+                    backgroundColor: colors.statusActiveSubtle,
+                    color: colors.statusActive,
+                    fontSize: typography.fontSize.sm,
+                    lineHeight: typography.lineHeight.normal,
+                    marginBottom: spacing['5'],
+                  }}
+                >
+                  Check your email for a password reset link.
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowReset(false)}
+                  style={{
+                    width: '100%',
+                    padding: `${spacing['3']} ${spacing['4']}`,
+                    fontSize: typography.fontSize.body,
+                    fontWeight: typography.fontWeight.medium,
+                    fontFamily: typography.fontFamily,
+                    color: colors.textSecondary,
+                    backgroundColor: colors.surfacePage,
+                    border: `1px solid ${colors.borderDefault}`,
+                    borderRadius: borderRadius.md,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleReset}>
+                {resetError && (
+                  <div
+                    style={{
+                      padding: `${spacing['3']} ${spacing['4']}`,
+                      borderRadius: borderRadius.md,
+                      backgroundColor: colors.statusCriticalSubtle,
+                      color: colors.statusCritical,
+                      fontSize: typography.fontSize.sm,
+                      marginBottom: spacing['5'],
+                      lineHeight: typography.lineHeight.normal,
+                    }}
+                  >
+                    {resetError}
+                  </div>
+                )}
+                <div style={{ marginBottom: spacing['5'] }}>
+                  <label style={labelStyle} htmlFor="login-email">Email</label>
+                  <input
+                    type="email" id="login-email"
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    placeholder="you@company.com"
+                    required
+                    style={inputStyle}
+                    onFocus={(e) => { e.currentTarget.style.borderColor = colors.borderFocus }}
+                    onBlur={(e) => { e.currentTarget.style.borderColor = colors.borderDefault }}
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: spacing['3'] }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowReset(false)}
+                    style={{
+                      flex: 1,
+                      padding: `${spacing['3']} ${spacing['4']}`,
+                      fontSize: typography.fontSize.body,
+                      fontWeight: typography.fontWeight.medium,
+                      fontFamily: typography.fontFamily,
+                      color: colors.textSecondary,
+                      backgroundColor: colors.surfacePage,
+                      border: `1px solid ${colors.borderDefault}`,
+                      borderRadius: borderRadius.md,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={resetLoading}
+                    style={{
+                      flex: 1,
+                      padding: `${spacing['3']} ${spacing['4']}`,
+                      fontSize: typography.fontSize.body,
+                      fontWeight: typography.fontWeight.semibold,
+                      fontFamily: typography.fontFamily,
+                      color: '#fff',
+                      backgroundColor: colors.primaryOrange,
+                      border: 'none',
+                      borderRadius: borderRadius.md,
+                      cursor: resetLoading ? 'not-allowed' : 'pointer',
+                      opacity: resetLoading ? 0.7 : 1,
+                    }}
+                  >
+                    {resetLoading ? 'Sending...' : 'Send Reset Link'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
-  );
+  )
 }

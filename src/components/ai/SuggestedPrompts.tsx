@@ -49,11 +49,47 @@ const pageContextPrompts: Record<string, string[]> = {
     'Show submittal dependencies on procurement',
     'Draft a review reminder email',
   ],
+  safety: [
+    'What are the open safety items?',
+    'Show TRIR trend for this month',
+    'Which crews have expiring certifications?',
+    'Draft a toolbox talk about fall protection',
+  ],
+  'daily-log': [
+    'Summarize today for the daily log',
+    'Compare today to yesterday',
+    'What were the key accomplishments this week?',
+    'Flag anything unusual in recent logs',
+  ],
+  'punch-list': [
+    'How many punch items are overdue?',
+    'Which trade has the most open items?',
+    'Show punch completion rate by floor',
+    'What is blocking punch closeout?',
+  ],
+  drawings: [
+    'Which drawings have new revisions?',
+    'Show me drawing coordination conflicts',
+    'Which disciplines need updated sets?',
+    'Summary of latest ASI changes',
+  ],
+  files: [
+    'What documents were uploaded this week?',
+    'Are there any missing spec sections?',
+    'Show transmittal history for this month',
+    'Which documents need review?',
+  ],
+  financials: [
+    'What is the current cash flow forecast?',
+    'Show WIP report summary',
+    'Which invoices are overdue?',
+    'Project the final cost at completion',
+  ],
   default: [
     'How is the project doing overall?',
     'What are the biggest risks right now?',
     'Summarize this week for the OAC meeting',
-    'When will we hit the next milestone?',
+    'What needs my attention today?',
   ],
 };
 

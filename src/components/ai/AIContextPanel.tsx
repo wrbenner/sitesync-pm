@@ -3,7 +3,6 @@ import { Sparkles, X, TrendingUp, TrendingDown, Minus, ChevronRight } from 'luci
 import { motion, AnimatePresence } from 'framer-motion';
 import { colors, spacing, typography, borderRadius, shadows, transitions, zIndex } from '../../styles/theme';
 import { useAIAnnotationStore } from '../../stores';
-import { getContextAnalysisForPage, getAnnotationsForPage } from '../../data/aiAnnotations';
 
 interface AIContextPanelProps {
   currentPage: string;
@@ -24,8 +23,6 @@ const trendIcons = {
 
 export const AIContextPanel: React.FC<AIContextPanelProps> = ({ currentPage }) => {
   const { contextPanelOpen, setContextPanelOpen } = useAIAnnotationStore();
-  const analysis = getContextAnalysisForPage(currentPage);
-  const annotations = getAnnotationsForPage(currentPage);
 
   return (
     <AnimatePresence>
@@ -80,7 +77,7 @@ export const AIContextPanel: React.FC<AIContextPanelProps> = ({ currentPage }) =
 
             {/* Content */}
             <div style={{ flex: 1, overflow: 'auto', padding: `${spacing['4']} ${spacing['5']}` }}>
-              {analysis ? (
+              {(() => { const analysis: any = null; const annotations: any[] = []; return analysis ? (
                 <>
                   {/* Summary */}
                   <p style={{ fontSize: typography.fontSize.body, color: colors.textPrimary, margin: 0, marginBottom: spacing['5'], lineHeight: typography.lineHeight.relaxed }}>
@@ -89,8 +86,8 @@ export const AIContextPanel: React.FC<AIContextPanelProps> = ({ currentPage }) =
 
                   {/* Metrics */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'], marginBottom: spacing['5'] }}>
-                    {analysis.insights.map((insight, i) => {
-                      const TrendIcon = insight.trend ? trendIcons[insight.trend] : null;
+                    {analysis.insights.map((insight: any, i: number) => {
+                      const TrendIcon = insight.trend ? (trendIcons as any)[insight.trend] : null;
                       const valueColor = insight.severity ? (severityColors[insight.severity] || colors.textPrimary) : colors.textPrimary;
                       return (
                         <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: `${spacing['2']} ${spacing['3']}`, backgroundColor: colors.surfaceInset, borderRadius: borderRadius.base }}>
@@ -145,7 +142,8 @@ export const AIContextPanel: React.FC<AIContextPanelProps> = ({ currentPage }) =
                   <Sparkles size={32} color={colors.textTertiary} style={{ marginBottom: spacing['3'] }} />
                   <p style={{ fontSize: typography.fontSize.body, color: colors.textSecondary, margin: 0 }}>No AI analysis available for this page yet.</p>
                 </div>
-              )}
+              )
+              })()}
             </div>
           </motion.aside>
         </>

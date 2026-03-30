@@ -1,8 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Play, Pause, SkipForward, Columns, Flag, DollarSign, Users, HelpCircle, Camera, Calendar, Sparkles } from 'lucide-react';
 import { PageContainer, Card, Btn, ProgressBar, useToast } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme';
 import { useAnimatedNumber } from '../hooks/useAnimatedNumber';
+import { useProjectId } from '../hooks/useProjectId';
+import { useProjectSnapshots } from '../hooks/queries';
+import type { ProjectSnapshot, Json } from '../types/database';
 
 interface TimeSnapshot {
   date: string;
@@ -17,31 +20,68 @@ interface TimeSnapshot {
   milestone?: string;
   event?: string;
   eventType?: 'milestone' | 'change_order' | 'incident';
+  keyEvents?: { title: string; type: string }[];
 }
 
-const snapshots: TimeSnapshot[] = [
-  { date: '2023-06-15', label: 'Jun 2023', progress: 0, budgetSpent: 0, budgetTotal: 47.5, openRfis: 0, crewCount: 2, workersOnSite: 24, photos: 0, milestone: 'Project Start', eventType: 'milestone' },
-  { date: '2023-09-01', label: 'Sep 2023', progress: 8, budgetSpent: 3.2, budgetTotal: 47.5, openRfis: 2, crewCount: 4, workersOnSite: 52, photos: 34, milestone: 'Demolition Complete', eventType: 'milestone' },
-  { date: '2023-12-15', label: 'Dec 2023', progress: 18, budgetSpent: 8.4, budgetTotal: 47.5, openRfis: 5, crewCount: 6, workersOnSite: 78, photos: 112, milestone: 'Foundation Complete', eventType: 'milestone' },
-  { date: '2024-04-01', label: 'Apr 2024', progress: 30, budgetSpent: 14.2, budgetTotal: 47.5, openRfis: 8, crewCount: 8, workersOnSite: 120, photos: 245 },
-  { date: '2024-08-15', label: 'Aug 2024', progress: 42, budgetSpent: 20.1, budgetTotal: 47.5, openRfis: 6, crewCount: 10, workersOnSite: 156, photos: 410, milestone: 'Structure Topped Out', eventType: 'milestone' },
-  { date: '2024-10-01', label: 'Oct 2024', progress: 48, budgetSpent: 23.8, budgetTotal: 47.5, openRfis: 9, crewCount: 12, workersOnSite: 172, photos: 520, event: 'CO 001: Additional Bracing', eventType: 'change_order' },
-  { date: '2025-01-01', label: 'Jan 2025', progress: 55, budgetSpent: 28.4, budgetTotal: 47.5, openRfis: 4, crewCount: 13, workersOnSite: 180, photos: 680, milestone: 'MEP 50% Complete', eventType: 'milestone' },
-  { date: '2025-03-01', label: 'Mar 2025', progress: 60, budgetSpent: 30.5, budgetTotal: 47.5, openRfis: 3, crewCount: 14, workersOnSite: 187, photos: 820, event: 'Safety Incident (Resolved)', eventType: 'incident' },
-  { date: '2025-03-27', label: 'Today', progress: 62, budgetSpent: 31.2, budgetTotal: 47.5, openRfis: 3, crewCount: 14, workersOnSite: 187, photos: 856 },
-];
+function formatSnapshotLabel(dateStr: string): string {
+  const d = new Date(dateStr + 'T00:00:00');
+  const now = new Date();
+  if (
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate()
+  ) {
+    return 'Today';
+  }
+  return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+}
 
-const periodEvents: Record<number, {title: string; type: string}[]> = {
-  0: [{title: 'Ground breaking ceremony', type: 'milestone'}, {title: 'Demolition permits approved', type: 'info'}],
-  1: [{title: 'Demolition 100% complete', type: 'milestone'}, {title: 'Foundation excavation started', type: 'info'}],
-  2: [{title: 'Foundation pour completed', type: 'milestone'}, {title: 'Structural steel order placed', type: 'info'}, {title: 'First RFI submitted', type: 'info'}],
-  3: [{title: 'Steel erection began', type: 'info'}, {title: 'MEP subcontractor mobilized', type: 'info'}],
-  4: [{title: 'Structure topped out', type: 'milestone'}, {title: 'Curtain wall panels delivered', type: 'info'}],
-  5: [{title: 'Change order CO 001 approved', type: 'warning'}, {title: 'Exterior work started', type: 'info'}],
-  6: [{title: 'MEP rough in 50%', type: 'milestone'}, {title: 'Interior framing began', type: 'info'}],
-  7: [{title: 'Safety incident reported (resolved)', type: 'warning'}, {title: 'Finishing crew mobilized', type: 'info'}],
-  8: [{title: 'Current state', type: 'info'}, {title: '3 critical tasks due this week', type: 'warning'}],
-};
+function safeNum(val: unknown, fallback: number = 0): number {
+  return typeof val === 'number' ? val : fallback;
+}
+
+function safeStr(val: unknown, fallback: string = ''): string {
+  return typeof val === 'string' ? val : fallback;
+}
+
+function mapKeyEvents(raw: Json | null): { title: string; type: string }[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((e) => !!e && typeof e === 'object' && !Array.isArray(e))
+    .map((e) => {
+      const obj = e as Record<string, unknown>;
+      return {
+        title: safeStr(obj.title, 'Event'),
+        type: safeStr(obj.type, 'info'),
+      };
+    });
+}
+
+function mapSnapshot(s: ProjectSnapshot): TimeSnapshot {
+  const d = (s.data ?? {}) as Record<string, unknown>;
+  const milestone = safeStr(d.milestone) || undefined;
+  const event = safeStr(d.event) || undefined;
+  const rawEventType = safeStr(d.event_type);
+  const eventType = (['milestone', 'change_order', 'incident'].includes(rawEventType)
+    ? rawEventType
+    : milestone ? 'milestone' : undefined) as TimeSnapshot['eventType'];
+
+  return {
+    date: s.snapshot_date,
+    label: formatSnapshotLabel(s.snapshot_date),
+    progress: safeNum(d.progress),
+    budgetSpent: safeNum(d.budget_spent),
+    budgetTotal: safeNum(d.budget_total, 47.5),
+    openRfis: safeNum(d.open_rfis),
+    crewCount: safeNum(d.crew_count),
+    workersOnSite: safeNum(d.workers_on_site),
+    photos: safeNum(d.photos),
+    milestone,
+    event,
+    eventType,
+    keyEvents: mapKeyEvents(s.key_events),
+  };
+}
 
 const snapshotPhotos = [
   'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=200',
@@ -52,13 +92,34 @@ const snapshotPhotos = [
 
 export const TimeMachine: React.FC = () => {
   const { addToast: _addToast } = useToast();
-  const [currentIndex, setCurrentIndex] = useState(snapshots.length - 1);
+  const projectId = useProjectId();
+  const { data: rawSnapshots } = useProjectSnapshots(projectId);
+
+  const snapshots = useMemo(() => {
+    const mapped = (rawSnapshots ?? [])
+      .slice()
+      .sort((a, b) => a.snapshot_date.localeCompare(b.snapshot_date))
+      .map(mapSnapshot);
+    return mapped.length > 0 ? mapped : [];
+  }, [rawSnapshots]);
+
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [compareIndex, setCompareIndex] = useState<number | null>(null);
   const intervalRef = useRef<number | undefined>(undefined);
 
-  const snap = snapshots[currentIndex];
-  const compareSnap = compareIndex !== null ? snapshots[compareIndex] : null;
+  // Reset index when snapshots load or change
+  useEffect(() => {
+    if (snapshots.length > 0) {
+      setCurrentIndex(snapshots.length - 1);
+    }
+  }, [snapshots.length]);
+
+  const snap = snapshots[currentIndex] ?? {
+    date: '', label: 'Loading', progress: 0, budgetSpent: 0, budgetTotal: 1,
+    openRfis: 0, crewCount: 0, workersOnSite: 0, photos: 0,
+  };
+  const compareSnap = compareIndex !== null ? snapshots[compareIndex] ?? null : null;
 
   const animBudget = useAnimatedNumber(snap.budgetSpent, 600);
   const animWorkers = useAnimatedNumber(snap.workersOnSite, 600);
@@ -73,7 +134,7 @@ export const TimeMachine: React.FC = () => {
       });
     }, 550);
     return () => clearInterval(intervalRef.current);
-  }, [playing]);
+  }, [playing, snapshots.length]);
 
   const handleSpeedRun = () => {
     if (playing) {
@@ -85,6 +146,20 @@ export const TimeMachine: React.FC = () => {
   };
 
   const rfiColor = snap.openRfis > 5 ? colors.statusCritical : snap.openRfis > 3 ? colors.statusPending : colors.statusActive;
+
+  if (snapshots.length === 0) {
+    return (
+      <PageContainer title="Time Machine" subtitle="Scrub through your project history">
+        <Card padding={spacing['6']}>
+          <div style={{ textAlign: 'center', color: colors.textTertiary, padding: spacing['8'] }}>
+            No snapshots available yet. Snapshots are created automatically as your project progresses.
+          </div>
+        </Card>
+      </PageContainer>
+    );
+  }
+
+  const currentEvents = (snap as TimeSnapshot).keyEvents ?? [];
 
   return (
     <PageContainer title="Time Machine" subtitle="Scrub through your project history">
@@ -232,10 +307,10 @@ export const TimeMachine: React.FC = () => {
 
         {/* Timeline bar */}
         <div style={{ position: 'relative', padding: `${spacing['3']} 0` }}>
-          {/* Clean tick marks only — labels shown via the date buttons below */}
+          {/* Clean tick marks only */}
           <div style={{ position: 'relative', height: 6, marginBottom: 2 }}>
             {snapshots.map((s, i) => {
-              const left = (i / (snapshots.length - 1)) * 100;
+              const left = snapshots.length > 1 ? (i / (snapshots.length - 1)) * 100 : 50;
               const hasEvent = s.milestone || s.event;
               if (!hasEvent) return null;
               const eventColor = s.eventType === 'milestone' ? colors.primaryOrange : s.eventType === 'change_order' ? colors.statusPending : s.eventType === 'incident' ? colors.statusCritical : colors.textTertiary;
@@ -261,13 +336,13 @@ export const TimeMachine: React.FC = () => {
 
           {/* Track */}
           <div style={{ height: 4, backgroundColor: colors.borderSubtle, borderRadius: 2, position: 'relative' }}>
-            <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${(currentIndex / (snapshots.length - 1)) * 100}%`, backgroundColor: colors.primaryOrange, borderRadius: 2, transition: `width ${transitions.quick}` }} />
+            <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${snapshots.length > 1 ? (currentIndex / (snapshots.length - 1)) * 100 : 100}%`, backgroundColor: colors.primaryOrange, borderRadius: 2, transition: `width ${transitions.quick}` }} />
           </div>
 
           {/* Event markers */}
           <div style={{ position: 'relative', height: 40, marginTop: -2 }}>
             {snapshots.map((s, i) => {
-              const left = (i / (snapshots.length - 1)) * 100;
+              const left = snapshots.length > 1 ? (i / (snapshots.length - 1)) * 100 : 50;
               const isCurrent = i === currentIndex;
               const isEvent = s.milestone || s.event;
               const eventColor = s.eventType === 'milestone' ? colors.primaryOrange : s.eventType === 'change_order' ? colors.statusPending : s.eventType === 'incident' ? colors.statusCritical : colors.textTertiary;
@@ -308,7 +383,7 @@ export const TimeMachine: React.FC = () => {
         {/* Compare slider */}
         {compareIndex !== null && (
           <div style={{ marginTop: spacing['2'] }}>
-            <label style={{ fontSize: typography.fontSize.caption, color: colors.statusReview, fontWeight: typography.fontWeight.medium }}>Compare to: {snapshots[compareIndex].label}</label>
+            <label style={{ fontSize: typography.fontSize.caption, color: colors.statusReview, fontWeight: typography.fontWeight.medium }}>Compare to: {snapshots[compareIndex]?.label ?? ''}</label>
             <input
               type="range"
               min={0}
@@ -342,7 +417,7 @@ export const TimeMachine: React.FC = () => {
               <p style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.statusInfo, margin: 0, marginBottom: spacing['1'] }}>${snap.budgetSpent}M</p>
               <p style={{ fontSize: '9px', color: colors.textTertiary, margin: 0, marginBottom: spacing['1'] }}>of ${snap.budgetTotal}M</p>
               <div style={{ height: 4, backgroundColor: colors.borderSubtle, borderRadius: 2 }}>
-                <div style={{ height: '100%', width: `${(snap.budgetSpent / snap.budgetTotal) * 100}%`, backgroundColor: colors.statusInfo, borderRadius: 2, transition: `width ${transitions.quick}` }} />
+                <div style={{ height: '100%', width: `${snap.budgetTotal > 0 ? (snap.budgetSpent / snap.budgetTotal) * 100 : 0}%`, backgroundColor: colors.statusInfo, borderRadius: 2, transition: `width ${transitions.quick}` }} />
               </div>
             </div>
 
@@ -366,7 +441,10 @@ export const TimeMachine: React.FC = () => {
           <Card padding={spacing['4']}>
             <p style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.4px', margin: 0, marginBottom: spacing['3'] }}>Key Events This Period</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'] }}>
-              {(periodEvents[currentIndex] || []).map((evt, idx) => {
+              {currentEvents.length === 0 && (
+                <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>No key events recorded for this period.</span>
+              )}
+              {currentEvents.map((evt, idx) => {
                 const dotColor = evt.type === 'milestone' ? colors.primaryOrange : evt.type === 'warning' ? colors.statusPending : colors.statusInfo;
                 return (
                   <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>

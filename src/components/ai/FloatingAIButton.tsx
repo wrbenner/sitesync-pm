@@ -2,9 +2,14 @@ import React from 'react';
 import { Sparkles } from 'lucide-react';
 import { colors, borderRadius, shadows, transitions } from '../../styles/theme';
 import { useAIAnnotationStore } from '../../stores';
+import { useProjectId } from '../../hooks/useProjectId';
+import { useAIInsights } from '../../hooks/queries';
 
 export const FloatingAIButton: React.FC = () => {
   const { toggleContextPanel, contextPanelOpen } = useAIAnnotationStore();
+  const projectId = useProjectId();
+  const { data: insights } = useAIInsights(projectId);
+  const insightCount = insights?.length || 0;
 
   return (
     <button
@@ -36,6 +41,25 @@ export const FloatingAIButton: React.FC = () => {
       }}
     >
       <Sparkles size={20} color={contextPanelOpen ? colors.statusReview : 'white'} />
+      {insightCount > 0 && (
+        <span style={{
+          position: 'absolute',
+          top: -4,
+          right: -4,
+          backgroundColor: colors.statusCritical,
+          color: 'white',
+          fontSize: '10px',
+          fontWeight: 600,
+          borderRadius: '50%',
+          width: 18,
+          height: 18,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+          {insightCount}
+        </span>
+      )}
     </button>
   );
 };
