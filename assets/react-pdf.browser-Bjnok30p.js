@@ -1,0 +1,1 @@
+import{r as e}from"./vendor-pdf-vL05Spfi.js";export{e as PDFDownloadLink};

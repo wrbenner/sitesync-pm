@@ -1,1 +1,0 @@
-import{_ as e,a as t,c as n,r}from"./mockData-Bs2jRfHd.js";var i=()=>e(r),a=()=>e(t),o=()=>e(n);export{a as n,o as r,i as t};

@@ -1,0 +1,14 @@
+{
+  "name": "SiteSync PM",
+  "short_name": "SiteSync",
+  "description": "AI powered construction project management",
+  "start_url": "/sitesync-pm/",
+  "display": "standalone",
+  "theme_color": "#F47820",
+  "background_color": "#0C0D0F",
+  "orientation": "any",
+  "icons": [
+    { "src": "/sitesync-pm/icon-192.svg", "sizes": "192x192", "type": "image/svg+xml", "purpose": "any maskable" },
+    { "src": "/sitesync-pm/icon-512.svg", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
