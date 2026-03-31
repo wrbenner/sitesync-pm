@@ -1,0 +1,1 @@
+import{l as e}from"./vendor-tanstack-WqSIy4Ba.js";import"./supabase-Cg_Lc_0G.js";function t(t,n,r){let i=e({queryKey:[t],queryFn:n,enabled:r?.enabled??!0});return{data:i.data??null,loading:i.isPending&&i.fetchStatus!==`idle`,error:i.error?.message??null,refetch:i.refetch}}export{t};
