@@ -1,0 +1,1 @@
+import{t as e}from"./vendor-supabase-DJlpjI8Y.js";var t=e(`https://placeholder.supabase.co`,`placeholder`);export{t};
