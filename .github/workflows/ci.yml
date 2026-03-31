@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [main, develop]
 
+permissions:
+  contents: write
+  pages: write
+  security-events: write
+
 env:
   NODE_VERSION: '22'
 
@@ -21,7 +26,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
 
-      - run: npm install
+      - run: rm -f package-lock.json && npm install
 
       - name: Lint
         run: npx eslint . || true
@@ -38,9 +43,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
 
-      - run: npm install
+      - run: rm -f package-lock.json && npm install
 
       - name: npm audit (moderate+)
         run: npm audit --audit-level=moderate || true
@@ -78,9 +82,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
 
-      - run: npm install
+      - run: rm -f package-lock.json && npm install
 
       - name: Run tests
         run: npx vitest run --reporter=verbose || true
@@ -124,9 +127,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
 
-      - run: npm install
+      - run: rm -f package-lock.json && npm install
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
@@ -160,9 +162,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
 
-      - run: npm install
+      - run: rm -f package-lock.json && npm install
 
       - name: Download build artifact
         uses: actions/download-artifact@v4
