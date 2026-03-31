@@ -103,7 +103,7 @@ export const MilestoneTimelineWidget: React.FC = React.memo(() => {
               >
                 {/* Label above */}
                 <div style={{ textAlign: 'center', marginBottom: spacing['1'] }}>
-                  <p style={{ fontSize: '10px', fontWeight: typography.fontWeight.medium, color: colors.textPrimary, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '80px' }}>
+                  <p style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '80px' }}>
                     {ms.name}
                   </p>
                 </div>
@@ -122,9 +122,9 @@ export const MilestoneTimelineWidget: React.FC = React.memo(() => {
 
                 {/* Date and slack below */}
                 <div style={{ textAlign: 'center' }}>
-                  <p style={{ fontSize: '9px', color: colors.textTertiary, margin: 0 }}>{ms.date}</p>
+                  <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0 }}>{ms.date}</p>
                   {ms.slackDays !== 0 && ms.status !== 'hit' && (
-                    <p style={{ fontSize: '9px', color: ms.slackDays < 0 ? colors.statusCritical : colors.statusActive, margin: 0, fontWeight: typography.fontWeight.medium }}>
+                    <p style={{ fontSize: typography.fontSize.caption, color: ms.slackDays < 0 ? colors.statusCritical : colors.statusActive, margin: 0, fontWeight: typography.fontWeight.medium }}>
                       {ms.slackDays > 0 ? `+${ms.slackDays}d` : `${ms.slackDays}d`}
                     </p>
                   )}

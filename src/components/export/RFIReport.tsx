@@ -1,5 +1,6 @@
 import React from 'react'
 import { Text, View } from '@react-pdf/renderer'
+import { colors } from '../../styles/theme'
 import { PDFReport, PDFTable, PDFSection } from './PDFTemplate'
 
 interface RFIData {
@@ -27,15 +28,15 @@ export const RFIReport: React.FC<RFIReportProps> = ({ projectName, rfis }) => {
       <View style={{ flexDirection: 'row', gap: 20, marginBottom: 16 }}>
         <View>
           <Text style={{ fontSize: 20, fontFamily: 'Helvetica-Bold' }}>{rfis.length}</Text>
-          <Text style={{ fontSize: 8, color: '#5C5550' }}>Total RFIs</Text>
+          <Text style={{ fontSize: 8, color: colors.textSecondary }}>Total RFIs</Text>
         </View>
         <View>
-          <Text style={{ fontSize: 20, fontFamily: 'Helvetica-Bold', color: '#C4850C' }}>{openCount}</Text>
-          <Text style={{ fontSize: 8, color: '#5C5550' }}>Open</Text>
+          <Text style={{ fontSize: 20, fontFamily: 'Helvetica-Bold', color: colors.statusPending }}>{openCount}</Text>
+          <Text style={{ fontSize: 8, color: colors.textSecondary }}>Open</Text>
         </View>
         <View>
-          <Text style={{ fontSize: 20, fontFamily: 'Helvetica-Bold', color: '#2D8A6E' }}>{closedCount}</Text>
-          <Text style={{ fontSize: 8, color: '#5C5550' }}>Closed</Text>
+          <Text style={{ fontSize: 20, fontFamily: 'Helvetica-Bold', color: colors.statusActive }}>{closedCount}</Text>
+          <Text style={{ fontSize: 8, color: colors.textSecondary }}>Closed</Text>
         </View>
       </View>
 

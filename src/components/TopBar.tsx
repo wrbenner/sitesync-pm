@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Sun, Moon, Monitor } from 'lucide-react';
-import { colors, darkColors, spacing, typography, borderRadius, shadows, transitions, layout, colorVars } from '../styles/theme';
+import { colors, darkColors, spacing, typography, borderRadius, shadows, transitions, layout, colorVars, zIndex } from '../styles/theme';
 import { Dot, useSidebar } from './Primitives';
 import { NotificationBell, NotificationPanel } from './collaboration/NotificationCenter';
 import { ConnectionStatusDot } from './ui/ConnectionStatus';
@@ -63,7 +63,7 @@ export const TopBar: React.FC<TopBarProps> = ({ activeView, onSearch }) => {
         justifyContent: 'space-between',
         padding: `0 ${spacing.xl}`,
         backgroundColor: scrolled
-          ? (isDark ? 'rgba(12, 13, 15, 0.72)' : 'rgba(255, 255, 255, 0.72)')
+          ? (isDark ? colors.topbarDark : colors.topbarLight)
           : (isDark ? colorVars.surfaceRaised : colors.white),
         backdropFilter: scrolled ? 'blur(12px)' : 'none',
         WebkitBackdropFilter: scrolled ? 'blur(12px)' : 'none',
@@ -71,7 +71,7 @@ export const TopBar: React.FC<TopBarProps> = ({ activeView, onSearch }) => {
         boxShadow: scrolled ? shadows.base : shadows.sm,
         marginLeft: sidebarW,
         transition: `margin-left ${transitions.slow}, background-color ${transitions.base}, box-shadow ${transitions.base}, backdrop-filter ${transitions.base}`,
-        zIndex: 50,
+        zIndex: zIndex.sticky,
         position: 'sticky',
         top: 0,
       }}
@@ -84,7 +84,7 @@ export const TopBar: React.FC<TopBarProps> = ({ activeView, onSearch }) => {
             fontWeight: typography.fontWeight.semibold,
             color: colorVars.textPrimary,
             margin: 0,
-            letterSpacing: '-0.3px',
+            letterSpacing: typography.letterSpacing.tight,
           }}
         >
           {pageNames[activeView] || 'Dashboard'}
@@ -101,7 +101,7 @@ export const TopBar: React.FC<TopBarProps> = ({ activeView, onSearch }) => {
               display: 'flex',
               alignItems: 'center',
               gap: spacing.sm,
-              width: '280px',
+              width: layout.searchWidth,
               backgroundColor: colors.surfaceFlat,
               padding: `${spacing.sm} ${spacing.lg}`,
               borderRadius: borderRadius.full,
@@ -158,9 +158,9 @@ export const TopBar: React.FC<TopBarProps> = ({ activeView, onSearch }) => {
                 fontSize: typography.fontSize.xs,
                 color: colors.textTertiary,
                 backgroundColor: colors.surfaceInset,
-                padding: '1px 5px',
+                padding: `${spacing['0.5']} ${spacing['1.5']}`,
                 borderRadius: borderRadius.sm,
-                fontFamily: 'monospace',
+                fontFamily: typography.fontFamilyMono,
               }}
             >
               ⌘K
@@ -204,7 +204,7 @@ export const TopBar: React.FC<TopBarProps> = ({ activeView, onSearch }) => {
               transition: `background-color ${transitions.fast}, color ${transitions.fast}`,
             }}
             onMouseEnter={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.backgroundColor = isDark ? 'rgba(255,255,255,0.06)' : colors.surfaceHover;
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor = isDark ? colors.darkHoverBg : colors.surfaceHover;
             }}
             onMouseLeave={(e) => {
               (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
@@ -215,7 +215,7 @@ export const TopBar: React.FC<TopBarProps> = ({ activeView, onSearch }) => {
           {themeMenuOpen && (
             <>
               <div
-                style={{ position: 'fixed', inset: 0, zIndex: 999 }}
+                style={{ position: 'fixed', inset: 0, zIndex: zIndex.dropdown }}
                 onClick={() => setThemeMenuOpen(false)}
               />
               <div
@@ -225,11 +225,11 @@ export const TopBar: React.FC<TopBarProps> = ({ activeView, onSearch }) => {
                   right: 0,
                   marginTop: spacing.sm,
                   backgroundColor: isDark ? darkColors.surfaceRaised : colors.white,
-                  border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : colors.borderDefault}`,
+                  border: `1px solid ${isDark ? colors.darkBorder : colors.borderDefault}`,
                   borderRadius: borderRadius.lg,
                   boxShadow: shadows.dropdown,
                   padding: spacing.xs,
-                  zIndex: 1000,
+                  zIndex: zIndex.dropdown,
                   minWidth: '140px',
                 }}
               >
@@ -250,11 +250,11 @@ export const TopBar: React.FC<TopBarProps> = ({ activeView, onSearch }) => {
                       border: 'none',
                       borderRadius: borderRadius.base,
                       backgroundColor: themeMode === mode
-                        ? (isDark ? 'rgba(244, 120, 32, 0.12)' : colors.orangeSubtle)
+                        ? (isDark ? colors.orangeLight : colors.orangeSubtle)
                         : 'transparent',
                       color: themeMode === mode
                         ? colors.primaryOrange
-                        : (isDark ? 'rgba(255,255,255,0.7)' : colors.textSecondary),
+                        : (isDark ? colors.overlayWhiteBold : colors.textSecondary),
                       cursor: 'pointer',
                       fontSize: typography.fontSize.sm,
                       fontFamily: typography.fontFamily,
@@ -263,7 +263,7 @@ export const TopBar: React.FC<TopBarProps> = ({ activeView, onSearch }) => {
                     }}
                     onMouseEnter={(e) => {
                       if (themeMode !== mode) {
-                        (e.currentTarget as HTMLButtonElement).style.backgroundColor = isDark ? 'rgba(255,255,255,0.06)' : colors.surfaceHover;
+                        (e.currentTarget as HTMLButtonElement).style.backgroundColor = isDark ? colors.darkHoverBg : colors.surfaceHover;
                       }
                     }}
                     onMouseLeave={(e) => {

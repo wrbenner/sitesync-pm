@@ -89,11 +89,13 @@ p {
 
 /* ── Focus ────────────────────────────────────────────── */
 
-/* Precise orange ring for keyboard users */
+/* Precise orange ring for keyboard users, animated in */
 *:focus-visible {
   outline: 2px solid #F47820;
   outline-offset: 2px;
   border-radius: 4px;
+  transition: outline-offset 120ms ease-out, box-shadow 120ms ease-out;
+  box-shadow: 0 0 0 2px white, 0 0 0 4px #F47820;
 }
 
 /* Don't show focus ring for mouse/pointer clicks */
@@ -156,6 +158,13 @@ button, input, textarea, select {
 @keyframes scaleIn {
   from { opacity: 0; transform: scale(0.96); }
   to { opacity: 1; transform: scale(1); }
+}
+
+/* ── Scroll-triggered Animations ──────────────────────── */
+
+@keyframes slideUpFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* ── Reduced Motion ───────────────────────────────────── */

@@ -59,7 +59,7 @@ export const ConversationThread: React.FC<ConversationThreadProps> = ({ messages
               <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['1'] }}>
                 <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>{msg.name}</span>
                 <span style={{
-                  fontSize: '10px', fontWeight: typography.fontWeight.semibold,
+                  fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
                   color: cfg.color, backgroundColor: `${cfg.color}12`,
                   padding: `0 ${spacing['1']}`, borderRadius: borderRadius.sm,
                   textTransform: 'uppercase', letterSpacing: typography.letterSpacing.wider,

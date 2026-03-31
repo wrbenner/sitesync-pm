@@ -2,20 +2,20 @@
 // RFI response times, submittal rejection rates, punch closure rates by subcontractor
 import React from 'react'
 import { View, Text, StyleSheet } from '@react-pdf/renderer'
-import { vizColors } from '../../styles/theme'
+import { colors, vizColors } from '../../styles/theme'
 import { PDFReport, PDFSection, PDFTable } from './PDFTemplate'
 
 const s = StyleSheet.create({
   kpiGrid: { flexDirection: 'row', gap: 8, marginBottom: 16 },
-  kpiBox: { flex: 1, padding: 8, backgroundColor: '#FAFAF8', borderRadius: 4, borderWidth: 0.5, borderColor: '#E5E1DC' },
-  kpiLabel: { fontSize: 7, color: '#5C5550', marginBottom: 2 },
+  kpiBox: { flex: 1, padding: 8, backgroundColor: colors.surfacePage, borderRadius: 4, borderWidth: 0.5, borderColor: colors.borderDefault },
+  kpiLabel: { fontSize: 7, color: colors.textSecondary, marginBottom: 2 },
   kpiValue: { fontSize: 14, fontFamily: 'Helvetica-Bold', color: vizColors.darkText },
-  kpiSub: { fontSize: 7, color: '#9A9490', marginTop: 1 },
+  kpiSub: { fontSize: 7, color: colors.textTertiary, marginTop: 1 },
   scorecard: { marginBottom: 16 },
-  subName: { fontSize: 10, fontFamily: 'Helvetica-Bold', color: '#0C0D0F', marginBottom: 4, marginTop: 12 },
+  subName: { fontSize: 10, fontFamily: 'Helvetica-Bold', color: colors.darkNavy, marginBottom: 4, marginTop: 12 },
   metricsRow: { flexDirection: 'row', gap: 6 },
-  metricCell: { flex: 1, padding: 6, backgroundColor: '#F3EFEC', borderRadius: 3 },
-  metricLabel: { fontSize: 6, color: '#5C5550' },
+  metricCell: { flex: 1, padding: 6, backgroundColor: colors.surfaceInset, borderRadius: 3 },
+  metricLabel: { fontSize: 6, color: colors.textSecondary },
   metricValue: { fontSize: 9, fontFamily: 'Helvetica-Bold', color: vizColors.darkText, marginTop: 1 },
 })
 
@@ -54,13 +54,13 @@ export const SubcontractorReport: React.FC<SubcontractorReportProps> = ({ data }
         </View>
         <View style={s.kpiBox}>
           <Text style={s.kpiLabel}>Avg Submittal Rejection</Text>
-          <Text style={[s.kpiValue, data.avgSubmittalRejectionRate > 25 ? { color: '#C93B3B' } : {}]}>
+          <Text style={[s.kpiValue, data.avgSubmittalRejectionRate > 25 ? { color: colors.statusCritical } : {}]}>
             {data.avgSubmittalRejectionRate}%
           </Text>
         </View>
         <View style={s.kpiBox}>
           <Text style={s.kpiLabel}>Avg Punch Closure</Text>
-          <Text style={[s.kpiValue, data.avgPunchClosureRate < 70 ? { color: '#C4850C' } : { color: '#2D8A6E' }]}>
+          <Text style={[s.kpiValue, data.avgPunchClosureRate < 70 ? { color: colors.statusPending } : { color: colors.statusActive }]}>
             {data.avgPunchClosureRate}%
           </Text>
         </View>
@@ -118,7 +118,7 @@ export const SubcontractorReport: React.FC<SubcontractorReportProps> = ({ data }
             </View>
             <View style={s.metricCell}>
               <Text style={s.metricLabel}>Rejection Rate</Text>
-              <Text style={[s.metricValue, sub.submittalRejectionRate > 25 ? { color: '#C93B3B' } : {}]}>
+              <Text style={[s.metricValue, sub.submittalRejectionRate > 25 ? { color: colors.statusCritical } : {}]}>
                 {sub.submittalRejectionRate}%
               </Text>
             </View>
@@ -128,7 +128,7 @@ export const SubcontractorReport: React.FC<SubcontractorReportProps> = ({ data }
             </View>
             <View style={s.metricCell}>
               <Text style={s.metricLabel}>Closure Rate</Text>
-              <Text style={[s.metricValue, sub.punchClosureRate >= 80 ? { color: '#2D8A6E' } : sub.punchClosureRate >= 50 ? { color: '#C4850C' } : { color: '#C93B3B' }]}>
+              <Text style={[s.metricValue, sub.punchClosureRate >= 80 ? { color: colors.statusActive } : sub.punchClosureRate >= 50 ? { color: colors.statusPending } : { color: colors.statusCritical }]}>
                 {sub.punchClosureRate}%
               </Text>
             </View>

@@ -68,7 +68,7 @@ const MemoizedRow = React.memo(function MemoizedRow<T>({
         <td
           key={cell.id}
           style={{
-            padding: `12px ${spacing['4']}`,
+            padding: `${spacing['3']} ${spacing['4']}`,
             borderBottom: `1px solid ${colors.borderSubtle}`,
             fontSize: typography.fontSize.sm,
             color: colors.textPrimary,
@@ -237,7 +237,7 @@ export function DataTable<T>({
                     key={header.id}
                     onClick={header.column.getCanSort() ? header.column.getToggleSortingHandler() : undefined}
                     style={{
-                      padding: `10px ${spacing['4']}`,
+                      padding: `${spacing['2.5']} ${spacing['4']}`,
                       borderBottom: `1px solid ${colors.borderDefault}`,
                       textAlign: 'left',
                       fontSize: typography.fontSize.label,
@@ -256,7 +256,7 @@ export function DataTable<T>({
                       maxWidth: header.column.columnDef.maxSize ? `${header.column.columnDef.maxSize}px` : undefined,
                     }}
                   >
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: spacing['1'] }}>
                       {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                       {header.column.getIsSorted() === 'asc' && <ArrowUp size={12} />}
                       {header.column.getIsSorted() === 'desc' && <ArrowDown size={12} />}
@@ -282,8 +282,8 @@ export function DataTable<T>({
 
       {/* Empty state */}
       {rows.length === 0 && !loading && (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', textAlign: 'center' }}>
-          <p style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, margin: 0, marginBottom: '4px' }}>{emptyMessage}</p>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: `${spacing['12']} ${spacing['6']}`, textAlign: 'center' }}>
+          <p style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, margin: 0, marginBottom: spacing['1'] }}>{emptyMessage}</p>
           <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0 }}>Try adjusting your search or filter criteria</p>
         </div>
       )}

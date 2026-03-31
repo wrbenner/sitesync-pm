@@ -36,7 +36,7 @@ function statusBg(status: string) {
 }
 
 const columns = [
-  columnHelper.accessor('company_name', {
+  columnHelper.accessor('company', {
     header: 'Company',
     cell: (info) => (
       <span style={{ fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>
@@ -145,7 +145,7 @@ export const Insurance: React.FC = () => {
 
   const companies = useMemo(() => {
     if (!certificates) return []
-    const set = new Set(certificates.map((c: any) => c.company_name).filter(Boolean))
+    const set = new Set(certificates.map((c: any) => c.company).filter(Boolean))
     return Array.from(set).sort() as string[]
   }, [certificates])
 
@@ -158,7 +158,7 @@ export const Insurance: React.FC = () => {
   const filtered = useMemo(() => {
     if (!certificates) return []
     return certificates.filter((c: any) => {
-      if (filterCompany && c.company_name !== filterCompany) return false
+      if (filterCompany && c.company !== filterCompany) return false
       if (filterType !== 'all' && c.policy_type !== filterType) return false
       if (filterStatus !== 'all') {
         const s = getStatus(c.expiration_date)

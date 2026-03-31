@@ -38,7 +38,7 @@ export const OfflineBanner: React.FC = () => {
     };
   } else if (hasConflicts) {
     config = {
-      bg: 'rgba(196, 133, 12, 0.06)',
+      bg: colors.warningBannerBg,
       border: colors.statusPending,
       icon: <AlertTriangle size={14} />,
       text: `${conflictCount} sync conflict${conflictCount !== 1 ? 's' : ''} need resolution.`,
@@ -126,7 +126,7 @@ export const OfflineBanner: React.FC = () => {
               gap: spacing['1'],
               padding: `${spacing['1']} ${spacing['3']}`,
               backgroundColor: colors.primaryOrange,
-              color: 'white',
+              color: colors.white,
               border: 'none',
               borderRadius: borderRadius.base,
               fontSize: typography.fontSize.caption,
@@ -235,11 +235,11 @@ export const SyncStatusDot: React.FC = () => {
       {totalIssues > 0 && (
         <span
           style={{
-            fontSize: '10px',
+            fontSize: typography.fontSize.caption,
             fontWeight: typography.fontWeight.semibold,
             color: dotColor,
             backgroundColor: `${dotColor}14`,
-            padding: '0 4px',
+            padding: `0 ${spacing['1']}`,
             borderRadius: borderRadius.full,
             minWidth: '16px',
             textAlign: 'center',

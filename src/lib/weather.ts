@@ -1,6 +1,8 @@
 // Weather auto-fill for daily logs
 // Uses OpenWeatherMap free tier (or falls back to reasonable defaults)
 
+import { colors } from '../styles/theme'
+
 export interface WeatherData {
   temp_high: number
   temp_low: number
@@ -94,16 +96,16 @@ export function formatWeatherSummary(w: WeatherData): string {
 
 export function getWeatherImpact(w: WeatherData): { level: 'none' | 'low' | 'high'; label: string; color: string } {
   if (w.conditions === 'Thunderstorm' || w.conditions === 'Tornado') {
-    return { level: 'high', label: 'Work stoppage likely', color: '#C93B3B' }
+    return { level: 'high', label: 'Work stoppage likely', color: colors.statusCritical }
   }
   if (w.conditions === 'Rain' || w.conditions === 'Snow') {
-    return { level: 'high', label: 'Outdoor work impacted', color: '#C4850C' }
+    return { level: 'high', label: 'Outdoor work impacted', color: colors.statusPending }
   }
   if (w.conditions === 'Light Rain' || w.conditions === 'Fog' || parseInt(w.wind_speed) > 25) {
-    return { level: 'low', label: 'Minor impact possible', color: '#C4850C' }
+    return { level: 'low', label: 'Minor impact possible', color: colors.statusPending }
   }
   if (w.temp_high > 100 || w.temp_low < 20) {
-    return { level: 'low', label: 'Extreme temperature', color: '#C4850C' }
+    return { level: 'low', label: 'Extreme temperature', color: colors.statusPending }
   }
-  return { level: 'none', label: 'No impact expected', color: '#2D8A6E' }
+  return { level: 'none', label: 'No impact expected', color: colors.statusActive }
 }

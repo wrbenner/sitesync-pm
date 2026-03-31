@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { X, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Maximize2 } from 'lucide-react';
-import { colors, spacing, typography, borderRadius, shadows, vizColors } from '../../styles/theme';
+import { colors, spacing, typography, borderRadius, shadows, vizColors, zIndex, transitions } from '../../styles/theme';
 
 // Configure PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -44,13 +44,13 @@ export function PdfViewer({ file, title, onClose }: PdfViewerProps) {
   const toolbarBtnStyle: React.CSSProperties = {
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     width: 36, height: 36, border: 'none',
-    borderRadius: borderRadius.base, backgroundColor: 'rgba(255,255,255,0.1)',
-    color: '#fff', cursor: 'pointer', transition: 'background-color 150ms',
+    borderRadius: borderRadius.base, backgroundColor: colors.overlayWhiteThin,
+    color: colors.white, cursor: 'pointer', transition: `background-color ${transitions.quick}`,
   };
 
   return (
     <div style={{
-      position: 'fixed', inset: 0, zIndex: 2000,
+      position: 'fixed', inset: 0, zIndex: zIndex.toast as number,
       display: 'flex', flexDirection: 'column',
       backgroundColor: vizColors.dark,
     }}>
@@ -58,8 +58,8 @@ export function PdfViewer({ file, title, onClose }: PdfViewerProps) {
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: `${spacing['2']} ${spacing['4']}`,
-        backgroundColor: 'rgba(0,0,0,0.4)',
-        borderBottom: '1px solid rgba(255,255,255,0.1)',
+        backgroundColor: colors.overlayDark,
+        borderBottom: `1px solid ${colors.darkBorder}`,
         flexShrink: 0,
       }}>
         {/* Left: title */}
@@ -67,7 +67,7 @@ export function PdfViewer({ file, title, onClose }: PdfViewerProps) {
           <button onClick={onClose} style={toolbarBtnStyle}>
             <X size={18} />
           </button>
-          <span style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.medium, color: '#fff' }}>
+          <span style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.medium, color: colors.white }}>
             {title || 'Document Viewer'}
           </span>
         </div>
@@ -77,7 +77,7 @@ export function PdfViewer({ file, title, onClose }: PdfViewerProps) {
           <button onClick={prevPage} disabled={pageNumber <= 1} style={{ ...toolbarBtnStyle, opacity: pageNumber <= 1 ? 0.3 : 1 }}>
             <ChevronLeft size={18} />
           </button>
-          <span style={{ fontSize: typography.fontSize.sm, color: '#fff', minWidth: '80px', textAlign: 'center' }}>
+          <span style={{ fontSize: typography.fontSize.sm, color: colors.white, minWidth: '80px', textAlign: 'center' }}>
             {loading ? '...' : `Page ${pageNumber} of ${numPages}`}
           </span>
           <button onClick={nextPage} disabled={pageNumber >= numPages} style={{ ...toolbarBtnStyle, opacity: pageNumber >= numPages ? 0.3 : 1 }}>
@@ -111,12 +111,12 @@ export function PdfViewer({ file, title, onClose }: PdfViewerProps) {
         {error ? (
           <div style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            padding: spacing['8'], color: '#fff', textAlign: 'center',
+            padding: spacing['8'], color: colors.white, textAlign: 'center',
           }}>
             <p style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.medium, marginBottom: spacing['2'] }}>
               Unable to load document
             </p>
-            <p style={{ fontSize: typography.fontSize.sm, color: 'rgba(255,255,255,0.6)' }}>
+            <p style={{ fontSize: typography.fontSize.sm, color: colors.overlayWhiteMedium }}>
               {error}
             </p>
           </div>
@@ -131,7 +131,7 @@ export function PdfViewer({ file, title, onClose }: PdfViewerProps) {
               onLoadSuccess={onDocumentLoadSuccess}
               onLoadError={onDocumentLoadError}
               loading={
-                <div style={{ width: 600, height: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' }}>
+                <div style={{ width: 600, height: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.white }}>
                   <div style={{ textAlign: 'center', color: colors.textTertiary }}>
                     <div style={{
                       width: 32, height: 32, borderRadius: '50%',

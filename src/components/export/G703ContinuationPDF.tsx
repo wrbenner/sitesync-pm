@@ -3,28 +3,28 @@
 
 import React from 'react'
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer'
-import { vizColors } from '../../styles/theme'
+import { colors, vizColors } from '../../styles/theme'
 import type { G702Data, G703LineItem } from '../../machines/paymentMachine'
 
 const styles = StyleSheet.create({
   page: { padding: 24, fontSize: 7, fontFamily: 'Helvetica', color: vizColors.darkText },
   header: { marginBottom: 12 },
   title: { fontSize: 12, fontFamily: 'Helvetica-Bold', textAlign: 'center', marginBottom: 2 },
-  subtitle: { fontSize: 8, textAlign: 'center', color: '#5C5550', marginBottom: 8 },
+  subtitle: { fontSize: 8, textAlign: 'center', color: colors.textSecondary, marginBottom: 8 },
   infoRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2, fontSize: 7 },
   // Table
   table: { marginTop: 8 },
-  headerRow: { flexDirection: 'row', backgroundColor: '#0C0D0F', padding: 4 },
-  headerCell: { fontFamily: 'Helvetica-Bold', fontSize: 6, color: '#FFFFFF', textAlign: 'center' },
-  row: { flexDirection: 'row', padding: 3, borderBottomWidth: 0.5, borderBottomColor: '#E5E1DC' },
-  rowAlt: { flexDirection: 'row', padding: 3, borderBottomWidth: 0.5, borderBottomColor: '#E5E1DC', backgroundColor: '#FAFAF8' },
+  headerRow: { flexDirection: 'row', backgroundColor: colors.darkNavy, padding: 4 },
+  headerCell: { fontFamily: 'Helvetica-Bold', fontSize: 6, color: colors.white, textAlign: 'center' },
+  row: { flexDirection: 'row', padding: 3, borderBottomWidth: 0.5, borderBottomColor: colors.borderDefault },
+  rowAlt: { flexDirection: 'row', padding: 3, borderBottomWidth: 0.5, borderBottomColor: colors.borderDefault, backgroundColor: colors.surfacePage },
   cell: { fontSize: 7, textAlign: 'right' },
   cellLeft: { fontSize: 7, textAlign: 'left' },
-  totalRow: { flexDirection: 'row', padding: 4, borderTopWidth: 1.5, borderTopColor: '#0C0D0F', marginTop: 2 },
+  totalRow: { flexDirection: 'row', padding: 4, borderTopWidth: 1.5, borderTopColor: colors.darkNavy, marginTop: 2 },
   totalCell: { fontSize: 7, fontFamily: 'Helvetica-Bold', textAlign: 'right' },
   // Footer
-  footer: { position: 'absolute', bottom: 16, left: 24, right: 24, flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 0.5, borderTopColor: '#E5E1DC', paddingTop: 4 },
-  footerText: { fontSize: 6, color: '#9A9490' },
+  footer: { position: 'absolute', bottom: 16, left: 24, right: 24, flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 0.5, borderTopColor: colors.borderDefault, paddingTop: 4 },
+  footerText: { fontSize: 6, color: colors.textTertiary },
 })
 
 // Column widths (percentage)

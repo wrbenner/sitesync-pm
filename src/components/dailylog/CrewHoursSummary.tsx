@@ -64,9 +64,9 @@ export const CrewHoursSummary: React.FC<CrewHoursSummaryProps> = ({ crews }) => 
               <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{crew.workers}</span>
               <div style={{ position: 'relative', height: 16 }}>
                 {/* Planned (background) */}
-                <div style={{ position: 'absolute', top: 0, left: 0, width: `${plannedWidth}%`, height: '100%', backgroundColor: colors.surfaceInset, borderRadius: 3 }} />
+                <div style={{ position: 'absolute', top: 0, left: 0, width: `${plannedWidth}%`, height: '100%', backgroundColor: colors.surfaceInset, borderRadius: borderRadius.sm }} />
                 {/* Actual (foreground) */}
-                <div style={{ position: 'absolute', top: 2, left: 0, width: `${actualWidth}%`, height: 12, backgroundColor: crew.color, borderRadius: 3, opacity: 0.85 }} />
+                <div style={{ position: 'absolute', top: 2, left: 0, width: `${actualWidth}%`, height: 12, backgroundColor: crew.color, borderRadius: borderRadius.sm, opacity: 0.85 }} />
               </div>
               <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, textAlign: 'right' }}>{crew.hours}</span>
               <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, textAlign: 'right' }}>{crew.plannedHours}</span>

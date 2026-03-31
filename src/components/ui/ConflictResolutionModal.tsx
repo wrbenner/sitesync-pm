@@ -62,7 +62,7 @@ export const ConflictResolutionModal: React.FC<ConflictResolutionModalProps> = (
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+        backgroundColor: colors.overlayDark,
       }}
       onClick={onClose}
     >
@@ -95,7 +95,7 @@ export const ConflictResolutionModal: React.FC<ConflictResolutionModalProps> = (
             <div style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
               Sync Conflict
             </div>
-            <div style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, marginTop: '2px' }}>
+            <div style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, marginTop: spacing['0.5'] }}>
               {conflicts.length} conflict{conflicts.length !== 1 ? 's' : ''} to resolve
               {conflicts.length > 1 && ` (${currentIndex + 1} of ${conflicts.length})`}
             </div>
@@ -165,7 +165,7 @@ export const ConflictResolutionModal: React.FC<ConflictResolutionModalProps> = (
                   style={{
                     padding: `${spacing['2']} ${spacing['3']}`,
                     borderLeft: `1px solid ${colors.borderDefault}`,
-                    backgroundColor: 'rgba(58, 123, 200, 0.04)',
+                    backgroundColor: colors.statusInfoExtraSubtle,
                     color: colors.textPrimary,
                     wordBreak: 'break-word',
                   }}
@@ -176,7 +176,7 @@ export const ConflictResolutionModal: React.FC<ConflictResolutionModalProps> = (
                   style={{
                     padding: `${spacing['2']} ${spacing['3']}`,
                     borderLeft: `1px solid ${colors.borderDefault}`,
-                    backgroundColor: 'rgba(45, 138, 110, 0.04)',
+                    backgroundColor: colors.statusActiveExtraSubtle,
                     color: colors.textPrimary,
                     wordBreak: 'break-word',
                   }}
@@ -258,7 +258,7 @@ export const ConflictResolutionModal: React.FC<ConflictResolutionModalProps> = (
                 fontSize: typography.fontSize.sm,
                 fontWeight: typography.fontWeight.semibold,
                 fontFamily: typography.fontFamily,
-                color: 'white',
+                color: colors.white,
                 cursor: resolving ? 'wait' : 'pointer',
                 transition: transitions.quick,
               }}
@@ -275,8 +275,8 @@ export const ConflictResolutionModal: React.FC<ConflictResolutionModalProps> = (
 const navBtnStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
-  gap: '4px',
-  padding: '4px 8px',
+  gap: spacing['1'],
+  padding: `${spacing['1']} ${spacing['2']}`,
   backgroundColor: 'transparent',
   border: `1px solid ${colors.borderDefault}`,
   borderRadius: borderRadius.sm,

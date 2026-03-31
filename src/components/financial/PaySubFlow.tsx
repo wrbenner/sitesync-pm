@@ -103,7 +103,7 @@ export const PaySubFlow = memo<PaySubFlowProps>(
       <div
         style={{
           position: 'fixed', inset: 0, zIndex: zIndex.modal,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(4px)',
+          backgroundColor: colors.overlayBackdrop, backdropFilter: 'blur(4px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           padding: spacing['4'],
         }}
@@ -191,7 +191,7 @@ export const PaySubFlow = memo<PaySubFlowProps>(
                             <span style={{
                               padding: `1px ${spacing['2']}`, borderRadius: borderRadius.full,
                               backgroundColor: colors.statusActiveSubtle, color: colors.statusActive,
-                              fontSize: '9px', fontWeight: typography.fontWeight.semibold,
+                              fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
                             }}>
                               Recommended
                             </span>

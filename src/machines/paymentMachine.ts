@@ -2,6 +2,7 @@
 // Manages the lifecycle: draft → submitted → gc_review → owner_review → approved → paid.
 
 import { setup, assign } from 'xstate'
+import { colors } from '../styles/theme'
 
 export type PaymentStatus = 'draft' | 'submitted' | 'gc_review' | 'owner_review' | 'approved' | 'rejected' | 'paid' | 'void'
 export type LienWaiverStatus = 'pending' | 'conditional' | 'unconditional' | 'final' | 'waived'
@@ -98,14 +99,14 @@ export function getValidPaymentTransitions(status: PaymentStatus): string[] {
 
 export function getPaymentStatusConfig(status: PaymentStatus) {
   const config: Record<PaymentStatus, { label: string; color: string; bg: string }> = {
-    draft: { label: 'Draft', color: '#8C8580', bg: 'rgba(140,133,128,0.08)' },
-    submitted: { label: 'Submitted', color: '#3A7BC8', bg: 'rgba(58,123,200,0.08)' },
-    gc_review: { label: 'GC Review', color: '#C4850C', bg: 'rgba(196,133,12,0.08)' },
-    owner_review: { label: 'Owner Review', color: '#7C5DC7', bg: 'rgba(124,93,199,0.08)' },
-    approved: { label: 'Approved', color: '#2D8A6E', bg: 'rgba(45,138,110,0.08)' },
-    rejected: { label: 'Rejected', color: '#C93B3B', bg: 'rgba(201,59,59,0.08)' },
-    paid: { label: 'Paid', color: '#2D8A6E', bg: 'rgba(45,138,110,0.12)' },
-    void: { label: 'Void', color: '#8C8580', bg: 'rgba(140,133,128,0.04)' },
+    draft: { label: 'Draft', color: colors.statusNeutral, bg: colors.statusNeutralSubtle },
+    submitted: { label: 'Submitted', color: colors.statusInfo, bg: colors.statusInfoSubtle },
+    gc_review: { label: 'GC Review', color: colors.statusPending, bg: colors.statusPendingSubtle },
+    owner_review: { label: 'Owner Review', color: colors.statusReview, bg: colors.statusReviewSubtle },
+    approved: { label: 'Approved', color: colors.statusActive, bg: colors.statusActiveSubtle },
+    rejected: { label: 'Rejected', color: colors.statusCritical, bg: colors.statusCriticalSubtle },
+    paid: { label: 'Paid', color: colors.statusActive, bg: colors.orangeLight },
+    void: { label: 'Void', color: colors.statusNeutral, bg: colors.statusNeutralSubtle },
   }
   return config[status] || config.draft
 }
@@ -227,11 +228,11 @@ export interface LienWaiver {
 
 export function getLienWaiverStatusConfig(status: LienWaiverStatus) {
   const config: Record<LienWaiverStatus, { label: string; color: string; bg: string }> = {
-    pending: { label: 'Pending', color: '#C4850C', bg: 'rgba(196,133,12,0.08)' },
-    conditional: { label: 'Conditional', color: '#3A7BC8', bg: 'rgba(58,123,200,0.08)' },
-    unconditional: { label: 'Unconditional', color: '#2D8A6E', bg: 'rgba(45,138,110,0.08)' },
-    final: { label: 'Final', color: '#2D8A6E', bg: 'rgba(45,138,110,0.12)' },
-    waived: { label: 'Waived', color: '#8C8580', bg: 'rgba(140,133,128,0.08)' },
+    pending: { label: 'Pending', color: colors.statusPending, bg: colors.statusPendingSubtle },
+    conditional: { label: 'Conditional', color: colors.statusInfo, bg: colors.statusInfoSubtle },
+    unconditional: { label: 'Unconditional', color: colors.statusActive, bg: colors.statusActiveSubtle },
+    final: { label: 'Final', color: colors.statusActive, bg: colors.orangeLight },
+    waived: { label: 'Waived', color: colors.statusNeutral, bg: colors.statusNeutralSubtle },
   }
   return config[status] || config.pending
 }

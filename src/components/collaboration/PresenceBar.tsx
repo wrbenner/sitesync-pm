@@ -36,7 +36,7 @@ export const PresenceBar: React.FC<PresenceBarProps> = ({ page }) => {
               borderRadius: borderRadius.full,
               backgroundColor: user.color,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '9px', fontWeight: typography.fontWeight.semibold,
+              fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
               color: colors.white, border: `2px solid ${colors.surfaceRaised}`,
               marginLeft: i > 0 ? '-6px' : 0,
               zIndex: users.length - i,
@@ -82,7 +82,7 @@ export const EntityPresence: React.FC<EntityPresenceProps> = ({ entityId }) => {
             borderRadius: borderRadius.full,
             backgroundColor: user.color,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '8px', fontWeight: typography.fontWeight.semibold,
+            fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
             color: colors.white,
           }}
         >
@@ -117,7 +117,7 @@ export const SidebarPresenceDot: React.FC<SidebarPresenceDotProps> = ({ page }) 
         boxShadow: `0 0 0 2px ${colors.surfaceSidebar}`,
       }} />
       {count > 1 && (
-        <span style={{ fontSize: '9px', color: colors.textTertiary }}>{count}</span>
+        <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{count}</span>
       )}
     </div>
   );

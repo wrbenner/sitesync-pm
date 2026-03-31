@@ -1,6 +1,6 @@
 import React from 'react';
 import { MapPin, Circle, Ruler, Type, Undo2, MousePointer } from 'lucide-react';
-import { colors, spacing, borderRadius, transitions } from '../../styles/theme';
+import { colors, spacing, borderRadius, transitions, shadows } from '../../styles/theme';
 
 export type MarkupTool = 'select' | 'pin' | 'highlight' | 'measure' | 'text';
 
@@ -24,7 +24,7 @@ export const MarkupToolbar: React.FC<MarkupToolbarProps> = ({ activeTool, onTool
     <div style={{
       display: 'flex', alignItems: 'center', gap: spacing['1'],
       padding: spacing['1'], backgroundColor: colors.surfaceRaised,
-      borderRadius: borderRadius.full, boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+      borderRadius: borderRadius.full, boxShadow: shadows.cardHover,
     }}>
       {tools.map((tool) => {
         const isActive = activeTool === tool.id;
@@ -37,7 +37,7 @@ export const MarkupToolbar: React.FC<MarkupToolbarProps> = ({ activeTool, onTool
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               width: 36, height: 36, border: 'none', borderRadius: borderRadius.full,
               backgroundColor: isActive ? colors.primaryOrange : 'transparent',
-              color: isActive ? 'white' : colors.textSecondary,
+              color: isActive ? colors.white : colors.textSecondary,
               cursor: 'pointer', transition: `all ${transitions.instant}`,
             }}
           >

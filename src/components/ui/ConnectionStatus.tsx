@@ -100,11 +100,11 @@ export const ConnectionStatusDot: React.FC = React.memo(() => {
         </span>
         {pendingChanges > 0 && (
           <span style={{
-            fontSize: '9px',
+            fontSize: typography.fontSize.caption,
             fontWeight: typography.fontWeight.semibold,
             backgroundColor: colors.statusPendingSubtle,
             color: colors.statusPending,
-            padding: '1px 5px',
+            padding: `${spacing['px']} ${spacing['1']}`,
             borderRadius: borderRadius.full,
           }}>
             {pendingChanges}

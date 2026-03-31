@@ -112,7 +112,7 @@ const EntityCard = memo<EntityCardProps>(({ entity, index, onRemove }) => {
   return (
     <div
       style={{
-        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+        backgroundColor: colors.darkHoverBg,
         borderRadius: borderRadius.lg,
         border: `1px solid rgba(255, 255, 255, 0.12)`,
         overflow: 'hidden',
@@ -125,7 +125,7 @@ const EntityCard = memo<EntityCardProps>(({ entity, index, onRemove }) => {
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: `${spacing['3']} ${spacing['4']}`,
-          borderBottom: `1px solid rgba(255, 255, 255, 0.06)`,
+          borderBottom: `1px solid ${colors.darkHoverBg}`,
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
@@ -156,7 +156,7 @@ const EntityCard = memo<EntityCardProps>(({ entity, index, onRemove }) => {
           <span
             style={{
               fontSize: typography.fontSize.caption,
-              color: 'rgba(255, 255, 255, 0.4)',
+              color: colors.darkMutedText,
             }}
           >
             {Math.round(entity.confidence * 100)}% confidence
@@ -175,7 +175,7 @@ const EntityCard = memo<EntityCardProps>(({ entity, index, onRemove }) => {
             border: 'none',
             borderRadius: borderRadius.sm,
             cursor: 'pointer',
-            color: 'rgba(255, 255, 255, 0.3)',
+            color: colors.toolbarBg,
           }}
         >
           <Trash2 size={12} />
@@ -198,7 +198,7 @@ const EntityCard = memo<EntityCardProps>(({ entity, index, onRemove }) => {
             <span
               style={{
                 fontSize: typography.fontSize.caption,
-                color: 'rgba(255, 255, 255, 0.45)',
+                color: colors.darkMutedText,
                 flexShrink: 0,
                 minWidth: 70,
               }}
@@ -208,7 +208,7 @@ const EntityCard = memo<EntityCardProps>(({ entity, index, onRemove }) => {
             <span
               style={{
                 fontSize: typography.fontSize.sm,
-                color: 'rgba(255, 255, 255, 0.85)',
+                color: colors.textOnDark,
                 fontWeight: typography.fontWeight.medium,
                 textAlign: 'right',
                 lineHeight: typography.lineHeight.snug,
@@ -256,10 +256,10 @@ const AudioPlayback = memo<{ audioUrl: string | null }>(({ audioUrl }) => {
         alignItems: 'center',
         gap: spacing['1'],
         padding: `${spacing['1.5']} ${spacing['3']}`,
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        backgroundColor: colors.overlayWhiteThin,
         border: 'none',
         borderRadius: borderRadius.full,
-        color: 'rgba(255, 255, 255, 0.7)',
+        color: colors.overlayWhiteBold,
         fontSize: typography.fontSize.caption,
         fontFamily: typography.fontFamily,
         fontWeight: typography.fontWeight.medium,
@@ -334,8 +334,8 @@ export const VoiceCapture: React.FC<VoiceCaptureProps> = ({ onClose, onConfirm }
             disabled={vc.phase === 'recording'}
             aria-label="Select language"
             style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.08)',
-              color: 'rgba(255, 255, 255, 0.7)',
+              backgroundColor: colors.darkHoverBg,
+              color: colors.overlayWhiteBold,
               border: 'none',
               borderRadius: borderRadius.base,
               padding: `${spacing['1']} ${spacing['2']}`,
@@ -386,7 +386,7 @@ export const VoiceCapture: React.FC<VoiceCaptureProps> = ({ onClose, onConfirm }
             style={{
               backgroundColor: 'transparent',
               border: 'none',
-              color: 'rgba(255, 255, 255, 0.5)',
+              color: colors.textOnDarkMuted,
               cursor: 'pointer',
               padding: spacing['2'],
             }}
@@ -439,7 +439,7 @@ export const VoiceCapture: React.FC<VoiceCaptureProps> = ({ onClose, onConfirm }
             <p
               style={{
                 fontSize: typography.fontSize.sm,
-                color: 'rgba(255, 255, 255, 0.5)',
+                color: colors.textOnDarkMuted,
                 margin: 0,
                 marginBottom: spacing['8'],
               }}
@@ -486,7 +486,7 @@ export const VoiceCapture: React.FC<VoiceCaptureProps> = ({ onClose, onConfirm }
                 style={{
                   width: 48,
                   height: 48,
-                  border: `3px solid rgba(255, 255, 255, 0.1)`,
+                  border: `3px solid ${colors.overlayWhiteThin}`,
                   borderTopColor: colors.statusReview,
                   borderRadius: '50%',
                   animation: 'spin 0.8s linear infinite',
@@ -505,7 +505,7 @@ export const VoiceCapture: React.FC<VoiceCaptureProps> = ({ onClose, onConfirm }
                 <p
                   style={{
                     fontSize: typography.fontSize.caption,
-                    color: 'rgba(255, 255, 255, 0.4)',
+                    color: colors.darkMutedText,
                     margin: 0,
                     marginBottom: spacing['2'],
                     textTransform: 'uppercase',
@@ -517,7 +517,7 @@ export const VoiceCapture: React.FC<VoiceCaptureProps> = ({ onClose, onConfirm }
                 <p
                   style={{
                     fontSize: typography.fontSize.body,
-                    color: 'rgba(255, 255, 255, 0.85)',
+                    color: colors.textOnDark,
                     margin: 0,
                     lineHeight: typography.lineHeight.relaxed,
                   }}
@@ -574,7 +574,7 @@ export const VoiceCapture: React.FC<VoiceCaptureProps> = ({ onClose, onConfirm }
                 <span
                   style={{
                     fontSize: typography.fontSize.caption,
-                    color: 'rgba(255, 255, 255, 0.4)',
+                    color: colors.darkMutedText,
                     marginLeft: 'auto',
                   }}
                 >
@@ -588,7 +588,7 @@ export const VoiceCapture: React.FC<VoiceCaptureProps> = ({ onClose, onConfirm }
               style={{
                 width: '100%',
                 padding: spacing['3'],
-                backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                backgroundColor: 'rgba(255, 255, 255, 0.04)', /* subtle dark bg */
                 borderRadius: borderRadius.base,
                 marginBottom: spacing['4'],
               }}
@@ -604,7 +604,7 @@ export const VoiceCapture: React.FC<VoiceCaptureProps> = ({ onClose, onConfirm }
                 <span
                   style={{
                     fontSize: typography.fontSize.caption,
-                    color: 'rgba(255, 255, 255, 0.4)',
+                    color: colors.darkMutedText,
                     textTransform: 'uppercase',
                     letterSpacing: typography.letterSpacing.wider,
                   }}
@@ -616,7 +616,7 @@ export const VoiceCapture: React.FC<VoiceCaptureProps> = ({ onClose, onConfirm }
               <p
                 style={{
                   fontSize: typography.fontSize.sm,
-                  color: 'rgba(255, 255, 255, 0.65)',
+                  color: 'rgba(255, 255, 255, 0.65)', /* between muted and bold */
                   margin: 0,
                   lineHeight: typography.lineHeight.relaxed,
                   fontStyle: 'italic',
@@ -650,7 +650,7 @@ export const VoiceCapture: React.FC<VoiceCaptureProps> = ({ onClose, onConfirm }
                   style={{
                     textAlign: 'center',
                     padding: spacing['8'],
-                    color: 'rgba(255, 255, 255, 0.4)',
+                    color: colors.darkMutedText,
                     fontSize: typography.fontSize.sm,
                   }}
                 >
@@ -707,8 +707,8 @@ export const VoiceCapture: React.FC<VoiceCaptureProps> = ({ onClose, onConfirm }
                   justifyContent: 'center',
                   gap: spacing['2'],
                   padding: `${spacing['4']} ${spacing['5']}`,
-                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                  color: 'rgba(255, 255, 255, 0.7)',
+                  backgroundColor: colors.overlayWhiteThin,
+                  color: colors.overlayWhiteBold,
                   border: 'none',
                   borderRadius: borderRadius.lg,
                   fontSize: typography.fontSize.sm,
@@ -729,8 +729,8 @@ export const VoiceCapture: React.FC<VoiceCaptureProps> = ({ onClose, onConfirm }
                   alignItems: 'center',
                   justifyContent: 'center',
                   padding: `${spacing['4']} ${spacing['5']}`,
-                  backgroundColor: 'rgba(255, 255, 255, 0.06)',
-                  color: 'rgba(255, 255, 255, 0.4)',
+                  backgroundColor: colors.darkHoverBg,
+                  color: colors.darkMutedText,
                   border: 'none',
                   borderRadius: borderRadius.lg,
                   fontSize: typography.fontSize.sm,
@@ -767,8 +767,8 @@ export const VoiceCapture: React.FC<VoiceCaptureProps> = ({ onClose, onConfirm }
               onClick={vc.reset}
               style={{
                 padding: `${spacing['3']} ${spacing['6']}`,
-                backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                color: 'rgba(255, 255, 255, 0.7)',
+                backgroundColor: colors.overlayWhiteThin,
+                color: colors.overlayWhiteBold,
                 border: 'none',
                 borderRadius: borderRadius.base,
                 fontSize: typography.fontSize.sm,

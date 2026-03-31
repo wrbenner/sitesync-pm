@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext, createContext, useCallback, use
 import { X, Search, CheckCircle, AlertTriangle, Info, XCircle, ChevronRight, LayoutGrid, HelpCircle, Calendar, DollarSign, User, Users, ClipboardList, FileText } from 'lucide-react';
 import type { RelatedItem, EntityType } from '../utils/connections';
 import { colors, spacing, typography, borderRadius, shadows, transitions, zIndex, layout } from '../styles/theme';
+import { motion as motionTokens, easing, duration } from '../styles/animations';
 
 // ─── Sidebar Context ────────────────────────────────────────────────────────
 // Shared context so PageContainer and TopBar can respond to sidebar state
@@ -119,18 +120,35 @@ export const Card: React.FC<CardProps> = React.memo(({ children, padding = spaci
       padding,
       boxShadow: shadows.card,
       cursor: onClick ? 'pointer' : 'default',
-      transition: `box-shadow ${transitions.quick}, background-color ${transitions.quick}`,
+      transition: motionTokens.cardLift,
+      transform: 'translateY(0)',
     }}
     onMouseEnter={(e) => {
       if (onClick) {
-        (e.currentTarget as HTMLDivElement).style.boxShadow = shadows.cardHover;
-        (e.currentTarget as HTMLDivElement).style.backgroundColor = colors.surfaceHover;
+        const el = e.currentTarget as HTMLDivElement;
+        el.style.boxShadow = shadows.cardHover;
+        el.style.transform = 'translateY(-2px)';
       }
     }}
     onMouseLeave={(e) => {
       if (onClick) {
-        (e.currentTarget as HTMLDivElement).style.boxShadow = shadows.card;
-        (e.currentTarget as HTMLDivElement).style.backgroundColor = colors.surfaceRaised;
+        const el = e.currentTarget as HTMLDivElement;
+        el.style.boxShadow = shadows.card;
+        el.style.transform = 'translateY(0)';
+      }
+    }}
+    onMouseDown={(e) => {
+      if (onClick) {
+        const el = e.currentTarget as HTMLDivElement;
+        el.style.transform = 'translateY(0) scale(0.995)';
+        el.style.boxShadow = shadows.card;
+      }
+    }}
+    onMouseUp={(e) => {
+      if (onClick) {
+        const el = e.currentTarget as HTMLDivElement;
+        el.style.transform = 'translateY(-2px)';
+        el.style.boxShadow = shadows.cardHover;
       }
     }}
   >
@@ -202,6 +220,13 @@ export const Btn: React.FC<BtnProps> = ({
   const v = variants[variant];
   const s = sizes[size];
 
+  const pressedBg: Record<string, string> = {
+    primary: colors.orangePressed,
+    secondary: colors.surfaceInset,
+    ghost: colors.surfaceInset,
+    danger: colors.statusCritical,
+  };
+
   return (
     <button
       type={type}
@@ -222,22 +247,43 @@ export const Btn: React.FC<BtnProps> = ({
         borderRadius: borderRadius.md,
         cursor: disabled ? 'not-allowed' : 'pointer',
         opacity: disabled ? 0.5 : 1,
-        transition: `background-color ${transitions.fast}, transform ${transitions.fast}`,
+        transition: `all ${duration.instant}ms ${easing.standard}, transform ${duration.fast}ms ${easing.spring}`,
+        transform: 'scale(1)',
         alignItems: 'center',
         justifyContent: 'center',
         gap: spacing.sm,
+        boxShadow: shadows.none,
       }}
       onMouseEnter={(e) => {
-        if (!disabled) (e.currentTarget as HTMLButtonElement).style.backgroundColor = v.hover;
+        if (!disabled) {
+          const el = e.currentTarget as HTMLButtonElement;
+          el.style.backgroundColor = v.hover;
+          el.style.boxShadow = shadows.sm;
+        }
       }}
       onMouseLeave={(e) => {
-        if (!disabled) (e.currentTarget as HTMLButtonElement).style.backgroundColor = v.bg;
+        if (!disabled) {
+          const el = e.currentTarget as HTMLButtonElement;
+          el.style.backgroundColor = v.bg;
+          el.style.transform = 'scale(1)';
+          el.style.boxShadow = shadows.none;
+        }
       }}
       onMouseDown={(e) => {
-        if (!disabled) (e.currentTarget as HTMLButtonElement).style.transform = 'scale(0.98)';
+        if (!disabled) {
+          const el = e.currentTarget as HTMLButtonElement;
+          el.style.transform = 'scale(0.98)';
+          el.style.backgroundColor = pressedBg[variant];
+          el.style.boxShadow = shadows.none;
+        }
       }}
       onMouseUp={(e) => {
-        (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)';
+        if (!disabled) {
+          const el = e.currentTarget as HTMLButtonElement;
+          el.style.transform = 'scale(1)';
+          el.style.backgroundColor = v.hover;
+          el.style.boxShadow = shadows.sm;
+        }
       }}
     >
       {icon && iconPosition === 'left' && <span style={{ display: 'flex' }}>{icon}</span>}
@@ -274,6 +320,18 @@ export const MetricBox: React.FC<MetricBoxProps> = React.memo(({
       borderRadius: borderRadius.lg,
       padding: spacing.xl,
       boxShadow: shadows.base,
+      transition: motionTokens.cardLift,
+      transform: 'translateY(0)',
+    }}
+    onMouseEnter={(e) => {
+      const el = e.currentTarget as HTMLDivElement;
+      el.style.boxShadow = shadows.cardHover;
+      el.style.transform = 'translateY(-2px)';
+    }}
+    onMouseLeave={(e) => {
+      const el = e.currentTarget as HTMLDivElement;
+      el.style.boxShadow = shadows.base;
+      el.style.transform = 'translateY(0)';
     }}
   >
     <p
@@ -344,15 +402,24 @@ export const Tag: React.FC<TagProps> = React.memo(({
   <span
     style={{
       display: 'inline-block',
-      padding: `2px ${spacing['2']}`,
+      padding: `${spacing['0.5']} ${spacing['2']}`,
       borderRadius: borderRadius.sm,
       backgroundColor,
       color,
       fontSize,
       fontWeight: typography.fontWeight.medium,
       whiteSpace: 'nowrap',
-      lineHeight: '18px',
+      lineHeight: typography.lineHeight.normal,
       letterSpacing: typography.letterSpacing.wide,
+      transition: `box-shadow ${duration.instant}ms ${easing.standard}, filter ${duration.instant}ms ${easing.standard}`,
+    }}
+    onMouseEnter={(e) => {
+      (e.currentTarget as HTMLSpanElement).style.boxShadow = shadows.sm;
+      (e.currentTarget as HTMLSpanElement).style.filter = 'saturate(1.2)';
+    }}
+    onMouseLeave={(e) => {
+      (e.currentTarget as HTMLSpanElement).style.boxShadow = 'none';
+      (e.currentTarget as HTMLSpanElement).style.filter = 'none';
     }}
   >
     {label}
@@ -446,12 +513,12 @@ export const TableHeader: React.FC<TableHeaderProps> = React.memo(({ columns }) 
     style={{
       display: 'grid',
       gridTemplateColumns: columns.map((c) => c.width || '1fr').join(' '),
-      padding: `10px ${spacing['5']}`,
+      padding: `${spacing['2.5']} ${spacing['5']}`,
       borderBottom: `1px solid ${colors.borderDefault}`,
       position: 'sticky',
       top: 0,
       backgroundColor: colors.surfaceInset,
-      zIndex: 10,
+      zIndex: zIndex.base,
     }}
   >
     {columns.map((col, i) => (
@@ -499,19 +566,27 @@ export const TableRow: React.FC<TableRowProps> = React.memo(({ columns, onClick,
     style={{
       display: 'grid',
       gridTemplateColumns: columns.map((c) => c.width || '1fr').join(' '),
-      padding: `14px ${spacing['5']}`,
+      padding: `${spacing['3.5']} ${spacing['5']}`,
       borderBottom: divider ? `1px solid ${colors.borderSubtle}` : 'none',
       backgroundColor: baseBg,
       cursor: onClick ? 'pointer' : 'default',
-      transition: `background-color ${transitions.quick}`,
+      transition: `background-color ${duration.instant}ms ${easing.standard}, border-left ${duration.instant}ms ${easing.standard}`,
       alignItems: 'center',
-      borderLeft: selected ? `2px solid ${colors.primaryOrange}` : '2px solid transparent',
+      borderLeft: selected ? `3px solid ${colors.primaryOrange}` : '3px solid transparent',
     }}
     onMouseEnter={(e) => {
-      if (onClick) (e.currentTarget as HTMLDivElement).style.backgroundColor = selected ? colors.surfaceSelected : colors.surfaceHover;
+      if (onClick) {
+        const el = e.currentTarget as HTMLDivElement;
+        el.style.backgroundColor = selected ? colors.surfaceSelected : colors.surfaceHover;
+        if (!selected) el.style.borderLeft = `3px solid ${colors.primaryOrange}`;
+      }
     }}
     onMouseLeave={(e) => {
-      if (onClick) (e.currentTarget as HTMLDivElement).style.backgroundColor = baseBg;
+      if (onClick) {
+        const el = e.currentTarget as HTMLDivElement;
+        el.style.backgroundColor = baseBg;
+        if (!selected) el.style.borderLeft = '3px solid transparent';
+      }
     }}
   >
     {columns.map((col, i) => (
@@ -579,8 +654,9 @@ export const Modal: React.FC<ModalProps> = ({ open, onClose, title, children, wi
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+        backgroundColor: colors.overlayDark,
         backdropFilter: 'blur(8px)',
+        animation: `fadeIn ${duration.normal}ms ${easing.enter}`,
       }}
       onClick={onClose}
     >
@@ -597,6 +673,7 @@ export const Modal: React.FC<ModalProps> = ({ open, onClose, title, children, wi
           maxWidth: '90vw',
           maxHeight: '85vh',
           overflow: 'auto',
+          animation: `modalIn ${duration.smooth}ms ${easing.apple}`,
           boxShadow: shadows.lg,
           outline: 'none',
         }}
@@ -632,16 +709,29 @@ export const Modal: React.FC<ModalProps> = ({ open, onClose, title, children, wi
               justifyContent: 'center',
               backgroundColor: 'transparent',
               border: 'none',
-              borderRadius: borderRadius.md,
+              borderRadius: borderRadius.full,
               cursor: 'pointer',
               color: colors.textTertiary,
-              transition: `background-color ${transitions.fast}`,
+              transition: `background-color ${duration.instant}ms ${easing.standard}, color ${duration.instant}ms ${easing.standard}, transform ${duration.fast}ms ${easing.spring}`,
+              transform: 'scale(1)',
             }}
             onMouseEnter={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.surfaceFlat;
+              const el = e.currentTarget as HTMLButtonElement;
+              el.style.backgroundColor = colors.surfaceHover;
+              el.style.color = colors.textPrimary;
             }}
             onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
+              const el = e.currentTarget as HTMLButtonElement;
+              el.style.backgroundColor = 'transparent';
+              el.style.color = colors.textTertiary;
+              el.style.transform = 'scale(1)';
+            }}
+            onMouseDown={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.transform = 'scale(0.9)';
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.surfaceInset;
+            }}
+            onMouseUp={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)';
             }}
           >
             <X size={18} />
@@ -663,7 +753,7 @@ interface TabBarProps {
 }
 
 export const TabBar: React.FC<TabBarProps> = React.memo(({ tabs, activeTab, onChange }) => (
-  <div role="tablist" style={{ display: 'flex', gap: spacing.xl }}>
+  <div role="tablist" style={{ display: 'flex', gap: spacing.xl, position: 'relative' }}>
     {tabs.map((tab) => {
       const isActive = tab.id === activeTab;
       return (
@@ -684,10 +774,16 @@ export const TabBar: React.FC<TabBarProps> = React.memo(({ tabs, activeTab, onCh
             border: 'none',
             borderBottom: isActive ? `2px solid ${colors.primaryOrange}` : '2px solid transparent',
             cursor: 'pointer',
-            transition: `all ${transitions.fast}`,
+            transition: `color ${duration.instant}ms ${easing.standard}, border-color ${duration.normal}ms ${easing.standard}, font-weight ${duration.fast}ms ${easing.standard}`,
             display: 'flex',
             alignItems: 'center',
             gap: spacing.sm,
+          }}
+          onMouseEnter={(e) => {
+            if (!isActive) (e.currentTarget as HTMLButtonElement).style.color = colors.textSecondary;
+          }}
+          onMouseLeave={(e) => {
+            if (!isActive) (e.currentTarget as HTMLButtonElement).style.color = colors.textTertiary;
           }}
         >
           {tab.label}
@@ -1097,7 +1193,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               borderRadius: borderRadius.lg,
               boxShadow: shadows.md,
               borderLeft: `3px solid ${toastColors[toast.type]}`,
-              animation: toast.dismissing ? 'toastOut 300ms ease-in forwards' : 'toastIn 300ms ease-out',
+              animation: toast.dismissing ? `toastOut ${duration.smooth}ms ${easing.exit} forwards` : `toastIn ${duration.smooth}ms ${easing.spring}`,
               pointerEvents: 'auto',
               minWidth: '280px',
               maxWidth: '400px',
@@ -1262,7 +1358,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ items }) => {
       style={{
         position: 'fixed', inset: 0, zIndex: zIndex.command as number,
         display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
-        paddingTop: '15vh', backgroundColor: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)',
+        paddingTop: '15vh', backgroundColor: colors.overlayDark, backdropFilter: 'blur(4px)',
       }}
       onClick={() => setOpen(false)}
     >
@@ -1273,7 +1369,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ items }) => {
         style={{
           width: '600px', maxWidth: '90vw', backgroundColor: colors.surfaceRaised,
           borderRadius: borderRadius.xl, boxShadow: shadows.lg, overflow: 'hidden',
-          animation: 'scaleIn 150ms ease-out',
+          animation: `scaleIn ${duration.normal}ms ${easing.apple}`,
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -1297,7 +1393,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ items }) => {
               fontSize: typography.fontSize.xl, fontFamily: typography.fontFamily, color: colors.textPrimary,
             }}
           />
-          <kbd style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, backgroundColor: colors.surfaceFlat, padding: '2px 6px', borderRadius: borderRadius.sm }}>ESC</kbd>
+          <kbd style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, backgroundColor: colors.surfaceFlat, padding: `${spacing['0.5']} ${spacing['1.5']}`, borderRadius: borderRadius.sm }}>ESC</kbd>
         </div>
 
         {/* Results */}
@@ -1340,7 +1436,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ items }) => {
                         )}
                       </div>
                       {item.shortcut && (
-                        <kbd style={{ fontSize: '10px', color: colors.textTertiary, backgroundColor: colors.surfaceInset, padding: '1px 5px', borderRadius: borderRadius.sm, flexShrink: 0, fontFamily: 'monospace' }}>{item.shortcut}</kbd>
+                        <kbd style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, backgroundColor: colors.surfaceInset, padding: `${spacing['0.5']} ${spacing['1.5']}`, borderRadius: borderRadius.sm, flexShrink: 0, fontFamily: typography.fontFamilyMono }}>{item.shortcut}</kbd>
                       )}
                     </button>
                   );
@@ -1358,13 +1454,13 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ items }) => {
         {/* Footer with keyboard hints */}
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['4'], padding: `${spacing['2']} ${spacing.xl}`, borderTop: `1px solid ${colors.borderLight}` }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
-            <kbd style={{ fontSize: '9px', backgroundColor: colors.surfaceInset, padding: '1px 4px', borderRadius: 3, fontFamily: 'monospace' }}>↑↓</kbd> navigate
+            <kbd style={{ fontSize: typography.fontSize.caption, backgroundColor: colors.surfaceInset, padding: `${spacing['0.5']} ${spacing['1']}`, borderRadius: borderRadius.sm, fontFamily: typography.fontFamilyMono }}>↑↓</kbd> navigate
           </span>
           <span style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
-            <kbd style={{ fontSize: '9px', backgroundColor: colors.surfaceInset, padding: '1px 4px', borderRadius: 3, fontFamily: 'monospace' }}>↵</kbd> select
+            <kbd style={{ fontSize: typography.fontSize.caption, backgroundColor: colors.surfaceInset, padding: `${spacing['0.5']} ${spacing['1']}`, borderRadius: borderRadius.sm, fontFamily: typography.fontFamilyMono }}>↵</kbd> select
           </span>
           <span style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
-            <kbd style={{ fontSize: '9px', backgroundColor: colors.surfaceInset, padding: '1px 4px', borderRadius: 3, fontFamily: 'monospace' }}>esc</kbd> close
+            <kbd style={{ fontSize: typography.fontSize.caption, backgroundColor: colors.surfaceInset, padding: `${spacing['0.5']} ${spacing['1']}`, borderRadius: borderRadius.sm, fontFamily: typography.fontFamilyMono }}>esc</kbd> close
           </span>
           <span style={{ marginLeft: 'auto', fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
             Try &quot;RFI 004&quot; or &quot;Create RFI&quot;
@@ -1426,7 +1522,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({ open, onClose, title, 
 
   return (
     <>
-      <div onClick={onClose} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.2)', zIndex: zIndex.modal as number - 1, animation: 'fadeIn 200ms ease-out' }} />
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, backgroundColor: colors.overlayDark, zIndex: (zIndex.modal as number) - 1, animation: `fadeIn ${duration.normal}ms ${easing.enter}` }} />
       <div
         ref={panelRef}
         role="dialog"
@@ -1437,7 +1533,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({ open, onClose, title, 
           position: 'fixed', top: 0, right: 0, bottom: 0, width, maxWidth: '90vw',
           backgroundColor: colors.surfaceRaised, boxShadow: shadows.lg,
           zIndex: zIndex.modal as number, overflowY: 'auto',
-          animation: 'slideInRight 250ms ease-out',
+          animation: `slideInRight ${duration.smooth}ms ${easing.standard}`,
           outline: 'none',
         }}
       >
@@ -1446,9 +1542,31 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({ open, onClose, title, 
           <button
             onClick={onClose}
             aria-label="Close panel"
-            style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', border: 'none', borderRadius: borderRadius.md, cursor: 'pointer', color: colors.textTertiary, transition: `background-color ${transitions.fast}` }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.surfaceFlat; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'; }}
+            style={{
+              width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              backgroundColor: 'transparent', border: 'none', borderRadius: borderRadius.full,
+              cursor: 'pointer', color: colors.textTertiary,
+              transition: `background-color ${duration.instant}ms ${easing.standard}, color ${duration.instant}ms ${easing.standard}, transform ${duration.fast}ms ${easing.spring}`,
+              transform: 'scale(1)',
+            }}
+            onMouseEnter={(e) => {
+              const el = e.currentTarget as HTMLButtonElement;
+              el.style.backgroundColor = colors.surfaceHover;
+              el.style.color = colors.textPrimary;
+            }}
+            onMouseLeave={(e) => {
+              const el = e.currentTarget as HTMLButtonElement;
+              el.style.backgroundColor = 'transparent';
+              el.style.color = colors.textTertiary;
+              el.style.transform = 'scale(1)';
+            }}
+            onMouseDown={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.transform = 'scale(0.9)';
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.surfaceInset;
+            }}
+            onMouseUp={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)';
+            }}
           >
             <X size={18} />
           </button>
@@ -1474,8 +1592,8 @@ export const Skeleton: React.FC<SkeletonProps> = React.memo(({ width = '100%', h
     style={{
       width, height, borderRadius: br,
       background: `linear-gradient(90deg, ${colors.surfaceFlat} 25%, ${colors.borderLight} 50%, ${colors.surfaceFlat} 75%)`,
-      backgroundSize: '200% 100%',
-      animation: 'shimmer 1.5s infinite',
+      backgroundSize: '800px 100%',
+      animation: 'shimmer 1.5s linear infinite',
     }}
   />
 ));

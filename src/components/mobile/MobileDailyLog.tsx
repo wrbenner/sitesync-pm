@@ -51,14 +51,14 @@ interface MobileDailyLogProps {
 // ── Touch Input Styles ───────────────────────────────────
 
 const touchInput: React.CSSProperties = {
-  width: '100%', padding: '14px 16px', fontSize: '16px',
+  width: '100%', padding: `${spacing['3.5']} ${spacing['4']}`, fontSize: typography.fontSize.title,
   fontFamily: typography.fontFamily, border: 'none',
   backgroundColor: colors.surfaceInset, borderRadius: borderRadius.md,
   outline: 'none', boxSizing: 'border-box', minHeight: '48px',
 };
 
 const touchTextarea: React.CSSProperties = {
-  ...touchInput, resize: 'vertical', minHeight: '120px', lineHeight: '1.5',
+  ...touchInput, resize: 'vertical', minHeight: '120px', lineHeight: typography.lineHeight.normal,
 };
 
 // ── Component ────────────────────────────────────────────
@@ -341,7 +341,7 @@ export const MobileDailyLog: React.FC<MobileDailyLogProps> = ({
             key={s.id}
             onClick={() => { impact('light'); setActiveIndex(i); }}
             style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['0.5'],
               padding: `${spacing['2']} ${spacing['3']}`, minWidth: '60px', minHeight: '52px',
               backgroundColor: i === activeIndex ? `${s.color}12` : 'transparent',
               color: i === activeIndex ? s.color : colors.textTertiary,
@@ -351,7 +351,7 @@ export const MobileDailyLog: React.FC<MobileDailyLogProps> = ({
             }}
           >
             {s.icon}
-            <span style={{ fontSize: '10px', fontWeight: i === activeIndex ? typography.fontWeight.semibold : typography.fontWeight.medium }}>
+            <span style={{ fontSize: typography.fontSize.caption, fontWeight: i === activeIndex ? typography.fontWeight.semibold : typography.fontWeight.medium }}>
               {s.label}
             </span>
           </button>

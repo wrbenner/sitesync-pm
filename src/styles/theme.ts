@@ -61,15 +61,49 @@ export const colors = {
 
   // Utility
   white: '#FFFFFF',
+  black: '#000000',
+  textDisabled: '#C5C0BB',
+  surfaceDisabled: '#EDEDEB',
+  borderHover: '#D5D0CA',
 
   // Overlay / Backdrop
   overlayDark: 'rgba(0, 0, 0, 0.4)',
   overlayLight: 'rgba(255, 255, 255, 0.9)',
   overlayScrim: 'rgba(0, 0, 0, 0.6)',
+  overlayHeavy: 'rgba(0, 0, 0, 0.8)',
+  overlayBackdrop: 'rgba(0, 0, 0, 0.5)',
+  overlayWhiteThin: 'rgba(255, 255, 255, 0.1)',
+  overlayWhiteMedium: 'rgba(255, 255, 255, 0.6)',
+  overlayWhiteBold: 'rgba(255, 255, 255, 0.7)',
+  overlayBlackThin: 'rgba(0, 0, 0, 0.03)',
+  overlayBlackLight: 'rgba(0, 0, 0, 0.08)',
+  overlayBlackMedium: 'rgba(0, 0, 0, 0.1)',
+  overlayBlackHeavy: 'rgba(0, 0, 0, 0.12)',
+  panelBg: 'rgba(255, 255, 255, 0.95)',
+  toolbarBg: 'rgba(0, 0, 0, 0.3)',
 
   // Indigo / AI accent
   indigo: '#4F46E5',
   indigoSubtle: 'rgba(79, 70, 229, 0.06)',
+
+  // Dark mode topbar
+  topbarDark: 'rgba(12, 13, 15, 0.72)',
+  topbarLight: 'rgba(255, 255, 255, 0.72)',
+  darkHoverBg: 'rgba(255, 255, 255, 0.06)',
+  darkBorder: 'rgba(255, 255, 255, 0.1)',
+  darkMutedText: 'rgba(255, 255, 255, 0.5)',
+
+  // Photo/viewer overlays
+  photoGradient: 'linear-gradient(transparent, rgba(0,0,0,0.6))',
+  photoGradientHeavy: 'linear-gradient(transparent, rgba(0,0,0,0.8))',
+  viewerBg: 'rgba(0, 0, 0, 0.9)',
+
+  // Error banner
+  errorSubtle: 'rgba(200, 50, 50, 0.06)',
+
+  // Status subtle variants (extra)
+  statusInfoExtraSubtle: 'rgba(58, 123, 200, 0.04)',
+  statusActiveExtraSubtle: 'rgba(45, 138, 110, 0.04)',
 
   // Additional status variants
   statusInfoBright: '#4A9EE8',
@@ -248,6 +282,8 @@ export const typography = {
     body: '14px',
     title: '16px',
     subtitle: '18px',
+    medium: '20px',
+    large: '24px',
     heading: '28px',
     display: '36px',
     // Legacy aliases
@@ -357,6 +393,9 @@ export const layout = {
   contentPaddingY: '36px',
   mobileBreak: '768px',
   tabletBreak: '1024px',
+  searchWidth: '320px',
+  metricCardHeight: '120px',
+  tableRowHeight: '52px',
   // Legacy aliases
   pageMaxWidth: '1140px',
   pagePaddingX: '36px',

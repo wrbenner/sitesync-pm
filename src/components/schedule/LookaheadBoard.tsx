@@ -103,7 +103,7 @@ export const LookaheadBoard: React.FC<LookaheadBoardProps> = ({
                 }}
               >
                 <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: isToday ? colors.orangeText : colors.textPrimary }}>{day}</span>
-                <span style={{ fontSize: '12px', marginLeft: spacing['1'] }}>{w?.icon}</span>
+                <span style={{ fontSize: typography.fontSize.label, marginLeft: spacing['1'] }}>{w?.icon}</span>
               </div>
             );
           })}
@@ -170,7 +170,7 @@ export const LookaheadBoard: React.FC<LookaheadBoardProps> = ({
                           }}
                         >
                           <GripVertical size={10} color={colors.borderDefault} style={{ position: 'absolute', top: 2, right: 2 }} />
-                          <p style={{ fontWeight: typography.fontWeight.medium, color: colors.textPrimary, margin: 0, lineHeight: typography.lineHeight.snug, fontSize: '11px' }}>{task.title}</p>
+                          <p style={{ fontWeight: typography.fontWeight.medium, color: colors.textPrimary, margin: 0, lineHeight: typography.lineHeight.snug, fontSize: typography.fontSize.caption }}>{task.title}</p>
 
                           {/* Constraint chips */}
                           {unresolvedCount > 0 && (
@@ -181,9 +181,9 @@ export const LookaheadBoard: React.FC<LookaheadBoardProps> = ({
                                   onClick={(e) => { e.stopPropagation(); onConstraintToggle?.(task.id, task.constraints.indexOf(c)); }}
                                   style={{
                                     display: 'inline-flex', alignItems: 'center', gap: 2,
-                                    padding: '4px 8px', fontSize: '11px',
+                                    padding: `${spacing['1']} ${spacing['2']}`, fontSize: typography.fontSize.caption,
                                     backgroundColor: `${colors.statusPending}14`, color: colors.statusPending,
-                                    borderRadius: 3, cursor: 'pointer', fontWeight: typography.fontWeight.medium,
+                                    borderRadius: borderRadius.sm, cursor: 'pointer', fontWeight: typography.fontWeight.medium,
                                   }}
                                 >
                                   {constraintIcons[c.type]} {c.label}
@@ -196,7 +196,7 @@ export const LookaheadBoard: React.FC<LookaheadBoardProps> = ({
                           {unresolvedCount === 0 && task.constraints.length > 0 && (
                             <div style={{ display: 'flex', alignItems: 'center', gap: 2, marginTop: 2 }}>
                               <CheckCircle size={9} color={colors.statusActive} />
-                              <span style={{ fontSize: '9px', color: colors.statusActive }}>All clear</span>
+                              <span style={{ fontSize: typography.fontSize.caption, color: colors.statusActive }}>All clear</span>
                             </div>
                           )}
                         </div>

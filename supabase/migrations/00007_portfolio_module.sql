@@ -106,32 +106,3 @@ CREATE POLICY exec_reports_select ON executive_reports FOR SELECT
     ));
 CREATE POLICY exec_reports_insert ON executive_reports FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
 
--- =============================================================================
--- Seed Data
--- =============================================================================
-
-DO $$
-DECLARE
-  user_mike UUID := '11111111-1111-1111-1111-111111111111';
-  project_id UUID := 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
-  portfolio_id UUID := 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
-BEGIN
-  -- Portfolio
-  INSERT INTO portfolios (id, name, description, owner_id) VALUES
-    (portfolio_id, 'Dallas Metro Portfolio', 'All active projects in the Dallas metropolitan area', user_mike);
-
-  -- Link project
-  INSERT INTO portfolio_projects (portfolio_id, project_id, sort_order) VALUES
-    (portfolio_id, project_id, 1);
-
-  -- Organization settings
-  INSERT INTO organization_settings (organization_id, name) VALUES
-    (NULL, 'Turner and Associates General Contractors');
-
-  -- Sample executive report
-  INSERT INTO executive_reports (portfolio_id, type, period_start, period_end, data, ai_narrative, created_by) VALUES
-    (portfolio_id, 'monthly', '2026-03-01', '2026-03-31',
-     '{"total_value": 52000000, "active_projects": 1, "overall_health": 78, "budget_variance": -2.1, "schedule_spi": 0.96}',
-     'March 2026 Executive Summary: The Dallas Metro Portfolio continues to perform well with one active project. The Riverside Commercial Tower is at 65% completion, slightly behind the baseline schedule (SPI 0.96). Budget performance is within acceptable range at 2.1% under forecast. Key highlights include completion of the structural steel package and commencement of curtain wall installation. Three critical RFIs require attention this month. Safety performance remains strong with zero lost time incidents. Recommendation: Allocate additional resources to the exterior facade to recover the 4 day schedule variance before it impacts the interior trades.',
-     user_mike);
-END $$;

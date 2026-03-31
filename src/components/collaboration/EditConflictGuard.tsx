@@ -98,7 +98,7 @@ export const CoEditingWarning: React.FC<CoEditingWarningProps> = ({ entityId }) 
     <div style={{
       display: 'flex', alignItems: 'center', gap: spacing['2'],
       padding: `${spacing['2']} ${spacing['3']}`,
-      backgroundColor: `${colors.statusInfo}08`,
+      backgroundColor: colors.statusInfoSubtle,
       borderRadius: borderRadius.md,
       borderLeft: `3px solid ${colors.statusInfo}`,
       marginBottom: spacing['3'],

@@ -76,20 +76,3 @@ RETURNS boolean AS $$
   );
 $$ LANGUAGE sql SECURITY DEFINER STABLE;
 
--- Seed: create an organization and link the existing project
-DO $$
-DECLARE
-  user_mike UUID := '11111111-1111-1111-1111-111111111111';
-  project_id UUID := 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
-  org_id UUID := 'cccccccc-cccc-cccc-cccc-cccccccccccc';
-BEGIN
-  INSERT INTO organizations (id, name, slug, plan) VALUES
-    (org_id, 'Turner and Associates General Contractors', 'turner-associates', 'enterprise')
-  ON CONFLICT DO NOTHING;
-
-  INSERT INTO organization_members (organization_id, user_id, role) VALUES
-    (org_id, user_mike, 'owner')
-  ON CONFLICT DO NOTHING;
-
-  UPDATE projects SET organization_id = org_id WHERE id = project_id;
-END $$;

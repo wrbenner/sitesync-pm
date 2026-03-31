@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Camera, MapPin, X, ChevronLeft, ChevronRight, Tag } from 'lucide-react';
-import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme';
+import { colors, spacing, typography, borderRadius, transitions, zIndex } from '../../styles/theme';
 
 export type PhotoCategory = 'progress' | 'safety' | 'quality' | 'weather';
 
@@ -66,18 +66,18 @@ export const PhotoGrid: React.FC<PhotoGridProps> = ({ photos, onCapture }) => {
               {/* Category badge */}
               <span style={{
                 position: 'absolute', top: spacing['1'], left: spacing['1'],
-                fontSize: '9px', fontWeight: typography.fontWeight.semibold,
+                fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
                 color: colors.white, backgroundColor: cat.color,
                 padding: `1px ${spacing['1']}`, borderRadius: borderRadius.sm,
-                textTransform: 'uppercase', letterSpacing: '0.5px',
+                textTransform: 'uppercase', letterSpacing: typography.letterSpacing.wider,
               }}>{cat.label}</span>
               {/* Caption overlay */}
-              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(transparent, rgba(0,0,0,0.6))', padding: `${spacing['3']} ${spacing['2']} ${spacing['1']}` }}>
-                <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.9)', margin: 0, lineHeight: 1.3 }}>{photo.caption}</p>
+              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: colors.photoGradient, padding: `${spacing['3']} ${spacing['2']} ${spacing['1']}` }}>
+                <p style={{ fontSize: typography.fontSize.caption, color: colors.textOnDark, margin: 0, lineHeight: typography.lineHeight.snug }}>{photo.caption}</p>
                 {photo.latitude && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 2, marginTop: 2 }}>
-                    <MapPin size={8} color="rgba(255,255,255,0.6)" />
-                    <span style={{ fontSize: '8px', color: 'rgba(255,255,255,0.6)' }}>GPS tagged</span>
+                    <MapPin size={8} color={colors.overlayWhiteMedium} />
+                    <span style={{ fontSize: typography.fontSize.caption, color: colors.overlayWhiteMedium }}>GPS tagged</span>
                   </div>
                 )}
               </div>
@@ -116,18 +116,18 @@ export const PhotoGrid: React.FC<PhotoGridProps> = ({ photos, onCapture }) => {
         <div
           onClick={() => setViewIndex(null)}
           style={{
-            position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.9)',
-            zIndex: 1060, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            position: 'fixed', inset: 0, backgroundColor: colors.viewerBg,
+            zIndex: zIndex.tooltip as number, display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}
         >
           {/* Close */}
-          <button onClick={() => setViewIndex(null)} style={{ position: 'absolute', top: spacing['4'], right: spacing['4'], padding: spacing['2'], backgroundColor: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: borderRadius.full, cursor: 'pointer', color: colors.white, zIndex: 2 }}>
+          <button onClick={() => setViewIndex(null)} style={{ position: 'absolute', top: spacing['4'], right: spacing['4'], padding: spacing['2'], backgroundColor: colors.overlayWhiteThin, border: 'none', borderRadius: borderRadius.full, cursor: 'pointer', color: colors.white, zIndex: 2 }}>
             <X size={20} />
           </button>
 
           {/* Prev */}
           {viewIndex > 0 && (
-            <button onClick={e => { e.stopPropagation(); prev(); }} style={{ position: 'absolute', left: spacing['4'], padding: spacing['3'], backgroundColor: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: borderRadius.full, cursor: 'pointer', color: colors.white, zIndex: 2 }}>
+            <button onClick={e => { e.stopPropagation(); prev(); }} style={{ position: 'absolute', left: spacing['4'], padding: spacing['3'], backgroundColor: colors.overlayWhiteThin, border: 'none', borderRadius: borderRadius.full, cursor: 'pointer', color: colors.white, zIndex: 2 }}>
               <ChevronLeft size={24} />
             </button>
           )}
@@ -142,22 +142,22 @@ export const PhotoGrid: React.FC<PhotoGridProps> = ({ photos, onCapture }) => {
               </div>
             )}
             {/* Info bar */}
-            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(transparent, rgba(0,0,0,0.8))', padding: `${spacing['6']} ${spacing['4']} ${spacing['4']}`, borderRadius: `0 0 ${borderRadius.lg} ${borderRadius.lg}` }}>
+            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: colors.photoGradientHeavy, padding: `${spacing['6']} ${spacing['4']} ${spacing['4']}`, borderRadius: `0 0 ${borderRadius.lg} ${borderRadius.lg}` }}>
               <p style={{ fontSize: typography.fontSize.title, color: colors.white, margin: 0, fontWeight: typography.fontWeight.medium }}>{viewing.caption}</p>
               <div style={{ display: 'flex', alignItems: 'center', gap: spacing['4'], marginTop: spacing['2'] }}>
-                <span style={{ fontSize: typography.fontSize.sm, color: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
+                <span style={{ fontSize: typography.fontSize.sm, color: colors.overlayWhiteMedium, display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
                   <Tag size={12} /> {categoryConfig[viewing.category].label}
                 </span>
-                <span style={{ fontSize: typography.fontSize.sm, color: 'rgba(255,255,255,0.6)' }}>
+                <span style={{ fontSize: typography.fontSize.sm, color: colors.overlayWhiteMedium }}>
                   {new Date(viewing.timestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
                 </span>
                 {viewing.latitude && (
-                  <span style={{ fontSize: typography.fontSize.sm, color: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
+                  <span style={{ fontSize: typography.fontSize.sm, color: colors.overlayWhiteMedium, display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
                     <MapPin size={12} /> {viewing.latitude.toFixed(4)}, {viewing.longitude?.toFixed(4)}
                   </span>
                 )}
               </div>
-              <span style={{ fontSize: typography.fontSize.sm, color: 'rgba(255,255,255,0.4)', marginTop: spacing['1'], display: 'block' }}>
+              <span style={{ fontSize: typography.fontSize.sm, color: colors.darkMutedText, marginTop: spacing['1'], display: 'block' }}>
                 {viewIndex + 1} of {photos.length}
               </span>
             </div>
@@ -165,7 +165,7 @@ export const PhotoGrid: React.FC<PhotoGridProps> = ({ photos, onCapture }) => {
 
           {/* Next */}
           {viewIndex < photos.length - 1 && (
-            <button onClick={e => { e.stopPropagation(); next(); }} style={{ position: 'absolute', right: spacing['4'], padding: spacing['3'], backgroundColor: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: borderRadius.full, cursor: 'pointer', color: colors.white, zIndex: 2 }}>
+            <button onClick={e => { e.stopPropagation(); next(); }} style={{ position: 'absolute', right: spacing['4'], padding: spacing['3'], backgroundColor: colors.overlayWhiteThin, border: 'none', borderRadius: borderRadius.full, cursor: 'pointer', color: colors.white, zIndex: 2 }}>
               <ChevronRight size={24} />
             </button>
           )}

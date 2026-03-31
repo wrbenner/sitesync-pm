@@ -1,10 +1,11 @@
 import React, { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
-import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme'
+import { colors, spacing, typography, borderRadius, shadows, transitions, zIndex } from '../../styles/theme'
 
 export const Login: React.FC = () => {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { signIn, resetPassword } = useAuth()
 
   const [email, setEmail] = useState('')
@@ -28,7 +29,7 @@ export const Login: React.FC = () => {
       setError(signInError)
       setLoading(false)
     } else {
-      navigate('/dashboard')
+      navigate(searchParams.get('returnTo') || '/dashboard')
     }
   }
 
@@ -103,7 +104,7 @@ export const Login: React.FC = () => {
               marginBottom: spacing['4'],
             }}
           >
-            <span style={{ color: '#fff', fontWeight: typography.fontWeight.semibold, fontSize: typography.fontSize.title }}>S</span>
+            <span style={{ color: colors.white, fontWeight: typography.fontWeight.semibold, fontSize: typography.fontSize.title }}>S</span>
           </div>
           <h1
             style={{
@@ -211,7 +212,7 @@ export const Login: React.FC = () => {
                 fontSize: typography.fontSize.body,
                 fontWeight: typography.fontWeight.semibold,
                 fontFamily: typography.fontFamily,
-                color: '#fff',
+                color: colors.white,
                 backgroundColor: loading ? colors.orangeHover : colors.primaryOrange,
                 border: 'none',
                 borderRadius: borderRadius.md,
@@ -258,11 +259,11 @@ export const Login: React.FC = () => {
           style={{
             position: 'fixed',
             inset: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.4)',
+            backgroundColor: colors.overlayDark,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            zIndex: 1040,
+            zIndex: zIndex.modal as number,
           }}
           onClick={() => setShowReset(false)}
         >
@@ -393,7 +394,7 @@ export const Login: React.FC = () => {
                       fontSize: typography.fontSize.body,
                       fontWeight: typography.fontWeight.semibold,
                       fontFamily: typography.fontFamily,
-                      color: '#fff',
+                      color: colors.white,
                       backgroundColor: colors.primaryOrange,
                       border: 'none',
                       borderRadius: borderRadius.md,

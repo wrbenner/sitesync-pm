@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { DollarSign } from 'lucide-react';
-import { colors, spacing, typography, borderRadius } from '../../../styles/theme';
+import { colors, spacing, typography, borderRadius, shadows } from '../../../styles/theme';
 import { useProjectId } from '../../../hooks/useProjectId';
 import { useBudgetItems } from '../../../hooks/queries';
 
@@ -159,7 +159,7 @@ export const CashFlowWidget: React.FC = React.memo(() => {
               padding: `${spacing['1']} ${spacing['2']}`,
               backgroundColor: colors.surfaceRaised,
               borderRadius: borderRadius.sm,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+              boxShadow: shadows.cardHover,
               whiteSpace: 'nowrap',
               fontSize: typography.fontSize.caption,
               pointerEvents: 'none',

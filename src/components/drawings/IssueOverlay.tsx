@@ -50,7 +50,7 @@ export const IssueOverlay: React.FC<IssueOverlayProps> = ({ pins, visibleTypes, 
                 color: isActive ? cfg.color : colors.textTertiary,
                 fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
                 fontFamily: typography.fontFamily, cursor: 'pointer',
-                boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
+                boxShadow: shadows.card,
                 opacity: isActive ? 1 : 0.6, transition: `all ${transitions.instant}`,
               }}
             >
@@ -81,7 +81,7 @@ export const IssueOverlay: React.FC<IssueOverlayProps> = ({ pins, visibleTypes, 
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               boxShadow: `0 2px 6px ${cfg.color}40`,
             }}>
-              <div style={{ transform: 'rotate(45deg)', color: 'white', display: 'flex' }}>{cfg.icon}</div>
+              <div style={{ transform: 'rotate(45deg)', color: colors.white, display: 'flex' }}>{cfg.icon}</div>
             </div>
 
             {/* Tooltip */}

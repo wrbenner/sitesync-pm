@@ -156,14 +156,14 @@ DROP POLICY IF EXISTS drawings_insert ON drawings;
 CREATE POLICY drawings_insert ON drawings FOR INSERT
   WITH CHECK (has_project_permission(project_id, 'project_manager'));
 
--- ── Safety (Incidents, Inspections, Corrective Actions) ──
+-- ── Safety (Incidents, Inspections) ──
 
-DROP POLICY IF EXISTS safety_incidents_update ON safety_incidents;
-CREATE POLICY safety_incidents_update ON safety_incidents FOR UPDATE
+DROP POLICY IF EXISTS incidents_update ON incidents;
+CREATE POLICY incidents_update ON incidents FOR UPDATE
   USING (has_project_permission(project_id, 'superintendent'));
 
-DROP POLICY IF EXISTS safety_incidents_insert ON safety_incidents;
-CREATE POLICY safety_incidents_insert ON safety_incidents FOR INSERT
+DROP POLICY IF EXISTS incidents_insert ON incidents;
+CREATE POLICY incidents_insert ON incidents FOR INSERT
   WITH CHECK (has_project_permission(project_id, 'superintendent'));
 
 DROP POLICY IF EXISTS safety_inspections_update ON safety_inspections;
@@ -172,12 +172,4 @@ CREATE POLICY safety_inspections_update ON safety_inspections FOR UPDATE
 
 DROP POLICY IF EXISTS safety_inspections_insert ON safety_inspections;
 CREATE POLICY safety_inspections_insert ON safety_inspections FOR INSERT
-  WITH CHECK (has_project_permission(project_id, 'superintendent'));
-
-DROP POLICY IF EXISTS corrective_actions_update ON corrective_actions;
-CREATE POLICY corrective_actions_update ON corrective_actions FOR UPDATE
-  USING (has_project_permission(project_id, 'superintendent'));
-
-DROP POLICY IF EXISTS corrective_actions_insert ON corrective_actions;
-CREATE POLICY corrective_actions_insert ON corrective_actions FOR INSERT
   WITH CHECK (has_project_permission(project_id, 'superintendent'));

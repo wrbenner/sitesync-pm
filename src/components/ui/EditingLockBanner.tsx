@@ -74,7 +74,7 @@ export const EditingLockBanner: React.FC<EditingLockBannerProps> = React.memo(({
                 backgroundColor: editor.color,
                 border: `2px solid ${colors.surfaceRaised}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '9px', fontWeight: 700, color: colors.white,
+                fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.bold, color: colors.white,
               }}
             >
               {editor.initials}

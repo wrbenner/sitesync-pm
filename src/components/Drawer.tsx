@@ -34,7 +34,7 @@ export const Drawer: React.FC<DrawerProps> = ({ open, onClose, title, width = '5
             style={{
               position: 'fixed',
               inset: 0,
-              backgroundColor: 'rgba(0, 0, 0, 0.3)',
+              backgroundColor: colors.toolbarBg,
               backdropFilter: 'blur(4px)',
               zIndex: zIndex.modal,
             }}

@@ -4,14 +4,14 @@
 
 import React from 'react'
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer'
-import { vizColors } from '../../styles/theme'
+import { colors, vizColors } from '../../styles/theme'
 
 const s = StyleSheet.create({
   page: { padding: 48, fontSize: 10, fontFamily: 'Helvetica', color: vizColors.darkText, lineHeight: 1.6 },
   title: { fontSize: 14, fontFamily: 'Helvetica-Bold', textAlign: 'center', marginBottom: 4 },
-  subtitle: { fontSize: 10, textAlign: 'center', color: '#5C5550', marginBottom: 20 },
+  subtitle: { fontSize: 10, textAlign: 'center', color: colors.textSecondary, marginBottom: 20 },
   section: { marginBottom: 16 },
-  label: { fontSize: 8, color: '#5C5550', fontFamily: 'Helvetica-Bold', marginBottom: 2 },
+  label: { fontSize: 8, color: colors.textSecondary, fontFamily: 'Helvetica-Bold', marginBottom: 2 },
   value: { fontSize: 10, marginBottom: 8 },
   legalText: { fontSize: 9, lineHeight: 1.7, marginBottom: 12 },
   bold: { fontFamily: 'Helvetica-Bold' },
@@ -21,14 +21,14 @@ const s = StyleSheet.create({
   signatureBlock: { marginTop: 32, flexDirection: 'row', gap: 48 },
   signatureField: { flex: 1 },
   signatureLine: { borderBottomWidth: 1, borderBottomColor: vizColors.darkText, marginTop: 40, marginBottom: 4 },
-  signatureLabel: { fontSize: 8, color: '#5C5550' },
-  notice: { marginTop: 20, padding: 12, backgroundColor: '#FEF7F2', borderRadius: 4, borderWidth: 0.5, borderColor: '#F47820' },
-  noticeText: { fontSize: 8, color: '#5C5550', lineHeight: 1.5 },
-  footer: { position: 'absolute', bottom: 24, left: 48, right: 48, borderTopWidth: 0.5, borderTopColor: '#E5E1DC', paddingTop: 8 },
-  footerText: { fontSize: 7, color: '#9A9490' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 24, paddingBottom: 12, borderBottomWidth: 2, borderBottomColor: '#0C0D0F' },
-  logo: { fontSize: 14, fontFamily: 'Helvetica-Bold', color: '#0C0D0F' },
-  projectName: { fontSize: 8, color: '#5C5550', marginTop: 2 },
+  signatureLabel: { fontSize: 8, color: colors.textSecondary },
+  notice: { marginTop: 20, padding: 12, backgroundColor: colors.surfaceSelected, borderRadius: 4, borderWidth: 0.5, borderColor: colors.primaryOrange },
+  noticeText: { fontSize: 8, color: colors.textSecondary, lineHeight: 1.5 },
+  footer: { position: 'absolute', bottom: 24, left: 48, right: 48, borderTopWidth: 0.5, borderTopColor: colors.borderDefault, paddingTop: 8 },
+  footerText: { fontSize: 7, color: colors.textTertiary },
+  header: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 24, paddingBottom: 12, borderBottomWidth: 2, borderBottomColor: colors.darkNavy },
+  logo: { fontSize: 14, fontFamily: 'Helvetica-Bold', color: colors.darkNavy },
+  projectName: { fontSize: 8, color: colors.textSecondary, marginTop: 2 },
 })
 
 // ── Types ───────────────────────────────────────────────
@@ -135,8 +135,8 @@ export const LienWaiverPDF: React.FC<{ data: LienWaiverData }> = ({ data }) => {
             <Text style={s.projectName}>{data.projectName}</Text>
           </View>
           <View style={{ alignItems: 'flex-end' }}>
-            <Text style={{ fontSize: 8, color: '#5C5550' }}>{statutoryRef}</Text>
-            <Text style={{ fontSize: 8, color: '#5C5550', marginTop: 2 }}>
+            <Text style={{ fontSize: 8, color: colors.textSecondary }}>{statutoryRef}</Text>
+            <Text style={{ fontSize: 8, color: colors.textSecondary, marginTop: 2 }}>
               {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
             </Text>
           </View>

@@ -36,7 +36,7 @@ export const AIContextPanel: React.FC<AIContextPanelProps> = ({ currentPage }) =
             onClick={() => setContextPanelOpen(false)}
             style={{
               position: 'fixed', inset: 0,
-              backgroundColor: 'rgba(0, 0, 0, 0.15)',
+              backgroundColor: 'rgba(0, 0, 0, 0.15)', /* light scrim, between overlayBlackHeavy(0.12) and overlayDark(0.4) */
               backdropFilter: 'blur(2px)',
               zIndex: zIndex.modal as number - 1,
             }}
@@ -58,7 +58,7 @@ export const AIContextPanel: React.FC<AIContextPanelProps> = ({ currentPage }) =
           >
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'], padding: `${spacing['4']} ${spacing['5']}`, borderBottom: `1px solid ${colors.borderSubtle}`, flexShrink: 0 }}>
-              <div style={{ width: 28, height: 28, borderRadius: '50%', background: `linear-gradient(135deg, ${colors.statusReview} 0%, #9B8ADB 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: 28, height: 28, borderRadius: '50%', background: `linear-gradient(135deg, ${colors.statusReview} 0%, #9B8ADB 100%)` /* decorative AI gradient */, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Sparkles size={14} color="white" />
               </div>
               <div style={{ flex: 1 }}>

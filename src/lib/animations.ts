@@ -3,6 +3,7 @@
 // Usage: <motion.div {...animations.pageSlide} /> or spread individual props.
 
 import type { Variants, Transition } from 'framer-motion'
+import { colors } from '../styles/theme'
 
 // ── Shared Easings ──────────────────────────────────────
 
@@ -130,7 +131,7 @@ export const deleteCollapse: Variants = {
 // CSS keyframe shimmer (gradient sweep). Use as className or inline.
 
 export const shimmerStyle: React.CSSProperties = {
-  background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.08) 50%, transparent 100%)',
+  background: `linear-gradient(90deg, transparent 0%, ${colors.overlayBlackLight} 50%, transparent 100%)`,
   backgroundSize: '200% 100%',
   animation: 'shimmer 1.5s infinite',
 }

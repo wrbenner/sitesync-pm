@@ -94,13 +94,13 @@ export function Register() {
             width: 48,
             height: 48,
             borderRadius: borderRadius.lg,
-            background: `linear-gradient(135deg, ${colors.primaryOrange}, #FF9C42)`,
+            background: `linear-gradient(135deg, ${colors.primaryOrange}, ${colors.orangeGradientEnd})`,
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
             marginBottom: spacing['4'],
           }}>
-            <span style={{ color: '#fff', fontSize: '20px', fontWeight: 700 }}>S</span>
+            <span style={{ color: colors.white, fontSize: typography.fontSize.medium, fontWeight: typography.fontWeight.bold }}>S</span>
           </div>
           <h1 style={{
             fontSize: typography.fontSize.heading,
@@ -266,7 +266,7 @@ export function Register() {
                   width: '100%',
                   padding: `${spacing['3']} ${spacing['6']}`,
                   backgroundColor: loading ? colors.textTertiary : colors.primaryOrange,
-                  color: '#fff',
+                  color: colors.white,
                   border: 'none',
                   borderRadius: borderRadius.md,
                   fontSize: typography.fontSize.body,
@@ -321,7 +321,7 @@ export function Register() {
                   width: '100%',
                   padding: `${spacing['3']} ${spacing['6']}`,
                   backgroundColor: loading ? colors.textTertiary : colors.primaryOrange,
-                  color: '#fff',
+                  color: colors.white,
                   border: 'none',
                   borderRadius: borderRadius.md,
                   fontSize: typography.fontSize.body,

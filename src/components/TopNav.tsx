@@ -5,7 +5,7 @@ import {
   HelpCircle, ClipboardList, CheckSquare, Users,
   BookOpen, Briefcase, Zap, Eye,
 } from 'lucide-react';
-import { colors, spacing, typography, borderRadius, shadows, transitions } from '../styles/theme';
+import { colors, spacing, typography, borderRadius, shadows, transitions, zIndex, layout } from '../styles/theme';
 import { Dot, ProgressBar } from './Primitives';
 
 interface TopNavProps {
@@ -65,8 +65,8 @@ export const TopNav: React.FC<TopNavProps> = ({ activeView, onNavigate }) => {
       style={{
         position: 'sticky',
         top: 0,
-        zIndex: 100,
-        backgroundColor: scrolled ? 'rgba(255, 255, 255, 0.85)' : colors.white,
+        zIndex: zIndex.sticky,
+        backgroundColor: scrolled ? colors.topbarLight : colors.white,
         backdropFilter: scrolled ? 'blur(16px)' : 'none',
         WebkitBackdropFilter: scrolled ? 'blur(16px)' : 'none',
         boxShadow: scrolled ? shadows.base : shadows.sm,
@@ -78,9 +78,9 @@ export const TopNav: React.FC<TopNavProps> = ({ activeView, onNavigate }) => {
         style={{
           display: 'flex',
           alignItems: 'center',
-          height: '56px',
+          height: spacing['14'],
           padding: `0 ${spacing.xl}`,
-          maxWidth: '1440px',
+          maxWidth: layout.contentMaxWidth,
           margin: '0 auto',
         }}
       >
@@ -110,17 +110,17 @@ export const TopNav: React.FC<TopNavProps> = ({ activeView, onNavigate }) => {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: '15px',
-              fontWeight: 700,
+              fontSize: typography.fontSize.lg,
+              fontWeight: typography.fontWeight.bold,
               color: colors.white,
             }}
           >
             S
           </div>
-          <span style={{ fontSize: typography.fontSize['2xl'], fontWeight: typography.fontWeight.bold, color: colors.textPrimary, letterSpacing: '-0.5px' }}>
+          <span style={{ fontSize: typography.fontSize['2xl'], fontWeight: typography.fontWeight.bold, color: colors.textPrimary, letterSpacing: typography.letterSpacing.tight }}>
             SiteSync
           </span>
-          <span style={{ fontSize: typography.fontSize.xs, fontWeight: typography.fontWeight.semibold, color: colors.orangeText, marginTop: '-8px' }}>
+          <span style={{ fontSize: typography.fontSize.xs, fontWeight: typography.fontWeight.semibold, color: colors.orangeText, marginTop: `-${spacing['2']}` }}>
             AI
           </span>
         </button>
@@ -208,7 +208,7 @@ export const TopNav: React.FC<TopNavProps> = ({ activeView, onNavigate }) => {
                   padding: spacing.sm,
                   minWidth: '220px',
                   animation: 'scaleIn 150ms ease-out',
-                  zIndex: 1000,
+                  zIndex: zIndex.dropdown,
                 }}
               >
                 {moreNav.map((item) => {
@@ -255,7 +255,7 @@ export const TopNav: React.FC<TopNavProps> = ({ activeView, onNavigate }) => {
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing.md, flexShrink: 0 }}>
           {/* Search */}
           {searchOpen ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, width: '240px', backgroundColor: colors.surfaceFlat, padding: `6px ${spacing.md}`, borderRadius: borderRadius.full }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, width: layout.searchWidth, backgroundColor: colors.surfaceFlat, padding: `${spacing['1.5']} ${spacing.md}`, borderRadius: borderRadius.full }}>
               <Search size={14} color={colors.textTertiary} />
               <input
                 type="text" placeholder="Search..." value={searchValue}
@@ -271,7 +271,7 @@ export const TopNav: React.FC<TopNavProps> = ({ activeView, onNavigate }) => {
               onClick={() => setSearchOpen(true)}
               style={{
                 display: 'flex', alignItems: 'center', gap: spacing.sm,
-                padding: `6px ${spacing.md}`, backgroundColor: colors.surfaceFlat,
+                padding: `${spacing['1.5']} ${spacing.md}`, backgroundColor: colors.surfaceFlat,
                 border: 'none', borderRadius: borderRadius.full, cursor: 'pointer',
                 fontSize: typography.fontSize.sm, color: colors.textTertiary, fontFamily: typography.fontFamily,
                 transition: `background-color ${transitions.fast}`,
@@ -281,12 +281,12 @@ export const TopNav: React.FC<TopNavProps> = ({ activeView, onNavigate }) => {
             >
               <Search size={14} />
               <span style={{ color: colors.textTertiary }}>Search</span>
-              <kbd style={{ fontSize: '10px', color: colors.textTertiary, backgroundColor: colors.surfaceInset, padding: '1px 4px', borderRadius: borderRadius.sm, fontFamily: 'monospace' }}>⌘K</kbd>
+              <kbd style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, backgroundColor: colors.surfaceInset, padding: `${spacing['0.5']} ${spacing['1']}`, borderRadius: borderRadius.sm, fontFamily: typography.fontFamilyMono }}>⌘K</kbd>
             </button>
           )}
 
           {/* Live indicator */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, padding: `4px ${spacing.md}`, backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.full }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, padding: `${spacing['1']} ${spacing.md}`, backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.full }}>
             <Dot color={colors.tealSuccess} pulse size={6} />
             <span style={{ fontSize: typography.fontSize.xs, color: colors.textSecondary, fontWeight: typography.fontWeight.medium }}>187 on site</span>
           </div>
@@ -304,7 +304,7 @@ export const TopNav: React.FC<TopNavProps> = ({ activeView, onNavigate }) => {
             onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'; }}
           >
             <Bell size={17} color={colors.textSecondary} />
-            <span style={{ position: 'absolute', top: '5px', right: '5px', width: '6px', height: '6px', backgroundColor: colors.primaryOrange, borderRadius: '50%' }} />
+            <span style={{ position: 'absolute', top: spacing['1.5'], right: spacing['1.5'], width: spacing['1.5'], height: spacing['1.5'], backgroundColor: colors.primaryOrange, borderRadius: '50%' }} />
           </button>
 
           {/* User avatar */}
@@ -327,7 +327,7 @@ export const TopNav: React.FC<TopNavProps> = ({ activeView, onNavigate }) => {
         style={{
           borderTop: `1px solid ${colors.borderLight}`,
           padding: `${spacing.sm} ${spacing.xl}`,
-          maxWidth: '1440px',
+          maxWidth: layout.contentMaxWidth,
           margin: '0 auto',
           display: 'flex',
           alignItems: 'center',

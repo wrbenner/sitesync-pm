@@ -2,6 +2,7 @@
 // All variants support reduced motion via the helper at the bottom.
 
 import type { Transition, Variant } from 'framer-motion'
+import { duration, easingArray } from '../../styles/animations'
 
 // ── Page Transitions ─────────────────────────────────────
 
@@ -9,7 +10,7 @@ export const pageTransition = {
   initial: { opacity: 0, y: 6 },
   animate: { opacity: 1, y: 0 },
   exit: { opacity: 0 },
-  transition: { duration: 0.18, ease: [0.25, 0.1, 0.25, 1] as [number, number, number, number] },
+  transition: { duration: duration.smooth / 1000, ease: easingArray.apple },
 };
 
 export const fadeIn = {

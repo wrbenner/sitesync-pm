@@ -177,12 +177,19 @@ CREATE OR REPLACE FUNCTION check_plan_limit(
   p_limit_type text -- 'projects', 'users', 'storage_gb'
 ) RETURNS boolean AS $$
 DECLARE
-  v_plan plans;
-  v_sub subscriptions;
+  v_plan_max_projects int;
+  v_plan_max_users int;
+  v_plan_max_storage int;
+  v_sub_max_projects_override int;
+  v_sub_max_users_override int;
+  v_sub_max_storage_override int;
   v_current_count int;
   v_max int;
 BEGIN
-  SELECT s.*, p.* INTO v_sub, v_plan
+  SELECT p.max_projects, p.max_users, p.max_storage_gb,
+         s.max_projects_override, s.max_users_override, s.max_storage_gb_override
+    INTO v_plan_max_projects, v_plan_max_users, v_plan_max_storage,
+         v_sub_max_projects_override, v_sub_max_users_override, v_sub_max_storage_override
   FROM subscriptions s
   JOIN plans p ON p.id = s.plan_id
   WHERE s.organization_id = p_organization_id AND s.status = 'active';
@@ -191,17 +198,17 @@ BEGIN
 
   CASE p_limit_type
     WHEN 'projects' THEN
-      v_max := COALESCE(v_sub.max_projects_override, v_plan.max_projects);
-      IF v_max = -1 THEN RETURN true; END IF; -- unlimited
+      v_max := COALESCE(v_sub_max_projects_override, v_plan_max_projects);
+      IF v_max = -1 THEN RETURN true; END IF;
       SELECT COUNT(*) INTO v_current_count FROM projects WHERE organization_id = p_organization_id;
     WHEN 'users' THEN
-      v_max := COALESCE(v_sub.max_users_override, v_plan.max_users);
+      v_max := COALESCE(v_sub_max_users_override, v_plan_max_users);
       IF v_max = -1 THEN RETURN true; END IF;
       SELECT COUNT(*) INTO v_current_count FROM organization_members WHERE organization_id = p_organization_id;
     WHEN 'storage_gb' THEN
-      v_max := COALESCE(v_sub.max_storage_gb_override, v_plan.max_storage_gb);
+      v_max := COALESCE(v_sub_max_storage_override, v_plan_max_storage);
       IF v_max = -1 THEN RETURN true; END IF;
-      v_current_count := 0; -- Would query storage bucket size
+      v_current_count := 0;
     ELSE
       RETURN true;
   END CASE;

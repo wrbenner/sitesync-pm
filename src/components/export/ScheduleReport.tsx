@@ -1,27 +1,27 @@
 // Schedule Report PDF: Critical path, 3-week lookahead, milestones, delay analysis
 import React from 'react'
 import { View, Text, StyleSheet } from '@react-pdf/renderer'
-import { vizColors } from '../../styles/theme'
+import { colors, vizColors } from '../../styles/theme'
 import { PDFReport, PDFSection, PDFTable } from './PDFTemplate'
 
 const s = StyleSheet.create({
   kpiGrid: { flexDirection: 'row', gap: 8, marginBottom: 16 },
-  kpiBox: { flex: 1, padding: 8, backgroundColor: '#FAFAF8', borderRadius: 4, borderWidth: 0.5, borderColor: '#E5E1DC' },
-  kpiLabel: { fontSize: 7, color: '#5C5550', marginBottom: 2 },
+  kpiBox: { flex: 1, padding: 8, backgroundColor: colors.surfacePage, borderRadius: 4, borderWidth: 0.5, borderColor: colors.borderDefault },
+  kpiLabel: { fontSize: 7, color: colors.textSecondary, marginBottom: 2 },
   kpiValue: { fontSize: 14, fontFamily: 'Helvetica-Bold', color: vizColors.darkText },
-  kpiSub: { fontSize: 7, color: '#9A9490', marginTop: 1 },
+  kpiSub: { fontSize: 7, color: colors.textTertiary, marginTop: 1 },
   statusDot: { width: 6, height: 6, borderRadius: 3, marginRight: 4 },
   legend: { flexDirection: 'row', gap: 12, marginBottom: 8 },
   legendItem: { flexDirection: 'row', alignItems: 'center' },
-  legendText: { fontSize: 7, color: '#5C5550' },
+  legendText: { fontSize: 7, color: colors.textSecondary },
 })
 
 const STATUS_COLORS: Record<string, string> = {
-  achieved: '#2D8A6E', complete: '#2D8A6E',
-  in_progress: '#3A7BC8',
-  late: '#C93B3B', behind: '#C93B3B',
-  upcoming: '#C4850C', not_started: '#9A9490',
-  Critical: '#C93B3B', Major: '#C4850C', Minor: '#3A7BC8',
+  achieved: colors.statusActive, complete: colors.statusActive,
+  in_progress: colors.statusInfo,
+  late: colors.statusCritical, behind: colors.statusCritical,
+  upcoming: colors.statusPending, not_started: colors.textTertiary,
+  Critical: colors.statusCritical, Major: colors.statusPending, Minor: colors.statusInfo,
 }
 
 interface ScheduleReportProps {
@@ -54,7 +54,7 @@ export const ScheduleReport: React.FC<ScheduleReportProps> = ({ data }) => {
         </View>
         <View style={s.kpiBox}>
           <Text style={s.kpiLabel}>Behind Schedule</Text>
-          <Text style={[s.kpiValue, data.behindSchedule > 0 ? { color: '#C93B3B' } : {}]}>{data.behindSchedule}</Text>
+          <Text style={[s.kpiValue, data.behindSchedule > 0 ? { color: colors.statusCritical } : {}]}>{data.behindSchedule}</Text>
           <Text style={s.kpiSub}>activities delayed</Text>
         </View>
         <View style={s.kpiBox}>

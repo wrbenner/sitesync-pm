@@ -249,7 +249,7 @@ export function EntityFormModal<T extends z.ZodObject<z.ZodRawShape>>({
             role="alert"
             style={{
               padding: spacing['3'],
-              backgroundColor: 'rgba(200, 50, 50, 0.06)',
+              backgroundColor: colors.errorSubtle,
               border: `1px solid ${colors.statusCritical}`,
               borderRadius: borderRadius.md,
               color: colors.statusCritical,

@@ -1,4 +1,5 @@
 import { setup } from 'xstate'
+import { colors } from '../styles/theme'
 
 export type PunchItemState = 'open' | 'in_progress' | 'resolved' | 'verified'
 
@@ -88,10 +89,10 @@ export function getNextPunchStatus(currentStatus: PunchItemState, action: string
 
 export function getPunchStatusConfig(status: PunchItemState) {
   const config: Record<PunchItemState, { label: string; color: string; bg: string }> = {
-    open: { label: 'Open', color: '#C93B3B', bg: 'rgba(201,59,59,0.08)' },
-    in_progress: { label: 'In Progress', color: '#3A7BC8', bg: 'rgba(58,123,200,0.08)' },
-    resolved: { label: 'Resolved', color: '#C4850C', bg: 'rgba(196,133,12,0.08)' },
-    verified: { label: 'Verified', color: '#2D8A6E', bg: 'rgba(45,138,110,0.08)' },
+    open: { label: 'Open', color: colors.statusCritical, bg: colors.statusCriticalSubtle },
+    in_progress: { label: 'In Progress', color: colors.statusInfo, bg: colors.statusInfoSubtle },
+    resolved: { label: 'Resolved', color: colors.statusPending, bg: colors.statusPendingSubtle },
+    verified: { label: 'Verified', color: colors.statusActive, bg: colors.statusActiveSubtle },
   }
   return config[status] || config.open
 }

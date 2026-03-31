@@ -1,7 +1,7 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ChevronRight, Home } from 'lucide-react';
-import { colors, spacing, typography, transitions } from '../styles/theme';
+import { colors, spacing, typography, transitions, borderRadius } from '../styles/theme';
 
 const routeLabels: Record<string, string> = {
   dashboard: 'Dashboard',
@@ -51,7 +51,7 @@ export const Breadcrumbs: React.FC = () => {
           color: colors.textTertiary,
           cursor: 'pointer',
           padding: `${spacing['1']} ${spacing['1']}`,
-          borderRadius: '4px',
+          borderRadius: borderRadius.sm,
           transition: `color ${transitions.instant}`,
         }}
         onMouseEnter={(e) => {
@@ -93,7 +93,7 @@ export const Breadcrumbs: React.FC = () => {
                   fontSize: typography.fontSize.sm,
                   fontFamily: typography.fontFamily,
                   padding: `${spacing['1']} ${spacing['1']}`,
-                  borderRadius: '4px',
+                  borderRadius: borderRadius.sm,
                   transition: `color ${transitions.instant}`,
                 }}
                 onMouseEnter={(e) => {

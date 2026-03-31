@@ -1,6 +1,6 @@
 import React from 'react'
 import { Text, View } from '@react-pdf/renderer'
-import { vizColors } from '../../styles/theme'
+import { colors, vizColors } from '../../styles/theme'
 import { PDFReport, PDFSection } from './PDFTemplate'
 
 interface HealthData {
@@ -20,15 +20,15 @@ interface ProjectHealthReportProps {
 }
 
 const getScoreColor = (score: number): string => {
-  if (score >= 80) return '#2D8A6E'
-  if (score >= 60) return '#C4850C'
-  return '#C93B3B'
+  if (score >= 80) return colors.statusActive
+  if (score >= 60) return colors.statusPending
+  return colors.statusCritical
 }
 
 const ScoreCard: React.FC<{ label: string; score: number }> = ({ label, score }) => (
   <View style={{ alignItems: 'center', width: '20%' }}>
     <Text style={{ fontSize: 24, fontFamily: 'Helvetica-Bold', color: getScoreColor(score) }}>{score}</Text>
-    <Text style={{ fontSize: 8, color: '#5C5550', marginTop: 2 }}>{label}</Text>
+    <Text style={{ fontSize: 8, color: colors.textSecondary, marginTop: 2 }}>{label}</Text>
   </View>
 )
 
@@ -45,11 +45,11 @@ export const ProjectHealthReport: React.FC<ProjectHealthReportProps> = ({ projec
         <Text style={{ fontSize: 36, fontFamily: 'Helvetica-Bold', color: getScoreColor(health.overallScore) }}>
           {health.overallScore}
         </Text>
-        <Text style={{ fontSize: 10, color: '#5C5550' }}>Overall Health Score</Text>
+        <Text style={{ fontSize: 10, color: colors.textSecondary }}>Overall Health Score</Text>
       </View>
 
       <PDFSection title="Score Breakdown" />
-      <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginBottom: 20, paddingVertical: 12, backgroundColor: '#FAFAF8', borderRadius: 4 }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginBottom: 20, paddingVertical: 12, backgroundColor: colors.surfacePage, borderRadius: 4 }}>
         <ScoreCard label="Schedule" score={health.scheduleScore} />
         <ScoreCard label="Budget" score={health.budgetScore} />
         <ScoreCard label="Quality" score={health.qualityScore} />
@@ -60,15 +60,15 @@ export const ProjectHealthReport: React.FC<ProjectHealthReportProps> = ({ projec
       <View style={{ flexDirection: 'row', gap: 20, marginBottom: 20 }}>
         <View>
           <Text style={{ fontSize: 20, fontFamily: 'Helvetica-Bold' }}>{health.rfiResponseDays}</Text>
-          <Text style={{ fontSize: 8, color: '#5C5550' }}>Avg RFI Response (days)</Text>
+          <Text style={{ fontSize: 8, color: colors.textSecondary }}>Avg RFI Response (days)</Text>
         </View>
         <View>
-          <Text style={{ fontSize: 20, fontFamily: 'Helvetica-Bold', color: health.punchItemsOpen > 20 ? '#C93B3B' : vizColors.darkText }}>{health.punchItemsOpen}</Text>
-          <Text style={{ fontSize: 8, color: '#5C5550' }}>Open Punch Items</Text>
+          <Text style={{ fontSize: 20, fontFamily: 'Helvetica-Bold', color: health.punchItemsOpen > 20 ? colors.statusCritical : vizColors.darkText }}>{health.punchItemsOpen}</Text>
+          <Text style={{ fontSize: 8, color: colors.textSecondary }}>Open Punch Items</Text>
         </View>
         <View>
           <Text style={{ fontSize: 20, fontFamily: 'Helvetica-Bold' }}>{health.crewProductivity}%</Text>
-          <Text style={{ fontSize: 8, color: '#5C5550' }}>Crew Productivity</Text>
+          <Text style={{ fontSize: 8, color: colors.textSecondary }}>Crew Productivity</Text>
         </View>
       </View>
 

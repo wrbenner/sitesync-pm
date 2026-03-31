@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Plus, Search, X, ArrowRight, GitBranch, Clock, AlertTriangle, ChevronRight } from 'lucide-react';
 import { PageContainer, Card, Btn, MetricBox, SectionHeader, Skeleton, useToast, Modal, TabBar } from '../components/Primitives';
-import { colors, spacing, typography, borderRadius, shadows, transitions } from '../styles/theme';
+import { colors, spacing, typography, borderRadius, shadows, transitions, zIndex } from '../styles/theme';
 import { WaterfallChart } from '../components/budget/WaterfallChart';
 import { useQuery } from '../hooks/useQuery';
 import { getCostData } from '../api/endpoints/budget';
@@ -256,8 +256,8 @@ export const ChangeOrders: React.FC = () => {
 
     return (
       <>
-        <div onClick={() => setSelectedCO(null)} role="presentation" aria-hidden="true" style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.2)', zIndex: 1039 }} />
-        <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: '560px', backgroundColor: colors.surfaceRaised, boxShadow: shadows.lg, zIndex: 1040, overflowY: 'auto' }}>
+        <div onClick={() => setSelectedCO(null)} role="presentation" aria-hidden="true" style={{ position: 'fixed', inset: 0, backgroundColor: colors.overlayBlackHeavy, zIndex: zIndex.modal as number - 1 }} />
+        <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: '560px', backgroundColor: colors.surfaceRaised, boxShadow: shadows.panel, zIndex: zIndex.modal as number, overflowY: 'auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: `${spacing['4']} ${spacing['5']}`, position: 'sticky', top: 0, backgroundColor: colors.surfaceRaised, zIndex: 1 }}>
             <button onClick={() => setSelectedCO(null)} aria-label="Close change order details" title="Close change order details" style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', border: 'none', borderRadius: borderRadius.md, cursor: 'pointer', color: colors.textTertiary }}><X size={18} /></button>
           </div>
@@ -354,8 +354,8 @@ export const ChangeOrders: React.FC = () => {
                   return (
                     <div key={i} style={{ display: 'flex', alignItems: 'center', gap: spacing['3'], padding: `${spacing['2']} ${spacing['3']}`, backgroundColor: done ? colors.statusActiveSubtle : colors.surfaceInset, borderRadius: borderRadius.sm }}>
                       <div style={{ width: 20, height: 20, borderRadius: borderRadius.full, backgroundColor: done ? colors.statusActive : colors.borderDefault, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        {done && <span style={{ color: colors.white, fontSize: '10px', fontWeight: typography.fontWeight.semibold }}>✓</span>}
-                        {!done && <span style={{ color: colors.textTertiary, fontSize: '10px' }}>{i + 1}</span>}
+                        {done && <span style={{ color: colors.white, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold }}>✓</span>}
+                        {!done && <span style={{ color: colors.textTertiary, fontSize: typography.fontSize.caption }}>{i + 1}</span>}
                       </div>
                       <div style={{ flex: 1 }}>
                         <p style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, margin: 0, fontWeight: typography.fontWeight.medium }}>{step.role}: {step.action}</p>

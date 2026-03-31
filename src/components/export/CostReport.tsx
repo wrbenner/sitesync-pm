@@ -1,20 +1,20 @@
 // Cost Report PDF: Budget vs actual by cost code, earned value analysis, contingency burn
 import React from 'react'
 import { View, Text, StyleSheet } from '@react-pdf/renderer'
-import { vizColors } from '../../styles/theme'
+import { colors, vizColors } from '../../styles/theme'
 import { PDFReport, PDFSection, PDFTable, pdfStyles } from './PDFTemplate'
 
 const s = StyleSheet.create({
   kpiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
-  kpiBox: { width: '23%', padding: 8, backgroundColor: '#FAFAF8', borderRadius: 4, borderWidth: 0.5, borderColor: '#E5E1DC' },
-  kpiLabel: { fontSize: 7, color: '#5C5550', marginBottom: 2 },
+  kpiBox: { width: '23%', padding: 8, backgroundColor: colors.surfacePage, borderRadius: 4, borderWidth: 0.5, borderColor: colors.borderDefault },
+  kpiLabel: { fontSize: 7, color: colors.textSecondary, marginBottom: 2 },
   kpiValue: { fontSize: 12, fontFamily: 'Helvetica-Bold', color: vizColors.darkText },
-  kpiSub: { fontSize: 7, color: '#9A9490', marginTop: 1 },
+  kpiSub: { fontSize: 7, color: colors.textTertiary, marginTop: 1 },
   evGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 },
-  evBox: { width: '15%', padding: 6, backgroundColor: '#F3EFEC', borderRadius: 3 },
-  evLabel: { fontSize: 6, color: '#5C5550', marginBottom: 1 },
+  evBox: { width: '15%', padding: 6, backgroundColor: colors.surfaceInset, borderRadius: 3 },
+  evLabel: { fontSize: 6, color: colors.textSecondary, marginBottom: 1 },
   evValue: { fontSize: 9, fontFamily: 'Helvetica-Bold', color: vizColors.darkText },
-  progressBar: { height: 6, backgroundColor: '#E5E1DC', borderRadius: 3, marginTop: 4, marginBottom: 8 },
+  progressBar: { height: 6, backgroundColor: colors.borderDefault, borderRadius: 3, marginTop: 4, marginBottom: 8 },
   progressFill: { height: 6, borderRadius: 3 },
 })
 
@@ -77,7 +77,7 @@ export const CostReport: React.FC<CostReportProps> = ({ data }) => {
           <Text style={s.kpiLabel}>Actual Cost to Date</Text>
           <Text style={s.kpiValue}>{fmtCurrency(data.actualCost)}</Text>
           <View style={s.progressBar}>
-            <View style={[s.progressFill, { width: `${Math.min(spent, 100)}%`, backgroundColor: spent > 90 ? '#C93B3B' : spent > 75 ? '#C4850C' : '#2D8A6E' }]} />
+            <View style={[s.progressFill, { width: `${Math.min(spent, 100)}%`, backgroundColor: spent > 90 ? colors.statusCritical : spent > 75 ? colors.statusPending : colors.statusActive }]} />
           </View>
           <Text style={s.kpiSub}>{spent.toFixed(1)}% of budget spent</Text>
         </View>
@@ -95,23 +95,23 @@ export const CostReport: React.FC<CostReportProps> = ({ data }) => {
         <View style={s.evBox}><Text style={s.evLabel}>EV</Text><Text style={s.evValue}>{fmtCurrency(data.ev)}</Text></View>
         <View style={s.evBox}><Text style={s.evLabel}>PV</Text><Text style={s.evValue}>{fmtCurrency(data.pv)}</Text></View>
         <View style={s.evBox}><Text style={s.evLabel}>AC</Text><Text style={s.evValue}>{fmtCurrency(data.ac)}</Text></View>
-        <View style={[s.evBox, { backgroundColor: data.cpi >= 1 ? '#E8F5E9' : '#FEF2F2' }]}>
+        <View style={[s.evBox, { backgroundColor: data.cpi >= 1 ? colors.statusSuccessSubtle : colors.statusCriticalSubtle }]}>
           <Text style={s.evLabel}>CPI</Text><Text style={s.evValue}>{fmtIndex(data.cpi)}</Text>
         </View>
-        <View style={[s.evBox, { backgroundColor: data.spi >= 1 ? '#E8F5E9' : '#FEF2F2' }]}>
+        <View style={[s.evBox, { backgroundColor: data.spi >= 1 ? colors.statusSuccessSubtle : colors.statusCriticalSubtle }]}>
           <Text style={s.evLabel}>SPI</Text><Text style={s.evValue}>{fmtIndex(data.spi)}</Text>
         </View>
       </View>
       <View style={s.evGrid}>
         <View style={s.evBox}><Text style={s.evLabel}>EAC</Text><Text style={s.evValue}>{fmtCurrency(data.eac)}</Text></View>
         <View style={s.evBox}><Text style={s.evLabel}>ETC</Text><Text style={s.evValue}>{fmtCurrency(data.etc)}</Text></View>
-        <View style={[s.evBox, { backgroundColor: data.vac >= 0 ? '#E8F5E9' : '#FEF2F2' }]}>
+        <View style={[s.evBox, { backgroundColor: data.vac >= 0 ? colors.statusSuccessSubtle : colors.statusCriticalSubtle }]}>
           <Text style={s.evLabel}>VAC</Text><Text style={s.evValue}>{fmtCurrency(data.vac)}</Text>
         </View>
-        <View style={[s.evBox, { backgroundColor: data.cv >= 0 ? '#E8F5E9' : '#FEF2F2' }]}>
+        <View style={[s.evBox, { backgroundColor: data.cv >= 0 ? colors.statusSuccessSubtle : colors.statusCriticalSubtle }]}>
           <Text style={s.evLabel}>CV</Text><Text style={s.evValue}>{fmtCurrency(data.cv)}</Text>
         </View>
-        <View style={[s.evBox, { backgroundColor: data.sv >= 0 ? '#E8F5E9' : '#FEF2F2' }]}>
+        <View style={[s.evBox, { backgroundColor: data.sv >= 0 ? colors.statusSuccessSubtle : colors.statusCriticalSubtle }]}>
           <Text style={s.evLabel}>SV</Text><Text style={s.evValue}>{fmtCurrency(data.sv)}</Text>
         </View>
       </View>
@@ -170,7 +170,7 @@ export const CostReport: React.FC<CostReportProps> = ({ data }) => {
             <View style={s.kpiBox}><Text style={s.kpiLabel}>Contingency Budget</Text><Text style={s.kpiValue}>{fmtCurrency(data.contingencyBudget)}</Text></View>
             <View style={s.kpiBox}><Text style={s.kpiLabel}>Used</Text><Text style={s.kpiValue}>{fmtCurrency(data.contingencyUsed)}</Text></View>
             <View style={s.kpiBox}><Text style={s.kpiLabel}>Remaining</Text><Text style={s.kpiValue}>{fmtCurrency(data.contingencyRemaining)}</Text></View>
-            <View style={[s.kpiBox, { backgroundColor: data.contingencyBurnRate > 75 ? '#FEF2F2' : '#FAFAF8' }]}>
+            <View style={[s.kpiBox, { backgroundColor: data.contingencyBurnRate > 75 ? colors.statusCriticalSubtle : '#FAFAF8' }]}>
               <Text style={s.kpiLabel}>Burn Rate</Text><Text style={s.kpiValue}>{data.contingencyBurnRate.toFixed(0)}%</Text>
             </View>
           </View>

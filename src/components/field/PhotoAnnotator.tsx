@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { ArrowRight, Circle, Type, Undo2, Download, X } from 'lucide-react';
-import { colors, spacing, typography, borderRadius, transitions, vizColors } from '../../styles/theme';
+import { colors, spacing, typography, borderRadius, transitions, vizColors, zIndex } from '../../styles/theme';
 
 type Tool = 'arrow' | 'circle' | 'text' | null;
 
@@ -26,7 +26,7 @@ const toolConfig: { tool: Tool; icon: React.ReactNode; label: string }[] = [
   { tool: 'text', icon: <Type size={16} />, label: 'Text' },
 ];
 
-const annotationColors = ['#F47820', '#C93B3B', '#2D8A6E', '#3A7BC8', '#7C5DC7'];
+const annotationColors = [colors.primaryOrange, colors.statusCritical, colors.statusActive, colors.statusInfo, colors.statusReview];
 
 export const PhotoAnnotator: React.FC<PhotoAnnotatorProps> = ({ onClose, onSave }) => {
   const [activeTool, setActiveTool] = useState<Tool>(null);
@@ -93,15 +93,15 @@ export const PhotoAnnotator: React.FC<PhotoAnnotatorProps> = ({ onClose, onSave 
   const handleUndo = () => setAnnotations((prev) => prev.slice(0, -1));
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 1060, backgroundColor: vizColors.darkText, display: 'flex', flexDirection: 'column' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: zIndex.tooltip as number, backgroundColor: vizColors.darkText, display: 'flex', flexDirection: 'column' }}>
       {/* Top toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: `${spacing['3']} ${spacing['4']}`, flexShrink: 0 }}>
-        <button onClick={onClose} style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], backgroundColor: 'transparent', border: 'none', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily }}>
+        <button onClick={onClose} style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], backgroundColor: 'transparent', border: 'none', color: colors.overlayWhiteBold, cursor: 'pointer', fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily }}>
           <X size={18} /> Cancel
         </button>
-        <span style={{ color: 'white', fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold }}>Annotate Photo</span>
-        <button onClick={() => { onSave(); onClose(); }} style={{ padding: `${spacing['2']} ${spacing['4']}`, backgroundColor: colors.primaryOrange, color: 'white', border: 'none', borderRadius: borderRadius.base, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, fontFamily: typography.fontFamily, cursor: 'pointer' }}>
-          <Download size={14} style={{ marginRight: 4, verticalAlign: 'middle' }} />Save
+        <span style={{ color: colors.white, fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold }}>Annotate Photo</span>
+        <button onClick={() => { onSave(); onClose(); }} style={{ padding: `${spacing['2']} ${spacing['4']}`, backgroundColor: colors.primaryOrange, color: colors.white, border: 'none', borderRadius: borderRadius.base, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, fontFamily: typography.fontFamily, cursor: 'pointer' }}>
+          <Download size={14} style={{ marginRight: spacing['1'], verticalAlign: 'middle' }} />Save
         </button>
       </div>
 
@@ -113,12 +113,12 @@ export const PhotoAnnotator: React.FC<PhotoAnnotatorProps> = ({ onClose, onSave 
           onMouseUp={handleCanvasMouseUp}
           style={{
             position: 'relative', width: '100%', maxWidth: '720px', aspectRatio: '4/3',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', /* decorative placeholder gradient */
             borderRadius: borderRadius.lg, overflow: 'hidden', cursor: activeTool ? 'crosshair' : 'default',
           }}
         >
           {/* Placeholder image content */}
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.3)', fontSize: typography.fontSize.heading, fontWeight: typography.fontWeight.semibold }}>
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.toolbarBg, fontSize: typography.fontSize.heading, fontWeight: typography.fontWeight.semibold }}>
             Floor 7 Steel Connection
           </div>
 
@@ -157,7 +157,7 @@ export const PhotoAnnotator: React.FC<PhotoAnnotatorProps> = ({ onClose, onSave 
               return (
                 <div key={ann.id} style={{
                   position: 'absolute', left: `${ann.x}%`, top: `${ann.y}%`,
-                  backgroundColor: ann.color, color: 'white',
+                  backgroundColor: ann.color, color: colors.white,
                   padding: `2px ${spacing['2']}`, borderRadius: borderRadius.sm,
                   fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold,
                   whiteSpace: 'nowrap', pointerEvents: 'none',
@@ -180,7 +180,7 @@ export const PhotoAnnotator: React.FC<PhotoAnnotatorProps> = ({ onClose, onSave 
                 onBlur={handleTextSubmit}
                 placeholder="Type here..."
                 style={{
-                  padding: `2px ${spacing['2']}`, backgroundColor: activeColor, color: 'white',
+                  padding: `2px ${spacing['2']}`, backgroundColor: activeColor, color: colors.white,
                   border: 'none', borderRadius: borderRadius.sm, outline: 'none',
                   fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
                   fontWeight: typography.fontWeight.semibold, minWidth: '100px',
@@ -194,7 +194,7 @@ export const PhotoAnnotator: React.FC<PhotoAnnotatorProps> = ({ onClose, onSave 
       {/* Bottom toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: spacing['4'], padding: `${spacing['3']} ${spacing['4']}`, flexShrink: 0 }}>
         {/* Tool selector */}
-        <div style={{ display: 'flex', gap: spacing['2'], backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: borderRadius.full, padding: spacing['1'] }}>
+        <div style={{ display: 'flex', gap: spacing['2'], backgroundColor: colors.darkHoverBg, borderRadius: borderRadius.full, padding: spacing['1'] }}>
           {toolConfig.map((t) => (
             <button
               key={t.tool}
@@ -203,7 +203,7 @@ export const PhotoAnnotator: React.FC<PhotoAnnotatorProps> = ({ onClose, onSave 
                 display: 'flex', alignItems: 'center', gap: spacing['1'],
                 padding: `${spacing['2']} ${spacing['3']}`,
                 backgroundColor: activeTool === t.tool ? colors.primaryOrange : 'transparent',
-                color: activeTool === t.tool ? 'white' : 'rgba(255,255,255,0.6)',
+                color: activeTool === t.tool ? colors.white : 'rgba(255,255,255,0.6)',
                 border: 'none', borderRadius: borderRadius.full, cursor: 'pointer',
                 fontSize: typography.fontSize.caption, fontFamily: typography.fontFamily,
                 fontWeight: typography.fontWeight.medium, transition: `all ${transitions.instant}`,
@@ -236,7 +236,7 @@ export const PhotoAnnotator: React.FC<PhotoAnnotatorProps> = ({ onClose, onSave 
           style={{
             display: 'flex', alignItems: 'center', gap: spacing['1'],
             padding: `${spacing['2']} ${spacing['3']}`,
-            backgroundColor: 'rgba(255,255,255,0.08)', color: annotations.length > 0 ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.2)',
+            backgroundColor: colors.darkHoverBg, color: annotations.length > 0 ? colors.overlayWhiteBold : 'rgba(255,255,255,0.2)',
             border: 'none', borderRadius: borderRadius.full, cursor: annotations.length > 0 ? 'pointer' : 'default',
             fontSize: typography.fontSize.caption, fontFamily: typography.fontFamily,
           }}

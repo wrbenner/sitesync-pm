@@ -1,10 +1,11 @@
 import React, { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme'
 
 export const Signup: React.FC = () => {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { signUp } = useAuth()
 
   const [name, setName] = useState('')
@@ -36,7 +37,7 @@ export const Signup: React.FC = () => {
       setError(signUpError)
       setLoading(false)
     } else {
-      navigate('/dashboard')
+      navigate(searchParams.get('returnTo') || '/dashboard')
     }
   }
 
@@ -96,7 +97,7 @@ export const Signup: React.FC = () => {
               marginBottom: spacing['4'],
             }}
           >
-            <span style={{ color: '#fff', fontWeight: typography.fontWeight.semibold, fontSize: typography.fontSize.title }}>S</span>
+            <span style={{ color: colors.white, fontWeight: typography.fontWeight.semibold, fontSize: typography.fontSize.title }}>S</span>
           </div>
           <h1
             style={{
@@ -214,7 +215,7 @@ export const Signup: React.FC = () => {
                 fontSize: typography.fontSize.body,
                 fontWeight: typography.fontWeight.semibold,
                 fontFamily: typography.fontFamily,
-                color: '#fff',
+                color: colors.white,
                 backgroundColor: loading ? colors.orangeHover : colors.primaryOrange,
                 border: 'none',
                 borderRadius: borderRadius.md,

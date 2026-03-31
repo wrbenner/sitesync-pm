@@ -3,6 +3,7 @@
 
 import { setup } from 'xstate'
 import { BASE_CLOSEOUT_ITEMS, PROJECT_TYPE_ITEMS } from '../constants/closeoutTemplates'
+import { colors } from '../styles/theme'
 
 // ── Types ────────────────────────────────────────────────
 
@@ -85,12 +86,12 @@ export function getValidCloseoutTransitions(status: CloseoutItemStatus): string[
 
 export function getCloseoutStatusConfig(status: CloseoutItemStatus) {
   const config: Record<CloseoutItemStatus, { label: string; color: string; bg: string }> = {
-    required: { label: 'Required', color: '#8C8580', bg: 'rgba(140,133,128,0.08)' },
-    requested: { label: 'Requested', color: '#3A7BC8', bg: 'rgba(58,123,200,0.08)' },
-    submitted: { label: 'Submitted', color: '#C4850C', bg: 'rgba(196,133,12,0.08)' },
-    under_review: { label: 'Under Review', color: '#7C5DC7', bg: 'rgba(124,93,199,0.08)' },
-    approved: { label: 'Approved', color: '#2D8A6E', bg: 'rgba(45,138,110,0.08)' },
-    rejected: { label: 'Rejected', color: '#C93B3B', bg: 'rgba(201,59,59,0.08)' },
+    required: { label: 'Required', color: colors.statusNeutral, bg: colors.statusNeutralSubtle },
+    requested: { label: 'Requested', color: colors.statusInfo, bg: colors.statusInfoSubtle },
+    submitted: { label: 'Submitted', color: colors.statusPending, bg: colors.statusPendingSubtle },
+    under_review: { label: 'Under Review', color: colors.statusReview, bg: colors.statusReviewSubtle },
+    approved: { label: 'Approved', color: colors.statusActive, bg: colors.statusActiveSubtle },
+    rejected: { label: 'Rejected', color: colors.statusCritical, bg: colors.statusCriticalSubtle },
   }
   return config[status] || config.required
 }
@@ -140,10 +141,10 @@ export function generateCloseoutList(projectType: ProjectType): CloseoutTemplate
 
 export function getWarrantyStatusConfig(status: WarrantyStatus) {
   const config: Record<WarrantyStatus, { label: string; color: string; bg: string }> = {
-    active: { label: 'Active', color: '#2D8A6E', bg: 'rgba(45,138,110,0.08)' },
-    expiring_soon: { label: 'Expiring Soon', color: '#C4850C', bg: 'rgba(196,133,12,0.08)' },
-    expired: { label: 'Expired', color: '#C93B3B', bg: 'rgba(201,59,59,0.08)' },
-    claimed: { label: 'Claimed', color: '#7C5DC7', bg: 'rgba(124,93,199,0.08)' },
+    active: { label: 'Active', color: colors.statusActive, bg: colors.statusActiveSubtle },
+    expiring_soon: { label: 'Expiring Soon', color: colors.statusPending, bg: colors.statusPendingSubtle },
+    expired: { label: 'Expired', color: colors.statusCritical, bg: colors.statusCriticalSubtle },
+    claimed: { label: 'Claimed', color: colors.statusReview, bg: colors.statusReviewSubtle },
   }
   return config[status] || config.active
 }

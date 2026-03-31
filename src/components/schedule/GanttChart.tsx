@@ -128,7 +128,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ phases, whatIfMode, onPh
                 color: timeScale === scale ? colors.textPrimary : colors.textTertiary,
                 fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
                 fontFamily: typography.fontFamily, cursor: 'pointer',
-                boxShadow: timeScale === scale ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                boxShadow: timeScale === scale ? shadows.sm : 'none',
                 textTransform: 'capitalize',
               }}
             >
@@ -281,9 +281,9 @@ export const GanttChart: React.FC<GanttChartProps> = ({ phases, whatIfMode, onPh
                     }}>
                       <div style={{
                         position: 'absolute', top: -16, left: '50%', transform: 'translateX(-50%)',
-                        fontSize: '9px', color: colors.statusReview, fontWeight: typography.fontWeight.semibold,
-                        backgroundColor: colors.surfaceRaised, padding: '0 4px', borderRadius: 3,
-                        whiteSpace: 'nowrap', boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                        fontSize: typography.fontSize.caption, color: colors.statusReview, fontWeight: typography.fontWeight.semibold,
+                        backgroundColor: colors.surfaceRaised, padding: `0 ${spacing['1']}`, borderRadius: borderRadius.sm,
+                        whiteSpace: 'nowrap', boxShadow: shadows.sm,
                       }}>
                         Cascade affected
                       </div>
@@ -346,7 +346,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ phases, whatIfMode, onPh
           {todayOffset > 0 && todayOffset < 100 && (
             <div style={{ paddingLeft: '170px', position: 'relative', height: 16, marginTop: spacing['1'] }}>
               <div style={{ position: 'absolute', left: `calc(170px + ${(todayOffset / 100) * (100)}% * (100% - 170px) / 100%)`, transform: 'translateX(-50%)' }}>
-                <span style={{ fontSize: '9px', color: colors.statusCritical, fontWeight: typography.fontWeight.semibold, backgroundColor: `${colors.statusCritical}12`, padding: '0 4px', borderRadius: 3 }}>Today</span>
+                <span style={{ fontSize: typography.fontSize.caption, color: colors.statusCritical, fontWeight: typography.fontWeight.semibold, backgroundColor: `${colors.statusCritical}12`, padding: `0 ${spacing['1']}`, borderRadius: borderRadius.sm }}>Today</span>
               </div>
             </div>
           )}
@@ -357,9 +357,9 @@ export const GanttChart: React.FC<GanttChartProps> = ({ phases, whatIfMode, onPh
             <div style={{ display: 'flex', gap: spacing['2'] }}>
               {/* Y-axis labels */}
               <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', alignItems: 'flex-end', height: 64, paddingRight: spacing['1'], flexShrink: 0 }}>
-                <span style={{ fontSize: '9px', color: colors.textTertiary }}>200</span>
-                <span style={{ fontSize: '9px', color: colors.textTertiary }}>100</span>
-                <span style={{ fontSize: '9px', color: colors.textTertiary }}>0</span>
+                <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>200</span>
+                <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>100</span>
+                <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>0</span>
               </div>
               {/* Bars */}
               <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', gap: 2, height: 64 }}>
@@ -379,7 +379,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ phases, whatIfMode, onPh
               </div>
             </div>
             <div style={{ paddingLeft: '28px', marginTop: spacing['1'] }}>
-              <span style={{ fontSize: '9px', color: colors.textTertiary }}>Workers</span>
+              <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Workers</span>
             </div>
           </div>
         </div>

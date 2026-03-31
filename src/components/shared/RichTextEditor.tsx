@@ -44,15 +44,15 @@ const ToolbarButton: React.FC<{
 
 const editorStyles = `
 .ProseMirror { outline: none; min-height: inherit; }
-.ProseMirror p { margin: 0 0 8px; }
-.ProseMirror h2 { font-size: 18px; font-weight: 600; margin: 16px 0 8px; }
-.ProseMirror ul, .ProseMirror ol { padding-left: 24px; }
+.ProseMirror p { margin: 0 0 ${spacing['2']}; }
+.ProseMirror h2 { font-size: ${typography.fontSize.subtitle}; font-weight: ${typography.fontWeight.semibold}; margin: ${spacing['4']} 0 ${spacing['2']}; }
+.ProseMirror ul, .ProseMirror ol { padding-left: ${spacing['6']}; }
 .ProseMirror ul[data-type="taskList"] { padding-left: 0; list-style: none; }
-.ProseMirror ul[data-type="taskList"] li { display: flex; align-items: flex-start; gap: 8px; }
-.ProseMirror mark { background-color: rgba(244, 120, 32, 0.2); }
+.ProseMirror ul[data-type="taskList"] li { display: flex; align-items: flex-start; gap: ${spacing['2']}; }
+.ProseMirror mark { background-color: ${colors.orangeLight}; }
 .ProseMirror p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
-  color: #9A9490;
+  color: ${colors.textTertiary};
   float: left;
   height: 0;
   pointer-events: none;

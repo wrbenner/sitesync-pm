@@ -1,4 +1,5 @@
 import { setup, assign } from 'xstate'
+import { colors } from '../styles/theme'
 
 export type SubmittalState = 'draft' | 'submitted' | 'gc_review' | 'architect_review' | 'approved' | 'rejected' | 'resubmit' | 'closed'
 export type SubmittalStamp = 'approved' | 'approved_as_noted' | 'rejected' | 'revise_and_resubmit'
@@ -123,14 +124,14 @@ export function getNextSubmittalStatus(currentStatus: SubmittalState, action: st
 
 export function getSubmittalStatusConfig(status: SubmittalState) {
   const config: Record<SubmittalState, { label: string; color: string; bg: string }> = {
-    draft: { label: 'Draft', color: '#8C8580', bg: 'rgba(140,133,128,0.08)' },
-    submitted: { label: 'Submitted', color: '#3A7BC8', bg: 'rgba(58,123,200,0.08)' },
-    gc_review: { label: 'GC Review', color: '#C4850C', bg: 'rgba(196,133,12,0.08)' },
-    architect_review: { label: 'A/E Review', color: '#7C5DC7', bg: 'rgba(124,93,199,0.08)' },
-    approved: { label: 'Approved', color: '#2D8A6E', bg: 'rgba(45,138,110,0.08)' },
-    rejected: { label: 'Rejected', color: '#C93B3B', bg: 'rgba(201,59,59,0.08)' },
-    resubmit: { label: 'Revise and Resubmit', color: '#C4850C', bg: 'rgba(196,133,12,0.08)' },
-    closed: { label: 'Closed', color: '#8C8580', bg: 'rgba(140,133,128,0.04)' },
+    draft: { label: 'Draft', color: colors.statusNeutral, bg: colors.statusNeutralSubtle },
+    submitted: { label: 'Submitted', color: colors.statusInfo, bg: colors.statusInfoSubtle },
+    gc_review: { label: 'GC Review', color: colors.statusPending, bg: colors.statusPendingSubtle },
+    architect_review: { label: 'A/E Review', color: colors.statusReview, bg: colors.statusReviewSubtle },
+    approved: { label: 'Approved', color: colors.statusActive, bg: colors.statusActiveSubtle },
+    rejected: { label: 'Rejected', color: colors.statusCritical, bg: colors.statusCriticalSubtle },
+    resubmit: { label: 'Revise and Resubmit', color: colors.statusPending, bg: colors.statusPendingSubtle },
+    closed: { label: 'Closed', color: colors.statusNeutral, bg: colors.statusNeutralSubtle },
   }
   return config[status] || config.draft
 }
@@ -139,10 +140,10 @@ export function getSubmittalStatusConfig(status: SubmittalState) {
 
 export function getStampConfig(stamp: SubmittalStamp) {
   const config: Record<SubmittalStamp, { label: string; color: string; bg: string }> = {
-    approved: { label: 'APPROVED', color: '#2D8A6E', bg: 'rgba(45,138,110,0.08)' },
-    approved_as_noted: { label: 'APPROVED AS NOTED', color: '#C4850C', bg: 'rgba(196,133,12,0.08)' },
-    rejected: { label: 'REJECTED', color: '#C93B3B', bg: 'rgba(201,59,59,0.08)' },
-    revise_and_resubmit: { label: 'REVISE AND RESUBMIT', color: '#C4850C', bg: 'rgba(196,133,12,0.08)' },
+    approved: { label: 'APPROVED', color: colors.statusActive, bg: colors.statusActiveSubtle },
+    approved_as_noted: { label: 'APPROVED AS NOTED', color: colors.statusPending, bg: colors.statusPendingSubtle },
+    rejected: { label: 'REJECTED', color: colors.statusCritical, bg: colors.statusCriticalSubtle },
+    revise_and_resubmit: { label: 'REVISE AND RESUBMIT', color: colors.statusPending, bg: colors.statusPendingSubtle },
   }
   return config[stamp] || config.approved
 }
@@ -150,11 +151,11 @@ export function getStampConfig(stamp: SubmittalStamp) {
 // ── Lead Time Urgency ────────────────────────────────────
 
 export function getLeadTimeUrgency(submitByDate: string | null): { color: string; label: string; urgent: boolean } {
-  if (!submitByDate) return { color: '#8C8580', label: 'No submit date', urgent: false }
+  if (!submitByDate) return { color: colors.statusNeutral, label: 'No submit date', urgent: false }
   const days = Math.ceil((new Date(submitByDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-  if (days < 0) return { color: '#C93B3B', label: `${Math.abs(days)} days past submit date`, urgent: true }
-  if (days <= 7) return { color: '#C4850C', label: `Submit within ${days} days`, urgent: true }
-  return { color: '#2D8A6E', label: `${days} days until submit date`, urgent: false }
+  if (days < 0) return { color: colors.statusCritical, label: `${Math.abs(days)} days past submit date`, urgent: true }
+  if (days <= 7) return { color: colors.statusPending, label: `Submit within ${days} days`, urgent: true }
+  return { color: colors.statusActive, label: `${days} days until submit date`, urgent: false }
 }
 
 // ── CSI MasterFormat Divisions ───────────────────────────

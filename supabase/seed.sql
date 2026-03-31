@@ -119,6 +119,77 @@ DECLARE
 BEGIN
 
 -- =========================================================================
+-- 0. TEST AUTH USERS (created via Supabase's own internal schema)
+-- =========================================================================
+-- We must match what GoTrue expects: proper instance_id, is_sso_user, etc.
+-- The password hash below is a valid bcrypt hash for "Password123!"
+
+-- bcrypt hash ($2a$ prefix required by GoTrue) for "Password123!"
+-- raw_user_meta_data must include sub, email, email_verified, phone_verified
+-- confirmation_token and similar fields must be '' not NULL
+
+INSERT INTO auth.users (
+  id, instance_id, aud, role, email, encrypted_password,
+  email_confirmed_at, created_at, updated_at,
+  raw_app_meta_data, raw_user_meta_data,
+  confirmation_token, recovery_token, email_change_token_new, email_change,
+  is_sso_user, is_anonymous
+)
+VALUES
+  (user_mike,     '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'mike.chen@turnergc.com',
+   '$2a$10$zd4L4pEffpYxkvfOqqErZeZts4hQcsb9OMrUYGC/ia5sbr.D4lK3O', now(), now(), now(),
+   '{"provider":"email","providers":["email"]}',
+   jsonb_build_object('sub', '11111111-1111-1111-1111-111111111111', 'email', 'mike.chen@turnergc.com', 'full_name', 'Mike Chen', 'email_verified', true, 'phone_verified', false),
+   '', '', '', '', false, false),
+  (user_jennifer, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'jennifer.walsh@turnergc.com',
+   '$2a$10$zd4L4pEffpYxkvfOqqErZeZts4hQcsb9OMrUYGC/ia5sbr.D4lK3O', now(), now(), now(),
+   '{"provider":"email","providers":["email"]}',
+   jsonb_build_object('sub', '22222222-2222-2222-2222-222222222222', 'email', 'jennifer.walsh@turnergc.com', 'full_name', 'Jennifer Walsh', 'email_verified', true, 'phone_verified', false),
+   '', '', '', '', false, false),
+  (user_david,    '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'david.park@turnergc.com',
+   '$2a$10$zd4L4pEffpYxkvfOqqErZeZts4hQcsb9OMrUYGC/ia5sbr.D4lK3O', now(), now(), now(),
+   '{"provider":"email","providers":["email"]}',
+   jsonb_build_object('sub', '33333333-3333-3333-3333-333333333333', 'email', 'david.park@turnergc.com', 'full_name', 'David Park', 'email_verified', true, 'phone_verified', false),
+   '', '', '', '', false, false),
+  (user_robert,   '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'robert.martinez@turnergc.com',
+   '$2a$10$zd4L4pEffpYxkvfOqqErZeZts4hQcsb9OMrUYGC/ia5sbr.D4lK3O', now(), now(), now(),
+   '{"provider":"email","providers":["email"]}',
+   jsonb_build_object('sub', '44444444-4444-4444-4444-444444444444', 'email', 'robert.martinez@turnergc.com', 'full_name', 'Robert Martinez', 'email_verified', true, 'phone_verified', false),
+   '', '', '', '', false, false),
+  (user_lisa,     '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'lisa.thompson@turnergc.com',
+   '$2a$10$zd4L4pEffpYxkvfOqqErZeZts4hQcsb9OMrUYGC/ia5sbr.D4lK3O', now(), now(), now(),
+   '{"provider":"email","providers":["email"]}',
+   jsonb_build_object('sub', '55555555-5555-5555-5555-555555555555', 'email', 'lisa.thompson@turnergc.com', 'full_name', 'Lisa Thompson', 'email_verified', true, 'phone_verified', false),
+   '', '', '', '', false, false),
+  (user_karen,    '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'karen.rodriguez@turnergc.com',
+   '$2a$10$zd4L4pEffpYxkvfOqqErZeZts4hQcsb9OMrUYGC/ia5sbr.D4lK3O', now(), now(), now(),
+   '{"provider":"email","providers":["email"]}',
+   jsonb_build_object('sub', '66666666-6666-6666-6666-666666666666', 'email', 'karen.rodriguez@turnergc.com', 'full_name', 'Karen Rodriguez', 'email_verified', true, 'phone_verified', false),
+   '', '', '', '', false, false),
+  (user_james,    '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'james.wilson@turnergc.com',
+   '$2a$10$zd4L4pEffpYxkvfOqqErZeZts4hQcsb9OMrUYGC/ia5sbr.D4lK3O', now(), now(), now(),
+   '{"provider":"email","providers":["email"]}',
+   jsonb_build_object('sub', '77777777-7777-7777-7777-777777777777', 'email', 'james.wilson@turnergc.com', 'full_name', 'James Wilson', 'email_verified', true, 'phone_verified', false),
+   '', '', '', '', false, false),
+  (user_sarah,    '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'sarah.kim@turnergc.com',
+   '$2a$10$zd4L4pEffpYxkvfOqqErZeZts4hQcsb9OMrUYGC/ia5sbr.D4lK3O', now(), now(), now(),
+   '{"provider":"email","providers":["email"]}',
+   jsonb_build_object('sub', '88888888-8888-8888-8888-888888888888', 'email', 'sarah.kim@turnergc.com', 'full_name', 'Sarah Kim', 'email_verified', true, 'phone_verified', false),
+   '', '', '', '', false, false);
+
+-- GoTrue requires an identity row per user for password sign-in
+INSERT INTO auth.identities (id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at)
+VALUES
+  (gen_random_uuid(), user_mike,     jsonb_build_object('sub', user_mike::text,     'email', 'mike.chen@turnergc.com',       'email_verified', true, 'phone_verified', false), 'email', user_mike::text,     now(), now(), now()),
+  (gen_random_uuid(), user_jennifer, jsonb_build_object('sub', user_jennifer::text, 'email', 'jennifer.walsh@turnergc.com',  'email_verified', true, 'phone_verified', false), 'email', user_jennifer::text, now(), now(), now()),
+  (gen_random_uuid(), user_david,    jsonb_build_object('sub', user_david::text,    'email', 'david.park@turnergc.com',      'email_verified', true, 'phone_verified', false), 'email', user_david::text,    now(), now(), now()),
+  (gen_random_uuid(), user_robert,   jsonb_build_object('sub', user_robert::text,   'email', 'robert.martinez@turnergc.com', 'email_verified', true, 'phone_verified', false), 'email', user_robert::text,   now(), now(), now()),
+  (gen_random_uuid(), user_lisa,     jsonb_build_object('sub', user_lisa::text,     'email', 'lisa.thompson@turnergc.com',   'email_verified', true, 'phone_verified', false), 'email', user_lisa::text,     now(), now(), now()),
+  (gen_random_uuid(), user_karen,    jsonb_build_object('sub', user_karen::text,    'email', 'karen.rodriguez@turnergc.com', 'email_verified', true, 'phone_verified', false), 'email', user_karen::text,    now(), now(), now()),
+  (gen_random_uuid(), user_james,    jsonb_build_object('sub', user_james::text,    'email', 'james.wilson@turnergc.com',    'email_verified', true, 'phone_verified', false), 'email', user_james::text,    now(), now(), now()),
+  (gen_random_uuid(), user_sarah,    jsonb_build_object('sub', user_sarah::text,    'email', 'sarah.kim@turnergc.com',       'email_verified', true, 'phone_verified', false), 'email', user_sarah::text,    now(), now(), now());
+
+-- =========================================================================
 -- 1. PROJECT
 -- =========================================================================
 
@@ -145,11 +216,11 @@ VALUES (
 INSERT INTO project_members (project_id, user_id, role, company, trade, invited_at, accepted_at) VALUES
   (project_id, user_mike,     'owner',  'Turner & Associates GC',       'General Contractor', '2024-01-10', '2024-01-10'),
   (project_id, user_jennifer, 'admin',  'Turner & Associates GC',       'Project Management', '2024-01-10', '2024-01-11'),
-  (project_id, user_david,    'member', 'Lone Star Structural Steel',   'Structural Steel',   '2024-01-12', '2024-01-13'),
-  (project_id, user_robert,   'member', 'DFW Mechanical Services',      'HVAC/Mechanical',    '2024-01-12', '2024-01-14'),
-  (project_id, user_lisa,     'member', 'Apex Electrical Contractors',   'Electrical',         '2024-01-15', '2024-01-16'),
+  (project_id, user_david,    'subcontractor', 'Lone Star Structural Steel',   'Structural Steel',   '2024-01-12', '2024-01-13'),
+  (project_id, user_robert,   'subcontractor', 'DFW Mechanical Services',      'HVAC/Mechanical',    '2024-01-12', '2024-01-14'),
+  (project_id, user_lisa,     'subcontractor', 'Apex Electrical Contractors',   'Electrical',         '2024-01-15', '2024-01-16'),
   (project_id, user_karen,    'admin',  'Whitman Graves Architects',     'Architecture',       '2024-01-10', '2024-01-11'),
-  (project_id, user_james,    'member', 'Precision Concrete Works',      'Concrete',           '2024-01-15', '2024-01-17'),
+  (project_id, user_james,    'subcontractor', 'Precision Concrete Works',      'Concrete',           '2024-01-15', '2024-01-17'),
   (project_id, user_sarah,    'viewer', 'Riverside Development Group',   'Owner Representative', '2024-01-10', '2024-01-12');
 
 -- =========================================================================
@@ -524,9 +595,9 @@ INSERT INTO change_orders (project_id, description, amount, status, requested_by
   (project_id, 'Addition of emergency generator load bank testing and permanent natural gas connection per revised owner requirements.',
    67000, 'approved', 'Riverside Development Group', '2025-11-01', '2025-12-05', '2025-11-01'),
   (project_id, 'Revised curtain wall system at the Level 14 setback to accommodate the architectural design change from flat panels to angled facade. Includes re engineering of anchor system.',
-   520000, 'pending', 'Whitman Graves Architects', '2026-03-10', NULL, '2026-03-10'),
+   520000, 'pending_review', 'Whitman Graves Architects', '2026-03-10', NULL, '2026-03-10'),
   (project_id, 'Credit for deletion of the rooftop amenity terrace water feature, replaced with enhanced landscape planters per owner direction.',
-   -95000, 'pending', 'Riverside Development Group', '2026-03-18', NULL, '2026-03-18');
+   -95000, 'pending_review', 'Riverside Development Group', '2026-03-18', NULL, '2026-03-18');
 
 -- =========================================================================
 -- 14. MEETINGS (8) with attendees and action items

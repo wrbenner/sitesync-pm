@@ -264,7 +264,7 @@ export function useBudgetItems(projectId: string | undefined) {
         .from('budget_items')
         .select('*')
         .eq('project_id', projectId!)
-        .order('division_name', { ascending: true })
+        .order('division', { ascending: true })
       if (error) throw error
       return data as BudgetItem[]
     },

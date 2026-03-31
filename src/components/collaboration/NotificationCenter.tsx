@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Bell, CheckCheck, X, ExternalLink, Inbox } from 'lucide-react';
-import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
+import { colors, spacing, typography, borderRadius, shadows, transitions, zIndex } from '../../styles/theme';
 import { useAuth } from '../../hooks/useAuth';
 import { useNotifications } from '../../hooks/queries';
 import { useMarkNotificationRead, useMarkAllNotificationsRead } from '../../hooks/mutations';
@@ -67,9 +67,9 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ onClick, isO
           minWidth: 16, height: 16,
           backgroundColor: colors.primaryOrange, color: colors.white,
           borderRadius: borderRadius.full,
-          fontSize: '10px', fontWeight: typography.fontWeight.semibold,
+          fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          padding: '0 4px',
+          padding: `0 ${spacing['1']}`,
           border: `2px solid ${colors.surfaceRaised}`,
           lineHeight: 1,
         }}>
@@ -116,7 +116,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ onClose })
   return (
     <>
       {/* Backdrop */}
-      <div onClick={onClose} role="presentation" aria-hidden="true" style={{ position: 'fixed', inset: 0, zIndex: 998 }} />
+      <div onClick={onClose} role="presentation" aria-hidden="true" style={{ position: 'fixed', inset: 0, zIndex: zIndex.dropdown as number }} />
 
       {/* Panel */}
       <div style={{
@@ -125,7 +125,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ onClose })
         backgroundColor: colors.surfaceRaised,
         borderRadius: borderRadius.lg,
         boxShadow: shadows.dropdown,
-        zIndex: 999, overflow: 'hidden',
+        zIndex: zIndex.dropdown as number + 1, overflow: 'hidden',
         display: 'flex', flexDirection: 'column',
       }}>
         {/* Header */}
@@ -223,7 +223,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ onClose })
               </div>
 
               {/* Icon */}
-              <span style={{ fontSize: '16px', flexShrink: 0, marginTop: 1 }}>
+              <span style={{ fontSize: typography.fontSize.title, flexShrink: 0, marginTop: 1 }}>
                 {typeIcons[notification.type] || '📌'}
               </span>
 

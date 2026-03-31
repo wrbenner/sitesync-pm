@@ -78,7 +78,7 @@ export const AIAnnotationIndicator: React.FC<AIAnnotationIndicatorProps> = ({ an
               <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>{annotation.title}</span>
             </div>
             <p style={{ fontSize: typography.fontSize.caption, color: colors.textSecondary, margin: 0, whiteSpace: 'normal', lineHeight: typography.lineHeight.normal }}>{annotation.insight}</p>
-            <p style={{ fontSize: '10px', color: colors.statusReview, margin: 0, marginTop: spacing['1'] }}>Click for details</p>
+            <p style={{ fontSize: typography.fontSize.caption, color: colors.statusReview, margin: 0, marginTop: spacing['1'] }}>Click for details</p>
           </div>
         )}
       </div>
@@ -89,7 +89,7 @@ export const AIAnnotationIndicator: React.FC<AIAnnotationIndicatorProps> = ({ an
           style={{
             position: 'fixed', inset: 0, zIndex: zIndex.modal as number,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            backgroundColor: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(4px)',
+            backgroundColor: colors.toolbarBg, backdropFilter: 'blur(4px)',
           }}
           onClick={() => setShowDetail(false)}
         >

@@ -1,5 +1,5 @@
 import React from 'react';
-import { colors, typography } from '../styles/theme';
+import { colors, typography, transitions } from '../styles/theme';
 
 interface ProgressRingProps {
   value: number;
@@ -49,7 +49,7 @@ export const ProgressRing: React.FC<ProgressRingProps> = ({
           strokeDasharray={circumference}
           strokeDashoffset={offset}
           strokeLinecap="round"
-          style={{ transition: 'stroke-dashoffset 0.6s ease-out' }}
+          style={{ transition: `stroke-dashoffset ${transitions.smooth}` }}
         />
       </svg>
       {showLabel && (

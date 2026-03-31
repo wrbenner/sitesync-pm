@@ -48,12 +48,12 @@ const FLOOR_COUNT = 3
 const EXPLODE_GAP = 4
 
 const layerColors: Record<string, string> = {
-  foundation: '#8B8680',
+  foundation: colors.gray500,
   structure: '#6B7B8D',
-  floorplate: '#D0D0D0',
+  floorplate: colors.gray300,
   walls: '#F0F0F0',
-  mepHvac: '#E05252',
-  mepPlumbing: '#4A9EE8',
+  mepHvac: colors.chartRed,
+  mepPlumbing: colors.statusInfoBright,
   mepElectrical: '#E8C84A',
   roof: '#444444',
 }
@@ -104,7 +104,7 @@ const SelectableMesh: React.FC<{
       color: displayColor,
       transparent: baseOpacity < 1 || xray,
       opacity: baseOpacity,
-      emissive: isSelected ? colors.primaryOrange : '#000000',
+      emissive: isSelected ? colors.primaryOrange : colors.black,
       emissiveIntensity: isSelected ? 0.3 : 0,
       side: THREE.DoubleSide,
     })
@@ -182,7 +182,7 @@ const ColumnGrid: React.FC<{
               onSelect(isSelected ? null : makeElementInfo(id, 'Steel Column', 'W14x30 Steel', '0.4m dia x 3.5m H', `Floor ${floorIndex + 1}`, 'structure'))
             }}
           >
-            <meshStandardMaterial color={isSelected ? colors.primaryOrange : layerColors.structure} emissive={isSelected ? colors.primaryOrange : '#000000'} emissiveIntensity={isSelected ? 0.3 : 0} transparent opacity={isSelected ? 1 : 0} />
+            <meshStandardMaterial color={isSelected ? colors.primaryOrange : layerColors.structure} emissive={isSelected ? colors.primaryOrange : colors.black} emissiveIntensity={isSelected ? 0.3 : 0} transparent opacity={isSelected ? 1 : 0} />
           </mesh>
         )
       })}
@@ -295,7 +295,7 @@ const SampleBuilding: React.FC<BuildingProps> = ({
                 }}
               >
                 <meshStandardMaterial color={selectedId === `conduit-${fi}` ? colors.primaryOrange : layerColors.mepElectrical} transparent={xray} opacity={xray ? 0.3 : 1}
-                  emissive={selectedId === `conduit-${fi}` ? colors.primaryOrange : '#000000'} emissiveIntensity={selectedId === `conduit-${fi}` ? 0.3 : 0} />
+                  emissive={selectedId === `conduit-${fi}` ? colors.primaryOrange : colors.black} emissiveIntensity={selectedId === `conduit-${fi}` ? 0.3 : 0} />
               </mesh>
             </FloorGroup>
           )}
@@ -312,7 +312,7 @@ const SampleBuilding: React.FC<BuildingProps> = ({
               }}
             >
               <meshStandardMaterial color={selectedId === `pipe-${i}` ? colors.primaryOrange : layerColors.mepPlumbing} transparent={xray} opacity={xray ? 0.3 : 1}
-                emissive={selectedId === `pipe-${i}` ? colors.primaryOrange : '#000000'} emissiveIntensity={selectedId === `pipe-${i}` ? 0.3 : 0} />
+                emissive={selectedId === `pipe-${i}` ? colors.primaryOrange : colors.black} emissiveIntensity={selectedId === `pipe-${i}` ? 0.3 : 0} />
             </mesh>
           ))}
         </group>
@@ -415,7 +415,7 @@ export const BIMViewer: React.FC = () => {
           <ambientLight intensity={0.6} />
           <directionalLight position={[15, 20, 10]} intensity={1} castShadow shadow-mapSize-width={2048} shadow-mapSize-height={2048} />
           <OrbitControls makeDefault enableDamping dampingFactor={0.1} minDistance={5} maxDistance={80} />
-          <Grid position={[0, -0.26, 0]} args={[50, 50]} cellSize={1} cellColor="#ddd" sectionSize={5} sectionColor="#bbb" fadeDistance={60} />
+          <Grid position={[0, -0.26, 0]} args={[50, 50]} cellSize={1} cellColor={vizColors.gridLine} sectionSize={5} sectionColor={vizColors.neutral} fadeDistance={60} />
 
           {/* Building */}
           <SampleBuilding
@@ -447,7 +447,7 @@ export const BIMViewer: React.FC = () => {
       <div style={{
         position: 'absolute', top: spacing['3'], left: spacing['3'],
         display: 'flex', flexDirection: 'column', gap: spacing['3'],
-        backgroundColor: 'rgba(255,255,255,0.95)', borderRadius: borderRadius.lg,
+        backgroundColor: colors.panelBg, borderRadius: borderRadius.lg,
         padding: spacing['3'], boxShadow: shadows.dropdown, backdropFilter: 'blur(8px)', maxWidth: 200,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['1'] }}>
@@ -489,7 +489,7 @@ export const BIMViewer: React.FC = () => {
       {showOverlayPanel && (
         <div style={{
           position: 'absolute', top: spacing['3'], right: spacing['3'],
-          width: 220, backgroundColor: 'rgba(255,255,255,0.95)', borderRadius: borderRadius.lg,
+          width: 220, backgroundColor: colors.panelBg, borderRadius: borderRadius.lg,
           padding: spacing['3'], boxShadow: shadows.dropdown, backdropFilter: 'blur(8px)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['3'] }}>
@@ -530,7 +530,7 @@ export const BIMViewer: React.FC = () => {
                   </div>
                   <div style={{ flex: 1 }}>
                     <p style={{ margin: 0, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: isActive ? colors.textPrimary : colors.textSecondary }}>{config.label}</p>
-                    <p style={{ margin: 0, fontSize: '9px', color: colors.textTertiary, lineHeight: typography.lineHeight.snug }}>{config.description}</p>
+                    <p style={{ margin: 0, fontSize: typography.fontSize.caption, color: colors.textTertiary, lineHeight: typography.lineHeight.snug }}>{config.description}</p>
                   </div>
                 </button>
               )
@@ -564,7 +564,7 @@ export const BIMViewer: React.FC = () => {
       {dt.activeLayers.has('schedule') && (
         <div style={{
           position: 'absolute', bottom: spacing['3'], left: spacing['3'], right: spacing['3'],
-          backgroundColor: 'rgba(255,255,255,0.95)', borderRadius: borderRadius.lg,
+          backgroundColor: colors.panelBg, borderRadius: borderRadius.lg,
           padding: `${spacing['3']} ${spacing['4']}`, boxShadow: shadows.dropdown, backdropFilter: 'blur(8px)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
@@ -598,7 +598,7 @@ export const BIMViewer: React.FC = () => {
       {selectedElement && !showOverlayPanel && (
         <div style={{
           position: 'absolute', top: spacing['3'], right: spacing['3'], width: 280,
-          backgroundColor: 'rgba(255,255,255,0.95)', borderRadius: borderRadius.lg,
+          backgroundColor: colors.panelBg, borderRadius: borderRadius.lg,
           padding: spacing['4'], boxShadow: shadows.dropdown, backdropFilter: 'blur(8px)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['3'] }}>
@@ -631,7 +631,7 @@ export const BIMViewer: React.FC = () => {
           style={{
             position: 'absolute', top: spacing['3'], right: spacing['3'],
             width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            backgroundColor: 'rgba(255,255,255,0.95)', border: 'none', borderRadius: borderRadius.base,
+            backgroundColor: colors.panelBg, border: 'none', borderRadius: borderRadius.base,
             boxShadow: shadows.dropdown, cursor: 'pointer', backdropFilter: 'blur(8px)',
           }}
         >

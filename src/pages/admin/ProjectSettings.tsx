@@ -119,7 +119,7 @@ export function ProjectSettings() {
             gap: spacing['2'],
             padding: `${spacing['2']} ${spacing['5']}`,
             backgroundColor: saved ? colors.statusActive : colors.primaryOrange,
-            color: '#fff',
+            color: colors.white,
             border: 'none',
             borderRadius: borderRadius.md,
             fontSize: typography.fontSize.sm,

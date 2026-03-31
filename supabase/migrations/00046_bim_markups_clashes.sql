@@ -1,12 +1,16 @@
 -- BIM Markups & Clash Detection: 3D annotations, measurements, and
 -- inter-discipline clash tracking for the digital twin viewer.
+--
+-- NOTE: bim_markups was already created in 00038_bim_models.sql with
+-- column "created_by" (not "user_id"). This migration adds any missing
+-- columns and creates the bim_clash_reports table.
 
--- ── Markups (annotations, measurements, notes) ──────────
+-- ── Add missing columns to bim_markups ─────────────────────
 
 CREATE TABLE IF NOT EXISTS bim_markups (
   id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   project_id          UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-  user_id             UUID NOT NULL REFERENCES auth.users(id),
+  created_by          UUID NOT NULL REFERENCES auth.users(id),
   markup_type         VARCHAR(50) NOT NULL CHECK (markup_type IN ('annotation', 'measurement', 'clash', 'note', 'section')),
   title               VARCHAR(255),
   description         TEXT,
@@ -29,9 +33,24 @@ CREATE TABLE IF NOT EXISTS bim_markups (
   expires_at          TIMESTAMPTZ
 );
 
-CREATE INDEX idx_markups_project ON bim_markups(project_id);
-CREATE INDEX idx_markups_user ON bim_markups(user_id);
-CREATE INDEX idx_markups_type ON bim_markups(project_id, markup_type);
+ALTER TABLE bim_markups ADD COLUMN IF NOT EXISTS annotation_text TEXT;
+ALTER TABLE bim_markups ADD COLUMN IF NOT EXISTS measurement_value FLOAT;
+ALTER TABLE bim_markups ADD COLUMN IF NOT EXISTS measurement_unit VARCHAR(10);
+ALTER TABLE bim_markups ADD COLUMN IF NOT EXISTS area_value FLOAT;
+ALTER TABLE bim_markups ADD COLUMN IF NOT EXISTS area_unit VARCHAR(20);
+ALTER TABLE bim_markups ADD COLUMN IF NOT EXISTS volume_value FLOAT;
+ALTER TABLE bim_markups ADD COLUMN IF NOT EXISTS volume_unit VARCHAR(20);
+ALTER TABLE bim_markups ADD COLUMN IF NOT EXISTS start_position JSONB;
+ALTER TABLE bim_markups ADD COLUMN IF NOT EXISTS image_url TEXT;
+ALTER TABLE bim_markups ADD COLUMN IF NOT EXISTS element_ids INT[];
+ALTER TABLE bim_markups ADD COLUMN IF NOT EXISTS shared_with UUID[];
+ALTER TABLE bim_markups ADD COLUMN IF NOT EXISTS visibility_public BOOLEAN DEFAULT false;
+ALTER TABLE bim_markups ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ;
+ALTER TABLE bim_markups ADD COLUMN IF NOT EXISTS markup_data JSONB DEFAULT '{}';
+
+CREATE INDEX IF NOT EXISTS idx_markups_project ON bim_markups(project_id);
+CREATE INDEX IF NOT EXISTS idx_markups_created_by ON bim_markups(created_by);
+CREATE INDEX IF NOT EXISTS idx_markups_type ON bim_markups(project_id, markup_type);
 
 -- ── Clash Reports ────────────────────────────────────────
 
@@ -54,9 +73,9 @@ CREATE TABLE IF NOT EXISTS bim_clash_reports (
   resolved_at     TIMESTAMPTZ
 );
 
-CREATE INDEX idx_clash_project ON bim_clash_reports(project_id);
-CREATE INDEX idx_clash_status ON bim_clash_reports(project_id, status);
-CREATE INDEX idx_clash_assigned ON bim_clash_reports(assigned_to) WHERE assigned_to IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_clash_project ON bim_clash_reports(project_id);
+CREATE INDEX IF NOT EXISTS idx_clash_status ON bim_clash_reports(project_id, status);
+CREATE INDEX IF NOT EXISTS idx_clash_assigned ON bim_clash_reports(assigned_to) WHERE assigned_to IS NOT NULL;
 
 -- ── RLS ──────────────────────────────────────────────────
 
@@ -64,23 +83,39 @@ ALTER TABLE bim_markups ENABLE ROW LEVEL SECURITY;
 ALTER TABLE bim_clash_reports ENABLE ROW LEVEL SECURITY;
 
 -- Markups: project members can read public or own markups
-CREATE POLICY markups_select ON bim_markups FOR SELECT
-  USING (
-    project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid())
-    AND (visibility_public = true OR user_id = auth.uid() OR auth.uid() = ANY(shared_with))
-  );
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'markups_select' AND tablename = 'bim_markups') THEN
+    CREATE POLICY markups_select ON bim_markups FOR SELECT
+      USING (
+        project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid())
+        AND (visibility_public = true OR created_by = auth.uid() OR auth.uid() = ANY(shared_with))
+      );
+  END IF;
+END $$;
 
-CREATE POLICY markups_insert ON bim_markups FOR INSERT
-  WITH CHECK (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()));
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'markups_insert' AND tablename = 'bim_markups') THEN
+    CREATE POLICY markups_insert ON bim_markups FOR INSERT
+      WITH CHECK (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()));
+  END IF;
+END $$;
 
-CREATE POLICY markups_update ON bim_markups FOR UPDATE
-  USING (user_id = auth.uid());
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'markups_update' AND tablename = 'bim_markups') THEN
+    CREATE POLICY markups_update ON bim_markups FOR UPDATE
+      USING (created_by = auth.uid());
+  END IF;
+END $$;
 
-CREATE POLICY markups_delete ON bim_markups FOR DELETE
-  USING (user_id = auth.uid() OR project_id IN (
-    SELECT project_id FROM project_members
-    WHERE user_id = auth.uid() AND role IN ('owner', 'admin', 'project_manager')
-  ));
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'markups_delete' AND tablename = 'bim_markups') THEN
+    CREATE POLICY markups_delete ON bim_markups FOR DELETE
+      USING (created_by = auth.uid() OR project_id IN (
+        SELECT project_id FROM project_members
+        WHERE user_id = auth.uid() AND role IN ('owner', 'admin', 'project_manager')
+      ));
+  END IF;
+END $$;
 
 -- Clash reports: project members can read, managers can write
 CREATE POLICY clash_select ON bim_clash_reports FOR SELECT

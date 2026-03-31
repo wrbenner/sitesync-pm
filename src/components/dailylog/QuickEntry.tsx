@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Cloud, Users, Wrench, HardHat, ShieldCheck, UserPlus, FileText, ChevronLeft, ChevronRight, Save, Send } from 'lucide-react';
-import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme';
+import { colors, spacing, typography, borderRadius, transitions, zIndex, touchTarget } from '../../styles/theme';
 import type { WeatherData } from '../../lib/weather';
 
 type Section = 'weather' | 'workforce' | 'equipment' | 'work' | 'safety' | 'visitors' | 'notes';
@@ -17,13 +17,13 @@ const SECTIONS: { id: Section; label: string; icon: React.ReactNode }[] = [
 
 // Touch-friendly input style (44px+ tap target)
 const touchInput: React.CSSProperties = {
-  width: '100%', padding: '14px 16px', fontSize: '16px', fontFamily: typography.fontFamily,
+  width: '100%', padding: `${spacing['3.5']} ${spacing['4']}`, fontSize: typography.fontSize.title, fontFamily: typography.fontFamily,
   border: 'none', backgroundColor: colors.surfaceInset, borderRadius: borderRadius.md,
-  outline: 'none', boxSizing: 'border-box', minHeight: '48px',
+  outline: 'none', boxSizing: 'border-box', minHeight: touchTarget.comfortable,
 };
 
 const touchTextarea: React.CSSProperties = {
-  ...touchInput, resize: 'vertical', minHeight: '96px', lineHeight: '1.5',
+  ...touchInput, resize: 'vertical', minHeight: spacing['24'], lineHeight: typography.lineHeight.normal,
 };
 
 const touchLabel: React.CSSProperties = {
@@ -117,7 +117,7 @@ export const QuickEntry: React.FC<QuickEntryProps> = ({ initialWeather, onSave, 
           <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
             {data.weather && (
               <div style={{ padding: spacing['4'], backgroundColor: colors.surfaceInset, borderRadius: borderRadius.lg, textAlign: 'center' }}>
-                <span style={{ fontSize: '48px' }}>{data.weather.icon}</span>
+                <span style={{ fontSize: spacing['12'] }}>{data.weather.icon}</span>
                 <p style={{ fontSize: typography.fontSize.subtitle, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: `${spacing['2']} 0 0` }}>
                   {data.weather.temp_high}°F / {data.weather.temp_low}°F
                 </p>
@@ -144,11 +144,11 @@ export const QuickEntry: React.FC<QuickEntryProps> = ({ initialWeather, onSave, 
                 <span style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>{crew.trade}</span>
                 <input type="number" inputMode="numeric" value={crew.workers || ''} placeholder="0"
                   onChange={e => updateWorkforce(idx, 'workers', Number(e.target.value))}
-                  style={{ ...touchInput, textAlign: 'center', padding: '12px 8px' }}
+                  style={{ ...touchInput, textAlign: 'center', padding: `${spacing['3']} ${spacing['2']}` }}
                 />
                 <input type="number" inputMode="numeric" value={crew.hours || ''} placeholder="0"
                   onChange={e => updateWorkforce(idx, 'hours', Number(e.target.value))}
-                  style={{ ...touchInput, textAlign: 'center', padding: '12px 8px' }}
+                  style={{ ...touchInput, textAlign: 'center', padding: `${spacing['3']} ${spacing['2']}` }}
                 />
               </div>
             ))}
@@ -208,12 +208,12 @@ export const QuickEntry: React.FC<QuickEntryProps> = ({ initialWeather, onSave, 
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, backgroundColor: colors.surfacePage, zIndex: 1060, display: 'flex', flexDirection: 'column' }}>
+    <div style={{ position: 'fixed', inset: 0, backgroundColor: colors.surfacePage, zIndex: zIndex.tooltip as number, display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: `${spacing['3']} ${spacing['4']}`, borderBottom: `1px solid ${colors.borderSubtle}`, backgroundColor: colors.surfaceRaised }}>
-        <button onClick={onClose} style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.body, fontFamily: typography.fontFamily, backgroundColor: 'transparent', border: 'none', cursor: 'pointer', color: colors.textSecondary, minHeight: '44px' }}>Cancel</button>
+        <button onClick={onClose} style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.body, fontFamily: typography.fontFamily, backgroundColor: 'transparent', border: 'none', cursor: 'pointer', color: colors.textSecondary, minHeight: touchTarget.min }}>Cancel</button>
         <span style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>Quick Entry</span>
-        <button onClick={() => onSave(data)} style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.body, fontFamily: typography.fontFamily, backgroundColor: 'transparent', border: 'none', cursor: 'pointer', color: colors.orangeText, fontWeight: typography.fontWeight.semibold, minHeight: '44px', display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
+        <button onClick={() => onSave(data)} style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.body, fontFamily: typography.fontFamily, backgroundColor: 'transparent', border: 'none', cursor: 'pointer', color: colors.orangeText, fontWeight: typography.fontWeight.semibold, minHeight: touchTarget.min, display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
           <Save size={16} /> Save
         </button>
       </div>
@@ -259,7 +259,7 @@ export const QuickEntry: React.FC<QuickEntryProps> = ({ initialWeather, onSave, 
       }}>
         <button onClick={goPrev} disabled={activeSection === 0} style={{
           display: 'flex', alignItems: 'center', gap: spacing['1'],
-          padding: `${spacing['3']} ${spacing['4']}`, minHeight: '48px',
+          padding: `${spacing['3']} ${spacing['4']}`, minHeight: touchTarget.comfortable,
           fontSize: typography.fontSize.body, fontFamily: typography.fontFamily, fontWeight: typography.fontWeight.medium,
           backgroundColor: 'transparent', border: `1px solid ${colors.borderDefault}`,
           borderRadius: borderRadius.md, cursor: activeSection === 0 ? 'default' : 'pointer',
@@ -272,7 +272,7 @@ export const QuickEntry: React.FC<QuickEntryProps> = ({ initialWeather, onSave, 
         {activeSection < SECTIONS.length - 1 ? (
           <button onClick={goNext} style={{
             display: 'flex', alignItems: 'center', gap: spacing['1'],
-            padding: `${spacing['3']} ${spacing['5']}`, minHeight: '48px',
+            padding: `${spacing['3']} ${spacing['5']}`, minHeight: touchTarget.comfortable,
             fontSize: typography.fontSize.body, fontFamily: typography.fontFamily, fontWeight: typography.fontWeight.semibold,
             backgroundColor: colors.primaryOrange, color: colors.white,
             border: 'none', borderRadius: borderRadius.md, cursor: 'pointer',
@@ -282,7 +282,7 @@ export const QuickEntry: React.FC<QuickEntryProps> = ({ initialWeather, onSave, 
         ) : (
           <button onClick={() => onSubmit(data)} style={{
             display: 'flex', alignItems: 'center', gap: spacing['2'],
-            padding: `${spacing['3']} ${spacing['5']}`, minHeight: '48px',
+            padding: `${spacing['3']} ${spacing['5']}`, minHeight: touchTarget.comfortable,
             fontSize: typography.fontSize.body, fontFamily: typography.fontFamily, fontWeight: typography.fontWeight.semibold,
             backgroundColor: colors.statusActive, color: colors.white,
             border: 'none', borderRadius: borderRadius.md, cursor: 'pointer',

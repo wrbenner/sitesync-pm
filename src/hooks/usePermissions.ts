@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { colors } from '../styles/theme'
 import { useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useProjectId } from './useProjectId'
@@ -242,7 +243,7 @@ export function usePermissions(): PermissionsResult {
         'All permissions granted as VIEWER role.\n' +
         'Set VITE_SUPABASE_URL to connect to a real backend.\n' +
         'Set VITE_DEV_BYPASS=true in .env to enable this bypass explicitly.',
-        'color: #D97706; font-size: 14px; font-weight: bold;'
+        `color: ${colors.statusWarning}; font-size: 14px; font-weight: bold;`
       )
     }
     return {

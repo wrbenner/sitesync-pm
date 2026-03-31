@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Columns, Layers, Sparkles } from 'lucide-react';
-import { colors, spacing, typography, borderRadius } from '../../styles/theme';
+import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme';
 
 interface VersionCompareProps {
   currentRev: string;
@@ -31,7 +31,7 @@ export const VersionCompare: React.FC<VersionCompareProps> = ({ currentRev, prev
               backgroundColor: mode === 'overlay' ? colors.surfaceRaised : 'transparent',
               color: mode === 'overlay' ? colors.textPrimary : colors.textTertiary,
               fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
-              fontFamily: typography.fontFamily, cursor: 'pointer', boxShadow: mode === 'overlay' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+              fontFamily: typography.fontFamily, cursor: 'pointer', boxShadow: mode === 'overlay' ? shadows.sm : 'none',
             }}
           >
             <Layers size={12} /> Overlay
@@ -44,7 +44,7 @@ export const VersionCompare: React.FC<VersionCompareProps> = ({ currentRev, prev
               backgroundColor: mode === 'side-by-side' ? colors.surfaceRaised : 'transparent',
               color: mode === 'side-by-side' ? colors.textPrimary : colors.textTertiary,
               fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
-              fontFamily: typography.fontFamily, cursor: 'pointer', boxShadow: mode === 'side-by-side' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+              fontFamily: typography.fontFamily, cursor: 'pointer', boxShadow: mode === 'side-by-side' ? shadows.sm : 'none',
             }}
           >
             <Columns size={12} /> Side by Side
@@ -87,19 +87,19 @@ export const VersionCompare: React.FC<VersionCompareProps> = ({ currentRev, prev
           {/* Previous revision (background) */}
           <div style={{
             position: 'absolute', inset: 0,
-            background: 'linear-gradient(135deg, #e8e0d8 0%, #d4ccc4 100%)',
+            background: `linear-gradient(135deg, ${colors.surfaceHover} 0%, ${colors.borderDefault} 100%)`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: typography.fontSize.heading, color: 'rgba(0,0,0,0.08)', fontWeight: typography.fontWeight.semibold,
+            fontSize: typography.fontSize.heading, color: colors.overlayBlackLight, fontWeight: typography.fontWeight.semibold,
           }}>
             Rev {previousRev}
           </div>
           {/* Current revision (overlay with opacity) */}
           <div style={{
             position: 'absolute', inset: 0,
-            background: 'linear-gradient(135deg, #f0e8e0 0%, #e0d8d0 100%)',
+            background: `linear-gradient(135deg, ${colors.surfaceInset} 0%, ${colors.surfaceHover} 100%)`,
             opacity: opacity / 100,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: typography.fontSize.heading, color: 'rgba(0,0,0,0.12)', fontWeight: typography.fontWeight.semibold,
+            fontSize: typography.fontSize.heading, color: colors.overlayBlackHeavy, fontWeight: typography.fontWeight.semibold,
           }}>
             Rev {currentRev}
           </div>
@@ -121,9 +121,9 @@ export const VersionCompare: React.FC<VersionCompareProps> = ({ currentRev, prev
               title={change.label}
             >
               <span style={{
-                fontSize: '9px', fontWeight: typography.fontWeight.semibold,
+                fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
                 color: change.severity === 'warning' ? colors.statusPending : colors.statusInfo,
-                backgroundColor: colors.surfaceRaised, padding: '1px 4px', borderRadius: 3,
+                backgroundColor: colors.surfaceRaised, padding: `${spacing['0.5']} ${spacing['1']}`, borderRadius: borderRadius.sm,
                 whiteSpace: 'nowrap',
               }}>
                 {change.label}
@@ -135,21 +135,21 @@ export const VersionCompare: React.FC<VersionCompareProps> = ({ currentRev, prev
         <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['2'] }}>
           <div style={{
             position: 'relative', borderRadius: borderRadius.md, overflow: 'hidden', border: `1px solid ${colors.borderSubtle}`,
-            background: 'linear-gradient(135deg, #e8e0d8 0%, #d4ccc4 100%)',
+            background: `linear-gradient(135deg, ${colors.surfaceHover} 0%, ${colors.borderDefault} 100%)`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <span style={{ fontSize: typography.fontSize.title, color: 'rgba(0,0,0,0.1)', fontWeight: typography.fontWeight.semibold }}>Rev {previousRev}</span>
+            <span style={{ fontSize: typography.fontSize.title, color: colors.overlayBlackMedium, fontWeight: typography.fontWeight.semibold }}>Rev {previousRev}</span>
             <div style={{ position: 'absolute', top: spacing['2'], left: spacing['2'], padding: `${spacing['1']} ${spacing['2']}`, backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.sm, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textSecondary }}>
               Previous: Rev {previousRev}
             </div>
           </div>
           <div style={{
             position: 'relative', borderRadius: borderRadius.md, overflow: 'hidden', border: `1px solid ${colors.borderSubtle}`,
-            background: 'linear-gradient(135deg, #f0e8e0 0%, #e0d8d0 100%)',
+            background: `linear-gradient(135deg, ${colors.surfaceInset} 0%, ${colors.surfaceHover} 100%)`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <span style={{ fontSize: typography.fontSize.title, color: 'rgba(0,0,0,0.1)', fontWeight: typography.fontWeight.semibold }}>Rev {currentRev}</span>
-            <div style={{ position: 'absolute', top: spacing['2'], left: spacing['2'], padding: `${spacing['1']} ${spacing['2']}`, backgroundColor: colors.primaryOrange, borderRadius: borderRadius.sm, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: 'white' }}>
+            <span style={{ fontSize: typography.fontSize.title, color: colors.overlayBlackMedium, fontWeight: typography.fontWeight.semibold }}>Rev {currentRev}</span>
+            <div style={{ position: 'absolute', top: spacing['2'], left: spacing['2'], padding: `${spacing['1']} ${spacing['2']}`, backgroundColor: colors.primaryOrange, borderRadius: borderRadius.sm, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.white }}>
               Current: Rev {currentRev}
             </div>
             {showChanges && aiChanges.map((change) => (

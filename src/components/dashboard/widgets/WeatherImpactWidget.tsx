@@ -85,8 +85,8 @@ export const WeatherImpactWidget: React.FC = React.memo(() => {
                 gap: spacing['2'],
                 padding: `${spacing['3']} ${spacing['1']}`,
                 borderRadius: borderRadius.md,
-                backgroundColor: day.conflict ? 'rgba(201, 59, 59, 0.04)' : 'transparent',
-                border: day.conflict ? `1px solid rgba(201, 59, 59, 0.12)` : '1px solid transparent',
+                backgroundColor: day.conflict ? colors.statusCriticalSubtle : 'transparent',
+                border: day.conflict ? `1px solid ${colors.statusCritical}20` : '1px solid transparent',
                 cursor: day.conflict ? 'pointer' : 'default',
                 transition: `background-color ${transitions.instant}`,
               }}
@@ -98,10 +98,10 @@ export const WeatherImpactWidget: React.FC = React.memo(() => {
 
               {/* Impact bar */}
               <div style={{ width: '100%', height: 4, backgroundColor: colors.surfaceInset, borderRadius: 2, marginTop: 'auto' }}>
-                <div style={{ width: `${day.impactScore}%`, height: '100%', backgroundColor: impactColor, borderRadius: 2, transition: 'width 0.6s ease-out' }} />
+                <div style={{ width: `${day.impactScore}%`, height: '100%', backgroundColor: impactColor, borderRadius: 2, transition: `width ${transitions.smooth}` }} />
               </div>
               {day.precipitation > 0 && (
-                <span style={{ fontSize: '9px', color: colors.statusInfo }}>{day.precipitation}%</span>
+                <span style={{ fontSize: typography.fontSize.caption, color: colors.statusInfo }}>{day.precipitation}%</span>
               )}
             </div>
           );
@@ -114,7 +114,7 @@ export const WeatherImpactWidget: React.FC = React.memo(() => {
           style={{
             marginTop: spacing['3'],
             padding: `${spacing['2']} ${spacing['3']}`,
-            backgroundColor: 'rgba(201, 59, 59, 0.06)',
+            backgroundColor: colors.statusCriticalSubtle,
             borderRadius: borderRadius.base,
             borderLeft: `3px solid ${colors.statusCritical}`,
           }}

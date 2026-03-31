@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { MapPin, Users } from 'lucide-react';
-import { colors, spacing, typography, borderRadius } from '../../../styles/theme';
+import { colors, spacing, typography, borderRadius, shadows } from '../../../styles/theme';
 import { useProjectId } from '../../../hooks/useProjectId';
 import { useCrews } from '../../../hooks/queries';
 
@@ -143,7 +143,7 @@ export const LiveSiteWidget: React.FC = React.memo(() => {
                   padding: `${spacing['1']} ${spacing['2']}`,
                   backgroundColor: colors.surfaceRaised,
                   borderRadius: borderRadius.sm,
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                  boxShadow: shadows.cardHover,
                   whiteSpace: 'nowrap',
                   fontSize: typography.fontSize.caption,
                 }}

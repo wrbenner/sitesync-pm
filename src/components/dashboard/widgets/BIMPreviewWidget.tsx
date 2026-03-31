@@ -1,6 +1,6 @@
 import React from 'react'
 import { Box, ArrowRight } from 'lucide-react'
-import { colors, spacing, typography, borderRadius } from '../../../styles/theme'
+import { colors, spacing, typography, borderRadius, vizColors } from '../../../styles/theme'
 
 export const BIMPreviewWidget: React.FC = React.memo(() => {
   return (
@@ -15,7 +15,7 @@ export const BIMPreviewWidget: React.FC = React.memo(() => {
       {/* Static building preview using CSS/SVG */}
       <div style={{
         flex: 1,
-        backgroundColor: '#E8F0FE',
+        backgroundColor: colors.statusInfoSubtle,
         borderRadius: borderRadius.md,
         overflow: 'hidden',
         position: 'relative',
@@ -27,33 +27,33 @@ export const BIMPreviewWidget: React.FC = React.memo(() => {
         {/* Simple isometric building illustration using divs */}
         <svg viewBox="0 0 200 150" width="100%" height="100%" style={{ maxHeight: '140px' }}>
           {/* Ground */}
-          <rect x="30" y="120" width="140" height="4" rx="2" fill="#C0C0C0" />
+          <rect x="30" y="120" width="140" height="4" rx="2" fill={colors.gray300} />
 
           {/* Building base */}
-          <rect x="50" y="40" width="100" height="80" rx="2" fill="#E0E0E0" stroke="#CCCCCC" strokeWidth="0.5" />
+          <rect x="50" y="40" width="100" height="80" rx="2" fill={vizColors.gridLine} stroke={vizColors.gridLine} strokeWidth="0.5" />
 
           {/* Floors */}
-          <line x1="50" y1="67" x2="150" y2="67" stroke="#CCCCCC" strokeWidth="0.5" />
-          <line x1="50" y1="93" x2="150" y2="93" stroke="#CCCCCC" strokeWidth="0.5" />
+          <line x1="50" y1="67" x2="150" y2="67" stroke={vizColors.gridLine} strokeWidth="0.5" />
+          <line x1="50" y1="93" x2="150" y2="93" stroke={vizColors.gridLine} strokeWidth="0.5" />
 
           {/* Windows grid */}
           {[45, 71, 97].map((y) =>
             [60, 80, 100, 120, 135].map((x) => (
-              <rect key={`${x}-${y}`} x={x} y={y} width="8" height="12" rx="1" fill="#B0C4DE" />
+              <rect key={`${x}-${y}`} x={x} y={y} width="8" height="12" rx="1" fill={vizColors.neutral} />
             ))
           )}
 
           {/* MEP color indicators */}
-          <line x1="55" y1="55" x2="145" y2="55" stroke="#E05252" strokeWidth="1.5" strokeDasharray="4 3" />
-          <line x1="55" y1="82" x2="145" y2="82" stroke="#4A9EE8" strokeWidth="1.5" strokeDasharray="4 3" />
-          <line x1="55" y1="107" x2="145" y2="107" stroke="#E8C84A" strokeWidth="1.5" strokeDasharray="4 3" />
+          <line x1="55" y1="55" x2="145" y2="55" stroke={colors.chartRed} strokeWidth="1.5" strokeDasharray="4 3" />
+          <line x1="55" y1="82" x2="145" y2="82" stroke={colors.statusInfoBright} strokeWidth="1.5" strokeDasharray="4 3" />
+          <line x1="55" y1="107" x2="145" y2="107" stroke="#E8C84A" strokeWidth="1.5" strokeDasharray="4 3" /* decorative MEP yellow */ />
 
           {/* Roof */}
-          <rect x="48" y="36" width="104" height="6" rx="1" fill="#888888" />
+          <rect x="48" y="36" width="104" height="6" rx="1" fill={colors.gray500} />
 
           {/* Steel columns */}
           {[65, 100, 135].map((x) => (
-            <rect key={x} x={x} y="40" width="3" height="80" fill="#6B7B8D" />
+            <rect key={x} x={x} y="40" width="3" height="80" fill={colors.gray600} />
           ))}
         </svg>
 
@@ -62,7 +62,7 @@ export const BIMPreviewWidget: React.FC = React.memo(() => {
           position: 'absolute',
           bottom: spacing['2'],
           right: spacing['2'],
-          backgroundColor: 'rgba(255,255,255,0.9)',
+          backgroundColor: colors.overlayLight,
           borderRadius: borderRadius.sm,
           padding: `${spacing['1']} ${spacing['2']}`,
           fontSize: typography.fontSize.caption,

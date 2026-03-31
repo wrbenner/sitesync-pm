@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { MobileLayout } from './MobileLayout';
+import { layout } from '../../styles/theme';
 
 interface ResponsiveShellProps {
   desktopLayout: React.ReactNode;
   children: React.ReactNode;
 }
 
-const BREAKPOINT = 768;
+const BREAKPOINT = parseInt(layout.mobileBreak, 10);
 
 export const ResponsiveShell: React.FC<ResponsiveShellProps> = ({ desktopLayout, children }) => {
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < BREAKPOINT);

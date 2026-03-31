@@ -1,4 +1,5 @@
 import { setup } from 'xstate'
+import { colors } from '../styles/theme'
 
 export type RFIState = 'draft' | 'open' | 'under_review' | 'answered' | 'closed' | 'void'
 
@@ -131,11 +132,11 @@ export function getBallInCourt(status: RFIState, createdBy: string | null, assig
 // ── Due Date Urgency ─────────────────────────────────────
 
 export function getDueDateUrgency(dueDate: string | null): { color: string; label: string } {
-  if (!dueDate) return { color: '#8C8580', label: 'No due date' }
+  if (!dueDate) return { color: colors.statusNeutral, label: 'No due date' }
   const days = Math.ceil((new Date(dueDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-  if (days < 0) return { color: '#C93B3B', label: `${Math.abs(days)} days overdue` }
-  if (days <= 3) return { color: '#C4850C', label: `Due in ${days} days` }
-  return { color: '#2D8A6E', label: `Due in ${days} days` }
+  if (days < 0) return { color: colors.statusCritical, label: `${Math.abs(days)} days overdue` }
+  if (days <= 3) return { color: colors.statusPending, label: `Due in ${days} days` }
+  return { color: colors.statusActive, label: `Due in ${days} days` }
 }
 
 // ── Days Open ────────────────────────────────────────────
@@ -149,12 +150,12 @@ export function getDaysOpen(createdAt: string | null): number {
 
 export function getRFIStatusConfig(status: RFIState) {
   const config: Record<RFIState, { label: string; color: string; bg: string }> = {
-    draft: { label: 'Draft', color: '#8C8580', bg: 'rgba(140,133,128,0.08)' },
-    open: { label: 'Open', color: '#3A7BC8', bg: 'rgba(58,123,200,0.08)' },
-    under_review: { label: 'Under Review', color: '#C4850C', bg: 'rgba(196,133,12,0.08)' },
-    answered: { label: 'Answered', color: '#2D8A6E', bg: 'rgba(45,138,110,0.08)' },
-    closed: { label: 'Closed', color: '#8C8580', bg: 'rgba(140,133,128,0.08)' },
-    void: { label: 'Void', color: '#8C8580', bg: 'rgba(140,133,128,0.04)' },
+    draft: { label: 'Draft', color: colors.statusNeutral, bg: colors.statusNeutralSubtle },
+    open: { label: 'Open', color: colors.statusInfo, bg: colors.statusInfoSubtle },
+    under_review: { label: 'Under Review', color: colors.statusPending, bg: colors.statusPendingSubtle },
+    answered: { label: 'Answered', color: colors.statusActive, bg: colors.statusActiveSubtle },
+    closed: { label: 'Closed', color: colors.statusNeutral, bg: colors.statusNeutralSubtle },
+    void: { label: 'Void', color: colors.statusNeutral, bg: colors.statusNeutralSubtle },
   }
   return config[status] || config.draft
 }

@@ -1,5 +1,6 @@
 import React from 'react'
 import { Text, View } from '@react-pdf/renderer'
+import { colors } from '../../styles/theme'
 import { PDFReport, PDFTable, PDFSection } from './PDFTemplate'
 
 interface PunchItem {
@@ -26,19 +27,19 @@ export const PunchListReport: React.FC<PunchListReportProps> = ({ projectName, i
       <View style={{ flexDirection: 'row', gap: 20, marginBottom: 16 }}>
         <View>
           <Text style={{ fontSize: 20, fontFamily: 'Helvetica-Bold' }}>{items.length}</Text>
-          <Text style={{ fontSize: 8, color: '#5C5550' }}>Total Items</Text>
+          <Text style={{ fontSize: 8, color: colors.textSecondary }}>Total Items</Text>
         </View>
         <View>
-          <Text style={{ fontSize: 20, fontFamily: 'Helvetica-Bold', color: '#C93B3B' }}>{openCount}</Text>
-          <Text style={{ fontSize: 8, color: '#5C5550' }}>Open</Text>
+          <Text style={{ fontSize: 20, fontFamily: 'Helvetica-Bold', color: colors.statusCritical }}>{openCount}</Text>
+          <Text style={{ fontSize: 8, color: colors.textSecondary }}>Open</Text>
         </View>
         <View>
-          <Text style={{ fontSize: 20, fontFamily: 'Helvetica-Bold', color: '#C4850C' }}>{inProgressCount}</Text>
-          <Text style={{ fontSize: 8, color: '#5C5550' }}>In Progress</Text>
+          <Text style={{ fontSize: 20, fontFamily: 'Helvetica-Bold', color: colors.statusPending }}>{inProgressCount}</Text>
+          <Text style={{ fontSize: 8, color: colors.textSecondary }}>In Progress</Text>
         </View>
         <View>
-          <Text style={{ fontSize: 20, fontFamily: 'Helvetica-Bold', color: '#2D8A6E' }}>{completeCount}</Text>
-          <Text style={{ fontSize: 8, color: '#5C5550' }}>Complete</Text>
+          <Text style={{ fontSize: 20, fontFamily: 'Helvetica-Bold', color: colors.statusActive }}>{completeCount}</Text>
+          <Text style={{ fontSize: 8, color: colors.textSecondary }}>Complete</Text>
         </View>
       </View>
 

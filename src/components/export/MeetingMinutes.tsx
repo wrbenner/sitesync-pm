@@ -1,6 +1,6 @@
 import React from 'react'
 import { Text, View } from '@react-pdf/renderer'
-import { vizColors } from '../../styles/theme'
+import { colors, vizColors } from '../../styles/theme'
 import { PDFReport, PDFTable, PDFSection } from './PDFTemplate'
 
 interface MeetingData {
@@ -25,15 +25,15 @@ export const MeetingMinutes: React.FC<MeetingMinutesProps> = ({ projectName, mee
         <Text style={{ fontSize: 14, fontFamily: 'Helvetica-Bold', marginBottom: 8 }}>{meeting.title}</Text>
         <View style={{ flexDirection: 'row', gap: 24, marginBottom: 4 }}>
           <View>
-            <Text style={{ fontSize: 8, color: '#5C5550' }}>Type</Text>
+            <Text style={{ fontSize: 8, color: colors.textSecondary }}>Type</Text>
             <Text style={{ fontSize: 10 }}>{meeting.type}</Text>
           </View>
           <View>
-            <Text style={{ fontSize: 8, color: '#5C5550' }}>Date</Text>
+            <Text style={{ fontSize: 8, color: colors.textSecondary }}>Date</Text>
             <Text style={{ fontSize: 10 }}>{meeting.date}</Text>
           </View>
           <View>
-            <Text style={{ fontSize: 8, color: '#5C5550' }}>Location</Text>
+            <Text style={{ fontSize: 8, color: colors.textSecondary }}>Location</Text>
             <Text style={{ fontSize: 10 }}>{meeting.location}</Text>
           </View>
         </View>

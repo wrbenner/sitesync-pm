@@ -6,7 +6,7 @@ import React, { useMemo, useRef, memo, useCallback } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Html, Line } from '@react-three/drei'
 import * as THREE from 'three'
-import { colors, spacing, typography, borderRadius, vizColors } from '../../styles/theme'
+import { colors, spacing, typography, borderRadius, shadows, vizColors, tradeColors } from '../../styles/theme'
 import type {
   RFIPin,
   SafetyZone,
@@ -95,10 +95,10 @@ const RFIPinMarker = memo<RFIPinMarkerProps>(({ pin, isSelected, onSelect }) => 
         >
           <div
             style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.95)',
+              backgroundColor: colors.panelBg,
               borderRadius: borderRadius.md,
               padding: `${spacing['2']} ${spacing['3']}`,
-              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+              boxShadow: shadows.dropdown,
               minWidth: 160,
               fontFamily: typography.fontFamily,
               backdropFilter: 'blur(8px)',
@@ -167,7 +167,7 @@ const SEVERITY_COLORS: Record<string, string> = {
   low: colors.statusPending,
   medium: colors.primaryOrange,
   high: colors.statusCritical,
-  critical: '#FF0000',
+  critical: colors.chartRed,
 }
 
 export const SafetyHeatmapLayer = memo<{ zones: SafetyZone[] }>(({ zones }) => (
@@ -235,14 +235,14 @@ SafetyHeatmapLayer.displayName = 'SafetyHeatmapLayer'
 // ── Crew Location Dots ────────────────────────────────────────
 
 const TRADE_COLORS: Record<string, string> = {
-  Concrete: '#8C8580',
-  Electrical: '#D97706',
-  Plumbing: '#3A7BC8',
-  'Structural Steel': '#C93B3B',
-  Mechanical: '#06B6D4',
-  Drywall: '#7C5DC7',
-  Painting: '#FB923C',
-  General: '#5C5550',
+  Concrete: tradeColors.concrete,
+  Electrical: tradeColors.electrical,
+  Plumbing: tradeColors.plumbing,
+  'Structural Steel': tradeColors.structural,
+  Mechanical: tradeColors.mechanical,
+  Drywall: tradeColors.finishing,
+  Painting: tradeColors.painting,
+  General: tradeColors.general,
 }
 
 const CrewDot = memo<{
@@ -288,11 +288,11 @@ const CrewDot = memo<{
       >
         <div
           style={{
-            backgroundColor: 'rgba(0, 0, 0, 0.75)',
+            backgroundColor: colors.overlayHeavy,
             color: colors.white,
             borderRadius: borderRadius.sm,
-            padding: `1px ${spacing['2']}`,
-            fontSize: '9px',
+            padding: `${spacing['0.5']} ${spacing['2']}`,
+            fontSize: typography.fontSize.caption,
             fontWeight: typography.fontWeight.semibold,
             fontFamily: typography.fontFamily,
             whiteSpace: 'nowrap',
@@ -311,10 +311,10 @@ const CrewDot = memo<{
         >
           <div
             style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.95)',
+              backgroundColor: colors.panelBg,
               borderRadius: borderRadius.md,
               padding: spacing['3'],
-              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+              boxShadow: shadows.dropdown,
               minWidth: 180,
               fontFamily: typography.fontFamily,
               backdropFilter: 'blur(8px)',
@@ -414,10 +414,10 @@ const PhotoPinMarker = memo<{
         >
           <div
             style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.95)',
+              backgroundColor: colors.panelBg,
               borderRadius: borderRadius.md,
               padding: spacing['2'],
-              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+              boxShadow: shadows.dropdown,
               minWidth: 200,
               fontFamily: typography.fontFamily,
               backdropFilter: 'blur(8px)',
@@ -496,11 +496,11 @@ export const MarkupsLayer = memo<{ markups: Markup3D[] }>(({ markups }) => (
               >
                 <div
                   style={{
-                    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+                    backgroundColor: colors.overlayHeavy,
                     color: colors.white,
                     borderRadius: borderRadius.sm,
-                    padding: `1px ${spacing['2']}`,
-                    fontSize: '10px',
+                    padding: `${spacing['0.5']} ${spacing['2']}`,
+                    fontSize: typography.fontSize.caption,
                     fontFamily: typography.fontFamily,
                     whiteSpace: 'nowrap',
                   }}
@@ -539,8 +539,8 @@ export const MarkupsLayer = memo<{ markups: Markup3D[] }>(({ markups }) => (
                   backgroundColor: markup.color,
                   color: colors.white,
                   borderRadius: borderRadius.sm,
-                  padding: `1px ${spacing['2']}`,
-                  fontSize: '10px',
+                  padding: `${spacing['0.5']} ${spacing['2']}`,
+                  fontSize: typography.fontSize.caption,
                   fontWeight: typography.fontWeight.semibold,
                   fontFamily: typography.fontFamily,
                 }}

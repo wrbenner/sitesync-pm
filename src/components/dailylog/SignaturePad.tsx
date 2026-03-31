@@ -82,7 +82,7 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({ onSign, signerName, 
               display: 'flex', alignItems: 'center', gap: spacing['1'],
               padding: `${spacing['1']} ${spacing['3']}`,
               backgroundColor: hasSignature ? colors.primaryOrange : colors.borderDefault,
-              color: 'white', border: 'none', borderRadius: borderRadius.sm,
+              color: colors.white, border: 'none', borderRadius: borderRadius.sm,
               fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
               fontFamily: typography.fontFamily, cursor: hasSignature ? 'pointer' : 'default',
               transition: `background-color ${transitions.instant}`,
@@ -94,7 +94,7 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({ onSign, signerName, 
       </div>
 
       {/* Drawing area */}
-      <div style={{ backgroundColor: 'white', position: 'relative' }}>
+      <div style={{ backgroundColor: colors.white, position: 'relative' }}>
         <svg
           ref={svgRef}
           width="100%"

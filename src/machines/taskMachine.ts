@@ -1,4 +1,5 @@
 import { setup } from 'xstate'
+import { colors } from '../styles/theme'
 
 export type TaskState = 'todo' | 'in_progress' | 'in_review' | 'done'
 
@@ -73,10 +74,10 @@ export function getNextTaskStatus(currentStatus: TaskState, action: string): Tas
 // Status display config
 export function getTaskStatusConfig(status: TaskState) {
   const config: Record<TaskState, { label: string; color: string; bg: string }> = {
-    todo: { label: 'To Do', color: '#8C8580', bg: 'rgba(140,133,128,0.08)' },
-    in_progress: { label: 'In Progress', color: '#3A7BC8', bg: 'rgba(58,123,200,0.08)' },
-    in_review: { label: 'In Review', color: '#C4850C', bg: 'rgba(196,133,12,0.08)' },
-    done: { label: 'Done', color: '#2D8A6E', bg: 'rgba(45,138,110,0.08)' },
+    todo: { label: 'To Do', color: colors.statusNeutral, bg: colors.statusNeutralSubtle },
+    in_progress: { label: 'In Progress', color: colors.statusInfo, bg: colors.statusInfoSubtle },
+    in_review: { label: 'In Review', color: colors.statusPending, bg: colors.statusPendingSubtle },
+    done: { label: 'Done', color: colors.statusActive, bg: colors.statusActiveSubtle },
   }
   return config[status] || config.todo
 }

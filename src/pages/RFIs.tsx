@@ -47,6 +47,7 @@ const MetaItem: React.FC<{ label: string; children: React.ReactNode }> = ({ labe
 );
 
 const RFIs: React.FC = () => {
+  const projectId = useProjectId();
   const { data: rfisRaw = [], isPending: rfisLoading, error: rfisError, refetch } = useRFIs(projectId);
 
   // Map API data to component shape
@@ -70,7 +71,6 @@ const RFIs: React.FC = () => {
   const perPage = 10;
   const { addToast } = useToast();
   const appNavigate = useAppNavigate();
-  const projectId = useProjectId();
   const createRFI = useCreateRFI();
   const updateRFI = useUpdateRFI();
 

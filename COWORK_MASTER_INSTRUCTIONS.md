@@ -1,456 +1,446 @@
-# SITESYNCAI AUTONOMOUS IMPROVEMENT ENGINE v3.0
-# MASTER SETUP AND OPERATIONS GUIDE
+# SITESYNC AI — AUTONOMOUS EVOLUTION ENGINE v4.0
+### The Overnight Engine That Makes SiteSync Into Something Nobody Has Seen Before
 
-**For:** Walker Benner, Founder, SiteSyncAI
-**Version:** 3.0 — March 2026
-**Purpose:** Run a fully autonomous codebase improvement loop with zero human intervention required during execution
+**For:** Walker Benner, Founder
+**Last updated:** March 2026
 
 ---
 
 ## WHAT THIS DOES
 
-This engine creates an autonomous loop between Claude API (deep research and auditing) and Claude Code (code execution) that runs continuously — improving the SiteSyncAI platform until it reaches zero actionable issues across every dimension.
+You set it up once. Every night you run it. While you sleep, it:
 
-Start it before you go to sleep. Wake up to a categorically better platform.
+1. **Reads your vision and priorities** from VISION.md and FEEDBACK.md
+2. **Audits every module** of the codebase across 14 dimensions with live competitive research against Procore, Autodesk, and Fieldwire
+3. **Generates exact code changes** — not suggestions, actual Claude Code execution prompts
+4. **Makes every change** via Claude Code in non-interactive mode
+5. **Verifies the build passes** — auto-fixes any regressions
+6. **Verifies every change** was correctly implemented — unresolved issues carry forward as P0
+7. **Invents new features** once a module hits 90+ for two cycles — it stops fixing and starts building things nobody has
+8. **Commits everything** with descriptive git messages
+9. **Writes you a morning briefing** with score trending, what changed, what was invented, and what's next
 
-The engine audits every module of the codebase against 13 dimensions — architecture, security, performance, AI integration, construction domain depth, UI/UX design, financial engine, and more — with competitive web research against Procore, Autodesk, and every other platform. It generates exact prompts for every issue, executes them via Claude Code one at a time, verifies build integrity, verifies each change, and loops until nothing is left to fix.
-
-**What's new in v3.0:**
-- Haiku model for module decomposition (10x cheaper decomposition step)
-- FEEDBACK.md injection — your priorities become P0 in every audit
-- Graceful Ctrl+C handling — always writes a report before exiting
-- Build verification after every cycle — auto-fixes regressions
-- Score trending in the final report — see improvement over time
-- Git hash-based snapshot caching — avoids redundant snapshots
-- Exponential backoff on API retries (30s, 60s, 120s)
-- Per-cycle cost tracking alongside cumulative spend
-- SKIP_MODULES support for targeting specific areas
-- Completion webhook notification
-- Full log tee to engine.log for post-run review
-- macOS compatibility (no numfmt dependency)
+Start it before bed. Wake up to a categorically better platform.
 
 ---
 
-## THE VISION
+## ONE-TIME SETUP
 
-SiteSyncAI is an AI-powered construction project management platform with autonomous agents, digital twins, RFIs, submittals, financial reporting (AIA billing, earned value, job costing), and more. It must be:
-
-- **Years ahead** of Procore, Autodesk Construction Cloud, PlanGrid, Buildertrend, CoConstruct
-- **Enterprise-grade:** 10,000+ concurrent users, 99.99% uptime, SOC2-ready
-- **AI-native:** autonomous agents woven into every workflow, not bolted on
-- **Real-time:** live collaboration, instant sync, offline-first with conflict resolution
-- **Beautiful:** Apple-level design that makes Procore look like it was built in 2005
-- **The platform that makes a $500M general contractor switch overnight**
-
----
-
-## SETUP (ONE TIME)
-
-### 1. Get an Anthropic API Key
-
-Go to https://console.anthropic.com, sign in, go to API Keys, create a key. Add a credit card. Set a spending limit if you want a hard cap (recommended: $500 for your first overnight run).
-
-### 2. Install Prerequisites
+### Step 1 — Install Prerequisites
 
 ```bash
-# Claude Code CLI (required)
+# Claude Code CLI
 npm install -g @anthropic-ai/claude-code
 
-# jq (JSON processor, required)
-brew install jq          # macOS
+# jq (JSON processor)
+brew install jq       # macOS
 sudo apt-get install -y jq   # Linux
 
-# bc (calculator, usually pre-installed)
-brew install bc          # macOS if missing
-sudo apt-get install -y bc   # Linux if missing
+# bc (calculator, usually already installed)
+brew install bc       # macOS only if missing
 ```
 
-### 3. Place the Script
-
-Save `autonomous_loop.sh` somewhere accessible. Make it executable:
+### Step 2 — Set Your API Key
 
 ```bash
+# Add to ~/.zshrc so it persists:
+echo 'export ANTHROPIC_API_KEY="YOUR_NEW_KEY_FROM_CONSOLE"' >> ~/.zshrc
+source ~/.zshrc
+```
+
+> **IMPORTANT — Key Rotation Required:**
+> The API key you shared earlier (`sk-ant-api03-ArJ45...`) was exposed in a conversation and must be rotated immediately.
+> Go to https://console.anthropic.com/settings/keys, delete that key, and generate a new one.
+> Paste the new key above in place of `YOUR_NEW_KEY_FROM_CONSOLE`.
+>
+> **Always set a spending limit:** https://console.anthropic.com/settings/billing
+> Recommended first limit: $500
+
+### Step 3 — Make the Script Executable
+
+```bash
+cd /path/to/sitesync-pm
 chmod +x autonomous_loop.sh
 ```
 
-### 4. Set Your API Key
+### Step 4 — Create Your VISION.md
 
-```bash
-# Persistent (add to ~/.zshrc or ~/.bashrc):
-echo 'export ANTHROPIC_API_KEY="sk-ant-YOUR-KEY-HERE"' >> ~/.zshrc
-source ~/.zshrc
+This is the most important file. The engine reads it before every audit and treats it as the north star for every decision.
 
-# Or just for this session:
-export ANTHROPIC_API_KEY="sk-ant-YOUR-KEY-HERE"
+Create `VISION.md` in your project root:
+
+```markdown
+# SiteSyncAI Product Vision
+
+## What We Are Building
+
+SiteSyncAI is the construction operating system that makes every other
+platform look like it was built in 2005. We are not improving on Procore.
+We are making Procore irrelevant.
+
+## Who Uses It
+
+The superintendent managing a $200M mixed-use tower. The PM at a 50-person
+GC running 8 active jobs. The CFO of a national construction firm who
+needs real cash flow visibility, not a spreadsheet. The owner who wants
+to know the truth about their project, not a sanitized report.
+
+## What It Must Feel Like
+
+Walking into the best-run jobsite you've ever seen. Everything in its place.
+Everyone knows what they need to know. Nothing falls through the cracks.
+AI is everywhere but invisible — it just makes everything faster and smarter.
+
+## What We Are NOT Building
+
+Another feature-dumped enterprise app that requires a 3-day training.
+A Procore clone with a fresh coat of paint.
+Software that ignores how construction actually works in the field.
+
+## The Three Things That Make a GC Switch Overnight
+
+1. The AI that catches problems before they become delays
+2. Financial visibility that goes from contract to cash in 3 clicks
+3. Field capture so fast a super will actually use it
+
+## Where We Want to Be in 12 Months
+
+The platform that a $500M GC references in their board deck as a competitive
+advantage. The platform their supers brag about on the job site. The platform
+their CFO credits for a 2-point margin improvement.
 ```
 
-### 5. Create a Clean Git Checkpoint
+### Step 5 — Create Your FEEDBACK.md
 
-Always checkpoint before running:
+This file directs tonight's priorities. Update it every morning.
+
+```markdown
+# Engine Priorities
+
+## This Week (P0)
+
+## Construction Gaps I've Noticed
+
+## UI Issues
+
+## Features I Want Invented
+```
+
+### Step 6 — Git Checkpoint
 
 ```bash
-cd /path/to/sitesyncai
+cd /path/to/sitesync-pm
 git add -A
 git commit -m "checkpoint: before engine run"
 ```
 
-The engine also auto-commits a backup at startup, but having your own is safer.
+---
+
+## RUNNING IT TONIGHT
+
+### The Standard Overnight Run
+
+```bash
+# 1. Open a tmux session so it keeps running after you close your laptop
+tmux new -s engine
+
+# 2. Navigate to the project
+cd /path/to/sitesync-pm
+
+# 3. Fire it up
+MAX_CYCLES=25 MAX_SPEND=400 ./autonomous_loop.sh .
+
+# 4. Detach: Ctrl+B then D
+# 5. Go to sleep
+```
+
+### Check In The Morning
+
+```bash
+# Reattach to see where it stopped
+tmux attach -t engine
+
+# Read the morning briefing
+cat engine-logs/run_*/MORNING_BRIEFING.md
+
+# See every change that was made
+git log --oneline -20
+
+# Run the app and click through it
+npm run dev
+```
 
 ---
 
-## HOW TO RUN IT
+## RUN CONFIGURATIONS
 
-### Quick Test (validate setup, ~$10-20)
-
+### First Test Run (~$20, validates everything works)
 ```bash
-MAX_CYCLES=1 MAX_SPEND=20 ./autonomous_loop.sh /path/to/sitesyncai
+MAX_CYCLES=1 MAX_SPEND=20 ./autonomous_loop.sh .
 ```
 
-### Standard Overnight Run
-
+### Standard Overnight (best balance)
 ```bash
-# Start a tmux session so it keeps running after you close your laptop
-tmux new -s engine
-
-# Run the engine
-MAX_CYCLES=30 MAX_SPEND=500 ./autonomous_loop.sh /path/to/sitesyncai
-
-# Detach: Ctrl+B, then D
-# Check in the morning: tmux attach -t engine
-
-# Review the report:
-cat engine-logs/run_*/REPORT.md
+MAX_CYCLES=25 MAX_SPEND=400 ./autonomous_loop.sh .
 ```
 
-### Maximum Quality Run
-
+### Maximum Quality (when you want the deepest possible audit)
 ```bash
-MAX_CYCLES=50 MAX_SPEND=1000 ./autonomous_loop.sh /path/to/sitesyncai
+MAX_CYCLES=40 MAX_SPEND=800 ./autonomous_loop.sh .
 ```
 
-### Budget-Conscious Run
-
+### Budget Run (Sonnet instead of Opus, still excellent)
 ```bash
-MAX_CYCLES=10 MAX_SPEND=100 AUDIT_MODEL=claude-sonnet-4-6 ./autonomous_loop.sh /path/to/sitesyncai
+MAX_CYCLES=20 MAX_SPEND=150 AUDIT_MODEL=claude-sonnet-4-6 ./autonomous_loop.sh .
 ```
 
-### Audit Only (see what needs fixing without touching code)
-
+### Audit Only — See What Needs Fixing Without Touching Code
 ```bash
-DRY_RUN=true MAX_CYCLES=1 ./autonomous_loop.sh /path/to/sitesyncai
+DRY_RUN=true MAX_CYCLES=1 ./autonomous_loop.sh .
 ```
 
-### Target a Specific Area
-
+### Target a Specific Module
 ```bash
-# Skip all modules EXCEPT what you care about today
-SKIP_MODULES="infrastructure-config,developer-experience" ./autonomous_loop.sh /path/to/sitesyncai
+# Only audit/fix the financial engine tonight
+SKIP_MODULES="ui-design-system,scheduling,field-operations,collaboration,enterprise-portfolio" \
+MAX_CYCLES=10 MAX_SPEND=100 ./autonomous_loop.sh .
 ```
 
-### With Build Verification
-
+### Resume an Interrupted Run
 ```bash
-BUILD_CMD="npm run build" MAX_CYCLES=20 ./autonomous_loop.sh /path/to/sitesyncai
+RESUME=true MAX_CYCLES=30 MAX_SPEND=500 ./autonomous_loop.sh .
+```
+
+### With Slack Notifications (know when it's done)
+```bash
+export NOTIFY_WEBHOOK="https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK"
+MAX_CYCLES=25 MAX_SPEND=400 ./autonomous_loop.sh .
 ```
 
 ---
 
 ## CONFIGURATION REFERENCE
 
-| Variable | Default | What It Controls |
-|----------|---------|-----------------|
+| Variable | Default | What It Does |
+|----------|---------|--------------|
 | `MAX_CYCLES` | 20 | Maximum audit-execute-verify loops |
-| `MAX_SPEND` | 500 | Maximum estimated API cost in USD |
-| `AUDIT_MODEL` | claude-opus-4-6 | Model for deep audits (Opus = best quality) |
-| `CODE_MODEL` | claude-sonnet-4-6 | Model for Claude Code execution (Sonnet = best value) |
-| `DECOMP_MODEL` | claude-haiku-4-5-20251001 | Model for module decomposition (Haiku = cheapest, adequate) |
-| `LOG_DIR` | ./engine-logs | Where logs and reports are saved |
-| `SKIP_WEB_RESEARCH` | false | Skip competitive web research (saves ~20% cost) |
-| `INCLUDE_UI` | true | Include UI/UX design in audits |
-| `DRY_RUN` | false | Audit only, don't change code |
+| `MAX_SPEND` | 500 | Hard stop at this USD API spend |
+| `AUDIT_MODEL` | claude-opus-4-6 | Model for deep audits — Opus = highest quality |
+| `CODE_MODEL` | claude-sonnet-4-6 | Model for Claude Code execution |
+| `DECOMP_MODEL` | claude-haiku-4-5-20251001 | Model for module decomposition (cheapest, adequate) |
+| `LOG_DIR` | ./engine-logs | Where all logs and reports are saved |
+| `SKIP_WEB_RESEARCH` | false | Set true to skip competitive research (saves ~20%) |
+| `DRY_RUN` | false | Audit without making any code changes |
 | `BUILD_CMD` | (auto-detected) | Build command verified after each cycle |
-| `TEST_CMD` | (auto-detected) | Test command run after each cycle |
+| `TEST_CMD` | (auto-detected) | Test command run after changes |
 | `SKIP_MODULES` | (none) | Comma-separated module names to skip |
-| `FEEDBACK_FILE` | PROJECT_DIR/FEEDBACK.md | Founder priorities injected into all audits |
-| `NOTIFY_WEBHOOK` | (none) | Webhook URL for completion notification |
-| `MAX_ISSUES_PER_MODULE` | 20 | Cap on issues processed per module per cycle |
+| `FEEDBACK_FILE` | ./FEEDBACK.md | Your founder priorities file |
+| `VISION_FILE` | ./VISION.md | Your product vision file |
+| `NOTIFY_WEBHOOK` | (none) | Slack/Discord webhook for completion message |
+| `MAX_ISSUES_PER_MODULE` | 20 | Cap on issues per module per cycle |
+| `INVENTION_MODE` | true | Invent new features when modules hit 90+ score |
+| `RESUME` | false | Resume from last incomplete run |
+| `AUTO_GIT_TAG` | true | Tag git milestones every 5 cycles |
 
 ---
 
 ## COST ESTIMATES (March 2026 Pricing)
 
-Current API pricing:
-- Claude Opus 4.6: $5 input / $25 output per million tokens
-- Claude Sonnet 4.6: $3 input / $15 output per million tokens
-- Claude Haiku 4.5: $1 input / $5 output per million tokens
+| Model | Input | Output |
+|-------|-------|--------|
+| Claude Opus 4.6 | $5 / 1M tokens | $25 / 1M tokens |
+| Claude Sonnet 4.6 | $3 / 1M tokens | $15 / 1M tokens |
+| Claude Haiku 4.5 | $1 / 1M tokens | $5 / 1M tokens |
 
-### Per-Cycle Cost Breakdown
+### Per-Cycle Estimates
 
-| Component | Model | Tokens | Est. Cost |
-|-----------|-------|--------|-----------|
-| Module decomposition | Haiku | ~50K in + ~5K out | **~$0.08** (vs $0.40 on Opus) |
-| Deep audit per module (with web search) | Opus | ~200K in + ~15K out | $1.40-$4.00 |
-| Claude Code execution per prompt | Sonnet | ~50K per prompt | $0.20-$1.00 |
-| Verification per module | Opus | ~200K in + ~5K out | $1.15 |
-| **Total per module per cycle** | | | **$3-$8** |
-| **Total per full cycle (5-8 modules)** | | | **$20-$70** |
+| Component | Model | Est. Cost |
+|-----------|-------|-----------|
+| Module decomposition | Haiku | ~$0.08 |
+| Deep audit per module (with web) | Opus | $2-5 |
+| Claude Code execution per issue | Sonnet | $0.20-1.00 |
+| Change verification per module | Opus | $0.50-1.50 |
+| **Full cycle (7 modules)** | Mixed | **$25-70** |
 
-### Overnight Run Estimates
+### Nightly Run Estimates
 
-| Codebase Size | Cycles | Est. Cost | Duration |
-|--------------|--------|-----------|----------|
-| Small (10K lines) | 5-10 | $50-$150 | 1-3 hours |
-| Medium (50K lines) | 10-15 | $150-$400 | 3-7 hours |
-| Large (100K+ lines) | 15-25 | $300-$800 | 5-12 hours |
+| Config | Cycles | Est. Cost | Duration |
+|--------|--------|-----------|----------|
+| Maximum quality | 25 | $300-500 | 6-10 hrs |
+| Balanced | 25 | $150-300 | 4-7 hrs |
+| Budget | 15 | $75-150 | 2-4 hrs |
+| Quick pass | 3 | $20-50 | 45 min |
 
-### Cost Optimization Options
-
-- **Biggest savings:** Use Sonnet for audits instead of Opus — `AUDIT_MODEL=claude-sonnet-4-6` (cuts audit cost ~40%, still excellent)
-- Skip competitive research: `SKIP_WEB_RESEARCH=true` (saves ~20%)
-- Cap issues per module: `MAX_ISSUES_PER_MODULE=10` (faster, cheaper cycles)
-- First run: `MAX_SPEND=50` to calibrate cost for your specific codebase
-- Monitor live spend at https://console.anthropic.com/settings/billing
+**Tip:** Run Opus the first few nights when there are the most high-impact issues. Switch to Sonnet after night 5 for polish work.
 
 ---
 
-## THE FEEDBACK.MD WORKFLOW
+## HOW THE 14 AUDIT DIMENSIONS WORK
 
-This is the most important feature for directing the engine toward your priorities.
+Every module gets scored 0-100 on each of these. Issues are generated for anything below 95.
 
-Create or edit `FEEDBACK.md` in the root of your project directory. The engine reads it before every audit and treats it as P0 — higher priority than everything else it finds.
+1. **Visual Polish** — Apple/Linear/Stripe level execution. Every pixel intentional.
+2. **Construction Domain Depth** — Matches how actual supers, PMs, and owners work. Not software-PM logic.
+3. **Data Richness** — Real calculated metrics, not placeholders. Charts that tell a story.
+4. **Interaction Quality** — Keyboard shortcuts, drag-drop, bulk actions, inline editing.
+5. **AI Integration** — AI woven into every workflow. Not a sidebar. Not an afterthought.
+6. **Mobile and Field-First** — Works perfectly on an iPhone on a dusty jobsite.
+7. **Performance** — Instant renders. Virtual lists. Zero unnecessary re-renders.
+8. **TypeScript Quality** — Strict types, no `any`, no `eslint-disable`, proper generics.
+9. **Error Handling** — Every edge case handled. Skeletons. Empty states. Error boundaries.
+10. **Real-Time and Collaboration** — Live updates, presence indicators, conflict resolution.
+11. **Accessibility** — WCAG 2.1 AA compliant. Keyboard navigable.
+12. **Security and Permissions** — RBAC checks, no data leaks, XSS-safe, SOC2 patterns.
+13. **Competitive Differentiation** — What makes a GC choose SiteSync over Procore right now.
+14. **Enterprise Readiness** — Audit trail, CSV export, SSO hooks, multi-tenant isolation.
 
-**Example FEEDBACK.md:**
-```markdown
-# Engine Priorities
+---
 
-## This Week
-- The RFI workflow needs to feel effortless. A superintendent should be able to create and send an RFI in under 30 seconds on mobile.
-- The budget page needs real job costing — budget vs actual by CSI code, not just flat totals.
-- The AI Copilot should proactively surface risks before they become problems, not wait to be asked.
+## INVENTION MODE
 
-## Construction Domain Gaps I've Noticed
-- No lien waiver tracking yet. This is a big deal for GCs.
-- Submittals workflow doesn't handle re-submissions well.
-- Schedule needs a baseline vs actual comparison view.
+When a module scores 90+ for two consecutive cycles and all known issues are resolved, the engine automatically enters **Invention Mode** for that module.
 
-## UI Issues
-- The sidebar feels heavy. Study how Linear does navigation.
-- Metric cards on every page are good — keep those.
+In Invention Mode, the engine:
+- Searches for features that don't exist in any competing product
+- Looks for what AI uniquely enables that was impossible in 2020
+- Thinks about what a CFO would pay for that no current platform offers
+- Generates and executes complete implementations, not just suggestions
+
+This is how SiteSync becomes something nobody has ever seen. The engine does not stop at "parity with Procore." It pushes past it into territory no construction software has explored.
+
+---
+
+## THE DAILY HABIT (5 minutes, maximum results)
+
+### Every Night Before Bed
+
+```bash
+# 1. Update your priorities
+nano /path/to/sitesync-pm/FEEDBACK.md
+
+# 2. Open tmux
+tmux new -s engine
+
+# 3. Run
+cd /path/to/sitesync-pm
+MAX_CYCLES=25 MAX_SPEND=400 ./autonomous_loop.sh .
+
+# 4. Ctrl+B, D — go to sleep
 ```
 
-Update this file any morning before starting the next night's run. The engine picks it up automatically — no other configuration needed.
+### Every Morning (30 minutes)
+
+```bash
+# 1. See what happened
+tmux attach -t engine
+cat engine-logs/run_*/MORNING_BRIEFING.md
+
+# 2. See every change
+git log --oneline -20
+
+# 3. Run the app
+npm run dev
+
+# 4. Click through any pages the engine touched
+# 5. Note anything off — add to FEEDBACK.md
+# 6. Push if satisfied
+git push
+```
+
+### What to Expect
+
+| Night | What Happens |
+|-------|-------------|
+| 1 | Architecture, TypeScript, security. Large commits. $150-300 spend. |
+| 2-3 | Performance, real-time, state management. Feature depth added. |
+| 4-5 | Construction domain depth. RFI workflows, financial engine, scheduling. |
+| 6-8 | AI integration gets woven deeper. More predictive, more autonomous. |
+| 9-11 | Invention Mode activates. New features nobody has. |
+| 12-14 | Polish, edge cases, accessibility, testing. Diminishing spend. |
+| 14+ | A construction platform that makes Procore look like legacy software. |
 
 ---
 
-## HOW THE ENGINE WORKS (DETAILED)
-
-### Phase 1: Snapshot
-
-Reads every source file in the project (excluding node_modules, dist, build, lock files, images, fonts). Creates a single comprehensive document with directory structure and all file contents. Large files are intelligently truncated. Uses git hash caching — if nothing changed since the last snapshot, it reuses the cached version instead of re-reading all files.
-
-### Phase 2: Module Decomposition (Haiku)
-
-Claude Haiku analyzes the architecture and groups files into logical modules — authentication, scheduling engine, API layer, UI design system, financial engine, etc. Each module is audited independently for maximum depth. Haiku is used here because decomposition is a straightforward categorization task that doesn't require deep reasoning, saving ~90% on this step.
-
-### Phase 3: Deep Audit (Opus + Web Search, per module)
-
-Each module is scored 1-100 across 13 dimensions. Opus searches the web to benchmark against Procore, Autodesk, Buildertrend, Fieldwire, and PlanGrid in real time. Your FEEDBACK.md priorities are injected as P0 context. Unresolved issues from the previous cycle are carried forward and addressed first.
-
-The 13 dimensions:
-
-1. **Architecture & Scalability** — Can it handle enterprise load?
-2. **Code Quality** — Strict TypeScript, SOLID, zero tech debt
-3. **Security** — OWASP Top 10, RBAC/ABAC, SOC2 readiness
-4. **Performance** — Sub-200ms, indexed queries, caching, no N+1
-5. **Real-Time and Offline** — WebSocket, CRDTs, offline-first
-6. **AI Integration** — Agents, digital twins, predictive analytics
-7. **Testing and Reliability** — 80%+ coverage, error boundaries, observability
-8. **Developer Experience** — API design, docs, CI/CD, migration strategy
-9. **Construction Domain Depth** — RFIs, submittals, BIM, CPM scheduling, AIA billing
-10. **Competitive Differentiation** — What makes a GC switch overnight
-11. **Data and Integrations** — Webhooks, Procore migration, QuickBooks/Sage, BIM
-12. **Financial Engine** — Job costing, AIA G702/G703, cash flow, lien waivers
-13. **UI/UX Design** — Apple-level simplicity, intuitive, construction-first
-
-### Phase 4: Prompt Execution
-
-Every issue generates a specific, self-contained Claude Code prompt. Prompts include exact file paths, function names, acceptance criteria, and construction industry context. They are sorted by severity (critical first) and capped at MAX_ISSUES_PER_MODULE. Each is fed to Claude Code in non-interactive mode with auto-permissions. Failed prompts retry once with a 5-second pause.
-
-### Phase 5: Build Verification
-
-After all prompts in a cycle are executed, the engine runs your build command. If it fails, Claude Code automatically diagnoses and fixes the build errors. This prevents a cycle from introducing syntax errors or TypeScript failures that would break the app.
-
-### Phase 6: Change Verification
-
-After execution, the engine re-snapshots the codebase and verifies every change was correctly implemented. Issues marked "partial" or "not fixed" carry forward to the next cycle as P0 context. Regressions (new bugs introduced by changes) are automatically fixed.
-
-### Phase 7: Commit and Loop
-
-All changes are committed with a descriptive message including cycle number and cost. If any module has remaining issues, the engine starts a new cycle. The loop stops when zero actionable issues remain across all modules, or the budget/cycle limit is hit.
-
----
-
-## WHAT THE OUTPUT LOOKS LIKE
+## OUTPUT STRUCTURE
 
 ```
 engine-logs/
 └── run_20260401_220000/
-    ├── engine.log                    # Full session log (everything that printed to terminal)
-    ├── snapshot.md                   # Full codebase snapshot (updated each cycle)
-    ├── modules.json                  # Module decomposition
+    ├── engine.log                        # Everything that printed to terminal
+    ├── snapshot.md                       # Full codebase snapshot (cached)
+    ├── modules.json                      # Module decomposition
+    ├── state.json                        # Resume state
     ├── scores/
-    │   ├── ui-design-system.txt      # Score history for trending
+    │   ├── ui-design-system.txt          # Score history per module
     │   ├── financial-engine.txt
     │   └── ...
+    ├── prior_[module].txt                # Unresolved issues carried forward
     ├── cycle_1/
-    │   ├── audit_ui-design-system.json      # Audit: scores, issues, competitive intel
-    │   ├── audit_ui-design-system_raw.json  # Raw API response (for debugging)
-    │   ├── audit_financial-engine.json
-    │   ├── exec_ui-design-system/
-    │   │   ├── prompts.json                 # All prompts for this module
-    │   │   ├── exec_0_ui-C1-001.log         # Claude Code execution log per prompt
-    │   │   └── exec_1_ui-C1-002.log
-    │   ├── verify_ui-design-system.json     # Verification: fixed/partial/not_fixed
-    │   ├── build.log                        # Build output
-    │   └── ...
+    │   ├── audit_[module].json           # Scores, issues, competitive intel
+    │   ├── audit_[module]_raw.json       # Raw API response
+    │   ├── exec_[module]/
+    │   │   ├── exec_0_[id].log           # Claude Code execution log
+    │   │   ├── invention_0_[module].log  # Invented feature execution log
+    │   │   └── ...
+    │   ├── verify_[module].json          # fixed / partial / not_fixed
+    │   └── build.log                     # Build output
     ├── cycle_2/
     │   └── ...
-    └── REPORT.md                     # Final summary with score trending
+    └── MORNING_BRIEFING.md               # Your morning report
 ```
-
----
-
-## THE TWO-WEEK PLAN
-
-Walker's approach for maximum results:
-
-**Every night before bed (~2 minutes):**
-
-```bash
-# Update FEEDBACK.md with anything you noticed that day
-nano /path/to/sitesyncai/FEEDBACK.md
-
-# Start the engine
-tmux new -s engine
-MAX_CYCLES=25 MAX_SPEND=400 BUILD_CMD="npm run build" ./autonomous_loop.sh /path/to/sitesyncai
-# Ctrl+B, D to detach
-```
-
-**Every morning (~30 minutes):**
-
-1. `tmux attach -t engine` — see where it stopped
-2. `cat engine-logs/run_*/REPORT.md` — read the score trending and what changed
-3. `cd /path/to/sitesyncai && git log --oneline -10` — see all committed changes
-4. `npm run dev` — click through key flows, especially anything the engine touched
-5. Note anything that feels off or anything you want prioritized → add to FEEDBACK.md
-6. `git push` if satisfied with the changes
-
-**What to expect:**
-
-- **Night 1:** Architecture, security, code quality improvements. Big commits. Probably $150-300 spend.
-- **Nights 2-5:** Performance, real-time, construction domain gaps. Feature additions. Spend decreases as issues get resolved.
-- **Nights 6-10:** AI integration, competitive differentiation, UI polish. Refinement work.
-- **Nights 11-14:** Edge cases, testing, final polish. Diminishing spend per night.
-- **After 2 weeks:** A platform categorically ahead of anything in construction PM.
-
----
-
-## MODEL SELECTION GUIDE
-
-| Scenario | AUDIT_MODEL | CODE_MODEL | Est. Nightly Cost |
-|----------|-------------|------------|-------------------|
-| Maximum quality | claude-opus-4-6 | claude-sonnet-4-6 | $200-400 |
-| Balanced | claude-sonnet-4-6 | claude-sonnet-4-6 | $100-200 |
-| Budget | claude-sonnet-4-6 | claude-haiku-4-5-20251001 | $50-100 |
-| Quick pass | claude-haiku-4-5-20251001 | claude-haiku-4-5-20251001 | $20-50 |
-
-Recommendation: Run Opus for the first few nights when there are the most high-impact issues to find. Switch to Sonnet once the major architectural issues are resolved and you're doing polish work.
-
----
-
-## NOTIFICATIONS
-
-To receive a message when the engine finishes overnight, set up a webhook. Works with Slack, Discord, or any HTTP endpoint.
-
-**Slack incoming webhook:**
-```bash
-export NOTIFY_WEBHOOK="https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
-MAX_CYCLES=30 MAX_SPEND=500 ./autonomous_loop.sh /path/to/sitesyncai
-```
-
-**Discord webhook:**
-```bash
-export NOTIFY_WEBHOOK="https://discord.com/api/webhooks/YOUR/WEBHOOK"
-```
-
-You will get a message like: `SiteSyncAI Engine COMPLETE | 12 cycles | $287.40 | 6h 23m 11s | Zero issues remaining`
 
 ---
 
 ## TROUBLESHOOTING
 
 **"ANTHROPIC_API_KEY not set"**
-Run: `export ANTHROPIC_API_KEY="sk-ant-YOUR-KEY-HERE"`
+Run: `export ANTHROPIC_API_KEY="sk-ant-..."`
 
 **"Claude Code CLI not found"**
 Run: `npm install -g @anthropic-ai/claude-code`
 
-**"jq not found" or "bc not found"**
-macOS: `brew install jq bc`
-Linux: `sudo apt-get install -y jq bc`
+**"jq not found"**
+macOS: `brew install jq` | Linux: `sudo apt-get install -y jq`
 
 **Script stops mid-run**
-Safe to restart — all changes are preserved in git and logs. Run the command again. It will pick up where it left off (prior cycle audit files remain, new cycle starts fresh).
+Run with `RESUME=true` to pick up where it left off.
 
-**Build keeps failing after auto-fix**
-Run with `DRY_RUN=true` first to see what the engine plans to change. Check if the codebase has unusual TypeScript configuration. Add build-specific context to FEEDBACK.md.
+**Build failing repeatedly after auto-fix**
+Run with `DRY_RUN=true MAX_CYCLES=1` first to see what the engine plans to change. Add context to FEEDBACK.md about any unusual TypeScript config.
 
-**API rate limits or overloaded errors**
-The engine retries automatically with exponential backoff (30s, 60s, 120s). If you're hitting sustained rate limits, your account may need a higher tier. Check: https://console.anthropic.com/settings/limits
+**Rate limits or overloaded errors**
+The engine retries automatically with 30s, 60s, 120s backoff. If sustained, check: https://console.anthropic.com/settings/limits
 
-**Codebase too large for context window**
-The engine auto-truncates at ~900K tokens and uses module decomposition to audit each area independently. If a single module is still too large, the engine will truncate intelligently. Add very large generated files to a `.engineignore` (not yet implemented) or move them to dist.
-
-**Claude Code prompt fails twice**
-The failure log is in `engine-logs/run_*/cycle_*/exec_*/exec_N_ID.log`. You can run the failed prompt manually: `claude -p "$(jq -r '.issues[0].prompt' audit_module.json)" --permission-mode auto`
-
-**Want to undo everything from a run**
+**Want to undo a run completely**
 ```bash
-cd /path/to/sitesyncai
-git log --oneline -10          # Find the pre-engine backup commit
-git reset --hard <commit-hash> # Reset to that exact state
+git log --oneline -10          # Find the "backup checkpoint" commit
+git reset --hard <hash>        # Reset to exactly that state
 ```
 
----
-
-## IMPORTANT RULES
-
-1. **Always commit before running.** The engine modifies your actual codebase.
-2. **Start with a test run.** `MAX_CYCLES=1 MAX_SPEND=20` to validate everything works.
-3. **Monitor your spend.** https://console.anthropic.com/settings/billing
-4. **The engine auto-commits.** A backup commit is created at startup; changes are committed after each cycle.
-5. **Git is your safety net.** You can always `git reset --hard` to any previous commit.
-6. **Each run creates fresh logs.** Previous run logs are never deleted.
-7. **The engine is idempotent.** Running it multiple times is safe and expected — it just keeps improving.
-8. **Update FEEDBACK.md daily.** This is the single highest-leverage thing you can do to direct the engine.
+**Costs more than expected**
+Add `SKIP_WEB_RESEARCH=true` to save ~20%. Or switch to `AUDIT_MODEL=claude-sonnet-4-6`.
 
 ---
 
-## WHAT "DONE" LOOKS LIKE
+## SAFETY RULES
 
-The engine declares zero actionable issues when:
-
-- Every dimension scores 90+ across all modules
-- Security scores 95+
-- Zero critical or high severity issues remain
-- Build passes cleanly after all changes
-- All changes verified as correctly implemented
-- Competitive research confirms feature parity or superiority vs Procore and Autodesk
-- UI is clean, intuitive, and field-first
-- A superintendent could use it on a job site with zero training
-
-This is the bar for a world-class construction platform.
+1. **Always git commit before running.** The engine modifies your actual files.
+2. **Always do a test run first.** `MAX_CYCLES=1 MAX_SPEND=20 ./autonomous_loop.sh .`
+3. **Watch your spend.** https://console.anthropic.com/settings/billing
+4. **Git is your undo button.** Every change is committed. `git reset --hard` brings you back.
+5. **The engine is safe to restart.** All state is preserved. Just run it again.
+6. **Update FEEDBACK.md daily.** This is the single highest-leverage thing you do.
 
 ---
 
-*Built for Walker Benner. Go build something nobody has ever seen before.*
+## WHAT "DONE" MEANS
+
+The engine declares zero actionable issues when every module scores 90+ across all 14 dimensions, the build is clean, all changes have been verified, and competitive research confirms SiteSync is ahead of every competitor in every area it has audited.
+
+That is not the goal. The goal is something no construction platform has ever been.
+
+The engine does not stop at "done." In Invention Mode, it keeps pushing.
+
+---
+
+*Built for Walker Benner. Go build something the industry has never seen.*

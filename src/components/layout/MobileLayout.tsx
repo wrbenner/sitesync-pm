@@ -148,7 +148,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
               width: 28, height: 28,
               background: `linear-gradient(135deg, ${colors.primaryOrange} 0%, ${colors.orangeGradientEnd} 100%)`,
               borderRadius: borderRadius.sm, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '13px', fontWeight: 700, color: 'white',
+              fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.bold, color: colors.white,
             }}>S</div>
           )}
           <span style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, letterSpacing: typography.letterSpacing.tight }}>
@@ -184,7 +184,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search items, people, drawings..."
             style={{
-              width: '100%', padding: '12px 16px', fontSize: '16px',
+              width: '100%', padding: `${spacing['3']} ${spacing['4']}`, fontSize: typography.fontSize.title,
               fontFamily: typography.fontFamily, border: 'none',
               backgroundColor: colors.surfaceInset, borderRadius: borderRadius.md,
               outline: 'none', boxSizing: 'border-box', minHeight: '48px',
@@ -236,7 +236,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
         <>
           <div
             onClick={() => setMoreOpen(false)}
-            style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.3)', zIndex: zIndex.dropdown as number }}
+            style={{ position: 'fixed', inset: 0, backgroundColor: colors.toolbarBg, zIndex: zIndex.dropdown as number }}
           />
           <div style={{
             position: 'fixed', bottom: `${TAB_BAR_HEIGHT}px`, left: 0, right: 0,
@@ -324,7 +324,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
                 }}>
                   <Camera size={24} color="white" />
                 </div>
-                <span style={{ fontSize: '10px', fontWeight: typography.fontWeight.semibold, color: colors.orangeText, marginTop: 2 }}>
+                <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.orangeText, marginTop: 2 }}>
                   {tab.label}
                 </span>
               </button>
@@ -346,7 +346,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
               aria-label={tab.label}
             >
               <Icon size={22} />
-              <span style={{ fontSize: '10px', fontWeight: isActive ? typography.fontWeight.semibold : typography.fontWeight.medium }}>
+              <span style={{ fontSize: typography.fontSize.caption, fontWeight: isActive ? typography.fontWeight.semibold : typography.fontWeight.medium }}>
                 {tab.label}
               </span>
             </button>

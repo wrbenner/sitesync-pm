@@ -114,7 +114,7 @@ export function UserManagement() {
             gap: spacing['2'],
             padding: `${spacing['2']} ${spacing['4']}`,
             backgroundColor: colors.primaryOrange,
-            color: '#fff',
+            color: colors.white,
             border: 'none',
             borderRadius: borderRadius.md,
             fontSize: typography.fontSize.sm,
@@ -220,7 +220,7 @@ export function UserManagement() {
                 style={{
                   padding: `${spacing['2']} ${spacing['4']}`,
                   backgroundColor: colors.primaryOrange,
-                  color: '#fff',
+                  color: colors.white,
                   border: 'none',
                   borderRadius: borderRadius.base,
                   fontSize: typography.fontSize.sm,
@@ -313,7 +313,7 @@ export function UserManagement() {
               <div style={{
                 fontSize: typography.fontSize.caption,
                 color: colors.textTertiary,
-                marginTop: '1px',
+                marginTop: spacing.px,
               }}>
                 {member.email}
               </div>

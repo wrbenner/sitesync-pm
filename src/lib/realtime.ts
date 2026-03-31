@@ -1,6 +1,7 @@
 import { supabase } from './supabase'
 import { queryClient } from './queryClient'
 import { toast } from 'sonner'
+import { colors } from '../styles/theme'
 
 // All tables that support real-time project-scoped updates
 const PROJECT_TABLES = [
@@ -147,8 +148,8 @@ export interface PresenceUser {
 }
 
 const PRESENCE_COLORS = [
-  '#3A7BC8', '#2D8A6E', '#C4850C', '#7C5DC7', '#C93B3B',
-  '#06B6D4', '#F47820', '#8B5E3C', '#DC2626', '#4F46E5',
+  colors.statusInfo, colors.statusActive, colors.statusPending, colors.statusReview, colors.statusCritical,
+  colors.chartCyan, colors.primaryOrange, colors.brand800, colors.chartRed, colors.indigo,
 ]
 
 function getUserColor(userId: string): string {

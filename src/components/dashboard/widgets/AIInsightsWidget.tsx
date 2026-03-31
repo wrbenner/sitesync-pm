@@ -61,7 +61,7 @@ export const AIInsightsWidget: React.FC = React.memo(() => {
         <span style={{ fontSize: typography.fontSize.label, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, textTransform: 'uppercase', letterSpacing: typography.letterSpacing.wider }}>
           AI Insights
         </span>
-        <span style={{ marginLeft: 'auto', fontSize: typography.fontSize.caption, color: 'white', fontWeight: typography.fontWeight.semibold, backgroundColor: colors.primaryOrange, borderRadius: borderRadius.full, minWidth: '20px', height: '20px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 6px', flexShrink: 0 }}>{allInsights.length}</span>
+        <span style={{ marginLeft: 'auto', fontSize: typography.fontSize.caption, color: colors.white, fontWeight: typography.fontWeight.semibold, backgroundColor: colors.primaryOrange, borderRadius: borderRadius.full, minWidth: '20px', height: '20px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: `0 ${spacing['1.5']}`, flexShrink: 0 }}>{allInsights.length}</span>
       </div>
 
       {/* Category filter */}

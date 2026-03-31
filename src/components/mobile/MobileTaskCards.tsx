@@ -124,7 +124,7 @@ const MobileTaskCard: React.FC<{
         paddingLeft: spacing['5'], gap: spacing['2'],
       }}>
         <Check size={24} color="white" />
-        <span style={{ color: 'white', fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold }}>
+        <span style={{ color: colors.white, fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold }}>
           Complete
         </span>
       </div>
@@ -136,19 +136,19 @@ const MobileTaskCard: React.FC<{
       }}>
         <button onClick={() => { onAction('edit'); setOffsetX(0); }} style={{
           flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          backgroundColor: colors.statusInfo, border: 'none', cursor: 'pointer', color: 'white',
+          backgroundColor: colors.statusInfo, border: 'none', cursor: 'pointer', color: colors.white,
         }}>
           <MoreHorizontal size={18} />
         </button>
         <button onClick={() => { onAction('reassign'); setOffsetX(0); }} style={{
           flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          backgroundColor: colors.statusPending, border: 'none', cursor: 'pointer', color: 'white',
+          backgroundColor: colors.statusPending, border: 'none', cursor: 'pointer', color: colors.white,
         }}>
           <User size={18} />
         </button>
         <button onClick={() => { onAction('flag'); setOffsetX(0); }} style={{
           flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          backgroundColor: colors.statusCritical, border: 'none', cursor: 'pointer', color: 'white',
+          backgroundColor: colors.statusCritical, border: 'none', cursor: 'pointer', color: colors.white,
         }}>
           <Flag size={18} />
         </button>
@@ -203,7 +203,7 @@ const MobileTaskCard: React.FC<{
             </span>
             {task.dueDate && (
               <span style={{
-                display: 'flex', alignItems: 'center', gap: '2px',
+                display: 'flex', alignItems: 'center', gap: spacing['0.5'],
                 fontSize: typography.fontSize.caption,
                 color: isOverdue ? colors.statusCritical : colors.textTertiary,
               }}>
@@ -213,7 +213,7 @@ const MobileTaskCard: React.FC<{
             )}
             {task.tags?.map((tag) => (
               <span key={tag} style={{
-                fontSize: '10px', padding: '1px 6px',
+                fontSize: typography.fontSize.caption, padding: '1px 6px',
                 backgroundColor: colors.surfaceInset, borderRadius: borderRadius.full,
                 color: colors.textTertiary,
               }}>
@@ -283,9 +283,9 @@ export const MobileTaskCards: React.FC<MobileTaskCardsProps> = ({ tasks, onCompl
             >
               {f.label}
               <span style={{
-                fontSize: '10px', padding: '0 4px', minWidth: '16px', textAlign: 'center',
+                fontSize: typography.fontSize.caption, padding: '0 4px', minWidth: '16px', textAlign: 'center',
                 borderRadius: borderRadius.full,
-                backgroundColor: filter === f.id ? 'rgba(255,255,255,0.25)' : colors.surfaceInset,
+                backgroundColor: filter === f.id ? 'rgba(255, 255, 255, 0.25)' : colors.surfaceInset, /* white overlay on orange */
               }}>
                 {count}
               </span>

@@ -14,7 +14,8 @@ import { Sidebar } from './components/Sidebar';
 import { MobileLayout } from './components/layout/MobileLayout';
 import { OfflineBanner } from './components/ui/OfflineBanner';
 import { useUiStore, useAIAnnotationStore } from './stores';
-import { colors, colorVars, layout } from './styles/theme';
+import { colors, colorVars, layout, spacing, typography, borderRadius, transitions } from './styles/theme';
+import { keyframes as animationKeyframes } from './styles/animations';
 import { pageTransition } from './components/transitions/variants';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import type { Shortcut } from './hooks/useKeyboardShortcuts';
@@ -103,14 +104,14 @@ function useIsMobile() {
 
 function PageLoader() {
   return (
-    <div style={{ padding: '32px', maxWidth: layout.contentMaxWidth, margin: '0 auto' }}>
+    <div style={{ padding: spacing['8'], maxWidth: layout.contentMaxWidth, margin: '0 auto' }}>
       <Skeleton width="200px" height="28px" />
-      <div style={{ marginTop: '16px' }}><Skeleton width="100%" height="16px" /></div>
-      <div style={{ marginTop: '8px' }}><Skeleton width="80%" height="16px" /></div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginTop: '32px' }}>
+      <div style={{ marginTop: spacing['4'] }}><Skeleton width="100%" height="16px" /></div>
+      <div style={{ marginTop: spacing['2'] }}><Skeleton width="80%" height="16px" /></div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'], marginTop: spacing['8'] }}>
         {[1, 2, 3, 4].map((i) => <Skeleton key={i} width="100%" height="100px" />)}
       </div>
-      <div style={{ marginTop: '24px' }}><Skeleton width="100%" height="300px" /></div>
+      <div style={{ marginTop: spacing['6'] }}><Skeleton width="100%" height="300px" /></div>
     </div>
   );
 }
@@ -199,11 +200,15 @@ function AppContent() {
 
   const projectId = useProjectId();
   const { user } = useAuth();
-  useRealtimeSubscription(projectId, user?.id);
-  useProjectCache(projectId);
   const { conflictCount } = useOfflineStatus();
   const { updateAvailable, applyUpdate } = useServiceWorkerUpdate();
   const [conflictModalOpen, setConflictModalOpen] = useState(false);
+
+  // Auth pages render without the app shell (no sidebar, no offline banner)
+  const isAuthPage = ['/login', '/signup', '/onboarding'].includes(location.pathname);
+
+  useRealtimeSubscription(isAuthPage ? undefined : projectId, isAuthPage ? undefined : user?.id);
+  useProjectCache(isAuthPage ? undefined : projectId);
 
   // Listen for background sync completion from SW
   useEffect(() => {
@@ -232,18 +237,18 @@ function AppContent() {
   // Track presence (who is on which page)
   const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
   const userInitials = userName.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2) || 'U';
-  usePresence(projectId, user?.id, userName, userInitials, activeView);
-
-  const handleNavigate = (view: string) => {
-    setActiveView(view);
-    navigate(`/${view}`);
-  };
+  usePresence(isAuthPage ? undefined : projectId, isAuthPage ? undefined : user?.id, userName, userInitials, activeView);
 
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const { toggleContextPanel } = useAIAnnotationStore();
   const sidebarWidth = sidebarCollapsed ? layout.sidebarCollapsed : layout.sidebarWidth;
+
+  const handleNavigate = (view: string) => {
+    setActiveView(view);
+    navigate(`/${view}`);
+  };
 
   // Keyboard shortcuts — every action reachable by keyboard
   const shortcuts: Shortcut[] = [
@@ -270,6 +275,15 @@ function AppContent() {
     { key: 'Escape', description: 'Close panels', action: () => { setNotificationsOpen(false); setShortcutsOpen(false); setExportOpen(false); } },
   ];
   useKeyboardShortcuts(shortcuts);
+
+  // Auth pages render without the app shell (no sidebar, no offline banner)
+  if (isAuthPage) {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <AppRoutes />
+      </Suspense>
+    );
+  }
 
   // Mobile layout
   if (isMobile) {
@@ -309,7 +323,7 @@ function AppContent() {
             flexDirection: 'column',
             marginLeft: sidebarWidth,
             overflow: 'auto',
-            transition: 'margin-left 0.3s cubic-bezier(0.32, 0.72, 0, 1)',
+            transition: `margin-left ${transitions.smooth}`,
           }}
         >
           <OfflineBanner />
@@ -332,12 +346,13 @@ function AppContent() {
   );
 }
 
-function SentryFallback() {
+function SentryFallback({ error }: { error?: Error }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', textAlign: 'center', padding: '32px' }}>
-      <h1 style={{ fontSize: '24px', fontWeight: 600, margin: 0, marginBottom: '8px' }}>Something went wrong</h1>
-      <p style={{ fontSize: '14px', color: colors.textTertiary, margin: 0, marginBottom: '16px' }}>An unexpected error has been reported. Please reload to continue.</p>
-      <button onClick={() => window.location.reload()} style={{ padding: '8px 24px', backgroundColor: colors.primaryOrange, color: colors.white, border: 'none', borderRadius: '6px', fontSize: '14px', cursor: 'pointer' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', textAlign: 'center', padding: spacing['8'] }}>
+      <h1 style={{ fontSize: typography.fontSize.large, fontWeight: typography.fontWeight.semibold, margin: 0, marginBottom: spacing['2'] }}>Something went wrong</h1>
+      <p style={{ fontSize: typography.fontSize.body, color: colors.textTertiary, margin: 0, marginBottom: spacing['4'] }}>An unexpected error has been reported. Please reload to continue.</p>
+      {error && <pre style={{ fontSize: typography.fontSize.label, color: colors.statusCritical, margin: `0 0 ${spacing['4']}`, maxWidth: '600px', textAlign: 'left', whiteSpace: 'pre-wrap', wordBreak: 'break-word', background: colors.surfaceInset, padding: spacing['3'], borderRadius: borderRadius.base }}>{error.message}{'\n'}{error.stack}</pre>}
+      <button onClick={() => window.location.reload()} style={{ padding: `${spacing['2']} ${spacing['6']}`, backgroundColor: colors.primaryOrange, color: colors.white, border: 'none', borderRadius: borderRadius.base, fontSize: typography.fontSize.body, cursor: 'pointer' }}>
         Reload Page
       </button>
     </div>
@@ -346,7 +361,8 @@ function SentryFallback() {
 
 function App() {
   return (
-    <Sentry.ErrorBoundary fallback={<SentryFallback />}>
+    <Sentry.ErrorBoundary fallback={({ error }: { error?: Error }) => <SentryFallback error={error} />}>
+      <style>{animationKeyframes}</style>
       <QueryClientProvider client={queryClient}>
         <ToastProvider>
           <HashRouter>

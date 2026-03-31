@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Camera, Tag, Clock, User, X } from 'lucide-react';
-import { colors, spacing, typography, borderRadius, transitions, zIndex } from '../../../styles/theme';
+import { colors, spacing, typography, borderRadius, transitions, zIndex, shadows } from '../../../styles/theme';
 import { useProjectId } from '../../../hooks/useProjectId';
 import { useFieldCaptures } from '../../../hooks/queries';
 import type { Json } from '../../../types/database';
@@ -85,19 +85,19 @@ export const PhotoFeedWidget: React.FC = React.memo(() => {
             }}
             onMouseEnter={(e) => {
               (e.currentTarget as HTMLDivElement).style.transform = 'scale(1.03)';
-              (e.currentTarget as HTMLDivElement).style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+              (e.currentTarget as HTMLDivElement).style.boxShadow = shadows.cardHover;
             }}
             onMouseLeave={(e) => {
               (e.currentTarget as HTMLDivElement).style.transform = 'scale(1)';
-              (e.currentTarget as HTMLDivElement).style.boxShadow = 'none';
+              (e.currentTarget as HTMLDivElement).style.boxShadow = shadows.none;
             }}
           >
             {/* AI tag badge */}
             <div style={{
               position: 'absolute', top: 4, right: 4,
               padding: '1px 5px', borderRadius: borderRadius.full,
-              backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
-              fontSize: '8px', color: 'white', fontWeight: typography.fontWeight.semibold,
+              backgroundColor: colors.overlayBackdrop, backdropFilter: 'blur(4px)',
+              fontSize: typography.fontSize.caption, color: colors.white, fontWeight: typography.fontWeight.semibold,
             }}>
               {photo.aiTags[0]}
             </div>
@@ -105,10 +105,10 @@ export const PhotoFeedWidget: React.FC = React.memo(() => {
             {/* Bottom overlay */}
             <div style={{
               position: 'absolute', bottom: 0, left: 0, right: 0,
-              background: 'linear-gradient(transparent, rgba(0,0,0,0.6))',
+              background: colors.photoGradient,
               padding: `${spacing['3']} ${spacing['2']} ${spacing['1']}`,
             }}>
-              <p style={{ fontSize: '9px', color: 'rgba(255,255,255,0.9)', margin: 0, fontWeight: typography.fontWeight.medium, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <p style={{ fontSize: typography.fontSize.caption, color: colors.textOnDark, margin: 0, fontWeight: typography.fontWeight.medium, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {photo.title}
               </p>
             </div>
@@ -121,7 +121,7 @@ export const PhotoFeedWidget: React.FC = React.memo(() => {
         <div
           style={{
             position: 'fixed', inset: 0, zIndex: zIndex.modal as number,
-            backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)',
+            backgroundColor: colors.overlayScrim, backdropFilter: 'blur(8px)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}
           onClick={() => setSelectedPhoto(null)}
@@ -140,9 +140,9 @@ export const PhotoFeedWidget: React.FC = React.memo(() => {
                 style={{
                   position: 'absolute', top: 12, right: 12,
                   width: 32, height: 32, borderRadius: borderRadius.full,
-                  backgroundColor: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)',
+                  backgroundColor: colors.overlayDark, backdropFilter: 'blur(4px)',
                   border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: 'white',
+                  color: colors.white,
                 }}
               >
                 <X size={16} />

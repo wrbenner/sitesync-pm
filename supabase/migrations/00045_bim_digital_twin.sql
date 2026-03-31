@@ -84,8 +84,7 @@ CREATE TABLE IF NOT EXISTS crew_gps_locations (
 CREATE INDEX idx_gps_project ON crew_gps_locations(project_id);
 CREATE INDEX idx_gps_crew_time ON crew_gps_locations(crew_id, recorded_at DESC);
 
--- Expire old GPS data (keep 30 days)
-CREATE INDEX idx_gps_expiry ON crew_gps_locations(recorded_at) WHERE recorded_at < now() - interval '30 days';
+CREATE INDEX idx_gps_recorded ON crew_gps_locations(recorded_at);
 
 -- ── RLS Policies ─────────────────────────────────────────
 

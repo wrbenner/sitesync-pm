@@ -1,6 +1,6 @@
 import React from 'react'
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer'
-import { vizColors } from '../../styles/theme'
+import { colors, vizColors } from '../../styles/theme'
 
 const styles = StyleSheet.create({
   page: {
@@ -16,17 +16,17 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     paddingBottom: 12,
     borderBottomWidth: 2,
-    borderBottomColor: '#0C0D0F',
+    borderBottomColor: colors.darkNavy,
   },
   headerLeft: {},
   logo: {
     fontSize: 16,
     fontFamily: 'Helvetica-Bold',
-    color: '#0C0D0F',
+    color: colors.darkNavy,
   },
   projectName: {
     fontSize: 8,
-    color: '#5C5550',
+    color: colors.textSecondary,
     marginTop: 2,
   },
   headerRight: {
@@ -35,11 +35,11 @@ const styles = StyleSheet.create({
   reportTitle: {
     fontSize: 14,
     fontFamily: 'Helvetica-Bold',
-    color: '#0C0D0F',
+    color: colors.darkNavy,
   },
   reportDate: {
     fontSize: 8,
-    color: '#5C5550',
+    color: colors.textSecondary,
     marginTop: 2,
   },
   footer: {
@@ -50,12 +50,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     borderTopWidth: 1,
-    borderTopColor: '#E5E1DC',
+    borderTopColor: colors.borderDefault,
     paddingTop: 8,
   },
   footerText: {
     fontSize: 7,
-    color: '#9A9490',
+    color: colors.textTertiary,
   },
   // Table styles
   table: {
@@ -63,26 +63,26 @@ const styles = StyleSheet.create({
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#0C0D0F',
+    backgroundColor: colors.darkNavy,
     padding: 6,
   },
   tableHeaderCell: {
     fontFamily: 'Helvetica-Bold',
     fontSize: 8,
-    color: '#FFFFFF',
+    color: colors.white,
   },
   tableRow: {
     flexDirection: 'row',
     padding: 6,
     borderBottomWidth: 0.5,
-    borderBottomColor: '#E5E1DC',
+    borderBottomColor: colors.borderDefault,
   },
   tableRowAlt: {
     flexDirection: 'row',
     padding: 6,
     borderBottomWidth: 0.5,
-    borderBottomColor: '#E5E1DC',
-    backgroundColor: '#FAFAF8',
+    borderBottomColor: colors.borderDefault,
+    backgroundColor: colors.surfacePage,
   },
   tableCell: {
     fontSize: 8,
@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 12,
     fontFamily: 'Helvetica-Bold',
-    color: '#0C0D0F',
+    color: colors.darkNavy,
     marginTop: 20,
     marginBottom: 8,
   },

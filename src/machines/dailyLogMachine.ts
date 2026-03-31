@@ -1,4 +1,5 @@
 import { setup } from 'xstate'
+import { colors } from '../styles/theme'
 
 export type DailyLogState = 'draft' | 'submitted' | 'approved' | 'rejected'
 
@@ -80,10 +81,10 @@ export function getNextDailyLogStatus(currentStatus: DailyLogState, action: stri
 
 export function getDailyLogStatusConfig(status: DailyLogState) {
   const config: Record<DailyLogState, { label: string; color: string; bg: string }> = {
-    draft: { label: 'Draft', color: '#8C8580', bg: 'rgba(140,133,128,0.08)' },
-    submitted: { label: 'Submitted', color: '#3A7BC8', bg: 'rgba(58,123,200,0.08)' },
-    approved: { label: 'Approved', color: '#2D8A6E', bg: 'rgba(45,138,110,0.08)' },
-    rejected: { label: 'Returned', color: '#C93B3B', bg: 'rgba(201,59,59,0.08)' },
+    draft: { label: 'Draft', color: colors.statusNeutral, bg: colors.statusNeutralSubtle },
+    submitted: { label: 'Submitted', color: colors.statusInfo, bg: colors.statusInfoSubtle },
+    approved: { label: 'Approved', color: colors.statusActive, bg: colors.statusActiveSubtle },
+    rejected: { label: 'Returned', color: colors.statusCritical, bg: colors.statusCriticalSubtle },
   }
   return config[status] || config.draft
 }

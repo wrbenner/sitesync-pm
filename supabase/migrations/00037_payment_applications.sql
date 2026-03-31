@@ -44,8 +44,8 @@ CREATE TABLE IF NOT EXISTS payment_applications (
   UNIQUE (project_id, application_number)
 );
 
-CREATE INDEX idx_pay_apps_project ON payment_applications(project_id, application_number DESC);
-CREATE INDEX idx_pay_apps_status ON payment_applications(project_id, status);
+CREATE INDEX idx_payment_apps_project ON payment_applications(project_id, application_number DESC);
+CREATE INDEX idx_payment_apps_status ON payment_applications(project_id, status);
 
 ALTER TABLE payment_applications ENABLE ROW LEVEL SECURITY;
 CREATE POLICY pay_apps_select ON payment_applications FOR SELECT

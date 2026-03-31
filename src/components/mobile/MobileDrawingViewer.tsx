@@ -120,10 +120,10 @@ export const MobileDrawingViewer: React.FC<DrawingViewerProps> = ({ drawing, onC
   };
 
   const layers = [
-    { id: 'architectural', label: 'Arch', color: '#7C5DC7' },
-    { id: 'structural', label: 'Struct', color: '#3A7BC8' },
-    { id: 'mep', label: 'MEP', color: '#2D8A6E' },
-    { id: 'electrical', label: 'Elec', color: '#C4850C' },
+    { id: 'architectural', label: 'Arch', color: colors.statusReview },
+    { id: 'structural', label: 'Struct', color: colors.statusInfo },
+    { id: 'mep', label: 'MEP', color: colors.statusActive },
+    { id: 'electrical', label: 'Elec', color: colors.statusPending },
   ];
 
   return (
@@ -135,20 +135,20 @@ export const MobileDrawingViewer: React.FC<DrawingViewerProps> = ({ drawing, onC
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: `${spacing['2']} ${spacing['3']}`, flexShrink: 0,
-        backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 5,
+        backgroundColor: colors.overlayDark, zIndex: zIndex.base as number + 5,
       }}>
         <button onClick={onClose} style={{
           width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          backgroundColor: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: borderRadius.full,
+          backgroundColor: colors.overlayWhiteThin, border: 'none', borderRadius: borderRadius.full,
           cursor: 'pointer',
         }}>
-          <X size={20} color="white" />
+          <X size={20} color={colors.white} />
         </button>
         <div style={{ textAlign: 'center', flex: 1 }}>
-          <p style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: 'white', margin: 0 }}>
+          <p style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.white, margin: 0 }}>
             {drawing.setNumber}: {drawing.title}
           </p>
-          <p style={{ fontSize: typography.fontSize.caption, color: 'rgba(255,255,255,0.4)', margin: 0 }}>
+          <p style={{ fontSize: typography.fontSize.caption, color: colors.darkMutedText, margin: 0 }}>
             Rev {drawing.revision} · {drawing.discipline}
           </p>
         </div>
@@ -157,11 +157,11 @@ export const MobileDrawingViewer: React.FC<DrawingViewerProps> = ({ drawing, onC
             onClick={() => { impact('light'); setMarkupMode(!markupMode); }}
             style={{
               width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              backgroundColor: markupMode ? colors.primaryOrange : 'rgba(255,255,255,0.1)',
+              backgroundColor: markupMode ? colors.primaryOrange : colors.overlayWhiteThin,
               border: 'none', borderRadius: borderRadius.full, cursor: 'pointer',
             }}
           >
-            <Edit3 size={18} color="white" />
+            <Edit3 size={18} color={colors.white} />
           </button>
         </div>
       </div>
@@ -185,33 +185,33 @@ export const MobileDrawingViewer: React.FC<DrawingViewerProps> = ({ drawing, onC
           {/* Drawing placeholder */}
           <div style={{
             position: 'absolute', left: '5%', top: '5%', width: '90%', height: '90%',
-            background: 'linear-gradient(135deg, #2a2a4e 0%, #1e1e3a 100%)',
-            borderRadius: borderRadius.md, border: '1px solid rgba(255,255,255,0.05)',
+            background: `linear-gradient(135deg, ${vizColors.dark} 0%, ${vizColors.dark} 100%)`,
+            borderRadius: borderRadius.md, border: `1px solid ${colors.overlayWhiteThin}`,
           }}>
             {/* Grid */}
             {Array.from({ length: 8 }).map((_, i) => (
               <React.Fragment key={i}>
-                <div style={{ position: 'absolute', left: `${(i + 1) * 11.1}%`, top: 0, bottom: 0, width: 1, backgroundColor: 'rgba(255,255,255,0.03)' }} />
-                <div style={{ position: 'absolute', top: `${(i + 1) * 11.1}%`, left: 0, right: 0, height: 1, backgroundColor: 'rgba(255,255,255,0.03)' }} />
+                <div style={{ position: 'absolute', left: `${(i + 1) * 11.1}%`, top: 0, bottom: 0, width: 1, backgroundColor: colors.overlayBlackThin }} />
+                <div style={{ position: 'absolute', top: `${(i + 1) * 11.1}%`, left: 0, right: 0, height: 1, backgroundColor: colors.overlayBlackThin }} />
               </React.Fragment>
             ))}
 
             {/* Layer representations */}
             {activeLayers.has('structural') && (
-              <div style={{ position: 'absolute', left: '10%', top: '10%', width: '80%', height: '80%', border: '1px solid rgba(58,123,200,0.2)', borderRadius: 2 }} />
+              <div style={{ position: 'absolute', left: '10%', top: '10%', width: '80%', height: '80%', border: `1px solid ${colors.statusInfo}33`, borderRadius: 2 }} />
             )}
             {activeLayers.has('architectural') && (
               <>
-                <div style={{ position: 'absolute', left: '15%', top: '15%', width: '30%', height: '25%', border: '1px solid rgba(124,93,199,0.15)', borderRadius: 2 }} />
-                <div style={{ position: 'absolute', left: '50%', top: '15%', width: '35%', height: '35%', border: '1px solid rgba(124,93,199,0.15)', borderRadius: 2 }} />
+                <div style={{ position: 'absolute', left: '15%', top: '15%', width: '30%', height: '25%', border: `1px solid ${colors.statusReview}26`, borderRadius: 2 }} />
+                <div style={{ position: 'absolute', left: '50%', top: '15%', width: '35%', height: '35%', border: `1px solid ${colors.statusReview}26`, borderRadius: 2 }} />
               </>
             )}
             {activeLayers.has('mep') && (
-              <div style={{ position: 'absolute', left: '20%', top: '45%', width: '60%', height: '2px', backgroundColor: 'rgba(45,138,110,0.2)' }} />
+              <div style={{ position: 'absolute', left: '20%', top: '45%', width: '60%', height: '2px', backgroundColor: `${colors.statusActive}33` }} />
             )}
 
             {/* Set number watermark */}
-            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.04)', fontSize: '64px', fontWeight: 700 }}>
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.overlayBlackThin, fontSize: spacing['16'], fontWeight: typography.fontWeight.bold }}>
               {drawing.setNumber}
             </div>
           </div>
@@ -223,9 +223,9 @@ export const MobileDrawingViewer: React.FC<DrawingViewerProps> = ({ drawing, onC
               style={{
                 position: 'absolute', left: `${m.x}%`, top: `${m.y}%`,
                 width: 16, height: 16, borderRadius: '50%',
-                backgroundColor: colors.primaryOrange, border: '2px solid white',
+                backgroundColor: colors.primaryOrange, border: `2px solid ${colors.white}`,
                 transform: 'translate(-50%, -50%)',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                boxShadow: shadows.card,
               }}
             />
           ))}
@@ -235,10 +235,10 @@ export const MobileDrawingViewer: React.FC<DrawingViewerProps> = ({ drawing, onC
         {markupMode && (
           <div style={{
             position: 'absolute', top: spacing['3'], left: '50%', transform: 'translateX(-50%)',
-            padding: `${spacing['2']} ${spacing['4']}`, backgroundColor: 'rgba(0,0,0,0.7)',
-            borderRadius: borderRadius.full, zIndex: 5,
+            padding: `${spacing['2']} ${spacing['4']}`, backgroundColor: colors.overlayHeavy,
+            borderRadius: borderRadius.full, zIndex: zIndex.base as number + 5,
           }}>
-            <span style={{ fontSize: typography.fontSize.sm, color: 'white' }}>
+            <span style={{ fontSize: typography.fontSize.sm, color: colors.white }}>
               Long press to add pin
             </span>
           </div>
@@ -247,14 +247,14 @@ export const MobileDrawingViewer: React.FC<DrawingViewerProps> = ({ drawing, onC
         {/* Zoom controls */}
         <div style={{
           position: 'absolute', bottom: spacing['5'], left: spacing['4'],
-          display: 'flex', flexDirection: 'column', gap: spacing['2'], zIndex: 5,
+          display: 'flex', flexDirection: 'column', gap: spacing['2'], zIndex: zIndex.base as number + 5,
         }}>
           <ZoomButton icon={<ZoomIn size={18} />} onClick={zoomIn} />
           <ZoomButton icon={<ZoomOut size={18} />} onClick={zoomOut} />
           <ZoomButton icon={<Maximize2 size={18} />} onClick={resetView} />
           <div style={{
             textAlign: 'center', fontSize: typography.fontSize.caption,
-            color: 'rgba(255,255,255,0.5)', fontFeatureSettings: '"tnum"',
+            color: colors.darkMutedText, fontFeatureSettings: '"tnum"',
           }}>
             {Math.round(zoom * 100)}%
           </div>
@@ -263,7 +263,7 @@ export const MobileDrawingViewer: React.FC<DrawingViewerProps> = ({ drawing, onC
         {/* Layer toggle */}
         <div style={{
           position: 'absolute', bottom: spacing['5'], right: spacing['4'],
-          display: 'flex', flexDirection: 'column', gap: spacing['2'], zIndex: 5,
+          display: 'flex', flexDirection: 'column', gap: spacing['2'], zIndex: zIndex.base as number + 5,
         }}>
           <ZoomButton
             icon={<Layers size={18} />}
@@ -273,7 +273,7 @@ export const MobileDrawingViewer: React.FC<DrawingViewerProps> = ({ drawing, onC
           {showLayers && (
             <div style={{
               position: 'absolute', bottom: '52px', right: 0, width: '140px',
-              backgroundColor: 'rgba(0,0,0,0.85)', borderRadius: borderRadius.md,
+              backgroundColor: colors.overlayHeavy, borderRadius: borderRadius.md,
               padding: spacing['2'], boxShadow: shadows.dropdown,
             }}>
               {layers.map((layer) => {

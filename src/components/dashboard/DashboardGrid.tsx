@@ -12,7 +12,8 @@ interface Layout {
 }
 interface Layouts { [breakpoint: string]: Layout[] }
 import { GripVertical, Plus, RotateCcw, X } from 'lucide-react';
-import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
+import { colors, spacing, typography, borderRadius, shadows, transitions, zIndex } from '../../styles/theme';
+import { duration, easing } from '../../styles/animations';
 import { widgetDefinitions, getWidgetDef } from './WidgetRegistry';
 import { WeatherImpactWidget } from './widgets/WeatherImpactWidget';
 import { LiveSiteWidget } from './widgets/LiveSiteWidget';
@@ -112,11 +113,11 @@ const WidgetPicker: React.FC<WidgetPickerProps> = ({ open, onClose, activeWidget
 
   return (
     <div
-      style={{ position: 'fixed', inset: 0, zIndex: 1050, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)' }}
+      style={{ position: 'fixed', inset: 0, zIndex: zIndex.popover, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.overlayDark, backdropFilter: 'blur(4px)' }}
       onClick={onClose}
     >
       <div
-        style={{ width: '480px', maxWidth: '90vw', backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.xl, boxShadow: shadows.panel, overflow: 'hidden', animation: 'scaleIn 150ms ease-out' }}
+        style={{ width: '480px', maxWidth: '90vw', backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.xl, boxShadow: shadows.panel, overflow: 'hidden', animation: `scaleIn ${duration.normal}ms ${easing.apple}` }}
         onClick={(e) => e.stopPropagation()}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: `${spacing['4']} ${spacing['5']}`, borderBottom: `1px solid ${colors.borderSubtle}` }}>
@@ -142,7 +143,7 @@ const WidgetPicker: React.FC<WidgetPickerProps> = ({ open, onClose, activeWidget
               onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.surfaceHover; }}
               onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'; }}
             >
-              <span style={{ fontSize: '24px', width: 40, textAlign: 'center' }}>{widget.icon}</span>
+              <span style={{ fontSize: typography.fontSize.large, width: 40, textAlign: 'center' }}>{widget.icon}</span>
               <div>
                 <p style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, margin: 0 }}>{widget.label}</p>
                 <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0, marginTop: 2 }}>{widget.description}</p>
@@ -295,13 +296,24 @@ export const DashboardGrid: React.FC = () => {
                 style={{
                   height: '100%',
                   backgroundColor: colors.surfaceRaised,
-                  borderRadius: borderRadius.lg,
+                  borderRadius: borderRadius.xl,
                   boxShadow: isDragging ? shadows.cardHover : shadows.card,
+                  border: `1px solid ${colors.borderSubtle}`,
                   padding: spacing['4'],
                   display: 'flex',
                   flexDirection: 'column',
                   overflow: 'hidden',
-                  transition: `box-shadow ${transitions.quick}`,
+                  transition: `box-shadow ${duration.normal}ms ${easing.standard}, transform ${duration.normal}ms ${easing.standard}`,
+                }}
+                onMouseEnter={(e) => {
+                  if (!isDragging) {
+                    (e.currentTarget as HTMLDivElement).style.boxShadow = shadows.cardHover;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isDragging) {
+                    (e.currentTarget as HTMLDivElement).style.boxShadow = shadows.card;
+                  }
                 }}
               >
                 {/* Drag handle + remove */}

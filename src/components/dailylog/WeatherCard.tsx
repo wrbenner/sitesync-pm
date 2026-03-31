@@ -78,7 +78,7 @@ export const WeatherCard: React.FC<WeatherCardProps> = ({ weather, onUpdate, loc
     }}>
       {/* Icon + conditions */}
       <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
-        <span style={{ fontSize: '32px', lineHeight: 1 }}>{weather.icon}</span>
+        <span style={{ fontSize: spacing['8'], lineHeight: typography.lineHeight.none }}>{weather.icon}</span>
         <div>
           <p style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0 }}>{weather.conditions}</p>
           <p style={{ fontSize: typography.fontSize.sm, color: impact.color, margin: `${spacing['1']} 0 0`, fontWeight: typography.fontWeight.medium }}>{impact.label}</p>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { colors, spacing, typography } from '../../styles/theme';
+import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme';
 
 interface SCurveProps {
   totalBudget: number;
@@ -132,8 +132,8 @@ export const SCurve: React.FC<SCurveProps> = ({ totalBudget: _totalBudget, spent
             left: `${(hovered / (plannedData.length - 1)) * 100}%`,
             top: 0, transform: 'translateX(-50%)',
             padding: `${spacing['1']} ${spacing['2']}`,
-            backgroundColor: colors.surfaceRaised, borderRadius: '4px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+            backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.sm,
+            boxShadow: shadows.cardHover,
             fontSize: typography.fontSize.caption, whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 5,
           }}>
             <span style={{ fontWeight: typography.fontWeight.semibold }}>${actualData[hovered]}M actual</span>

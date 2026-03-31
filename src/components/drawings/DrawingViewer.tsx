@@ -125,24 +125,24 @@ export const DrawingViewer: React.FC<DrawingViewerProps> = ({ drawing, onClose }
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: zIndex.modal as number, backgroundColor: vizColors.dark, display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: `${spacing['3']} ${spacing['4']}`, backgroundColor: 'rgba(0,0,0,0.3)', flexShrink: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: `${spacing['3']} ${spacing['4']}`, backgroundColor: colors.toolbarBg, flexShrink: 0 }}>
         <div>
-          <span style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: 'white' }}>{drawing.setNumber}: {drawing.title}</span>
-          <span style={{ fontSize: typography.fontSize.caption, color: 'rgba(255,255,255,0.5)', marginLeft: spacing['3'] }}>Rev {drawing.revision} · {drawing.discipline}</span>
+          <span style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.white }}>{drawing.setNumber}: {drawing.title}</span>
+          <span style={{ fontSize: typography.fontSize.caption, color: colors.textOnDarkMuted, marginLeft: spacing['3'] }}>Rev {drawing.revision} · {drawing.discipline}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
           <button
             onClick={() => setShowCompare(!showCompare)}
             style={{
               padding: `${spacing['1']} ${spacing['3']}`, border: 'none', borderRadius: borderRadius.base,
-              backgroundColor: showCompare ? colors.primaryOrange : 'rgba(255,255,255,0.1)',
-              color: 'white', fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
+              backgroundColor: showCompare ? colors.primaryOrange : colors.overlayWhiteThin,
+              color: colors.white, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
               fontFamily: typography.fontFamily, cursor: 'pointer',
             }}
           >
             {showCompare ? 'Exit Compare' : 'Compare Versions'}
           </button>
-          <button onClick={onClose} style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: borderRadius.md, cursor: 'pointer', color: 'white' }}>
+          <button onClick={onClose} style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.overlayWhiteThin, border: 'none', borderRadius: borderRadius.md, cursor: 'pointer', color: colors.white }}>
             <X size={18} />
           </button>
         </div>
@@ -155,8 +155,8 @@ export const DrawingViewer: React.FC<DrawingViewerProps> = ({ drawing, onClose }
       ) : (
         <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
           {/* Layer panel */}
-          <div style={{ width: '180px', backgroundColor: 'rgba(0,0,0,0.2)', padding: spacing['3'], flexShrink: 0, overflowY: 'auto' }}>
-            <p style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: typography.letterSpacing.wider, margin: 0, marginBottom: spacing['3'] }}>Layers</p>
+          <div style={{ width: '180px', backgroundColor: 'rgba(0, 0, 0, 0.2)', padding: spacing['3'], flexShrink: 0, overflowY: 'auto' }}>
+            <p style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.darkMutedText, textTransform: 'uppercase', letterSpacing: typography.letterSpacing.wider, margin: 0, marginBottom: spacing['3'] }}>Layers</p>
             {disciplineLayers.map((layer) => {
               const isActive = activeLayers.has(layer.id);
               return (
@@ -166,14 +166,14 @@ export const DrawingViewer: React.FC<DrawingViewerProps> = ({ drawing, onClose }
                   style={{
                     width: '100%', display: 'flex', alignItems: 'center', gap: spacing['2'],
                     padding: `${spacing['2']} ${spacing['2']}`, border: 'none', borderRadius: borderRadius.sm,
-                    backgroundColor: isActive ? 'rgba(255,255,255,0.08)' : 'transparent',
-                    color: isActive ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.3)',
+                    backgroundColor: isActive ? colors.overlayBlackLight : 'transparent',
+                    color: isActive ? colors.textOnDark : 'rgba(255, 255, 255, 0.3)',
                     fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, cursor: 'pointer',
                     textAlign: 'left', marginBottom: spacing['1'], transition: `all ${transitions.instant}`,
                   }}
                 >
                   {isActive ? <Eye size={14} /> : <EyeOff size={14} />}
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: isActive ? layer.color : 'rgba(255,255,255,0.15)' }} />
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: isActive ? layer.color : colors.overlayWhiteThin }} />
                   {layer.label}
                 </button>
               );
@@ -199,14 +199,14 @@ export const DrawingViewer: React.FC<DrawingViewerProps> = ({ drawing, onClose }
               {/* Drawing placeholder */}
               <div style={{
                 position: 'absolute', left: '5%', top: '5%', width: '90%', height: '90%',
-                background: 'linear-gradient(135deg, #2a2a4e 0%, #1e1e3a 100%)',
-                borderRadius: borderRadius.md, border: '1px solid rgba(255,255,255,0.05)',
+                background: `linear-gradient(135deg, ${vizColors.dark} 0%, #1e1e3a 100%)`,
+                borderRadius: borderRadius.md, border: `1px solid rgba(255, 255, 255, 0.05)`,
               }}>
                 {/* Grid */}
                 {Array.from({ length: 8 }).map((_, i) => (
                   <React.Fragment key={i}>
-                    <div style={{ position: 'absolute', left: `${(i + 1) * 11.1}%`, top: 0, bottom: 0, width: 1, backgroundColor: 'rgba(255,255,255,0.03)' }} />
-                    <div style={{ position: 'absolute', top: `${(i + 1) * 11.1}%`, left: 0, right: 0, height: 1, backgroundColor: 'rgba(255,255,255,0.03)' }} />
+                    <div style={{ position: 'absolute', left: `${(i + 1) * 11.1}%`, top: 0, bottom: 0, width: 1, backgroundColor: 'rgba(255, 255, 255, 0.03)' }} />
+                    <div style={{ position: 'absolute', top: `${(i + 1) * 11.1}%`, left: 0, right: 0, height: 1, backgroundColor: 'rgba(255, 255, 255, 0.03)' }} />
                   </React.Fragment>
                 ))}
                 {/* Layer outlines */}
@@ -222,7 +222,7 @@ export const DrawingViewer: React.FC<DrawingViewerProps> = ({ drawing, onClose }
                 {activeLayers.has('mep') && (
                   <div style={{ position: 'absolute', left: '20%', top: '45%', width: '60%', height: '2px', backgroundColor: `${colors.statusActive}30` }} />
                 )}
-                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.06)', fontSize: '48px', fontWeight: 700 }}>
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255, 255, 255, 0.06)', fontSize: typography.fontSize.display, fontWeight: typography.fontWeight.bold }}>
                   {drawing.setNumber}
                 </div>
               </div>
@@ -233,7 +233,7 @@ export const DrawingViewer: React.FC<DrawingViewerProps> = ({ drawing, onClose }
               {/* Markups */}
               {markups.map((m) => {
                 if (m.tool === 'pin') {
-                  return <div key={m.id} style={{ position: 'absolute', left: `${m.x}%`, top: `${m.y}%`, width: 12, height: 12, borderRadius: '50%', backgroundColor: colors.primaryOrange, border: '2px solid white', transform: 'translate(-50%, -50%)', boxShadow: '0 2px 4px rgba(0,0,0,0.3)' }} />;
+                  return <div key={m.id} style={{ position: 'absolute', left: `${m.x}%`, top: `${m.y}%`, width: 12, height: 12, borderRadius: '50%', backgroundColor: colors.primaryOrange, border: `2px solid ${colors.white}`, transform: 'translate(-50%, -50%)', boxShadow: shadows.card }} />;
                 }
                 if (m.tool === 'highlight' && m.endX !== undefined && m.endY !== undefined) {
                   return <div key={m.id} style={{ position: 'absolute', left: `${Math.min(m.x, m.endX)}%`, top: `${Math.min(m.y, m.endY)}%`, width: `${Math.abs(m.endX - m.x)}%`, height: `${Math.abs(m.endY - m.y)}%`, border: `2px solid ${colors.primaryOrange}`, borderRadius: '50%', backgroundColor: `${colors.primaryOrange}15` }} />;
@@ -246,14 +246,14 @@ export const DrawingViewer: React.FC<DrawingViewerProps> = ({ drawing, onClose }
                   return (
                     <React.Fragment key={m.id}>
                       <div style={{ position: 'absolute', left: `${m.x}%`, top: `${m.y}%`, width: `${len}%`, height: '2px', backgroundColor: vizColors.success, transform: `rotate(${angle}deg)`, transformOrigin: '0 50%' }} />
-                      <div style={{ position: 'absolute', left: `${(m.x + m.endX) / 2}%`, top: `${(m.y + m.endY) / 2}%`, transform: 'translate(-50%, -100%)', padding: '1px 4px', backgroundColor: vizColors.success, color: '#000', fontSize: '10px', fontWeight: 600, borderRadius: 2, whiteSpace: 'nowrap' }}>
+                      <div style={{ position: 'absolute', left: `${(m.x + m.endX) / 2}%`, top: `${(m.y + m.endY) / 2}%`, transform: 'translate(-50%, -100%)', padding: `${spacing['0.5']} ${spacing['1']}`, backgroundColor: vizColors.success, color: colors.black, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, borderRadius: borderRadius.sm, whiteSpace: 'nowrap' }}>
                         {(len * 0.3).toFixed(1)} ft
                       </div>
                     </React.Fragment>
                   );
                 }
                 if (m.tool === 'text' && m.text) {
-                  return <div key={m.id} style={{ position: 'absolute', left: `${m.x}%`, top: `${m.y}%`, padding: '2px 6px', backgroundColor: colors.primaryOrange, color: 'white', fontSize: '11px', fontWeight: 600, borderRadius: 3, whiteSpace: 'nowrap' }}>{m.text}</div>;
+                  return <div key={m.id} style={{ position: 'absolute', left: `${m.x}%`, top: `${m.y}%`, padding: `${spacing['0.5']} ${spacing['1.5']}`, backgroundColor: colors.primaryOrange, color: colors.white, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, borderRadius: borderRadius.sm, whiteSpace: 'nowrap' }}>{m.text}</div>;
                 }
                 return null;
               })}
@@ -261,7 +261,7 @@ export const DrawingViewer: React.FC<DrawingViewerProps> = ({ drawing, onClose }
               {/* Text input */}
               {textPos && (
                 <div style={{ position: 'absolute', left: `${textPos.x}%`, top: `${textPos.y}%`, zIndex: 20 }}>
-                  <input autoFocus value={textInput} onChange={(e) => setTextInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') handleTextSubmit(); if (e.key === 'Escape') setTextPos(null); }} onBlur={handleTextSubmit} placeholder="Add note..." style={{ padding: '2px 6px', backgroundColor: colors.primaryOrange, color: 'white', border: 'none', borderRadius: 3, outline: 'none', fontSize: '11px', fontFamily: typography.fontFamily, fontWeight: 600, minWidth: '80px' }} />
+                  <input autoFocus value={textInput} onChange={(e) => setTextInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') handleTextSubmit(); if (e.key === 'Escape') setTextPos(null); }} onBlur={handleTextSubmit} placeholder="Add note..." style={{ padding: `${spacing['0.5']} ${spacing['1.5']}`, backgroundColor: colors.primaryOrange, color: colors.white, border: 'none', borderRadius: borderRadius.sm, outline: 'none', fontSize: typography.fontSize.caption, fontFamily: typography.fontFamily, fontWeight: typography.fontWeight.semibold, minWidth: '80px' }} />
                 </div>
               )}
             </div>
@@ -271,7 +271,7 @@ export const DrawingViewer: React.FC<DrawingViewerProps> = ({ drawing, onClose }
               <button onClick={() => setZoom((z) => Math.min(4, z + 0.25))} aria-label="Zoom in" title="Zoom in" style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceRaised, border: 'none', borderRadius: borderRadius.md, cursor: 'pointer', color: colors.textSecondary, boxShadow: shadows.card }}><ZoomIn size={16} /></button>
               <button onClick={() => setZoom((z) => Math.max(0.25, z - 0.25))} aria-label="Zoom out" title="Zoom out" style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceRaised, border: 'none', borderRadius: borderRadius.md, cursor: 'pointer', color: colors.textSecondary, boxShadow: shadows.card }}><ZoomOut size={16} /></button>
               <button onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }} aria-label="Reset zoom and pan" title="Reset zoom and pan" style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceRaised, border: 'none', borderRadius: borderRadius.md, cursor: 'pointer', color: colors.textSecondary, boxShadow: shadows.card }}><Maximize2 size={16} /></button>
-              <div style={{ padding: `${spacing['1']} 0`, textAlign: 'center', fontSize: typography.fontSize.caption, color: 'rgba(255,255,255,0.5)' }}>{Math.round(zoom * 100)}%</div>
+              <div style={{ padding: `${spacing['1']} 0`, textAlign: 'center', fontSize: typography.fontSize.caption, color: colors.textOnDarkMuted }}>{Math.round(zoom * 100)}%</div>
             </div>
 
             {/* Markup toolbar */}

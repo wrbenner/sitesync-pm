@@ -6,8 +6,8 @@
 
 -- ── Safety Incidents DELETE ─────────────────────────────
 
-DROP POLICY IF EXISTS safety_incidents_delete ON safety_incidents;
-CREATE POLICY safety_incidents_delete ON safety_incidents FOR DELETE
+DROP POLICY IF EXISTS incidents_delete ON incidents;
+CREATE POLICY incidents_delete ON incidents FOR DELETE
   USING (has_project_permission(project_id, 'project_manager'));
 
 -- ── Safety Inspections DELETE ───────────────────────────

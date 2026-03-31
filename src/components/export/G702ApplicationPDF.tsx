@@ -3,37 +3,37 @@
 
 import React from 'react'
 import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer'
-import { vizColors } from '../../styles/theme'
+import { colors, vizColors } from '../../styles/theme'
 import type { G702Data } from '../../machines/paymentMachine'
 
 const styles = StyleSheet.create({
   page: { padding: 36, fontSize: 9, fontFamily: 'Helvetica', color: vizColors.darkText },
   header: { textAlign: 'center', marginBottom: 16 },
   title: { fontSize: 14, fontFamily: 'Helvetica-Bold', marginBottom: 4 },
-  subtitle: { fontSize: 10, color: '#5C5550', marginBottom: 8 },
-  formNumber: { fontSize: 7, color: '#8C8580', marginBottom: 16 },
+  subtitle: { fontSize: 10, color: colors.textSecondary, marginBottom: 8 },
+  formNumber: { fontSize: 7, color: colors.statusNeutral, marginBottom: 16 },
   // Two-column info section
   infoRow: { flexDirection: 'row', marginBottom: 4 },
-  infoLabel: { width: '35%', fontSize: 8, color: '#5C5550' },
+  infoLabel: { width: '35%', fontSize: 8, color: colors.textSecondary },
   infoValue: { width: '65%', fontSize: 8, fontFamily: 'Helvetica-Bold' },
   // Financial table
   section: { marginTop: 16, marginBottom: 8 },
-  sectionTitle: { fontSize: 10, fontFamily: 'Helvetica-Bold', marginBottom: 8, borderBottomWidth: 1, borderBottomColor: '#0C0D0F', paddingBottom: 4 },
-  row: { flexDirection: 'row', paddingVertical: 4, borderBottomWidth: 0.5, borderBottomColor: '#E5E1DC' },
+  sectionTitle: { fontSize: 10, fontFamily: 'Helvetica-Bold', marginBottom: 8, borderBottomWidth: 1, borderBottomColor: colors.darkNavy, paddingBottom: 4 },
+  row: { flexDirection: 'row', paddingVertical: 4, borderBottomWidth: 0.5, borderBottomColor: colors.borderDefault },
   rowLabel: { width: '60%', fontSize: 8 },
-  rowNumber: { width: '10%', fontSize: 8, textAlign: 'center', color: '#5C5550' },
+  rowNumber: { width: '10%', fontSize: 8, textAlign: 'center', color: colors.textSecondary },
   rowValue: { width: '30%', fontSize: 8, textAlign: 'right', fontFamily: 'Helvetica-Bold' },
-  totalRow: { flexDirection: 'row', paddingVertical: 6, borderTopWidth: 1.5, borderTopColor: '#0C0D0F', marginTop: 4 },
+  totalRow: { flexDirection: 'row', paddingVertical: 6, borderTopWidth: 1.5, borderTopColor: colors.darkNavy, marginTop: 4 },
   totalLabel: { width: '60%', fontSize: 9, fontFamily: 'Helvetica-Bold' },
   totalValue: { width: '30%', fontSize: 9, textAlign: 'right', fontFamily: 'Helvetica-Bold' },
   // Signatures
   signatureSection: { flexDirection: 'row', marginTop: 24, gap: 24 },
-  signatureBox: { flex: 1, borderTopWidth: 1, borderTopColor: '#0C0D0F', paddingTop: 8 },
-  signatureLabel: { fontSize: 7, color: '#5C5550' },
+  signatureBox: { flex: 1, borderTopWidth: 1, borderTopColor: colors.darkNavy, paddingTop: 8 },
+  signatureLabel: { fontSize: 7, color: colors.textSecondary },
   signatureImage: { width: 150, height: 40, objectFit: 'contain' },
   // Footer
-  footer: { position: 'absolute', bottom: 20, left: 36, right: 36, flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 0.5, borderTopColor: '#E5E1DC', paddingTop: 6 },
-  footerText: { fontSize: 6, color: '#9A9490' },
+  footer: { position: 'absolute', bottom: 20, left: 36, right: 36, flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 0.5, borderTopColor: colors.borderDefault, paddingTop: 6 },
+  footerText: { fontSize: 6, color: colors.textTertiary },
 })
 
 const fmt = (n: number) => `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -89,7 +89,7 @@ export const G702ApplicationPDF: React.FC<G702PDFProps> = ({ data }) => (
 
       {/* Certifications */}
       <View style={styles.section}>
-        <Text style={{ fontSize: 7, color: '#5C5550', lineHeight: 1.5, marginBottom: 12 }}>
+        <Text style={{ fontSize: 7, color: colors.textSecondary, lineHeight: 1.5, marginBottom: 12 }}>
           The undersigned Contractor certifies that to the best of the Contractor's knowledge, information, and belief,
           the Work covered by this Application for Payment has been completed in accordance with the Contract Documents,
           that all amounts have been paid by the Contractor for Work for which previous Certificates for Payment were issued,

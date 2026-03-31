@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Send, ClipboardList } from 'lucide-react';
-import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
+import { colors, spacing, typography, borderRadius, shadows, transitions, zIndex } from '../../styles/theme';
 import { UppyUploader } from '../files/UppyUploader';
 import { useSubmittalStore } from '../../stores/submittalStore';
 import { useProjectContext } from '../../stores/projectContextStore';
@@ -110,9 +110,9 @@ export function CreateSubmittalForm({ open, onClose, onSuccess }: CreateSubmitta
 
   return (
     <div style={{
-      position: 'fixed', inset: 0, zIndex: 1000,
+      position: 'fixed', inset: 0, zIndex: zIndex.dropdown as number,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      backgroundColor: 'rgba(0,0,0,0.4)',
+      backgroundColor: colors.overlayDark,
     }} onClick={handleClose}>
       <div
         style={{
@@ -295,7 +295,7 @@ export function CreateSubmittalForm({ open, onClose, onSuccess }: CreateSubmitta
               backgroundColor: colors.primaryOrange,
               fontSize: typography.fontSize.sm,
               fontWeight: typography.fontWeight.medium,
-              color: '#fff',
+              color: colors.white,
               cursor: saving ? 'not-allowed' : 'pointer',
               fontFamily: typography.fontFamily,
               transition: `background-color ${transitions.quick}`,

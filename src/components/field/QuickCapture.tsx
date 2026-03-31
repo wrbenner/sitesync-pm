@@ -213,7 +213,7 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: zIndex.tooltip as number,
-      backgroundColor: step === 'capture' ? 'rgba(0,0,0,0.95)' : colors.surfacePage,
+      backgroundColor: step === 'capture' ? colors.viewerBg : colors.surfacePage,
       display: 'flex', flexDirection: 'column',
     }}>
       {/* ── Header ────────────────────────────────── */}
@@ -225,7 +225,7 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
       }}>
         <button onClick={onClose} style={{
           width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          backgroundColor: step === 'capture' ? 'rgba(255,255,255,0.1)' : 'transparent',
+          backgroundColor: step === 'capture' ? colors.overlayWhiteThin : 'transparent',
           border: 'none', borderRadius: borderRadius.full, cursor: 'pointer',
         }}>
           <X size={20} color={step === 'capture' ? 'white' : colors.textSecondary} />
@@ -243,7 +243,7 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
         /* ── CAPTURE STEP ────────────────────────── */
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
           {/* Mode switcher */}
-          <div style={{ display: 'flex', gap: spacing['1'], padding: spacing['2'], backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: borderRadius.full, marginBottom: spacing['10'] }}>
+          <div style={{ display: 'flex', gap: spacing['1'], padding: spacing['2'], backgroundColor: colors.darkHoverBg, borderRadius: borderRadius.full, marginBottom: spacing['10'] }}>
             {([
               { id: 'camera' as const, icon: Camera, label: 'Photo' },
               { id: 'voice' as const, icon: Mic, label: 'Voice' },
@@ -256,7 +256,7 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
                   display: 'flex', alignItems: 'center', gap: spacing['2'],
                   padding: `${spacing['2']} ${spacing['4']}`, minHeight: '44px',
                   backgroundColor: mode === m.id ? colors.primaryOrange : 'transparent',
-                  color: mode === m.id ? 'white' : 'rgba(255,255,255,0.5)',
+                  color: mode === m.id ? colors.white : colors.textOnDarkMuted,
                   border: 'none', borderRadius: borderRadius.full, cursor: 'pointer',
                   fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold,
                   fontFamily: typography.fontFamily, transition: `all ${transitions.quick}`,
@@ -273,7 +273,7 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
               {/* Viewfinder */}
               <div style={{
                 width: '280px', height: '280px',
-                border: '2px solid rgba(255,255,255,0.2)',
+                border: `2px solid rgba(255,255,255,0.2)`,
                 borderRadius: borderRadius.xl, position: 'relative', marginBottom: spacing['8'],
               }}>
                 {/* Corner marks */}
@@ -293,7 +293,7 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
                       : `0 0 ${borderRadius.xl} 0`,
                   }} />
                 ))}
-                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.15)', fontSize: '64px' }}>
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.15)', fontSize: typography.fontSize.display }}>
                   <Camera size={64} />
                 </div>
               </div>
@@ -304,8 +304,8 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
                 disabled={capturing}
                 style={{
                   width: 72, height: 72, borderRadius: '50%',
-                  background: `linear-gradient(135deg, ${colors.primaryOrange} 0%, #FF9C42 100%)`,
-                  border: '4px solid rgba(255,255,255,0.3)',
+                  background: `linear-gradient(135deg, ${colors.primaryOrange} 0%, ${colors.orangeGradientEnd} 100%)`,
+                  border: `4px solid ${colors.toolbarBg}`,
                   cursor: capturing ? 'wait' : 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   boxShadow: shadows.glow, opacity: capturing ? 0.6 : 1,
@@ -317,7 +317,7 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
 
               {/* GPS indicator */}
               {gps && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], marginTop: spacing['4'], color: 'rgba(255,255,255,0.4)', fontSize: typography.fontSize.caption }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], marginTop: spacing['4'], color: colors.darkMutedText, fontSize: typography.fontSize.caption }}>
                   <MapPin size={12} /> GPS: {gps.lat.toFixed(4)}, {gps.lng.toFixed(4)}
                 </div>
               )}
@@ -339,10 +339,10 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
               </div>
 
               {/* Timer */}
-              <p style={{ fontSize: typography.fontSize['4xl'], fontWeight: typography.fontWeight.semibold, color: 'white', margin: 0, marginBottom: spacing['2'], fontFeatureSettings: '"tnum"' }}>
+              <p style={{ fontSize: typography.fontSize['4xl'], fontWeight: typography.fontWeight.semibold, color: colors.white, margin: 0, marginBottom: spacing['2'], fontFeatureSettings: '"tnum"' }}>
                 {formatTime(elapsed)}
               </p>
-              <p style={{ fontSize: typography.fontSize.sm, color: 'rgba(255,255,255,0.4)', margin: 0, marginBottom: spacing['8'] }}>
+              <p style={{ fontSize: typography.fontSize.sm, color: colors.darkMutedText, margin: 0, marginBottom: spacing['8'] }}>
                 {recording ? 'Listening...' : elapsed > 0 ? 'Tap to re-record' : 'Tap to start recording'}
               </p>
 
@@ -364,7 +364,7 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
               {/* Live transcript */}
               {transcript && (
                 <div style={{ marginTop: spacing['6'], maxWidth: '320px', padding: `0 ${spacing['4']}` }}>
-                  <p style={{ fontSize: typography.fontSize.sm, color: 'rgba(255,255,255,0.7)', margin: 0, lineHeight: typography.lineHeight.relaxed, textAlign: 'center' }}>
+                  <p style={{ fontSize: typography.fontSize.sm, color: colors.overlayWhiteBold, margin: 0, lineHeight: typography.lineHeight.relaxed, textAlign: 'center' }}>
                     "{transcript}"
                     {recording && <span style={{ opacity: 0.5, animation: 'pulse 1s infinite' }}>|</span>}
                   </p>
@@ -391,14 +391,14 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
                   boxShadow: `0 0 12px ${colors.primaryOrange}`,
                 }} />
               </div>
-              <p style={{ fontSize: typography.fontSize.sm, color: 'rgba(255,255,255,0.4)', margin: 0, marginBottom: spacing['6'] }}>
+              <p style={{ fontSize: typography.fontSize.sm, color: colors.darkMutedText, margin: 0, marginBottom: spacing['6'] }}>
                 Point camera at QR code on equipment or location marker
               </p>
               <button
                 onClick={handleQrScan}
                 style={{
                   padding: `${spacing['3']} ${spacing['6']}`, minHeight: '48px',
-                  backgroundColor: colors.primaryOrange, color: 'white',
+                  backgroundColor: colors.primaryOrange, color: colors.white,
                   border: 'none', borderRadius: borderRadius.md, cursor: 'pointer',
                   fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold,
                   fontFamily: typography.fontFamily,
@@ -480,7 +480,7 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
             onChange={(e) => setLocationText(e.target.value)}
             placeholder="Floor, area, room..."
             style={{
-              width: '100%', padding: '14px 16px', fontSize: '16px',
+              width: '100%', padding: `${spacing['3.5']} ${spacing['4']}`, fontSize: typography.fontSize.title,
               fontFamily: typography.fontFamily, border: 'none',
               backgroundColor: colors.surfaceInset, borderRadius: borderRadius.md,
               outline: 'none', boxSizing: 'border-box', minHeight: '48px',
@@ -497,7 +497,7 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
             onChange={(e) => setRelatedItem(e.target.value)}
             placeholder="RFI, task, punch item..."
             style={{
-              width: '100%', padding: '14px 16px', fontSize: '16px',
+              width: '100%', padding: `${spacing['3.5']} ${spacing['4']}`, fontSize: typography.fontSize.title,
               fontFamily: typography.fontFamily, border: 'none',
               backgroundColor: colors.surfaceInset, borderRadius: borderRadius.md,
               outline: 'none', boxSizing: 'border-box', minHeight: '48px',
@@ -514,11 +514,11 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Additional context..."
             style={{
-              width: '100%', padding: '14px 16px', fontSize: '16px',
+              width: '100%', padding: `${spacing['3.5']} ${spacing['4']}`, fontSize: typography.fontSize.title,
               fontFamily: typography.fontFamily, border: 'none',
               backgroundColor: colors.surfaceInset, borderRadius: borderRadius.md,
               outline: 'none', boxSizing: 'border-box', minHeight: '96px',
-              resize: 'vertical', lineHeight: '1.5',
+              resize: 'vertical', lineHeight: typography.lineHeight.normal,
             }}
           />
         </div>
@@ -537,8 +537,8 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
             style={{
               width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
               gap: spacing['2'], padding: `${spacing['4']}`, minHeight: '52px',
-              background: `linear-gradient(135deg, ${colors.primaryOrange} 0%, #FF9C42 100%)`,
-              color: 'white', border: 'none', borderRadius: borderRadius.md, cursor: 'pointer',
+              background: `linear-gradient(135deg, ${colors.primaryOrange} 0%, ${colors.orangeGradientEnd} 100%)`,
+              color: colors.white, border: 'none', borderRadius: borderRadius.md, cursor: 'pointer',
               fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold,
               fontFamily: typography.fontFamily, boxShadow: shadows.glow,
             }}

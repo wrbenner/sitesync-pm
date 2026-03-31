@@ -1,5 +1,5 @@
 import React from 'react'
-import { colors, typography, borderRadius } from '../../styles/theme'
+import { colors, spacing, typography, borderRadius, zIndex } from '../../styles/theme'
 
 export const SkipToContent: React.FC = () => (
   <a
@@ -7,18 +7,18 @@ export const SkipToContent: React.FC = () => (
     style={{
       position: 'absolute',
       top: '-100px',
-      left: '16px',
-      zIndex: 9999,
-      padding: '8px 16px',
+      left: spacing['4'],
+      zIndex: zIndex.toast as number,
+      padding: `${spacing['2']} ${spacing['4']}`,
       backgroundColor: colors.primaryOrange,
-      color: 'white',
+      color: colors.white,
       fontSize: typography.fontSize.sm,
       fontWeight: typography.fontWeight.semibold,
       borderRadius: borderRadius.md,
       textDecoration: 'none',
       transition: 'top 0.2s',
     }}
-    onFocus={(e) => { (e.currentTarget as HTMLAnchorElement).style.top = '16px' }}
+    onFocus={(e) => { (e.currentTarget as HTMLAnchorElement).style.top = spacing['4'] }}
     onBlur={(e) => { (e.currentTarget as HTMLAnchorElement).style.top = '-100px' }}
   >
     Skip to content

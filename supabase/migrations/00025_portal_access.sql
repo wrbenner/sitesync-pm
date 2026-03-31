@@ -44,14 +44,3 @@ ALTER TABLE projects ADD COLUMN IF NOT EXISTS portal_config jsonb DEFAULT '{
   "contractor_logo_url": null
 }';
 
--- Seed: create a portal access token for the test project
-DO $$
-DECLARE
-  project_id UUID := 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
-  user_mike UUID := '11111111-1111-1111-1111-111111111111';
-BEGIN
-  INSERT INTO portal_access_tokens (project_id, portal_type, name, email, company, permissions, created_by) VALUES
-    (project_id, 'owner', 'James Bradford', 'jbradford@meridiandev.com', 'Meridian Development LLC',
-     '["overview","budget","schedule","photos","reports","documents"]', user_mike)
-  ON CONFLICT DO NOTHING;
-END $$;

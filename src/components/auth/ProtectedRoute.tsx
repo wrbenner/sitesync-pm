@@ -5,7 +5,7 @@ import { usePermissions } from '../../hooks/usePermissions'
 import type { Permission } from '../../hooks/usePermissions'
 import { Skeleton } from '../Primitives'
 import { RequestAccessPage } from './PermissionGate'
-import { colors, spacing, typography } from '../../styles/theme'
+import { colors, spacing, typography, zIndex } from '../../styles/theme'
 import { MODULE_PERMISSIONS } from '../../hooks/usePermissions'
 
 interface Props {
@@ -20,8 +20,8 @@ interface Props {
 
 const DevBanner: React.FC = () => (
   <div style={{
-    position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999,
-    backgroundColor: colors.statusPending, color: 'white',
+    position: 'fixed', top: 0, left: 0, right: 0, zIndex: zIndex.toast,
+    backgroundColor: colors.statusPending, color: colors.white,
     padding: `${spacing['1']} ${spacing['4']}`,
     fontSize: typography.fontSize.caption,
     fontWeight: typography.fontWeight.medium,
@@ -50,7 +50,7 @@ export const ProtectedRoute: React.FC<Props> = ({ children, requiredPermission, 
     return (
       <>
         <DevBanner />
-        <div style={{ marginTop: '28px' }}>{children}</div>
+        <div style={{ marginTop: spacing['7'] }}>{children}</div>
       </>
     )
   }

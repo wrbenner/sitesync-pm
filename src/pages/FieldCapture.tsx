@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Camera, Mic, FileText, AlertTriangle, MapPin, ChevronRight, Sparkles } from 'lucide-react';
 import { PageContainer, Card, Btn, SectionHeader, useToast } from '../components/Primitives';
-import { colors, spacing, typography, borderRadius, shadows, transitions } from '../styles/theme';
+import { colors, spacing, typography, borderRadius, shadows, transitions, zIndex } from '../styles/theme';
 import { PhotoAnnotator } from '../components/field/PhotoAnnotator';
 import { VoiceCapture } from '../components/field/VoiceCapture';
 import { CaptureTimeline } from '../components/field/CaptureTimeline';
@@ -155,7 +155,7 @@ export const FieldCapture: React.FC = () => {
             style={{
               flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['2'],
               padding: `${spacing['4']} ${spacing['3']}`,
-              backgroundColor: colors.primaryOrange, color: 'white', border: 'none',
+              backgroundColor: colors.primaryOrange, color: colors.white, border: 'none',
               borderRadius: borderRadius.md, cursor: 'pointer',
               transition: `background-color ${transitions.instant}`,
             }}
@@ -164,7 +164,7 @@ export const FieldCapture: React.FC = () => {
           >
             <Camera size={24} />
             <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold }}>Photo</span>
-            <span style={{ fontSize: '10px', opacity: 0.8, fontWeight: typography.fontWeight.normal }}>Take a photo</span>
+            <span style={{ fontSize: typography.fontSize.caption, opacity: 0.8, fontWeight: typography.fontWeight.normal }}>Take a photo</span>
           </button>
         </PermissionGate>
 
@@ -174,14 +174,14 @@ export const FieldCapture: React.FC = () => {
             style={{
               flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['2'],
               padding: `${spacing['4']} ${spacing['3']}`,
-              backgroundColor: colors.statusReview, color: 'white', border: 'none',
+              backgroundColor: colors.statusReview, color: colors.white, border: 'none',
               borderRadius: borderRadius.md, cursor: 'pointer',
               transition: `opacity ${transitions.instant}`,
             }}
           >
             <Mic size={24} />
             <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold }}>Voice</span>
-            <span style={{ fontSize: '10px', opacity: 0.8, fontWeight: typography.fontWeight.normal }}>Record and transcribe</span>
+            <span style={{ fontSize: typography.fontSize.caption, opacity: 0.8, fontWeight: typography.fontWeight.normal }}>Record and transcribe</span>
           </button>
         </PermissionGate>
 
@@ -199,7 +199,7 @@ export const FieldCapture: React.FC = () => {
           >
             <FileText size={24} />
             <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold }}>Text</span>
-            <span style={{ fontSize: '10px', opacity: 0.8, fontWeight: typography.fontWeight.normal }}>Quick note</span>
+            <span style={{ fontSize: typography.fontSize.caption, opacity: 0.8, fontWeight: typography.fontWeight.normal }}>Quick note</span>
           </button>
         </PermissionGate>
       </div>
@@ -207,12 +207,12 @@ export const FieldCapture: React.FC = () => {
       {/* Camera simulation overlay */}
       {captureMode === 'photo' && (
         <div style={{
-          position: 'fixed', inset: 0, zIndex: 1060, backgroundColor: '#000', /* camera overlay */
+          position: 'fixed', inset: 0, zIndex: zIndex.tooltip as number, backgroundColor: colors.black, /* camera overlay */
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
           <div style={{ width: '100%', maxWidth: '640px', aspectRatio: '4/3', position: 'relative', backgroundColor: colors.darkNavy }}>
             {/* Viewfinder guides */}
-            <div style={{ position: 'absolute', top: '10%', left: '10%', width: '80%', height: '80%', border: '1px solid rgba(255,255,255,0.2)', borderRadius: borderRadius.md }}>
+            <div style={{ position: 'absolute', top: '10%', left: '10%', width: '80%', height: '80%', border: `1px solid ${colors.overlayWhiteThin}`, borderRadius: borderRadius.md }}>
               {/* Corner marks */}
               {['top-left', 'top-right', 'bottom-left', 'bottom-right'].map((pos) => (
                 <div key={pos} style={{
@@ -220,29 +220,29 @@ export const FieldCapture: React.FC = () => {
                   [pos.includes('top') ? 'top' : 'bottom']: -1,
                   [pos.includes('left') ? 'left' : 'right']: -1,
                   width: 20, height: 20,
-                  borderTop: pos.includes('top') ? '2px solid white' : 'none',
-                  borderBottom: pos.includes('bottom') ? '2px solid white' : 'none',
-                  borderLeft: pos.includes('left') ? '2px solid white' : 'none',
-                  borderRight: pos.includes('right') ? '2px solid white' : 'none',
+                  borderTop: pos.includes('top') ? `2px solid ${colors.white}` : 'none',
+                  borderBottom: pos.includes('bottom') ? `2px solid ${colors.white}` : 'none',
+                  borderLeft: pos.includes('left') ? `2px solid ${colors.white}` : 'none',
+                  borderRight: pos.includes('right') ? `2px solid ${colors.white}` : 'none',
                 }} />
               ))}
             </div>
             {/* Center crosshair */}
             <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-              <div style={{ width: 20, height: 1, backgroundColor: 'rgba(255,255,255,0.4)' }} />
-              <div style={{ width: 1, height: 20, backgroundColor: 'rgba(255,255,255,0.4)', position: 'absolute', top: -10, left: 10 }} />
+              <div style={{ width: 20, height: 1, backgroundColor: colors.darkMutedText }} />
+              <div style={{ width: 1, height: 20, backgroundColor: colors.darkMutedText, position: 'absolute', top: -10, left: 10 }} />
             </div>
             {/* Metadata overlay */}
             <div style={{ position: 'absolute', bottom: 16, left: 16, right: 16, display: 'flex', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
-                <MapPin size={12} color="rgba(255,255,255,0.6)" />
-                <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.6)' }}>Floor 7, Grid B4</span>
+                <MapPin size={12} color={colors.overlayWhiteMedium} />
+                <span style={{ fontSize: '10px', color: colors.overlayWhiteMedium }}>Floor 7, Grid B4</span>
               </div>
-              <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.6)' }}>Capturing...</span>
+              <span style={{ fontSize: '10px', color: colors.overlayWhiteMedium }}>Capturing...</span>
             </div>
             {/* Flash animation */}
             <div style={{
-              position: 'absolute', inset: 0, backgroundColor: 'white',
+              position: 'absolute', inset: 0, backgroundColor: colors.white,
               animation: 'fadeIn 100ms ease-out reverse',
               opacity: 0, pointerEvents: 'none',
             }} />

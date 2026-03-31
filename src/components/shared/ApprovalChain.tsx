@@ -53,14 +53,14 @@ export const ApprovalChain: React.FC<ApprovalChainProps> = ({ steps }) => {
               <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
                 <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>{step.name}</span>
                 <span style={{
-                  fontSize: '10px', fontWeight: typography.fontWeight.semibold,
+                  fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
                   color: cfg.color, backgroundColor: cfg.bg,
                   padding: `0 ${spacing['1']}`, borderRadius: borderRadius.sm,
                 }}>
                   {cfg.label}
                 </span>
               </div>
-              <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0, marginTop: 2 }}>
+              <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0, marginTop: spacing['0.5'] }}>
                 {step.role}{step.date ? ` · ${step.date}` : ''}
               </p>
               {step.comment && (

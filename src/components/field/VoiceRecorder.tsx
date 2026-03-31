@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Mic, Square, CheckCircle, X, Sparkles } from 'lucide-react';
-import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme';
+import { colors, spacing, typography, borderRadius, transitions, zIndex } from '../../styles/theme';
 
 interface VoiceRecorderProps {
   onClose: () => void;
@@ -66,8 +66,8 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onClose, onSave })
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 1060, backgroundColor: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(12px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-      <button onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, backgroundColor: 'transparent', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: zIndex.tooltip as number, backgroundColor: colors.viewerBg, backdropFilter: 'blur(12px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+      <button onClick={onClose} style={{ position: 'absolute', top: spacing['4'], right: spacing['4'], backgroundColor: 'transparent', border: 'none', color: colors.textOnDarkMuted, cursor: 'pointer' }}>
         <X size={24} />
       </button>
 
@@ -87,10 +87,10 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onClose, onSave })
       </div>
 
       {/* Timer */}
-      <p style={{ fontSize: typography.fontSize['4xl'], fontWeight: typography.fontWeight.semibold, color: 'white', margin: 0, marginBottom: spacing['2'], fontFeatureSettings: '"tnum"' }}>
+      <p style={{ fontSize: typography.fontSize['4xl'], fontWeight: typography.fontWeight.semibold, color: colors.white, margin: 0, marginBottom: spacing['2'], fontFeatureSettings: '"tnum"' }}>
         {formatTime(elapsed)}
       </p>
-      <p style={{ fontSize: typography.fontSize.sm, color: 'rgba(255,255,255,0.5)', margin: 0, marginBottom: spacing['8'] }}>
+      <p style={{ fontSize: typography.fontSize.sm, color: colors.textOnDarkMuted, margin: 0, marginBottom: spacing['8'] }}>
         {recording ? 'Listening...' : elapsed > 0 ? 'Recording complete' : 'Tap to start recording'}
       </p>
 
@@ -100,7 +100,7 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onClose, onSave })
           onClick={() => recording ? handleStop() : setRecording(true)}
           style={{
             width: 72, height: 72, borderRadius: '50%',
-            backgroundColor: recording ? 'rgba(255,255,255,0.15)' : colors.statusCritical,
+            backgroundColor: recording ? 'rgba(255, 255, 255, 0.15)' : colors.statusCritical, /* between overlayWhiteThin and overlayWhiteMedium */
             border: `3px solid ${recording ? colors.statusCritical : 'transparent'}`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             cursor: 'pointer', transition: `all ${transitions.quick}`,
@@ -113,10 +113,10 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onClose, onSave })
       {/* Transcription */}
       {transcript && (
         <div style={{ marginTop: spacing['8'], maxWidth: '480px', width: '100%', padding: `0 ${spacing['4']}` }}>
-          <p style={{ fontSize: typography.fontSize.caption, color: 'rgba(255,255,255,0.4)', margin: 0, marginBottom: spacing['2'], textTransform: 'uppercase', letterSpacing: typography.letterSpacing.wider }}>
+          <p style={{ fontSize: typography.fontSize.caption, color: colors.darkMutedText, margin: 0, marginBottom: spacing['2'], textTransform: 'uppercase', letterSpacing: typography.letterSpacing.wider }}>
             Transcription
           </p>
-          <p style={{ fontSize: typography.fontSize.body, color: 'rgba(255,255,255,0.85)', margin: 0, lineHeight: typography.lineHeight.relaxed }}>
+          <p style={{ fontSize: typography.fontSize.body, color: colors.textOnDark, margin: 0, lineHeight: typography.lineHeight.relaxed }}>
             {transcript}
             {recording && <span style={{ opacity: 0.5, animation: 'pulse 1s infinite' }}>|</span>}
           </p>
@@ -126,32 +126,32 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onClose, onSave })
       {/* AI extraction card */}
       {showExtraction && aiExtraction && (
         <div style={{ marginTop: spacing['6'], maxWidth: '480px', width: '100%', padding: `0 ${spacing['4']}`, animation: 'slideInUp 300ms ease-out' }}>
-          <div style={{ backgroundColor: 'rgba(124, 93, 199, 0.12)', borderRadius: borderRadius.lg, padding: spacing['5'], border: `1px solid rgba(124, 93, 199, 0.25)` }}>
+          <div style={{ backgroundColor: colors.statusReviewSubtle, borderRadius: borderRadius.lg, padding: spacing['5'], border: `1px solid ${colors.statusReview}40` }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['3'] }}>
               <Sparkles size={14} color={colors.statusReview} />
               <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.statusReview, textTransform: 'uppercase', letterSpacing: typography.letterSpacing.wider }}>AI Detected Action Item</span>
             </div>
-            <p style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: 'white', margin: 0, marginBottom: spacing['3'] }}>
+            <p style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.white, margin: 0, marginBottom: spacing['3'] }}>
               Create {aiExtraction.type}: {aiExtraction.title}
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['1'], marginBottom: spacing['4'] }}>
               {Object.entries(aiExtraction).filter(([k]) => k !== 'type' && k !== 'title').map(([key, val]) => (
                 <div key={key} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: typography.fontSize.sm, color: 'rgba(255,255,255,0.5)', textTransform: 'capitalize' }}>{key}</span>
-                  <span style={{ fontSize: typography.fontSize.sm, color: 'rgba(255,255,255,0.85)', fontWeight: typography.fontWeight.medium }}>{val}</span>
+                  <span style={{ fontSize: typography.fontSize.sm, color: colors.textOnDarkMuted, textTransform: 'capitalize' }}>{key}</span>
+                  <span style={{ fontSize: typography.fontSize.sm, color: colors.textOnDark, fontWeight: typography.fontWeight.medium }}>{val}</span>
                 </div>
               ))}
             </div>
             <div style={{ display: 'flex', gap: spacing['2'] }}>
               <button
                 onClick={() => onSave(transcript)}
-                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: spacing['2'], padding: `${spacing['3']}`, backgroundColor: colors.statusReview, color: 'white', border: 'none', borderRadius: borderRadius.base, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, fontFamily: typography.fontFamily, cursor: 'pointer' }}
+                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: spacing['2'], padding: `${spacing['3']}`, backgroundColor: colors.statusReview, color: colors.white, border: 'none', borderRadius: borderRadius.base, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, fontFamily: typography.fontFamily, cursor: 'pointer' }}
               >
                 <CheckCircle size={16} /> Confirm
               </button>
               <button
                 onClick={onClose}
-                style={{ padding: `${spacing['3']} ${spacing['4']}`, backgroundColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)', border: 'none', borderRadius: borderRadius.base, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, cursor: 'pointer' }}
+                style={{ padding: `${spacing['3']} ${spacing['4']}`, backgroundColor: colors.overlayWhiteThin, color: 'rgba(255,255,255,0.6)', border: 'none', borderRadius: borderRadius.base, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, cursor: 'pointer' }}
               >
                 Discard
               </button>

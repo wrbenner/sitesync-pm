@@ -13,10 +13,10 @@ interface PredictiveAlertBannerProps {
 }
 
 const severityStyles: Record<string, { bg: string; border: string; icon: string }> = {
-  critical: { bg: 'rgba(201, 59, 59, 0.05)', border: colors.statusCritical, icon: colors.statusCritical },
-  warning: { bg: 'rgba(196, 133, 12, 0.05)', border: colors.statusPending, icon: colors.statusPending },
-  info: { bg: 'rgba(58, 123, 200, 0.05)', border: colors.statusInfo, icon: colors.statusInfo },
-  positive: { bg: 'rgba(45, 138, 110, 0.05)', border: colors.statusActive, icon: colors.statusActive },
+  critical: { bg: colors.statusCriticalSubtle, border: colors.statusCritical, icon: colors.statusCritical },
+  warning: { bg: colors.statusPendingSubtle, border: colors.statusPending, icon: colors.statusPending },
+  info: { bg: colors.statusInfoSubtle, border: colors.statusInfo, icon: colors.statusInfo },
+  positive: { bg: colors.statusActiveSubtle, border: colors.statusActive, icon: colors.statusActive },
 };
 
 export const PredictiveAlertBanner: React.FC<PredictiveAlertBannerProps> = ({ alert, onAction }) => {
@@ -48,7 +48,7 @@ export const PredictiveAlertBanner: React.FC<PredictiveAlertBannerProps> = ({ al
           <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: 0, lineHeight: typography.lineHeight.normal }}>{alert.description}</p>
 
           {showReasoning && (
-            <div style={{ marginTop: spacing['3'], padding: `${spacing['2']} ${spacing['3']}`, backgroundColor: 'rgba(0,0,0,0.03)', borderRadius: borderRadius.base }}>
+            <div style={{ marginTop: spacing['3'], padding: `${spacing['2']} ${spacing['3']}`, backgroundColor: colors.overlayBlackThin, borderRadius: borderRadius.base }}>
               <p style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, margin: 0, marginBottom: spacing['1'], textTransform: 'uppercase', letterSpacing: typography.letterSpacing.wider }}>AI Reasoning</p>
               <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: 0, lineHeight: typography.lineHeight.relaxed }}>{alert.description}</p>
               <p style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, margin: 0, marginTop: spacing['2'], marginBottom: spacing['1'], textTransform: 'uppercase', letterSpacing: typography.letterSpacing.wider }}>Impact</p>
@@ -157,7 +157,7 @@ const DatabaseInsightBanner: React.FC<{ insight: AIInsight }> = ({ insight }) =>
                 {expanded ? 'Less' : 'More'}
               </button>
               {expanded && (
-                <div style={{ marginTop: spacing['2'], padding: `${spacing['2']} ${spacing['3']}`, backgroundColor: 'rgba(0,0,0,0.03)', borderRadius: borderRadius.base }}>
+                <div style={{ marginTop: spacing['2'], padding: `${spacing['2']} ${spacing['3']}`, backgroundColor: colors.overlayBlackThin, borderRadius: borderRadius.base }}>
                   <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: 0, lineHeight: typography.lineHeight.relaxed }}>{insight.expanded_content}</p>
                 </div>
               )}
@@ -215,7 +215,7 @@ export const PageInsightBanners: React.FC<{ page: string }> = ({ page }) => {
   });
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'], marginBottom: spacing['4'] }}>
       {sorted.slice(0, 2).map((insight) => (
         <DatabaseInsightBanner key={insight.id} insight={insight} />
       ))}

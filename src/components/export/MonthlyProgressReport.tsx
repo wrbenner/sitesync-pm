@@ -1,5 +1,6 @@
 import React from 'react'
 import { Text, View } from '@react-pdf/renderer'
+import { colors } from '../../styles/theme'
 import { PDFReport, PDFTable, PDFSection } from './PDFTemplate'
 
 interface MonthlyProgressProps {
@@ -49,27 +50,27 @@ export const MonthlyProgressReport: React.FC<MonthlyProgressProps> = (props) => 
       {/* Executive Summary */}
       <PDFSection title="Executive Summary" />
       <View style={{ flexDirection: 'row', gap: 16, marginBottom: 16 }}>
-        <View style={{ flex: 1, padding: 10, backgroundColor: '#F8F9FA', borderRadius: 4 }}>
-          <Text style={{ fontSize: 7, color: '#5C5550', marginBottom: 2 }}>Schedule Progress</Text>
+        <View style={{ flex: 1, padding: 10, backgroundColor: colors.surfacePage, borderRadius: 4 }}>
+          <Text style={{ fontSize: 7, color: colors.textSecondary, marginBottom: 2 }}>Schedule Progress</Text>
           <Text style={{ fontSize: 14, fontFamily: 'Helvetica-Bold' }}>{fmtPct(props.actualProgress)}</Text>
-          <Text style={{ fontSize: 7, color: props.actualProgress >= props.scheduledProgress ? '#2D8A6E' : '#C93B3B' }}>
+          <Text style={{ fontSize: 7, color: props.actualProgress >= props.scheduledProgress ? colors.statusActive : colors.statusCritical }}>
             {props.actualProgress >= props.scheduledProgress ? 'Ahead' : 'Behind'} (planned: {fmtPct(props.scheduledProgress)})
           </Text>
         </View>
-        <View style={{ flex: 1, padding: 10, backgroundColor: '#F8F9FA', borderRadius: 4 }}>
-          <Text style={{ fontSize: 7, color: '#5C5550', marginBottom: 2 }}>Contract Value</Text>
+        <View style={{ flex: 1, padding: 10, backgroundColor: colors.surfacePage, borderRadius: 4 }}>
+          <Text style={{ fontSize: 7, color: colors.textSecondary, marginBottom: 2 }}>Contract Value</Text>
           <Text style={{ fontSize: 14, fontFamily: 'Helvetica-Bold' }}>{fmtCurrency(props.currentContract)}</Text>
-          <Text style={{ fontSize: 7, color: '#5C5550' }}>Original: {fmtCurrency(props.originalContract)}</Text>
+          <Text style={{ fontSize: 7, color: colors.textSecondary }}>Original: {fmtCurrency(props.originalContract)}</Text>
         </View>
-        <View style={{ flex: 1, padding: 10, backgroundColor: '#F8F9FA', borderRadius: 4 }}>
-          <Text style={{ fontSize: 7, color: '#5C5550', marginBottom: 2 }}>Cost to Date</Text>
+        <View style={{ flex: 1, padding: 10, backgroundColor: colors.surfacePage, borderRadius: 4 }}>
+          <Text style={{ fontSize: 7, color: colors.textSecondary, marginBottom: 2 }}>Cost to Date</Text>
           <Text style={{ fontSize: 14, fontFamily: 'Helvetica-Bold' }}>{fmtCurrency(props.costToDate)}</Text>
-          <Text style={{ fontSize: 7, color: '#5C5550' }}>Billed: {fmtCurrency(props.billedToDate)}</Text>
+          <Text style={{ fontSize: 7, color: colors.textSecondary }}>Billed: {fmtCurrency(props.billedToDate)}</Text>
         </View>
-        <View style={{ flex: 1, padding: 10, backgroundColor: '#F8F9FA', borderRadius: 4 }}>
-          <Text style={{ fontSize: 7, color: '#5C5550', marginBottom: 2 }}>Safety (TRIR)</Text>
-          <Text style={{ fontSize: 14, fontFamily: 'Helvetica-Bold', color: props.trir <= 2 ? '#2D8A6E' : '#C93B3B' }}>{props.trir.toFixed(2)}</Text>
-          <Text style={{ fontSize: 7, color: '#5C5550' }}>{props.incidentsThisPeriod} incidents this period</Text>
+        <View style={{ flex: 1, padding: 10, backgroundColor: colors.surfacePage, borderRadius: 4 }}>
+          <Text style={{ fontSize: 7, color: colors.textSecondary, marginBottom: 2 }}>Safety (TRIR)</Text>
+          <Text style={{ fontSize: 14, fontFamily: 'Helvetica-Bold', color: props.trir <= 2 ? colors.statusActive : colors.statusCritical }}>{props.trir.toFixed(2)}</Text>
+          <Text style={{ fontSize: 7, color: colors.textSecondary }}>{props.incidentsThisPeriod} incidents this period</Text>
         </View>
       </View>
 
@@ -89,11 +90,11 @@ export const MonthlyProgressReport: React.FC<MonthlyProgressProps> = (props) => 
       <View style={{ flexDirection: 'row', gap: 16, marginBottom: 12 }}>
         <View>
           <Text style={{ fontSize: 18, fontFamily: 'Helvetica-Bold' }}>{props.totalManHours.toLocaleString()}</Text>
-          <Text style={{ fontSize: 7, color: '#5C5550' }}>Total Man Hours</Text>
+          <Text style={{ fontSize: 7, color: colors.textSecondary }}>Total Man Hours</Text>
         </View>
         <View>
           <Text style={{ fontSize: 18, fontFamily: 'Helvetica-Bold' }}>{props.avgDailyWorkers}</Text>
-          <Text style={{ fontSize: 7, color: '#5C5550' }}>Avg Daily Workers</Text>
+          <Text style={{ fontSize: 7, color: colors.textSecondary }}>Avg Daily Workers</Text>
         </View>
       </View>
       <PDFTable
@@ -109,13 +110,13 @@ export const MonthlyProgressReport: React.FC<MonthlyProgressProps> = (props) => 
       <PDFSection title="Schedule Status" />
       <Text style={{ fontSize: 8, marginBottom: 8 }}>Milestones achieved this period:</Text>
       {props.milestonesAchieved.map((m, i) => (
-        <Text key={i} style={{ fontSize: 8, color: '#2D8A6E', marginBottom: 2 }}>✓ {m.name} ({m.date})</Text>
+        <Text key={i} style={{ fontSize: 8, color: colors.statusActive, marginBottom: 2 }}>✓ {m.name} ({m.date})</Text>
       ))}
       {props.milestonesUpcoming.length > 0 && (
         <>
           <Text style={{ fontSize: 8, marginTop: 8, marginBottom: 4 }}>Upcoming milestones:</Text>
           {props.milestonesUpcoming.map((m, i) => (
-            <Text key={i} style={{ fontSize: 8, color: '#3A7BC8', marginBottom: 2 }}>→ {m.name} ({m.date})</Text>
+            <Text key={i} style={{ fontSize: 8, color: colors.statusInfo, marginBottom: 2 }}>→ {m.name} ({m.date})</Text>
           ))}
         </>
       )}
@@ -154,19 +155,19 @@ export const MonthlyProgressReport: React.FC<MonthlyProgressProps> = (props) => 
       <View style={{ flexDirection: 'row', gap: 16 }}>
         <View>
           <Text style={{ fontSize: 14, fontFamily: 'Helvetica-Bold' }}>{props.incidentsThisPeriod}</Text>
-          <Text style={{ fontSize: 7, color: '#5C5550' }}>Recordable Incidents</Text>
+          <Text style={{ fontSize: 7, color: colors.textSecondary }}>Recordable Incidents</Text>
         </View>
         <View>
           <Text style={{ fontSize: 14, fontFamily: 'Helvetica-Bold' }}>{props.nearMissesThisPeriod}</Text>
-          <Text style={{ fontSize: 7, color: '#5C5550' }}>Near Misses</Text>
+          <Text style={{ fontSize: 7, color: colors.textSecondary }}>Near Misses</Text>
         </View>
         <View>
           <Text style={{ fontSize: 14, fontFamily: 'Helvetica-Bold' }}>{props.safetyInspections}</Text>
-          <Text style={{ fontSize: 7, color: '#5C5550' }}>Inspections Completed</Text>
+          <Text style={{ fontSize: 7, color: colors.textSecondary }}>Inspections Completed</Text>
         </View>
         <View>
-          <Text style={{ fontSize: 14, fontFamily: 'Helvetica-Bold', color: props.trir <= 2 ? '#2D8A6E' : '#C93B3B' }}>{props.trir.toFixed(2)}</Text>
-          <Text style={{ fontSize: 7, color: '#5C5550' }}>TRIR</Text>
+          <Text style={{ fontSize: 14, fontFamily: 'Helvetica-Bold', color: props.trir <= 2 ? colors.statusActive : colors.statusCritical }}>{props.trir.toFixed(2)}</Text>
+          <Text style={{ fontSize: 7, color: colors.textSecondary }}>TRIR</Text>
         </View>
       </View>
     </PDFReport>

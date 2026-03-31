@@ -1,17 +1,21 @@
 import React from 'react';
 import {
   Home, LayoutGrid, Calendar, DollarSign,
-  HelpCircle, ClipboardList, FileText,
+  HelpCircle, FileText,
   BookOpen, Briefcase, CheckSquare,
   Users, Zap, Search, ListChecks,
   Activity, Clock, Heart, Shield,
   Calculator, ShieldCheck, Package, Truck,
   Sun, Moon, Bot, ClipboardCheck,
   Plug, BarChart3, Leaf, ScrollText, Code, Globe, Store,
+  TrendingUp, FileDiff, Send, HardHat, Repeat2,
+  Receipt, Milestone, ChevronDown, ChevronRight,
+  Bell, Settings, LogOut,
 } from 'lucide-react';
 import { useUiStore } from '../stores';
 import { motion } from 'framer-motion';
-import { colors, spacing, typography, borderRadius, transitions, layout } from '../styles/theme';
+import { colors, spacing, typography, borderRadius, transitions, layout, zIndex } from '../styles/theme';
+import { duration, easing, motion as motionTokens } from '../styles/animations';
 import { ProgressBar } from './Primitives';
 import { usePermissions } from '../hooks/usePermissions';
 import { SidebarPresenceDot } from './collaboration/PresenceBar';
@@ -42,7 +46,7 @@ const sections = [
       { id: 'copilot', label: 'AI Copilot', icon: Zap },
       { id: 'ai-agents', label: 'AI Agents', icon: Bot },
       { id: 'time-machine', label: 'Time Machine', icon: Clock },
-      { id: 'lookahead', label: 'Lookahead', icon: ListChecks },
+      { id: 'lookahead', label: 'Lookahead', icon: Milestone },
     ],
   },
   {
@@ -51,12 +55,12 @@ const sections = [
       { id: 'tasks', label: 'Tasks', icon: LayoutGrid },
       { id: 'schedule', label: 'Schedule', icon: Calendar },
       { id: 'budget', label: 'Budget', icon: DollarSign },
-      { id: 'change-orders', label: 'Change Orders', icon: ClipboardList },
-      { id: 'financials', label: 'Financials', icon: DollarSign },
-      { id: 'pay-apps', label: 'Pay Apps', icon: ScrollText },
+      { id: 'change-orders', label: 'Change Orders', icon: FileDiff },
+      { id: 'financials', label: 'Financials', icon: TrendingUp },
+      { id: 'pay-apps', label: 'Pay Apps', icon: Receipt },
       { id: 'drawings', label: 'Drawings', icon: FileText },
       { id: 'rfis', label: 'RFIs', icon: HelpCircle },
-      { id: 'submittals', label: 'Submittals', icon: ClipboardList },
+      { id: 'submittals', label: 'Submittals', icon: Send },
       { id: 'estimating', label: 'Estimating', icon: Calculator },
       { id: 'procurement', label: 'Procurement', icon: Package },
       { id: 'equipment', label: 'Equipment', icon: Truck },
@@ -66,11 +70,11 @@ const sections = [
   {
     label: 'Field',
     items: [
-      { id: 'field-capture', label: 'Field Capture', icon: Briefcase },
+      { id: 'field-capture', label: 'Field Capture', icon: HardHat },
       { id: 'daily-log', label: 'Daily Log', icon: BookOpen },
       { id: 'punch-list', label: 'Punch List', icon: CheckSquare },
       { id: 'crews', label: 'Crews', icon: Users },
-      { id: 'workforce', label: 'Workforce', icon: Users },
+      { id: 'workforce', label: 'Workforce', icon: HardHat },
       { id: 'safety', label: 'Safety', icon: Shield },
       { id: 'insurance', label: 'Insurance', icon: ShieldCheck },
     ],
@@ -79,7 +83,7 @@ const sections = [
     label: 'Collaborate',
     items: [
       { id: 'activity', label: 'Activity Feed', icon: Activity },
-      { id: 'meetings', label: 'Meetings', icon: Calendar },
+      { id: 'meetings', label: 'Meetings', icon: Repeat2 },
       { id: 'directory', label: 'Directory', icon: Users },
     ],
   },
@@ -122,7 +126,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate }) => {
         borderRight: `1px solid ${colors.borderSubtle}`,
         display: 'flex',
         flexDirection: 'column',
-        zIndex: 100,
+        zIndex: zIndex.sticky,
         overflowY: 'auto',
         overflowX: 'hidden',
       }}
@@ -138,8 +142,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate }) => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: '14px',
-            fontWeight: 600,
+            fontSize: typography.fontSize.body,
+            fontWeight: typography.fontWeight.semibold,
             color: colors.white,
             flexShrink: 0,
           }}
@@ -149,7 +153,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate }) => {
         <span style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, letterSpacing: typography.letterSpacing.tight }}>
           SiteSync
         </span>
-        <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.orangeText, marginTop: '-6px', marginLeft: '-2px' }}>
+        <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.orangeText, marginTop: `-${spacing['1.5']}`, marginLeft: `-${spacing['0.5']}` }}>
           AI
         </span>
       </div>
@@ -167,7 +171,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate }) => {
             alignItems: 'center',
             gap: spacing['2'],
             padding: `${spacing['2']} ${spacing['3']}`,
-            backgroundColor: 'rgba(0, 0, 0, 0.06)',
+            backgroundColor: colors.overlayBlackLight,
             border: 'none',
             borderRadius: borderRadius.base,
             cursor: 'pointer',
@@ -176,12 +180,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate }) => {
             color: colors.textTertiary,
             transition: `background-color ${transitions.instant}`,
           }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(0, 0, 0, 0.08)'; }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(0, 0, 0, 0.06)'; }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.overlayBlackMedium; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.overlayBlackLight; }}
         >
           <Search size={14} />
           <span style={{ flex: 1, textAlign: 'left' }}>Search...</span>
-          <kbd style={{ fontSize: '10px', color: colors.textTertiary, backgroundColor: 'rgba(0,0,0,0.04)', padding: '1px 5px', borderRadius: borderRadius.sm, fontFamily: 'monospace' }}>⌘K</kbd>
+          <kbd style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, backgroundColor: colors.overlayBlackThin, padding: `${spacing['0.5']} ${spacing['1.5']}`, borderRadius: borderRadius.sm, fontFamily: typography.fontFamilyMono }}>⌘K</kbd>
         </button>
       </div>
 
@@ -196,7 +200,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate }) => {
           <div key={si} style={{ marginBottom: spacing['4'] }}>
             {section.label && (
               <p style={{
-                fontSize: '10.5px',
+                fontSize: typography.fontSize.caption,
                 fontWeight: typography.fontWeight.semibold,
                 color: colors.textTertiary,
                 textTransform: 'uppercase',
@@ -221,8 +225,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate }) => {
                     display: 'flex',
                     alignItems: 'center',
                     gap: spacing['3'],
-                    padding: `8px ${spacing['3']}`,
-                    margin: `1px 0`,
+                    padding: `${spacing['2']} ${spacing['3']}`,
+                    margin: `${spacing.px} 0`,
                     backgroundColor: 'transparent',
                     color: isActive ? colors.orangeText : colors.textSecondary,
                     border: 'none',
@@ -232,14 +236,22 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate }) => {
                     fontFamily: typography.fontFamily,
                     fontWeight: isActive ? typography.fontWeight.medium : typography.fontWeight.normal,
                     letterSpacing: typography.letterSpacing.normal,
-                    transition: `background-color ${transitions.instant}`,
+                    transition: `background-color ${duration.instant}ms ${easing.standard}, color ${duration.instant}ms ${easing.standard}`,
                     textAlign: 'left',
                   }}
                   onMouseEnter={(e) => {
-                    if (!isActive) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(0, 0, 0, 0.06)';
+                    if (!isActive) {
+                      const el = e.currentTarget as HTMLButtonElement;
+                      el.style.backgroundColor = colors.overlayBlackLight;
+                      el.style.color = colors.textPrimary;
+                    }
                   }}
                   onMouseLeave={(e) => {
-                    if (!isActive) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
+                    if (!isActive) {
+                      const el = e.currentTarget as HTMLButtonElement;
+                      el.style.backgroundColor = 'transparent';
+                      el.style.color = colors.textSecondary;
+                    }
                   }}
                 >
                   {isActive && (
@@ -248,8 +260,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate }) => {
                       style={{
                         position: 'absolute',
                         inset: 0,
-                        backgroundColor: 'rgba(244, 120, 32, 0.08)',
-                        borderRadius: '8px',
+                        backgroundColor: colors.orangeSubtle,
+                        borderRadius: borderRadius.md,
                         borderLeft: `2px solid ${colors.primaryOrange}`,
                       }}
                       transition={{ type: 'spring', stiffness: 400, damping: 30 }}
@@ -324,7 +336,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate }) => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: 'rgba(0, 0, 0, 0.06)',
+            backgroundColor: colors.overlayBlackLight,
             border: 'none',
             borderRadius: borderRadius.base,
             cursor: 'pointer',
@@ -332,8 +344,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate }) => {
             flexShrink: 0,
             transition: `background-color ${transitions.instant}`,
           }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(0, 0, 0, 0.1)'; }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(0, 0, 0, 0.06)'; }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.overlayBlackMedium; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.overlayBlackLight; }}
         >
           {themeMode === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
         </button>

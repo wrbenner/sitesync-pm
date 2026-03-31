@@ -36,7 +36,7 @@ const emptyForm: ContactFormData = {
 const overlayStyle: React.CSSProperties = {
   position: 'fixed',
   inset: 0,
-  backgroundColor: 'rgba(0, 0, 0, 0.4)',
+  backgroundColor: colors.overlayDark,
   backdropFilter: 'blur(4px)',
   zIndex: zIndex.modal as number,
   display: 'flex',

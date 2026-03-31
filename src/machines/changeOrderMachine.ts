@@ -1,4 +1,5 @@
 import { setup } from 'xstate'
+import { colors } from '../styles/theme'
 
 export type ChangeOrderState = 'draft' | 'pending_review' | 'approved' | 'rejected' | 'void'
 export type ChangeOrderType = 'pco' | 'cor' | 'co'
@@ -121,9 +122,9 @@ export function getPreviousCOType(currentType: ChangeOrderType): ChangeOrderType
 
 export function getCOTypeConfig(type: ChangeOrderType) {
   const config: Record<ChangeOrderType, { label: string; shortLabel: string; color: string; bg: string }> = {
-    pco: { label: 'Potential Change Order', shortLabel: 'PCO', color: '#8C8580', bg: 'rgba(140,133,128,0.08)' },
-    cor: { label: 'Change Order Request', shortLabel: 'COR', color: '#C4850C', bg: 'rgba(196,133,12,0.08)' },
-    co: { label: 'Change Order', shortLabel: 'CO', color: '#3A7BC8', bg: 'rgba(58,123,200,0.08)' },
+    pco: { label: 'Potential Change Order', shortLabel: 'PCO', color: colors.statusNeutral, bg: colors.statusNeutralSubtle },
+    cor: { label: 'Change Order Request', shortLabel: 'COR', color: colors.statusPending, bg: colors.statusPendingSubtle },
+    co: { label: 'Change Order', shortLabel: 'CO', color: colors.statusInfo, bg: colors.statusInfoSubtle },
   }
   return config[type] || config.co
 }
@@ -132,11 +133,11 @@ export function getCOTypeConfig(type: ChangeOrderType) {
 
 export function getCOStatusConfig(status: ChangeOrderState) {
   const config: Record<ChangeOrderState, { label: string; color: string; bg: string }> = {
-    draft: { label: 'Draft', color: '#8C8580', bg: 'rgba(140,133,128,0.08)' },
-    pending_review: { label: 'Under Review', color: '#C4850C', bg: 'rgba(196,133,12,0.08)' },
-    approved: { label: 'Approved', color: '#2D8A6E', bg: 'rgba(45,138,110,0.08)' },
-    rejected: { label: 'Rejected', color: '#C93B3B', bg: 'rgba(201,59,59,0.08)' },
-    void: { label: 'Void', color: '#8C8580', bg: 'rgba(140,133,128,0.04)' },
+    draft: { label: 'Draft', color: colors.statusNeutral, bg: colors.statusNeutralSubtle },
+    pending_review: { label: 'Under Review', color: colors.statusPending, bg: colors.statusPendingSubtle },
+    approved: { label: 'Approved', color: colors.statusActive, bg: colors.statusActiveSubtle },
+    rejected: { label: 'Rejected', color: colors.statusCritical, bg: colors.statusCriticalSubtle },
+    void: { label: 'Void', color: colors.statusNeutral, bg: colors.statusNeutralSubtle },
   }
   return config[status] || config.draft
 }
@@ -145,14 +146,14 @@ export function getCOStatusConfig(status: ChangeOrderState) {
 
 export function getReasonCodeConfig(code: ReasonCode) {
   const config: Record<ReasonCode, { label: string; color: string }> = {
-    owner_change: { label: 'Owner Change', color: '#3A7BC8' },
-    design_error: { label: 'Design Error', color: '#C93B3B' },
-    field_condition: { label: 'Field Condition', color: '#C4850C' },
-    regulatory: { label: 'Regulatory', color: '#7C5DC7' },
-    value_engineering: { label: 'Value Engineering', color: '#2D8A6E' },
-    unforeseen: { label: 'Unforeseen', color: '#8C8580' },
+    owner_change: { label: 'Owner Change', color: colors.statusInfo },
+    design_error: { label: 'Design Error', color: colors.statusCritical },
+    field_condition: { label: 'Field Condition', color: colors.statusPending },
+    regulatory: { label: 'Regulatory', color: colors.statusReview },
+    value_engineering: { label: 'Value Engineering', color: colors.statusActive },
+    unforeseen: { label: 'Unforeseen', color: colors.statusNeutral },
   }
-  return config[code] || { label: code, color: '#8C8580' }
+  return config[code] || { label: code, color: colors.statusNeutral }
 }
 
 // ── Approval Chain ───────────────────────────────────────

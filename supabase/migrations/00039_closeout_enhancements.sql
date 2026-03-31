@@ -32,7 +32,7 @@ ALTER TABLE warranties ADD COLUMN IF NOT EXISTS reminder_30_sent boolean DEFAULT
 ALTER TABLE warranties ADD COLUMN IF NOT EXISTS reminder_7_sent boolean DEFAULT false;
 
 CREATE INDEX IF NOT EXISTS idx_warranties_project ON warranties(project_id, status);
-CREATE INDEX IF NOT EXISTS idx_warranties_expiry ON warranties(end_date) WHERE status = 'active';
+CREATE INDEX IF NOT EXISTS idx_warranties_expiry ON warranties(expiration_date) WHERE status = 'active';
 
 ALTER TABLE warranties ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS warranties_select ON warranties;
@@ -74,10 +74,10 @@ CREATE OR REPLACE FUNCTION update_warranty_status()
 RETURNS void AS $$
 BEGIN
   UPDATE warranties SET status = 'expired'
-  WHERE end_date < CURRENT_DATE AND status = 'active';
+  WHERE expiration_date < CURRENT_DATE AND status = 'active';
 
   UPDATE warranties SET status = 'expiring_soon'
-  WHERE end_date >= CURRENT_DATE AND end_date <= CURRENT_DATE + INTERVAL '30 days' AND status = 'active';
+  WHERE expiration_date >= CURRENT_DATE AND expiration_date <= CURRENT_DATE + INTERVAL '30 days' AND status = 'active';
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
