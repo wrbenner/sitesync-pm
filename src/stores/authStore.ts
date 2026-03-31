@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
 import type { Profile, Company } from '../types/database';
 import type { Session, User } from '@supabase/supabase-js';
 
@@ -21,30 +21,6 @@ interface AuthState {
   createCompany: (name: string) => Promise<{ error: string | null; company: Company | null }>;
 }
 
-// Mock user for development without Supabase
-const MOCK_PROFILE: Profile = {
-  id: 'user-1',
-  company_id: 'company-1',
-  email: 'walker@sitesync.ai',
-  first_name: 'Walker',
-  last_name: 'Benner',
-  role: 'company_admin',
-  avatar_url: null,
-  phone: null,
-  is_active: true,
-  created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString(),
-};
-
-const MOCK_COMPANY: Company = {
-  id: 'company-1',
-  name: 'SiteSync AI',
-  logo_url: null,
-  subscription_tier: 'pro',
-  created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString(),
-};
-
 export const useAuthStore = create<AuthState>((set, get) => ({
   session: null,
   user: null,
@@ -54,17 +30,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   initialized: false,
 
   initialize: async () => {
-    if (!isSupabaseConfigured) {
-      // Development mode: use mock data
-      set({
-        profile: MOCK_PROFILE,
-        company: MOCK_COMPANY,
-        loading: false,
-        initialized: true,
-      });
-      return;
-    }
-
     try {
       const { data: { session } } = await supabase.auth.getSession();
       set({ session, user: session?.user ?? null });
@@ -92,11 +57,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   signIn: async (email, password) => {
-    if (!isSupabaseConfigured) {
-      set({ profile: MOCK_PROFILE, company: MOCK_COMPANY });
-      return { error: null };
-    }
-
     set({ loading: true });
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     set({ loading: false });
@@ -104,11 +64,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   signUp: async (email, password, firstName, lastName) => {
-    if (!isSupabaseConfigured) {
-      set({ profile: MOCK_PROFILE, company: MOCK_COMPANY });
-      return { error: null };
-    }
-
     set({ loading: true });
     const { error } = await supabase.auth.signUp({
       email,
@@ -122,15 +77,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   signOut: async () => {
-    if (isSupabaseConfigured) {
-      await supabase.auth.signOut();
-    }
+    await supabase.auth.signOut();
     set({ session: null, user: null, profile: null, company: null });
   },
 
   loadProfile: async () => {
-    if (!isSupabaseConfigured) return;
-
     const { user } = get();
     if (!user) return;
 
@@ -146,8 +97,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   loadCompany: async () => {
-    if (!isSupabaseConfigured) return;
-
     const { profile } = get();
     if (!profile?.company_id) return;
 
@@ -163,11 +112,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   updateProfile: async (updates) => {
-    if (!isSupabaseConfigured) {
-      set((s) => ({ profile: s.profile ? { ...s.profile, ...updates } : null }));
-      return { error: null };
-    }
-
     const { user } = get();
     if (!user) return { error: 'Not authenticated' };
 
@@ -184,12 +128,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   createCompany: async (name) => {
-    if (!isSupabaseConfigured) {
-      const company = { ...MOCK_COMPANY, name };
-      set({ company });
-      return { error: null, company };
-    }
-
     const { user } = get();
     if (!user) return { error: 'Not authenticated', company: null };
 

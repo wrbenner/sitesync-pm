@@ -371,7 +371,7 @@ export const EquipmentPage: React.FC = () => {
                 fontSize: typography.fontSize.sm,
                 fontFamily: typography.fontFamily,
                 fontWeight: isActive ? typography.fontWeight.medium : typography.fontWeight.normal,
-                color: isActive ? colors.primaryOrange : colors.textSecondary,
+                color: isActive ? colors.orangeText : colors.textSecondary,
                 backgroundColor: isActive ? colors.surfaceRaised : 'transparent',
                 transition: `all ${transitions.instant}`,
                 whiteSpace: 'nowrap',

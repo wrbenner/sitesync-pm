@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { supabase } from '../lib/supabase';
 import type { ActivityItem } from '../components/activity/ActivityCard';
 
 export interface ActivityEntry extends ActivityItem {
@@ -15,25 +16,40 @@ interface ActivityState {
   getFiltered: (filter: string) => ActivityEntry[];
 }
 
-const MOCK_ACTIVITIES: ActivityEntry[] = [
-  { id: 1, type: 'task', user: 'Thomas Rodriguez', userInitials: 'TR', action: 'completed', target: 'Install fire stopping at floor penetrations', timestamp: new Date(Date.now() - 45 * 60 * 1000), commentCount: 3 },
-  { id: 2, type: 'comment', user: 'David Kumar', userInitials: 'DK', action: 'commented on', target: 'Resolve curtain wall interface detail', timestamp: new Date(Date.now() - 90 * 60 * 1000), preview: 'The connection detail looks good. I have marked up the drawing with two minor adjustments needed at grid line B4.', commentCount: 5 },
-  { id: 3, type: 'rfi', user: 'Mike Patterson', userInitials: 'MP', action: 'submitted', target: 'RFI-004: Structural connection at curtain wall', timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), preview: 'Need clarification on the connection detail between structural steel and curtain wall panel system at the south face.', commentCount: 2 },
-  { id: 4, type: 'photo', user: 'John Smith', userInitials: 'JS', action: 'uploaded 3 photos to', target: 'Floor 7 Steel Connection', timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000), photoUrl: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=400', commentCount: 1 },
-  { id: 5, type: 'submittal', user: 'Jennifer Lee', userInitials: 'JL', action: 'approved', target: 'SUB-001: Structural Steel Shop Drawings', timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000), preview: 'Approved with no comments. Fabrication may proceed per submitted shop drawings.' },
-  { id: 6, type: 'schedule', user: 'Karen Williams', userInitials: 'KW', action: 'moved to In Review', target: 'Review CO-002 HVAC upgrade scope', timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000) },
-  { id: 7, type: 'budget', user: 'Robert Anderson', userInitials: 'RA', action: 'flagged', target: 'Structural division budget at 97%', timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000), preview: 'Contingency is effectively zero after CO-001. Recommend reallocation from Interior budget.' },
-  { id: 8, type: 'task', user: 'Mike Patterson', userInitials: 'MP', action: 'created task', target: 'Safety audit walkthrough', timestamp: new Date(Date.now() - 25 * 60 * 60 * 1000) },
-  { id: 9, type: 'photo', user: 'Maria Garcia', userInitials: 'MG', action: 'captured voice note', target: 'Safety observation at north entrance', timestamp: new Date(Date.now() - 30 * 60 * 60 * 1000), preview: 'North entrance rebar exposed, needs capping before tomorrow morning. Flagged as priority.', photoUrl: 'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=400' },
-  { id: 10, type: 'punch', user: 'Robert Chen', userInitials: 'RC', action: 'updated', target: 'PL-003: Door closer adjustment', timestamp: new Date(Date.now() - 50 * 60 * 60 * 1000) },
-];
-
 export const useActivityStore = create<ActivityState>()((set, get) => ({
   activities: [],
   loading: false,
 
-  loadActivities: (_projectId) => {
-    set({ activities: MOCK_ACTIVITIES, loading: false });
+  loadActivities: async (projectId: string) => {
+    set({ loading: true });
+    try {
+      const { data, error } = await supabase
+        .from('activity_feed')
+        .select('*')
+        .eq('project_id', projectId)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+
+      const activities: ActivityEntry[] = (data ?? []).map((row: any) => ({
+        id: row.id,
+        type: row.activity_type ?? 'task',
+        user: row.user_name ?? 'Unknown',
+        userInitials: row.user_initials ?? '??',
+        action: row.action ?? '',
+        target: row.target ?? '',
+        timestamp: new Date(row.created_at),
+        commentCount: row.comment_count ?? 0,
+        preview: row.preview ?? undefined,
+        photoUrl: row.photo_url ?? undefined,
+      }));
+
+      set({ activities, loading: false });
+    } catch {
+      // Activity feed table may not exist yet; return empty
+      set({ activities: [], loading: false });
+    }
   },
 
   addActivity: (activity) => {

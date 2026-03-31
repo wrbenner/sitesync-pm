@@ -163,7 +163,7 @@ export const PhotoFeedWidget: React.FC = React.memo(() => {
                   <Tag size={14} color={colors.textTertiary} />
                   <div style={{ display: 'flex', gap: spacing['1'], flexWrap: 'wrap' }}>
                     {selectedPhoto.aiTags.map((tag) => (
-                      <span key={tag} style={{ fontSize: typography.fontSize.caption, color: colors.primaryOrange, backgroundColor: colors.orangeSubtle, padding: `1px ${spacing['2']}`, borderRadius: borderRadius.full, fontWeight: typography.fontWeight.medium }}>{tag}</span>
+                      <span key={tag} style={{ fontSize: typography.fontSize.caption, color: colors.orangeText, backgroundColor: colors.orangeSubtle, padding: `1px ${spacing['2']}`, borderRadius: borderRadius.full, fontWeight: typography.fontWeight.medium }}>{tag}</span>
                     ))}
                   </div>
                 </div>

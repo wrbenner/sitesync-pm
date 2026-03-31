@@ -29,6 +29,46 @@ jobs:
       - name: Type check
         run: npx tsc --noEmit
 
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+
+      - name: npm audit (moderate+)
+        run: npm audit --audit-level=moderate || true
+
+      - name: Check for known vulnerabilities
+        run: npx audit-ci --moderate
+
+  codeql:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+
   test:
     name: Unit Tests
     runs-on: ubuntu-latest
@@ -110,10 +150,36 @@ jobs:
           path: playwright-report/
           retention-days: 7
 
+  accessibility:
+    name: Accessibility Audit
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Serve build and run axe
+        run: |
+          npx serve dist -l 3000 &
+          sleep 3
+          npx @axe-core/cli http://localhost:3000 --exit || true
+
   deploy-staging:
     name: Deploy to Staging
     runs-on: ubuntu-latest
-    needs: [build, test, e2e]
+    needs: [build, test, e2e, security-audit]
     if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
     environment: staging
     steps:
@@ -135,7 +201,7 @@ jobs:
   deploy-production:
     name: Deploy to Production
     runs-on: ubuntu-latest
-    needs: [build, test, e2e]
+    needs: [build, test, e2e, security-audit]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     environment: production
     steps:

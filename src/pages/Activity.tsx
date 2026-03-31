@@ -5,8 +5,9 @@ import { colors, spacing, typography, borderRadius, transitions } from '../style
 import { ActivityCard } from '../components/activity/ActivityCard';
 import type { ActivityItem } from '../components/activity/ActivityCard';
 import { MentionInput } from '../components/activity/MentionInput';
+import type { MentionPerson } from '../components/activity/MentionInput';
 import { useProjectId } from '../hooks/useProjectId';
-import { useActivityFeed } from '../hooks/queries';
+import { useActivityFeed, useDirectoryContacts } from '../hooks/queries';
 import type { ActivityFeedItem } from '../types/database';
 
 type FilterType = 'all' | 'rfi' | 'submittal' | 'photo' | 'task' | 'budget' | 'schedule';
@@ -85,6 +86,15 @@ export const Activity: React.FC = () => {
   const { addToast } = useToast();
   const projectId = useProjectId();
   const { data: rawActivities } = useActivityFeed(projectId);
+  const { data: contacts = [] } = useDirectoryContacts(projectId);
+  const mentionPeople: MentionPerson[] = useMemo(() => contacts.map((c: Record<string, unknown>) => {
+    const name = String(c.name || c.full_name || c.email || '');
+    return {
+      name,
+      initials: name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase() || '??',
+      role: String(c.role || c.company || ''),
+    };
+  }), [contacts]);
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [following, setFollowing] = useState<Set<string>>(new Set(['rfi', 'task']));
   const [readItems, setReadItems] = useState<Set<number>>(new Set());
@@ -108,6 +118,7 @@ export const Activity: React.FC = () => {
         <MentionInput
           onSend={(_text) => addToast('success', 'Posted to activity feed')}
           placeholder="Share an update with the team... Use @ to mention someone"
+          people={mentionPeople}
         />
       </Card>
 
@@ -121,7 +132,7 @@ export const Activity: React.FC = () => {
               style={{
                 padding: `${spacing['1']} ${spacing['3']}`, border: 'none', borderRadius: borderRadius.full,
                 backgroundColor: activeFilter === f.id ? colors.orangeSubtle : 'transparent',
-                color: activeFilter === f.id ? colors.primaryOrange : colors.textTertiary,
+                color: activeFilter === f.id ? colors.orangeText : colors.textTertiary,
                 fontSize: typography.fontSize.caption, fontWeight: activeFilter === f.id ? typography.fontWeight.semibold : typography.fontWeight.medium,
                 fontFamily: typography.fontFamily, cursor: 'pointer', transition: `all ${transitions.instant}`,
               }}
@@ -133,7 +144,7 @@ export const Activity: React.FC = () => {
             <button
               onClick={() => setReadItems(new Set(activities.map(i => i.id)))}
               style={{
-                fontSize: typography.fontSize.caption, color: colors.primaryOrange,
+                fontSize: typography.fontSize.caption, color: colors.orangeText,
                 backgroundColor: 'transparent', border: 'none', cursor: 'pointer',
                 fontFamily: typography.fontFamily, fontWeight: typography.fontWeight.medium,
               }}
@@ -172,7 +183,7 @@ export const Activity: React.FC = () => {
                 style={{
                   padding: `0 ${spacing['2']}`, border: `1px solid ${following.has(type) ? colors.primaryOrange : colors.borderDefault}`,
                   borderRadius: borderRadius.full, backgroundColor: following.has(type) ? colors.orangeSubtle : 'transparent',
-                  color: following.has(type) ? colors.primaryOrange : colors.textTertiary,
+                  color: following.has(type) ? colors.orangeText : colors.textTertiary,
                   fontSize: '10px', fontWeight: typography.fontWeight.medium,
                   fontFamily: typography.fontFamily, cursor: 'pointer', textTransform: 'capitalize',
                 }}

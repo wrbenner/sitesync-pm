@@ -116,7 +116,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ onClose })
   return (
     <>
       {/* Backdrop */}
-      <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 998 }} />
+      <div onClick={onClose} role="presentation" aria-hidden="true" style={{ position: 'fixed', inset: 0, zIndex: 998 }} />
 
       {/* Panel */}
       <div style={{
@@ -139,7 +139,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ onClose })
             {unreadCount > 0 && (
               <span style={{
                 fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
-                color: colors.primaryOrange, backgroundColor: colors.orangeSubtle,
+                color: colors.orangeText, backgroundColor: colors.orangeSubtle,
                 padding: `1px ${spacing['2']}`, borderRadius: borderRadius.full,
               }}>{unreadCount}</span>
             )}

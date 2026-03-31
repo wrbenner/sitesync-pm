@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
 import type { Project, ProjectMember } from '../types/database';
 
 interface ProjectContextState {
@@ -30,27 +30,6 @@ interface ProjectContextState {
   removeMember: (memberId: string) => Promise<{ error: string | null }>;
 }
 
-// Mock projects for development
-const MOCK_PROJECTS: Project[] = [
-  {
-    id: 'project-1',
-    company_id: 'company-1',
-    name: 'Meridian Tower',
-    address: '1200 Main Street, Dallas, TX 75201',
-    project_type: 'Mixed Use High Rise',
-    total_value: 47500000,
-    status: 'active',
-    completion_percentage: 62,
-    start_date: '2024-03-15',
-    scheduled_end_date: '2026-08-30',
-    actual_end_date: null,
-    description: '12 story mixed use tower with 250 luxury apartments, 75,000 sq ft retail, and 500 space parking garage.',
-    created_by: 'user-1',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-];
-
 export const useProjectContext = create<ProjectContextState>()(
   persist(
     (set, get) => ({
@@ -62,16 +41,6 @@ export const useProjectContext = create<ProjectContextState>()(
       error: null,
 
       loadProjects: async (companyId) => {
-        if (!isSupabaseConfigured) {
-          set({
-            projects: MOCK_PROJECTS,
-            activeProject: MOCK_PROJECTS[0],
-            activeProjectId: MOCK_PROJECTS[0].id,
-            loading: false,
-          });
-          return;
-        }
-
         set({ loading: true, error: null });
         try {
           const { data, error } = await supabase
@@ -107,11 +76,6 @@ export const useProjectContext = create<ProjectContextState>()(
       },
 
       loadMembers: async (projectId) => {
-        if (!isSupabaseConfigured) {
-          set({ members: [] });
-          return;
-        }
-
         const { data, error } = await supabase
           .from('project_members')
           .select('*, profile:profiles(*)')
@@ -123,30 +87,6 @@ export const useProjectContext = create<ProjectContextState>()(
       },
 
       createProject: async (project) => {
-        if (!isSupabaseConfigured) {
-          const newProject: Project = {
-            id: `project-${Date.now()}`,
-            ...project,
-            address: project.address ?? null,
-            project_type: project.project_type ?? null,
-            total_value: project.total_value ?? null,
-            status: 'active',
-            completion_percentage: 0,
-            start_date: project.start_date ?? null,
-            scheduled_end_date: project.scheduled_end_date ?? null,
-            actual_end_date: null,
-            description: project.description ?? null,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          };
-          set((s) => ({
-            projects: [newProject, ...s.projects],
-            activeProject: newProject,
-            activeProjectId: newProject.id,
-          }));
-          return { error: null, project: newProject };
-        }
-
         const { data, error } = await (supabase
           .from('projects') as any)
           .insert({
@@ -170,7 +110,7 @@ export const useProjectContext = create<ProjectContextState>()(
 
         const newProject = data as Project;
 
-        // Auto-add creator as project manager
+        // Auto add creator as project manager
         await (supabase.from('project_members') as any).insert({
           project_id: newProject.id,
           user_id: project.created_by,
@@ -188,14 +128,6 @@ export const useProjectContext = create<ProjectContextState>()(
       },
 
       updateProject: async (projectId, updates) => {
-        if (!isSupabaseConfigured) {
-          set((s) => ({
-            projects: s.projects.map((p) => (p.id === projectId ? { ...p, ...updates } : p)),
-            activeProject: s.activeProject?.id === projectId ? { ...s.activeProject, ...updates } : s.activeProject,
-          }));
-          return { error: null };
-        }
-
         const { error } = await (supabase.from('projects') as any).update(updates).eq('id', projectId);
         if (!error) {
           set((s) => ({
@@ -207,8 +139,6 @@ export const useProjectContext = create<ProjectContextState>()(
       },
 
       addMember: async (projectId, userId, role) => {
-        if (!isSupabaseConfigured) return { error: null };
-
         const { error } = await (supabase.from('project_members') as any).insert({
           project_id: projectId,
           user_id: userId,
@@ -223,8 +153,6 @@ export const useProjectContext = create<ProjectContextState>()(
       },
 
       removeMember: async (memberId) => {
-        if (!isSupabaseConfigured) return { error: null };
-
         const { error } = await supabase.from('project_members').delete().eq('id', memberId);
         if (!error) {
           const { activeProjectId } = get();

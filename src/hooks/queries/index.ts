@@ -1646,3 +1646,46 @@ export function useReportSchedules(projectId: string | undefined) {
     enabled: !!projectId,
   })
 }
+
+// ── Daily Log Entries ────────────────────────────────────
+
+export function useDailyLogEntries(dailyLogId: string | undefined) {
+  return useQuery({
+    queryKey: ['daily_log_entries', dailyLogId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('daily_log_entries')
+        .select('*')
+        .eq('daily_log_id', dailyLogId!)
+        .order('created_at')
+      if (error) throw error
+      return data
+    },
+    enabled: !!dailyLogId,
+  })
+}
+
+// ── Lookahead Tasks ──────────────────────────────────────
+
+export function useLookaheadTasks(projectId: string | undefined) {
+  return useQuery({
+    queryKey: ['lookahead_tasks', projectId],
+    queryFn: async () => {
+      const today = new Date()
+      const threeWeeksOut = new Date(today)
+      threeWeeksOut.setDate(today.getDate() + 21)
+
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('*, crew:crews(id, name)')
+        .eq('project_id', projectId!)
+        .gte('start_date', today.toISOString().slice(0, 10))
+        .lte('start_date', threeWeeksOut.toISOString().slice(0, 10))
+        .in('status', ['todo', 'in_progress'])
+        .order('start_date')
+      if (error) throw error
+      return data as Task[]
+    },
+    enabled: !!projectId,
+  })
+}

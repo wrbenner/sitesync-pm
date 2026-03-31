@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { AlertTriangle, ClipboardCheck, Award, Eye, TrendingUp, Users, Plus } from 'lucide-react'
+import React, { useState, lazy, Suspense } from 'react'
+import { AlertTriangle, Camera, ClipboardCheck, Award, Eye, TrendingUp, Users, Plus } from 'lucide-react'
 import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton } from '../components/Primitives'
 import { DataTable, createColumnHelper } from '../components/shared/DataTable'
 import { ExportButton } from '../components/shared/ExportButton'
@@ -8,7 +8,9 @@ import { useProjectId } from '../hooks/useProjectId'
 import { useSafetyInspections, useIncidents, useToolboxTalks, useSafetyCertifications, useSafetyObservations, useDailyLogs } from '../hooks/queries'
 import { toast } from 'sonner'
 
-type TabKey = 'overview' | 'inspections' | 'incidents' | 'toolbox' | 'certifications' | 'observations'
+const AIPhotoAnalysis = lazy(() => import('../components/safety/AIPhotoAnalysis').then(m => ({ default: m.AIPhotoAnalysis })))
+
+type TabKey = 'overview' | 'inspections' | 'incidents' | 'toolbox' | 'certifications' | 'observations' | 'ai_analysis'
 
 const tabs: { key: TabKey; label: string; icon: React.ElementType }[] = [
   { key: 'overview', label: 'Overview', icon: TrendingUp },
@@ -17,6 +19,7 @@ const tabs: { key: TabKey; label: string; icon: React.ElementType }[] = [
   { key: 'toolbox', label: 'Toolbox Talks', icon: Users },
   { key: 'certifications', label: 'Certifications', icon: Award },
   { key: 'observations', label: 'Observations', icon: Eye },
+  { key: 'ai_analysis', label: 'AI Photo Analysis', icon: Camera },
 ]
 
 // ── Column helpers ───────────────────────────────────────────
@@ -96,7 +99,7 @@ const incidentColumns = [
   incidentCol.accessor('incident_number', {
     header: '#',
     cell: (info) => (
-      <span style={{ fontWeight: typography.fontWeight.medium, color: colors.primaryOrange }}>
+      <span style={{ fontWeight: typography.fontWeight.medium, color: colors.orangeText }}>
         {info.getValue()}
       </span>
     ),
@@ -431,7 +434,7 @@ export const Safety: React.FC = () => {
                 fontSize: typography.fontSize.sm,
                 fontFamily: typography.fontFamily,
                 fontWeight: isActive ? typography.fontWeight.medium : typography.fontWeight.normal,
-                color: isActive ? colors.primaryOrange : colors.textSecondary,
+                color: isActive ? colors.orangeText : colors.textSecondary,
                 backgroundColor: isActive ? colors.surfaceRaised : 'transparent',
                 transition: `all ${transitions.instant}`,
                 whiteSpace: 'nowrap',
@@ -665,6 +668,12 @@ export const Safety: React.FC = () => {
             enableSorting
           />
         </Card>
+      )}
+
+      {activeTab === 'ai_analysis' && (
+        <Suspense fallback={<Skeleton height="300px" />}>
+          <AIPhotoAnalysis />
+        </Suspense>
       )}
     </PageContainer>
   )

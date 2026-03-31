@@ -245,7 +245,7 @@ export const Signup: React.FC = () => {
           <Link
             to="/login"
             style={{
-              color: colors.primaryOrange,
+              color: colors.orangeText,
               textDecoration: 'none',
               fontWeight: typography.fontWeight.medium,
             }}

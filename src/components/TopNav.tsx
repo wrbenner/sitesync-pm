@@ -85,8 +85,9 @@ export const TopNav: React.FC<TopNavProps> = ({ activeView, onNavigate }) => {
         }}
       >
         {/* Logo */}
-        <div
+        <button
           onClick={() => onNavigate('dashboard')}
+          aria-label="SiteSync AI, go to dashboard"
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -94,6 +95,10 @@ export const TopNav: React.FC<TopNavProps> = ({ activeView, onNavigate }) => {
             cursor: 'pointer',
             marginRight: spacing['2xl'],
             flexShrink: 0,
+            background: 'none',
+            border: 'none',
+            padding: 0,
+            fontFamily: typography.fontFamily,
           }}
         >
           <div
@@ -115,19 +120,20 @@ export const TopNav: React.FC<TopNavProps> = ({ activeView, onNavigate }) => {
           <span style={{ fontSize: typography.fontSize['2xl'], fontWeight: typography.fontWeight.bold, color: colors.textPrimary, letterSpacing: '-0.5px' }}>
             SiteSync
           </span>
-          <span style={{ fontSize: typography.fontSize.xs, fontWeight: typography.fontWeight.semibold, color: colors.primaryOrange, marginTop: '-8px' }}>
+          <span style={{ fontSize: typography.fontSize.xs, fontWeight: typography.fontWeight.semibold, color: colors.orangeText, marginTop: '-8px' }}>
             AI
           </span>
-        </div>
+        </button>
 
         {/* Primary nav */}
-        <nav style={{ display: 'flex', alignItems: 'center', gap: spacing.xs, flex: 1 }}>
+        <nav aria-label="Primary navigation" style={{ display: 'flex', alignItems: 'center', gap: spacing.xs, flex: 1 }}>
           {primaryNav.map((item) => {
             const isActive = activeView === item.id;
             return (
               <button
                 key={item.id}
                 onClick={() => onNavigate(item.id)}
+                aria-current={isActive ? 'page' : undefined}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -136,7 +142,7 @@ export const TopNav: React.FC<TopNavProps> = ({ activeView, onNavigate }) => {
                   fontSize: typography.fontSize.base,
                   fontWeight: isActive ? typography.fontWeight.semibold : typography.fontWeight.medium,
                   fontFamily: typography.fontFamily,
-                  color: isActive ? colors.primaryOrange : colors.textSecondary,
+                  color: isActive ? colors.orangeText : colors.textSecondary,
                   backgroundColor: isActive ? colors.orangeLight : 'transparent',
                   border: 'none',
                   borderRadius: borderRadius.full,
@@ -161,6 +167,8 @@ export const TopNav: React.FC<TopNavProps> = ({ activeView, onNavigate }) => {
           <div ref={moreRef} style={{ position: 'relative' }}>
             <button
               onClick={() => setMoreOpen(!moreOpen)}
+              aria-expanded={moreOpen}
+              aria-haspopup="true"
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -169,7 +177,7 @@ export const TopNav: React.FC<TopNavProps> = ({ activeView, onNavigate }) => {
                 fontSize: typography.fontSize.base,
                 fontWeight: isInMore ? typography.fontWeight.semibold : typography.fontWeight.medium,
                 fontFamily: typography.fontFamily,
-                color: isInMore ? colors.primaryOrange : colors.textSecondary,
+                color: isInMore ? colors.orangeText : colors.textSecondary,
                 backgroundColor: isInMore ? colors.orangeLight : 'transparent',
                 border: 'none',
                 borderRadius: borderRadius.full,
@@ -218,7 +226,7 @@ export const TopNav: React.FC<TopNavProps> = ({ activeView, onNavigate }) => {
                         fontSize: typography.fontSize.base,
                         fontWeight: isActive ? typography.fontWeight.semibold : typography.fontWeight.normal,
                         fontFamily: typography.fontFamily,
-                        color: isActive ? colors.primaryOrange : colors.textPrimary,
+                        color: isActive ? colors.orangeText : colors.textPrimary,
                         backgroundColor: isActive ? colors.orangeLight : 'transparent',
                         border: 'none',
                         borderRadius: borderRadius.md,
@@ -233,7 +241,7 @@ export const TopNav: React.FC<TopNavProps> = ({ activeView, onNavigate }) => {
                         if (!isActive) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
                       }}
                     >
-                      <item.icon size={16} color={isActive ? colors.primaryOrange : colors.textTertiary} />
+                      <item.icon size={16} color={isActive ? colors.orangeText : colors.textTertiary} />
                       {item.label}
                     </button>
                   );
@@ -254,6 +262,7 @@ export const TopNav: React.FC<TopNavProps> = ({ activeView, onNavigate }) => {
                 onChange={(e) => setSearchValue(e.target.value)}
                 onBlur={() => { setSearchOpen(false); setSearchValue(''); }}
                 autoFocus
+                aria-label="Search"
                 style={{ flex: 1, border: 'none', backgroundColor: 'transparent', outline: 'none', fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, color: colors.textPrimary }}
               />
             </div>
@@ -284,6 +293,7 @@ export const TopNav: React.FC<TopNavProps> = ({ activeView, onNavigate }) => {
 
           {/* Notifications */}
           <button
+            aria-label="Notifications"
             style={{
               position: 'relative', width: 34, height: 34,
               backgroundColor: 'transparent', border: 'none', borderRadius: borderRadius.full,

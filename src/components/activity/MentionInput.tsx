@@ -3,28 +3,19 @@ import { Send } from 'lucide-react';
 import { Avatar } from '../Primitives';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
 
-interface Person {
+export interface MentionPerson {
   name: string;
   initials: string;
   role: string;
 }
 
-const people: Person[] = [
-  { name: 'Mike Patterson', initials: 'MP', role: 'Project Manager' },
-  { name: 'Jennifer Lee', initials: 'JL', role: 'Architect' },
-  { name: 'David Kumar', initials: 'DK', role: 'Structural Engineer' },
-  { name: 'Robert Anderson', initials: 'RA', role: 'MEP Consultant' },
-  { name: 'Lisa Zhang', initials: 'LZ', role: 'Steel Supplier' },
-  { name: 'Thomas Rodriguez', initials: 'TR', role: 'Electrical Contractor' },
-  { name: 'Karen Williams', initials: 'KW', role: 'HVAC Contractor' },
-];
-
 interface MentionInputProps {
   onSend: (text: string) => void;
   placeholder?: string;
+  people?: MentionPerson[];
 }
 
-export const MentionInput: React.FC<MentionInputProps> = ({ onSend, placeholder = 'Write a comment... Use @ to mention' }) => {
+export const MentionInput: React.FC<MentionInputProps> = ({ onSend, placeholder = 'Write a comment... Use @ to mention', people = [] }) => {
   const [value, setValue] = useState('');
   const [showMentions, setShowMentions] = useState(false);
   const [mentionFilter, setMentionFilter] = useState('');
@@ -49,7 +40,7 @@ export const MentionInput: React.FC<MentionInputProps> = ({ onSend, placeholder 
     }
   };
 
-  const handleMention = (person: Person) => {
+  const handleMention = (person: MentionPerson) => {
     const atIndex = value.lastIndexOf('@');
     setValue(value.slice(0, atIndex) + `@${person.name} `);
     setShowMentions(false);

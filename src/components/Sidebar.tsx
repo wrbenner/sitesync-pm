@@ -7,7 +7,7 @@ import {
   Activity, Clock, Heart, Shield,
   Calculator, ShieldCheck, Package, Truck,
   Sun, Moon, Bot, ClipboardCheck,
-  Plug, BarChart3, Leaf, ScrollText,
+  Plug, BarChart3, Leaf, ScrollText, Code, Globe, Store,
 } from 'lucide-react';
 import { useUiStore } from '../stores';
 import { motion } from 'framer-motion';
@@ -15,6 +15,7 @@ import { colors, spacing, typography, borderRadius, transitions, layout } from '
 import { ProgressBar } from './Primitives';
 import { usePermissions } from '../hooks/usePermissions';
 import { SidebarPresenceDot } from './collaboration/PresenceBar';
+import { AgentStatusBadge } from './ai/agentStream';
 
 interface SidebarProps {
   activeView: string;
@@ -52,6 +53,7 @@ const sections = [
       { id: 'budget', label: 'Budget', icon: DollarSign },
       { id: 'change-orders', label: 'Change Orders', icon: ClipboardList },
       { id: 'financials', label: 'Financials', icon: DollarSign },
+      { id: 'pay-apps', label: 'Pay Apps', icon: ScrollText },
       { id: 'drawings', label: 'Drawings', icon: FileText },
       { id: 'rfis', label: 'RFIs', icon: HelpCircle },
       { id: 'submittals', label: 'Submittals', icon: ClipboardList },
@@ -92,7 +94,10 @@ const sections = [
     items: [
       { id: 'audit-trail', label: 'Audit Trail', icon: ScrollText },
       { id: 'integrations', label: 'Integrations', icon: Plug },
+      { id: 'marketplace', label: 'Marketplace', icon: Store },
+      { id: 'developers', label: 'Developers', icon: Code },
       { id: 'reports', label: 'Reports', icon: BarChart3 },
+      { id: 'benchmarks', label: 'Benchmarks', icon: Globe },
       { id: 'sustainability', label: 'Sustainability', icon: Leaf },
       { id: 'warranties', label: 'Warranties', icon: ShieldCheck },
     ],
@@ -105,7 +110,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate }) => {
   const { canAccessModule, role } = usePermissions();
 
   return (
-    <aside
+    <nav
+      aria-label="Main navigation"
       style={{
         position: 'fixed',
         left: 0,
@@ -143,7 +149,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate }) => {
         <span style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, letterSpacing: typography.letterSpacing.tight }}>
           SiteSync
         </span>
-        <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.primaryOrange, marginTop: '-6px', marginLeft: '-2px' }}>
+        <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.orangeText, marginTop: '-6px', marginLeft: '-2px' }}>
           AI
         </span>
       </div>
@@ -192,7 +198,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate }) => {
               <p style={{
                 fontSize: '10.5px',
                 fontWeight: typography.fontWeight.semibold,
-                color: '#9C9590',
+                color: colors.textTertiary,
                 textTransform: 'uppercase',
                 letterSpacing: typography.letterSpacing.widest,
                 padding: `0 ${spacing['3']}`,
@@ -208,6 +214,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate }) => {
                 <button
                   key={item.id}
                   onClick={() => onNavigate(item.id)}
+                  aria-current={isActive ? 'page' : undefined}
                   style={{
                     position: 'relative',
                     width: '100%',
@@ -217,7 +224,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate }) => {
                     padding: `8px ${spacing['3']}`,
                     margin: `1px 0`,
                     backgroundColor: 'transparent',
-                    color: isActive ? colors.primaryOrange : colors.textSecondary,
+                    color: isActive ? colors.orangeText : colors.textSecondary,
                     border: 'none',
                     borderRadius: borderRadius.base,
                     cursor: 'pointer',
@@ -243,7 +250,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate }) => {
                         inset: 0,
                         backgroundColor: 'rgba(244, 120, 32, 0.08)',
                         borderRadius: '8px',
-                        borderLeft: '2px solid #F47820',
+                        borderLeft: `2px solid ${colors.primaryOrange}`,
                       }}
                       transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                     />
@@ -277,6 +284,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate }) => {
             <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>154d left</span>
           </div>
         </div>
+      </div>
+
+      {/* Active Agents (shown only when agents are running) */}
+      <div style={{ borderTop: `1px solid ${colors.borderSubtle}`, padding: `${spacing['3']} ${spacing['4']}` }}>
+        <AgentStatusBadge agents={[]} compact={false} />
       </div>
 
       {/* User */}
@@ -326,6 +338,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate }) => {
           {themeMode === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
         </button>
       </div>
-    </aside>
+    </nav>
   );
 };

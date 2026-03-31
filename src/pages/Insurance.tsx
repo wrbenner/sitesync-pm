@@ -7,6 +7,7 @@ import { colors, spacing, typography, borderRadius } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
 import { useInsuranceCertificates } from '../hooks/queries'
 import { toast } from 'sonner'
+import { PermissionGate } from '../components/auth/PermissionGate'
 
 const columnHelper = createColumnHelper<any>()
 
@@ -206,10 +207,10 @@ export const Insurance: React.FC = () => {
           <SectionHeader title="All Certificates" />
           <div style={{ display: 'flex', gap: spacing.sm }}>
             <ExportButton onExportCSV={() => toast.success('Insurance certificates exported')} pdfFilename="SiteSync_Insurance" />
-            <Btn onClick={() => toast.info('Certificate upload requires backend configuration')}>
+            <PermissionGate permission="project.settings"><Btn onClick={() => toast.info('Certificate upload requires backend configuration')}>
               <Plus size={14} />
               Add Certificate
-            </Btn>
+            </Btn></PermissionGate>
           </div>
         </div>
 

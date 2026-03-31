@@ -11,7 +11,7 @@ interface VersionCompareProps {
 type CompareMode = 'side-by-side' | 'overlay';
 
 // Change detection results loaded from AI analysis via drawing_markups table
-const mockChanges: Array<{ id: number; x: number; y: number; w: number; h: number; label: string; severity: 'warning' | 'info' }> = [];
+const aiChanges: Array<{ id: number; x: number; y: number; w: number; h: number; label: string; severity: 'warning' | 'info' }> = [];
 
 export const VersionCompare: React.FC<VersionCompareProps> = ({ currentRev, previousRev, drawingTitle: _drawingTitle }) => {
   const [mode, setMode] = useState<CompareMode>('overlay');
@@ -77,7 +77,7 @@ export const VersionCompare: React.FC<VersionCompareProps> = ({ currentRev, prev
             fontFamily: typography.fontFamily, cursor: 'pointer',
           }}
         >
-          <Sparkles size={12} /> AI Changes ({mockChanges.length})
+          <Sparkles size={12} /> AI Changes ({aiChanges.length})
         </button>
       </div>
 
@@ -105,7 +105,7 @@ export const VersionCompare: React.FC<VersionCompareProps> = ({ currentRev, prev
           </div>
 
           {/* AI change highlights */}
-          {showChanges && mockChanges.map((change) => (
+          {showChanges && aiChanges.map((change) => (
             <div
               key={change.id}
               style={{
@@ -152,7 +152,7 @@ export const VersionCompare: React.FC<VersionCompareProps> = ({ currentRev, prev
             <div style={{ position: 'absolute', top: spacing['2'], left: spacing['2'], padding: `${spacing['1']} ${spacing['2']}`, backgroundColor: colors.primaryOrange, borderRadius: borderRadius.sm, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: 'white' }}>
               Current: Rev {currentRev}
             </div>
-            {showChanges && mockChanges.map((change) => (
+            {showChanges && aiChanges.map((change) => (
               <div key={change.id} style={{
                 position: 'absolute', left: `${change.x}%`, top: `${change.y}%`,
                 width: `${change.w}%`, height: `${change.h}%`,

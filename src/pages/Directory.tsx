@@ -10,6 +10,7 @@ import { colors, spacing, typography, borderRadius, transitions, shadows } from 
 import { useProjectId } from '../hooks/useProjectId';
 import { useDirectoryContacts } from '../hooks/queries';
 import AddContactModal from '../components/forms/AddContactModal';
+import { PermissionGate } from '../components/auth/PermissionGate';
 
 const GROUP_ORDER = ['Owner', 'Design Team', 'Construction', 'Subcontractors'] as const;
 
@@ -123,7 +124,7 @@ const IconButton: React.FC<{
     border: `1px solid ${colors.borderSubtle}`,
     borderRadius: borderRadius.base,
     backgroundColor: hovered ? colors.surfaceHover : 'transparent',
-    color: hovered ? colors.primaryOrange : colors.textSecondary,
+    color: hovered ? colors.orangeText : colors.textSecondary,
     cursor: 'pointer',
     transition: `all ${transitions.quick}`,
     textDecoration: 'none',
@@ -134,6 +135,7 @@ const IconButton: React.FC<{
       <a
         href={href}
         title={title}
+        aria-label={title}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         style={style}
@@ -147,6 +149,7 @@ const IconButton: React.FC<{
     <button
       onClick={onClick}
       title={title}
+      aria-label={title}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={style}
@@ -175,6 +178,7 @@ const ViewToggle: React.FC<{
       <button
         key={mode}
         onClick={() => onChange(mode)}
+        aria-pressed={viewMode === mode}
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -277,7 +281,9 @@ export const Directory: React.FC = () => {
             pdfFilename="SiteSync_Directory"
           />
           <ViewToggle viewMode={viewMode} onChange={setViewMode} />
-          <Btn onClick={() => setCreateOpen(true)}>Add Contact</Btn>
+          <PermissionGate permission="directory.manage">
+            <Btn onClick={() => setCreateOpen(true)}>Add Contact</Btn>
+          </PermissionGate>
         </div>
       }
     >
@@ -298,6 +304,7 @@ export const Directory: React.FC = () => {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            aria-label="Search contacts, companies, or roles"
             placeholder="Search contacts, companies, or roles..."
             style={{
               flex: 1,
@@ -457,7 +464,7 @@ export const Directory: React.FC = () => {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: '#fff',
+                  color: colors.white,
                   flexShrink: 0,
                 }}
               >
@@ -497,7 +504,7 @@ export const Directory: React.FC = () => {
                   marginBottom: spacing['3'],
                 }}
               >
-                <BarChart3 size={16} style={{ color: colors.primaryOrange }} />
+                <BarChart3 size={16} style={{ color: colors.orangeText }} />
                 <span
                   style={{
                     fontSize: typography.fontSize.body,
@@ -564,7 +571,7 @@ export const Directory: React.FC = () => {
                   marginBottom: spacing['3'],
                 }}
               >
-                <ChevronRight size={16} style={{ color: colors.primaryOrange }} />
+                <ChevronRight size={16} style={{ color: colors.orangeText }} />
                 <span
                   style={{
                     fontSize: typography.fontSize.body,

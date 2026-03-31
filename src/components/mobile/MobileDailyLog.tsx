@@ -325,7 +325,7 @@ export const MobileDailyLog: React.FC<MobileDailyLogProps> = ({
           padding: `${spacing['2']} ${spacing['3']}`, minHeight: '44px',
           fontSize: typography.fontSize.body, fontFamily: typography.fontFamily,
           backgroundColor: 'transparent', border: 'none', cursor: 'pointer',
-          color: colors.primaryOrange, fontWeight: typography.fontWeight.semibold,
+          color: colors.orangeText, fontWeight: typography.fontWeight.semibold,
         }}>
           <Save size={16} /> Save
         </button>

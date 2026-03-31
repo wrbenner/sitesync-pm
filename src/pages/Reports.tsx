@@ -119,7 +119,7 @@ export const Reports: React.FC = () => {
                   width: 40, height: 40, borderRadius: borderRadius.md,
                   backgroundColor: colors.orangeSubtle,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: colors.primaryOrange,
+                  color: colors.orangeText,
                 }}>
                   {reportIcons[report.type] ?? <FileText size={18} />}
                 </div>

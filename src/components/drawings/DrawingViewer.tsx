@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { ZoomIn, ZoomOut, X, Eye, EyeOff, Maximize2 } from 'lucide-react';
-import { colors, spacing, typography, borderRadius, shadows, transitions, zIndex } from '../../styles/theme';
+import { colors, spacing, typography, borderRadius, shadows, transitions, zIndex, vizColors } from '../../styles/theme';
 import { MarkupToolbar } from './MarkupToolbar';
 import type { MarkupTool } from './MarkupToolbar';
 import { IssueOverlay } from './IssueOverlay';
@@ -30,7 +30,7 @@ const disciplineLayers = [
 ];
 
 // Issue pins loaded from drawing_markups table via parent page
-const mockIssuePins: IssuePin[] = [];
+const issuePins: IssuePin[] = [];
 
 export const DrawingViewer: React.FC<DrawingViewerProps> = ({ drawing, onClose }) => {
   const [zoom, setZoom] = useState(1);
@@ -123,7 +123,7 @@ export const DrawingViewer: React.FC<DrawingViewerProps> = ({ drawing, onClose }
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: zIndex.modal as number, backgroundColor: '#1a1a2e', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: zIndex.modal as number, backgroundColor: vizColors.dark, display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: `${spacing['3']} ${spacing['4']}`, backgroundColor: 'rgba(0,0,0,0.3)', flexShrink: 0 }}>
         <div>
@@ -228,7 +228,7 @@ export const DrawingViewer: React.FC<DrawingViewerProps> = ({ drawing, onClose }
               </div>
 
               {/* Issue pins */}
-              <IssueOverlay pins={mockIssuePins} visibleTypes={visiblePinTypes} onToggleType={togglePinType} />
+              <IssueOverlay pins={issuePins} visibleTypes={visiblePinTypes} onToggleType={togglePinType} />
 
               {/* Markups */}
               {markups.map((m) => {
@@ -245,8 +245,8 @@ export const DrawingViewer: React.FC<DrawingViewerProps> = ({ drawing, onClose }
                   const angle = Math.atan2(dy, dx) * (180 / Math.PI);
                   return (
                     <React.Fragment key={m.id}>
-                      <div style={{ position: 'absolute', left: `${m.x}%`, top: `${m.y}%`, width: `${len}%`, height: '2px', backgroundColor: '#00ff88', transform: `rotate(${angle}deg)`, transformOrigin: '0 50%' }} />
-                      <div style={{ position: 'absolute', left: `${(m.x + m.endX) / 2}%`, top: `${(m.y + m.endY) / 2}%`, transform: 'translate(-50%, -100%)', padding: '1px 4px', backgroundColor: '#00ff88', color: '#000', fontSize: '10px', fontWeight: 600, borderRadius: 2, whiteSpace: 'nowrap' }}>
+                      <div style={{ position: 'absolute', left: `${m.x}%`, top: `${m.y}%`, width: `${len}%`, height: '2px', backgroundColor: vizColors.success, transform: `rotate(${angle}deg)`, transformOrigin: '0 50%' }} />
+                      <div style={{ position: 'absolute', left: `${(m.x + m.endX) / 2}%`, top: `${(m.y + m.endY) / 2}%`, transform: 'translate(-50%, -100%)', padding: '1px 4px', backgroundColor: vizColors.success, color: '#000', fontSize: '10px', fontWeight: 600, borderRadius: 2, whiteSpace: 'nowrap' }}>
                         {(len * 0.3).toFixed(1)} ft
                       </div>
                     </React.Fragment>
@@ -268,9 +268,9 @@ export const DrawingViewer: React.FC<DrawingViewerProps> = ({ drawing, onClose }
 
             {/* Zoom controls */}
             <div style={{ position: 'absolute', bottom: spacing['4'], left: spacing['4'], display: 'flex', flexDirection: 'column', gap: spacing['1'], zIndex: 5 }}>
-              <button onClick={() => setZoom((z) => Math.min(4, z + 0.25))} style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceRaised, border: 'none', borderRadius: borderRadius.md, cursor: 'pointer', color: colors.textSecondary, boxShadow: shadows.card }}><ZoomIn size={16} /></button>
-              <button onClick={() => setZoom((z) => Math.max(0.25, z - 0.25))} style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceRaised, border: 'none', borderRadius: borderRadius.md, cursor: 'pointer', color: colors.textSecondary, boxShadow: shadows.card }}><ZoomOut size={16} /></button>
-              <button onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }} style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceRaised, border: 'none', borderRadius: borderRadius.md, cursor: 'pointer', color: colors.textSecondary, boxShadow: shadows.card }}><Maximize2 size={16} /></button>
+              <button onClick={() => setZoom((z) => Math.min(4, z + 0.25))} aria-label="Zoom in" title="Zoom in" style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceRaised, border: 'none', borderRadius: borderRadius.md, cursor: 'pointer', color: colors.textSecondary, boxShadow: shadows.card }}><ZoomIn size={16} /></button>
+              <button onClick={() => setZoom((z) => Math.max(0.25, z - 0.25))} aria-label="Zoom out" title="Zoom out" style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceRaised, border: 'none', borderRadius: borderRadius.md, cursor: 'pointer', color: colors.textSecondary, boxShadow: shadows.card }}><ZoomOut size={16} /></button>
+              <button onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }} aria-label="Reset zoom and pan" title="Reset zoom and pan" style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceRaised, border: 'none', borderRadius: borderRadius.md, cursor: 'pointer', color: colors.textSecondary, boxShadow: shadows.card }}><Maximize2 size={16} /></button>
               <div style={{ padding: `${spacing['1']} 0`, textAlign: 'center', fontSize: typography.fontSize.caption, color: 'rgba(255,255,255,0.5)' }}>{Math.round(zoom * 100)}%</div>
             </div>
 

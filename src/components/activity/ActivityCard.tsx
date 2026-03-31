@@ -112,7 +112,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({ item, onComment, onC
               style={{
                 display: 'flex', alignItems: 'center', gap: spacing['1'],
                 backgroundColor: 'transparent', border: 'none', cursor: 'pointer',
-                color: liked ? colors.primaryOrange : colors.textTertiary,
+                color: liked ? colors.orangeText : colors.textTertiary,
                 fontSize: typography.fontSize.caption, fontFamily: typography.fontFamily,
               }}
             >

@@ -213,7 +213,7 @@ export const QuickEntry: React.FC<QuickEntryProps> = ({ initialWeather, onSave, 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: `${spacing['3']} ${spacing['4']}`, borderBottom: `1px solid ${colors.borderSubtle}`, backgroundColor: colors.surfaceRaised }}>
         <button onClick={onClose} style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.body, fontFamily: typography.fontFamily, backgroundColor: 'transparent', border: 'none', cursor: 'pointer', color: colors.textSecondary, minHeight: '44px' }}>Cancel</button>
         <span style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>Quick Entry</span>
-        <button onClick={() => onSave(data)} style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.body, fontFamily: typography.fontFamily, backgroundColor: 'transparent', border: 'none', cursor: 'pointer', color: colors.primaryOrange, fontWeight: typography.fontWeight.semibold, minHeight: '44px', display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
+        <button onClick={() => onSave(data)} style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.body, fontFamily: typography.fontFamily, backgroundColor: 'transparent', border: 'none', cursor: 'pointer', color: colors.orangeText, fontWeight: typography.fontWeight.semibold, minHeight: '44px', display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
           <Save size={16} /> Save
         </button>
       </div>
@@ -232,7 +232,7 @@ export const QuickEntry: React.FC<QuickEntryProps> = ({ initialWeather, onSave, 
 
       {/* Section header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'], padding: `${spacing['2']} ${spacing['5']}` }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: borderRadius.md, backgroundColor: colors.orangeSubtle, color: colors.primaryOrange }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: borderRadius.md, backgroundColor: colors.orangeSubtle, color: colors.orangeText }}>
           {section.icon}
         </div>
         <div>

@@ -1,6 +1,10 @@
 import React, { useState, useMemo } from 'react';
+import { useTableKeyboardNavigation } from '../hooks/useTableKeyboardNavigation';
 import {
+  AlertTriangle,
+  CheckSquare,
   Plus,
+  RefreshCw,
   Search,
   Calendar,
   MessageSquare,
@@ -24,50 +28,90 @@ import {
   PageContainer,
   RelatedItems,
   Skeleton,
+  EmptyState,
   useToast,
 } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../styles/theme';
-import { useQuery } from '../hooks/useQuery';
-import { getTasks } from '../api/endpoints/tasks';
+import { useTasks } from '../hooks/queries';
 import { useAppNavigate, getRelatedItemsForTask } from '../utils/connections';
 import { useCreateTask, useUpdateTask, useBulkUpdateTasks, useBulkDeleteTasks, useApplyTaskTemplate } from '../hooks/mutations';
-import { useTaskCriticalPath, useTaskTemplates } from '../hooks/queries';
+import { useDirectoryContacts, useTaskCriticalPath, useTaskTemplates } from '../hooks/queries';
 import { useProjectId } from '../hooks/useProjectId';
 import { AIAnnotationIndicator } from '../components/ai/AIAnnotation';
 import { PredictiveAlertBanner } from '../components/ai/PredictiveAlert';
 import { getAnnotationsForEntity, getPredictiveAlertsForPage } from '../data/aiAnnotations';
+import { PermissionGate } from '../components/auth/PermissionGate';
 
 type TaskStatus = 'todo' | 'in_progress' | 'in_review' | 'done';
 type TaskPriority = 'low' | 'medium' | 'high' | 'critical';
 
 const statusConfig: Record<TaskStatus, { label: string; color: string; dotColor: string }> = {
-  todo: { label: 'To Do', color: '#92400E', dotColor: colors.statusPending },
-  in_progress: { label: 'In Progress', color: '#1E40AF', dotColor: colors.statusInfo },
-  in_review: { label: 'In Review', color: '#7C3AED', dotColor: colors.statusReview },
-  done: { label: 'Done', color: '#166534', dotColor: colors.statusActive },
+  todo: { label: 'To Do', color: colors.statusPending, dotColor: colors.statusPending },
+  in_progress: { label: 'In Progress', color: colors.statusInfo, dotColor: colors.statusInfo },
+  in_review: { label: 'In Review', color: colors.statusReview, dotColor: colors.statusReview },
+  done: { label: 'Done', color: colors.statusSuccess, dotColor: colors.statusActive },
 };
 
 const columns: TaskStatus[] = ['todo', 'in_progress', 'in_review', 'done'];
 const priorities: Array<TaskPriority | 'all'> = ['all', 'critical', 'high', 'medium', 'low'];
 
-const assigneeMap: Record<string, { name: string; initials: string; company: string }> = {
-  MP: { name: 'Mike Patterson', initials: 'MP', company: 'Turner Construction' },
-  JL: { name: 'Jennifer Lee', initials: 'JL', company: 'Lee Engineering' },
-  DK: { name: 'David Kumar', initials: 'DK', company: 'Kumar Electrical' },
-  RA: { name: 'Robert Anderson', initials: 'RA', company: 'Anderson Concrete' },
-  TR: { name: 'Thomas Rodriguez', initials: 'TR', company: 'Rodriguez Plumbing' },
-  KW: { name: 'Karen Williams', initials: 'KW', company: 'Quality HVAC Services' },
-};
+interface MappedTask {
+  id: number;
+  uuid: string;
+  title: string;
+  description: string;
+  status: 'todo' | 'in_progress' | 'in_review' | 'done';
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  assignee: { name: string; initials: string; company: string };
+  dueDate: string;
+  tags: string[];
+  commentsCount: number;
+  attachmentsCount: number;
+  createdDate: string;
+  subtasks: { total: number; completed: number };
+  linkedItems: Array<{ type: string; id: string }>;
+  predecessorIds: string[];
+  isCriticalPath: boolean;
+}
 
 export const Tasks: React.FC = () => {
-  const { data: fetchedTasks, loading } = useQuery('tasks', getTasks);
-  type TaskList = Awaited<ReturnType<typeof getTasks>>;
+  const projectId = useProjectId();
+  const { data: tasksRaw = [], isPending: loading, error: tasksError, refetch } = useTasks(projectId);
+
+  // Map API tasks to component shape
+  const fetchedTasks: MappedTask[] = useMemo(() => tasksRaw.map((t: Record<string, unknown>) => {
+    const name = (t.assigned_to as string) || 'Unassigned';
+    const initials = name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase() || 'NA';
+    const predecessorIds = (t.predecessor_ids as string[]) || [];
+    const tags: string[] = [];
+    if (t.is_critical_path) tags.push('critical path');
+    return {
+      id: typeof t.id === 'number' ? t.id : parseInt(String(t.id).replace(/\D/g, '').slice(0, 8) || '0', 10),
+      uuid: String(t.id || ''),
+      title: (t.title as string) || '',
+      description: (t.description as string) || '',
+      status: ((t.status as string) || 'todo') as MappedTask['status'],
+      priority: ((t.priority as string) || 'medium') as MappedTask['priority'],
+      assignee: { name, initials, company: '' },
+      dueDate: (t.due_date as string) || (t.end_date as string) || '',
+      tags,
+      commentsCount: 0,
+      attachmentsCount: 0,
+      createdDate: ((t.created_at as string) || '').slice(0, 10),
+      subtasks: { total: 0, completed: 0 },
+      linkedItems: [],
+      predecessorIds,
+      isCriticalPath: !!t.is_critical_path,
+    };
+  }), [tasksRaw]);
+
+  type TaskList = MappedTask[];
   const [localTasks, setLocalTasks] = useState<TaskList>([]);
   const [initialized, setInitialized] = useState(false);
 
   // Sync fetched data into local state once loaded
   React.useEffect(() => {
-    if (fetchedTasks && !initialized) {
+    if (fetchedTasks.length > 0 && !initialized) {
       setLocalTasks(fetchedTasks);
       setInitialized(true);
     }
@@ -86,7 +130,6 @@ export const Tasks: React.FC = () => {
   const [showTemplates, setShowTemplates] = useState(false);
   const { addToast } = useToast();
   const appNavigate = useAppNavigate();
-  const projectId = useProjectId();
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
   const bulkUpdate = useBulkUpdateTasks();
@@ -94,6 +137,7 @@ export const Tasks: React.FC = () => {
   const applyTemplate = useApplyTaskTemplate();
   const { data: cpmResults } = useTaskCriticalPath(projectId);
   const { data: templates } = useTaskTemplates();
+  const { data: teamMembers = [] } = useDirectoryContacts(projectId);
 
   const filteredTasks = useMemo(() => {
     return localTasks.filter((t) => {
@@ -106,6 +150,8 @@ export const Tasks: React.FC = () => {
       return matchesSearch && matchesPriority && matchesMy;
     });
   }, [localTasks, searchQuery, filterPriority, criticalFilter, myTasksOnly]);
+
+  useTableKeyboardNavigation(filteredTasks, selectedTask?.id ?? null, setSelectedTask);
 
   const tasksByStatus = useMemo(() => {
     const grouped: Record<TaskStatus, typeof localTasks> = { todo: [], in_progress: [], in_review: [], done: [] };
@@ -608,6 +654,7 @@ export const Tasks: React.FC = () => {
           {/* Actions */}
           <div style={{ display: 'flex', gap: spacing.md }}>
             {selectedTask.status !== 'done' && (
+              <PermissionGate permission="tasks.edit">
               <Btn variant="primary" size="md" icon={<ArrowRight size={16} />} iconPosition="right" onClick={async () => {
                 const nextStatus: Record<string, TaskStatus> = { todo: 'in_progress', in_progress: 'in_review', in_review: 'done' };
                 const newStatus = nextStatus[selectedTask.status];
@@ -628,6 +675,7 @@ export const Tasks: React.FC = () => {
               }}>
                 {selectedTask.status === 'todo' ? 'Start Task' : selectedTask.status === 'in_progress' ? 'Move to Review' : 'Mark Complete'}
               </Btn>
+              </PermissionGate>
             )}
             <Btn variant="secondary" size="md" icon={<MessageSquare size={16} />}>Comment</Btn>
           </div>
@@ -638,7 +686,7 @@ export const Tasks: React.FC = () => {
 
   const pageAlerts = getPredictiveAlertsForPage('tasks');
 
-  if (loading || !localTasks || localTasks.length === 0 && !initialized) {
+  if (loading) {
     return (
       <PageContainer title="Tasks" subtitle="Loading...">
         <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.lg }}>
@@ -657,6 +705,40 @@ export const Tasks: React.FC = () => {
     );
   }
 
+  if (tasksError) {
+    return (
+      <PageContainer title="Tasks" subtitle="Unable to load">
+        <Card padding={spacing['6']}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['4'], padding: spacing['6'], textAlign: 'center' }}>
+            <AlertTriangle size={40} color={colors.statusCritical} />
+            <div>
+              <p style={{ fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>Failed to load tasks</p>
+              <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: 0 }}>{(tasksError as Error).message || 'Unable to fetch task data'}</p>
+            </div>
+            <Btn variant="primary" size="sm" icon={<RefreshCw size={14} />} onClick={() => refetch()}>Try Again</Btn>
+          </div>
+        </Card>
+      </PageContainer>
+    );
+  }
+
+  if (localTasks.length === 0 && initialized) {
+    return (
+      <PageContainer
+        title="Tasks"
+        subtitle="No items"
+        actions={<PermissionGate permission="tasks.create"><Btn onClick={() => setShowNewTask(true)}><Plus size={16} style={{ marginRight: spacing.xs }} />New Task</Btn></PermissionGate>}
+      >
+        <EmptyState
+          icon={<CheckSquare size={40} color={colors.textTertiary} />}
+          title="No tasks yet"
+          description="Create a task to assign work and track progress across your project."
+          action={<PermissionGate permission="tasks.create"><Btn variant="primary" onClick={() => setShowNewTask(true)}>Create Task</Btn></PermissionGate>}
+        />
+      </PageContainer>
+    );
+  }
+
   return (
     <PageContainer
       title="Tasks"
@@ -664,7 +746,7 @@ export const Tasks: React.FC = () => {
       actions={
         <div style={{ display: 'flex', gap: spacing.sm }}>
           <Btn variant="ghost" size="md" icon={<LayoutTemplate size={16} />} onClick={() => setShowTemplates(true)}>Templates</Btn>
-          <Btn variant="primary" size="md" icon={<Plus size={16} />} onClick={() => setShowNewTask(true)}>New Task</Btn>
+          <PermissionGate permission="tasks.create"><Btn variant="primary" size="md" icon={<Plus size={16} />} onClick={() => setShowNewTask(true)}>New Task</Btn></PermissionGate>
         </div>
       }
     >
@@ -793,7 +875,7 @@ export const Tasks: React.FC = () => {
       {/* Detail Panel */}
       {selectedTask && (
         <>
-          <div onClick={() => setSelectedTask(null)} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.2)', zIndex: 1039 }} />
+          <div onClick={() => setSelectedTask(null)} role="presentation" aria-hidden="true" style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.2)', zIndex: 1039 }} />
           {renderDetailPanel()}
         </>
       )}
@@ -809,19 +891,23 @@ export const Tasks: React.FC = () => {
         }}>
           <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold }}>{selectedIds.size} selected</span>
           <div style={{ width: 1, height: 20, backgroundColor: 'rgba(255,255,255,0.2)' }} />
-          {(['todo', 'in_progress', 'in_review', 'done'] as TaskStatus[]).map(s => (
-            <button key={s} onClick={() => handleBulkStatusChange(s)} style={{
-              padding: `${spacing.xs} ${spacing.md}`, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
-              backgroundColor: 'rgba(255,255,255,0.1)', color: colors.white, border: 'none',
-              borderRadius: borderRadius.sm, cursor: 'pointer',
-            }}>{statusConfig[s].label}</button>
-          ))}
+          <PermissionGate permission="tasks.edit">
+            {(['todo', 'in_progress', 'in_review', 'done'] as TaskStatus[]).map(s => (
+              <button key={s} onClick={() => handleBulkStatusChange(s)} style={{
+                padding: `${spacing.xs} ${spacing.md}`, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
+                backgroundColor: 'rgba(255,255,255,0.1)', color: colors.white, border: 'none',
+                borderRadius: borderRadius.sm, cursor: 'pointer',
+              }}>{statusConfig[s].label}</button>
+            ))}
+          </PermissionGate>
           <div style={{ width: 1, height: 20, backgroundColor: 'rgba(255,255,255,0.2)' }} />
-          <button onClick={handleBulkDelete} style={{
-            padding: `${spacing.xs} ${spacing.md}`, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
-            backgroundColor: 'rgba(201,59,59,0.3)', color: '#ff8888', border: 'none',
-            borderRadius: borderRadius.sm, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: spacing.xs,
-          }}><Trash2 size={13} /> Delete</button>
+          <PermissionGate permission="tasks.delete">
+            <button onClick={handleBulkDelete} style={{
+              padding: `${spacing.xs} ${spacing.md}`, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
+              backgroundColor: colors.statusCriticalSubtle, color: colors.chartPink, border: 'none',
+              borderRadius: borderRadius.sm, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: spacing.xs,
+            }}><Trash2 size={13} /> Delete</button>
+          </PermissionGate>
           <button onClick={() => setSelectedIds(new Set())} style={{
             padding: `${spacing.xs} ${spacing.md}`, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
             backgroundColor: 'transparent', color: 'rgba(255,255,255,0.6)', border: 'none',
@@ -837,7 +923,7 @@ export const Tasks: React.FC = () => {
             Select a template to create a set of pre configured tasks with dependencies.
           </p>
           {(templates || []).map((tmpl: any) => (
-            <div key={tmpl.id} onClick={() => handleApplyTemplate(tmpl.id)} style={{
+            <div key={tmpl.id} onClick={() => handleApplyTemplate(tmpl.id)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleApplyTemplate(tmpl.id); } }} style={{
               padding: spacing.lg, backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.md,
               cursor: 'pointer', transition: `background-color ${transitions.quick}`,
             }}
@@ -888,12 +974,9 @@ export const Tasks: React.FC = () => {
               <select value={newAssignee} onChange={(e) => setNewAssignee(e.target.value)}
                 style={{ width: '100%', padding: `${spacing.md} ${spacing.lg}`, fontSize: typography.fontSize.base, fontFamily: typography.fontFamily, border: 'none', backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.md, outline: 'none' }}>
                 <option value="">Select...</option>
-                <option value="MP">Mike Patterson</option>
-                <option value="JL">Jennifer Lee</option>
-                <option value="DK">David Kumar</option>
-                <option value="RA">Robert Anderson</option>
-                <option value="TR">Thomas Rodriguez</option>
-                <option value="KW">Karen Williams</option>
+                {teamMembers.map((m: Record<string, unknown>) => (
+                  <option key={String(m.id)} value={String(m.id)}>{String(m.name || m.full_name || m.email || m.id)}</option>
+                ))}
               </select>
             </div>
           </div>
@@ -909,7 +992,9 @@ export const Tasks: React.FC = () => {
                 addToast('error', 'Please enter a task title');
                 return;
               }
-              const assignee = assigneeMap[newAssignee] || { name: 'Unassigned', initials: 'UA', company: '' };
+              const member = teamMembers.find((m: Record<string, unknown>) => String(m.id) === newAssignee);
+              const memberName = member ? String(member.name || member.full_name || member.email || '') : 'Unassigned';
+              const assignee = { name: memberName, initials: memberName.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase() || 'UA', company: member ? String(member.company || '') : '' };
               const newTask = {
                 id: Date.now(),
                 title: newTitle.trim(),

@@ -139,6 +139,10 @@ export interface PresenceUser {
   color: string
   page: string
   entityId?: string
+  action?: 'viewing' | 'editing'
+  editingEntityType?: string
+  editingEntityId?: string
+  editingSince?: number
   lastSeen: number
 }
 
@@ -184,6 +188,11 @@ export function subscribeToPresence(
         if (key === userId) continue // Skip self
         const latest = (presences as any[])[0]
         if (latest) {
+          // Release stale editing locks (30 second timeout)
+          const editingSince = latest.editingSince as number | undefined
+          const isStaleEdit = editingSince && (Date.now() - editingSince > 30_000)
+          const action = (latest.action === 'editing' && !isStaleEdit) ? 'editing' as const : 'viewing' as const
+
           users.push({
             userId: key,
             name: latest.name || 'Unknown',
@@ -191,6 +200,10 @@ export function subscribeToPresence(
             color: getUserColor(key),
             page: latest.page || 'dashboard',
             entityId: latest.entityId,
+            action,
+            editingEntityType: action === 'editing' ? latest.editingEntityType : undefined,
+            editingEntityId: action === 'editing' ? latest.editingEntityId : undefined,
+            editingSince: action === 'editing' ? editingSince : undefined,
             lastSeen: latest.lastSeen || Date.now(),
           })
         }
@@ -223,8 +236,35 @@ export function updatePresencePage(page: string, entityId?: string) {
     presenceChannel.track({
       page,
       entityId,
+      action: 'viewing',
       lastSeen: Date.now(),
     }).catch(() => {}) // Ignore errors on presence update
+  }
+}
+
+/** Broadcast that current user started editing an entity */
+export function broadcastEditingStart(entityType: string, entityId: string) {
+  if (presenceChannel) {
+    presenceChannel.track({
+      action: 'editing',
+      editingEntityType: entityType,
+      editingEntityId: entityId,
+      editingSince: Date.now(),
+      lastSeen: Date.now(),
+    }).catch(() => {})
+  }
+}
+
+/** Broadcast that current user stopped editing */
+export function broadcastEditingStop() {
+  if (presenceChannel) {
+    presenceChannel.track({
+      action: 'viewing',
+      editingEntityType: undefined,
+      editingEntityId: undefined,
+      editingSince: undefined,
+      lastSeen: Date.now(),
+    }).catch(() => {})
   }
 }
 

@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
-import { PageContainer, Card, Btn, StatusTag, PriorityTag, TableHeader, TableRow, DetailPanel, RelatedItems, Skeleton, useToast } from '../components/Primitives';
+import React, { useState, useMemo, useCallback } from 'react';
+import { PageContainer, Card, Btn, StatusTag, PriorityTag, TableHeader, TableRow, DetailPanel, RelatedItems, Skeleton, EmptyState, useToast } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
-import { useQuery } from '../hooks/useQuery';
-import { getSubmittals } from '../api/endpoints/submittals';
-import { Calendar, Clock, ArrowRight, CheckCircle, Paperclip, LayoutGrid, List, Sparkles, Search } from 'lucide-react';
+import { useSubmittals } from '../hooks/queries';
+import { useTableKeyboardNavigation } from '../hooks/useTableKeyboardNavigation';
+import { AlertTriangle, Calendar, Clock, ArrowRight, CheckCircle, ClipboardList, Paperclip, LayoutGrid, List, RefreshCw, Sparkles, Search } from 'lucide-react';
 import { useAppNavigate, getRelatedItemsForSubmittal } from '../utils/connections';
+import { useCreateSubmittal, useUpdateSubmittal } from '../hooks/mutations';
+import { useProjectId } from '../hooks/useProjectId';
+import { PermissionGate } from '../components/auth/PermissionGate';
 import { AIAnnotationIndicator } from '../components/ai/AIAnnotation';
 import { PredictiveAlertBanner } from '../components/ai/PredictiveAlert';
 import { getAnnotationsForEntity, getPredictiveAlertsForPage } from '../data/aiAnnotations';
@@ -12,6 +15,11 @@ import { KanbanBoard } from '../components/shared/KanbanBoard';
 import type { KanbanColumn } from '../components/shared/KanbanBoard';
 import { ApprovalChain } from '../components/shared/ApprovalChain';
 import type { ApprovalStep } from '../components/shared/ApprovalChain';
+import CreateSubmittalModal from '../components/forms/CreateSubmittalModal';
+import { EditableDetailField } from '../components/forms/EditableField';
+import { toast } from 'sonner';
+import { PresenceAvatars } from '../components/shared/PresenceAvatars';
+import { EditingLockBanner } from '../components/ui/EditingLockBanner';
 
 const isOverdue = (dateStr: string) => new Date(dateStr) < new Date();
 
@@ -24,64 +32,33 @@ const columns = [
   { label: 'Due', width: '100px' },
 ];
 
-const mockDescriptions: Record<number, string> = {
-  1: 'Complete set of structural steel shop drawings for floors 7 through 12, including connection details, erection sequences, and bolt patterns per specification section 05 12 00.',
-  2: 'Mechanical equipment specifications for rooftop HVAC units including performance data, electrical requirements, structural loads, and maintenance access requirements.',
-  3: 'Full door and hardware schedule covering 186 door openings across floors 1 through 12. Includes finish hardware groups, keying schedule, and access control integration.',
-  4: 'Electrical panel specifications for main distribution and branch circuit panels. Includes single line diagrams, short circuit calculations, and arc flash labels.',
-};
-
-const reviewTimelines: Record<number, Array<{ date: string; event: string; by: string; status: 'complete' | 'active' | 'pending' }>> = {
-  1: [
-    { date: 'Mar 10, 2025', event: 'Submitted by contractor', by: 'Fabricator ABC Steel', status: 'complete' },
-    { date: 'Mar 18, 2025', event: 'Architect review complete', by: 'Morris Architects', status: 'complete' },
-    { date: 'Mar 22, 2025', event: 'Approved with no exceptions', by: 'Turner Construction', status: 'complete' },
-  ],
-  2: [
-    { date: 'Mar 14, 2025', event: 'Submitted by contractor', by: 'HVAC Contractor', status: 'complete' },
-    { date: 'Mar 21, 2025', event: 'Under architect review', by: 'Morris Architects', status: 'active' },
-    { date: 'Pending', event: 'Awaiting final response', by: 'Turner Construction', status: 'pending' },
-  ],
-  3: [
-    { date: 'Mar 8, 2025', event: 'Submitted by contractor', by: 'Hardware Supplier', status: 'complete' },
-    { date: 'Mar 15, 2025', event: 'Revisions requested', by: 'Morris Architects', status: 'complete' },
-    { date: 'Pending', event: 'Awaiting resubmission', by: 'Hardware Supplier', status: 'pending' },
-  ],
-  4: [
-    { date: 'Mar 20, 2025', event: 'Submitted by contractor', by: 'Electrical Supplier', status: 'complete' },
-    { date: 'Pending', event: 'Awaiting architect review', by: 'Morris Architects', status: 'pending' },
-    { date: 'Pending', event: 'Awaiting final response', by: 'Turner Construction', status: 'pending' },
-  ],
-};
-
-
-const specSections: Record<number, string> = {
-  1: '05 12 00', 2: '23 05 00', 3: '08 71 00', 4: '26 24 00',
-  5: '03 30 00', 6: '08 44 00', 7: '23 73 00', 8: '14 21 00',
-  9: '21 13 00', 10: '26 24 13', 11: '22 40 00', 12: '07 10 00',
-  13: '09 51 00', 14: '08 71 00', 15: '09 91 00', 16: '05 12 00',
-};
-
-const reviewCycles: Record<number, number> = { 3: 2, 12: 3, 16: 2 };
-
-const leadTimes: Record<number, number> = {
-  1: 6, 2: 10, 3: 4, 4: 8, 5: 3, 6: 16, 7: 12, 8: 14, 9: 6, 10: 10, 11: 4, 12: 8, 13: 3, 14: 4, 15: 2, 16: 6,
-};
-
 const Submittals: React.FC = () => {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingDetail, setEditingDetail] = useState(false);
   const { addToast } = useToast();
   const appNavigate = useAppNavigate();
-  const { data: submittals, loading } = useQuery('submittals', getSubmittals);
+  const projectId = useProjectId();
+  const createSubmittal = useCreateSubmittal();
+  const updateSubmittal = useUpdateSubmittal();
+  const { data: submittalsRaw = [], isPending: loading, error: submittalsError, refetch } = useSubmittals(projectId);
 
-  if (loading || !submittals) {
+  // Map API data to component shape
+  const submittals = useMemo(() => submittalsRaw.map((s: Record<string, unknown>) => ({
+    ...s,
+    submittalNumber: s.number ? `SUB-${String(s.number).padStart(3, '0')}` : String(s.id ?? '').slice(0, 8),
+    from: (s.subcontractor as string) || (s.created_by as string) || '',
+    dueDate: (s.due_date as string) || '',
+  })), [submittalsRaw]);
+
+  if (loading) {
     return (
       <PageContainer title="Submittals" subtitle="Loading...">
         <Card padding="0">
           <div style={{ padding: spacing.lg, display: 'flex', flexDirection: 'column', gap: spacing.md }}>
-            {[1, 2, 3, 4, 5].map(i => (
-              <Skeleton key={i} height="40px" />
+            {Array.from({ length: 8 }).map((_, i) => (
+              <Skeleton key={i} height="44px" />
             ))}
           </div>
         </Card>
@@ -89,43 +66,80 @@ const Submittals: React.FC = () => {
     );
   }
 
-  const allSubmittals = submittals || [];
+  if (submittalsError) {
+    return (
+      <PageContainer title="Submittals" subtitle="Unable to load">
+        <Card padding={spacing['6']}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['4'], padding: spacing['6'], textAlign: 'center' }}>
+            <AlertTriangle size={40} color={colors.statusCritical} />
+            <div>
+              <p style={{ fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>Failed to load submittals</p>
+              <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: 0 }}>{(submittalsError as Error).message || 'Unable to fetch submittal data'}</p>
+            </div>
+            <Btn variant="primary" size="sm" icon={<RefreshCw size={14} />} onClick={() => refetch()}>Try Again</Btn>
+          </div>
+        </Card>
+      </PageContainer>
+    );
+  }
+
+  if (!submittals.length) {
+    return (
+      <PageContainer
+        title="Submittals"
+        subtitle="No items"
+        actions={<PermissionGate permission="submittals.create"><Btn onClick={() => setShowCreateModal(true)}>New Submittal</Btn></PermissionGate>}
+      >
+        <EmptyState
+          icon={<ClipboardList size={40} color={colors.textTertiary} />}
+          title="No submittals yet"
+          description="Create a submittal to track shop drawings, product data, and material approvals."
+          action={<PermissionGate permission="submittals.create"><Btn variant="primary" onClick={() => setShowCreateModal(true)}>New Submittal</Btn></PermissionGate>}
+        />
+      </PageContainer>
+    );
+  }
+
+  const allSubmittals = submittals;
+
+  const handleKeySelect = useCallback((sub: Record<string, unknown>) => setSelectedId(sub.id as number), []);
+  useTableKeyboardNavigation(allSubmittals, selectedId, handleKeySelect);
 
   const pageAlerts = getPredictiveAlertsForPage('submittals');
-  const openCount = allSubmittals.filter(s => s.status !== 'approved').length;
-  const selected = allSubmittals.find(s => s.id === selectedId) || null;
-  const timeline = selectedId ? reviewTimelines[selectedId] || [] : [];
+  const openCount = useMemo(() => allSubmittals.filter((s: Record<string, unknown>) => s.status !== 'approved').length, [allSubmittals]);
+  const selected = allSubmittals.find((s: Record<string, unknown>) => s.id === selectedId) || null;
+  const timeline: Array<{ date: string; event: string; by: string; status: 'complete' | 'active' | 'pending' }> = [];
 
-  const kanbanColumns: KanbanColumn<any>[] = [
+  const kanbanColumns: KanbanColumn<any>[] = useMemo(() => [
     { id: 'pending', label: 'Pending', color: colors.statusPending, items: allSubmittals.filter((s) => s.status === 'pending') },
     { id: 'under_review', label: 'Under Review', color: colors.statusInfo, items: allSubmittals.filter((s) => s.status === 'under_review') },
     { id: 'revise_resubmit', label: 'Revise & Resubmit', color: colors.statusCritical, items: allSubmittals.filter((s) => s.status === 'revise_resubmit') },
     { id: 'approved', label: 'Approved', color: colors.statusActive, items: allSubmittals.filter((s) => s.status === 'approved') },
-  ];
+  ], [allSubmittals]);
 
-  const approvalSteps: ApprovalStep[] = selected ? [
+  const approvalSteps: ApprovalStep[] = useMemo(() => selected ? [
     { id: 1, role: 'Subcontractor', name: selected.from || 'Contractor', initials: 'SC', status: 'approved', date: 'Submitted', comment: 'Initial submission' },
-    { id: 2, role: 'General Contractor', name: 'Mike Patterson', initials: 'MP', status: 'approved', date: 'Reviewed' },
-    { id: 3, role: 'Architect', name: 'Jennifer Lee', initials: 'JL', status: selected.status === 'approved' ? 'approved' : selected.status === 'revise_resubmit' ? 'rejected' : 'pending', date: selected.status === 'approved' ? 'Approved' : undefined, comment: selected.status === 'revise_resubmit' ? 'Revisions required' : undefined },
-    { id: 4, role: 'Owner', name: 'James Bradford', initials: 'JB', status: selected.status === 'approved' ? 'approved' : 'waiting' },
-  ] : [];
+    { id: 2, role: 'General Contractor', name: 'GC Reviewer', initials: 'GC', status: 'approved', date: 'Reviewed' },
+    { id: 3, role: 'Architect', name: 'Architect', initials: 'AR', status: selected.status === 'approved' ? 'approved' : selected.status === 'revise_resubmit' ? 'rejected' : 'pending', date: selected.status === 'approved' ? 'Approved' : undefined, comment: selected.status === 'revise_resubmit' ? 'Revisions required' : undefined },
+    { id: 4, role: 'Owner', name: 'Owner', initials: 'OW', status: selected.status === 'approved' ? 'approved' : 'waiting' },
+  ] : [], [selected]);
 
-  const handleApprove = () => {
+  const handleApprove = useCallback(() => {
     addToast('success', `${selected?.submittalNumber} approved successfully`);
     setSelectedId(null);
-  };
+  }, [selected, addToast]);
 
-  const handleReject = () => {
+  const handleReject = useCallback(() => {
     addToast('error', `${selected?.submittalNumber} has been rejected`);
     setSelectedId(null);
-  };
+  }, [selected, addToast]);
 
-  const handleRequestRevision = () => {
+  const handleRequestRevision = useCallback(() => {
     addToast('warning', `Revision requested for ${selected?.submittalNumber}`);
     setSelectedId(null);
-  };
+  }, [selected, addToast]);
 
-  const toggleBtnStyle = (active: boolean): React.CSSProperties => ({
+  const toggleBtnStyle = useCallback((active: boolean): React.CSSProperties => ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -136,7 +150,7 @@ const Submittals: React.FC = () => {
     backgroundColor: active ? colors.primaryOrange : 'transparent',
     color: active ? colors.white : colors.textTertiary,
     transition: 'all 150ms ease',
-  });
+  }), []);
 
   return (
     <PageContainer
@@ -149,6 +163,7 @@ const Submittals: React.FC = () => {
               style={{ ...toggleBtnStyle(viewMode === 'table'), borderRadius: `${borderRadius.full} 0 0 ${borderRadius.full}` }}
               onClick={() => setViewMode('table')}
               title="Table View"
+              aria-label="Table View"
             >
               <List size={16} />
             </button>
@@ -156,11 +171,14 @@ const Submittals: React.FC = () => {
               style={{ ...toggleBtnStyle(viewMode === 'kanban'), borderRadius: `0 ${borderRadius.full} ${borderRadius.full} 0` }}
               onClick={() => setViewMode('kanban')}
               title="Board View"
+              aria-label="Board View"
             >
               <LayoutGrid size={16} />
             </button>
           </div>
-          <Btn onClick={() => addToast('info', 'Form submission requires backend configuration')}>New Submittal</Btn>
+          <PermissionGate permission="submittals.create">
+            <Btn onClick={() => setShowCreateModal(true)}>New Submittal</Btn>
+          </PermissionGate>
         </div>
       }
     >
@@ -170,6 +188,7 @@ const Submittals: React.FC = () => {
 
       {viewMode === 'table' ? (
         <Card padding="0">
+          <div role="table" aria-label="Submittals list">
           <TableHeader columns={columns} />
           {allSubmittals.map((sub, i) => (
             <div
@@ -185,7 +204,7 @@ const Submittals: React.FC = () => {
                 columns={[
                   {
                     width: '100px',
-                    content: <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.primaryOrange }}>{sub.submittalNumber}</span>,
+                    content: <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.orangeText }}>{sub.submittalNumber}</span>,
                   },
                   {
                     width: '1fr',
@@ -198,8 +217,8 @@ const Submittals: React.FC = () => {
                           ))}
                         </span>
                         <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
-                          {specSections[sub.id] && <span style={{ fontFamily: 'monospace', marginRight: spacing['2'] }}>{specSections[sub.id]}</span>}
-                          {leadTimes[sub.id] && (() => { const wks = leadTimes[sub.id]; const c = wks > 12 ? colors.statusCritical : wks >= 8 ? colors.statusPending : colors.statusActive; return <span style={{ color: c }}>{wks} wk lead</span>; })()}
+                          {sub.spec_section && <span style={{ fontFamily: 'monospace', marginRight: spacing['2'] }}>{sub.spec_section}</span>}
+                          {sub.lead_time_weeks != null && sub.lead_time_weeks > 0 && (() => { const wks = sub.lead_time_weeks; const c = wks > 12 ? colors.statusCritical : wks >= 8 ? colors.statusPending : colors.statusActive; return <span style={{ color: c }}>{wks} wk lead</span>; })()}
                         </span>
                       </div>
                     ),
@@ -217,7 +236,7 @@ const Submittals: React.FC = () => {
                     content: (
                       <span style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
                         <StatusTag status={sub.status as any} />
-                        {reviewCycles[sub.id] && <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.statusCritical, backgroundColor: `${colors.statusCritical}08`, padding: '1px 5px', borderRadius: borderRadius.full }}>C{reviewCycles[sub.id]}</span>}
+                        {sub.revision_number > 1 && <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.statusCritical, backgroundColor: `${colors.statusCritical}08`, padding: '1px 5px', borderRadius: borderRadius.full }}>C{sub.revision_number}</span>}
                       </span>
                     ),
                   },
@@ -233,12 +252,13 @@ const Submittals: React.FC = () => {
               />
             </div>
           ))}
+          </div>
           {allSubmittals.length === 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', textAlign: 'center' }}>
-              <Search size={32} color="#A09890" style={{ marginBottom: '12px' }} />
-              <p style={{ fontSize: '14px', fontWeight: 500, color: '#1A1613', margin: 0, marginBottom: '4px' }}>No items match your filters</p>
-              <p style={{ fontSize: '13px', color: '#6B6560', margin: 0, marginBottom: '16px' }}>Try adjusting your search or filter criteria</p>
-              <button onClick={() => window.location.reload()} style={{ padding: '6px 16px', backgroundColor: 'transparent', border: '1px solid #E5E1DC', borderRadius: '6px', fontSize: '13px', fontFamily: '"Inter", sans-serif', color: '#6B6560', cursor: 'pointer' }}>
+              <Search size={32} color={colors.textTertiary} style={{ marginBottom: spacing.md }} />
+              <p style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, margin: 0, marginBottom: spacing['1'] }}>No items match your filters</p>
+              <p style={{ fontSize: typography.fontSize.sm, color: colors.gray600, margin: 0, marginBottom: spacing.lg }}>Try adjusting your search or filter criteria</p>
+              <button onClick={() => window.location.reload()} style={{ padding: `${spacing['1.5']} ${spacing.lg}`, backgroundColor: 'transparent', border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, color: colors.gray600, cursor: 'pointer' }}>
                 Clear Filters
               </button>
             </div>
@@ -250,8 +270,12 @@ const Submittals: React.FC = () => {
           getKey={(sub: any) => sub.id}
           renderCard={(sub: any) => (
             <div
-              style={{ padding: spacing.md }}
+              style={{ padding: spacing.md, cursor: 'pointer' }}
               onClick={() => setSelectedId(sub.id)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedId(sub.id); } }}
+              role="button"
+              tabIndex={0}
+              aria-label={`View submittal ${sub.submittalNumber}: ${sub.title}`}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs }}>
                 <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: colors.textTertiary }}>{sub.submittalNumber}</span>
@@ -267,7 +291,7 @@ const Submittals: React.FC = () => {
                 <span
                   style={{
                     fontSize: typography.fontSize.caption,
-                    color: isOverdue(sub.dueDate) && sub.status !== 'approved' ? colors.red : colors.textTertiary,
+                    color: isOverdue(sub.dueDate) && sub.status !== 'approved' ? colors.statusCritical : colors.textTertiary,
                     fontWeight: isOverdue(sub.dueDate) && sub.status !== 'approved' ? typography.fontWeight.medium : typography.fontWeight.normal,
                   }}
                 >
@@ -286,16 +310,29 @@ const Submittals: React.FC = () => {
 
       <DetailPanel
         open={!!selected}
-        onClose={() => setSelectedId(null)}
+        onClose={() => { setSelectedId(null); setEditingDetail(false); }}
         title={selected?.submittalNumber || ''}
       >
         {selected && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xl }}>
-            {/* Title and meta */}
+            {/* Title + Edit Toggle */}
             <div>
-              <h3 style={{ fontSize: typography.fontSize['3xl'], fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing.md }}>
-                {selected.title}
-              </h3>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing['3'] }}>
+                <h3 style={{ fontSize: typography.fontSize['3xl'], fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing.md, flex: 1 }}>
+                  {selected.title}
+                </h3>
+                <PresenceAvatars entityId={String(selected.id)} size={24} />
+                <PermissionGate permission="submittals.edit">
+                  <Btn
+                    variant={editingDetail ? 'primary' : 'secondary'}
+                    size="sm"
+                    onClick={() => setEditingDetail(!editingDetail)}
+                  >
+                    {editingDetail ? 'Done' : 'Edit'}
+                  </Btn>
+                </PermissionGate>
+              </div>
+              <EditingLockBanner entityType="submittal" entityId={String(selected.id)} isEditing={editingDetail} />
               <div style={{ display: 'flex', gap: spacing.sm, flexWrap: 'wrap' }}>
                 <PriorityTag priority={selected.priority as any} />
                 <StatusTag status={selected.status as any} />
@@ -304,30 +341,45 @@ const Submittals: React.FC = () => {
 
             {/* Details grid */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing.lg }}>
-              <div>
-                <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, marginBottom: spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>From</div>
-                <div style={{ fontSize: typography.fontSize.base, color: colors.textPrimary, fontWeight: typography.fontWeight.medium }}>{selected.from}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, marginBottom: spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Due Date</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
-                  <Calendar size={14} color={isOverdue(selected.dueDate) && selected.status !== 'approved' ? colors.red : colors.textSecondary} />
-                  <span style={{
-                    fontSize: typography.fontSize.base,
-                    color: isOverdue(selected.dueDate) && selected.status !== 'approved' ? colors.red : colors.textPrimary,
-                    fontWeight: typography.fontWeight.medium,
-                  }}>
-                    {new Date(selected.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                  </span>
-                </div>
-              </div>
+              <EditableDetailField
+                label="From"
+                value={selected.from || ''}
+                editing={editingDetail}
+                type="text"
+                onSave={async (val) => {
+                  await updateSubmittal.mutateAsync({ id: String(selected.id), updates: { subcontractor: val }, projectId: projectId! });
+                  toast.success('Subcontractor updated');
+                }}
+              />
+              <EditableDetailField
+                label="Due Date"
+                value={selected.dueDate?.slice(0, 10) || ''}
+                editing={editingDetail}
+                type="date"
+                onSave={async (val) => {
+                  await updateSubmittal.mutateAsync({ id: String(selected.id), updates: { due_date: val }, projectId: projectId! });
+                  toast.success('Due date updated');
+                }}
+                displayContent={
+                  <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
+                    <Calendar size={14} color={isOverdue(selected.dueDate) && selected.status !== 'approved' ? colors.statusCritical : colors.textSecondary} />
+                    <span style={{
+                      fontSize: typography.fontSize.base,
+                      color: isOverdue(selected.dueDate) && selected.status !== 'approved' ? colors.statusCritical : colors.textPrimary,
+                      fontWeight: typography.fontWeight.medium,
+                    }}>
+                      {new Date(selected.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </span>
+                  </div>
+                }
+              />
             </div>
 
             {/* Description */}
             <div>
               <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, marginBottom: spacing.sm, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Description</div>
               <p style={{ fontSize: typography.fontSize.base, color: colors.textSecondary, lineHeight: typography.lineHeight.relaxed, margin: 0 }}>
-                {mockDescriptions[selected.id] || 'No description provided.'}
+                {(selected as any).description || 'No description provided.'}
               </p>
             </div>
 
@@ -412,9 +464,15 @@ const Submittals: React.FC = () => {
             {/* Actions */}
             {selected.status !== 'approved' && (
               <div style={{ display: 'flex', gap: spacing.sm, paddingTop: spacing.md, borderTop: `1px solid ${colors.borderLight}` }}>
-                <Btn variant="primary" onClick={handleApprove} icon={<CheckCircle size={16} />}>Approve</Btn>
-                <Btn variant="danger" onClick={handleReject}>Reject</Btn>
-                <Btn variant="secondary" onClick={handleRequestRevision} icon={<ArrowRight size={16} />}>Request Revision</Btn>
+                <PermissionGate permission="submittals.approve">
+                  <Btn variant="primary" onClick={handleApprove} icon={<CheckCircle size={16} />}>Approve</Btn>
+                </PermissionGate>
+                <PermissionGate permission="submittals.approve">
+                  <Btn variant="danger" onClick={handleReject}>Reject</Btn>
+                </PermissionGate>
+                <PermissionGate permission="submittals.approve">
+                  <Btn variant="secondary" onClick={handleRequestRevision} icon={<ArrowRight size={16} />}>Request Revision</Btn>
+                </PermissionGate>
               </div>
             )}
             {selected.status === 'approved' && (
@@ -426,6 +484,18 @@ const Submittals: React.FC = () => {
           </div>
         )}
       </DetailPanel>
+
+      <CreateSubmittalModal
+        open={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSubmit={async (data) => {
+          await createSubmittal.mutateAsync({
+            projectId: projectId!,
+            data: { ...data, project_id: projectId! },
+          });
+          toast.success('Submittal created: ' + (data.title || 'New Submittal'));
+        }}
+      />
     </PageContainer>
   );
 };

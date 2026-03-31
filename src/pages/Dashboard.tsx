@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { PageContainer, Skeleton } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, shadows } from '../styles/theme';
 import { useProjectId } from '../hooks/useProjectId';
@@ -15,20 +15,37 @@ export const Dashboard: React.FC = () => {
   const { data: punchItems } = usePunchItems(projectId);
 
   // Compute KPIs from real data
-  const overallProgress = phases?.length
-    ? Math.round(phases.reduce((s, p) => s + (p.percent_complete || 0), 0) / phases.length)
-    : 0;
+  const overallProgress = useMemo(() =>
+    phases?.length
+      ? Math.round(phases.reduce((s, p) => s + (p.percent_complete || 0), 0) / phases.length)
+      : 0,
+    [phases]
+  );
 
-  const budgetSpent = budgetItems?.reduce((s, b) => s + (b.actual_amount || 0), 0) || 0;
-  const budgetTotal = budgetItems?.reduce((s, b) => s + (b.original_amount || 0), 0) || 1;
+  const { budgetSpent, budgetTotal } = useMemo(() => ({
+    budgetSpent: budgetItems?.reduce((s, b) => s + (b.actual_amount || 0), 0) || 0,
+    budgetTotal: budgetItems?.reduce((s, b) => s + (b.original_amount || 0), 0) || 1,
+  }), [budgetItems]);
 
-  const openRfis = rfis?.filter(r => r.status === 'open' || r.status === 'under_review').length || 0;
-  const openPunch = punchItems?.filter(p => p.status === 'open' || p.status === 'in_progress').length || 0;
-  const activeItemCount = openRfis + openPunch;
+  const activeItemCount = useMemo(() => {
+    const openRfis = rfis?.filter(r => r.status === 'open' || r.status === 'under_review').length || 0;
+    const openPunch = punchItems?.filter(p => p.status === 'open' || p.status === 'in_progress').length || 0;
+    return openRfis + openPunch;
+  }, [rfis, punchItems]);
 
-  const daysRemaining = project?.target_completion
-    ? Math.max(0, Math.ceil((new Date(project.target_completion).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
-    : 0;
+  const daysRemaining = useMemo(() =>
+    project?.target_completion
+      ? Math.max(0, Math.ceil((new Date(project.target_completion).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+      : 0,
+    [project?.target_completion]
+  );
+
+  const projectAddress = useMemo(() =>
+    [project?.address, project?.city, project?.state].filter(Boolean).join(', '),
+    [project?.address, project?.city, project?.state]
+  );
+
+  const circumference = 2 * Math.PI * 23;
 
   // Animated numbers
   const animProgress = useAnimatedNumber(overallProgress);
@@ -68,7 +85,7 @@ export const Dashboard: React.FC = () => {
             {project.name}
           </h1>
           <p style={{ fontSize: typography.fontSize.body, color: colors.textSecondary, margin: 0, marginTop: spacing['1'] }}>
-            {[project.address, project.city, project.state].filter(Boolean).join(', ')}
+            {projectAddress}
           </p>
         </div>
 
@@ -95,11 +112,11 @@ export const Dashboard: React.FC = () => {
             <svg width={56} height={56} style={{ transform: 'rotate(-90deg)' }}>
               <circle cx={28} cy={28} r={23} fill="none" stroke={colors.borderSubtle} strokeWidth="4" />
               <circle cx={28} cy={28} r={23} fill="none" stroke={colors.primaryOrange} strokeWidth="4"
-                strokeDasharray={2 * Math.PI * 23} strokeDashoffset={2 * Math.PI * 23 * (1 - overallProgress / 100)} strokeLinecap="round" />
+                strokeDasharray={circumference} strokeDashoffset={circumference * (1 - overallProgress / 100)} strokeLinecap="round" />
             </svg>
             <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
               <span style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, lineHeight: 1 }}>{Math.round(animProgress)}%</span>
-              <span style={{ fontSize: '7px', color: colors.textTertiary, marginTop: 1, textTransform: 'uppercase', letterSpacing: '0.3px' }}>Complete</span>
+              <span style={{ fontSize: '7px', color: colors.textTertiary, marginTop: 1, textTransform: 'uppercase', letterSpacing: typography.letterSpacing.wider }}>Complete</span>
             </div>
           </div>
         </div>

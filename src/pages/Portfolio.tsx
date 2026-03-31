@@ -189,7 +189,7 @@ export const Portfolio: React.FC = () => {
                 backgroundColor: 'transparent',
                 border: 'none',
                 borderBottom: isActive ? `2px solid ${colors.primaryOrange}` : '2px solid transparent',
-                color: isActive ? colors.primaryOrange : colors.textSecondary,
+                color: isActive ? colors.orangeText : colors.textSecondary,
                 fontSize: typography.fontSize.sm,
                 fontWeight: isActive ? typography.fontWeight.semibold : typography.fontWeight.normal,
                 fontFamily: typography.fontFamily,
@@ -278,7 +278,7 @@ export const Portfolio: React.FC = () => {
                       <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'], marginBottom: spacing['4'] }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                           <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>Contract Value</span>
-                          <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.primaryOrange }}>
+                          <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.orangeText }}>
                             {project.contract_value ? fmtCurrency(project.contract_value) : 'N/A'}
                           </span>
                         </div>

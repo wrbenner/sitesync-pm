@@ -71,14 +71,18 @@ const Procurement = lazy(() => import('./pages/Procurement'));
 const EquipmentPage = lazy(() => import('./pages/Equipment'));
 const Portfolio = lazy(() => import('./pages/Portfolio'));
 const Financials = lazy(() => import('./pages/Financials'));
+const PaymentApplications = lazy(() => import('./pages/PaymentApplications'));
 const Insurance = lazy(() => import('./pages/Insurance'));
 const OwnerPortal = lazy(() => import('./pages/OwnerPortal'));
 const AIAgents = lazy(() => import('./pages/AIAgents'));
 const Workforce = lazy(() => import('./pages/Workforce'));
 const Permits = lazy(() => import('./pages/Permits'));
 const Integrations = lazy(() => import('./pages/Integrations'));
+const Marketplace = lazy(() => import('./pages/Marketplace'));
+const Developers = lazy(() => import('./pages/Developers'));
 const Reports = lazy(() => import('./pages/Reports'));
 const Sustainability = lazy(() => import('./pages/Sustainability'));
+const Benchmarks = lazy(() => import('./pages/Benchmarks'));
 const WarrantiesPage = lazy(() => import('./pages/Warranties'));
 const Onboarding = lazy(() => import('./pages/Onboarding').then((m) => ({ default: m.Onboarding })));
 const NotFound = lazy(() => import('./pages/errors/NotFound').then((m) => ({ default: m.NotFound })));
@@ -135,43 +139,47 @@ function AppRoutes() {
         <Routes location={location} key={location.pathname}>
           <Route path="/login" element={<AnimatedPage><Login /></AnimatedPage>} />
           <Route path="/signup" element={<AnimatedPage><Signup /></AnimatedPage>} />
-          <Route path="/portfolio" element={<ProtectedRoute><AnimatedPage><Portfolio /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/" element={<ProtectedRoute><AnimatedPage><Dashboard /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/dashboard" element={<ProtectedRoute><AnimatedPage><Dashboard /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/tasks" element={<ProtectedRoute><AnimatedPage><Tasks /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/drawings" element={<ProtectedRoute><AnimatedPage><Drawings /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/rfis" element={<ProtectedRoute><AnimatedPage><RFIs /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/submittals" element={<ProtectedRoute><AnimatedPage><Submittals /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/schedule" element={<ProtectedRoute><AnimatedPage><Schedule /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/lookahead" element={<ProtectedRoute><AnimatedPage><Lookahead /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/budget" element={<ProtectedRoute><AnimatedPage><Budget /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/change-orders" element={<ProtectedRoute><AnimatedPage><ChangeOrders /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/daily-log" element={<ProtectedRoute><AnimatedPage><DailyLog /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/field-capture" element={<ProtectedRoute><AnimatedPage><FieldCapture /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/punch-list" element={<ProtectedRoute><AnimatedPage><PunchList /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/crews" element={<ProtectedRoute><AnimatedPage><Crews /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/safety" element={<ProtectedRoute><AnimatedPage><Safety /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/estimating" element={<ProtectedRoute><AnimatedPage><Estimating /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/procurement" element={<ProtectedRoute><AnimatedPage><Procurement /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/equipment" element={<ProtectedRoute><AnimatedPage><EquipmentPage /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/directory" element={<ProtectedRoute><AnimatedPage><Directory /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/meetings" element={<ProtectedRoute><AnimatedPage><Meetings /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/files" element={<ProtectedRoute><AnimatedPage><Files /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/copilot" element={<ProtectedRoute><AnimatedPage><AICopilot /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/activity" element={<ProtectedRoute><AnimatedPage><Activity /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/audit-trail" element={<ProtectedRoute><AnimatedPage><AuditTrail /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/time-machine" element={<ProtectedRoute><AnimatedPage><TimeMachine /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/project-health" element={<ProtectedRoute><AnimatedPage><ProjectHealth /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/financials" element={<ProtectedRoute><AnimatedPage><Financials /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/insurance" element={<ProtectedRoute><AnimatedPage><Insurance /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/portal/owner" element={<ProtectedRoute><AnimatedPage><OwnerPortal /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/ai-agents" element={<ProtectedRoute><AnimatedPage><AIAgents /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/workforce" element={<ProtectedRoute><AnimatedPage><Workforce /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/permits" element={<ProtectedRoute><AnimatedPage><Permits /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/integrations" element={<ProtectedRoute><AnimatedPage><Integrations /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/reports" element={<ProtectedRoute><AnimatedPage><Reports /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/sustainability" element={<ProtectedRoute><AnimatedPage><Sustainability /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/warranties" element={<ProtectedRoute><AnimatedPage><WarrantiesPage /></AnimatedPage></ProtectedRoute>} />
+          <Route path="/portfolio" element={<ProtectedRoute moduleId="portfolio" moduleName="Portfolio"><AnimatedPage><Portfolio /></AnimatedPage></ProtectedRoute>} />
+          <Route path="/" element={<ProtectedRoute moduleId="dashboard" moduleName="Dashboard"><AnimatedPage><Dashboard /></AnimatedPage></ProtectedRoute>} />
+          <Route path="/dashboard" element={<ProtectedRoute moduleId="dashboard" moduleName="Dashboard"><AnimatedPage><Dashboard /></AnimatedPage></ProtectedRoute>} />
+          <Route path="/tasks" element={<ProtectedRoute moduleId="tasks" moduleName="Tasks"><AnimatedPage><Tasks /></AnimatedPage></ProtectedRoute>} />
+          <Route path="/drawings" element={<ProtectedRoute moduleId="drawings" moduleName="Drawings"><AnimatedPage><Drawings /></AnimatedPage></ProtectedRoute>} />
+          <Route path="/rfis" element={<ProtectedRoute moduleId="rfis" moduleName="RFIs"><AnimatedPage><RFIs /></AnimatedPage></ProtectedRoute>} />
+          <Route path="/submittals" element={<ProtectedRoute moduleId="submittals" moduleName="Submittals"><AnimatedPage><Submittals /></AnimatedPage></ProtectedRoute>} />
+          <Route path="/schedule" element={<ProtectedRoute moduleId="schedule" moduleName="Schedule"><AnimatedPage><Schedule /></AnimatedPage></ProtectedRoute>} />
+          <Route path="/lookahead" element={<ProtectedRoute moduleId="lookahead" moduleName="Lookahead"><AnimatedPage><Lookahead /></AnimatedPage></ProtectedRoute>} />
+          <Route path="/budget" element={<ProtectedRoute moduleId="budget" moduleName="Budget"><AnimatedPage><Budget /></AnimatedPage></ProtectedRoute>} />
+          <Route path="/change-orders" element={<ProtectedRoute moduleId="change-orders" moduleName="Change Orders"><AnimatedPage><ChangeOrders /></AnimatedPage></ProtectedRoute>} />
+          <Route path="/daily-log" element={<ProtectedRoute moduleId="daily-log" moduleName="Daily Log"><AnimatedPage><DailyLog /></AnimatedPage></ProtectedRoute>} />
+          <Route path="/field-capture" element={<ProtectedRoute moduleId="field-capture" moduleName="Field Capture"><AnimatedPage><FieldCapture /></AnimatedPage></ProtectedRoute>} />
+          <Route path="/punch-list" element={<ProtectedRoute moduleId="punch-list" moduleName="Punch List"><AnimatedPage><PunchList /></AnimatedPage></ProtectedRoute>} />
+          <Route path="/crews" element={<ProtectedRoute moduleId="crews" moduleName="Crews"><AnimatedPage><Crews /></AnimatedPage></ProtectedRoute>} />
+          <Route path="/safety" element={<ProtectedRoute moduleId="safety" moduleName="Safety"><AnimatedPage><Safety /></AnimatedPage></ProtectedRoute>} />
+          <Route path="/estimating" element={<ProtectedRoute moduleId="estimating" moduleName="Estimating"><AnimatedPage><Estimating /></AnimatedPage></ProtectedRoute>} />
+          <Route path="/procurement" element={<ProtectedRoute moduleId="procurement" moduleName="Procurement"><AnimatedPage><Procurement /></AnimatedPage></ProtectedRoute>} />
+          <Route path="/equipment" element={<ProtectedRoute moduleId="equipment" moduleName="Equipment"><AnimatedPage><EquipmentPage /></AnimatedPage></ProtectedRoute>} />
+          <Route path="/directory" element={<ProtectedRoute moduleId="directory" moduleName="Directory"><AnimatedPage><Directory /></AnimatedPage></ProtectedRoute>} />
+          <Route path="/meetings" element={<ProtectedRoute moduleId="meetings" moduleName="Meetings"><AnimatedPage><Meetings /></AnimatedPage></ProtectedRoute>} />
+          <Route path="/files" element={<ProtectedRoute moduleId="files" moduleName="Files"><AnimatedPage><Files /></AnimatedPage></ProtectedRoute>} />
+          <Route path="/copilot" element={<ProtectedRoute moduleId="copilot" moduleName="AI Copilot"><AnimatedPage><AICopilot /></AnimatedPage></ProtectedRoute>} />
+          <Route path="/activity" element={<ProtectedRoute moduleId="activity" moduleName="Activity"><AnimatedPage><Activity /></AnimatedPage></ProtectedRoute>} />
+          <Route path="/audit-trail" element={<ProtectedRoute moduleId="audit-trail" moduleName="Audit Trail"><AnimatedPage><AuditTrail /></AnimatedPage></ProtectedRoute>} />
+          <Route path="/time-machine" element={<ProtectedRoute moduleId="time-machine" moduleName="Time Machine"><AnimatedPage><TimeMachine /></AnimatedPage></ProtectedRoute>} />
+          <Route path="/project-health" element={<ProtectedRoute moduleId="project-health" moduleName="Project Health"><AnimatedPage><ProjectHealth /></AnimatedPage></ProtectedRoute>} />
+          <Route path="/financials" element={<ProtectedRoute moduleId="financials" moduleName="Financials"><AnimatedPage><Financials /></AnimatedPage></ProtectedRoute>} />
+          <Route path="/pay-apps" element={<ProtectedRoute moduleId="pay-apps" moduleName="Payment Applications"><AnimatedPage><PaymentApplications /></AnimatedPage></ProtectedRoute>} />
+          <Route path="/insurance" element={<ProtectedRoute moduleId="insurance" moduleName="Insurance"><AnimatedPage><Insurance /></AnimatedPage></ProtectedRoute>} />
+          <Route path="/portal/owner" element={<ProtectedRoute requiredPermission="project.settings" moduleName="Owner Portal"><AnimatedPage><OwnerPortal /></AnimatedPage></ProtectedRoute>} />
+          <Route path="/ai-agents" element={<ProtectedRoute moduleId="ai-agents" moduleName="AI Agents"><AnimatedPage><AIAgents /></AnimatedPage></ProtectedRoute>} />
+          <Route path="/workforce" element={<ProtectedRoute moduleId="workforce" moduleName="Workforce"><AnimatedPage><Workforce /></AnimatedPage></ProtectedRoute>} />
+          <Route path="/permits" element={<ProtectedRoute moduleId="permits" moduleName="Permits"><AnimatedPage><Permits /></AnimatedPage></ProtectedRoute>} />
+          <Route path="/integrations" element={<ProtectedRoute moduleId="integrations" moduleName="Integrations"><AnimatedPage><Integrations /></AnimatedPage></ProtectedRoute>} />
+          <Route path="/marketplace" element={<ProtectedRoute moduleId="marketplace" moduleName="App Marketplace"><AnimatedPage><Marketplace /></AnimatedPage></ProtectedRoute>} />
+          <Route path="/developers" element={<ProtectedRoute moduleId="developers" moduleName="Developer Portal"><AnimatedPage><Developers /></AnimatedPage></ProtectedRoute>} />
+          <Route path="/reports" element={<ProtectedRoute moduleId="reports" moduleName="Reports"><AnimatedPage><Reports /></AnimatedPage></ProtectedRoute>} />
+          <Route path="/sustainability" element={<ProtectedRoute moduleId="sustainability" moduleName="Sustainability"><AnimatedPage><Sustainability /></AnimatedPage></ProtectedRoute>} />
+          <Route path="/benchmarks" element={<ProtectedRoute moduleId="benchmarks" moduleName="Platform Intelligence"><AnimatedPage><Benchmarks /></AnimatedPage></ProtectedRoute>} />
+          <Route path="/warranties" element={<ProtectedRoute moduleId="warranties" moduleName="Warranties"><AnimatedPage><WarrantiesPage /></AnimatedPage></ProtectedRoute>} />
           <Route path="/onboarding" element={<AnimatedPage><Onboarding /></AnimatedPage>} />
           <Route path="/vision" element={<ProtectedRoute><AnimatedPage><Vision /></AnimatedPage></ProtectedRoute>} />
           <Route path="*" element={<AnimatedPage><NotFound /></AnimatedPage>} />
@@ -290,9 +298,7 @@ function AppContent() {
         }}
       >
         <SkipToContent />
-        <div role="navigation" aria-label="Main navigation">
-          <Sidebar activeView={activeView} onNavigate={handleNavigate} />
-        </div>
+        <Sidebar activeView={activeView} onNavigate={handleNavigate} />
 
         <div
           id="main-content"
@@ -330,8 +336,8 @@ function SentryFallback() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', textAlign: 'center', padding: '32px' }}>
       <h1 style={{ fontSize: '24px', fontWeight: 600, margin: 0, marginBottom: '8px' }}>Something went wrong</h1>
-      <p style={{ fontSize: '14px', color: '#666', margin: 0, marginBottom: '16px' }}>An unexpected error has been reported. Please reload to continue.</p>
-      <button onClick={() => window.location.reload()} style={{ padding: '8px 24px', backgroundColor: '#F47820', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '14px', cursor: 'pointer' }}>
+      <p style={{ fontSize: '14px', color: colors.textTertiary, margin: 0, marginBottom: '16px' }}>An unexpected error has been reported. Please reload to continue.</p>
+      <button onClick={() => window.location.reload()} style={{ padding: '8px 24px', backgroundColor: colors.primaryOrange, color: colors.white, border: 'none', borderRadius: '6px', fontSize: '14px', cursor: 'pointer' }}>
         Reload Page
       </button>
     </div>

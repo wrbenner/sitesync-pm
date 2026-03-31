@@ -1,144 +1,47 @@
-import React, { useState } from 'react'
-import { toast } from 'sonner'
-import { colors } from '../../styles/theme'
-import {
-  FormModal,
-  FormBody,
-  FormRow,
-  FormFooter,
-  FormField,
-  FormInput,
-  FormTextarea,
-  FormSelect,
-  FormCheckbox,
-} from './FormPrimitives'
-
-export interface TaskFormData {
-  title: string
-  description: string
-  status: string
-  priority: string
-  assigned_to: string
-  due_date: string
-  is_critical_path: boolean
-}
+import React from 'react'
+import { EntityFormModal } from './EntityFormModal'
+import { taskSchema } from './schemas'
+import type { FieldConfig } from './EntityFormModal'
 
 interface CreateTaskModalProps {
   open: boolean
   onClose: () => void
-  onSubmit: (data: TaskFormData) => void
+  onSubmit: (data: Record<string, unknown>) => Promise<void> | void
 }
 
-const emptyForm: TaskFormData = {
-  title: '',
-  description: '',
-  status: 'todo',
-  priority: 'medium',
-  assigned_to: '',
-  due_date: '',
-  is_critical_path: false,
-}
+const fields: FieldConfig[] = [
+  { name: 'title', label: 'Title', type: 'text', placeholder: 'Enter the task title', required: true },
+  { name: 'description', label: 'Description', type: 'textarea', placeholder: 'Describe the scope and any relevant details' },
+  { name: 'status', label: 'Status', type: 'select', row: 1, options: [
+    { value: 'todo', label: 'To Do' },
+    { value: 'in_progress', label: 'In Progress' },
+    { value: 'in_review', label: 'In Review' },
+    { value: 'done', label: 'Done' },
+  ]},
+  { name: 'priority', label: 'Priority', type: 'select', row: 1, options: [
+    { value: 'low', label: 'Low' },
+    { value: 'medium', label: 'Medium' },
+    { value: 'high', label: 'High' },
+    { value: 'critical', label: 'Critical' },
+  ]},
+  { name: 'assigned_to', label: 'Assigned To', type: 'text', placeholder: 'Person or crew responsible' },
+  { name: 'start_date', label: 'Start Date', type: 'date', row: 2 },
+  { name: 'end_date', label: 'End Date', type: 'date', row: 2 },
+  { name: 'is_critical_path', label: 'Critical Path Item', type: 'checkbox' },
+]
 
-const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ open, onClose, onSubmit }) => {
-  const [form, setForm] = useState<TaskFormData>(emptyForm)
-  const [errors, setErrors] = useState<Record<string, string>>({})
-
-  const handleChange = (field: keyof TaskFormData, value: string | boolean) => {
-    setForm((prev) => ({ ...prev, [field]: value }))
-    if (errors[field as string]) {
-      setErrors((prev) => ({ ...prev, [field]: '' }))
-    }
-  }
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    const newErrors: Record<string, string> = {}
-    if (!form.title.trim()) newErrors.title = 'Title is required'
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors)
-      return
-    }
-    onSubmit(form)
-    toast.success('Task created: ' + form.title)
-    setForm(emptyForm)
-    setErrors({})
-    onClose()
-  }
-
-  const handleClose = () => {
-    setForm(emptyForm)
-    setErrors({})
-    onClose()
-  }
-
-  return (
-    <FormModal open={open} onClose={handleClose} title="Create New Task">
-      <FormBody onSubmit={handleSubmit}>
-        <FormField label="Title" required error={errors.title}>
-          <FormInput
-            type="text"
-            value={form.title}
-            onChange={(e) => handleChange('title', e.target.value)}
-            placeholder="Enter the task title"
-            hasError={!!errors.title}
-          />
-        </FormField>
-
-        <FormField label="Description">
-          <FormTextarea
-            value={form.description}
-            onChange={(e) => handleChange('description', e.target.value)}
-            placeholder="Describe the scope and any relevant details"
-          />
-        </FormField>
-
-        <FormRow>
-          <FormField label="Status">
-            <FormSelect value={form.status} onChange={(e) => handleChange('status', e.target.value)}>
-              <option value="todo">To Do</option>
-              <option value="in_progress">In Progress</option>
-              <option value="in_review">In Review</option>
-              <option value="done">Done</option>
-            </FormSelect>
-          </FormField>
-          <FormField label="Priority">
-            <FormSelect value={form.priority} onChange={(e) => handleChange('priority', e.target.value)}>
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-              <option value="critical">Critical</option>
-            </FormSelect>
-          </FormField>
-        </FormRow>
-
-        <FormField label="Assigned To">
-          <FormInput
-            type="text"
-            value={form.assigned_to}
-            onChange={(e) => handleChange('assigned_to', e.target.value)}
-            placeholder="Person or crew responsible"
-          />
-        </FormField>
-
-        <FormField label="Due Date">
-          <FormInput
-            type="date"
-            value={form.due_date}
-            onChange={(e) => handleChange('due_date', e.target.value)}
-          />
-        </FormField>
-
-        <FormCheckbox
-          id="critical-path"
-          label="Critical Path Item"
-          checked={form.is_critical_path}
-          onChange={(checked) => handleChange('is_critical_path', checked)}
-        />
-
-        <FormFooter onCancel={handleClose} submitLabel="Create Task" />
-      </FormBody>
-    </FormModal>
-  )
-}
+const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ open, onClose, onSubmit }) => (
+  <EntityFormModal
+    open={open}
+    onClose={onClose}
+    onSubmit={onSubmit}
+    title="Create New Task"
+    schema={taskSchema}
+    fields={fields}
+    defaults={{ status: 'todo', priority: 'medium' }}
+    submitLabel="Create Task"
+    draftKey="draft_task"
+  />
+)
 
 export default CreateTaskModal

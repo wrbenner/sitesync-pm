@@ -300,7 +300,7 @@ export function ProjectSettings() {
                   height: 32,
                   borderRadius: borderRadius.full,
                   backgroundColor: colors.orangeSubtle,
-                  color: colors.primaryOrange,
+                  color: colors.orangeText,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',

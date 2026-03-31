@@ -1,43 +1,377 @@
-import React, { useState } from 'react'
-import { Bot, CheckCircle, XCircle, Clock, Play, Pause } from 'lucide-react'
-import { PageContainer, Card, SectionHeader, MetricBox, Skeleton } from '../components/Primitives'
+import React, { useState, useMemo, useCallback, memo } from 'react'
+import {
+  Bot, CheckCircle, XCircle, Clock, Play, Pause, Activity, Shield,
+  Calendar, DollarSign, ShieldCheck, ClipboardCheck, Scale, FileSearch,
+  Zap, TrendingUp, AlertTriangle, Eye,
+} from 'lucide-react'
+import { PageContainer, Card, SectionHeader, MetricBox, Skeleton, EmptyState } from '../components/Primitives'
 import { DataTable, createColumnHelper } from '../components/shared/DataTable'
-import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme'
+import { colors, spacing, typography, borderRadius, transitions, shadows } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
 import { useAIAgents, useAIAgentActions } from '../hooks/queries'
+import { useAgentOrchestrator } from '../stores/agentOrchestrator'
+import { SPECIALIST_AGENTS, AGENT_DOMAINS } from '../types/agents'
+import type { AgentDomain, AgentState } from '../types/agents'
 import { toast } from 'sonner'
 
-type TabKey = 'agents' | 'pending'
+// ── Types ─────────────────────────────────────────────────────
+
+type TabKey = 'overview' | 'activity' | 'tools'
 
 const tabs: { key: TabKey; label: string; icon: React.ElementType }[] = [
-  { key: 'agents', label: 'Agents', icon: Bot },
-  { key: 'pending', label: 'Pending Actions', icon: Clock },
+  { key: 'overview', label: 'Agent Team', icon: Bot },
+  { key: 'activity', label: 'Activity Feed', icon: Activity },
+  { key: 'tools', label: 'Tool Registry', icon: Zap },
 ]
 
-function formatAgentType(type: string): string {
-  return type
-    .split('_')
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(' ')
+// ── Agent Icon/Color Maps ─────────────────────────────────────
+
+const AGENT_ICONS: Record<AgentDomain, React.ElementType> = {
+  schedule: Calendar,
+  cost: DollarSign,
+  safety: ShieldCheck,
+  quality: ClipboardCheck,
+  compliance: Scale,
+  document: FileSearch,
 }
 
-// ── Column helpers ───────────────────────────────────────────
+const AGENT_ACCENT: Record<AgentDomain, string> = {
+  schedule: colors.statusInfo,
+  cost: colors.statusActive,
+  safety: colors.statusCritical,
+  quality: colors.statusPending,
+  compliance: colors.statusReview,
+  document: colors.statusInfo,
+}
 
-const actionCol = createColumnHelper<any>()
+const AGENT_ACCENT_SUBTLE: Record<AgentDomain, string> = {
+  schedule: colors.statusInfoSubtle,
+  cost: colors.statusActiveSubtle,
+  safety: colors.statusCriticalSubtle,
+  quality: colors.statusPendingSubtle,
+  compliance: colors.statusReviewSubtle,
+  document: colors.statusInfoSubtle,
+}
+
+// ── Agent Card Component ──────────────────────────────────────
+
+interface AgentCardProps {
+  domain: AgentDomain
+  agentState: AgentState
+  dbActions: number
+  onToggle: (domain: AgentDomain) => void
+}
+
+const AgentCard = memo<AgentCardProps>(({ domain, agentState, dbActions, onToggle }) => {
+  const agent = SPECIALIST_AGENTS[domain]
+  const Icon = AGENT_ICONS[domain]
+  const accent = AGENT_ACCENT[domain]
+  const accentSubtle = AGENT_ACCENT_SUBTLE[domain]
+  const isActive = agentState.status === 'active'
+  const totalActions = agentState.totalActions + dbActions
+  const approvalRate =
+    totalActions > 0
+      ? Math.round((agentState.approvedActions / totalActions) * 100)
+      : 0
+
+  return (
+    <Card padding={spacing['5']}>
+      {/* Header */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          marginBottom: spacing['4'],
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
+          <div
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: borderRadius.lg,
+              backgroundColor: accent,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Icon size={20} color={colors.white} />
+          </div>
+          <div>
+            <p
+              style={{
+                margin: 0,
+                fontSize: typography.fontSize.title,
+                fontWeight: typography.fontWeight.semibold,
+                color: colors.textPrimary,
+              }}
+            >
+              {agent.name}
+            </p>
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: spacing['1'],
+                fontSize: typography.fontSize.caption,
+                fontWeight: typography.fontWeight.medium,
+                color: isActive ? colors.statusActive : colors.statusPending,
+                backgroundColor: isActive
+                  ? colors.statusActiveSubtle
+                  : colors.statusPendingSubtle,
+                padding: `1px ${spacing['2']}`,
+                borderRadius: borderRadius.full,
+                marginTop: spacing['1'],
+              }}
+            >
+              <div
+                style={{
+                  width: 5,
+                  height: 5,
+                  borderRadius: '50%',
+                  backgroundColor: isActive ? colors.statusActive : colors.statusPending,
+                }}
+              />
+              {isActive ? 'Active' : 'Paused'}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Description */}
+      <p
+        style={{
+          fontSize: typography.fontSize.sm,
+          color: colors.textSecondary,
+          margin: 0,
+          marginBottom: spacing['4'],
+          lineHeight: typography.lineHeight.normal,
+        }}
+      >
+        {agent.description}
+      </p>
+
+      {/* Expertise tags */}
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: spacing['1'],
+          marginBottom: spacing['4'],
+        }}
+      >
+        {agent.expertise.slice(0, 3).map((skill) => (
+          <span
+            key={skill}
+            style={{
+              padding: `2px ${spacing['2']}`,
+              borderRadius: borderRadius.full,
+              backgroundColor: accentSubtle,
+              color: accent,
+              fontSize: typography.fontSize.caption,
+              fontWeight: typography.fontWeight.medium,
+            }}
+          >
+            {skill}
+          </span>
+        ))}
+        {agent.expertise.length > 3 && (
+          <span
+            style={{
+              padding: `2px ${spacing['2']}`,
+              borderRadius: borderRadius.full,
+              backgroundColor: colors.surfaceInset,
+              color: colors.textTertiary,
+              fontSize: typography.fontSize.caption,
+            }}
+          >
+            +{agent.expertise.length - 3} more
+          </span>
+        )}
+      </div>
+
+      {/* Metrics */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr 1fr',
+          gap: spacing['2'],
+          marginBottom: spacing['4'],
+          padding: spacing['3'],
+          backgroundColor: colors.surfaceInset,
+          borderRadius: borderRadius.base,
+        }}
+      >
+        <div>
+          <p
+            style={{
+              margin: 0,
+              fontSize: typography.fontSize.caption,
+              color: colors.textTertiary,
+            }}
+          >
+            Actions
+          </p>
+          <p
+            style={{
+              margin: 0,
+              fontSize: typography.fontSize.title,
+              fontWeight: typography.fontWeight.semibold,
+              color: colors.textPrimary,
+            }}
+          >
+            {totalActions}
+          </p>
+        </div>
+        <div>
+          <p
+            style={{
+              margin: 0,
+              fontSize: typography.fontSize.caption,
+              color: colors.textTertiary,
+            }}
+          >
+            Approved
+          </p>
+          <p
+            style={{
+              margin: 0,
+              fontSize: typography.fontSize.title,
+              fontWeight: typography.fontWeight.semibold,
+              color: approvalRate >= 80 ? colors.statusActive : colors.statusPending,
+            }}
+          >
+            {approvalRate}%
+          </p>
+        </div>
+        <div>
+          <p
+            style={{
+              margin: 0,
+              fontSize: typography.fontSize.caption,
+              color: colors.textTertiary,
+            }}
+          >
+            Confidence
+          </p>
+          <p
+            style={{
+              margin: 0,
+              fontSize: typography.fontSize.title,
+              fontWeight: typography.fontWeight.semibold,
+              color: colors.textPrimary,
+            }}
+          >
+            {agentState.averageConfidence > 0
+              ? `${agentState.averageConfidence}%`
+              : 'N/A'}
+          </p>
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: spacing['2'] }}>
+        <button
+          onClick={() => onToggle(domain)}
+          aria-label={isActive ? `Pause ${agent.name}` : `Resume ${agent.name}`}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: spacing['1'],
+            padding: `${spacing['2']} ${spacing['3']}`,
+            border: `1px solid ${colors.borderDefault}`,
+            borderRadius: borderRadius.base,
+            backgroundColor: 'transparent',
+            color: colors.textSecondary,
+            fontSize: typography.fontSize.caption,
+            fontWeight: typography.fontWeight.medium,
+            cursor: 'pointer',
+            fontFamily: typography.fontFamily,
+            transition: `background-color ${transitions.instant}`,
+          }}
+          onMouseEnter={(e) => {
+            ;(e.currentTarget as HTMLButtonElement).style.backgroundColor =
+              colors.surfaceInset
+          }}
+          onMouseLeave={(e) => {
+            ;(e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'
+          }}
+        >
+          {isActive ? (
+            <>
+              <Pause size={12} /> Pause
+            </>
+          ) : (
+            <>
+              <Play size={12} /> Resume
+            </>
+          )}
+        </button>
+      </div>
+    </Card>
+  )
+})
+AgentCard.displayName = 'AgentCard'
+
+// ── Activity Table Columns ────────────────────────────────────
+
+const actionCol = createColumnHelper<Record<string, unknown>>()
 const actionColumns = [
   actionCol.accessor('agent_type', {
     header: 'Agent',
-    cell: (info) => (
-      <span style={{ fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>
-        {info.getValue() ? formatAgentType(info.getValue()) : ''}
-      </span>
-    ),
+    cell: (info) => {
+      const domain = info.getValue() as AgentDomain | undefined
+      if (!domain || !SPECIALIST_AGENTS[domain]) {
+        return <span style={{ color: colors.textTertiary }}>{String(info.getValue() || '')}</span>
+      }
+      const agent = SPECIALIST_AGENTS[domain]
+      const Icon = AGENT_ICONS[domain]
+      const accent = AGENT_ACCENT[domain]
+      return (
+        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
+          <div
+            style={{
+              width: 22,
+              height: 22,
+              borderRadius: borderRadius.sm,
+              backgroundColor: accent,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Icon size={11} color={colors.white} />
+          </div>
+          <span
+            style={{
+              fontWeight: typography.fontWeight.medium,
+              color: colors.textPrimary,
+              fontSize: typography.fontSize.sm,
+            }}
+          >
+            {agent.shortName}
+          </span>
+        </div>
+      )
+    },
   }),
   actionCol.accessor('description', {
     header: 'Description',
     cell: (info) => (
-      <span style={{ color: colors.textSecondary, maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
-        {info.getValue()}
+      <span
+        style={{
+          color: colors.textSecondary,
+          fontSize: typography.fontSize.sm,
+          maxWidth: 320,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+          display: 'block',
+        }}
+      >
+        {String(info.getValue() || '')}
       </span>
     ),
   }),
@@ -46,118 +380,207 @@ const actionColumns = [
     cell: (info) => {
       const v = info.getValue() as number | null
       if (v == null) return <span style={{ color: colors.textTertiary }}>N/A</span>
-      const c = v >= 90 ? colors.statusActive : v >= 70 ? colors.statusPending : colors.statusCritical
-      return <span style={{ fontWeight: typography.fontWeight.semibold, color: c }}>{v}%</span>
+      const c =
+        v >= 90
+          ? colors.statusActive
+          : v >= 70
+            ? colors.statusPending
+            : colors.statusCritical
+      return (
+        <span style={{ fontWeight: typography.fontWeight.semibold, color: c }}>
+          {v}%
+        </span>
+      )
     },
   }),
   actionCol.accessor('status', {
     header: 'Status',
     cell: (info) => {
-      const v = info.getValue() as string
-      const statusColor = v === 'approved' ? colors.statusActive
-        : v === 'rejected' ? colors.statusCritical
-        : v === 'pending' ? colors.statusPending
-        : colors.statusInfo
-      const statusBg = v === 'approved' ? colors.statusActiveSubtle
-        : v === 'rejected' ? colors.statusCriticalSubtle
-        : v === 'pending' ? colors.statusPendingSubtle
-        : colors.statusInfoSubtle
+      const v = String(info.getValue() || '')
+      const statusColor =
+        v === 'approved' || v === 'completed'
+          ? colors.statusActive
+          : v === 'rejected'
+            ? colors.statusCritical
+            : v === 'pending'
+              ? colors.statusPending
+              : colors.statusInfo
+      const statusBg =
+        v === 'approved' || v === 'completed'
+          ? colors.statusActiveSubtle
+          : v === 'rejected'
+            ? colors.statusCriticalSubtle
+            : v === 'pending'
+              ? colors.statusPendingSubtle
+              : colors.statusInfoSubtle
       return (
-        <span style={{
-          display: 'inline-flex', alignItems: 'center', gap: spacing.xs,
-          padding: `2px ${spacing.sm}`, borderRadius: borderRadius.full,
-          fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
-          color: statusColor, backgroundColor: statusBg,
-        }}>
-          <div style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: statusColor }} />
+        <span
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: spacing.xs,
+            padding: `2px ${spacing.sm}`,
+            borderRadius: borderRadius.full,
+            fontSize: typography.fontSize.caption,
+            fontWeight: typography.fontWeight.medium,
+            color: statusColor,
+            backgroundColor: statusBg,
+          }}
+        >
+          <div
+            style={{
+              width: 5,
+              height: 5,
+              borderRadius: '50%',
+              backgroundColor: statusColor,
+            }}
+          />
           {v ? v.charAt(0).toUpperCase() + v.slice(1) : ''}
         </span>
       )
     },
   }),
   actionCol.accessor('created_at', {
-    header: 'Created',
+    header: 'Time',
     cell: (info) => (
-      <span style={{ color: colors.textSecondary }}>
-        {info.getValue() ? new Date(info.getValue()).toLocaleDateString() : ''}
+      <span style={{ color: colors.textTertiary, fontSize: typography.fontSize.caption }}>
+        {info.getValue()
+          ? new Date(info.getValue() as string).toLocaleString()
+          : ''}
       </span>
     ),
   }),
-  actionCol.display({
-    id: 'actions',
-    header: '',
-    cell: (info) => {
-      const row = info.row.original
-      if (row.status !== 'pending') return null
-      return (
-        <div style={{ display: 'flex', gap: spacing['2'] }}>
-          <button
-            onClick={() => toast.success('Action approved')}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 4,
-              padding: `4px ${spacing['3']}`, border: 'none', borderRadius: borderRadius.base,
-              backgroundColor: colors.statusActiveSubtle, color: colors.statusActive,
-              fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
-              cursor: 'pointer', fontFamily: typography.fontFamily,
-            }}
-          >
-            <CheckCircle size={12} /> Approve
-          </button>
-          <button
-            onClick={() => toast.info('Action rejected')}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 4,
-              padding: `4px ${spacing['3']}`, border: 'none', borderRadius: borderRadius.base,
-              backgroundColor: colors.statusCriticalSubtle, color: colors.statusCritical,
-              fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
-              cursor: 'pointer', fontFamily: typography.fontFamily,
-            }}
-          >
-            <XCircle size={12} /> Reject
-          </button>
-        </div>
-      )
-    },
-  }),
 ]
 
-// ── Main Component ───────────────────────────────────────────
+// ── Tool Registry ─────────────────────────────────────────────
+
+const TOOL_REGISTRY: Record<
+  AgentDomain,
+  Array<{ name: string; description: string; mutating: boolean }>
+> = {
+  schedule: [
+    { name: 'query_tasks', description: 'Query tasks with filters', mutating: false },
+    { name: 'query_schedule', description: 'Get schedule milestones and phases', mutating: false },
+    { name: 'predict_delays', description: 'Predict delays from current data', mutating: false },
+    { name: 'analyze_critical_path', description: 'Analyze critical path and float', mutating: false },
+    { name: 'query_weather_impact', description: 'Check weather impact on schedule', mutating: false },
+    { name: 'suggest_reordering', description: 'Suggest task reordering to mitigate delays', mutating: true },
+  ],
+  cost: [
+    { name: 'query_budget', description: 'Query budget by division or cost code', mutating: false },
+    { name: 'query_change_orders', description: 'Query change orders', mutating: false },
+    { name: 'earned_value_analysis', description: 'Calculate CPI, SPI, EAC metrics', mutating: false },
+    { name: 'forecast_costs', description: 'Project final cost with confidence intervals', mutating: false },
+    { name: 'query_contingency', description: 'Check contingency remaining', mutating: false },
+    { name: 'draft_change_order', description: 'Draft a new change order for approval', mutating: true },
+  ],
+  safety: [
+    { name: 'query_incidents', description: 'Query safety incidents', mutating: false },
+    { name: 'query_inspections', description: 'Query inspection results', mutating: false },
+    { name: 'analyze_safety_photos', description: 'Analyze photos for PPE violations', mutating: false },
+    { name: 'query_weather', description: 'Check weather conditions', mutating: false },
+    { name: 'generate_jha', description: 'Generate Job Hazard Analysis', mutating: true },
+    { name: 'track_corrective_actions', description: 'Track corrective actions', mutating: false },
+  ],
+  quality: [
+    { name: 'query_punch_items', description: 'Query punch list items', mutating: false },
+    { name: 'query_submittals', description: 'Query submittal status', mutating: false },
+    { name: 'query_inspections', description: 'Query quality inspections', mutating: false },
+    { name: 'analyze_rework', description: 'Analyze rework patterns', mutating: false },
+    { name: 'predict_rework_risk', description: 'Predict rework risk for activities', mutating: false },
+    { name: 'suggest_inspection_schedule', description: 'Suggest optimal inspection schedule', mutating: true },
+  ],
+  compliance: [
+    { name: 'query_certifications', description: 'Query workforce certifications', mutating: false },
+    { name: 'query_insurance', description: 'Query insurance certificates', mutating: false },
+    { name: 'query_payroll', description: 'Query certified payroll records', mutating: false },
+    { name: 'check_prevailing_wage', description: 'Verify prevailing wage rates', mutating: false },
+    { name: 'flag_expiring_cois', description: 'Flag expiring insurance certificates', mutating: true },
+    { name: 'generate_compliance_report', description: 'Generate compliance report', mutating: true },
+  ],
+  document: [
+    { name: 'search_documents', description: 'Full text search project documents', mutating: false },
+    { name: 'extract_from_pdf', description: 'Extract data from PDF files', mutating: false },
+    { name: 'cross_reference_specs', description: 'Cross reference specs with drawings', mutating: false },
+    { name: 'generate_report', description: 'Generate project report', mutating: true },
+    { name: 'find_spec_sections', description: 'Find relevant specification sections', mutating: false },
+    { name: 'generate_closeout_docs', description: 'Generate closeout documentation', mutating: true },
+  ],
+}
+
+// ── Main Component ────────────────────────────────────────────
 
 export const AIAgents: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<TabKey>('agents')
+  const [activeTab, setActiveTab] = useState<TabKey>('overview')
   const projectId = useProjectId()
-  const { data: agents, isLoading: loadingAgents } = useAIAgents(projectId)
-  const { data: allActions, isLoading: loadingActions } = useAIAgentActions(projectId)
+  const { data: dbAgents, isLoading: loadingAgents } = useAIAgents(projectId)
+  const { data: dbActions, isLoading: loadingActions } = useAIAgentActions(projectId)
+  const { agentStates, setAgentStatus } = useAgentOrchestrator()
 
-  const pendingActions = allActions?.filter((a: any) => a.status === 'pending') || []
-  const approvedActions = allActions?.filter((a: any) => a.status === 'approved') || []
-  const activeAgents = agents?.filter((a: any) => a.status === 'active') || []
+  // Compute metrics from DB + local state
+  const totalActiveAgents = useMemo(
+    () => AGENT_DOMAINS.filter((d) => agentStates[d].status === 'active').length,
+    [agentStates],
+  )
 
-  const approvalRate = allActions && allActions.length > 0
-    ? Math.round((approvedActions.length / allActions.length) * 100)
-    : 0
+  const totalActions = useMemo(
+    () =>
+      AGENT_DOMAINS.reduce((sum, d) => sum + agentStates[d].totalActions, 0) +
+      (dbActions?.length || 0),
+    [agentStates, dbActions],
+  )
 
-  const oneWeekAgo = new Date()
-  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
-  const actionsThisWeek = allActions?.filter((a: any) => new Date(a.created_at) >= oneWeekAgo).length || 0
+  const pendingCount = useMemo(
+    () => dbActions?.filter((a: Record<string, unknown>) => a.status === 'pending').length || 0,
+    [dbActions],
+  )
+
+  const overallApprovalRate = useMemo(() => {
+    const total = AGENT_DOMAINS.reduce((s, d) => s + agentStates[d].totalActions, 0)
+    const approved = AGENT_DOMAINS.reduce((s, d) => s + agentStates[d].approvedActions, 0)
+    return total > 0 ? Math.round((approved / total) * 100) : 0
+  }, [agentStates])
+
+  const handleToggleAgent = useCallback(
+    (domain: AgentDomain) => {
+      const current = agentStates[domain].status
+      const next = current === 'active' ? 'paused' : 'active'
+      setAgentStatus(domain, next as 'active' | 'paused')
+      toast.success(
+        `${SPECIALIST_AGENTS[domain].name} ${next === 'active' ? 'resumed' : 'paused'}`,
+      )
+    },
+    [agentStates, setAgentStatus],
+  )
+
+  const dbActionCountByDomain = useMemo(() => {
+    const counts: Record<string, number> = {}
+    for (const action of dbActions || []) {
+      const domain = (action as Record<string, unknown>).agent_type as string
+      counts[domain] = (counts[domain] || 0) + 1
+    }
+    return counts
+  }, [dbActions])
 
   const isLoading = loadingAgents || loadingActions
 
   return (
     <PageContainer
       title="AI Agents"
-      subtitle="Autonomous agents that monitor, analyze, and take action across your project"
+      subtitle="Your team of 6 specialist agents analyzing schedule, cost, safety, quality, compliance, and documents"
     >
       {/* Tab Switcher */}
-      <div style={{
-        display: 'flex',
-        gap: spacing['1'],
-        backgroundColor: colors.surfaceInset,
-        borderRadius: borderRadius.lg,
-        padding: spacing['1'],
-        marginBottom: spacing['2xl'],
-        overflowX: 'auto',
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          gap: spacing['1'],
+          backgroundColor: colors.surfaceInset,
+          borderRadius: borderRadius.lg,
+          padding: spacing['1'],
+          marginBottom: spacing['2xl'],
+          overflowX: 'auto',
+        }}
+      >
         {tabs.map((tab) => {
           const isActive = activeTab === tab.key
           return (
@@ -174,8 +597,10 @@ export const AIAgents: React.FC = () => {
                 cursor: 'pointer',
                 fontSize: typography.fontSize.sm,
                 fontFamily: typography.fontFamily,
-                fontWeight: isActive ? typography.fontWeight.medium : typography.fontWeight.normal,
-                color: isActive ? colors.primaryOrange : colors.textSecondary,
+                fontWeight: isActive
+                  ? typography.fontWeight.medium
+                  : typography.fontWeight.normal,
+                color: isActive ? colors.orangeText : colors.textSecondary,
                 backgroundColor: isActive ? colors.surfaceRaised : 'transparent',
                 transition: `all ${transitions.instant}`,
                 whiteSpace: 'nowrap',
@@ -190,123 +615,231 @@ export const AIAgents: React.FC = () => {
 
       {/* Loading State */}
       {isLoading && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'], marginBottom: spacing['2xl'] }}>
-          {[1, 2, 3, 4].map((i) => <Skeleton key={i} width="100%" height="100px" />)}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, 1fr)',
+            gap: spacing['4'],
+            marginBottom: spacing['2xl'],
+          }}
+        >
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} width="100%" height="100px" />
+          ))}
         </div>
       )}
 
       {/* KPIs */}
       {!isLoading && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: spacing['4'], marginBottom: spacing['2xl'] }}>
-          <MetricBox label="Total Agents Active" value={activeAgents.length} />
-          <MetricBox label="Pending Actions" value={pendingActions.length} change={pendingActions.length > 5 ? -1 : 0} />
-          <MetricBox label="Approval Rate" value={`${approvalRate}%`} change={approvalRate >= 80 ? 1 : -1} />
-          <MetricBox label="Actions This Week" value={actionsThisWeek} />
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+            gap: spacing['4'],
+            marginBottom: spacing['2xl'],
+          }}
+        >
+          <MetricBox
+            label="Active Agents"
+            value={`${totalActiveAgents}/6`}
+            change={totalActiveAgents === 6 ? 1 : 0}
+          />
+          <MetricBox label="Total Actions" value={totalActions} />
+          <MetricBox
+            label="Pending Approval"
+            value={pendingCount}
+            change={pendingCount > 5 ? -1 : 0}
+          />
+          <MetricBox
+            label="Approval Rate"
+            value={`${overallApprovalRate}%`}
+            change={overallApprovalRate >= 80 ? 1 : -1}
+          />
         </div>
       )}
 
-      {/* Agents Tab */}
-      {activeTab === 'agents' && !isLoading && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: spacing['4'] }}>
-          {agents && agents.length > 0 ? agents.map((agent: any) => {
-            const agentActions = allActions?.filter((a: any) => a.agent_type === agent.agent_type) || []
-            const agentApproved = agentActions.filter((a: any) => a.status === 'approved').length
-            const agentApprovalPct = agentActions.length > 0 ? Math.round((agentApproved / agentActions.length) * 100) : 0
+      {/* Overview Tab — Agent Cards */}
+      {activeTab === 'overview' && !isLoading && (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
+            gap: spacing['4'],
+          }}
+        >
+          {AGENT_DOMAINS.map((domain) => (
+            <AgentCard
+              key={domain}
+              domain={domain}
+              agentState={agentStates[domain]}
+              dbActions={dbActionCountByDomain[domain] || 0}
+              onToggle={handleToggleAgent}
+            />
+          ))}
+        </div>
+      )}
 
-            const statusColor = agent.status === 'active' ? colors.statusActive
-              : agent.status === 'paused' ? colors.statusPending
-              : colors.textTertiary
-            const statusBg = agent.status === 'active' ? colors.statusActiveSubtle
-              : agent.status === 'paused' ? colors.statusPendingSubtle
-              : colors.surfaceInset
+      {/* Activity Tab */}
+      {activeTab === 'activity' && !isLoading && (
+        <Card padding={spacing['4']}>
+          <SectionHeader title="Agent Activity Feed" />
+          {dbActions && dbActions.length > 0 ? (
+            <div style={{ marginTop: spacing['3'] }}>
+              <DataTable
+                columns={actionColumns}
+                data={dbActions as Record<string, unknown>[]}
+              />
+            </div>
+          ) : (
+            <EmptyState
+              icon={<Activity size={32} color={colors.textTertiary} />}
+              title="No activity yet"
+              description="Agent activity will appear here as agents analyze your project data and suggest actions."
+            />
+          )}
+        </Card>
+      )}
+
+      {/* Tools Tab */}
+      {activeTab === 'tools' && !isLoading && (
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: spacing['4'],
+          }}
+        >
+          {AGENT_DOMAINS.map((domain) => {
+            const agent = SPECIALIST_AGENTS[domain]
+            const Icon = AGENT_ICONS[domain]
+            const accent = AGENT_ACCENT[domain]
+            const tools = TOOL_REGISTRY[domain]
 
             return (
-              <Card key={agent.id} padding={spacing['5']}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing['3'] }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
-                    <div style={{
-                      width: 36, height: 36, borderRadius: borderRadius.base,
-                      background: `linear-gradient(135deg, ${colors.primaryOrange} 0%, ${colors.orangeGradientEnd || '#FF9F43'} 100%)`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>
-                      <Bot size={18} color="#fff" />
-                    </div>
-                    <div>
-                      <p style={{ margin: 0, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
-                        {formatAgentType(agent.agent_type)}
-                      </p>
-                      <span style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 4,
-                        fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
-                        color: statusColor, backgroundColor: statusBg,
-                        padding: `1px ${spacing.sm}`, borderRadius: borderRadius.full, marginTop: 2,
-                      }}>
-                        <div style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: statusColor }} />
-                        {agent.status ? agent.status.charAt(0).toUpperCase() + agent.status.slice(1) : ''}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['2'], marginBottom: spacing['4'] }}>
-                  <div>
-                    <p style={{ margin: 0, fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Actions Taken</p>
-                    <p style={{ margin: 0, fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>{agentActions.length}</p>
-                  </div>
-                  <div>
-                    <p style={{ margin: 0, fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Approved</p>
-                    <p style={{ margin: 0, fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>{agentApprovalPct}%</p>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                  <button
-                    onClick={() => toast.success(agent.status === 'active' ? 'Agent paused' : 'Agent resumed')}
+              <Card key={domain} padding={spacing['5']}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: spacing['3'],
+                    marginBottom: spacing['4'],
+                  }}
+                >
+                  <div
                     style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 4,
-                      padding: `${spacing['2']} ${spacing['3']}`,
-                      border: `1px solid ${colors.borderDefault}`,
+                      width: 32,
+                      height: 32,
                       borderRadius: borderRadius.base,
-                      backgroundColor: 'transparent',
-                      color: colors.textSecondary,
-                      fontSize: typography.fontSize.caption,
-                      fontWeight: typography.fontWeight.medium,
-                      cursor: 'pointer',
-                      fontFamily: typography.fontFamily,
-                      transition: `background-color ${transitions.instant}`,
+                      backgroundColor: accent,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
                     }}
-                    onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.surfaceInset }}
-                    onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent' }}
                   >
-                    {agent.status === 'active' ? <><Pause size={12} /> Pause</> : <><Play size={12} /> Resume</>}
-                  </button>
+                    <Icon size={16} color={colors.white} />
+                  </div>
+                  <div>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: typography.fontSize.title,
+                        fontWeight: typography.fontWeight.semibold,
+                        color: colors.textPrimary,
+                      }}
+                    >
+                      {agent.name}
+                    </p>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: typography.fontSize.caption,
+                        color: colors.textTertiary,
+                      }}
+                    >
+                      {tools.length} tools available
+                    </p>
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                    gap: spacing['2'],
+                  }}
+                >
+                  {tools.map((tool) => (
+                    <div
+                      key={tool.name}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: spacing['3'],
+                        padding: spacing['3'],
+                        backgroundColor: colors.surfaceInset,
+                        borderRadius: borderRadius.base,
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 6,
+                          height: 6,
+                          borderRadius: '50%',
+                          backgroundColor: tool.mutating
+                            ? colors.statusPending
+                            : colors.statusActive,
+                          marginTop: spacing['1.5'],
+                          flexShrink: 0,
+                        }}
+                      />
+                      <div>
+                        <p
+                          style={{
+                            margin: 0,
+                            fontSize: typography.fontSize.sm,
+                            fontWeight: typography.fontWeight.medium,
+                            color: colors.textPrimary,
+                            fontFamily: typography.fontFamilyMono,
+                          }}
+                        >
+                          {tool.name}
+                        </p>
+                        <p
+                          style={{
+                            margin: 0,
+                            fontSize: typography.fontSize.caption,
+                            color: colors.textTertiary,
+                            marginTop: spacing['0.5'],
+                          }}
+                        >
+                          {tool.description}
+                        </p>
+                        {tool.mutating && (
+                          <span
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: spacing['1'],
+                              marginTop: spacing['1'],
+                              padding: `1px ${spacing['2']}`,
+                              borderRadius: borderRadius.full,
+                              backgroundColor: colors.statusPendingSubtle,
+                              color: colors.statusPending,
+                              fontSize: typography.fontSize.caption,
+                              fontWeight: typography.fontWeight.medium,
+                            }}
+                          >
+                            <Shield size={8} /> Requires approval
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </Card>
             )
-          }) : (
-            <Card padding={spacing['5']}>
-              <p style={{ color: colors.textTertiary, fontSize: typography.fontSize.sm, margin: 0 }}>
-                No AI agents configured yet.
-              </p>
-            </Card>
-          )}
+          })}
         </div>
-      )}
-
-      {/* Pending Actions Tab */}
-      {activeTab === 'pending' && !isLoading && (
-        <Card padding={spacing['4']}>
-          <SectionHeader title="Pending Actions" />
-          {allActions && allActions.length > 0 ? (
-            <div style={{ marginTop: spacing['3'] }}>
-              <DataTable columns={actionColumns} data={allActions} />
-            </div>
-          ) : (
-            <p style={{ color: colors.textTertiary, fontSize: typography.fontSize.sm, margin: `${spacing['3']} 0 0` }}>
-              No agent actions recorded yet.
-            </p>
-          )}
-        </Card>
       )}
     </PageContainer>
   )

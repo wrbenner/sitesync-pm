@@ -1,71 +1,28 @@
-import React, { useState, useEffect } from 'react';
-import { BarChart3, MapPin, Award, AlertTriangle } from 'lucide-react';
-import { PageContainer, Card, ProgressBar, Skeleton, SectionHeader } from '../components/Primitives';
+import React, { useState, useEffect, useMemo } from 'react';
+import { BarChart3, MapPin, Award, AlertTriangle, RefreshCw, Users } from 'lucide-react';
+import { PageContainer, Card, Btn, ProgressBar, Skeleton, SectionHeader, EmptyState } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme';
 import { useCrewStore } from '../stores/crewStore';
 import { useProjectContext } from '../stores/projectContextStore';
 import { AIAnnotationIndicator } from '../components/ai/AIAnnotation';
 import { PredictiveAlertBanner } from '../components/ai/PredictiveAlert';
 import { getAnnotationsForEntity, getPredictiveAlertsForPage } from '../data/aiAnnotations';
+import { PermissionGate } from '../components/auth/PermissionGate';
 
-const crewColors: Record<string, string> = {
-  'crew-1': colors.statusInfo,
-  'crew-2': colors.statusActive,
-  'crew-3': colors.statusPending,
-  'crew-4': colors.statusReview,
-  'crew-5': colors.primaryOrange,
-  'crew-6': colors.statusNeutral,
-};
-
-const crewPositions: Record<string, { x: number; y: number }> = {
-  'crew-1': { x: 72, y: 22 },
-  'crew-2': { x: 35, y: 48 },
-  'crew-3': { x: 55, y: 72 },
-  'crew-4': { x: 88, y: 55 },
-  'crew-5': { x: 25, y: 28 },
-  'crew-6': { x: 48, y: 85 },
-};
-
-const certifications = [
-  { crew: 'Steel Crew A', cert: 'Crane Operation', expires: '2025-06-15', status: 'current' },
-  { crew: 'Steel Crew A', cert: 'Welding AWS D1.1', expires: '2025-04-20', status: 'expiring' },
-  { crew: 'MEP Crew B', cert: 'HVAC EPA 608', expires: '2025-12-01', status: 'current' },
-  { crew: 'Electrical Crew C', cert: 'Licensed Electrician', expires: '2026-01-15', status: 'current' },
-  { crew: 'Exterior Crew D', cert: 'Fall Protection', expires: '2025-04-01', status: 'expiring' },
+// Rotating palette for crew dot colors on map
+const CREW_COLOR_PALETTE = [
+  colors.statusInfo,
+  colors.statusActive,
+  colors.statusPending,
+  colors.statusReview,
+  colors.primaryOrange,
+  colors.statusNeutral,
 ];
 
-const crewTaskOverrides: Record<string, string[]> = {
-  'crew-1': ['Level 9 concrete pour', 'Formwork Floor 10'],
-  'crew-2': ['Ductwork installation floors 6 through 8', 'VAV box connections Floor 5'],
-  'crew-3': ['Electrical rough in floors 3 through 5', 'Panel installation Floor 2'],
-  'crew-4': ['Curtain wall installation floors 4 through 6'],
-  'crew-5': ['Steel erection floors 9 through 10', 'Connections Floor 8'],
-  'crew-6': ['Drywall taping Floor 2', 'Primer coat Lobby'],
-};
-
-const crewForemen: Record<string, string> = {
-  'crew-1': 'Mike Torres',
-  'crew-2': 'Sarah Chen',
-  'crew-3': 'Ray Johnson',
-  'crew-4': 'Carlos Mendez',
-  'crew-5': 'Dave Williams',
-  'crew-6': 'Lisa Park',
-};
-
-const crewCerts: Record<string, { label: string; color: string }[]> = {
-  'crew-1': [{ label: 'OSHA 30', color: colors.statusActive }, { label: 'First Aid', color: colors.statusInfo }],
-  'crew-2': [{ label: 'OSHA 30', color: colors.statusActive }],
-  'crew-3': [{ label: 'OSHA 30', color: colors.statusActive }, { label: 'First Aid', color: colors.statusInfo }],
-  'crew-4': [{ label: 'Training Due', color: colors.statusPending }],
-  'crew-5': [{ label: 'OSHA 30', color: colors.statusActive }],
-  'crew-6': [{ label: 'Training Due', color: colors.statusPending }],
-};
-
 export const Crews: React.FC = () => {
-  const { crews, loading, loadCrews } = useCrewStore();
+  const { crews, loading, error: crewError, loadCrews } = useCrewStore();
   const { activeProject } = useProjectContext();
   const [activeTab, setActiveTab] = useState<'map' | 'cards' | 'performance'>('cards');
-  const [dotPositions, setDotPositions] = useState(crewPositions);
   const [hoveredCrew, setHoveredCrew] = useState<string | null>(null);
 
   useEffect(() => {
@@ -73,6 +30,30 @@ export const Crews: React.FC = () => {
       loadCrews(activeProject.id);
     }
   }, [activeProject?.id]);
+
+  // Derive color per crew from palette
+  const getCrewColor = useMemo(() => {
+    const map = new Map<string, string>();
+    crews.forEach((c, i) => map.set(c.id, CREW_COLOR_PALETTE[i % CREW_COLOR_PALETTE.length]));
+    return (id: string) => map.get(id) || colors.statusNeutral;
+  }, [crews]);
+
+  // Derive initial positions spread across the map
+  const initialPositions = useMemo(() => {
+    const pos: Record<string, { x: number; y: number }> = {};
+    crews.forEach((c, i) => {
+      const angle = (i / Math.max(crews.length, 1)) * 2 * Math.PI;
+      pos[c.id] = { x: 50 + 30 * Math.cos(angle), y: 50 + 30 * Math.sin(angle) };
+    });
+    return pos;
+  }, [crews]);
+
+  const [dotPositions, setDotPositions] = useState(initialPositions);
+
+  // Sync positions when crews change
+  useEffect(() => {
+    setDotPositions(initialPositions);
+  }, [initialPositions]);
 
   // Simulated movement for map dots
   useEffect(() => {
@@ -92,11 +73,11 @@ export const Crews: React.FC = () => {
     return () => clearInterval(interval);
   }, [activeTab]);
 
-  if (loading || crews.length === 0) {
+  if (loading) {
     return (
       <PageContainer title="Crews" subtitle="Loading crews...">
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: spacing.lg }}>
-          {[1, 2, 3, 4, 5, 6].map((i) => (
+          {Array.from({ length: 6 }).map((_, i) => (
             <Card key={i} padding={spacing.xl}>
               <Skeleton width="60%" height="18px" />
               <div style={{ marginTop: spacing.sm }}><Skeleton width="80%" height="14px" /></div>
@@ -105,6 +86,36 @@ export const Crews: React.FC = () => {
             </Card>
           ))}
         </div>
+      </PageContainer>
+    );
+  }
+
+  if (crewError) {
+    return (
+      <PageContainer title="Crews" subtitle="Unable to load">
+        <Card padding={spacing['6']}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['4'], padding: spacing['6'], textAlign: 'center' }}>
+            <AlertTriangle size={40} color={colors.statusCritical} />
+            <div>
+              <p style={{ fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>Failed to load crews</p>
+              <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: 0 }}>{crewError}</p>
+            </div>
+            <Btn variant="primary" size="sm" icon={<RefreshCw size={14} />} onClick={() => activeProject?.id && loadCrews(activeProject.id)}>Try Again</Btn>
+          </div>
+        </Card>
+      </PageContainer>
+    );
+  }
+
+  if (crews.length === 0) {
+    return (
+      <PageContainer title="Crews" subtitle="No crews">
+        <EmptyState
+          icon={<Users size={40} color={colors.textTertiary} />}
+          title="No crews yet"
+          description="Add crews to track workforce, productivity, and certifications across the project."
+          action={<PermissionGate permission="crews.create"><Btn variant="primary">Add Crew</Btn></PermissionGate>}
+        />
       </PageContainer>
     );
   }
@@ -218,7 +229,7 @@ export const Crews: React.FC = () => {
             {/* Crew dots */}
             {crews.map((crew) => {
               const pos = dotPositions[crew.id] || { x: 50, y: 50 };
-              const dotColor = crewColors[crew.id] || colors.statusNeutral;
+              const dotColor = getCrewColor(crew.id);
               const isActive = crew.status === 'active';
               return (
                 <div
@@ -285,7 +296,7 @@ export const Crews: React.FC = () => {
           >
             {crews.map((crew) => (
               <div key={crew.id} style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
-                <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: crewColors[crew.id] || colors.statusNeutral }} />
+                <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: getCrewColor(crew.id) }} />
                 <span style={{ fontSize: typography.fontSize.caption, color: colors.textSecondary }}>{crew.name}</span>
               </div>
             ))}
@@ -323,7 +334,7 @@ export const Crews: React.FC = () => {
                 <Card key={crew.id} padding={spacing.xl}>
                   <div style={{
                     opacity: crew.status === 'standby' ? 0.6 : 1,
-                    borderLeft: isBehind ? '4px solid #E05252' : '4px solid transparent',
+                    borderLeft: isBehind ? `4px solid ${colors.chartRed}` : '4px solid transparent',
                     marginLeft: `-${spacing.xl}`,
                     paddingLeft: `calc(${spacing.xl} - 4px)`,
                   }}>
@@ -426,49 +437,25 @@ export const Crews: React.FC = () => {
                     <p
                       style={{
                         fontSize: typography.fontSize.sm,
-                        color: isBehind ? '#E05252' : colors.textSecondary,
+                        color: isBehind ? colors.chartRed : colors.textSecondary,
                         fontWeight: typography.fontWeight.medium,
                         margin: 0,
                         display: 'flex',
                         alignItems: 'center',
                       }}
                     >
-                      {isBehind && <AlertTriangle size={12} color="#E05252" style={{ marginRight: 4 }} />}
+                      {isBehind && <AlertTriangle size={12} color={colors.chartRed} style={{ marginRight: 4 }} />}
                       {crew.eta}
                     </p>
 
-                    {/* Crew Tasks */}
-                    {(crewTaskOverrides[crew.id] || []).length > 0 && (
+                    {/* Crew Task */}
+                    {crew.task && crew.task !== 'Unassigned' && (
                       <div style={{ marginTop: spacing.md, borderTop: `1px solid ${colors.borderLight}`, paddingTop: spacing.sm }}>
-                        {(crewTaskOverrides[crew.id] || []).map((taskDesc) => (
-                          <p
-                            key={taskDesc}
-                            style={{
-                              fontSize: '13px',
-                              color: colors.textSecondary,
-                              margin: 0,
-                              padding: `${spacing.xs} ${spacing.sm}`,
-                            }}
-                          >
-                            {taskDesc}
-                          </p>
-                        ))}
+                        <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: 0, padding: `${spacing.xs} ${spacing.sm}` }}>
+                          {crew.task}
+                        </p>
                       </div>
                     )}
-
-                    {/* Foreman */}
-                    {crewForemen[crew.id] && (
-                      <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0, marginTop: spacing['1'] }}>
-                        Lead: {crewForemen[crew.id]}
-                      </p>
-                    )}
-
-                    {/* Certification Badges */}
-                    <div style={{ display: 'flex', gap: spacing['1'], marginTop: spacing['2'], flexWrap: 'wrap' }}>
-                      {(crewCerts[crew.id] || []).map(cert => (
-                        <span key={cert.label} style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: cert.color, backgroundColor: `${cert.color}12`, padding: '1px 6px', borderRadius: borderRadius.full }}>{cert.label}</span>
-                      ))}
-                    </div>
                   </div>
                 </Card>
               );
@@ -539,76 +526,15 @@ export const Crews: React.FC = () => {
             </div>
           </Card>
 
-          {/* Certifications Table */}
+          {/* Certifications (placeholder for future certification tracking) */}
           <Card padding={spacing.xl}>
             <SectionHeader title="Certifications" action={
               <span style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
                 <Award size={14} color={colors.textTertiary} />
-                <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{certifications.filter(c => c.status === 'expiring').length} expiring soon</span>
               </span>
             } />
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: typography.fontSize.sm }}>
-                <thead>
-                  <tr>
-                    {['Crew', 'Certification', 'Expires', 'Status'].map((header) => (
-                      <th
-                        key={header}
-                        style={{
-                          textAlign: 'left',
-                          padding: `${spacing.sm} ${spacing.md}`,
-                          fontSize: typography.fontSize.caption,
-                          fontWeight: typography.fontWeight.semibold,
-                          color: colors.textTertiary,
-                          textTransform: 'uppercase',
-                          letterSpacing: typography.letterSpacing.wider,
-                          borderBottom: `1px solid ${colors.borderSubtle}`,
-                        }}
-                      >
-                        {header}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {certifications.map((cert, i) => (
-                    <tr
-                      key={i}
-                      style={{ cursor: 'pointer' }}
-                      onMouseEnter={(e) => { (e.currentTarget as HTMLTableRowElement).style.backgroundColor = colors.surfaceHover; }}
-                      onMouseLeave={(e) => { (e.currentTarget as HTMLTableRowElement).style.backgroundColor = 'transparent'; }}
-                    >
-                      <td style={{ padding: `${spacing.md} ${spacing.md}`, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, borderBottom: `1px solid ${colors.borderSubtle}` }}>
-                        {cert.crew}
-                      </td>
-                      <td style={{ padding: `${spacing.md} ${spacing.md}`, color: colors.textSecondary, borderBottom: `1px solid ${colors.borderSubtle}` }}>
-                        {cert.cert}
-                      </td>
-                      <td style={{ padding: `${spacing.md} ${spacing.md}`, color: colors.textSecondary, borderBottom: `1px solid ${colors.borderSubtle}` }}>
-                        {cert.expires}
-                      </td>
-                      <td style={{ padding: `${spacing.md} ${spacing.md}`, borderBottom: `1px solid ${colors.borderSubtle}` }}>
-                        <span
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: spacing.xs,
-                            padding: `2px ${spacing.sm}`,
-                            borderRadius: borderRadius.full,
-                            fontSize: typography.fontSize.caption,
-                            fontWeight: typography.fontWeight.medium,
-                            color: cert.status === 'current' ? colors.statusActive : colors.statusPending,
-                            backgroundColor: cert.status === 'current' ? colors.statusActiveSubtle : colors.statusPendingSubtle,
-                          }}
-                        >
-                          <div style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: cert.status === 'current' ? colors.statusActive : colors.statusPending }} />
-                          {cert.status === 'current' ? 'Current' : 'Expiring Soon'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div style={{ padding: spacing.lg, textAlign: 'center' }}>
+              <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0 }}>Certification tracking will be available when crew certification data is configured.</p>
             </div>
           </Card>
         </div>

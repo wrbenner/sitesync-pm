@@ -1,18 +1,23 @@
-import React, { useState } from 'react';
-import { PageContainer, Card, Btn, StatusTag, PriorityTag, TableHeader, TableRow, DetailPanel, Avatar, Tag, RelatedItems, Skeleton, useToast } from '../components/Primitives';
+import React, { useState, useMemo, useCallback } from 'react';
+import { PageContainer, Card, Btn, StatusTag, PriorityTag, TableHeader, TableRow, DetailPanel, Avatar, Tag, RelatedItems, Skeleton, EmptyState, useToast } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
-import { useQuery } from '../hooks/useQuery';
-import { getRfis } from '../api/endpoints/rfis';
-import { getMetrics } from '../api/endpoints/projects';
-import { Plus, Clock, MessageSquare, Paperclip, Calendar, Send, Sparkles, LayoutGrid, List, Search } from 'lucide-react';
+import { useRFIs } from '../hooks/queries';
+import { useTableKeyboardNavigation } from '../hooks/useTableKeyboardNavigation';
+import { AlertTriangle, HelpCircle, Plus, Clock, MessageSquare, Paperclip, Calendar, RefreshCw, Send, Sparkles, LayoutGrid, List, Search } from 'lucide-react';
 import { useAppNavigate, getRelatedItemsForRfi } from '../utils/connections';
 import { useCreateRFI, useUpdateRFI } from '../hooks/mutations';
 import { useProjectId } from '../hooks/useProjectId';
+import { PermissionGate } from '../components/auth/PermissionGate';
 import { AIAnnotationIndicator } from '../components/ai/AIAnnotation';
 import { PredictiveAlertBanner } from '../components/ai/PredictiveAlert';
 import { getAnnotationsForEntity, getPredictiveAlertsForPage } from '../data/aiAnnotations';
 import { KanbanBoard } from '../components/shared/KanbanBoard';
 import type { KanbanColumn } from '../components/shared/KanbanBoard';
+import CreateRFIModal from '../components/forms/CreateRFIModal';
+import { EditableDetailField } from '../components/forms/EditableField';
+import { toast } from 'sonner';
+import { PresenceAvatars } from '../components/shared/PresenceAvatars';
+import { EditingLockBanner } from '../components/ui/EditingLockBanner';
 
 const isOverdue = (dateStr: string) => new Date(dateStr) < new Date();
 
@@ -30,21 +35,6 @@ const columns = [
 ];
 
 
-const commentCounts: Record<number, number> = { 1: 3, 2: 1, 3: 5, 4: 8, 5: 2, 8: 4, 12: 6 };
-
-const drawingRefs: Record<number, string> = { 1: 'A-001', 2: 'ID-001', 3: 'M-001', 4: 'S-001', 5: 'E-001', 8: 'A-001', 12: 'S-002' };
-
-const ballInCourt: Record<number, { initials: string; name: string }> = {
-  1: { initials: 'JL', name: 'Jennifer Lee' },
-  3: { initials: 'RA', name: 'Robert Anderson' },
-  4: { initials: 'DK', name: 'David Kumar' },
-  5: { initials: 'RA', name: 'Robert Anderson' },
-  8: { initials: 'JL', name: 'Jennifer Lee' },
-  12: { initials: 'DK', name: 'David Kumar' },
-  13: { initials: 'RA', name: 'Robert Anderson' },
-};
-
-
 const MetaItem: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
   <div>
     <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, marginBottom: spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: typography.fontWeight.medium }}>
@@ -57,10 +47,25 @@ const MetaItem: React.FC<{ label: string; children: React.ReactNode }> = ({ labe
 );
 
 const RFIs: React.FC = () => {
-  const { data: rfis, loading: rfisLoading } = useQuery('rfis', getRfis);
-  const { data: metrics } = useQuery('metrics', getMetrics);
+  const { data: rfisRaw = [], isPending: rfisLoading, error: rfisError, refetch } = useRFIs(projectId);
+
+  // Map API data to component shape
+  const rfis = useMemo(() => rfisRaw.map((r: Record<string, unknown>) => ({
+    ...r,
+    rfiNumber: r.number ? `RFI-${String(r.number).padStart(3, '0')}` : String(r.id ?? '').slice(0, 8),
+    from: (r.created_by as string) || '',
+    to: (r.assigned_to as string) || '',
+    submitDate: typeof r.created_at === 'string' ? r.created_at.slice(0, 10) : '',
+    dueDate: (r.due_date as string) || '',
+  })), [rfisRaw]);
+
+  // Derive metrics from data
+  const openCount = useMemo(() => rfis.filter((r: Record<string, unknown>) => r.status === 'open').length, [rfis]);
+  const overdueCount = useMemo(() => rfis.filter((r: Record<string, unknown>) => r.status === 'open' && r.dueDate && isOverdue(r.dueDate as string)).length, [rfis]);
   const [selectedRfi, setSelectedRfi] = useState<any>(null);
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingDetail, setEditingDetail] = useState(false);
   const [page, setPage] = useState(1);
   const perPage = 10;
   const { addToast } = useToast();
@@ -69,23 +74,23 @@ const RFIs: React.FC = () => {
   const createRFI = useCreateRFI();
   const updateRFI = useUpdateRFI();
 
-  const handleStatusChange = async (rfiId: string, newStatus: string) => {
+  const handleStatusChange = useCallback(async (rfiId: string, newStatus: string) => {
     try {
       await updateRFI.mutateAsync({ id: rfiId, updates: { status: newStatus }, projectId: projectId! });
       addToast('success', 'Status updated');
     } catch {
       addToast('error', 'Failed to update status');
     }
-  };
+  }, [updateRFI, projectId, addToast]);
 
   const pageAlerts = getPredictiveAlertsForPage('rfis');
 
-  if (rfisLoading || !rfis) {
+  if (rfisLoading) {
     return (
       <PageContainer title="RFIs" subtitle="Loading...">
         <Card padding="0">
           <div style={{ padding: spacing.lg, display: 'flex', flexDirection: 'column', gap: spacing.md }}>
-            {[...Array(6)].map((_, i) => (
+            {Array.from({ length: 8 }).map((_, i) => (
               <Skeleton key={i} height="44px" />
             ))}
           </div>
@@ -94,22 +99,65 @@ const RFIs: React.FC = () => {
     );
   }
 
-  const allRfis = rfis || [];
-  const totalPages = Math.ceil(allRfis.length / perPage);
-  const paginatedRfis = allRfis.slice((page - 1) * perPage, page * perPage);
+  if (rfisError) {
+    return (
+      <PageContainer title="RFIs" subtitle="Unable to load">
+        <Card padding={spacing['6']}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['4'], padding: spacing['6'], textAlign: 'center' }}>
+            <AlertTriangle size={40} color={colors.statusCritical} />
+            <div>
+              <p style={{ fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>Failed to load RFIs</p>
+              <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: 0 }}>{(rfisError as Error).message || 'Unable to fetch request data'}</p>
+            </div>
+            <Btn variant="primary" size="sm" icon={<RefreshCw size={14} />} onClick={() => refetch()}>Try Again</Btn>
+          </div>
+        </Card>
+      </PageContainer>
+    );
+  }
 
-  const kanbanColumns: KanbanColumn<any>[] = [
+  if (!rfis.length) {
+    return (
+      <PageContainer
+        title="RFIs"
+        subtitle="No items"
+        actions={
+          <PermissionGate permission="rfis.create">
+            <Btn onClick={() => setShowCreateModal(true)}>
+              <Plus size={16} style={{ marginRight: spacing.xs }} />
+              New RFI
+            </Btn>
+          </PermissionGate>
+        }
+      >
+        <EmptyState
+          icon={<HelpCircle size={40} color={colors.textTertiary} />}
+          title="No RFIs yet"
+          description="Submit an RFI to get clarification or approvals from the design team."
+          action={<PermissionGate permission="rfis.create"><Btn variant="primary" onClick={() => setShowCreateModal(true)}>Submit RFI</Btn></PermissionGate>}
+        />
+      </PageContainer>
+    );
+  }
+
+  const allRfis = rfis || [];
+  const totalPages = useMemo(() => Math.ceil(allRfis.length / perPage), [allRfis, perPage]);
+  const paginatedRfis = useMemo(() => allRfis.slice((page - 1) * perPage, page * perPage), [allRfis, page, perPage]);
+
+  useTableKeyboardNavigation(paginatedRfis, selectedRfi?.id ?? null, setSelectedRfi);
+
+  const kanbanColumns: KanbanColumn<any>[] = useMemo(() => [
     { id: 'draft', label: 'In Draft', color: colors.textTertiary, items: [] },
     { id: 'pending', label: 'Submitted', color: colors.statusPending, items: allRfis.filter((r) => r.status === 'pending') },
     { id: 'under_review', label: 'Under Review', color: colors.statusInfo, items: [] },
     { id: 'approved', label: 'Answered', color: colors.statusActive, items: allRfis.filter((r) => r.status === 'approved') },
     { id: 'closed', label: 'Closed', color: colors.statusNeutral, items: [] },
-  ];
+  ], [allRfis]);
 
   return (
     <PageContainer
       title="RFIs"
-      subtitle={`${metrics?.rfiOpen ?? 0} open · ${metrics?.rfiOverdue ?? 0} overdue`}
+      subtitle={`${openCount} open · ${overdueCount} overdue`}
       actions={
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
           <div style={{ display: 'flex', gap: spacing['1'], backgroundColor: colors.surfaceInset, borderRadius: borderRadius.full, padding: 2 }}>
@@ -120,28 +168,12 @@ const RFIs: React.FC = () => {
               <LayoutGrid size={14} style={{ marginRight: 4 }} /> Kanban
             </button>
           </div>
-          <Btn onClick={async () => {
-            try {
-              await createRFI.mutateAsync({
-                projectId: projectId!,
-                data: {
-                  project_id: projectId!,
-                  title: 'New RFI',
-                  description: '',
-                  priority: 'medium',
-                  assigned_to: null,
-                  drawing_reference: null,
-                  due_date: null,
-                }
-              });
-              addToast('success', 'RFI created successfully');
-            } catch {
-              addToast('error', 'Failed to create RFI');
-            }
-          }}>
-            <Plus size={16} style={{ marginRight: spacing.xs }} />
-            New RFI
-          </Btn>
+          <PermissionGate permission="rfis.create">
+            <Btn onClick={() => setShowCreateModal(true)}>
+              <Plus size={16} style={{ marginRight: spacing.xs }} />
+              New RFI
+            </Btn>
+          </PermissionGate>
         </div>
       }
     >
@@ -151,6 +183,7 @@ const RFIs: React.FC = () => {
 
       {viewMode === 'table' ? (
         <Card padding="0">
+          <div role="table">
           <TableHeader columns={columns} />
           {paginatedRfis.map((rfi, i) => (
             <TableRow
@@ -162,7 +195,7 @@ const RFIs: React.FC = () => {
                 {
                   width: '90px',
                   content: (
-                    <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.primaryOrange }}>{rfi.rfiNumber}</span>
+                    <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.orangeText }}>{rfi.rfiNumber}</span>
                   ),
                 },
                 {
@@ -177,11 +210,9 @@ const RFIs: React.FC = () => {
                           </span>
                         )}
                       </span>
-                      {(commentCounts[rfi.id] || drawingRefs[rfi.id]) && (
+                      {rfi.drawing_reference && (
                         <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
-                          {drawingRefs[rfi.id] && <span style={{ color: colors.primaryOrange }}>{drawingRefs[rfi.id]}</span>}
-                          {commentCounts[rfi.id] && <span>{commentCounts[rfi.id]} comments</span>}
-                          {ballInCourt[rfi.id] && <span>Action: {ballInCourt[rfi.id].name.split(' ')[1]}</span>}
+                          <span style={{ color: colors.orangeText }}>{rfi.drawing_reference}</span>
                         </span>
                       )}
                     </div>
@@ -198,7 +229,7 @@ const RFIs: React.FC = () => {
                 {
                   width: '110px',
                   content: rfi.status === 'pending' ? (
-                    <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: '#4A9EE8', backgroundColor: 'rgba(74, 158, 232, 0.08)', padding: '2px 8px', borderRadius: borderRadius.full }}>Pending</span>
+                    <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.statusInfoBright, backgroundColor: colors.statusInfoSubtle, padding: '2px 8px', borderRadius: borderRadius.full }}>Pending</span>
                   ) : (
                     <StatusTag status={rfi.status as any} />
                   ),
@@ -222,12 +253,13 @@ const RFIs: React.FC = () => {
               ]}
             />
           ))}
+          </div>
           {paginatedRfis.length === 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', textAlign: 'center' }}>
-              <Search size={32} color="#A09890" style={{ marginBottom: '12px' }} />
-              <p style={{ fontSize: '14px', fontWeight: 500, color: '#1A1613', margin: 0, marginBottom: '4px' }}>No items match your filters</p>
-              <p style={{ fontSize: '13px', color: '#6B6560', margin: 0, marginBottom: '16px' }}>Try adjusting your search or filter criteria</p>
-              <button onClick={() => setPage(1)} style={{ padding: '6px 16px', backgroundColor: 'transparent', border: '1px solid #E5E1DC', borderRadius: '6px', fontSize: '13px', fontFamily: '"Inter", sans-serif', color: '#6B6560', cursor: 'pointer' }}>
+              <Search size={32} color={colors.textTertiary} style={{ marginBottom: '12px' }} />
+              <p style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, margin: 0, marginBottom: '4px' }}>No items match your filters</p>
+              <p style={{ fontSize: typography.fontSize.sm, color: colors.gray600, margin: 0, marginBottom: '16px' }}>Try adjusting your search or filter criteria</p>
+              <button onClick={() => setPage(1)} style={{ padding: '6px 16px', backgroundColor: 'transparent', border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, color: colors.gray600, cursor: 'pointer' }}>
                 Clear Filters
               </button>
             </div>
@@ -247,9 +279,9 @@ const RFIs: React.FC = () => {
           columns={kanbanColumns}
           getKey={(rfi) => rfi.id}
           renderCard={(rfi) => (
-            <div style={{ padding: spacing['3'] }} onClick={() => setSelectedRfi(rfi)}>
+            <div style={{ padding: spacing['3'], cursor: 'pointer' }} role="button" tabIndex={0} aria-label={`Open RFI ${rfi.rfiNumber}: ${rfi.title}`} onClick={() => setSelectedRfi(rfi)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedRfi(rfi); } }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['2'] }}>
-                <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.primaryOrange }}>{rfi.rfiNumber}</span>
+                <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.orangeText }}>{rfi.rfiNumber}</span>
                 <PriorityTag priority={rfi.priority} />
               </div>
               <p style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>{rfi.title}</p>
@@ -268,18 +300,29 @@ const RFIs: React.FC = () => {
       {/* Detail Panel */}
       <DetailPanel
         open={!!selectedRfi}
-        onClose={() => setSelectedRfi(null)}
+        onClose={() => { setSelectedRfi(null); setEditingDetail(false); }}
         title={selectedRfi?.rfiNumber || ''}
         width="560px"
       >
         {selectedRfi && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xl }}>
-            {/* Title */}
-            <div>
-              <h3 style={{ margin: 0, fontSize: typography.fontSize['3xl'], fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, lineHeight: typography.lineHeight.tight }}>
+            {/* Title + Edit Toggle */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing['3'] }}>
+              <h3 style={{ margin: 0, fontSize: typography.fontSize['3xl'], fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, lineHeight: typography.lineHeight.tight, flex: 1 }}>
                 {selectedRfi.title}
               </h3>
+              <PresenceAvatars entityId={String(selectedRfi.id)} size={24} />
+              <PermissionGate permission="rfis.edit">
+                <Btn
+                  variant={editingDetail ? 'primary' : 'secondary'}
+                  size="sm"
+                  onClick={() => setEditingDetail(!editingDetail)}
+                >
+                  {editingDetail ? 'Done' : 'Edit'}
+                </Btn>
+              </PermissionGate>
             </div>
+            <EditingLockBanner entityType="RFI" entityId={String(selectedRfi.id)} isEditing={editingDetail} />
 
             {/* Meta Grid */}
             <div
@@ -292,33 +335,86 @@ const RFIs: React.FC = () => {
                 borderRadius: borderRadius.md,
               }}
             >
+              <EditableDetailField
+                label="Priority"
+                value={selectedRfi.priority}
+                editing={editingDetail}
+                type="select"
+                options={[
+                  { value: 'low', label: 'Low' },
+                  { value: 'medium', label: 'Medium' },
+                  { value: 'high', label: 'High' },
+                  { value: 'critical', label: 'Critical' },
+                ]}
+                onSave={async (val) => {
+                  await updateRFI.mutateAsync({ id: String(selectedRfi.id), updates: { priority: val }, projectId: projectId! });
+                  selectedRfi.priority = val;
+                  toast.success('Priority updated');
+                }}
+                displayContent={<PriorityTag priority={selectedRfi.priority as any} />}
+              />
+              <EditableDetailField
+                label="Status"
+                value={selectedRfi.status}
+                editing={editingDetail}
+                type="select"
+                options={[
+                  { value: 'open', label: 'Open' },
+                  { value: 'under_review', label: 'Under Review' },
+                  { value: 'answered', label: 'Answered' },
+                  { value: 'closed', label: 'Closed' },
+                ]}
+                onSave={async (val) => {
+                  await handleStatusChange(String(selectedRfi.id), val);
+                  selectedRfi.status = val;
+                }}
+                displayContent={<StatusTag status={selectedRfi.status as any} />}
+              />
+              <EditableDetailField
+                label="Assigned To"
+                value={selectedRfi.to || ''}
+                editing={editingDetail}
+                type="text"
+                onSave={async (val) => {
+                  await updateRFI.mutateAsync({ id: String(selectedRfi.id), updates: { assigned_to: val }, projectId: projectId! });
+                  selectedRfi.to = val;
+                  toast.success('Assignee updated');
+                }}
+                displayContent={
+                  selectedRfi.to ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
+                      <Avatar initials={selectedRfi.to.split(' ').map((w: string) => w[0]).join('').slice(0, 2)} size={24} />
+                      <span>{selectedRfi.to}</span>
+                    </div>
+                  ) : undefined
+                }
+              />
+              <EditableDetailField
+                label="Due Date"
+                value={selectedRfi.dueDate?.slice(0, 10) || ''}
+                editing={editingDetail}
+                type="date"
+                onSave={async (val) => {
+                  await updateRFI.mutateAsync({ id: String(selectedRfi.id), updates: { due_date: val }, projectId: projectId! });
+                  selectedRfi.dueDate = val;
+                  toast.success('Due date updated');
+                }}
+                displayContent={
+                  <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
+                    <Calendar size={14} style={{ color: colors.textTertiary }} />
+                    <span style={{
+                      color: isOverdue(selectedRfi.dueDate) && selectedRfi.status !== 'approved' ? colors.statusCritical : colors.textPrimary,
+                      fontWeight: isOverdue(selectedRfi.dueDate) && selectedRfi.status !== 'approved' ? typography.fontWeight.medium : typography.fontWeight.normal,
+                    }}>
+                      {formatDate(selectedRfi.dueDate)}
+                    </span>
+                  </div>
+                }
+              />
               <MetaItem label="From">
                 <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
                   <Avatar initials={selectedRfi.from.split(' ').map((w: string) => w[0]).join('').slice(0, 2)} size={24} />
                   <span>{selectedRfi.from}</span>
-                </div>
-              </MetaItem>
-              <MetaItem label="To">
-                <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
-                  <Avatar initials={selectedRfi.to.split(' ').map((w: string) => w[0]).join('').slice(0, 2)} size={24} />
-                  <span>{selectedRfi.to}</span>
-                </div>
-              </MetaItem>
-              <MetaItem label="Priority">
-                <PriorityTag priority={selectedRfi.priority as any} />
-              </MetaItem>
-              <MetaItem label="Status">
-                <StatusTag status={selectedRfi.status as any} />
-              </MetaItem>
-              <MetaItem label="Due Date">
-                <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
-                  <Calendar size={14} style={{ color: colors.textTertiary }} />
-                  <span style={{
-                    color: isOverdue(selectedRfi.dueDate) && selectedRfi.status !== 'approved' ? colors.red : colors.textPrimary,
-                    fontWeight: isOverdue(selectedRfi.dueDate) && selectedRfi.status !== 'approved' ? typography.fontWeight.medium : typography.fontWeight.normal,
-                  }}>
-                    {formatDate(selectedRfi.dueDate)}
-                  </span>
                 </div>
               </MetaItem>
               <MetaItem label="Submitted">
@@ -412,27 +508,31 @@ const RFIs: React.FC = () => {
             {/* Action Buttons */}
             <div style={{ display: 'flex', gap: spacing.md, paddingTop: spacing.md, borderTop: `1px solid ${colors.borderLight}` }}>
               <div style={{ flex: 1 }}>
-                <Btn
-                  fullWidth
-                  icon={<Send size={15} />}
-                  onClick={async () => {
-                    await handleStatusChange(String(selectedRfi.id), 'approved');
-                    addToast('success', 'Response submitted successfully');
-                    setSelectedRfi(null);
-                  }}
-                >
-                  Submit Response
-                </Btn>
+                <PermissionGate permission="rfis.respond">
+                  <Btn
+                    fullWidth
+                    icon={<Send size={15} />}
+                    onClick={async () => {
+                      await handleStatusChange(String(selectedRfi.id), 'approved');
+                      addToast('success', 'Response submitted successfully');
+                      setSelectedRfi(null);
+                    }}
+                  >
+                    Submit Response
+                  </Btn>
+                </PermissionGate>
               </div>
               <div style={{ flex: 1 }}>
-                <Btn
-                  variant="secondary"
-                  fullWidth
-                  icon={<MessageSquare size={15} />}
-                  onClick={() => addToast('info', 'Comment box opening soon')}
-                >
-                  Add Comment
-                </Btn>
+                <PermissionGate permission="rfis.respond">
+                  <Btn
+                    variant="secondary"
+                    fullWidth
+                    icon={<MessageSquare size={15} />}
+                    onClick={() => addToast('info', 'Comment box opening soon')}
+                  >
+                    Add Comment
+                  </Btn>
+                </PermissionGate>
               </div>
             </div>
 
@@ -441,6 +541,18 @@ const RFIs: React.FC = () => {
           </div>
         )}
       </DetailPanel>
+
+      <CreateRFIModal
+        open={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSubmit={async (data) => {
+          await createRFI.mutateAsync({
+            projectId: projectId!,
+            data: { ...data, project_id: projectId! },
+          });
+          toast.success('RFI created: ' + (data.title || 'New RFI'));
+        }}
+      />
     </PageContainer>
   );
 };

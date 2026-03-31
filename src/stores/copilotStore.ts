@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { supabase } from '../lib/supabase';
 
 export interface CopilotMessage {
   id: string;
@@ -27,30 +28,6 @@ interface CopilotState {
   setActiveConversation: (id: string) => void;
   sendMessage: (text: string) => Promise<void>;
   deleteConversation: (id: string) => void;
-}
-
-// Smart construction-aware responses when no API key is configured
-const MOCK_RESPONSES: Record<string, string> = {
-  'default': 'Based on the current project data for Meridian Tower, I can help you analyze schedules, budgets, RFIs, submittals, and field conditions. What specific area would you like to explore?',
-  'budget': 'Looking at the budget data: Total project value is $47.5M with $28M spent to date (59%). Structural division is at 78% of budget with $2.1M committed, which puts it at risk of overrun. I recommend monitoring the Structural division closely and considering a contingency reallocation from Interior which has 42% remaining budget.',
-  'rfi': 'There are currently 12 RFIs tracked on this project. 5 are in submitted status, 3 are under review, 3 have been responded to, and 1 is closed. RFI-004 (Structural connection at curtain wall) and RFI-012 (Concrete mix design for Level 10) are both critical priority and should be prioritized.',
-  'schedule': 'The project is currently at 62% completion with the scheduled end date approaching. Key milestones to watch: Level 10 slab pour is dependent on RFI-012 response, and the curtain wall installation is blocked by RFI-004. I recommend expediting these two items to maintain schedule.',
-  'submittal': 'There are 10 submittals tracked. 3 are approved, 2 are under review, 3 are submitted and awaiting review, and 2 require revisions (Door Hardware Schedule and Waterproofing Membrane). The Curtain Wall System (SUB-006) is critical priority and under review, so that should be your top focus.',
-  'safety': 'Based on the daily logs and field reports, there are no open safety incidents. The last safety audit was completed on schedule. Recommended focus areas: fall protection on upper floors as structural steel work progresses, and confined space monitoring in the elevator pits.',
-  'weather': 'Current conditions are favorable for construction. No significant weather events forecasted in the next 7 days. The next potential impact could be from seasonal rain patterns in approximately 3 weeks, which could affect exterior waterproofing and concrete pours.',
-  'crew': 'Current crew deployment: 6 active crews with 142 total workers on site. Structural crew is at full capacity (28 workers), MEP crew could use 4 additional workers for the floor 8 HVAC rough-in to maintain schedule. I recommend pulling from the Site Work crew which is winding down.',
-};
-
-function getMockResponse(text: string): string {
-  const lower = text.toLowerCase();
-  if (lower.includes('budget') || lower.includes('cost') || lower.includes('spend') || lower.includes('variance')) return MOCK_RESPONSES['budget'];
-  if (lower.includes('rfi') || lower.includes('request for information')) return MOCK_RESPONSES['rfi'];
-  if (lower.includes('schedule') || lower.includes('timeline') || lower.includes('milestone') || lower.includes('delay')) return MOCK_RESPONSES['schedule'];
-  if (lower.includes('submittal') || lower.includes('shop drawing') || lower.includes('approval')) return MOCK_RESPONSES['submittal'];
-  if (lower.includes('safety') || lower.includes('incident') || lower.includes('osha')) return MOCK_RESPONSES['safety'];
-  if (lower.includes('weather') || lower.includes('rain') || lower.includes('forecast')) return MOCK_RESPONSES['weather'];
-  if (lower.includes('crew') || lower.includes('manpower') || lower.includes('worker') || lower.includes('labor')) return MOCK_RESPONSES['crew'];
-  return MOCK_RESPONSES['default'];
 }
 
 export const useCopilotStore = create<CopilotState>()((set, get) => ({
@@ -120,7 +97,7 @@ export const useCopilotStore = create<CopilotState>()((set, get) => ({
     let responseText: string;
 
     if (apiKey) {
-      // Real Claude API call
+      // Real Claude API call via direct browser access
       try {
         const conversation = get().conversations.find((c) => c.id === activeConversationId);
         const apiMessages = (conversation?.messages ?? []).map((m) => ({
@@ -156,18 +133,33 @@ export const useCopilotStore = create<CopilotState>()((set, get) => ({
         responseText = `I encountered an error connecting to the AI service: ${(err as Error).message}. Please check your API key and try again.`;
       }
     } else {
-      // Mock response with simulated delay
-      await new Promise((resolve) => setTimeout(resolve, 800 + Math.random() * 1200));
-      responseText = getMockResponse(text);
-
-      // Auto-set conversation title from first user message
-      const conv = get().conversations.find((c) => c.id === activeConversationId);
-      if (conv && conv.messages.length <= 2) {
-        const title = text.length > 40 ? text.substring(0, 40) + '...' : text;
-        set((s) => ({
-          conversations: s.conversations.map((c) => c.id === activeConversationId ? { ...c, title } : c),
+      // Call the Supabase edge function for AI chat
+      try {
+        const conversation = get().conversations.find((c) => c.id === activeConversationId);
+        const messages = (conversation?.messages ?? []).map((m) => ({
+          role: m.role,
+          content: m.content,
         }));
+        messages.push({ role: 'user', content: text });
+
+        const { data, error } = await supabase.functions.invoke('ai-chat', {
+          body: { messages },
+        });
+
+        if (error) throw error;
+        responseText = data?.response ?? 'I was unable to generate a response. Please try again.';
+      } catch (err) {
+        responseText = `I encountered an error connecting to the AI service: ${(err as Error).message}. Please ensure the ai-chat edge function is deployed.`;
       }
+    }
+
+    // Auto set conversation title from first user message
+    const conv = get().conversations.find((c) => c.id === activeConversationId);
+    if (conv && conv.messages.length <= 2) {
+      const title = text.length > 40 ? text.substring(0, 40) + '...' : text;
+      set((s) => ({
+        conversations: s.conversations.map((c) => c.id === activeConversationId ? { ...c, title } : c),
+      }));
     }
 
     const botMsg: CopilotMessage = {

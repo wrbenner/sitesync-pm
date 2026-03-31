@@ -256,7 +256,7 @@ export const ProjectHealth: React.FC = () => {
           </Btn>
           {shareOpen && (
             <>
-              <div onClick={() => setShareOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 999 }} />
+              <div onClick={() => setShareOpen(false)} role="presentation" aria-hidden="true" style={{ position: 'fixed', inset: 0, zIndex: 999 }} />
               <div style={{
                 position: 'absolute', top: '100%', right: 0, marginTop: spacing['1'],
                 backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.md,
@@ -371,7 +371,7 @@ export const ProjectHealth: React.FC = () => {
                     onClick={(e) => { e.stopPropagation(); setExpandedDim(isExpanded ? null : dim.label); }}
                     style={{
                       display: 'inline', border: 'none', backgroundColor: 'transparent', padding: 0, marginTop: 2,
-                      fontSize: typography.fontSize.caption, color: colors.primaryOrange, cursor: 'pointer',
+                      fontSize: typography.fontSize.caption, color: colors.orangeText, cursor: 'pointer',
                       fontFamily: typography.fontFamily, fontWeight: typography.fontWeight.medium,
                     }}
                   >
@@ -444,7 +444,7 @@ export const ProjectHealth: React.FC = () => {
       <div style={{ marginTop: spacing['5'] }}>
         <Card padding={spacing['4']}>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: spacing['3'] }}>
-            <div style={{ width: 28, height: 28, borderRadius: '50%', background: `linear-gradient(135deg, ${colors.statusReview} 0%, #9B8ADB 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <div style={{ width: 28, height: 28, borderRadius: '50%', background: `linear-gradient(135deg, ${colors.statusReview} 0%, ${colors.statusReview} 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <Sparkles size={13} color="white" />
             </div>
             <div>

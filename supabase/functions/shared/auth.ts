@@ -1,24 +1,65 @@
-// Shared security utilities for ALL Supabase Edge Functions.
-// EVERY function MUST use these. No exceptions.
+// ── Shared Auth Utilities ─────────────────────────────────────
+// Authentication, authorization, validation, and CORS for all edge functions.
+// LAW 12: Edge Functions are secure by default.
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-// ── Environment ──────────────────────────────────────────
+// ── Error Handling ───────────────────────────────────────────
 
-function getRequiredEnv(name: string): string {
-  const value = Deno.env.get(name)
-  if (!value) throw new Error('Server configuration error')
-  return value
+export class HttpError extends Error {
+  constructor(
+    public readonly status: number,
+    message: string,
+    public readonly type: string = 'api_error',
+  ) {
+    super(message)
+    this.name = 'HttpError'
+  }
 }
 
-// ── CORS ─────────────────────────────────────────────────
+export function errorResponse(
+  error: unknown,
+  extraHeaders: Record<string, string> = {},
+): Response {
+  if (error instanceof HttpError) {
+    return new Response(
+      JSON.stringify({
+        error: {
+          message: error.message,
+          type: error.type,
+          status: error.status,
+        },
+      }),
+      {
+        status: error.status,
+        headers: { 'Content-Type': 'application/json', ...extraHeaders },
+      },
+    )
+  }
+
+  console.error('Unhandled error:', error)
+  return new Response(
+    JSON.stringify({
+      error: {
+        message: 'Internal server error',
+        type: 'internal_error',
+        status: 500,
+      },
+    }),
+    {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...extraHeaders },
+    },
+  )
+}
+
+// ── CORS ─────────────────────────────────────────────────────
 
 const ALLOWED_ORIGINS = [
-  'https://sitesync.pm',
-  'https://app.sitesync.pm',
-  'https://staging.sitesync.pm',
   'http://localhost:5173',
   'http://localhost:3000',
+  'https://sitesync.ai',
+  'https://app.sitesync.ai',
 ]
 
 export function getCorsHeaders(req: Request): Record<string, string> {
@@ -26,84 +67,106 @@ export function getCorsHeaders(req: Request): Record<string, string> {
   const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]
   return {
     'Access-Control-Allow-Origin': allowedOrigin,
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-API-Key, X-Idempotency-Key',
     'Access-Control-Max-Age': '86400',
   }
 }
 
 export function handleCors(req: Request): Response | null {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: getCorsHeaders(req) })
+    return new Response(null, { status: 204, headers: getCorsHeaders(req) })
   }
   return null
 }
 
-// ── UUID Validation ──────────────────────────────────────
+// ── UUID Validation ──────────────────────────────────────────
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-export function isValidUuid(value: unknown): value is string {
-  return typeof value === 'string' && UUID_REGEX.test(value)
+export function isValidUuid(value: string): boolean {
+  return UUID_REGEX.test(value)
 }
 
 export function requireUuid(value: unknown, fieldName: string): string {
-  if (!isValidUuid(value)) {
-    throw new HttpError(400, `Invalid ${fieldName}: must be a valid UUID`)
+  if (typeof value !== 'string' || !isValidUuid(value)) {
+    throw new HttpError(400, `${fieldName} must be a valid UUID`)
   }
   return value
 }
 
-// ── HTTP Error ───────────────────────────────────────────
+// ── Input Sanitization ───────────────────────────────────────
 
-export class HttpError extends Error {
-  constructor(public status: number, message: string) {
-    super(message)
+export function sanitizeString(value: string, maxLength = 1000): string {
+  return value.slice(0, maxLength).replace(/<[^>]*>/g, '')
+}
+
+export function sanitizeText(value: string, maxLength = 5000): string {
+  return value
+    .slice(0, maxLength)
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<[^>]*>/g, '')
+    .trim()
+}
+
+export function sanitizeForPrompt(value: string, maxLength = 10000): string {
+  return value
+    .slice(0, maxLength)
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/```[\s\S]*?```/g, (m) => m) // preserve code blocks
+    .trim()
+}
+
+export function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+// ── JSON Body Parsing ────────────────────────────────────────
+
+export async function parseJsonBody<T = Record<string, unknown>>(
+  req: Request,
+): Promise<T> {
+  const contentType = req.headers.get('Content-Type') || ''
+  if (!contentType.includes('application/json')) {
+    throw new HttpError(415, 'Content-Type must be application/json')
+  }
+
+  try {
+    const body = await req.json()
+    if (typeof body !== 'object' || body === null) {
+      throw new HttpError(400, 'Request body must be a JSON object')
+    }
+    return body as T
+  } catch (err) {
+    if (err instanceof HttpError) throw err
+    throw new HttpError(400, 'Invalid JSON in request body')
   }
 }
 
-export function errorResponse(error: unknown, corsHeaders: Record<string, string>): Response {
-  if (error instanceof HttpError) {
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: error.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
-  }
-  // Generic error: never leak internals
-  console.error('Edge function error:', error)
-  return new Response(
-    JSON.stringify({ error: 'An unexpected error occurred' }),
-    { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-  )
+// ── Authentication ───────────────────────────────────────────
+
+interface AuthResult {
+  user: { id: string; email: string }
+  supabase: SupabaseClient
 }
 
-// ── User Authentication ──────────────────────────────────
-
-export interface AuthenticatedUser {
-  id: string
-  email: string
-}
-
-/**
- * Authenticate a user from the Authorization header.
- * Creates a user-scoped Supabase client that respects RLS.
- * NEVER use service role key for user-initiated operations.
- */
-export async function authenticateRequest(req: Request): Promise<{
-  user: AuthenticatedUser
-  supabase: ReturnType<typeof createClient>
-}> {
+export async function authenticateRequest(req: Request): Promise<AuthResult> {
   const authHeader = req.headers.get('Authorization')
   if (!authHeader?.startsWith('Bearer ')) {
-    throw new HttpError(401, 'Missing or invalid authorization header')
+    throw new HttpError(401, 'Missing or invalid Authorization header')
   }
 
-  const supabaseUrl = getRequiredEnv('SUPABASE_URL')
-  const supabaseAnonKey = getRequiredEnv('SUPABASE_ANON_KEY')
+  const token = authHeader.slice(7)
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
 
-  // Create user-scoped client: passes the user's JWT so RLS applies
   const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-    global: { headers: { Authorization: authHeader } },
+    global: { headers: { Authorization: `Bearer ${token}` } },
   })
 
   const { data: { user }, error } = await supabase.auth.getUser()
@@ -112,143 +175,71 @@ export async function authenticateRequest(req: Request): Promise<{
   }
 
   return {
-    user: { id: user.id, email: user.email ?? '' },
+    user: { id: user.id, email: user.email || '' },
     supabase,
   }
 }
 
-// ── CRON Authentication ──────────────────────────────────
+// ── CRON Authentication ──────────────────────────────────────
 
-/**
- * Verify that a request comes from the Supabase cron scheduler.
- * CRON functions use service role because they operate across all projects.
- * Returns a service-role client.
- */
-export function authenticateCron(req: Request): ReturnType<typeof createClient> {
+export function authenticateCron(req: Request): SupabaseClient {
   const authHeader = req.headers.get('Authorization')
   const cronSecret = Deno.env.get('CRON_SECRET')
 
-  // Option 1: Bearer token matches the cron secret
-  if (cronSecret && authHeader === `Bearer ${cronSecret}`) {
-    const supabaseUrl = getRequiredEnv('SUPABASE_URL')
-    const serviceKey = getRequiredEnv('SUPABASE_SERVICE_ROLE_KEY')
-    return createClient(supabaseUrl, serviceKey)
+  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+    throw new HttpError(401, 'Invalid CRON authentication')
   }
 
-  // Option 2: Supabase-internal invocation (from pg_cron or scheduled function)
-  // These come with the service role key in the authorization header
-  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-  if (serviceKey && authHeader === `Bearer ${serviceKey}`) {
-    const supabaseUrl = getRequiredEnv('SUPABASE_URL')
-    return createClient(supabaseUrl, serviceKey)
-  }
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
-  throw new HttpError(403, 'This function is only callable by the scheduler')
+  return createClient(supabaseUrl, serviceRoleKey)
 }
 
-// ── Project Membership Verification ──────────────────────
+// ── Project Membership ───────────────────────────────────────
 
-/**
- * Verify the user is a member of the given project and return their role.
- * Uses the user-scoped client, so RLS ensures they can only see their own memberships.
- */
+type ProjectRole = 'viewer' | 'field_user' | 'foreman' | 'project_manager' | 'admin' | 'owner'
+
+const ROLE_HIERARCHY: Record<ProjectRole, number> = {
+  viewer: 0,
+  field_user: 1,
+  foreman: 2,
+  project_manager: 3,
+  admin: 4,
+  owner: 5,
+}
+
 export async function verifyProjectMembership(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
   userId: string,
-  projectId: string
-): Promise<string> {
+  projectId: string,
+): Promise<ProjectRole> {
   const { data, error } = await supabase
     .from('project_members')
     .select('role')
-    .eq('project_id', projectId)
     .eq('user_id', userId)
+    .eq('project_id', projectId)
     .single()
 
   if (error || !data) {
-    throw new HttpError(403, 'You do not have access to this project')
+    throw new HttpError(403, 'User is not a member of this project')
   }
 
-  return data.role as string
+  return (data.role as ProjectRole) || 'viewer'
 }
 
-// Role hierarchy for permission checks
-const ROLE_LEVELS: Record<string, number> = {
-  owner: 6, admin: 5, project_manager: 4,
-  superintendent: 3, subcontractor: 2, viewer: 1,
-}
+export function requireMinimumRole(
+  currentRole: ProjectRole,
+  minimumRole: ProjectRole,
+  action: string,
+): void {
+  const currentLevel = ROLE_HIERARCHY[currentRole] ?? 0
+  const requiredLevel = ROLE_HIERARCHY[minimumRole] ?? 0
 
-export function hasMinimumRole(userRole: string, requiredRole: string): boolean {
-  return (ROLE_LEVELS[userRole] ?? 0) >= (ROLE_LEVELS[requiredRole] ?? 0)
-}
-
-export function requireMinimumRole(userRole: string, requiredRole: string, action: string): void {
-  if (!hasMinimumRole(userRole, requiredRole)) {
-    throw new HttpError(403, `You do not have permission to ${action}`)
-  }
-}
-
-// ── Input Sanitization ───────────────────────────────────
-
-/**
- * Strip HTML tags and common injection patterns from user content.
- */
-export function sanitizeText(input: string): string {
-  return input
-    .replace(/<[^>]*>/g, '') // strip HTML tags
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;')
-    .trim()
-}
-
-/**
- * HTML-escape for safe rendering in email templates.
- */
-export function escapeHtml(input: string): string {
-  return input
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;')
-}
-
-/**
- * Sanitize content before injecting into AI system prompt.
- * Prevents prompt injection by removing instruction-like patterns.
- */
-export function sanitizeForPrompt(input: string): string {
-  return input
-    .replace(/```/g, '') // code blocks
-    .replace(/\bsystem\b/gi, '[filtered]')
-    .replace(/\bassistant\b/gi, '[filtered]')
-    .replace(/\bignore (previous|above|all)\b/gi, '[filtered]')
-    .replace(/\bforget (previous|above|all)\b/gi, '[filtered]')
-    .replace(/\bnew instructions?\b/gi, '[filtered]')
-    .replace(/\boverride\b/gi, '[filtered]')
-    .slice(0, 2000) // cap length
-}
-
-// ── Request Size Limit ───────────────────────────────────
-
-const MAX_REQUEST_BODY_SIZE = 256 * 1024 // 256KB
-
-export async function parseJsonBody<T>(req: Request): Promise<T> {
-  const contentLength = parseInt(req.headers.get('Content-Length') ?? '0', 10)
-  if (contentLength > MAX_REQUEST_BODY_SIZE) {
-    throw new HttpError(413, 'Request body too large')
-  }
-
-  const text = await req.text()
-  if (text.length > MAX_REQUEST_BODY_SIZE) {
-    throw new HttpError(413, 'Request body too large')
-  }
-
-  try {
-    return JSON.parse(text) as T
-  } catch {
-    throw new HttpError(400, 'Invalid JSON in request body')
+  if (currentLevel < requiredLevel) {
+    throw new HttpError(
+      403,
+      `Insufficient permissions: ${minimumRole} role required to ${action}`,
+    )
   }
 }

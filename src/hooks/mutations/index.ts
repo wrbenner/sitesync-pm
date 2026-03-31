@@ -4,6 +4,10 @@ import posthog from '../../lib/analytics'
 import { useAuditedMutation, createOnError } from './createAuditedMutation'
 import { toast } from 'sonner'
 import Sentry from '../../lib/sentry'
+import {
+  rfiSchema, submittalSchema, punchItemSchema,
+  taskSchema, changeOrderSchema, meetingSchema, dailyLogSchema,
+} from '../../components/forms/schemas'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const from = (table: string) => supabase.from(table as any) as any
@@ -13,6 +17,7 @@ const from = (table: string) => supabase.from(table as any) as any
 export function useCreateRFI() {
   return useAuditedMutation<{ data: Record<string, unknown>; projectId: string }, { data: any; projectId: string }>({
     permission: 'rfis.create',
+    schema: rfiSchema,
     action: 'create_rfi',
     entityType: 'rfi',
     getEntityTitle: (p) => (p.data.title as string) || undefined,
@@ -32,6 +37,8 @@ export function useCreateRFI() {
 export function useUpdateRFI() {
   return useAuditedMutation<{ id: string; updates: Record<string, unknown>; projectId: string }, { projectId: string; id: string }>({
     permission: 'rfis.edit',
+    schema: rfiSchema.partial(),
+    schemaKey: 'updates',
     action: 'update_rfi',
     entityType: 'rfi',
     getEntityId: (p) => p.id,
@@ -87,99 +94,129 @@ export function useCreateRFIResponse() {
 // ── Submittals ────────────────────────────────────────────
 
 export function useCreateSubmittal() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: async (params: { data: Record<string, unknown>; projectId: string }) => {
+  return useAuditedMutation<{ data: Record<string, unknown>; projectId: string }, { data: any; projectId: string }>({
+    permission: 'submittals.create',
+    schema: submittalSchema,
+    action: 'create_submittal',
+    entityType: 'submittal',
+    getEntityTitle: (p) => (p.data.title as string) || undefined,
+    getNewValue: (p) => p.data,
+    mutationFn: async (params) => {
       const { data, error } = await from('submittals').insert(params.data).select().single()
       if (error) throw error
       return { data, projectId: params.projectId }
     },
-    onSuccess: (result: { projectId: string }) => {
-      queryClient.invalidateQueries({ queryKey: ['submittals', result.projectId] })
-      posthog.capture('submittal_created', { project_id: result.projectId })
-    },
-    onError: createOnError('create_submittal'),
+    invalidateKeys: (p, r) => [['submittals', r.projectId]],
+    analyticsEvent: 'submittal_created',
+    getAnalyticsProps: (p) => ({ project_id: p.projectId }),
+    errorMessage: 'Failed to create submittal',
   })
 }
 
 export function useUpdateSubmittal() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: async ({ id, updates, projectId }: { id: string; updates: Record<string, unknown>; projectId: string }) => {
+  return useAuditedMutation<{ id: string; updates: Record<string, unknown>; projectId: string }, { projectId: string; id: string }>({
+    permission: 'submittals.edit',
+    schema: submittalSchema.partial(),
+    schemaKey: 'updates',
+    action: 'update_submittal',
+    entityType: 'submittal',
+    getEntityId: (p) => p.id,
+    getNewValue: (p) => p.updates,
+    mutationFn: async ({ id, updates, projectId }) => {
       const { error } = await from('submittals').update(updates).eq('id', id)
       if (error) throw error
       return { projectId, id }
     },
-    onSuccess: (result: { projectId: string; id: string }) => {
-      queryClient.invalidateQueries({ queryKey: ['submittals', result.projectId] })
-      queryClient.invalidateQueries({ queryKey: ['submittals', 'detail', result.id] }) // FIX #2: detail page
-      posthog.capture('submittal_updated', { project_id: result.projectId })
-    },
-    onError: createOnError('update_submittal'),
+    invalidateKeys: (_, r) => [['submittals', r.projectId], ['submittals', 'detail', r.id]],
+    analyticsEvent: 'submittal_updated',
+    getAnalyticsProps: (p) => ({ project_id: p.projectId }),
+    errorMessage: 'Failed to update submittal',
   })
 }
 
 // ── Punch Items ───────────────────────────────────────────
 
 export function useCreatePunchItem() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: async (params: { data: Record<string, unknown>; projectId: string }) => {
+  return useAuditedMutation<{ data: Record<string, unknown>; projectId: string }, { data: any; projectId: string }>({
+    permission: 'punch_list.create',
+    schema: punchItemSchema,
+    action: 'create_punch_item',
+    entityType: 'punch_item',
+    getEntityTitle: (p) => (p.data.title as string) || undefined,
+    getNewValue: (p) => p.data,
+    mutationFn: async (params) => {
       const { data, error } = await from('punch_items').insert(params.data).select().single()
       if (error) throw error
       return { data, projectId: params.projectId }
     },
-    onSuccess: (result: { projectId: string }) => {
-      queryClient.invalidateQueries({ queryKey: ['punch_items', result.projectId] })
-      posthog.capture('punch_item_created', { project_id: result.projectId })
-    },
+    invalidateKeys: (p, r) => [['punch_items', r.projectId]],
+    analyticsEvent: 'punch_item_created',
+    getAnalyticsProps: (p) => ({ project_id: p.projectId }),
+    errorMessage: 'Failed to create punch item',
   })
 }
 
 export function useUpdatePunchItem() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: async ({ id, updates, projectId }: { id: string; updates: Record<string, unknown>; projectId: string }) => {
+  return useAuditedMutation<{ id: string; updates: Record<string, unknown>; projectId: string }, { projectId: string; id: string }>({
+    permission: 'punch_list.edit',
+    schema: punchItemSchema.partial(),
+    schemaKey: 'updates',
+    action: 'update_punch_item',
+    entityType: 'punch_item',
+    getEntityId: (p) => p.id,
+    getNewValue: (p) => p.updates,
+    mutationFn: async ({ id, updates, projectId }) => {
       const { error } = await from('punch_items').update(updates).eq('id', id)
       if (error) throw error
-      return { projectId }
+      return { projectId, id }
     },
-    onSuccess: (result: { projectId: string }) => {
-      queryClient.invalidateQueries({ queryKey: ['punch_items', result.projectId] })
-      posthog.capture('punch_item_updated', { project_id: result.projectId })
-    },
+    invalidateKeys: (_, r) => [['punch_items', r.projectId]],
+    analyticsEvent: 'punch_item_updated',
+    getAnalyticsProps: (p) => ({ project_id: p.projectId }),
+    errorMessage: 'Failed to update punch item',
   })
 }
 
 // ── Tasks ─────────────────────────────────────────────────
 
 export function useCreateTask() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: async (params: { data: Record<string, unknown>; projectId: string }) => {
+  return useAuditedMutation<{ data: Record<string, unknown>; projectId: string }, { data: any; projectId: string }>({
+    permission: 'tasks.create',
+    schema: taskSchema,
+    action: 'create_task',
+    entityType: 'task',
+    getEntityTitle: (p) => (p.data.title as string) || undefined,
+    getNewValue: (p) => p.data,
+    mutationFn: async (params) => {
       const { data, error } = await from('tasks').insert(params.data).select().single()
       if (error) throw error
       return { data, projectId: params.projectId }
     },
-    onSuccess: (result: { projectId: string }) => {
-      queryClient.invalidateQueries({ queryKey: ['tasks', result.projectId] })
-      posthog.capture('task_created', { project_id: result.projectId })
-    },
+    invalidateKeys: (p, r) => [['tasks', r.projectId]],
+    analyticsEvent: 'task_created',
+    getAnalyticsProps: (p) => ({ project_id: p.projectId }),
+    errorMessage: 'Failed to create task',
   })
 }
 
 export function useUpdateTask() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: async ({ id, updates, projectId }: { id: string; updates: Record<string, unknown>; projectId: string }) => {
+  return useAuditedMutation<{ id: string; updates: Record<string, unknown>; projectId: string }, { projectId: string; id: string }>({
+    permission: 'tasks.edit',
+    schema: taskSchema.partial(),
+    schemaKey: 'updates',
+    action: 'update_task',
+    entityType: 'task',
+    getEntityId: (p) => p.id,
+    getNewValue: (p) => p.updates,
+    mutationFn: async ({ id, updates, projectId }) => {
       const { error } = await from('tasks').update(updates).eq('id', id)
       if (error) throw error
-      return { projectId }
+      return { projectId, id }
     },
-    onSuccess: (result: { projectId: string }) => {
-      queryClient.invalidateQueries({ queryKey: ['tasks', result.projectId] })
-      posthog.capture('task_updated', { project_id: result.projectId })
-    },
+    invalidateKeys: (_, r) => [['tasks', r.projectId]],
+    analyticsEvent: 'task_updated',
+    getAnalyticsProps: (p) => ({ project_id: p.projectId }),
+    errorMessage: 'Failed to update task',
   })
 }
 
@@ -201,34 +238,43 @@ export function useDeleteTask() {
 // ── Daily Logs ────────────────────────────────────────────
 
 export function useCreateDailyLog() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: async (params: { data: Record<string, unknown>; projectId: string }) => {
+  return useAuditedMutation<{ data: Record<string, unknown>; projectId: string }, { data: any; projectId: string }>({
+    permission: 'daily_log.create',
+    schema: dailyLogSchema,
+    action: 'create_daily_log',
+    entityType: 'daily_log',
+    getEntityTitle: (p) => (p.data.title as string) || undefined,
+    getNewValue: (p) => p.data,
+    mutationFn: async (params) => {
       const { data, error } = await from('daily_logs').insert(params.data).select().single()
       if (error) throw error
       return { data, projectId: params.projectId }
     },
-    onSuccess: (result: { projectId: string }) => {
-      queryClient.invalidateQueries({ queryKey: ['daily_logs', result.projectId] })
-      posthog.capture('daily_log_created', { project_id: result.projectId })
-    },
+    invalidateKeys: (p, r) => [['daily_logs', r.projectId]],
+    analyticsEvent: 'daily_log_created',
+    getAnalyticsProps: (p) => ({ project_id: p.projectId }),
+    errorMessage: 'Failed to create daily log',
   })
 }
 
 export function useUpdateDailyLog() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: async ({ id, updates, projectId }: { id: string; updates: Record<string, unknown>; projectId: string }) => {
+  return useAuditedMutation<{ id: string; updates: Record<string, unknown>; projectId: string }, { projectId: string; id: string }>({
+    permission: 'daily_log.edit',
+    schema: dailyLogSchema.partial(),
+    schemaKey: 'updates',
+    action: 'update_daily_log',
+    entityType: 'daily_log',
+    getEntityId: (p) => p.id,
+    getNewValue: (p) => p.updates,
+    mutationFn: async ({ id, updates, projectId }) => {
       const { error } = await from('daily_logs').update(updates).eq('id', id)
       if (error) throw error
       return { projectId, id }
     },
-    onSuccess: (result: { projectId: string; id: string }) => {
-      queryClient.invalidateQueries({ queryKey: ['daily_logs', result.projectId] })
-      queryClient.invalidateQueries({ queryKey: ['daily_logs', 'detail', result.id] }) // FIX #3
-      posthog.capture('daily_log_updated', { project_id: result.projectId })
-    },
-    onError: createOnError('update_daily_log'),
+    invalidateKeys: (_, r) => [['daily_logs', r.projectId], ['daily_logs', 'detail', r.id]],
+    analyticsEvent: 'daily_log_updated',
+    getAnalyticsProps: (p) => ({ project_id: p.projectId }),
+    errorMessage: 'Failed to update daily log',
   })
 }
 
@@ -316,32 +362,43 @@ export function useRejectDailyLog() {
 // ── Change Orders ─────────────────────────────────────────
 
 export function useCreateChangeOrder() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: async (params: { data: Record<string, unknown>; projectId: string }) => {
+  return useAuditedMutation<{ data: Record<string, unknown>; projectId: string }, { data: any; projectId: string }>({
+    permission: 'change_orders.create',
+    schema: changeOrderSchema,
+    action: 'create_change_order',
+    entityType: 'change_order',
+    getEntityTitle: (p) => (p.data.title as string) || undefined,
+    getNewValue: (p) => p.data,
+    mutationFn: async (params) => {
       const { data, error } = await from('change_orders').insert(params.data).select().single()
       if (error) throw error
       return { data, projectId: params.projectId }
     },
-    onSuccess: (result: { projectId: string }) => {
-      queryClient.invalidateQueries({ queryKey: ['change_orders', result.projectId] })
-      posthog.capture('change_order_created', { project_id: result.projectId })
-    },
+    invalidateKeys: (p, r) => [['change_orders', r.projectId]],
+    analyticsEvent: 'change_order_created',
+    getAnalyticsProps: (p) => ({ project_id: p.projectId }),
+    errorMessage: 'Failed to create change order',
   })
 }
 
 export function useUpdateChangeOrder() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: async ({ id, updates, projectId }: { id: string; updates: Record<string, unknown>; projectId: string }) => {
+  return useAuditedMutation<{ id: string; updates: Record<string, unknown>; projectId: string }, { projectId: string; id: string }>({
+    permission: 'change_orders.edit',
+    schema: changeOrderSchema.partial(),
+    schemaKey: 'updates',
+    action: 'update_change_order',
+    entityType: 'change_order',
+    getEntityId: (p) => p.id,
+    getNewValue: (p) => p.updates,
+    mutationFn: async ({ id, updates, projectId }) => {
       const { error } = await from('change_orders').update(updates).eq('id', id)
       if (error) throw error
-      return { projectId }
+      return { projectId, id }
     },
-    onSuccess: (result: { projectId: string }) => {
-      queryClient.invalidateQueries({ queryKey: ['change_orders', result.projectId] })
-      posthog.capture('change_order_updated', { project_id: result.projectId })
-    },
+    invalidateKeys: (_, r) => [['change_orders', r.projectId]],
+    analyticsEvent: 'change_order_updated',
+    getAnalyticsProps: (p) => ({ project_id: p.projectId }),
+    errorMessage: 'Failed to update change order',
   })
 }
 
@@ -454,17 +511,22 @@ export function useRejectChangeOrder() {
 // ── Meetings ──────────────────────────────────────────────
 
 export function useCreateMeeting() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: async (params: { data: Record<string, unknown>; projectId: string }) => {
+  return useAuditedMutation<{ data: Record<string, unknown>; projectId: string }, { data: any; projectId: string }>({
+    permission: 'meetings.create',
+    schema: meetingSchema,
+    action: 'create_meeting',
+    entityType: 'meeting',
+    getEntityTitle: (p) => (p.data.title as string) || undefined,
+    getNewValue: (p) => p.data,
+    mutationFn: async (params) => {
       const { data, error } = await from('meetings').insert(params.data).select().single()
       if (error) throw error
       return { data, projectId: params.projectId }
     },
-    onSuccess: (result: { projectId: string }) => {
-      queryClient.invalidateQueries({ queryKey: ['meetings', result.projectId] })
-      posthog.capture('meeting_created', { project_id: result.projectId })
-    },
+    invalidateKeys: (p, r) => [['meetings', r.projectId]],
+    analyticsEvent: 'meeting_created',
+    getAnalyticsProps: (p) => ({ project_id: p.projectId }),
+    errorMessage: 'Failed to create meeting',
   })
 }
 

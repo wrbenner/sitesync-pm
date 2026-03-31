@@ -90,7 +90,7 @@ export const BIMPreviewWidget: React.FC = React.memo(() => {
             gap: spacing['1'],
             fontSize: typography.fontSize.caption,
             fontWeight: typography.fontWeight.semibold,
-            color: colors.primaryOrange,
+            color: colors.orangeText,
             textDecoration: 'none',
             cursor: 'pointer',
           }}

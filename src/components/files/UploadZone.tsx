@@ -74,8 +74,8 @@ export const UploadZone: React.FC<UploadZoneProps> = ({ onUpload }) => {
           transition: `all ${transitions.instant}`,
         }}
       >
-        <Upload size={32} color={isDragging ? colors.primaryOrange : colors.textTertiary} style={{ marginBottom: spacing['3'] }} />
-        <p style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium, color: isDragging ? colors.primaryOrange : colors.textPrimary, margin: 0, marginBottom: spacing['1'] }}>
+        <Upload size={32} color={isDragging ? colors.orangeText : colors.textTertiary} style={{ marginBottom: spacing['3'] }} />
+        <p style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium, color: isDragging ? colors.orangeText : colors.textPrimary, margin: 0, marginBottom: spacing['1'] }}>
           {isDragging ? 'Drop files here' : 'Drag and drop files or click to upload'}
         </p>
         <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0 }}>

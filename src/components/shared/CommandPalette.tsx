@@ -329,7 +329,7 @@ export function CommandPalette() {
   if (!open) return null
 
   return (
-    <div style={overlayStyle} onClick={() => setOpen(false)}>
+    <div style={overlayStyle} onClick={() => setOpen(false)} role="presentation" aria-hidden="true">
       <div style={{ height: 'fit-content' }} onClick={e => e.stopPropagation()}>
         <Command
           label="Search or jump to..."

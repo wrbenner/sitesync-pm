@@ -9,6 +9,7 @@ import { colors, spacing, typography, borderRadius, shadows, transitions } from 
 import { useProjectId } from '../hooks/useProjectId';
 import { useFiles } from '../hooks/queries';
 import { useCreateFile } from '../hooks/mutations';
+import { PermissionGate } from '../components/auth/PermissionGate';
 
 type ViewMode = 'list' | 'grid';
 
@@ -22,11 +23,11 @@ interface FileItem {
 }
 
 const fileGradients: Record<string, string> = {
-  pdf: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-  xlsx: 'linear-gradient(135deg, #2D8A6E 0%, #06B6D4 100%)',
-  dwg: 'linear-gradient(135deg, #F47820 0%, #FF9C42 100%)',
-  zip: 'linear-gradient(135deg, #6B6560 0%, #A09890 100%)',
-  default: 'linear-gradient(135deg, #3A7BC8 0%, #7C5DC7 100%)',
+  pdf: `linear-gradient(135deg, ${colors.statusInfo} 0%, ${colors.statusReview} 100%)`,
+  xlsx: `linear-gradient(135deg, ${colors.statusActive} 0%, ${colors.chartCyan} 100%)`,
+  dwg: `linear-gradient(135deg, ${colors.primaryOrange} 0%, ${colors.orangeGradientEnd} 100%)`,
+  zip: `linear-gradient(135deg, ${colors.gray600} 0%, ${colors.textTertiary} 100%)`,
+  default: `linear-gradient(135deg, ${colors.statusInfo} 0%, ${colors.statusReview} 100%)`,
   folder: `linear-gradient(135deg, rgba(244, 120, 32, 0.12) 0%, rgba(244, 120, 32, 0.04) 100%)`,
 };
 
@@ -259,20 +260,22 @@ export const Files: React.FC = () => {
           </div>
 
           {/* Upload button */}
-          <Btn
-            icon={<UploadIcon size={14} />}
-            onClick={() => setShowUpload(!showUpload)}
-            variant={showUpload ? 'secondary' : 'primary'}
-            size="sm"
-          >
-            Upload
-          </Btn>
+          <PermissionGate permission="files.upload">
+            <Btn
+              icon={<UploadIcon size={14} />}
+              onClick={() => setShowUpload(!showUpload)}
+              variant={showUpload ? 'secondary' : 'primary'}
+              size="sm"
+            >
+              Upload
+            </Btn>
+          </PermissionGate>
         </div>
       }
     >
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '12px 16px', marginBottom: '16px', backgroundColor: 'rgba(124, 93, 199, 0.04)', borderRadius: '8px', borderLeft: '3px solid #7C5DC7' }}>
-        <Sparkles size={14} color="#7C5DC7" style={{ marginTop: 2, flexShrink: 0 }} />
-        <p style={{ fontSize: '13px', color: '#1A1613', margin: 0, lineHeight: 1.5 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: spacing['3'], padding: `${spacing['3']} ${spacing['4']}`, marginBottom: spacing['4'], backgroundColor: colors.statusReviewSubtle, borderRadius: borderRadius.md, borderLeft: `3px solid ${colors.statusReview}` }}>
+        <Sparkles size={14} color={colors.statusReview} style={{ marginTop: 2, flexShrink: 0 }} />
+        <p style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, margin: 0, lineHeight: 1.5 }}>
           Documentation coverage at 84%. Missing: updated MEP coordination drawings and revised fire protection submittals.
         </p>
       </div>
@@ -390,10 +393,10 @@ export const Files: React.FC = () => {
             );
           })}
           {files.length === 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', textAlign: 'center' }}>
-              <Search size={32} color="#A09890" style={{ marginBottom: '12px' }} />
-              <p style={{ fontSize: '14px', fontWeight: 500, color: '#1A1613', margin: 0, marginBottom: '4px' }}>No files match your search</p>
-              <p style={{ fontSize: '13px', color: '#6B6560', margin: 0, marginBottom: '16px' }}>Try adjusting your search or filter criteria</p>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: `${spacing['6']} ${spacing['4']}`, textAlign: 'center' }}>
+              <Search size={32} color={colors.textTertiary} style={{ marginBottom: spacing['3'] }} />
+              <p style={{ fontSize: typography.fontSize.body, fontWeight: 500, color: colors.textPrimary, margin: 0, marginBottom: spacing['1'] }}>No files match your search</p>
+              <p style={{ fontSize: typography.fontSize.sm, color: colors.gray600, margin: 0, marginBottom: spacing['4'] }}>Try adjusting your search or filter criteria</p>
             </div>
           )}
         </div>

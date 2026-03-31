@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Users, Clock, ShieldCheck, Cloud, ChevronRight, Camera, Send, BarChart3, Sparkles, Zap, CalendarDays, X, Lock, AlertTriangle } from 'lucide-react';
-import { PageContainer, Card, Btn, Skeleton, SectionHeader, useToast } from '../components/Primitives';
-import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme';
+import { Users, Clock, ShieldCheck, Cloud, ChevronRight, Camera, Send, BarChart3, Sparkles, Zap, CalendarDays, X, Lock, AlertTriangle, BookOpen, RefreshCw } from 'lucide-react';
+import { PageContainer, Card, Btn, Skeleton, SectionHeader, EmptyState, useToast } from '../components/Primitives';
+import { colors, spacing, typography, borderRadius, transitions, tradeColors } from '../styles/theme';
 import { ExportButton } from '../components/shared/ExportButton';
 import { toast } from 'sonner';
 import { AutoNarrative } from '../components/dailylog/AutoNarrative';
@@ -16,17 +16,18 @@ import { QuickEntry } from '../components/dailylog/QuickEntry';
 import type { QuickEntryData } from '../components/dailylog/QuickEntry';
 import { CalendarNav } from '../components/dailylog/CalendarNav';
 import { useProjectId } from '../hooks/useProjectId';
-import { useDailyLogs } from '../hooks/queries';
+import { useDailyLogs, useDailyLogEntries } from '../hooks/queries';
 import { useUpdateDailyLog, useCreateDailyLog, useSubmitDailyLog, useApproveDailyLog, useRejectDailyLog } from '../hooks/mutations';
 import { fetchWeather, formatWeatherSummary } from '../lib/weather';
 import type { WeatherData } from '../lib/weather';
+import { PermissionGate } from '../components/auth/PermissionGate';
 import { getDailyLogStatusConfig } from '../machines/dailyLogMachine';
 import type { DailyLogState } from '../machines/dailyLogMachine';
 
 export const DailyLog: React.FC = () => {
   const { addToast } = useToast();
   const projectId = useProjectId();
-  const { data: dailyLogData, isPending: loading } = useDailyLogs(projectId);
+  const { data: dailyLogData, isPending: loading, error: logError, refetch } = useDailyLogs(projectId);
   const updateDailyLog = useUpdateDailyLog();
   const createDailyLog = useCreateDailyLog();
   const submitDailyLog = useSubmitDailyLog();
@@ -52,26 +53,60 @@ export const DailyLog: React.FC = () => {
     fetchWeather().then(setWeather);
   }, []);
 
-  // Crew hours data (derived from manpower entries or default)
-  const crewHours: CrewHoursEntry[] = useMemo(() => [
-    { trade: 'Concrete', workers: 42, hours: 336, plannedHours: 320, color: colors.statusInfo },
-    { trade: 'Electrical', workers: 35, hours: 280, plannedHours: 300, color: colors.statusPending },
-    { trade: 'Mechanical', workers: 28, hours: 224, plannedHours: 240, color: colors.statusActive },
-    { trade: 'Steel', workers: 24, hours: 192, plannedHours: 200, color: colors.primaryOrange },
-    { trade: 'Plumbing', workers: 18, hours: 144, plannedHours: 160, color: colors.statusReview },
-    { trade: 'Carpentry', workers: 16, hours: 128, plannedHours: 120, color: '#8B5E3C' },
-    { trade: 'General Labor', workers: 24, hours: 192, plannedHours: 180, color: colors.textTertiary },
-  ], []);
+  // Fetch entries for the current daily log
+  const todayLogId = dailyLogHistory.length > 0 ? dailyLogHistory[0]?.id : undefined;
+  const { data: logEntries = [] } = useDailyLogEntries(todayLogId);
 
-  // Photo data (from daily_log_entries with photos, or placeholder)
-  const photos: DailyLogPhoto[] = useMemo(() => [
-    { id: '1', url: '', caption: 'Steel Connection Detail', category: 'progress' as const, timestamp: new Date().toISOString(), latitude: 40.7128, longitude: -74.006 },
-    { id: '2', url: '', caption: 'PPE Compliance Check', category: 'safety' as const, timestamp: new Date().toISOString(), latitude: 40.7128, longitude: -74.006 },
-    { id: '3', url: '', caption: 'Drywall Progress Floor 8', category: 'progress' as const, timestamp: new Date().toISOString() },
-    { id: '4', url: '', caption: 'MEP Routing Inspection', category: 'quality' as const, timestamp: new Date().toISOString() },
-    { id: '5', url: '', caption: 'Curtain Wall Install', category: 'progress' as const, timestamp: new Date().toISOString() },
-    { id: '6', url: '', caption: 'Morning Conditions', category: 'weather' as const, timestamp: new Date().toISOString() },
-  ], []);
+  // Trade color mapping
+  const tradeColorMap: Record<string, string> = useMemo(() => ({
+    concrete: colors.statusInfo,
+    electrical: colors.statusPending,
+    mechanical: colors.statusActive,
+    steel: colors.primaryOrange,
+    plumbing: colors.statusReview,
+    carpentry: tradeColors.carpentry,
+  }), []);
+
+  // Derive crew hours from daily log entries
+  const crewHours: CrewHoursEntry[] = useMemo(() => {
+    const grouped = new Map<string, { workers: number; hours: number }>();
+    for (const entry of logEntries) {
+      if (!entry.trade) continue;
+      const existing = grouped.get(entry.trade) ?? { workers: 0, hours: 0 };
+      grouped.set(entry.trade, {
+        workers: existing.workers + (entry.headcount ?? 0),
+        hours: existing.hours + (entry.hours ?? 0),
+      });
+    }
+    return Array.from(grouped.entries()).map(([trade, data]) => ({
+      trade,
+      workers: data.workers,
+      hours: data.hours,
+      plannedHours: data.hours,
+      color: tradeColorMap[trade.toLowerCase()] ?? colors.textTertiary,
+    }));
+  }, [logEntries, tradeColorMap]);
+
+  // Derive photos from daily log entries
+  const photos: DailyLogPhoto[] = useMemo(() => {
+    const result: DailyLogPhoto[] = [];
+    for (const entry of logEntries) {
+      const entryPhotos = Array.isArray(entry.photos) ? entry.photos : [];
+      for (const photo of entryPhotos) {
+        const p = photo as Record<string, unknown>;
+        result.push({
+          id: (p.id as string) ?? `${entry.id}-${result.length}`,
+          url: (p.url as string) ?? '',
+          caption: (p.caption as string) ?? entry.description ?? '',
+          category: (p.category as DailyLogPhoto['category']) ?? 'progress',
+          timestamp: (p.timestamp as string) ?? entry.created_at ?? new Date().toISOString(),
+          latitude: (p.latitude as number) ?? null,
+          longitude: (p.longitude as number) ?? null,
+        });
+      }
+    }
+    return result;
+  }, [logEntries]);
 
   // Calendar data
   const loggedDates = useMemo(() => new Set(
@@ -133,9 +168,9 @@ export const DailyLog: React.FC = () => {
     addToast('info', 'Camera capture would open on mobile device');
   };
 
-  if (loading || dailyLogHistory.length === 0) {
+  if (loading) {
     return (
-      <PageContainer title="Daily Log">
+      <PageContainer title="Daily Log" subtitle="Loading...">
         <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['6'] }}>
           <Card padding={spacing['5']}>
             <Skeleton width="240px" height="24px" />
@@ -143,7 +178,49 @@ export const DailyLog: React.FC = () => {
               {[1, 2, 3, 4].map((i) => <Skeleton key={i} height="72px" />)}
             </div>
           </Card>
+          <Card padding={spacing['5']}>
+            <Skeleton width="180px" height="20px" />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'], marginTop: spacing['4'] }}>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} height="36px" />
+              ))}
+            </div>
+          </Card>
         </div>
+      </PageContainer>
+    );
+  }
+
+  if (logError) {
+    return (
+      <PageContainer title="Daily Log" subtitle="Unable to load">
+        <Card padding={spacing['6']}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['4'], padding: spacing['6'], textAlign: 'center' }}>
+            <AlertTriangle size={40} color={colors.statusCritical} />
+            <div>
+              <p style={{ fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>Failed to load daily log</p>
+              <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: 0 }}>{(logError as Error).message || 'Unable to fetch daily log entries'}</p>
+            </div>
+            <Btn variant="primary" size="sm" icon={<RefreshCw size={14} />} onClick={() => refetch()}>Try Again</Btn>
+          </div>
+        </Card>
+      </PageContainer>
+    );
+  }
+
+  if (dailyLogHistory.length === 0) {
+    return (
+      <PageContainer
+        title="Daily Log"
+        subtitle="No entries"
+        actions={<PermissionGate permission="daily_logs.create"><Btn onClick={() => setShowQuickEntry(true)}>New Entry</Btn></PermissionGate>}
+      >
+        <EmptyState
+          icon={<BookOpen size={40} color={colors.textTertiary} />}
+          title="No log entries for today"
+          description="Log crew hours and photos to document project progress."
+          action={<PermissionGate permission="daily_logs.create"><Btn variant="primary" onClick={() => setShowQuickEntry(true)}>Add Entry</Btn></PermissionGate>}
+        />
       </PageContainer>
     );
   }
@@ -216,7 +293,7 @@ export const DailyLog: React.FC = () => {
           </Btn>
           {compareDropdownOpen && (
             <>
-              <div onClick={() => setCompareDropdownOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 998 }} />
+              <div onClick={() => setCompareDropdownOpen(false)} role="presentation" aria-hidden="true" style={{ position: 'fixed', inset: 0, zIndex: 998 }} />
               <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: spacing['1'], backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.md, boxShadow: '0 4px 16px rgba(0,0,0,0.1)', zIndex: 999, overflow: 'hidden', minWidth: '180px' }}>
                 {[
                   { label: 'vs Yesterday', mode: 'yesterday' as const },
@@ -232,16 +309,16 @@ export const DailyLog: React.FC = () => {
         </div>
         {/* Approval workflow actions */}
         {logStatus === 'draft' && (
-          <Btn size="sm" icon={<Send size={14} />} onClick={handleSubmit}>Submit for Approval</Btn>
+          <PermissionGate permission="daily_log.submit"><Btn size="sm" icon={<Send size={14} />} onClick={handleSubmit}>Submit for Approval</Btn></PermissionGate>
         )}
         {logStatus === 'submitted' && (
           <>
-            <Btn size="sm" variant="primary" icon={<ShieldCheck size={14} />} onClick={() => setShowSignature(true)}>Approve</Btn>
-            <span style={{ color: colors.statusCritical }}><Btn size="sm" variant="ghost" onClick={() => setShowRejectModal(true)}>Reject</Btn></span>
+            <PermissionGate permission="daily_log.approve"><Btn size="sm" variant="primary" icon={<ShieldCheck size={14} />} onClick={() => setShowSignature(true)}>Approve</Btn></PermissionGate>
+            <span style={{ color: colors.statusCritical }}><PermissionGate permission="daily_log.reject"><Btn size="sm" variant="ghost" onClick={() => setShowRejectModal(true)}>Reject</Btn></PermissionGate></span>
           </>
         )}
         {isRejected && (
-          <Btn size="sm" icon={<Send size={14} />} onClick={handleSubmit}>Resubmit</Btn>
+          <PermissionGate permission="daily_log.submit"><Btn size="sm" icon={<Send size={14} />} onClick={handleSubmit}>Resubmit</Btn></PermissionGate>
         )}
       </div>
     }>
@@ -279,9 +356,9 @@ export const DailyLog: React.FC = () => {
           )}
 
           {/* AI insight */}
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '12px 16px', backgroundColor: 'rgba(124, 93, 199, 0.04)', borderRadius: '8px', borderLeft: '3px solid #7C5DC7' }}>
-            <Sparkles size={14} color="#7C5DC7" style={{ marginTop: 2, flexShrink: 0 }} />
-            <p style={{ fontSize: '13px', color: '#1A1613', margin: 0, lineHeight: 1.5 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: spacing['3'], padding: `${spacing['3']} ${spacing['4']}`, backgroundColor: colors.statusReviewSubtle, borderRadius: borderRadius.md, borderLeft: `3px solid ${colors.statusReview}` }}>
+            <Sparkles size={14} color={colors.statusReview} style={{ marginTop: 2, flexShrink: 0 }} />
+            <p style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, margin: 0, lineHeight: 1.5 }}>
               Productivity trending 8% above baseline this week. Concrete crew efficiency highest in project history.
             </p>
           </div>
@@ -441,7 +518,7 @@ export const DailyLog: React.FC = () => {
             <Card>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['3'] }}>
                 <span style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>Calendar</span>
-                <button onClick={() => setShowCalendar(false)} style={{ backgroundColor: 'transparent', border: 'none', cursor: 'pointer', color: colors.textTertiary, padding: spacing['1'] }}><X size={14} /></button>
+                <button onClick={() => setShowCalendar(false)} aria-label="Close calendar" title="Close calendar" style={{ backgroundColor: 'transparent', border: 'none', cursor: 'pointer', color: colors.textTertiary, padding: spacing['1'] }}><X size={14} /></button>
               </div>
               <CalendarNav
                 loggedDates={loggedDates}
@@ -467,7 +544,7 @@ export const DailyLog: React.FC = () => {
       {/* Reject Modal */}
       {showRejectModal && (
         <>
-          <div onClick={() => setShowRejectModal(false)} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.3)', zIndex: 1039 }} />
+          <div onClick={() => setShowRejectModal(false)} role="presentation" aria-hidden="true" style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.3)', zIndex: 1039 }} />
           <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 440, backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.lg, boxShadow: '0 16px 48px rgba(0,0,0,0.15)', zIndex: 1040, padding: spacing['6'] }}>
             <h3 style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['4'] }}>Return Daily Log</h3>
             <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: 0, marginBottom: spacing['3'] }}>Provide a reason so the superintendent knows what needs to be corrected.</p>
@@ -480,7 +557,7 @@ export const DailyLog: React.FC = () => {
             />
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: spacing['2'], marginTop: spacing['4'] }}>
               <Btn variant="ghost" size="md" onClick={() => { setShowRejectModal(false); setRejectReason(''); }}>Cancel</Btn>
-              <Btn variant="primary" size="md" onClick={handleReject}>Return for Revision</Btn>
+              <PermissionGate permission="daily_log.reject"><Btn variant="primary" size="md" onClick={handleReject}>Return for Revision</Btn></PermissionGate>
             </div>
           </div>
         </>

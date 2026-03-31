@@ -2,20 +2,21 @@
 // RFI response times, submittal rejection rates, punch closure rates by subcontractor
 import React from 'react'
 import { View, Text, StyleSheet } from '@react-pdf/renderer'
+import { vizColors } from '../../styles/theme'
 import { PDFReport, PDFSection, PDFTable } from './PDFTemplate'
 
 const s = StyleSheet.create({
   kpiGrid: { flexDirection: 'row', gap: 8, marginBottom: 16 },
   kpiBox: { flex: 1, padding: 8, backgroundColor: '#FAFAF8', borderRadius: 4, borderWidth: 0.5, borderColor: '#E5E1DC' },
   kpiLabel: { fontSize: 7, color: '#5C5550', marginBottom: 2 },
-  kpiValue: { fontSize: 14, fontFamily: 'Helvetica-Bold', color: '#1A1613' },
+  kpiValue: { fontSize: 14, fontFamily: 'Helvetica-Bold', color: vizColors.darkText },
   kpiSub: { fontSize: 7, color: '#9A9490', marginTop: 1 },
   scorecard: { marginBottom: 16 },
   subName: { fontSize: 10, fontFamily: 'Helvetica-Bold', color: '#0C0D0F', marginBottom: 4, marginTop: 12 },
   metricsRow: { flexDirection: 'row', gap: 6 },
   metricCell: { flex: 1, padding: 6, backgroundColor: '#F3EFEC', borderRadius: 3 },
   metricLabel: { fontSize: 6, color: '#5C5550' },
-  metricValue: { fontSize: 9, fontFamily: 'Helvetica-Bold', color: '#1A1613', marginTop: 1 },
+  metricValue: { fontSize: 9, fontFamily: 'Helvetica-Bold', color: vizColors.darkText, marginTop: 1 },
 })
 
 interface SubcontractorReportProps {

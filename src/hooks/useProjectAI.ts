@@ -119,12 +119,14 @@ export function useProjectAI(pageContext?: string, entityContext?: string): UseP
     try {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
       if (!supabaseUrl) {
-        // Fallback for prototype mode
+        // Fallback for prototype mode with generative UI
+        const fallback = generateFallbackWithUI(input.trim(), pageContext)
         const aiResponse: ChatMessage = {
           id: `msg-${Date.now() + 1}`,
           role: 'assistant',
-          content: generateFallbackResponse(input.trim(), pageContext),
+          content: fallback.content,
           timestamp: new Date(),
+          toolResults: fallback.toolResults,
         }
         setMessages(prev => [...prev, aiResponse])
         return
@@ -279,6 +281,152 @@ export function useProjectAI(pageContext?: string, entityContext?: string): UseP
   }, [])
 
   return { messages, input, setInput, sendMessage, confirmAction, cancelAction, isLoading, error, clearMessages }
+}
+
+// Fallback with generative UI blocks for prototype mode
+function generateFallbackWithUI(query: string, page?: string): { content: string; toolResults?: ToolResult[] } {
+  const lower = query.toLowerCase()
+
+  // "Show me overdue RFIs" → data table
+  if (lower.includes('overdue') && lower.includes('rfi')) {
+    return {
+      content: 'Here are the overdue RFIs that need attention:',
+      toolResults: [{
+        tool: 'query_rfis',
+        input: { overdue: true },
+        result: {
+          ui_type: 'data_table',
+          title: 'Overdue RFIs',
+          columns: [
+            { key: 'number', label: 'RFI #', width: '80px' },
+            { key: 'title', label: 'Subject', width: '1fr' },
+            { key: 'status', label: 'Status', type: 'status', width: '110px' },
+            { key: 'days', label: 'Days Open', type: 'number', width: '90px' },
+            { key: 'assignee', label: 'Ball in Court', width: '140px' },
+          ],
+          rows: [],
+          actions: [
+            { label: 'Reassign', action: 'reassign_rfi', requiresPermission: 'rfis.edit' },
+          ],
+          total_count: 3,
+        },
+      }],
+    }
+  }
+
+  // "Create a punch item" / "Create an RFI" → form
+  if (lower.includes('create') && (lower.includes('punch') || lower.includes('rfi') || lower.includes('task'))) {
+    const entityType = lower.includes('rfi') ? 'rfi' : lower.includes('punch') ? 'punch_item' : 'task'
+    const title = lower.includes('rfi') ? 'Create New RFI' : lower.includes('punch') ? 'Create Punch Item' : 'Create Task'
+    // Extract context from query
+    const contextMatch = query.match(/(?:for|about|regarding)\s+(.+?)(?:\.|$)/i)
+    const contextText = contextMatch?.[1] || ''
+
+    return {
+      content: `I have prepared a ${entityType === 'rfi' ? 'RFI' : entityType === 'punch_item' ? 'punch item' : 'task'} form based on your request. Review the pre-filled fields and submit when ready:`,
+      toolResults: [{
+        tool: `create_${entityType}`,
+        input: {},
+        result: {
+          ui_type: 'form',
+          title,
+          entity_type: entityType,
+          fields: entityType === 'rfi' ? [
+            { name: 'title', label: 'Subject', type: 'text', required: true, value: contextText || 'HVAC Conflict' },
+            { name: 'description', label: 'Question', type: 'textarea', required: true, value: contextText ? `Requesting clarification on: ${contextText}` : '' },
+            { name: 'priority', label: 'Priority', type: 'select', options: [{ value: 'low', label: 'Low' }, { value: 'medium', label: 'Medium' }, { value: 'high', label: 'High' }, { value: 'critical', label: 'Critical' }], value: 'high' },
+            { name: 'assigned_to', label: 'Assigned To', type: 'text', placeholder: 'Name or company' },
+            { name: 'due_date', label: 'Due Date', type: 'date' },
+          ] : entityType === 'punch_item' ? [
+            { name: 'title', label: 'Description', type: 'text', required: true, value: contextText },
+            { name: 'location', label: 'Location', type: 'text', value: '' },
+            { name: 'priority', label: 'Priority', type: 'select', options: [{ value: 'low', label: 'Low' }, { value: 'medium', label: 'Medium' }, { value: 'high', label: 'High' }, { value: 'critical', label: 'Critical' }], value: 'medium' },
+            { name: 'assigned_to', label: 'Assigned To', type: 'text' },
+          ] : [
+            { name: 'title', label: 'Title', type: 'text', required: true, value: contextText },
+            { name: 'description', label: 'Description', type: 'textarea' },
+            { name: 'priority', label: 'Priority', type: 'select', options: [{ value: 'low', label: 'Low' }, { value: 'medium', label: 'Medium' }, { value: 'high', label: 'High' }, { value: 'critical', label: 'Critical' }], value: 'medium' },
+            { name: 'due_date', label: 'Due Date', type: 'date' },
+          ],
+          submit_label: `Create ${entityType === 'rfi' ? 'RFI' : entityType === 'punch_item' ? 'Punch Item' : 'Task'}`,
+        },
+      }],
+    }
+  }
+
+  // "Project health" / "overview" → metric cards + timeline
+  if (lower.includes('health') || lower.includes('overview') || lower.includes('dashboard')) {
+    return {
+      content: 'Here is your project health overview:',
+      toolResults: [{
+        tool: 'get_project_health',
+        input: {},
+        result: {
+          ui_type: 'metric_cards',
+          cards: [
+            { label: 'Schedule Health', value: '92%', status: 'good', change: 3, changeLabel: 'vs last week', link: '/schedule' },
+            { label: 'Budget Health', value: '87%', status: 'warning', change: -2, changeLabel: 'vs last week', link: '/budget' },
+            { label: 'Safety Score', value: '98%', status: 'good', change: 1, changeLabel: 'vs last week', link: '/safety' },
+            { label: 'Quality Score', value: '85%', status: 'warning', change: -4, changeLabel: 'vs last week', link: '/punch-list' },
+          ],
+        },
+      }],
+    }
+  }
+
+  // "Compare" → comparison table
+  if (lower.includes('compare') || lower.includes('vs') || lower.includes('versus')) {
+    return {
+      content: 'Here is the comparison:',
+      toolResults: [{
+        tool: 'comparison',
+        input: {},
+        result: {
+          ui_type: 'comparison',
+          title: 'This Month vs Last Month',
+          columns: ['This Month', 'Last Month'],
+          rows: [
+            { label: 'RFIs Opened', values: [8, 12], highlight: 'better' },
+            { label: 'RFIs Closed', values: [11, 7], highlight: 'better' },
+            { label: 'Avg Response Time', values: ['4.2 days', '6.1 days'], highlight: 'better' },
+            { label: 'Change Orders', values: [3, 2], highlight: 'worse' },
+            { label: 'CO Value', values: ['$485K', '$210K'], highlight: 'worse' },
+            { label: 'Punch Items Closed', values: [28, 22], highlight: 'better' },
+            { label: 'Safety Incidents', values: [0, 1], highlight: 'better' },
+          ],
+        },
+      }],
+    }
+  }
+
+  // "Budget" → chart
+  if (lower.includes('budget') && (lower.includes('breakdown') || lower.includes('chart') || lower.includes('division'))) {
+    return {
+      content: 'Here is the budget breakdown by division:',
+      toolResults: [{
+        tool: 'query_budget',
+        input: { type: 'divisions' },
+        result: {
+          ui_type: 'chart',
+          chart_type: 'bar',
+          title: 'Budget by Division',
+          data: [
+            { division: 'Structural', budget: 8500000, spent: 7480000 },
+            { division: 'MEP', budget: 12200000, spent: 8784000 },
+            { division: 'Finishes', budget: 6800000, spent: 2720000 },
+            { division: 'Site Work', budget: 4200000, spent: 3780000 },
+            { division: 'General', budget: 5100000, spent: 3570000 },
+          ],
+          x_key: 'division',
+          y_keys: ['budget', 'spent'],
+          y_labels: ['Budget', 'Spent'],
+        },
+      }],
+    }
+  }
+
+  // Default: return plain text
+  return { content: generateFallbackResponse(query, page) }
 }
 
 // Fallback responses when no API key is configured

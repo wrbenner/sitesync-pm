@@ -17,11 +17,30 @@ if (typeof requestIdleCallback !== 'undefined') {
   setTimeout(() => initVitals(), 0)
 }
 
+// Development only: axe-core accessibility audit
+if (import.meta.env.DEV) {
+  import('axe-core').then((axe) => {
+    // Run after initial render settles
+    setTimeout(() => {
+      axe.default.run(document.body).then((results) => {
+        if (results.violations.length > 0) {
+          console.warn(`[a11y] ${results.violations.length} accessibility violations:`)
+          results.violations.forEach((v) => {
+            console.warn(`  ${v.impact} — ${v.id}: ${v.help} (${v.nodes.length} nodes)`)
+          })
+        } else {
+          console.log('[a11y] No accessibility violations found')
+        }
+      })
+    }, 2000)
+  })
+}
+
 // ── Service Worker Registration ──────────────────────────
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', async () => {
     try {
-      const registration = await navigator.serviceWorker.register('/sitesync-pm/sw.js')
+      const registration = await navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`)
 
       // Check for updates periodically (every 30 min)
       setInterval(() => registration.update(), 30 * 60 * 1000)

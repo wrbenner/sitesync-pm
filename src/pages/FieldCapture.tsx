@@ -3,12 +3,14 @@ import { Camera, Mic, FileText, AlertTriangle, MapPin, ChevronRight, Sparkles } 
 import { PageContainer, Card, Btn, SectionHeader, useToast } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../styles/theme';
 import { PhotoAnnotator } from '../components/field/PhotoAnnotator';
-import { VoiceRecorder } from '../components/field/VoiceRecorder';
+import { VoiceCapture } from '../components/field/VoiceCapture';
 import { CaptureTimeline } from '../components/field/CaptureTimeline';
 import { QuickCapture, type CaptureData } from '../components/field/QuickCapture';
 import { useProjectId } from '../hooks/useProjectId';
 import { useFieldCaptures } from '../hooks/queries';
 import { useCreateFieldCapture } from '../hooks/mutations';
+import { PermissionGate } from '../components/auth/PermissionGate';
+import type { ExtractedEntity } from '../hooks/useVoiceCapture';
 
 type CaptureMode = null | 'photo' | 'voice' | 'text';
 type IssueType = 'issue' | 'progress' | 'safety' | 'note';
@@ -135,9 +137,9 @@ export const FieldCapture: React.FC = () => {
   return (
     <PageContainer title="Field Capture" subtitle="Capture photos, voice notes, and observations from the field">
       <QuickCapture open={quickCaptureOpen} onClose={() => setQuickCaptureOpen(false)} onSave={handleQuickCaptureSave} />
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '12px 16px', marginBottom: '16px', backgroundColor: 'rgba(124, 93, 199, 0.04)', borderRadius: '8px', borderLeft: '3px solid #7C5DC7' }}>
-        <Sparkles size={14} color="#7C5DC7" style={{ marginTop: 2, flexShrink: 0 }} />
-        <p style={{ fontSize: '13px', color: '#1A1613', margin: 0, lineHeight: 1.5 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: spacing['3'], padding: `${spacing['3']} ${spacing['4']}`, marginBottom: spacing['4'], backgroundColor: colors.statusReviewSubtle, borderRadius: borderRadius.base, borderLeft: `3px solid ${colors.statusReview}` }}>
+        <Sparkles size={14} color={colors.statusReview} style={{ marginTop: 2, flexShrink: 0 }} />
+        <p style={{ fontSize: typography.fontSize.caption, color: colors.textPrimary, margin: 0, lineHeight: 1.5 }}>
           AI Analysis: 85% of today's captures were auto categorized. 2 potential safety concerns flagged for review.
         </p>
       </div>
@@ -147,62 +149,68 @@ export const FieldCapture: React.FC = () => {
         padding: spacing['4'], backgroundColor: colors.surfaceRaised,
         borderRadius: borderRadius.lg, boxShadow: shadows.card, marginBottom: spacing['6'],
       }}>
-        <button
-          onClick={() => setQuickCaptureOpen(true)}
-          style={{
-            flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['2'],
-            padding: `${spacing['4']} ${spacing['3']}`,
-            backgroundColor: colors.primaryOrange, color: 'white', border: 'none',
-            borderRadius: borderRadius.md, cursor: 'pointer',
-            transition: `background-color ${transitions.instant}`,
-          }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.orangeHover; }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.primaryOrange; }}
-        >
-          <Camera size={24} />
-          <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold }}>Photo</span>
-          <span style={{ fontSize: '10px', opacity: 0.8, fontWeight: typography.fontWeight.normal }}>Take a photo</span>
-        </button>
+        <PermissionGate permission="field_capture.create">
+          <button
+            onClick={() => setQuickCaptureOpen(true)}
+            style={{
+              flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['2'],
+              padding: `${spacing['4']} ${spacing['3']}`,
+              backgroundColor: colors.primaryOrange, color: 'white', border: 'none',
+              borderRadius: borderRadius.md, cursor: 'pointer',
+              transition: `background-color ${transitions.instant}`,
+            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.orangeHover; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.primaryOrange; }}
+          >
+            <Camera size={24} />
+            <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold }}>Photo</span>
+            <span style={{ fontSize: '10px', opacity: 0.8, fontWeight: typography.fontWeight.normal }}>Take a photo</span>
+          </button>
+        </PermissionGate>
 
-        <button
-          onClick={() => setShowVoice(true)}
-          style={{
-            flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['2'],
-            padding: `${spacing['4']} ${spacing['3']}`,
-            backgroundColor: colors.statusReview, color: 'white', border: 'none',
-            borderRadius: borderRadius.md, cursor: 'pointer',
-            transition: `opacity ${transitions.instant}`,
-          }}
-        >
-          <Mic size={24} />
-          <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold }}>Voice</span>
-          <span style={{ fontSize: '10px', opacity: 0.8, fontWeight: typography.fontWeight.normal }}>Record and transcribe</span>
-        </button>
+        <PermissionGate permission="field_capture.create">
+          <button
+            onClick={() => setShowVoice(true)}
+            style={{
+              flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['2'],
+              padding: `${spacing['4']} ${spacing['3']}`,
+              backgroundColor: colors.statusReview, color: 'white', border: 'none',
+              borderRadius: borderRadius.md, cursor: 'pointer',
+              transition: `opacity ${transitions.instant}`,
+            }}
+          >
+            <Mic size={24} />
+            <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold }}>Voice</span>
+            <span style={{ fontSize: '10px', opacity: 0.8, fontWeight: typography.fontWeight.normal }}>Record and transcribe</span>
+          </button>
+        </PermissionGate>
 
-        <button
-          onClick={() => setQuickTextType(quickTextType ? null : 'note')}
-          style={{
-            flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['2'],
-            padding: `${spacing['4']} ${spacing['3']}`,
-            backgroundColor: quickTextType ? colors.surfaceSelected : `${colors.statusInfo}14`,
-            color: quickTextType ? colors.primaryOrange : colors.statusInfo,
-            border: 'none', borderRadius: borderRadius.md, cursor: 'pointer',
-            transition: `all ${transitions.instant}`,
-          }}
-        >
-          <FileText size={24} />
-          <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold }}>Text</span>
-          <span style={{ fontSize: '10px', opacity: 0.8, fontWeight: typography.fontWeight.normal }}>Quick note</span>
-        </button>
+        <PermissionGate permission="field_capture.create">
+          <button
+            onClick={() => setQuickTextType(quickTextType ? null : 'note')}
+            style={{
+              flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['2'],
+              padding: `${spacing['4']} ${spacing['3']}`,
+              backgroundColor: quickTextType ? colors.surfaceSelected : `${colors.statusInfo}14`,
+              color: quickTextType ? colors.primaryOrange : colors.statusInfo,
+              border: 'none', borderRadius: borderRadius.md, cursor: 'pointer',
+              transition: `all ${transitions.instant}`,
+            }}
+          >
+            <FileText size={24} />
+            <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold }}>Text</span>
+            <span style={{ fontSize: '10px', opacity: 0.8, fontWeight: typography.fontWeight.normal }}>Quick note</span>
+          </button>
+        </PermissionGate>
       </div>
 
       {/* Camera simulation overlay */}
       {captureMode === 'photo' && (
         <div style={{
-          position: 'fixed', inset: 0, zIndex: 1060, backgroundColor: '#000',
+          position: 'fixed', inset: 0, zIndex: 1060, backgroundColor: '#000', /* camera overlay */
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
-          <div style={{ width: '100%', maxWidth: '640px', aspectRatio: '4/3', position: 'relative', backgroundColor: '#1a1a2e' }}>
+          <div style={{ width: '100%', maxWidth: '640px', aspectRatio: '4/3', position: 'relative', backgroundColor: colors.darkNavy }}>
             {/* Viewfinder guides */}
             <div style={{ position: 'absolute', top: '10%', left: '10%', width: '80%', height: '80%', border: '1px solid rgba(255,255,255,0.2)', borderRadius: borderRadius.md }}>
               {/* Corner marks */}
@@ -294,7 +302,9 @@ export const FieldCapture: React.FC = () => {
           />
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: spacing['2'], marginTop: spacing['2'] }}>
             <Btn variant="ghost" size="sm" onClick={() => { setQuickTextType(null); setQuickTextLocation(''); }}>Cancel</Btn>
-            <Btn size="sm" onClick={handleQuickTextSend} disabled={!quickTextValue.trim()}>Save Capture</Btn>
+            <PermissionGate permission="field_capture.create">
+              <Btn size="sm" onClick={handleQuickTextSend} disabled={!quickTextValue.trim()}>Save Capture</Btn>
+            </PermissionGate>
           </div>
         </Card>
       )}
@@ -353,19 +363,21 @@ export const FieldCapture: React.FC = () => {
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
                 {capture.type === 'photo' && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); addToast('info', 'Select a drawing sheet to pin this photo'); }}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: spacing['1'],
-                      padding: `${spacing['1']} ${spacing['2']}`,
-                      backgroundColor: 'transparent', border: `1px solid ${colors.borderDefault}`,
-                      borderRadius: borderRadius.sm, fontSize: typography.fontSize.caption,
-                      fontFamily: typography.fontFamily, color: colors.textTertiary,
-                      cursor: 'pointer', whiteSpace: 'nowrap',
-                    }}
-                  >
-                    <FileText size={10} /> Pin to Drawing
-                  </button>
+                  <PermissionGate permission="field_capture.create">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); addToast('info', 'Select a drawing sheet to pin this photo'); }}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: spacing['1'],
+                        padding: `${spacing['1']} ${spacing['2']}`,
+                        backgroundColor: 'transparent', border: `1px solid ${colors.borderDefault}`,
+                        borderRadius: borderRadius.sm, fontSize: typography.fontSize.caption,
+                        fontFamily: typography.fontFamily, color: colors.textTertiary,
+                        cursor: 'pointer', whiteSpace: 'nowrap',
+                      }}
+                    >
+                      <FileText size={10} /> Pin to Drawing
+                    </button>
+                  </PermissionGate>
                 )}
                 <ChevronRight size={14} color={colors.textTertiary} />
               </div>
@@ -387,14 +399,83 @@ export const FieldCapture: React.FC = () => {
         />
       )}
       {showVoice && (
-        <VoiceRecorder
+        <VoiceCapture
           onClose={() => setShowVoice(false)}
-          onSave={async (_transcript) => {
-            try {
-              await createFieldCapture.mutateAsync({ projectId: projectId!, data: { project_id: projectId!, type: 'voice', content: _transcript || 'Voice note' } })
-              addToast('success', 'Voice note saved')
-              setShowVoice(false)
-            } catch { addToast('error', 'Failed to save voice note') }
+          onConfirm={async (entities: ExtractedEntity[], transcript: string, _audioBlob: Blob | null) => {
+            let savedCount = 0;
+            for (const entity of entities) {
+              try {
+                const data = entity.data as Record<string, unknown>;
+                if (entity.type === 'daily_log') {
+                  const activities = data.activities as Array<Record<string, unknown>> | undefined;
+                  const location = activities?.[0]?.location as string || '';
+                  await createFieldCapture.mutateAsync({
+                    projectId: projectId!,
+                    data: {
+                      project_id: projectId!,
+                      type: 'voice',
+                      content: transcript,
+                      location: location || null,
+                      ai_category: 'daily_log',
+                    },
+                  });
+                  savedCount++;
+                } else if (entity.type === 'rfi_draft') {
+                  await createFieldCapture.mutateAsync({
+                    projectId: projectId!,
+                    data: {
+                      project_id: projectId!,
+                      type: 'voice',
+                      content: `RFI: ${data.subject || ''} — ${data.question || ''}`,
+                      location: (data.location as string) || null,
+                      ai_category: 'rfi_draft',
+                    },
+                  });
+                  savedCount++;
+                } else if (entity.type === 'punch_item') {
+                  await createFieldCapture.mutateAsync({
+                    projectId: projectId!,
+                    data: {
+                      project_id: projectId!,
+                      type: 'voice',
+                      content: `Punch: ${data.title || ''} — ${data.description || ''}`,
+                      location: (data.location as string) || null,
+                      ai_category: 'punch_item',
+                    },
+                  });
+                  savedCount++;
+                } else if (entity.type === 'safety_observation') {
+                  await createFieldCapture.mutateAsync({
+                    projectId: projectId!,
+                    data: {
+                      project_id: projectId!,
+                      type: 'voice',
+                      content: `Safety: ${data.description || ''}`,
+                      location: (data.location as string) || null,
+                      ai_category: 'safety_observation',
+                    },
+                  });
+                  savedCount++;
+                } else {
+                  await createFieldCapture.mutateAsync({
+                    projectId: projectId!,
+                    data: {
+                      project_id: projectId!,
+                      type: 'voice',
+                      content: transcript,
+                      ai_category: 'general_note',
+                    },
+                  });
+                  savedCount++;
+                }
+              } catch {
+                addToast('error', `Failed to save ${entity.type}`);
+              }
+            }
+            if (savedCount > 0) {
+              addToast('success', `${savedCount} item${savedCount !== 1 ? 's' : ''} created from voice capture`);
+            }
+            setShowVoice(false);
           }}
         />
       )}

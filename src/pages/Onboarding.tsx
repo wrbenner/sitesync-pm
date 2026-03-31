@@ -17,7 +17,7 @@ const Step1Welcome: React.FC<StepProps> = ({ onNext }) => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', textAlign: 'center', opacity: visible ? 1 : 0, transform: visible ? 'translateY(0)' : 'translateY(20px)', transition: 'all 0.6s ease-out' }}>
-      <div style={{ width: 80, height: 80, background: `linear-gradient(135deg, ${colors.primaryOrange} 0%, #FF9C42 100%)`, borderRadius: borderRadius.xl, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: spacing['6'], fontSize: '36px', fontWeight: 700, color: 'white' }}>S</div>
+      <div style={{ width: 80, height: 80, background: `linear-gradient(135deg, ${colors.primaryOrange} 0%, ${colors.orangeGradientEnd} 100%)`, borderRadius: borderRadius.xl, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: spacing['6'], fontSize: '36px', fontWeight: 700, color: 'white' }}>S</div>
       <h1 style={{ fontSize: '36px', fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['3'], letterSpacing: typography.letterSpacing.tight }}>Welcome to SiteSync AI</h1>
       <p style={{ fontSize: typography.fontSize.title, color: colors.textSecondary, margin: 0, marginBottom: spacing['8'], maxWidth: '480px', lineHeight: typography.lineHeight.relaxed }}>
         The construction operating system that thinks ahead. Let us set up your project in under 2 minutes.
@@ -80,9 +80,9 @@ const Step4Import: React.FC<StepProps> = ({ onNext, onBack, onSkip }) => {
       {['Procore', 'Primavera P6', 'Microsoft Project', 'Excel Spreadsheet'].map((source) => (
         <button key={source} onClick={() => { setImporting(source); setTimeout(() => { setImporting(null); }, 1500); }}
           style={{ width: '100%', display: 'flex', alignItems: 'center', gap: spacing['3'], padding: `${spacing['4']}`, backgroundColor: importing === source ? colors.orangeSubtle : colors.surfaceRaised, border: `1px solid ${importing === source ? colors.primaryOrange : colors.borderDefault}`, borderRadius: borderRadius.md, cursor: 'pointer', marginBottom: spacing['2'], fontFamily: typography.fontFamily, fontSize: typography.fontSize.body, color: colors.textPrimary, transition: `all ${transitions.instant}` }}>
-          <Upload size={16} color={importing === source ? colors.primaryOrange : colors.textTertiary} />
+          <Upload size={16} color={importing === source ? colors.orangeText : colors.textTertiary} />
           <span style={{ flex: 1, textAlign: 'left' }}>{source}</span>
-          {importing === source && <span style={{ fontSize: typography.fontSize.caption, color: colors.primaryOrange }}>Importing...</span>}
+          {importing === source && <span style={{ fontSize: typography.fontSize.caption, color: colors.orangeText }}>Importing...</span>}
         </button>
       ))}
       <div style={{ display: 'flex', gap: spacing['3'], marginTop: spacing['5'] }}>
@@ -119,7 +119,7 @@ const Step5Widgets: React.FC<StepProps> = ({ onNext, onBack }) => {
             <button key={w.id} onClick={() => { const next = new Set(selected); if (next.has(w.id)) next.delete(w.id); else next.add(w.id); setSelected(next); }}
               style={{ display: 'flex', alignItems: 'center', gap: spacing['3'], padding: spacing['4'], backgroundColor: isSelected ? colors.orangeSubtle : colors.surfaceRaised, border: `1px solid ${isSelected ? colors.primaryOrange : colors.borderDefault}`, borderRadius: borderRadius.md, cursor: 'pointer', fontFamily: typography.fontFamily, transition: `all ${transitions.instant}` }}>
               <span style={{ fontSize: '20px' }}>{w.icon}</span>
-              <span style={{ fontSize: typography.fontSize.sm, fontWeight: isSelected ? typography.fontWeight.semibold : typography.fontWeight.normal, color: isSelected ? colors.primaryOrange : colors.textPrimary }}>{w.label}</span>
+              <span style={{ fontSize: typography.fontSize.sm, fontWeight: isSelected ? typography.fontWeight.semibold : typography.fontWeight.normal, color: isSelected ? colors.orangeText : colors.textPrimary }}>{w.label}</span>
               {isSelected && <Check size={14} color={colors.primaryOrange} style={{ marginLeft: 'auto' }} />}
             </button>
           );

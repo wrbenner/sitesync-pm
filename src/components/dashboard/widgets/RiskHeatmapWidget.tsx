@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { AlertTriangle } from 'lucide-react';
+import { Skeleton } from '../../Primitives';
 import { colors, spacing, typography, borderRadius, transitions } from '../../../styles/theme';
+import { useProjectId } from '../../../hooks/useProjectId';
+import { useAIInsights } from '../../../hooks/queries';
 
 interface Risk {
   id: number;
@@ -13,16 +16,6 @@ interface Risk {
   route: string;
 }
 
-const risks: Risk[] = [
-  { id: 1, title: 'Steel delivery delay', description: 'Phoenix supplier 2 weeks behind on structural steel', likelihood: 4, impact: 5, category: 'Schedule', owner: 'Mike Patterson', route: 'tasks' },
-  { id: 2, title: 'Exterior crew weather exposure', description: 'Curtain wall team losing 2+ days per month to weather', likelihood: 3, impact: 3, category: 'Schedule', owner: 'Lisa Zhang', route: 'crews' },
-  { id: 3, title: 'Structural budget overrun', description: 'Division at 97% spend with CO-001 approved', likelihood: 4, impact: 4, category: 'Budget', owner: 'Robert Anderson', route: 'budget' },
-  { id: 4, title: 'MEP coordination conflicts', description: 'Elevator shaft routing unresolved between 3 trades', likelihood: 3, impact: 4, category: 'Quality', owner: 'Robert Anderson', route: 'rfis' },
-  { id: 5, title: 'Safety audit findings', description: '3 open items from last quarterly inspection', likelihood: 2, impact: 4, category: 'Safety', owner: 'Mike Patterson', route: 'daily-log' },
-  { id: 6, title: 'Submittal review backlog', description: '4 submittals pending review past due date', likelihood: 3, impact: 2, category: 'Schedule', owner: 'Jennifer Lee', route: 'submittals' },
-  { id: 7, title: 'Concrete cure temperature', description: 'Cold weather concrete procedures needed Q4', likelihood: 2, impact: 2, category: 'Quality', owner: 'David Kumar', route: 'daily-log' },
-];
-
 function getRiskColor(likelihood: number, impact: number): string {
   const score = likelihood * impact;
   if (score >= 16) return colors.statusCritical;
@@ -32,8 +25,43 @@ function getRiskColor(likelihood: number, impact: number): string {
 }
 
 export const RiskHeatmapWidget: React.FC = React.memo(() => {
+  const projectId = useProjectId();
+  const { data: insights = [], isPending: loading } = useAIInsights(projectId, 'dashboard');
   const [hoveredRisk, setHoveredRisk] = useState<Risk | null>(null);
   const gridSize = 5;
+
+  // Derive risks from AI insights with severity/confidence mapped to likelihood/impact
+  const risks: Risk[] = useMemo(() => insights
+    .filter((i: Record<string, unknown>) => i.category === 'risk' || i.severity === 'critical' || i.severity === 'high')
+    .map((i: Record<string, unknown>, idx: number) => ({
+      id: idx + 1,
+      title: String(i.title || i.insight || ''),
+      description: String(i.description || i.recommendation || ''),
+      likelihood: i.severity === 'critical' ? 5 : i.severity === 'high' ? 4 : i.severity === 'medium' ? 3 : 2,
+      impact: Math.min(5, Math.max(1, Math.round((i.confidence as number) * 5 || 3))),
+      category: String(i.category || 'General'),
+      owner: String(i.entity_type || ''),
+      route: String(i.page || 'dashboard'),
+    })), [insights]);
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'], padding: spacing['2'] }}>
+        <Skeleton width="60%" height="16px" />
+        <Skeleton width="100%" height="120px" />
+      </div>
+    );
+  }
+
+  if (risks.length === 0) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: spacing['4'], textAlign: 'center' }}>
+        <AlertTriangle size={24} color={colors.textTertiary} />
+        <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0, marginTop: spacing['2'] }}>No risks identified</p>
+        <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0, marginTop: spacing['1'] }}>AI will surface risks as project data accumulates.</p>
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>

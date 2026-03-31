@@ -102,7 +102,7 @@ export const OwnerPortal: React.FC = () => {
   if (isLoading) {
     return (
       <div style={{
-        minHeight: '100vh', backgroundColor: '#FFFFFF',
+        minHeight: '100vh', backgroundColor: colors.white,
         display: 'flex', flexDirection: 'column', alignItems: 'center',
         padding: `${spacing['6']} ${spacing['4']}`,
       }}>
@@ -116,7 +116,7 @@ export const OwnerPortal: React.FC = () => {
   return (
     <div style={{
       minHeight: '100vh',
-      backgroundColor: '#FFFFFF',
+      backgroundColor: colors.white,
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
@@ -126,8 +126,8 @@ export const OwnerPortal: React.FC = () => {
       {/* Header */}
       <div style={{ textAlign: 'center', marginBottom: spacing.xl }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, marginBottom: spacing.xs }}>
-          <Building size={20} style={{ color: colors.primaryOrange }} />
-          <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.primaryOrange, textTransform: 'uppercase', letterSpacing: typography.letterSpacing.widest }}>
+          <Building size={20} style={{ color: colors.orangeText }} />
+          <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.orangeText, textTransform: 'uppercase', letterSpacing: typography.letterSpacing.widest }}>
             Owner Portal
           </span>
         </div>
@@ -161,7 +161,7 @@ export const OwnerPortal: React.FC = () => {
           boxShadow: shadows.sm,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md }}>
-            <Calendar size={18} style={{ color: colors.primaryOrange }} />
+            <Calendar size={18} style={{ color: colors.orangeText }} />
             <h2 style={{ margin: 0, fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
               Schedule Milestones
             </h2>
@@ -178,7 +178,7 @@ export const OwnerPortal: React.FC = () => {
           boxShadow: shadows.sm,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md }}>
-            <MessageSquare size={18} style={{ color: colors.primaryOrange }} />
+            <MessageSquare size={18} style={{ color: colors.orangeText }} />
             <h2 style={{ margin: 0, fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
               Latest Update
             </h2>
@@ -211,7 +211,7 @@ export const OwnerPortal: React.FC = () => {
           boxShadow: shadows.sm,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md }}>
-            <Camera size={18} style={{ color: colors.primaryOrange }} />
+            <Camera size={18} style={{ color: colors.orangeText }} />
             <h2 style={{ margin: 0, fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
               Project Photos
             </h2>

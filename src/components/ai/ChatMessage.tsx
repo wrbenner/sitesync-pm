@@ -33,7 +33,7 @@ export const ChatMessageBubble: React.FC<ChatMessageProps> = ({ message }) => {
         <div
           style={{
             width: 28, height: 28, borderRadius: borderRadius.full,
-            background: `linear-gradient(135deg, ${colors.statusReview} 0%, #9B8ADB 100%)`,
+            background: `linear-gradient(135deg, ${colors.statusReview} 0%, ${colors.statusReview} 100%)`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             marginTop: spacing['1'], flexShrink: 0,
           }}
@@ -66,7 +66,7 @@ export const ChatMessageBubble: React.FC<ChatMessageProps> = ({ message }) => {
                 width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center',
                 backgroundColor: reaction === 'up' ? colors.orangeSubtle : 'transparent',
                 border: 'none', borderRadius: borderRadius.sm, cursor: 'pointer',
-                color: reaction === 'up' ? colors.primaryOrange : colors.textTertiary,
+                color: reaction === 'up' ? colors.orangeText : colors.textTertiary,
                 transition: `all ${transitions.instant}`,
               }}
             >
@@ -110,7 +110,7 @@ export const AITypingIndicator: React.FC = () => (
     <div
       style={{
         width: 28, height: 28, borderRadius: borderRadius.full,
-        background: `linear-gradient(135deg, ${colors.statusReview} 0%, #9B8ADB 100%)`,
+        background: `linear-gradient(135deg, ${colors.statusReview} 0%, ${colors.statusReview} 100%)`,
         display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
       }}
     >

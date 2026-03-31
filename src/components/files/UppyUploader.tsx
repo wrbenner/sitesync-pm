@@ -163,7 +163,7 @@ export function UppyUploader({ onFilesSelected, onUploadComplete, accept, maxFil
           transition: `all ${transitions.quick}`,
         }}
       >
-        <Upload size={32} color={dragOver ? colors.primaryOrange : colors.textTertiary} style={{ marginBottom: spacing['3'] }} />
+        <Upload size={32} color={dragOver ? colors.orangeText : colors.textTertiary} style={{ marginBottom: spacing['3'] }} />
         <p style={{ margin: 0, fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
           {label || 'Drop files here or click to upload'}
         </p>

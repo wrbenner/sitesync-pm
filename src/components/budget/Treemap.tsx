@@ -23,39 +23,7 @@ const divisionColors = [
   colors.primaryOrange,
 ];
 
-const mockChildren: Record<string | number, { name: string; amount: number; pct: number }[]> = {
-  1: [
-    { name: 'Steel Fabrication', amount: 4200000, pct: 48 },
-    { name: 'Concrete Work', amount: 2800000, pct: 32 },
-    { name: 'Rebar Supply', amount: 1100000, pct: 13 },
-    { name: 'Misc Metals', amount: 550000, pct: 7 },
-  ],
-  2: [
-    { name: 'HVAC Equipment', amount: 2400000, pct: 39 },
-    { name: 'Piping', amount: 1800000, pct: 29 },
-    { name: 'Ductwork', amount: 1200000, pct: 19 },
-    { name: 'Controls', amount: 800000, pct: 13 },
-  ],
-  3: [
-    { name: 'Distribution', amount: 2000000, pct: 39 },
-    { name: 'Panels & Switchgear', amount: 1500000, pct: 29 },
-    { name: 'Low Voltage', amount: 1000000, pct: 20 },
-    { name: 'Fire Alarm', amount: 600000, pct: 12 },
-  ],
-  4: [
-    { name: 'Curtain Wall', amount: 4200000, pct: 54 },
-    { name: 'Roofing', amount: 1800000, pct: 23 },
-    { name: 'Waterproofing', amount: 1200000, pct: 15 },
-    { name: 'Sealants', amount: 600000, pct: 8 },
-  ],
-  5: [
-    { name: 'Drywall & Framing', amount: 3200000, pct: 34 },
-    { name: 'Flooring', amount: 2400000, pct: 25 },
-    { name: 'Millwork', amount: 1800000, pct: 19 },
-    { name: 'Paint', amount: 1200000, pct: 13 },
-    { name: 'Doors & Hardware', amount: 900000, pct: 9 },
-  ],
-};
+// Child breakdown is derived from the division's children prop or from budget line items
 
 const fmt = (n: number) => n >= 1000000 ? `$${(n / 1000000).toFixed(1)}M` : `$${(n / 1000).toFixed(0)}K`;
 
@@ -66,7 +34,7 @@ export const Treemap: React.FC<TreemapProps> = ({ divisions }) => {
 
   if (drillDown !== null) {
     const div = divisions.find((d) => d.id === drillDown);
-    const children = mockChildren[drillDown] || [];
+    const children = div?.children || [];
     const ddIndex = typeof drillDown === 'number' ? drillDown - 1 : 0;
     const divColor = divisionColors[ddIndex % divisionColors.length];
 

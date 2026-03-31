@@ -3,10 +3,11 @@
 
 import React from 'react'
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer'
+import { vizColors } from '../../styles/theme'
 import type { G702Data, G703LineItem } from '../../machines/paymentMachine'
 
 const styles = StyleSheet.create({
-  page: { padding: 24, fontSize: 7, fontFamily: 'Helvetica', color: '#1A1613' },
+  page: { padding: 24, fontSize: 7, fontFamily: 'Helvetica', color: vizColors.darkText },
   header: { marginBottom: 12 },
   title: { fontSize: 12, fontFamily: 'Helvetica-Bold', textAlign: 'center', marginBottom: 2 },
   subtitle: { fontSize: 8, textAlign: 'center', color: '#5C5550', marginBottom: 8 },

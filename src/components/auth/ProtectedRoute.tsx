@@ -1,11 +1,21 @@
 import React from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
+import { usePermissions } from '../../hooks/usePermissions'
+import type { Permission } from '../../hooks/usePermissions'
 import { Skeleton } from '../Primitives'
-import { colors, spacing, typography, borderRadius } from '../../styles/theme'
+import { RequestAccessPage } from './PermissionGate'
+import { colors, spacing, typography } from '../../styles/theme'
+import { MODULE_PERMISSIONS } from '../../hooks/usePermissions'
 
 interface Props {
   children: React.ReactNode
+  /** Optional: require a specific permission to access this route */
+  requiredPermission?: Permission
+  /** Optional: module ID for automatic permission lookup via MODULE_PERMISSIONS */
+  moduleId?: string
+  /** Optional: human-readable name for the access denied page */
+  moduleName?: string
 }
 
 const DevBanner: React.FC = () => (
@@ -30,8 +40,9 @@ function isDevBypassActive(): boolean {
   return true
 }
 
-export const ProtectedRoute: React.FC<Props> = ({ children }) => {
-  const { user, loading, isSessionValid } = useAuth()
+export const ProtectedRoute: React.FC<Props> = ({ children, requiredPermission, moduleId, moduleName }) => {
+  const { user, loading: authLoading, isSessionValid } = useAuth()
+  const { hasPermission, canAccessModule, loading: permLoading } = usePermissions()
   const location = useLocation()
 
   // Dev bypass: explicit opt-in only, with prominent warning banner
@@ -44,7 +55,7 @@ export const ProtectedRoute: React.FC<Props> = ({ children }) => {
     )
   }
 
-  if (loading) {
+  if (authLoading) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
         <Skeleton width="200px" height="24px" />
@@ -56,6 +67,18 @@ export const ProtectedRoute: React.FC<Props> = ({ children }) => {
   if (!user || !isSessionValid) {
     const returnTo = location.pathname !== '/login' ? `?returnTo=${encodeURIComponent(location.pathname)}` : ''
     return <Navigate to={`/login${returnTo}`} replace />
+  }
+
+  // Permission check (only after auth confirmed and permissions loaded)
+  if (!permLoading) {
+    // Check explicit permission
+    if (requiredPermission && !hasPermission(requiredPermission)) {
+      return <RequestAccessPage moduleName={moduleName} />
+    }
+    // Check module-level permission
+    if (moduleId && !canAccessModule(moduleId)) {
+      return <RequestAccessPage moduleName={moduleName || moduleId} />
+    }
   }
 
   return <>{children}</>

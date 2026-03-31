@@ -8,15 +8,10 @@ interface VoiceRecorderProps {
 }
 
 // Transcription comes from Web Speech API or Whisper edge function
-const mockTranscription: Array<{ time: number; text: string }> = [];
+const transcriptionSegments: Array<{ time: number; text: string }> = [];
 
-const aiExtraction = {
-  type: 'Punch List Item',
-  title: 'Drywall crack, Floor 8, Unit 801',
-  location: 'Floor 8, North Wall, Unit 801',
-  priority: 'Medium',
-  assignee: 'Finishing Crew F',
-};
+// AI extraction result placeholder (populated after voice processing)
+const aiExtraction: { type: string; title: string; location: string; priority: string; assignee: string } | null = null;
 
 export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onClose, onSave }) => {
   const [recording, setRecording] = useState(false);
@@ -35,7 +30,7 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onClose, onSave })
       setElapsed((prev) => {
         const next = prev + 0.1;
         // Simulated transcription
-        const segment = mockTranscription.findLast((s) => s.time <= next);
+        const segment = transcriptionSegments.findLast((s) => s.time <= next);
         if (segment) setTranscript(segment.text);
         if (next >= 7.5) {
           setRecording(false);
@@ -129,7 +124,7 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onClose, onSave })
       )}
 
       {/* AI extraction card */}
-      {showExtraction && (
+      {showExtraction && aiExtraction && (
         <div style={{ marginTop: spacing['6'], maxWidth: '480px', width: '100%', padding: `0 ${spacing['4']}`, animation: 'slideInUp 300ms ease-out' }}>
           <div style={{ backgroundColor: 'rgba(124, 93, 199, 0.12)', borderRadius: borderRadius.lg, padding: spacing['5'], border: `1px solid rgba(124, 93, 199, 0.25)` }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['3'] }}>

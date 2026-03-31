@@ -146,7 +146,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
           ) : (
             <div style={{
               width: 28, height: 28,
-              background: `linear-gradient(135deg, ${colors.primaryOrange} 0%, #FF9C42 100%)`,
+              background: `linear-gradient(135deg, ${colors.primaryOrange} 0%, ${colors.orangeGradientEnd} 100%)`,
               borderRadius: borderRadius.sm, display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: '13px', fontWeight: 700, color: 'white',
             }}>S</div>
@@ -209,7 +209,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
               animation: refreshing ? 'spin 0.6s linear infinite' : 'none',
               transform: refreshing ? 'none' : `rotate(${pullDistance * 3}deg)`,
             }} />
-            <span style={{ fontSize: typography.fontSize.sm, color: colors.primaryOrange, fontWeight: typography.fontWeight.medium }}>
+            <span style={{ fontSize: typography.fontSize.sm, color: colors.orangeText, fontWeight: typography.fontWeight.medium }}>
               {refreshing ? 'Refreshing...' : pullDistance >= PULL_THRESHOLD ? 'Release to refresh' : 'Pull to refresh'}
             </span>
           </div>
@@ -271,7 +271,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
                         width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                         padding: `${spacing['3']} ${spacing['5']}`, minHeight: '48px',
                         backgroundColor: activeTab === item.id ? colors.orangeSubtle : 'transparent',
-                        color: activeTab === item.id ? colors.primaryOrange : colors.textPrimary,
+                        color: activeTab === item.id ? colors.orangeText : colors.textPrimary,
                         border: 'none', cursor: 'pointer',
                         fontSize: typography.fontSize.body, fontFamily: typography.fontFamily,
                         fontWeight: activeTab === item.id ? typography.fontWeight.medium : typography.fontWeight.normal,
@@ -318,13 +318,13 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
               >
                 <div style={{
                   width: 52, height: 52, borderRadius: '50%',
-                  background: `linear-gradient(135deg, ${colors.primaryOrange} 0%, #FF9C42 100%)`,
+                  background: `linear-gradient(135deg, ${colors.primaryOrange} 0%, ${colors.orangeGradientEnd} 100%)`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   boxShadow: shadows.glow,
                 }}>
                   <Camera size={24} color="white" />
                 </div>
-                <span style={{ fontSize: '10px', fontWeight: typography.fontWeight.semibold, color: colors.primaryOrange, marginTop: 2 }}>
+                <span style={{ fontSize: '10px', fontWeight: typography.fontWeight.semibold, color: colors.orangeText, marginTop: 2 }}>
                   {tab.label}
                 </span>
               </button>
@@ -339,7 +339,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
                 display: 'flex', flexDirection: 'column', alignItems: 'center',
                 gap: 2, padding: `${spacing['1']} ${spacing['3']}`,
                 backgroundColor: 'transparent', border: 'none', cursor: 'pointer',
-                color: isActive ? colors.primaryOrange : colors.textTertiary,
+                color: isActive ? colors.orangeText : colors.textTertiary,
                 transition: `color ${transitions.instant}`,
                 minWidth: 56, minHeight: 48,
               }}

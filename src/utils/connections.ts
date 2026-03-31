@@ -351,17 +351,17 @@ export function getRelatedItemsForInsight(insightId: number): RelatedItem[] {
     items.push({ entityType: 'task', id: 12, label: 'Procure secondary steel supplier quote', subtitle: 'In Progress', navigateTo: 'tasks' });
     items.push({ entityType: 'rfi', id: 4, label: 'RFI-004', subtitle: 'Structural connection at curtain wall', navigateTo: 'rfis' });
     items.push({ entityType: 'schedule_phase', id: 3, label: 'Structure Phase', subtitle: '100% complete', navigateTo: 'schedule' });
-    items.push({ entityType: 'crew', id: 1, label: 'Steel Crew A', subtitle: 'Floor 7, 14 workers', navigateTo: 'crews' });
+    items.push({ entityType: 'crew', id: 1, label: 'Crew 1', subtitle: 'Active', navigateTo: 'crews' });
     items.push({ entityType: 'change_order', id: 1, label: 'CO-001: Additional structural bracing', subtitle: '$125,000', navigateTo: 'budget' });
   } else if (insightId === 2) {
     // Electrical RFI Pattern
     items.push({ entityType: 'rfi', id: 5, label: 'RFI-005', subtitle: 'Electrical panel location confirmation', navigateTo: 'rfis' });
     items.push({ entityType: 'task', id: 4, label: 'Electrical rough in floors 1 through 3', subtitle: 'In Progress', navigateTo: 'tasks' });
     items.push({ entityType: 'schedule_phase', id: 4, label: 'MEP Phase', subtitle: '62% complete', navigateTo: 'schedule' });
-    items.push({ entityType: 'crew', id: 3, label: 'Electrical Crew C', subtitle: 'Floors 1-3, 8 workers', navigateTo: 'crews' });
+    items.push({ entityType: 'crew', id: 3, label: 'Crew 3', subtitle: 'Active', navigateTo: 'crews' });
   } else if (insightId === 3) {
     // Productivity Uplift
-    items.push({ entityType: 'crew', id: 5, label: 'Framing Crew E', subtitle: 'Floors 8-12, 88% productivity', navigateTo: 'crews' });
+    items.push({ entityType: 'crew', id: 5, label: 'Crew 5', subtitle: 'Active', navigateTo: 'crews' });
     items.push({ entityType: 'schedule_phase', id: 5, label: 'Exterior Phase', subtitle: '55% complete', navigateTo: 'schedule' });
     items.push({ entityType: 'task', id: 3, label: 'Resolve curtain wall interface detail', subtitle: 'In Progress', navigateTo: 'tasks' });
   }

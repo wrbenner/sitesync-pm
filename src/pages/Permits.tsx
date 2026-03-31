@@ -38,7 +38,7 @@ const permitColumns = [
   permitCol.accessor('permit_number', {
     header: 'Permit #',
     cell: (info) => (
-      <span style={{ fontWeight: typography.fontWeight.medium, color: colors.primaryOrange }}>
+      <span style={{ fontWeight: typography.fontWeight.medium, color: colors.orangeText }}>
         {info.getValue()}
       </span>
     ),
@@ -182,7 +182,7 @@ export const Permits: React.FC = () => {
                 fontSize: typography.fontSize.sm,
                 fontFamily: typography.fontFamily,
                 fontWeight: isActive ? typography.fontWeight.medium : typography.fontWeight.normal,
-                color: isActive ? colors.primaryOrange : colors.textSecondary,
+                color: isActive ? colors.orangeText : colors.textSecondary,
                 backgroundColor: isActive ? colors.surfaceRaised : 'transparent',
                 transition: `all ${transitions.instant}`,
                 whiteSpace: 'nowrap',

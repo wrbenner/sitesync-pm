@@ -33,7 +33,7 @@ const ToolbarButton: React.FC<{
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       border: 'none', borderRadius: borderRadius.sm,
       backgroundColor: active ? colors.orangeSubtle : 'transparent',
-      color: active ? colors.primaryOrange : colors.textTertiary,
+      color: active ? colors.orangeText : colors.textTertiary,
       cursor: 'pointer',
       transition: `all ${transitions.instant}`,
     }}

@@ -9,6 +9,7 @@
 // 7. Analytics tracking
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { type ZodType, ZodError } from 'zod'
 import { supabase } from '../../lib/supabase'
 import { usePermissions, PermissionError, type Permission } from '../usePermissions'
 import { useProjectId } from '../useProjectId'
@@ -19,9 +20,24 @@ import Sentry from '../../lib/sentry'
 
 // ── Types ────────────────────────────────────────────────
 
+export class ValidationError extends Error {
+  constructor(public readonly fieldErrors: Record<string, string[]>) {
+    const summary = Object.entries(fieldErrors)
+      .map(([field, msgs]) => `${field}: ${msgs[0]}`)
+      .join(', ')
+    super(`Validation failed: ${summary}`)
+    this.name = 'ValidationError'
+  }
+}
+
 interface AuditedMutationConfig<TParams, TResult> {
   // Required permission to execute this mutation
   permission: Permission
+
+  // Optional Zod schema to validate params.data (or the entire params object)
+  schema?: ZodType
+  // Which key in params contains the data to validate (default: 'data')
+  schemaKey?: string
 
   // The actual database operation
   mutationFn: (params: TParams) => Promise<TResult>
@@ -89,10 +105,30 @@ export function useAuditedMutation<TParams, TResult>(config: AuditedMutationConf
         )
       }
 
-      // Step 2: Execute the actual mutation
+      // Step 2: Validate input with Zod schema (if provided)
+      if (config.schema) {
+        const key = config.schemaKey || 'data'
+        const dataToValidate = (params as Record<string, unknown>)[key] ?? params
+        try {
+          config.schema.parse(dataToValidate)
+        } catch (err) {
+          if (err instanceof ZodError) {
+            const fieldErrors: Record<string, string[]> = {}
+            for (const issue of err.issues) {
+              const field = issue.path.join('.') || '_root'
+              if (!fieldErrors[field]) fieldErrors[field] = []
+              fieldErrors[field].push(issue.message)
+            }
+            throw new ValidationError(fieldErrors)
+          }
+          throw err
+        }
+      }
+
+      // Step 3: Execute the actual mutation
       const result = await config.mutationFn(params)
 
-      // Step 3: Write audit trail (fire and forget)
+      // Step 4: Write audit trail (fire and forget)
       if (projectId) {
         supabase.from('audit_trail' as any).insert({
           project_id: projectId,
@@ -138,12 +174,15 @@ export function useAuditedMutation<TParams, TResult>(config: AuditedMutationConf
       // User-facing feedback
       if (error instanceof PermissionError) {
         toast.error(error.message)
+      } else if (error instanceof ValidationError) {
+        const firstError = Object.values(error.fieldErrors)[0]?.[0]
+        toast.error(firstError || 'Invalid input')
       } else {
         toast.error(config.errorMessage ?? `Failed to ${config.action.replace(/_/g, ' ')}`)
       }
 
-      // Report to Sentry (skip permission errors, those are expected)
-      if (!(error instanceof PermissionError)) {
+      // Report to Sentry (skip permission/validation errors, those are expected)
+      if (!(error instanceof PermissionError) && !(error instanceof ValidationError)) {
         Sentry.captureException(error, {
           extra: {
             mutation: config.action,

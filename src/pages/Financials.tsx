@@ -106,7 +106,7 @@ const billingColumns = [
   billingCol.accessor('application_number', {
     header: 'App #',
     cell: (info) => (
-      <span style={{ fontWeight: typography.fontWeight.medium, color: colors.primaryOrange }}>
+      <span style={{ fontWeight: typography.fontWeight.medium, color: colors.orangeText }}>
         #{info.getValue()}
       </span>
     ),
@@ -275,7 +275,7 @@ const wipColumns = [
   }),
   wipCol.accessor('pct_complete', {
     header: '% Complete',
-    cell: (info) => <span style={{ fontWeight: typography.fontWeight.semibold, color: colors.primaryOrange }}>{fmtPct(info.getValue())}</span>,
+    cell: (info) => <span style={{ fontWeight: typography.fontWeight.semibold, color: colors.orangeText }}>{fmtPct(info.getValue())}</span>,
   }),
   wipCol.accessor('earned_revenue', {
     header: 'Earned Revenue',
@@ -450,7 +450,7 @@ export const Financials: React.FC = () => {
                 fontSize: typography.fontSize.sm,
                 fontFamily: typography.fontFamily,
                 fontWeight: isActive ? typography.fontWeight.medium : typography.fontWeight.normal,
-                color: isActive ? colors.primaryOrange : colors.textSecondary,
+                color: isActive ? colors.orangeText : colors.textSecondary,
                 backgroundColor: isActive ? colors.surfaceRaised : 'transparent',
                 transition: `all ${transitions.instant}`,
                 whiteSpace: 'nowrap',

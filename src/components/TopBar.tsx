@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Sun, Moon, Monitor } from 'lucide-react';
-import { colors, spacing, typography, borderRadius, shadows, transitions, layout, colorVars } from '../styles/theme';
+import { colors, darkColors, spacing, typography, borderRadius, shadows, transitions, layout, colorVars } from '../styles/theme';
 import { Dot, useSidebar } from './Primitives';
 import { NotificationBell, NotificationPanel } from './collaboration/NotificationCenter';
+import { ConnectionStatusDot } from './ui/ConnectionStatus';
 import { PresenceBar } from './collaboration/PresenceBar';
 import { useUiStore } from '../stores';
 import { useTheme } from '../hooks/useTheme';
@@ -175,6 +176,9 @@ export const TopBar: React.FC<TopBarProps> = ({ activeView, onSearch }) => {
           </span>
         </div>
 
+        {/* Connection Status */}
+        <ConnectionStatusDot />
+
         {/* Notifications */}
         <div style={{ position: 'relative' }}>
           <NotificationBell onClick={() => setNotificationsOpen(!notificationsOpen)} isOpen={notificationsOpen} />
@@ -220,7 +224,7 @@ export const TopBar: React.FC<TopBarProps> = ({ activeView, onSearch }) => {
                   top: '100%',
                   right: 0,
                   marginTop: spacing.sm,
-                  backgroundColor: isDark ? '#1A1B1E' : colors.white,
+                  backgroundColor: isDark ? darkColors.surfaceRaised : colors.white,
                   border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : colors.borderDefault}`,
                   borderRadius: borderRadius.lg,
                   boxShadow: shadows.dropdown,

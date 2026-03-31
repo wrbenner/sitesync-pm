@@ -8,6 +8,7 @@ import { useCreateMeeting } from '../hooks/mutations';
 import { useProjectId } from '../hooks/useProjectId';
 import { useMeetings } from '../hooks/queries';
 import CreateMeetingModal from '../components/forms/CreateMeetingModal';
+import { PermissionGate } from '../components/auth/PermissionGate';
 
 const meetingTypeLabel = (type: string) => {
   switch (type) {
@@ -36,19 +37,18 @@ const meetingTypeBg = (type: string) => {
   }
 };
 
-const mockAgenda = [
-  { title: 'Safety Review', duration: '10 min' },
-  { title: 'Schedule Update', duration: '15 min' },
-  { title: 'RFI Discussion', duration: '10 min' },
-  { title: 'Budget Review', duration: '10 min' },
-  { title: 'Action Items', duration: '5 min' },
-];
-
-const mockAgendaPreview = [
-  'Safety Review',
-  'Schedule Update',
-  'Open Items',
-];
+// Parse agenda items from meeting's agenda JSONB field
+function parseAgendaItems(meeting: any): { title: string; duration: string }[] {
+  if (!meeting?.agenda) return [];
+  try {
+    const parsed = typeof meeting.agenda === 'string' ? JSON.parse(meeting.agenda) : meeting.agenda;
+    if (Array.isArray(parsed)) return parsed.map((item: any) => ({
+      title: item.title || item.name || String(item),
+      duration: item.duration || '',
+    }));
+  } catch { /* ignore parse errors */ }
+  return [];
+}
 
 const tabs = [
   { key: 'upcoming' as const, label: 'Upcoming' },
@@ -147,8 +147,10 @@ export const Meetings: React.FC = () => {
     setActiveTab('upcoming');
   };
 
+  const liveAgendaItems = liveMeeting ? parseAgendaItems(liveMeeting) : [];
+
   const advanceAgenda = () => {
-    if (liveAgendaIndex < mockAgenda.length - 1) {
+    if (liveAgendaIndex < liveAgendaItems.length - 1) {
       setLiveAgendaIndex((prev) => prev + 1);
     }
   };
@@ -232,14 +234,16 @@ export const Meetings: React.FC = () => {
           onExportCSV={() => toast.success('Meeting data exported as CSV')}
           pdfFilename="SiteSync_Meetings"
         />
-        <Btn onClick={() => setCreateOpen(true)}>New Meeting</Btn>
+        <PermissionGate permission="meetings.create"><Btn onClick={() => setCreateOpen(true)}>New Meeting</Btn></PermissionGate>
       </div>
     }>
       {/* Tab bar */}
-      <div style={tabBarStyle}>
+      <div style={tabBarStyle} role="tablist" aria-label="Meeting views">
         {tabs.map((tab) => (
           <button
             key={tab.key}
+            role="tab"
+            aria-selected={activeTab === tab.key}
             style={tabStyle(activeTab === tab.key)}
             onClick={() => setActiveTab(tab.key)}
           >
@@ -248,9 +252,9 @@ export const Meetings: React.FC = () => {
         ))}
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '12px 16px', marginBottom: '16px', backgroundColor: 'rgba(124, 93, 199, 0.04)', borderRadius: '8px', borderLeft: '3px solid #7C5DC7' }}>
-        <Sparkles size={14} color="#7C5DC7" style={{ marginTop: 2, flexShrink: 0 }} />
-        <p style={{ fontSize: '13px', color: '#1A1613', margin: 0, lineHeight: 1.5 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: spacing['3'], padding: `${spacing['3']} ${spacing['4']}`, marginBottom: spacing['4'], backgroundColor: colors.statusReviewSubtle, borderRadius: borderRadius.md, borderLeft: `3px solid ${colors.statusReview}` }}>
+        <Sparkles size={14} color={colors.statusReview} style={{ marginTop: 2, flexShrink: 0 }} />
+        <p style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, margin: 0, lineHeight: 1.5 }}>
           3 action items from last OAC meeting are overdue. Next safety meeting has 2 unresolved items from prior session.
         </p>
       </div>
@@ -259,7 +263,7 @@ export const Meetings: React.FC = () => {
       {activeTab === 'upcoming' && (
         <>
           <SectionHeader title="Upcoming" />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.lg, marginBottom: spacing['2xl'] }}>
+          <div role="list" aria-label="Upcoming meetings" style={{ display: 'flex', flexDirection: 'column', gap: spacing.lg, marginBottom: spacing['2xl'] }}>
             {upcoming.map((meeting) => (
               <Card key={meeting.id} padding={spacing.xl}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -296,21 +300,27 @@ export const Meetings: React.FC = () => {
                         Agenda Preview
                       </p>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
-                        {mockAgendaPreview.map((item, i) => (
-                          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
-                            <ChevronRight size={12} color={colors.textTertiary} />
-                            <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{item}</span>
-                          </div>
-                        ))}
+                        {(() => {
+                          const items = parseAgendaItems(meeting);
+                          if (items.length === 0) return (
+                            <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>No agenda items</span>
+                          );
+                          return items.slice(0, 3).map((item, i) => (
+                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
+                              <ChevronRight size={12} color={colors.textTertiary} />
+                              <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{item.title}</span>
+                            </div>
+                          ));
+                        })()}
                       </div>
                     </div>
 
-                    <Btn
+                    <PermissionGate permission="meetings.create"><Btn
                       icon={<Play size={14} />}
                       onClick={() => {
                         startMeeting(meeting);
                       }}
-                    >Start Meeting</Btn>
+                    >Start Meeting</Btn></PermissionGate>
                   </div>
                   <Tag label={meetingTypeLabel(meeting.type)} color={meetingTypeColor(meeting.type)} backgroundColor={meetingTypeBg(meeting.type)} />
                 </div>
@@ -319,7 +329,7 @@ export const Meetings: React.FC = () => {
           </div>
 
           <SectionHeader title="Past" />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.md }}>
+          <div role="list" aria-label="Past meetings" style={{ display: 'flex', flexDirection: 'column', gap: spacing.md }}>
             {completed.map((meeting) => (
               <Card key={meeting.id} padding={spacing.xl} onClick={() => addToast('info', `Viewing minutes for ${meeting.title}`)}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -352,6 +362,8 @@ export const Meetings: React.FC = () => {
         <>
           <SectionHeader title="This Week" />
           <div
+            role="grid"
+            aria-label="Weekly calendar"
             style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(7, 1fr)',
@@ -376,17 +388,21 @@ export const Meetings: React.FC = () => {
                   }}
                 >
                   <div style={{ textAlign: 'center', marginBottom: spacing.sm }}>
-                    <p style={{ fontSize: typography.fontSize.label, fontWeight: typography.fontWeight.semibold, color: isToday ? colors.primaryOrange : colors.textSecondary, margin: 0, textTransform: 'uppercase', letterSpacing: typography.letterSpacing.wider }}>
+                    <p style={{ fontSize: typography.fontSize.label, fontWeight: typography.fontWeight.semibold, color: isToday ? colors.orangeText : colors.textSecondary, margin: 0, textTransform: 'uppercase', letterSpacing: typography.letterSpacing.wider }}>
                       {day.dayName}
                     </p>
-                    <p style={{ fontSize: typography.fontSize.sm, color: isToday ? colors.primaryOrange : colors.textTertiary, margin: 0 }}>
+                    <p style={{ fontSize: typography.fontSize.sm, color: isToday ? colors.orangeText : colors.textTertiary, margin: 0 }}>
                       {day.label}
                     </p>
                   </div>
                   {dayMeetings.map((m) => (
                     <div
                       key={m.id}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`${meetingTypeLabel(m.type)} meeting: ${m.title} at ${m.time}`}
                       onClick={() => addToast('info', `${m.title} at ${m.time}`)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); addToast('info', `${m.title} at ${m.time}`); } }}
                       style={{
                         background: meetingTypeBg(m.type),
                         borderLeft: `3px solid ${meetingTypeColor(m.type)}`,
@@ -468,11 +484,14 @@ export const Meetings: React.FC = () => {
                       Agenda
                     </p>
                     <span style={{ fontSize: typography.fontSize.label, color: colors.textTertiary }}>
-                      {liveAgendaIndex + 1} of {mockAgenda.length}
+                      {liveAgendaItems.length > 0 ? `${liveAgendaIndex + 1} of ${liveAgendaItems.length}` : 'No agenda'}
                     </span>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm, marginBottom: spacing.xl }}>
-                    {mockAgenda.map((item, i) => {
+                  <div role="list" aria-label="Agenda items" style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm, marginBottom: spacing.xl }}>
+                    {liveAgendaItems.length === 0 && (
+                      <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, textAlign: 'center', padding: spacing.lg }}>No agenda items</p>
+                    )}
+                    {liveAgendaItems.map((item, i) => {
                       const isCurrent = i === liveAgendaIndex;
                       const isComplete = i < liveAgendaIndex;
                       return (
@@ -521,8 +540,8 @@ export const Meetings: React.FC = () => {
                   <Btn
                     icon={<ChevronRight size={14} />}
                     onClick={advanceAgenda}
-                    disabled={liveAgendaIndex >= mockAgenda.length - 1}
-                  >{liveAgendaIndex < mockAgenda.length - 1 ? 'Next Item' : 'All Items Complete'}</Btn>
+                    disabled={liveAgendaItems.length === 0 || liveAgendaIndex >= liveAgendaItems.length - 1}
+                  >{liveAgendaItems.length === 0 ? 'No Agenda Items' : liveAgendaIndex < liveAgendaItems.length - 1 ? 'Next Item' : 'All Items Complete'}</Btn>
                 </Card>
 
                 {/* Action items */}
@@ -533,6 +552,7 @@ export const Meetings: React.FC = () => {
                   <div style={{ display: 'flex', gap: spacing.sm, marginBottom: spacing.lg }}>
                     <input
                       type="text"
+                      aria-label="Capture an action item"
                       placeholder="Capture an action item..."
                       value={actionInput}
                       onChange={(e) => setActionInput(e.target.value)}
@@ -541,7 +561,7 @@ export const Meetings: React.FC = () => {
                     />
                     <Btn icon={<Plus size={14} />} onClick={addActionItem}>Add</Btn>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm, maxHeight: '240px', overflowY: 'auto' }}>
+                  <div role="list" aria-label="Action items" style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm, maxHeight: '240px', overflowY: 'auto' }}>
                     {actionItems.length === 0 && (
                       <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, textAlign: 'center', padding: spacing.xl }}>
                         No action items captured yet. Type above to add one.
@@ -595,7 +615,7 @@ export const Meetings: React.FC = () => {
 
               {/* End Meeting */}
               <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <button
+                <PermissionGate permission="meetings.create"><button
                   onClick={endMeeting}
                   style={{
                     display: 'flex',
@@ -615,7 +635,7 @@ export const Meetings: React.FC = () => {
                 >
                   <Square size={14} />
                   End Meeting
-                </button>
+                </button></PermissionGate>
               </div>
             </div>
           )}

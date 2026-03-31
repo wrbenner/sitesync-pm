@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { ArrowRight, Circle, Type, Undo2, Download, X } from 'lucide-react';
-import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme';
+import { colors, spacing, typography, borderRadius, transitions, vizColors } from '../../styles/theme';
 
 type Tool = 'arrow' | 'circle' | 'text' | null;
 
@@ -93,7 +93,7 @@ export const PhotoAnnotator: React.FC<PhotoAnnotatorProps> = ({ onClose, onSave 
   const handleUndo = () => setAnnotations((prev) => prev.slice(0, -1));
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 1060, backgroundColor: '#1A1613', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 1060, backgroundColor: vizColors.darkText, display: 'flex', flexDirection: 'column' }}>
       {/* Top toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: `${spacing['3']} ${spacing['4']}`, flexShrink: 0 }}>
         <button onClick={onClose} style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], backgroundColor: 'transparent', border: 'none', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily }}>

@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { X, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Maximize2 } from 'lucide-react';
-import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme';
+import { colors, spacing, typography, borderRadius, shadows, vizColors } from '../../styles/theme';
 
 // Configure PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -52,7 +52,7 @@ export function PdfViewer({ file, title, onClose }: PdfViewerProps) {
     <div style={{
       position: 'fixed', inset: 0, zIndex: 2000,
       display: 'flex', flexDirection: 'column',
-      backgroundColor: '#1a1a2e',
+      backgroundColor: vizColors.dark,
     }}>
       {/* Toolbar */}
       <div style={{

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, createContext, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useContext, createContext, useCallback, useRef, useId } from 'react';
 import { X, Search, CheckCircle, AlertTriangle, Info, XCircle, ChevronRight, LayoutGrid, HelpCircle, Calendar, DollarSign, User, Users, ClipboardList, FileText } from 'lucide-react';
 import type { RelatedItem, EntityType } from '../utils/connections';
 import { colors, spacing, typography, borderRadius, shadows, transitions, zIndex, layout } from '../styles/theme';
@@ -19,7 +19,7 @@ export const SidebarContext = createContext<SidebarContextType>({
 export const useSidebar = () => useContext(SidebarContext);
 
 // ─── PageContainer ──────────────────────────────────────────────────────────
-// Consistent page wrapper. Replaces the raw <main> with hardcoded marginLeft.
+// Consistent page wrapper. Replaces the raw <main> with a fixed marginLeft.
 
 interface PageContainerProps {
   title?: string;
@@ -97,11 +97,22 @@ interface CardProps {
   children: React.ReactNode;
   padding?: string;
   onClick?: () => void;
+  'aria-label'?: string;
+  role?: string;
 }
 
-export const Card: React.FC<CardProps> = ({ children, padding = spacing['5'], onClick }) => (
+export const Card: React.FC<CardProps> = React.memo(({ children, padding = spacing['5'], onClick, 'aria-label': ariaLabel, role }) => (
   <div
     onClick={onClick}
+    role={role || (onClick ? 'button' : undefined)}
+    tabIndex={onClick ? 0 : undefined}
+    aria-label={ariaLabel}
+    onKeyDown={onClick ? (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        onClick();
+      }
+    } : undefined}
     style={{
       backgroundColor: colors.surfaceRaised,
       borderRadius: borderRadius.lg,
@@ -125,7 +136,7 @@ export const Card: React.FC<CardProps> = ({ children, padding = spacing['5'], on
   >
     {children}
   </div>
-);
+));
 
 // ─── Btn ────────────────────────────────────────────────────────────────────
 // Purpose driven buttons. Orange = action. Everything else is quiet.
@@ -197,6 +208,7 @@ export const Btn: React.FC<BtnProps> = ({
       onClick={onClick}
       disabled={disabled}
       aria-label={ariaLabel}
+      aria-disabled={disabled || undefined}
       style={{
         display: 'inline-flex',
         width: fullWidth ? '100%' : 'auto',
@@ -247,7 +259,7 @@ interface MetricBoxProps {
   icon?: React.ReactNode; // kept for backwards compat but ignored
 }
 
-export const MetricBox: React.FC<MetricBoxProps> = ({
+export const MetricBox: React.FC<MetricBoxProps> = React.memo(({
   label,
   value,
   unit,
@@ -255,6 +267,8 @@ export const MetricBox: React.FC<MetricBoxProps> = ({
   changeLabel,
 }) => (
   <div
+    role="group"
+    aria-label={`${label}: ${value}${unit ? ` ${unit}` : ''}`}
     style={{
       backgroundColor: colors.surfaceRaised,
       borderRadius: borderRadius.lg,
@@ -299,7 +313,7 @@ export const MetricBox: React.FC<MetricBoxProps> = ({
       <p
         style={{
           fontSize: typography.fontSize.sm,
-          color: change >= 0 ? colors.tealSuccess : colors.red,
+          color: change >= 0 ? colors.statusActive : colors.statusCritical,
           margin: 0,
           marginTop: spacing.sm,
           fontWeight: typography.fontWeight.medium,
@@ -309,7 +323,7 @@ export const MetricBox: React.FC<MetricBoxProps> = ({
       </p>
     )}
   </div>
-);
+));
 
 // ─── Tag ────────────────────────────────────────────────────────────────────
 // Small, round, quiet. Whispers, not shouts.
@@ -321,7 +335,7 @@ interface TagProps {
   fontSize?: string;
 }
 
-export const Tag: React.FC<TagProps> = ({
+export const Tag: React.FC<TagProps> = React.memo(({
   label,
   color = colors.textSecondary,
   backgroundColor = colors.surfaceFlat,
@@ -343,7 +357,7 @@ export const Tag: React.FC<TagProps> = ({
   >
     {label}
   </span>
-);
+));
 
 // ─── StatusTag ──────────────────────────────────────────────────────────────
 
@@ -352,7 +366,7 @@ interface StatusTagProps {
   label?: string;
 }
 
-export const StatusTag: React.FC<StatusTagProps> = ({ status, label }) => {
+export const StatusTag: React.FC<StatusTagProps> = React.memo(({ status, label }) => {
   const statusConfig: Record<string, { bg: string; color: string; text: string }> = {
     pending: { bg: colors.statusPendingSubtle, color: colors.statusPending, text: 'Pending' },
     approved: { bg: colors.statusActiveSubtle, color: colors.statusActive, text: 'Approved' },
@@ -365,7 +379,7 @@ export const StatusTag: React.FC<StatusTagProps> = ({ status, label }) => {
   };
   const config = statusConfig[status] || statusConfig.pending;
   return <Tag label={label || config.text} color={config.color} backgroundColor={config.bg} />;
-};
+});
 
 // ─── PriorityTag ────────────────────────────────────────────────────────────
 
@@ -374,16 +388,16 @@ interface PriorityTagProps {
   label?: string;
 }
 
-export const PriorityTag: React.FC<PriorityTagProps> = ({ priority, label }) => {
+export const PriorityTag: React.FC<PriorityTagProps> = React.memo(({ priority, label }) => {
   const priorityConfig: Record<string, { bg: string; color: string; text: string }> = {
     low: { bg: colors.statusInfoSubtle, color: colors.statusInfo, text: 'Low' },
     medium: { bg: colors.statusPendingSubtle, color: colors.statusPending, text: 'Medium' },
-    high: { bg: colors.orangeSubtle, color: colors.primaryOrange, text: 'High' },
+    high: { bg: colors.orangeSubtle, color: colors.orangeText, text: 'High' },
     critical: { bg: colors.statusCriticalSubtle, color: colors.statusCritical, text: 'Critical' },
   };
   const config = priorityConfig[priority];
   return <Tag label={label || config.text} color={config.color} backgroundColor={config.bg} />;
-};
+});
 
 // ─── SectionHeader ──────────────────────────────────────────────────────────
 // Clean section label. No subtitle noise.
@@ -394,7 +408,7 @@ interface SectionHeaderProps {
   action?: React.ReactNode;
 }
 
-export const SectionHeader: React.FC<SectionHeaderProps> = ({ title, action }) => (
+export const SectionHeader: React.FC<SectionHeaderProps> = React.memo(({ title, action }) => (
   <div
     style={{
       display: 'flex',
@@ -417,7 +431,7 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({ title, action }) =
     </h2>
     {action}
   </div>
-);
+));
 
 // ─── TableHeader ────────────────────────────────────────────────────────────
 // Quiet column labels. No uppercase shouting. No background fill.
@@ -426,8 +440,9 @@ interface TableHeaderProps {
   columns: Array<{ label: string; width?: string }>;
 }
 
-export const TableHeader: React.FC<TableHeaderProps> = ({ columns }) => (
+export const TableHeader: React.FC<TableHeaderProps> = React.memo(({ columns }) => (
   <div
+    role="row"
     style={{
       display: 'grid',
       gridTemplateColumns: columns.map((c) => c.width || '1fr').join(' '),
@@ -442,6 +457,7 @@ export const TableHeader: React.FC<TableHeaderProps> = ({ columns }) => (
     {columns.map((col, i) => (
       <p
         key={i}
+        role="columnheader"
         style={{
           fontSize: typography.fontSize.label,
           fontWeight: typography.fontWeight.medium,
@@ -454,7 +470,7 @@ export const TableHeader: React.FC<TableHeaderProps> = ({ columns }) => (
       </p>
     ))}
   </div>
-);
+));
 
 // ─── TableRow ───────────────────────────────────────────────────────────────
 // Breathing room. Soft hover. No harsh dividers.
@@ -466,11 +482,20 @@ interface TableRowProps {
   selected?: boolean;
 }
 
-export const TableRow: React.FC<TableRowProps> = ({ columns, onClick, divider = true, selected = false }) => {
+export const TableRow: React.FC<TableRowProps> = React.memo(({ columns, onClick, divider = true, selected = false }) => {
   const baseBg = selected ? colors.surfaceSelected : colors.surfaceRaised;
   return (
   <div
+    role="row"
+    aria-selected={selected || undefined}
     onClick={onClick}
+    tabIndex={onClick ? 0 : undefined}
+    onKeyDown={onClick ? (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        onClick();
+      }
+    } : undefined}
     style={{
       display: 'grid',
       gridTemplateColumns: columns.map((c) => c.width || '1fr').join(' '),
@@ -490,11 +515,11 @@ export const TableRow: React.FC<TableRowProps> = ({ columns, onClick, divider = 
     }}
   >
     {columns.map((col, i) => (
-      <div key={i}>{col.content}</div>
+      <div key={i} role="cell">{col.content}</div>
     ))}
   </div>
   );
-};
+});
 
 // ─── Modal ──────────────────────────────────────────────────────────────────
 // Soft, spacious dialog. No header border. Blurred backdrop.
@@ -508,11 +533,40 @@ interface ModalProps {
 }
 
 export const Modal: React.FC<ModalProps> = ({ open, onClose, title, children, width = '600px' }) => {
+  const titleId = useId();
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+
   useEffect(() => {
-    if (open) document.body.style.overflow = 'hidden';
-    else document.body.style.overflow = '';
+    if (open) {
+      previousFocusRef.current = document.activeElement as HTMLElement;
+      document.body.style.overflow = 'hidden';
+      setTimeout(() => dialogRef.current?.focus(), 50);
+    } else {
+      document.body.style.overflow = '';
+      previousFocusRef.current?.focus();
+    }
     return () => { document.body.style.overflow = ''; };
   }, [open]);
+
+  // Focus trap
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { onClose(); return; }
+      if (e.key !== 'Tab' || !dialogRef.current) return;
+      const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [open, onClose]);
 
   if (!open) return null;
 
@@ -531,6 +585,11 @@ export const Modal: React.FC<ModalProps> = ({ open, onClose, title, children, wi
       onClick={onClose}
     >
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
         style={{
           backgroundColor: colors.surfaceRaised,
           borderRadius: borderRadius.xl,
@@ -539,6 +598,7 @@ export const Modal: React.FC<ModalProps> = ({ open, onClose, title, children, wi
           maxHeight: '85vh',
           overflow: 'auto',
           boxShadow: shadows.lg,
+          outline: 'none',
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -551,6 +611,7 @@ export const Modal: React.FC<ModalProps> = ({ open, onClose, title, children, wi
           }}
         >
           <h2
+            id={titleId}
             style={{
               fontSize: typography.fontSize['3xl'],
               fontWeight: typography.fontWeight.bold,
@@ -562,6 +623,7 @@ export const Modal: React.FC<ModalProps> = ({ open, onClose, title, children, wi
           </h2>
           <button
             onClick={onClose}
+            aria-label="Close dialog"
             style={{
               width: 32,
               height: 32,
@@ -600,13 +662,17 @@ interface TabBarProps {
   onChange: (id: string) => void;
 }
 
-export const TabBar: React.FC<TabBarProps> = ({ tabs, activeTab, onChange }) => (
-  <div style={{ display: 'flex', gap: spacing.xl }}>
+export const TabBar: React.FC<TabBarProps> = React.memo(({ tabs, activeTab, onChange }) => (
+  <div role="tablist" style={{ display: 'flex', gap: spacing.xl }}>
     {tabs.map((tab) => {
       const isActive = tab.id === activeTab;
       return (
         <button
           key={tab.id}
+          role="tab"
+          aria-selected={isActive}
+          aria-controls={`tabpanel-${tab.id}`}
+          id={`tab-${tab.id}`}
           onClick={() => onChange(tab.id)}
           style={{
             padding: `${spacing.sm} 0`,
@@ -640,7 +706,7 @@ export const TabBar: React.FC<TabBarProps> = ({ tabs, activeTab, onChange }) => 
       );
     })}
   </div>
-);
+));
 
 // ─── Avatar ─────────────────────────────────────────────────────────────────
 // Soft pastel colors. Round. Clean initials.
@@ -662,10 +728,12 @@ function hashStr(s: string): number {
   return Math.abs(h);
 }
 
-export const Avatar: React.FC<AvatarProps> = ({ initials, size = 36, color }) => {
+export const Avatar: React.FC<AvatarProps> = React.memo(({ initials, size = 36, color }) => {
   const bg = color || avatarColors[hashStr(initials) % avatarColors.length];
   return (
     <div
+      role="img"
+      aria-label={`Avatar: ${initials}`}
       style={{
         width: size,
         height: size,
@@ -683,7 +751,7 @@ export const Avatar: React.FC<AvatarProps> = ({ initials, size = 36, color }) =>
       {initials}
     </div>
   );
-};
+});
 
 // ─── ProgressBar ────────────────────────────────────────────────────────────
 // Clean bar. Rounded ends. Soft track.
@@ -696,7 +764,7 @@ interface ProgressBarProps {
   bgColor?: string;
 }
 
-export const ProgressBar: React.FC<ProgressBarProps> = ({
+export const ProgressBar: React.FC<ProgressBarProps> = React.memo(({
   value,
   max = 100,
   height = 3,
@@ -704,6 +772,11 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   bgColor = colors.surfaceInset,
 }) => (
   <div
+    role="progressbar"
+    aria-valuenow={value}
+    aria-valuemin={0}
+    aria-valuemax={max}
+    aria-label={`${Math.round((value / max) * 100)}% complete`}
     style={{
       width: '100%',
       height,
@@ -722,7 +795,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
       }}
     />
   </div>
-);
+));
 
 // ─── Dot ────────────────────────────────────────────────────────────────────
 
@@ -732,7 +805,7 @@ interface DotProps {
   size?: number;
 }
 
-export const Dot: React.FC<DotProps> = ({ color = colors.green, pulse = false, size = 8 }) => (
+export const Dot: React.FC<DotProps> = React.memo(({ color = colors.green, pulse = false, size = 8 }) => (
   <div
     style={{
       width: `${size}px`,
@@ -743,7 +816,7 @@ export const Dot: React.FC<DotProps> = ({ color = colors.green, pulse = false, s
       flexShrink: 0,
     }}
   />
-);
+));
 
 // ─── AIRing ─────────────────────────────────────────────────────────────────
 
@@ -760,9 +833,9 @@ export const AIRing: React.FC<AIRingProps> = ({ score, label, size = 80 }) => {
   const color = score >= 80 ? colors.tealSuccess : score >= 60 ? colors.amber : colors.red;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing.sm }}>
+    <div role="group" aria-label={`${label || 'Score'}: ${score} out of 100`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing.sm }}>
       <div style={{ position: 'relative', width: size, height: size }}>
-        <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
+        <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }} aria-hidden="true">
           <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={colors.borderLight} strokeWidth="5" />
           <circle
             cx={size / 2} cy={size / 2} r={r} fill="none"
@@ -793,6 +866,8 @@ interface InputFieldProps {
   type?: string;
   icon?: React.ReactNode;
   error?: string;
+  required?: boolean;
+  id?: string;
 }
 
 export const InputField: React.FC<InputFieldProps> = ({
@@ -803,13 +878,19 @@ export const InputField: React.FC<InputFieldProps> = ({
   type = 'text',
   icon,
   error,
+  required,
+  id: externalId,
 }) => {
+  const autoId = useId();
+  const inputId = externalId || autoId;
+  const errorId = `${inputId}-error`;
   const [focused, setFocused] = useState(false);
 
   return (
     <div>
       {label && (
         <label
+          htmlFor={inputId}
           style={{
             display: 'block',
             fontSize: typography.fontSize.sm,
@@ -833,14 +914,19 @@ export const InputField: React.FC<InputFieldProps> = ({
           transition: `border-color ${transitions.fast}`,
         }}
       >
-        {icon && <span style={{ color: colors.textTertiary, display: 'flex' }}>{icon}</span>}
+        {icon && <span style={{ color: colors.textTertiary, display: 'flex' }} aria-hidden="true">{icon}</span>}
         <input
+          id={inputId}
           type={type}
           placeholder={placeholder}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
+          aria-required={required || undefined}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? errorId : undefined}
+          aria-label={!label ? placeholder : undefined}
           style={{
             flex: 1,
             border: 'none',
@@ -853,7 +939,7 @@ export const InputField: React.FC<InputFieldProps> = ({
         />
       </div>
       {error && (
-        <p style={{ fontSize: typography.fontSize.xs, color: colors.red, margin: 0, marginTop: spacing.xs }}>
+        <p id={errorId} role="alert" style={{ fontSize: typography.fontSize.xs, color: colors.red, margin: 0, marginTop: spacing.xs }}>
           {error}
         </p>
       )}
@@ -998,7 +1084,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   return (
     <ToastContext.Provider value={{ addToast }}>
       {children}
-      <div style={{ position: 'fixed', top: spacing.xl, right: spacing.xl, zIndex: zIndex.tooltip as number, display: 'flex', flexDirection: 'column', gap: spacing.sm, pointerEvents: 'none' }}>
+      <div aria-live="polite" aria-atomic="false" role="status" style={{ position: 'fixed', top: spacing.xl, right: spacing.xl, zIndex: zIndex.tooltip as number, display: 'flex', flexDirection: 'column', gap: spacing.sm, pointerEvents: 'none' }}>
         {toasts.map((toast) => (
           <div
             key={toast.id}
@@ -1181,6 +1267,9 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ items }) => {
       onClick={() => setOpen(false)}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Command palette"
         style={{
           width: '600px', maxWidth: '90vw', backgroundColor: colors.surfaceRaised,
           borderRadius: borderRadius.xl, boxShadow: shadows.lg, overflow: 'hidden',
@@ -1197,6 +1286,12 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ items }) => {
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Search or type a command..."
+            aria-label="Search or type a command"
+            role="combobox"
+            aria-expanded={true}
+            aria-autocomplete="list"
+            aria-controls="command-palette-results"
+            aria-activedescendant={flatList[selectedIndex] ? `cmd-item-${flatList[selectedIndex].id}` : undefined}
             style={{
               flex: 1, border: 'none', backgroundColor: 'transparent', outline: 'none',
               fontSize: typography.fontSize.xl, fontFamily: typography.fontFamily, color: colors.textPrimary,
@@ -1206,11 +1301,11 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ items }) => {
         </div>
 
         {/* Results */}
-        <div ref={listRef} style={{ maxHeight: '420px', overflowY: 'auto', padding: spacing.sm }}>
+        <div ref={listRef} id="command-palette-results" role="listbox" style={{ maxHeight: '420px', overflowY: 'auto', padding: spacing.sm }}>
           {sections.map((section) => {
             const sectionItems = allItems.filter((i) => i.section === section);
             return (
-              <div key={section}>
+              <div key={section} role="group" aria-label={section}>
                 <p style={{ fontSize: typography.fontSize.xs, fontWeight: typography.fontWeight.medium, color: colors.textTertiary, padding: `${spacing.sm} ${spacing.md}`, margin: 0, textTransform: 'uppercase', letterSpacing: typography.letterSpacing.wider }}>
                   {section}
                 </p>
@@ -1221,6 +1316,9 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ items }) => {
                   return (
                     <button
                       key={item.id}
+                      id={`cmd-item-${item.id}`}
+                      role="option"
+                      aria-selected={isSelected}
                       data-idx={idx}
                       onClick={() => handleSelect(item)}
                       style={{
@@ -1289,11 +1387,40 @@ interface DetailPanelProps {
 }
 
 export const DetailPanel: React.FC<DetailPanelProps> = ({ open, onClose, title, children, width = '520px' }) => {
+  const titleId = useId();
+  const panelRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+
   useEffect(() => {
-    if (open) document.body.style.overflow = 'hidden';
-    else document.body.style.overflow = '';
+    if (open) {
+      previousFocusRef.current = document.activeElement as HTMLElement;
+      document.body.style.overflow = 'hidden';
+      setTimeout(() => panelRef.current?.focus(), 50);
+    } else {
+      document.body.style.overflow = '';
+      previousFocusRef.current?.focus();
+    }
     return () => { document.body.style.overflow = ''; };
   }, [open]);
+
+  // Focus trap + Escape
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { onClose(); return; }
+      if (e.key !== 'Tab' || !panelRef.current) return;
+      const focusable = panelRef.current.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [open, onClose]);
 
   if (!open) return null;
 
@@ -1301,17 +1428,24 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({ open, onClose, title, 
     <>
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.2)', zIndex: zIndex.modal as number - 1, animation: 'fadeIn 200ms ease-out' }} />
       <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
         style={{
           position: 'fixed', top: 0, right: 0, bottom: 0, width, maxWidth: '90vw',
           backgroundColor: colors.surfaceRaised, boxShadow: shadows.lg,
           zIndex: zIndex.modal as number, overflowY: 'auto',
           animation: 'slideInRight 250ms ease-out',
+          outline: 'none',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: `${spacing.lg} ${spacing.xl}`, position: 'sticky', top: 0, backgroundColor: colors.surfaceRaised, zIndex: 1, borderBottom: `1px solid ${colors.borderLight}` }}>
-          <h2 style={{ fontSize: typography.fontSize['2xl'], fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0 }}>{title}</h2>
+          <h2 id={titleId} style={{ fontSize: typography.fontSize['2xl'], fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0 }}>{title}</h2>
           <button
             onClick={onClose}
+            aria-label="Close panel"
             style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', border: 'none', borderRadius: borderRadius.md, cursor: 'pointer', color: colors.textTertiary, transition: `background-color ${transitions.fast}` }}
             onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.surfaceFlat; }}
             onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'; }}
@@ -1334,8 +1468,9 @@ interface SkeletonProps {
   borderRadius?: string;
 }
 
-export const Skeleton: React.FC<SkeletonProps> = ({ width = '100%', height = '16px', borderRadius: br = borderRadius.md }) => (
+export const Skeleton: React.FC<SkeletonProps> = React.memo(({ width = '100%', height = '16px', borderRadius: br = borderRadius.md }) => (
   <div
+    aria-hidden="true"
     style={{
       width, height, borderRadius: br,
       background: `linear-gradient(90deg, ${colors.surfaceFlat} 25%, ${colors.borderLight} 50%, ${colors.surfaceFlat} 75%)`,
@@ -1343,9 +1478,9 @@ export const Skeleton: React.FC<SkeletonProps> = ({ width = '100%', height = '16
       animation: 'shimmer 1.5s infinite',
     }}
   />
-);
+));
 
-export const EmptyState: React.FC<EmptyStateProps> = ({ icon, title, description, action }) => (
+export const EmptyState: React.FC<EmptyStateProps> = React.memo(({ icon, title, description, action }) => (
   <div
     style={{
       display: 'flex',
@@ -1375,4 +1510,4 @@ export const EmptyState: React.FC<EmptyStateProps> = ({ icon, title, description
     )}
     {action}
   </div>
-);
+));

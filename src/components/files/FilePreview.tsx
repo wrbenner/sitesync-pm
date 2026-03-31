@@ -18,11 +18,8 @@ interface FilePreviewProps {
   onClose: () => void;
 }
 
-const versionHistory = [
-  { version: 'v3', date: 'Mar 24, 2026', author: 'Mike Patterson', note: 'Updated structural loads' },
-  { version: 'v2', date: 'Mar 15, 2026', author: 'David Kumar', note: 'Added floor 8 details' },
-  { version: 'v1', date: 'Feb 28, 2026', author: 'Mike Patterson', note: 'Initial upload' },
-];
+// Version history will be populated from file_versions table when available
+const versionHistory: Array<{ version: string; date: string; author: string; note: string }> = [];
 
 const approvalStates: Record<string, { label: string; color: string }> = {
   approved: { label: 'Approved', color: colors.statusActive },
@@ -98,27 +95,31 @@ export const FilePreview: React.FC<FilePreviewProps> = ({ file, onClose }) => {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
                   <User size={14} color={colors.textTertiary} />
-                  <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>Mike Patterson</span>
+                  <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>Owner</span>
                 </div>
               </div>
 
               {/* Version history */}
               <p style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: typography.letterSpacing.wider, margin: 0, marginBottom: spacing['3'] }}>Version History</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                {versionHistory.map((v, i) => (
-                  <div key={v.version} style={{
-                    display: 'flex', alignItems: 'flex-start', gap: spacing['3'],
-                    padding: `${spacing['2']} 0`,
-                    borderBottom: i < versionHistory.length - 1 ? `1px solid ${colors.borderSubtle}` : 'none',
-                  }}>
-                    <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: i === 0 ? colors.primaryOrange : colors.textTertiary, minWidth: '24px' }}>{v.version}</span>
-                    <div>
-                      <p style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, margin: 0 }}>{v.note}</p>
-                      <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0, marginTop: 1 }}>{v.author} · {v.date}</p>
+              {versionHistory.length === 0 ? (
+                <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0 }}>No version history available</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                  {versionHistory.map((v, i) => (
+                    <div key={v.version} style={{
+                      display: 'flex', alignItems: 'flex-start', gap: spacing['3'],
+                      padding: `${spacing['2']} 0`,
+                      borderBottom: i < versionHistory.length - 1 ? `1px solid ${colors.borderSubtle}` : 'none',
+                    }}>
+                      <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: i === 0 ? colors.orangeText : colors.textTertiary, minWidth: '24px' }}>{v.version}</span>
+                      <div>
+                        <p style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, margin: 0 }}>{v.note}</p>
+                        <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0, marginTop: 1 }}>{v.author} · {v.date}</p>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
 
               {/* Actions */}
               <div style={{ display: 'flex', gap: spacing['2'], marginTop: spacing['5'] }}>

@@ -76,7 +76,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ phases, whatIfMode, onPh
   }, [timelineStart, timelineEnd, timelineSpan, timeScale]);
 
   const getBarColor = (phase: GanttPhase) => {
-    if (phase.completed) return '#4a6b5a'; // desaturated gray-green for completed
+    if (phase.completed) return colors.statusActive; // desaturated gray-green for completed
     if (whatIfMode && dragPhase) return colors.statusReview;
     if (phase.critical && phase.progress > 0) return colors.primaryOrange;
     if (phase.progress === 0) return colors.textTertiary;
@@ -160,7 +160,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ phases, whatIfMode, onPh
         {/* Critical path legend */}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: spacing['3'] }}>
           {[
-            { color: '#4a6b5a', label: 'Complete' },
+            { color: colors.statusActive, label: 'Complete' },
             { color: colors.primaryOrange, label: 'Critical' },
             { color: colors.statusInfo, label: 'Active' },
             { color: colors.textTertiary, label: 'Future' },
@@ -334,7 +334,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ phases, whatIfMode, onPh
                         {new Date(phase.startDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })} to {new Date(phase.endDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
                       </p>
                       <p style={{ color: barColor, fontWeight: typography.fontWeight.semibold, margin: 0, marginTop: 2 }}>{phase.progress}% complete</p>
-                      {phase.critical && <p style={{ color: colors.primaryOrange, margin: 0, marginTop: 2 }}>Critical Path</p>}
+                      {phase.critical && <p style={{ color: colors.orangeText, margin: 0, marginTop: 2 }}>Critical Path</p>}
                     </div>
                   )}
                 </div>

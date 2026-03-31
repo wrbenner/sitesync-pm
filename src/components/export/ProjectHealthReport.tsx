@@ -1,5 +1,6 @@
 import React from 'react'
 import { Text, View } from '@react-pdf/renderer'
+import { vizColors } from '../../styles/theme'
 import { PDFReport, PDFSection } from './PDFTemplate'
 
 interface HealthData {
@@ -62,7 +63,7 @@ export const ProjectHealthReport: React.FC<ProjectHealthReportProps> = ({ projec
           <Text style={{ fontSize: 8, color: '#5C5550' }}>Avg RFI Response (days)</Text>
         </View>
         <View>
-          <Text style={{ fontSize: 20, fontFamily: 'Helvetica-Bold', color: health.punchItemsOpen > 20 ? '#C93B3B' : '#1A1613' }}>{health.punchItemsOpen}</Text>
+          <Text style={{ fontSize: 20, fontFamily: 'Helvetica-Bold', color: health.punchItemsOpen > 20 ? '#C93B3B' : vizColors.darkText }}>{health.punchItemsOpen}</Text>
           <Text style={{ fontSize: 8, color: '#5C5550' }}>Open Punch Items</Text>
         </View>
         <View>
@@ -73,7 +74,7 @@ export const ProjectHealthReport: React.FC<ProjectHealthReportProps> = ({ projec
 
       <PDFSection title="Summary" />
       <View>
-        <Text style={{ fontSize: 9, color: '#1A1613', lineHeight: 1.5 }}>
+        <Text style={{ fontSize: 9, color: vizColors.darkText, lineHeight: 1.5 }}>
           {getOverallLabel(health.overallScore)} The schedule dimension scored {health.scheduleScore}, budget scored {health.budgetScore}, quality scored {health.qualityScore}, and safety scored {health.safetyScore}. Average RFI response time is {health.rfiResponseDays} days with {health.punchItemsOpen} open punch items remaining. Crew productivity is currently at {health.crewProductivity}%.
         </Text>
       </View>

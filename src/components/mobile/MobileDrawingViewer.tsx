@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { X, ZoomIn, ZoomOut, Maximize2, Layers, Edit3, MapPin } from 'lucide-react';
-import { colors, spacing, typography, borderRadius, shadows, transitions, zIndex } from '../../styles/theme';
+import { colors, spacing, typography, borderRadius, shadows, transitions, zIndex, vizColors } from '../../styles/theme';
 import { useHaptics } from '../../hooks/useMobileCapture';
 
 // ── Types ────────────────────────────────────────────────
@@ -129,7 +129,7 @@ export const MobileDrawingViewer: React.FC<DrawingViewerProps> = ({ drawing, onC
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: zIndex.modal as number,
-      backgroundColor: '#1a1a2e', display: 'flex', flexDirection: 'column',
+      backgroundColor: vizColors.dark, display: 'flex', flexDirection: 'column',
     }}>
       {/* Header */}
       <div style={{

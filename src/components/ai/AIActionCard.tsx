@@ -30,7 +30,7 @@ export const AIActionCard: React.FC<AIActionCardProps> = ({ title, description, 
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['2'] }}>
         <Sparkles size={12} color={colors.primaryOrange} />
-        <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.primaryOrange, textTransform: 'uppercase', letterSpacing: typography.letterSpacing.wider }}>Suggested Action</span>
+        <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.orangeText, textTransform: 'uppercase', letterSpacing: typography.letterSpacing.wider }}>Suggested Action</span>
       </div>
       <p style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, margin: 0 }}>{title}</p>
       <p style={{ fontSize: typography.fontSize.caption, color: colors.textSecondary, margin: 0, marginTop: spacing['1'], lineHeight: typography.lineHeight.normal }}>{description}</p>

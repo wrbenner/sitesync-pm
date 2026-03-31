@@ -354,7 +354,7 @@ export function Register() {
           <Link
             to="/login"
             style={{
-              color: colors.primaryOrange,
+              color: colors.orangeText,
               fontWeight: typography.fontWeight.medium,
               textDecoration: 'none',
             }}

@@ -58,7 +58,7 @@ const poColumns = [
   poCol.accessor('po_number', {
     header: 'PO #',
     cell: (info) => (
-      <span style={{ fontWeight: typography.fontWeight.medium, color: colors.primaryOrange }}>
+      <span style={{ fontWeight: typography.fontWeight.medium, color: colors.orangeText }}>
         {info.getValue()}
       </span>
     ),
@@ -130,7 +130,7 @@ const deliveryColumns = [
   deliveryCol.accessor('po_number', {
     header: 'PO #',
     cell: (info) => (
-      <span style={{ fontWeight: typography.fontWeight.medium, color: colors.primaryOrange }}>
+      <span style={{ fontWeight: typography.fontWeight.medium, color: colors.orangeText }}>
         {info.getValue()}
       </span>
     ),
@@ -279,7 +279,7 @@ export const Procurement: React.FC = () => {
                 fontSize: typography.fontSize.sm,
                 fontFamily: typography.fontFamily,
                 fontWeight: isActive ? typography.fontWeight.medium : typography.fontWeight.normal,
-                color: isActive ? colors.primaryOrange : colors.textSecondary,
+                color: isActive ? colors.orangeText : colors.textSecondary,
                 backgroundColor: isActive ? colors.surfaceRaised : 'transparent',
                 transition: `all ${transitions.instant}`,
                 whiteSpace: 'nowrap',

@@ -341,6 +341,31 @@ serve(async (req) => {
     if (messages.length > MAX_MESSAGES) {
       throw new HttpError(400, `Maximum ${MAX_MESSAGES} messages allowed`)
     }
+    // Validate each message has required fields
+    for (const msg of messages) {
+      if (!msg || typeof msg.role !== 'string' || typeof msg.content !== 'string') {
+        throw new HttpError(400, 'Each message must have role and content strings')
+      }
+      if (msg.content.length > 10000) {
+        throw new HttpError(400, 'Individual message content must be under 10,000 characters')
+      }
+    }
+
+    // Validate projectContext fields
+    if (projectContext) {
+      if (projectContext.page && typeof projectContext.page !== 'string') {
+        throw new HttpError(400, 'projectContext.page must be a string')
+      }
+      if (projectContext.entityContext && typeof projectContext.entityContext !== 'string') {
+        throw new HttpError(400, 'projectContext.entityContext must be a string')
+      }
+      if (projectContext.page && projectContext.page.length > 100) {
+        throw new HttpError(400, 'projectContext.page must be under 100 characters')
+      }
+      if (projectContext.entityContext && projectContext.entityContext.length > 2000) {
+        throw new HttpError(400, 'projectContext.entityContext must be under 2000 characters')
+      }
+    }
 
     // Validate and verify project access
     const projectId = requireUuid(projectContext?.projectId, 'projectId')
@@ -378,7 +403,23 @@ RULES:
 3. Reference entities with: [ENTITY:type:id:label]
 4. Be concise and actionable. Use construction terminology.
 5. Never use hyphens. Format currency with $ ($1.2M, $45K).
-6. After answering, suggest 2 to 3 follow up questions.`
+6. After answering, suggest 2 to 3 follow up questions.
+7. When tool results include a "ui_type" field, the frontend will render interactive UI. Include these in tool results where appropriate.
+
+GENERATIVE UI TYPES (return as tool result with ui_type field):
+- data_table: Interactive table with columns, rows, actions
+- metric_cards: Summary metric cards with trends
+- chart: Bar, line, pie, area charts
+- timeline: Event timelines with status
+- checklist: Interactive checklists
+- comparison: Side by side comparisons
+- form: Dynamic forms for entity creation
+- approval_card: Approve/reject workflows
+- schedule_card: Task details with progress, crew, dependencies, float, critical path
+- cost_breakdown: Budget line items with variance, spend tracking, status
+- safety_alert: Safety observations with severity, location, recommended actions, OSHA reference
+- rfi_response: RFI question/response with attachments, priority, days open
+- photo_grid: Progress photos with before/after pairs, tags, annotations`
 
     // Format messages (sanitize user content)
     const apiMessages = messages.map((m) => ({

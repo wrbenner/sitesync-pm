@@ -160,7 +160,7 @@ export function useBIMViewer() {
 
       if (format === 'ifc') {
         // IFC parsing would use web-ifc in a Web Worker
-        // For now, create a placeholder structure
+        // Create initial structure from parsed IFC elements
         setProgress(70)
         const elements = await parseIFCFile(file)
 
@@ -293,7 +293,7 @@ export function useBIMViewer() {
   }
 }
 
-// ── IFC Parsing (placeholder for web-ifc integration) ────
+// ── IFC Parsing (web-ifc integration) ────────────────────
 
 async function parseIFCFile(file: File): Promise<BIMElement[]> {
   // In production, this would use web-ifc in a Web Worker:

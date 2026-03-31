@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
 import type { Meeting, ActionItem } from '../types/database';
 
 export interface MeetingWithDetails extends Meeting {
@@ -23,31 +23,6 @@ interface MeetingState {
   getActionItems: (meetingId: string) => ActionItem[];
 }
 
-const today = new Date().toISOString().split('T')[0];
-const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
-const lastWeek1 = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
-const lastWeek2 = new Date(Date.now() - 8 * 86400000).toISOString().split('T')[0];
-
-const MOCK_MEETINGS: MeetingWithDetails[] = [
-  { id: 'mtg-1', project_id: 'project-1', meeting_type: 'oac', title: 'Owner Architect Contractor Meeting', meeting_date: today, meeting_time: '10:00 AM', location: 'Conference Room A', created_by: 'user-1', created_at: '2026-03-01T00:00:00Z', attendee_count: 12, status: 'scheduled', has_minutes: false },
-  { id: 'mtg-2', project_id: 'project-1', meeting_type: 'safety', title: 'Weekly Safety Briefing', meeting_date: today, meeting_time: '8:00 AM', location: 'Site Trailer', created_by: 'user-1', created_at: '2026-03-01T00:00:00Z', attendee_count: 23, status: 'scheduled', has_minutes: false },
-  { id: 'mtg-3', project_id: 'project-1', meeting_type: 'coordination', title: 'MEP Coordination Meeting', meeting_date: tomorrow, meeting_time: '2:00 PM', location: 'Virtual', created_by: 'user-1', created_at: '2026-03-01T00:00:00Z', attendee_count: 8, status: 'scheduled', has_minutes: false },
-  { id: 'mtg-4', project_id: 'project-1', meeting_type: 'safety', title: 'Incident Review Follow up', meeting_date: lastWeek1, meeting_time: '9:00 AM', location: 'Site Trailer', created_by: 'user-1', created_at: '2026-03-01T00:00:00Z', attendee_count: 6, status: 'completed', has_minutes: true },
-  { id: 'mtg-5', project_id: 'project-1', meeting_type: 'oac', title: 'Monthly Progress Review', meeting_date: lastWeek2, meeting_time: '2:00 PM', location: 'Conference Room A', created_by: 'user-1', created_at: '2026-03-01T00:00:00Z', attendee_count: 14, status: 'completed', has_minutes: true },
-];
-
-const MOCK_ACTION_ITEMS: Record<string, ActionItem[]> = {
-  'mtg-4': [
-    { id: 'ai-1', meeting_id: 'mtg-4', description: 'Install anti slip tape on all stairwell landings', assigned_to: 'Mike Torres', due_date: '2026-03-22', status: 'completed' },
-    { id: 'ai-2', meeting_id: 'mtg-4', description: 'Update incident report with corrective actions', assigned_to: 'Safety Coordinator', due_date: '2026-03-21', status: 'completed' },
-  ],
-  'mtg-5': [
-    { id: 'ai-3', meeting_id: 'mtg-5', description: 'Expedite RFI-004 response from structural engineer', assigned_to: 'Jennifer Lee', due_date: '2026-03-25', status: 'open' },
-    { id: 'ai-4', meeting_id: 'mtg-5', description: 'Review CO-003 lobby finishes with owner', assigned_to: 'James Bradford', due_date: '2026-03-24', status: 'open' },
-    { id: 'ai-5', meeting_id: 'mtg-5', description: 'Submit updated schedule with steel recovery plan', assigned_to: 'Michael Patterson', due_date: '2026-03-26', status: 'in_progress' },
-  ],
-};
-
 export const useMeetingStore = create<MeetingState>()((set, get) => ({
   meetings: [],
   actionItems: {},
@@ -55,11 +30,6 @@ export const useMeetingStore = create<MeetingState>()((set, get) => ({
   error: null,
 
   loadMeetings: async (projectId) => {
-    if (!isSupabaseConfigured) {
-      set({ meetings: MOCK_MEETINGS.filter((m) => m.project_id === projectId), actionItems: MOCK_ACTION_ITEMS, loading: false });
-      return;
-    }
-
     set({ loading: true, error: null });
     try {
       const { data, error } = await supabase
@@ -75,23 +45,25 @@ export const useMeetingStore = create<MeetingState>()((set, get) => ({
         status: m.status || 'scheduled',
         has_minutes: m.has_minutes || false,
       }));
-      set({ meetings, loading: false });
+
+      // Load action items for meetings that have minutes
+      const actionItems: Record<string, ActionItem[]> = {};
+      for (const mtg of meetings.filter((m) => m.has_minutes)) {
+        const { data: items } = await supabase
+          .from('meeting_action_items')
+          .select('*')
+          .eq('meeting_id', mtg.id)
+          .order('id');
+        if (items) actionItems[mtg.id] = items as ActionItem[];
+      }
+
+      set({ meetings, actionItems, loading: false });
     } catch (e) {
       set({ error: (e as Error).message, loading: false });
     }
   },
 
   createMeeting: async (meeting) => {
-    if (!isSupabaseConfigured) {
-      const newMeeting: MeetingWithDetails = {
-        ...meeting,
-        id: `mtg-${Date.now()}`,
-        created_at: new Date().toISOString(),
-      };
-      set((s) => ({ meetings: [newMeeting, ...s.meetings] }));
-      return { error: null };
-    }
-
     const { error } = await (supabase.from('meetings') as any).insert(meeting);
     if (error) return { error: error.message };
     await get().loadMeetings(meeting.project_id);
@@ -99,13 +71,6 @@ export const useMeetingStore = create<MeetingState>()((set, get) => ({
   },
 
   updateMeeting: async (id, updates) => {
-    if (!isSupabaseConfigured) {
-      set((s) => ({
-        meetings: s.meetings.map((m) => (m.id === id ? { ...m, ...updates } : m)),
-      }));
-      return { error: null };
-    }
-
     const { error } = await (supabase.from('meetings') as any).update(updates).eq('id', id);
     if (!error) {
       set((s) => ({
@@ -116,11 +81,6 @@ export const useMeetingStore = create<MeetingState>()((set, get) => ({
   },
 
   deleteMeeting: async (id) => {
-    if (!isSupabaseConfigured) {
-      set((s) => ({ meetings: s.meetings.filter((m) => m.id !== id) }));
-      return { error: null };
-    }
-
     const { error } = await (supabase.from('meetings') as any).delete().eq('id', id);
     if (!error) {
       set((s) => ({ meetings: s.meetings.filter((m) => m.id !== id) }));
@@ -129,6 +89,7 @@ export const useMeetingStore = create<MeetingState>()((set, get) => ({
   },
 
   addActionItem: (meetingId, description, assignedTo) => {
+    // Action items are persisted locally; can be synced to meeting_action_items table
     const item: ActionItem = {
       id: `ai-${Date.now()}`,
       meeting_id: meetingId,

@@ -1,13 +1,14 @@
 // Schedule Report PDF: Critical path, 3-week lookahead, milestones, delay analysis
 import React from 'react'
 import { View, Text, StyleSheet } from '@react-pdf/renderer'
+import { vizColors } from '../../styles/theme'
 import { PDFReport, PDFSection, PDFTable } from './PDFTemplate'
 
 const s = StyleSheet.create({
   kpiGrid: { flexDirection: 'row', gap: 8, marginBottom: 16 },
   kpiBox: { flex: 1, padding: 8, backgroundColor: '#FAFAF8', borderRadius: 4, borderWidth: 0.5, borderColor: '#E5E1DC' },
   kpiLabel: { fontSize: 7, color: '#5C5550', marginBottom: 2 },
-  kpiValue: { fontSize: 14, fontFamily: 'Helvetica-Bold', color: '#1A1613' },
+  kpiValue: { fontSize: 14, fontFamily: 'Helvetica-Bold', color: vizColors.darkText },
   kpiSub: { fontSize: 7, color: '#9A9490', marginTop: 1 },
   statusDot: { width: 6, height: 6, borderRadius: 3, marginRight: 4 },
   legend: { flexDirection: 'row', gap: 12, marginBottom: 8 },

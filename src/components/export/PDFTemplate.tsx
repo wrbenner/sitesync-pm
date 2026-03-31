@@ -1,12 +1,13 @@
 import React from 'react'
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer'
+import { vizColors } from '../../styles/theme'
 
 const styles = StyleSheet.create({
   page: {
     padding: 40,
     fontSize: 10,
     fontFamily: 'Helvetica',
-    color: '#1A1613',
+    color: vizColors.darkText,
   },
   header: {
     flexDirection: 'row',
@@ -85,7 +86,7 @@ const styles = StyleSheet.create({
   },
   tableCell: {
     fontSize: 8,
-    color: '#1A1613',
+    color: vizColors.darkText,
   },
   sectionTitle: {
     fontSize: 12,

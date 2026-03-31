@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { UserPlus, Mail, Search, Check } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
-import { supabase, isSupabaseConfigured } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
 import type { Profile, UserRole } from '../../types/database';
 
@@ -40,26 +40,6 @@ export function UserManagement() {
   const loadMembers = async () => {
     if (!company?.id) return;
 
-    if (!isSupabaseConfigured) {
-      // Mock members for development
-      setMembers([
-        { ...profile!, role: 'company_admin' },
-        {
-          id: 'user-2', company_id: company.id, email: 'mike@construction.com',
-          first_name: 'Mike', last_name: 'Patterson', role: 'superintendent',
-          avatar_url: null, phone: '(555) 234-5678', is_active: true,
-          created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-        },
-        {
-          id: 'user-3', company_id: company.id, email: 'sarah@construction.com',
-          first_name: 'Sarah', last_name: 'Chen', role: 'engineer',
-          avatar_url: null, phone: '(555) 345-6789', is_active: true,
-          created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-        },
-      ]);
-      return;
-    }
-
     const { data } = await supabase
       .from('profiles')
       .select('*')
@@ -72,17 +52,15 @@ export function UserManagement() {
   const handleInvite = async () => {
     if (!inviteEmail || !company?.id) return;
 
-    if (isSupabaseConfigured) {
-      await (supabase.from('invitations') as any).insert({
-        company_id: company.id,
-        email: inviteEmail,
-        role: inviteRole,
-        invited_by: profile!.id,
-        status: 'pending',
-        token: crypto.randomUUID(),
-        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-      });
-    }
+    await (supabase.from('invitations') as any).insert({
+      company_id: company.id,
+      email: inviteEmail,
+      role: inviteRole,
+      invited_by: profile!.id,
+      status: 'pending',
+      token: crypto.randomUUID(),
+      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    });
 
     setInviteSuccess(true);
     setTimeout(() => {

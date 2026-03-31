@@ -6,7 +6,14 @@ const config: CapacitorConfig = {
   webDir: 'dist',
   server: {
     androidScheme: 'https',
-    allowNavigation: ['*.supabase.co'],
+    allowNavigation: [
+      '*.supabase.co',
+      '*.sentry.io',
+      '*.posthog.com',
+      '*.liveblocks.io',
+      'api.anthropic.com',
+      'api.openweathermap.org',
+    ],
   },
   plugins: {
     Camera: {

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
 
 export interface SchedulePhase {
   id: number;
@@ -28,35 +28,20 @@ interface ScheduleState {
   updatePhase: (id: number, updates: Partial<SchedulePhase>) => void;
 }
 
-const MOCK_PHASES: SchedulePhase[] = [
-  { id: 1, name: 'Demolition', startDate: '2023-06-15', endDate: '2023-08-30', progress: 100, critical: false, completed: true },
-  { id: 2, name: 'Foundation', startDate: '2023-09-01', endDate: '2023-12-15', progress: 100, critical: true, completed: true },
-  { id: 3, name: 'Structure', startDate: '2023-12-20', endDate: '2024-08-15', progress: 100, critical: true, completed: true },
-  { id: 4, name: 'MEP', startDate: '2024-08-01', endDate: '2025-03-31', progress: 62, critical: true, completed: false },
-  { id: 5, name: 'Exterior', startDate: '2024-07-15', endDate: '2025-05-30', progress: 55, critical: true, completed: false },
-  { id: 6, name: 'Interior', startDate: '2025-02-01', endDate: '2025-10-31', progress: 25, critical: false, completed: false },
-  { id: 7, name: 'Finishes', startDate: '2025-06-01', endDate: '2025-12-15', progress: 0, critical: false, completed: false },
-];
-
-const MOCK_METRICS: ScheduleMetrics = {
-  daysBeforeSchedule: 4,
-  milestonesHit: 8,
-  milestoneTotal: 12,
-  aiConfidenceLevel: 74,
+const DEFAULT_METRICS: ScheduleMetrics = {
+  daysBeforeSchedule: 0,
+  milestonesHit: 0,
+  milestoneTotal: 0,
+  aiConfidenceLevel: 0,
 };
 
 export const useScheduleStore = create<ScheduleState>()((set) => ({
   phases: [],
-  metrics: MOCK_METRICS,
+  metrics: DEFAULT_METRICS,
   loading: false,
   error: null,
 
   loadSchedule: async (projectId) => {
-    if (!isSupabaseConfigured) {
-      set({ phases: MOCK_PHASES, metrics: MOCK_METRICS, loading: false });
-      return;
-    }
-
     set({ loading: true, error: null });
     try {
       const { data, error } = await supabase
@@ -75,7 +60,21 @@ export const useScheduleStore = create<ScheduleState>()((set) => ({
         critical: d.critical,
         completed: d.completed,
       }));
-      set({ phases, loading: false });
+
+      // Derive metrics from phases
+      const completedPhases = phases.filter((p) => p.completed).length;
+      set({
+        phases,
+        metrics: {
+          daysBeforeSchedule: 0,
+          milestonesHit: completedPhases,
+          milestoneTotal: phases.length,
+          aiConfidenceLevel: phases.length > 0
+            ? Math.round(phases.reduce((s, p) => s + p.progress, 0) / phases.length)
+            : 0,
+        },
+        loading: false,
+      });
     } catch (e) {
       set({ error: (e as Error).message, loading: false });
     }

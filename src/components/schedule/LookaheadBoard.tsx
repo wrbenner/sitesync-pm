@@ -41,7 +41,7 @@ const constraintIcons: Record<ConstraintType, React.ReactNode> = {
 };
 
 // Weather data comes from weather_records table via parent page
-const mockWeather: Record<number, { icon: string; rain: boolean }> = {};
+const weatherByDay: Record<number, { icon: string; rain: boolean }> = {};
 
 export const LookaheadBoard: React.FC<LookaheadBoardProps> = ({
   tasks, days, crews, weekView, onTaskMove, onConstraintToggle,
@@ -92,7 +92,7 @@ export const LookaheadBoard: React.FC<LookaheadBoardProps> = ({
           </div>
           {visibleDays.map((day, i) => {
             const isToday = i === 0;
-            const w = mockWeather[i];
+            const w = weatherByDay[i];
             return (
               <div
                 key={day}
@@ -102,7 +102,7 @@ export const LookaheadBoard: React.FC<LookaheadBoardProps> = ({
                   borderBottom: isToday ? `2px solid ${colors.primaryOrange}` : 'none',
                 }}
               >
-                <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: isToday ? colors.primaryOrange : colors.textPrimary }}>{day}</span>
+                <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: isToday ? colors.orangeText : colors.textPrimary }}>{day}</span>
                 <span style={{ fontSize: '12px', marginLeft: spacing['1'] }}>{w?.icon}</span>
               </div>
             );

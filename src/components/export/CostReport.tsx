@@ -1,18 +1,19 @@
 // Cost Report PDF: Budget vs actual by cost code, earned value analysis, contingency burn
 import React from 'react'
 import { View, Text, StyleSheet } from '@react-pdf/renderer'
+import { vizColors } from '../../styles/theme'
 import { PDFReport, PDFSection, PDFTable, pdfStyles } from './PDFTemplate'
 
 const s = StyleSheet.create({
   kpiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
   kpiBox: { width: '23%', padding: 8, backgroundColor: '#FAFAF8', borderRadius: 4, borderWidth: 0.5, borderColor: '#E5E1DC' },
   kpiLabel: { fontSize: 7, color: '#5C5550', marginBottom: 2 },
-  kpiValue: { fontSize: 12, fontFamily: 'Helvetica-Bold', color: '#1A1613' },
+  kpiValue: { fontSize: 12, fontFamily: 'Helvetica-Bold', color: vizColors.darkText },
   kpiSub: { fontSize: 7, color: '#9A9490', marginTop: 1 },
   evGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 },
   evBox: { width: '15%', padding: 6, backgroundColor: '#F3EFEC', borderRadius: 3 },
   evLabel: { fontSize: 6, color: '#5C5550', marginBottom: 1 },
-  evValue: { fontSize: 9, fontFamily: 'Helvetica-Bold', color: '#1A1613' },
+  evValue: { fontSize: 9, fontFamily: 'Helvetica-Bold', color: vizColors.darkText },
   progressBar: { height: 6, backgroundColor: '#E5E1DC', borderRadius: 3, marginTop: 4, marginBottom: 8 },
   progressFill: { height: 6, borderRadius: 3 },
 })

@@ -81,7 +81,7 @@ export const AIInsightsWidget: React.FC = React.memo(() => {
                 border: 'none',
                 borderRadius: borderRadius.full,
                 backgroundColor: isActive ? colors.orangeSubtle : 'transparent',
-                color: isActive ? colors.primaryOrange : colors.textTertiary,
+                color: isActive ? colors.orangeText : colors.textTertiary,
                 fontSize: typography.fontSize.caption,
                 fontFamily: typography.fontFamily,
                 fontWeight: isActive ? typography.fontWeight.semibold : typography.fontWeight.medium,

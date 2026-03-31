@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Plus, Search, X, ArrowRight, GitBranch, Clock, AlertTriangle, ChevronRight } from 'lucide-react';
 import { PageContainer, Card, Btn, MetricBox, SectionHeader, Skeleton, useToast, Modal, TabBar } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../styles/theme';
@@ -16,7 +16,9 @@ import {
   getValidCOTransitions, getNextCOType, getApprovalChain,
 } from '../machines/changeOrderMachine';
 import type { ChangeOrderType, ChangeOrderState, ReasonCode } from '../machines/changeOrderMachine';
+import { PermissionGate } from '../components/auth/PermissionGate';
 import type { MappedChangeOrder } from '../api/endpoints/budget';
+import { useTableKeyboardNavigation } from '../hooks/useTableKeyboardNavigation';
 const fmt = (n: number): string => {
   if (Math.abs(n) >= 1000000) return `$${(n / 1000000).toFixed(1)}M`;
   if (Math.abs(n) >= 1000) return `$${(n / 1000).toFixed(0)}K`;
@@ -77,6 +79,9 @@ export const ChangeOrders: React.FC = () => {
       return matchSearch && matchType && matchStatus;
     });
   }, [allCOs, searchQuery, filterType, filterStatus]);
+
+  const handleKeySelectCO = useCallback((co: MappedChangeOrder) => setSelectedCO(co), []);
+  useTableKeyboardNavigation(filteredCOs, selectedCO?.id ?? null, handleKeySelectCO);
 
   // Pipeline metrics
   const metrics = useMemo(() => {
@@ -195,7 +200,7 @@ export const ChangeOrders: React.FC = () => {
             const statusConfig = getCOStatusConfig(co.status);
             const reasonConfig = co.reason_code ? getReasonCodeConfig(co.reason_code) : null;
             return (
-              <div key={co.id} onClick={() => setSelectedCO(co)} style={{
+              <div key={co.id} onClick={() => setSelectedCO(co)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedCO(co); } }} style={{
                 padding: spacing['4'], backgroundColor: colors.surfaceRaised,
                 borderRadius: borderRadius.md, cursor: 'pointer',
                 boxShadow: shadows.card, transition: `box-shadow ${transitions.quick}`,
@@ -224,7 +229,7 @@ export const ChangeOrders: React.FC = () => {
                 {co.status === 'approved' && getNextCOType(co.type) && !co.promoted_at && (
                   <div style={{ marginTop: spacing['2'], display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
                     <ArrowRight size={10} color={colors.primaryOrange} />
-                    <span style={{ fontSize: typography.fontSize.caption, color: colors.primaryOrange, fontWeight: typography.fontWeight.medium }}>Ready to promote</span>
+                    <span style={{ fontSize: typography.fontSize.caption, color: colors.orangeText, fontWeight: typography.fontWeight.medium }}>Ready to promote</span>
                   </div>
                 )}
               </div>
@@ -251,10 +256,10 @@ export const ChangeOrders: React.FC = () => {
 
     return (
       <>
-        <div onClick={() => setSelectedCO(null)} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.2)', zIndex: 1039 }} />
+        <div onClick={() => setSelectedCO(null)} role="presentation" aria-hidden="true" style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.2)', zIndex: 1039 }} />
         <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: '560px', backgroundColor: colors.surfaceRaised, boxShadow: shadows.lg, zIndex: 1040, overflowY: 'auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: `${spacing['4']} ${spacing['5']}`, position: 'sticky', top: 0, backgroundColor: colors.surfaceRaised, zIndex: 1 }}>
-            <button onClick={() => setSelectedCO(null)} style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', border: 'none', borderRadius: borderRadius.md, cursor: 'pointer', color: colors.textTertiary }}><X size={18} /></button>
+            <button onClick={() => setSelectedCO(null)} aria-label="Close change order details" title="Close change order details" style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', border: 'none', borderRadius: borderRadius.md, cursor: 'pointer', color: colors.textTertiary }}><X size={18} /></button>
           </div>
 
           <div style={{ padding: `0 ${spacing['5']} ${spacing['5']}` }}>
@@ -378,7 +383,7 @@ export const ChangeOrders: React.FC = () => {
                   const isApprove = action === 'Approve';
                   const isReject = action === 'Reject';
                   const isVoid = action === 'Void';
-                  return (
+                  const btn = (
                     <Btn
                       key={action}
                       variant={isApprove || isPromote ? 'primary' : isReject || isVoid ? 'ghost' : 'secondary'}
@@ -390,6 +395,8 @@ export const ChangeOrders: React.FC = () => {
                       {action}
                     </Btn>
                   );
+                  if (isApprove || isPromote) return <PermissionGate key={action} permission="change_orders.approve">{btn}</PermissionGate>;
+                  return btn;
                 })}
               </div>
             )}
@@ -403,7 +410,7 @@ export const ChangeOrders: React.FC = () => {
     <PageContainer
       title="Change Orders"
       subtitle={`${allCOs.length} items · ${fmt(metrics.approvedTotal)} approved`}
-      actions={<Btn variant="primary" size="md" icon={<Plus size={16} />} onClick={() => setShowCreateModal(true)}>New PCO</Btn>}
+      actions={<PermissionGate permission="change_orders.create"><Btn variant="primary" size="md" icon={<Plus size={16} />} onClick={() => setShowCreateModal(true)}>New PCO</Btn></PermissionGate>}
     >
       {/* Schedule impact warning */}
       {metrics.scheduleImpact > 14 && (
@@ -446,7 +453,7 @@ export const ChangeOrders: React.FC = () => {
           <Search size={14} color={colors.textTertiary} />
           <input type="text" placeholder="Search change orders..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
             style={{ flex: 1, border: 'none', backgroundColor: 'transparent', outline: 'none', fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, color: colors.textPrimary }} />
-          {searchQuery && <button onClick={() => setSearchQuery('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: colors.textTertiary, display: 'flex' }}><X size={12} /></button>}
+          {searchQuery && <button onClick={() => setSearchQuery('')} aria-label="Clear search" title="Clear search" style={{ background: 'none', border: 'none', cursor: 'pointer', color: colors.textTertiary, display: 'flex' }}><X size={12} /></button>}
         </div>
 
         {/* Type filter */}
@@ -502,7 +509,7 @@ export const ChangeOrders: React.FC = () => {
             const typeConfig = getCOTypeConfig(co.type);
             const statusConfig = getCOStatusConfig(co.status);
             return (
-              <div key={co.id} onClick={() => setSelectedCO(co)} style={{
+              <div key={co.id} onClick={() => setSelectedCO(co)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedCO(co); } }} style={{
                 display: 'grid', gridTemplateColumns: '80px 60px 1fr 100px 100px 80px 120px',
                 padding: `${spacing['3']} ${spacing['4']}`,
                 borderBottom: i < filteredCOs.length - 1 ? `1px solid ${colors.borderSubtle}` : 'none',
@@ -541,7 +548,7 @@ export const ChangeOrders: React.FC = () => {
             style={{ width: '100%', padding: spacing['3'], fontSize: typography.fontSize.body, fontFamily: typography.fontFamily, border: 'none', backgroundColor: colors.surfaceInset, borderRadius: borderRadius.md, outline: 'none', resize: 'vertical', minHeight: '96px', boxSizing: 'border-box' }} />
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: spacing['2'] }}>
             <Btn variant="ghost" size="md" onClick={() => { setShowRejectModal(false); setRejectComments(''); }}>Cancel</Btn>
-            <Btn variant="primary" size="md" onClick={handleReject}>Reject</Btn>
+            <PermissionGate permission="change_orders.approve"><Btn variant="primary" size="md" onClick={handleReject}>Reject</Btn></PermissionGate>
           </div>
         </div>
       </Modal>

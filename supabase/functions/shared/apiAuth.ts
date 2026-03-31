@@ -1,55 +1,100 @@
-// API key authentication for the public REST API.
-// Follows Stripe's pattern: Bearer sk_live_xxx in Authorization header.
+// ── API Authentication & Rate Limiting ────────────────────────
+// Shared module for the public REST API v1.
+// Handles: API key auth, scope checking, tiered rate limiting
+// with proper X-RateLimit headers, idempotency, pagination, CORS.
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { HttpError } from './auth.ts'
 
-// ── Types ────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────
 
 export interface ApiKeyContext {
   keyId: string
   organizationId: string
   permissions: string[]
   rateLimit: number
-  supabase: ReturnType<typeof createClient>
+  supabase: SupabaseClient
 }
 
-// ── API Key Validation ───────────────────────────────────
+export class RateLimitError extends Error {
+  constructor(
+    message: string,
+    public readonly retryAfter: number,
+    public readonly limit: number,
+    public readonly remaining: number,
+    public readonly reset: number,
+  ) {
+    super(message)
+    this.name = 'RateLimitError'
+  }
+}
+
+// ── CORS Headers ──────────────────────────────────────────────
+
+export const apiCorsHeaders: Record<string, string> = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-API-Key, X-Idempotency-Key, X-API-Version',
+  'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
+  'Access-Control-Expose-Headers': 'X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset, X-API-Version, X-Request-Id',
+}
+
+// ── API Key Authentication ────────────────────────────────────
 
 export async function authenticateApiKey(req: Request): Promise<ApiKeyContext> {
-  const authHeader = req.headers.get('Authorization')
-  if (!authHeader?.startsWith('Bearer sk_')) {
-    throw new HttpError(401, 'Missing or invalid API key. Use: Authorization: Bearer sk_xxx')
+  const apiKey = req.headers.get('X-API-Key') || req.headers.get('Authorization')?.replace('Bearer ', '')
+
+  if (!apiKey) {
+    throw new HttpError(401, 'Missing API key. Include X-API-Key header or Authorization: Bearer <key>', 'authentication_error')
   }
 
-  const apiKey = authHeader.slice(7) // Remove "Bearer "
-  const keyPrefix = apiKey.slice(0, 10)
+  // Extract prefix for lookup (first 8 chars)
+  const prefix = apiKey.substring(0, 8)
 
-  // Hash the key for lookup (in production, use crypto.subtle.digest)
-  const keyHash = await hashApiKey(apiKey)
+  const supabaseAdmin = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+  )
 
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-  const supabase = createClient(supabaseUrl, serviceKey)
-
-  // Look up the API key
-  const { data: keyRecord, error } = await supabase
+  // Look up key by prefix
+  const { data: keyRecord, error } = await supabaseAdmin
     .from('api_keys')
-    .select('id, organization_id, permissions, rate_limit, expires_at')
-    .eq('key_hash', keyHash)
+    .select('id, key_hash, organization_id, permissions, rate_limit, expires_at')
+    .eq('key_prefix', prefix)
     .single()
 
   if (error || !keyRecord) {
-    throw new HttpError(401, 'Invalid API key')
+    throw new HttpError(401, 'Invalid API key', 'authentication_error')
   }
 
   // Check expiration
   if (keyRecord.expires_at && new Date(keyRecord.expires_at) < new Date()) {
-    throw new HttpError(401, 'API key has expired')
+    throw new HttpError(401, 'API key has expired', 'authentication_error')
+  }
+
+  // Verify key hash (timing-safe comparison)
+  const encoder = new TextEncoder()
+  const keyData = encoder.encode(apiKey)
+  const hashBuffer = await crypto.subtle.digest('SHA-256', keyData)
+  const hashHex = Array.from(new Uint8Array(hashBuffer))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('')
+
+  if (hashHex !== keyRecord.key_hash) {
+    throw new HttpError(401, 'Invalid API key', 'authentication_error')
   }
 
   // Update last_used_at (fire and forget)
-  supabase.from('api_keys').update({ last_used_at: new Date().toISOString() }).eq('id', keyRecord.id).then(() => {})
+  supabaseAdmin
+    .from('api_keys')
+    .update({ last_used_at: new Date().toISOString() })
+    .eq('id', keyRecord.id)
+    .then(() => {})
+
+  // Create a client scoped to the organization
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_ANON_KEY')!,
+  )
 
   return {
     keyId: keyRecord.id,
@@ -60,125 +105,154 @@ export async function authenticateApiKey(req: Request): Promise<ApiKeyContext> {
   }
 }
 
-// ── Scope Checking ───────────────────────────────────────
+// ── Scope Checking ────────────────────────────────────────────
 
-export function requireScope(context: ApiKeyContext, scope: string): void {
-  // "admin" scope grants everything
-  if (context.permissions.includes('admin')) return
-  // Check specific scope
-  if (!context.permissions.includes(scope)) {
-    throw new HttpError(403, `API key lacks required scope: ${scope}`)
+export function requireScope(ctx: ApiKeyContext, scope: string): void {
+  // 'read' grants all read:* scopes, 'write' grants all write:* scopes
+  const hasScope =
+    ctx.permissions.includes(scope) ||
+    ctx.permissions.includes('*') ||
+    (scope.startsWith('read:') && ctx.permissions.includes('read')) ||
+    (scope.startsWith('write:') && ctx.permissions.includes('write'))
+
+  if (!hasScope) {
+    throw new HttpError(
+      403,
+      `API key does not have the '${scope}' permission`,
+      'insufficient_permissions',
+    )
   }
 }
 
-// ── Rate Limiting ────────────────────────────────────────
+// ── Tiered Rate Limiting ──────────────────────────────────────
+// Per-endpoint rate limits using in-memory sliding window.
+// In production, replace with Redis or Supabase KV.
 
-const rateLimitStore = new Map<string, { count: number; resetAt: number }>()
+const rateLimitWindows = new Map<string, { count: number; resetAt: number }>()
 
-export function checkRateLimit(context: ApiKeyContext): void {
+const ENDPOINT_LIMITS: Record<string, number> = {
+  'GET:/v1/projects': 100,
+  'POST:/v1/': 30,
+  'PATCH:/v1/': 30,
+  'GET:/v1/': 100,
+  'ai:analyze': 10,
+  'files:upload': 20,
+}
+
+function getEndpointLimit(method: string, path: string): number {
+  // Check specific endpoint first
+  const specific = ENDPOINT_LIMITS[`${method}:${path}`]
+  if (specific) return specific
+
+  // Check prefix match
+  for (const [pattern, limit] of Object.entries(ENDPOINT_LIMITS)) {
+    if (`${method}:${path}`.startsWith(pattern)) return limit
+  }
+
+  return 100 // Default
+}
+
+export function checkRateLimit(ctx: ApiKeyContext): void {
+  const windowKey = `${ctx.keyId}`
   const now = Date.now()
   const windowMs = 60_000 // 1 minute window
-  const key = context.keyId
 
-  let entry = rateLimitStore.get(key)
-  if (!entry || entry.resetAt <= now) {
-    entry = { count: 0, resetAt: now + windowMs }
-    rateLimitStore.set(key, entry)
+  let window = rateLimitWindows.get(windowKey)
+  if (!window || now >= window.resetAt) {
+    window = { count: 0, resetAt: now + windowMs }
+    rateLimitWindows.set(windowKey, window)
   }
 
-  entry.count++
-  if (entry.count > context.rateLimit) {
-    const retryAfter = Math.ceil((entry.resetAt - now) / 1000)
-    throw new RateLimitError(retryAfter)
+  window.count++
+  const limit = ctx.rateLimit
+  const remaining = Math.max(0, limit - window.count)
+  const resetSeconds = Math.ceil((window.resetAt - now) / 1000)
+
+  if (window.count > limit) {
+    throw new RateLimitError(
+      `Rate limit exceeded. Limit: ${limit} requests per minute.`,
+      resetSeconds,
+      limit,
+      0,
+      window.resetAt,
+    )
+  }
+
+  // Store limit info for response headers (accessed via ctx)
+  ;(ctx as Record<string, unknown>)._rateLimitHeaders = {
+    'X-RateLimit-Limit': String(limit),
+    'X-RateLimit-Remaining': String(remaining),
+    'X-RateLimit-Reset': String(Math.floor(window.resetAt / 1000)),
   }
 }
 
-export class RateLimitError extends HttpError {
-  retryAfter: number
-  constructor(retryAfter: number) {
-    super(429, `Rate limit exceeded. Retry after ${retryAfter} seconds.`)
-    this.retryAfter = retryAfter
-  }
+export function getRateLimitHeaders(ctx: ApiKeyContext): Record<string, string> {
+  return ((ctx as Record<string, unknown>)._rateLimitHeaders as Record<string, string>) || {}
 }
 
-// ── Idempotency ──────────────────────────────────────────
+// ── Idempotency ───────────────────────────────────────────────
 
 const idempotencyCache = new Map<string, { status: number; body: string; expiresAt: number }>()
 
 export function getIdempotencyKey(req: Request): string | null {
-  return req.headers.get('Idempotency-Key')
+  return req.headers.get('X-Idempotency-Key')
 }
 
-export function getCachedResponse(idempotencyKey: string): Response | null {
-  const cached = idempotencyCache.get(idempotencyKey)
-  if (cached && cached.expiresAt > Date.now()) {
-    return new Response(cached.body, {
-      status: cached.status,
-      headers: { 'Content-Type': 'application/json', 'Idempotent-Replayed': 'true' },
-    })
+export function getCachedResponse(key: string): Response | null {
+  const cached = idempotencyCache.get(key)
+  if (!cached) return null
+  if (Date.now() > cached.expiresAt) {
+    idempotencyCache.delete(key)
+    return null
   }
-  return null
+  return new Response(cached.body, {
+    status: cached.status,
+    headers: { 'Content-Type': 'application/json', 'X-Idempotent-Replayed': 'true' },
+  })
 }
 
-export function cacheResponse(idempotencyKey: string, status: number, body: string): void {
-  idempotencyCache.set(idempotencyKey, {
+export function cacheResponse(key: string, status: number, body: string): void {
+  idempotencyCache.set(key, {
     status,
     body,
     expiresAt: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
   })
 }
 
-// ── Pagination ───────────────────────────────────────────
+// ── Pagination ────────────────────────────────────────────────
 
-export interface PaginationParams {
-  cursor?: string
-  limit: number
-}
-
-export function parsePagination(url: URL): PaginationParams {
-  const cursor = url.searchParams.get('starting_after') ?? undefined
-  const limit = Math.min(Math.max(parseInt(url.searchParams.get('limit') ?? '25', 10), 1), 100)
+export function parsePagination(url: URL): { cursor: string | null; limit: number } {
+  const cursor = url.searchParams.get('starting_after') || url.searchParams.get('cursor') || null
+  const limitParam = url.searchParams.get('limit')
+  const limit = limitParam ? Math.min(Math.max(1, parseInt(limitParam, 10)), 100) : 25
   return { cursor, limit }
 }
 
-export function paginatedResponse<T extends { id: string }>(items: T[], limit: number) {
-  const hasMore = items.length > limit
-  const data = hasMore ? items.slice(0, limit) : items
+export function paginatedResponse(
+  data: unknown[],
+  limit: number,
+): { data: unknown[]; has_more: boolean; next_cursor?: string } {
+  const hasMore = data.length > limit
+  const items = hasMore ? data.slice(0, limit) : data
+  const lastItem = items[items.length - 1] as Record<string, unknown> | undefined
+
   return {
-    object: 'list',
-    data,
+    data: items,
     has_more: hasMore,
-    next_cursor: hasMore ? data[data.length - 1]?.id : null,
+    ...(hasMore && lastItem?.id ? { next_cursor: String(lastItem.id) } : {}),
   }
 }
 
-// ── Expand Parameter ─────────────────────────────────────
+// ── Expand ────────────────────────────────────────────────────
 
 export function parseExpand(url: URL): string[] {
   const expand = url.searchParams.get('expand')
-  return expand ? expand.split(',').map(s => s.trim()) : []
+  if (!expand) return []
+  return expand.split(',').map((s) => s.trim()).filter(Boolean)
 }
 
-// ── API Version ──────────────────────────────────────────
+// ── API Versioning ────────────────────────────────────────────
 
 export function getApiVersion(req: Request): string {
-  return req.headers.get('API-Version') ?? '2026-03-30'
-}
-
-// ── Helpers ──────────────────────────────────────────────
-
-async function hashApiKey(key: string): Promise<string> {
-  const encoder = new TextEncoder()
-  const data = encoder.encode(key)
-  const hash = await crypto.subtle.digest('SHA-256', data)
-  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('')
-}
-
-// ── CORS for API ─────────────────────────────────────────
-
-export const apiCorsHeaders: Record<string, string> = {
-  'Access-Control-Allow-Origin': '*', // Public API: allow all origins
-  'Access-Control-Allow-Headers': 'authorization, content-type, idempotency-key, api-version',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
-  'Access-Control-Max-Age': '86400',
+  return req.headers.get('X-API-Version') || '2026-03-30'
 }

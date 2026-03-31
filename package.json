@@ -1,7 +1,7 @@
 {
   "name": "sitesync-pm",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0-alpha.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -109,6 +109,7 @@
     "sonner": "^2.0.7",
     "tesseract.js": "^7.0.0",
     "three": "^0.183.2",
+    "web-ifc": "^0.0.77",
     "workbox-background-sync": "^7.4.0",
     "workbox-cacheable-response": "^7.4.0",
     "workbox-expiration": "^7.4.0",
@@ -119,6 +120,7 @@
     "xlsx": "^0.18.5",
     "xstate": "^5.29.0",
     "yjs": "^13.6.30",
+    "zod": "^4.3.6",
     "zustand": "^5.0.12"
   },
   "devDependencies": {
@@ -134,6 +136,7 @@
     "@vitejs/plugin-react": "^6.0.1",
     "axe-core": "^4.11.1",
     "eslint": "^9.39.4",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "fake-indexeddb": "^6.2.5",

@@ -80,7 +80,7 @@ const wasteColumns = [
   wasteCol.accessor('manifest_number', {
     header: 'Manifest #',
     cell: (info) => (
-      <span style={{ color: colors.primaryOrange, fontWeight: typography.fontWeight.medium }}>
+      <span style={{ color: colors.orangeText, fontWeight: typography.fontWeight.medium }}>
         {info.getValue() || ''}
       </span>
     ),
@@ -90,9 +90,9 @@ const wasteColumns = [
 // ── Certification Levels ──────────────────────────────────
 
 function getCertLevel(score: number) {
-  if (score >= 80) return { label: 'Platinum', color: '#7C3AED' }
-  if (score >= 60) return { label: 'Gold', color: '#D97706' }
-  if (score >= 50) return { label: 'Silver', color: '#6B7280' }
+  if (score >= 80) return { label: 'Platinum', color: colors.chartPurple }
+  if (score >= 60) return { label: 'Gold', color: colors.statusWarning }
+  if (score >= 50) return { label: 'Silver', color: colors.gray500 }
   if (score >= 40) return { label: 'Certified', color: colors.statusActive }
   return { label: 'Not Certified', color: colors.textTertiary }
 }
@@ -191,7 +191,7 @@ export const Sustainability: React.FC = () => {
                 fontSize: typography.fontSize.sm,
                 fontFamily: typography.fontFamily,
                 fontWeight: isActive ? typography.fontWeight.medium : typography.fontWeight.normal,
-                color: isActive ? colors.primaryOrange : colors.textSecondary,
+                color: isActive ? colors.orangeText : colors.textSecondary,
                 backgroundColor: isActive ? colors.surfaceRaised : 'transparent',
                 transition: `all ${transitions.instant}`,
                 whiteSpace: 'nowrap',
@@ -253,7 +253,7 @@ export const Sustainability: React.FC = () => {
                   <SectionHeader title={category} />
                   <span style={{
                     fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold,
-                    color: colors.primaryOrange,
+                    color: colors.orangeText,
                   }}>
                     {catPoints} / {catPossible} pts
                   </span>

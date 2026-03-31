@@ -410,7 +410,7 @@ const FormatButton: React.FC<{
       border: `1px solid ${active ? colors.primaryOrange : colors.borderDefault}`,
       borderRadius: borderRadius.md,
       backgroundColor: active ? colors.orangeSubtle : 'transparent',
-      color: active ? colors.primaryOrange : colors.textSecondary,
+      color: active ? colors.orangeText : colors.textSecondary,
       fontSize: typography.fontSize.sm,
       fontWeight: active ? typography.fontWeight.semibold : typography.fontWeight.normal,
       fontFamily: typography.fontFamily, cursor: 'pointer',

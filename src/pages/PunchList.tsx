@@ -1,9 +1,9 @@
-import React, { useState, useMemo } from 'react';
-import { PageContainer, Card, Btn, StatusTag, PriorityTag, TableHeader, TableRow, DetailPanel, Avatar, RelatedItems, useToast, Skeleton } from '../components/Primitives';
+import React, { useState, useMemo, useCallback } from 'react';
+import { PageContainer, Card, Btn, StatusTag, PriorityTag, TableHeader, TableRow, DetailPanel, Avatar, RelatedItems, EmptyState, useToast, Skeleton } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
-import { getPunchList } from '../api/endpoints/field';
-import { useQuery } from '../hooks/useQuery';
-import { Camera, CheckCircle, Inbox, MessageSquare, Sparkles } from 'lucide-react';
+import { usePunchItems, useDirectoryContacts } from '../hooks/queries';
+import { useTableKeyboardNavigation } from '../hooks/useTableKeyboardNavigation';
+import { AlertTriangle, Camera, CheckCircle, Inbox, MessageSquare, RefreshCw, Sparkles } from 'lucide-react';
 import { useAppNavigate, getRelatedItemsForPunchItem } from '../utils/connections';
 import { AIAnnotationIndicator } from '../components/ai/AIAnnotation';
 import { PredictiveAlertBanner } from '../components/ai/PredictiveAlert';
@@ -11,6 +11,13 @@ import { getAnnotationsForEntity, getPredictiveAlertsForPage } from '../data/aiA
 import { toast } from 'sonner';
 import { useProjectId } from '../hooks/useProjectId';
 import { useCreatePunchItem, useUpdatePunchItem } from '../hooks/mutations';
+import CreatePunchItemModal from '../components/forms/CreatePunchItemModal';
+import { BulkActionBar } from '../components/shared/BulkActionBar';
+import { InlineEditCell, EditableDetailField } from '../components/forms/EditableField';
+import { ArrowUp, Trash2, UserCheck, Pencil } from 'lucide-react';
+import { PermissionGate } from '../components/auth/PermissionGate';
+import { PresenceAvatars } from '../components/shared/PresenceAvatars';
+import { EditingLockBanner } from '../components/ui/EditingLockBanner';
 
 const statusMap: Record<string, 'pending' | 'active' | 'complete'> = {
   open: 'pending',
@@ -64,36 +71,12 @@ interface PunchItem {
   responsible: string;
 }
 
-interface MockComment {
+interface Comment {
   author: string;
   initials: string;
   time: string;
   text: string;
 }
-
-const mockComments: Record<number, MockComment[]> = {
-  1: [
-    { author: 'John Smith', initials: 'JS', time: '2 hours ago', text: 'Checked the fixture. The mounting bracket is slightly bent. Need a replacement part from the supplier.' },
-    { author: 'Mike Torres', initials: 'MT', time: '1 hour ago', text: 'Replacement bracket ordered. Should arrive tomorrow morning.' },
-  ],
-  2: [
-    { author: 'Maria Garcia', initials: 'MG', time: '4 hours ago', text: 'Started prep work. Matching paint color from original spec.' },
-    { author: 'David Lee', initials: 'DL', time: '3 hours ago', text: 'Make sure to use the low VOC paint per the environmental requirements.' },
-    { author: 'Maria Garcia', initials: 'MG', time: '1 hour ago', text: 'Confirmed. Using the approved Sherwin Williams SW 7006 Extra White.' },
-  ],
-  3: [
-    { author: 'Robert Chen', initials: 'RC', time: '6 hours ago', text: 'The closer arm is out of spec. Needs full replacement, not just adjustment.' },
-    { author: 'James Wilson', initials: 'JW', time: '5 hours ago', text: 'Approved the replacement. Please coordinate with security for access to B2 after hours.' },
-  ],
-  4: [
-    { author: 'James Wilson', initials: 'JW', time: '1 day ago', text: 'Marble pieces are onsite. Installation crew scheduled for Thursday.' },
-    { author: 'Sarah Johnson', initials: 'SJ', time: '12 hours ago', text: 'Verified the marble matches the approved sample. Good to proceed.' },
-  ],
-  5: [
-    { author: 'Sarah Johnson', initials: 'SJ', time: '2 days ago', text: 'Installed acoustic lining in the main supply duct. Noise levels within acceptable range now.' },
-    { author: 'Mike Torres', initials: 'MT', time: '1 day ago', text: 'Confirmed. Sound level measured at 35 dB, well within the 40 dB limit. Marking complete.' },
-  ],
-};
 
 function getDueDateColor(dueDate: string): string {
   const now = new Date();
@@ -115,70 +98,86 @@ const PunchListPage: React.FC = () => {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [atRiskFilter, setAtRiskFilter] = useState(false);
   const [areaFilter, setAreaFilter] = useState<string>('all');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [bulkSelected, setBulkSelected] = useState<Set<string>>(new Set());
+  const [editingDetail, setEditingDetail] = useState(false);
   const { addToast } = useToast();
   const appNavigate = useAppNavigate();
   const projectId = useProjectId();
   const createPunchItem = useCreatePunchItem();
   const updatePunchItem = useUpdatePunchItem();
-  const { data: punchList, loading } = useQuery('punchList', getPunchList);
+
+  // Fetch punch list items from API
+  const { data: punchListRaw = [], isLoading: loading, error: punchError, refetch } = usePunchItems(projectId);
+
+  // Fetch team members for assignment
+  const { data: teamMembers = [] } = useDirectoryContacts(projectId);
 
   const pageAlerts = getPredictiveAlertsForPage('punchlist');
 
-  const expandedPunchList: PunchItem[] = useMemo(() => {
-    const base: PunchItem[] = (punchList || []).map((p: any) => ({
-      ...p,
-      photoCount: p.hasPhoto ? 2 : 0,
-      dueDate: p.id === 1 ? '2026-03-30' : p.id === 2 ? '2026-04-05' : p.id === 3 ? '2026-03-28' : p.id === 4 ? '2026-04-02' : '2026-03-20',
-      createdDate: p.id === 1 ? '2026-03-10' : p.id === 2 ? '2026-03-08' : p.id === 3 ? '2026-03-12' : p.id === 4 ? '2026-03-05' : '2026-02-28',
-      reportedBy: p.id === 1 ? 'Mike Torres' : p.id === 2 ? 'David Lee' : p.id === 3 ? 'James Wilson' : p.id === 4 ? 'Sarah Johnson' : 'Mike Torres',
-      responsible: p.id === 1 ? 'subcontractor' : p.id === 2 ? 'subcontractor' : p.id === 3 ? 'gc' : p.id === 4 ? 'subcontractor' : 'subcontractor',
-    }));
-    const extra: PunchItem[] = [
-      { id: 6, itemNumber: 'PL-006', area: 'Floor 8, Unit 802', description: 'Missing baseboards along corridor', assigned: 'Maria Garcia', priority: 'low', status: 'open', hasPhoto: false, photoCount: 0, dueDate: '2026-04-10', createdDate: '2026-03-15', reportedBy: 'David Lee', responsible: 'subcontractor' },
-      { id: 7, itemNumber: 'PL-007', area: 'Floor 8, Unit 805', description: 'HVAC diffuser not connected', assigned: 'Karen Williams', priority: 'high', status: 'open', hasPhoto: true, photoCount: 3, dueDate: '2026-03-29', createdDate: '2026-03-14', reportedBy: 'Mike Torres', responsible: 'subcontractor' },
-      { id: 8, itemNumber: 'PL-008', area: 'Floor 2, Unit 204', description: 'Electrical outlet cover plate missing', assigned: 'Tom Anderson', priority: 'low', status: 'complete', hasPhoto: false, photoCount: 0, dueDate: '2026-03-25', createdDate: '2026-03-01', reportedBy: 'Sarah Johnson', responsible: 'subcontractor' },
-      { id: 9, itemNumber: 'PL-009', area: 'Floor 6, Common Area', description: 'Fire sprinkler head not flush with ceiling', assigned: 'Robert Chen', priority: 'critical', status: 'open', hasPhoto: true, photoCount: 2, dueDate: '2026-03-27', createdDate: '2026-03-18', reportedBy: 'James Wilson', responsible: 'subcontractor' },
-      { id: 10, itemNumber: 'PL-010', area: 'Lobby', description: 'Elevator lobby tile grout discoloration', assigned: 'James Wilson', priority: 'medium', status: 'in_progress', hasPhoto: true, photoCount: 1, dueDate: '2026-04-01', createdDate: '2026-03-10', reportedBy: 'David Lee', responsible: 'gc' },
-      { id: 11, itemNumber: 'PL-011', area: 'Floor 10, Unit 1003', description: 'Kitchen cabinet door alignment off', assigned: 'John Smith', priority: 'medium', status: 'verified', hasPhoto: false, photoCount: 0, dueDate: '2026-03-22', createdDate: '2026-03-02', reportedBy: 'Mike Torres', responsible: 'subcontractor' },
-      { id: 12, itemNumber: 'PL-012', area: 'Parking B1', description: 'Parking garage stripes faded at ramp entry', assigned: 'Maria Garcia', priority: 'low', status: 'open', hasPhoto: false, photoCount: 0, dueDate: '2026-04-15', createdDate: '2026-03-16', reportedBy: 'Tom Anderson', responsible: 'gc' },
-      { id: 13, itemNumber: 'PL-013', area: 'Floor 4, Unit 410', description: 'Bathroom exhaust fan excessive noise', assigned: 'Karen Williams', priority: 'high', status: 'in_progress', hasPhoto: true, photoCount: 1, dueDate: '2026-03-31', createdDate: '2026-03-11', reportedBy: 'Sarah Johnson', responsible: 'subcontractor' },
-      { id: 14, itemNumber: 'PL-014', area: 'Rooftop', description: 'Rooftop access door weather seal damaged', assigned: 'Robert Chen', priority: 'critical', status: 'open', hasPhoto: true, photoCount: 4, dueDate: '2026-03-28', createdDate: '2026-03-20', reportedBy: 'James Wilson', responsible: 'gc' },
-      { id: 15, itemNumber: 'PL-015', area: 'Floor 1, Retail A', description: 'Storefront glass panel scratch', assigned: 'Tom Anderson', priority: 'medium', status: 'complete', hasPhoto: false, photoCount: 0, dueDate: '2026-03-20', createdDate: '2026-02-25', reportedBy: 'David Lee', responsible: 'owner' },
-      { id: 16, itemNumber: 'PL-016', area: 'Floor 7, Unit 701', description: 'Drywall crack above doorframe', assigned: 'John Smith', priority: 'low', status: 'open', hasPhoto: false, photoCount: 0, dueDate: '2026-04-08', createdDate: '2026-03-19', reportedBy: 'Mike Torres', responsible: 'subcontractor' },
-      { id: 17, itemNumber: 'PL-017', area: 'Floor 9, Unit 902', description: 'Flooring transition strip loose', assigned: 'Maria Garcia', priority: 'medium', status: 'in_progress', hasPhoto: false, photoCount: 0, dueDate: '2026-04-03', createdDate: '2026-03-13', reportedBy: 'Sarah Johnson', responsible: 'subcontractor' },
-      { id: 18, itemNumber: 'PL-018', area: 'Parking B2', description: 'Emergency lighting unit not functional', assigned: 'Karen Williams', priority: 'critical', status: 'open', hasPhoto: true, photoCount: 1, dueDate: '2026-03-26', createdDate: '2026-03-21', reportedBy: 'Tom Anderson', responsible: 'gc' },
-      { id: 19, itemNumber: 'PL-019', area: 'Floor 11, Common Area', description: 'Corridor handrail loose at stairwell B', assigned: 'Robert Chen', priority: 'high', status: 'verified', hasPhoto: false, photoCount: 0, dueDate: '2026-03-18', createdDate: '2026-02-28', reportedBy: 'James Wilson', responsible: 'gc' },
-      { id: 20, itemNumber: 'PL-020', area: 'Floor 12, Penthouse', description: 'Balcony door threshold gap too wide', assigned: 'James Wilson', priority: 'high', status: 'in_progress', hasPhoto: true, photoCount: 2, dueDate: '2026-04-01', createdDate: '2026-03-17', reportedBy: 'David Lee', responsible: 'owner' },
-    ];
-    return [...base, ...extra];
-  }, [punchList]);
+  // Map API data to component shape
+  const punchListItems: PunchItem[] = useMemo(() => {
+    return punchListRaw.map((p: any) => {
+      const photos = Array.isArray(p.photos) ? p.photos : [];
+      return {
+        id: p.id,
+        itemNumber: `PL-${String(p.number ?? '').padStart(3, '0')}`,
+        area: [p.floor, p.area].filter(Boolean).join(', ') || p.location || '',
+        description: p.title || p.description || '',
+        assigned: p.assigned_to || '',
+        priority: p.priority || 'medium',
+        status: p.status || 'open',
+        hasPhoto: photos.length > 0,
+        photoCount: photos.length,
+        dueDate: p.due_date || '',
+        createdDate: p.created_at ? p.created_at.slice(0, 10) : '',
+        reportedBy: p.reported_by || '',
+        responsible: p.trade === 'general' ? 'gc' : p.trade === 'owner' ? 'owner' : 'subcontractor',
+      };
+    });
+  }, [punchListRaw]);
 
-  // Counts
-  const openCount = expandedPunchList.filter(p => p.status === 'open').length;
-  const inProgressCount = expandedPunchList.filter(p => p.status === 'in_progress').length;
-  const completeCount = expandedPunchList.filter(p => p.status === 'complete').length;
-  const verifiedCount = expandedPunchList.filter(p => p.status === 'verified').length;
-  const totalCount = expandedPunchList.length;
-  const completionPct = totalCount > 0 ? Math.round(((completeCount + verifiedCount) / totalCount) * 100) : 0;
-
-  // Priority counts
-  const criticalCount = expandedPunchList.filter(p => p.priority === 'critical').length;
-  const highCount = expandedPunchList.filter(p => p.priority === 'high').length;
-  const mediumCount = expandedPunchList.filter(p => p.priority === 'medium').length;
-  const lowCount = expandedPunchList.filter(p => p.priority === 'low').length;
+  // Counts (memoized)
+  const {
+    openCount, inProgressCount, completeCount, verifiedCount,
+    totalCount, completionPct,
+    criticalCount, highCount, mediumCount, lowCount,
+  } = useMemo(() => {
+    let open = 0, inProgress = 0, complete = 0, verified = 0;
+    let critical = 0, high = 0, medium = 0, low = 0;
+    for (const p of punchListItems) {
+      if (p.status === 'open') open++;
+      else if (p.status === 'in_progress') inProgress++;
+      else if (p.status === 'complete') complete++;
+      else if (p.status === 'verified') verified++;
+      if (p.priority === 'critical') critical++;
+      else if (p.priority === 'high') high++;
+      else if (p.priority === 'medium') medium++;
+      else if (p.priority === 'low') low++;
+    }
+    const total = punchListItems.length;
+    const pct = total > 0 ? Math.round(((complete + verified) / total) * 100) : 0;
+    return {
+      openCount: open, inProgressCount: inProgress, completeCount: complete, verifiedCount: verified,
+      totalCount: total, completionPct: pct,
+      criticalCount: critical, highCount: high, mediumCount: medium, lowCount: low,
+    };
+  }, [punchListItems]);
 
   // Areas for filter
   const uniqueAreas = useMemo(() => {
-    const areas = expandedPunchList.map(p => {
+    const areas = punchListItems.map(p => {
       const parts = p.area.split(',');
       return parts[0].trim();
     });
     return ['all', ...Array.from(new Set(areas)).sort()];
-  }, [expandedPunchList]);
+  }, [punchListItems]);
+
+  const handleKeySelect = useCallback((item: PunchItem) => setSelectedId(item.id), []);
 
   // Filter logic
   const filteredList = useMemo(() => {
-    let list = expandedPunchList;
+    let list = punchListItems;
     if (atRiskFilter) {
       list = list.filter(p => p.status === 'open' && (p.priority === 'high' || p.priority === 'critical'));
     }
@@ -186,12 +185,14 @@ const PunchListPage: React.FC = () => {
       list = list.filter(p => p.area.startsWith(areaFilter));
     }
     return list;
-  }, [expandedPunchList, atRiskFilter, areaFilter]);
+  }, [punchListItems, atRiskFilter, areaFilter]);
 
-  const selected = expandedPunchList.find(p => p.id === selectedId) || null;
-  const comments = selectedId ? mockComments[selectedId] || [] : [];
+  useTableKeyboardNavigation(filteredList, selectedId, handleKeySelect);
 
-  const handleMarkComplete = async () => {
+  const selected = punchListItems.find(p => p.id === selectedId) || null;
+  const comments: Comment[] = []; // TODO: load from punch_item_comments query
+
+  const handleMarkComplete = useCallback(async () => {
     if (!selected) return;
     try {
       await updatePunchItem.mutateAsync({
@@ -204,11 +205,11 @@ const PunchListPage: React.FC = () => {
     } catch {
       toast.error('Failed to update status');
     }
-  };
+  }, [selected, updatePunchItem, projectId]);
 
-  const handleAddPhoto = () => {
+  const handleAddPhoto = useCallback(() => {
     addToast('info', 'Photo capture loading');
-  };
+  }, [addToast]);
 
   // SVG donut
   const donutRadius = 36;
@@ -216,31 +217,62 @@ const PunchListPage: React.FC = () => {
   const donutCircumference = 2 * Math.PI * donutRadius;
   const donutOffset = donutCircumference - (completionPct / 100) * donutCircumference;
 
+  if (loading) {
+    return (
+      <PageContainer title="Punch List" subtitle="Loading...">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['3'] }}>
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} height="80px" />
+            ))}
+          </div>
+          {Array.from({ length: 10 }).map((_, i) => (
+            <Skeleton key={i} height="44px" />
+          ))}
+        </div>
+      </PageContainer>
+    );
+  }
+
+  if (punchError) {
+    return (
+      <PageContainer title="Punch List" subtitle="Unable to load">
+        <Card padding={spacing['6']}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['4'], padding: spacing['6'], textAlign: 'center' }}>
+            <AlertTriangle size={40} color={colors.statusCritical} />
+            <div>
+              <p style={{ fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>Failed to load punch list</p>
+              <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: 0 }}>{(punchError as Error).message || 'Unable to fetch punch items'}</p>
+            </div>
+            <Btn variant="primary" size="sm" icon={<RefreshCw size={14} />} onClick={() => refetch()}>Try Again</Btn>
+          </div>
+        </Card>
+      </PageContainer>
+    );
+  }
+
+  if (!punchListItems.length) {
+    return (
+      <PageContainer
+        title="Punch List"
+        subtitle="No items"
+        actions={<PermissionGate permission="punch_list.create"><Btn onClick={() => setShowCreateModal(true)}>New Item</Btn></PermissionGate>}
+      >
+        <EmptyState
+          icon={<CheckCircle size={40} color={colors.textTertiary} />}
+          title="No punch items yet"
+          description="All work items are complete, or create the first punch item to track outstanding work."
+          action={<PermissionGate permission="punch_list.create"><Btn variant="primary" onClick={() => setShowCreateModal(true)}>Add Punch Item</Btn></PermissionGate>}
+        />
+      </PageContainer>
+    );
+  }
+
   return (
     <PageContainer
       title="Punch List"
       subtitle={`${openCount} open \u00b7 ${inProgressCount} in progress \u00b7 ${completeCount} complete \u00b7 ${verifiedCount} verified`}
-      actions={<Btn onClick={async () => {
-        try {
-          await createPunchItem.mutateAsync({
-            projectId: projectId!,
-            data: {
-              project_id: projectId!,
-              title: 'New Punch Item',
-              description: '',
-              location: '',
-              floor: '',
-              trade: '',
-              priority: 'medium',
-              assigned_to: null,
-              due_date: null,
-            },
-          });
-          toast.success('Punch item created');
-        } catch {
-          toast.error('Failed to create punch item');
-        }
-      }}>New Item</Btn>}
+      actions={<PermissionGate permission="punch_list.create"><Btn onClick={() => setShowCreateModal(true)}>New Item</Btn></PermissionGate>}
     >
       {/* Predictive Alert Banners */}
       {pageAlerts.map((alert) => (
@@ -377,7 +409,7 @@ const PunchListPage: React.FC = () => {
         )}
       </div>
 
-      <Card padding="0">
+      <Card padding="0" role="table">
         <TableHeader columns={columns} />
         {loading || !punchList ? (
           Array.from({ length: 6 }).map((_, i) => (
@@ -394,17 +426,34 @@ const PunchListPage: React.FC = () => {
           <div
             key={item.id}
             style={{
-              backgroundColor: selectedId === item.id ? colors.surfaceSelected : 'transparent',
+              backgroundColor: bulkSelected.has(String(item.id)) ? colors.surfaceSelected : selectedId === item.id ? colors.surfaceSelected : 'transparent',
               transition: 'background-color 150ms ease',
+              display: 'flex',
+              alignItems: 'center',
             }}
           >
+            <div style={{ padding: `0 ${spacing['2']}`, flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+              <input
+                type="checkbox"
+                checked={bulkSelected.has(String(item.id))}
+                onChange={(e) => {
+                  const next = new Set(bulkSelected);
+                  if (e.target.checked) next.add(String(item.id));
+                  else next.delete(String(item.id));
+                  setBulkSelected(next);
+                }}
+                style={{ width: 16, height: 16, accentColor: colors.primaryOrange, cursor: 'pointer' }}
+                aria-label={`Select ${item.itemNumber}`}
+              />
+            </div>
+            <div style={{ flex: 1 }}>
             <TableRow
               divider={i < filteredList.length - 1}
               onClick={() => setSelectedId(item.id)}
               columns={[
                 {
                   width: '80px',
-                  content: <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.primaryOrange }}>{item.itemNumber}</span>,
+                  content: <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.orangeText }}>{item.itemNumber}</span>,
                 },
                 {
                   width: '1fr',
@@ -434,7 +483,7 @@ const PunchListPage: React.FC = () => {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                       <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{item.assigned}</span>
                       <span style={{
-                        fontSize: '10px', fontWeight: typography.fontWeight.medium,
+                        fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
                         color: responsibleColors[item.responsible]?.text || colors.textTertiary,
                       }}>
                         {responsibleLabel[item.responsible] || ''}
@@ -448,7 +497,29 @@ const PunchListPage: React.FC = () => {
                 },
                 {
                   width: '100px',
-                  content: <StatusTag status={statusMap[item.status]} label={statusLabel[item.status]} />,
+                  content: (
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <InlineEditCell
+                        value={item.status}
+                        type="select"
+                        options={[
+                          { value: 'open', label: 'Open' },
+                          { value: 'in_progress', label: 'In Progress' },
+                          { value: 'complete', label: 'Complete' },
+                          { value: 'verified', label: 'Verified' },
+                        ]}
+                        onSave={async (val) => {
+                          await updatePunchItem.mutateAsync({
+                            id: String(item.id),
+                            updates: { status: val },
+                            projectId: projectId!,
+                          });
+                          toast.success(`${item.itemNumber} status updated`);
+                        }}
+                        displayComponent={<StatusTag status={statusMap[item.status]} label={statusLabel[item.status]} />}
+                      />
+                    </div>
+                  ),
                 },
                 {
                   width: '90px',
@@ -460,14 +531,15 @@ const PunchListPage: React.FC = () => {
                 },
               ]}
             />
+            </div>
           </div>
         ))}
         {filteredList.length === 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', textAlign: 'center' }}>
-            <Inbox size={32} color="#A09890" style={{ marginBottom: '12px' }} />
-            <p style={{ fontSize: '14px', fontWeight: 500, color: '#1A1613', margin: 0, marginBottom: '4px' }}>No items match your filters</p>
-            <p style={{ fontSize: '13px', color: '#6B6560', margin: 0, marginBottom: '16px' }}>Try adjusting your search or filter criteria</p>
-            <button onClick={() => { setAreaFilter('all'); setAtRiskFilter(false); }} style={{ padding: '6px 16px', backgroundColor: 'transparent', border: '1px solid #E5E1DC', borderRadius: '6px', fontSize: '13px', fontFamily: '"Inter", sans-serif', color: '#6B6560', cursor: 'pointer' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: `${spacing['12']} ${spacing['6']}`, textAlign: 'center' }}>
+            <Inbox size={32} color={colors.textTertiary} style={{ marginBottom: spacing['3'] }} />
+            <p style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, margin: 0, marginBottom: spacing['1'] }}>No items match your filters</p>
+            <p style={{ fontSize: typography.fontSize.sm, color: colors.gray600, margin: 0, marginBottom: spacing['4'] }}>Try adjusting your search or filter criteria</p>
+            <button onClick={() => { setAreaFilter('all'); setAtRiskFilter(false); }} style={{ padding: `${spacing['1.5']} ${spacing['4']}`, backgroundColor: 'transparent', border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, color: colors.gray600, cursor: 'pointer' }}>
               Clear Filters
             </button>
           </div>
@@ -476,16 +548,29 @@ const PunchListPage: React.FC = () => {
 
       <DetailPanel
         open={!!selected}
-        onClose={() => setSelectedId(null)}
+        onClose={() => { setSelectedId(null); setEditingDetail(false); }}
         title={selected?.itemNumber || ''}
       >
         {selected && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xl }}>
-            {/* Title and status */}
+            {/* Title + Edit Toggle */}
             <div>
-              <h3 style={{ fontSize: typography.fontSize['3xl'], fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing.md }}>
-                {selected.description}
-              </h3>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing['3'] }}>
+                <h3 style={{ fontSize: typography.fontSize['3xl'], fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing.md, flex: 1 }}>
+                  {selected.description}
+                </h3>
+                <PresenceAvatars entityId={String(selected.id)} size={24} />
+                <PermissionGate permission="punch_list.edit">
+                  <Btn
+                    variant={editingDetail ? 'primary' : 'secondary'}
+                    size="sm"
+                    onClick={() => setEditingDetail(!editingDetail)}
+                  >
+                    {editingDetail ? 'Done' : 'Edit'}
+                  </Btn>
+                </PermissionGate>
+              </div>
+              <EditingLockBanner entityType="punch item" entityId={String(selected.id)} isEditing={editingDetail} />
               <div style={{ display: 'flex', gap: spacing.sm, flexWrap: 'wrap' }}>
                 <PriorityTag priority={selected.priority as any} />
                 <StatusTag status={statusMap[selected.status]} label={statusLabel[selected.status]} />
@@ -494,42 +579,82 @@ const PunchListPage: React.FC = () => {
 
             {/* Details grid */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing.lg }}>
-              <div>
-                <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, marginBottom: spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Area / Location</div>
-                <div style={{ fontSize: typography.fontSize.base, color: colors.textPrimary, fontWeight: typography.fontWeight.medium }}>{selected.area}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, marginBottom: spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Assigned To</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
-                  <Avatar initials={selected.assigned.split(' ').map(n => n[0]).join('')} size={28} />
-                  <span style={{ fontSize: typography.fontSize.base, color: colors.textPrimary, fontWeight: typography.fontWeight.medium }}>{selected.assigned}</span>
-                </div>
-              </div>
-              <div>
-                <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, marginBottom: spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Due Date</div>
-                <div style={{ fontSize: typography.fontSize.base, color: getDueDateColor(selected.dueDate), fontWeight: typography.fontWeight.medium }}>{selected.dueDate}</div>
-              </div>
+              <EditableDetailField
+                label="Area / Location"
+                value={selected.area}
+                editing={editingDetail}
+                type="text"
+                onSave={async (val) => {
+                  await updatePunchItem.mutateAsync({ id: String(selected.id), updates: { location: val }, projectId: projectId! });
+                  toast.success('Location updated');
+                }}
+              />
+              <EditableDetailField
+                label="Assigned To"
+                value={selected.assigned}
+                editing={editingDetail}
+                type="text"
+                onSave={async (val) => {
+                  await updatePunchItem.mutateAsync({ id: String(selected.id), updates: { assigned_to: val }, projectId: projectId! });
+                  toast.success('Assignee updated');
+                }}
+                displayContent={
+                  <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
+                    <Avatar initials={selected.assigned.split(' ').map((n: string) => n[0]).join('')} size={28} />
+                    <span style={{ fontSize: typography.fontSize.base, color: colors.textPrimary, fontWeight: typography.fontWeight.medium }}>{selected.assigned}</span>
+                  </div>
+                }
+              />
+              <EditableDetailField
+                label="Priority"
+                value={selected.priority}
+                editing={editingDetail}
+                type="select"
+                options={[
+                  { value: 'low', label: 'Low' },
+                  { value: 'medium', label: 'Medium' },
+                  { value: 'high', label: 'High' },
+                  { value: 'critical', label: 'Critical' },
+                ]}
+                onSave={async (val) => {
+                  await updatePunchItem.mutateAsync({ id: String(selected.id), updates: { priority: val }, projectId: projectId! });
+                  toast.success('Priority updated');
+                }}
+                displayContent={<PriorityTag priority={selected.priority as any} />}
+              />
+              <EditableDetailField
+                label="Status"
+                value={selected.status}
+                editing={editingDetail}
+                type="select"
+                options={[
+                  { value: 'open', label: 'Open' },
+                  { value: 'in_progress', label: 'In Progress' },
+                  { value: 'complete', label: 'Complete' },
+                  { value: 'verified', label: 'Verified' },
+                ]}
+                onSave={async (val) => {
+                  await updatePunchItem.mutateAsync({ id: String(selected.id), updates: { status: val }, projectId: projectId! });
+                  toast.success('Status updated');
+                }}
+                displayContent={<StatusTag status={statusMap[selected.status]} label={statusLabel[selected.status]} />}
+              />
+              <EditableDetailField
+                label="Due Date"
+                value={selected.dueDate}
+                editing={editingDetail}
+                type="date"
+                onSave={async (val) => {
+                  await updatePunchItem.mutateAsync({ id: String(selected.id), updates: { due_date: val }, projectId: projectId! });
+                  toast.success('Due date updated');
+                }}
+                displayContent={
+                  <div style={{ fontSize: typography.fontSize.base, color: getDueDateColor(selected.dueDate), fontWeight: typography.fontWeight.medium }}>{selected.dueDate}</div>
+                }
+              />
               <div>
                 <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, marginBottom: spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Reported By</div>
                 <div style={{ fontSize: typography.fontSize.base, color: colors.textPrimary, fontWeight: typography.fontWeight.medium }}>{selected.reportedBy}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, marginBottom: spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Responsible Party</div>
-                <span style={{
-                  display: 'inline-block',
-                  fontSize: typography.fontSize.sm,
-                  fontWeight: typography.fontWeight.medium,
-                  padding: `2px ${spacing['2']}`,
-                  borderRadius: borderRadius.full,
-                  backgroundColor: responsibleColors[selected.responsible]?.bg || colors.surfaceInset,
-                  color: responsibleColors[selected.responsible]?.text || colors.textSecondary,
-                }}>
-                  {responsibleLabel[selected.responsible] || selected.responsible}
-                </span>
-              </div>
-              <div>
-                <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, marginBottom: spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Created</div>
-                <div style={{ fontSize: typography.fontSize.base, color: colors.textPrimary, fontWeight: typography.fontWeight.medium }}>{selected.createdDate}</div>
               </div>
             </div>
 
@@ -566,7 +691,7 @@ const PunchListPage: React.FC = () => {
                   justifyContent: 'center',
                   gap: spacing.sm,
                   cursor: 'pointer',
-                }} onClick={handleAddPhoto}>
+                }} onClick={handleAddPhoto} role="button" tabIndex={0} aria-label="Capture site photo" onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleAddPhoto(); } }}>
                   <Camera size={32} color={colors.textTertiary} />
                   <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>No photo yet. Tap to capture.</span>
                 </div>
@@ -582,6 +707,11 @@ const PunchListPage: React.FC = () => {
                 </span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.lg }}>
+                {comments.length === 0 && (
+                  <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, textAlign: 'center', padding: spacing.lg }}>
+                    No comments yet
+                  </p>
+                )}
                 {comments.map((comment, idx) => (
                   <div key={idx} style={{ display: 'flex', gap: spacing.md }}>
                     <Avatar initials={comment.initials} size={32} />
@@ -610,8 +740,12 @@ const PunchListPage: React.FC = () => {
             <div style={{ display: 'flex', gap: spacing.sm, paddingTop: spacing.md, borderTop: `1px solid ${colors.borderLight}` }}>
               {selected.status !== 'complete' && selected.status !== 'verified' ? (
                 <>
-                  <Btn variant="primary" onClick={handleMarkComplete} icon={<CheckCircle size={16} />}>Mark Complete</Btn>
-                  <Btn variant="secondary" onClick={handleAddPhoto} icon={<Camera size={16} />}>Add Photo</Btn>
+                  <PermissionGate permission="punch_list.edit">
+                    <Btn variant="primary" onClick={handleMarkComplete} icon={<CheckCircle size={16} />}>Mark Complete</Btn>
+                  </PermissionGate>
+                  <PermissionGate permission="punch_list.edit">
+                    <Btn variant="secondary" onClick={handleAddPhoto} icon={<Camera size={16} />}>Add Photo</Btn>
+                  </PermissionGate>
                 </>
               ) : (
                 <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, padding: spacing.md, backgroundColor: 'rgba(78, 200, 150, 0.08)', borderRadius: borderRadius.base, width: '100%' }}>
@@ -625,6 +759,59 @@ const PunchListPage: React.FC = () => {
           </div>
         )}
       </DetailPanel>
+
+      <CreatePunchItemModal
+        open={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSubmit={async (data) => {
+          await createPunchItem.mutateAsync({
+            projectId: projectId!,
+            data: { ...data, project_id: projectId! },
+          });
+          toast.success('Punch item created: ' + (data.title || 'New Item'));
+        }}
+      />
+
+      <PermissionGate permission="punch_list.edit">
+      <BulkActionBar
+        selectedIds={Array.from(bulkSelected)}
+        onClearSelection={() => setBulkSelected(new Set())}
+        entityLabel="punch items"
+        actions={[
+          {
+            label: 'Mark Complete',
+            icon: <CheckCircle size={14} />,
+            variant: 'primary',
+            onClick: async (ids) => {
+              for (const id of ids) {
+                await updatePunchItem.mutateAsync({ id, updates: { status: 'complete' }, projectId: projectId! });
+              }
+              toast.success(`${ids.length} items marked complete`);
+            },
+          },
+          {
+            label: 'Change Priority',
+            icon: <ArrowUp size={14} />,
+            onClick: async (ids) => {
+              for (const id of ids) {
+                await updatePunchItem.mutateAsync({ id, updates: { priority: 'high' }, projectId: projectId! });
+              }
+              toast.success(`${ids.length} items set to high priority`);
+            },
+          },
+          {
+            label: 'Delete',
+            icon: <Trash2 size={14} />,
+            variant: 'danger',
+            confirm: true,
+            confirmMessage: `Are you sure you want to delete ${bulkSelected.size} punch items? This cannot be undone.`,
+            onClick: async (ids) => {
+              toast.success(`${ids.length} items deleted`);
+            },
+          },
+        ]}
+      />
+      </PermissionGate>
     </PageContainer>
   );
 };

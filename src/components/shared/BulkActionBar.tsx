@@ -1,0 +1,241 @@
+import React, { useState } from 'react'
+import * as Dialog from '@radix-ui/react-dialog'
+import { X, Loader2 } from 'lucide-react'
+import { colors, spacing, typography, borderRadius, shadows, zIndex, transitions } from '../../styles/theme'
+import { Btn } from '../Primitives'
+import { motion, AnimatePresence } from 'framer-motion'
+
+// ── Bulk Action Bar ─────────────────────────────────────
+// Floats at the bottom of the screen when items are selected.
+
+interface BulkAction {
+  label: string
+  icon?: React.ReactNode
+  variant?: 'primary' | 'secondary' | 'danger'
+  /** If true, shows a confirmation dialog before executing */
+  confirm?: boolean
+  confirmMessage?: string
+  onClick: (selectedIds: string[]) => Promise<void>
+}
+
+interface BulkActionBarProps {
+  selectedIds: string[]
+  onClearSelection: () => void
+  actions: BulkAction[]
+  entityLabel?: string
+}
+
+export const BulkActionBar: React.FC<BulkActionBarProps> = ({
+  selectedIds,
+  onClearSelection,
+  actions,
+  entityLabel = 'items',
+}) => {
+  const [loading, setLoading] = useState<string | null>(null)
+  const [confirmAction, setConfirmAction] = useState<BulkAction | null>(null)
+  const count = selectedIds.length
+
+  if (count === 0) return null
+
+  const handleAction = async (action: BulkAction) => {
+    if (action.confirm) {
+      setConfirmAction(action)
+      return
+    }
+    await executeAction(action)
+  }
+
+  const executeAction = async (action: BulkAction) => {
+    setLoading(action.label)
+    setConfirmAction(null)
+    try {
+      await action.onClick(selectedIds)
+      onClearSelection()
+    } catch {
+      // Error handled by the action callback
+    } finally {
+      setLoading(null)
+    }
+  }
+
+  const getButtonStyle = (variant: string = 'secondary'): React.CSSProperties => {
+    const base: React.CSSProperties = {
+      padding: `${spacing['2']} ${spacing['4']}`,
+      fontSize: typography.fontSize.sm,
+      fontFamily: typography.fontFamily,
+      fontWeight: typography.fontWeight.medium,
+      borderRadius: borderRadius.md,
+      cursor: 'pointer',
+      display: 'flex',
+      alignItems: 'center',
+      gap: spacing['2'],
+      transition: `all ${transitions.instant}`,
+      minHeight: 36,
+    }
+    if (variant === 'primary') {
+      return { ...base, backgroundColor: colors.primaryOrange, color: colors.white, border: 'none' }
+    }
+    if (variant === 'danger') {
+      return { ...base, backgroundColor: colors.statusCritical, color: colors.white, border: 'none' }
+    }
+    return { ...base, backgroundColor: colors.white, color: colors.textPrimary, border: `1px solid ${colors.borderDefault}` }
+  }
+
+  return (
+    <>
+      <AnimatePresence>
+        <motion.div
+          initial={{ y: 80, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: 80, opacity: 0 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+          style={{
+            position: 'fixed',
+            bottom: spacing['6'],
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: zIndex.toast as number,
+            display: 'flex',
+            alignItems: 'center',
+            gap: spacing['3'],
+            padding: `${spacing['3']} ${spacing['5']}`,
+            backgroundColor: colors.surfaceRaised,
+            borderRadius: borderRadius.xl,
+            boxShadow: shadows.panel,
+            border: `1px solid ${colors.borderDefault}`,
+          }}
+          role="toolbar"
+          aria-label={`Bulk actions for ${count} selected ${entityLabel}`}
+        >
+          <span style={{
+            fontSize: typography.fontSize.sm,
+            fontWeight: typography.fontWeight.semibold,
+            color: colors.primaryOrange,
+            whiteSpace: 'nowrap',
+          }}>
+            {count} selected
+          </span>
+
+          <div style={{ width: 1, height: 24, backgroundColor: colors.borderDefault }} />
+
+          {actions.map((action) => (
+            <button
+              key={action.label}
+              onClick={() => handleAction(action)}
+              disabled={loading !== null}
+              style={{
+                ...getButtonStyle(action.variant),
+                opacity: loading && loading !== action.label ? 0.5 : 1,
+              }}
+            >
+              {loading === action.label ? (
+                <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
+              ) : action.icon ? (
+                action.icon
+              ) : null}
+              {action.label}
+            </button>
+          ))}
+
+          <div style={{ width: 1, height: 24, backgroundColor: colors.borderDefault }} />
+
+          <button
+            onClick={onClearSelection}
+            style={{
+              all: 'unset',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 28,
+              height: 28,
+              borderRadius: borderRadius.full,
+              color: colors.textTertiary,
+              transition: `background-color ${transitions.instant}`,
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = colors.surfaceHover }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent' }}
+            aria-label="Clear selection"
+          >
+            <X size={16} />
+          </button>
+        </motion.div>
+      </AnimatePresence>
+
+      {/* Confirmation Dialog */}
+      <Dialog.Root open={!!confirmAction} onOpenChange={(open) => { if (!open) setConfirmAction(null) }}>
+        <Dialog.Portal>
+          <Dialog.Overlay style={{
+            position: 'fixed', inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.4)',
+            backdropFilter: 'blur(4px)',
+            zIndex: zIndex.modal as number,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <Dialog.Content style={{
+              width: 420,
+              backgroundColor: colors.white,
+              borderRadius: borderRadius.xl,
+              boxShadow: shadows.panel,
+              padding: spacing['6'],
+              fontFamily: typography.fontFamily,
+            }}
+            aria-describedby="confirm-description"
+            >
+              <Dialog.Title style={{
+                margin: 0, marginBottom: spacing['3'],
+                fontSize: typography.fontSize.subtitle,
+                fontWeight: typography.fontWeight.semibold,
+                color: colors.textPrimary,
+              }}>
+                Confirm Action
+              </Dialog.Title>
+              <p id="confirm-description" style={{
+                margin: 0, marginBottom: spacing['5'],
+                fontSize: typography.fontSize.body,
+                color: colors.textSecondary,
+                lineHeight: typography.lineHeight.relaxed,
+              }}>
+                {confirmAction?.confirmMessage || `This will affect ${count} ${entityLabel}. Are you sure?`}
+              </p>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: spacing['3'] }}>
+                <button
+                  onClick={() => setConfirmAction(null)}
+                  style={{
+                    padding: `${spacing['2']} ${spacing['5']}`,
+                    fontSize: typography.fontSize.body,
+                    fontFamily: typography.fontFamily,
+                    fontWeight: typography.fontWeight.medium,
+                    border: `1px solid ${colors.borderDefault}`,
+                    borderRadius: borderRadius.md,
+                    backgroundColor: colors.white,
+                    color: colors.textSecondary,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => confirmAction && executeAction(confirmAction)}
+                  style={{
+                    padding: `${spacing['2']} ${spacing['5']}`,
+                    fontSize: typography.fontSize.body,
+                    fontFamily: typography.fontFamily,
+                    fontWeight: typography.fontWeight.semibold,
+                    border: 'none',
+                    borderRadius: borderRadius.md,
+                    backgroundColor: confirmAction?.variant === 'danger' ? colors.statusCritical : colors.primaryOrange,
+                    color: colors.white,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {confirmAction?.label}
+                </button>
+              </div>
+            </Dialog.Content>
+          </Dialog.Overlay>
+        </Dialog.Portal>
+      </Dialog.Root>
+    </>
+  )
+}

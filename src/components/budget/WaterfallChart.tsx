@@ -105,8 +105,8 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = ({
           </div>
           <div style={{ fontSize: typography.fontSize.subtitle, color: colors.textTertiary }}>→</div>
           <div>
-            <span style={{ fontSize: typography.fontSize.caption, color: colors.primaryOrange, textTransform: 'uppercase', letterSpacing: typography.letterSpacing.wider }}>Revised Contract</span>
-            <p style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.primaryOrange, margin: `${spacing['1']} 0 0` }}>{fmt(revisedContract)}</p>
+            <span style={{ fontSize: typography.fontSize.caption, color: colors.orangeText, textTransform: 'uppercase', letterSpacing: typography.letterSpacing.wider }}>Revised Contract</span>
+            <p style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.orangeText, margin: `${spacing['1']} 0 0` }}>{fmt(revisedContract)}</p>
           </div>
         </div>
       </div>

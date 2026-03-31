@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Search, Sparkles, FileText, FolderOpen } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme';
+import { supabase } from '../../lib/supabase';
 
 interface SearchResult {
   id: number;
@@ -10,21 +11,6 @@ interface SearchResult {
   category: string;
 }
 
-const mockResults: Record<string, SearchResult[]> = {
-  'structural floor 8': [
-    { id: 1, name: 'S-001 Structural Grid Layout', type: 'file', match: 'Drawing set with Floor 8 structural details', category: 'Drawings' },
-    { id: 2, name: 'Structural Calculations', type: 'folder', match: 'Contains Floor 8 load calculations and steel specs', category: 'Engineering' },
-  ],
-  'mep spec': [
-    { id: 3, name: 'MEP Specifications.pdf', type: 'file', match: 'Mechanical, Electrical, Plumbing specs (4.2 MB)', category: 'Specifications' },
-    { id: 4, name: 'M-001 HVAC System Diagram', type: 'file', match: 'HVAC layout diagram, Rev A', category: 'Drawings' },
-  ],
-  'safety': [
-    { id: 5, name: 'Safety Documentation', type: 'folder', match: '18 items including incident reports and training records', category: 'Safety' },
-    { id: 6, name: 'Safety Audit Q1 2026.pdf', type: 'file', match: 'Quarterly safety audit results and findings', category: 'Reports' },
-  ],
-};
-
 interface DocumentSearchProps {
   onSelect?: (result: SearchResult) => void;
 }
@@ -33,15 +19,32 @@ export const DocumentSearch: React.FC<DocumentSearchProps> = ({ onSelect }) => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleSearch = (q: string) => {
     setQuery(q);
     if (!q.trim()) { setResults([]); return; }
 
+    if (debounceRef.current) clearTimeout(debounceRef.current);
     setSearching(true);
-    setTimeout(() => {
-      const key = Object.keys(mockResults).find((k) => q.toLowerCase().includes(k));
-      setResults(key ? mockResults[key] : []);
+
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const { data } = await supabase
+          .from('documents')
+          .select('id, name, category')
+          .ilike('name', `%${q}%`)
+          .limit(10);
+        setResults((data || []).map((doc: Record<string, unknown>) => ({
+          id: doc.id as number,
+          name: doc.name as string,
+          type: 'file' as const,
+          match: '',
+          category: (doc.category as string) || 'Documents',
+        })));
+      } catch {
+        setResults([]);
+      }
       setSearching(false);
     }, 300);
   };

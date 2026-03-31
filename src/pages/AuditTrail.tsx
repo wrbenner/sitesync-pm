@@ -93,7 +93,7 @@ export const AuditTrail: React.FC = () => {
           <Search size={14} color={colors.textTertiary} />
           <input type="text" placeholder="Search audit trail..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
             style={{ flex: 1, border: 'none', backgroundColor: 'transparent', outline: 'none', fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, color: colors.textPrimary }} />
-          {searchQuery && <button onClick={() => setSearchQuery('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: colors.textTertiary, display: 'flex' }}><X size={12} /></button>}
+          {searchQuery && <button onClick={() => setSearchQuery('')} aria-label="Clear search" title="Clear search" style={{ background: 'none', border: 'none', cursor: 'pointer', color: colors.textTertiary, display: 'flex' }}><X size={12} /></button>}
         </div>
 
         <select value={filterEntity} onChange={e => setFilterEntity(e.target.value)}

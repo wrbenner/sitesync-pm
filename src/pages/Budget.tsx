@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { PageContainer, Card, SectionHeader, MetricBox, ProgressBar, StatusTag, DetailPanel, RelatedItems, Skeleton, useToast } from '../components/Primitives';
 import { Btn } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
@@ -17,6 +17,7 @@ import { Download, AlertTriangle, ChevronRight, ArrowRight } from 'lucide-react'
 import { toast } from 'sonner';
 import { useProjectId } from '../hooks/useProjectId';
 import { useUpdateChangeOrder } from '../hooks/mutations';
+import { PermissionGate } from '../components/auth/PermissionGate';
 import { getCOTypeConfig, getCOStatusConfig } from '../machines/changeOrderMachine';
 import type { ChangeOrderType, ChangeOrderState } from '../machines/changeOrderMachine';
 import { useNavigate } from 'react-router-dom';
@@ -67,18 +68,18 @@ export const Budget: React.FC = () => {
 
   const pageAlerts = getPredictiveAlertsForPage('budget');
 
-  const committed = costData.divisions.reduce((sum, d) => sum + d.committed, 0);
-  const spent = costData.divisions.reduce((sum, d) => sum + d.spent, 0);
-  const remaining = projectData.totalValue - spent - committed;
+  const committed = useMemo(() => costData.divisions.reduce((sum, d) => sum + d.committed, 0), [costData.divisions]);
+  const spent = useMemo(() => costData.divisions.reduce((sum, d) => sum + d.spent, 0), [costData.divisions]);
+  const remaining = useMemo(() => projectData.totalValue - spent - committed, [projectData.totalValue, spent, committed]);
 
   // Change orders from real data only
   const allChangeOrders = costData.changeOrders || [];
 
-  const approvedTotal = allChangeOrders.filter(co => co.status === 'approved').reduce((s, co) => s + co.amount, 0);
+  const approvedTotal = useMemo(() => allChangeOrders.filter(co => co.status === 'approved').reduce((s, co) => s + co.amount, 0), [allChangeOrders]);
 
   // Fix 5: Contingency
   const consumed = approvedTotal;
-  const contingencyRemaining = 3800000 - consumed;
+  const contingencyRemaining = useMemo(() => 3800000 - consumed, [consumed]);
 
   const pillBase: React.CSSProperties = {
     padding: `${spacing['1']} ${spacing['3']}`,
@@ -103,6 +104,8 @@ export const Budget: React.FC = () => {
 
       {/* Summary Metrics */}
       <div
+        role="group"
+        aria-label="Budget summary metrics"
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(4, 1fr)',
@@ -120,7 +123,7 @@ export const Budget: React.FC = () => {
       <div style={{ marginBottom: spacing['4'] }}>
         <p style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.4px', margin: 0, marginBottom: spacing['2'] }}>Contingency Drawdown</p>
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
-          <div style={{ flex: 1, height: 12, backgroundColor: colors.surfaceInset, borderRadius: borderRadius.full, overflow: 'hidden', display: 'flex' }}>
+          <div role="progressbar" aria-label="Contingency drawdown" aria-valuenow={Math.round((consumed / 3800000) * 100)} aria-valuemin={0} aria-valuemax={100} style={{ flex: 1, height: 12, backgroundColor: colors.surfaceInset, borderRadius: borderRadius.full, overflow: 'hidden', display: 'flex' }}>
             <div style={{ width: `${(consumed / 3800000) * 100}%`, height: '100%', backgroundColor: colors.statusPending, borderRadius: borderRadius.full }} />
           </div>
           <span style={{ fontSize: typography.fontSize.caption, color: colors.textSecondary, whiteSpace: 'nowrap', flexShrink: 0 }}>
@@ -130,8 +133,11 @@ export const Budget: React.FC = () => {
       </div>
 
       {/* Tab Toggle */}
-      <div style={{ display: 'flex', gap: spacing['1'], backgroundColor: colors.surfaceInset, borderRadius: borderRadius.full, padding: 2, marginBottom: spacing['5'] }}>
+      <div role="tablist" aria-label="Budget views" style={{ display: 'flex', gap: spacing['1'], backgroundColor: colors.surfaceInset, borderRadius: borderRadius.full, padding: 2, marginBottom: spacing['5'] }}>
         <button
+          role="tab"
+          aria-selected={activeTab === 'overview'}
+          aria-controls="budget-tab-overview"
           onClick={() => setActiveTab('overview')}
           style={{
             ...pillBase,
@@ -143,6 +149,9 @@ export const Budget: React.FC = () => {
           Overview
         </button>
         <button
+          role="tab"
+          aria-selected={activeTab === 'earned-value'}
+          aria-controls="budget-tab-earned-value"
           onClick={() => setActiveTab('earned-value')}
           style={{
             ...pillBase,
@@ -156,11 +165,13 @@ export const Budget: React.FC = () => {
       </div>
 
       {activeTab === 'overview' && (
-        <>
+        <div role="tabpanel" id="budget-tab-overview" aria-label="Overview">
           {/* Cost Distribution Treemap */}
-          <SectionHeader title="Cost Distribution" action={<span style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], fontSize: typography.fontSize.caption, color: colors.primaryOrange, fontWeight: typography.fontWeight.medium, cursor: 'pointer' }}>Click to drill down <ChevronRight size={12} /></span>} />
+          <SectionHeader title="Cost Distribution" action={<span style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], fontSize: typography.fontSize.caption, color: colors.orangeText, fontWeight: typography.fontWeight.medium, cursor: 'pointer' }}>Click to drill down <ChevronRight size={12} aria-hidden="true" /></span>} />
           <Card padding={spacing['5']}>
-            <Treemap divisions={costData.divisions} />
+            <div role="img" aria-label="Cost distribution treemap showing budget allocation across divisions">
+              <Treemap divisions={costData.divisions} />
+            </div>
           </Card>
 
           {/* Fix 1: Division Health */}
@@ -174,25 +185,25 @@ export const Budget: React.FC = () => {
                   <div key={division.id} style={{
                     display: 'flex', alignItems: 'center', gap: spacing['3'],
                     padding: `${spacing['3']} ${spacing['3']}`,
-                    borderLeft: isAtRisk ? '4px solid #E05252' : '4px solid transparent',
-                    backgroundColor: isAtRisk ? 'rgba(224, 82, 82, 0.04)' : 'transparent',
+                    borderLeft: isAtRisk ? `4px solid ${colors.chartRed}` : '4px solid transparent',
+                    backgroundColor: isAtRisk ? colors.statusCriticalSubtle : 'transparent',
                     borderRadius: borderRadius.sm, marginBottom: spacing['2'],
                   }}>
-                    {isAtRisk && <AlertTriangle size={16} color="#E05252" />}
+                    {isAtRisk && <AlertTriangle size={16} color={colors.chartRed} />}
                     <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, flex: 1 }}>
                       {division.name}
                       {getAnnotationsForEntity('budget_division', division.id).map((ann) => (
                         <AIAnnotationIndicator key={ann.id} annotation={ann} inline />
                       ))}
                     </span>
-                    <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: isAtRisk ? '#E05252' : colors.textSecondary }}>
+                    <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: isAtRisk ? colors.chartRed : colors.textSecondary }}>
                       {pct}%
                     </span>
                     <div style={{ width: '80px', flexShrink: 0 }}>
-                      <ProgressBar value={pct} height={4} color={isAtRisk ? '#E05252' : pct >= 70 ? colors.statusPending : colors.statusInfo} />
+                      <ProgressBar value={pct} height={4} color={isAtRisk ? colors.chartRed : pct >= 70 ? colors.statusPending : colors.statusInfo} />
                     </div>
                     {isAtRisk && (
-                      <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: '#E05252', backgroundColor: 'rgba(224, 82, 82, 0.08)', padding: '2px 8px', borderRadius: borderRadius.full, whiteSpace: 'nowrap' }}>At Risk</span>
+                      <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.chartRed, backgroundColor: colors.statusCriticalSubtle, padding: '2px 8px', borderRadius: borderRadius.full, whiteSpace: 'nowrap' }}>At Risk</span>
                     )}
                   </div>
                 );
@@ -204,7 +215,9 @@ export const Budget: React.FC = () => {
           <div style={{ marginTop: spacing['5'] }}>
             <SectionHeader title="Cumulative Cost (S Curve)" />
             <Card padding={spacing['5']}>
-              <SCurve totalBudget={projectData.totalValue} spent={spent} />
+              <div role="img" aria-label="S Curve chart showing cumulative cost over time against total budget">
+                <SCurve totalBudget={projectData.totalValue} spent={spent} />
+              </div>
             </Card>
           </div>
 
@@ -212,12 +225,14 @@ export const Budget: React.FC = () => {
           <div style={{ marginTop: spacing['5'] }}>
             <SectionHeader title="Change Order Impact" />
             <Card padding={spacing['5']}>
+              <div role="img" aria-label="Waterfall chart showing change order impact on budget">
               <WaterfallChart
                 originalContract={projectData.totalValue}
                 approvedCOs={approvedTotal}
                 pendingCOs={allChangeOrders.filter(co => co.status !== 'approved' && co.status !== 'rejected' && co.status !== 'void').reduce((s, co) => s + (co.estimated_cost || co.amount), 0)}
                 rejectedCOs={allChangeOrders.filter(co => co.status === 'rejected').reduce((s, co) => s + (co.estimated_cost || co.amount), 0)}
               />
+              </div>
             </Card>
           </div>
 
@@ -228,46 +243,54 @@ export const Budget: React.FC = () => {
             } />
             <Card padding="0">
               {/* Header */}
-              <div style={{ display: 'grid', gridTemplateColumns: '80px 60px 1fr 120px 140px', padding: `${spacing.md} ${spacing.xl}`, borderBottom: `1px solid ${colors.borderLight}` }}>
+              <div role="table" aria-label="Change orders">
+              <div role="rowgroup">
+              <div role="row" style={{ display: 'grid', gridTemplateColumns: '80px 60px 1fr 120px 140px', padding: `${spacing.md} ${spacing.xl}`, borderBottom: `1px solid ${colors.borderLight}` }}>
                 {['Number', 'Type', 'Title', 'Amount', 'Status'].map((label) => (
-                  <span key={label} style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textTertiary }}>{label}</span>
+                  <span role="columnheader" key={label} style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textTertiary }}>{label}</span>
                 ))}
+              </div>
               </div>
 
               {/* Rows */}
+              <div role="rowgroup">
               {allChangeOrders.slice(0, 10).map((co, i) => {
                 const coType = (co as any).type as ChangeOrderType || 'co';
                 const coStatus = co.status as ChangeOrderState || 'draft';
                 const typeConfig = getCOTypeConfig(coType);
                 const statusConfig = getCOStatusConfig(coStatus);
                 return (
-                  <div key={co.id} onClick={() => setSelectedCO(co as any)} style={{
+                  <div role="row" tabIndex={0} key={co.id} onClick={() => setSelectedCO(co as any)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedCO(co as any); } }} style={{
                     display: 'grid', gridTemplateColumns: '80px 60px 1fr 120px 140px',
                     padding: `${spacing.lg} ${spacing.xl}`,
                     borderBottom: i < allChangeOrders.length - 1 ? `1px solid ${colors.borderLight}` : 'none',
                     alignItems: 'center', cursor: 'pointer',
                   }}>
-                    <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>{co.coNumber}</span>
-                    <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: typeConfig.color }}>{typeConfig.shortLabel}</span>
-                    <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, display: 'inline-flex', alignItems: 'center', gap: spacing.xs }}>
+                    <span role="cell" style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>{co.coNumber}</span>
+                    <span role="cell" style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: typeConfig.color }}>{typeConfig.shortLabel}</span>
+                    <span role="cell" style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, display: 'inline-flex', alignItems: 'center', gap: spacing.xs }}>
                       {co.title}
                       {getAnnotationsForEntity('change_order', co.id).map((ann) => (
                         <AIAnnotationIndicator key={ann.id} annotation={ann} inline />
                       ))}
                     </span>
-                    <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>{fmt(co.amount)}</span>
-                    <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: statusConfig.color, backgroundColor: statusConfig.bg, padding: `2px ${spacing['2']}`, borderRadius: borderRadius.full, textAlign: 'center' }}>{statusConfig.label}</span>
+                    <span role="cell" style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>{fmt(co.amount)}</span>
+                    <span role="cell" style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: statusConfig.color, backgroundColor: statusConfig.bg, padding: `2px ${spacing['2']}`, borderRadius: borderRadius.full, textAlign: 'center' }}>{statusConfig.label}</span>
                   </div>
                 );
               })}
+              </div>
 
               {/* Running Totals */}
-              <div style={{ display: 'grid', gridTemplateColumns: '80px 60px 1fr 120px 140px', padding: `${spacing.md} ${spacing.xl}`, borderTop: `2px solid ${colors.borderDefault}`, backgroundColor: colors.surfaceInset }}>
-                <span></span>
-                <span></span>
-                <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>Approved Total</span>
-                <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.statusActive }}>{fmt(approvedTotal)}</span>
-                <span></span>
+              <div role="rowgroup">
+              <div role="row" style={{ display: 'grid', gridTemplateColumns: '80px 60px 1fr 120px 140px', padding: `${spacing.md} ${spacing.xl}`, borderTop: `2px solid ${colors.borderDefault}`, backgroundColor: colors.surfaceInset }}>
+                <span role="cell"></span>
+                <span role="cell"></span>
+                <span role="cell" style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>Approved Total</span>
+                <span role="cell" style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.statusActive }}>{fmt(approvedTotal)}</span>
+                <span role="cell"></span>
+              </div>
+              </div>
               </div>
               {allChangeOrders.length > 10 && (
                 <div style={{ padding: `${spacing['3']} ${spacing.xl}`, textAlign: 'center' }}>
@@ -276,16 +299,18 @@ export const Budget: React.FC = () => {
               )}
             </Card>
           </div>
-        </>
+        </div>
       )}
 
       {activeTab === 'earned-value' && (
-        <>
+        <div role="tabpanel" id="budget-tab-earned-value" aria-label="Earned Value">
           <SectionHeader title="Earned Value Analysis" />
           <Card padding={spacing['5']}>
-            <EarnedValueDashboard totalBudget={projectData.totalValue} spent={spent} progress={Math.round((spent / projectData.totalValue) * 100)} />
+            <div role="img" aria-label="Earned value analysis dashboard showing budget performance indicators">
+              <EarnedValueDashboard totalBudget={projectData.totalValue} spent={spent} progress={Math.round((spent / projectData.totalValue) * 100)} />
+            </div>
           </Card>
-        </>
+        </div>
       )}
 
       <DetailPanel open={!!selectedCO} onClose={() => setSelectedCO(null)} title={selectedCO?.coNumber || ''}>
@@ -305,6 +330,7 @@ export const Budget: React.FC = () => {
             </div>
             <RelatedItems items={getRelatedItemsForChangeOrder(selectedCO.id)} onNavigate={appNavigate} />
             {selectedCO.status !== 'approved' && (
+              <PermissionGate permission="change_orders.approve">
               <div style={{ paddingTop: spacing.md, borderTop: `1px solid ${colors.borderLight}` }}>
                 <Btn
                   variant="primary"
@@ -325,6 +351,7 @@ export const Budget: React.FC = () => {
                   Approve Change Order
                 </Btn>
               </div>
+              </PermissionGate>
             )}
           </div>
         )}

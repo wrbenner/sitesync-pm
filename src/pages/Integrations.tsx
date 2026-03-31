@@ -8,6 +8,7 @@ import { useProjectId } from '../hooks/useProjectId'
 import { INTEGRATION_REGISTRY, type IntegrationMeta } from '../services/integrations'
 import { FormModal, FormBody, FormFooter, FormField, FormInput } from '../components/forms/FormPrimitives'
 import { toast } from 'sonner'
+import { PermissionGate } from '../components/auth/PermissionGate'
 
 // ── Types ────────────────────────────────────────────────
 
@@ -272,6 +273,7 @@ export const Integrations: React.FC = () => {
                 <div style={{ display: 'flex', gap: spacing['2'], flexWrap: 'wrap' }}>
                   {isConnected ? (
                     <>
+                      <PermissionGate permission="project.settings">
                       <Btn
                         variant="ghost" size="sm"
                         icon={<RefreshCw size={14} style={isSyncing ? { animation: 'spin 1s linear infinite' } : undefined} />}
@@ -280,6 +282,7 @@ export const Integrations: React.FC = () => {
                       >
                         {isSyncing ? 'Syncing...' : 'Sync Now'}
                       </Btn>
+                      </PermissionGate>
                       <Btn
                         variant="ghost" size="sm"
                         icon={<ChevronRight size={14} />}
@@ -287,6 +290,7 @@ export const Integrations: React.FC = () => {
                       >
                         Details
                       </Btn>
+                      <PermissionGate permission="project.settings">
                       <Btn
                         variant="ghost" size="sm"
                         icon={<X size={14} />}
@@ -295,8 +299,10 @@ export const Integrations: React.FC = () => {
                       >
                         Disconnect
                       </Btn>
+                      </PermissionGate>
                     </>
                   ) : (
+                    <PermissionGate permission="project.settings">
                     <Btn
                       variant="primary" size="sm"
                       icon={<Check size={14} />}
@@ -305,6 +311,7 @@ export const Integrations: React.FC = () => {
                     >
                       Connect
                     </Btn>
+                    </PermissionGate>
                   )}
                 </div>
               </Card>

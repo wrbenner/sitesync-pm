@@ -190,7 +190,7 @@ export const Login: React.FC = () => {
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: colors.primaryOrange,
+                  color: colors.orangeText,
                   fontSize: typography.fontSize.sm,
                   fontFamily: typography.fontFamily,
                   cursor: 'pointer',
@@ -242,7 +242,7 @@ export const Login: React.FC = () => {
           <Link
             to="/signup"
             style={{
-              color: colors.primaryOrange,
+              color: colors.orangeText,
               textDecoration: 'none',
               fontWeight: typography.fontWeight.medium,
             }}

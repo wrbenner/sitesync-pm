@@ -163,9 +163,9 @@ export const TimeMachine: React.FC = () => {
 
   return (
     <PageContainer title="Time Machine" subtitle="Scrub through your project history">
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '12px 16px', marginBottom: '16px', backgroundColor: 'rgba(124, 93, 199, 0.04)', borderRadius: '8px', borderLeft: '3px solid #7C5DC7' }}>
-        <Sparkles size={14} color="#7C5DC7" style={{ marginTop: 2, flexShrink: 0 }} />
-        <p style={{ fontSize: '13px', color: '#1A1613', margin: 0, lineHeight: 1.5 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: spacing['3'], padding: `${spacing['3']} ${spacing['4']}`, marginBottom: spacing['4'], backgroundColor: colors.statusReviewSubtle, borderRadius: borderRadius.md, borderLeft: `3px solid ${colors.statusReview}` }}>
+        <Sparkles size={14} color={colors.statusReview} style={{ marginTop: 2, flexShrink: 0 }} />
+        <p style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, margin: 0, lineHeight: 1.5 }}>
           AI detected 3 periods of accelerated progress. Patterns suggest weather and crew size are the primary drivers.
         </p>
       </div>
@@ -194,7 +194,7 @@ export const TimeMachine: React.FC = () => {
           <Calendar size={16} color={colors.textTertiary} />
           <span style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>{snap.label}</span>
           {snap.milestone && (
-            <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.primaryOrange, backgroundColor: colors.orangeSubtle, padding: `${spacing['1']} ${spacing['2']}`, borderRadius: borderRadius.full }}>
+            <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.orangeText, backgroundColor: colors.orangeSubtle, padding: `${spacing['1']} ${spacing['2']}`, borderRadius: borderRadius.full }}>
               {snap.milestone}
             </span>
           )}
@@ -212,7 +212,7 @@ export const TimeMachine: React.FC = () => {
         <ProgressBar value={snap.progress} height={8} color={colors.primaryOrange} />
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: spacing['1'] }}>
           <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>0%</span>
-          <span style={{ fontSize: typography.fontSize.caption, color: colors.primaryOrange, fontWeight: typography.fontWeight.semibold }}>{snap.progress}% complete</span>
+          <span style={{ fontSize: typography.fontSize.caption, color: colors.orangeText, fontWeight: typography.fontWeight.semibold }}>{snap.progress}% complete</span>
           <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>100%</span>
         </div>
       </Card>
@@ -293,7 +293,7 @@ export const TimeMachine: React.FC = () => {
           >
             {playing ? <Pause size={16} /> : <Play size={16} />}
           </button>
-          {playing && <span style={{ fontSize: typography.fontSize.caption, color: colors.primaryOrange, fontWeight: typography.fontWeight.semibold }}>Playing...</span>}
+          {playing && <span style={{ fontSize: typography.fontSize.caption, color: colors.orangeText, fontWeight: typography.fontWeight.semibold }}>Playing...</span>}
           <Btn variant="secondary" size="sm" icon={<SkipForward size={14} />} onClick={handleSpeedRun}>{playing ? 'Stop' : 'Speed Run'}</Btn>
           <Btn
             variant={compareIndex !== null ? 'primary' : 'secondary'}
@@ -368,7 +368,7 @@ export const TimeMachine: React.FC = () => {
                     transition: `all ${transitions.instant}`,
                   }} />
                   <span style={{
-                    fontSize: '9px', color: isCurrent ? colors.primaryOrange : colors.textTertiary,
+                    fontSize: '9px', color: isCurrent ? colors.orangeText : colors.textTertiary,
                     fontWeight: isCurrent ? typography.fontWeight.semibold : typography.fontWeight.normal,
                     whiteSpace: 'nowrap',
                   }}>
@@ -405,7 +405,7 @@ export const TimeMachine: React.FC = () => {
             {/* Schedule Progress */}
             <div style={{ padding: spacing['3'], backgroundColor: colors.surfaceInset, borderRadius: borderRadius.md }}>
               <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0, marginBottom: spacing['1'] }}>Schedule Progress</p>
-              <p style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.primaryOrange, margin: 0, marginBottom: spacing['2'] }}>{snap.progress}%</p>
+              <p style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.orangeText, margin: 0, marginBottom: spacing['2'] }}>{snap.progress}%</p>
               <div style={{ height: 4, backgroundColor: colors.borderSubtle, borderRadius: 2 }}>
                 <div style={{ height: '100%', width: `${snap.progress}%`, backgroundColor: colors.primaryOrange, borderRadius: 2, transition: `width ${transitions.quick}` }} />
               </div>

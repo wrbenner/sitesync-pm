@@ -7,6 +7,7 @@
 export const colors = {
   // Brand
   primaryOrange: '#F47820',
+  orangeText: '#C45A0C', // AA compliant (5.5:1 on white) for text use
   orangeHover: '#E06A10',
   orangePressed: '#D05E08',
   orangeSubtle: 'rgba(244, 120, 32, 0.08)',
@@ -61,6 +62,42 @@ export const colors = {
   // Utility
   white: '#FFFFFF',
 
+  // Overlay / Backdrop
+  overlayDark: 'rgba(0, 0, 0, 0.4)',
+  overlayLight: 'rgba(255, 255, 255, 0.9)',
+  overlayScrim: 'rgba(0, 0, 0, 0.6)',
+
+  // Indigo / AI accent
+  indigo: '#4F46E5',
+  indigoSubtle: 'rgba(79, 70, 229, 0.06)',
+
+  // Additional status variants
+  statusInfoBright: '#4A9EE8',
+  statusWarning: '#D97706',
+  statusWarningSubtle: 'rgba(217, 119, 6, 0.06)',
+  statusSuccess: '#166534',
+  statusSuccessSubtle: 'rgba(22, 101, 52, 0.06)',
+
+  // Chart / Accent palette
+  chartGreen: '#A3E635',
+  chartCyan: '#06B6D4',
+  chartAmber: '#FB923C',
+  chartPurple: '#7C3AED',
+  chartPink: '#E07070',
+  chartRed: '#E05252',
+
+  // Neutral grays (for icons, dividers, disabled states)
+  gray300: '#D0D0D0',
+  gray400: '#B0B0B0',
+  gray500: '#8B8680',
+  gray600: '#6B6560',
+  gray700: '#5C5550',
+
+  // Error banner
+  errorBannerBg: 'rgba(201, 59, 59, 0.06)',
+  warningBannerBg: 'rgba(196, 133, 12, 0.06)',
+  infoBannerBg: 'rgba(58, 123, 200, 0.06)',
+
   // Legacy aliases (for components that haven't been updated yet)
   tealSuccess: '#2D8A6E',
   red: '#C93B3B',
@@ -78,6 +115,50 @@ export const colors = {
   orangeGradientStart: '#F47820',
   orangeGradientEnd: '#FF9C42',
   orangeMedium: 'rgba(244, 120, 32, 0.08)',
+} as const;
+
+// ── Visualization Colors ───────────────────────────────
+// Colors for drawing viewers, annotations, and data visualizations.
+
+export const vizColors = {
+  dark: '#1a1a2e',
+  darkText: '#1A1613',
+  success: '#00ff88',
+  success2: '#6BBF59',
+  neutral: '#B0B0B0',
+  gridLine: '#e0e0e0',
+  annotation: '#ff4444',
+  highlight: '#ffff00',
+} as const;
+
+// ── PDF Export Colors ──────────────────────────────────
+// Colors for PDF/print export templates.
+
+export const pdfColors = {
+  text: '#333333',
+  border: '#cccccc',
+  background: '#f9f9f9',
+  pageNumber: '#666666',
+} as const;
+
+// ── Trade Colors ────────────────────────────────────────
+// Construction trade-specific colors for crew pages, daily logs, etc.
+
+export const tradeColors: Record<string, string> = {
+  carpentry: '#8B5E3C',
+  electrical: '#D97706',
+  plumbing: '#3A7BC8',
+  concrete: '#8C8580',
+  structural: '#C93B3B',
+  mechanical: '#06B6D4',
+  fire_protection: '#E05252',
+  finishing: '#7C5DC7',
+  general: '#5C5550',
+  roofing: '#4F46E5',
+  glazing: '#2D8A6E',
+  painting: '#FB923C',
+  excavation: '#A04808',
+  landscaping: '#166534',
 } as const;
 
 // ── Dark Mode Colors ─────────────────────────────────────

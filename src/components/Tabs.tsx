@@ -17,6 +17,7 @@ interface TabsProps {
 export const Tabs: React.FC<TabsProps> = ({ tabs, activeTab, onChange }) => {
   return (
     <div
+      role="tablist"
       style={{
         display: 'flex',
         gap: spacing['6'],
@@ -29,13 +30,17 @@ export const Tabs: React.FC<TabsProps> = ({ tabs, activeTab, onChange }) => {
         return (
           <button
             key={tab.id}
+            role="tab"
+            aria-selected={isActive}
+            aria-controls={`tabpanel-${tab.id}`}
+            id={`tab-${tab.id}`}
             onClick={() => onChange(tab.id)}
             style={{
               position: 'relative',
               padding: `${spacing['3']} 0`,
               border: 'none',
               backgroundColor: 'transparent',
-              color: isActive ? colors.primaryOrange : colors.textSecondary,
+              color: isActive ? colors.orangeText : colors.textSecondary,
               fontSize: typography.fontSize.sm,
               fontFamily: typography.fontFamily,
               fontWeight: isActive ? typography.fontWeight.semibold : typography.fontWeight.medium,
@@ -52,7 +57,7 @@ export const Tabs: React.FC<TabsProps> = ({ tabs, activeTab, onChange }) => {
                 style={{
                   fontSize: typography.fontSize.caption,
                   fontWeight: typography.fontWeight.medium,
-                  color: isActive ? colors.primaryOrange : colors.textTertiary,
+                  color: isActive ? colors.orangeText : colors.textTertiary,
                   backgroundColor: isActive ? colors.orangeSubtle : colors.surfaceInset,
                   padding: `1px ${spacing['2']}`,
                   borderRadius: '9999px',

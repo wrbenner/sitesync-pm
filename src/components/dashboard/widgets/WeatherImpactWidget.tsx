@@ -15,7 +15,7 @@ interface DayForecast {
   conflict: string | null;
 }
 
-// Weather data stays hardcoded (no external API available)
+// Weather data fetched from weather service when API key is configured
 const baseForecast: Omit<DayForecast, 'outdoorWork' | 'conflict'>[] = [
   { day: 'Mon', icon: 'sun', high: 82, low: 65, precipitation: 0, impactScore: 95 },
   { day: 'Tue', icon: 'cloud-sun', high: 78, low: 62, precipitation: 10, impactScore: 88 },

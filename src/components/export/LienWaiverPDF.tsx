@@ -4,9 +4,10 @@
 
 import React from 'react'
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer'
+import { vizColors } from '../../styles/theme'
 
 const s = StyleSheet.create({
-  page: { padding: 48, fontSize: 10, fontFamily: 'Helvetica', color: '#1A1613', lineHeight: 1.6 },
+  page: { padding: 48, fontSize: 10, fontFamily: 'Helvetica', color: vizColors.darkText, lineHeight: 1.6 },
   title: { fontSize: 14, fontFamily: 'Helvetica-Bold', textAlign: 'center', marginBottom: 4 },
   subtitle: { fontSize: 10, textAlign: 'center', color: '#5C5550', marginBottom: 20 },
   section: { marginBottom: 16 },
@@ -16,10 +17,10 @@ const s = StyleSheet.create({
   bold: { fontFamily: 'Helvetica-Bold' },
   fieldRow: { flexDirection: 'row', gap: 16, marginBottom: 8 },
   field: { flex: 1 },
-  underline: { borderBottomWidth: 1, borderBottomColor: '#1A1613', paddingBottom: 2, marginBottom: 4, minHeight: 16 },
+  underline: { borderBottomWidth: 1, borderBottomColor: vizColors.darkText, paddingBottom: 2, marginBottom: 4, minHeight: 16 },
   signatureBlock: { marginTop: 32, flexDirection: 'row', gap: 48 },
   signatureField: { flex: 1 },
-  signatureLine: { borderBottomWidth: 1, borderBottomColor: '#1A1613', marginTop: 40, marginBottom: 4 },
+  signatureLine: { borderBottomWidth: 1, borderBottomColor: vizColors.darkText, marginTop: 40, marginBottom: 4 },
   signatureLabel: { fontSize: 8, color: '#5C5550' },
   notice: { marginTop: 20, padding: 12, backgroundColor: '#FEF7F2', borderRadius: 4, borderWidth: 0.5, borderColor: '#F47820' },
   noticeText: { fontSize: 8, color: '#5C5550', lineHeight: 1.5 },

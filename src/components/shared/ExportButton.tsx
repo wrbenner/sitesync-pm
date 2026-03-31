@@ -1,6 +1,6 @@
 import React, { useState, lazy, Suspense } from 'react'
 import { Download, ChevronDown, FileText, Table2, Sheet } from 'lucide-react'
-import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme'
+import { colors, spacing, typography, borderRadius, shadows, transitions, vizColors } from '../../styles/theme'
 
 // Lazy load PDF rendering
 const PDFDownloadLink = lazy(() => import('@react-pdf/renderer').then(m => ({ default: m.PDFDownloadLink })))
@@ -50,7 +50,7 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
 
       {open && (
         <>
-          <div style={{ position: 'fixed', inset: 0, zIndex: 50 }} onClick={() => setOpen(false)} />
+          <div style={{ position: 'fixed', inset: 0, zIndex: 50 }} onClick={() => setOpen(false)} role="presentation" aria-hidden="true" />
           <div style={{
             position: 'absolute',
             top: '100%',
@@ -107,7 +107,7 @@ const menuItemStyle: React.CSSProperties = {
   backgroundColor: 'transparent',
   fontSize: '13px',
   fontFamily: '"Inter", sans-serif',
-  color: '#1A1613',
+  color: vizColors.darkText,
   cursor: 'pointer',
   textAlign: 'left' as const,
   textDecoration: 'none',

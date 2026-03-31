@@ -68,6 +68,9 @@ export const Dropdown: React.FC<DropdownProps> = ({
       )}
       <button
         onClick={() => setOpen(!open)}
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        aria-label={label ? undefined : placeholder}
         style={{
           width: '100%',
           display: 'flex',
@@ -122,6 +125,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search..."
+                  aria-label="Filter options"
                   style={{
                     border: 'none',
                     background: 'none',
@@ -135,10 +139,12 @@ export const Dropdown: React.FC<DropdownProps> = ({
               </div>
             </div>
           )}
-          <div style={{ overflow: 'auto', maxHeight: '200px' }}>
+          <div role="listbox" aria-label={label || placeholder} style={{ overflow: 'auto', maxHeight: '200px' }}>
             {filtered.map((opt) => (
               <button
                 key={opt.value}
+                role="option"
+                aria-selected={opt.value === value}
                 onClick={() => {
                   onChange(opt.value);
                   setOpen(false);
@@ -150,7 +156,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
                   padding: `${spacing['2']} ${spacing['3']}`,
                   border: 'none',
                   backgroundColor: opt.value === value ? colors.orangeSubtle : 'transparent',
-                  color: opt.value === value ? colors.primaryOrange : colors.textPrimary,
+                  color: opt.value === value ? colors.orangeText : colors.textPrimary,
                   fontSize: typography.fontSize.sm,
                   fontFamily: typography.fontFamily,
                   fontWeight: opt.value === value ? typography.fontWeight.medium : typography.fontWeight.normal,

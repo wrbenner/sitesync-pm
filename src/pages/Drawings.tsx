@@ -7,17 +7,18 @@ import { useQuery } from '../hooks/useQuery';
 import { AIAnnotationIndicator } from '../components/ai/AIAnnotation';
 import { getAnnotationsForEntity } from '../data/aiAnnotations';
 import { DrawingViewer } from '../components/drawings/DrawingViewer';
+import { PermissionGate } from '../components/auth/PermissionGate';
 
 const disciplineColorMap: Record<string, string> = {
-  Architectural: '#3A7BC8',
-  Structural: '#2D8A6E',
-  Mechanical: '#F47820',
-  Electrical: '#C4850C',
-  Plumbing: '#7C5DC7',
-  Landscape: '#2D8A6E',
-  'Fire Protection': '#C93B3B',
-  Civil: '#8C8580',
-  'Interior Design': '#E07070',
+  Architectural: colors.statusInfo,
+  Structural: colors.statusActive,
+  Mechanical: colors.primaryOrange,
+  Electrical: colors.statusPending,
+  Plumbing: colors.statusReview,
+  Landscape: colors.statusActive,
+  'Fire Protection': colors.statusCritical,
+  Civil: colors.statusNeutral,
+  'Interior Design': colors.chartPink,
 };
 
 
@@ -82,9 +83,11 @@ export const Drawings: React.FC = () => {
     <PageContainer
       title="Drawings"
       actions={
-        <Btn variant="primary" size="md" icon={<Upload size={16} />} onClick={() => addToast('success', 'Drawing set uploaded successfully')}>
-          Upload Set
-        </Btn>
+        <PermissionGate permission="drawings.upload">
+          <Btn variant="primary" size="md" icon={<Upload size={16} />} onClick={() => addToast('success', 'Drawing set uploaded successfully')}>
+            Upload Set
+          </Btn>
+        </PermissionGate>
       }
     >
       <div
@@ -170,7 +173,7 @@ export const Drawings: React.FC = () => {
               </div>
             ))}
             {!loading && sortedDrawings.map((drawing, index) => {
-              const thumbColor = disciplineColorMap[drawing.discipline] || '#8C8580';
+              const thumbColor = disciplineColorMap[drawing.discipline] || colors.statusNeutral;
               const linked = linkedItems[drawing.id];
               const viewed = lastViewed[drawing.id];
               return (
@@ -234,7 +237,7 @@ export const Drawings: React.FC = () => {
                   <span style={{ fontSize: typography.fontSize.sm }}>
                     {linked ? (
                       <span
-                        style={{ color: colors.primaryOrange, cursor: 'pointer', fontSize: typography.fontSize.sm }}
+                        style={{ color: colors.orangeText, cursor: 'pointer', fontSize: typography.fontSize.sm }}
                         onClick={(e) => { e.stopPropagation(); addToast('info', 'Opening linked items for ' + drawing.setNumber); }}
                       >
                         {linked.rfis} RFIs · {linked.submittals} Sub
@@ -255,11 +258,11 @@ export const Drawings: React.FC = () => {
               );
             })}
             {!loading && sortedDrawings.length === 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', textAlign: 'center' }}>
-                <FileText size={32} color="#A09890" style={{ marginBottom: '12px' }} />
-                <p style={{ fontSize: '14px', fontWeight: 500, color: '#1A1613', margin: 0, marginBottom: '4px' }}>No drawings match your filters</p>
-                <p style={{ fontSize: '13px', color: '#6B6560', margin: 0, marginBottom: '16px' }}>Try adjusting your discipline filter</p>
-                <button onClick={() => setFilter('All')} style={{ padding: '6px 16px', backgroundColor: 'transparent', border: '1px solid #E5E1DC', borderRadius: '6px', fontSize: '13px', fontFamily: '"Inter", sans-serif', color: '#6B6560', cursor: 'pointer' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: `${spacing['6']} ${spacing['4']}`, textAlign: 'center' }}>
+                <FileText size={32} color={colors.textTertiary} style={{ marginBottom: spacing['3'] }} />
+                <p style={{ fontSize: typography.fontSize.body, fontWeight: 500, color: colors.textPrimary, margin: 0, marginBottom: spacing['1'] }}>No drawings match your filters</p>
+                <p style={{ fontSize: typography.fontSize.sm, color: colors.gray600, margin: 0, marginBottom: spacing['4'] }}>Try adjusting your discipline filter</p>
+                <button onClick={() => setFilter('All')} style={{ padding: `${spacing['1']} ${spacing['4']}`, backgroundColor: 'transparent', border: `1px solid ${colors.border}`, borderRadius: borderRadius.md, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, color: colors.gray600, cursor: 'pointer' }}>
                   Clear Filters
                 </button>
               </div>
