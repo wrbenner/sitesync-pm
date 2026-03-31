@@ -162,36 +162,36 @@ RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
 BLUE='\033[0;34m'; CYAN='\033[0;36m'; MAGENTA='\033[0;35m'
 BOLD='\033[1m'; DIM='\033[2m'; NC='\033[0m'
 
-log()      { echo -e "${BLUE}[$(date +%H:%M:%S)]${NC} $1"; }
-success()  { echo -e "${GREEN}[$(date +%H:%M:%S)] ✓${NC} $1"; }
-warn()     { echo -e "${YELLOW}[$(date +%H:%M:%S)] ⚠${NC} $1"; }
-error()    { echo -e "${RED}[$(date +%H:%M:%S)] ✗${NC} $1"; }
-invent()   { echo -e "${MAGENTA}[$(date +%H:%M:%S)] ✦ INVENTING:${NC} $1"; }
+log()      { echo -e "${BLUE}[$(date +%H:%M:%S)]${NC} $1" >&2; }
+success()  { echo -e "${GREEN}[$(date +%H:%M:%S)] ✓${NC} $1" >&2; }
+warn()     { echo -e "${YELLOW}[$(date +%H:%M:%S)] ⚠${NC} $1" >&2; }
+error()    { echo -e "${RED}[$(date +%H:%M:%S)] ✗${NC} $1" >&2; }
+invent()   { echo -e "${MAGENTA}[$(date +%H:%M:%S)] ✦ INVENTING:${NC} $1" >&2; }
 header()   {
-    echo -e "\n${BOLD}${CYAN}══════════════════════════════════════════════════════════════════════${NC}"
-    echo -e "${BOLD}${CYAN}  $1${NC}"
-    echo -e "${BOLD}${CYAN}══════════════════════════════════════════════════════════════════════${NC}\n"
+    echo -e "\n${BOLD}${CYAN}══════════════════════════════════════════════════════════════════════${NC}" >&2
+    echo -e "${BOLD}${CYAN}  $1${NC}" >&2
+    echo -e "${BOLD}${CYAN}══════════════════════════════════════════════════════════════════════${NC}\n" >&2
 }
 subheader() {
-    echo -e "\n${BOLD}  ── $1 ──${NC}"
+    echo -e "\n${BOLD}  ── $1 ──${NC}" >&2
 }
 
 # Startup manifesto — printed once, sets the tone for everything that follows
 print_manifesto() {
-    echo ""
-    echo -e "${BOLD}${CYAN}  ┌─────────────────────────────────────────────────────────────────┐${NC}"
-    echo -e "${BOLD}${CYAN}  │                                                                 │${NC}"
-    echo -e "${BOLD}${CYAN}  │   SITESYNC AI — AUTONOMOUS EVOLUTION ENGINE  v4.0              │${NC}"
-    echo -e "${BOLD}${CYAN}  │                                                                 │${NC}"
-    echo -e "${BOLD}${CYAN}  │   This engine does not rest. It does not compromise.           │${NC}"
-    echo -e "${BOLD}${CYAN}  │   It reads your vision. It studies your competitors.           │${NC}"
-    echo -e "${BOLD}${CYAN}  │   It finds every weakness and eliminates it.                   │${NC}"
-    echo -e "${BOLD}${CYAN}  │   And when there is nothing left to fix, it invents.           │${NC}"
-    echo -e "${BOLD}${CYAN}  │                                                                 │${NC}"
-    echo -e "${BOLD}${CYAN}  │   Go to sleep, Walker. We have work to do.                    │${NC}"
-    echo -e "${BOLD}${CYAN}  │                                                                 │${NC}"
-    echo -e "${BOLD}${CYAN}  └─────────────────────────────────────────────────────────────────┘${NC}"
-    echo ""
+    echo "" >&2
+    echo -e "${BOLD}${CYAN}  ┌─────────────────────────────────────────────────────────────────┐${NC}" >&2
+    echo -e "${BOLD}${CYAN}  │                                                                 │${NC}" >&2
+    echo -e "${BOLD}${CYAN}  │   SITESYNC AI — AUTONOMOUS EVOLUTION ENGINE  v4.0              │${NC}" >&2
+    echo -e "${BOLD}${CYAN}  │                                                                 │${NC}" >&2
+    echo -e "${BOLD}${CYAN}  │   This engine does not rest. It does not compromise.           │${NC}" >&2
+    echo -e "${BOLD}${CYAN}  │   It reads your vision. It studies your competitors.           │${NC}" >&2
+    echo -e "${BOLD}${CYAN}  │   It finds every weakness and eliminates it.                   │${NC}" >&2
+    echo -e "${BOLD}${CYAN}  │   And when there is nothing left to fix, it invents.           │${NC}" >&2
+    echo -e "${BOLD}${CYAN}  │                                                                 │${NC}" >&2
+    echo -e "${BOLD}${CYAN}  │   Go to sleep, Walker. We have work to do.                    │${NC}" >&2
+    echo -e "${BOLD}${CYAN}  │                                                                 │${NC}" >&2
+    echo -e "${BOLD}${CYAN}  └─────────────────────────────────────────────────────────────────┘${NC}" >&2
+    echo "" >&2
 }
 
 # ── Utility functions ─────────────────────────────────────────────────────────
@@ -325,18 +325,18 @@ call_claude() {
 preflight() {
     print_manifesto
 
-    echo -e "${DIM}  Project:  ${NC}${BOLD}${PROJECT_DIR}${NC}"
-    echo -e "${DIM}  Run dir:  ${NC}${RUN_DIR}"
-    echo -e "${DIM}  Models:   ${NC}Audit=${AUDIT_MODEL} | Code=${CODE_MODEL} | Decomp=${DECOMP_MODEL}"
-    echo -e "${DIM}  Budget:   ${NC}${MAX_CYCLES} cycles max, \$${MAX_SPEND} spend limit"
-    echo -e "${DIM}  Mode:     ${NC}$([ "$DRY_RUN" = "true" ] && echo "DRY RUN (no code changes)" || echo "LIVE (will modify code)")"
-    echo ""
+    echo -e "${DIM}  Project:  ${NC}${BOLD}${PROJECT_DIR}${NC}" >&2
+    echo -e "${DIM}  Run dir:  ${NC}${RUN_DIR}" >&2
+    echo -e "${DIM}  Models:   ${NC}Audit=${AUDIT_MODEL} | Code=${CODE_MODEL} | Decomp=${DECOMP_MODEL}" >&2
+    echo -e "${DIM}  Budget:   ${NC}${MAX_CYCLES} cycles max, \$${MAX_SPEND} spend limit" >&2
+    echo -e "${DIM}  Mode:     ${NC}$([ "$DRY_RUN" = "true" ] && echo "DRY RUN (no code changes)" || echo "LIVE (will modify code)")" >&2
+    echo "" >&2
 
     # API key
     if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
         error "ANTHROPIC_API_KEY not set."
-        echo "  Run: export ANTHROPIC_API_KEY='sk-ant-...'"
-        echo "  Get one at: https://console.anthropic.com/settings/keys"
+        echo "  Run: export ANTHROPIC_API_KEY='sk-ant-...'" >&2
+        echo "  Get one at: https://console.anthropic.com/settings/keys" >&2
         exit 1
     fi
     success "API key configured"
@@ -344,7 +344,7 @@ preflight() {
     # Claude Code CLI
     if ! command -v claude &>/dev/null; then
         error "Claude Code CLI not found."
-        echo "  Run: npm install -g @anthropic-ai/claude-code"
+        echo "  Run: npm install -g @anthropic-ai/claude-code" >&2
         exit 1
     fi
     local cc_ver
@@ -1414,9 +1414,9 @@ main() {
         echo '{"last_completed_cycle":'"$CYCLE"',"estimated_spend":"'"$ESTIMATED_SPEND"'","prompts_executed":'"$TOTAL_PROMPTS_EXECUTED"'}' > "$STATE_FILE"
 
         # Status summary
-        echo ""
-        echo -e "${BOLD}  Cycle ${CYCLE} complete:${NC} ${modules_processed} modules, \$${CYCLE_SPEND} this cycle, \$${ESTIMATED_SPEND} total, $(elapsed)"
-        echo ""
+        echo "" >&2
+        echo -e "${BOLD}  Cycle ${CYCLE} complete:${NC} ${modules_processed} modules, \$${CYCLE_SPEND} this cycle, \$${ESTIMATED_SPEND} total, $(elapsed)" >&2
+        echo "" >&2
 
         # Check if we are done
         if [ "$any_issues" = "false" ]; then
@@ -1430,21 +1430,21 @@ main() {
     generate_report "$([ "$ALL_CLEAN" = "true" ] && echo "COMPLETE" || echo "STOPPED")"
     notify_completion "$([ "$ALL_CLEAN" = "true" ] && echo "COMPLETE" || echo "STOPPED")"
 
-    echo ""
-    echo -e "${BOLD}${GREEN}══════════════════════════════════════════════════════${NC}"
-    echo -e "${BOLD}${GREEN}  SITESYNC AI ENGINE DONE${NC}"
-    echo -e "${BOLD}${GREEN}══════════════════════════════════════════════════════${NC}"
-    echo ""
-    echo -e "  ${DIM}Cycles:${NC}          ${CYCLE}"
-    echo -e "  ${DIM}Spend:${NC}           \$${ESTIMATED_SPEND}"
-    echo -e "  ${DIM}Duration:${NC}        $(elapsed)"
-    echo -e "  ${DIM}Prompts run:${NC}     ${TOTAL_PROMPTS_EXECUTED}"
-    echo -e "  ${DIM}Features invented:${NC} ${FEATURES_INVENTED}"
-    echo -e "  ${DIM}Report:${NC}          ${RUN_DIR}/MORNING_BRIEFING.md"
-    echo ""
-    echo -e "  ${CYAN}git log --oneline -20${NC}   — see every change"
-    echo -e "  ${CYAN}npm run dev${NC}             — run the app"
-    echo ""
+    echo "" >&2
+    echo -e "${BOLD}${GREEN}══════════════════════════════════════════════════════${NC}" >&2
+    echo -e "${BOLD}${GREEN}  SITESYNC AI ENGINE DONE${NC}" >&2
+    echo -e "${BOLD}${GREEN}══════════════════════════════════════════════════════${NC}" >&2
+    echo "" >&2
+    echo -e "  ${DIM}Cycles:${NC}          ${CYCLE}" >&2
+    echo -e "  ${DIM}Spend:${NC}           \$${ESTIMATED_SPEND}" >&2
+    echo -e "  ${DIM}Duration:${NC}        $(elapsed)" >&2
+    echo -e "  ${DIM}Prompts run:${NC}     ${TOTAL_PROMPTS_EXECUTED}" >&2
+    echo -e "  ${DIM}Features invented:${NC} ${FEATURES_INVENTED}" >&2
+    echo -e "  ${DIM}Report:${NC}          ${RUN_DIR}/MORNING_BRIEFING.md" >&2
+    echo "" >&2
+    echo -e "  ${CYAN}git log --oneline -20${NC}   — see every change" >&2
+    echo -e "  ${CYAN}npm run dev${NC}             — run the app" >&2
+    echo "" >&2
 }
 
 main "$@"
