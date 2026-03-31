@@ -6,7 +6,7 @@ export default defineConfig(({ mode }) => {
   const isAnalyze = process.env.ANALYZE === 'true'
 
   return {
-    base: '/sitesync-pm/',
+    base: process.env.VERCEL ? '/' : '/sitesync-pm/',
     plugins: [
       react(),
       // Bundle visualizer: run ANALYZE=true npm run build to generate stats.html
