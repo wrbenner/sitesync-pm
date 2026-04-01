@@ -803,6 +803,12 @@ Return ONLY valid JSON (no markdown fences):
 }
 
 Generate issues sorted by severity descending. Cap at ${MAX_ISSUES_PER_MODULE} issues.
+
+CRITICAL OUTPUT RULES:
+- Return ONLY the JSON object. No preamble, no explanation, no markdown fences.
+- Do NOT write any text before or after the JSON.
+- Start your response with { and end with }.
+- Keep issue descriptions and prompts concise but complete.
 ${invention_section}"
 
     local tools_arg=""
@@ -811,15 +817,73 @@ ${invention_section}"
     fi
 
     local response
-    response=$(call_claude "$AUDIT_MODEL" "$prompt" 8192 "" "$tools_arg")
+    response=$(call_claude "$AUDIT_MODEL" "$prompt" 16384 "" "$tools_arg")
 
     # Save raw response for debugging
     echo "$response" > "${cycle_dir}/audit_${module_name}_raw.json"
+
+    # Check for truncation (stop_reason: max_tokens)
+    local stop_reason
+    stop_reason=$(echo "$response" | jq -r '.stop_reason // "end_turn"' 2>/dev/null)
+    if [ "$stop_reason" = "max_tokens" ]; then
+        warn "${module_label}: response truncated (hit max_tokens) — attempting repair"
+    fi
 
     local text
     text=$(extract_text "$response")
     local audit_json
     audit_json=$(extract_json "$text")
+
+    # If extract_json returned {} and we were truncated, try to repair by closing the JSON
+    if [ "$audit_json" = "{}" ] && [ "$stop_reason" = "max_tokens" ]; then
+        log "Attempting truncated JSON repair..."
+        local repaired
+        repaired=$(printf '%s' "$text" | python3 -c '
+import sys, json
+
+text = sys.stdin.read()
+idx = text.find("{")
+if idx < 0:
+    print("{}")
+    sys.exit(0)
+
+partial = text[idx:]
+
+# Progressive cutback: strip chars from end until JSON parses
+for cutback in range(0, 3000, 10):
+    trimmed = partial[:len(partial)-cutback] if cutback > 0 else partial
+    trimmed = trimmed.rstrip().rstrip(",")
+
+    # Detect open string
+    in_string = False
+    escaped = False
+    for c in trimmed:
+        if escaped: escaped = False; continue
+        if c == "\\": escaped = True; continue
+        if c == "\"": in_string = not in_string
+
+    suffix = ""
+    if in_string:
+        suffix += "\""
+    suffix += "]" * max(0, trimmed.count("[") - trimmed.count("]"))
+    suffix += "}" * max(0, trimmed.count("{") - trimmed.count("}"))
+
+    try:
+        result = json.loads(trimmed + suffix)
+        print(json.dumps(result))
+        sys.exit(0)
+    except json.JSONDecodeError:
+        continue
+
+print("{}")
+' 2>/dev/null)
+        if [ -n "$repaired" ] && [ "$repaired" != "{}" ]; then
+            audit_json="$repaired"
+            success "Truncated JSON repaired successfully"
+        else
+            warn "JSON repair failed — response was too truncated"
+        fi
+    fi
 
     # Validate: must have .issues as an array (not null) and a non-empty .module field
     if echo "$audit_json" | jq -e '.issues | type == "array"' &>/dev/null; then
