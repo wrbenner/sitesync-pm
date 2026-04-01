@@ -22,9 +22,13 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ items, children }) => 
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
-    setPosition({ x: e.clientX, y: e.clientY });
+    const MENU_WIDTH = 188;
+    const MENU_HEIGHT = items.length * 36 + 8;
+    const clampedX = e.clientX + MENU_WIDTH > window.innerWidth ? e.clientX - MENU_WIDTH : e.clientX;
+    const clampedY = e.clientY + MENU_HEIGHT > window.innerHeight ? e.clientY - MENU_HEIGHT : e.clientY;
+    setPosition({ x: clampedX, y: clampedY });
     setOpen(true);
-  }, []);
+  }, [items.length]);
 
   useEffect(() => {
     if (!open) return;
