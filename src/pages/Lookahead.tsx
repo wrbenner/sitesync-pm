@@ -6,6 +6,8 @@ import { LookaheadBoard } from '../components/schedule/LookaheadBoard';
 import type { LookaheadTask } from '../components/schedule/LookaheadBoard';
 import { useCrews, useLookaheadTasks } from '../hooks/queries';
 import { useProjectId } from '../hooks/useProjectId';
+import { getWeatherForecast } from '../lib/weather';
+import type { WeatherDay } from '../lib/weather';
 
 const generateDays = (weeks: number): string[] => {
   const days: string[] = [];
@@ -39,6 +41,14 @@ export const Lookahead: React.FC = () => {
 
   // State for creating new task
   const [isCreating, setIsCreating] = useState(false);
+  const [weatherForecast, setWeatherForecast] = useState<WeatherDay[]>([]);
+
+  React.useEffect(() => {
+    if (!projectId) return;
+    getWeatherForecast(projectId, 21)
+      .then(setWeatherForecast)
+      .catch(() => setWeatherForecast([]));
+  }, [projectId]);
 
   // Map crew data to name strings for the board
   const crews = useMemo(() => crewData.map((c: any) => c.name as string), [crewData]);
@@ -85,6 +95,8 @@ export const Lookahead: React.FC = () => {
         readiness,
         constraints,
         progress: t.percent_complete ?? 0,
+        work_type: t.work_type as string | undefined,
+        location: t.location as string | undefined,
       };
     });
   }, [lookaheadTasks, crews, boardStartDate]);
@@ -231,6 +243,7 @@ export const Lookahead: React.FC = () => {
           days={days}
           crews={crews}
           weekView={weekView}
+          weatherForecast={weatherForecast}
           onTaskMove={handleTaskMove}
           onConstraintToggle={handleConstraintToggle}
         />

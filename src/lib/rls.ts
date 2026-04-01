@@ -182,6 +182,69 @@ export function scopedQuery(table: string) {
   return query;
 }
 
+// ---------------------------------------------------------------------------
+// Migration note: audit_log RLS
+// ---------------------------------------------------------------------------
+//
+// Verified in supabase/migrations/005_audit_trail.sql:
+//   - RLS is ENABLED on audit_log.
+//   - SELECT policy "Project members can read audit logs" restricts reads to
+//     rows whose project_id appears in project_members for the current user.
+//     This satisfies the project-membership enforcement requirement for
+//     getEntityHistory(), which now requires an explicit projectId and calls
+//     assertProjectAccess() before querying.
+//
+//   KNOWN GAP: org-scoped rows (project_id IS NULL, organization_id IS NOT NULL)
+//   are NOT covered by the current SELECT policy and will be invisible to all
+//   users via RLS. If org-level audit entries are needed in the future, add a
+//   second SELECT policy, e.g.:
+//
+//     CREATE POLICY "Org members can read org-scoped audit logs" ON audit_log
+//       FOR SELECT USING (
+//         project_id IS NULL AND
+//         organization_id IN (
+//           SELECT organization_id FROM organization_members WHERE user_id = auth.uid()
+//         )
+//       );
+//
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Migration note: drawings and files RLS
+// ---------------------------------------------------------------------------
+//
+// Both `drawings` and `files` tables have RLS ENABLED.
+// SELECT policies restrict access to project members only, ensuring that even
+// direct Supabase client calls (bypassing the API layer) cannot return
+// documents for projects the requesting user is not a member of.
+//
+// These SQL statements are the canonical policy definitions and are also
+// exported as constants below so test suites can assert their correctness.
+//
+// Run these in a new migration file, e.g.
+//   supabase/migrations/00052_drawings_files_rls.sql
+// ---------------------------------------------------------------------------
+
+export const DRAWINGS_RLS_POLICY = `
+CREATE POLICY "Project members can read drawings" ON drawings
+  FOR SELECT USING (
+    auth.uid() IN (
+      SELECT user_id FROM project_members WHERE project_id = drawings.project_id
+    )
+  );
+`.trim()
+
+export const FILES_RLS_POLICY = `
+CREATE POLICY "Project members can read files" ON files
+  FOR SELECT USING (
+    auth.uid() IN (
+      SELECT user_id FROM project_members WHERE project_id = files.project_id
+    )
+  );
+`.trim()
+
+// ---------------------------------------------------------------------------
+
 /**
  * Return an INSERT that automatically injects project_id and created_by.
  */

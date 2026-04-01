@@ -206,7 +206,8 @@ const ViewToggle: React.FC<{
 export const Directory: React.FC = () => {
   const projectId = useProjectId();
   const createDirectoryContact = useCreateDirectoryContact();
-  const { data: rawDirectory, isPending: loading } = useDirectoryContacts(projectId);
+  const { data: rawDirectoryResult, isPending: loading } = useDirectoryContacts(projectId);
+  const rawDirectory = rawDirectoryResult?.data;
 
   const directory = useMemo(() =>
     (rawDirectory || []).map(c => ({

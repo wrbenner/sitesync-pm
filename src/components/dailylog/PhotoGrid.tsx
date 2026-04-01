@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { Camera, MapPin, X, ChevronLeft, ChevronRight, Tag } from 'lucide-react';
+import React, { useState, useCallback } from 'react';
+import { Camera, MapPin, X, ChevronLeft, ChevronRight, Tag, Sparkles, RefreshCw } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, transitions, zIndex } from '../../styles/theme';
+import { aiService } from '../../lib/aiService';
 
 export type PhotoCategory = 'progress' | 'safety' | 'quality' | 'weather';
 
@@ -18,6 +19,7 @@ export interface DailyLogPhoto {
 interface PhotoGridProps {
   photos: DailyLogPhoto[];
   onCapture?: () => void;
+  onUpdateCaption?: (id: string, caption: string) => void;
 }
 
 const categoryConfig: Record<PhotoCategory, { label: string; color: string }> = {
@@ -27,9 +29,33 @@ const categoryConfig: Record<PhotoCategory, { label: string; color: string }> = 
   weather: { label: 'Weather', color: colors.statusPending },
 };
 
-export const PhotoGrid: React.FC<PhotoGridProps> = ({ photos, onCapture }) => {
+export const PhotoGrid: React.FC<PhotoGridProps> = ({ photos, onCapture, onUpdateCaption }) => {
   const [viewIndex, setViewIndex] = useState<number | null>(null);
+  const [batchRunning, setBatchRunning] = useState(false);
+  const [batchProgress, setBatchProgress] = useState({ done: 0, total: 0 });
   const viewing = viewIndex !== null ? photos[viewIndex] : null;
+
+  const handleAutoCaptionAll = useCallback(async () => {
+    if (photos.length === 0 || batchRunning) return;
+    setBatchRunning(true);
+    setBatchProgress({ done: 0, total: photos.length });
+
+    const results = await Promise.allSettled(
+      photos.map(async (photo) => {
+        const result = await aiService.analyzePhoto(photo.url);
+        setBatchProgress(prev => ({ ...prev, done: prev.done + 1 }));
+        return { id: photo.id, caption: result.caption };
+      })
+    );
+
+    results.forEach(result => {
+      if (result.status === 'fulfilled' && result.value.caption) {
+        onUpdateCaption?.(result.value.id, result.value.caption);
+      }
+    });
+
+    setBatchRunning(false);
+  }, [photos, batchRunning, onUpdateCaption]);
 
   const next = () => {
     if (viewIndex !== null && viewIndex < photos.length - 1) setViewIndex(viewIndex + 1);
@@ -40,6 +66,31 @@ export const PhotoGrid: React.FC<PhotoGridProps> = ({ photos, onCapture }) => {
 
   return (
     <>
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+      {photos.length > 0 && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: spacing['2'] }}>
+          <button
+            onClick={handleAutoCaptionAll}
+            disabled={batchRunning}
+            style={{
+              display: 'flex', alignItems: 'center', gap: spacing['1'],
+              padding: `${spacing['2']} ${spacing['3']}`,
+              backgroundColor: batchRunning ? colors.surfaceInset : colors.orangeSubtle,
+              color: batchRunning ? colors.textTertiary : colors.primaryOrange,
+              border: `1px solid ${batchRunning ? colors.borderSubtle : colors.primaryOrange}30`,
+              borderRadius: borderRadius.md, cursor: batchRunning ? 'not-allowed' : 'pointer',
+              fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold,
+              fontFamily: typography.fontFamily, opacity: batchRunning ? 0.8 : 1,
+            }}
+          >
+            {batchRunning ? (
+              <><RefreshCw size={12} style={{ animation: 'spin 1s linear infinite' }} /> Captioning {batchProgress.done}/{batchProgress.total}</>
+            ) : (
+              <><Sparkles size={12} /> Auto-caption all</>
+            )}
+          </button>
+        </div>
+      )}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: spacing['2'] }}>
         {photos.map((photo, idx) => {
           const cat = categoryConfig[photo.category];

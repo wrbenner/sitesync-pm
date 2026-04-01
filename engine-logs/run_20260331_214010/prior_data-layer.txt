@@ -1,0 +1,11 @@
+UNRESOLVED FROM CYCLE 1:
+- [partial] data-layer-C1-001: auditTrail.ts modified (+14 lines) but diff content not fully visible; error handling improvements present but transformSupabaseError integration unclear
+- [partial] data-layer-C2-002: organizations.ts significantly refactored (+163 lines changed) suggesting type safety improvements, but `any` cast removal not confirmed in diff
+- [not_fixed] data-layer-C3-003: projects.ts modified (+115 lines) but no evidence of replacing hardcoded AI health scores; changes appear unrelated to metrics placeholder issue
+- [partial] data-layer-H1-004: Multiple endpoints modified (activity, budget, documents, field, etc.) suggesting pagination work, but implementation details not visible in summary
+- [partial] data-layer-H2-005: budget.ts heavily modified (+399 lines) indicating significant refactoring, but hardcoded approved_cost fix not confirmed
+- [not_fixed] data-layer-H3-006: No evidence of column selection optimization in getPortfolioMetrics; changes present but unfetched field reduction unclear
+- [not_fixed] data-layer-H4-007: Diff shows read endpoints modifications only; no write/mutation endpoints added to data layer
+- [partial] data-layer-H5-008: projectScope.ts middleware modified (+40 lines) suggesting project_id filter improvements, but enforcement in query callback not confirmed
+- [not_fixed] data-layer-M1-009: No new lien waiver or pay application endpoints found in modified files list
+- [partial] data-layer-M2-010: aiService.ts modified (+25 lines) with error handling improvements visible, but full coverage of AI failure scenarios uncertain

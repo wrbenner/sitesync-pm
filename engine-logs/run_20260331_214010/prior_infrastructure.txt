@@ -1,0 +1,9 @@
+UNRESOLVED FROM CYCLE 1:
+- [partial] infrastructure-C1-001: projectScope.ts modified but no evidence of server-side RBAC enforcement added; client projectId still not validated against user permissions
+- [partial] infrastructure-C1-003: organizations.ts and projectMembers.ts modified (129 and 63 lines changed) but diff summary insufficient to confirm all `any` types removed
+- [partial] infrastructure-C1-004: organizations.ts and projects.ts updated but no confirmation of field selection or org membership guard implementation in diff
+- [not_fixed] infrastructure-H1-006: No evidence in diff that hardcoded aiHealthScore=85 and aiConfidenceLevel=74 values were replaced with real calculations
+- [not_fixed] infrastructure-H1-007: budget.ts modified (10 lines) but no indication that hardcoded approved_cost=0 was replaced with actual value calculation
+- [not_fixed] infrastructure-H1-008: No evidence in diff of pagination, filtering, or memory optimization for getPortfolioMetrics RFI/punch item fetching
+- [not_fixed] infrastructure-M1-009: projectMembers.ts modified but no evidence of role hierarchy enforcement checks added to addProjectMember/updateProjectMember
+- [not_fixed] infrastructure-M1-010: projectScope.ts modified (19 lines) but no evidence that unused _table parameter was removed or deduplication implemented

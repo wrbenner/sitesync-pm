@@ -52,6 +52,43 @@ export interface LienWaiverData {
   signedDate?: string
 }
 
+// Build LienWaiverData from a database LienWaiverRow plus project context.
+// Caller supplies the static project fields; the row fills in the sub-specific fields.
+export interface LienWaiverRowContext {
+  projectName: string
+  projectAddress: string
+  ownerName: string
+  contractorName: string
+  waiverState?: WaiverState
+}
+
+export function lienWaiverDataFromRow(
+  row: {
+    type: string
+    sub_name: string | null
+    amount: number | null
+    through_date: string | null
+    signed_by: string | null
+    signed_date: string | null
+  },
+  ctx: LienWaiverRowContext,
+): LienWaiverData {
+  const isConditional = row.type === 'conditional_progress' || row.type === 'conditional_final'
+  return {
+    waiverType: isConditional ? 'conditional' : 'unconditional',
+    waiverState: ctx.waiverState ?? 'generic',
+    projectName: ctx.projectName,
+    projectAddress: ctx.projectAddress,
+    ownerName: ctx.ownerName,
+    contractorName: ctx.contractorName,
+    claimantName: row.sub_name ?? '',
+    throughDate: row.through_date ?? '',
+    amount: row.amount ?? 0,
+    signedBy: row.signed_by ?? undefined,
+    signedDate: row.signed_date ?? undefined,
+  }
+}
+
 function fmtCurrency(n: number): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n)
 }

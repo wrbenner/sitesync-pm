@@ -1,8 +1,15 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, Download, Share2, Clock, User, Tag, FileText, FolderOpen } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Btn } from '../Primitives';
 import { colors, spacing, typography, borderRadius, shadows, zIndex } from '../../styles/theme';
+
+const pulseStyle: React.CSSProperties = {
+  backgroundColor: '#E5E7EB',
+  animation: 'pulse 1.5s ease-in-out infinite',
+  borderRadius: borderRadius.base,
+  opacity: 0.6,
+};
 
 interface FileItem {
   id: string | number;
@@ -28,6 +35,18 @@ const approvalStates: Record<string, { label: string; color: string }> = {
 };
 
 export const FilePreview: React.FC<FilePreviewProps> = ({ file, onClose }) => {
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const prevFileIdRef = useRef<string | number | null>(null);
+
+  useEffect(() => {
+    if (file && file.id !== prevFileIdRef.current) {
+      prevFileIdRef.current = file.id;
+      setPreviewLoading(true);
+      const timer = setTimeout(() => setPreviewLoading(false), 600);
+      return () => clearTimeout(timer);
+    }
+  }, [file]);
+
   if (!file) return null;
 
   const approval = file.name.includes('Structural') ? approvalStates.approved
@@ -65,23 +84,50 @@ export const FilePreview: React.FC<FilePreviewProps> = ({ file, onClose }) => {
             </div>
 
             <div style={{ flex: 1, overflow: 'auto', padding: `${spacing['4']} ${spacing['5']}` }}>
-              {/* Preview thumbnail */}
-              <div style={{
-                width: '100%', height: '160px', borderRadius: borderRadius.md,
-                background: file.type === 'folder' ? `linear-gradient(135deg, ${colors.orangeSubtle} 0%, ${colors.surfaceInset} 100%)` : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: spacing['5'],
-              }}>
-                {file.type === 'folder' ? <FolderOpen size={48} color={colors.primaryOrange} /> : <FileText size={48} color="rgba(255,255,255,0.5)" />}
-              </div>
+              {/* Preview thumbnail with loading shimmer */}
+              {previewLoading ? (
+                <div
+                  aria-hidden="true"
+                  style={{
+                    width: '100%',
+                    height: '160px',
+                    borderRadius: borderRadius.md,
+                    marginBottom: spacing['5'],
+                    ...pulseStyle,
+                  }}
+                />
+              ) : (
+                <div style={{
+                  width: '100%', height: '160px', borderRadius: borderRadius.md,
+                  background: file.type === 'folder' ? `linear-gradient(135deg, ${colors.orangeSubtle} 0%, ${colors.surfaceInset} 100%)` : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: spacing['5'],
+                }}>
+                  {file.type === 'folder' ? <FolderOpen size={48} color={colors.primaryOrange} /> : <FileText size={48} color="rgba(255,255,255,0.5)" />}
+                </div>
+              )}
 
               {/* File info */}
-              <h4 style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['3'] }}>{file.name}</h4>
+              {previewLoading ? (
+                <div aria-hidden="true" style={{ marginBottom: spacing['5'] }}>
+                  <div style={{ ...pulseStyle, width: '75%', height: 18, marginBottom: spacing['3'] }} />
+                  <div style={{ ...pulseStyle, width: '40%', height: 20, borderRadius: borderRadius.full, marginBottom: spacing['4'] }} />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
+                    <div style={{ ...pulseStyle, width: '55%', height: 14 }} />
+                    <div style={{ ...pulseStyle, width: '65%', height: 14 }} />
+                    <div style={{ ...pulseStyle, width: '45%', height: 14 }} />
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <h4 style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['3'] }}>{file.name}</h4>
 
-              {/* Approval status */}
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: spacing['1'], padding: `${spacing['1']} ${spacing['2']}`, backgroundColor: `${approval.color}12`, borderRadius: borderRadius.full, marginBottom: spacing['4'] }}>
-                <div style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: approval.color }} />
-                <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: approval.color }}>{approval.label}</span>
-              </div>
+                  {/* Approval status */}
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: spacing['1'], padding: `${spacing['1']} ${spacing['2']}`, backgroundColor: `${approval.color}12`, borderRadius: borderRadius.full, marginBottom: spacing['4'] }}>
+                    <div style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: approval.color }} />
+                    <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: approval.color }}>{approval.label}</span>
+                  </div>
+                </>
+              )}
 
               {/* Metadata */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'], marginBottom: spacing['5'] }}>

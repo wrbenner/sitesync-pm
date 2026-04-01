@@ -340,7 +340,8 @@ export const Safety: React.FC = () => {
   const { data: talks, isLoading: loadingTalks } = useToolboxTalks(projectId)
   const { data: certifications, isLoading: loadingCerts } = useSafetyCertifications(projectId)
   const { data: observations, isLoading: loadingObs } = useSafetyObservations(projectId)
-  const { data: dailyLogs } = useDailyLogs(projectId)
+  const { data: dailyLogsResult } = useDailyLogs(projectId)
+  const dailyLogs = dailyLogsResult?.data
 
 
   // ── KPIs ───────────────────────────────────────────────────

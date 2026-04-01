@@ -136,6 +136,30 @@ export function useRealtimeFlash(table: string, entityId: string): FlashType {
   return flash
 }
 
+// ── MetricFlash ─────────────────────────────────────────
+// Wraps a metric card and pulses an orange ring when realtime data refreshes.
+// Driven by the isFlashing flag returned from useBudgetRealtime.
+
+interface MetricFlashProps {
+  isFlashing: boolean
+  children: React.ReactNode
+}
+
+export const MetricFlash: React.FC<MetricFlashProps> = ({ isFlashing, children }) => (
+  <div
+    aria-live="polite"
+    style={{
+      borderRadius: borderRadius.md,
+      transition: 'box-shadow 0.35s ease-out',
+      boxShadow: isFlashing
+        ? `0 0 0 2px ${'#F47820'}66, 0 0 10px ${'#F47820'}22`
+        : 'none',
+    }}
+  >
+    {children}
+  </div>
+)
+
 // ── Animated List Item ──────────────────────────────────
 // Wrapper for list items that animates insert/delete.
 

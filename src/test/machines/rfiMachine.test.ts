@@ -131,17 +131,17 @@ describe('RFI State Machine', () => {
 
     it('overdue returns red', () => {
       const past = new Date(Date.now() - 3 * 86400000).toISOString()
-      expect(getDueDateUrgency(past).color).toBe('#C93B3B')
+      expect(getDueDateUrgency(past).color).toBe('var(--color-statusCritical)')
     })
 
     it('within 3 days returns amber', () => {
       const soon = new Date(Date.now() + 2 * 86400000).toISOString()
-      expect(getDueDateUrgency(soon).color).toBe('#C4850C')
+      expect(getDueDateUrgency(soon).color).toBe('var(--color-statusPending)')
     })
 
     it('future returns green', () => {
       const future = new Date(Date.now() + 10 * 86400000).toISOString()
-      expect(getDueDateUrgency(future).color).toBe('#2D8A6E')
+      expect(getDueDateUrgency(future).color).toBe('var(--color-statusActive)')
     })
   })
 
@@ -162,7 +162,7 @@ describe('RFI State Machine', () => {
       for (const s of statuses) {
         const c = getRFIStatusConfig(s)
         expect(c.label).toBeTruthy()
-        expect(c.color).toMatch(/^#/)
+        expect(c.color).toMatch(/^var\(/)
       }
     })
   })

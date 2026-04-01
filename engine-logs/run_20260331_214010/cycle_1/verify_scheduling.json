@@ -1,0 +1,57 @@
+{
+  "verifications": [
+    {
+      "id": "scheduling-C1-001",
+      "status": "not_fixed",
+      "note": "No changes to baseline tracking or slippage comparison logic in schedule.ts endpoint"
+    },
+    {
+      "id": "scheduling-C2-002",
+      "status": "partial",
+      "note": "ai.ts and aiService.ts modified (+77, +37 lines) but no evidence of predictive delay engine implementation in diff summary"
+    },
+    {
+      "id": "scheduling-C3-003",
+      "status": "not_fixed",
+      "note": "No metric card components or KPI calculation logic visible in provided diff"
+    },
+    {
+      "id": "scheduling-H1-004",
+      "status": "not_fixed",
+      "note": "No Gantt chart component updates detected; no drag-to-adjust, dependency arrows, or milestone markers implemented"
+    },
+    {
+      "id": "scheduling-H2-005",
+      "status": "partial",
+      "note": "WeatherCard.tsx modified (+16 lines) suggests weather overlay work, but no trade conflict detection visible"
+    },
+    {
+      "id": "scheduling-H3-006",
+      "status": "partial",
+      "note": "e2e/mobile.spec.ts added (+49 lines) indicates mobile testing, but no mobile-optimized view components in diff"
+    },
+    {
+      "id": "scheduling-H4-007",
+      "status": "partial",
+      "note": "ErrorBoundary.tsx updated (+17 lines), but no empty state or loading skeleton implementations visible in summary"
+    },
+    {
+      "id": "scheduling-M1-008",
+      "status": "not_fixed",
+      "note": "schedule.ts modified (+60 lines) but no TypeScript type definitions or construction-critical field additions evident"
+    },
+    {
+      "id": "scheduling-M2-009",
+      "status": "not_fixed",
+      "note": "No real-time update mechanism (WebSocket, polling, subscriptions) visible in api client or schedule endpoint changes"
+    },
+    {
+      "id": "scheduling-M3-010",
+      "status": "not_fixed",
+      "note": "No accessibility updates detected; no ARIA roles, keyboard navigation, or screen reader improvements in diff"
+    }
+  ],
+  "files_changed": 34,
+  "regression_detected": true,
+  "regression_description": "Large engine-logs snapshot (75738 lines) and state.json suggest potential data integrity issues or incomplete migration. Mobile spec added but core scheduling accessibility and real-time sync features still missing. AI endpoints modified but predictive engine not demonstrated. Risk: incomplete feature delivery disguised by infrastructure changes."
+}

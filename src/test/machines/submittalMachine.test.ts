@@ -114,8 +114,8 @@ describe('Submittal State Machine', () => {
       for (const status of statuses) {
         const config = getSubmittalStatusConfig(status)
         expect(config.label).toBeTruthy()
-        expect(config.color).toMatch(/^#/)
-        expect(config.bg).toMatch(/^rgba/)
+        expect(config.color).toMatch(/^var\(/)
+        expect(config.bg).toMatch(/^var\(/)
       }
     })
 
@@ -130,7 +130,7 @@ describe('Submittal State Machine', () => {
       for (const stamp of stamps) {
         const config = getStampConfig(stamp)
         expect(config.label).toBeTruthy()
-        expect(config.color).toMatch(/^#/)
+        expect(config.color).toMatch(/^var\(/)
       }
     })
 

@@ -1,6 +1,56 @@
 import { useEffect, useRef } from 'react'
 import { syncManager } from '../lib/syncManager'
 import { getSyncMetadata } from '../lib/offlineDb'
+import { buildProjectContext } from '../lib/aiPrompts'
+
+interface ContextCacheEntry {
+  context: string
+  fetchedAt: number
+}
+
+const contextCache = new Map<string, ContextCacheEntry>()
+const CONTEXT_TTL_MS = 5 * 60 * 1000
+
+export async function getCachedProjectContext(projectId: string): Promise<string> {
+  if (!projectId) return ''
+  const entry = contextCache.get(projectId)
+  if (entry && Date.now() - entry.fetchedAt < CONTEXT_TTL_MS) {
+    return entry.context
+  }
+  try {
+    const context = await buildProjectContext(projectId)
+    contextCache.set(projectId, { context, fetchedAt: Date.now() })
+    return context
+  } catch {
+    return entry?.context ?? ''
+  }
+}
+
+export function invalidateProjectContext(projectId: string): void {
+  contextCache.delete(projectId)
+}
+
+// ── Entity label cache (for activity feed enrichment) ────────
+
+interface EntityLabelCacheEntry {
+  label: string
+  fetchedAt: number
+}
+
+const entityLabelCache = new Map<string, EntityLabelCacheEntry>()
+const ENTITY_LABEL_TTL_MS = 5 * 60 * 1000
+
+/** Returns a cached label for the given cache key, or undefined if expired/missing. */
+export function getCachedEntityLabel(key: string): string | undefined {
+  const entry = entityLabelCache.get(key)
+  if (entry && Date.now() - entry.fetchedAt < ENTITY_LABEL_TTL_MS) return entry.label
+  return undefined
+}
+
+/** Stores a resolved entity label into the cache. */
+export function setCachedEntityLabel(key: string, label: string): void {
+  entityLabelCache.set(key, { label, fetchedAt: Date.now() })
+}
 
 /**
  * On mount (and when projectId changes), caches all project data to Dexie

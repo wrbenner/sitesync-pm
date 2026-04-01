@@ -1,0 +1,57 @@
+{
+  "verifications": [
+    {
+      "id": "document-management-C1-001",
+      "status": "not_fixed",
+      "note": "No changes in src/api/endpoints/documents.ts indicate version control or revision comparison implementation"
+    },
+    {
+      "id": "document-management-C2-002",
+      "status": "partial",
+      "note": "organizationScope.ts and projectScope.ts middleware added, but documents.ts endpoint changes unclear - RLS enforcement not explicitly verified in diff"
+    },
+    {
+      "id": "document-management-C3-003",
+      "status": "not_fixed",
+      "note": "documents.ts modified (+177 lines) but diff content not shown; cannot verify itemCount hardcoding fix"
+    },
+    {
+      "id": "document-management-H1-004",
+      "status": "not_fixed",
+      "note": "No evidence of bulk operations, drag-and-drop, or keyboard navigation in provided diff summary"
+    },
+    {
+      "id": "document-management-H2-005",
+      "status": "partial",
+      "note": "ai.ts and aiService.ts modified (+99, +37 lines), suggesting AI integration attempted, but no specific auto-tagging/clash detection implementation visible"
+    },
+    {
+      "id": "document-management-H3-006",
+      "status": "not_fixed",
+      "note": "No changes to disciplineColor function or design token color integration visible in diff"
+    },
+    {
+      "id": "document-management-H4-007",
+      "status": "partial",
+      "note": "ErrorBoundary.tsx modified (+17 lines), but no empty states or loading skeletons confirmed in diff"
+    },
+    {
+      "id": "document-management-H5-008",
+      "status": "not_fixed",
+      "note": "No real-time collaboration, presence indicators, or live markup sync changes detected"
+    },
+    {
+      "id": "document-management-M1-009",
+      "status": "not_fixed",
+      "note": "DrawingViewer accessibility and ARIA labels not addressed in provided changes"
+    },
+    {
+      "id": "document-management-M2-010",
+      "status": "not_fixed",
+      "note": "No type safety improvements to DrawingRow/FileRow spread operators visible in diff"
+    }
+  ],
+  "files_changed": 32,
+  "regression_detected": true,
+  "regression_description": "Mobile e2e tests added but document-management critical issues remain unresolved. Middleware improvements detected but core functionality fixes (version control, RLS, itemCount, AI) not confirmed in diff. High risk of regression if deployment proceeds without verification of actual code changes in endpoints."
+}

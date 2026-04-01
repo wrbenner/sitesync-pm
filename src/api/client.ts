@@ -1,18 +1,41 @@
 // Supabase API client wrapper with typed error handling.
+//
+// WARNING: Do NOT pass the raw `supabase` client to project-scoped query
+// callbacks. Always use projectScopedQuery, which automatically enforces
+// project_id isolation via createScopedClient. Bypassing this allows
+// cross-project data leakage.
 
 import { supabase } from '../lib/supabase'
 import type { Database } from '../types/database'
 import { transformSupabaseError } from './errors'
-import { validateProjectId } from './middleware/projectScope'
+import { assertProjectAccess } from './middleware/projectScope'
 import { dedup, queryKey } from '../lib/requestDedup'
 
 type TableName = keyof Database['public']['Tables']
 type DbClient = typeof supabase
 type QueryResult<T> = PromiseLike<{ data: T | null; error: { message: string; code?: string; details?: string | null } | null }>
 
-// Typed query helper — callback receives the fully-typed Supabase client
+/**
+ * Wraps the Supabase client so that every .from() call automatically
+ * appends .eq('project_id', projectId). This prevents callers from
+ * accidentally reading rows that belong to a different project.
+ */
+export function createScopedClient(client: DbClient, projectId: string): DbClient {
+  return new Proxy(client, {
+    get(target, prop) {
+      if (prop === 'from') {
+        return (table: string) => (target.from as (t: string) => any)(table).eq('project_id', projectId)
+      }
+      return (target as any)[prop]
+    },
+  })
+}
+
+/**
+ * Use for simple reads that do not need per-project access enforcement or
+ * deduplication. The callback receives the typed Supabase client.
+ */
 export async function supabaseQuery<T>(
-  _table: TableName,
   query: (client: DbClient) => QueryResult<T>
 ): Promise<T> {
   const { data, error } = await query(supabase)
@@ -20,9 +43,11 @@ export async function supabaseQuery<T>(
   return data as T
 }
 
-// Typed mutation helper — callback receives the fully-typed Supabase client
+/**
+ * Use for INSERT, UPDATE, and DELETE operations. Mutations are never
+ * deduplicated, so they always execute immediately.
+ */
 export async function supabaseMutation<T>(
-  _table: TableName,
   mutation: (client: DbClient) => QueryResult<T>
 ): Promise<T> {
   const { data, error } = await mutation(supabase)
@@ -30,16 +55,24 @@ export async function supabaseMutation<T>(
   return data as T
 }
 
-// Project-scoped query helper: validates projectId then runs query pre-filtered by project
+/**
+ * Use for project-scoped reads. Asserts the caller has access to projectId,
+ * then deduplicates concurrent calls with the same table + projectId so that
+ * rapid re-renders never fan out into redundant network requests.
+ */
 export async function projectScopedQuery<T>(
-  _table: TableName,
+  table: TableName,
   projectId: string,
   query: (client: DbClient) => QueryResult<T>
 ): Promise<T> {
-  validateProjectId(projectId)
-  const { data, error } = await query(supabase)
-  if (error) throw transformSupabaseError(error)
-  return data as T
+  await assertProjectAccess(projectId)
+  const key = queryKey(table, { project_id: projectId })
+  const scopedClient = createScopedClient(supabase, projectId)
+  return dedup(key, async () => {
+    const { data, error } = await query(scopedClient)
+    if (error) throw transformSupabaseError(error)
+    return data as T
+  })
 }
 
 // Deduplicated query helper — coalesces concurrent identical requests into a single network call
@@ -54,6 +87,34 @@ export async function dedupQuery<T>(
     if (error) throw transformSupabaseError(error)
     return data as T
   })
+}
+
+/**
+ * Runs a paginated Supabase query. The queryFn receives (from, to) range indices
+ * and must use `.select('*', { count: 'exact' })` and `.range(from, to)`.
+ * Returns a PaginatedResult with the mapped rows and total count.
+ */
+export async function buildPaginatedQuery<TRaw, TResult = TRaw>(
+  queryFn: (from: number, to: number) => PromiseLike<{
+    data: TRaw[] | null
+    error: { message: string; code?: string; details?: string | null } | null
+    count: number | null
+  }>,
+  pagination: import('../types/api').PaginationParams = {},
+  transform?: (item: TRaw) => TResult
+): Promise<import('../types/api').PaginatedResult<TResult>> {
+  const { page = 1, pageSize = 50 } = pagination
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
+  const { data, error, count } = await queryFn(from, to)
+  if (error) throw transformSupabaseError(error)
+  const rows = (data ?? []) as TRaw[]
+  return {
+    data: transform ? rows.map(transform) : (rows as unknown as TResult[]),
+    total: count ?? 0,
+    page,
+    pageSize,
+  }
 }
 
 // Re-export for convenience

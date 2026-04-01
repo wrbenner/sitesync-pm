@@ -32,9 +32,9 @@ const typeColors = {
 
 export const CaptureTimeline: React.FC<CaptureTimelineProps> = ({ events, onSelect }) => {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', position: 'relative' }}>
+    <div role="list" style={{ display: 'flex', flexDirection: 'column', position: 'relative' }}>
       {/* Timeline line */}
-      <div style={{ position: 'absolute', left: 15, top: 8, bottom: 8, width: 2, backgroundColor: colors.borderSubtle }} />
+      <div aria-hidden="true" style={{ position: 'absolute', left: 15, top: 8, bottom: 8, width: 2, backgroundColor: colors.borderSubtle }} />
 
       {events.map((event) => {
         const Icon = typeIcons[event.type];
@@ -42,7 +42,11 @@ export const CaptureTimeline: React.FC<CaptureTimelineProps> = ({ events, onSele
         return (
           <div
             key={event.id}
+            role="listitem"
+            aria-label={`${event.type} capture: ${event.title}, ${event.time}`}
             onClick={() => onSelect?.(event)}
+            onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && onSelect) { e.preventDefault(); onSelect(event); } }}
+            tabIndex={onSelect ? 0 : undefined}
             style={{
               display: 'flex', alignItems: 'flex-start', gap: spacing['4'],
               padding: `${spacing['3']} 0`, cursor: onSelect ? 'pointer' : 'default',

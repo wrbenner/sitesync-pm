@@ -1,9 +1,131 @@
 import React, { useState } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
-import { X, Loader2 } from 'lucide-react'
+import { X, Loader2, FolderOpen, ChevronRight } from 'lucide-react'
 import { colors, spacing, typography, borderRadius, shadows, zIndex, transitions } from '../../styles/theme'
-import { Btn } from '../Primitives'
 import { motion, AnimatePresence } from 'framer-motion'
+
+// ── Folder Picker Modal ──────────────────────────────────
+
+export interface FolderOption {
+  id: string
+  name: string
+  depth?: number
+}
+
+interface FolderPickerModalProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  folders: FolderOption[]
+  onSelect: (folder: FolderOption) => void
+  title?: string
+}
+
+export const FolderPickerModal: React.FC<FolderPickerModalProps> = ({
+  open,
+  onOpenChange,
+  folders,
+  onSelect,
+  title = 'Move to Folder',
+}) => {
+  const [hoveredId, setHoveredId] = useState<string | null>(null)
+
+  return (
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+      <Dialog.Portal>
+        <Dialog.Overlay style={{
+          position: 'fixed', inset: 0,
+          backgroundColor: 'rgba(0,0,0,0.4)',
+          backdropFilter: 'blur(4px)',
+          zIndex: zIndex.modal as number,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <Dialog.Content
+            style={{
+              width: 400,
+              backgroundColor: colors.white,
+              borderRadius: borderRadius.xl,
+              boxShadow: shadows.panel,
+              fontFamily: typography.fontFamily,
+              overflow: 'hidden',
+            }}
+            aria-describedby="folder-picker-description"
+          >
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: `${spacing['4']} ${spacing['5']}`,
+              borderBottom: `1px solid ${colors.borderSubtle}`,
+            }}>
+              <Dialog.Title style={{
+                margin: 0,
+                fontSize: typography.fontSize.subtitle,
+                fontWeight: typography.fontWeight.semibold,
+                color: colors.textPrimary,
+              }}>
+                {title}
+              </Dialog.Title>
+              <Dialog.Close asChild>
+                <button style={{
+                  all: 'unset', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  width: 28, height: 28,
+                  borderRadius: borderRadius.full,
+                  color: colors.textTertiary,
+                }}>
+                  <X size={16} />
+                </button>
+              </Dialog.Close>
+            </div>
+
+            <p id="folder-picker-description" style={{
+              margin: 0,
+              padding: `${spacing['3']} ${spacing['5']} 0`,
+              fontSize: typography.fontSize.sm,
+              color: colors.textSecondary,
+            }}>
+              Select a destination folder.
+            </p>
+
+            <div style={{ maxHeight: 320, overflowY: 'auto', padding: spacing['3'] }}>
+              {folders.length === 0 && (
+                <p style={{ padding: `${spacing['4']} ${spacing['5']}`, fontSize: typography.fontSize.sm, color: colors.textTertiary, textAlign: 'center', margin: 0 }}>
+                  No folders available
+                </p>
+              )}
+              {folders.map((folder) => (
+                <button
+                  key={folder.id}
+                  onClick={() => { onSelect(folder); onOpenChange(false); }}
+                  onMouseEnter={() => setHoveredId(folder.id)}
+                  onMouseLeave={() => setHoveredId(null)}
+                  style={{
+                    all: 'unset',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: spacing['3'],
+                    width: '100%',
+                    padding: `${spacing['2']} ${spacing['3']}`,
+                    paddingLeft: `calc(${spacing['3']} + ${(folder.depth || 0) * 20}px)`,
+                    borderRadius: borderRadius.md,
+                    cursor: 'pointer',
+                    backgroundColor: hoveredId === folder.id ? colors.surfaceHover : 'transparent',
+                    transition: `background-color ${transitions.instant}`,
+                    boxSizing: 'border-box',
+                  }}
+                >
+                  <FolderOpen size={16} color={colors.primaryOrange} />
+                  <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, flex: 1 }}>
+                    {folder.name}
+                  </span>
+                  <ChevronRight size={14} color={colors.textTertiary} />
+                </button>
+              ))}
+            </div>
+          </Dialog.Content>
+        </Dialog.Overlay>
+      </Dialog.Portal>
+    </Dialog.Root>
+  )
+}
 
 // ── Bulk Action Bar ─────────────────────────────────────
 // Floats at the bottom of the screen when items are selected.

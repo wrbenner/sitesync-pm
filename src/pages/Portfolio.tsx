@@ -1,9 +1,11 @@
-import React, { useState } from 'react'
+import React, { useState, useCallback } from 'react'
 import { Briefcase, Plus, FileText, BarChart3 } from 'lucide-react'
 import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton } from '../components/Primitives'
 import { DataTable, createColumnHelper } from '../components/shared/DataTable'
+import { ErrorBoundary } from '../components/ErrorBoundary'
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme'
-import { usePortfolios, usePortfolioProjects, useExecutiveReports } from '../hooks/queries'
+import { usePortfolios, usePortfolioProjects, useExecutiveReports, useOrgPortfolioMetrics } from '../hooks/queries'
+import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 
 // ── Column helpers ─────────────────────────────────────────
@@ -125,13 +127,65 @@ const tabs: { key: TabKey; label: string; icon: React.ElementType }[] = [
   { key: 'reports', label: 'Reports', icon: FileText },
 ]
 
+// ── Portfolio Metrics Section ──────────────────────────────
+// Rendered inside an ErrorBoundary so a total metrics failure shows
+// a targeted error state rather than crashing the whole page.
+
+const ORG_ID = '11111111-1111-1111-1111-111111111111'
+
+interface PortfolioMetricsSectionProps {
+  totalValue: number
+  activeCount: number
+  currentPortfolioName: string
+  latestReportLabel: string
+  loading: boolean
+}
+
+const PortfolioMetricsSection: React.FC<PortfolioMetricsSectionProps> = ({
+  totalValue,
+  activeCount,
+  currentPortfolioName,
+  latestReportLabel,
+  loading,
+}) => {
+  const { data: orgMetrics } = useOrgPortfolioMetrics(ORG_ID)
+  const warnings = orgMetrics?.warnings ?? []
+
+  const rfiWarning = warnings.find((w) => w.includes('RFI'))
+  const punchWarning = warnings.find((w) => w.includes('Punch'))
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'], marginBottom: spacing['6'] }}>
+      <MetricBox
+        label="Total Contract Value"
+        value={loading ? '...' : fmtCurrency(totalValue)}
+      />
+      <MetricBox
+        label="Active Projects"
+        value={loading ? '...' : String(activeCount)}
+      />
+      <MetricBox
+        label="Open RFIs"
+        value={orgMetrics === undefined ? '...' : (orgMetrics.open_rfis !== undefined ? String(orgMetrics.open_rfis) : 'N/A')}
+        warning={rfiWarning}
+      />
+      <MetricBox
+        label="Open Punch Items"
+        value={orgMetrics === undefined ? '...' : (orgMetrics.open_punch_items !== undefined ? String(orgMetrics.open_punch_items) : 'N/A')}
+        warning={punchWarning}
+      />
+    </div>
+  )
+}
+
 // ── Component ──────────────────────────────────────────────
 
 export const Portfolio: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('overview')
   const portfolioId = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'
+  const queryClient = useQueryClient()
 
-  const { data: portfolios } = usePortfolios('11111111-1111-1111-1111-111111111111')
+  const { data: portfolios } = usePortfolios(ORG_ID)
   const { data: portfolioProjects, isPending: loading } = usePortfolioProjects(portfolioId)
   const { data: reports } = useExecutiveReports(portfolioId)
 
@@ -141,6 +195,10 @@ export const Portfolio: React.FC = () => {
   const activeCount = projects.filter((p: any) => p.status === 'active').length
   const currentPortfolio = (portfolios || []).find((p: any) => p.id === portfolioId)
   const latestReport = (reports || [])[0]
+
+  const handleMetricsRetry = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['org_portfolio_metrics', ORG_ID] })
+  }, [queryClient])
 
   return (
     <PageContainer
@@ -205,25 +263,19 @@ export const Portfolio: React.FC = () => {
         })}
       </div>
 
-      {/* KPI Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'], marginBottom: spacing['6'] }}>
-        <MetricBox
-          label="Total Contract Value"
-          value={loading ? '...' : fmtCurrency(totalValue)}
+      {/* KPI Row — wrapped in ErrorBoundary so a total metrics failure shows a targeted error state */}
+      <ErrorBoundary
+        message="Portfolio metrics could not be loaded. Check your connection and try again."
+        onRetry={handleMetricsRetry}
+      >
+        <PortfolioMetricsSection
+          totalValue={totalValue}
+          activeCount={activeCount}
+          currentPortfolioName={currentPortfolio?.name || 'Default'}
+          latestReportLabel={latestReport ? (latestReport.type || 'Available') : 'None'}
+          loading={loading}
         />
-        <MetricBox
-          label="Active Projects"
-          value={loading ? '...' : String(activeCount)}
-        />
-        <MetricBox
-          label="Portfolio"
-          value={loading ? '...' : (currentPortfolio?.name || 'Default')}
-        />
-        <MetricBox
-          label="Latest Report"
-          value={latestReport ? (latestReport.type || 'Available') : 'None'}
-        />
-      </div>
+      </ErrorBoundary>
 
       {/* Tab Content */}
       {activeTab === 'overview' && (

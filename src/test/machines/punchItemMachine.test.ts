@@ -71,17 +71,17 @@ describe('Punch Item State Machine', () => {
       for (const s of statuses) {
         const config = getPunchStatusConfig(s)
         expect(config.label).toBeTruthy()
-        expect(config.color).toMatch(/^#/)
-        expect(config.bg).toMatch(/^rgba/)
+        expect(config.color).toMatch(/^var\(/)
+        expect(config.bg).toMatch(/^var\(/)
       }
     })
 
     it('open is red', () => {
-      expect(getPunchStatusConfig('open').color).toBe('#C93B3B')
+      expect(getPunchStatusConfig('open').color).toBe('var(--color-statusCritical)')
     })
 
     it('verified is green', () => {
-      expect(getPunchStatusConfig('verified').color).toBe('#2D8A6E')
+      expect(getPunchStatusConfig('verified').color).toBe('var(--color-statusActive)')
     })
   })
 

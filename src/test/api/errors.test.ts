@@ -145,6 +145,18 @@ describe('transformSupabaseError', () => {
     expect(err.userMessage).toBeTruthy()
   })
 
+  it('does not propagate hint field from Supabase errors', () => {
+    const err = transformSupabaseError({
+      message: 'query error',
+      code: '99999',
+      hint: 'Check the index on column user_id in table audit_log',
+    })
+    expect((err as unknown as Record<string, unknown>).hint).toBeUndefined()
+    expect(err.userMessage).not.toContain('user_id')
+    expect(err.userMessage).not.toContain('audit_log')
+    expect(err.details).toBeUndefined()
+  })
+
   it('humanizes timeout messages', () => {
     const err = transformSupabaseError({ message: 'query timeout after 5000ms' })
     expect(err.userMessage).toContain('timed out')
@@ -158,5 +170,70 @@ describe('transformSupabaseError', () => {
   it('humanizes not null messages', () => {
     const err = transformSupabaseError({ message: 'not null violation on column title' })
     expect(err.userMessage).toContain('required field')
+  })
+})
+
+describe('auditTrail error transformation', () => {
+  it('does not expose table names in userMessage for generic DB errors', () => {
+    const err = transformSupabaseError({
+      message: 'relation "audit_log" does not exist',
+      code: '42P01',
+      details: 'ERROR: relation "audit_log" does not exist at character 15',
+    })
+    expect(err).toBeInstanceOf(ApiError)
+    expect(err.userMessage).not.toContain('audit_log')
+    expect(err.userMessage).not.toContain('relation')
+  })
+
+  it('does not expose SQL details in userMessage for PostgREST errors', () => {
+    const err = transformSupabaseError({
+      message: 'permission denied for table audit_log',
+      code: '42501',
+      details: null,
+    })
+    expect(err).toBeInstanceOf(PermissionError)
+    expect(err.userMessage).not.toContain('audit_log')
+    expect(err.userMessage).not.toContain('table')
+  })
+
+  it('returns safe fallback message for unknown audit query errors', () => {
+    const err = transformSupabaseError({
+      message: 'canceling statement due to conflict with recovery on table "public.audit_log"',
+      code: '40001',
+    })
+    expect(err).toBeInstanceOf(ApiError)
+    expect(err.userMessage).not.toContain('audit_log')
+    expect(err.userMessage).not.toContain('public.')
+  })
+
+  it('exposes userMessage suitable for toast display', () => {
+    const err = transformSupabaseError({ message: 'could not connect to server' })
+    expect(err.userMessage).toBeTruthy()
+    expect(typeof err.userMessage).toBe('string')
+    expect(err.userMessage.length).toBeGreaterThan(0)
+  })
+
+  it('transformed audit errors always have message and code properties', () => {
+    const inputs = [
+      { message: 'relation "audit_log" does not exist', code: '42P01' },
+      { message: 'permission denied for table audit_log', code: '42501' },
+      { message: 'canceling statement due to conflict with recovery on table "public.audit_log"', code: '40001' },
+    ]
+    for (const input of inputs) {
+      const err = transformSupabaseError(input)
+      expect(typeof err.message).toBe('string')
+      expect(err.message.length).toBeGreaterThan(0)
+      expect(typeof err.code).toBe('string')
+      expect(err.code.length).toBeGreaterThan(0)
+    }
+  })
+
+  it('unauthorized audit trail access throws ApiError with status 403', () => {
+    const err = new ApiError('You do not have access to this project', 403, 'FORBIDDEN')
+    expect(err).toBeInstanceOf(ApiError)
+    expect(err.status).toBe(403)
+    expect(typeof err.message).toBe('string')
+    expect(typeof err.code).toBe('string')
+    expect(err.userMessage).not.toContain('audit_log')
   })
 })

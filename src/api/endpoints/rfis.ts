@@ -1,6 +1,6 @@
-import { supabase, transformSupabaseError } from '../client'
-import { validateProjectId } from '../middleware/projectScope'
-import type { RfiRow } from '../../types/api'
+import { supabase, transformSupabaseError, buildPaginatedQuery, supabaseMutation } from '../client'
+import { assertProjectAccess, validateProjectId } from '../middleware/projectScope'
+import type { RfiRow, PaginationParams, PaginatedResult, CreateRfiPayload } from '../../types/api'
 
 function mapRfi(r: RfiRow) {
   return {
@@ -13,15 +13,55 @@ function mapRfi(r: RfiRow) {
   }
 }
 
-export const getRfis = async (projectId: string) => {
-  validateProjectId(projectId)
-  const { data, error } = await supabase.from('rfis').select('*').eq('project_id', projectId).order('number', { ascending: false })
-  if (error) throw transformSupabaseError(error)
-  return (data || []).map(mapRfi)
+export type MappedRfi = ReturnType<typeof mapRfi>
+
+export const getRfis = async (
+  projectId: string,
+  pagination?: PaginationParams
+): Promise<PaginatedResult<MappedRfi>> => {
+  await assertProjectAccess(projectId)
+  return buildPaginatedQuery<RfiRow, MappedRfi>(
+    (from, to) =>
+      supabase
+        .from('rfis')
+        .select('*', { count: 'exact' })
+        .eq('project_id', projectId)
+        .order('number', { ascending: false })
+        .range(from, to),
+    pagination,
+    mapRfi
+  )
 }
 export const getRfiById = async (projectId: string, id: string) => {
-  validateProjectId(projectId)
+  await assertProjectAccess(projectId)
   const { data, error } = await supabase.from('rfis').select('*').eq('project_id', projectId).eq('id', id).single()
   if (error) throw transformSupabaseError(error)
+  return mapRfi(data)
+}
+
+export const createRfi = async (projectId: string, payload: CreateRfiPayload): Promise<MappedRfi> => {
+  validateProjectId(projectId)
+  const data = await supabaseMutation<RfiRow>(client =>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (client.from('rfis') as any).insert({ ...payload, project_id: projectId }).select().single()
+  )
+  return mapRfi(data)
+}
+
+export const updateRfi = async (
+  projectId: string,
+  id: string,
+  updates: Partial<CreateRfiPayload> & { status?: string }
+): Promise<MappedRfi> => {
+  validateProjectId(projectId)
+  const data = await supabaseMutation<RfiRow>(client =>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (client.from('rfis') as any)
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('project_id', projectId)
+      .select()
+      .single()
+  )
   return mapRfi(data)
 }

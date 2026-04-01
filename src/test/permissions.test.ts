@@ -1,4 +1,18 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+
+vi.mock('../lib/supabase', () => {
+  const mockQueryBuilder = {
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    maybeSingle: vi.fn(),
+  }
+  return {
+    supabase: {
+      auth: { getUser: vi.fn() },
+      from: vi.fn(() => mockQueryBuilder),
+    },
+  }
+})
 import {
   PERMISSION_MATRIX,
   ROLE_LEVELS,
@@ -246,6 +260,134 @@ describe('Module Permissions', () => {
   })
 })
 
+// ── Organization Scope Access Control ────────────────────
+
+describe('Organization Scope Access Control', () => {
+  const VALID_ORG_ID = '99999999-1234-4234-8234-123456789abc'
+  const AUTHED_USER_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+
+  beforeEach(async () => {
+    const { supabase } = await import('../lib/supabase')
+    vi.mocked(supabase.auth.getUser).mockResolvedValue({
+      data: { user: { id: AUTHED_USER_ID } as any },
+      error: null,
+    })
+  })
+
+  it('throws a 403 ApiError when user is not a member of the org', async () => {
+    const { supabase } = await import('../lib/supabase')
+    const mockBuilder = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+    }
+    vi.mocked(supabase.from).mockReturnValue(mockBuilder as any)
+
+    const { assertOrganizationAccess } = await import('../api/middleware/organizationScope')
+    const { ApiError } = await import('../api/errors')
+
+    await expect(assertOrganizationAccess(VALID_ORG_ID)).rejects.toMatchObject({
+      status: 403,
+      code: 'FORBIDDEN',
+    })
+    await expect(assertOrganizationAccess(VALID_ORG_ID)).rejects.toBeInstanceOf(ApiError)
+  })
+
+  it('resolves when user is a member of the org', async () => {
+    const { supabase } = await import('../lib/supabase')
+    const mockBuilder = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({ data: { id: 'member-row-id' }, error: null }),
+    }
+    vi.mocked(supabase.from).mockReturnValue(mockBuilder as any)
+
+    const { assertOrganizationAccess } = await import('../api/middleware/organizationScope')
+
+    await expect(assertOrganizationAccess(VALID_ORG_ID)).resolves.toBeUndefined()
+  })
+
+  it('throws a 401 AuthError when no user session exists', async () => {
+    const { supabase } = await import('../lib/supabase')
+    vi.mocked(supabase.auth.getUser).mockResolvedValue({
+      data: { user: null },
+      error: { message: 'Not authenticated' } as any,
+    })
+
+    const { assertOrganizationAccess } = await import('../api/middleware/organizationScope')
+    const { AuthError } = await import('../api/errors')
+
+    await expect(assertOrganizationAccess(VALID_ORG_ID)).rejects.toBeInstanceOf(AuthError)
+  })
+})
+
+// ── Role Escalation Prevention ───────────────────────────
+
+describe('Role Escalation Prevention', () => {
+  describe('ROLE_HIERARCHY ordering', () => {
+    it('project_executive is the highest level', async () => {
+      const { ROLE_HIERARCHY } = await import('../types/tenant')
+      expect(ROLE_HIERARCHY['project_executive']).toBeGreaterThan(ROLE_HIERARCHY['project_manager'])
+      expect(ROLE_HIERARCHY['project_executive']).toBeGreaterThan(ROLE_HIERARCHY['superintendent'])
+    })
+
+    it('viewer is the lowest level', async () => {
+      const { ROLE_HIERARCHY } = await import('../types/tenant')
+      const viewerLevel = ROLE_HIERARCHY['viewer']
+      for (const level of Object.values(ROLE_HIERARCHY)) {
+        expect(viewerLevel).toBeLessThanOrEqual(level)
+      }
+    })
+  })
+
+  describe('assertCanAssignRole', () => {
+    it('project_manager cannot assign project_executive (same or higher role)', async () => {
+      const { assertCanAssignRole } = await import('../api/endpoints/projectMembers')
+      expect(() => assertCanAssignRole('project_manager', 'project_executive')).toThrow()
+    })
+
+    it('project_manager cannot assign project_manager (equal role)', async () => {
+      const { assertCanAssignRole } = await import('../api/endpoints/projectMembers')
+      expect(() => assertCanAssignRole('project_manager', 'project_manager')).toThrow()
+    })
+
+    it('viewer cannot assign any role', async () => {
+      const { assertCanAssignRole } = await import('../api/endpoints/projectMembers')
+      const roles = ['viewer', 'subcontractor', 'field_engineer', 'superintendent', 'project_manager', 'project_executive'] as const
+      for (const role of roles) {
+        expect(() => assertCanAssignRole('viewer', role)).toThrow()
+      }
+    })
+
+    it('project_executive can assign project_manager', async () => {
+      const { assertCanAssignRole } = await import('../api/endpoints/projectMembers')
+      expect(() => assertCanAssignRole('project_executive', 'project_manager')).not.toThrow()
+    })
+
+    it('project_executive can assign viewer', async () => {
+      const { assertCanAssignRole } = await import('../api/endpoints/projectMembers')
+      expect(() => assertCanAssignRole('project_executive', 'viewer')).not.toThrow()
+    })
+
+    it('superintendent can assign field_engineer but not project_manager', async () => {
+      const { assertCanAssignRole } = await import('../api/endpoints/projectMembers')
+      expect(() => assertCanAssignRole('superintendent', 'field_engineer')).not.toThrow()
+      expect(() => assertCanAssignRole('superintendent', 'project_manager')).toThrow()
+    })
+
+    it('thrown error has status 403', async () => {
+      const { assertCanAssignRole } = await import('../api/endpoints/projectMembers')
+      let caught: unknown
+      try {
+        assertCanAssignRole('viewer', 'superintendent')
+      } catch (e) {
+        caught = e
+      }
+      expect(caught).toMatchObject({ status: 403 })
+    })
+  })
+})
+
 // ── Permission Error ─────────────────────────────────────
 
 describe('PermissionError', () => {
@@ -256,5 +398,73 @@ describe('PermissionError', () => {
     expect(error.name).toBe('PermissionError')
     expect(error.message).toBe('Not allowed')
     expect(error.permission).toBe('budget.approve')
+  })
+})
+
+// ── API Project Scope Access Control ─────────────────────
+
+describe('Project Scope Access Control', () => {
+  const VALID_PROJECT_ID = '12345678-1234-4234-8234-123456789abc'
+  const AUTHED_USER_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+
+  beforeEach(async () => {
+    const { supabase } = await import('../lib/supabase')
+    vi.mocked(supabase.auth.getUser).mockResolvedValue({
+      data: { user: { id: AUTHED_USER_ID } as any },
+      error: null,
+    })
+  })
+
+  it('throws a 403 ApiError when user is not a member of the project', async () => {
+    const { supabase } = await import('../lib/supabase')
+    const mockBuilder = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+    }
+    vi.mocked(supabase.from).mockReturnValue(mockBuilder as any)
+
+    const { assertProjectAccess } = await import('../api/middleware/projectScope')
+    const { ApiError } = await import('../api/errors')
+
+    await expect(assertProjectAccess(VALID_PROJECT_ID)).rejects.toMatchObject({
+      status: 403,
+      code: 'FORBIDDEN',
+    })
+    await expect(assertProjectAccess(VALID_PROJECT_ID)).rejects.toBeInstanceOf(ApiError)
+  })
+
+  it('resolves when user is a member of the project', async () => {
+    const { supabase } = await import('../lib/supabase')
+    const mockBuilder = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({ data: { id: 'member-row-id' }, error: null }),
+    }
+    vi.mocked(supabase.from).mockReturnValue(mockBuilder as any)
+
+    const { assertProjectAccess } = await import('../api/middleware/projectScope')
+
+    await expect(assertProjectAccess(VALID_PROJECT_ID)).resolves.toBeUndefined()
+  })
+
+  it('throws a 401 AuthError when no user session exists', async () => {
+    const { supabase } = await import('../lib/supabase')
+    vi.mocked(supabase.auth.getUser).mockResolvedValue({
+      data: { user: null },
+      error: { message: 'Not authenticated' } as any,
+    })
+
+    const { assertProjectAccess } = await import('../api/middleware/projectScope')
+    const { AuthError } = await import('../api/errors')
+
+    await expect(assertProjectAccess(VALID_PROJECT_ID)).rejects.toBeInstanceOf(AuthError)
+  })
+
+  it('throws a ValidationError for a malformed projectId before any network call', async () => {
+    const { assertProjectAccess } = await import('../api/middleware/projectScope')
+    const { ValidationError } = await import('../api/errors')
+
+    await expect(assertProjectAccess('not-a-uuid')).rejects.toBeInstanceOf(ValidationError)
   })
 })

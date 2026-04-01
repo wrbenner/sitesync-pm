@@ -272,7 +272,7 @@ export const MobileTaskCards: React.FC<MobileTaskCardsProps> = ({ tasks, onCompl
               onClick={() => { impact('light'); setFilter(f.id); }}
               style={{
                 display: 'flex', alignItems: 'center', gap: spacing['1'],
-                padding: `${spacing['2']} ${spacing['3']}`, minHeight: '40px',
+                padding: `${spacing['2']} ${spacing['3']}`, minHeight: '44px',
                 backgroundColor: filter === f.id ? colors.primaryOrange : colors.surfaceRaised,
                 color: filter === f.id ? 'white' : colors.textSecondary,
                 border: filter === f.id ? 'none' : `1px solid ${colors.borderDefault}`,

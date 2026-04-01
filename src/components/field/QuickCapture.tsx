@@ -1,7 +1,12 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { X, Camera, Mic, QrCode, MapPin, Tag, Link2, Check, ChevronDown, Square } from 'lucide-react';
+import React, { useState, useCallback, useRef, useEffect, KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { X, Camera, Mic, QrCode, MapPin, Tag, Link2, Check, ChevronDown, Square, RefreshCw, Clock, Sparkles, AlertTriangle } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, shadows, transitions, zIndex } from '../../styles/theme';
 import { useMobileCapture, useHaptics } from '../../hooks/useMobileCapture';
+import { useOfflineMutation } from '../../hooks/useOfflineMutation';
+import { useOfflineStatus } from '../../hooks/useOfflineStatus';
+import { usePhotoAnalysis } from '../../hooks/usePhotoAnalysis';
+import { GenSafetyAlert } from '../ai/generativeUI/GenSafetyAlert';
+import type { SafetyAlertBlock } from '../ai/generativeUI/types';
 
 type CaptureMode = 'camera' | 'voice' | 'qr';
 type TagCategory = 'progress' | 'safety' | 'quality' | 'weather' | 'equipment' | 'general';
@@ -22,10 +27,13 @@ interface QuickCaptureProps {
 }
 
 export interface CaptureData {
+  id?: string;
   type: 'photo' | 'voice' | 'qr';
   imageUrl?: string;
   transcript?: string;
   qrData?: string;
+  caption?: string;
+  aiTags?: string[];
   category: TagCategory;
   location: string;
   gpsLat?: number;
@@ -58,8 +66,31 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
   // QR state
   const [qrData, setQrData] = useState<string | null>(null);
 
+  // AI analysis state
+  const [caption, setCaption] = useState('');
+  const [aiTags, setAiTags] = useState<string[]>([]);
+  const [safetyAlertBlock, setSafetyAlertBlock] = useState<SafetyAlertBlock | null>(null);
+
+  const { state: analysisState, result: analysisResult, analyzePhoto, reset: resetAnalysis } = usePhotoAnalysis();
+
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const { capturePhoto, capturing } = useMobileCapture();
   const { impact, notification } = useHaptics();
+  const { isOnline, syncState, pendingChanges } = useOfflineStatus();
+
+  const captureMutation = useOfflineMutation<CaptureData, CaptureData>({
+    table: 'field_captures',
+    operation: 'insert',
+    mutationFn: async (capture) => capture,
+    getOfflinePayload: (capture) => capture as unknown as Record<string, unknown>,
+    onSuccess: (_data, capture) => {
+      onSave(capture);
+      notification('success');
+      onClose();
+    },
+  });
 
   // Auto-capture GPS on open
   useEffect(() => {
@@ -71,6 +102,39 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
       );
     }
   }, [open]);
+
+  // Apply AI analysis results when ready
+  useEffect(() => {
+    if (analysisState === 'ready' && analysisResult) {
+      setCaption(analysisResult.summary);
+      const allTags = [...new Set([
+        ...analysisResult.suggestedTags,
+        ...analysisResult.materials,
+        ...analysisResult.equipment,
+      ])];
+      setAiTags(allTags);
+
+      // Critical violations have confidence > 0.7 by severity definition
+      const criticalViolation = analysisResult.safetyViolations.find(v => v.severity === 'critical');
+      if (criticalViolation) {
+        setSafetyAlertBlock({
+          ui_type: 'safety_alert',
+          alert_id: crypto.randomUUID(),
+          severity: 'critical',
+          title: criticalViolation.type,
+          description: criticalViolation.description,
+          location: criticalViolation.location,
+          reported_by: 'Field App',
+          timestamp: new Date().toISOString(),
+          status: 'open',
+          recommended_actions: analysisResult.ppeCompliance.violations.length > 0
+            ? analysisResult.ppeCompliance.violations.map(v => `Address PPE violation: ${v}`)
+            : ['Stop work in affected area', 'Notify site safety officer immediately'],
+          photo_url: capturedImage || undefined,
+        });
+      }
+    }
+  }, [analysisState, analysisResult, capturedImage]);
 
   // Reset on close
   useEffect(() => {
@@ -85,8 +149,12 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
       setQrData(null);
       setRecording(false);
       setElapsed(0);
+      setCaption('');
+      setAiTags([]);
+      setSafetyAlertBlock(null);
+      resetAnalysis();
     }
-  }, [open]);
+  }, [open, resetAnalysis]);
 
   // ── Camera ─────────────────────────────────────────
 
@@ -100,8 +168,9 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
       }
       notification('success');
       setStep('tag');
+      analyzePhoto(result.imageUrl);
     }
-  }, [capturePhoto, impact, notification]);
+  }, [capturePhoto, impact, notification, analyzePhoto]);
 
   // ── Voice Recording ────────────────────────────────
 
@@ -185,10 +254,13 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
   const handleSave = useCallback(() => {
     impact('medium');
     const capture: CaptureData = {
+      id: crypto.randomUUID(),
       type: mode === 'camera' ? 'photo' : mode === 'voice' ? 'voice' : 'qr',
       imageUrl: capturedImage || undefined,
       transcript: transcript || undefined,
       qrData: qrData || undefined,
+      caption: caption || undefined,
+      aiTags: aiTags.length ? aiTags : undefined,
       category,
       location: locationText,
       gpsLat: gps?.lat,
@@ -197,10 +269,50 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
       notes,
       timestamp: new Date().toISOString(),
     };
-    onSave(capture);
+    captureMutation.mutate(capture);
+  }, [mode, capturedImage, transcript, qrData, caption, aiTags, category, locationText, gps, relatedItem, notes, impact, captureMutation]);
+
+  // Focus trap
+  useEffect(() => {
+    if (!open || !dialogRef.current) return;
+    const dialog = dialogRef.current;
+    const firstFocusable = dialog.querySelector<HTMLElement>('button:not([disabled]), input, textarea, select');
+    firstFocusable?.focus();
+    const handleTab = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return;
+      const focusable = Array.from(
+        dialog.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), input:not([type="file"]), textarea, select, [tabindex]:not([tabindex="-1"])'
+        )
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener('keydown', handleTab);
+    return () => document.removeEventListener('keydown', handleTab);
+  }, [open]);
+
+  const handleKeyActivate = useCallback((e: ReactKeyboardEvent, fn: () => void) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(); }
+  }, []);
+
+  const handleUploadFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    setCapturedImage(url);
     notification('success');
-    onClose();
-  }, [mode, capturedImage, transcript, qrData, category, locationText, gps, relatedItem, notes, impact, notification, onSave, onClose]);
+    setStep('tag');
+    analyzePhoto(url);
+  }, [notification, analyzePhoto]);
 
   if (!open) return null;
 
@@ -211,11 +323,17 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
   };
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: zIndex.tooltip as number,
-      backgroundColor: step === 'capture' ? colors.viewerBg : colors.surfacePage,
-      display: 'flex', flexDirection: 'column',
-    }}>
+    <div
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label={step === 'capture' ? 'Quick Capture' : 'Tag and Save'}
+      style={{
+        position: 'fixed', inset: 0, zIndex: zIndex.tooltip as number,
+        backgroundColor: step === 'capture' ? colors.viewerBg : colors.surfacePage,
+        display: 'flex', flexDirection: 'column',
+      }}
+    >
       {/* ── Header ────────────────────────────────── */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -301,6 +419,7 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
               {/* Capture button */}
               <button
                 onClick={handleCameraCapture}
+                onKeyDown={(e) => handleKeyActivate(e, handleCameraCapture)}
                 disabled={capturing}
                 style={{
                   width: 72, height: 72, borderRadius: '50%',
@@ -310,9 +429,36 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   boxShadow: shadows.glow, opacity: capturing ? 0.6 : 1,
                 }}
-                aria-label="Take photo"
+                aria-label="Capture photo"
               >
                 <Camera size={28} color="white" />
+              </button>
+
+              {/* Upload trigger */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleUploadFile}
+                style={{ display: 'none' }}
+                tabIndex={-1}
+                aria-hidden="true"
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                onKeyDown={(e) => handleKeyActivate(e, () => fileInputRef.current?.click())}
+                style={{
+                  marginTop: spacing['3'],
+                  padding: `${spacing['2']} ${spacing['4']}`, minHeight: '44px',
+                  backgroundColor: colors.overlayWhiteThin,
+                  border: 'none', borderRadius: borderRadius.full, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: spacing['2'],
+                  color: colors.textOnDarkMuted, fontSize: typography.fontSize.sm,
+                  fontFamily: typography.fontFamily,
+                }}
+                aria-label="Upload photo"
+              >
+                <Camera size={14} /> Upload photo
               </button>
 
               {/* GPS indicator */}
@@ -356,7 +502,7 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   cursor: 'pointer',
                 }}
-                aria-label={recording ? 'Stop recording' : 'Start recording'}
+                aria-label={recording ? 'Stop recording' : 'Start voice recording'}
               >
                 {recording ? <Square size={24} color="white" fill="white" /> : <Mic size={28} color="white" />}
               </button>
@@ -447,6 +593,102 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
             </div>
           )}
 
+          {/* AI Safety Alert */}
+          {safetyAlertBlock && (
+            <div style={{ marginBottom: spacing['5'] }}>
+              <GenSafetyAlert block={safetyAlertBlock} onAction={() => {}} />
+              <button
+                onClick={() => { impact('medium'); notification('success'); setSafetyAlertBlock(null); }}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  gap: spacing['2'], padding: `${spacing['3']} ${spacing['4']}`, minHeight: '48px',
+                  backgroundColor: colors.statusCritical, color: 'white',
+                  border: 'none', borderRadius: borderRadius.md, cursor: 'pointer',
+                  fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold,
+                  fontFamily: typography.fontFamily, marginTop: spacing['2'],
+                }}
+              >
+                <AlertTriangle size={16} /> Create Safety Observation
+              </button>
+            </div>
+          )}
+
+          {/* AI Caption */}
+          {mode === 'camera' && (analysisState === 'analyzing' || analysisState === 'ready') && (
+            <div style={{ marginBottom: spacing['5'] }}>
+              <label style={{
+                display: 'flex', alignItems: 'center', gap: spacing['1'],
+                fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium,
+                color: colors.textPrimary, marginBottom: spacing['2'],
+              }}>
+                <Sparkles size={14} color={colors.primaryOrange} /> AI Caption
+              </label>
+              {analysisState === 'analyzing' ? (
+                <div style={{
+                  padding: `${spacing['3.5']} ${spacing['4']}`,
+                  backgroundColor: colors.surfaceInset, borderRadius: borderRadius.md,
+                  display: 'flex', alignItems: 'center', gap: spacing['2'],
+                  border: `1.5px solid ${colors.borderSubtle}`,
+                }}>
+                  <RefreshCw size={14} color={colors.textTertiary} style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} />
+                  <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>Analyzing photo...</span>
+                </div>
+              ) : (
+                <textarea
+                  value={caption}
+                  onChange={(e) => setCaption(e.target.value)}
+                  placeholder="AI suggested caption..."
+                  style={{
+                    width: '100%', padding: `${spacing['3.5']} ${spacing['4']}`, fontSize: typography.fontSize.title,
+                    fontFamily: typography.fontFamily,
+                    border: `1.5px solid ${colors.primaryOrange}40`,
+                    backgroundColor: colors.surfaceInset, borderRadius: borderRadius.md,
+                    outline: 'none', boxSizing: 'border-box', minHeight: '72px',
+                    resize: 'vertical', lineHeight: typography.lineHeight.normal,
+                  }}
+                />
+              )}
+            </div>
+          )}
+
+          {/* AI Detected Tags */}
+          {aiTags.length > 0 && (
+            <div style={{ marginBottom: spacing['5'] }}>
+              <label style={{
+                display: 'flex', alignItems: 'center', gap: spacing['1'],
+                fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium,
+                color: colors.textPrimary, marginBottom: spacing['2'],
+              }}>
+                <Sparkles size={14} color={colors.primaryOrange} /> Detected Tags
+              </label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: spacing['2'] }}>
+                {aiTags.map((tag) => (
+                  <span key={tag} style={{
+                    display: 'inline-flex', alignItems: 'center', gap: spacing['1'],
+                    padding: `${spacing['1']} ${spacing['2']} ${spacing['1']} ${spacing['3']}`,
+                    backgroundColor: `${colors.primaryOrange}15`,
+                    color: colors.primaryOrange,
+                    border: `1px solid ${colors.primaryOrange}30`,
+                    borderRadius: borderRadius.full,
+                    fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium,
+                  }}>
+                    {tag}
+                    <button
+                      onClick={() => setAiTags(tags => tags.filter(t => t !== tag))}
+                      style={{
+                        background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                        display: 'flex', alignItems: 'center', color: colors.primaryOrange, lineHeight: 1,
+                      }}
+                      aria-label={`Remove tag ${tag}`}
+                    >
+                      <X size={12} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Category */}
           <label style={{ display: 'block', fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['2'] }}>
             <Tag size={14} style={{ marginRight: spacing['1'], verticalAlign: 'middle' }} /> Category
@@ -530,7 +772,6 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
           padding: `${spacing['3']} ${spacing['5']}`,
           borderTop: `1px solid ${colors.borderSubtle}`,
           backgroundColor: colors.surfaceRaised,
-          paddingBottom: `max(${spacing['3']}, env(safe-area-inset-bottom))`,
         }}>
           <button
             onClick={handleSave}
@@ -548,11 +789,60 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
         </div>
       )}
 
-      {/* Scan line animation */}
+      {/* Sync status bar */}
+      {(() => {
+        const isActivelySyncing = syncState === 'syncing' || captureMutation.isPending;
+        const offlineQueued = !isOnline && pendingChanges > 0;
+        const bg = isActivelySyncing
+          ? colors.statusInfoSubtle
+          : offlineQueued
+          ? colors.statusPendingSubtle
+          : colors.statusActiveSubtle;
+        const iconColor = isActivelySyncing
+          ? colors.statusInfo
+          : offlineQueued
+          ? colors.statusPending
+          : colors.statusActive;
+        const text = isActivelySyncing
+          ? 'Syncing...'
+          : offlineQueued
+          ? `${pendingChanges} item${pendingChanges !== 1 ? 's' : ''} queued`
+          : 'Synced';
+        return (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: spacing['2'],
+            padding: `${spacing['2']} ${spacing['4']}`,
+            backgroundColor: bg,
+            borderTop: `1px solid ${iconColor}20`,
+            paddingBottom: `max(${spacing['2']}, env(safe-area-inset-bottom))`,
+            flexShrink: 0,
+          }}>
+            {isActivelySyncing
+              ? <RefreshCw size={12} color={iconColor} style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} />
+              : offlineQueued
+              ? <Clock size={12} color={iconColor} style={{ flexShrink: 0 }} />
+              : <Check size={12} color={iconColor} style={{ flexShrink: 0 }} />
+            }
+            <span style={{
+              fontSize: typography.fontSize.caption,
+              color: iconColor,
+              fontWeight: typography.fontWeight.medium,
+            }}>
+              {text}
+            </span>
+          </div>
+        );
+      })()}
+
+      {/* Animations */}
       <style>{`
         @keyframes scanLine {
           0%, 100% { top: 20px; }
           50% { top: calc(100% - 20px); }
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
         }
       `}</style>
     </div>

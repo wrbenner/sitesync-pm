@@ -1,20 +1,21 @@
 import React, { useState, useRef, useCallback, useEffect, memo } from 'react'
 import {
   QrCode, Users, Clock, Building2, ArrowRight, Check,
-  X, MapPin, AlertTriangle, UserCheck, Scan,
+  X, MapPin, AlertTriangle, UserCheck, Scan, LogOut,
 } from 'lucide-react'
 import { colors, spacing, typography, borderRadius, transitions, shadows, zIndex } from '../../styles/theme'
-import { Btn, Card, MetricBox, SectionHeader } from '../Primitives'
+import { Btn, Card, MetricBox, SectionHeader, useToast } from '../Primitives'
 import {
   useHeadcount,
   useCheckInMutation,
   useCheckOutMutation,
   useHeadcountRealtime,
+  useWorkerLookup,
+  useDailyLogCrewUpsert,
   generateQRPayload,
 } from '../../hooks/useCheckIn'
 import type { CheckInRecord, HeadcountSummary } from '../../hooks/useCheckIn'
 import { useProjectId } from '../../hooks/useProjectId'
-import { toast } from 'sonner'
 
 // ── QR Code Display (for gate/entrance) ───────────────────────
 
@@ -235,16 +236,277 @@ const HeadcountDashboard = memo<{ data: HeadcountSummary }>(({ data }) => (
 ))
 HeadcountDashboard.displayName = 'HeadcountDashboard'
 
+// ── SwipeToCheckOutRow ────────────────────────────────────────
+
+const SWIPE_THRESHOLD = 80
+
+const SwipeToCheckOutRow = memo<{
+  record: CheckInRecord
+  onCheckOut: (id: string, trade: string, company: string, hours: number) => void
+}>(({ record, onCheckOut }) => {
+  const [translateX, setTranslateX] = useState(0)
+  const [isDragging, setIsDragging] = useState(false)
+  const startXRef = useRef(0)
+
+  const checkInTime = new Date(record.checkInAt).toLocaleTimeString('en-US', {
+    hour: 'numeric', minute: '2-digit',
+  })
+  const elapsedMin = Math.round((Date.now() - new Date(record.checkInAt).getTime()) / 60000)
+  const elapsedLabel = record.checkOutAt
+    ? `${record.hoursOnSite}h total`
+    : elapsedMin < 60
+    ? `${elapsedMin}m on site`
+    : `${(elapsedMin / 60).toFixed(1)}h on site`
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (record.checkOutAt) return
+    startXRef.current = e.clientX
+    setIsDragging(true)
+    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+  }
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!isDragging) return
+    const delta = e.clientX - startXRef.current
+    setTranslateX(Math.min(0, delta))
+  }
+
+  const handlePointerUp = () => {
+    setIsDragging(false)
+    if (Math.abs(translateX) >= SWIPE_THRESHOLD) {
+      const hours = Math.round((Date.now() - new Date(record.checkInAt).getTime()) / 360000) / 10
+      onCheckOut(record.id, record.trade, record.company, hours)
+    }
+    setTranslateX(0)
+  }
+
+  return (
+    <div style={{ position: 'relative', overflow: 'hidden' }}>
+      {/* Checkout reveal */}
+      <div style={{
+        position: 'absolute', inset: 0, backgroundColor: colors.statusCritical,
+        display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
+        paddingRight: spacing['5'],
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
+          <LogOut size={14} color={colors.white} />
+          <span style={{ color: colors.white, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold }}>
+            Check Out
+          </span>
+        </div>
+      </div>
+
+      {/* Swipeable row */}
+      <div
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        style={{
+          display: 'flex', alignItems: 'center', gap: spacing['3'],
+          padding: `${spacing['3']} ${spacing['4']}`,
+          backgroundColor: colors.surfaceRaised,
+          transform: `translateX(${translateX}px)`,
+          transition: isDragging ? 'none' : 'transform 200ms ease',
+          cursor: record.checkOutAt ? 'default' : 'grab',
+          userSelect: 'none', touchAction: 'pan-y',
+          borderBottom: `1px solid ${colors.borderSubtle}`,
+        }}
+      >
+        <div style={{
+          width: 32, height: 32, borderRadius: '50%',
+          backgroundColor: record.checkOutAt ? colors.statusActiveSubtle : colors.statusInfoSubtle,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+        }}>
+          {record.checkOutAt
+            ? <Check size={14} color={colors.statusActive} />
+            : <UserCheck size={14} color={colors.statusInfo} />}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ margin: 0, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {record.workerName}
+          </p>
+          <p style={{ margin: 0, fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
+            {record.trade || 'General'} · {record.company || 'Unknown'}
+          </p>
+        </div>
+        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+          <p style={{ margin: 0, fontSize: typography.fontSize.caption, color: colors.textSecondary }}>
+            In: {checkInTime}
+          </p>
+          <p style={{ margin: 0, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: record.checkOutAt ? colors.statusActive : colors.statusInfo }}>
+            {elapsedLabel}
+          </p>
+        </div>
+        {!record.checkOutAt && (
+          <ArrowRight size={14} color={`${colors.textTertiary}80`} style={{ flexShrink: 0 }} />
+        )}
+      </div>
+    </div>
+  )
+})
+SwipeToCheckOutRow.displayName = 'SwipeToCheckOutRow'
+
+// ── LiveCheckInBoard ──────────────────────────────────────────
+
+const LiveCheckInBoard = memo<{
+  records: CheckInRecord[]
+  onCheckOut: (id: string, trade: string, company: string, hours: number) => void
+  onSimulateScan: () => void
+  isScanning: boolean
+}>(({ records, onCheckOut, onSimulateScan, isScanning }) => {
+  const onSite = records.filter((r) => !r.checkOutAt)
+  const checkedOut = records.filter((r) => r.checkOutAt)
+
+  // Aggregate on-site by trade+company for the summary table
+  const byTrade = Array.from(
+    onSite.reduce((map, r) => {
+      const key = `${r.trade}__${r.company}`
+      const existing = map.get(key)
+      if (existing) {
+        existing.headcount++
+        if (r.checkInAt < existing.timeIn) existing.timeIn = r.checkInAt
+      } else {
+        map.set(key, { trade: r.trade || 'General', company: r.company || 'Unknown', headcount: 1, timeIn: r.checkInAt })
+      }
+      return map
+    }, new Map<string, { trade: string; company: string; headcount: number; timeIn: string }>()),
+  ).map(([, v]) => v).sort((a, b) => b.headcount - a.headcount)
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textTertiary }}>
+          {onSite.length} worker{onSite.length !== 1 ? 's' : ''} on site. Swipe left to check out.
+        </p>
+        <Btn size="sm" onClick={onSimulateScan} disabled={isScanning}>
+          <Scan size={14} style={{ marginRight: spacing['1'] }} />
+          {isScanning ? 'Scanning...' : 'Scan Worker QR'}
+        </Btn>
+      </div>
+
+      {/* Trade summary table */}
+      {byTrade.length > 0 && (
+        <Card padding="0">
+          <div style={{ padding: `${spacing['3']} ${spacing['4']}`, borderBottom: `1px solid ${colors.borderSubtle}`, display: 'grid', gridTemplateColumns: '1fr 1fr 80px 100px', gap: spacing['3'] }}>
+            {['Trade', 'Company', 'Count', 'First In'].map((h) => (
+              <span key={h} style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</span>
+            ))}
+          </div>
+          {byTrade.map((row) => (
+            <div key={`${row.trade}-${row.company}`} style={{ padding: `${spacing['3']} ${spacing['4']}`, borderBottom: `1px solid ${colors.borderSubtle}`, display: 'grid', gridTemplateColumns: '1fr 1fr 80px 100px', gap: spacing['3'], alignItems: 'center' }}>
+              <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>{row.trade}</span>
+              <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{row.company}</span>
+              <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.primaryOrange }}>{row.headcount}</span>
+              <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
+                {new Date(row.timeIn).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+              </span>
+            </div>
+          ))}
+        </Card>
+      )}
+
+      {/* Individual swipeable rows */}
+      <div>
+        <SectionHeader title="On Site Now" />
+        <Card padding="0" style={{ marginTop: spacing['2'] }}>
+          {onSite.length === 0 ? (
+            <div style={{ padding: spacing['6'], textAlign: 'center' }}>
+              <Users size={24} color={colors.textTertiary} style={{ margin: '0 auto 8px' }} />
+              <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textTertiary }}>No workers checked in yet</p>
+              <p style={{ margin: `${spacing['1']} 0 0`, fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Scan a worker QR code to check them in</p>
+            </div>
+          ) : (
+            onSite.map((record) => (
+              <SwipeToCheckOutRow key={record.id} record={record} onCheckOut={onCheckOut} />
+            ))
+          )}
+        </Card>
+      </div>
+
+      {checkedOut.length > 0 && (
+        <div>
+          <SectionHeader title="Checked Out Today" />
+          <Card padding="0" style={{ marginTop: spacing['2'] }}>
+            {checkedOut.map((record) => (
+              <SwipeToCheckOutRow key={record.id} record={record} onCheckOut={onCheckOut} />
+            ))}
+          </Card>
+        </div>
+      )}
+    </div>
+  )
+})
+LiveCheckInBoard.displayName = 'LiveCheckInBoard'
+
 // ── Main QR Check-In Component ────────────────────────────────
 
 interface QRCheckInProps {
   showQRCode?: boolean // Show the QR code for gate display mode
+  showLiveBoard?: boolean // Show swipeable individual check-in rows
 }
 
-export const QRCheckIn: React.FC<QRCheckInProps> = ({ showQRCode }) => {
+export const QRCheckIn: React.FC<QRCheckInProps> = ({ showQRCode, showLiveBoard }) => {
   const projectId = useProjectId()
   const { data: headcount, isLoading } = useHeadcount()
   useHeadcountRealtime()
+  const { addToast } = useToast()
+  const checkInMutation = useCheckInMutation()
+  const checkOutMutation = useCheckOutMutation()
+  const crewUpsert = useDailyLogCrewUpsert()
+  const lookupWorker = useWorkerLookup()
+  const [isScanning, setIsScanning] = useState(false)
+
+  // Simulate a QR scan: resolves first matching worker from directory not already on site
+  const handleSimulateScan = useCallback(async () => {
+    if (!projectId || isScanning) return
+    setIsScanning(true)
+    try {
+      // In production, this would open a camera scanner; here we use the first directory contact
+      const identity = await lookupWorker('a') // broad partial match to get any worker
+      if (!identity) {
+        addToast('info', 'No workers found in directory. Add contacts in the Directory page.')
+        return
+      }
+      const now = new Date().toISOString()
+      await checkInMutation.mutateAsync({
+        workerId: identity.workerId,
+        workerName: identity.workerName,
+        company: identity.company,
+        trade: identity.trade,
+        method: 'qr_scan',
+      })
+      await crewUpsert.mutateAsync({
+        trade: identity.trade,
+        company: identity.company,
+        headcountDelta: 1,
+        timeIn: now,
+      })
+      addToast('success', `${identity.workerName} (${identity.trade}) checked in`)
+    } catch {
+      addToast('error', 'Check-in failed. Will retry when back online.')
+    } finally {
+      setIsScanning(false)
+    }
+  }, [projectId, isScanning, lookupWorker, checkInMutation, crewUpsert, addToast])
+
+  const handleCheckOut = useCallback(async (
+    checkInId: string, trade: string, company: string, hours: number,
+  ) => {
+    try {
+      await checkOutMutation.mutateAsync(checkInId)
+      await crewUpsert.mutateAsync({
+        trade,
+        company,
+        headcountDelta: -1,
+        timeOut: new Date().toISOString(),
+        hoursDelta: hours,
+      })
+      addToast('success', `Checked out. ${hours}h logged to daily report.`)
+    } catch {
+      addToast('error', 'Check-out failed')
+    }
+  }, [checkOutMutation, crewUpsert, addToast])
 
   if (isLoading) {
     return (
@@ -273,7 +535,16 @@ export const QRCheckIn: React.FC<QRCheckInProps> = ({ showQRCode }) => {
           <QRCodeDisplay projectId={projectId} />
         </div>
       )}
-      <HeadcountDashboard data={data} />
+      {showLiveBoard ? (
+        <LiveCheckInBoard
+          records={data.recentCheckIns}
+          onCheckOut={handleCheckOut}
+          onSimulateScan={handleSimulateScan}
+          isScanning={isScanning}
+        />
+      ) : (
+        <HeadcountDashboard data={data} />
+      )}
     </div>
   )
 }

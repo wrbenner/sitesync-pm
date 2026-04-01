@@ -458,7 +458,7 @@ export const VoiceCapture: React.FC<VoiceCaptureProps> = ({ onClose, onConfirm }
             {vc.phase !== 'processing' && (
               <button
                 onClick={vc.phase === 'recording' ? vc.stopRecording : vc.startRecording}
-                aria-label={vc.phase === 'recording' ? 'Stop recording' : 'Start recording'}
+                aria-label={vc.phase === 'recording' ? 'Stop recording' : 'Start voice recording'}
                 style={{
                   width: 72,
                   height: 72,
@@ -781,6 +781,18 @@ export const VoiceCapture: React.FC<VoiceCaptureProps> = ({ onClose, onConfirm }
             </button>
           </div>
         )}
+      </div>
+
+      {/* Screen reader live region for recording state announcements */}
+      <div
+        aria-live="polite"
+        aria-atomic="true"
+        style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap' }}
+      >
+        {vc.phase === 'recording' && 'Recording started'}
+        {vc.phase === 'processing' && 'Transcribing...'}
+        {vc.phase === 'review' && 'Transcription complete'}
+        {vc.phase === 'idle' && vc.elapsed > 0 && 'Recording stopped'}
       </div>
 
       {/* CSS animation for spinner */}

@@ -77,6 +77,10 @@ export const queryKeys = {
   projectMembers: {
     all: (projectId: string) => ['project_members', projectId] as const,
   },
+  lienWaivers: {
+    all: (projectId: string) => ['lien_waivers', projectId] as const,
+    byPayApp: (payAppId: string) => ['lien_waivers', 'pay_app', payAppId] as const,
+  },
   auditLog: {
     project: (projectId: string) => ['audit_log', projectId] as const,
     projectFiltered: (projectId: string, filters: Record<string, unknown>) =>
@@ -108,5 +112,6 @@ export function allProjectEntityKeys(projectId: string): ReadonlyArray<readonly 
     queryKeys.projectSnapshots.all(projectId),
     queryKeys.metrics.project(projectId),
     queryKeys.projectMembers.all(projectId),
+    queryKeys.lienWaivers.all(projectId),
   ]
 }

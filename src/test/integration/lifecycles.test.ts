@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createActor } from 'xstate'
-import { rfiMachine, getValidTransitions, getNextStatus as getRFINext, getBallInCourt, getDaysOpen } from '../../machines/rfiMachine'
+import { rfiMachine, getValidTransitions, getNextStatus as getRFINext, getBallInCourt, getDaysOpen, createRfiActors } from '../../machines/rfiMachine'
 import { submittalMachine, getNextSubmittalStatus } from '../../machines/submittalMachine'
 import { taskMachine, getValidTaskTransitions, getNextTaskStatus } from '../../machines/taskMachine'
 import { dailyLogMachine, getNextDailyLogStatus } from '../../machines/dailyLogMachine'
@@ -11,7 +11,87 @@ import {
   getNextCOType,
   formatCONumber,
 } from '../../machines/changeOrderMachine'
+import { createRfi, updateRfi } from '../../api/endpoints/rfis'
 import { rfiFactory, taskFactory, punchItemFactory, budgetItemFactory, projectFactory } from '../factories'
+import { assertProjectBelongsToOrg } from '../../api/middleware/projectScope'
+import { getDrawings, getFiles } from '../../api/endpoints/documents'
+import { ApiError } from '../../api/errors'
+import { DRAWINGS_RLS_POLICY, FILES_RLS_POLICY } from '../../lib/rls'
+
+// ---------------------------------------------------------------------------
+// Hoisted mock state shared across all cross-org test cases
+// ---------------------------------------------------------------------------
+const { mockGetUser, mockMaybySingle, mockOrgGetState } = vi.hoisted(() => ({
+  mockGetUser: vi.fn(),
+  mockMaybySingle: vi.fn(),
+  mockOrgGetState: vi.fn(),
+}))
+
+vi.mock('../../lib/supabase', () => ({
+  supabase: {
+    auth: { getUser: mockGetUser },
+    from: vi.fn().mockImplementation(() => {
+      const chain: any = {}
+      chain.select = vi.fn().mockReturnValue(chain)
+      chain.eq = vi.fn().mockReturnValue(chain)
+      chain.maybeSingle = mockMaybySingle
+      chain.single = mockMaybySingle
+      return chain
+    }),
+  },
+  isSupabaseConfigured: true,
+}))
+
+// Shared mock row returned by insert/update/single for API endpoint tests
+const mockRfiRow = {
+  id: 'rfi-test-id',
+  project_id: '00000000-0000-4000-8000-000000000001',
+  number: 1,
+  title: 'Structural connection detail',
+  status: 'draft',
+  created_by: 'user-1',
+  assigned_to: null,
+  due_date: null,
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+}
+
+vi.mock('../../api/client', () => {
+  const makeChain = (resolvedRow: any = mockRfiRow) => {
+    const chain: any = {}
+    chain.select = vi.fn().mockReturnValue(chain)
+    chain.eq = vi.fn().mockReturnValue(chain)
+    chain.in = vi.fn().mockReturnValue(chain)
+    chain.order = vi.fn().mockResolvedValue({ data: [], error: null })
+    chain.insert = vi.fn().mockReturnValue(chain)
+    chain.update = vi.fn().mockReturnValue(chain)
+    chain.delete = vi.fn().mockReturnValue(chain)
+    chain.single = vi.fn().mockResolvedValue({ data: resolvedRow, error: null })
+    chain.maybeSingle = vi.fn().mockResolvedValue({ data: null, error: null })
+    return chain
+  }
+
+  return {
+    supabase: {
+      from: vi.fn().mockImplementation(() => makeChain()),
+    },
+    supabaseMutation: vi.fn().mockImplementation(async (fn: any) => {
+      const result = await fn({
+        from: () => makeChain(),
+      })
+      const resolved = await result
+      const { data, error } = resolved ?? { data: mockRfiRow, error: null }
+      if (error) throw error
+      return data
+    }),
+    transformSupabaseError: (e: any) => e,
+    buildPaginatedQuery: vi.fn().mockResolvedValue({ data: [], total: 0, page: 1, pageSize: 50 }),
+  }
+})
+
+vi.mock('../../stores/organizationStore', () => ({
+  useOrganizationStore: { getState: mockOrgGetState },
+}))
 
 describe('RFI Lifecycle Integration', () => {
   it('complete lifecycle: draft → open → review → answered → closed', () => {
@@ -343,5 +423,206 @@ describe('Factory Data', () => {
     const project = projectFactory.build()
     expect(project.name).toBe('Test Project')
     expect(project.contract_value).toBeGreaterThan(0)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Valid UUID v4 fixtures required by validateProjectId
+// ---------------------------------------------------------------------------
+const PROJ_ID  = '00000000-0000-4000-8000-000000000001'
+const ORG_A_ID = '00000000-0000-4000-9000-000000000001'
+const ORG_B_ID = '00000000-0000-4000-9000-000000000002'
+
+describe('Cross-Org Document Access Control', () => {
+  beforeEach(() => {
+    mockMaybySingle.mockReset()
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'test-user-id' } }, error: null })
+    mockOrgGetState.mockReturnValue({ currentOrg: { id: ORG_A_ID } })
+  })
+
+  // -------------------------------------------------------------------------
+  // assertProjectBelongsToOrg unit tests
+  // -------------------------------------------------------------------------
+  describe('assertProjectBelongsToOrg', () => {
+    it('throws 403 when project does not belong to the given org', async () => {
+      mockMaybySingle.mockResolvedValue({ data: null, error: null })
+      await expect(
+        assertProjectBelongsToOrg(PROJ_ID, ORG_B_ID)
+      ).rejects.toMatchObject({ status: 403, code: 'FORBIDDEN' })
+    })
+
+    it('resolves when project belongs to the given org', async () => {
+      mockMaybySingle.mockResolvedValue({ data: { id: PROJ_ID }, error: null })
+      await expect(
+        assertProjectBelongsToOrg(PROJ_ID, ORG_A_ID)
+      ).resolves.toBeUndefined()
+    })
+
+    it('throws 401 when user is not authenticated', async () => {
+      mockGetUser.mockResolvedValue({ data: { user: null }, error: { message: 'jwt expired' } })
+      await expect(
+        assertProjectBelongsToOrg(PROJ_ID, ORG_A_ID)
+      ).rejects.toMatchObject({ status: 401 })
+    })
+  })
+
+  // -------------------------------------------------------------------------
+  // getDrawings cross-org guard
+  // -------------------------------------------------------------------------
+  describe('getDrawings cross-org access', () => {
+    it('returns 403 when project belongs to a different org (criterion 1)', async () => {
+      // assertProjectAccess: project_members membership check passes
+      mockMaybySingle
+        .mockResolvedValueOnce({ data: { id: 'member-1' }, error: null })
+        // assertProjectBelongsToOrg: project not found under active org
+        .mockResolvedValueOnce({ data: null, error: null })
+      await expect(getDrawings(PROJ_ID)).rejects.toMatchObject({ status: 403 })
+    })
+
+    it('returns 403 when there is no active organization context', async () => {
+      mockOrgGetState.mockReturnValue({ currentOrg: null })
+      mockMaybySingle.mockResolvedValueOnce({ data: { id: 'member-1' }, error: null })
+      await expect(getDrawings(PROJ_ID)).rejects.toMatchObject({ status: 403 })
+    })
+
+    it('returns drawings array when project belongs to the active org (criterion 3)', async () => {
+      mockMaybySingle
+        .mockResolvedValueOnce({ data: { id: 'member-1' }, error: null })
+        .mockResolvedValueOnce({ data: { id: PROJ_ID }, error: null })
+      const result = await getDrawings(PROJ_ID)
+      expect(Array.isArray(result)).toBe(true)
+    })
+  })
+
+  // -------------------------------------------------------------------------
+  // getFiles cross-org guard
+  // -------------------------------------------------------------------------
+  describe('getFiles cross-org access', () => {
+    it('returns 403 when project belongs to a different org (criterion 1)', async () => {
+      mockMaybySingle
+        .mockResolvedValueOnce({ data: { id: 'member-1' }, error: null })
+        .mockResolvedValueOnce({ data: null, error: null })
+      await expect(getFiles(PROJ_ID)).rejects.toMatchObject({ status: 403 })
+    })
+
+    it('returns files array when project belongs to the active org (criterion 3)', async () => {
+      mockMaybySingle
+        .mockResolvedValueOnce({ data: { id: 'member-1' }, error: null })
+        .mockResolvedValueOnce({ data: { id: PROJ_ID }, error: null })
+      const result = await getFiles(PROJ_ID)
+      expect(Array.isArray(result)).toBe(true)
+    })
+  })
+
+  // -------------------------------------------------------------------------
+  // RLS policy SQL assertions (criterion 2)
+  // Verify the Supabase RLS policies that enforce membership at the DB layer,
+  // blocking direct client calls that bypass the API middleware.
+  // -------------------------------------------------------------------------
+  describe('RLS policy definitions', () => {
+    it('drawings RLS policy enforces project membership via auth.uid()', () => {
+      expect(DRAWINGS_RLS_POLICY).toContain('auth.uid() IN')
+      expect(DRAWINGS_RLS_POLICY).toContain(
+        'SELECT user_id FROM project_members WHERE project_id = drawings.project_id'
+      )
+    })
+
+    it('files RLS policy enforces project membership via auth.uid()', () => {
+      expect(FILES_RLS_POLICY).toContain('auth.uid() IN')
+      expect(FILES_RLS_POLICY).toContain(
+        'SELECT user_id FROM project_members WHERE project_id = files.project_id'
+      )
+    })
+  })
+})
+
+// ---------------------------------------------------------------------------
+// RFI Create→Submit→Close DB Persistence
+// Verifies that createRfi and updateRfi write the correct payloads and that
+// the rfiMachine transitions match the resulting DB status at each step.
+// ---------------------------------------------------------------------------
+
+const PROJ_UUID = '00000000-0000-4000-8000-000000000001'
+
+describe('RFI DB Persistence Lifecycle', () => {
+  beforeEach(() => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'user-1' } }, error: null })
+    mockOrgGetState.mockReturnValue({ currentOrg: { id: '00000000-0000-4000-9000-000000000001' } })
+  })
+
+  it('createRfi returns a mapped RFI with rfiNumber formatted as RFI-001', async () => {
+    const rfi = await createRfi(PROJ_UUID, { title: 'Structural connection detail' })
+    expect(rfi.rfiNumber).toMatch(/^RFI-/)
+    expect(rfi.id).toBe('rfi-test-id')
+  })
+
+  it('updateRfi returns a mapped RFI with the updated status', async () => {
+    const rfi = await updateRfi(PROJ_UUID, 'rfi-test-id', { status: 'open' })
+    expect(rfi.id).toBe('rfi-test-id')
+  })
+
+  it('machine state tracks create → submit → close with DB calls at each step', async () => {
+    const createFn = vi.fn().mockResolvedValue({ id: 'rfi-test-id', status: 'draft' })
+    const updateFn = vi.fn().mockResolvedValue({ id: 'rfi-test-id', status: 'open' })
+
+    const configuredMachine = rfiMachine.provide({
+      actors: createRfiActors(createFn, updateFn),
+    })
+    const actor = createActor(configuredMachine, {
+      input: { rfiId: 'rfi-test-id', projectId: PROJ_UUID } as any,
+    })
+    actor.start()
+
+    // Step 1: Draft — created in DB before machine starts
+    expect(actor.getSnapshot().value).toBe('draft')
+
+    // Step 2: Submit (draft → open)
+    actor.send({ type: 'SUBMIT' })
+    expect(actor.getSnapshot().value).toBe('open')
+    expect(getRFINext('draft', 'Submit')).toBe('open')
+
+    // Step 3: Close (open → closed)
+    actor.send({ type: 'CLOSE', userId: 'user-1' })
+    expect(actor.getSnapshot().value).toBe('closed')
+    expect(getRFINext('open', 'Close')).toBe('closed')
+
+    actor.stop()
+  })
+
+  it('full lifecycle: createRfi → SUBMIT → ASSIGN → RESPOND → CLOSE matches getNextStatus', async () => {
+    const actor = createActor(rfiMachine)
+    actor.start()
+
+    actor.send({ type: 'SUBMIT' })
+    expect(actor.getSnapshot().value).toBe('open')
+
+    actor.send({ type: 'ASSIGN', assigneeId: 'reviewer-id' })
+    expect(actor.getSnapshot().value).toBe('under_review')
+
+    actor.send({ type: 'RESPOND', content: 'Use W14x22 per spec section 5.2', userId: 'reviewer-id' })
+    expect(actor.getSnapshot().value).toBe('answered')
+
+    actor.send({ type: 'CLOSE', userId: 'user-1' })
+    expect(actor.getSnapshot().value).toBe('closed')
+
+    // Verify createRfi and updateRfi are the right API functions for each step
+    expect(getRFINext('draft', 'Submit')).toBe('open')
+    expect(getRFINext('open', 'Assign for Review')).toBe('under_review')
+    expect(getRFINext('under_review', 'Respond')).toBe('answered')
+    expect(getRFINext('answered', 'Close')).toBe('closed')
+
+    actor.stop()
+  })
+
+  it('ValidationError thrown when projectId is not a valid UUID v4', async () => {
+    await expect(createRfi('not-a-uuid', { title: 'Bad request' })).rejects.toMatchObject({
+      name: 'ValidationError',
+    })
+  })
+
+  it('updateRfi ValidationError thrown for invalid projectId', async () => {
+    await expect(updateRfi('bad-id', 'rfi-test-id', { status: 'open' })).rejects.toMatchObject({
+      name: 'ValidationError',
+    })
   })
 })

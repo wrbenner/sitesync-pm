@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Sparkles, ChevronRight, AlertTriangle, TrendingDown, Shield, CheckCircle } from 'lucide-react';
+import { Sparkles, ChevronRight, AlertTriangle, TrendingDown, Shield, CheckCircle, RefreshCw, Clock } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { colors, spacing, typography, borderRadius, transitions } from '../../../styles/theme';
 import { useProjectId } from '../../../hooks/useProjectId';
-import { useAIInsights } from '../../../hooks/queries';
+import { useAiInsightsMeta } from '../../../hooks/queries';
 import { useAppNavigate } from '../../../utils/connections';
 
 type Category = 'all' | 'schedule' | 'budget' | 'safety' | 'quality';
@@ -14,6 +15,8 @@ const categoryConfig: Record<Category, { label: string; icon: React.ReactNode; c
   safety: { label: 'Safety', icon: <Shield size={12} />, color: colors.statusInfo },
   quality: { label: 'Quality', icon: <CheckCircle size={12} />, color: colors.statusActive },
 };
+
+const STALENESS_THRESHOLD_MS = 24 * 60 * 60 * 1000;
 
 function pageToCategory(page: string | null | undefined): Category {
   if (!page) return 'schedule';
@@ -29,18 +32,44 @@ export const AIInsightsWidget: React.FC = React.memo(() => {
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const dismissInsight = (id: string) => setDismissedIds((prev) => new Set([...prev, id]));
   const projectId = useProjectId();
-  const { data: rawInsights } = useAIInsights(projectId);
+  const queryClient = useQueryClient();
+  const { data: insightsResponse, isFetching, refetch } = useAiInsightsMeta(projectId);
   const navigate = useAppNavigate();
 
-  const allInsights = (rawInsights || [])
+  const rawInsights = insightsResponse?.insights || [];
+  const hasCachedInsights = rawInsights.some((i) => i.source !== 'live');
+
+  const mostRecentCreatedAt = rawInsights.length > 0
+    ? rawInsights.reduce((latest, i) => (i.createdAt > latest ? i.createdAt : latest), rawInsights[0].createdAt)
+    : null;
+  const isStale = mostRecentCreatedAt
+    ? Date.now() - new Date(mostRecentCreatedAt).getTime() > STALENESS_THRESHOLD_MS
+    : false;
+
+  const relativeTime = (iso: string): string => {
+    const ms = Date.now() - new Date(iso).getTime();
+    const minutes = Math.floor(ms / 60000);
+    if (minutes < 60) return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
+    const days = Math.floor(hours / 24);
+    return `${days} day${days !== 1 ? 's' : ''} ago`;
+  };
+
+  const handleRetry = () => {
+    queryClient.removeQueries({ queryKey: ['ai_insights_meta', projectId] });
+    refetch();
+  };
+
+  const allInsights = rawInsights
     .filter((i) => !dismissedIds.has(i.id))
     .map((i) => ({
       id: i.id,
       severity: (i.severity || 'info') as 'warning' | 'info' | 'success' | 'critical',
-      title: i.message,
-      description: i.expanded_content || '',
-      category: pageToCategory(i.page),
-      route: i.action_link || 'dashboard',
+      title: i.title,
+      description: i.description || '',
+      category: pageToCategory((i as any).page),
+      route: (i as any).action_link || 'dashboard',
     }));
 
   const filtered = activeCategory === 'all'
@@ -63,6 +92,69 @@ export const AIInsightsWidget: React.FC = React.memo(() => {
         </span>
         <span style={{ marginLeft: 'auto', fontSize: typography.fontSize.caption, color: colors.white, fontWeight: typography.fontWeight.semibold, backgroundColor: colors.primaryOrange, borderRadius: borderRadius.full, minWidth: '20px', height: '20px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: `0 ${spacing['1.5']}`, flexShrink: 0 }}>{allInsights.length}</span>
       </div>
+
+      {/* Cached data banner */}
+      {hasCachedInsights && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: spacing['2'],
+          padding: `${spacing['2']} ${spacing['3']}`,
+          marginBottom: spacing['2'],
+          backgroundColor: '#FFF7ED',
+          border: '1px solid #FED7AA',
+          borderRadius: borderRadius.base,
+        }}>
+          <AlertTriangle size={13} color={colors.statusPending} style={{ flexShrink: 0 }} />
+          <span style={{ flex: 1, fontSize: typography.fontSize.caption, color: '#92400E' }}>
+            {mostRecentCreatedAt
+              ? `AI insights updated ${relativeTime(mostRecentCreatedAt)} — live analysis unavailable.`
+              : 'AI insights are showing cached data. Live analysis unavailable.'}
+          </span>
+          <button
+            onClick={handleRetry}
+            disabled={isFetching}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+              padding: `2px ${spacing['2']}`,
+              border: '1px solid #FED7AA',
+              borderRadius: borderRadius.base,
+              backgroundColor: 'transparent',
+              color: '#92400E',
+              fontSize: typography.fontSize.caption,
+              fontFamily: typography.fontFamily,
+              fontWeight: typography.fontWeight.medium,
+              cursor: isFetching ? 'not-allowed' : 'pointer',
+              opacity: isFetching ? 0.6 : 1,
+              flexShrink: 0,
+            }}
+          >
+            <RefreshCw size={11} style={{ animation: isFetching ? 'spin 1s linear infinite' : 'none' }} />
+            Retry
+          </button>
+        </div>
+      )}
+
+      {/* Staleness warning */}
+      {isStale && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: spacing['2'],
+          padding: `${spacing['1.5']} ${spacing['3']}`,
+          marginBottom: spacing['2'],
+          backgroundColor: '#FFFBEB',
+          border: '1px solid #FDE68A',
+          borderRadius: borderRadius.base,
+        }}>
+          <Clock size={12} color={colors.statusPending} style={{ flexShrink: 0 }} />
+          <span style={{ fontSize: typography.fontSize.caption, color: '#78350F' }}>
+            Insights are more than 24 hours old.
+          </span>
+        </div>
+      )}
 
       {/* Category filter */}
       <div style={{ display: 'flex', gap: spacing['1'], marginBottom: spacing['3'], flexWrap: 'wrap' }}>

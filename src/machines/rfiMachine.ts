@@ -1,7 +1,24 @@
-import { setup } from 'xstate'
+import { setup, fromPromise } from 'xstate'
 import { colors } from '../styles/theme'
+import type { CreateRfiPayload } from '../types/api'
 
 export type RFIState = 'draft' | 'open' | 'under_review' | 'answered' | 'closed' | 'void'
+
+// Actor factory for production. Inject via rfiMachine.provide({ actors: createRfiActors(...) }).
+// The machine's setup() uses no-op placeholders so tests run without real API calls.
+export function createRfiActors(
+  createFn: (projectId: string, payload: CreateRfiPayload) => Promise<unknown>,
+  updateFn: (projectId: string, id: string, updates: Partial<CreateRfiPayload> & { status?: string }) => Promise<unknown>
+) {
+  return {
+    persistCreate: fromPromise(({ input }: { input: { projectId: string; payload: CreateRfiPayload } }) =>
+      input.projectId ? createFn(input.projectId, input.payload) : Promise.resolve(null)
+    ),
+    persistTransition: fromPromise(({ input }: { input: { projectId: string; rfiId: string; status: string } }) =>
+      input.rfiId ? updateFn(input.projectId, input.rfiId, { status: input.status }) : Promise.resolve(null)
+    ),
+  }
+}
 
 export interface RFITransition {
   from: RFIState
@@ -27,6 +44,16 @@ export const rfiMachine = setup({
       | { type: 'CLOSE'; userId: string }
       | { type: 'REOPEN'; userId: string }
       | { type: 'VOID'; userId: string; reason: string },
+  },
+  // No-op placeholders. Override in production:
+  //   rfiMachine.provide({ actors: createRfiActors(createRfi, updateRfi) })
+  actors: {
+    persistCreate: fromPromise<unknown, { projectId: string; payload: CreateRfiPayload }>(
+      () => Promise.resolve(null)
+    ),
+    persistTransition: fromPromise<unknown, { projectId: string; rfiId: string; status: string }>(
+      () => Promise.resolve(null)
+    ),
   },
 }).createMachine({
   id: 'rfi',

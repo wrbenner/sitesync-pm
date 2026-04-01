@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Download, Clock, X } from 'lucide-react';
+import { Search, Download, Clock, X, AlertCircle } from 'lucide-react';
 import { PageContainer, Card, Btn, Skeleton, useToast } from '../components/Primitives';
+import { ApiError } from '../api/errors';
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme';
 import { useAuditTrail, exportAuditTrailCSV } from '../hooks/useAuditTrail';
 import { PermissionGate } from '../components/auth/PermissionGate';
@@ -38,7 +39,7 @@ export const AuditTrail: React.FC = () => {
   const [filterEntity, setFilterEntity] = useState<string>('');
   const [filterAction, setFilterAction] = useState<string>('');
 
-  const { data: entries, isPending: loading } = useAuditTrail({
+  const { data: entries, isPending: loading, isError, error } = useAuditTrail({
     entityType: filterEntity || undefined,
     action: filterAction || undefined,
   });
@@ -73,6 +74,20 @@ export const AuditTrail: React.FC = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
           {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} height="56px" />)}
         </div>
+      </PageContainer>
+    );
+  }
+
+  if (isError) {
+    const safeMessage = error instanceof ApiError ? error.userMessage : 'Failed to load audit log';
+    return (
+      <PageContainer title="Audit Trail" subtitle="Error">
+        <Card>
+          <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'], padding: spacing['4'], color: colors.statusCritical }}>
+            <AlertCircle size={20} />
+            <span style={{ fontSize: typography.fontSize.body }}>{safeMessage}</span>
+          </div>
+        </Card>
       </PageContainer>
     );
   }

@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
@@ -13,6 +13,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { colors, spacing, typography, transitions } from '../../styles/theme';
 import { Skeleton } from '../Primitives';
 import { ArrowUp, ArrowDown } from 'lucide-react';
+import { useTableKeyboardNavigation } from '../../hooks/useTableKeyboardNavigation';
 
 interface VirtualDataTableProps<T> {
   data: T[];
@@ -24,7 +25,10 @@ interface VirtualDataTableProps<T> {
   getRowId?: (row: T) => string;
   emptyMessage?: string;
   rowHeight?: number;
+  containerHeight?: number;
   overscan?: number;
+  selectedRows?: Set<string>;
+  onSelectionChange?: (rows: Set<string>) => void;
 }
 
 const ROW_HEIGHT = 44;
@@ -34,15 +38,25 @@ const VirtualRow = React.memo(function VirtualRow<T>({
   onClick,
   selected,
   style,
+  index,
+  focused,
 }: {
   row: Row<T>;
   onClick?: (row: T) => void;
   selected: boolean;
   style: React.CSSProperties;
+  index: number;
+  focused: boolean;
 }) {
   const baseBg = selected ? colors.surfaceSelected : colors.surfaceRaised;
   return (
-    <tr
+    <div
+      role="row"
+      aria-rowindex={index + 1}
+      aria-selected={selected}
+      tabIndex={focused ? 0 : -1}
+      data-row-index={index}
+      className="sitesync-grid-row"
       onClick={onClick ? () => onClick(row.original) : undefined}
       style={{
         ...style,
@@ -55,15 +69,16 @@ const VirtualRow = React.memo(function VirtualRow<T>({
         borderLeft: selected ? `2px solid ${colors.primaryOrange}` : '2px solid transparent',
       }}
       onMouseEnter={(e) => {
-        if (onClick) (e.currentTarget as HTMLTableRowElement).style.backgroundColor = selected ? colors.surfaceSelected : colors.surfaceHover;
+        if (onClick) (e.currentTarget as HTMLDivElement).style.backgroundColor = selected ? colors.surfaceSelected : colors.surfaceHover;
       }}
       onMouseLeave={(e) => {
-        if (onClick) (e.currentTarget as HTMLTableRowElement).style.backgroundColor = baseBg;
+        if (onClick) (e.currentTarget as HTMLDivElement).style.backgroundColor = baseBg;
       }}
     >
       {row.getVisibleCells().map((cell) => (
-        <td
+        <div
           key={cell.id}
+          role="gridcell"
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -77,15 +92,17 @@ const VirtualRow = React.memo(function VirtualRow<T>({
           }}
         >
           {flexRender(cell.column.columnDef.cell, cell.getContext())}
-        </td>
+        </div>
       ))}
-    </tr>
+    </div>
   );
 }) as <T>(props: {
   row: Row<T>;
   onClick?: (row: T) => void;
   selected: boolean;
   style: React.CSSProperties;
+  index: number;
+  focused: boolean;
 }) => React.ReactElement;
 
 export function VirtualDataTable<T>({
@@ -98,9 +115,11 @@ export function VirtualDataTable<T>({
   getRowId,
   emptyMessage = 'No items found',
   rowHeight = ROW_HEIGHT,
+  containerHeight = 600,
   overscan = 10,
 }: VirtualDataTableProps<T>) {
   const parentRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
 
   const table = useReactTable({
@@ -123,6 +142,21 @@ export function VirtualDataTable<T>({
     overscan,
   });
 
+  const { focusedIndex, handleKeyDown } = useTableKeyboardNavigation({
+    rowCount: rows.length,
+    onActivate: (i) => onRowClick?.(rows[i].original),
+  });
+
+  useEffect(() => {
+    virtualizer.scrollToIndex(focusedIndex, { align: 'auto' });
+    if (gridRef.current?.contains(document.activeElement)) {
+      requestAnimationFrame(() => {
+        const row = gridRef.current?.querySelector<HTMLElement>(`[data-row-index="${focusedIndex}"]`);
+        row?.focus({ preventScroll: false });
+      });
+    }
+  }, [focusedIndex]);
+
   if (loading) {
     return (
       <div style={{ padding: spacing['4'], display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
@@ -134,41 +168,68 @@ export function VirtualDataTable<T>({
   }
 
   return (
-    <div>
+    <div
+      ref={gridRef}
+      role="grid"
+      aria-rowcount={data.length}
+      tabIndex={0}
+      className="sitesync-grid"
+      onKeyDown={handleKeyDown}
+      onFocus={(e) => {
+        if (e.target === e.currentTarget) {
+          const firstRow = e.currentTarget.querySelector<HTMLElement>('[data-row-index="0"]');
+          firstRow?.focus();
+        }
+      }}
+    >
       {/* Header */}
-      <div style={{ display: 'flex', borderBottom: `1px solid ${colors.borderDefault}`, backgroundColor: colors.surfaceInset, position: 'sticky', top: 0, zIndex: 10 }}>
-        {table.getHeaderGroups().map((headerGroup) =>
-          headerGroup.headers.map((header) => (
-            <div
-              key={header.id}
-              onClick={header.column.getCanSort() ? header.column.getToggleSortingHandler() : undefined}
-              style={{
-                padding: `${spacing['2.5']} ${spacing['4']}`,
-                fontSize: typography.fontSize.label,
-                fontWeight: typography.fontWeight.medium,
-                color: colors.textTertiary,
-                letterSpacing: typography.letterSpacing.wide,
-                cursor: header.column.getCanSort() ? 'pointer' : 'default',
-                userSelect: 'none',
-                whiteSpace: 'nowrap',
-                width: header.column.getSize(),
-                flexShrink: 0,
-              }}
-            >
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: spacing['1'] }}>
-                {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                {header.column.getIsSorted() === 'asc' && <ArrowUp size={12} />}
-                {header.column.getIsSorted() === 'desc' && <ArrowDown size={12} />}
-              </span>
-            </div>
-          ))
-        )}
+      <div
+        role="rowgroup"
+        style={{ display: 'flex', borderBottom: `1px solid ${colors.borderDefault}`, backgroundColor: colors.surfaceInset, position: 'sticky', top: 0, zIndex: 10 }}
+      >
+        {table.getHeaderGroups().map((headerGroup) => (
+          <div key={headerGroup.id} role="row" style={{ display: 'flex', width: '100%' }}>
+            {headerGroup.headers.map((header) => (
+              <div
+                key={header.id}
+                role="columnheader"
+                aria-sort={
+                  header.column.getIsSorted() === 'asc'
+                    ? 'ascending'
+                    : header.column.getIsSorted() === 'desc'
+                    ? 'descending'
+                    : 'none'
+                }
+                onClick={header.column.getCanSort() ? header.column.getToggleSortingHandler() : undefined}
+                style={{
+                  padding: `${spacing['2.5']} ${spacing['4']}`,
+                  fontSize: typography.fontSize.label,
+                  fontWeight: typography.fontWeight.medium,
+                  color: colors.textTertiary,
+                  letterSpacing: typography.letterSpacing.wide,
+                  cursor: header.column.getCanSort() ? 'pointer' : 'default',
+                  userSelect: 'none',
+                  whiteSpace: 'nowrap',
+                  width: header.column.getSize(),
+                  flexShrink: 0,
+                }}
+              >
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: spacing['1'] }}>
+                  {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                  {header.column.getIsSorted() === 'asc' && <ArrowUp size={12} />}
+                  {header.column.getIsSorted() === 'desc' && <ArrowDown size={12} />}
+                </span>
+              </div>
+            ))}
+          </div>
+        ))}
       </div>
 
       {/* Virtual scroll container */}
       <div
         ref={parentRef}
-        style={{ height: '600px', overflow: 'auto' }}
+        role="rowgroup"
+        style={{ height: `${containerHeight}px`, overflow: 'auto' }}
       >
         <div style={{ height: `${virtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
           {virtualizer.getVirtualItems().map((virtualRow) => {
@@ -179,6 +240,8 @@ export function VirtualDataTable<T>({
                 row={row}
                 onClick={onRowClick}
                 selected={selectedRowId != null && getRowId ? getRowId(row.original) === String(selectedRowId) : false}
+                index={virtualRow.index}
+                focused={focusedIndex === virtualRow.index}
                 style={{
                   position: 'absolute',
                   top: 0,

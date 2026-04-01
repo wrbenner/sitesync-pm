@@ -1,14 +1,15 @@
 import React, { useState, useMemo } from 'react';
 import { Settings } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { PageContainer, Card, useToast } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme';
 import { ActivityCard } from '../components/activity/ActivityCard';
 import type { ActivityItem } from '../components/activity/ActivityCard';
 import { MentionInput } from '../components/activity/MentionInput';
-import type { MentionPerson } from '../components/activity/MentionInput';
 import { useProjectId } from '../hooks/useProjectId';
-import { useActivityFeed, useDirectoryContacts } from '../hooks/queries';
-import type { ActivityFeedItem } from '../types/database';
+import { useRealtimeActivityFeed } from '../hooks/queries/realtime';
+import { insertActivity, notifyMentionedUsers } from '../api/endpoints/activity';
+import type { ActivityFeedItem } from '../types/entities';
 
 type FilterType = 'all' | 'rfi' | 'submittal' | 'photo' | 'task' | 'budget' | 'schedule';
 
@@ -22,6 +23,22 @@ const filterOptions: { id: FilterType; label: string }[] = [
   { id: 'schedule', label: 'Schedule' },
 ];
 
+/** Maps entity type to the app route for detail navigation. */
+function resolveEntityPath(entityType: string): string | undefined {
+  switch (entityType) {
+    case 'rfi': return '/rfis';
+    case 'submittal': return '/submittals';
+    case 'change_order': return '/change-orders';
+    case 'task': return '/tasks';
+    case 'punch': return '/punch-list';
+    case 'daily_log': return '/daily-log';
+    case 'budget': return '/budget';
+    case 'schedule': return '/schedule';
+    case 'photo': return '/field-capture';
+    default: return undefined;
+  }
+}
+
 function getInitials(name: string): string {
   return name
     .split(' ')
@@ -31,42 +48,39 @@ function getInitials(name: string): string {
     .slice(0, 2);
 }
 
-function mapFeedItem(item: ActivityFeedItem): ActivityItem & { photoUrl?: string } {
-  const meta = (item.metadata ?? {}) as Record<string, unknown>;
-  const userName = (meta.user_name as string) || 'Unknown User';
-  const type = (item.type || 'task') as ActivityItem['type'];
-  const action = (meta.action as string) || '';
-  const photoUrl = (meta.photo_url as string) || undefined;
-
+function mapFeedItem(item: ActivityFeedItem): ActivityItem {
+  const meta = item.metadata;
   return {
-    id: typeof meta.numeric_id === 'number' ? meta.numeric_id : Math.abs(hashCode(item.id)),
-    type,
-    user: userName,
-    userInitials: getInitials(userName),
-    action,
-    target: item.title,
-    timestamp: new Date(item.created_at ?? Date.now()),
-    preview: item.body || undefined,
+    id: item.id,
+    type: item.entityType || 'task',
+    user: item.actorName,
+    userInitials: getInitials(item.actorName),
+    actorAvatar: item.actorAvatar,
+    action: item.verb,
+    target: item.entityLabel || (meta.title as string) || '',
+    entityPath: item.entityId ? resolveEntityPath(item.entityType) : undefined,
+    timestamp: new Date(item.createdAt),
+    preview: (meta.body as string) || undefined,
     commentCount: typeof meta.comment_count === 'number' ? meta.comment_count : undefined,
-    photoUrl,
   };
 }
 
-/** Simple string hash so we get a stable numeric id from the uuid */
-function hashCode(s: string): number {
-  let hash = 0;
-  for (let i = 0; i < s.length; i++) {
-    hash = (hash << 5) - hash + s.charCodeAt(i);
-    hash |= 0;
-  }
-  return hash;
+/** Mark consecutive items from the same actor within 5 minutes as grouped. */
+function applyGrouping(items: ActivityItem[]): ActivityItem[] {
+  return items.map((item, i) => {
+    if (i === 0) return item;
+    const prev = items[i - 1];
+    const sameActor = prev.user === item.user;
+    const withinWindow = Math.abs(item.timestamp.getTime() - prev.timestamp.getTime()) <= 5 * 60 * 1000;
+    return sameActor && withinWindow ? { ...item, isGrouped: true } : item;
+  });
 }
 
-function groupByTime(items: (ActivityItem & { photoUrl?: string })[]): { label: string; items: (ActivityItem & { photoUrl?: string })[] }[] {
+function groupByTime(items: ActivityItem[]): { label: string; items: ActivityItem[] }[] {
   const now = Date.now();
-  const today: (ActivityItem & { photoUrl?: string })[] = [];
-  const yesterday: (ActivityItem & { photoUrl?: string })[] = [];
-  const earlier: (ActivityItem & { photoUrl?: string })[] = [];
+  const today: ActivityItem[] = [];
+  const yesterday: ActivityItem[] = [];
+  const earlier: ActivityItem[] = [];
 
   items.forEach(item => {
     const hours = (now - item.timestamp.getTime()) / (1000 * 60 * 60);
@@ -75,7 +89,7 @@ function groupByTime(items: (ActivityItem & { photoUrl?: string })[]): { label: 
     else earlier.push(item);
   });
 
-  const groups: { label: string; items: (ActivityItem & { photoUrl?: string })[] }[] = [];
+  const groups: { label: string; items: ActivityItem[] }[] = [];
   if (today.length) groups.push({ label: 'Today', items: today });
   if (yesterday.length) groups.push({ label: 'Yesterday', items: yesterday });
   if (earlier.length) groups.push({ label: 'Earlier', items: earlier });
@@ -84,20 +98,12 @@ function groupByTime(items: (ActivityItem & { photoUrl?: string })[]): { label: 
 
 export const Activity: React.FC = () => {
   const { addToast } = useToast();
+  const navigate = useNavigate();
   const projectId = useProjectId();
-  const { data: rawActivities } = useActivityFeed(projectId);
-  const { data: contacts = [] } = useDirectoryContacts(projectId);
-  const mentionPeople: MentionPerson[] = useMemo(() => contacts.map((c: Record<string, unknown>) => {
-    const name = String(c.name || c.full_name || c.email || '');
-    return {
-      name,
-      initials: name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase() || '??',
-      role: String(c.role || c.company || ''),
-    };
-  }), [contacts]);
+  const { data: rawActivities } = useRealtimeActivityFeed(projectId);
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [following, setFollowing] = useState<Set<string>>(new Set(['rfi', 'task']));
-  const [readItems, setReadItems] = useState<Set<number>>(new Set());
+  const [readItems, setReadItems] = useState<Set<string>>(new Set());
 
   const activities = useMemo(
     () => (rawActivities ?? []).map(mapFeedItem),
@@ -108,17 +114,33 @@ export const Activity: React.FC = () => {
     ? activities
     : activities.filter((a) => a.type === activeFilter);
 
-  const unreadCount = filtered.filter(i => !readItems.has(i.id)).length;
-  const grouped = groupByTime(filtered);
+  const withGrouping = useMemo(() => applyGrouping(filtered), [filtered]);
+  const unreadCount = withGrouping.filter(i => !readItems.has(i.id)).length;
+  const grouped = groupByTime(withGrouping);
 
   return (
     <PageContainer title="Activity" subtitle="Everything happening on Meridian Tower">
       {/* Post input */}
       <Card padding={spacing['4']}>
         <MentionInput
-          onSend={(_text) => addToast('success', 'Posted to activity feed')}
+          onSend={async (text, mentionedUserIds) => {
+            if (!projectId) return;
+            try {
+              const activityId = await insertActivity(projectId, {
+                type: 'comment',
+                title: text,
+                body: text,
+              });
+              if (mentionedUserIds.length > 0) {
+                await notifyMentionedUsers(mentionedUserIds, activityId, projectId);
+              }
+              addToast('success', 'Posted to activity feed');
+            } catch {
+              addToast('error', 'Failed to post comment');
+            }
+          }}
           placeholder="Share an update with the team... Use @ to mention someone"
-          people={mentionPeople}
+          projectId={projectId}
         />
       </Card>
 
@@ -211,7 +233,7 @@ export const Activity: React.FC = () => {
                   position: 'relative',
                 }}
               >
-                {!readItems.has(item.id) && (
+                {!readItems.has(item.id) && !item.isGrouped && (
                   <div style={{
                     position: 'absolute', left: spacing['2'], top: '50%', transform: 'translateY(-50%)',
                     width: 6, height: 6, borderRadius: '50%', backgroundColor: colors.statusInfo, zIndex: 1,
@@ -222,14 +244,12 @@ export const Activity: React.FC = () => {
                   onComment={() => addToast('info', 'Comment thread opened')}
                   onClick={() => {
                     setReadItems(prev => { const n = new Set(prev); n.add(item.id); return n; });
-                    addToast('info', `Navigating to ${item.target}`);
+                  }}
+                  onEntityClick={(path) => {
+                    setReadItems(prev => { const n = new Set(prev); n.add(item.id); return n; });
+                    navigate(path);
                   }}
                 />
-                {item.photoUrl && (
-                  <div style={{ padding: `0 ${spacing['5']} ${spacing['3']}`, marginTop: `-${spacing['2']}` }}>
-                    <img src={item.photoUrl} alt="Site photo" style={{ width: '100%', height: '140px', objectFit: 'cover', borderRadius: borderRadius.md }} />
-                  </div>
-                )}
               </div>
             ))}
           </div>

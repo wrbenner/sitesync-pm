@@ -1,46 +1,60 @@
-import { useEffect, useCallback } from 'react'
+import { useState, useCallback, useId } from 'react'
+import type React from 'react'
 
-/**
- * Adds arrow-key navigation to data tables and lists.
- * When a row is focused/selected, ArrowUp/ArrowDown moves to the
- * previous/next item in the list.
- */
-export function useTableKeyboardNavigation<T extends { id: string | number }>(
-  items: T[],
-  selectedId: string | number | null,
-  onSelect: (item: T) => void,
-) {
+interface UseTableKeyboardNavigationOptions {
+  rowCount: number
+  onActivate?: (index: number) => void
+  onToggleSelect?: (index: number) => void
+  /** Prefix used to build row element IDs, e.g. "myTable" produces "myTable-row-0". Defaults to a generated ID. */
+  rowIdPrefix?: string
+}
+
+export function useTableKeyboardNavigation({
+  rowCount,
+  onActivate,
+  onToggleSelect,
+  rowIdPrefix,
+}: UseTableKeyboardNavigationOptions): {
+  focusedIndex: number
+  handleKeyDown: (e: React.KeyboardEvent) => void
+  /** The id of the currently focused row element, for use as aria-activedescendant on the container. */
+  activeRowId: string | undefined
+} {
+  const generatedPrefix = useId()
+  const prefix = rowIdPrefix ?? generatedPrefix
+  const [focusedIndex, setFocusedIndex] = useState(0)
+
   const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (items.length === 0) return
-      if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return
+    (e: React.KeyboardEvent) => {
+      if (rowCount === 0) return
 
-      // Only handle when no input/textarea is focused
-      const tag = (e.target as HTMLElement)?.tagName
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
-
-      e.preventDefault()
-
-      const currentIndex = selectedId != null
-        ? items.findIndex((item) => item.id === selectedId)
-        : -1
-
-      let nextIndex: number
-      if (e.key === 'ArrowDown') {
-        nextIndex = currentIndex < items.length - 1 ? currentIndex + 1 : currentIndex
-      } else {
-        nextIndex = currentIndex > 0 ? currentIndex - 1 : 0
-      }
-
-      if (nextIndex !== currentIndex && items[nextIndex]) {
-        onSelect(items[nextIndex])
+      switch (e.key) {
+        case 'ArrowDown':
+        case 'j':
+          e.preventDefault()
+          setFocusedIndex((prev) => Math.min(prev + 1, rowCount - 1))
+          break
+        case 'ArrowUp':
+        case 'k':
+          e.preventDefault()
+          setFocusedIndex((prev) => Math.max(prev - 1, 0))
+          break
+        case 'Enter': {
+          e.preventDefault()
+          onActivate?.(focusedIndex)
+          break
+        }
+        case ' ': {
+          e.preventDefault()
+          onToggleSelect?.(focusedIndex)
+          break
+        }
       }
     },
-    [items, selectedId, onSelect],
+    [rowCount, focusedIndex, onActivate, onToggleSelect],
   )
 
-  useEffect(() => {
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [handleKeyDown])
+  const activeRowId = rowCount > 0 ? `${prefix}-row-${focusedIndex}` : undefined
+
+  return { focusedIndex, handleKeyDown, activeRowId }
 }

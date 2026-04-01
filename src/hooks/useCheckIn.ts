@@ -161,8 +161,20 @@ export function useCheckInMutation() {
       gpsLat?: number
       gpsLng?: number
     }) => {
-      if (!projectId || !isSupabaseConfigured) {
-        throw new Error('Project not configured')
+      if (!projectId) throw new Error('Project not configured')
+
+      // Offline: queue for background sync when reconnected
+      if (!navigator.onLine || !isSupabaseConfigured) {
+        enqueueOfflineCheckIn({
+          projectId,
+          workerId: params.workerId,
+          workerName: params.workerName,
+          company: params.company,
+          trade: params.trade,
+          checkInAt: new Date().toISOString(),
+          method: params.method,
+        })
+        return null
       }
 
       const { data, error } = await supabase
@@ -241,5 +253,206 @@ export function useHeadcountRealtime() {
     return () => {
       supabase.removeChannel(channel)
     }
+  }, [projectId, queryClient])
+}
+
+// ── subscribeToCheckins ───────────────────────────────────────
+// Imperative subscription for multi-super scenarios. Returns an unsubscribe fn.
+
+export function subscribeToCheckins(
+  projectId: string,
+  onChange: () => void,
+): () => void {
+  if (!isSupabaseConfigured) return () => {}
+  const channel = supabase
+    .channel(`checkins-sub-${projectId}`)
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'site_check_ins',
+      filter: `project_id=eq.${projectId}`,
+    }, onChange)
+    .subscribe()
+  return () => { supabase.removeChannel(channel) }
+}
+
+// ── WorkerIdentity ────────────────────────────────────────────
+
+export interface WorkerIdentity {
+  workerId: string
+  workerName: string
+  company: string
+  trade: string
+}
+
+// ── useWorkerLookup ───────────────────────────────────────────
+// Resolves a worker from directory_contacts by id or partial name.
+// Target: <1s lookup for QR scan resolution.
+
+export function useWorkerLookup() {
+  const projectId = useProjectId()
+  return useCallback(
+    async (idOrName: string): Promise<WorkerIdentity | null> => {
+      if (!projectId || !isSupabaseConfigured) return null
+      const { data } = await supabase
+        .from('directory_contacts')
+        .select('id, name, company, trade')
+        .eq('project_id', projectId)
+        .or(`id.eq.${idOrName},name.ilike.%${idOrName}%`)
+        .limit(1)
+        .maybeSingle()
+      if (!data) return null
+      return {
+        workerId: data.id as string,
+        workerName: (data.name as string) ?? 'Unknown',
+        company: (data.company as string) ?? '',
+        trade: (data.trade as string) ?? '',
+      }
+    },
+    [projectId],
+  )
+}
+
+// ── useDailyLogCrewUpsert ─────────────────────────────────────
+// Upserts a crew entry in today's daily_log_entries grouped by trade+company.
+// Creates the day's daily log if it does not yet exist.
+
+export function useDailyLogCrewUpsert() {
+  const projectId = useProjectId()
+  return useMutation({
+    mutationFn: async (params: {
+      trade: string
+      company: string
+      headcountDelta: number
+      timeIn?: string
+      timeOut?: string
+      hoursDelta?: number
+    }) => {
+      if (!projectId || !isSupabaseConfigured) return null
+      const today = new Date().toISOString().split('T')[0]
+
+      // Find or create today's log
+      let logId: string
+      const { data: existingLog } = await supabase
+        .from('daily_logs')
+        .select('id')
+        .eq('project_id', projectId)
+        .eq('log_date', today)
+        .maybeSingle()
+      if (existingLog) {
+        logId = existingLog.id as string
+      } else {
+        const { data: created, error } = await supabase
+          .from('daily_logs')
+          .insert({ project_id: projectId, log_date: today })
+          .select('id')
+          .single()
+        if (error) throw error
+        logId = created.id as string
+      }
+
+      // Upsert crew entry for this trade+company bucket
+      const { data: entry } = await supabase
+        .from('daily_log_entries')
+        .select('id, headcount, hours, time_in')
+        .eq('daily_log_id', logId)
+        .eq('type', 'crew')
+        .eq('trade', params.trade)
+        .eq('company', params.company)
+        .maybeSingle()
+
+      if (entry) {
+        const patch: Record<string, unknown> = {
+          headcount: Math.max(0, ((entry.headcount as number) ?? 0) + params.headcountDelta),
+        }
+        if (params.timeIn) {
+          const prev = entry.time_in as string | null
+          if (!prev || params.timeIn < prev) patch.time_in = params.timeIn
+        }
+        if (params.timeOut) patch.time_out = params.timeOut
+        if (params.hoursDelta != null) {
+          patch.hours =
+            Math.round((((entry.hours as number) ?? 0) + params.hoursDelta) * 10) / 10
+        }
+        await supabase.from('daily_log_entries').update(patch).eq('id', entry.id as string)
+      } else if (params.headcountDelta > 0) {
+        await supabase.from('daily_log_entries').insert({
+          daily_log_id: logId,
+          type: 'crew',
+          trade: params.trade || 'General',
+          company: params.company || 'Unknown',
+          headcount: 1,
+          time_in: params.timeIn ?? new Date().toISOString(),
+          hours: 0,
+        })
+      }
+      return null
+    },
+  })
+}
+
+// ── Offline Check-In Queue ────────────────────────────────────
+// localStorage-based queue; flushed to Supabase on reconnect.
+
+const OFFLINE_CHECKIN_KEY = 'sitesync_offline_checkins'
+
+interface OfflinePendingCheckIn {
+  tempId: string
+  projectId: string
+  workerId?: string
+  workerName: string
+  company: string
+  trade: string
+  checkInAt: string
+  method: CheckInMethod
+}
+
+function readOfflineQueue(): OfflinePendingCheckIn[] {
+  try { return JSON.parse(localStorage.getItem(OFFLINE_CHECKIN_KEY) ?? '[]') }
+  catch { return [] }
+}
+
+function writeOfflineQueue(items: OfflinePendingCheckIn[]) {
+  localStorage.setItem(OFFLINE_CHECKIN_KEY, JSON.stringify(items))
+}
+
+export function enqueueOfflineCheckIn(item: Omit<OfflinePendingCheckIn, 'tempId'>) {
+  writeOfflineQueue([...readOfflineQueue(), { ...item, tempId: crypto.randomUUID() }])
+}
+
+// ── useSyncOfflineCheckIns ────────────────────────────────────
+// Mount in any page that uses check-in to flush queued offline records.
+
+export function useSyncOfflineCheckIns() {
+  const projectId = useProjectId()
+  const queryClient = useQueryClient()
+
+  useEffect(() => {
+    if (!projectId || !isSupabaseConfigured) return
+
+    const flush = async () => {
+      const queue = readOfflineQueue().filter((i) => i.projectId === projectId)
+      if (!queue.length) return
+      const synced: string[] = []
+      for (const item of queue) {
+        try {
+          await supabase.from('site_check_ins').insert({
+            project_id: item.projectId,
+            worker_id: item.workerId ?? null,
+            check_in_at: item.checkInAt,
+            method: item.method,
+          })
+          synced.push(item.tempId)
+        } catch { /* leave in queue for retry */ }
+      }
+      if (synced.length) {
+        writeOfflineQueue(readOfflineQueue().filter((i) => !synced.includes(i.tempId)))
+        queryClient.invalidateQueries({ queryKey: ['headcount', projectId] })
+      }
+    }
+
+    window.addEventListener('online', flush)
+    if (navigator.onLine) void flush()
+    return () => window.removeEventListener('online', flush)
   }, [projectId, queryClient])
 }

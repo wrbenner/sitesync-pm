@@ -124,8 +124,7 @@ export function transformSupabaseError(
     return new NetworkError(error.message)
   }
 
-  const details = 'details' in error ? error.details : undefined
-  return new ApiError(error.message, 500, code, humanizeError(error.message), details)
+  return new ApiError(error.message, 500, code, humanizeError(error.message))
 }
 
 export function isRetryable(error: unknown): error is RetryableError {

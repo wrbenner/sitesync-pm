@@ -11,12 +11,12 @@ export const punchItemMachine = setup({
       error: string | null
     },
     events: {} as
-      | { type: 'START_WORK' }
-      | { type: 'RESOLVE' }
-      | { type: 'VERIFY' }
-      | { type: 'VERIFY_DIRECT' }  // BUG #3 FIX: For items complete at creation
-      | { type: 'REJECT_VERIFICATION' }  // BUG #3 FIX: Failed verification
-      | { type: 'REOPEN' },
+      | { type: 'START_WORK' }           // Assignee starts work
+      | { type: 'VERIFY_DIRECT' }        // Super verifies item already complete at creation
+      | { type: 'RESOLVE' }              // Assignee marks their work done
+      | { type: 'VERIFY' }               // Super verifies completion
+      | { type: 'REJECT_VERIFICATION' }  // Super rejects, sends back to in_progress
+      | { type: 'REOPEN' },              // Manually reopen
   },
 }).createMachine({
   id: 'punchItem',
@@ -26,7 +26,7 @@ export const punchItemMachine = setup({
     open: {
       on: {
         START_WORK: { target: 'in_progress' },
-        VERIFY_DIRECT: { target: 'verified' },  // BUG #3 FIX: Skip to verified
+        VERIFY_DIRECT: { target: 'verified' },
       },
     },
     in_progress: {
@@ -42,7 +42,6 @@ export const punchItemMachine = setup({
       },
     },
     verified: {
-      // BUG #3 FIX: Not fully final — failed verification can reopen for rework
       on: {
         REJECT_VERIFICATION: { target: 'in_progress' },
       },
@@ -50,7 +49,7 @@ export const punchItemMachine = setup({
   },
 })
 
-// ── Valid Transitions (BUG #3 FIX: Missing helper) ───────
+// ── Valid Transitions ─────────────────────────────────────
 
 export function getValidPunchTransitions(status: PunchItemState): string[] {
   const transitions: Record<PunchItemState, string[]> = {
@@ -66,26 +65,15 @@ export function getValidPunchTransitions(status: PunchItemState): string[] {
 
 export function getNextPunchStatus(currentStatus: PunchItemState, action: string): PunchItemState | null {
   const map: Record<string, Record<string, PunchItemState>> = {
-    open: {
-      'Start Work': 'in_progress',
-      'Verify (Complete at Creation)': 'verified',
-    },
-    in_progress: {
-      'Mark Resolved': 'resolved',
-      'Reopen': 'open',
-    },
-    resolved: {
-      'Verify': 'verified',
-      'Reopen': 'open',
-    },
-    verified: {
-      'Reject Verification': 'in_progress',
-    },
+    open: { 'Start Work': 'in_progress', 'Verify (Complete at Creation)': 'verified' },
+    in_progress: { 'Mark Resolved': 'resolved', 'Reopen': 'open' },
+    resolved: { 'Verify': 'verified', 'Reopen': 'open' },
+    verified: { 'Reject Verification': 'in_progress' },
   }
   return map[currentStatus]?.[action] || null
 }
 
-// ── Status Display (BUG #3 FIX: Missing helper) ─────────
+// ── Status Display ────────────────────────────────────────
 
 export function getPunchStatusConfig(status: PunchItemState) {
   const config: Record<PunchItemState, { label: string; color: string; bg: string }> = {

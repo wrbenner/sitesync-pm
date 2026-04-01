@@ -9,6 +9,9 @@ import {
   rfiSchema, submittalSchema, punchItemSchema,
   taskSchema, changeOrderSchema, meetingSchema, dailyLogSchema,
 } from '../../components/forms/schemas'
+import { useOfflineMutation } from '../useOfflineMutation'
+import { createDailyLog, updateDailyLog } from '../../api/endpoints/field'
+import type { DailyLogPayload } from '../../types/api'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const from = (table: string) => supabase.from(table as any) as any
@@ -27,6 +30,17 @@ export function useCreateRFI() {
       const { data, error } = await from('rfis').insert(params.data).select().single()
       if (error) throw error
       return { data, projectId: params.projectId }
+    },
+    optimistic: {
+      queryKey: (p) => ['rfis', p.projectId],
+      updater: (old: unknown, p) => {
+        const prev = old as { data?: unknown[]; total?: number } | undefined
+        return {
+          ...prev,
+          data: [...(prev?.data ?? []), { ...p.data, id: `temp-${Date.now()}` }],
+          total: (prev?.total ?? 0) + 1,
+        }
+      },
     },
     analyticsEvent: 'rfi_created',
     getAnalyticsProps: (p) => ({ project_id: p.projectId }),
@@ -47,6 +61,19 @@ export function useUpdateRFI() {
       const { error } = await from('rfis').update(updates).eq('id', id)
       if (error) throw error
       return { projectId, id }
+    },
+    optimistic: {
+      queryKey: (p) => ['rfis', p.projectId],
+      updater: (old: unknown, p) => {
+        const prev = old as { data?: unknown[] } | undefined
+        return {
+          ...prev,
+          data: (prev?.data ?? []).map((rfi: unknown) => {
+            const r = rfi as Record<string, unknown>
+            return r.id === p.id ? { ...r, ...p.updates } : r
+          }),
+        }
+      },
     },
     analyticsEvent: 'rfi_updated',
     getAnalyticsProps: (p) => ({ project_id: p.projectId }),
@@ -289,12 +316,34 @@ export function useCreateDailyLogEntry() {
 export function useSubmitDailyLog() {
   const queryClient = useQueryClient()
   return useMutation({
+    onMutate: async ({ id, projectId }: { id: string; signatureUrl?: string; projectId: string }) => {
+      const key = ['daily_logs', projectId]
+      await queryClient.cancelQueries({ queryKey: key })
+      const previous = queryClient.getQueryData(key)
+      queryClient.setQueryData(key, (old: unknown) => {
+        const prev = old as { data?: unknown[] } | undefined
+        return {
+          ...prev,
+          data: (prev?.data ?? []).map((log: unknown) => {
+            const l = log as Record<string, unknown>
+            return l.id === id ? { ...l, status: 'submitted', is_submitted: true } : l
+          }),
+        }
+      })
+      return { previous, key }
+    },
     mutationFn: async ({ id, signatureUrl, projectId }: { id: string; signatureUrl?: string; projectId: string }) => {
       const updates: Record<string, unknown> = { status: 'submitted', submitted_at: new Date().toISOString() }
       if (signatureUrl) updates.superintendent_signature_url = signatureUrl
       const { error } = await from('daily_logs').update(updates).eq('id', id)
       if (error) throw error
       return { projectId }
+    },
+    onError: (_err, _params, context) => {
+      const ctx = context as { previous: unknown; key: unknown[] } | undefined
+      if (ctx?.previous !== undefined) {
+        queryClient.setQueryData(ctx.key, ctx.previous)
+      }
     },
     onSuccess: (result: { projectId: string }) => {
       invalidateEntity('daily_log', result.projectId)
@@ -347,6 +396,33 @@ export function useRejectDailyLog() {
     invalidateKeys: (p) => [['daily_logs', 'detail', p.id]],
     analyticsEvent: 'daily_log_rejected',
     errorMessage: 'Failed to reject daily log',
+  })
+}
+
+// ── Daily Log Offline-aware Mutation ──────────────────────
+// Wraps createDailyLog with offline queue support. When the device is offline
+// the payload is enqueued to syncManager and written optimistically to the
+// local Dexie cache. On reconnect the SyncManager drains the queue automatically.
+
+export function useDailyLogMutation(projectId: string) {
+  return useOfflineMutation<unknown, { payload: DailyLogPayload }>({
+    table: 'daily_logs',
+    operation: 'insert',
+    mutationFn: ({ payload }) => createDailyLog(projectId, payload),
+    invalidateKeys: [['daily_logs', projectId]],
+    getOfflinePayload: ({ payload }) => ({ project_id: projectId, ...payload }),
+    analyticsEvent: 'daily_log_created',
+  })
+}
+
+export function useDailyLogUpdateMutation(projectId: string) {
+  return useOfflineMutation<unknown, { id: string; payload: Partial<DailyLogPayload> }>({
+    table: 'daily_logs',
+    operation: 'update',
+    mutationFn: ({ id, payload }) => updateDailyLog(id, payload),
+    invalidateKeys: [['daily_logs', projectId]],
+    getOfflinePayload: ({ id, payload }) => ({ id, project_id: projectId, ...payload }),
+    analyticsEvent: 'daily_log_updated',
   })
 }
 

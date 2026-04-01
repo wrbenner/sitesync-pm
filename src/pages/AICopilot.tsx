@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef, useEffect, useCallback, memo } from '
 import {
   Sparkles, Clock, Download, Clipboard, Share2, FileText, ExternalLink,
   Calendar, DollarSign, ShieldCheck, ClipboardCheck, Scale, FileSearch,
-  Bot, ChevronRight,
+  Bot, ChevronRight, Users,
 } from 'lucide-react'
 import { PageContainer, useToast } from '../components/Primitives'
 import { colors, spacing, typography, borderRadius, transitions, shadows } from '../styles/theme'
@@ -147,6 +147,21 @@ const PRESET_PROMPTS = [
     icon: Sparkles,
     description: 'Overdue items, pending approvals, and risk flags',
     agentCount: 3,
+  },
+]
+
+const COLLABORATION_PROMPTS = [
+  {
+    label: 'Who is blocking the most open items?',
+    icon: Users,
+    description: 'Find team members with the most idle ball-in-court assignments',
+    agentCount: 2,
+  },
+  {
+    label: 'Which team members have pending ball-in-court items?',
+    icon: Clock,
+    description: 'List all open RFIs and submittals grouped by responsible party',
+    agentCount: 2,
   },
 ]
 
@@ -691,6 +706,102 @@ export const AICopilot: React.FC = () => {
                     )
                   })}
                 </div>
+
+                {/* Collaboration prompts: shown when arriving from RFIs or submittals */}
+                {(contextPage === 'rfis' || contextPage === 'submittals') && (
+                  <div style={{ maxWidth: 560, width: '100%' }}>
+                    <p
+                      style={{
+                        fontSize: typography.fontSize.caption,
+                        fontWeight: typography.fontWeight.semibold,
+                        color: colors.textTertiary,
+                        textTransform: 'uppercase',
+                        letterSpacing: typography.letterSpacing.wider,
+                        margin: 0,
+                        marginBottom: spacing['2'],
+                      }}
+                    >
+                      Collaboration
+                    </p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'] }}>
+                      {COLLABORATION_PROMPTS.map((prompt) => {
+                        const Icon = prompt.icon
+                        return (
+                          <button
+                            key={prompt.label}
+                            onClick={() => handleSendMessage(prompt.label)}
+                            style={{
+                              padding: `${spacing['3']} ${spacing['4']}`,
+                              textAlign: 'left',
+                              backgroundColor: colors.surfaceRaised,
+                              border: `1px solid ${colors.borderSubtle}`,
+                              borderRadius: borderRadius.lg,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: spacing['3'],
+                              transition: `all ${transitions.quick}`,
+                              fontFamily: typography.fontFamily,
+                            }}
+                            onMouseEnter={(e) => {
+                              ;(e.currentTarget as HTMLButtonElement).style.borderColor =
+                                colors.borderFocus
+                              ;(e.currentTarget as HTMLButtonElement).style.boxShadow =
+                                shadows.cardHover
+                            }}
+                            onMouseLeave={(e) => {
+                              ;(e.currentTarget as HTMLButtonElement).style.borderColor =
+                                colors.borderSubtle
+                              ;(e.currentTarget as HTMLButtonElement).style.boxShadow = 'none'
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: 32,
+                                height: 32,
+                                borderRadius: borderRadius.base,
+                                backgroundColor: colors.teal,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexShrink: 0,
+                              }}
+                            >
+                              <Icon size={15} color={colors.white} />
+                            </div>
+                            <div>
+                              <p
+                                style={{
+                                  fontSize: typography.fontSize.sm,
+                                  fontWeight: typography.fontWeight.medium,
+                                  color: colors.textPrimary,
+                                  margin: 0,
+                                  marginBottom: 2,
+                                }}
+                              >
+                                {prompt.label}
+                              </p>
+                              <p
+                                style={{
+                                  fontSize: typography.fontSize.caption,
+                                  color: colors.textTertiary,
+                                  margin: 0,
+                                }}
+                              >
+                                {prompt.description}
+                              </p>
+                            </div>
+                            <ChevronRight
+                              size={14}
+                              color={colors.textTertiary}
+                              style={{ marginLeft: 'auto', flexShrink: 0 }}
+                            />
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

@@ -1,0 +1,57 @@
+{
+  "verifications": [
+    {
+      "id": "collaboration-C1-001",
+      "status": "partial",
+      "note": "projectMembers.ts modified but no evidence of @mention routing logic or notification system integration in diff"
+    },
+    {
+      "id": "collaboration-C1-002",
+      "status": "not_fixed",
+      "note": "No EditConflictGuard or locking mechanism changes visible in diff"
+    },
+    {
+      "id": "collaboration-C1-003",
+      "status": "partial",
+      "note": "ai.ts and aiService.ts modified, but unclear if collaboration context awareness was added"
+    },
+    {
+      "id": "collaboration-C1-004",
+      "status": "not_fixed",
+      "note": "No changes to PresenceBar or EntityPresence components visible in diff"
+    },
+    {
+      "id": "collaboration-C1-005",
+      "status": "partial",
+      "note": "Mobile spec added and App.tsx modified, but no explicit NotificationCenter mobile navigation integration visible"
+    },
+    {
+      "id": "collaboration-C1-006",
+      "status": "not_fixed",
+      "note": "No ConversationThread component changes visible in diff"
+    },
+    {
+      "id": "collaboration-C1-007",
+      "status": "fixed",
+      "note": "auditTrail.ts modified with error handling improvements"
+    },
+    {
+      "id": "collaboration-C1-008",
+      "status": "not_fixed",
+      "note": "No ARIA live region additions visible in diff for PresenceBar or NotificationCenter"
+    },
+    {
+      "id": "collaboration-C1-009",
+      "status": "partial",
+      "note": "activity.ts significantly modified (109 lines changed), suggests enrichment/grouping work but cannot confirm completeness"
+    },
+    {
+      "id": "collaboration-C1-010",
+      "status": "partial",
+      "note": "projectMembers.ts modified (112 lines), likely addresses type safety but exact changes unclear from summary"
+    }
+  ],
+  "files_changed": 24,
+  "regression_detected": false,
+  "regression_description": "No obvious regressions detected, but limited visibility into actual implementation changes from diff summary alone"
+}

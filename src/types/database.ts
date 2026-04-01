@@ -1,3 +1,5 @@
+import type { ProjectRole } from './tenant'
+
 export type Json =
   | string
   | number
@@ -567,6 +569,8 @@ export type Database = {
       change_orders: {
         Row: {
           amount: number | null
+          // approved_amount stores the final negotiated value; populated via migration 00051+
+          approved_amount: number | null
           approved_date: string | null
           cost_code: string | null
           created_at: string | null
@@ -586,6 +590,7 @@ export type Database = {
         }
         Insert: {
           amount?: number | null
+          approved_amount?: number | null
           approved_date?: string | null
           cost_code?: string | null
           created_at?: string | null
@@ -605,6 +610,7 @@ export type Database = {
         }
         Update: {
           amount?: number | null
+          approved_amount?: number | null
           approved_date?: string | null
           cost_code?: string | null
           created_at?: string | null
@@ -1135,6 +1141,10 @@ export type Database = {
           weather: string | null
           weather_am: string | null
           weather_pm: string | null
+          is_submitted: boolean | null
+          submitted_at: string | null
+          version: number | null
+          weather_source: string | null
           wind_speed: string | null
           workers_onsite: number | null
         }
@@ -1147,21 +1157,25 @@ export type Database = {
           created_by?: string | null
           id?: string
           incidents?: number | null
+          is_submitted?: boolean | null
           log_date: string
           manager_signature_url?: string | null
           precipitation?: string | null
           project_id: string
           rejection_comments?: string | null
           status?: string | null
+          submitted_at?: string | null
           summary?: string | null
           superintendent_signature_url?: string | null
           temperature_high?: number | null
           temperature_low?: number | null
           total_hours?: number | null
           updated_at?: string | null
+          version?: number | null
           weather?: string | null
           weather_am?: string | null
           weather_pm?: string | null
+          weather_source?: string | null
           wind_speed?: string | null
           workers_onsite?: number | null
         }
@@ -1174,21 +1188,25 @@ export type Database = {
           created_by?: string | null
           id?: string
           incidents?: number | null
+          is_submitted?: boolean | null
           log_date?: string
           manager_signature_url?: string | null
           precipitation?: string | null
           project_id?: string
           rejection_comments?: string | null
           status?: string | null
+          submitted_at?: string | null
           summary?: string | null
           superintendent_signature_url?: string | null
           temperature_high?: number | null
           temperature_low?: number | null
           total_hours?: number | null
           updated_at?: string | null
+          version?: number | null
           weather?: string | null
           weather_am?: string | null
           weather_pm?: string | null
+          weather_source?: string | null
           wind_speed?: string | null
           workers_onsite?: number | null
         }
@@ -2667,6 +2685,53 @@ export type Database = {
           },
         ]
       }
+      lien_waivers: {
+        Row: {
+          id: string
+          project_id: string
+          subcontractor_id: string | null
+          payment_period: string | null
+          type: 'conditional_progress' | 'unconditional_progress' | 'conditional_final' | 'unconditional_final'
+          amount: number | null
+          status: 'pending' | 'received' | 'missing'
+          payment_app_id: string | null
+          created_at: string | null
+          received_at: string | null
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          subcontractor_id?: string | null
+          payment_period?: string | null
+          type: 'conditional_progress' | 'unconditional_progress' | 'conditional_final' | 'unconditional_final'
+          amount?: number | null
+          status?: 'pending' | 'received' | 'missing'
+          payment_app_id?: string | null
+          created_at?: string | null
+          received_at?: string | null
+        }
+        Update: {
+          id?: string
+          project_id?: string
+          subcontractor_id?: string | null
+          payment_period?: string | null
+          type?: 'conditional_progress' | 'unconditional_progress' | 'conditional_final' | 'unconditional_final'
+          amount?: number | null
+          status?: 'pending' | 'received' | 'missing'
+          payment_app_id?: string | null
+          created_at?: string | null
+          received_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lien_waivers_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       material_inventory: {
         Row: {
           category: string | null
@@ -3796,31 +3861,40 @@ export type Database = {
         Row: {
           accepted_at: string | null
           company: string | null
+          created_at: string | null
           id: string
           invited_at: string | null
+          permissions: Json | null
           project_id: string
-          role: string
+          role: ProjectRole
           trade: string | null
+          updated_at: string | null
           user_id: string
         }
         Insert: {
           accepted_at?: string | null
           company?: string | null
+          created_at?: string | null
           id?: string
           invited_at?: string | null
+          permissions?: Json | null
           project_id: string
-          role: string
+          role: ProjectRole
           trade?: string | null
+          updated_at?: string | null
           user_id: string
         }
         Update: {
           accepted_at?: string | null
           company?: string | null
+          created_at?: string | null
           id?: string
           invited_at?: string | null
+          permissions?: Json | null
           project_id?: string
-          role?: string
+          role?: ProjectRole
           trade?: string | null
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: [
@@ -4659,9 +4733,14 @@ export type Database = {
       schedule_phases: {
         Row: {
           assigned_crew_id: string | null
+          baseline_end: string | null
+          baseline_start: string | null
           created_at: string | null
+          dependencies: string[] | null
           depends_on: string | null
+          earned_value: number | null
           end_date: string | null
+          float_days: number | null
           id: string
           is_critical_path: boolean | null
           name: string
@@ -4673,9 +4752,14 @@ export type Database = {
         }
         Insert: {
           assigned_crew_id?: string | null
+          baseline_end?: string | null
+          baseline_start?: string | null
           created_at?: string | null
+          dependencies?: string[] | null
           depends_on?: string | null
+          earned_value?: number | null
           end_date?: string | null
+          float_days?: number | null
           id?: string
           is_critical_path?: boolean | null
           name: string
@@ -4687,9 +4771,14 @@ export type Database = {
         }
         Update: {
           assigned_crew_id?: string | null
+          baseline_end?: string | null
+          baseline_start?: string | null
           created_at?: string | null
+          dependencies?: string[] | null
           depends_on?: string | null
+          earned_value?: number | null
           end_date?: string | null
+          float_days?: number | null
           id?: string
           is_critical_path?: boolean | null
           name?: string
@@ -6114,6 +6203,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_portfolio_metrics: {
+        Args: { org_id: string }
+        Returns: {
+          total_projects: number
+          active_projects: number
+          total_contract_value: number
+          avg_completion_percentage: number
+          projects_on_schedule: number
+          projects_at_risk: number
+        }[]
+      }
       can_user_approve: { Args: { p_project_id: string }; Returns: boolean }
       can_user_create: { Args: { p_project_id: string }; Returns: boolean }
       check_ai_rate_limit: {
@@ -6317,5 +6417,4 @@ export type ProjectSnapshot = TableRow<'project_snapshots'>
 export type Meeting = TableRow<'meetings'>
 export type Priority = 'low' | 'medium' | 'high' | 'critical'
 export type TaskStatus = 'todo' | 'in_progress' | 'in_review' | 'done'
-export type ProjectRole = 'owner' | 'admin' | 'member' | 'viewer'
 export type RFIResponse = TableRow<'rfi_responses'>

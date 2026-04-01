@@ -1,9 +1,13 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { PageContainer, Card, Btn, StatusTag, PriorityTag, TableHeader, TableRow, DetailPanel, Avatar, Tag, RelatedItems, Skeleton, EmptyState, useToast } from '../components/Primitives';
+import { DataTable } from '../components/shared/DataTable';
+import { BulkActionBar } from '../components/shared/BulkActionBar';
+import { createColumnHelper } from '@tanstack/react-table';
+import { PageContainer, Card, Btn, StatusTag, PriorityTag, DetailPanel, Avatar, Tag, RelatedItems, Skeleton, useToast } from '../components/Primitives';
+import EmptyState from '../components/ui/EmptyState';
+import { MetricCardSkeleton, TableRowSkeleton } from '../components/ui/Skeletons';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 import { useRFIs } from '../hooks/queries';
-import { useTableKeyboardNavigation } from '../hooks/useTableKeyboardNavigation';
-import { AlertTriangle, HelpCircle, Plus, Clock, MessageSquare, Paperclip, Calendar, RefreshCw, Send, Sparkles, LayoutGrid, List, Search } from 'lucide-react';
+import { AlertTriangle, FileQuestion, Plus, Clock, MessageSquare, Paperclip, Calendar, RefreshCw, Send, Sparkles, LayoutGrid, List, UserCheck, Flag, Download, XCircle } from 'lucide-react';
 import { useAppNavigate, getRelatedItemsForRfi } from '../utils/connections';
 import { useCreateRFI, useUpdateRFI } from '../hooks/mutations';
 import { useProjectId } from '../hooks/useProjectId';
@@ -24,15 +28,7 @@ const isOverdue = (dateStr: string) => new Date(dateStr) < new Date();
 const formatDate = (dateStr: string) =>
   new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
-const columns = [
-  { label: 'RFI #', width: '90px' },
-  { label: 'Title', width: '1fr' },
-  { label: 'From', width: '140px' },
-  { label: 'Priority', width: '90px' },
-  { label: 'Status', width: '110px' },
-  { label: 'Days', width: '70px' },
-  { label: 'Due', width: '100px' },
-];
+const rfiColHelper = createColumnHelper<any>();
 
 
 const MetaItem: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
@@ -48,7 +44,8 @@ const MetaItem: React.FC<{ label: string; children: React.ReactNode }> = ({ labe
 
 const RFIs: React.FC = () => {
   const projectId = useProjectId();
-  const { data: rfisRaw = [], isPending: rfisLoading, error: rfisError, refetch } = useRFIs(projectId);
+  const { data: rfisResult, isPending: rfisLoading, error: rfisError, refetch } = useRFIs(projectId);
+  const rfisRaw = rfisResult?.data ?? [];
 
   // Map API data to component shape
   const rfis = useMemo(() => rfisRaw.map((r: Record<string, unknown>) => ({
@@ -64,11 +61,10 @@ const RFIs: React.FC = () => {
   const openCount = useMemo(() => rfis.filter((r: Record<string, unknown>) => r.status === 'open').length, [rfis]);
   const overdueCount = useMemo(() => rfis.filter((r: Record<string, unknown>) => r.status === 'open' && r.dueDate && isOverdue(r.dueDate as string)).length, [rfis]);
   const [selectedRfi, setSelectedRfi] = useState<any>(null);
+  const [selectedRfiIds, setSelectedRfiIds] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingDetail, setEditingDetail] = useState(false);
-  const [page, setPage] = useState(1);
-  const perPage = 10;
   const { addToast } = useToast();
   const appNavigate = useAppNavigate();
   const createRFI = useCreateRFI();
@@ -85,15 +81,86 @@ const RFIs: React.FC = () => {
 
   const pageAlerts = getPredictiveAlertsForPage('rfis');
 
+  const rfiColumns = useMemo(() => [
+    rfiColHelper.accessor('rfiNumber', {
+      header: 'RFI #',
+      size: 90,
+      cell: (info) => (
+        <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.orangeText }}>{info.getValue()}</span>
+      ),
+    }),
+    rfiColHelper.accessor('title', {
+      header: 'Title',
+      size: 360,
+      cell: (info) => {
+        const rfi = info.row.original;
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, fontWeight: typography.fontWeight.medium, lineHeight: typography.lineHeight.snug }}>
+              {info.getValue()}
+              {getAnnotationsForEntity('rfi', rfi.id).length > 0 && (
+                <span title={getAnnotationsForEntity('rfi', rfi.id)[0]?.insight || ''} style={{ display: 'inline-flex', alignItems: 'center', gap: 2, marginLeft: spacing['2'], padding: '1px 5px', backgroundColor: `${colors.statusReview}10`, borderRadius: borderRadius.full, verticalAlign: 'middle' }}>
+                  <Sparkles size={10} color={colors.statusReview} />
+                </span>
+              )}
+            </span>
+            {rfi.drawing_reference && (
+              <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
+                <span style={{ color: colors.orangeText }}>{rfi.drawing_reference}</span>
+              </span>
+            )}
+          </div>
+        );
+      },
+    }),
+    rfiColHelper.accessor('from', {
+      header: 'From',
+      size: 140,
+      cell: (info) => <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{info.getValue()}</span>,
+    }),
+    rfiColHelper.accessor('priority', {
+      header: 'Priority',
+      size: 90,
+      cell: (info) => <PriorityTag priority={info.getValue() as any} />,
+    }),
+    rfiColHelper.accessor('status', {
+      header: 'Status',
+      size: 110,
+      cell: (info) => info.getValue() === 'pending' ? (
+        <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.statusInfoBright, backgroundColor: colors.statusInfoSubtle, padding: '2px 8px', borderRadius: borderRadius.full }}>Pending</span>
+      ) : (
+        <StatusTag status={info.getValue() as any} />
+      ),
+    }),
+    rfiColHelper.accessor('submitDate', {
+      header: 'Days',
+      size: 70,
+      cell: (info) => {
+        const days = Math.ceil((Date.now() - new Date(info.getValue()).getTime()) / (1000 * 60 * 60 * 24));
+        const dColor = days > 10 ? colors.statusCritical : days > 5 ? colors.statusPending : colors.statusActive;
+        return <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: dColor, fontVariantNumeric: 'tabular-nums' as const }}>{days}d</span>;
+      },
+    }),
+    rfiColHelper.accessor('dueDate', {
+      header: 'Due',
+      size: 100,
+      cell: (info) => {
+        const rfi = info.row.original;
+        return (
+          <span style={{ fontSize: typography.fontSize.sm, color: isOverdue(info.getValue()) && rfi.status !== 'approved' ? colors.statusCritical : colors.textTertiary, fontVariantNumeric: 'tabular-nums' as const }}>
+            {formatDate(info.getValue())}
+          </span>
+        );
+      },
+    }),
+  ], []);
+
   if (rfisLoading) {
     return (
       <PageContainer title="RFIs" subtitle="Loading...">
+        <MetricCardSkeleton />
         <Card padding="0">
-          <div style={{ padding: spacing.lg, display: 'flex', flexDirection: 'column', gap: spacing.md }}>
-            {Array.from({ length: 8 }).map((_, i) => (
-              <Skeleton key={i} height="44px" />
-            ))}
-          </div>
+          <TableRowSkeleton rows={8} />
         </Card>
       </PageContainer>
     );
@@ -131,20 +198,16 @@ const RFIs: React.FC = () => {
         }
       >
         <EmptyState
-          icon={<HelpCircle size={40} color={colors.textTertiary} />}
+          icon={<FileQuestion size={28} color={colors.textTertiary} />}
           title="No RFIs yet"
-          description="Submit an RFI to get clarification or approvals from the design team."
-          action={<PermissionGate permission="rfis.create"><Btn variant="primary" onClick={() => setShowCreateModal(true)}>Submit RFI</Btn></PermissionGate>}
+          description="RFIs track design questions and field conflicts. Create your first to get started."
+          action={{ label: 'Create RFI', onClick: () => setShowCreateModal(true) }}
         />
       </PageContainer>
     );
   }
 
   const allRfis = rfis || [];
-  const totalPages = useMemo(() => Math.ceil(allRfis.length / perPage), [allRfis, perPage]);
-  const paginatedRfis = useMemo(() => allRfis.slice((page - 1) * perPage, page * perPage), [allRfis, page, perPage]);
-
-  useTableKeyboardNavigation(paginatedRfis, selectedRfi?.id ?? null, setSelectedRfi);
 
   const kanbanColumns: KanbanColumn<any>[] = useMemo(() => [
     { id: 'draft', label: 'In Draft', color: colors.textTertiary, items: [] },
@@ -183,96 +246,16 @@ const RFIs: React.FC = () => {
 
       {viewMode === 'table' ? (
         <Card padding="0">
-          <div role="table">
-          <TableHeader columns={columns} />
-          {paginatedRfis.map((rfi, i) => (
-            <TableRow
-              key={rfi.id}
-              divider={i < paginatedRfis.length - 1}
-              onClick={() => setSelectedRfi(rfi)}
-              selected={selectedRfi?.id === rfi.id}
-              columns={[
-                {
-                  width: '90px',
-                  content: (
-                    <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.orangeText }}>{rfi.rfiNumber}</span>
-                  ),
-                },
-                {
-                  width: '1fr',
-                  content: (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                      <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, fontWeight: typography.fontWeight.medium, lineHeight: typography.lineHeight.snug }}>
-                        {rfi.title}
-                        {getAnnotationsForEntity('rfi', rfi.id).length > 0 && (
-                          <span title={getAnnotationsForEntity('rfi', rfi.id)[0]?.insight || ''} style={{ display: 'inline-flex', alignItems: 'center', gap: 2, marginLeft: spacing['2'], padding: '1px 5px', backgroundColor: `${colors.statusReview}10`, borderRadius: borderRadius.full, verticalAlign: 'middle' }}>
-                            <Sparkles size={10} color={colors.statusReview} />
-                          </span>
-                        )}
-                      </span>
-                      {rfi.drawing_reference && (
-                        <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
-                          <span style={{ color: colors.orangeText }}>{rfi.drawing_reference}</span>
-                        </span>
-                      )}
-                    </div>
-                  ),
-                },
-                {
-                  width: '140px',
-                  content: <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{rfi.from}</span>,
-                },
-                {
-                  width: '90px',
-                  content: <PriorityTag priority={rfi.priority as any} />,
-                },
-                {
-                  width: '110px',
-                  content: rfi.status === 'pending' ? (
-                    <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.statusInfoBright, backgroundColor: colors.statusInfoSubtle, padding: '2px 8px', borderRadius: borderRadius.full }}>Pending</span>
-                  ) : (
-                    <StatusTag status={rfi.status as any} />
-                  ),
-                },
-                {
-                  width: '70px',
-                  content: (() => {
-                    const days = Math.ceil((Date.now() - new Date(rfi.submitDate).getTime()) / (1000 * 60 * 60 * 24));
-                    const dColor = days > 10 ? colors.statusCritical : days > 5 ? colors.statusPending : colors.statusActive;
-                    return <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: dColor, fontVariantNumeric: 'tabular-nums' as const }}>{days}d</span>;
-                  })(),
-                },
-                {
-                  width: '100px',
-                  content: (
-                    <span style={{ fontSize: typography.fontSize.sm, color: isOverdue(rfi.dueDate) && rfi.status !== 'approved' ? colors.statusCritical : colors.textTertiary, fontVariantNumeric: 'tabular-nums' as const }}>
-                      {formatDate(rfi.dueDate)}
-                    </span>
-                  ),
-                },
-              ]}
-            />
-          ))}
-          </div>
-          {paginatedRfis.length === 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', textAlign: 'center' }}>
-              <Search size={32} color={colors.textTertiary} style={{ marginBottom: '12px' }} />
-              <p style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, margin: 0, marginBottom: '4px' }}>No items match your filters</p>
-              <p style={{ fontSize: typography.fontSize.sm, color: colors.gray600, margin: 0, marginBottom: '16px' }}>Try adjusting your search or filter criteria</p>
-              <button onClick={() => setPage(1)} style={{ padding: '6px 16px', backgroundColor: 'transparent', border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, color: colors.gray600, cursor: 'pointer' }}>
-                Clear Filters
-              </button>
-            </div>
-          )}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: `${spacing.md} ${spacing.xl}`, borderTop: `1px solid ${colors.borderLight}` }}>
-            <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
-              Showing {(page - 1) * perPage + 1} to {Math.min(page * perPage, allRfis.length)} of {allRfis.length}
-            </span>
-            <div style={{ display: 'flex', gap: spacing['1'] }}>
-              <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} style={{ padding: `${spacing['1']} ${spacing['3']}`, border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.sm, backgroundColor: 'transparent', cursor: page > 1 ? 'pointer' : 'default', color: page > 1 ? colors.textPrimary : colors.textTertiary, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily }}>Prev</button>
-              <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} style={{ padding: `${spacing['1']} ${spacing['3']}`, border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.sm, backgroundColor: 'transparent', cursor: page < totalPages ? 'pointer' : 'default', color: page < totalPages ? colors.textPrimary : colors.textTertiary, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily }}>Next</button>
-            </div>
-          </div>
+          <DataTable
+            data={allRfis}
+            columns={rfiColumns}
+            selectable
+            onSelectionChange={setSelectedRfiIds}
+            onRowClick={(row) => setSelectedRfi(row)}
+            selectedRowId={selectedRfi?.id ?? null}
+            getRowId={(row) => String(row.id)}
+            emptyMessage="No RFIs match your filters"
+          />
         </Card>
       ) : (
         <KanbanBoard
@@ -296,6 +279,59 @@ const RFIs: React.FC = () => {
           )}
         />
       )}
+
+      <BulkActionBar
+        selectedIds={selectedRfiIds}
+        onClearSelection={() => setSelectedRfiIds([])}
+        entityLabel="RFIs"
+        actions={[
+          {
+            label: 'Reassign Ball-in-Court',
+            icon: <UserCheck size={14} />,
+            variant: 'secondary',
+            onClick: async (ids) => {
+              await Promise.all(ids.map((id) => updateRFI.mutateAsync({ id, updates: { assigned_to: 'Reassigned' }, projectId: projectId! })));
+              addToast('success', `${ids.length} RFI${ids.length > 1 ? 's' : ''} reassigned`);
+            },
+          },
+          {
+            label: 'Change Priority',
+            icon: <Flag size={14} />,
+            variant: 'secondary',
+            onClick: async (ids) => {
+              await Promise.all(ids.map((id) => updateRFI.mutateAsync({ id, updates: { priority: 'high' }, projectId: projectId! })));
+              addToast('success', `Priority updated for ${ids.length} RFI${ids.length > 1 ? 's' : ''}`);
+            },
+          },
+          {
+            label: 'Export Selected',
+            icon: <Download size={14} />,
+            variant: 'secondary',
+            onClick: async (ids) => {
+              const selected = allRfis.filter((r) => ids.includes(String(r.id)));
+              const csv = ['RFI #,Title,From,Priority,Status,Due Date',
+                ...selected.map((r) => `${r.rfiNumber},"${r.title}",${r.from},${r.priority},${r.status},${r.dueDate}`),
+              ].join('\n');
+              const blob = new Blob([csv], { type: 'text/csv' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url; a.download = 'rfis-export.csv'; a.click();
+              URL.revokeObjectURL(url);
+            },
+          },
+          {
+            label: 'Mark as Closed',
+            icon: <XCircle size={14} />,
+            variant: 'danger',
+            confirm: true,
+            confirmMessage: `Close ${selectedRfiIds.length} selected RFI${selectedRfiIds.length > 1 ? 's' : ''}? This cannot be undone.`,
+            onClick: async (ids) => {
+              await Promise.all(ids.map((id) => updateRFI.mutateAsync({ id, updates: { status: 'closed' }, projectId: projectId! })));
+              addToast('success', `${ids.length} RFI${ids.length > 1 ? 's' : ''} closed`);
+            },
+          },
+        ]}
+      />
 
       {/* Detail Panel */}
       <DetailPanel

@@ -18,3 +18,4 @@ export { useMeetingStore } from './meetingStore';
 export { useDirectoryStore } from './directoryStore';
 export { useScheduleStore } from './scheduleStore';
 export { useActivityStore } from './activityStore';
+export { useLienWaiverStore } from './lienWaiverStore';

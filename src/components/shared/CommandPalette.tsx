@@ -248,11 +248,16 @@ function ensureKeyframes() {
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
-export function CommandPalette() {
+
+interface CommandPaletteProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}
+
+export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const navigate = useNavigate()
   const location = useLocation()
 
-  const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
   const [searching, setSearching] = useState(false)
@@ -270,18 +275,6 @@ export function CommandPalette() {
       addRecentPage(match.label, match.path)
     }
   }, [location.pathname])
-
-  // ---- Global keyboard shortcut ----
-  useEffect(() => {
-    function onKeyDown(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault()
-        setOpen(prev => !prev)
-      }
-    }
-    document.addEventListener('keydown', onKeyDown)
-    return () => document.removeEventListener('keydown', onKeyDown)
-  }, [])
 
   // ---- Debounced Orama search ----
   useEffect(() => {
@@ -321,15 +314,15 @@ export function CommandPalette() {
   // ---- Helpers ----
   const goTo = useCallback((path: string) => {
     navigate(path)
-    setOpen(false)
-  }, [navigate])
+    onOpenChange(false)
+  }, [navigate, onOpenChange])
 
   const recentPages = getRecentPages()
 
   if (!open) return null
 
   return (
-    <div style={overlayStyle} onClick={() => setOpen(false)} role="presentation" aria-hidden="true">
+    <div style={overlayStyle} onClick={() => onOpenChange(false)} role="presentation" aria-hidden="true">
       <div style={{ height: 'fit-content' }} onClick={e => e.stopPropagation()}>
         <Command
           label="Search or jump to..."
@@ -461,7 +454,7 @@ export function CommandPalette() {
                       <Command.Item
                         key={`${result.type}-${result.id}`}
                         value={`${result.type} ${result.title} ${result.subtitle}`}
-                        onSelect={() => { navigate(result.link); setOpen(false) }}
+                        onSelect={() => { navigate(result.link); onOpenChange(false) }}
                         style={itemStyle}
                       >
                         <span style={typeBadgeStyle(result.type)}>

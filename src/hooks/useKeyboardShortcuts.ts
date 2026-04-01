@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react'
+import { useEffect, useCallback, useRef } from 'react'
 
 // ── Types ────────────────────────────────────────────────
 
@@ -11,36 +11,116 @@ export interface Shortcut {
   category?: 'navigation' | 'actions' | 'list' | 'detail' | 'general'
 }
 
+// Chord shortcut: single key ('meta+k') or sequential pair (['g', 'd'])
+export interface ChordShortcut {
+  keys: string[]
+  sequential?: boolean
+  action: () => void
+  description?: string
+  category?: 'navigation' | 'actions' | 'list' | 'detail' | 'general'
+}
+
+function parseKeyStr(keyStr: string): { meta: boolean; shift: boolean; key: string } {
+  const parts = keyStr.toLowerCase().split('+')
+  const meta = parts.includes('meta') || parts.includes('ctrl')
+  const shift = parts.includes('shift')
+  const key = parts[parts.length - 1]
+  return { meta, shift, key }
+}
+
 // ── Main Hook ────────────────────────────────────────────
 
-export function useKeyboardShortcuts(shortcuts: Shortcut[]) {
+export function useKeyboardShortcuts(shortcuts: Array<Shortcut | ChordShortcut>) {
+  const pendingChordRef = useRef<string | null>(null)
+  const pendingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   const handler = useCallback((e: KeyboardEvent) => {
     const target = e.target as HTMLElement
     const tagName = target.tagName
     const isTyping = tagName === 'INPUT' || tagName === 'TEXTAREA' || target.isContentEditable
 
     for (const shortcut of shortcuts) {
-      const metaMatch = shortcut.meta ? (e.metaKey || e.ctrlKey) : !(e.metaKey || e.ctrlKey)
-      const shiftMatch = shortcut.shift ? e.shiftKey : !e.shiftKey
+      if ('keys' in shortcut) {
+        const { keys, sequential, action } = shortcut
 
-      if (e.key.toLowerCase() === shortcut.key.toLowerCase() && metaMatch && shiftMatch) {
-        // Meta shortcuts (Cmd+K, Cmd+S) always fire, even in inputs
-        if (shortcut.meta) {
-          e.preventDefault()
-          shortcut.action()
-          return
+        if (sequential && keys.length === 2) {
+          // Sequential two-key chord (e.g., g then d within 1000ms)
+          if (isTyping) continue
+          const first = parseKeyStr(keys[0])
+          const second = parseKeyStr(keys[1])
+          const pressedKey = e.key.toLowerCase()
+
+          if (pendingChordRef.current === first.key) {
+            // Waiting for second key
+            if (
+              pressedKey === second.key &&
+              (second.meta ? e.metaKey || e.ctrlKey : !(e.metaKey || e.ctrlKey)) &&
+              (second.shift ? e.shiftKey : !e.shiftKey)
+            ) {
+              e.preventDefault()
+              if (pendingTimerRef.current) clearTimeout(pendingTimerRef.current)
+              pendingChordRef.current = null
+              action()
+              return
+            }
+          } else if (
+            pressedKey === first.key &&
+            (first.meta ? e.metaKey || e.ctrlKey : !(e.metaKey || e.ctrlKey)) &&
+            (first.shift ? e.shiftKey : !e.shiftKey)
+          ) {
+            // Record first key, wait up to 1000ms for second
+            pendingChordRef.current = first.key
+            if (pendingTimerRef.current) clearTimeout(pendingTimerRef.current)
+            pendingTimerRef.current = setTimeout(() => {
+              pendingChordRef.current = null
+            }, 1000)
+          }
+          continue
         }
-        // Escape always fires (for closing modals from inputs)
-        if (shortcut.key === 'Escape') {
-          e.preventDefault()
-          shortcut.action()
-          return
+
+        // Single key in new format (e.g., ['meta+k'])
+        const parsed = parseKeyStr(keys[0])
+        const metaMatch = parsed.meta ? (e.metaKey || e.ctrlKey) : !(e.metaKey || e.ctrlKey)
+        const shiftMatch = parsed.shift ? e.shiftKey : !e.shiftKey
+
+        if (e.key.toLowerCase() === parsed.key && metaMatch && shiftMatch) {
+          if (parsed.meta) {
+            e.preventDefault()
+            action()
+            return
+          }
+          if (parsed.key === 'escape') {
+            e.preventDefault()
+            action()
+            return
+          }
+          if (!isTyping) {
+            e.preventDefault()
+            action()
+            return
+          }
         }
-        // Non-meta shortcuts (J, K, E, etc.) only fire when NOT typing
-        if (!isTyping) {
-          e.preventDefault()
-          shortcut.action()
-          return
+      } else {
+        // Legacy Shortcut format
+        const metaMatch = shortcut.meta ? (e.metaKey || e.ctrlKey) : !(e.metaKey || e.ctrlKey)
+        const shiftMatch = shortcut.shift ? e.shiftKey : !e.shiftKey
+
+        if (e.key.toLowerCase() === shortcut.key.toLowerCase() && metaMatch && shiftMatch) {
+          if (shortcut.meta) {
+            e.preventDefault()
+            shortcut.action()
+            return
+          }
+          if (shortcut.key === 'Escape') {
+            e.preventDefault()
+            shortcut.action()
+            return
+          }
+          if (!isTyping) {
+            e.preventDefault()
+            shortcut.action()
+            return
+          }
         }
       }
     }
@@ -48,7 +128,9 @@ export function useKeyboardShortcuts(shortcuts: Shortcut[]) {
 
   useEffect(() => {
     window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
+    return () => {
+      window.removeEventListener('keydown', handler)
+    }
   }, [handler])
 }
 
@@ -107,7 +189,9 @@ export function useDetailShortcuts(options: DetailShortcutOptions) {
 
 // ── Global Shortcuts Reference ───────────────────────────
 
-export const globalShortcuts: Omit<Shortcut, 'action'>[] = [
+export type GlobalShortcutEntry = Omit<Shortcut, 'action'> & { chord?: [string, string] }
+
+export const globalShortcuts: GlobalShortcutEntry[] = [
   { key: 'k', meta: true, description: 'Search or jump to...', category: 'navigation' },
   { key: 'n', meta: true, description: 'New item (context aware)', category: 'navigation' },
   { key: '/', meta: true, description: 'Keyboard shortcuts', category: 'navigation' },
@@ -123,6 +207,11 @@ export const globalShortcuts: Omit<Shortcut, 'action'>[] = [
   { key: '7', meta: true, description: 'Daily Log', category: 'navigation' },
   { key: '8', meta: true, description: 'Punch List', category: 'navigation' },
   { key: '9', meta: true, description: 'Drawings', category: 'navigation' },
+  // Sequential navigation chords
+  { key: 'g d', description: 'Go to Dashboard', category: 'navigation', chord: ['G', 'D'] },
+  { key: 'g r', description: 'Go to RFIs', category: 'navigation', chord: ['G', 'R'] },
+  { key: 'g b', description: 'Go to Budget', category: 'navigation', chord: ['G', 'B'] },
+  { key: 'g s', description: 'Go to Schedule', category: 'navigation', chord: ['G', 'S'] },
   { key: 'Escape', description: 'Close modal or panel', category: 'general' },
   { key: 's', meta: true, description: 'Save current form', category: 'general' },
   { key: 'e', meta: true, description: 'Export', category: 'general' },

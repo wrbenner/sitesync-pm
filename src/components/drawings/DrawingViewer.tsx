@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { ZoomIn, ZoomOut, X, Eye, EyeOff, Maximize2 } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, shadows, transitions, zIndex, vizColors } from '../../styles/theme';
 import { MarkupToolbar } from './MarkupToolbar';
@@ -6,9 +6,19 @@ import type { MarkupTool } from './MarkupToolbar';
 import { IssueOverlay } from './IssueOverlay';
 import type { IssuePin, IssuePinType } from './IssueOverlay';
 import { VersionCompare } from './VersionCompare';
+import {
+  RoomProvider,
+  useOthers,
+  useUpdateMyPresence,
+  useBroadcastEvent,
+  useEventListener,
+} from '../../lib/liveblocks';
+import { DrawingPresenceBar } from '../collaboration/PresenceBar';
+import { supabase } from '../../api/client';
+import { useUiStore } from '../../stores';
 
 interface DrawingViewerProps {
-  drawing: { setNumber: string; title: string; discipline: string; revision: string };
+  drawing: { id?: string; setNumber: string; title: string; discipline: string; revision: string };
   onClose: () => void;
 }
 
@@ -22,6 +32,25 @@ interface MarkupItem {
   text?: string;
 }
 
+// Demo user info persisted within a browser session so the same tab always
+// appears as the same person during collaborative testing.
+const DEMO_USERS = [
+  { name: 'Alex Chen', initials: 'AC', color: '#4EC896' },
+  { name: 'Jordan Lee', initials: 'JL', color: '#F47820' },
+  { name: 'Sam Rivera', initials: 'SR', color: '#3B82F6' },
+  { name: 'Casey Kim', initials: 'CK', color: '#8B5CF6' },
+  { name: 'Morgan Park', initials: 'MP', color: '#EC4899' },
+];
+
+function getDemoUser() {
+  const stored = sessionStorage.getItem('sitesync_demo_user_idx');
+  const idx = stored !== null
+    ? parseInt(stored, 10)
+    : Math.floor(Math.random() * DEMO_USERS.length);
+  if (stored === null) sessionStorage.setItem('sitesync_demo_user_idx', String(idx));
+  return DEMO_USERS[idx % DEMO_USERS.length];
+}
+
 const disciplineLayers = [
   { id: 'architectural', label: 'Architectural', color: colors.statusReview },
   { id: 'structural', label: 'Structural', color: colors.statusInfo },
@@ -32,7 +61,36 @@ const disciplineLayers = [
 // Issue pins loaded from drawing_markups table via parent page
 const issuePins: IssuePin[] = [];
 
-export const DrawingViewer: React.FC<DrawingViewerProps> = ({ drawing, onClose }) => {
+// ── Outer wrapper: provides the Liveblocks room ─────────────────────────────
+
+export const DrawingViewer: React.FC<DrawingViewerProps> = (props) => {
+  const demoUser = getDemoUser();
+  const roomId = `drawing:${props.drawing.id || props.drawing.setNumber}`;
+
+  return (
+    <RoomProvider
+      id={roomId}
+      initialPresence={{
+        cursor: null,
+        page: 'drawing',
+        name: demoUser.name,
+        initials: demoUser.initials,
+        avatar: null,
+        color: demoUser.color,
+      }}
+    >
+      <DrawingViewerInner {...props} demoUser={demoUser} />
+    </RoomProvider>
+  );
+};
+
+// ── Inner component: uses Liveblocks hooks ───────────────────────────────────
+
+interface DrawingViewerInnerProps extends DrawingViewerProps {
+  demoUser: { name: string; initials: string; color: string };
+}
+
+const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({ drawing, onClose, demoUser }) => {
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
@@ -44,11 +102,41 @@ export const DrawingViewer: React.FC<DrawingViewerProps> = ({ drawing, onClose }
   const [visiblePinTypes, setVisiblePinTypes] = useState<Set<IssuePinType>>(new Set(['rfi', 'punch', 'ai']));
   const [textInput, setTextInput] = useState('');
   const [textPos, setTextPos] = useState<{ x: number; y: number } | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const canvasRef = useRef<HTMLDivElement>(null);
+  const canvasOuterRef = useRef<HTMLDivElement>(null);
   const panStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
   const drawStart = useRef({ x: 0, y: 0 });
 
+  const announceStatus = useUiStore((s) => s.announceStatus);
+
+  // ── Liveblocks hooks ──────────────────────────────────────────────────────
+  const updateMyPresence = useUpdateMyPresence();
+  const others = useOthers();
+  const broadcastEvent = useBroadcastEvent();
+
+  // Update presence name/color once on mount
+  useEffect(() => {
+    updateMyPresence({ name: demoUser.name, initials: demoUser.initials, color: demoUser.color });
+  }, [demoUser.name, demoUser.initials, demoUser.color, updateMyPresence]);
+
+  // Receive remote markup events and apply to local state
+  useEventListener(({ event }) => {
+    if (event.type === 'MARKUP_ADD') {
+      setMarkups((prev) => {
+        // Ignore if already applied (duplicate event guard)
+        if (prev.some((m) => m.id === event.markup.id)) return prev;
+        return [...prev, event.markup as MarkupItem];
+      });
+    } else if (event.type === 'MARKUP_DELETE') {
+      setMarkups((prev) => prev.filter((m) => m.id !== event.id));
+    }
+  });
+
+  // ── Coordinate helpers ────────────────────────────────────────────────────
+
+  // Position relative to the canvas inner div (drawing coordinates)
   const getRelPos = useCallback((e: React.MouseEvent) => {
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return { x: 0, y: 0 };
@@ -57,6 +145,18 @@ export const DrawingViewer: React.FC<DrawingViewerProps> = ({ drawing, onClose }
       y: ((e.clientY - rect.top) / rect.height) * 100,
     };
   }, []);
+
+  // Position relative to the outer container (for cursor sharing across zoom levels)
+  const getOuterRelPos = useCallback((e: React.MouseEvent) => {
+    const rect = canvasOuterRef.current?.getBoundingClientRect();
+    if (!rect) return { x: 0, y: 0 };
+    return {
+      x: ((e.clientX - rect.left) / rect.width) * 100,
+      y: ((e.clientY - rect.top) / rect.height) * 100,
+    };
+  }, []);
+
+  // ── Mouse handlers ────────────────────────────────────────────────────────
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (activeTool === 'select') {
@@ -80,6 +180,8 @@ export const DrawingViewer: React.FC<DrawingViewerProps> = ({ drawing, onClose }
         y: panStart.current.panY + (e.clientY - panStart.current.y),
       });
     }
+    // Broadcast cursor position (outer container coordinates)
+    updateMyPresence({ cursor: getOuterRelPos(e) });
   };
 
   const handleMouseUp = (e: React.MouseEvent) => {
@@ -87,24 +189,92 @@ export const DrawingViewer: React.FC<DrawingViewerProps> = ({ drawing, onClose }
     if (!isDrawing) return;
     setIsDrawing(false);
     const endPos = getRelPos(e);
-    setMarkups((prev) => [...prev, {
+    const newMarkup: MarkupItem = {
       id: Date.now(), tool: activeTool,
       x: drawStart.current.x, y: drawStart.current.y,
       endX: endPos.x, endY: endPos.y,
-    }]);
+    };
+    setMarkups((prev) => [...prev, newMarkup]);
+    announceStatus('Annotation added');
+    // Broadcast so other users see this markup within ~500ms
+    broadcastEvent({ type: 'MARKUP_ADD', markup: newMarkup });
+  };
+
+  const handleMouseLeave = () => {
+    updateMyPresence({ cursor: null });
   };
 
   const handleTextSubmit = () => {
     if (!textPos || !textInput.trim()) { setTextPos(null); return; }
-    setMarkups((prev) => [...prev, { id: Date.now(), tool: 'text', x: textPos.x, y: textPos.y, text: textInput }]);
+    const newMarkup: MarkupItem = { id: Date.now(), tool: 'text', x: textPos.x, y: textPos.y, text: textInput };
+    setMarkups((prev) => [...prev, newMarkup]);
+    announceStatus('Text annotation added');
+    broadcastEvent({ type: 'MARKUP_ADD', markup: newMarkup });
     setTextInput('');
     setTextPos(null);
+  };
+
+  const handleUndo = () => {
+    setMarkups((prev) => {
+      if (prev.length === 0) return prev;
+      const removed = prev[prev.length - 1];
+      broadcastEvent({ type: 'MARKUP_DELETE', id: removed.id });
+      return prev.slice(0, -1);
+    });
   };
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault();
     setZoom((prev) => Math.max(0.25, Math.min(4, prev - e.deltaY * 0.001)));
   }, []);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    const PAN_STEP = 50;
+    const ZOOM_STEP = 0.1;
+    switch (e.key) {
+      case 'ArrowUp':
+        e.preventDefault();
+        setPan((prev) => ({ ...prev, y: prev.y + PAN_STEP }));
+        break;
+      case 'ArrowDown':
+        e.preventDefault();
+        setPan((prev) => ({ ...prev, y: prev.y - PAN_STEP }));
+        break;
+      case 'ArrowLeft':
+        e.preventDefault();
+        setPan((prev) => ({ ...prev, x: prev.x + PAN_STEP }));
+        break;
+      case 'ArrowRight':
+        e.preventDefault();
+        setPan((prev) => ({ ...prev, x: prev.x - PAN_STEP }));
+        break;
+      case '+':
+      case '=':
+        e.preventDefault();
+        setZoom((prev) => {
+          const next = Math.min(4, parseFloat((prev + ZOOM_STEP).toFixed(2)));
+          announceStatus(`Zoomed to ${Math.round(next * 100)}%`);
+          return next;
+        });
+        break;
+      case '-':
+        e.preventDefault();
+        setZoom((prev) => {
+          const next = Math.max(0.25, parseFloat((prev - ZOOM_STEP).toFixed(2)));
+          announceStatus(`Zoomed to ${Math.round(next * 100)}%`);
+          return next;
+        });
+        break;
+      case 'Home':
+        e.preventDefault();
+        setZoom(1);
+        setPan({ x: 0, y: 0 });
+        announceStatus('View reset to fit');
+        break;
+      default:
+        break;
+    }
+  }, [announceStatus]);
 
   const toggleLayer = (id: string) => {
     setActiveLayers((prev) => {
@@ -122,15 +292,58 @@ export const DrawingViewer: React.FC<DrawingViewerProps> = ({ drawing, onClose }
     });
   };
 
+  // ── Supabase persistence ──────────────────────────────────────────────────
+
+  const handleSaveMarkups = async () => {
+    if (markups.length === 0) return;
+    setIsSaving(true);
+    try {
+      const drawingId = drawing.id || drawing.setNumber;
+      const records = markups.map((m) => ({
+        drawing_id: drawingId,
+        revision_id: drawing.revision,
+        markup_type: m.tool,
+        coordinates: JSON.stringify({ x: m.x, y: m.y, endX: m.endX, endY: m.endY }),
+        color: colors.primaryOrange,
+        text: m.text || null,
+        created_by: demoUser.name,
+        created_at: new Date().toISOString(),
+      }));
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any).from('drawing_markups').insert(records);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // ── Render ────────────────────────────────────────────────────────────────
+
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: zIndex.modal as number, backgroundColor: vizColors.dark, display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: `${spacing['3']} ${spacing['4']}`, backgroundColor: colors.toolbarBg, flexShrink: 0 }}>
-        <div>
-          <span style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.white }}>{drawing.setNumber}: {drawing.title}</span>
-          <span style={{ fontSize: typography.fontSize.caption, color: colors.textOnDarkMuted, marginLeft: spacing['3'] }}>Rev {drawing.revision} · {drawing.discipline}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['4'] }}>
+          <div>
+            <span style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.white }}>{drawing.setNumber}: {drawing.title}</span>
+            <span style={{ fontSize: typography.fontSize.caption, color: colors.textOnDarkMuted, marginLeft: spacing['3'] }}>Rev {drawing.revision} · {drawing.discipline}</span>
+          </div>
+          {/* Presence bar showing other active viewers */}
+          <DrawingPresenceBar />
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
+          {/* Self indicator */}
+          <div
+            title={`You (${demoUser.name})`}
+            style={{
+              width: 28, height: 28, borderRadius: '50%',
+              backgroundColor: demoUser.color,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '10px', fontWeight: typography.fontWeight.bold, color: colors.white,
+              border: `2px solid rgba(255, 255, 255, 0.3)`,
+            }}
+          >
+            {demoUser.initials}
+          </div>
           <button
             onClick={() => setShowCompare(!showCompare)}
             style={{
@@ -180,8 +393,60 @@ export const DrawingViewer: React.FC<DrawingViewerProps> = ({ drawing, onClose }
             })}
           </div>
 
-          {/* Canvas */}
-          <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+          {/* Canvas area */}
+          <div
+            ref={canvasOuterRef}
+            role="application"
+            aria-label="Drawing viewer - use arrow keys to pan, plus/minus to zoom"
+            tabIndex={0}
+            style={{ flex: 1, position: 'relative', overflow: 'hidden' }}
+            onMouseLeave={handleMouseLeave}
+            onKeyDown={handleKeyDown}
+          >
+            {/* Remote cursors rendered in outer container (stable coordinate space) */}
+            {others.map((other) => {
+              if (!other.presence.cursor) return null;
+              return (
+                <div
+                  key={other.connectionId}
+                  style={{
+                    position: 'absolute',
+                    left: `${other.presence.cursor.x}%`,
+                    top: `${other.presence.cursor.y}%`,
+                    transform: 'translate(-50%, -50%)',
+                    zIndex: 20,
+                    pointerEvents: 'none',
+                  }}
+                >
+                  <div style={{
+                    width: 22, height: 22,
+                    borderRadius: '50%',
+                    backgroundColor: other.presence.color || colors.statusInfo,
+                    border: '2px solid rgba(255, 255, 255, 0.9)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '8px', fontWeight: 700, color: colors.white,
+                    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.4)',
+                  }}>
+                    {other.presence.initials || '?'}
+                  </div>
+                  {/* Name label */}
+                  <div style={{
+                    position: 'absolute', left: '100%', top: 0, marginLeft: 6,
+                    backgroundColor: other.presence.color || colors.statusInfo,
+                    color: colors.white,
+                    padding: '2px 6px', borderRadius: borderRadius.sm,
+                    fontSize: '10px', fontWeight: typography.fontWeight.semibold,
+                    whiteSpace: 'nowrap',
+                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
+                    opacity: 0.95,
+                  }}>
+                    {other.presence.name || 'Someone'}
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Canvas inner (transformed) */}
             <div
               ref={canvasRef}
               onMouseDown={handleMouseDown}
@@ -230,7 +495,7 @@ export const DrawingViewer: React.FC<DrawingViewerProps> = ({ drawing, onClose }
               {/* Issue pins */}
               <IssueOverlay pins={issuePins} visibleTypes={visiblePinTypes} onToggleType={togglePinType} />
 
-              {/* Markups */}
+              {/* Markups (local + received from remote) */}
               {markups.map((m) => {
                 if (m.tool === 'pin') {
                   return <div key={m.id} style={{ position: 'absolute', left: `${m.x}%`, top: `${m.y}%`, width: 12, height: 12, borderRadius: '50%', backgroundColor: colors.primaryOrange, border: `2px solid ${colors.white}`, transform: 'translate(-50%, -50%)', boxShadow: shadows.card }} />;
@@ -268,15 +533,22 @@ export const DrawingViewer: React.FC<DrawingViewerProps> = ({ drawing, onClose }
 
             {/* Zoom controls */}
             <div style={{ position: 'absolute', bottom: spacing['4'], left: spacing['4'], display: 'flex', flexDirection: 'column', gap: spacing['1'], zIndex: 5 }}>
-              <button onClick={() => setZoom((z) => Math.min(4, z + 0.25))} aria-label="Zoom in" title="Zoom in" style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceRaised, border: 'none', borderRadius: borderRadius.md, cursor: 'pointer', color: colors.textSecondary, boxShadow: shadows.card }}><ZoomIn size={16} /></button>
-              <button onClick={() => setZoom((z) => Math.max(0.25, z - 0.25))} aria-label="Zoom out" title="Zoom out" style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceRaised, border: 'none', borderRadius: borderRadius.md, cursor: 'pointer', color: colors.textSecondary, boxShadow: shadows.card }}><ZoomOut size={16} /></button>
-              <button onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }} aria-label="Reset zoom and pan" title="Reset zoom and pan" style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceRaised, border: 'none', borderRadius: borderRadius.md, cursor: 'pointer', color: colors.textSecondary, boxShadow: shadows.card }}><Maximize2 size={16} /></button>
+              <button onClick={() => setZoom((z) => { const next = Math.min(4, parseFloat((z + 0.25).toFixed(2))); announceStatus(`Zoomed to ${Math.round(next * 100)}%`); return next; })} aria-label="Zoom in" title="Zoom in" style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceRaised, border: 'none', borderRadius: borderRadius.md, cursor: 'pointer', color: colors.textSecondary, boxShadow: shadows.card }}><ZoomIn size={16} /></button>
+              <button onClick={() => setZoom((z) => { const next = Math.max(0.25, parseFloat((z - 0.25).toFixed(2))); announceStatus(`Zoomed to ${Math.round(next * 100)}%`); return next; })} aria-label="Zoom out" title="Zoom out" style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceRaised, border: 'none', borderRadius: borderRadius.md, cursor: 'pointer', color: colors.textSecondary, boxShadow: shadows.card }}><ZoomOut size={16} /></button>
+              <button onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); announceStatus('View reset to fit'); }} aria-label="Reset zoom and pan" title="Reset zoom and pan" style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceRaised, border: 'none', borderRadius: borderRadius.md, cursor: 'pointer', color: colors.textSecondary, boxShadow: shadows.card }}><Maximize2 size={16} /></button>
               <div style={{ padding: `${spacing['1']} 0`, textAlign: 'center', fontSize: typography.fontSize.caption, color: colors.textOnDarkMuted }}>{Math.round(zoom * 100)}%</div>
             </div>
 
-            {/* Markup toolbar */}
+            {/* Markup toolbar with Save */}
             <div style={{ position: 'absolute', bottom: spacing['4'], left: '50%', transform: 'translateX(-50%)', zIndex: 5 }}>
-              <MarkupToolbar activeTool={activeTool} onToolChange={setActiveTool} onUndo={() => setMarkups((p) => p.slice(0, -1))} canUndo={markups.length > 0} />
+              <MarkupToolbar
+                activeTool={activeTool}
+                onToolChange={setActiveTool}
+                onUndo={handleUndo}
+                canUndo={markups.length > 0}
+                onSave={handleSaveMarkups}
+                isSaving={isSaving}
+              />
             </div>
           </div>
         </div>

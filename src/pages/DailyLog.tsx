@@ -1,8 +1,12 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Users, Clock, ShieldCheck, Cloud, ChevronRight, Camera, Send, BarChart3, Sparkles, Zap, CalendarDays, X, Lock, AlertTriangle, BookOpen, RefreshCw } from 'lucide-react';
-import { PageContainer, Card, Btn, Skeleton, SectionHeader, EmptyState, useToast } from '../components/Primitives';
+import { Users, Clock, ShieldCheck, Cloud, ChevronRight, Camera, Send, BarChart3, Sparkles, Zap, CalendarDays, X, Lock, AlertTriangle, BookOpen, RefreshCw, Truck, UserPlus, FileEdit, HardHat } from 'lucide-react';
+import { PageContainer, Card, Btn, Skeleton, SectionHeader, useToast } from '../components/Primitives';
+import EmptyState from '../components/ui/EmptyState';
+import CreateDailyLogModal from '../components/forms/CreateDailyLogModal';
 import { colors, spacing, typography, borderRadius, transitions, tradeColors } from '../styles/theme';
 import { ExportButton } from '../components/shared/ExportButton';
+import { DailyLogPDF } from '../components/export/DailyLogPDF';
+import type { DailyLogPDFData } from '../components/export/DailyLogPDF';
 import { toast } from 'sonner';
 import { AutoNarrative } from '../components/dailylog/AutoNarrative';
 import { DayComparison } from '../components/dailylog/DayComparison';
@@ -34,7 +38,7 @@ export const DailyLog: React.FC = () => {
   const approveDailyLog = useApproveDailyLog();
   const rejectDailyLog = useRejectDailyLog();
 
-  const dailyLogHistory = dailyLogData ?? [];
+  const dailyLogHistory = dailyLogData?.data ?? [];
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
   const [showComparison, setShowComparison] = useState(false);
   const [showSignature, setShowSignature] = useState(false);
@@ -47,6 +51,8 @@ export const DailyLog: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [rejectReason, setRejectReason] = useState('');
   const [showRejectModal, setShowRejectModal] = useState(false);
+  const [showAmendmentModal, setShowAmendmentModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   // Auto-fetch weather on mount
   useEffect(() => {
@@ -116,14 +122,58 @@ export const DailyLog: React.FC = () => {
     dailyLogHistory.filter((l: any) => l.status === 'draft' || (!l.status && !l.approved)).map((l: any) => l.log_date?.split('T')[0])
   ), [dailyLogHistory]);
 
+  const aggMetrics = useMemo(() => {
+    const now = new Date();
+    const sevenDaysAgo = new Date(now); sevenDaysAgo.setDate(now.getDate() - 7);
+    const fourteenDaysAgo = new Date(now); fourteenDaysAgo.setDate(now.getDate() - 14);
+    const thirtyDaysAgo = new Date(now); thirtyDaysAgo.setDate(now.getDate() - 30);
+    const sixtyDaysAgo = new Date(now); sixtyDaysAgo.setDate(now.getDate() - 60);
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const endOfPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+
+    const logsInRange = (start: Date, end?: Date) =>
+      dailyLogHistory.filter((l: any) => {
+        const d = new Date((l.log_date as string) + 'T12:00:00');
+        return d >= start && (!end || d <= end);
+      });
+
+    const thisWeekLogs = logsInRange(sevenDaysAgo);
+    const prevWeekLogs = logsInRange(fourteenDaysAgo, sevenDaysAgo);
+    const last30Logs = logsInRange(thirtyDaysAgo);
+    const prev30Logs = logsInRange(sixtyDaysAgo, thirtyDaysAgo);
+    const thisMonthLogs = logsInRange(startOfMonth);
+    const prevMonthLogs = logsInRange(startOfPrevMonth, endOfPrevMonth);
+
+    const todayWorkers = (dailyLogHistory[0] as any)?.workers_onsite ?? 0;
+    const yesterdayWorkers = (dailyLogHistory[1] as any)?.workers_onsite ?? 0;
+    const manHoursWeek = thisWeekLogs.reduce((s: number, l: any) => s + (l.total_hours ?? 0), 0);
+    const manHoursPrevWeek = prevWeekLogs.reduce((s: number, l: any) => s + (l.total_hours ?? 0), 0);
+    const openIncidents = last30Logs.filter((l: any) => (l.incidents ?? 0) > 0).length;
+    const prevIncidents = prev30Logs.filter((l: any) => (l.incidents ?? 0) > 0).length;
+    const logsMonth = thisMonthLogs.length;
+    const logsPrevMonth = prevMonthLogs.length;
+
+    return {
+      todayWorkers,
+      todayWorkersDelta: todayWorkers - yesterdayWorkers,
+      manHoursWeek,
+      manHoursWeekDelta: manHoursWeek - manHoursPrevWeek,
+      openIncidents,
+      openIncidentsDelta: openIncidents - prevIncidents,
+      logsMonth,
+      logsMonthDelta: logsMonth - logsPrevMonth,
+    };
+  }, [dailyLogHistory]);
+
   const handleQuickSave = useCallback((_data: QuickEntryData) => {
     toast.success('Draft saved');
   }, []);
 
   const handleQuickSubmit = useCallback(async (data: QuickEntryData) => {
     try {
-      const totalWorkers = data.workforce.reduce((s, w) => s + w.workers, 0);
-      const totalHours = data.workforce.reduce((s, w) => s + w.hours, 0);
+      const totalWorkers = data.crew_entries.reduce((s, w) => s + w.headcount, 0);
+      const totalHours = data.crew_entries.reduce((s, w) => s + w.hours, 0);
       await createDailyLog.mutateAsync({
         projectId: projectId!,
         data: {
@@ -131,17 +181,31 @@ export const DailyLog: React.FC = () => {
           log_date: selectedDate,
           workers_onsite: totalWorkers,
           total_hours: totalHours,
+          incidents: data.incident_details.length,
           weather: data.weather ? formatWeatherSummary(data.weather) : null,
           summary: data.workPerformed,
           status: 'submitted',
+          is_submitted: true,
+          submitted_at: new Date().toISOString(),
         },
       });
       setShowQuickEntry(false);
-      addToast('success', 'Daily log submitted');
+      addToast('success', 'Daily log submitted and locked');
     } catch {
       addToast('error', 'Failed to submit daily log');
     }
   }, [createDailyLog, projectId, selectedDate, addToast]);
+
+  const handleOpenQuickEntry = useCallback(() => {
+    // If today's log is already submitted/locked, prompt amendment workflow
+    if (dailyLogHistory.length > 0) {
+      const log = dailyLogHistory[0];
+      const status = (log as any).status;
+      const locked = (log as any).is_submitted === true || status === 'approved';
+      if (locked) { setShowAmendmentModal(true); return; }
+    }
+    setShowQuickEntry(true);
+  }, [dailyLogHistory]);
 
   const handleCalendarSelect = (date: string) => {
     setSelectedDate(date);
@@ -213,14 +277,63 @@ export const DailyLog: React.FC = () => {
       <PageContainer
         title="Daily Log"
         subtitle="No entries"
-        actions={<PermissionGate permission="daily_logs.create"><Btn onClick={() => setShowQuickEntry(true)}>New Entry</Btn></PermissionGate>}
+        actions={<PermissionGate permission="daily_logs.create"><Btn onClick={() => setShowCreateModal(true)}>New Entry</Btn></PermissionGate>}
       >
-        <EmptyState
-          icon={<BookOpen size={40} color={colors.textTertiary} />}
-          title="No log entries for today"
-          description="Log crew hours and photos to document project progress."
-          action={<PermissionGate permission="daily_logs.create"><Btn variant="primary" onClick={() => setShowQuickEntry(true)}>Add Entry</Btn></PermissionGate>}
-        />
+        {/* Aggregate metric cards — all zeros until first log is created */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'], marginBottom: spacing['6'] }}>
+          {[
+            { icon: <Users size={24} color={colors.primaryOrange} />, label: "Today's Workers", value: '0', delta: 0, positiveIsGood: true },
+            { icon: <Clock size={24} color={colors.statusActive} />, label: 'Man-Hours This Week', value: '0', delta: 0, positiveIsGood: true },
+            { icon: <ShieldCheck size={24} color={colors.statusActive} />, label: 'Open Incidents (30d)', value: '0', delta: 0, positiveIsGood: false },
+            { icon: <CalendarDays size={24} color={colors.statusInfo} />, label: 'Logs This Month', value: '0', delta: 0, positiveIsGood: true },
+          ].map((m) => (
+            <Card key={m.label} padding={spacing['5']}>
+              <div style={{ marginBottom: spacing['3'] }}>{m.icon}</div>
+              <p style={{ fontSize: '12px', color: colors.textTertiary, margin: 0, marginBottom: spacing['2'], fontWeight: typography.fontWeight.medium }}>{m.label}</p>
+              <p style={{ fontSize: '28px', fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, lineHeight: 1 }}>{m.value}</p>
+              <p style={{ fontSize: '11px', color: colors.textTertiary, margin: 0, marginTop: spacing['2'] }}>vs prior period</p>
+            </Card>
+          ))}
+        </div>
+
+        {/* Empty state */}
+        <Card padding={spacing['10']}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: spacing['4'] }}>
+            <HardHat size={64} color={colors.borderDefault} />
+            <div>
+              <p style={{ fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>No daily logs yet</p>
+              <p style={{ fontSize: typography.fontSize.body, color: colors.textTertiary, margin: 0, maxWidth: '400px' }}>
+                Tap the button below to log today's work — weather, crew, equipment, and progress. Done in under 90 seconds.
+              </p>
+            </div>
+            <Btn variant="primary" size="md" onClick={() => setShowCreateModal(true)}>Start Today's Log</Btn>
+          </div>
+        </Card>
+
+        {showCreateModal && (
+          <CreateDailyLogModal
+            open={showCreateModal}
+            onClose={() => setShowCreateModal(false)}
+            projectId={projectId ?? undefined}
+            onSubmit={async (data) => {
+              await createDailyLog.mutateAsync({
+                projectId: projectId!,
+                data: {
+                  project_id: projectId!,
+                  log_date: data.date,
+                  workers_onsite: data.crew_count ? Number(data.crew_count) : 0,
+                  total_hours: 0,
+                  incidents: data.has_incident ? 1 : 0,
+                  weather: data.weather_condition,
+                  summary: data.activities,
+                  status: 'draft',
+                },
+              });
+              setShowCreateModal(false);
+              addToast('success', 'Daily log created');
+            }}
+          />
+        )}
       </PageContainer>
     );
   }
@@ -237,8 +350,9 @@ export const DailyLog: React.FC = () => {
 
   const logStatus: DailyLogState = (today as any).status || (today.approved ? 'approved' : 'draft');
   const statusConfig = getDailyLogStatusConfig(logStatus);
-  const isLocked = logStatus === 'approved';
+  const isLocked = (today as any).is_submitted === true || logStatus === 'approved';
   const isRejected = logStatus === 'rejected';
+  const submittedAt: string | null = (today as any).submitted_at ?? null;
   const rejectionComments = (today as any).rejection_comments;
 
   const todayMetrics = [
@@ -284,9 +398,37 @@ export const DailyLog: React.FC = () => {
         <ExportButton
           onExportCSV={() => toast.success('Daily log data exported as CSV')}
           pdfFilename="SiteSync_DailyLog"
+          pdfDocument={(() => {
+            const pdfData: DailyLogPDFData = {
+              projectName: 'Current Project',
+              logDate: today.log_date,
+              workers_onsite: today.workers_onsite ?? 0,
+              total_hours: today.total_hours ?? 0,
+              incidents: today.incidents ?? 0,
+              weather: today.weather ?? (weather ? formatWeatherSummary(weather) : 'N/A'),
+              temperature_high: today.temperature_high ?? undefined,
+              temperature_low: today.temperature_low ?? undefined,
+              wind_speed: today.wind_speed ?? undefined,
+              precipitation: today.precipitation ?? undefined,
+              is_submitted: (today as any).is_submitted ?? false,
+              submitted_at: (today as any).submitted_at ?? null,
+              status: logStatus,
+              crew_entries: (today as any).crew_entries ?? [],
+              equipment_entries: (today as any).equipment_entries ?? [],
+              material_deliveries: (today as any).material_deliveries ?? [],
+              workPerformed: today.summary ?? '',
+              safety_observations: (today as any).safety_observations ?? '',
+              toolbox_talk_topic: (today as any).toolbox_talk_topic ?? '',
+              visitors: (today as any).visitors ?? [],
+              incident_details: (today as any).incident_details ?? [],
+              superintendent_signature_url: today.superintendent_signature_url,
+              manager_signature_url: today.manager_signature_url,
+            };
+            return <DailyLogPDF data={pdfData} />;
+          })()}
         />
         <Btn variant="ghost" size="sm" icon={<CalendarDays size={14} />} onClick={() => setShowCalendar(!showCalendar)}>Calendar</Btn>
-        <Btn variant="secondary" size="sm" icon={<Zap size={14} />} onClick={() => setShowQuickEntry(true)}>Quick Entry</Btn>
+        <Btn variant="secondary" size="sm" icon={<Zap size={14} />} onClick={handleOpenQuickEntry}>Quick Entry</Btn>
         <div style={{ position: 'relative' }}>
           <Btn variant="secondary" size="sm" icon={<BarChart3 size={14} />} onClick={() => setCompareDropdownOpen(!compareDropdownOpen)}>
             Compare Days
@@ -308,8 +450,8 @@ export const DailyLog: React.FC = () => {
           )}
         </div>
         {/* Approval workflow actions */}
-        {logStatus === 'draft' && (
-          <PermissionGate permission="daily_log.submit"><Btn size="sm" icon={<Send size={14} />} onClick={handleSubmit}>Submit for Approval</Btn></PermissionGate>
+        {logStatus === 'draft' && !isLocked && (
+          <PermissionGate permission="daily_log.submit"><Btn size="sm" icon={<Lock size={14} />} onClick={handleSubmit}>Submit and Lock</Btn></PermissionGate>
         )}
         {logStatus === 'submitted' && (
           <>
@@ -335,7 +477,14 @@ export const DailyLog: React.FC = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
               {isLocked && <Lock size={13} color={statusConfig.color} />}
               <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: statusConfig.color }}>{statusConfig.label}</span>
-              {isLocked && <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>This log is locked. Contact PM to make changes.</span>}
+              {isLocked && submittedAt && (
+                <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>
+                  Submitted {new Date(submittedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}. Edits create an amendment.
+                </span>
+              )}
+              {isLocked && !submittedAt && (
+                <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>This log is locked. Edits create an amendment.</span>
+              )}
             </div>
           </div>
 
@@ -391,26 +540,114 @@ export const DailyLog: React.FC = () => {
 
           {/* Equipment on Site */}
           <Card>
-            <SectionHeader title="Equipment on Site" />
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 120px 100px', gap: 1 }}>
-              {['Equipment', 'Qty', 'Location', 'Status'].map(h => (
-                <span key={h} style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.4px', backgroundColor: colors.surfaceInset }}>{h}</span>
-              ))}
-              {[
-                { name: 'Tower Crane', qty: 1, location: 'Roof', status: 'Operating', statusColor: colors.statusActive },
-                { name: 'Concrete Pump', qty: 2, location: 'Floor 9', status: 'Active', statusColor: colors.statusActive },
-                { name: 'Scissor Lifts', qty: 4, location: 'Floors 3 to 5', status: 'Active', statusColor: colors.statusActive },
-                { name: 'Generator', qty: 1, location: 'Basement', status: 'Standby', statusColor: colors.statusPending },
-              ].map(eq => (
-                <React.Fragment key={eq.name}>
-                  <span style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.sm, color: colors.textPrimary, borderBottom: `1px solid ${colors.borderSubtle}` }}>{eq.name}</span>
-                  <span style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.sm, color: colors.textSecondary, borderBottom: `1px solid ${colors.borderSubtle}`, textAlign: 'center' }}>{eq.qty}</span>
-                  <span style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.sm, color: colors.textSecondary, borderBottom: `1px solid ${colors.borderSubtle}` }}>{eq.location}</span>
-                  <span style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: eq.statusColor, borderBottom: `1px solid ${colors.borderSubtle}` }}>{eq.status}</span>
-                </React.Fragment>
-              ))}
+            <SectionHeader title="Equipment on Site" action={
+              <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{((today as any).equipment_entries ?? []).length} items</span>
+            } />
+            {((today as any).equipment_entries ?? []).length > 0 ? (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 72px 120px', gap: 1 }}>
+                {['Equipment', 'Qty', 'Hrs Operated'].map(h => (
+                  <span key={h} style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.4px', backgroundColor: colors.surfaceInset }}>{h}</span>
+                ))}
+                {((today as any).equipment_entries as Array<{ type: string; count: number; hours_operated: number }>).map((eq, i) => (
+                  <React.Fragment key={i}>
+                    <span style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.sm, color: colors.textPrimary, borderBottom: `1px solid ${colors.borderSubtle}` }}>{eq.type}</span>
+                    <span style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.sm, color: colors.textSecondary, borderBottom: `1px solid ${colors.borderSubtle}`, textAlign: 'center' }}>{eq.count}</span>
+                    <span style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.sm, color: colors.textSecondary, borderBottom: `1px solid ${colors.borderSubtle}` }}>{eq.hours_operated} hrs</span>
+                  </React.Fragment>
+                ))}
+              </div>
+            ) : (
+              <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0, padding: `${spacing['3']} 0` }}>No equipment entries. Use Quick Entry to log equipment.</p>
+            )}
+          </Card>
+
+          {/* Material Deliveries */}
+          <Card>
+            <SectionHeader title="Material Deliveries" action={
+              <Truck size={14} style={{ color: colors.textTertiary }} />
+            } />
+            {((today as any).material_deliveries ?? []).length > 0 ? (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 72px 120px 120px', gap: 1 }}>
+                {['Description', 'Qty', 'PO Reference', 'Delivery Ticket'].map(h => (
+                  <span key={h} style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.4px', backgroundColor: colors.surfaceInset }}>{h}</span>
+                ))}
+                {((today as any).material_deliveries as Array<{ description: string; quantity: number; po_reference: string; delivery_ticket: string }>).map((d, i) => (
+                  <React.Fragment key={i}>
+                    <span style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.sm, color: colors.textPrimary, borderBottom: `1px solid ${colors.borderSubtle}` }}>{d.description}</span>
+                    <span style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.sm, color: colors.textSecondary, borderBottom: `1px solid ${colors.borderSubtle}`, textAlign: 'center' }}>{d.quantity || '—'}</span>
+                    <span style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.sm, color: colors.textSecondary, borderBottom: `1px solid ${colors.borderSubtle}` }}>{d.po_reference || '—'}</span>
+                    <span style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.sm, color: colors.textSecondary, borderBottom: `1px solid ${colors.borderSubtle}` }}>{d.delivery_ticket || '—'}</span>
+                  </React.Fragment>
+                ))}
+              </div>
+            ) : (
+              <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0, padding: `${spacing['3']} 0` }}>No material deliveries today.</p>
+            )}
+          </Card>
+
+          {/* Safety and Toolbox Talk */}
+          <Card>
+            <SectionHeader title="Safety" action={
+              <ShieldCheck size={14} style={{ color: colors.textTertiary }} />
+            } />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
+              {(today as any).toolbox_talk_topic && (
+                <div>
+                  <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.4px', display: 'block', marginBottom: spacing['1'] }}>Toolbox Talk</span>
+                  <p style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, margin: 0 }}>{(today as any).toolbox_talk_topic}</p>
+                </div>
+              )}
+              <div>
+                <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.4px', display: 'block', marginBottom: spacing['1'] }}>Observations</span>
+                <p style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, margin: 0 }}>{(today as any).safety_observations || 'No safety observations recorded.'}</p>
+              </div>
             </div>
           </Card>
+
+          {/* Site Visitors */}
+          <Card>
+            <SectionHeader title="Site Visitors" action={
+              <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
+                <UserPlus size={12} /> {((today as any).visitors ?? []).length}
+              </span>
+            } />
+            {((today as any).visitors ?? []).length > 0 ? (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 80px 80px', gap: 1 }}>
+                {['Name', 'Company', 'Purpose', 'Time In', 'Time Out'].map(h => (
+                  <span key={h} style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.4px', backgroundColor: colors.surfaceInset }}>{h}</span>
+                ))}
+                {((today as any).visitors as Array<{ name: string; company: string; purpose: string; time_in: string; time_out: string }>).map((v, i) => (
+                  <React.Fragment key={i}>
+                    <span style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.sm, color: colors.textPrimary, borderBottom: `1px solid ${colors.borderSubtle}` }}>{v.name}</span>
+                    <span style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.sm, color: colors.textSecondary, borderBottom: `1px solid ${colors.borderSubtle}` }}>{v.company || '—'}</span>
+                    <span style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.sm, color: colors.textSecondary, borderBottom: `1px solid ${colors.borderSubtle}` }}>{v.purpose || '—'}</span>
+                    <span style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.sm, color: colors.textSecondary, borderBottom: `1px solid ${colors.borderSubtle}` }}>{v.time_in || '—'}</span>
+                    <span style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.sm, color: colors.textSecondary, borderBottom: `1px solid ${colors.borderSubtle}` }}>{v.time_out || '—'}</span>
+                  </React.Fragment>
+                ))}
+              </div>
+            ) : (
+              <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0, padding: `${spacing['3']} 0` }}>No visitors today.</p>
+            )}
+          </Card>
+
+          {/* Incident Details */}
+          {((today as any).incident_details ?? []).length > 0 && (
+            <Card>
+              <SectionHeader title="Incident Details" />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
+                {((today as any).incident_details as Array<{ description: string; type: string; corrective_action: string }>).map((inc, i) => (
+                  <div key={i} style={{ padding: spacing['3'], backgroundColor: colors.statusCriticalSubtle, borderRadius: borderRadius.md, borderLeft: `3px solid ${colors.statusCritical}` }}>
+                    <p style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.statusCritical, textTransform: 'uppercase', margin: 0, marginBottom: spacing['1'] }}>{inc.type.replace(/_/g, ' ')}</p>
+                    <p style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, margin: 0 }}>{inc.description}</p>
+                    {inc.corrective_action && (
+                      <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: `${spacing['1']} 0 0` }}>Corrective action: {inc.corrective_action}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
 
           {/* AI Auto Narrative */}
           <AutoNarrative
@@ -460,6 +697,53 @@ export const DailyLog: React.FC = () => {
               }}
             />
           )}
+
+          {/* Aggregate metric cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'] }}>
+            {[
+              {
+                icon: <Users size={24} color={colors.primaryOrange} />,
+                label: "Today's Workers",
+                value: aggMetrics.todayWorkers,
+                delta: aggMetrics.todayWorkersDelta,
+                positiveIsGood: true,
+                deltaLabel: 'vs yesterday',
+              },
+              {
+                icon: <Clock size={24} color={colors.statusActive} />,
+                label: 'Man-Hours This Week',
+                value: aggMetrics.manHoursWeek.toLocaleString(),
+                delta: aggMetrics.manHoursWeekDelta,
+                positiveIsGood: true,
+                deltaLabel: 'vs prior week',
+              },
+              {
+                icon: <ShieldCheck size={24} color={aggMetrics.openIncidents === 0 ? colors.statusActive : colors.statusCritical} />,
+                label: 'Open Incidents (30d)',
+                value: aggMetrics.openIncidents,
+                delta: aggMetrics.openIncidentsDelta,
+                positiveIsGood: false,
+                deltaLabel: 'vs prior 30d',
+              },
+              {
+                icon: <CalendarDays size={24} color={colors.statusInfo} />,
+                label: 'Logs This Month',
+                value: aggMetrics.logsMonth,
+                delta: aggMetrics.logsMonthDelta,
+                positiveIsGood: true,
+                deltaLabel: 'vs prior month',
+              },
+            ].map((m) => (
+              <Card key={m.label} padding={spacing['5']}>
+                <div style={{ marginBottom: spacing['3'] }}>{m.icon}</div>
+                <p style={{ fontSize: '12px', color: colors.textTertiary, margin: 0, marginBottom: spacing['2'], fontWeight: typography.fontWeight.medium }}>{m.label}</p>
+                <p style={{ fontSize: '28px', fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, lineHeight: 1 }}>{m.value}</p>
+                <p style={{ fontSize: '11px', margin: 0, marginTop: spacing['2'], color: m.delta === 0 ? colors.textTertiary : (m.positiveIsGood ? (m.delta > 0 ? colors.statusActive : colors.statusCritical) : (m.delta < 0 ? colors.statusActive : colors.statusCritical)) }}>
+                  {m.delta === 0 ? `— ${m.deltaLabel}` : `${m.delta > 0 ? '+' : ''}${m.delta} ${m.deltaLabel}`}
+                </p>
+              </Card>
+            ))}
+          </div>
 
           {/* Previous Days */}
           <div>
@@ -539,6 +823,39 @@ export const DailyLog: React.FC = () => {
           onSubmit={handleQuickSubmit}
           onClose={() => setShowQuickEntry(false)}
         />
+      )}
+
+      {/* Amendment Modal */}
+      {showAmendmentModal && (
+        <>
+          <div onClick={() => setShowAmendmentModal(false)} role="presentation" aria-hidden="true" style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.3)', zIndex: 1039 }} />
+          <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 440, backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.lg, boxShadow: '0 16px 48px rgba(0,0,0,0.15)', zIndex: 1040, padding: spacing['6'] }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'], marginBottom: spacing['4'] }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, borderRadius: borderRadius.md, backgroundColor: colors.orangeSubtle }}>
+                <FileEdit size={18} color={colors.orangeText} />
+              </div>
+              <h3 style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0 }}>Create Amendment</h3>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: spacing['2'], padding: spacing['3'], backgroundColor: colors.orangeSubtle, borderRadius: borderRadius.md, marginBottom: spacing['4'] }}>
+              <Lock size={13} color={colors.orangeText} style={{ marginTop: 1, flexShrink: 0 }} />
+              <div>
+                <p style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.orangeText, margin: 0 }}>This log has been submitted and locked</p>
+                {submittedAt && (
+                  <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: `${spacing['1']} 0 0` }}>
+                    Submitted {new Date(submittedAt).toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                )}
+              </div>
+            </div>
+            <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: 0, marginBottom: spacing['5'] }}>
+              Creating an amendment will start a new audit version while preserving the original submission. The original timestamp and contents remain on record.
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: spacing['2'] }}>
+              <Btn variant="ghost" size="md" onClick={() => setShowAmendmentModal(false)}>Cancel</Btn>
+              <Btn variant="primary" size="md" icon={<FileEdit size={14} />} onClick={() => { setShowAmendmentModal(false); setShowQuickEntry(true); }}>Create Amendment</Btn>
+            </div>
+          </div>
+        </>
       )}
 
       {/* Reject Modal */}

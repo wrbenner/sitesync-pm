@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { WifiOff, RefreshCw, Check, AlertTriangle, Cloud, Clock, ChevronDown, ChevronUp } from 'lucide-react';
-import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme';
+import React, { useState, useEffect } from 'react';
+import { WifiOff, RefreshCw, Check, AlertTriangle, Cloud, Clock, ChevronDown, ChevronUp, X } from 'lucide-react';
+import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
 import { useOfflineStatus } from '../../hooks/useOfflineStatus';
+import { getPendingMutations, retryMutation, type PendingMutation } from '../../lib/offlineDb';
 
 export const OfflineBanner: React.FC = () => {
   const {
@@ -15,6 +16,7 @@ export const OfflineBanner: React.FC = () => {
     sync,
   } = useOfflineStatus();
   const [expanded, setExpanded] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   const isSyncing = syncState === 'syncing';
   const isCaching = syncState === 'caching';
@@ -111,6 +113,28 @@ export const OfflineBanner: React.FC = () => {
           {config.text}
         </span>
 
+        {/* View queued items */}
+        {(hasPending || hasConflicts) && !isSyncing && (
+          <button
+            onClick={() => setSheetOpen(true)}
+            style={{
+              fontSize: typography.fontSize.caption,
+              color: config.iconColor,
+              fontWeight: typography.fontWeight.semibold,
+              fontFamily: typography.fontFamily,
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: `0 ${spacing['1']}`,
+              whiteSpace: 'nowrap',
+              textDecoration: 'underline',
+              textUnderlineOffset: '2px',
+            }}
+          >
+            View
+          </button>
+        )}
+
         {/* Last synced timestamp */}
         <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, whiteSpace: 'nowrap' }}>
           {lastSyncedLabel}
@@ -197,6 +221,12 @@ export const OfflineBanner: React.FC = () => {
           )}
         </div>
       )}
+
+      <QueuedItemsSheet
+        open={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+        onSyncNow={sync}
+      />
     </div>
   );
 };
@@ -298,3 +328,240 @@ function getProgressPercent(
   if (!progress || progress.total === 0) return '0%';
   return `${Math.round((progress.completed / progress.total) * 100)}%`;
 }
+
+// ── Queued Items Sheet ───────────────────────────────────
+
+const TABLE_LABELS: Record<string, string> = {
+  field_captures: 'Field capture',
+  rfis: 'RFI',
+  submittals: 'Submittal',
+  tasks: 'Task',
+  punch_items: 'Punch item',
+  daily_logs: 'Daily log',
+  drawings: 'Drawing',
+  crews: 'Crew',
+  budget_items: 'Budget item',
+  change_orders: 'Change order',
+  meetings: 'Meeting',
+  directory_contacts: 'Contact',
+  files: 'File',
+  schedule_phases: 'Schedule phase',
+  project_members: 'Project member',
+  projects: 'Project',
+};
+
+const OP_LABELS: Record<string, string> = {
+  insert: 'created',
+  update: 'updated',
+  delete: 'deleted',
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  pending: 'Queued',
+  syncing: 'Syncing',
+  failed: 'Failed',
+  conflict: 'Conflict',
+};
+
+const STATUS_COLORS: Record<string, string> = {
+  pending: colors.statusPending,
+  syncing: colors.statusInfo,
+  failed: colors.statusCritical,
+  conflict: colors.statusPending,
+};
+
+function formatMutationLabel(m: PendingMutation): string {
+  const table = TABLE_LABELS[m.table] ?? m.table;
+  const op = OP_LABELS[m.operation] ?? m.operation;
+  return `${table} ${op}`;
+}
+
+function formatMutationTime(created_at: string): string {
+  const seconds = Math.floor((Date.now() - new Date(created_at).getTime()) / 1000);
+  if (seconds < 10) return 'just now';
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  return `${hours}h ago`;
+}
+
+const QueuedItemsSheet: React.FC<{
+  open: boolean;
+  onClose: () => void;
+  onSyncNow: () => void;
+}> = ({ open, onClose, onSyncNow }) => {
+  const [mutations, setMutations] = useState<PendingMutation[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setLoading(true);
+      getPendingMutations().then((m) => {
+        setMutations(m);
+        setLoading(false);
+      });
+    }
+  }, [open]);
+
+  const handleRetry = async (id: number) => {
+    await retryMutation(id);
+    setMutations((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, status: 'pending' as const, retryCount: 0 } : m))
+    );
+    onSyncNow();
+  };
+
+  if (!open) return null;
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        onClick={onClose}
+        style={{
+          position: 'fixed', inset: 0,
+          backgroundColor: 'rgba(0,0,0,0.4)',
+          zIndex: 1000,
+        }}
+      />
+
+      {/* Sheet */}
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Queued changes"
+        style={{
+          position: 'fixed', left: 0, right: 0, bottom: 0,
+          backgroundColor: colors.surfaceRaised,
+          borderRadius: `${borderRadius.xl} ${borderRadius.xl} 0 0`,
+          boxShadow: shadows.elevated,
+          zIndex: 1001,
+          maxHeight: '70vh',
+          display: 'flex', flexDirection: 'column',
+        }}
+      >
+        {/* Handle */}
+        <div style={{ display: 'flex', justifyContent: 'center', padding: `${spacing['2']} 0` }}>
+          <div style={{
+            width: 36, height: 4,
+            borderRadius: borderRadius.full,
+            backgroundColor: colors.borderSubtle,
+          }} />
+        </div>
+
+        {/* Header */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: `${spacing['1']} ${spacing['4']} ${spacing['3']}`,
+          borderBottom: `1px solid ${colors.borderSubtle}`,
+        }}>
+          <span style={{
+            fontSize: typography.fontSize.title,
+            fontWeight: typography.fontWeight.semibold,
+            color: colors.textPrimary,
+          }}>
+            Queued Changes
+          </span>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            style={{
+              width: 32, height: 32,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'none', border: 'none', cursor: 'pointer',
+              borderRadius: borderRadius.full,
+              color: colors.textSecondary,
+            }}
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* List */}
+        <div style={{ flex: 1, overflow: 'auto' }}>
+          {loading ? (
+            <div style={{
+              padding: spacing['6'], textAlign: 'center',
+              color: colors.textTertiary, fontSize: typography.fontSize.sm,
+            }}>
+              Loading...
+            </div>
+          ) : mutations.length === 0 ? (
+            <div style={{
+              padding: spacing['6'], textAlign: 'center',
+              color: colors.textTertiary, fontSize: typography.fontSize.sm,
+            }}>
+              No queued changes
+            </div>
+          ) : (
+            mutations.map((m) => {
+              const statusColor = STATUS_COLORS[m.status] ?? colors.textTertiary;
+              return (
+                <div
+                  key={m.id}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: spacing['3'],
+                    padding: `${spacing['3']} ${spacing['4']}`,
+                    borderBottom: `1px solid ${colors.borderSubtle}`,
+                  }}
+                >
+                  {/* Status dot */}
+                  <div style={{
+                    width: 8, height: 8, borderRadius: '50%',
+                    backgroundColor: statusColor, flexShrink: 0,
+                  }} />
+
+                  {/* Info */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{
+                      fontSize: typography.fontSize.sm,
+                      fontWeight: typography.fontWeight.medium,
+                      color: colors.textPrimary,
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    }}>
+                      {formatMutationLabel(m)}
+                    </div>
+                    <div style={{
+                      fontSize: typography.fontSize.caption,
+                      color: colors.textTertiary,
+                      marginTop: 2,
+                    }}>
+                      {formatMutationTime(m.created_at)}
+                      {' · '}
+                      <span style={{ color: statusColor }}>
+                        {STATUS_LABELS[m.status] ?? m.status}
+                        {m.status === 'failed' ? ` (attempt ${m.retryCount})` : ''}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Retry button for permanently failed items */}
+                  {m.status === 'failed' && m.id != null && (
+                    <button
+                      onClick={() => handleRetry(m.id!)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: spacing['1'],
+                        padding: `${spacing['1']} ${spacing['3']}`,
+                        backgroundColor: colors.primaryOrange,
+                        color: colors.white,
+                        border: 'none', borderRadius: borderRadius.base,
+                        fontSize: typography.fontSize.caption,
+                        fontWeight: typography.fontWeight.semibold,
+                        fontFamily: typography.fontFamily,
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      <RefreshCw size={11} /> Retry
+                    </button>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+    </>
+  );
+};

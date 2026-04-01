@@ -78,7 +78,7 @@ describe('Daily Log State Machine', () => {
       for (const s of statuses) {
         const c = getDailyLogStatusConfig(s)
         expect(c.label).toBeTruthy()
-        expect(c.color).toMatch(/^#/)
+        expect(c.color).toMatch(/^var\(/)
       }
     })
 

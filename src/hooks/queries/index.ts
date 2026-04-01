@@ -1,5 +1,14 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
+import type { PaginationParams, PaginatedResult } from '../../types/api'
+import { getAiInsights } from '../../api/endpoints/ai'
+import { getActivityFeed } from '../../api/endpoints/activity'
+import type { ActivityFeedItem as EnrichedActivityFeedItem } from '../../types/entities'
+import { getPortfolioMetrics } from '../../api/endpoints/organizations'
+import { getPayApplication } from '../../api/endpoints/budget'
+import { getPayApplications } from '../../api/endpoints/payApplications'
+import { getLienWaivers } from '../../api/endpoints/lienWaivers'
+import { getFiles as getFilesEnriched } from '../../api/endpoints/documents'
 import type {
   Project,
   RFI,
@@ -43,17 +52,21 @@ export function useProject(projectId: string | undefined) {
 
 // ── RFIs ──────────────────────────────────────────────────
 
-export function useRFIs(projectId: string | undefined) {
+export function useRFIs(projectId: string | undefined, pagination?: PaginationParams) {
+  const { page = 1, pageSize = 50 } = pagination ?? {}
   return useQuery({
-    queryKey: ['rfis', projectId],
-    queryFn: async () => {
-      const { data, error } = await supabase
+    queryKey: ['rfis', projectId, page, pageSize],
+    queryFn: async (): Promise<PaginatedResult<RFI>> => {
+      const from = (page - 1) * pageSize
+      const to = from + pageSize - 1
+      const { data, error, count } = await supabase
         .from('rfis')
-        .select('*')
+        .select('*', { count: 'exact' })
         .eq('project_id', projectId!)
         .order('rfi_number', { ascending: false })
+        .range(from, to)
       if (error) throw error
-      return data as RFI[]
+      return { data: (data ?? []) as RFI[], total: count ?? 0, page, pageSize }
     },
     enabled: !!projectId,
   })
@@ -84,17 +97,21 @@ export function useRFI(id: string | undefined) {
 
 // ── Submittals ────────────────────────────────────────────
 
-export function useSubmittals(projectId: string | undefined) {
+export function useSubmittals(projectId: string | undefined, pagination?: PaginationParams) {
+  const { page = 1, pageSize = 50 } = pagination ?? {}
   return useQuery({
-    queryKey: ['submittals', projectId],
-    queryFn: async () => {
-      const { data, error } = await supabase
+    queryKey: ['submittals', projectId, page, pageSize],
+    queryFn: async (): Promise<PaginatedResult<Submittal>> => {
+      const from = (page - 1) * pageSize
+      const to = from + pageSize - 1
+      const { data, error, count } = await supabase
         .from('submittals')
-        .select('*')
+        .select('*', { count: 'exact' })
         .eq('project_id', projectId!)
         .order('submittal_number', { ascending: false })
+        .range(from, to)
       if (error) throw error
-      return data as Submittal[]
+      return { data: (data ?? []) as Submittal[], total: count ?? 0, page, pageSize }
     },
     enabled: !!projectId,
   })
@@ -118,17 +135,21 @@ export function useSubmittal(id: string | undefined) {
 
 // ── Punch Items ───────────────────────────────────────────
 
-export function usePunchItems(projectId: string | undefined) {
+export function usePunchItems(projectId: string | undefined, pagination?: PaginationParams) {
+  const { page = 1, pageSize = 50 } = pagination ?? {}
   return useQuery({
-    queryKey: ['punch_items', projectId],
-    queryFn: async () => {
-      const { data, error } = await supabase
+    queryKey: ['punch_items', projectId, page, pageSize],
+    queryFn: async (): Promise<PaginatedResult<PunchItem>> => {
+      const from = (page - 1) * pageSize
+      const to = from + pageSize - 1
+      const { data, error, count } = await supabase
         .from('punch_items')
-        .select('*')
+        .select('*', { count: 'exact' })
         .eq('project_id', projectId!)
         .order('item_number', { ascending: false })
+        .range(from, to)
       if (error) throw error
-      return data as PunchItem[]
+      return { data: (data ?? []) as PunchItem[], total: count ?? 0, page, pageSize }
     },
     enabled: !!projectId,
   })
@@ -205,17 +226,21 @@ export function useTask(id: string | undefined) {
 
 // ── Daily Logs ────────────────────────────────────────────
 
-export function useDailyLogs(projectId: string | undefined) {
+export function useDailyLogs(projectId: string | undefined, pagination?: PaginationParams) {
+  const { page = 1, pageSize = 50 } = pagination ?? {}
   return useQuery({
-    queryKey: ['daily_logs', projectId],
-    queryFn: async () => {
-      const { data, error } = await supabase
+    queryKey: ['daily_logs', projectId, page, pageSize],
+    queryFn: async (): Promise<PaginatedResult<DailyLog>> => {
+      const from = (page - 1) * pageSize
+      const to = from + pageSize - 1
+      const { data, error, count } = await supabase
         .from('daily_logs')
-        .select('*')
+        .select('*', { count: 'exact' })
         .eq('project_id', projectId!)
         .order('date', { ascending: false })
+        .range(from, to)
       if (error) throw error
-      return data as DailyLog[]
+      return { data: (data ?? []) as DailyLog[], total: count ?? 0, page, pageSize }
     },
     enabled: !!projectId,
   })
@@ -308,17 +333,21 @@ export function useChangeOrder(id: string | undefined) {
 
 // ── Meetings ──────────────────────────────────────────────
 
-export function useMeetings(projectId: string | undefined) {
+export function useMeetings(projectId: string | undefined, pagination?: PaginationParams) {
+  const { page = 1, pageSize = 50 } = pagination ?? {}
   return useQuery({
-    queryKey: ['meetings', projectId],
-    queryFn: async () => {
-      const { data, error } = await supabase
+    queryKey: ['meetings', projectId, page, pageSize],
+    queryFn: async (): Promise<PaginatedResult<Meeting>> => {
+      const from = (page - 1) * pageSize
+      const to = from + pageSize - 1
+      const { data, error, count } = await supabase
         .from('meetings')
-        .select('*')
+        .select('*', { count: 'exact' })
         .eq('project_id', projectId!)
         .order('date', { ascending: false })
+        .range(from, to)
       if (error) throw error
-      return data as Meeting[]
+      return { data: (data ?? []) as Meeting[], total: count ?? 0, page, pageSize }
     },
     enabled: !!projectId,
   })
@@ -346,17 +375,21 @@ export function useMeeting(id: string | undefined) {
 
 // ── Directory Contacts ────────────────────────────────────
 
-export function useDirectoryContacts(projectId: string | undefined) {
+export function useDirectoryContacts(projectId: string | undefined, pagination?: PaginationParams) {
+  const { page = 1, pageSize = 50 } = pagination ?? {}
   return useQuery({
-    queryKey: ['directory_contacts', projectId],
-    queryFn: async () => {
-      const { data, error } = await supabase
+    queryKey: ['directory_contacts', projectId, page, pageSize],
+    queryFn: async (): Promise<PaginatedResult<DirectoryContact>> => {
+      const from = (page - 1) * pageSize
+      const to = from + pageSize - 1
+      const { data, error, count } = await supabase
         .from('directory_contacts')
-        .select('*')
+        .select('*', { count: 'exact' })
         .eq('project_id', projectId!)
         .order('contact_name', { ascending: true })
+        .range(from, to)
       if (error) throw error
-      return data as DirectoryContact[]
+      return { data: (data ?? []) as DirectoryContact[], total: count ?? 0, page, pageSize }
     },
     enabled: !!projectId,
   })
@@ -364,23 +397,10 @@ export function useDirectoryContacts(projectId: string | undefined) {
 
 // ── Files ─────────────────────────────────────────────────
 
-export function useFiles(projectId: string | undefined, folder?: string | null) {
+export function useFiles(projectId: string | undefined) {
   return useQuery({
-    queryKey: ['files', projectId, folder ?? null],
-    queryFn: async () => {
-      let query = supabase
-        .from('files')
-        .select('*')
-        .eq('project_id', projectId!)
-
-      if (folder) {
-        query = query.eq('folder', folder)
-      }
-
-      const { data, error } = await query.order('name', { ascending: true })
-      if (error) throw error
-      return data as FileRecord[]
-    },
+    queryKey: ['files', projectId],
+    queryFn: () => getFilesEnriched(projectId!),
     enabled: !!projectId,
   })
 }
@@ -443,18 +463,9 @@ export function useNotifications(userId: string | undefined) {
 // ── Activity Feed ─────────────────────────────────────────
 
 export function useActivityFeed(projectId: string | undefined) {
-  return useQuery({
+  return useQuery<EnrichedActivityFeedItem[]>({
     queryKey: ['activity_feed', projectId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('activity_feed')
-        .select('*')
-        .eq('project_id', projectId!)
-        .order('created_at', { ascending: false })
-        .limit(50)
-      if (error) throw error
-      return data as ActivityFeedItem[]
-    },
+    queryFn: () => getActivityFeed(projectId!),
     enabled: !!projectId,
   })
 }
@@ -497,6 +508,15 @@ export function useAIInsightsByCategory(projectId: string | undefined, category?
       if (error) throw error
       return (data || []) as AIInsight[]
     },
+    enabled: !!projectId,
+  })
+}
+
+/** Routes through getAiInsights so the aiService is tried first, with Supabase as fallback. Returns dataSource and lastFallbackAt for cache indicators. */
+export function useAiInsightsMeta(projectId: string | undefined) {
+  return useQuery({
+    queryKey: ['ai_insights_meta', projectId],
+    queryFn: () => getAiInsights(projectId!),
     enabled: !!projectId,
   })
 }
@@ -791,6 +811,17 @@ export function useCostDatabase() {
 
 // ── Portfolio ────────────────────────────────────────────
 
+export function useOrgPortfolioMetrics(orgId: string | undefined) {
+  return useQuery({
+    queryKey: ['org_portfolio_metrics', orgId],
+    queryFn: () => getPortfolioMetrics(orgId!),
+    enabled: !!orgId,
+    staleTime: 60_000,
+    retry: 1,
+    throwOnError: true,
+  })
+}
+
 export function usePortfolios(userId: string | undefined) {
   return useQuery({
     queryKey: ['portfolios', userId],
@@ -983,11 +1014,7 @@ export function useContracts(projectId: string | undefined) {
 export function usePayApplications(projectId: string | undefined) {
   return useQuery({
     queryKey: ['pay_applications', projectId],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('pay_applications').select('*').eq('project_id', projectId!).order('application_number', { ascending: false })
-      if (error) throw error
-      return data
-    },
+    queryFn: () => getPayApplications(projectId!),
     enabled: !!projectId,
   })
 }
@@ -1665,6 +1692,32 @@ export function useDailyLogEntries(dailyLogId: string | undefined) {
   })
 }
 
+// ── Lien Waivers ─────────────────────────────────────────
+
+export function useLienWaivers(projectId: string | undefined) {
+  return useQuery({
+    queryKey: ['lien_waivers', projectId],
+    queryFn: () => getLienWaivers(projectId!),
+    enabled: !!projectId,
+  })
+}
+
+export function useLienWaiversByPayApp(payAppId: string | undefined) {
+  return useQuery({
+    queryKey: ['lien_waivers', 'pay_app', payAppId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('lien_waivers')
+        .select('*')
+        .eq('pay_app_id', payAppId!)
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return data
+    },
+    enabled: !!payAppId,
+  })
+}
+
 // ── Lookahead Tasks ──────────────────────────────────────
 
 export function useLookaheadTasks(projectId: string | undefined) {
@@ -1687,5 +1740,13 @@ export function useLookaheadTasks(projectId: string | undefined) {
       return data as Task[]
     },
     enabled: !!projectId,
+  })
+}
+
+export function usePayAppSOV(projectId: string | undefined, appNumber: number | null | undefined) {
+  return useQuery({
+    queryKey: ['pay_app_sov', projectId, appNumber],
+    queryFn: () => getPayApplication(projectId!, appNumber!),
+    enabled: !!projectId && appNumber != null,
   })
 }

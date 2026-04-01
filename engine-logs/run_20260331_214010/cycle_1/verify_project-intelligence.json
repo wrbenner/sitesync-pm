@@ -1,0 +1,57 @@
+{
+  "verifications": [
+    {
+      "id": "project-intelligence-C1-001",
+      "status": "partial",
+      "note": "ai.ts and aiService.ts modified (+99, +37 lines) but diff content not visible. Cannot confirm hardcoded placeholders removed without code inspection."
+    },
+    {
+      "id": "project-intelligence-C1-002",
+      "status": "partial",
+      "note": "budget.ts significantly changed (+336 lines) suggesting cost calculation fixes, but cannot verify approved_cost logic without seeing actual code."
+    },
+    {
+      "id": "project-intelligence-C1-003",
+      "status": "partial",
+      "note": "projectScope.ts middleware added/modified (+19 lines) and organizationScope.ts created (+17 lines), suggesting scope guards implemented. Cannot confirm getEntityHistory protection without code review."
+    },
+    {
+      "id": "project-intelligence-C1-004",
+      "status": "partial",
+      "note": "aiService.ts and errors.ts modified, ErrorBoundary.tsx enhanced (+17 lines). Changes suggest error handling improvements but cannot verify silent fallback elimination."
+    },
+    {
+      "id": "project-intelligence-C2-005",
+      "status": "partial",
+      "note": "organizations.ts heavily modified (+142 lines). Likely refactored but cannot confirm type safety improvements without code inspection."
+    },
+    {
+      "id": "project-intelligence-C2-006",
+      "status": "not_fixed",
+      "note": "No new endpoint files or model changes visible in diff. Lien waiver workflow remains incomplete."
+    },
+    {
+      "id": "project-intelligence-C2-007",
+      "status": "partial",
+      "note": "field.ts and QuickEntry.tsx significantly modified (+345, +482 lines). Daily log offline sync may be addressed but cannot confirm without code review."
+    },
+    {
+      "id": "project-intelligence-C2-008",
+      "status": "partial",
+      "note": "ai.ts and aiService.ts changes suggest copilot context work, but cannot verify construction-context system prompt or data injection without code inspection."
+    },
+    {
+      "id": "project-intelligence-C3-009",
+      "status": "partial",
+      "note": "Primitives.tsx modified (+71 lines) and PhotoGrid.tsx updated (+57 lines). Accessibility improvements possible but cannot confirm ARIA/keyboard navigation without code."
+    },
+    {
+      "id": "project-intelligence-C3-010",
+      "status": "not_fixed",
+      "note": "No changes to queryKeys.ts optimization logic visible. N+1 portfolio metrics issue likely unresolved."
+    }
+  ],
+  "files_changed": 34,
+  "regression_detected": true,
+  "regression_description": "Mobile e2e tests added (mobile.spec.ts +49) and engine logs with large snapshot (75738 lines) suggest incomplete testing coverage. Diff content unavailable prevents verification of 8/10 issues. High risk of unverified changes introducing regressions in critical security/data-integrity areas (scope guards, AI error handling, cost calculations)."
+}

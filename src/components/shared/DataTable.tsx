@@ -1,4 +1,5 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useMemo, useId } from 'react';
+import { VirtualDataTable } from './VirtualDataTable';
 import {
   useReactTable,
   getCoreRowModel,
@@ -14,10 +15,46 @@ import {
 } from '@tanstack/react-table';
 import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme';
 import { Skeleton } from '../Primitives';
-import { ArrowUp, ArrowDown, ChevronLeft, ChevronRight, Search, Download } from 'lucide-react';
+import { ArrowUp, ArrowDown, ChevronLeft, ChevronRight, Search, Download, Keyboard } from 'lucide-react';
+import { useTableKeyboardNavigation } from '../../hooks/useTableKeyboardNavigation';
 
 export type { ColumnDef, Row };
 export { createColumnHelper } from '@tanstack/react-table';
+
+interface TableProps<T> extends DataTableProps<T> {
+  virtualThreshold?: number;
+  rowHeight?: number;
+  containerHeight?: number;
+  overscan?: number;
+}
+
+export function Table<T>({
+  virtualThreshold = 50,
+  rowHeight,
+  containerHeight,
+  overscan,
+  ...rest
+}: TableProps<T>) {
+  // Always use DataTable when selectable so checkbox/keyboard nav work correctly
+  if (!rest.selectable && rest.data.length > virtualThreshold) {
+    return (
+      <VirtualDataTable
+        data={rest.data}
+        columns={rest.columns}
+        loading={rest.loading}
+        enableSorting={rest.enableSorting}
+        onRowClick={rest.onRowClick}
+        selectedRowId={rest.selectedRowId}
+        getRowId={rest.getRowId}
+        emptyMessage={rest.emptyMessage}
+        rowHeight={rowHeight}
+        containerHeight={containerHeight}
+        overscan={overscan}
+      />
+    );
+  }
+  return <DataTable {...rest} />;
+}
 
 interface DataTableProps<T> {
   data: T[];
@@ -34,6 +71,9 @@ interface DataTableProps<T> {
   getRowId?: (row: T) => string;
   emptyMessage?: string;
   stickyHeader?: boolean;
+  /** Adds a checkbox column and exposes selection state via onSelectionChange */
+  selectable?: boolean;
+  onSelectionChange?: (ids: string[]) => void;
 }
 
 const MemoizedRow = React.memo(function MemoizedRow<T>({
@@ -41,21 +81,35 @@ const MemoizedRow = React.memo(function MemoizedRow<T>({
   onClick,
   selected,
   columns,
+  index,
+  focused,
+  rowId,
 }: {
   row: Row<T>;
   onClick?: (row: T) => void;
   selected: boolean;
   columns: ColumnDef<T, any>[];
+  index: number;
+  focused: boolean;
+  rowId: string;
 }) {
   const baseBg = selected ? colors.surfaceSelected : colors.surfaceRaised;
   return (
     <tr
+      id={rowId}
+      role="row"
+      aria-rowindex={index + 1}
+      aria-selected={selected}
+      tabIndex={focused ? 0 : -1}
+      data-row-index={index}
+      className="sitesync-grid-row"
       onClick={onClick ? () => onClick(row.original) : undefined}
       style={{
         backgroundColor: baseBg,
         cursor: onClick ? 'pointer' : 'default',
         transition: `background-color ${transitions.quick}`,
         borderLeft: selected ? `2px solid ${colors.primaryOrange}` : '2px solid transparent',
+        height: '48px',
       }}
       onMouseEnter={(e) => {
         if (onClick) (e.currentTarget as HTMLTableRowElement).style.backgroundColor = selected ? colors.surfaceSelected : colors.surfaceHover;
@@ -67,6 +121,7 @@ const MemoizedRow = React.memo(function MemoizedRow<T>({
       {row.getVisibleCells().map((cell) => (
         <td
           key={cell.id}
+          role="gridcell"
           style={{
             padding: `${spacing['3']} ${spacing['4']}`,
             borderBottom: `1px solid ${colors.borderSubtle}`,
@@ -87,6 +142,9 @@ const MemoizedRow = React.memo(function MemoizedRow<T>({
   onClick?: (row: T) => void;
   selected: boolean;
   columns: ColumnDef<T, any>[];
+  index: number;
+  focused: boolean;
+  rowId: string;
 }) => React.ReactElement;
 
 function exportToCsv<T>(table: ReturnType<typeof useReactTable<T>>, columns: ColumnDef<T, any>[]) {
@@ -130,15 +188,74 @@ export function DataTable<T>({
   getRowId,
   emptyMessage = 'No items found',
   stickyHeader = true,
+  selectable = false,
+  onSelectionChange,
 }: DataTableProps<T>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 
+  // Tracks the last index the user clicked a checkbox on, for shift-click range selection.
+  const lastCheckedRef = useRef<number | null>(null);
+
+  const checkboxColumn = useMemo<ColumnDef<T, any>>(() => ({
+    id: '_select',
+    size: 40,
+    enableSorting: false,
+    header: ({ table: t }) => (
+      <input
+        type="checkbox"
+        checked={t.getIsAllRowsSelected()}
+        ref={(el) => { if (el) el.indeterminate = t.getIsSomeRowsSelected(); }}
+        onChange={(e) => {
+          t.getToggleAllRowsSelectedHandler()(e);
+          lastCheckedRef.current = null;
+        }}
+        style={{ cursor: 'pointer', accentColor: colors.primaryOrange, width: 14, height: 14 }}
+        aria-label="Select all rows"
+      />
+    ),
+    cell: ({ row, table: t }) => {
+      const index = row.index;
+      return (
+        <input
+          type="checkbox"
+          checked={row.getIsSelected()}
+          onChange={() => {/* controlled via onClick */}}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (e.shiftKey && lastCheckedRef.current !== null) {
+              // Range select: toggle all rows between lastChecked and current to match current row's new state
+              const allRows = t.getRowModel().rows;
+              const from = Math.min(lastCheckedRef.current, index);
+              const to = Math.max(lastCheckedRef.current, index);
+              const targetState = !row.getIsSelected();
+              allRows.slice(from, to + 1).forEach((r) => {
+                if (r.getCanSelect()) r.toggleSelected(targetState);
+              });
+            } else {
+              row.toggleSelected();
+            }
+            lastCheckedRef.current = index;
+          }}
+          style={{ cursor: 'pointer', accentColor: colors.primaryOrange, width: 14, height: 14 }}
+          aria-label="Select row"
+        />
+      );
+    },
+  // lastCheckedRef is a stable ref object, safe to omit from deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), []);
+
+  const effectiveColumns = useMemo(
+    () => selectable ? [checkboxColumn, ...columns] : columns,
+    [selectable, checkboxColumn, columns],
+  );
+
   const table = useReactTable({
     data,
-    columns,
+    columns: effectiveColumns,
     state: {
       sorting,
       globalFilter,
@@ -153,16 +270,42 @@ export function DataTable<T>({
     getSortedRowModel: enableSorting ? getSortedRowModel() : undefined,
     getFilteredRowModel: enableGlobalFilter ? getFilteredRowModel() : undefined,
     getPaginationRowModel: enablePagination ? getPaginationRowModel() : undefined,
-    enableRowSelection,
+    enableRowSelection: selectable || enableRowSelection,
     getRowId,
     initialState: {
       pagination: { pageSize },
     },
   });
 
+  useEffect(() => {
+    if (!onSelectionChange) return;
+    const ids = table.getSelectedRowModel().rows.map((r) => r.id);
+    onSelectionChange(ids);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rowSelection]);
+
   const handleExport = useCallback(() => {
-    exportToCsv(table, columns);
-  }, [table, columns]);
+    exportToCsv(table, effectiveColumns);
+  }, [table, effectiveColumns]);
+
+  const rows = table.getRowModel().rows;
+
+  const tableId = useId();
+  const gridRef = useRef<HTMLDivElement>(null);
+
+  const { focusedIndex, handleKeyDown, activeRowId } = useTableKeyboardNavigation({
+    rowCount: rows.length,
+    onActivate: (i) => onRowClick?.(rows[i].original),
+    onToggleSelect: selectable ? (i) => rows[i]?.toggleSelected() : undefined,
+    rowIdPrefix: tableId,
+  });
+
+  useEffect(() => {
+    if (gridRef.current?.contains(document.activeElement)) {
+      const row = gridRef.current.querySelector<HTMLElement>(`[data-row-index="${focusedIndex}"]`);
+      row?.focus({ preventScroll: false });
+    }
+  }, [focusedIndex]);
 
   if (loading) {
     return (
@@ -173,8 +316,6 @@ export function DataTable<T>({
       </div>
     );
   }
-
-  const rows = table.getRowModel().rows;
 
   return (
     <div>
@@ -227,14 +368,42 @@ export function DataTable<T>({
       )}
 
       {/* Table */}
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+      <div
+        ref={gridRef}
+        tabIndex={0}
+        className="sitesync-grid"
+        onKeyDown={handleKeyDown}
+        aria-activedescendant={activeRowId}
+        onFocus={(e) => {
+          if (e.target === e.currentTarget) {
+            const firstRow = e.currentTarget.querySelector<HTMLElement>('[data-row-index="0"]');
+            firstRow?.focus();
+          }
+        }}
+        style={{ overflowX: 'auto' }}
+      >
+        <table
+          role="grid"
+          aria-rowcount={data.length}
+          style={{ width: '100%', borderCollapse: 'collapse' }}
+        >
           <thead>
             {table.getHeaderGroups().map((headerGroup) => (
-              <tr key={headerGroup.id}>
+              <tr key={headerGroup.id} role="row">
                 {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
+                    role="columnheader"
+                    scope="col"
+                    aria-sort={
+                      header.column.getCanSort()
+                        ? header.column.getIsSorted() === 'asc'
+                          ? 'ascending'
+                          : header.column.getIsSorted() === 'desc'
+                          ? 'descending'
+                          : 'none'
+                        : undefined
+                    }
                     onClick={header.column.getCanSort() ? header.column.getToggleSortingHandler() : undefined}
                     style={{
                       padding: `${spacing['2.5']} ${spacing['4']}`,
@@ -267,18 +436,38 @@ export function DataTable<T>({
             ))}
           </thead>
           <tbody>
-            {rows.map((row) => (
+            {rows.map((row, index) => (
               <MemoizedRow
                 key={row.id}
                 row={row}
                 onClick={onRowClick}
                 selected={selectedRowId != null && getRowId ? getRowId(row.original) === String(selectedRowId) : false}
-                columns={columns}
+                columns={effectiveColumns}
+                index={index}
+                focused={focusedIndex === index}
+                rowId={`${tableId}-row-${index}`}
               />
             ))}
           </tbody>
         </table>
       </div>
+
+      {/* Keyboard shortcut hint */}
+      {rows.length > 0 && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: spacing['2'],
+          padding: `${spacing['2']} ${spacing['4']}`,
+          borderTop: `1px solid ${colors.borderSubtle}`,
+          backgroundColor: colors.surfaceInset,
+        }}>
+          <Keyboard size={11} style={{ color: colors.textTertiary, flexShrink: 0 }} />
+          <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
+            J/K to navigate{selectable ? ', Space to select' : ''}, Enter to open
+          </span>
+        </div>
+      )}
 
       {/* Empty state */}
       {rows.length === 0 && !loading && (

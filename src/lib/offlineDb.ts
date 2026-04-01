@@ -302,6 +302,14 @@ export async function clearPendingMutations() {
   await offlineDb.pendingMutations.clear()
 }
 
+export async function retryMutation(id: number): Promise<void> {
+  await offlineDb.pendingMutations.update(id, {
+    status: 'pending' as const,
+    retryCount: 0,
+    nextRetryAt: undefined,
+  })
+}
+
 // ── Conflict Resolution (BUG #2 FIX: atomic transaction) ─
 
 export async function resolveMutationConflict(
@@ -752,7 +760,4 @@ export {
   classifyUploadError,
   getDexieTableName,
   isReadyForRetry,
-  storeBaseVersion,
-  getBaseVersion,
-  deleteBaseVersion,
 }

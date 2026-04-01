@@ -111,6 +111,22 @@ export const WeatherCard: React.FC<WeatherCardProps> = ({ weather, onUpdate, loc
         <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{weather.humidity}%</span>
       </div>
 
+      {/* Source badge */}
+      {weather.source === 'openweathermap' && (
+        <div style={{
+          marginLeft: 'auto',
+          fontSize: typography.fontSize.caption,
+          color: colors.textTertiary,
+          backgroundColor: colors.surfaceInset,
+          border: `1px solid ${colors.borderSubtle}`,
+          borderRadius: borderRadius.sm,
+          padding: `2px ${spacing['2']}`,
+          whiteSpace: 'nowrap',
+        }}>
+          Auto-populated from OpenWeatherMap
+        </div>
+      )}
+
       {/* Edit button */}
       {!locked && onUpdate && (
         <button onClick={() => { setDraft(weather); setEditing(true); }}

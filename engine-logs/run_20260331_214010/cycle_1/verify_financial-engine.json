@@ -1,0 +1,57 @@
+{
+  "verifications": [
+    {
+      "id": "financial-engine-C1-001",
+      "status": "not_fixed",
+      "note": "No changes visible in budget.ts mapping logic for approved_cost field"
+    },
+    {
+      "id": "financial-engine-C2-002",
+      "status": "partial",
+      "note": "CashFlowWidget.tsx expanded (343 lines), likely contains 13-week projection, but financialEngine.ts not in diff"
+    },
+    {
+      "id": "financial-engine-C3-003",
+      "status": "not_fixed",
+      "note": "No AIA G702/G703 schedule of values implementation visible in diff"
+    },
+    {
+      "id": "financial-engine-H1-004",
+      "status": "not_fixed",
+      "note": "No changes to pay application approval flow or lien waiver integration"
+    },
+    {
+      "id": "financial-engine-H2-005",
+      "status": "partial",
+      "note": "EarnedValueDashboard.tsx modified (151 lines), suggests WIP/earned value updates, but unclear if using real data"
+    },
+    {
+      "id": "financial-engine-H3-006",
+      "status": "partial",
+      "note": "budget.ts heavily modified (336 lines), likely addresses type conflict but details unclear from diff"
+    },
+    {
+      "id": "financial-engine-H4-007",
+      "status": "not_fixed",
+      "note": "No fallback logic implementation visible for empty budget_items table"
+    },
+    {
+      "id": "financial-engine-M1-008",
+      "status": "partial",
+      "note": "Supabase realtime subscription logic may be in budget.ts changes (336 lines), but not explicitly shown"
+    },
+    {
+      "id": "financial-engine-M2-009",
+      "status": "not_fixed",
+      "note": "No drill-down functionality or clickable row implementation visible in diff"
+    },
+    {
+      "id": "financial-engine-M3-010",
+      "status": "partial",
+      "note": "AI endpoints modified (77 lines in ai.ts, 37 lines in aiService.ts), suggests variance analysis implementation possible"
+    }
+  ],
+  "files_changed": 29,
+  "regression_detected": true,
+  "regression_description": "Critical files like financialEngine.ts not included in diff despite being mentioned in issues. Budget.ts large changes (336 lines) without clear documentation of specific fixes. AI service modifications may introduce new dependencies or side effects not covered by provided changes."
+}

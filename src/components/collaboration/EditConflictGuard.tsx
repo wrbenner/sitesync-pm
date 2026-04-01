@@ -1,10 +1,17 @@
-import React, { useState, useCallback } from 'react';
-import { AlertTriangle, RefreshCw, X } from 'lucide-react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { AlertTriangle, RefreshCw, X, Lock } from 'lucide-react';
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
 import { supabase } from '../../lib/supabase';
 import { EntityPresence } from './PresenceBar';
 import { usePresenceStore } from '../../stores/presenceStore';
+import { useUiStore } from '../../stores';
 import { Btn } from '../Primitives';
+import {
+  acquireEditLock,
+  renewEditLock,
+  releaseEditLock,
+  type AcquireEditLockResult,
+} from '../../api/endpoints/editLocks';
 
 // ── Optimistic Lock Check ──────────────────────────────────
 
@@ -111,3 +118,143 @@ export const CoEditingWarning: React.FC<CoEditingWarningProps> = ({ entityId }) 
     </div>
   );
 };
+
+// ── Edit Lock Guard ────────────────────────────────────────
+// Acquires a pessimistic lock on mount, renews every 60 seconds,
+// releases on unmount, and subscribes to realtime so all sessions
+// see lock state changes instantly.
+
+export interface EditConflictGuardProps {
+  entityType: string;
+  entityId: string;
+  userId: string;
+  children: React.ReactNode;
+}
+
+export const EditConflictGuard: React.FC<EditConflictGuardProps> = ({
+  entityType,
+  entityId,
+  userId,
+  children,
+}) => {
+  const [lockResult, setLockResult] = useState<AcquireEditLockResult | null>(null);
+  const renewRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const tryAcquire = () =>
+      acquireEditLock(entityType, entityId, userId)
+        .then((result) => { if (!cancelled) setLockResult(result); })
+        .catch(console.error);
+
+    tryAcquire();
+
+    // Renew every 60 s to keep the lock alive
+    renewRef.current = setInterval(() => {
+      renewEditLock(entityType, entityId, userId).catch(console.error);
+    }, 60_000);
+
+    // Realtime: re-evaluate lock whenever this entity's lock row changes
+    const channel = supabase
+      .channel(`edit_locks:${entityType}:${entityId}`)
+      .on(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        'postgres_changes' as any,
+        {
+          event: '*',
+          schema: 'public',
+          table: 'edit_locks',
+          filter: `entity_id=eq.${entityId}`,
+        },
+        () => { tryAcquire(); },
+      )
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      if (renewRef.current) clearInterval(renewRef.current);
+      releaseEditLock(entityType, entityId, userId).catch(console.error);
+      supabase.removeChannel(channel);
+    };
+  // Stable identity: only run on mount / when ids change
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entityType, entityId, userId]);
+
+  const announceAlert = useUiStore(s => s.announceAlert);
+  const prevLockedRef = useRef(false);
+
+  useEffect(() => {
+    const isNowLockedByOther = lockResult?.locked === true;
+    // Only announce the transition from unlocked -> locked to avoid repeated alerts
+    if (isNowLockedByOther && !prevLockedRef.current) {
+      const lockedByName = (lockResult as { locked: true; lockedBy: { name: string | null } }).lockedBy.name;
+      announceAlert(
+        lockedByName
+          ? `${lockedByName} is currently editing this item`
+          : 'This item is being edited by someone else',
+      );
+    }
+    prevLockedRef.current = isNowLockedByOther;
+  }, [lockResult, announceAlert]);
+
+  const handleRequestAccess = useCallback(() => {
+    // Re-attempt acquisition: signals intent to take over an expired or released lock
+    acquireEditLock(entityType, entityId, userId)
+      .then(setLockResult)
+      .catch(console.error);
+  }, [entityType, entityId, userId]);
+
+  const isLockedByOther = lockResult?.locked === true;
+
+  return (
+    <div>
+      {isLockedByOther && (
+        <LockBanner
+          lockedByName={(lockResult as { locked: true; lockedBy: { name: string | null } }).lockedBy.name}
+          onRequestAccess={handleRequestAccess}
+        />
+      )}
+      {children}
+    </div>
+  );
+};
+
+// ── Lock Banner ────────────────────────────────────────────
+// Shown to the second user while another session holds the lock.
+
+interface LockBannerProps {
+  lockedByName: string | null;
+  onRequestAccess: () => void;
+}
+
+const LockBanner: React.FC<LockBannerProps> = ({ lockedByName, onRequestAccess }) => (
+  <div style={{
+    display: 'flex', alignItems: 'center', gap: spacing['3'],
+    padding: `${spacing['3']} ${spacing['4']}`,
+    backgroundColor: colors.statusCriticalSubtle,
+    borderRadius: borderRadius.md,
+    borderLeft: `3px solid ${colors.statusCritical}`,
+    marginBottom: spacing['3'],
+  }}>
+    <Lock size={16} color={colors.statusCritical} style={{ flexShrink: 0 }} />
+    <div style={{ flex: 1 }}>
+      <p style={{
+        fontSize: typography.fontSize.sm,
+        fontWeight: typography.fontWeight.semibold,
+        color: colors.textPrimary,
+        margin: 0,
+      }}>
+        {lockedByName
+          ? `${lockedByName} is currently editing this item`
+          : 'This item is being edited by someone else'}
+      </p>
+      <p style={{ fontSize: typography.fontSize.caption, color: colors.textSecondary, margin: `${spacing['1']} 0 0` }}>
+        Wait for them to finish or request access. The lock expires automatically after 5 minutes of inactivity.
+      </p>
+    </div>
+    <Btn variant="secondary" size="sm" onClick={onRequestAccess}>
+      Request Access
+    </Btn>
+  </div>
+);

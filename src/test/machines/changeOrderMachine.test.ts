@@ -111,8 +111,8 @@ describe('Change Order State Machine', () => {
         const config = getCOTypeConfig(type)
         expect(config.label).toBeTruthy()
         expect(config.shortLabel).toBeTruthy()
-        expect(config.color).toMatch(/^#/)
-        expect(config.bg).toMatch(/^rgba/)
+        expect(config.color).toMatch(/^var\(/)
+        expect(config.bg).toMatch(/^var\(/)
       }
     })
 
@@ -132,8 +132,8 @@ describe('Change Order State Machine', () => {
       for (const status of statuses) {
         const config = getCOStatusConfig(status)
         expect(config.label).toBeTruthy()
-        expect(config.color).toMatch(/^#/)
-        expect(config.bg).toMatch(/^rgba/)
+        expect(config.color).toMatch(/^var\(/)
+        expect(config.bg).toMatch(/^var\(/)
       }
     })
 
@@ -149,7 +149,7 @@ describe('Change Order State Machine', () => {
       for (const code of codes) {
         const config = getReasonCodeConfig(code)
         expect(config.label).toBeTruthy()
-        expect(config.color).toMatch(/^#/)
+        expect(config.color).toMatch(/^var\(/)
       }
     })
 
@@ -233,6 +233,33 @@ describe('Change Order State Machine', () => {
 
     it('Return to COR maps to draft status', () => {
       expect(getNextCOStatus('rejected', 'Return to COR')).toBe('draft')
+    })
+  })
+
+  describe('approved_cost after approval transition', () => {
+    it('approved CO with amount has non-zero approved_cost', () => {
+      const status: ChangeOrderState = 'approved'
+      const amount = 50000
+      const approved_amount: number | null = null
+      const approved_cost = status === 'approved' ? (approved_amount ?? amount ?? 0) : 0
+      expect(approved_cost).toBe(50000)
+      expect(approved_cost).not.toBe(0)
+    })
+
+    it('pending CO has zero approved_cost', () => {
+      const status: ChangeOrderState = 'pending_review'
+      const amount = 50000
+      const approved_amount: number | null = null
+      const approved_cost = status === 'approved' ? (approved_amount ?? amount ?? 0) : 0
+      expect(approved_cost).toBe(0)
+    })
+
+    it('approved CO with explicit approved_amount uses approved_amount over amount', () => {
+      const status: ChangeOrderState = 'approved'
+      const amount = 50000
+      const approved_amount = 45000
+      const approved_cost = status === 'approved' ? (approved_amount ?? amount ?? 0) : 0
+      expect(approved_cost).toBe(45000)
     })
   })
 

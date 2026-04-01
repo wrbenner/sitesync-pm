@@ -66,8 +66,28 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onClose, onSave })
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: zIndex.tooltip as number, backgroundColor: colors.viewerBg, backdropFilter: 'blur(12px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-      <button onClick={onClose} style={{ position: 'absolute', top: spacing['4'], right: spacing['4'], backgroundColor: 'transparent', border: 'none', color: colors.textOnDarkMuted, cursor: 'pointer' }}>
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Voice recorder"
+      style={{ position: 'fixed', inset: 0, zIndex: zIndex.tooltip as number, backgroundColor: colors.viewerBg, backdropFilter: 'blur(12px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}
+    >
+      {/* Live region for recording state */}
+      <div
+        aria-live="polite"
+        aria-atomic="true"
+        style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap' }}
+      >
+        {recording && 'Recording started'}
+        {!recording && elapsed > 0 && !showExtraction && 'Recording stopped'}
+        {showExtraction && 'Transcription complete'}
+      </div>
+
+      <button
+        onClick={onClose}
+        aria-label="Close voice recorder"
+        style={{ position: 'absolute', top: spacing['4'], right: spacing['4'], backgroundColor: 'transparent', border: 'none', color: colors.textOnDarkMuted, cursor: 'pointer' }}
+      >
         <X size={24} />
       </button>
 
@@ -98,6 +118,7 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onClose, onSave })
       {!showExtraction && (
         <button
           onClick={() => recording ? handleStop() : setRecording(true)}
+          aria-label={recording ? 'Stop recording' : 'Start voice recording'}
           style={{
             width: 72, height: 72, borderRadius: '50%',
             backgroundColor: recording ? 'rgba(255, 255, 255, 0.15)' : colors.statusCritical, /* between overlayWhiteThin and overlayWhiteMedium */

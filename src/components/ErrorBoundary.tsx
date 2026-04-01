@@ -5,6 +5,12 @@ import { captureException, addBreadcrumb } from '../lib/errorTracking';
 
 interface Props {
   children: React.ReactNode;
+  /** Override the default error message shown to the user */
+  message?: string;
+  /** Called when the retry button is clicked. Defaults to window.location.reload(). */
+  onRetry?: () => void;
+  /** Custom fallback renderer. When provided, overrides the default error UI. */
+  fallback?: (error: Error) => React.ReactNode;
 }
 
 interface State {
@@ -32,6 +38,9 @@ export class ErrorBoundary extends React.Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
+      if (this.props.fallback && this.state.error) {
+        return <>{this.props.fallback(this.state.error)}</>;
+      }
       return (
         <div
           style={{
@@ -78,7 +87,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
                 maxWidth: '400px',
               }}
             >
-              An unexpected error occurred. Try refreshing the page.
+              {this.props.message ?? 'An unexpected error occurred. Try refreshing the page.'}
             </p>
             {this.state.error && (
               <p
@@ -97,7 +106,11 @@ export class ErrorBoundary extends React.Component<Props, State> {
           <button
             onClick={() => {
               this.setState({ hasError: false, error: null });
-              window.location.reload();
+              if (this.props.onRetry) {
+                this.props.onRetry();
+              } else {
+                window.location.reload();
+              }
             }}
             style={{
               padding: `${spacing['3']} ${spacing['6']}`,

@@ -590,3 +590,266 @@ function formatValue(val: unknown): string {
   if (typeof val === 'object') return JSON.stringify(val, null, 2);
   return String(val);
 }
+
+// ── LiveEditConflictModal ────────────────────────────────
+// Shown when a user submits an edit against a server record that has changed
+// since they opened the form (stale-edit detection via checkStaleSubmission).
+
+export interface LiveEditConflictModalProps {
+  open: boolean;
+  onClose: () => void;
+  /** The record state when the user first opened the form */
+  beforeState: Record<string, unknown>;
+  /** The current server record fetched at submit time */
+  serverState: Record<string, unknown>;
+  /** The user's unsaved edits */
+  localState: Record<string, unknown>;
+  /** Called with the final resolved record — consumer should submit this */
+  onResolve: (resolved: Record<string, unknown>) => void;
+}
+
+export const LiveEditConflictModal: React.FC<LiveEditConflictModalProps> = ({
+  open,
+  onClose,
+  beforeState,
+  serverState,
+  localState,
+  onResolve,
+}) => {
+  const [fieldChoices, setFieldChoices] = useState<Record<string, FieldChoice>>({});
+
+  // Compute conflict info derived from props (no async needed)
+  const allKeys = [...new Set([...Object.keys(localState), ...Object.keys(serverState)])].filter(
+    (k) => k !== 'id' && k !== 'created_at' && k !== 'updated_at',
+  );
+
+  const diffKeys = allKeys.filter(
+    (k) => JSON.stringify(localState[k]) !== JSON.stringify(serverState[k]),
+  );
+
+  const conflictingFields = new Set(
+    diffKeys.filter((k) => {
+      const baseVal = JSON.stringify(beforeState[k]);
+      const localVal = JSON.stringify(localState[k]);
+      const serverVal = JSON.stringify(serverState[k]);
+      // True conflict: both sides changed from base to different values
+      return localVal !== baseVal && serverVal !== baseVal && localVal !== serverVal;
+    }),
+  );
+
+  const autoMergedKeys = diffKeys.filter((k) => !conflictingFields.has(k));
+  const trueConflictKeys = diffKeys.filter((k) => conflictingFields.has(k));
+
+  // Initialise field choices to 'local' whenever the modal opens
+  useEffect(() => {
+    if (!open) return;
+    const initial: Record<string, FieldChoice> = {};
+    for (const k of trueConflictKeys) initial[k] = 'local';
+    setFieldChoices(initial);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  const handleKeepMine = () => {
+    onResolve(localState);
+    onClose();
+  };
+
+  const handleKeepTheirs = () => {
+    onResolve(serverState);
+    onClose();
+  };
+
+  const handleMerge = () => {
+    // Start from server, apply auto-merged local-only changes, then field choices
+    const merged: Record<string, unknown> = { ...serverState };
+
+    for (const k of autoMergedKeys) {
+      const localChanged =
+        JSON.stringify(localState[k]) !== JSON.stringify(beforeState[k]);
+      if (localChanged) merged[k] = localState[k];
+    }
+
+    for (const [k, choice] of Object.entries(fieldChoices)) {
+      merged[k] = choice === 'local' ? localState[k] : serverState[k];
+    }
+
+    onResolve(merged);
+    onClose();
+  };
+
+  if (!open) return null;
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: zIndex.modal,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: colors.overlayDark,
+      }}
+      onClick={onClose}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: '720px',
+          maxWidth: '92vw',
+          maxHeight: '85vh',
+          backgroundColor: colors.surfaceRaised,
+          borderRadius: borderRadius.xl,
+          boxShadow: shadows.panel,
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Header */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: spacing['3'],
+          padding: `${spacing['4']} ${spacing['5']}`,
+          borderBottom: `1px solid ${colors.borderSubtle}`,
+        }}>
+          <AlertTriangle size={18} color={colors.statusPending} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+              Edit Conflict
+            </div>
+            <div style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, marginTop: spacing['0.5'] }}>
+              This record was changed by someone else while you were editing.
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            style={{ padding: spacing['1'], background: 'none', border: 'none', cursor: 'pointer', color: colors.textTertiary }}
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div style={{ padding: spacing['5'], flex: 1, overflow: 'auto' }}>
+          <div style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, marginBottom: spacing['4'] }}>
+            Choose which version of each field to keep. Fields only you changed are auto-merged.
+          </div>
+
+          {trueConflictKeys.length > 0 && (
+            <>
+              <SectionHeading
+                icon={<AlertTriangle size={13} color={colors.statusPending} />}
+                label="Fields needing your decision"
+                color={colors.statusPending}
+              />
+              <div style={{
+                border: `1px solid ${colors.borderDefault}`,
+                borderRadius: borderRadius.md,
+                overflow: 'hidden',
+                marginBottom: spacing['4'],
+              }}>
+                <ColumnHeaders localLabel="Your version" serverLabel="Server version" showToggle />
+                {trueConflictKeys.map((key, i) => (
+                  <ConflictRow
+                    key={key}
+                    fieldName={key}
+                    localValue={localState[key]}
+                    serverValue={serverState[key]}
+                    baseValue={beforeState[key]}
+                    choice={fieldChoices[key] ?? 'local'}
+                    onChoose={(choice) => setFieldChoices((prev) => ({ ...prev, [key]: choice }))}
+                    isLast={i === trueConflictKeys.length - 1}
+                    showToggle
+                  />
+                ))}
+              </div>
+            </>
+          )}
+
+          {autoMergedKeys.length > 0 && (
+            <>
+              <SectionHeading
+                icon={<GitMerge size={13} color={colors.statusSuccess} />}
+                label="Auto-merged (no action needed)"
+                color={colors.statusSuccess}
+              />
+              <div style={{
+                border: `1px solid ${colors.borderDefault}`,
+                borderRadius: borderRadius.md,
+                overflow: 'hidden',
+                marginBottom: spacing['4'],
+                opacity: 0.8,
+              }}>
+                <ColumnHeaders localLabel="Your version" serverLabel="Server version" showToggle={false} />
+                {autoMergedKeys.map((key, i) => {
+                  const localChanged = JSON.stringify(localState[key]) !== JSON.stringify(beforeState[key]);
+                  return (
+                    <ConflictRow
+                      key={key}
+                      fieldName={key}
+                      localValue={localState[key]}
+                      serverValue={serverState[key]}
+                      baseValue={beforeState[key]}
+                      choice={localChanged ? 'local' : 'server'}
+                      onChoose={() => {}}
+                      isLast={i === autoMergedKeys.length - 1}
+                      showToggle={false}
+                      autoMerged
+                    />
+                  );
+                })}
+              </div>
+            </>
+          )}
+
+          {diffKeys.length === 0 && (
+            <div style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, textAlign: 'center', padding: spacing['6'] }}>
+              No conflicting fields detected. Your edit can be submitted safely.
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'flex-end',
+          gap: spacing['2'],
+          padding: `${spacing['3']} ${spacing['5']}`,
+          borderTop: `1px solid ${colors.borderSubtle}`,
+          backgroundColor: colors.surfaceInset,
+          flexWrap: 'wrap',
+        }}>
+          <button onClick={handleKeepTheirs} style={secondaryBtnStyle(false)}>
+            <Layers size={14} /> Accept All Theirs
+          </button>
+          <button onClick={handleKeepMine} style={secondaryBtnStyle(false)}>
+            <Check size={14} /> Accept All Mine
+          </button>
+          <button
+            onClick={handleMerge}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: spacing['1'],
+              padding: `${spacing['2']} ${spacing['4']}`,
+              backgroundColor: colors.primaryOrange,
+              border: 'none',
+              borderRadius: borderRadius.base,
+              fontSize: typography.fontSize.sm,
+              fontWeight: typography.fontWeight.semibold,
+              fontFamily: typography.fontFamily,
+              color: colors.white,
+              cursor: 'pointer',
+              transition: transitions.quick,
+            }}
+          >
+            <GitMerge size={14} /> {trueConflictKeys.length > 0 ? 'Merge' : 'Submit'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};

@@ -2,13 +2,19 @@
 // Each wraps the corresponding standard query with a Supabase Realtime subscription.
 // Use these in page components instead of the base hooks for live-updating lists.
 
+import { useEffect, useRef, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { useRealtimeQuery } from '../useRealtimeQuery'
+import { queryKeys } from '../../api/queryKeys'
+import { useToast } from '../../components/Primitives'
+import { getActivityFeed } from '../../api/endpoints/activity'
 import type {
   RFI, Submittal, PunchItem, Task, Drawing, DailyLog,
   Crew, BudgetItem, ChangeOrder, Meeting, DirectoryContact,
   FileRecord, FieldCapture, SchedulePhase,
 } from '../../types/database'
+import type { ActivityFeedItem } from '../../types/entities'
 
 // ── RFIs ─────────────────────────────────────────────────
 
@@ -194,18 +200,69 @@ export function useRealtimeCrews(projectId: string | undefined) {
 }
 
 // ── Schedule Phases ──────────────────────────────────────
+// Custom subscription hook (not useRealtimeQuery) so we can:
+//   - Expose isSubscribed for the Live indicator
+//   - Show a conflict toast when a dirty (in-edit) phase receives an external UPDATE
+//   - Optimistically remove phases from cache on DELETE
 
-export function useRealtimeSchedulePhases(projectId: string | undefined) {
-  return useRealtimeQuery<SchedulePhase>(
-    ['schedule_phases', projectId],
-    async () => {
-      if (!projectId) return []
-      const { data, error } = await supabase.from('schedule_phases').select('*').eq('project_id', projectId).order('start_date')
-      if (error) throw error
-      return (data ?? []) as SchedulePhase[]
-    },
-    { table: 'schedule_phases' }
-  )
+export function useRealtimeSchedulePhases(
+  projectId: string,
+  dirtyPhaseIds: ReadonlySet<string> = new Set()
+): { isSubscribed: boolean } {
+  const queryClient = useQueryClient()
+  const { addToast } = useToast()
+  const [isSubscribed, setIsSubscribed] = useState(false)
+
+  // Refs so the channel handler always sees the latest values without re-subscribing
+  const dirtyRef = useRef<ReadonlySet<string>>(dirtyPhaseIds)
+  const addToastRef = useRef(addToast)
+  useEffect(() => { dirtyRef.current = dirtyPhaseIds })
+  useEffect(() => { addToastRef.current = addToast })
+
+  useEffect(() => {
+    if (!projectId) return
+
+    const channel = supabase
+      .channel(`schedule_phases_${projectId}`)
+      .on<SchedulePhase>(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'schedule_phases', filter: `project_id=eq.${projectId}` },
+        (payload) => {
+          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+            queryClient.invalidateQueries({ queryKey: ['schedule', projectId] })
+
+            if (payload.eventType === 'UPDATE') {
+              const updatedId = payload.new.id
+              if (updatedId && dirtyRef.current.has(updatedId)) {
+                addToastRef.current(
+                  'warning',
+                  'This activity was updated by another user. Reload to see changes.',
+                  { label: 'Reload', onClick: () => queryClient.invalidateQueries({ queryKey: ['schedule', projectId] }) }
+                )
+              }
+            }
+          } else if (payload.eventType === 'DELETE') {
+            const deletedId = payload.old.id
+            if (deletedId) {
+              queryClient.setQueryData<SchedulePhase[]>(
+                ['schedule', projectId],
+                (prev) => prev?.filter((p) => p.id !== deletedId) ?? []
+              )
+            }
+          }
+        }
+      )
+      .subscribe((status) => {
+        setIsSubscribed(status === 'SUBSCRIBED')
+      })
+
+    return () => {
+      supabase.removeChannel(channel)
+      setIsSubscribed(false)
+    }
+  }, [projectId, queryClient])
+
+  return { isSubscribed }
 }
 
 // ── Field Captures ───────────────────────────────────────
@@ -220,5 +277,70 @@ export function useRealtimeFieldCaptures(projectId: string | undefined) {
       return (data ?? []) as FieldCapture[]
     },
     { table: 'field_captures' }
+  )
+}
+
+// ── Budget Realtime ──────────────────────────────────────
+// Subscribes to budget_items and change_orders for a project.
+// Invalidates both query keys on any INSERT/UPDATE/DELETE and returns
+// a brief isFlashing flag for metric card pulse indicators.
+
+const BUDGET_DEBOUNCE_MS = 300
+const BUDGET_FLASH_DURATION_MS = 1200
+
+export function useBudgetRealtime(projectId: string | undefined): { isFlashing: boolean } {
+  const queryClient = useQueryClient()
+  const [isFlashing, setIsFlashing] = useState(false)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    if (!projectId) return
+
+    const handleChange = () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+      debounceRef.current = setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: queryKeys.budgetItems.all(projectId) })
+        queryClient.invalidateQueries({ queryKey: queryKeys.changeOrders.all(projectId) })
+        debounceRef.current = null
+
+        setIsFlashing(true)
+        if (flashTimerRef.current) clearTimeout(flashTimerRef.current)
+        flashTimerRef.current = setTimeout(() => setIsFlashing(false), BUDGET_FLASH_DURATION_MS)
+      }, BUDGET_DEBOUNCE_MS)
+    }
+
+    const channel = supabase
+      .channel(`budget_realtime_${projectId}`)
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'budget_items',
+        filter: `project_id=eq.${projectId}`,
+      }, handleChange)
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'change_orders',
+        filter: `project_id=eq.${projectId}`,
+      }, handleChange)
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+      if (flashTimerRef.current) clearTimeout(flashTimerRef.current)
+    }
+  }, [projectId, queryClient])
+
+  return { isFlashing }
+}
+
+// ── Activity Feed ─────────────────────────────────────────
+
+export function useRealtimeActivityFeed(projectId: string | undefined) {
+  return useRealtimeQuery<ActivityFeedItem>(
+    ['activity_feed', projectId],
+    async () => {
+      if (!projectId) return []
+      return getActivityFeed(projectId)
+    },
+    { table: 'activity_feed' },
   )
 }

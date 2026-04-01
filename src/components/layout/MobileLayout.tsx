@@ -1,10 +1,12 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Home, ClipboardList, Camera, BookOpen, MoreHorizontal, X, Search,
-  ChevronRight, ArrowLeft, Bell, QrCode, Mic } from 'lucide-react';
+  ChevronRight, ArrowLeft, Bell, Check } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { colors, spacing, typography, borderRadius, shadows, transitions, zIndex } from '../../styles/theme';
 import { useHaptics } from '../../hooks/useMobileCapture';
+import { useNotificationStore } from '../../stores';
+import { NotificationList } from '../notifications/NotificationCenter';
 
 // ── Tab Configuration ────────────────────────────────────
 
@@ -13,6 +15,7 @@ const tabs = [
   { id: 'tasks', label: 'Tasks', icon: ClipboardList, route: '/tasks' },
   { id: 'capture', label: 'Capture', icon: Camera, route: '/field-capture', isCapture: true },
   { id: 'daily-log', label: 'Logs', icon: BookOpen, route: '/daily-log' },
+  { id: 'notifications', label: 'Alerts', icon: Bell, route: '' },
   { id: 'more', label: 'More', icon: MoreHorizontal, route: '' },
 ];
 
@@ -41,6 +44,7 @@ const MORE_GROUPS = ['Project', 'Finance', 'People', 'Docs', 'AI'];
 
 const SWIPE_THRESHOLD = 60;
 const PULL_THRESHOLD = 80;
+const SHEET_DISMISS_THRESHOLD = 100;
 const TAB_BAR_HEIGHT = 68;
 
 // ── Component ────────────────────────────────────────────
@@ -54,29 +58,40 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
   const location = useLocation();
   const queryClient = useQueryClient();
   const { impact } = useHaptics();
+  const { unreadCount, markAllRead } = useNotificationStore();
 
   const [moreOpen, setMoreOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [pullDistance, setPullDistance] = useState(0);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [sheetDragOffset, setSheetDragOffset] = useState(0);
 
   // Swipe state
   const touchStart = useRef({ x: 0, y: 0 });
   const contentRef = useRef<HTMLDivElement>(null);
   const isPulling = useRef(false);
+  const sheetTouchStartY = useRef(0);
 
   const activeTab = location.pathname.replace('/', '') || 'dashboard';
 
   const handleTabPress = useCallback((tab: typeof tabs[0]) => {
     impact('light');
     if (tab.id === 'more') {
+      setNotificationsOpen(false);
       setMoreOpen(!moreOpen);
       return;
     }
+    if (tab.id === 'notifications') {
+      setMoreOpen(false);
+      setNotificationsOpen(!notificationsOpen);
+      return;
+    }
     setMoreOpen(false);
+    setNotificationsOpen(false);
     navigate(tab.route);
-  }, [navigate, moreOpen, impact]);
+  }, [navigate, moreOpen, notificationsOpen, impact]);
 
   // ── Pull-to-Refresh ────────────────────────────────────
 
@@ -122,8 +137,31 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
     isPulling.current = false;
   }, [pullDistance, impact, queryClient, navigate]);
 
-  // Close more menu on route change
-  useEffect(() => { setMoreOpen(false); }, [location.pathname]);
+  // ── Notification Sheet Swipe-Down ──────────────────────
+
+  const handleSheetHandleTouchStart = useCallback((e: React.TouchEvent) => {
+    sheetTouchStartY.current = e.touches[0].clientY;
+  }, []);
+
+  const handleSheetHandleTouchMove = useCallback((e: React.TouchEvent) => {
+    const dy = e.touches[0].clientY - sheetTouchStartY.current;
+    if (dy > 0) {
+      setSheetDragOffset(Math.min(dy, 300));
+    }
+  }, []);
+
+  const handleSheetHandleTouchEnd = useCallback(() => {
+    if (sheetDragOffset > SHEET_DISMISS_THRESHOLD) {
+      setNotificationsOpen(false);
+    }
+    setSheetDragOffset(0);
+  }, [sheetDragOffset]);
+
+  // Close sheets on route change
+  useEffect(() => {
+    setMoreOpen(false);
+    setNotificationsOpen(false);
+  }, [location.pathname]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: colors.surfacePage, overflow: 'hidden' }}>
@@ -246,7 +284,6 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
             padding: `${spacing['2']} 0`, maxHeight: '60vh', overflowY: 'auto',
             animation: 'slideInUp 200ms ease-out',
           }}>
-            {/* Drag handle */}
             <div style={{ display: 'flex', justifyContent: 'center', padding: `${spacing['2']} 0 ${spacing['3']}` }}>
               <div style={{ width: 36, height: 4, borderRadius: borderRadius.full, backgroundColor: colors.borderDefault }} />
             </div>
@@ -289,6 +326,103 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
         </>
       )}
 
+      {/* ── Notification Bottom Sheet ────────────────── */}
+      {notificationsOpen && (
+        <>
+          <div
+            onClick={() => setNotificationsOpen(false)}
+            style={{ position: 'fixed', inset: 0, backgroundColor: colors.toolbarBg, zIndex: zIndex.dropdown as number }}
+          />
+          <div
+            style={{
+              position: 'fixed', bottom: 0, left: 0, right: 0,
+              height: '80vh',
+              backgroundColor: colors.surfaceRaised,
+              borderTopLeftRadius: borderRadius['2xl'], borderTopRightRadius: borderRadius['2xl'],
+              boxShadow: shadows.panel, zIndex: (zIndex.dropdown as number) + 1,
+              display: 'flex', flexDirection: 'column', overflow: 'hidden',
+              transform: `translateY(${sheetDragOffset}px)`,
+              transition: sheetDragOffset === 0 ? `transform 0.2s ease` : 'none',
+              animation: sheetDragOffset === 0 ? 'slideInUp 250ms ease-out' : 'none',
+            }}
+          >
+            {/* Drag handle area */}
+            <div
+              onTouchStart={handleSheetHandleTouchStart}
+              onTouchMove={handleSheetHandleTouchMove}
+              onTouchEnd={handleSheetHandleTouchEnd}
+              style={{ flexShrink: 0, paddingBottom: spacing['1'], cursor: 'grab' }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'center', padding: `${spacing['3']} 0 ${spacing['2']}` }}>
+                <div style={{ width: 36, height: 4, borderRadius: borderRadius.full, backgroundColor: colors.borderDefault }} />
+              </div>
+
+              {/* Sheet header */}
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: `0 ${spacing['4']} ${spacing['3']}`,
+                borderBottom: `1px solid ${colors.borderSubtle}`,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
+                  <Bell size={18} color={colors.textPrimary} />
+                  <span style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>Notifications</span>
+                  {unreadCount > 0 && (
+                    <span style={{
+                      minWidth: 18, height: 18,
+                      backgroundColor: colors.statusCritical, color: colors.white,
+                      borderRadius: borderRadius.full,
+                      fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                      padding: `0 ${spacing['1']}`,
+                    }}>
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
+                  {unreadCount > 0 && (
+                    <button
+                      onClick={markAllRead}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: spacing['1'],
+                        padding: `${spacing['1']} ${spacing['2']}`,
+                        backgroundColor: 'transparent', border: 'none',
+                        borderRadius: borderRadius.sm, cursor: 'pointer',
+                        color: colors.textTertiary, fontSize: typography.fontSize.caption,
+                        fontFamily: typography.fontFamily,
+                      }}
+                    >
+                      <Check size={12} /> All read
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setNotificationsOpen(false)}
+                    style={{
+                      width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      backgroundColor: colors.surfaceInset, border: 'none',
+                      borderRadius: '50%', cursor: 'pointer', color: colors.textTertiary,
+                    }}
+                    aria-label="Close"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Notification list */}
+            <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' as any }}>
+              <NotificationList
+                onNavigate={(route) => {
+                  setNotificationsOpen(false);
+                  navigate(`/${route}`);
+                }}
+              />
+            </div>
+          </div>
+        </>
+      )}
+
       {/* ── Bottom Tab Bar ──────────────────────────── */}
       <nav style={{
         position: 'fixed', bottom: 0, left: 0, right: 0,
@@ -301,9 +435,12 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
       }}>
         {tabs.map((tab) => {
           const Icon = tab.icon;
-          const isActive = tab.id === 'more' ? moreOpen : activeTab === tab.id || (tab.id === 'capture' && activeTab === 'field-capture');
+          const isActive =
+            tab.id === 'more' ? moreOpen :
+            tab.id === 'notifications' ? notificationsOpen :
+            activeTab === tab.id || (tab.id === 'capture' && activeTab === 'field-capture');
 
-          // Capture button gets special treatment
+          // Capture button: elevated circle
           if (tab.isCapture) {
             return (
               <button
@@ -331,6 +468,47 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
             );
           }
 
+          // Notifications bell: bell with unread badge
+          if (tab.id === 'notifications') {
+            return (
+              <button
+                key={tab.id}
+                onClick={() => handleTabPress(tab)}
+                style={{
+                  display: 'flex', flexDirection: 'column', alignItems: 'center',
+                  gap: 2, padding: `${spacing['1']} ${spacing['3']}`,
+                  backgroundColor: 'transparent', border: 'none', cursor: 'pointer',
+                  color: isActive ? colors.orangeText : colors.textTertiary,
+                  transition: `color ${transitions.instant}`,
+                  minWidth: 44, minHeight: 48, position: 'relative',
+                }}
+                aria-label="Notifications"
+              >
+                <div style={{ position: 'relative' }}>
+                  <Icon size={22} />
+                  {unreadCount > 0 && (
+                    <span style={{
+                      position: 'absolute', top: -4, right: -6,
+                      minWidth: 18, height: 18,
+                      backgroundColor: colors.statusCritical, color: colors.white,
+                      borderRadius: borderRadius.full,
+                      fontSize: '10px', fontWeight: typography.fontWeight.bold,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      padding: '0 3px',
+                      border: `2px solid ${colors.surfaceRaised}`,
+                      lineHeight: 1,
+                    }}>
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
+                </div>
+                <span style={{ fontSize: typography.fontSize.caption, fontWeight: isActive ? typography.fontWeight.semibold : typography.fontWeight.medium }}>
+                  {tab.label}
+                </span>
+              </button>
+            );
+          }
+
           return (
             <button
               key={tab.id}
@@ -341,7 +519,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
                 backgroundColor: 'transparent', border: 'none', cursor: 'pointer',
                 color: isActive ? colors.orangeText : colors.textTertiary,
                 transition: `color ${transitions.instant}`,
-                minWidth: 56, minHeight: 48,
+                minWidth: 44, minHeight: 48,
               }}
               aria-label={tab.label}
             >

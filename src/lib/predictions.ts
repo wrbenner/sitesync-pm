@@ -452,6 +452,123 @@ export function generateRFIBottleneckInsights(bottlenecks: RFIBottleneck[]): Gen
   }))
 }
 
+// ── Schedule Phase Risk Prediction ──────────────────────────
+
+export interface WeatherDay {
+  date: string
+  conditions: string
+  precipitationChance: number
+  tempHigh: number
+  tempLow: number
+}
+
+export interface MappedPhase {
+  id: string
+  name: string
+  startDate: string
+  endDate: string
+  progress: number
+  critical: boolean
+  completed: boolean
+  floatDays?: number | null
+  slippageDays?: number
+}
+
+export interface PredictedRisk {
+  phaseId: string
+  title: string
+  likelihoodPercent: number
+  impactDays: number
+  reason: string
+  suggestedAction: string
+}
+
+export function predictScheduleRisks(phases: MappedPhase[], weatherForecast: WeatherDay[]): PredictedRisk[] {
+  const now = new Date()
+  const risks: PredictedRisk[] = []
+  const LOOKAHEAD_MS = 30 * 86400000
+
+  for (const phase of phases) {
+    if (phase.completed) continue
+
+    const phaseStart = new Date(phase.startDate)
+    const phaseEnd = new Date(phase.endDate)
+
+    // Only analyze phases active within the next 30 days
+    if (phaseStart.getTime() > now.getTime() + LOOKAHEAD_MS) continue
+
+    let likelihood = 20
+    const reasonParts: string[] = []
+    let impactDays = 0
+
+    if (phase.critical) {
+      likelihood += 15
+      reasonParts.push('on critical path')
+    }
+
+    if (phase.floatDays === 0) {
+      likelihood += 10
+      reasonParts.push('zero float remaining')
+    } else if ((phase.floatDays ?? 999) <= 3) {
+      likelihood += 6
+      reasonParts.push(`only ${phase.floatDays}d float remaining`)
+    }
+
+    const slip = phase.slippageDays ?? 0
+    if (slip > 0) {
+      likelihood += Math.min(slip * 5, 25)
+      impactDays += slip
+      reasonParts.push(`${slip} days of existing slippage`)
+    }
+
+    if (phase.progress < 30 && phaseStart < now) {
+      likelihood += 15
+      reasonParts.push('progress behind expected pace')
+    }
+
+    const adverseDays = weatherForecast.filter((w) => {
+      const wd = new Date(w.date)
+      return (
+        wd >= phaseStart &&
+        wd <= phaseEnd &&
+        (w.conditions === 'Rain' ||
+          w.conditions === 'Snow' ||
+          w.conditions === 'Thunderstorm' ||
+          w.precipitationChance > 60)
+      )
+    })
+    if (adverseDays.length > 0) {
+      likelihood += adverseDays.length * 8
+      impactDays += Math.ceil(adverseDays.length * 0.5)
+      const condSet = [...new Set(adverseDays.map((w) => w.conditions.toLowerCase()))].join(' and ')
+      reasonParts.push(`${adverseDays.length} day${adverseDays.length > 1 ? 's' : ''} of ${condSet} in the 7-day forecast`)
+    }
+
+    likelihood = Math.min(95, likelihood)
+    impactDays = Math.max(1, impactDays)
+
+    if (likelihood < 40) continue
+
+    const reason =
+      reasonParts.length > 0
+        ? `At risk due to ${reasonParts.join(', ')}.`
+        : 'Multiple scheduling risk factors detected.'
+
+    let suggestedAction = 'Review resource allocation and adjust schedule baseline.'
+    if (adverseDays.length > 0) {
+      suggestedAction = `Pre-position indoor work to buffer ${adverseDays.length} forecast weather day${adverseDays.length > 1 ? 's' : ''}. Add crew to accelerate critical tasks before weather window.`
+    } else if (slip > 0) {
+      suggestedAction = `Authorize overtime on ${phase.name} to recover ${slip} days of slippage before it cascades to successors.`
+    } else if (phase.critical && phase.floatDays === 0) {
+      suggestedAction = `Assign a dedicated crew to ${phase.name} to protect the zero-float critical path milestone.`
+    }
+
+    risks.push({ phaseId: phase.id, title: phase.name, likelihoodPercent: likelihood, impactDays, reason, suggestedAction })
+  }
+
+  return risks.sort((a, b) => b.likelihoodPercent - a.likelihoodPercent)
+}
+
 export function generateSubmittalRiskInsights(risks: SubmittalRisk[]): GeneratedInsight[] {
   const insights: GeneratedInsight[] = []
   const critical = risks.filter(r => r.riskLevel === 'critical')

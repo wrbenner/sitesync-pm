@@ -1,18 +1,22 @@
 import React, { useState, useMemo } from 'react';
-import { Camera, Mic, FileText, AlertTriangle, MapPin, ChevronRight, Sparkles } from 'lucide-react';
+import { Camera, Mic, FileText, AlertTriangle, MapPin, ChevronRight, Sparkles, Users, RefreshCw } from 'lucide-react';
 import { PageContainer, Card, Btn, SectionHeader, useToast } from '../components/Primitives';
+import { ErrorBoundary } from '../components/ErrorBoundary';
+import FieldCaptureSkeleton from '../components/field/FieldCaptureSkeleton';
 import { colors, spacing, typography, borderRadius, shadows, transitions, zIndex } from '../styles/theme';
 import { PhotoAnnotator } from '../components/field/PhotoAnnotator';
 import { VoiceCapture } from '../components/field/VoiceCapture';
 import { CaptureTimeline } from '../components/field/CaptureTimeline';
 import { QuickCapture, type CaptureData } from '../components/field/QuickCapture';
+import { QRCheckIn } from '../components/workforce/QRCheckIn';
 import { useProjectId } from '../hooks/useProjectId';
 import { useFieldCaptures } from '../hooks/queries';
 import { useCreateFieldCapture } from '../hooks/mutations';
+import { useSyncOfflineCheckIns } from '../hooks/useCheckIn';
 import { PermissionGate } from '../components/auth/PermissionGate';
 import type { ExtractedEntity } from '../hooks/useVoiceCapture';
 
-type CaptureMode = null | 'photo' | 'voice' | 'text';
+type CaptureMode = null | 'photo' | 'voice' | 'text' | 'checkin';
 type IssueType = 'issue' | 'progress' | 'safety' | 'note';
 
 const issueTypes: { type: IssueType; label: string; color: string; template: string }[] = [
@@ -43,10 +47,35 @@ function isToday(dateStr: string | null): boolean {
   return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
 }
 
-export const FieldCapture: React.FC = () => {
+const FieldCaptureInner: React.FC = () => {
   const projectId = useProjectId();
-  const { data: capturesData } = useFieldCaptures(projectId);
+  const { data: capturesData, isLoading, isError, error, refetch } = useFieldCaptures(projectId);
   const captures = capturesData ?? [];
+
+  if (isLoading) {
+    return (
+      <PageContainer title="Field Capture" subtitle="Loading...">
+        <FieldCaptureSkeleton />
+      </PageContainer>
+    );
+  }
+
+  if (isError) {
+    return (
+      <PageContainer title="Field Capture" subtitle="Unable to load">
+        <Card padding={spacing['6']}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['4'], padding: spacing['6'], textAlign: 'center' }}>
+            <AlertTriangle size={40} color={colors.statusCritical} />
+            <div>
+              <p style={{ fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>Failed to load field captures</p>
+              <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: 0 }}>{(error as Error)?.message || 'Unable to fetch captures from the field'}</p>
+            </div>
+            <Btn variant="primary" size="sm" icon={<RefreshCw size={14} />} onClick={() => refetch()}>Retry</Btn>
+          </div>
+        </Card>
+      </PageContainer>
+    );
+  }
 
   const { todayCaptures, previousCaptures } = useMemo(() => {
     const today: typeof mapped = [];
@@ -72,6 +101,7 @@ export const FieldCapture: React.FC = () => {
   }, [captures]);
   const { addToast } = useToast();
   const createFieldCapture = useCreateFieldCapture();
+  useSyncOfflineCheckIns();
   const [captureMode, setCaptureMode] = useState<CaptureMode>(null);
   const [showAnnotator, setShowAnnotator] = useState(false);
   const [showVoice, setShowVoice] = useState(false);
@@ -202,6 +232,24 @@ export const FieldCapture: React.FC = () => {
             <span style={{ fontSize: typography.fontSize.caption, opacity: 0.8, fontWeight: typography.fontWeight.normal }}>Quick note</span>
           </button>
         </PermissionGate>
+
+        <button
+          onClick={() => setCaptureMode(captureMode === 'checkin' ? null : 'checkin')}
+          style={{
+            flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['2'],
+            padding: `${spacing['4']} ${spacing['3']}`,
+            backgroundColor: captureMode === 'checkin' ? colors.surfaceSelected : `${colors.statusActive}14`,
+            color: captureMode === 'checkin' ? colors.primaryOrange : colors.statusActive,
+            border: 'none', borderRadius: borderRadius.md, cursor: 'pointer',
+            transition: `all ${transitions.instant}`,
+          }}
+          onMouseEnter={(e) => { if (captureMode !== 'checkin') (e.currentTarget as HTMLButtonElement).style.backgroundColor = `${colors.statusActive}22`; }}
+          onMouseLeave={(e) => { if (captureMode !== 'checkin') (e.currentTarget as HTMLButtonElement).style.backgroundColor = `${colors.statusActive}14`; }}
+        >
+          <Users size={24} />
+          <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold }}>Crew</span>
+          <span style={{ fontSize: typography.fontSize.caption, opacity: 0.8, fontWeight: typography.fontWeight.normal }}>Check-in board</span>
+        </button>
       </div>
 
       {/* Camera simulation overlay */}
@@ -307,6 +355,23 @@ export const FieldCapture: React.FC = () => {
             </PermissionGate>
           </div>
         </Card>
+      )}
+
+      {/* Crew Check-In Board */}
+      {captureMode === 'checkin' && (
+        <div style={{ marginBottom: spacing['6'] }}>
+          <SectionHeader
+            title="Crew Check-In"
+            action={
+              <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
+                Live · updates in real time
+              </span>
+            }
+          />
+          <div style={{ marginTop: spacing['3'] }}>
+            <QRCheckIn showLiveBoard />
+          </div>
+        </div>
       )}
 
       {/* Today's Timeline */}
@@ -482,3 +547,11 @@ export const FieldCapture: React.FC = () => {
     </PageContainer>
   );
 };
+
+export const FieldCapture: React.FC = () => (
+  <ErrorBoundary message="Field capture could not be displayed. Check your connection and try again.">
+    <FieldCaptureInner />
+  </ErrorBoundary>
+);
+
+export default FieldCapture;

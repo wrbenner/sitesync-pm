@@ -1,26 +1,19 @@
 import React, { useState } from 'react';
-import { Upload, X, Sparkles, FileText } from 'lucide-react';
-import { PageContainer, Card, Btn, Tag, Skeleton, useToast } from '../components/Primitives';
+import { ErrorBoundary } from '../components/ErrorBoundary';
+import { DrawingsEmptyState } from '../components/drawings/DrawingsEmptyState';
+import { TableRowSkeleton } from '../components/ui/Skeletons';
+import { Upload, X, Sparkles, FileText, AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
+import { aiService } from '../lib/aiService';
+import type { DrawingAnalysis } from '../types/ai';
+import { PageContainer, Card, Btn, Tag, useToast } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme';
-import { getDrawings } from '../api/endpoints/documents';
+import { getDrawings, getDisciplineColor } from '../api/endpoints/documents';
 import { useQuery } from '../hooks/useQuery';
 import { useProjectId } from '../hooks/useProjectId';
 import { AIAnnotationIndicator } from '../components/ai/AIAnnotation';
 import { getAnnotationsForEntity } from '../data/aiAnnotations';
 import { DrawingViewer } from '../components/drawings/DrawingViewer';
 import { PermissionGate } from '../components/auth/PermissionGate';
-
-const disciplineColorMap: Record<string, string> = {
-  Architectural: colors.statusInfo,
-  Structural: colors.statusActive,
-  Mechanical: colors.primaryOrange,
-  Electrical: colors.statusPending,
-  Plumbing: colors.statusReview,
-  Landscape: colors.statusActive,
-  'Fire Protection': colors.statusCritical,
-  Civil: colors.statusNeutral,
-  'Interior Design': colors.chartPink,
-};
 
 
 const aiChanges: Record<number, number> = { 1: 3, 5: 2, 11: 4 };
@@ -48,9 +41,18 @@ const lastViewed: Record<number, string> = {
   12: '1d ago',
 };
 
-const gridColumns = '60px 80px 1fr 120px 80px 100px 70px 120px 100px 70px';
+const gridColumns = '60px 80px 1fr 120px 80px 100px 70px 120px 100px 70px 90px';
 
-export const Drawings: React.FC = () => {
+// Static coordination conflicts for the AI Insights panel
+const coordinationConflicts = [
+  { id: 'c1', drawing1: 'A-201', rev1: 'Rev 3', drawing2: 'S-101', location: 'Grid Line C4', discipline1: 'Architectural', discipline2: 'Structural', confidence: 0.94 },
+  { id: 'c2', drawing1: 'M-301', rev1: 'Rev 2', drawing2: 'S-204', location: 'Level 3 ceiling plenum', discipline1: 'Mechanical', discipline2: 'Structural', confidence: 0.88 },
+  { id: 'c3', drawing1: 'E-101', rev1: 'Rev 1', drawing2: 'P-201', location: 'Mechanical room west wall', discipline1: 'Electrical', discipline2: 'Plumbing', confidence: 0.76 },
+  { id: 'c4', drawing1: 'FP-101', rev1: 'Rev 2', drawing2: 'A-301', location: 'Stairwell 3 soffit', discipline1: 'Fire Protection', discipline2: 'Architectural', confidence: 0.71 },
+  { id: 'c5', drawing1: 'M-401', rev1: 'Rev 1', drawing2: 'E-202', location: 'Roof drain area B7', discipline1: 'Mechanical', discipline2: 'Electrical', confidence: 0.68 },
+];
+
+const _DrawingsPage: React.FC = () => {
   const { addToast } = useToast();
   const projectId = useProjectId();
   const { data: drawings, loading } = useQuery(`drawings-${projectId}`, () => getDrawings(projectId!), { enabled: !!projectId });
@@ -59,6 +61,9 @@ export const Drawings: React.FC = () => {
   const [viewerDrawing, setViewerDrawing] = useState<NonNullable<typeof drawings>[0] | null>(null);
   const [sortField, setSortField] = useState<string>('setNumber');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  const [showConflicts, setShowConflicts] = useState(false);
+  const [analyzingId, setAnalyzingId] = useState<number | null>(null);
+  const [analysisResults, setAnalysisResults] = useState<Record<number, DrawingAnalysis>>({});
 
   const disciplines = ['All', 'Architectural', 'Structural', 'Mechanical', 'Electrical', 'Plumbing', 'Landscape', 'Fire Protection', 'Civil', 'Interior Design'];
 
@@ -69,6 +74,20 @@ export const Drawings: React.FC = () => {
   const handleSort = (field: string) => {
     if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
     else { setSortField(field); setSortDir('asc'); }
+  };
+
+  const handleAnalyzeSheet = async (e: React.MouseEvent, drawing: NonNullable<typeof drawings>[0]) => {
+    e.stopPropagation();
+    setAnalyzingId(drawing.id);
+    try {
+      const result = await aiService.analyzeDrawingSheet(String(drawing.id), '');
+      setAnalysisResults((prev) => ({ ...prev, [drawing.id]: result }));
+      addToast('success', `Analysis complete: ${result.drawingNumber} ${result.revision}`);
+    } catch {
+      addToast('error', 'Sheet analysis failed. Try again.');
+    } finally {
+      setAnalyzingId(null);
+    }
   };
 
   const sortedDrawings = [...filteredDrawings].sort((a, b) => {
@@ -100,24 +119,65 @@ export const Drawings: React.FC = () => {
         }}
       >
         <div>
-          {/* AI Banner */}
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: spacing['3'], padding: `${spacing['3']} ${spacing['4']}`, marginBottom: spacing['4'], backgroundColor: `${colors.statusReview}06`, borderRadius: borderRadius.md, borderLeft: `3px solid ${colors.statusReview}` }}>
-            <Sparkles size={14} color={colors.statusReview} style={{ marginTop: 2, flexShrink: 0 }} />
-            <div style={{ flex: 1 }}>
-              <p style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0 }}>AI detected 5 coordination conflicts between MEP and Structural drawings in the latest revision. Review recommended.</p>
-              <button onClick={() => addToast('info', 'Navigating to conflict review')} style={{ marginTop: spacing['2'], padding: `${spacing['1']} ${spacing['3']}`, backgroundColor: colors.statusReview, color: 'white', border: 'none', borderRadius: borderRadius.base, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, fontFamily: typography.fontFamily, cursor: 'pointer' }}>View Conflicts</button>
+          {/* AI Insights Panel */}
+          <div style={{ marginBottom: spacing['4'], backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.md, border: `1px solid ${colors.borderSubtle}`, overflow: 'hidden' }}>
+            <div
+              style={{ display: 'flex', alignItems: 'center', gap: spacing['3'], padding: `${spacing['3']} ${spacing['4']}`, cursor: 'pointer', borderBottom: showConflicts ? `1px solid ${colors.borderSubtle}` : 'none', transition: `background-color ${transitions.instant}` }}
+              onClick={() => setShowConflicts((v) => !v)}
+              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = colors.surfaceHover; }}
+              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+            >
+              <Sparkles size={14} color={colors.statusReview} style={{ flexShrink: 0 }} />
+              <div style={{ flex: 1 }}>
+                <p style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0 }}>
+                  AI Insights: {coordinationConflicts.length} coordination conflicts detected in latest revision
+                </p>
+                <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0, marginTop: 1 }}>Click to {showConflicts ? 'collapse' : 'review'} conflicts across disciplines</p>
+              </div>
+              <span style={{ fontSize: typography.fontSize.caption, backgroundColor: `${colors.statusCritical}12`, color: colors.statusCritical, padding: '2px 8px', borderRadius: borderRadius.full, fontWeight: typography.fontWeight.semibold }}>
+                {coordinationConflicts.filter((c) => c.confidence >= 0.8).length} high confidence
+              </span>
             </div>
+
+            {showConflicts && (
+              <div style={{ padding: spacing['2'] }}>
+                {coordinationConflicts.map((conflict) => (
+                  <div key={conflict.id} style={{ display: 'flex', alignItems: 'flex-start', gap: spacing['3'], padding: `${spacing['2']} ${spacing['2']}`, borderRadius: borderRadius.base }}>
+                    <AlertTriangle size={13} color={conflict.confidence >= 0.8 ? colors.statusCritical : colors.statusPending} style={{ marginTop: 2, flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, margin: 0 }}>
+                        <span style={{ fontWeight: typography.fontWeight.semibold }}>{conflict.drawing1} {conflict.rev1}</span>
+                        {' conflicts with '}
+                        <span style={{ fontWeight: typography.fontWeight.semibold }}>{conflict.drawing2}</span>
+                        {' at '}
+                        <span style={{ color: colors.primaryOrange }}>{conflict.location}</span>
+                      </p>
+                      <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0, marginTop: 1 }}>
+                        {conflict.discipline1} vs {conflict.discipline2}
+                      </p>
+                    </div>
+                    <span style={{ fontSize: typography.fontSize.caption, color: conflict.confidence >= 0.8 ? colors.statusCritical : colors.statusPending, fontWeight: typography.fontWeight.semibold, flexShrink: 0 }}>
+                      {Math.round(conflict.confidence * 100)}%
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Discipline filter pills */}
           <div style={{ display: 'flex', gap: spacing.sm, marginBottom: spacing.xl, flexWrap: 'wrap' }}>
             {disciplines.map((discipline) => {
               const isActive = filter === discipline;
+              const dotColor = discipline !== 'All' ? getDisciplineColor(discipline) : null;
               return (
                 <button
                   key={discipline}
                   onClick={() => setFilter(discipline)}
                   style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: spacing['1'],
                     padding: `${spacing.sm} ${spacing.lg}`,
                     backgroundColor: isActive ? colors.surfaceInset : 'transparent',
                     color: isActive ? colors.textPrimary : colors.textTertiary,
@@ -130,6 +190,18 @@ export const Drawings: React.FC = () => {
                     transition: `all ${transitions.quick}`,
                   }}
                 >
+                  {dotColor && (
+                    <span
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: '50%',
+                        backgroundColor: dotColor,
+                        flexShrink: 0,
+                        display: 'inline-block',
+                      }}
+                    />
+                  )}
                   {discipline}
                 </button>
               );
@@ -151,7 +223,8 @@ export const Drawings: React.FC = () => {
                 { field: 'sheetCount', label: 'Sheets' },
                 { field: '', label: 'Linked' },
                 { field: '', label: 'Last Viewed' },
-                { field: '', label: '' },
+                { field: '', label: 'View' },
+                { field: '', label: 'Analyze' },
               ].map((col, i) => (
                 <button key={col.label || `col-${i}`} onClick={() => col.field && handleSort(col.field)} style={{ display: 'flex', alignItems: 'center', gap: 2, border: 'none', backgroundColor: 'transparent', cursor: col.field ? 'pointer' : 'default', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textTertiary, fontFamily: typography.fontFamily, padding: 0 }}>
                   {col.label}
@@ -160,22 +233,9 @@ export const Drawings: React.FC = () => {
               ))}
             </div>
 
-            {loading && Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} style={{ display: 'grid', gridTemplateColumns: gridColumns, gap: spacing.md, padding: `${spacing.md} ${spacing.lg}`, borderBottom: i < 4 ? `1px solid ${colors.border}` : 'none' }}>
-                <Skeleton width="48px" height="36px" borderRadius="4px" />
-                <Skeleton width="50px" height="14px" />
-                <Skeleton width="80%" height="14px" />
-                <Skeleton width="70px" height="22px" borderRadius="12px" />
-                <Skeleton width="45px" height="14px" />
-                <Skeleton width="70px" height="14px" />
-                <Skeleton width="30px" height="14px" />
-                <Skeleton width="60px" height="14px" />
-                <Skeleton width="40px" height="14px" />
-                <Skeleton width="40px" height="22px" borderRadius="4px" />
-              </div>
-            ))}
+            {loading && <TableRowSkeleton rows={8} />}
             {!loading && sortedDrawings.map((drawing, index) => {
-              const thumbColor = disciplineColorMap[drawing.discipline] || colors.statusNeutral;
+              const thumbColor = drawing.disciplineColor || getDisciplineColor(drawing.discipline || '');
               const linked = linkedItems[drawing.id];
               const viewed = lastViewed[drawing.id];
               return (
@@ -205,7 +265,17 @@ export const Drawings: React.FC = () => {
                   </span>
 
                   {/* Title */}
-                  <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary }}>
+                  <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
+                    <span
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: '50%',
+                        backgroundColor: thumbColor,
+                        flexShrink: 0,
+                        display: 'inline-block',
+                      }}
+                    />
                     {drawing.title}
                     {getAnnotationsForEntity('drawing', drawing.id).map((ann) => (
                       <AIAnnotationIndicator key={ann.id} annotation={ann} inline />
@@ -255,19 +325,54 @@ export const Drawings: React.FC = () => {
                   </span>
 
                   {/* View Button */}
-                  <Btn variant="ghost" size="sm" onClick={() => { setViewerDrawing(drawing); }}>View</Btn>
+                  <Btn variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setViewerDrawing(drawing); }}>View</Btn>
+
+                  {/* Analyze Button */}
+                  <div>
+                    {analyzingId === drawing.id ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], padding: `4px ${spacing['2']}` }}>
+                        <Loader2 size={12} color={colors.statusReview} style={{ animation: 'spin 1s linear infinite' }} />
+                        <span style={{ fontSize: typography.fontSize.caption, color: colors.statusReview }}>Analyzing</span>
+                      </div>
+                    ) : analysisResults[drawing.id] ? (
+                      <div
+                        style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], padding: `4px ${spacing['2']}`, cursor: 'pointer' }}
+                        onClick={(e) => { e.stopPropagation(); addToast('info', `${analysisResults[drawing.id].drawingNumber} ${analysisResults[drawing.id].revision}: ${analysisResults[drawing.id].conflicts.length} conflict(s) found`); }}
+                      >
+                        {analysisResults[drawing.id].conflicts.length > 0
+                          ? <AlertTriangle size={12} color={colors.statusCritical} />
+                          : <CheckCircle2 size={12} color={colors.statusActive} />}
+                        <span style={{ fontSize: typography.fontSize.caption, color: analysisResults[drawing.id].conflicts.length > 0 ? colors.statusCritical : colors.statusActive, fontWeight: typography.fontWeight.semibold }}>
+                          {analysisResults[drawing.id].conflicts.length > 0 ? `${analysisResults[drawing.id].conflicts.length} conflicts` : 'No conflicts'}
+                        </span>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={(e) => handleAnalyzeSheet(e, drawing)}
+                        style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], padding: `4px ${spacing['2']}`, backgroundColor: `${colors.statusReview}10`, border: `1px solid ${colors.statusReview}30`, borderRadius: borderRadius.base, cursor: 'pointer', fontSize: typography.fontSize.caption, color: colors.statusReview, fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily, whiteSpace: 'nowrap' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${colors.statusReview}20`; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = `${colors.statusReview}10`; }}
+                      >
+                        <Sparkles size={10} /> Analyze
+                      </button>
+                    )}
+                  </div>
                 </div>
               );
             })}
             {!loading && sortedDrawings.length === 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: `${spacing['6']} ${spacing['4']}`, textAlign: 'center' }}>
-                <FileText size={32} color={colors.textTertiary} style={{ marginBottom: spacing['3'] }} />
-                <p style={{ fontSize: typography.fontSize.body, fontWeight: 500, color: colors.textPrimary, margin: 0, marginBottom: spacing['1'] }}>No drawings match your filters</p>
-                <p style={{ fontSize: typography.fontSize.sm, color: colors.gray600, margin: 0, marginBottom: spacing['4'] }}>Try adjusting your discipline filter</p>
-                <button onClick={() => setFilter('All')} style={{ padding: `${spacing['1']} ${spacing['4']}`, backgroundColor: 'transparent', border: `1px solid ${colors.border}`, borderRadius: borderRadius.md, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, color: colors.gray600, cursor: 'pointer' }}>
-                  Clear Filters
-                </button>
-              </div>
+              allDrawings.length === 0 ? (
+                <DrawingsEmptyState onUpload={() => addToast('success', 'Drawing set uploaded successfully')} />
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: `${spacing['6']} ${spacing['4']}`, textAlign: 'center' }}>
+                  <FileText size={32} color={colors.textTertiary} style={{ marginBottom: spacing['3'] }} />
+                  <p style={{ fontSize: typography.fontSize.body, fontWeight: 500, color: colors.textPrimary, margin: 0, marginBottom: spacing['1'] }}>No drawings match your filters</p>
+                  <p style={{ fontSize: typography.fontSize.sm, color: colors.gray600, margin: 0, marginBottom: spacing['4'] }}>Try adjusting your discipline filter</p>
+                  <button onClick={() => setFilter('All')} style={{ padding: `${spacing['1']} ${spacing['4']}`, backgroundColor: 'transparent', border: `1px solid ${colors.border}`, borderRadius: borderRadius.md, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, color: colors.gray600, cursor: 'pointer' }}>
+                    Clear Filters
+                  </button>
+                </div>
+              )
             )}
           </Card>
         </div>
@@ -389,3 +494,9 @@ export const Drawings: React.FC = () => {
     </PageContainer>
   );
 };
+
+export const Drawings: React.FC = () => (
+  <ErrorBoundary message="Failed to load drawings. Retry">
+    <_DrawingsPage />
+  </ErrorBoundary>
+);

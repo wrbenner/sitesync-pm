@@ -1,9 +1,13 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { PageContainer, Card, Btn, StatusTag, PriorityTag, TableHeader, TableRow, DetailPanel, Avatar, RelatedItems, EmptyState, useToast, Skeleton } from '../components/Primitives';
+import { VirtualDataTable } from '../components/shared/VirtualDataTable';
+import { createColumnHelper } from '@tanstack/react-table';
+import { PageContainer, Card, Btn, StatusTag, PriorityTag, DetailPanel, Avatar, RelatedItems, useToast, Skeleton } from '../components/Primitives';
+import { ErrorBoundary } from '../components/ErrorBoundary';
+import PunchListSkeleton from '../components/field/PunchListSkeleton';
+import EmptyState from '../components/ui/EmptyState';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 import { usePunchItems, useDirectoryContacts } from '../hooks/queries';
-import { useTableKeyboardNavigation } from '../hooks/useTableKeyboardNavigation';
-import { AlertTriangle, Camera, CheckCircle, Inbox, MessageSquare, RefreshCw, Sparkles } from 'lucide-react';
+import { AlertTriangle, Camera, CheckCircle, CheckSquare, Inbox, MessageSquare, RefreshCw, Sparkles } from 'lucide-react';
 import { useAppNavigate, getRelatedItemsForPunchItem } from '../utils/connections';
 import { AIAnnotationIndicator } from '../components/ai/AIAnnotation';
 import { PredictiveAlertBanner } from '../components/ai/PredictiveAlert';
@@ -21,27 +25,41 @@ import { EditingLockBanner } from '../components/ui/EditingLockBanner';
 
 const statusMap: Record<string, 'pending' | 'active' | 'complete'> = {
   open: 'pending',
-  in_progress: 'active',
-  complete: 'complete',
+  sub_complete: 'active',
   verified: 'complete',
+  rejected: 'pending',
 };
 
 const statusLabel: Record<string, string> = {
   open: 'Open',
-  in_progress: 'In Progress',
-  complete: 'Complete',
+  sub_complete: 'Sub Complete',
   verified: 'Verified',
+  rejected: 'Rejected',
 };
 
-const columns = [
-  { label: 'Item', width: '80px' },
-  { label: 'Description', width: '1fr' },
-  { label: 'Area', width: '140px' },
-  { label: 'Assigned', width: '120px' },
-  { label: 'Priority', width: '90px' },
-  { label: 'Status', width: '100px' },
-  { label: 'Due', width: '90px' },
-];
+const plColHelper = createColumnHelper<PunchItem>();
+
+// Two-step verification badge: dot 1 = sub completion, dot 2 = GC verification
+const TwoStepBadge: React.FC<{ verificationStatus: string }> = ({ verificationStatus }) => {
+  const step1Done = verificationStatus === 'sub_complete' || verificationStatus === 'verified';
+  const step2Done = verificationStatus === 'verified';
+  const isRejected = verificationStatus === 'rejected';
+  const step1Color = isRejected ? colors.statusCritical : step1Done ? colors.statusPending : colors.borderDefault;
+  const step2Color = step2Done ? colors.statusActive : colors.borderDefault;
+  const label = statusLabel[verificationStatus] ?? verificationStatus;
+  const labelColor = isRejected ? colors.statusCritical
+    : step2Done ? colors.statusActive
+    : step1Done ? colors.statusPending
+    : colors.textTertiary;
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+      <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: step1Color, flexShrink: 0 }} />
+      <div style={{ width: 12, height: 1, backgroundColor: colors.borderDefault, flexShrink: 0 }} />
+      <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: step2Color, flexShrink: 0 }} />
+      <span style={{ fontSize: 11, fontWeight: 500, color: labelColor, marginLeft: 4 }}>{label}</span>
+    </div>
+  );
+};
 
 const responsibleColors: Record<string, { bg: string; text: string }> = {
   subcontractor: { bg: 'rgba(58, 123, 200, 0.10)', text: colors.statusInfo },
@@ -63,6 +81,13 @@ interface PunchItem {
   assigned: string;
   priority: string;
   status: string;
+  verification_status: string;
+  verified_by: string | null;
+  verified_at: string | null;
+  sub_completed_at: string | null;
+  before_photo_url: string | null;
+  after_photo_url: string | null;
+  rejection_reason: string | null;
   hasPhoto: boolean;
   photoCount?: number;
   dueDate: string;
@@ -108,10 +133,12 @@ const PunchListPage: React.FC = () => {
   const updatePunchItem = useUpdatePunchItem();
 
   // Fetch punch list items from API
-  const { data: punchListRaw = [], isLoading: loading, error: punchError, refetch } = usePunchItems(projectId);
+  const { data: punchListResult, isLoading: loading, error: punchError, refetch } = usePunchItems(projectId);
+  const punchListRaw = punchListResult?.data ?? [];
 
   // Fetch team members for assignment
-  const { data: teamMembers = [] } = useDirectoryContacts(projectId);
+  const { data: teamMembersResult } = useDirectoryContacts(projectId);
+  const teamMembers = teamMembersResult?.data ?? [];
 
   const pageAlerts = getPredictiveAlertsForPage('punchlist');
 
@@ -127,6 +154,13 @@ const PunchListPage: React.FC = () => {
         assigned: p.assigned_to || '',
         priority: p.priority || 'medium',
         status: p.status || 'open',
+        verification_status: p.verification_status ?? 'open',
+        verified_by: p.verified_by ?? null,
+        verified_at: p.verified_at ?? null,
+        sub_completed_at: p.sub_completed_at ?? null,
+        before_photo_url: p.before_photo_url ?? null,
+        after_photo_url: p.after_photo_url ?? null,
+        rejection_reason: p.rejection_reason ?? null,
         hasPhoto: photos.length > 0,
         photoCount: photos.length,
         dueDate: p.due_date || '',
@@ -139,26 +173,26 @@ const PunchListPage: React.FC = () => {
 
   // Counts (memoized)
   const {
-    openCount, inProgressCount, completeCount, verifiedCount,
+    openCount, subCompleteCount, verifiedCount, rejectedCount,
     totalCount, completionPct,
     criticalCount, highCount, mediumCount, lowCount,
   } = useMemo(() => {
-    let open = 0, inProgress = 0, complete = 0, verified = 0;
+    let open = 0, subComplete = 0, verified = 0, rejected = 0;
     let critical = 0, high = 0, medium = 0, low = 0;
     for (const p of punchListItems) {
-      if (p.status === 'open') open++;
-      else if (p.status === 'in_progress') inProgress++;
-      else if (p.status === 'complete') complete++;
-      else if (p.status === 'verified') verified++;
+      if (p.verification_status === 'sub_complete') subComplete++;
+      else if (p.verification_status === 'verified') verified++;
+      else if (p.verification_status === 'rejected') rejected++;
+      else open++;
       if (p.priority === 'critical') critical++;
       else if (p.priority === 'high') high++;
       else if (p.priority === 'medium') medium++;
       else if (p.priority === 'low') low++;
     }
     const total = punchListItems.length;
-    const pct = total > 0 ? Math.round(((complete + verified) / total) * 100) : 0;
+    const pct = total > 0 ? Math.round((verified / total) * 100) : 0;
     return {
-      openCount: open, inProgressCount: inProgress, completeCount: complete, verifiedCount: verified,
+      openCount: open, subCompleteCount: subComplete, verifiedCount: verified, rejectedCount: rejected,
       totalCount: total, completionPct: pct,
       criticalCount: critical, highCount: high, mediumCount: medium, lowCount: low,
     };
@@ -173,13 +207,11 @@ const PunchListPage: React.FC = () => {
     return ['all', ...Array.from(new Set(areas)).sort()];
   }, [punchListItems]);
 
-  const handleKeySelect = useCallback((item: PunchItem) => setSelectedId(item.id), []);
-
   // Filter logic
   const filteredList = useMemo(() => {
     let list = punchListItems;
     if (atRiskFilter) {
-      list = list.filter(p => p.status === 'open' && (p.priority === 'high' || p.priority === 'critical'));
+      list = list.filter(p => p.verification_status === 'open' && (p.priority === 'high' || p.priority === 'critical'));
     }
     if (areaFilter !== 'all') {
       list = list.filter(p => p.area.startsWith(areaFilter));
@@ -187,23 +219,51 @@ const PunchListPage: React.FC = () => {
     return list;
   }, [punchListItems, atRiskFilter, areaFilter]);
 
-  useTableKeyboardNavigation(filteredList, selectedId, handleKeySelect);
-
   const selected = punchListItems.find(p => p.id === selectedId) || null;
   const comments: Comment[] = []; // TODO: load from punch_item_comments query
 
-  const handleMarkComplete = useCallback(async () => {
+  const handleMarkSubComplete = useCallback(async () => {
     if (!selected) return;
     try {
       await updatePunchItem.mutateAsync({
         id: String(selected.id),
-        updates: { status: 'complete' },
+        updates: { verification_status: 'sub_complete', sub_completed_at: new Date().toISOString() },
         projectId: projectId!,
       });
-      toast.success(`${selected.itemNumber} marked as complete`);
+      toast.success(`${selected.itemNumber} marked sub-complete. Superintendent notified for verification.`);
       setSelectedId(null);
     } catch {
       toast.error('Failed to update status');
+    }
+  }, [selected, updatePunchItem, projectId]);
+
+  const handleVerify = useCallback(async () => {
+    if (!selected) return;
+    try {
+      await updatePunchItem.mutateAsync({
+        id: String(selected.id),
+        updates: { verification_status: 'verified', verified_at: new Date().toISOString() },
+        projectId: projectId!,
+      });
+      toast.success(`${selected.itemNumber} verified and closed.`);
+      setSelectedId(null);
+    } catch {
+      toast.error('Failed to verify item');
+    }
+  }, [selected, updatePunchItem, projectId]);
+
+  const handleReject = useCallback(async () => {
+    if (!selected) return;
+    try {
+      await updatePunchItem.mutateAsync({
+        id: String(selected.id),
+        updates: { verification_status: 'rejected' },
+        projectId: projectId!,
+      });
+      toast.error(`${selected.itemNumber} rejected. Subcontractor notified to rework.`);
+      setSelectedId(null);
+    } catch {
+      toast.error('Failed to reject item');
     }
   }, [selected, updatePunchItem, projectId]);
 
@@ -211,25 +271,124 @@ const PunchListPage: React.FC = () => {
     addToast('info', 'Photo capture loading');
   }, [addToast]);
 
-  // SVG donut
-  const donutRadius = 36;
-  const donutStroke = 7;
-  const donutCircumference = 2 * Math.PI * donutRadius;
-  const donutOffset = donutCircumference - (completionPct / 100) * donutCircumference;
+  const plColumns = useMemo(() => [
+    plColHelper.display({
+      id: 'select',
+      size: 40,
+      header: () => null,
+      cell: (info) => {
+        const item = info.row.original;
+        return (
+          <div onClick={(e) => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <input
+              type="checkbox"
+              checked={bulkSelected.has(String(item.id))}
+              onChange={(e) => {
+                const next = new Set(bulkSelected);
+                if (e.target.checked) next.add(String(item.id));
+                else next.delete(String(item.id));
+                setBulkSelected(next);
+              }}
+              style={{ width: 16, height: 16, accentColor: colors.primaryOrange, cursor: 'pointer' }}
+              aria-label={`Select ${item.itemNumber}`}
+            />
+          </div>
+        );
+      },
+    }),
+    plColHelper.accessor('itemNumber', {
+      header: 'Item',
+      size: 80,
+      cell: (info) => <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.orangeText }}>{info.getValue()}</span>,
+    }),
+    plColHelper.accessor('description', {
+      header: 'Description',
+      size: 300,
+      cell: (info) => {
+        const item = info.row.original;
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, fontWeight: typography.fontWeight.medium, lineHeight: typography.lineHeight.snug, display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
+              {info.getValue()}
+              {item.hasPhoto && <Camera size={11} color={colors.textTertiary} />}
+              {getAnnotationsForEntity('punch_item', item.id).map((ann: any) => (
+                <AIAnnotationIndicator key={ann.id} annotation={ann} inline />
+              ))}
+            </span>
+            <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
+              {item.reportedBy && <span>{item.reportedBy}</span>}
+              {item.createdDate && <span> · {formatDate(item.createdDate)}</span>}
+            </span>
+          </div>
+        );
+      },
+    }),
+    plColHelper.accessor('area', {
+      header: 'Area',
+      size: 140,
+      cell: (info) => <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{info.getValue()}</span>,
+    }),
+    plColHelper.accessor('assigned', {
+      header: 'Assigned',
+      size: 120,
+      cell: (info) => {
+        const item = info.row.original;
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{info.getValue()}</span>
+            <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: responsibleColors[item.responsible]?.text || colors.textTertiary }}>
+              {responsibleLabel[item.responsible] || ''}
+            </span>
+          </div>
+        );
+      },
+    }),
+    plColHelper.accessor('priority', {
+      header: 'Priority',
+      size: 90,
+      cell: (info) => <PriorityTag priority={info.getValue() as any} />,
+    }),
+    plColHelper.accessor('verification_status', {
+      header: 'Status',
+      size: 130,
+      cell: (info) => {
+        const item = info.row.original;
+        return (
+          <div onClick={(e) => e.stopPropagation()}>
+            <InlineEditCell
+              value={info.getValue()}
+              type="select"
+              options={[
+                { value: 'open', label: 'Open' },
+                { value: 'sub_complete', label: 'Sub Complete' },
+                { value: 'verified', label: 'Verified' },
+                { value: 'rejected', label: 'Rejected' },
+              ]}
+              onSave={async (val) => {
+                await updatePunchItem.mutateAsync({ id: String(item.id), updates: { verification_status: val }, projectId: projectId! });
+                toast.success(`${item.itemNumber} status updated`);
+              }}
+              displayComponent={<TwoStepBadge verificationStatus={info.getValue()} />}
+            />
+          </div>
+        );
+      },
+    }),
+    plColHelper.accessor('dueDate', {
+      header: 'Due',
+      size: 90,
+      cell: (info) => (
+        <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: getDueDateColor(info.getValue()), fontVariantNumeric: 'tabular-nums' as const }}>
+          {formatDate(info.getValue())}
+        </span>
+      ),
+    }),
+  ], [bulkSelected, setBulkSelected, updatePunchItem, projectId]);
 
   if (loading) {
     return (
       <PageContainer title="Punch List" subtitle="Loading...">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['3'] }}>
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} height="80px" />
-            ))}
-          </div>
-          {Array.from({ length: 10 }).map((_, i) => (
-            <Skeleton key={i} height="44px" />
-          ))}
-        </div>
+        <PunchListSkeleton />
       </PageContainer>
     );
   }
@@ -259,10 +418,10 @@ const PunchListPage: React.FC = () => {
         actions={<PermissionGate permission="punch_list.create"><Btn onClick={() => setShowCreateModal(true)}>New Item</Btn></PermissionGate>}
       >
         <EmptyState
-          icon={<CheckCircle size={40} color={colors.textTertiary} />}
-          title="No punch items yet"
-          description="All work items are complete, or create the first punch item to track outstanding work."
-          action={<PermissionGate permission="punch_list.create"><Btn variant="primary" onClick={() => setShowCreateModal(true)}>Add Punch Item</Btn></PermissionGate>}
+          icon={<CheckSquare size={28} color={colors.textTertiary} />}
+          title="Punch list is clear"
+          description="All items resolved. New punch items appear here during inspections."
+          action={{ label: 'Add Item', onClick: () => setShowCreateModal(true) }}
         />
       </PageContainer>
     );
@@ -271,7 +430,7 @@ const PunchListPage: React.FC = () => {
   return (
     <PageContainer
       title="Punch List"
-      subtitle={`${openCount} open \u00b7 ${inProgressCount} in progress \u00b7 ${completeCount} complete \u00b7 ${verifiedCount} verified`}
+      subtitle={`${openCount} open \u00b7 ${subCompleteCount} pending verification \u00b7 ${verifiedCount} verified`}
       actions={<PermissionGate permission="punch_list.create"><Btn onClick={() => setShowCreateModal(true)}>New Item</Btn></PermissionGate>}
     >
       {/* Predictive Alert Banners */}
@@ -288,83 +447,30 @@ const PunchListPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Fix 15: Completion Visualization */}
-      <div style={{ display: 'flex', gap: spacing['4'], marginBottom: spacing['4'], flexWrap: 'wrap' }}>
-        {/* Donut chart */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['4'], minWidth: '200px' }}><Card padding={spacing['4']}>
-          <div style={{ position: 'relative', width: 86, height: 86, flexShrink: 0 }}>
-            <svg width="86" height="86" viewBox="0 0 86 86">
-              <circle cx="43" cy="43" r={donutRadius} fill="none" stroke={colors.borderSubtle} strokeWidth={donutStroke} />
-              <circle
-                cx="43" cy="43" r={donutRadius} fill="none"
-                stroke={colors.statusActive}
-                strokeWidth={donutStroke}
-                strokeDasharray={donutCircumference}
-                strokeDashoffset={donutOffset}
-                strokeLinecap="round"
-                transform="rotate(-90 43 43)"
-              />
-            </svg>
-            <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ fontSize: typography.fontSize.xl, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>{completionPct}%</span>
-            </div>
-          </div>
-          <div>
-            <div style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>Completion</div>
-            <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary }}>{completeCount + verifiedCount} of {totalCount} items done</div>
-          </div>
-        </Card></div>
-
-        {/* Metric cards for statuses */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'], minWidth: '100px' }}><Card padding={spacing['4']}>
-          <div>
-            <div style={{ fontSize: typography.fontSize['3xl'], fontWeight: typography.fontWeight.semibold, color: colors.statusPending }}>{openCount}</div>
-            <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary }}>Open</div>
-          </div>
-        </Card></div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'], minWidth: '100px' }}><Card padding={spacing['4']}>
-          <div>
-            <div style={{ fontSize: typography.fontSize['3xl'], fontWeight: typography.fontWeight.semibold, color: colors.statusInfo }}>{inProgressCount}</div>
-            <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary }}>In Progress</div>
-          </div>
-        </Card></div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'], minWidth: '100px' }}><Card padding={spacing['4']}>
-          <div>
-            <div style={{ fontSize: typography.fontSize['3xl'], fontWeight: typography.fontWeight.semibold, color: colors.statusActive }}>{completeCount}</div>
-            <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary }}>Complete</div>
-          </div>
-        </Card></div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'], minWidth: '100px' }}><Card padding={spacing['4']}>
-          <div>
-            <div style={{ fontSize: typography.fontSize['3xl'], fontWeight: typography.fontWeight.semibold, color: colors.statusActive }}>{verifiedCount}</div>
-            <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary }}>Verified</div>
-          </div>
-        </Card></div>
-
-        {/* By Priority breakdown */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['4'], minWidth: '220px' }}><Card padding={spacing['4']}>
-          <div>
-            <div style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing['2'] }}>By Priority</div>
-            <div style={{ display: 'flex', gap: spacing['3'] }}>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.semibold, color: colors.statusCritical }}>{criticalCount}</div>
-                <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Critical</div>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.semibold, color: colors.statusPending }}>{highCount}</div>
-                <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>High</div>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.semibold, color: colors.statusInfo }}>{mediumCount}</div>
-                <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Medium</div>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary }}>{lowCount}</div>
-                <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Low</div>
-              </div>
-            </div>
-          </div>
-        </Card></div>
+      {/* Metric Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: spacing['3'], marginBottom: spacing['4'] }}>
+        <Card padding={spacing['4']}>
+          <div style={{ fontSize: typography.fontSize['3xl'], fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>{totalCount}</div>
+          <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, marginTop: spacing['1'] }}>Total Items</div>
+        </Card>
+        <Card padding={spacing['4']}>
+          <div style={{ fontSize: typography.fontSize['3xl'], fontWeight: typography.fontWeight.semibold, color: colors.statusCritical }}>{openCount}</div>
+          <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, marginTop: spacing['1'] }}>Open</div>
+        </Card>
+        <Card padding={spacing['4']}>
+          <div style={{ fontSize: typography.fontSize['3xl'], fontWeight: typography.fontWeight.semibold, color: colors.statusPending }}>{subCompleteCount}</div>
+          <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, marginTop: spacing['1'] }}>Sub Complete</div>
+          <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Pending verification</div>
+        </Card>
+        <Card padding={spacing['4']}>
+          <div style={{ fontSize: typography.fontSize['3xl'], fontWeight: typography.fontWeight.semibold, color: colors.statusActive }}>{verifiedCount}</div>
+          <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, marginTop: spacing['1'] }}>Verified</div>
+        </Card>
+        <Card padding={spacing['4']}>
+          <div style={{ fontSize: typography.fontSize['3xl'], fontWeight: typography.fontWeight.semibold, color: colors.primaryOrange }}>{completionPct}%</div>
+          <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, marginTop: spacing['1'] }}>Completion</div>
+          <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{verifiedCount} of {totalCount} verified</div>
+        </Card>
       </div>
 
       {/* Area/Floor Filter */}
@@ -409,141 +515,17 @@ const PunchListPage: React.FC = () => {
         )}
       </div>
 
-      <Card padding="0" role="table">
-        <TableHeader columns={columns} />
-        {loading || !punchList ? (
-          Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} style={{ padding: spacing.md, display: 'flex', gap: spacing.md }}>
-              <Skeleton width="80px" height="16px" />
-              <Skeleton width="140px" height="16px" />
-              <Skeleton width="60%" height="16px" />
-              <Skeleton width="120px" height="16px" />
-              <Skeleton width="80px" height="16px" />
-              <Skeleton width="100px" height="16px" />
-            </div>
-          ))
-        ) : filteredList.map((item, i) => (
-          <div
-            key={item.id}
-            style={{
-              backgroundColor: bulkSelected.has(String(item.id)) ? colors.surfaceSelected : selectedId === item.id ? colors.surfaceSelected : 'transparent',
-              transition: 'background-color 150ms ease',
-              display: 'flex',
-              alignItems: 'center',
-            }}
-          >
-            <div style={{ padding: `0 ${spacing['2']}`, flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
-              <input
-                type="checkbox"
-                checked={bulkSelected.has(String(item.id))}
-                onChange={(e) => {
-                  const next = new Set(bulkSelected);
-                  if (e.target.checked) next.add(String(item.id));
-                  else next.delete(String(item.id));
-                  setBulkSelected(next);
-                }}
-                style={{ width: 16, height: 16, accentColor: colors.primaryOrange, cursor: 'pointer' }}
-                aria-label={`Select ${item.itemNumber}`}
-              />
-            </div>
-            <div style={{ flex: 1 }}>
-            <TableRow
-              divider={i < filteredList.length - 1}
-              onClick={() => setSelectedId(item.id)}
-              columns={[
-                {
-                  width: '80px',
-                  content: <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.orangeText }}>{item.itemNumber}</span>,
-                },
-                {
-                  width: '1fr',
-                  content: (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                      <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, fontWeight: typography.fontWeight.medium, lineHeight: typography.lineHeight.snug, display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
-                        {item.description}
-                        {item.hasPhoto && <Camera size={11} color={colors.textTertiary} />}
-                        {getAnnotationsForEntity('punch_item', item.id).map((ann) => (
-                          <AIAnnotationIndicator key={ann.id} annotation={ann} inline />
-                        ))}
-                      </span>
-                      <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
-                        {item.reportedBy && <span>{item.reportedBy}</span>}
-                        {item.createdDate && <span> · {formatDate(item.createdDate)}</span>}
-                      </span>
-                    </div>
-                  ),
-                },
-                {
-                  width: '140px',
-                  content: <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{item.area}</span>,
-                },
-                {
-                  width: '120px',
-                  content: (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                      <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{item.assigned}</span>
-                      <span style={{
-                        fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
-                        color: responsibleColors[item.responsible]?.text || colors.textTertiary,
-                      }}>
-                        {responsibleLabel[item.responsible] || ''}
-                      </span>
-                    </div>
-                  ),
-                },
-                {
-                  width: '90px',
-                  content: <PriorityTag priority={item.priority as any} />,
-                },
-                {
-                  width: '100px',
-                  content: (
-                    <div onClick={(e) => e.stopPropagation()}>
-                      <InlineEditCell
-                        value={item.status}
-                        type="select"
-                        options={[
-                          { value: 'open', label: 'Open' },
-                          { value: 'in_progress', label: 'In Progress' },
-                          { value: 'complete', label: 'Complete' },
-                          { value: 'verified', label: 'Verified' },
-                        ]}
-                        onSave={async (val) => {
-                          await updatePunchItem.mutateAsync({
-                            id: String(item.id),
-                            updates: { status: val },
-                            projectId: projectId!,
-                          });
-                          toast.success(`${item.itemNumber} status updated`);
-                        }}
-                        displayComponent={<StatusTag status={statusMap[item.status]} label={statusLabel[item.status]} />}
-                      />
-                    </div>
-                  ),
-                },
-                {
-                  width: '90px',
-                  content: (
-                    <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: getDueDateColor(item.dueDate), fontVariantNumeric: 'tabular-nums' as const }}>
-                      {formatDate(item.dueDate)}
-                    </span>
-                  ),
-                },
-              ]}
-            />
-            </div>
-          </div>
-        ))}
-        {filteredList.length === 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: `${spacing['12']} ${spacing['6']}`, textAlign: 'center' }}>
-            <Inbox size={32} color={colors.textTertiary} style={{ marginBottom: spacing['3'] }} />
-            <p style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, margin: 0, marginBottom: spacing['1'] }}>No items match your filters</p>
-            <p style={{ fontSize: typography.fontSize.sm, color: colors.gray600, margin: 0, marginBottom: spacing['4'] }}>Try adjusting your search or filter criteria</p>
-            <button onClick={() => { setAreaFilter('all'); setAtRiskFilter(false); }} style={{ padding: `${spacing['1.5']} ${spacing['4']}`, backgroundColor: 'transparent', border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, color: colors.gray600, cursor: 'pointer' }}>
-              Clear Filters
-            </button>
-          </div>
-        )}
+      <Card padding="0">
+        <VirtualDataTable
+          data={filteredList}
+          columns={plColumns}
+          rowHeight={48}
+          containerHeight={600}
+          onRowClick={(row) => setSelectedId(row.id)}
+          selectedRowId={selectedId}
+          getRowId={(row) => String(row.id)}
+          emptyMessage="No items match your filters"
+        />
       </Card>
 
       <DetailPanel
@@ -571,9 +553,10 @@ const PunchListPage: React.FC = () => {
                 </PermissionGate>
               </div>
               <EditingLockBanner entityType="punch item" entityId={String(selected.id)} isEditing={editingDetail} />
-              <div style={{ display: 'flex', gap: spacing.sm, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: spacing.sm, flexWrap: 'wrap', alignItems: 'center' }}>
                 <PriorityTag priority={selected.priority as any} />
-                <StatusTag status={statusMap[selected.status]} label={statusLabel[selected.status]} />
+                <StatusTag status={statusMap[selected.verification_status]} label={statusLabel[selected.verification_status] ?? selected.verification_status} />
+                <TwoStepBadge verificationStatus={selected.verification_status} />
               </div>
             </div>
 
@@ -623,21 +606,21 @@ const PunchListPage: React.FC = () => {
                 displayContent={<PriorityTag priority={selected.priority as any} />}
               />
               <EditableDetailField
-                label="Status"
-                value={selected.status}
+                label="Verification Status"
+                value={selected.verification_status}
                 editing={editingDetail}
                 type="select"
                 options={[
                   { value: 'open', label: 'Open' },
-                  { value: 'in_progress', label: 'In Progress' },
-                  { value: 'complete', label: 'Complete' },
+                  { value: 'sub_complete', label: 'Sub Complete' },
                   { value: 'verified', label: 'Verified' },
+                  { value: 'rejected', label: 'Rejected' },
                 ]}
                 onSave={async (val) => {
-                  await updatePunchItem.mutateAsync({ id: String(selected.id), updates: { status: val }, projectId: projectId! });
+                  await updatePunchItem.mutateAsync({ id: String(selected.id), updates: { verification_status: val }, projectId: projectId! });
                   toast.success('Status updated');
                 }}
-                displayContent={<StatusTag status={statusMap[selected.status]} label={statusLabel[selected.status]} />}
+                displayContent={<TwoStepBadge verificationStatus={selected.verification_status} />}
               />
               <EditableDetailField
                 label="Due Date"
@@ -658,42 +641,59 @@ const PunchListPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Photo placeholder */}
+            {/* Before / After Photos */}
             <div>
-              <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, marginBottom: spacing.sm, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Site Photo</div>
-              {selected.hasPhoto ? (
-                <div style={{
-                  width: '100%',
-                  height: '180px',
-                  backgroundColor: colors.surfaceInset,
-                  borderRadius: borderRadius.base,
-                  border: `2px dashed ${colors.border}`,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: spacing.sm,
-                }}>
-                  <Camera size={32} color={colors.textTertiary} />
-                  <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>Photo captured on site</span>
-                  <span style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary }}>IMG_2847.jpg</span>
+              <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, marginBottom: spacing.sm, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Before / After Photos</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing.sm }}>
+                {/* Before Photo */}
+                <div>
+                  <div style={{ fontSize: typography.fontSize.caption, fontWeight: 600, color: colors.textSecondary, marginBottom: spacing.xs }}>Before</div>
+                  {selected.before_photo_url ? (
+                    <img
+                      src={selected.before_photo_url}
+                      alt="Before"
+                      style={{ width: '100%', height: '140px', objectFit: 'cover', borderRadius: borderRadius.base, border: `1px solid ${colors.border}` }}
+                    />
+                  ) : (
+                    <div
+                      style={{ width: '100%', height: '140px', backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.base, border: `2px dashed ${colors.border}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, cursor: 'pointer' }}
+                      onClick={handleAddPhoto} role="button" tabIndex={0} aria-label="Add before photo"
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleAddPhoto(); } }}
+                    >
+                      <Camera size={24} color={colors.textTertiary} />
+                      <span style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary }}>Add before photo</span>
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <div style={{
-                  width: '100%',
-                  height: '180px',
-                  backgroundColor: colors.surfaceFlat,
-                  borderRadius: borderRadius.base,
-                  border: `2px dashed ${colors.border}`,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: spacing.sm,
-                  cursor: 'pointer',
-                }} onClick={handleAddPhoto} role="button" tabIndex={0} aria-label="Capture site photo" onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleAddPhoto(); } }}>
-                  <Camera size={32} color={colors.textTertiary} />
-                  <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>No photo yet. Tap to capture.</span>
+                {/* After Photo */}
+                <div>
+                  <div style={{ fontSize: typography.fontSize.caption, fontWeight: 600, color: colors.textSecondary, marginBottom: spacing.xs }}>After</div>
+                  {selected.after_photo_url ? (
+                    <img
+                      src={selected.after_photo_url}
+                      alt="After"
+                      style={{ width: '100%', height: '140px', objectFit: 'cover', borderRadius: borderRadius.base, border: `1px solid ${colors.border}` }}
+                    />
+                  ) : (
+                    <div
+                      style={{ width: '100%', height: '140px', backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.base, border: `2px dashed ${colors.border}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, cursor: selected.verification_status === 'open' ? 'not-allowed' : 'pointer', opacity: selected.verification_status === 'open' ? 0.5 : 1 }}
+                      onClick={selected.verification_status !== 'open' ? handleAddPhoto : undefined}
+                      role="button" tabIndex={selected.verification_status !== 'open' ? 0 : -1}
+                      aria-label="Add after photo"
+                      onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && selected.verification_status !== 'open') { e.preventDefault(); handleAddPhoto(); } }}
+                    >
+                      <Camera size={24} color={colors.textTertiary} />
+                      <span style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary }}>
+                        {selected.verification_status === 'open' ? 'Available after sub completes' : 'Add after photo'}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+              {selected.rejection_reason && (
+                <div style={{ marginTop: spacing.sm, padding: spacing.sm, backgroundColor: colors.statusCriticalSubtle, borderRadius: borderRadius.base, border: `1px solid ${colors.statusCritical}20` }}>
+                  <span style={{ fontSize: typography.fontSize.xs, fontWeight: 600, color: colors.statusCritical }}>Rejection Reason: </span>
+                  <span style={{ fontSize: typography.fontSize.xs, color: colors.statusCritical }}>{selected.rejection_reason}</span>
                 </div>
               )}
             </div>
@@ -738,22 +738,41 @@ const PunchListPage: React.FC = () => {
 
             {/* Actions */}
             <div style={{ display: 'flex', gap: spacing.sm, paddingTop: spacing.md, borderTop: `1px solid ${colors.borderLight}` }}>
-              {selected.status !== 'complete' && selected.status !== 'verified' ? (
+              {selected.verification_status === 'open' && (
+                <PermissionGate permission="punch_list.edit">
+                  <Btn variant="primary" onClick={handleMarkSubComplete} icon={<CheckCircle size={16} />}>Mark Sub-Complete</Btn>
+                </PermissionGate>
+              )}
+              {selected.verification_status === 'sub_complete' && (
                 <>
-                  <PermissionGate permission="punch_list.edit">
-                    <Btn variant="primary" onClick={handleMarkComplete} icon={<CheckCircle size={16} />}>Mark Complete</Btn>
+                  <PermissionGate permission="punch_list.verify">
+                    <Btn variant="primary" onClick={handleVerify} icon={<CheckCircle size={16} />}>Verify</Btn>
                   </PermissionGate>
-                  <PermissionGate permission="punch_list.edit">
-                    <Btn variant="secondary" onClick={handleAddPhoto} icon={<Camera size={16} />}>Add Photo</Btn>
+                  <PermissionGate permission="punch_list.verify">
+                    <Btn variant="secondary" onClick={handleReject}>Reject</Btn>
                   </PermissionGate>
                 </>
-              ) : (
+              )}
+              {selected.verification_status === 'rejected' && (
+                <PermissionGate permission="punch_list.edit">
+                  <Btn variant="secondary" onClick={handleMarkSubComplete} icon={<RefreshCw size={16} />}>Resubmit</Btn>
+                </PermissionGate>
+              )}
+              {selected.verification_status === 'verified' && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, padding: spacing.md, backgroundColor: 'rgba(78, 200, 150, 0.08)', borderRadius: borderRadius.base, width: '100%' }}>
                   <CheckCircle size={18} color={colors.tealSuccess} />
-                  <span style={{ fontSize: typography.fontSize.base, color: colors.tealSuccess, fontWeight: typography.fontWeight.medium }}>
-                    {selected.status === 'verified' ? 'This item has been verified' : 'This item has been completed'}
-                  </span>
+                  <div>
+                    <span style={{ fontSize: typography.fontSize.base, color: colors.tealSuccess, fontWeight: typography.fontWeight.medium }}>Verified and closed</span>
+                    {selected.verified_by && (
+                      <span style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, display: 'block' }}>by {selected.verified_by}{selected.verified_at ? ` on ${formatDate(selected.verified_at)}` : ''}</span>
+                    )}
+                  </div>
                 </div>
+              )}
+              {selected.verification_status !== 'verified' && (
+                <PermissionGate permission="punch_list.edit">
+                  <Btn variant="secondary" onClick={handleAddPhoto} icon={<Camera size={16} />}>Add Photo</Btn>
+                </PermissionGate>
               )}
             </div>
           </div>
@@ -784,9 +803,9 @@ const PunchListPage: React.FC = () => {
             variant: 'primary',
             onClick: async (ids) => {
               for (const id of ids) {
-                await updatePunchItem.mutateAsync({ id, updates: { status: 'complete' }, projectId: projectId! });
+                await updatePunchItem.mutateAsync({ id, updates: { verification_status: 'sub_complete', sub_completed_at: new Date().toISOString() }, projectId: projectId! });
               }
-              toast.success(`${ids.length} items marked complete`);
+              toast.success(`${ids.length} items marked sub-complete. Superintendent notified.`);
             },
           },
           {
@@ -816,5 +835,10 @@ const PunchListPage: React.FC = () => {
   );
 };
 
-export { PunchListPage as PunchList };
-export default PunchListPage;
+export const PunchList: React.FC = () => (
+  <ErrorBoundary message="The punch list could not be displayed. Check your connection and try again.">
+    <PunchListPage />
+  </ErrorBoundary>
+);
+
+export default PunchList;

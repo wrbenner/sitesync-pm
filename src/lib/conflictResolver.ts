@@ -73,6 +73,42 @@ export function resolveConflict(
 }
 
 /**
+ * Detect whether a live (non-offline) submission is stale.
+ *
+ * Call this before saving an edited record to check whether the server version
+ * has changed since the user opened the form. If it has, and the changes
+ * conflict, surface the LiveEditConflictModal.
+ *
+ * Returns:
+ *   isStale        - true when the server has diverged from before_state
+ *   canAutoMerge   - true when all divergences are non-overlapping (safe to merge silently)
+ *   conflictingFields - field names that both the user and server changed differently
+ *   merged         - the auto-merged record (only valid when canAutoMerge is true)
+ */
+export function checkStaleSubmission(
+  beforeState: Record<string, unknown>,
+  serverState: Record<string, unknown>,
+  localEdits: Record<string, unknown>,
+): {
+  isStale: boolean
+  canAutoMerge: boolean
+  conflictingFields: string[]
+  merged: Record<string, unknown>
+} {
+  // Fast path: server hasn't changed at all
+  const serverChanged = Object.keys(serverState).some(
+    (k) => k !== 'updated_at' && k !== 'id' &&
+      JSON.stringify(serverState[k]) !== JSON.stringify(beforeState[k]),
+  )
+  if (!serverChanged) {
+    return { isStale: false, canAutoMerge: true, conflictingFields: [], merged: { ...localEdits } }
+  }
+
+  const { canAutoMerge, conflictingFields, merged } = detectConflicts(beforeState, localEdits, serverState)
+  return { isStale: true, canAutoMerge, conflictingFields, merged }
+}
+
+/**
  * Build a merged record from a conflict using per-field resolutions stored on a PendingMutation.
  * Starts from the auto-merged base (server + non-conflicting local changes), then applies
  * the user's manual choices for the truly conflicting fields.

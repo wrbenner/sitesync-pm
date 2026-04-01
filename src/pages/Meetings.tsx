@@ -86,7 +86,8 @@ export const Meetings: React.FC = () => {
   const { addToast } = useToast();
   const projectId = useProjectId();
   const createMeeting = useCreateMeeting();
-  const { data: rawMeetings, isPending: loading } = useMeetings(projectId);
+  const { data: rawMeetingsResult, isPending: loading } = useMeetings(projectId);
+  const rawMeetings = rawMeetingsResult?.data;
 
   const meetings = useMemo(() =>
     (rawMeetings || []).map(m => {

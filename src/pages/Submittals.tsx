@@ -1,9 +1,13 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { PageContainer, Card, Btn, StatusTag, PriorityTag, TableHeader, TableRow, DetailPanel, RelatedItems, Skeleton, EmptyState, useToast } from '../components/Primitives';
+import { DataTable } from '../components/shared/DataTable';
+import { BulkActionBar } from '../components/shared/BulkActionBar';
+import { createColumnHelper } from '@tanstack/react-table';
+import { PageContainer, Card, Btn, StatusTag, PriorityTag, DetailPanel, RelatedItems, Skeleton, useToast } from '../components/Primitives';
+import EmptyState from '../components/ui/EmptyState';
+import { MetricCardSkeleton, TableRowSkeleton } from '../components/ui/Skeletons';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 import { useSubmittals } from '../hooks/queries';
-import { useTableKeyboardNavigation } from '../hooks/useTableKeyboardNavigation';
-import { AlertTriangle, Calendar, Clock, ArrowRight, CheckCircle, ClipboardList, Paperclip, LayoutGrid, List, RefreshCw, Sparkles, Search } from 'lucide-react';
+import { AlertTriangle, Calendar, Clock, ArrowRight, CheckCircle, ClipboardList, Paperclip, LayoutGrid, List, RefreshCw, Sparkles, UserCheck, Tag as TagIcon, Download } from 'lucide-react';
 import { useAppNavigate, getRelatedItemsForSubmittal } from '../utils/connections';
 import { useCreateSubmittal, useUpdateSubmittal } from '../hooks/mutations';
 import { useProjectId } from '../hooks/useProjectId';
@@ -23,17 +27,11 @@ import { EditingLockBanner } from '../components/ui/EditingLockBanner';
 
 const isOverdue = (dateStr: string) => new Date(dateStr) < new Date();
 
-const columns = [
-  { label: 'Submittal #', width: '100px' },
-  { label: 'Title', width: '1fr' },
-  { label: 'From', width: '150px' },
-  { label: 'Priority', width: '90px' },
-  { label: 'Status', width: '130px' },
-  { label: 'Due', width: '100px' },
-];
+const subColHelper = createColumnHelper<any>();
 
 const Submittals: React.FC = () => {
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedSubmittalIds, setSelectedSubmittalIds] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingDetail, setEditingDetail] = useState(false);
@@ -42,7 +40,8 @@ const Submittals: React.FC = () => {
   const projectId = useProjectId();
   const createSubmittal = useCreateSubmittal();
   const updateSubmittal = useUpdateSubmittal();
-  const { data: submittalsRaw = [], isPending: loading, error: submittalsError, refetch } = useSubmittals(projectId);
+  const { data: submittalsResult, isPending: loading, error: submittalsError, refetch } = useSubmittals(projectId);
+  const submittalsRaw = submittalsResult?.data ?? [];
 
   // Map API data to component shape
   const submittals = useMemo(() => submittalsRaw.map((s: Record<string, unknown>) => ({
@@ -55,12 +54,9 @@ const Submittals: React.FC = () => {
   if (loading) {
     return (
       <PageContainer title="Submittals" subtitle="Loading...">
+        <MetricCardSkeleton />
         <Card padding="0">
-          <div style={{ padding: spacing.lg, display: 'flex', flexDirection: 'column', gap: spacing.md }}>
-            {Array.from({ length: 8 }).map((_, i) => (
-              <Skeleton key={i} height="44px" />
-            ))}
-          </div>
+          <TableRowSkeleton rows={8} />
         </Card>
       </PageContainer>
     );
@@ -91,10 +87,10 @@ const Submittals: React.FC = () => {
         actions={<PermissionGate permission="submittals.create"><Btn onClick={() => setShowCreateModal(true)}>New Submittal</Btn></PermissionGate>}
       >
         <EmptyState
-          icon={<ClipboardList size={40} color={colors.textTertiary} />}
-          title="No submittals yet"
-          description="Create a submittal to track shop drawings, product data, and material approvals."
-          action={<PermissionGate permission="submittals.create"><Btn variant="primary" onClick={() => setShowCreateModal(true)}>New Submittal</Btn></PermissionGate>}
+          icon={<ClipboardList size={28} color={colors.textTertiary} />}
+          title="No submittals on file"
+          description="Submittals track shop drawings and product data approvals."
+          action={{ label: 'Create Submittal', onClick: () => setShowCreateModal(true) }}
         />
       </PageContainer>
     );
@@ -102,11 +98,80 @@ const Submittals: React.FC = () => {
 
   const allSubmittals = submittals;
 
-  const handleKeySelect = useCallback((sub: Record<string, unknown>) => setSelectedId(sub.id as number), []);
-  useTableKeyboardNavigation(allSubmittals, selectedId, handleKeySelect);
-
   const pageAlerts = getPredictiveAlertsForPage('submittals');
   const openCount = useMemo(() => allSubmittals.filter((s: Record<string, unknown>) => s.status !== 'approved').length, [allSubmittals]);
+
+  const subColumns = useMemo(() => [
+    subColHelper.accessor('submittalNumber', {
+      header: 'Submittal #',
+      size: 100,
+      cell: (info) => <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.orangeText }}>{info.getValue()}</span>,
+    }),
+    subColHelper.accessor('title', {
+      header: 'Title',
+      size: 360,
+      cell: (info) => {
+        const sub = info.row.original;
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, fontWeight: typography.fontWeight.medium, lineHeight: typography.lineHeight.snug }}>
+              {info.getValue()}
+              {getAnnotationsForEntity('submittal', sub.id).map((ann: any) => (
+                <AIAnnotationIndicator key={ann.id} annotation={ann} inline />
+              ))}
+            </span>
+            <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
+              {sub.spec_section && <span style={{ fontFamily: 'monospace', marginRight: spacing['2'] }}>{sub.spec_section}</span>}
+              {sub.lead_time_weeks != null && sub.lead_time_weeks > 0 && (() => {
+                const wks = sub.lead_time_weeks;
+                const c = wks > 12 ? colors.statusCritical : wks >= 8 ? colors.statusPending : colors.statusActive;
+                return <span style={{ color: c }}>{wks} wk lead</span>;
+              })()}
+            </span>
+          </div>
+        );
+      },
+    }),
+    subColHelper.accessor('from', {
+      header: 'From',
+      size: 150,
+      cell: (info) => <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{info.getValue()}</span>,
+    }),
+    subColHelper.accessor('priority', {
+      header: 'Priority',
+      size: 90,
+      cell: (info) => <PriorityTag priority={info.getValue() as any} />,
+    }),
+    subColHelper.accessor('status', {
+      header: 'Status',
+      size: 130,
+      cell: (info) => {
+        const sub = info.row.original;
+        return (
+          <span style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
+            <StatusTag status={info.getValue() as any} />
+            {sub.revision_number > 1 && (
+              <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.statusCritical, backgroundColor: `${colors.statusCritical}08`, padding: '1px 5px', borderRadius: borderRadius.full }}>
+                C{sub.revision_number}
+              </span>
+            )}
+          </span>
+        );
+      },
+    }),
+    subColHelper.accessor('dueDate', {
+      header: 'Due',
+      size: 100,
+      cell: (info) => {
+        const sub = info.row.original;
+        return (
+          <span style={{ fontSize: typography.fontSize.sm, color: isOverdue(info.getValue()) && sub.status !== 'approved' ? colors.statusCritical : colors.textTertiary, fontVariantNumeric: 'tabular-nums' as const }}>
+            {new Date(info.getValue()).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+          </span>
+        );
+      },
+    }),
+  ], []);
   const selected = allSubmittals.find((s: Record<string, unknown>) => s.id === selectedId) || null;
   const timeline: Array<{ date: string; event: string; by: string; status: 'complete' | 'active' | 'pending' }> = [];
 
@@ -188,81 +253,16 @@ const Submittals: React.FC = () => {
 
       {viewMode === 'table' ? (
         <Card padding="0">
-          <div role="table" aria-label="Submittals list">
-          <TableHeader columns={columns} />
-          {allSubmittals.map((sub, i) => (
-            <div
-              key={sub.id}
-              style={{
-                backgroundColor: selectedId === sub.id ? colors.surfaceSelected : 'transparent',
-                transition: 'background-color 150ms ease',
-              }}
-            >
-              <TableRow
-                divider={i < allSubmittals.length - 1}
-                onClick={() => setSelectedId(sub.id)}
-                columns={[
-                  {
-                    width: '100px',
-                    content: <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.orangeText }}>{sub.submittalNumber}</span>,
-                  },
-                  {
-                    width: '1fr',
-                    content: (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, fontWeight: typography.fontWeight.medium, lineHeight: typography.lineHeight.snug }}>
-                          {sub.title}
-                          {getAnnotationsForEntity('submittal', sub.id).map((ann) => (
-                            <AIAnnotationIndicator key={ann.id} annotation={ann} inline />
-                          ))}
-                        </span>
-                        <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
-                          {sub.spec_section && <span style={{ fontFamily: 'monospace', marginRight: spacing['2'] }}>{sub.spec_section}</span>}
-                          {sub.lead_time_weeks != null && sub.lead_time_weeks > 0 && (() => { const wks = sub.lead_time_weeks; const c = wks > 12 ? colors.statusCritical : wks >= 8 ? colors.statusPending : colors.statusActive; return <span style={{ color: c }}>{wks} wk lead</span>; })()}
-                        </span>
-                      </div>
-                    ),
-                  },
-                  {
-                    width: '150px',
-                    content: <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{sub.from}</span>,
-                  },
-                  {
-                    width: '90px',
-                    content: <PriorityTag priority={sub.priority as any} />,
-                  },
-                  {
-                    width: '130px',
-                    content: (
-                      <span style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
-                        <StatusTag status={sub.status as any} />
-                        {sub.revision_number > 1 && <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.statusCritical, backgroundColor: `${colors.statusCritical}08`, padding: '1px 5px', borderRadius: borderRadius.full }}>C{sub.revision_number}</span>}
-                      </span>
-                    ),
-                  },
-                  {
-                    width: '100px',
-                    content: (
-                      <span style={{ fontSize: typography.fontSize.sm, color: isOverdue(sub.dueDate) && sub.status !== 'approved' ? colors.statusCritical : colors.textTertiary, fontVariantNumeric: 'tabular-nums' as const }}>
-                        {new Date(sub.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                      </span>
-                    ),
-                  },
-                ]}
-              />
-            </div>
-          ))}
-          </div>
-          {allSubmittals.length === 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', textAlign: 'center' }}>
-              <Search size={32} color={colors.textTertiary} style={{ marginBottom: spacing.md }} />
-              <p style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, margin: 0, marginBottom: spacing['1'] }}>No items match your filters</p>
-              <p style={{ fontSize: typography.fontSize.sm, color: colors.gray600, margin: 0, marginBottom: spacing.lg }}>Try adjusting your search or filter criteria</p>
-              <button onClick={() => window.location.reload()} style={{ padding: `${spacing['1.5']} ${spacing.lg}`, backgroundColor: 'transparent', border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, color: colors.gray600, cursor: 'pointer' }}>
-                Clear Filters
-              </button>
-            </div>
-          )}
+          <DataTable
+            data={allSubmittals}
+            columns={subColumns}
+            selectable
+            onSelectionChange={setSelectedSubmittalIds}
+            onRowClick={(row) => setSelectedId(row.id)}
+            selectedRowId={selectedId}
+            getRowId={(row) => String(row.id)}
+            emptyMessage="No submittals match your filters"
+          />
         </Card>
       ) : (
         <KanbanBoard
@@ -307,6 +307,48 @@ const Submittals: React.FC = () => {
           )}
         />
       )}
+
+      <BulkActionBar
+        selectedIds={selectedSubmittalIds}
+        onClearSelection={() => setSelectedSubmittalIds([])}
+        entityLabel="submittals"
+        actions={[
+          {
+            label: 'Reassign Reviewer',
+            icon: <UserCheck size={14} />,
+            variant: 'secondary',
+            onClick: async (ids) => {
+              await Promise.all(ids.map((id) => updateSubmittal.mutateAsync({ id, updates: { reviewer: 'Reassigned' }, projectId: projectId! })));
+              addToast('success', `${ids.length} submittal${ids.length > 1 ? 's' : ''} reassigned`);
+            },
+          },
+          {
+            label: 'Change Status',
+            icon: <TagIcon size={14} />,
+            variant: 'secondary',
+            onClick: async (ids) => {
+              await Promise.all(ids.map((id) => updateSubmittal.mutateAsync({ id, updates: { status: 'under_review' }, projectId: projectId! })));
+              addToast('success', `${ids.length} submittal${ids.length > 1 ? 's' : ''} set to Under Review`);
+            },
+          },
+          {
+            label: 'Export',
+            icon: <Download size={14} />,
+            variant: 'secondary',
+            onClick: async (ids) => {
+              const selected = allSubmittals.filter((s: Record<string, unknown>) => ids.includes(String(s.id)));
+              const csv = ['Submittal #,Title,From,Priority,Status,Due Date',
+                ...selected.map((s: any) => `${s.submittalNumber},"${s.title}",${s.from},${s.priority},${s.status},${s.dueDate}`),
+              ].join('\n');
+              const blob = new Blob([csv], { type: 'text/csv' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url; a.download = 'submittals-export.csv'; a.click();
+              URL.revokeObjectURL(url);
+            },
+          },
+        ]}
+      />
 
       <DetailPanel
         open={!!selected}

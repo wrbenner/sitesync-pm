@@ -137,7 +137,8 @@ export const Tasks: React.FC = () => {
   const applyTemplate = useApplyTaskTemplate();
   const { data: cpmResults } = useTaskCriticalPath(projectId);
   const { data: templates } = useTaskTemplates();
-  const { data: teamMembers = [] } = useDirectoryContacts(projectId);
+  const { data: teamMembersResult } = useDirectoryContacts(projectId);
+  const teamMembers = teamMembersResult?.data ?? [];
 
   const filteredTasks = useMemo(() => {
     return localTasks.filter((t) => {

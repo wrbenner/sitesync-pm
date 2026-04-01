@@ -1,0 +1,57 @@
+{
+  "verifications": [
+    {
+      "id": "data-layer-C1-001",
+      "status": "partial",
+      "note": "auditTrail.ts modified (+14 lines) but diff content not fully visible; error handling improvements present but transformSupabaseError integration unclear"
+    },
+    {
+      "id": "data-layer-C2-002",
+      "status": "partial",
+      "note": "organizations.ts significantly refactored (+163 lines changed) suggesting type safety improvements, but `any` cast removal not confirmed in diff"
+    },
+    {
+      "id": "data-layer-C3-003",
+      "status": "not_fixed",
+      "note": "projects.ts modified (+115 lines) but no evidence of replacing hardcoded AI health scores; changes appear unrelated to metrics placeholder issue"
+    },
+    {
+      "id": "data-layer-H1-004",
+      "status": "partial",
+      "note": "Multiple endpoints modified (activity, budget, documents, field, etc.) suggesting pagination work, but implementation details not visible in summary"
+    },
+    {
+      "id": "data-layer-H2-005",
+      "status": "partial",
+      "note": "budget.ts heavily modified (+399 lines) indicating significant refactoring, but hardcoded approved_cost fix not confirmed"
+    },
+    {
+      "id": "data-layer-H3-006",
+      "status": "not_fixed",
+      "note": "No evidence of column selection optimization in getPortfolioMetrics; changes present but unfetched field reduction unclear"
+    },
+    {
+      "id": "data-layer-H4-007",
+      "status": "not_fixed",
+      "note": "Diff shows read endpoints modifications only; no write/mutation endpoints added to data layer"
+    },
+    {
+      "id": "data-layer-H5-008",
+      "status": "partial",
+      "note": "projectScope.ts middleware modified (+40 lines) suggesting project_id filter improvements, but enforcement in query callback not confirmed"
+    },
+    {
+      "id": "data-layer-M1-009",
+      "status": "not_fixed",
+      "note": "No new lien waiver or pay application endpoints found in modified files list"
+    },
+    {
+      "id": "data-layer-M2-010",
+      "status": "partial",
+      "note": "aiService.ts modified (+25 lines) with error handling improvements visible, but full coverage of AI failure scenarios uncertain"
+    }
+  ],
+  "files_changed": 27,
+  "regression_detected": true,
+  "regression_description": "Large unreviewed engine-logs artifacts (75K+ lines) and test file additions suggest significant scope creep; package.json changes indicate new dependencies not documented in issue fixes; multiple critical issues show only partial fixes with unconfirmed implementations"
+}

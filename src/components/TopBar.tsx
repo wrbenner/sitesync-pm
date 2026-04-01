@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, Sun, Moon, Monitor } from 'lucide-react';
 import { colors, darkColors, spacing, typography, borderRadius, shadows, transitions, layout, colorVars, zIndex } from '../styles/theme';
 import { Dot, useSidebar } from './Primitives';
-import { NotificationBell, NotificationPanel } from './collaboration/NotificationCenter';
+import { NotificationBell, NotificationPanel } from './notifications/NotificationCenter';
 import { ConnectionStatusDot } from './ui/ConnectionStatus';
 import { PresenceBar } from './collaboration/PresenceBar';
 import { useUiStore } from '../stores';

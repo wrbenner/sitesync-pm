@@ -1,5 +1,6 @@
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
+import { transformSupabaseError } from '../api/client'
 import { useProjectId } from './useProjectId'
 import { useAuth } from './useAuth'
 
@@ -46,7 +47,7 @@ export function useAuditTrail(filters?: AuditFilters) {
 
       query = query.limit(200)
       const { data, error } = await query
-      if (error) throw error
+      if (error) throw transformSupabaseError(error)
       return (data || []) as AuditEntry[]
     },
     enabled: !!projectId,
@@ -81,7 +82,7 @@ export function useWriteAudit() {
         new_value: newValue || null,
         user_agent: navigator.userAgent,
       })
-      if (error) throw error
+      if (error) throw transformSupabaseError(error)
     },
   })
 }

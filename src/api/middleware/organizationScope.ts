@@ -1,5 +1,6 @@
 import { supabase } from '../client'
 import { PermissionError } from '../../lib/rls'
+import { ApiError, AuthError } from '../errors'
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
@@ -54,4 +55,20 @@ export async function withOrgAdminAccess<T>(orgId: string, fn: () => Promise<T>)
   }
 
   return fn()
+}
+
+export async function assertOrganizationAccess(orgId: string): Promise<void> {
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    throw new AuthError('Not authenticated')
+  }
+  const { data } = await supabase
+    .from('organization_members')
+    .select('id')
+    .eq('organization_id', orgId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+  if (!data) {
+    throw new ApiError('You do not have access to this organization', 403, 'FORBIDDEN')
+  }
 }

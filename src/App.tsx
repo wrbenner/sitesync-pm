@@ -22,6 +22,7 @@ import type { Shortcut } from './hooks/useKeyboardShortcuts';
 import { useTheme } from './hooks/useTheme';
 import { useRealtimeSubscription, usePresence } from './hooks/useRealtimeSubscription';
 import { useRealtimeInvalidation } from './hooks/useRealtimeInvalidation';
+import { useNotificationRealtime } from './hooks/useNotificationRealtime';
 import { useProjectId } from './hooks/useProjectId';
 import { useAuth } from './hooks/useAuth';
 import { SkipToContent } from './components/ui/SkipToContent';
@@ -213,6 +214,7 @@ function AppContent() {
   useRealtimeSubscription(isAuthPage ? undefined : projectId, isAuthPage ? undefined : user?.id);
   useRealtimeInvalidation();
   useProjectCache(isAuthPage ? undefined : projectId);
+  useNotificationRealtime();
 
   // Listen for background sync completion from SW
   useEffect(() => {
@@ -246,6 +248,7 @@ function AppContent() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const { toggleContextPanel } = useAIAnnotationStore();
   const sidebarWidth = sidebarCollapsed ? layout.sidebarCollapsed : layout.sidebarWidth;
 
@@ -257,13 +260,11 @@ function AppContent() {
   // Keyboard shortcuts — every action reachable by keyboard
   const shortcuts: Shortcut[] = [
     // Navigation
-    { key: '/', meta: true, description: 'Keyboard shortcuts', action: () => setShortcutsOpen((p) => !p) },
     { key: 'b', meta: true, description: 'Toggle sidebar', action: () => setSidebarCollapsed(!sidebarCollapsed) },
     { key: '.', meta: true, description: 'Toggle AI panel', action: toggleContextPanel },
     { key: 'n', meta: true, description: 'New item', action: () => handleNavigate(activeView === 'rfis' ? 'rfis' : activeView === 'submittals' ? 'submittals' : activeView === 'punch-list' ? 'punch-list' : 'tasks') },
     { key: 's', meta: true, description: 'Save current form', action: () => {} },
     { key: 'e', meta: true, description: 'Export', action: () => setExportOpen(true) },
-    { key: 'f', meta: true, description: 'Focus search', action: () => { /* Command palette handles its own Cmd+K; Cmd+F is browser find override */ } },
     // Page navigation: Cmd+1 through Cmd+9
     { key: '1', meta: true, description: 'Dashboard', action: () => handleNavigate('dashboard') },
     { key: '2', meta: true, description: 'Tasks', action: () => handleNavigate('tasks') },
@@ -274,11 +275,20 @@ function AppContent() {
     { key: '7', meta: true, description: 'Daily Log', action: () => handleNavigate('daily-log') },
     { key: '8', meta: true, description: 'Punch List', action: () => handleNavigate('punch-list') },
     { key: '9', meta: true, description: 'Drawings', action: () => handleNavigate('drawings') },
-    // General
     { key: '?', description: 'Shortcut help', action: () => setShortcutsOpen(true) },
-    { key: 'Escape', description: 'Close panels', action: () => { setNotificationsOpen(false); setShortcutsOpen(false); setExportOpen(false); } },
   ];
   useKeyboardShortcuts(shortcuts);
+
+  // Global chord shortcuts — Cmd+K, Cmd+/, sequential g+x navigation, Escape
+  useKeyboardShortcuts([
+    { keys: ['meta+k'], action: () => setCommandPaletteOpen((p) => !p) },
+    { keys: ['meta+/'], action: () => setShortcutsOpen((p) => !p) },
+    { keys: ['g', 'd'], sequential: true, action: () => navigate('/dashboard') },
+    { keys: ['g', 'r'], sequential: true, action: () => navigate('/rfis') },
+    { keys: ['g', 'b'], sequential: true, action: () => navigate('/budget') },
+    { keys: ['g', 's'], sequential: true, action: () => navigate('/schedule') },
+    { keys: ['escape'], action: () => { setNotificationsOpen(false); setShortcutsOpen(false); setExportOpen(false); setCommandPaletteOpen(false); } },
+  ]);
 
   // Auth pages render without the app shell (no sidebar, no offline banner)
   if (isAuthPage) {
@@ -336,7 +346,7 @@ function AppContent() {
           </ErrorBoundary>
         </div>
 
-        <CommandPalette />
+        <CommandPalette open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen} />
         <Suspense fallback={null}>
           {notificationsOpen && <NotificationCenter open={notificationsOpen} onClose={() => setNotificationsOpen(false)} />}
           {shortcutsOpen && <ShortcutOverlay open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />}

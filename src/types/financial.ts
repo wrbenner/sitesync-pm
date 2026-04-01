@@ -1,4 +1,5 @@
 export interface ProjectFinancials {
+  isEmpty: boolean
   originalContractValue: number
   approvedChangeOrders: number
   revisedContractValue: number
@@ -32,14 +33,16 @@ export interface DivisionFinancials {
 }
 
 export interface EarnedValueMetrics {
-  bcws: number // Planned Value
-  bcwp: number // Earned Value
-  acwp: number // Actual Cost
-  spi: number  // Schedule Performance Index
-  cpi: number  // Cost Performance Index
-  eac: number  // Estimate at Completion
-  etc: number  // Estimate to Complete
-  vac: number  // Variance at Completion
+  bcws: number              // Planned Value
+  bcwp: number              // Earned Value
+  acwp: number              // Actual Cost
+  spi: number               // Schedule Performance Index
+  cpi: number               // Cost Performance Index
+  eac: number               // Estimate at Completion
+  etc: number               // Estimate to Complete
+  vac: number               // Variance at Completion
+  scheduleVarianceDays: number // Estimated days ahead (positive) or behind (negative) schedule
+  costVariance: number      // BCWP - ACWP (positive = under budget)
 }
 
 export interface CashFlowWeek {
@@ -56,4 +59,32 @@ export interface CashFlowForecast {
   currentCashPosition: number
   lowestProjectedPosition: number
   lowestPositionWeek: number
+}
+
+// 13-week cash flow types
+export interface WeeklyCashFlowRow {
+  weekStart: string
+  weekEnd: string
+  inflow: number
+  outflow: number
+  net: number
+  cumulativeBalance: number
+}
+
+export interface PayApplicationRow {
+  id: string
+  project_id: string
+  amount: number
+  status: 'draft' | 'submitted' | 'approved' | 'paid'
+  submitted_date: string | null
+  approved_date: string | null
+  period_end: string | null
+}
+
+export interface SubInvoiceRow {
+  id: string
+  project_id: string
+  amount: number
+  submitted_date: string | null
+  due_date: string | null
 }

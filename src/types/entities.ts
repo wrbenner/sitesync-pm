@@ -28,7 +28,21 @@ export type FileRecord = Tables['files']['Row']
 export type FieldCapture = Tables['field_captures']['Row']
 export type SchedulePhase = Tables['schedule_phases']['Row']
 export type Notification = Tables['notifications']['Row']
-export type ActivityFeedItem = Tables['activity_feed']['Row']
+export type ActivityFeedRow = Tables['activity_feed']['Row']
+
+/** Enriched activity feed item with resolved actor info and entity label. */
+export interface ActivityFeedItem {
+  id: string
+  actorName: string
+  actorAvatar: string | null
+  verb: string
+  entityType: string
+  entityLabel: string
+  entityId: string
+  projectId: string
+  createdAt: string
+  metadata: Record<string, unknown>
+}
 export type AIInsight = Tables['ai_insights']['Row']
 export type ProjectSnapshot = Tables['project_snapshots']['Row']
 
@@ -67,3 +81,48 @@ export type IncidentSeverity = 'first_aid' | 'medical_treatment' | 'lost_time' |
 
 // ── JSON Utility Type ────────────────────────────────────────
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
+
+// ── Schedule Domain ──────────────────────────────────────────
+export type ScheduleWorkType = 'indoor' | 'outdoor' | 'both'
+
+type DbSchedulePhaseRow = Tables['schedule_phases']['Row']
+
+/** Fully-mapped construction schedule phase returned by the API layer.
+ *  All nullable DB fields are kept as-is; computed/convenience fields are non-null.
+ */
+export interface MappedSchedulePhase extends DbSchedulePhaseRow {
+  // Extended domain fields not yet in DB schema
+  baseline_start_date: string | null
+  baseline_end_date: string | null
+  baseline_percent_complete: number | null
+  is_milestone: boolean | null
+  predecessor_ids: string[] | null
+  work_type: ScheduleWorkType | null
+  location: string | null
+  assigned_trade: string | null
+  planned_labor_hours: number | null
+  actual_labor_hours: number | null
+
+  // Camelcase convenience aliases (non-null / defaulted)
+  startDate: string
+  endDate: string
+  progress: number
+  critical: boolean
+  completed: boolean
+  baselineStartDate: string | null
+  baselineEndDate: string | null
+  baselineProgress: number
+  slippageDays: number
+  earnedValue: number
+
+  // Computed fields (always non-null)
+  isOnCriticalPath: boolean
+  floatDays: number
+  scheduleVarianceDays: number
+
+  // Camelcase versions of new domain fields (non-null / defaulted)
+  isMilestone: boolean
+  predecessorIds: string[]
+  plannedLaborHours: number
+  actualLaborHours: number
+}

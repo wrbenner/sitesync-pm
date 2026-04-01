@@ -1,11 +1,13 @@
 import React, { useState } from 'react'
-import { DollarSign, Receipt, FileText, TrendingUp, Wallet, Plus, Check, X } from 'lucide-react'
-import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton } from '../components/Primitives'
+import { DollarSign, Receipt, FileText, TrendingUp, Wallet, Plus, Check, X, BookOpen } from 'lucide-react'
+import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton, EmptyState } from '../components/Primitives'
 import { DataTable, createColumnHelper } from '../components/shared/DataTable'
 import { ExportButton } from '../components/shared/ExportButton'
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
 import { useContracts, usePayApplications, useJobCostEntries, useInvoicesPayable, useWipReports, useRetainageLedger } from '../hooks/queries'
+import { useBudgetRealtime } from '../hooks/queries/realtime'
+import { MetricFlash } from '../components/ui/RealtimeFlash'
 import { toast } from 'sonner'
 
 const fmtCurrency = (n: number | null) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n || 0)
@@ -357,6 +359,7 @@ const retainageColumns = [
 export const Financials: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('overview')
   const projectId = useProjectId()
+  const { isFlashing } = useBudgetRealtime(projectId)
 
   const { data: contracts, isLoading: loadingContracts } = useContracts(projectId)
   const { data: payApps, isLoading: loadingPayApps } = usePayApplications(projectId)
@@ -471,43 +474,65 @@ export const Financials: React.FC = () => {
       )}
 
       {/* Overview Tab */}
-      {activeTab === 'overview' && !isLoading && (
+      {activeTab === 'overview' && !isLoading && contractValue === 0 && (
+        <Card padding={spacing['5']}>
+          <EmptyState
+            icon={<BookOpen size={48} />}
+            title="No Financial Data Yet"
+            description="Once contracts are created and pay applications are submitted, your project financials will appear here."
+          />
+        </Card>
+      )}
+
+      {activeTab === 'overview' && !isLoading && contractValue > 0 && (
         <>
           {/* KPI Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: spacing['4'], marginBottom: spacing['2xl'] }}>
-            <MetricBox
-              label="Contract Value"
-              value={fmtCurrency(contractValue)}
-              changeLabel="prime contracts"
-            />
-            <MetricBox
-              label="Billed to Date"
-              value={fmtCurrency(billedToDate)}
-              change={billedToDate > 0 ? 1 : 0}
-              changeLabel="completed and stored"
-            />
-            <MetricBox
-              label="Costs to Date"
-              value={fmtCurrency(costsToDate)}
-              changeLabel="all cost types"
-            />
-            <MetricBox
-              label="Retainage Held"
-              value={fmtCurrency(retainageHeld)}
-              changeLabel="held by owner"
-            />
-            <MetricBox
-              label="AP Outstanding"
-              value={fmtCurrency(apOutstanding)}
-              change={apOutstanding > 0 ? -1 : 0}
-              changeLabel="unpaid invoices"
-            />
-            <MetricBox
-              label="Gross Margin"
-              value={fmtPct(grossMargin)}
-              change={grossMargin >= 10 ? 1 : -1}
-              changeLabel="billed vs costs"
-            />
+            <MetricFlash isFlashing={isFlashing}>
+              <MetricBox
+                label="Contract Value"
+                value={fmtCurrency(contractValue)}
+                changeLabel="prime contracts"
+              />
+            </MetricFlash>
+            <MetricFlash isFlashing={isFlashing}>
+              <MetricBox
+                label="Billed to Date"
+                value={fmtCurrency(billedToDate)}
+                change={billedToDate > 0 ? 1 : 0}
+                changeLabel="completed and stored"
+              />
+            </MetricFlash>
+            <MetricFlash isFlashing={isFlashing}>
+              <MetricBox
+                label="Costs to Date"
+                value={fmtCurrency(costsToDate)}
+                changeLabel="all cost types"
+              />
+            </MetricFlash>
+            <MetricFlash isFlashing={isFlashing}>
+              <MetricBox
+                label="Retainage Held"
+                value={fmtCurrency(retainageHeld)}
+                changeLabel="held by owner"
+              />
+            </MetricFlash>
+            <MetricFlash isFlashing={isFlashing}>
+              <MetricBox
+                label="AP Outstanding"
+                value={fmtCurrency(apOutstanding)}
+                change={apOutstanding > 0 ? -1 : 0}
+                changeLabel="unpaid invoices"
+              />
+            </MetricFlash>
+            <MetricFlash isFlashing={isFlashing}>
+              <MetricBox
+                label="Gross Margin"
+                value={fmtPct(grossMargin)}
+                change={grossMargin >= 10 ? 1 : -1}
+                changeLabel="billed vs costs"
+              />
+            </MetricFlash>
           </div>
 
           {/* Recent Pay Applications */}

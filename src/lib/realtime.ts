@@ -136,6 +136,8 @@ export function subscribeToNotifications(userId: string) {
 export interface PresenceUser {
   userId: string
   name: string
+  displayName: string
+  role?: string
   initials: string
   color: string
   page: string
@@ -168,6 +170,8 @@ export function subscribeToPresence(
   userInitials: string,
   currentPage: string,
   onChange: (users: PresenceUser[]) => void,
+  userRole?: string,
+  userDisplayName?: string,
 ) {
   onPresenceChange = onChange
 
@@ -197,6 +201,8 @@ export function subscribeToPresence(
           users.push({
             userId: key,
             name: latest.name || 'Unknown',
+            displayName: latest.displayName || latest.name || 'Unknown',
+            role: latest.role,
             initials: latest.initials || '??',
             color: getUserColor(key),
             page: latest.page || 'dashboard',
@@ -216,6 +222,8 @@ export function subscribeToPresence(
       if (status === 'SUBSCRIBED') {
         await presenceChannel!.track({
           name: userName,
+          displayName: userDisplayName || userName,
+          role: userRole,
           initials: userInitials,
           page: currentPage,
           lastSeen: Date.now(),

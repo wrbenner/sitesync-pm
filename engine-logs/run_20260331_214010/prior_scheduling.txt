@@ -1,0 +1,11 @@
+UNRESOLVED FROM CYCLE 1:
+- [not_fixed] scheduling-C1-001: No changes to baseline tracking or slippage comparison logic in schedule.ts endpoint
+- [partial] scheduling-C2-002: ai.ts and aiService.ts modified (+77, +37 lines) but no evidence of predictive delay engine implementation in diff summary
+- [not_fixed] scheduling-C3-003: No metric card components or KPI calculation logic visible in provided diff
+- [not_fixed] scheduling-H1-004: No Gantt chart component updates detected; no drag-to-adjust, dependency arrows, or milestone markers implemented
+- [partial] scheduling-H2-005: WeatherCard.tsx modified (+16 lines) suggests weather overlay work, but no trade conflict detection visible
+- [partial] scheduling-H3-006: e2e/mobile.spec.ts added (+49 lines) indicates mobile testing, but no mobile-optimized view components in diff
+- [partial] scheduling-H4-007: ErrorBoundary.tsx updated (+17 lines), but no empty state or loading skeleton implementations visible in summary
+- [not_fixed] scheduling-M1-008: schedule.ts modified (+60 lines) but no TypeScript type definitions or construction-critical field additions evident
+- [not_fixed] scheduling-M2-009: No real-time update mechanism (WebSocket, polling, subscriptions) visible in api client or schedule endpoint changes
+- [not_fixed] scheduling-M3-010: No accessibility updates detected; no ARIA roles, keyboard navigation, or screen reader improvements in diff

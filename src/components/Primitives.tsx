@@ -303,6 +303,7 @@ interface MetricBoxProps {
   change?: number;
   changeLabel?: string;
   icon?: React.ReactNode; // kept for backwards compat but ignored
+  warning?: string; // amber caution icon with tooltip when data may be incomplete
 }
 
 export const MetricBox: React.FC<MetricBoxProps> = React.memo(({
@@ -311,10 +312,12 @@ export const MetricBox: React.FC<MetricBoxProps> = React.memo(({
   unit,
   change,
   changeLabel,
+  warning,
 }) => (
   <div
     role="group"
-    aria-label={`${label}: ${value}${unit ? ` ${unit}` : ''}`}
+    aria-label={`${label}: ${value}${unit ? ` ${unit}` : ''}${warning ? ` (${warning})` : ''}`}
+    className="sitesync-metric-box"
     style={{
       backgroundColor: colors.surfaceRaised,
       borderRadius: borderRadius.lg,
@@ -334,19 +337,25 @@ export const MetricBox: React.FC<MetricBoxProps> = React.memo(({
       el.style.transform = 'translateY(0)';
     }}
   >
-    <p
-      style={{
-        fontSize: typography.fontSize.label,
-        color: colors.textTertiary,
-        margin: 0,
-        marginBottom: spacing['3'],
-        fontWeight: typography.fontWeight.medium,
-        letterSpacing: typography.letterSpacing.wider,
-        textTransform: 'uppercase' as const,
-      }}
-    >
-      {label}
-    </p>
+    <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs, marginBottom: spacing['3'] }}>
+      <p
+        style={{
+          fontSize: typography.fontSize.label,
+          color: colors.textTertiary,
+          margin: 0,
+          fontWeight: typography.fontWeight.medium,
+          letterSpacing: typography.letterSpacing.wider,
+          textTransform: 'uppercase' as const,
+        }}
+      >
+        {label}
+      </p>
+      {warning && (
+        <span title={warning} style={{ display: 'flex', alignItems: 'center', cursor: 'help', flexShrink: 0 }}>
+          <AlertTriangle size={13} color={colors.statusPending} />
+        </span>
+      )}
+    </div>
     <div style={{ display: 'flex', alignItems: 'baseline', gap: spacing.sm }}>
       <p
         style={{
@@ -1136,15 +1145,21 @@ export const RelatedItems: React.FC<RelatedItemsProps> = ({ items, onNavigate })
 
 type ToastType = 'success' | 'error' | 'warning' | 'info';
 
+interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
+
 interface Toast {
   id: number;
   type: ToastType;
   message: string;
+  action?: ToastAction;
   dismissing?: boolean;
 }
 
 interface ToastContextType {
-  addToast: (type: ToastType, message: string) => void;
+  addToast: (type: ToastType, message: string, action?: ToastAction) => void;
 }
 
 export const ToastContext = createContext<ToastContextType>({ addToast: () => {} });
@@ -1154,9 +1169,9 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [toasts, setToasts] = useState<Toast[]>([]);
   const counterRef = useRef(0);
 
-  const addToast = useCallback((type: ToastType, message: string) => {
+  const addToast = useCallback((type: ToastType, message: string, action?: ToastAction) => {
     const id = ++counterRef.current;
-    setToasts((prev) => [...prev, { id, type, message }]);
+    setToasts((prev) => [...prev, { id, type, message, action }]);
     setTimeout(() => {
       setToasts((prev) => prev.map((t) => t.id === id ? { ...t, dismissing: true } : t));
       setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 300);
@@ -1200,7 +1215,27 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             }}
           >
             <span style={{ color: toastColors[toast.type], display: 'flex' }}>{toastIcons[toast.type]}</span>
-            <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, fontWeight: typography.fontWeight.medium }}>{toast.message}</span>
+            <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, fontWeight: typography.fontWeight.medium, flex: 1 }}>{toast.message}</span>
+            {toast.action && (
+              <button
+                onClick={toast.action.onClick}
+                style={{
+                  flexShrink: 0,
+                  padding: `2px ${spacing.md}`,
+                  backgroundColor: toastColors[toast.type],
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: borderRadius.base,
+                  fontSize: typography.fontSize.caption,
+                  fontWeight: typography.fontWeight.semibold,
+                  fontFamily: typography.fontFamily,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {toast.action.label}
+              </button>
+            )}
           </div>
         ))}
       </div>

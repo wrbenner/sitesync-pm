@@ -23,6 +23,19 @@ export type ProjectRole =
   | 'architect'
   | 'viewer'
 
+export const ROLE_HIERARCHY: Record<ProjectRole, number> = {
+  viewer: 1,
+  architect: 2,
+  owner_rep: 2,
+  subcontractor: 2,
+  field_engineer: 3,
+  project_engineer: 3,
+  safety_manager: 3,
+  superintendent: 4,
+  project_manager: 5,
+  project_executive: 7,
+}
+
 export interface OrganizationMember {
   id: string
   organization_id: string
@@ -38,6 +51,7 @@ export interface ProjectMember {
   role: ProjectRole
   permissions: Record<string, boolean>
   created_at?: string
+  updated_at?: string
 }
 
 export interface PortfolioMetrics {
@@ -45,10 +59,11 @@ export interface PortfolioMetrics {
   active_projects: number
   total_contract_value: number
   total_budget_spent: number
-  open_rfis: number
-  overdue_rfis: number
-  open_punch_items: number
+  open_rfis?: number
+  overdue_rfis?: number
+  open_punch_items?: number
   avg_completion_percentage: number
   projects_on_schedule: number
   projects_at_risk: number
+  warnings?: string[]
 }

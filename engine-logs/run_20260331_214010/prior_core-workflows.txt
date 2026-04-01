@@ -1,0 +1,11 @@
+UNRESOLVED FROM CYCLE 1:
+- [not_fixed] core-workflows-C1-001: No changes to MappedChangeOrder or budget-related type definitions found in diff
+- [partial] core-workflows-C1-002: LienWaiverPDF.tsx component added but no API endpoints or data model changes visible for lien waiver workflow
+- [partial] core-workflows-C1-003: WeatherCard.tsx added to daily log, but no weather API integration or legal defensibility fields visible in CreateDailyLogModal changes
+- [partial] core-workflows-C1-004: Type improvements in client.ts and endpoints, but widespread 'any' type casting likely still present in AI endpoints and other files
+- [partial] core-workflows-C1-005: auditTrail.ts has 36 lines changed, suggesting error handling improvements, but unclear if raw Supabase errors are fully wrapped
+- [not_fixed] core-workflows-C1-006: schedule.ts modified but no baseline vs. actual comparison or critical path data additions evident
+- [partial] core-workflows-C1-007: projects.ts heavily modified (87 lines), projectScope.ts middleware updated, but unclear if fallback behavior is fixed
+- [partial] core-workflows-C1-008: AIInsightsWidget and aiService.ts significantly refactored, but error handling improvements not fully clear from diff summary
+- [not_fixed] core-workflows-C1-009: rfis.ts and submittals.ts minimally changed; no bulk actions, keyboard navigation, or row click handlers visible
+- [not_fixed] core-workflows-C1-010: No error boundary additions to portfolio metrics query visible; ErrorBoundary.tsx only has 12 line changes

@@ -1,4 +1,6 @@
 import { supabase } from '../../lib/supabase'
+import { transformSupabaseError } from '../client'
+import { assertProjectAccess, validateProjectId } from '../middleware/projectScope'
 
 export interface AuditLogEntry {
   id: string
@@ -33,6 +35,9 @@ export async function getAuditLog(
   projectId: string,
   filters: AuditLogFilters = {}
 ): Promise<{ entries: AuditLogEntry[]; total: number }> {
+  validateProjectId(projectId)
+  await assertProjectAccess(projectId)
+
   const {
     userId,
     entityType,
@@ -58,21 +63,26 @@ export async function getAuditLog(
 
   const { data, error, count } = await query
 
-  if (error) throw error
+  if (error) throw transformSupabaseError(error)
   return { entries: (data ?? []) as AuditLogEntry[], total: count ?? 0 }
 }
 
 export async function getEntityHistory(
+  projectId: string,
   entityType: string,
   entityId: string
 ): Promise<AuditLogEntry[]> {
+  validateProjectId(projectId)
+  await assertProjectAccess(projectId)
+
   const { data, error } = await supabase
     .from('audit_log')
     .select('*')
+    .eq('project_id', projectId)
     .eq('entity_type', entityType)
     .eq('entity_id', entityId)
     .order('created_at', { ascending: false })
 
-  if (error) throw error
+  if (error) throw transformSupabaseError(error)
   return (data ?? []) as AuditLogEntry[]
 }

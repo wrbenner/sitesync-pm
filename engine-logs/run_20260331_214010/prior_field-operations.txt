@@ -1,0 +1,11 @@
+UNRESOLVED FROM CYCLE 1:
+- [partial] field-operations-C1-001: auditTrail.ts expanded but daily log legally-defensible fields (timestamps, user ID, signatures) not confirmed in diff
+- [partial] field-operations-C2-002: field.ts changes suggest offline capability, but offline queue implementation and sync status UI not visible in provided diff
+- [not_fixed] field-operations-C3-003: No changes visible to punch list two-step verification or progress metrics in diff
+- [partial] field-operations-H1-004: ai.ts and aiService.ts significantly expanded; integration into daily log/field capture flows not confirmed in diff
+- [not_fixed] field-operations-H2-005: No QR code crew check-in flow implementation visible in diff
+- [partial] field-operations-H3-006: WeatherCard.tsx added and QuickEntry.tsx expanded, but metric cards and empty state improvements not confirmed in diff
+- [not_fixed] field-operations-H4-007: field.ts shows 327 line changes but implicit any via spread operator typing issues not addressed in visible diff
+- [partial] field-operations-M1-008: ErrorBoundary.tsx modified; loading skeletons not confirmed in provided diff sections
+- [not_fixed] field-operations-M2-009: No ARIA labels or keyboard alternatives visible for camera/voice inputs in diff
+- [partial] field-operations-M3-010: WeatherCard.tsx added but integration into daily log entry form not confirmed in diff

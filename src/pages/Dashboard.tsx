@@ -3,15 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Calendar, DollarSign, HelpCircle, Shield, Users,
-  TrendingUp, TrendingDown, ArrowRight,
+  TrendingUp, TrendingDown, ArrowRight, Scale, AlertCircle,
 } from 'lucide-react';
 import { PageContainer, Skeleton } from '../components/Primitives';
+import { MetricCardSkeleton, TableRowSkeleton } from '../components/ui/Skeletons';
 import { colors, spacing, typography, borderRadius, shadows } from '../styles/theme';
 import { duration, easing, easingArray } from '../styles/animations';
 import { useProjectId } from '../hooks/useProjectId';
 import {
   useProject, useSchedulePhases, useBudgetItems, useRFIs,
-  usePunchItems, useIncidents, useCrews,
+  usePunchItems, useIncidents, useCrews, usePayApplications, useLienWaivers,
 } from '../hooks/queries';
 import { useAnimatedNumber } from '../hooks/useAnimatedNumber';
 import { useReducedMotion } from '../hooks/useReducedMotion';
@@ -175,15 +176,11 @@ function DashboardSkeleton() {
   return (
     <PageContainer>
       <Skeleton width="100%" height="120px" borderRadius={borderRadius.xl} />
-      <div style={{ display: 'flex', gap: spacing['4'], marginTop: spacing['5'] }}>
-        {[1, 2, 3, 4, 5].map((i) => (
-          <div key={i} style={{ flex: '1 1 0' }}>
-            <Skeleton width="100%" height="140px" borderRadius={borderRadius.lg} />
-          </div>
-        ))}
-      </div>
       <div style={{ marginTop: spacing['5'] }}>
-        <Skeleton width="100%" height="400px" borderRadius={borderRadius.lg} />
+        <MetricCardSkeleton />
+      </div>
+      <div style={{ marginTop: spacing['2'] }}>
+        <TableRowSkeleton rows={8} />
       </div>
     </PageContainer>
   );
@@ -199,10 +196,14 @@ export const Dashboard: React.FC = () => {
   const { data: project } = useProject(projectId);
   const { data: phases } = useSchedulePhases(projectId);
   const { data: budgetItems } = useBudgetItems(projectId);
-  const { data: rfis } = useRFIs(projectId);
-  const { data: punchItems } = usePunchItems(projectId);
+  const { data: rfisResult } = useRFIs(projectId);
+  const rfis = rfisResult?.data;
+  const { data: punchItemsResult } = usePunchItems(projectId);
+  const punchItems = punchItemsResult?.data;
   const { data: incidents } = useIncidents(projectId);
   const { data: crews } = useCrews(projectId);
+  const { data: payApps } = usePayApplications(projectId);
+  const { data: lienWaivers } = useLienWaivers(projectId);
 
   // ── Derived KPIs ──────────────────────────────────────
 
@@ -257,6 +258,18 @@ export const Dashboard: React.FC = () => {
       : 0,
     [project?.target_completion]
   );
+
+  const missingWaivers = useMemo(() => {
+    const approvedAppIds = (payApps ?? [])
+      .filter((a) => (a as any).status === 'approved' || (a as any).status === 'paid')
+      .map((a) => (a as any).id as string)
+    if (approvedAppIds.length === 0) return []
+    const waivers = lienWaivers ?? []
+    return approvedAppIds.filter((id) => {
+      const appWaivers = (waivers as any[]).filter((w) => w.pay_app_id === id)
+      return appWaivers.length === 0 || appWaivers.every((w) => w.status === 'pending')
+    })
+  }, [payApps, lienWaivers]);
 
   const projectStartDate = useMemo(() =>
     project?.start_date
@@ -426,6 +439,55 @@ export const Dashboard: React.FC = () => {
           onClick={() => navigate('/daily-log')}
         />
       </motion.div>
+
+      {/* ── Action Items ──────────────────────────────────── */}
+      {missingWaivers.length > 0 && (
+        <motion.div
+          initial={reducedMotion ? undefined : { opacity: 0, y: 8 }}
+          animate={reducedMotion ? undefined : { opacity: 1, y: 0 }}
+          transition={reducedMotion ? undefined : { ...staggerTransition, delay: 0.2 }}
+          style={{
+            display: 'flex', alignItems: 'flex-start', gap: spacing['3'],
+            padding: spacing['4'],
+            backgroundColor: colors.surfaceRaised,
+            border: `1px solid ${colors.borderSubtle}`,
+            borderLeft: `3px solid ${colors.statusCritical}`,
+            borderRadius: borderRadius.lg,
+            marginBottom: spacing['5'],
+            boxShadow: shadows.card,
+            cursor: 'pointer',
+          }}
+          onClick={() => navigate('/payment-applications')}
+        >
+          <div style={{
+            width: 36, height: 36, borderRadius: borderRadius.base, flexShrink: 0,
+            backgroundColor: colors.statusCriticalSubtle,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <Scale size={16} color={colors.statusCritical} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['1'] }}>
+              <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+                Lien Waivers Missing
+              </span>
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                minWidth: 20, height: 20, padding: `0 ${spacing['1']}`,
+                backgroundColor: colors.statusCritical, color: colors.white,
+                borderRadius: borderRadius.full, fontSize: typography.fontSize.caption,
+                fontWeight: typography.fontWeight.bold,
+              }}>
+                {missingWaivers.length}
+              </span>
+            </div>
+            <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textSecondary, lineHeight: typography.lineHeight.normal }}>
+              {missingWaivers.length} approved pay app{missingWaivers.length !== 1 ? 's have' : ' has'} no lien waiver on file. Collect before releasing payment.
+            </p>
+          </div>
+          <AlertCircle size={14} color={colors.textTertiary} style={{ flexShrink: 0, marginTop: 2 }} />
+        </motion.div>
+      )}
 
       {/* ── Widget Grid ───────────────────────────────────── */}
       <motion.div

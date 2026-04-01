@@ -56,10 +56,10 @@ export const ProjectHealth: React.FC = () => {
   const projectId = useProjectId();
   const { data: schedulePhases } = useSchedulePhases(projectId);
   const { data: budgetItems } = useBudgetItems(projectId);
-  const { data: punchItems } = usePunchItems(projectId);
-  const { data: rfis } = useRFIs(projectId);
-  const { data: dailyLogs } = useDailyLogs(projectId);
-  const { data: meetings } = useMeetings(projectId);
+  const { data: punchItemsResult } = usePunchItems(projectId);
+  const { data: rfisResult } = useRFIs(projectId);
+  const { data: dailyLogsResult } = useDailyLogs(projectId);
+  const { data: meetingsResult } = useMeetings(projectId);
   const { data: files } = useFiles(projectId);
   const { data: drawings } = useDrawings(projectId);
 
@@ -113,7 +113,7 @@ export const ProjectHealth: React.FC = () => {
       : 'Budget health will be computed once budget items are added.';
 
     // ── Quality (Punch Items) ──
-    const punches = punchItems ?? [];
+    const punches = punchItemsResult?.data ?? [];
     const resolvedPunches = punches.filter(
       (p) => p.status === 'resolved' || p.status === 'verified'
     );
@@ -141,7 +141,7 @@ export const ProjectHealth: React.FC = () => {
       : 'Quality metrics will appear once punch items are logged.';
 
     // ── Safety ──
-    const logs = dailyLogs ?? [];
+    const logs = dailyLogsResult?.data ?? [];
     const totalIncidents = logs.reduce((s, l) => s + (l.incidents ?? 0), 0);
     const totalHours = logs.reduce((s, l) => s + (l.total_hours ?? 0), 0);
     const incidentRate = totalHours > 0 ? (totalIncidents / totalHours) * 1000 : 0;
@@ -157,13 +157,13 @@ export const ProjectHealth: React.FC = () => {
       : 'Safety metrics will be calculated from daily log entries once they are submitted.';
 
     // ── Communication ──
-    const rfiList = rfis ?? [];
+    const rfiList = rfisResult?.data ?? [];
     const overdueRfis = rfiList.filter((r) => {
       if (r.status === 'answered' || r.status === 'closed') return false;
       if (!r.due_date) return false;
       return new Date(r.due_date) < new Date();
     });
-    const meetingList = meetings ?? [];
+    const meetingList = meetingsResult?.data ?? [];
     const commScore = rfiList.length > 0
       ? clamp(Math.round(100 - (overdueRfis.length / Math.max(rfiList.length, 1)) * 100), 0, 100)
       : meetingList.length > 0
@@ -207,7 +207,7 @@ export const ProjectHealth: React.FC = () => {
     const overall = Math.round(dims.reduce((s, d, i) => s + d.score * weights[i], 0));
 
     return { dimensions: dims, overallScore: overall };
-  }, [schedulePhases, budgetItems, punchItems, rfis, dailyLogs, meetings, files, drawings]);
+  }, [schedulePhases, budgetItems, punchItemsResult, rfisResult, dailyLogsResult, meetingsResult, files, drawings]);
 
   const percentile = Math.min(99, Math.max(1, overallScore - 5));
 

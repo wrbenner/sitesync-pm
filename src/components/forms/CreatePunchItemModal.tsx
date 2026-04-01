@@ -33,7 +33,12 @@ const fields: FieldConfig[] = [
     { value: 'critical', label: 'Critical' },
   ]},
   { name: 'assigned_to', label: 'Assigned To', type: 'text', placeholder: 'Person or crew responsible', row: 2 },
-  { name: 'due_date', label: 'Due Date', type: 'date' },
+  { name: 'due_date', label: 'Due Date', type: 'date', row: 3 },
+  { name: 'verification_role', label: 'Verification Role', type: 'select', row: 3, options: [
+    { value: 'superintendent', label: 'Superintendent' },
+    { value: 'project_manager', label: 'Project Manager' },
+    { value: 'owners_rep', label: "Owner's Rep" },
+  ]},
 ]
 
 const CreatePunchItemModal: React.FC<CreatePunchItemModalProps> = ({ open, onClose, onSubmit }) => (

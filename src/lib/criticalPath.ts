@@ -1,6 +1,111 @@
 // Critical Path Method (CPM) calculation for construction scheduling
 // Forward pass → Early Start/Finish, Backward pass → Late Start/Finish, Float = LS - ES
 
+import type { SchedulePhase } from '../stores/scheduleStore'
+
+export interface ScheduleKPIs {
+  scheduleVarianceDays: number
+  spi: number
+  criticalPathLength: number
+  floatConsumedPct: number
+  activitiesOnTimePct: number
+  projectedCompletionDate: string
+}
+
+export function computeScheduleKPIs(phases: SchedulePhase[]): ScheduleKPIs {
+  if (phases.length === 0) {
+    return {
+      scheduleVarianceDays: 0,
+      spi: 1,
+      criticalPathLength: 0,
+      floatConsumedPct: 0,
+      activitiesOnTimePct: 100,
+      projectedCompletionDate: '',
+    }
+  }
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const todayMs = today.getTime()
+
+  // Schedule variance: baselineEnd minus currentEnd of the last critical phase (positive = ahead)
+  const criticalPhases = phases.filter(p => p.critical)
+  let scheduleVarianceDays = 0
+  if (criticalPhases.length > 0) {
+    const lastCritical = [...criticalPhases].sort(
+      (a, b) => new Date(b.endDate).getTime() - new Date(a.endDate).getTime()
+    )[0]
+    if (lastCritical.baselineEndDate) {
+      const baselineEnd = new Date(lastCritical.baselineEndDate)
+      baselineEnd.setHours(0, 0, 0, 0)
+      const currentEnd = new Date(lastCritical.endDate)
+      currentEnd.setHours(0, 0, 0, 0)
+      scheduleVarianceDays = Math.round(
+        (baselineEnd.getTime() - currentEnd.getTime()) / 86400000
+      )
+    }
+  }
+
+  // SPI = sum(earned_progress * planned_duration) / sum(expected_progress_by_today * planned_duration)
+  let earnedSum = 0
+  let plannedSum = 0
+  for (const phase of phases) {
+    const start = new Date(phase.startDate)
+    const end = new Date(phase.endDate)
+    start.setHours(0, 0, 0, 0)
+    end.setHours(0, 0, 0, 0)
+    const planDuration = Math.max(1, (end.getTime() - start.getTime()) / 86400000)
+
+    let expectedProgress: number
+    if (todayMs <= start.getTime()) {
+      expectedProgress = 0
+    } else if (todayMs >= end.getTime()) {
+      expectedProgress = 1
+    } else {
+      expectedProgress = (todayMs - start.getTime()) / (end.getTime() - start.getTime())
+    }
+
+    earnedSum += (phase.progress / 100) * planDuration
+    plannedSum += expectedProgress * planDuration
+  }
+  const spi = plannedSum > 0 ? Math.round((earnedSum / plannedSum) * 100) / 100 : 1
+
+  // Float consumed: avg ratio of slippage to total float across phases that have float
+  const phasesWithFloat = phases.filter(p => p.floatDays != null && p.floatDays > 0)
+  let floatConsumedPct = 0
+  if (phasesWithFloat.length > 0) {
+    const totalRatio = phasesWithFloat.reduce((sum, p) => {
+      return sum + Math.min(1, Math.max(0, p.slippageDays) / p.floatDays!)
+    }, 0)
+    floatConsumedPct = Math.round((totalRatio / phasesWithFloat.length) * 100)
+  }
+
+  // Activities on time: slippageDays <= 0
+  const onTimeCount = phases.filter(p => p.slippageDays <= 0).length
+  const activitiesOnTimePct = Math.round((onTimeCount / phases.length) * 100)
+
+  // Projected completion: adjust latest end date by remaining work scaled by SPI
+  const latestEnd = phases.reduce((latest, p) =>
+    new Date(p.endDate) > new Date(latest.endDate) ? p : latest
+  )
+  let projectedCompletionDate = latestEnd.endDate
+  if (spi > 0) {
+    const endMs = new Date(latestEnd.endDate).setHours(0, 0, 0, 0)
+    const remainingMs = Math.max(0, endMs - todayMs)
+    const adjustedMs = remainingMs / spi
+    projectedCompletionDate = new Date(todayMs + adjustedMs).toISOString().split('T')[0]
+  }
+
+  return {
+    scheduleVarianceDays,
+    spi,
+    criticalPathLength: criticalPhases.length,
+    floatConsumedPct,
+    activitiesOnTimePct,
+    projectedCompletionDate,
+  }
+}
+
 export interface CPMTask {
   id: string
   title: string

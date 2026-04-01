@@ -1,0 +1,11 @@
+UNRESOLVED FROM CYCLE 1:
+- [not_fixed] document-management-C1-001: No changes in src/api/endpoints/documents.ts indicate version control or revision comparison implementation
+- [partial] document-management-C2-002: organizationScope.ts and projectScope.ts middleware added, but documents.ts endpoint changes unclear - RLS enforcement not explicitly verified in diff
+- [not_fixed] document-management-C3-003: documents.ts modified (+177 lines) but diff content not shown; cannot verify itemCount hardcoding fix
+- [not_fixed] document-management-H1-004: No evidence of bulk operations, drag-and-drop, or keyboard navigation in provided diff summary
+- [partial] document-management-H2-005: ai.ts and aiService.ts modified (+99, +37 lines), suggesting AI integration attempted, but no specific auto-tagging/clash detection implementation visible
+- [not_fixed] document-management-H3-006: No changes to disciplineColor function or design token color integration visible in diff
+- [partial] document-management-H4-007: ErrorBoundary.tsx modified (+17 lines), but no empty states or loading skeletons confirmed in diff
+- [not_fixed] document-management-H5-008: No real-time collaboration, presence indicators, or live markup sync changes detected
+- [not_fixed] document-management-M1-009: DrawingViewer accessibility and ARIA labels not addressed in provided changes
+- [not_fixed] document-management-M2-010: No type safety improvements to DrawingRow/FileRow spread operators visible in diff
