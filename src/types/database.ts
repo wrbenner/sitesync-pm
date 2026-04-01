@@ -3871,56 +3871,110 @@ export type Database = {
       projects: {
         Row: {
           address: string | null
+          architect_contact_id: string | null
+          architect_name: string | null
+          building_area_sqft: number | null
           city: string | null
+          contract_type: 'lump_sum' | 'gmp' | 'cost_plus' | 'time_and_materials' | 'unit_price' | null
           contract_value: number | null
+          cover_photo_url: string | null
           created_at: string | null
+          delivery_method: 'design_bid_build' | 'cm_at_risk' | 'design_build' | 'integrated_project_delivery' | null
+          description: string | null
           general_contractor: string | null
           id: string
+          latitude: number | null
+          logo_url: string | null
+          longitude: number | null
           name: string
+          num_floors: number | null
           organization_id: string | null
+          owner_contact_id: string | null
           owner_id: string | null
+          owner_name: string | null
           portal_config: Json | null
+          project_phase: 'preconstruction' | 'mobilization' | 'construction' | 'commissioning' | 'closeout' | 'warranty' | null
+          project_type: 'commercial_office' | 'mixed_use' | 'healthcare' | 'education' | 'multifamily' | 'industrial' | 'data_center' | 'retail' | 'hospitality' | 'government' | 'infrastructure' | null
+          retainage_rate: number | null
           start_date: string | null
           state: string | null
           status: string | null
           target_completion: string | null
+          time_zone: string | null
           updated_at: string | null
+          weather_location_id: string | null
           zip: string | null
         }
         Insert: {
           address?: string | null
+          architect_contact_id?: string | null
+          architect_name?: string | null
+          building_area_sqft?: number | null
           city?: string | null
+          contract_type?: 'lump_sum' | 'gmp' | 'cost_plus' | 'time_and_materials' | 'unit_price' | null
           contract_value?: number | null
+          cover_photo_url?: string | null
           created_at?: string | null
+          delivery_method?: 'design_bid_build' | 'cm_at_risk' | 'design_build' | 'integrated_project_delivery' | null
+          description?: string | null
           general_contractor?: string | null
           id?: string
+          latitude?: number | null
+          logo_url?: string | null
+          longitude?: number | null
           name: string
+          num_floors?: number | null
           organization_id?: string | null
+          owner_contact_id?: string | null
           owner_id?: string | null
+          owner_name?: string | null
           portal_config?: Json | null
+          project_phase?: 'preconstruction' | 'mobilization' | 'construction' | 'commissioning' | 'closeout' | 'warranty' | null
+          project_type?: 'commercial_office' | 'mixed_use' | 'healthcare' | 'education' | 'multifamily' | 'industrial' | 'data_center' | 'retail' | 'hospitality' | 'government' | 'infrastructure' | null
+          retainage_rate?: number | null
           start_date?: string | null
           state?: string | null
           status?: string | null
           target_completion?: string | null
+          time_zone?: string | null
           updated_at?: string | null
+          weather_location_id?: string | null
           zip?: string | null
         }
         Update: {
           address?: string | null
+          architect_contact_id?: string | null
+          architect_name?: string | null
+          building_area_sqft?: number | null
           city?: string | null
+          contract_type?: 'lump_sum' | 'gmp' | 'cost_plus' | 'time_and_materials' | 'unit_price' | null
           contract_value?: number | null
+          cover_photo_url?: string | null
           created_at?: string | null
+          delivery_method?: 'design_bid_build' | 'cm_at_risk' | 'design_build' | 'integrated_project_delivery' | null
+          description?: string | null
           general_contractor?: string | null
           id?: string
+          latitude?: number | null
+          logo_url?: string | null
+          longitude?: number | null
           name?: string
+          num_floors?: number | null
           organization_id?: string | null
+          owner_contact_id?: string | null
           owner_id?: string | null
+          owner_name?: string | null
           portal_config?: Json | null
+          project_phase?: 'preconstruction' | 'mobilization' | 'construction' | 'commissioning' | 'closeout' | 'warranty' | null
+          project_type?: 'commercial_office' | 'mixed_use' | 'healthcare' | 'education' | 'multifamily' | 'industrial' | 'data_center' | 'retail' | 'hospitality' | 'government' | 'infrastructure' | null
+          retainage_rate?: number | null
           start_date?: string | null
           state?: string | null
           status?: string | null
           target_completion?: string | null
+          time_zone?: string | null
           updated_at?: string | null
+          weather_location_id?: string | null
           zip?: string | null
         }
         Relationships: [
@@ -3929,6 +3983,20 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_owner_contact_id_fkey"
+            columns: ["owner_contact_id"]
+            isOneToOne: false
+            referencedRelation: "directory_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_architect_contact_id_fkey"
+            columns: ["architect_contact_id"]
+            isOneToOne: false
+            referencedRelation: "directory_contacts"
             referencedColumns: ["id"]
           },
         ]

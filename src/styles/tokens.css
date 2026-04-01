@@ -1,0 +1,208 @@
+/* SiteSync AI Design Tokens
+   Single source of truth for all CSS custom properties.
+   Components use these via inline styles (theme.ts CSS var references)
+   or directly in stylesheets. */
+
+:root {
+  /* ── Brand / Primary ──────────────────────────────── */
+  --color-primary: #F47820;
+  --color-primary-hover: #E06A10;
+  --color-primary-pressed: #D05E08;
+  --color-primary-subtle: rgba(244, 120, 32, 0.08);
+  --color-primary-light: rgba(244, 120, 32, 0.12);
+  --color-primary-text: #C45A0C;
+
+  /* ── Surfaces ─────────────────────────────────────── */
+  --color-surfacePage: #FAFAF8;
+  --color-surfaceSidebar: #F6F3F0;
+  --color-surfaceRaised: #FFFFFF;
+  --color-surfaceInset: #F3EFEC;
+  --color-surfaceHover: #F0EDE8;
+  --color-surfaceSelected: #FEF7F2;
+  --color-surfaceFlat: #F6F3F0;
+  --color-surfaceDisabled: #EDEDEB;
+
+  /* ── Borders ──────────────────────────────────────── */
+  --color-borderSubtle: #F0EDE9;
+  --color-borderDefault: #E5E1DC;
+  --color-borderLight: #F0EDE9;
+  --color-borderHover: #D5D0CA;
+  --color-borderFocus: #F47820;
+
+  /* ── Text ─────────────────────────────────────────── */
+  --color-textPrimary: #1A1613;
+  --color-textSecondary: #5C5550;
+  --color-textTertiary: #9A9490;
+  --color-textDisabled: #C5C0BB;
+  --color-textOnDark: rgba(255, 255, 255, 0.92);
+  --color-textOnDarkMuted: rgba(255, 255, 255, 0.5);
+
+  /* ── Status ───────────────────────────────────────── */
+  --color-statusActive: #2D8A6E;
+  --color-statusActiveSubtle: rgba(45, 138, 110, 0.08);
+  --color-statusActiveExtraSubtle: rgba(45, 138, 110, 0.04);
+  --color-statusPending: #C4850C;
+  --color-statusPendingSubtle: rgba(196, 133, 12, 0.06);
+  --color-statusCritical: #C93B3B;
+  --color-statusCriticalSubtle: rgba(201, 59, 59, 0.06);
+  --color-statusInfo: #3A7BC8;
+  --color-statusInfoSubtle: rgba(58, 123, 200, 0.06);
+  --color-statusInfoExtraSubtle: rgba(58, 123, 200, 0.04);
+  --color-statusInfoBright: #4A9EE8;
+  --color-statusReview: #7C5DC7;
+  --color-statusReviewSubtle: rgba(124, 93, 199, 0.06);
+  --color-statusNeutral: #8C8580;
+  --color-statusNeutralSubtle: rgba(140, 133, 128, 0.06);
+  --color-statusWarning: #D97706;
+  --color-statusWarningSubtle: rgba(217, 119, 6, 0.06);
+  --color-statusSuccess: #166534;
+  --color-statusSuccessSubtle: rgba(22, 101, 52, 0.06);
+
+  /* ── Indigo / AI Accent ───────────────────────────── */
+  --color-indigo: #4F46E5;
+  --color-indigoSubtle: rgba(79, 70, 229, 0.06);
+
+  /* ── Overlays ─────────────────────────────────────── */
+  --color-overlayDark: rgba(0, 0, 0, 0.4);
+  --color-overlayLight: rgba(255, 255, 255, 0.9);
+  --color-overlayScrim: rgba(0, 0, 0, 0.6);
+  --color-overlayHeavy: rgba(0, 0, 0, 0.8);
+  --color-overlayBackdrop: rgba(0, 0, 0, 0.5);
+  --color-overlayWhiteThin: rgba(255, 255, 255, 0.1);
+  --color-overlayWhiteMedium: rgba(255, 255, 255, 0.6);
+  --color-overlayWhiteBold: rgba(255, 255, 255, 0.7);
+  --color-overlayBlackThin: rgba(0, 0, 0, 0.03);
+  --color-overlayBlackLight: rgba(0, 0, 0, 0.08);
+  --color-overlayBlackMedium: rgba(0, 0, 0, 0.1);
+  --color-overlayBlackHeavy: rgba(0, 0, 0, 0.12);
+
+  /* ── Error / Warning Banners ──────────────────────── */
+  --color-errorSubtle: rgba(200, 50, 50, 0.06);
+  --color-errorBannerBg: rgba(201, 59, 59, 0.06);
+  --color-warningBannerBg: rgba(196, 133, 12, 0.06);
+  --color-infoBannerBg: rgba(58, 123, 200, 0.06);
+
+  /* ── Topbar ───────────────────────────────────────── */
+  --color-topbarDark: rgba(12, 13, 15, 0.72);
+  --color-topbarLight: rgba(255, 255, 255, 0.72);
+  --color-darkHoverBg: rgba(255, 255, 255, 0.06);
+  --color-darkBorder: rgba(255, 255, 255, 0.1);
+  --color-darkMutedText: rgba(255, 255, 255, 0.5);
+
+  /* ── Typography ───────────────────────────────────── */
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-family-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --font-size-caption: 11px;
+  --font-size-label: 12px;
+  --font-size-sm: 13px;
+  --font-size-body: 14px;
+  --font-size-title: 16px;
+  --font-size-subtitle: 18px;
+  --font-size-medium: 20px;
+  --font-size-large: 24px;
+  --font-size-heading: 28px;
+  --font-size-display: 36px;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --line-height-none: 1;
+  --line-height-tight: 1.2;
+  --line-height-snug: 1.35;
+  --line-height-normal: 1.55;
+  --line-height-relaxed: 1.7;
+  --letter-spacing-tighter: -0.03em;
+  --letter-spacing-tight: -0.02em;
+  --letter-spacing-normal: -0.011em;
+  --letter-spacing-wide: 0.01em;
+  --letter-spacing-wider: 0.04em;
+  --letter-spacing-widest: 0.08em;
+
+  /* ── Border Radius ────────────────────────────────── */
+  --radius-sm: 4px;
+  --radius-base: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-full: 9999px;
+
+  /* ── Shadows ──────────────────────────────────────── */
+  --shadow-none: none;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(0, 0, 0, 0.015);
+  --shadow-card-hover: 0 3px 12px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.02);
+  --shadow-dropdown: 0 4px 16px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.03);
+  --shadow-panel: 0 16px 48px rgba(0, 0, 0, 0.12);
+  --shadow-pressed: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+  --shadow-glow: 0 4px 24px rgba(244, 120, 32, 0.25);
+
+  /* ── Transitions ──────────────────────────────────── */
+  --transition-instant: 80ms ease-out;
+  --transition-quick: 160ms cubic-bezier(0.25, 0.1, 0.25, 1);
+  --transition-smooth: 300ms cubic-bezier(0.32, 0.72, 0, 1);
+  --transition-spring: 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ── Spacing (4px grid) ───────────────────────────── */
+  --space-0: 0px;
+  --space-0-5: 2px;
+  --space-1: 4px;
+  --space-1-5: 6px;
+  --space-2: 8px;
+  --space-2-5: 10px;
+  --space-3: 12px;
+  --space-3-5: 14px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 28px;
+  --space-8: 32px;
+  --space-9: 36px;
+  --space-10: 40px;
+  --space-11: 44px;
+  --space-12: 48px;
+  --space-14: 56px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+
+  /* ── Layout ───────────────────────────────────────── */
+  --sidebar-width: 252px;
+  --sidebar-collapsed: 72px;
+  --topbar-height: 64px;
+  --content-max-width: 1140px;
+  --page-padding-x: 36px;
+  --page-padding-y: 36px;
+}
+
+/* ── Dark Mode ────────────────────────────────────────── */
+
+[data-theme='dark'] {
+  --color-surfacePage: #0C0D0F;
+  --color-surfaceSidebar: #111214;
+  --color-surfaceRaised: #1A1B1E;
+  --color-surfaceInset: #141518;
+  --color-surfaceHover: #1F2024;
+  --color-surfaceSelected: #2A1F16;
+  --color-surfaceFlat: #171819;
+  --color-surfaceDisabled: #2A2B2E;
+  --color-borderSubtle: rgba(255, 255, 255, 0.06);
+  --color-borderDefault: rgba(255, 255, 255, 0.1);
+  --color-borderLight: rgba(255, 255, 255, 0.06);
+  --color-borderHover: rgba(255, 255, 255, 0.15);
+  --color-textPrimary: rgba(255, 255, 255, 0.92);
+  --color-textSecondary: rgba(255, 255, 255, 0.6);
+  --color-textTertiary: rgba(255, 255, 255, 0.38);
+  --color-textDisabled: rgba(255, 255, 255, 0.2);
+
+  color-scheme: dark;
+}
+
+/* ── Mobile Overrides ─────────────────────────────────── */
+
+@media (max-width: 768px) {
+  :root {
+    --page-padding-x: 16px;
+    --page-padding-y: 16px;
+  }
+}

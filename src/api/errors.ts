@@ -1,10 +1,13 @@
 // Typed error hierarchy for the SiteSync API layer.
 // Every error has a user-friendly message for toast display.
 
+import type { PostgrestError } from '@supabase/supabase-js'
+
 export class ApiError extends Error {
   status: number
   code: string
   userMessage: string
+  a11yMessage: string
   details?: unknown
 
   constructor(message: string, status = 500, code = 'UNKNOWN', userMessage?: string, details?: unknown) {
@@ -13,6 +16,7 @@ export class ApiError extends Error {
     this.status = status
     this.code = code
     this.userMessage = userMessage || humanizeError(message)
+    this.a11yMessage = `Error: ${this.userMessage}`
     this.details = details
   }
 }
@@ -54,10 +58,41 @@ export class NotFoundError extends ApiError {
   }
 }
 
+export class RetryableError extends ApiError {
+  retryAfterMs: number
+  constructor(message: string, retryAfterMs = 5000) {
+    super(message, 503, 'RETRYABLE', 'Something went wrong. Retrying automatically...')
+    this.name = 'RetryableError'
+    this.retryAfterMs = retryAfterMs
+  }
+}
+
 // Convert a raw Supabase/Postgres error into a typed ApiError
-export function transformSupabaseError(error: { message: string; code?: string; details?: string | null }): ApiError {
+export function transformSupabaseError(
+  error: PostgrestError | { message: string; code?: string; details?: string | null; hint?: string | null }
+): ApiError {
   const msg = error.message?.toLowerCase() || ''
   const code = error.code || ''
+
+  // Rate limiting
+  if (code === '429' || msg.includes('rate limit') || msg.includes('too many requests')) {
+    return new ApiError(error.message, 429, 'RATE_LIMITED', 'Too many requests. Please wait a moment and try again.')
+  }
+
+  // Timeout
+  if (msg.includes('timeout') || msg.includes('statement timeout') || code === '57014') {
+    return new ApiError(error.message, 504, 'TIMEOUT', 'The request timed out. Please try again.')
+  }
+
+  // Payload too large
+  if (msg.includes('payload too large') || msg.includes('request entity too large')) {
+    return new ApiError(error.message, 413, 'PAYLOAD_TOO_LARGE', 'The file or data is too large. Please reduce the size and try again.')
+  }
+
+  // Storage quota
+  if (msg.includes('quota') || msg.includes('storage limit')) {
+    return new ApiError(error.message, 507, 'STORAGE_QUOTA', 'Storage limit reached. Please contact your administrator.')
+  }
 
   // Auth errors
   if (code === 'PGRST301' || msg.includes('jwt') || msg.includes('token')) {
@@ -89,7 +124,16 @@ export function transformSupabaseError(error: { message: string; code?: string; 
     return new NetworkError(error.message)
   }
 
-  return new ApiError(error.message, 500, code, humanizeError(error.message), error.details)
+  const details = 'details' in error ? error.details : undefined
+  return new ApiError(error.message, 500, code, humanizeError(error.message), details)
+}
+
+export function isRetryable(error: unknown): error is RetryableError {
+  return (
+    error instanceof RetryableError ||
+    error instanceof NetworkError ||
+    (error instanceof ApiError && error.status === 429)
+  )
 }
 
 // Convert technical error messages into user-friendly text

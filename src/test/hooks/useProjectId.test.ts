@@ -1,15 +1,28 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook } from '@testing-library/react'
 import { useProjectId } from '../../hooks/useProjectId'
 
+const mockActiveProjectId = vi.fn<[], string | null>()
+
+vi.mock('../../stores/projectContextStore', () => ({
+  useProjectContext: (selector: (s: { activeProjectId: string | null }) => unknown) =>
+    selector({ activeProjectId: mockActiveProjectId() }),
+}))
+
 describe('useProjectId', () => {
-  it('should return the seed project ID', () => {
-    const { result } = renderHook(() => useProjectId())
-    expect(result.current).toBe('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
+  beforeEach(() => {
+    mockActiveProjectId.mockReset()
   })
 
-  it('should return a string', () => {
+  it('returns the active project ID from the context store', () => {
+    mockActiveProjectId.mockReturnValue('11111111-1111-4111-a111-111111111111')
     const { result } = renderHook(() => useProjectId())
-    expect(typeof result.current).toBe('string')
+    expect(result.current).toBe('11111111-1111-4111-a111-111111111111')
+  })
+
+  it('returns undefined when no project is active', () => {
+    mockActiveProjectId.mockReturnValue(null)
+    const { result } = renderHook(() => useProjectId())
+    expect(result.current).toBeUndefined()
   })
 })

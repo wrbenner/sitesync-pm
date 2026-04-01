@@ -7,10 +7,13 @@ import {
   getPendingCount,
   getConflictCount,
   getLastSyncTimestamp,
+  resolveMutationConflict,
   type SyncProgressCallback,
   type CacheProgressCallback,
   type CacheResult,
 } from './offlineDb'
+
+export { resolveMutationConflict }
 
 export type ConnectionStatus = 'online' | 'offline'
 export type SyncState = 'idle' | 'syncing' | 'caching' | 'error'

@@ -64,4 +64,49 @@ export const queryKeys = {
   projectSnapshots: {
     all: (projectId: string) => ['project_snapshots', projectId] as const,
   },
+  metrics: {
+    project: (projectId: string) => ['metrics', 'project', projectId] as const,
+    portfolio: (orgId: string) => ['metrics', 'portfolio', orgId] as const,
+  },
+  organizations: {
+    all: ['organizations'] as const,
+    detail: (id: string) => ['organizations', id] as const,
+    projects: (orgId: string) => ['organizations', orgId, 'projects'] as const,
+    portfolio: (orgId: string) => ['organizations', orgId, 'portfolio'] as const,
+  },
+  projectMembers: {
+    all: (projectId: string) => ['project_members', projectId] as const,
+  },
+  auditLog: {
+    project: (projectId: string) => ['audit_log', projectId] as const,
+    projectFiltered: (projectId: string, filters: Record<string, unknown>) =>
+      ['audit_log', projectId, filters] as const,
+    entity: (entityType: string, entityId: string) =>
+      ['audit_log', 'entity', entityType, entityId] as const,
+  },
 } as const
+
+// Returns all project-scoped query keys for bulk invalidation (e.g. invalidateAll).
+export function allProjectEntityKeys(projectId: string): ReadonlyArray<readonly unknown[]> {
+  return [
+    queryKeys.rfis.all(projectId),
+    queryKeys.submittals.all(projectId),
+    queryKeys.punchItems.all(projectId),
+    queryKeys.tasks.all(projectId),
+    queryKeys.drawings.all(projectId),
+    queryKeys.dailyLogs.all(projectId),
+    queryKeys.crews.all(projectId),
+    queryKeys.budgetItems.all(projectId),
+    queryKeys.changeOrders.all(projectId),
+    queryKeys.meetings.all(projectId),
+    queryKeys.directoryContacts.all(projectId),
+    queryKeys.files.all(projectId),
+    queryKeys.fieldCaptures.all(projectId),
+    queryKeys.schedulePhases.all(projectId),
+    queryKeys.activityFeed.all(projectId),
+    queryKeys.aiInsights.all(projectId),
+    queryKeys.projectSnapshots.all(projectId),
+    queryKeys.metrics.project(projectId),
+    queryKeys.projectMembers.all(projectId),
+  ]
+}

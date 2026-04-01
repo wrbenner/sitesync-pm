@@ -21,15 +21,18 @@ import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import type { Shortcut } from './hooks/useKeyboardShortcuts';
 import { useTheme } from './hooks/useTheme';
 import { useRealtimeSubscription, usePresence } from './hooks/useRealtimeSubscription';
+import { useRealtimeInvalidation } from './hooks/useRealtimeInvalidation';
 import { useProjectId } from './hooks/useProjectId';
 import { useAuth } from './hooks/useAuth';
 import { SkipToContent } from './components/ui/SkipToContent';
 import { RouteAnnouncer } from './components/ui/RouteAnnouncer';
+import { LiveRegion } from './components/ui/LiveRegion';
 import { ConflictResolutionModal } from './components/ui/ConflictResolutionModal';
 import { useServiceWorkerUpdate } from './hooks/useServiceWorkerUpdate';
 import { useProjectCache } from './hooks/useProjectCache';
 import { useOfflineStatus } from './hooks/useOfflineStatus';
 import { syncManager } from './lib/syncManager';
+import { OrganizationProvider } from './hooks/useOrganization';
 
 // Auth pages
 const Login = lazy(() => import('./pages/auth/Login').then((m) => ({ default: m.Login })));
@@ -208,6 +211,7 @@ function AppContent() {
   const isAuthPage = ['/login', '/signup', '/onboarding'].includes(location.pathname);
 
   useRealtimeSubscription(isAuthPage ? undefined : projectId, isAuthPage ? undefined : user?.id);
+  useRealtimeInvalidation();
   useProjectCache(isAuthPage ? undefined : projectId);
 
   // Listen for background sync completion from SW
@@ -364,13 +368,16 @@ function App() {
     <Sentry.ErrorBoundary fallback={({ error }: { error?: Error }) => <SentryFallback error={error} />}>
       <style>{animationKeyframes}</style>
       <QueryClientProvider client={queryClient}>
-        <ToastProvider>
-          <HashRouter>
-            <AppContent />
-          </HashRouter>
-          <Toaster position="bottom-right" richColors closeButton />
-        </ToastProvider>
-        {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
+        <OrganizationProvider>
+          <ToastProvider>
+            <LiveRegion />
+            <HashRouter>
+              <AppContent />
+            </HashRouter>
+            <Toaster position="bottom-right" richColors closeButton />
+          </ToastProvider>
+          {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
+        </OrganizationProvider>
       </QueryClientProvider>
     </Sentry.ErrorBoundary>
   );

@@ -4,6 +4,7 @@ import { PageContainer, Card, Btn, Tag, Skeleton, useToast } from '../components
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme';
 import { getDrawings } from '../api/endpoints/documents';
 import { useQuery } from '../hooks/useQuery';
+import { useProjectId } from '../hooks/useProjectId';
 import { AIAnnotationIndicator } from '../components/ai/AIAnnotation';
 import { getAnnotationsForEntity } from '../data/aiAnnotations';
 import { DrawingViewer } from '../components/drawings/DrawingViewer';
@@ -51,7 +52,8 @@ const gridColumns = '60px 80px 1fr 120px 80px 100px 70px 120px 100px 70px';
 
 export const Drawings: React.FC = () => {
   const { addToast } = useToast();
-  const { data: drawings, loading } = useQuery('drawings', getDrawings);
+  const projectId = useProjectId();
+  const { data: drawings, loading } = useQuery(`drawings-${projectId}`, () => getDrawings(projectId!), { enabled: !!projectId });
   const [filter, setFilter] = useState('All');
   const [selectedDrawing, setSelectedDrawing] = useState<NonNullable<typeof drawings>[0] | null>(null);
   const [viewerDrawing, setViewerDrawing] = useState<NonNullable<typeof drawings>[0] | null>(null);

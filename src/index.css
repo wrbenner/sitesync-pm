@@ -1,45 +1,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300..700&display=swap');
+@import './styles/tokens.css';
 
-/* ── CSS Custom Properties (light mode defaults) ──────── */
+/* color-scheme hint for light mode */
 :root {
-  --color-surfacePage: #FAFAF8;
-  --color-surfaceSidebar: #F6F3F0;
-  --color-surfaceRaised: #FFFFFF;
-  --color-surfaceInset: #F3EFEC;
-  --color-surfaceHover: #F0EDE8;
-  --color-surfaceSelected: #FEF7F2;
-  --color-surfaceFlat: #F6F3F0;
-  --color-borderSubtle: #F0EDE9;
-  --color-borderDefault: #E5E1DC;
-  --color-borderLight: #F0EDE9;
-  --color-textPrimary: #1A1613;
-  --color-textSecondary: #5C5550;
-  --color-textTertiary: #9A9490;
-  --color-cardBackground: #FFFFFF;
-  --color-lightBackground: #FAFAF8;
-
   color-scheme: light dark;
-}
-
-/* Dark mode via data-theme attribute (set by useTheme hook) */
-[data-theme="dark"] {
-  --color-surfacePage: #0C0D0F;
-  --color-surfaceSidebar: #111214;
-  --color-surfaceRaised: #1A1B1E;
-  --color-surfaceInset: #141518;
-  --color-surfaceHover: #1F2024;
-  --color-surfaceSelected: #2A1F16;
-  --color-surfaceFlat: #171819;
-  --color-borderSubtle: rgba(255, 255, 255, 0.06);
-  --color-borderDefault: rgba(255, 255, 255, 0.1);
-  --color-borderLight: rgba(255, 255, 255, 0.06);
-  --color-textPrimary: rgba(255, 255, 255, 0.92);
-  --color-textSecondary: rgba(255, 255, 255, 0.6);
-  --color-textTertiary: rgba(255, 255, 255, 0.38);
-  --color-cardBackground: #1A1B1E;
-  --color-lightBackground: #0C0D0F;
-
-  color-scheme: dark;
 }
 
 /* ── Reset ────────────────────────────────────────────── */

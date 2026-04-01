@@ -10,13 +10,14 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { type ZodType, ZodError } from 'zod'
-import { supabase } from '../../lib/supabase'
 import { usePermissions, PermissionError, type Permission } from '../usePermissions'
 import { useProjectId } from '../useProjectId'
 import { useAuth } from '../useAuth'
 import { toast } from 'sonner'
 import posthog from '../../lib/analytics'
 import Sentry from '../../lib/sentry'
+import { invalidateEntity, type EntityType } from '../../api/invalidation'
+import { logAuditEntry } from '../../lib/auditLogger'
 
 // ── Types ────────────────────────────────────────────────
 
@@ -42,16 +43,22 @@ interface AuditedMutationConfig<TParams, TResult> {
   // The actual database operation
   mutationFn: (params: TParams) => Promise<TResult>
 
-  // Query keys to invalidate on success
-  invalidateKeys: (params: TParams, result: TResult) => (string | unknown)[][]
+  // Query keys to invalidate on success IN ADDITION to the entity's INVALIDATION_MAP entries.
+  // Omit this to rely solely on the map (preferred). Include it for detail-page or non-standard keys.
+  invalidateKeys?: (params: TParams, result: TResult) => (string | unknown)[][]
 
-  // Audit trail metadata
-  entityType: string
-  action: string
+  // Audit trail metadata. When entityType matches a known EntityType, the INVALIDATION_MAP
+  // is applied automatically so cross-entity dependencies (metrics, activity feed) are always fresh.
+  entityType: EntityType | string
+  action: 'create' | 'update' | 'delete' | 'status_change' | 'approve' | 'reject' | 'submit' | 'close'
   getEntityId?: (params: TParams, result?: TResult) => string | undefined
   getEntityTitle?: (params: TParams) => string | undefined
-  getOldValue?: (params: TParams) => Record<string, unknown> | undefined
-  getNewValue?: (params: TParams, result?: TResult) => Record<string, unknown> | undefined
+  // Snapshot of the record BEFORE the mutation (omit for creates)
+  getBeforeState?: (params: TParams) => Record<string, unknown> | undefined
+  // Snapshot of the record AFTER the mutation (omit for deletes)
+  getAfterState?: (params: TParams, result?: TResult) => Record<string, unknown> | undefined
+  // Additional metadata to attach to the audit entry
+  getAuditMetadata?: (params: TParams) => Record<string, unknown> | undefined
 
   // Optimistic update (optional)
   optimistic?: {
@@ -128,19 +135,18 @@ export function useAuditedMutation<TParams, TResult>(config: AuditedMutationConf
       // Step 3: Execute the actual mutation
       const result = await config.mutationFn(params)
 
-      // Step 4: Write audit trail (fire and forget)
-      if (projectId) {
-        supabase.from('audit_trail' as any).insert({
-          project_id: projectId,
-          actor_id: user?.id || null,
+      // Step 4: Write audit trail (fire and forget, failures never block the user)
+      const entityId = config.getEntityId?.(params, result)
+      if (projectId && entityId) {
+        logAuditEntry({
+          projectId,
+          entityType: config.entityType,
+          entityId,
           action: config.action,
-          entity_type: config.entityType,
-          entity_id: config.getEntityId?.(params, result) || null,
-          entity_title: config.getEntityTitle?.(params) || null,
-          old_value: config.getOldValue?.(params) || null,
-          new_value: config.getNewValue?.(params, result) || null,
-          user_agent: navigator.userAgent,
-        } as any).then(() => {})
+          beforeState: config.getBeforeState?.(params),
+          afterState: config.getAfterState?.(params, result),
+          metadata: config.getAuditMetadata?.(params),
+        }).catch(() => {}) // already logged inside logAuditEntry
       }
 
       return result
@@ -148,7 +154,12 @@ export function useAuditedMutation<TParams, TResult>(config: AuditedMutationConf
 
     // ── onSuccess: Invalidate caches + analytics ─────
     onSuccess: (result, params) => {
-      const keys = config.invalidateKeys(params, result)
+      // Always invalidate via the map first (handles cross-entity deps).
+      if (projectId) {
+        invalidateEntity(config.entityType as EntityType, projectId)
+      }
+      // Then any caller-specified extra keys (detail pages, non-standard keys).
+      const keys = config.invalidateKeys?.(params, result) ?? []
       for (const key of keys) {
         queryClient.invalidateQueries({ queryKey: key })
       }

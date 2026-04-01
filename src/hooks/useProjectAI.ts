@@ -1,6 +1,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useProjectId } from './useProjectId'
 import { supabase } from '../lib/supabase'
+import { aiService } from '../lib/aiService'
+import type { AIMessage, AIContext } from '../types/ai'
 
 export interface ToolResult {
   tool: string
@@ -30,6 +32,7 @@ export interface ChatMessage {
   pendingAction?: PendingAction
   suggestedPrompts?: string[]
   entityRefs?: EntityRef[]
+  streaming?: boolean
 }
 
 interface UseProjectAIReturn {
@@ -58,7 +61,6 @@ function parseEntityRefs(text: string): EntityRef[] {
 // Parse suggested follow-ups from AI response
 function parseSuggestedPrompts(text: string): string[] {
   const prompts: string[] = []
-  // Look for numbered follow-up suggestions
   const lines = text.split('\n')
   let inFollowUp = false
   for (const line of lines) {
@@ -83,11 +85,32 @@ function parsePendingAction(text: string): PendingAction | undefined {
     return {
       id: `action-${Date.now()}`,
       description: match[1].trim(),
-      tool: '', // Will be filled when confirmed
+      tool: '',
       input: {},
     }
   }
   return undefined
+}
+
+function cleanContent(content: string): string {
+  return content
+    .replace(/\[ENTITY:\w+:[^:]+:[^\]]+\]/g, (match: string) => {
+      const ref = parseEntityRefs(match)[0]
+      return ref ? ref.label : match
+    })
+    .replace(/\[ACTION_PENDING:[^\]]+\]/g, '')
+    .trim()
+}
+
+function buildAIMessages(chatMessages: ChatMessage[]): AIMessage[] {
+  return chatMessages
+    .filter(m => m.role === 'user' || m.role === 'assistant')
+    .map(m => ({
+      id: m.id,
+      role: m.role as 'user' | 'assistant',
+      content: m.content,
+      timestamp: m.timestamp.toISOString(),
+    }))
 }
 
 export function useProjectAI(pageContext?: string, entityContext?: string): UseProjectAIReturn {
@@ -98,7 +121,6 @@ export function useProjectAI(pageContext?: string, entityContext?: string): UseP
   const [error, setError] = useState<string | null>(null)
   const conversationRef = useRef<ChatMessage[]>([])
 
-  // Keep ref in sync
   useEffect(() => { conversationRef.current = messages }, [messages])
 
   const sendMessage = useCallback(async () => {
@@ -116,82 +138,115 @@ export function useProjectAI(pageContext?: string, entityContext?: string): UseP
     setIsLoading(true)
     setError(null)
 
+    const context: AIContext = {
+      projectId,
+      currentPage: pageContext,
+      selectedEntities: entityContext ? [{ type: 'entity', id: entityContext }] : undefined,
+    }
+
     try {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-      if (!supabaseUrl) {
-        // Fallback for prototype mode with generative UI
-        const fallback = generateFallbackWithUI(input.trim(), pageContext)
-        const aiResponse: ChatMessage = {
-          id: `msg-${Date.now() + 1}`,
+      // Path 1: dedicated AI endpoint (VITE_AI_ENDPOINT / VITE_AI_API_KEY)
+      if (aiService.isConfigured()) {
+        const streamingId = `msg-${Date.now() + 1}`
+        // Optimistically add a streaming placeholder
+        setMessages(prev => [...prev, {
+          id: streamingId,
           role: 'assistant',
-          content: fallback.content,
+          content: '',
           timestamp: new Date(),
-          toolResults: fallback.toolResults,
-        }
-        setMessages(prev => [...prev, aiResponse])
+          streaming: true,
+        }])
+
+        const allMessages = buildAIMessages([...conversationRef.current, userMessage])
+
+        await aiService.streamChat(
+          allMessages,
+          context,
+          (chunk) => {
+            setMessages(prev => prev.map(m =>
+              m.id === streamingId ? { ...m, content: m.content + chunk } : m
+            ))
+          }
+        )
+
+        // Finalize the streamed message
+        setMessages(prev => prev.map(m => {
+          if (m.id !== streamingId) return m
+          const raw = m.content
+          const entityRefs = parseEntityRefs(raw)
+          const suggestedPrompts = parseSuggestedPrompts(raw)
+          const pendingAction = parsePendingAction(raw)
+          return {
+            ...m,
+            content: cleanContent(raw),
+            streaming: false,
+            entityRefs: entityRefs.length > 0 ? entityRefs : undefined,
+            suggestedPrompts: suggestedPrompts.length > 0 ? suggestedPrompts : undefined,
+            pendingAction,
+          }
+        }))
         return
       }
 
-      const { data: { session } } = await supabase.auth.getSession()
-      const allMessages = [...conversationRef.current, userMessage]
+      // Path 2: Supabase Edge Function
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+      if (supabaseUrl) {
+        const { data: { session } } = await supabase.auth.getSession()
+        const allMessages = [...conversationRef.current, userMessage]
 
-      const response = await fetch(`${supabaseUrl}/functions/v1/ai-chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({
-          messages: allMessages.map(m => ({ role: m.role, content: m.content })),
-          projectContext: {
-            projectId,
-            userId: session?.user?.id,
-            page: pageContext || 'general',
-            entityContext: entityContext || '',
+        const response = await fetch(`${supabaseUrl}/functions/v1/ai-chat`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           },
-        }),
-      })
-
-      if (!response.ok) {
-        if (response.status === 429) {
-          throw new Error('Daily AI usage limit reached. Please try again tomorrow.')
-        }
-        throw new Error(`AI service error: ${response.status}`)
-      }
-
-      const data = await response.json()
-
-      if (data.error) {
-        throw new Error(data.error)
-      }
-
-      const content = data.content || ''
-      const toolResults = data.tool_results || []
-      const entityRefs = parseEntityRefs(content)
-      const suggestedPrompts = parseSuggestedPrompts(content)
-      const pendingAction = parsePendingAction(content)
-
-      // Clean entity refs and action markers from displayed content
-      const cleanContent = content
-        .replace(/\[ENTITY:\w+:[^:]+:[^\]]+\]/g, (match: string) => {
-          const ref = parseEntityRefs(match)[0]
-          return ref ? ref.label : match
+          body: JSON.stringify({
+            messages: allMessages.map(m => ({ role: m.role, content: m.content })),
+            projectContext: {
+              projectId,
+              userId: session?.user?.id,
+              page: pageContext || 'general',
+              entityContext: entityContext || '',
+            },
+          }),
         })
-        .replace(/\[ACTION_PENDING:[^\]]+\]/g, '')
-        .trim()
 
-      const aiResponse: ChatMessage = {
+        if (!response.ok) {
+          if (response.status === 429) throw new Error('Daily AI usage limit reached. Please try again tomorrow.')
+          throw new Error(`AI service error: ${response.status}`)
+        }
+
+        const data = await response.json()
+        if (data.error) throw new Error(data.error)
+
+        const content = data.content || ''
+        const toolResults = data.tool_results || []
+        const entityRefs = parseEntityRefs(content)
+        const suggestedPrompts = parseSuggestedPrompts(content)
+        const pendingAction = parsePendingAction(content)
+
+        setMessages(prev => [...prev, {
+          id: `msg-${Date.now() + 1}`,
+          role: 'assistant',
+          content: cleanContent(content),
+          timestamp: new Date(),
+          toolResults: toolResults.length > 0 ? toolResults : undefined,
+          entityRefs: entityRefs.length > 0 ? entityRefs : undefined,
+          suggestedPrompts: suggestedPrompts.length > 0 ? suggestedPrompts : undefined,
+          pendingAction,
+        }])
+        return
+      }
+
+      // Path 3: Prototype fallback
+      const fallback = generateFallbackWithUI(input.trim(), pageContext)
+      setMessages(prev => [...prev, {
         id: `msg-${Date.now() + 1}`,
         role: 'assistant',
-        content: cleanContent,
+        content: fallback.content,
         timestamp: new Date(),
-        toolResults: toolResults.length > 0 ? toolResults : undefined,
-        entityRefs: entityRefs.length > 0 ? entityRefs : undefined,
-        suggestedPrompts: suggestedPrompts.length > 0 ? suggestedPrompts : undefined,
-        pendingAction,
-      }
-
-      setMessages(prev => [...prev, aiResponse])
+        toolResults: fallback.toolResults,
+      }])
     } catch (err) {
       setError((err as Error).message)
       setMessages(prev => [...prev, {
@@ -206,13 +261,11 @@ export function useProjectAI(pageContext?: string, entityContext?: string): UseP
   }, [input, isLoading, projectId, pageContext, entityContext])
 
   const confirmAction = useCallback(async (actionId: string) => {
-    // Find the message with this pending action
     const msg = conversationRef.current.find(m => m.pendingAction?.id === actionId)
     if (!msg?.pendingAction) return
 
     setIsLoading(true)
     try {
-      // Re-send the conversation with an explicit confirmation
       const confirmMessage: ChatMessage = {
         id: `msg-${Date.now()}`,
         role: 'user',
@@ -221,43 +274,53 @@ export function useProjectAI(pageContext?: string, entityContext?: string): UseP
       }
       setMessages(prev => [...prev, confirmMessage])
 
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-      const { data: { session } } = await supabase.auth.getSession()
-      const allMessages = [...conversationRef.current, confirmMessage]
+      const context: AIContext = {
+        projectId,
+        currentPage: pageContext,
+      }
 
-      const response = await fetch(`${supabaseUrl}/functions/v1/ai-chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({
-          messages: allMessages.map(m => ({ role: m.role, content: m.content })),
-          projectContext: {
-            projectId,
-            userId: session?.user?.id,
-            page: pageContext || 'general',
+      if (aiService.isConfigured()) {
+        const allMessages = buildAIMessages([...conversationRef.current, confirmMessage])
+        const result = await aiService.chat(allMessages, context) as AIMessage
+        const content = result.content || 'Action completed.'
+        setMessages(prev => [...prev, {
+          id: `msg-${Date.now() + 1}`,
+          role: 'assistant',
+          content: cleanContent(content),
+          timestamp: new Date(),
+          entityRefs: parseEntityRefs(content),
+        }])
+      } else {
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+        const { data: { session } } = await supabase.auth.getSession()
+        const allMessages = [...conversationRef.current, confirmMessage]
+
+        const response = await fetch(`${supabaseUrl}/functions/v1/ai-chat`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           },
-        }),
-      })
+          body: JSON.stringify({
+            messages: allMessages.map(m => ({ role: m.role, content: m.content })),
+            projectContext: { projectId, userId: session?.user?.id, page: pageContext || 'general' },
+          }),
+        })
 
-      const data = await response.json()
-      const content = data.content || 'Action completed.'
-      const toolResults = data.tool_results || []
+        const data = await response.json()
+        const content = data.content || 'Action completed.'
+        const toolResults = data.tool_results || []
 
-      setMessages(prev => [...prev, {
-        id: `msg-${Date.now() + 1}`,
-        role: 'assistant',
-        content: content.replace(/\[ENTITY:\w+:[^:]+:[^\]]+\]/g, (match: string) => {
-          const ref = parseEntityRefs(match)[0]
-          return ref ? ref.label : match
-        }).replace(/\[ACTION_PENDING:[^\]]+\]/g, ''),
-        timestamp: new Date(),
-        toolResults: toolResults.length > 0 ? toolResults : undefined,
-        entityRefs: parseEntityRefs(content),
-      }])
+        setMessages(prev => [...prev, {
+          id: `msg-${Date.now() + 1}`,
+          role: 'assistant',
+          content: cleanContent(content),
+          timestamp: new Date(),
+          toolResults: toolResults.length > 0 ? toolResults : undefined,
+          entityRefs: parseEntityRefs(content),
+        }])
+      }
 
-      // Clear the pending action from the original message
       setMessages(prev => prev.map(m =>
         m.pendingAction?.id === actionId ? { ...m, pendingAction: undefined } : m
       ))
@@ -287,7 +350,6 @@ export function useProjectAI(pageContext?: string, entityContext?: string): UseP
 function generateFallbackWithUI(query: string, page?: string): { content: string; toolResults?: ToolResult[] } {
   const lower = query.toLowerCase()
 
-  // "Show me overdue RFIs" → data table
   if (lower.includes('overdue') && lower.includes('rfi')) {
     return {
       content: 'Here are the overdue RFIs that need attention:',
@@ -314,11 +376,9 @@ function generateFallbackWithUI(query: string, page?: string): { content: string
     }
   }
 
-  // "Create a punch item" / "Create an RFI" → form
   if (lower.includes('create') && (lower.includes('punch') || lower.includes('rfi') || lower.includes('task'))) {
     const entityType = lower.includes('rfi') ? 'rfi' : lower.includes('punch') ? 'punch_item' : 'task'
     const title = lower.includes('rfi') ? 'Create New RFI' : lower.includes('punch') ? 'Create Punch Item' : 'Create Task'
-    // Extract context from query
     const contextMatch = query.match(/(?:for|about|regarding)\s+(.+?)(?:\.|$)/i)
     const contextText = contextMatch?.[1] || ''
 
@@ -354,7 +414,6 @@ function generateFallbackWithUI(query: string, page?: string): { content: string
     }
   }
 
-  // "Project health" / "overview" → metric cards + timeline
   if (lower.includes('health') || lower.includes('overview') || lower.includes('dashboard')) {
     return {
       content: 'Here is your project health overview:',
@@ -374,7 +433,6 @@ function generateFallbackWithUI(query: string, page?: string): { content: string
     }
   }
 
-  // "Compare" → comparison table
   if (lower.includes('compare') || lower.includes('vs') || lower.includes('versus')) {
     return {
       content: 'Here is the comparison:',
@@ -399,7 +457,6 @@ function generateFallbackWithUI(query: string, page?: string): { content: string
     }
   }
 
-  // "Budget" → chart
   if (lower.includes('budget') && (lower.includes('breakdown') || lower.includes('chart') || lower.includes('division'))) {
     return {
       content: 'Here is the budget breakdown by division:',
@@ -425,11 +482,9 @@ function generateFallbackWithUI(query: string, page?: string): { content: string
     }
   }
 
-  // Default: return plain text
   return { content: generateFallbackResponse(query, page) }
 }
 
-// Fallback responses when no API key is configured
 function generateFallbackResponse(query: string, page?: string): string {
   const lower = query.toLowerCase()
 

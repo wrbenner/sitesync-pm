@@ -1,7 +1,8 @@
 import { supabase, transformSupabaseError } from '../client'
-const PID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+import { validateProjectId } from '../middleware/projectScope'
+import type { RfiRow } from '../../types/api'
 
-function mapRfi(r: any) {
+function mapRfi(r: RfiRow) {
   return {
     ...r,
     rfiNumber: r.number ? `RFI-${String(r.number).padStart(3, '0')}` : r.id?.slice(0, 8),
@@ -12,13 +13,15 @@ function mapRfi(r: any) {
   }
 }
 
-export const getRfis = async () => {
-  const { data, error } = await supabase.from('rfis').select('*').eq('project_id', PID).order('number', { ascending: false })
-  if (error) throw transformSupabaseError({ message: error.message, code: error.code })
+export const getRfis = async (projectId: string) => {
+  validateProjectId(projectId)
+  const { data, error } = await supabase.from('rfis').select('*').eq('project_id', projectId).order('number', { ascending: false })
+  if (error) throw transformSupabaseError(error)
   return (data || []).map(mapRfi)
 }
-export const getRfiById = async (id: string) => {
-  const { data, error } = await supabase.from('rfis').select('*').eq('id', id).single()
-  if (error) throw transformSupabaseError({ message: error.message, code: error.code })
+export const getRfiById = async (projectId: string, id: string) => {
+  validateProjectId(projectId)
+  const { data, error } = await supabase.from('rfis').select('*').eq('project_id', projectId).eq('id', id).single()
+  if (error) throw transformSupabaseError(error)
   return mapRfi(data)
 }

@@ -37,8 +37,8 @@ const REASON_CODES: { value: ReasonCode; label: string }[] = [
 export const ChangeOrders: React.FC = () => {
   const { addToast } = useToast();
   const projectId = useProjectId();
-  const { data: costData, loading: costLoading } = useQuery('costData', getCostData);
-  const { data: projectData, loading: projectLoading } = useQuery('projectData', getProject);
+  const { data: costData, loading: costLoading } = useQuery(`costData-${projectId}`, () => getCostData(projectId!), { enabled: !!projectId });
+  const { data: projectData, loading: projectLoading } = useQuery(`projectData-${projectId}`, () => getProject(projectId!), { enabled: !!projectId });
 
   const createCO = useCreateChangeOrder();
   const updateCO = useUpdateChangeOrder();

@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient, type UseMutationOptions } from '@tanstack/react-query'
 import { useIsOnline } from './useOfflineStatus'
 import { syncManager } from '../lib/syncManager'
-import { writeToCache } from '../lib/offlineDb'
+import { writeToCache, getOneFromCache, storeBaseVersion } from '../lib/offlineDb'
 import { toast } from 'sonner'
 
 interface OfflineMutationOptions<TData, TVariables> {
@@ -35,6 +35,19 @@ export function useOfflineMutation<TData = unknown, TVariables = unknown>(
 
       // Queue for offline sync
       const payload = options.getOfflinePayload(variables)
+
+      // Capture the base version (current server-synced state) before overwriting
+      // the cache. This enables three-way merge when reconnecting.
+      if (options.operation === 'update') {
+        const entityId = payload.id as string | undefined
+        if (entityId) {
+          const cached = await getOneFromCache<Record<string, unknown>>(options.table, entityId)
+          if (cached) {
+            await storeBaseVersion(options.table, entityId, cached)
+          }
+        }
+      }
+
       await syncManager.queueOfflineMutation(options.table, options.operation, payload)
 
       // Write optimistically to local cache

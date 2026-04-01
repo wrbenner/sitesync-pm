@@ -1,7 +1,9 @@
 import { supabase, transformSupabaseError } from '../client'
 import type { ChangeOrderType, ChangeOrderState, ReasonCode } from '../../machines/changeOrderMachine'
-
-const PID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+import { validateProjectId } from '../middleware/projectScope'
+import type { BudgetItemRow, ChangeOrderRow } from '../../types/api'
+import { computeProjectFinancials, computeDivisionFinancials } from '../../lib/financialEngine'
+import type { ProjectFinancials, DivisionFinancials } from '../../types/financial'
 
 export interface MappedDivision {
   id: string
@@ -48,15 +50,16 @@ export interface MappedChangeOrder {
   number: number
 }
 
-export const getCostData = async () => {
+export const getCostData = async (projectId: string) => {
+  validateProjectId(projectId)
   const [budgetRes, coRes] = await Promise.all([
-    supabase.from('budget_items').select('*').eq('project_id', PID).order('division'),
-    supabase.from('change_orders').select('*').eq('project_id', PID).order('number', { ascending: false }),
+    supabase.from('budget_items').select('*').eq('project_id', projectId).order('division'),
+    supabase.from('change_orders').select('*').eq('project_id', projectId).order('number', { ascending: false }),
   ])
-  if (budgetRes.error) throw transformSupabaseError({ message: budgetRes.error.message, code: budgetRes.error.code })
-  if (coRes.error) throw transformSupabaseError({ message: coRes.error.message, code: coRes.error.code })
+  if (budgetRes.error) throw transformSupabaseError(budgetRes.error)
+  if (coRes.error) throw transformSupabaseError(coRes.error)
 
-  const divisions: MappedDivision[] = (budgetRes.data || []).map((b: any) => ({
+  const divisions: MappedDivision[] = (budgetRes.data || []).map((b: BudgetItemRow) => ({
     id: b.id,
     name: b.division,
     budget: b.original_amount || 0,
@@ -66,8 +69,8 @@ export const getCostData = async () => {
     cost_code: b.cost_code || null,
   }))
 
-  const changeOrders: MappedChangeOrder[] = (coRes.data || []).map((co: any) => {
-    const type: ChangeOrderType = co.type || 'co'
+  const changeOrders: MappedChangeOrder[] = (coRes.data || []).map((co: ChangeOrderRow) => {
+    const type: ChangeOrderType = (co.type as ChangeOrderType) || 'co'
     const prefix = type.toUpperCase()
     return {
       id: co.id,
@@ -75,29 +78,29 @@ export const getCostData = async () => {
       title: co.title || co.description || '',
       description: co.description || '',
       amount: co.amount || 0,
-      estimated_cost: co.estimated_cost || co.amount || 0,
-      submitted_cost: co.submitted_cost || co.amount || 0,
-      approved_cost: co.approved_cost || 0,
+      estimated_cost: co.amount || 0,
+      submitted_cost: co.amount || 0,
+      approved_cost: 0,
       status: (co.status as ChangeOrderState) || 'draft',
       type,
-      reason_code: co.reason_code || null,
-      schedule_impact_days: co.schedule_impact_days || 0,
+      reason_code: (co.reason as ReasonCode) || null,
+      schedule_impact_days: 0,
       cost_code: co.cost_code || null,
-      budget_line_item_id: co.budget_line_item_id || null,
+      budget_line_item_id: null,
       parent_co_id: co.parent_co_id || null,
-      promoted_from_id: co.promoted_from_id || null,
-      submitted_by: co.submitted_by || null,
-      submitted_at: co.submitted_at || null,
-      reviewed_by: co.reviewed_by || null,
-      reviewed_at: co.reviewed_at || null,
-      review_comments: co.review_comments || null,
-      approved_by: co.approved_by || null,
-      approved_at: co.approved_at || null,
-      approval_comments: co.approval_comments || null,
-      rejected_by: co.rejected_by || null,
-      rejected_at: co.rejected_at || null,
-      rejection_comments: co.rejection_comments || null,
-      promoted_at: co.promoted_at || null,
+      promoted_from_id: null,
+      submitted_by: null,
+      submitted_at: null,
+      reviewed_by: null,
+      reviewed_at: null,
+      review_comments: null,
+      approved_by: null,
+      approved_at: co.approved_date || null,
+      approval_comments: null,
+      rejected_by: null,
+      rejected_at: null,
+      rejection_comments: null,
+      promoted_at: null,
       requested_by: co.requested_by || null,
       requested_date: co.requested_date || null,
       created_at: co.created_at || null,
@@ -106,4 +109,15 @@ export const getCostData = async () => {
   })
 
   return { divisions, changeOrders }
+}
+
+export async function getProjectFinancials(
+  projectId: string,
+  contractValue: number
+): Promise<{ project: ProjectFinancials; byDivision: DivisionFinancials[] }> {
+  const { divisions, changeOrders } = await getCostData(projectId)
+  return {
+    project: computeProjectFinancials(divisions, changeOrders, contractValue),
+    byDivision: computeDivisionFinancials(divisions, changeOrders),
+  }
 }

@@ -1,5 +1,6 @@
 import Dexie, { type Table } from 'dexie'
 import { supabase } from './supabase'
+import { detectConflicts } from './conflictResolver'
 
 // ── Configuration ────────────────────────────────────────
 
@@ -26,8 +27,18 @@ export interface PendingMutation {
   created_at: string
   entity_id?: string
   conflict_server_data?: Record<string, unknown>
+  conflict_base_data?: Record<string, unknown>
+  conflict_conflicting_fields?: string[]
   nextRetryAt?: string
   priority: number // lower = higher priority. 0 = critical, 10 = normal
+}
+
+export interface BaseVersion {
+  id: string // `${table}:${recordId}`
+  table: string
+  record_id: string
+  data: Record<string, unknown>
+  stored_at: string
 }
 
 export interface PendingUpload {
@@ -73,6 +84,7 @@ export class SiteSyncOfflineDB extends Dexie {
   pendingMutations!: Table<PendingMutation, number>
   pendingUploads!: Table<PendingUpload, number>
   syncMetadata!: Table<SyncMetadata, string>
+  baseVersions!: Table<BaseVersion, string>
 
   constructor() {
     super('sitesync-offline')
@@ -99,6 +111,31 @@ export class SiteSyncOfflineDB extends Dexie {
       pendingMutations: '++id, table, operation, status, created_at, entity_id, priority, nextRetryAt',
       pendingUploads: '++id, fileName, status, created_at, nextRetryAt',
       syncMetadata: 'key',
+    })
+    this.version(5).stores({
+      projects: 'id, name, status',
+      projectMembers: 'id, project_id, user_id',
+      rfis: 'id, project_id, rfi_number, status',
+      submittals: 'id, project_id, submittal_number, status',
+      punchItems: 'id, project_id, number, status',
+      tasks: 'id, project_id, status',
+      drawings: 'id, project_id, discipline',
+      dailyLogs: 'id, project_id, log_date',
+      crews: 'id, project_id, status',
+      budgetItems: 'id, project_id, division',
+      changeOrders: 'id, project_id, status',
+      meetings: 'id, project_id, date',
+      directoryContacts: 'id, project_id, name',
+      files: 'id, project_id, folder',
+      fieldCaptures: 'id, project_id, created_at',
+      schedulePhases: 'id, project_id, start_date',
+      notifications: 'id, user_id, read',
+      activityFeed: 'id, project_id, created_at',
+      aiInsights: 'id, project_id, page, dismissed',
+      pendingMutations: '++id, table, operation, status, created_at, entity_id, priority, nextRetryAt',
+      pendingUploads: '++id, fileName, status, created_at, nextRetryAt',
+      syncMetadata: 'key',
+      baseVersions: 'id, table, record_id, stored_at',
     })
   }
 }
@@ -161,6 +198,35 @@ export async function getSyncMetadata(key: string): Promise<string | null> {
 
 export async function setSyncMetadata(key: string, value: string) {
   await offlineDb.syncMetadata.put({ key, value })
+}
+
+// ── Base Version Cache ───────────────────────────────────
+// Stores the last-known server state of a record so three-way merge is possible.
+
+export async function storeBaseVersion(
+  table: string,
+  recordId: string,
+  data: Record<string, unknown>
+): Promise<void> {
+  await offlineDb.baseVersions.put({
+    id: `${table}:${recordId}`,
+    table,
+    record_id: recordId,
+    data,
+    stored_at: new Date().toISOString(),
+  })
+}
+
+export async function getBaseVersion(
+  table: string,
+  recordId: string
+): Promise<Record<string, unknown> | null> {
+  const entry = await offlineDb.baseVersions.get(`${table}:${recordId}`)
+  return entry?.data ?? null
+}
+
+export async function deleteBaseVersion(table: string, recordId: string): Promise<void> {
+  await offlineDb.baseVersions.delete(`${table}:${recordId}`)
 }
 
 // ── Exponential Backoff ──────────────────────────────────
@@ -240,31 +306,56 @@ export async function clearPendingMutations() {
 
 export async function resolveMutationConflict(
   mutationId: number,
-  resolution: 'keep_local' | 'keep_server'
+  resolution: 'keep_local' | 'keep_server' | 'use_merged',
+  mergedData?: Record<string, unknown>
 ): Promise<void> {
   const mutation = await offlineDb.pendingMutations.get(mutationId)
   if (!mutation) return
 
+  const dexieTableName = getDexieTableName(mutation.table)
+
   if (resolution === 'keep_server') {
     // Atomic: apply server data to cache AND delete mutation in one transaction
-    const dexieTableName = getDexieTableName(mutation.table)
     const tablesToTouch = [offlineDb.pendingMutations]
     if (dexieTableName) {
       tablesToTouch.push((offlineDb as any)[dexieTableName])
     }
-
     await offlineDb.transaction('rw', tablesToTouch, async () => {
       if (mutation.conflict_server_data && mutation.entity_id && dexieTableName) {
         await (offlineDb as any)[dexieTableName].put(mutation.conflict_server_data)
       }
       await offlineDb.pendingMutations.delete(mutationId)
     })
+    if (mutation.entity_id) {
+      await deleteBaseVersion(mutation.table, mutation.entity_id)
+    }
+  } else if (resolution === 'use_merged' && mergedData) {
+    // Apply merged data to cache and re-queue with merged payload
+    const tablesToTouch = [offlineDb.pendingMutations]
+    if (dexieTableName) {
+      tablesToTouch.push((offlineDb as any)[dexieTableName])
+    }
+    await offlineDb.transaction('rw', tablesToTouch, async () => {
+      if (dexieTableName && mutation.entity_id) {
+        await (offlineDb as any)[dexieTableName].put(mergedData)
+      }
+      await offlineDb.pendingMutations.update(mutationId, {
+        status: 'pending',
+        data: mergedData,
+        retryCount: 0,
+        conflict_server_data: undefined,
+        conflict_base_data: undefined,
+        conflict_conflicting_fields: undefined,
+      })
+    })
   } else {
-    // Re-queue for sync
+    // keep_local: re-queue original local data for sync
     await offlineDb.pendingMutations.update(mutationId, {
       status: 'pending',
       retryCount: 0,
       conflict_server_data: undefined,
+      conflict_base_data: undefined,
+      conflict_conflicting_fields: undefined,
     })
   }
 }
@@ -325,7 +416,7 @@ export async function processSyncQueue(
         const { error } = await from.insert(m.data)
         if (error) throw error
       } else if (m.operation === 'update' && m.data.id) {
-        // Check for conflicts before applying update
+        // Fetch current server version to check for conflicts
         const { data: serverRow } = await from
           .select('*')
           .eq('id', m.data.id)
@@ -337,16 +428,51 @@ export async function processSyncQueue(
 
           if (serverUpdated > localTimestamp) {
             if (isStatusOnlyChange(m.data)) {
+              // Status-only fields use last-write-wins: always apply local
               const { id, ...updates } = m.data
               const { error } = await from.update(updates).eq('id', id)
               if (error) throw error
             } else {
-              await offlineDb.pendingMutations.update(m.id!, {
-                status: 'conflict',
-                conflict_server_data: serverRow,
-              })
-              conflicts++
-              continue
+              // Attempt three-way merge using the cached base version
+              const base = m.conflict_base_data ?? await getBaseVersion(m.table, String(m.data.id))
+              if (base) {
+                const { canAutoMerge, conflictingFields, merged } = detectConflicts(
+                  base,
+                  m.data,
+                  serverRow
+                )
+                if (canAutoMerge) {
+                  // Non-conflicting changes on both sides: apply merged result silently
+                  const { id, updated_at: _ts, ...updates } = merged as any
+                  const { error } = await from.update(updates).eq('id', id)
+                  if (error) throw error
+                  // Keep local cache in sync with the merged record
+                  const dexieTableName = getDexieTableName(m.table)
+                  if (dexieTableName) {
+                    await (offlineDb as any)[dexieTableName].put(merged)
+                  }
+                  if (m.entity_id) await deleteBaseVersion(m.table, m.entity_id)
+                } else {
+                  // Real conflict on one or more fields: surface to user
+                  await offlineDb.pendingMutations.update(m.id!, {
+                    status: 'conflict',
+                    conflict_server_data: serverRow,
+                    conflict_base_data: base,
+                    conflict_conflicting_fields: conflictingFields,
+                  })
+                  conflicts++
+                  continue
+                }
+              } else {
+                // No base version available: cannot three-way merge, surface as conflict
+                await offlineDb.pendingMutations.update(m.id!, {
+                  status: 'conflict',
+                  conflict_server_data: serverRow,
+                  conflict_conflicting_fields: [],
+                })
+                conflicts++
+                continue
+              }
             }
           } else {
             const { id, ...updates } = m.data
@@ -626,4 +752,7 @@ export {
   classifyUploadError,
   getDexieTableName,
   isReadyForRetry,
+  storeBaseVersion,
+  getBaseVersion,
+  deleteBaseVersion,
 }

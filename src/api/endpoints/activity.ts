@@ -1,7 +1,9 @@
 import { supabase, transformSupabaseError } from '../client'
-const PID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
-export const getActivityFeed = async () => {
-  const { data, error } = await supabase.from('activity_feed').select('*').eq('project_id', PID).order('created_at', { ascending: false }).limit(50)
-  if (error) throw transformSupabaseError({ message: error.message, code: error.code })
+import { validateProjectId } from '../middleware/projectScope'
+
+export const getActivityFeed = async (projectId: string) => {
+  validateProjectId(projectId)
+  const { data, error } = await supabase.from('activity_feed').select('*').eq('project_id', projectId).order('created_at', { ascending: false }).limit(50)
+  if (error) throw transformSupabaseError(error)
   return data || []
 }

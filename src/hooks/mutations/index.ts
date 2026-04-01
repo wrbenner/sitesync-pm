@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import posthog from '../../lib/analytics'
 import { useAuditedMutation, createOnError } from './createAuditedMutation'
+import { invalidateEntity } from '../../api/invalidation'
 import { toast } from 'sonner'
 import Sentry from '../../lib/sentry'
 import {
@@ -27,7 +28,6 @@ export function useCreateRFI() {
       if (error) throw error
       return { data, projectId: params.projectId }
     },
-    invalidateKeys: (p, r) => [['rfis', r.projectId]],
     analyticsEvent: 'rfi_created',
     getAnalyticsProps: (p) => ({ project_id: p.projectId }),
     errorMessage: 'Failed to create RFI',
@@ -48,7 +48,6 @@ export function useUpdateRFI() {
       if (error) throw error
       return { projectId, id }
     },
-    invalidateKeys: (_, r) => [['rfis', r.projectId]],
     analyticsEvent: 'rfi_updated',
     getAnalyticsProps: (p) => ({ project_id: p.projectId }),
     errorMessage: 'Failed to update RFI',
@@ -66,7 +65,6 @@ export function useDeleteRFI() {
       if (error) throw error
       return { projectId }
     },
-    invalidateKeys: (_, r) => [['rfis', r.projectId]],
     analyticsEvent: 'rfi_deleted',
     getAnalyticsProps: (p) => ({ project_id: p.projectId }),
     errorMessage: 'Failed to delete RFI',
@@ -82,8 +80,8 @@ export function useCreateRFIResponse() {
       return { data, rfiId: params.rfiId, projectId: params.projectId }
     },
     onSuccess: (result: { rfiId: string; projectId: string }) => {
-      queryClient.invalidateQueries({ queryKey: ['rfis', result.projectId] })
-      queryClient.invalidateQueries({ queryKey: ['rfis', 'detail', result.rfiId] }) // FIX #1: detail page sees new response
+      invalidateEntity('rfi', result.projectId)
+      queryClient.invalidateQueries({ queryKey: ['rfis', 'detail', result.rfiId] })
       queryClient.invalidateQueries({ queryKey: ['rfi_responses', result.rfiId] })
       posthog.capture('rfi_response_created', { rfi_id: result.rfiId })
     },
@@ -106,7 +104,6 @@ export function useCreateSubmittal() {
       if (error) throw error
       return { data, projectId: params.projectId }
     },
-    invalidateKeys: (p, r) => [['submittals', r.projectId]],
     analyticsEvent: 'submittal_created',
     getAnalyticsProps: (p) => ({ project_id: p.projectId }),
     errorMessage: 'Failed to create submittal',
@@ -127,7 +124,7 @@ export function useUpdateSubmittal() {
       if (error) throw error
       return { projectId, id }
     },
-    invalidateKeys: (_, r) => [['submittals', r.projectId], ['submittals', 'detail', r.id]],
+    invalidateKeys: (_, r) => [['submittals', 'detail', r.id]],
     analyticsEvent: 'submittal_updated',
     getAnalyticsProps: (p) => ({ project_id: p.projectId }),
     errorMessage: 'Failed to update submittal',
@@ -149,7 +146,6 @@ export function useCreatePunchItem() {
       if (error) throw error
       return { data, projectId: params.projectId }
     },
-    invalidateKeys: (p, r) => [['punch_items', r.projectId]],
     analyticsEvent: 'punch_item_created',
     getAnalyticsProps: (p) => ({ project_id: p.projectId }),
     errorMessage: 'Failed to create punch item',
@@ -170,7 +166,6 @@ export function useUpdatePunchItem() {
       if (error) throw error
       return { projectId, id }
     },
-    invalidateKeys: (_, r) => [['punch_items', r.projectId]],
     analyticsEvent: 'punch_item_updated',
     getAnalyticsProps: (p) => ({ project_id: p.projectId }),
     errorMessage: 'Failed to update punch item',
@@ -192,7 +187,6 @@ export function useCreateTask() {
       if (error) throw error
       return { data, projectId: params.projectId }
     },
-    invalidateKeys: (p, r) => [['tasks', r.projectId]],
     analyticsEvent: 'task_created',
     getAnalyticsProps: (p) => ({ project_id: p.projectId }),
     errorMessage: 'Failed to create task',
@@ -213,7 +207,6 @@ export function useUpdateTask() {
       if (error) throw error
       return { projectId, id }
     },
-    invalidateKeys: (_, r) => [['tasks', r.projectId]],
     analyticsEvent: 'task_updated',
     getAnalyticsProps: (p) => ({ project_id: p.projectId }),
     errorMessage: 'Failed to update task',
@@ -221,7 +214,6 @@ export function useUpdateTask() {
 }
 
 export function useDeleteTask() {
-  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, projectId }: { id: string; projectId: string }) => {
       const { error } = await from('tasks').delete().eq('id', id)
@@ -229,7 +221,7 @@ export function useDeleteTask() {
       return { projectId }
     },
     onSuccess: (result: { projectId: string }) => {
-      queryClient.invalidateQueries({ queryKey: ['tasks', result.projectId] })
+      invalidateEntity('task', result.projectId)
       posthog.capture('task_deleted', { project_id: result.projectId })
     },
   })
@@ -250,7 +242,6 @@ export function useCreateDailyLog() {
       if (error) throw error
       return { data, projectId: params.projectId }
     },
-    invalidateKeys: (p, r) => [['daily_logs', r.projectId]],
     analyticsEvent: 'daily_log_created',
     getAnalyticsProps: (p) => ({ project_id: p.projectId }),
     errorMessage: 'Failed to create daily log',
@@ -271,7 +262,7 @@ export function useUpdateDailyLog() {
       if (error) throw error
       return { projectId, id }
     },
-    invalidateKeys: (_, r) => [['daily_logs', r.projectId], ['daily_logs', 'detail', r.id]],
+    invalidateKeys: (_, r) => [['daily_logs', 'detail', r.id]],
     analyticsEvent: 'daily_log_updated',
     getAnalyticsProps: (p) => ({ project_id: p.projectId }),
     errorMessage: 'Failed to update daily log',
@@ -289,7 +280,7 @@ export function useCreateDailyLogEntry() {
       return { data, projectId: params.projectId }
     },
     onSuccess: (result: { projectId: string }) => {
-      queryClient.invalidateQueries({ queryKey: ['daily_logs', result.projectId] })
+      invalidateEntity('daily_log', result.projectId)
       posthog.capture('daily_log_entry_created', { project_id: result.projectId })
     },
   })
@@ -306,7 +297,7 @@ export function useSubmitDailyLog() {
       return { projectId }
     },
     onSuccess: (result: { projectId: string }) => {
-      queryClient.invalidateQueries({ queryKey: ['daily_logs', result.projectId] })
+      invalidateEntity('daily_log', result.projectId)
       posthog.capture('daily_log_submitted', { project_id: result.projectId })
     },
   })
@@ -328,7 +319,7 @@ export function useApproveDailyLog() {
       if (error) throw error
       return { projectId }
     },
-    invalidateKeys: (p, r) => [['daily_logs', r.projectId], ['daily_logs', 'detail', p.id]], // FIX #4
+    invalidateKeys: (p) => [['daily_logs', 'detail', p.id]],
     analyticsEvent: 'daily_log_approved',
     errorMessage: 'Failed to approve daily log',
   })
@@ -353,7 +344,7 @@ export function useRejectDailyLog() {
       if (error) throw error
       return { projectId }
     },
-    invalidateKeys: (p, r) => [['daily_logs', r.projectId], ['daily_logs', 'detail', p.id]],
+    invalidateKeys: (p) => [['daily_logs', 'detail', p.id]],
     analyticsEvent: 'daily_log_rejected',
     errorMessage: 'Failed to reject daily log',
   })
@@ -374,7 +365,6 @@ export function useCreateChangeOrder() {
       if (error) throw error
       return { data, projectId: params.projectId }
     },
-    invalidateKeys: (p, r) => [['change_orders', r.projectId]],
     analyticsEvent: 'change_order_created',
     getAnalyticsProps: (p) => ({ project_id: p.projectId }),
     errorMessage: 'Failed to create change order',
@@ -395,7 +385,6 @@ export function useUpdateChangeOrder() {
       if (error) throw error
       return { projectId, id }
     },
-    invalidateKeys: (_, r) => [['change_orders', r.projectId]],
     analyticsEvent: 'change_order_updated',
     getAnalyticsProps: (p) => ({ project_id: p.projectId }),
     errorMessage: 'Failed to update change order',
@@ -433,10 +422,9 @@ export function usePromoteChangeOrder() {
       return { data: promoted, projectId }
     },
     onSuccess: (result: { projectId: string }) => {
-      queryClient.invalidateQueries({ queryKey: ['change_orders', result.projectId] }) // FIX #5: all CO types
+      invalidateEntity('change_order', result.projectId)
       queryClient.invalidateQueries({ queryKey: ['costData'] })
-      queryClient.invalidateQueries({ queryKey: ['earned_value', result.projectId] }) // FIX #5: financials
-      queryClient.invalidateQueries({ queryKey: ['budget_items', result.projectId] })
+      queryClient.invalidateQueries({ queryKey: ['earned_value', result.projectId] })
       posthog.capture('change_order_promoted', { project_id: result.projectId })
     },
     onError: createOnError('promote_change_order'),
@@ -456,7 +444,7 @@ export function useSubmitChangeOrder() {
       return { projectId }
     },
     onSuccess: (result: { projectId: string }) => {
-      queryClient.invalidateQueries({ queryKey: ['change_orders', result.projectId] })
+      invalidateEntity('change_order', result.projectId)
       queryClient.invalidateQueries({ queryKey: ['costData'] })
       posthog.capture('change_order_submitted', { project_id: result.projectId })
     },
@@ -482,7 +470,7 @@ export function useApproveChangeOrder() {
       if (error) throw error
       return { projectId }
     },
-    invalidateKeys: (_, r) => [['change_orders', r.projectId], ['costData'], ['budget_items', r.projectId], ['earned_value', r.projectId]],
+    invalidateKeys: (_, r) => [['costData'], ['earned_value', r.projectId]],
     analyticsEvent: 'change_order_approved',
     errorMessage: 'Failed to approve change order',
   })
@@ -502,7 +490,7 @@ export function useRejectChangeOrder() {
       if (error) throw error
       return { projectId }
     },
-    invalidateKeys: (_, r) => [['change_orders', r.projectId], ['costData']],
+    invalidateKeys: () => [['costData']],
     analyticsEvent: 'change_order_rejected',
     errorMessage: 'Failed to reject change order',
   })
@@ -523,7 +511,6 @@ export function useCreateMeeting() {
       if (error) throw error
       return { data, projectId: params.projectId }
     },
-    invalidateKeys: (p, r) => [['meetings', r.projectId]],
     analyticsEvent: 'meeting_created',
     getAnalyticsProps: (p) => ({ project_id: p.projectId }),
     errorMessage: 'Failed to create meeting',
@@ -533,7 +520,6 @@ export function useCreateMeeting() {
 // ── Files ─────────────────────────────────────────────────
 
 export function useCreateFile() {
-  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (params: { data: Record<string, unknown>; projectId: string }) => {
       const { data, error } = await from('files').insert(params.data).select().single()
@@ -541,7 +527,7 @@ export function useCreateFile() {
       return { data, projectId: params.projectId }
     },
     onSuccess: (result: { projectId: string }) => {
-      queryClient.invalidateQueries({ queryKey: ['files', result.projectId] })
+      invalidateEntity('file', result.projectId)
       posthog.capture('file_uploaded', { project_id: result.projectId })
     },
   })
@@ -556,7 +542,7 @@ export function useDeleteFile() {
       return { projectId }
     },
     onSuccess: (result: { projectId: string }) => {
-      // FIX #6: Use exact:false to catch ['files', projectId, folder] for all folder variations
+      // exact:false catches ['files', projectId, folder] for all folder variations
       queryClient.invalidateQueries({ queryKey: ['files', result.projectId], exact: false })
       posthog.capture('file_deleted', { project_id: result.projectId })
     },
@@ -567,7 +553,6 @@ export function useDeleteFile() {
 // ── Field Captures ────────────────────────────────────────
 
 export function useCreateFieldCapture() {
-  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (params: { data: Record<string, unknown>; projectId: string }) => {
       const { data, error } = await from('field_captures').insert(params.data).select().single()
@@ -575,7 +560,7 @@ export function useCreateFieldCapture() {
       return { data, projectId: params.projectId }
     },
     onSuccess: (result: { projectId: string }) => {
-      queryClient.invalidateQueries({ queryKey: ['field_captures', result.projectId] })
+      invalidateEntity('field_capture', result.projectId)
       posthog.capture('field_capture_created', { project_id: result.projectId })
     },
   })
@@ -584,7 +569,6 @@ export function useCreateFieldCapture() {
 // ── Directory Contacts ────────────────────────────────────
 
 export function useCreateDirectoryContact() {
-  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (params: { data: Record<string, unknown>; projectId: string }) => {
       const { data, error } = await from('directory_contacts').insert(params.data).select().single()
@@ -592,7 +576,7 @@ export function useCreateDirectoryContact() {
       return { data, projectId: params.projectId }
     },
     onSuccess: (result: { projectId: string }) => {
-      queryClient.invalidateQueries({ queryKey: ['directory_contacts', result.projectId] })
+      invalidateEntity('contact', result.projectId)
       posthog.capture('directory_contact_created', { project_id: result.projectId })
     },
   })
@@ -601,7 +585,6 @@ export function useCreateDirectoryContact() {
 // ── Crews ─────────────────────────────────────────────────
 
 export function useCreateCrew() {
-  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (params: { data: Record<string, unknown>; projectId: string }) => {
       const { data, error } = await from('crews').insert(params.data).select().single()
@@ -609,7 +592,7 @@ export function useCreateCrew() {
       return { data, projectId: params.projectId }
     },
     onSuccess: (result: { projectId: string }) => {
-      queryClient.invalidateQueries({ queryKey: ['crews', result.projectId] })
+      invalidateEntity('crew', result.projectId)
       posthog.capture('crew_created', { project_id: result.projectId })
     },
   })
@@ -898,7 +881,6 @@ export function useRemoveRFIWatcher() {
 // ── Task Bulk Operations ─────────────────────────────────
 
 export function useBulkUpdateTasks() {
-  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ ids, updates, projectId }: { ids: string[]; updates: Record<string, unknown>; projectId: string }) => {
       const { error } = await from('tasks').update(updates).in('id', ids)
@@ -906,14 +888,13 @@ export function useBulkUpdateTasks() {
       return { projectId, count: ids.length }
     },
     onSuccess: (result: { projectId: string; count: number }) => {
-      queryClient.invalidateQueries({ queryKey: ['tasks', result.projectId] })
+      invalidateEntity('task', result.projectId)
       posthog.capture('tasks_bulk_updated', { project_id: result.projectId, count: result.count })
     },
   })
 }
 
 export function useBulkDeleteTasks() {
-  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ ids, projectId }: { ids: string[]; projectId: string }) => {
       const { error } = await from('tasks').delete().in('id', ids)
@@ -921,7 +902,7 @@ export function useBulkDeleteTasks() {
       return { projectId, count: ids.length }
     },
     onSuccess: (result: { projectId: string; count: number }) => {
-      queryClient.invalidateQueries({ queryKey: ['tasks', result.projectId] })
+      invalidateEntity('task', result.projectId)
       posthog.capture('tasks_bulk_deleted', { project_id: result.projectId, count: result.count })
     },
   })
@@ -991,7 +972,6 @@ export function useUpdateTaskDependencies() {
 }
 
 export function useApplyTaskTemplate() {
-  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ templateId, projectId }: { templateId: string; projectId: string }) => {
       const { data: template, error: templateError } = await supabase
@@ -1042,7 +1022,7 @@ export function useApplyTaskTemplate() {
       return { projectId, count: taskData.length, phase: tmpl.phase }
     },
     onSuccess: (result: { projectId: string; count: number; phase: string }) => {
-      queryClient.invalidateQueries({ queryKey: ['tasks', result.projectId] })
+      invalidateEntity('task', result.projectId)
       posthog.capture('task_template_applied', { project_id: result.projectId, count: result.count, phase: result.phase })
     },
     onError: createOnError('apply_task_template'),

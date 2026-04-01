@@ -75,7 +75,7 @@ AUDIT_MODEL="${AUDIT_MODEL:-claude-opus-4-6}"
 CODE_MODEL="${CODE_MODEL:-claude-sonnet-4-6}"
 DECOMP_MODEL="${DECOMP_MODEL:-claude-haiku-4-5-20251001}"
 LOG_DIR="${LOG_DIR:-./engine-logs}"
-SKIP_WEB_RESEARCH="${SKIP_WEB_RESEARCH:-false}"
+SKIP_WEB_RESEARCH="${SKIP_WEB_RESEARCH:-true}"
 INCLUDE_UI="${INCLUDE_UI:-true}"
 DRY_RUN="${DRY_RUN:-false}"
 BUILD_CMD="${BUILD_CMD:-}"
@@ -84,7 +84,7 @@ SKIP_MODULES="${SKIP_MODULES:-}"
 FEEDBACK_FILE="${FEEDBACK_FILE:-$PROJECT_DIR/FEEDBACK.md}"
 VISION_FILE="${VISION_FILE:-$PROJECT_DIR/VISION.md}"
 NOTIFY_WEBHOOK="${NOTIFY_WEBHOOK:-}"
-MAX_ISSUES_PER_MODULE="${MAX_ISSUES_PER_MODULE:-20}"
+MAX_ISSUES_PER_MODULE="${MAX_ISSUES_PER_MODULE:-10}"
 INVENTION_MODE="${INVENTION_MODE:-true}"
 RESUME="${RESUME:-false}"
 AUTO_GIT_TAG="${AUTO_GIT_TAG:-true}"
@@ -592,43 +592,15 @@ decompose_modules() {
     snapshot_content=$(head -200 "$snapshot_file")
 
     local prompt
-    prompt="You are analyzing a React TypeScript construction project management platform called SiteSyncAI.
+    prompt="Decompose this React TypeScript construction PM app into 8-10 modules. Return ONLY JSON, no other text.
 
-Based on this directory structure and code overview, decompose the codebase into 6-10 logical modules for independent auditing.
-
-Each module should group related files by domain/concern. Return ONLY valid JSON, no markdown fences.
-
-Directory structure:
-\`\`\`
+Directory:
 $(grep -A 100 '## Directory Structure' "$snapshot_file" | head -80)
-\`\`\`
 
-Return this exact JSON format:
-{
-  \"modules\": [
-    {
-      \"name\": \"ui-design-system\",
-      \"label\": \"UI Design System\",
-      \"description\": \"Design tokens, primitives, shared components\",
-      \"files\": [\"src/styles/theme.ts\", \"src/components/Primitives.tsx\"],
-      \"priority\": 1
-    }
-  ]
-}
+JSON format (start with { end with }):
+{\"modules\":[{\"name\":\"ui-design-system\",\"label\":\"UI Design System\",\"description\":\"Design tokens, primitives, shared components\",\"files\":[\"src/styles/theme.ts\",\"src/components/Primitives.tsx\"],\"priority\":1}]}
 
-Module ideas for a construction PM app:
-- ui-design-system (theme, primitives, layout)
-- core-workflows (RFIs, submittals, change orders, punch list)
-- financial-engine (budget, financials, pay apps, estimating)
-- scheduling (schedule, lookahead, gantt, phases)
-- field-operations (daily log, field capture, crews, safety)
-- project-intelligence (AI copilot, agents, insights, project health)
-- document-management (drawings, files, BIM viewer)
-- collaboration (activity, meetings, directory, presence)
-- enterprise-portfolio (portfolio, benchmarks, integrations, admin)
-- infrastructure (App.tsx, routing, state, queries, auth)
-
-Return only the JSON object."
+Use these modules: ui-design-system, core-workflows (RFIs/submittals/change-orders/punch-list), financial-engine (budget/pay-apps), scheduling (gantt/phases), field-operations (daily-log/field-capture/crews), project-intelligence (AI-copilot), document-management (drawings/files), collaboration (meetings/directory), infrastructure (App.tsx/routing/auth)."
 
     local response
     response=$(call_claude "$DECOMP_MODEL" "$prompt" 4096)
@@ -723,92 +695,70 @@ Include a complete implementation prompt for each."
     fi
 
     local prompt
-    prompt="You are the world's best software architect and construction industry expert. Your only job is to make SiteSyncAI the most advanced construction project management platform ever built.
+    prompt="You are a senior software architect auditing a React TypeScript construction PM platform called SiteSyncAI.
 
-## YOUR MISSION
+TASK: Audit the \"${module_label}\" module. Score 14 dimensions. Generate fix prompts for issues.
 
-Audit the \"${module_label}\" module of SiteSyncAI against the 14 dimensions below. Study competitors. Find everything that is wrong, missing, shallow, or could be world-class. Generate precise, self-contained Claude Code implementation prompts for every issue.
+RULES:
+1. Your ENTIRE response must be a single JSON object. No text before or after.
+2. Start with { and end with }. No markdown fences. No explanation.
+3. Cap at ${MAX_ISSUES_PER_MODULE} issues, sorted by severity (critical first).
+4. Each issue prompt must be self-contained: include file paths, function names, what to change, and acceptance criteria.
+5. Keep descriptions under 100 words. Keep prompts under 300 words.
 
-## CONTEXT
-
+CONTEXT (founder vision, competitors, domain knowledge):
 ${founder_context}
 
-## PRIOR UNRESOLVED ISSUES (MUST ADDRESS FIRST — P0)
-
+PRIOR UNRESOLVED ISSUES (fix these FIRST, they are P0):
 ${prior_issues}
 
-## ENGINE STRATEGY (dynamic, based on score trends from prior cycles)
-
+STRATEGY (from prior cycle analysis):
 ${strategy_context}
 
-## CODEBASE SNAPSHOT
-
+CODEBASE (relevant source files):
 ${relevant_snapshot}
 
-## 14 AUDIT DIMENSIONS
+SCORING DIMENSIONS (0-100 each):
+1. Visual Polish: Apple/Linear level UI
+2. Construction Domain Depth: matches real super/PM workflows
+3. Data Richness: calculated metrics, not placeholders
+4. Interaction Quality: keyboard shortcuts, drag-drop, bulk actions
+5. AI Integration: AI woven into workflow
+6. Mobile/Field-First: works on iPhone on jobsite
+7. Performance: instant renders, virtual lists
+8. TypeScript Quality: strict types, no any
+9. Error Handling: empty states, loading, error boundaries
+10. Real-Time: live updates, presence
+11. Accessibility: WCAG 2.1 AA
+12. Security: RBAC, XSS safe
+13. Competitive Differentiation: why choose over Procore
+14. Enterprise Readiness: audit trail, SSO, multi-tenant
 
-Score each 0-100. Generate actionable issues for anything below 95.
-
-1. **Visual Polish** — Is this Apple/Linear/Stripe level? Zero compromises. Every pixel.
-2. **Construction Domain Depth** — Does this match how actual supers, PMs, and owners work?
-3. **Data Richness** — Real calculated metrics, not placeholders. Charts that tell stories.
-4. **Interaction Quality** — Keyboard shortcuts, drag-drop, bulk actions, inline editing.
-5. **AI Integration** — AI woven into the workflow, not a sidebar feature.
-6. **Mobile and Field-First** — Works perfectly on an iPhone on a dusty jobsite.
-7. **Performance** — Instant renders. Zero unnecessary re-renders. Virtual lists where needed.
-8. **TypeScript Quality** — Strict types, no any, no eslint-disable, proper generics.
-9. **Error Handling** — Every edge case handled. Skeleton loaders. Empty states. Error boundaries.
-10. **Real-Time and Collaboration** — Live updates, presence, conflict resolution.
-11. **Accessibility** — WCAG 2.1 AA. Keyboard navigable. Screen reader tested.
-12. **Security and Permissions** — RBAC checks, no data leaks, XSS safe.
-13. **Competitive Differentiation** — What makes a GC choose SiteSync over Procore today?
-14. **Enterprise Readiness** — Audit trail, export, SSO hooks, multi-tenant isolation.
-
-## OUTPUT FORMAT
-
-Return ONLY valid JSON (no markdown fences):
-
+REQUIRED JSON FORMAT:
 {
   \"module\": \"${module_name}\",
   \"scores\": {
-    \"visual_polish\": 0,
-    \"domain_depth\": 0,
-    \"data_richness\": 0,
-    \"interaction_quality\": 0,
-    \"ai_integration\": 0,
-    \"mobile_first\": 0,
-    \"performance\": 0,
-    \"typescript_quality\": 0,
-    \"error_handling\": 0,
-    \"realtime\": 0,
-    \"accessibility\": 0,
-    \"security\": 0,
-    \"differentiation\": 0,
-    \"enterprise_readiness\": 0
+    \"visual_polish\": 0, \"domain_depth\": 0, \"data_richness\": 0,
+    \"interaction_quality\": 0, \"ai_integration\": 0, \"mobile_first\": 0,
+    \"performance\": 0, \"typescript_quality\": 0, \"error_handling\": 0,
+    \"realtime\": 0, \"accessibility\": 0, \"security\": 0,
+    \"differentiation\": 0, \"enterprise_readiness\": 0
   },
   \"overall_score\": 0,
   \"issues\": [
     {
       \"id\": \"${module_name}-C${CYCLE}-001\",
-      \"severity\": \"critical|high|medium|low\",
+      \"severity\": \"critical\",
       \"dimension\": \"visual_polish\",
-      \"title\": \"Short issue title\",
-      \"description\": \"What is wrong and why it matters\",
-      \"prompt\": \"Complete self-contained Claude Code prompt — include exact file paths, function names, full implementation instructions, acceptance criteria, and construction industry context. This must be executable standalone with zero additional context.\"
+      \"title\": \"Short title\",
+      \"description\": \"What is wrong\",
+      \"prompt\": \"Self-contained Claude Code fix prompt with file paths and acceptance criteria\"
     }
   ],
   \"invented_features\": [],
-  \"competitive_intel\": \"What competitors do here and how SiteSync compares\",
-  \"summary\": \"One paragraph: current state, key wins, key gaps\"
+  \"competitive_intel\": \"Brief comparison\",
+  \"summary\": \"One paragraph summary\"
 }
-
-Generate issues sorted by severity descending. Cap at ${MAX_ISSUES_PER_MODULE} issues.
-
-CRITICAL OUTPUT RULES:
-- Return ONLY the JSON object. No preamble, no explanation, no markdown fences.
-- Do NOT write any text before or after the JSON.
-- Start your response with { and end with }.
-- Keep issue descriptions and prompts concise but complete.
 ${invention_section}"
 
     local tools_arg=""
@@ -817,7 +767,7 @@ ${invention_section}"
     fi
 
     local response
-    response=$(call_claude "$AUDIT_MODEL" "$prompt" 32768 "" "$tools_arg")
+    response=$(call_claude "$AUDIT_MODEL" "$prompt" 16384 "" "$tools_arg")
 
     # Save raw response for debugging
     echo "$response" > "${cycle_dir}/audit_${module_name}_raw.json"
@@ -1138,30 +1088,21 @@ verify_changes() {
     diff_summary=$(git -C "$PROJECT_DIR" diff HEAD~1 --stat 2>/dev/null | head -30 || echo "No git diff available")
 
     local prompt
-    prompt="You are verifying that code changes were correctly implemented for the \"${module_name}\" module.
+    prompt="Verify code changes for the \"${module_name}\" module. For each issue, check if it was fixed.
 
 Issues that should have been fixed:
 $(echo "$issues_summary")
 
-Git diff summary showing what actually changed:
+Git diff summary:
 \`\`\`
 ${diff_summary}
 \`\`\`
 
-For each issue, assess if it was: fixed, partial, not_fixed.
-
-Return ONLY valid JSON:
-{
-  \"verifications\": [
-    {\"id\": \"issue-id\", \"status\": \"fixed|partial|not_fixed\", \"note\": \"brief note\"}
-  ],
-  \"files_changed\": 0,
-  \"regression_detected\": false,
-  \"regression_description\": \"\"
-}"
+Return ONLY this JSON (no other text):
+{\"verifications\":[{\"id\":\"issue-id\",\"status\":\"fixed|partial|not_fixed\",\"note\":\"brief note\"}],\"files_changed\":0,\"regression_detected\":false,\"regression_description\":\"\"}"
 
     local response
-    response=$(call_claude "$AUDIT_MODEL" "$prompt" 2048)
+    response=$(call_claude "$DECOMP_MODEL" "$prompt" 2048)
 
     local text
     text=$(extract_text "$response")

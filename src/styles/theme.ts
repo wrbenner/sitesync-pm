@@ -3,17 +3,19 @@
 // Every color, spacing, font, shadow, radius, and z-index value in the app comes from here.
 
 // ── Colors ───────────────────────────────────────────────
+// All themeable colors reference CSS custom properties defined in tokens.css.
+// Non-themeable values (charts, brand scale, gradients) remain as raw values.
 
 export const colors = {
   // Brand
-  primaryOrange: '#F47820',
-  orangeText: '#C45A0C', // AA compliant (5.5:1 on white) for text use
-  orangeHover: '#E06A10',
-  orangePressed: '#D05E08',
-  orangeSubtle: 'rgba(244, 120, 32, 0.08)',
-  orangeLight: 'rgba(244, 120, 32, 0.12)',
+  primaryOrange: 'var(--color-primary)',
+  orangeText: 'var(--color-primary-text)',
+  orangeHover: 'var(--color-primary-hover)',
+  orangePressed: 'var(--color-primary-pressed)',
+  orangeSubtle: 'var(--color-primary-subtle)',
+  orangeLight: 'var(--color-primary-light)',
 
-  // Brand palette (full scale for charts, gradients, illustrations)
+  // Brand palette (raw values — used for charts, gradients, illustrations)
   brand50: '#FEF5ED',
   brand100: '#FDDCB8',
   brand200: '#FBBD84',
@@ -25,94 +27,94 @@ export const colors = {
   brand800: '#7C3606',
   brand900: '#582604',
 
-  // Surfaces — warm, layered, architectural
-  surfacePage: '#FAFAF8',
-  surfaceSidebar: '#F6F3F0',
-  surfaceRaised: '#FFFFFF',
-  surfaceInset: '#F3EFEC',
-  surfaceHover: '#F0EDE8',
-  surfaceSelected: '#FEF7F2',
+  // Surfaces
+  surfacePage: 'var(--color-surfacePage)',
+  surfaceSidebar: 'var(--color-surfaceSidebar)',
+  surfaceRaised: 'var(--color-surfaceRaised)',
+  surfaceInset: 'var(--color-surfaceInset)',
+  surfaceHover: 'var(--color-surfaceHover)',
+  surfaceSelected: 'var(--color-surfaceSelected)',
 
-  // Borders — barely there
-  borderSubtle: '#F0EDE9',
-  borderDefault: '#E5E1DC',
-  borderFocus: '#F47820',
+  // Borders
+  borderSubtle: 'var(--color-borderSubtle)',
+  borderDefault: 'var(--color-borderDefault)',
+  borderFocus: 'var(--color-borderFocus)',
 
-  // Text — warm, four levels
-  textPrimary: '#1A1613',
-  textSecondary: '#5C5550',
-  textTertiary: '#9A9490',
-  textOnDark: 'rgba(255, 255, 255, 0.92)',
-  textOnDarkMuted: 'rgba(255, 255, 255, 0.5)',
+  // Text
+  textPrimary: 'var(--color-textPrimary)',
+  textSecondary: 'var(--color-textSecondary)',
+  textTertiary: 'var(--color-textTertiary)',
+  textOnDark: 'var(--color-textOnDark)',
+  textOnDarkMuted: 'var(--color-textOnDarkMuted)',
 
-  // Status — desaturated, sophisticated
-  statusActive: '#2D8A6E',
-  statusActiveSubtle: 'rgba(45, 138, 110, 0.08)',
-  statusPending: '#C4850C',
-  statusPendingSubtle: 'rgba(196, 133, 12, 0.06)',
-  statusCritical: '#C93B3B',
-  statusCriticalSubtle: 'rgba(201, 59, 59, 0.06)',
-  statusInfo: '#3A7BC8',
-  statusInfoSubtle: 'rgba(58, 123, 200, 0.06)',
-  statusReview: '#7C5DC7',
-  statusReviewSubtle: 'rgba(124, 93, 199, 0.06)',
-  statusNeutral: '#8C8580',
-  statusNeutralSubtle: 'rgba(140, 133, 128, 0.06)',
+  // Status
+  statusActive: 'var(--color-statusActive)',
+  statusActiveSubtle: 'var(--color-statusActiveSubtle)',
+  statusPending: 'var(--color-statusPending)',
+  statusPendingSubtle: 'var(--color-statusPendingSubtle)',
+  statusCritical: 'var(--color-statusCritical)',
+  statusCriticalSubtle: 'var(--color-statusCriticalSubtle)',
+  statusInfo: 'var(--color-statusInfo)',
+  statusInfoSubtle: 'var(--color-statusInfoSubtle)',
+  statusReview: 'var(--color-statusReview)',
+  statusReviewSubtle: 'var(--color-statusReviewSubtle)',
+  statusNeutral: 'var(--color-statusNeutral)',
+  statusNeutralSubtle: 'var(--color-statusNeutralSubtle)',
 
   // Utility
   white: '#FFFFFF',
   black: '#000000',
-  textDisabled: '#C5C0BB',
-  surfaceDisabled: '#EDEDEB',
-  borderHover: '#D5D0CA',
+  textDisabled: 'var(--color-textDisabled)',
+  surfaceDisabled: 'var(--color-surfaceDisabled)',
+  borderHover: 'var(--color-borderHover)',
 
-  // Overlay / Backdrop
-  overlayDark: 'rgba(0, 0, 0, 0.4)',
-  overlayLight: 'rgba(255, 255, 255, 0.9)',
-  overlayScrim: 'rgba(0, 0, 0, 0.6)',
-  overlayHeavy: 'rgba(0, 0, 0, 0.8)',
-  overlayBackdrop: 'rgba(0, 0, 0, 0.5)',
-  overlayWhiteThin: 'rgba(255, 255, 255, 0.1)',
-  overlayWhiteMedium: 'rgba(255, 255, 255, 0.6)',
-  overlayWhiteBold: 'rgba(255, 255, 255, 0.7)',
-  overlayBlackThin: 'rgba(0, 0, 0, 0.03)',
-  overlayBlackLight: 'rgba(0, 0, 0, 0.08)',
-  overlayBlackMedium: 'rgba(0, 0, 0, 0.1)',
-  overlayBlackHeavy: 'rgba(0, 0, 0, 0.12)',
+  // Overlays
+  overlayDark: 'var(--color-overlayDark)',
+  overlayLight: 'var(--color-overlayLight)',
+  overlayScrim: 'var(--color-overlayScrim)',
+  overlayHeavy: 'var(--color-overlayHeavy)',
+  overlayBackdrop: 'var(--color-overlayBackdrop)',
+  overlayWhiteThin: 'var(--color-overlayWhiteThin)',
+  overlayWhiteMedium: 'var(--color-overlayWhiteMedium)',
+  overlayWhiteBold: 'var(--color-overlayWhiteBold)',
+  overlayBlackThin: 'var(--color-overlayBlackThin)',
+  overlayBlackLight: 'var(--color-overlayBlackLight)',
+  overlayBlackMedium: 'var(--color-overlayBlackMedium)',
+  overlayBlackHeavy: 'var(--color-overlayBlackHeavy)',
   panelBg: 'rgba(255, 255, 255, 0.95)',
   toolbarBg: 'rgba(0, 0, 0, 0.3)',
 
   // Indigo / AI accent
-  indigo: '#4F46E5',
-  indigoSubtle: 'rgba(79, 70, 229, 0.06)',
+  indigo: 'var(--color-indigo)',
+  indigoSubtle: 'var(--color-indigoSubtle)',
 
   // Dark mode topbar
-  topbarDark: 'rgba(12, 13, 15, 0.72)',
-  topbarLight: 'rgba(255, 255, 255, 0.72)',
-  darkHoverBg: 'rgba(255, 255, 255, 0.06)',
-  darkBorder: 'rgba(255, 255, 255, 0.1)',
-  darkMutedText: 'rgba(255, 255, 255, 0.5)',
+  topbarDark: 'var(--color-topbarDark)',
+  topbarLight: 'var(--color-topbarLight)',
+  darkHoverBg: 'var(--color-darkHoverBg)',
+  darkBorder: 'var(--color-darkBorder)',
+  darkMutedText: 'var(--color-darkMutedText)',
 
-  // Photo/viewer overlays
+  // Photo/viewer overlays (raw gradients — not themeable)
   photoGradient: 'linear-gradient(transparent, rgba(0,0,0,0.6))',
   photoGradientHeavy: 'linear-gradient(transparent, rgba(0,0,0,0.8))',
   viewerBg: 'rgba(0, 0, 0, 0.9)',
 
   // Error banner
-  errorSubtle: 'rgba(200, 50, 50, 0.06)',
+  errorSubtle: 'var(--color-errorSubtle)',
 
   // Status subtle variants (extra)
-  statusInfoExtraSubtle: 'rgba(58, 123, 200, 0.04)',
-  statusActiveExtraSubtle: 'rgba(45, 138, 110, 0.04)',
+  statusInfoExtraSubtle: 'var(--color-statusInfoExtraSubtle)',
+  statusActiveExtraSubtle: 'var(--color-statusActiveExtraSubtle)',
 
   // Additional status variants
-  statusInfoBright: '#4A9EE8',
-  statusWarning: '#D97706',
-  statusWarningSubtle: 'rgba(217, 119, 6, 0.06)',
-  statusSuccess: '#166534',
-  statusSuccessSubtle: 'rgba(22, 101, 52, 0.06)',
+  statusInfoBright: 'var(--color-statusInfoBright)',
+  statusWarning: 'var(--color-statusWarning)',
+  statusWarningSubtle: 'var(--color-statusWarningSubtle)',
+  statusSuccess: 'var(--color-statusSuccess)',
+  statusSuccessSubtle: 'var(--color-statusSuccessSubtle)',
 
-  // Chart / Accent palette
+  // Chart / Accent palette (raw values — not themeable)
   chartGreen: '#A3E635',
   chartCyan: '#06B6D4',
   chartAmber: '#FB923C',
@@ -120,35 +122,35 @@ export const colors = {
   chartPink: '#E07070',
   chartRed: '#E05252',
 
-  // Neutral grays (for icons, dividers, disabled states)
+  // Neutral grays
   gray300: '#D0D0D0',
   gray400: '#B0B0B0',
   gray500: '#8B8680',
   gray600: '#6B6560',
   gray700: '#5C5550',
 
-  // Error banner
-  errorBannerBg: 'rgba(201, 59, 59, 0.06)',
-  warningBannerBg: 'rgba(196, 133, 12, 0.06)',
-  infoBannerBg: 'rgba(58, 123, 200, 0.06)',
+  // Banner backgrounds
+  errorBannerBg: 'var(--color-errorBannerBg)',
+  warningBannerBg: 'var(--color-warningBannerBg)',
+  infoBannerBg: 'var(--color-infoBannerBg)',
 
-  // Legacy aliases (for components that haven't been updated yet)
-  tealSuccess: '#2D8A6E',
-  red: '#C93B3B',
-  amber: '#C4850C',
-  green: '#2D8A6E',
-  blue: '#3A7BC8',
-  purple: '#7C5DC7',
+  // Legacy aliases
+  tealSuccess: 'var(--color-statusActive)',
+  red: 'var(--color-statusCritical)',
+  amber: 'var(--color-statusPending)',
+  green: 'var(--color-statusActive)',
+  blue: 'var(--color-statusInfo)',
+  purple: 'var(--color-statusReview)',
   cyan: '#06B6D4',
-  lightBackground: '#FAFAF8',
-  cardBackground: '#FFFFFF',
-  border: '#E5E1DC',
-  borderLight: '#F0EDE9',
-  surfaceFlat: '#F6F3F0',
+  lightBackground: 'var(--color-surfacePage)',
+  cardBackground: 'var(--color-surfaceRaised)',
+  border: 'var(--color-borderDefault)',
+  borderLight: 'var(--color-borderSubtle)',
+  surfaceFlat: 'var(--color-surfaceSidebar)',
   darkNavy: '#0F1629',
-  orangeGradientStart: '#F47820',
+  orangeGradientStart: 'var(--color-primary)',
   orangeGradientEnd: '#FF9C42',
-  orangeMedium: 'rgba(244, 120, 32, 0.08)',
+  orangeMedium: 'var(--color-primary-subtle)',
 } as const;
 
 // ── Visualization Colors ───────────────────────────────
@@ -216,21 +218,22 @@ export const darkColors = {
   // Status colors stay the same in dark mode (high contrast on dark bg)
 } as const;
 
-// CSS custom property names for dark mode theming
+// CSS custom property names for dark mode theming.
+// These are aliases into colors for any components that import colorVars directly.
 export const colorVars = {
-  surfacePage: 'var(--color-surfacePage, #FAFAF8)',
-  surfaceSidebar: 'var(--color-surfaceSidebar, #F6F3F0)',
-  surfaceRaised: 'var(--color-surfaceRaised, #FFFFFF)',
-  surfaceInset: 'var(--color-surfaceInset, #F3EFEC)',
-  surfaceHover: 'var(--color-surfaceHover, #F0EDE8)',
-  surfaceSelected: 'var(--color-surfaceSelected, #FEF7F2)',
-  surfaceFlat: 'var(--color-surfaceFlat, #F6F3F0)',
-  borderSubtle: 'var(--color-borderSubtle, #F0EDE9)',
-  borderDefault: 'var(--color-borderDefault, #E5E1DC)',
-  borderLight: 'var(--color-borderLight, #F0EDE9)',
-  textPrimary: 'var(--color-textPrimary, #1A1613)',
-  textSecondary: 'var(--color-textSecondary, #5C5550)',
-  textTertiary: 'var(--color-textTertiary, #9A9490)',
+  surfacePage: colors.surfacePage,
+  surfaceSidebar: colors.surfaceSidebar,
+  surfaceRaised: colors.surfaceRaised,
+  surfaceInset: colors.surfaceInset,
+  surfaceHover: colors.surfaceHover,
+  surfaceSelected: colors.surfaceSelected,
+  surfaceFlat: 'var(--color-surfaceFlat)',
+  borderSubtle: colors.borderSubtle,
+  borderDefault: colors.borderDefault,
+  borderLight: colors.borderLight,
+  textPrimary: colors.textPrimary,
+  textSecondary: colors.textSecondary,
+  textTertiary: colors.textTertiary,
 } as const;
 
 // ── Spacing ──────────────────────────────────────────────

@@ -1,7 +1,8 @@
 import { supabase, transformSupabaseError } from '../client'
-const PID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+import { validateProjectId } from '../middleware/projectScope'
+import type { SubmittalRow } from '../../types/api'
 
-function mapSubmittal(s: any) {
+function mapSubmittal(s: SubmittalRow) {
   return {
     ...s,
     submittalNumber: s.number ? `SUB-${String(s.number).padStart(3, '0')}` : s.id?.slice(0, 8),
@@ -10,13 +11,15 @@ function mapSubmittal(s: any) {
   }
 }
 
-export const getSubmittals = async () => {
-  const { data, error } = await supabase.from('submittals').select('*').eq('project_id', PID).order('number', { ascending: false })
-  if (error) throw transformSupabaseError({ message: error.message, code: error.code })
+export const getSubmittals = async (projectId: string) => {
+  validateProjectId(projectId)
+  const { data, error } = await supabase.from('submittals').select('*').eq('project_id', projectId).order('number', { ascending: false })
+  if (error) throw transformSupabaseError(error)
   return (data || []).map(mapSubmittal)
 }
-export const getSubmittalById = async (id: string) => {
-  const { data, error } = await supabase.from('submittals').select('*').eq('id', id).single()
-  if (error) throw transformSupabaseError({ message: error.message, code: error.code })
+export const getSubmittalById = async (projectId: string, id: string) => {
+  validateProjectId(projectId)
+  const { data, error } = await supabase.from('submittals').select('*').eq('project_id', projectId).eq('id', id).single()
+  if (error) throw transformSupabaseError(error)
   return mapSubmittal(data)
 }

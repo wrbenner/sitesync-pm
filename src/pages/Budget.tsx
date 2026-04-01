@@ -34,8 +34,8 @@ export const Budget: React.FC = () => {
   const { addToast } = useToast();
   const projectId = useProjectId();
   const updateCO = useUpdateChangeOrder();
-  const { data: costData, loading: costLoading } = useQuery('costData', getCostData);
-  const { data: projectData, loading: projectLoading } = useQuery('projectData', getProject);
+  const { data: costData, loading: costLoading } = useQuery(`costData-${projectId}`, () => getCostData(projectId!), { enabled: !!projectId });
+  const { data: projectData, loading: projectLoading } = useQuery(`projectData-${projectId}`, () => getProject(projectId!), { enabled: !!projectId });
   const [selectedCO, setSelectedCO] = useState<NonNullable<typeof costData>['changeOrders'][0] | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'earned-value'>('overview');
 

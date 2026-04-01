@@ -1,13 +1,30 @@
 /**
  * Row Level Security (RLS) enforcement helpers.
  *
- * These helpers ensure that every Supabase query is scoped to the
- * current user's company and active project. They provide a typed
- * wrapper around the Supabase client that automatically applies
- * tenant isolation filters.
+ * Provides both client-side guardrails (PermissionError thrown before the
+ * network call) and scoped query helpers that apply project_id filters so
+ * authorized queries are always tenant-isolated.
  */
 
 import { supabase, isSupabaseConfigured } from './supabase';
+
+// ---------------------------------------------------------------------------
+// PermissionError
+// ---------------------------------------------------------------------------
+
+export class PermissionError extends Error {
+  readonly projectId?: string;
+
+  constructor(message: string, projectId?: string) {
+    super(message);
+    this.name = 'PermissionError';
+    this.projectId = projectId;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Tenant context (lightweight in-memory cache)
+// ---------------------------------------------------------------------------
 
 export interface TenantContext {
   companyId: string;
@@ -17,31 +34,144 @@ export interface TenantContext {
 
 let currentContext: TenantContext | null = null;
 
-/**
- * Set the current tenant context. Call this on login and project switch.
- */
 export function setTenantContext(ctx: TenantContext) {
   currentContext = ctx;
 }
 
-/**
- * Clear tenant context on logout.
- */
 export function clearTenantContext() {
   currentContext = null;
 }
 
-/**
- * Get the current tenant context. Throws if not set and Supabase is configured.
- */
 export function getTenantContext(): TenantContext | null {
   if (!isSupabaseConfigured) return null;
   return currentContext;
 }
 
+// ---------------------------------------------------------------------------
+// Core access checks (hit the DB, rely on RLS for the final verdict)
+// ---------------------------------------------------------------------------
+
 /**
- * Scoped query builder that automatically applies project_id filter.
- * Usage: scopedQuery('rfis').select('*') => already filtered by project_id
+ * Verify the current auth user is a member of projectId.
+ * Throws PermissionError if not authenticated or not a member.
+ */
+export async function ensureProjectAccess(projectId: string): Promise<void> {
+  if (!isSupabaseConfigured) return;
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    throw new PermissionError('Not authenticated', projectId);
+  }
+
+  const { data, error } = await supabase
+    .from('project_members')
+    .select('id')
+    .eq('project_id', projectId)
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (error || !data) {
+    throw new PermissionError(
+      `Access denied: not a member of project ${projectId}`,
+      projectId,
+    );
+  }
+}
+
+/**
+ * Return the current user's role on projectId.
+ * Throws PermissionError if not authenticated or not a member.
+ */
+export async function getUserProjectRole(projectId: string): Promise<string> {
+  if (!isSupabaseConfigured) return 'owner';
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    throw new PermissionError('Not authenticated', projectId);
+  }
+
+  const { data, error } = await supabase
+    .from('project_members')
+    .select('role')
+    .eq('project_id', projectId)
+    .eq('user_id', user.id)
+    .single();
+
+  if (error || !data) {
+    throw new PermissionError(
+      `Not a member of project ${projectId}`,
+      projectId,
+    );
+  }
+
+  return data.role as string;
+}
+
+// ---------------------------------------------------------------------------
+// Role hierarchy
+// ---------------------------------------------------------------------------
+
+const ROLE_LEVEL: Record<string, number> = {
+  owner: 6,
+  admin: 5,
+  project_manager: 4,
+  superintendent: 3,
+  subcontractor: 2,
+  viewer: 1,
+  member: 2,
+};
+
+const ACTION_MIN_ROLE: Record<'read' | 'write' | 'admin', string> = {
+  read: 'viewer',
+  write: 'superintendent',
+  admin: 'project_manager',
+};
+
+/**
+ * Return true if the current user meets the minimum role required for action.
+ * Returns false on any error (not authenticated, not a member, network issue).
+ */
+export async function canPerformAction(
+  projectId: string,
+  action: 'read' | 'write' | 'admin',
+): Promise<boolean> {
+  try {
+    const role = await getUserProjectRole(projectId);
+    const userLevel = ROLE_LEVEL[role] ?? 0;
+    const minLevel = ROLE_LEVEL[ACTION_MIN_ROLE[action]] ?? 0;
+    return userLevel >= minLevel;
+  } catch {
+    return false;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// RBAC helpers (synchronous, used after role is already known)
+// ---------------------------------------------------------------------------
+
+export type ProjectPermission = 'view' | 'edit' | 'approve' | 'admin';
+
+const ROLE_PERMISSIONS: Record<string, ProjectPermission[]> = {
+  owner: ['view', 'edit', 'approve', 'admin'],
+  admin: ['view', 'edit', 'approve', 'admin'],
+  project_manager: ['view', 'edit', 'approve', 'admin'],
+  superintendent: ['view', 'edit', 'approve'],
+  subcontractor: ['view', 'edit'],
+  member: ['view', 'edit'],
+  viewer: ['view'],
+};
+
+export function hasPermission(role: string, permission: ProjectPermission): boolean {
+  const permissions = ROLE_PERMISSIONS[role] ?? ROLE_PERMISSIONS['viewer'];
+  return permissions.includes(permission);
+}
+
+// ---------------------------------------------------------------------------
+// Scoped query helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Return a SELECT query already filtered by the active project.
  */
 export function scopedQuery(table: string) {
   const ctx = getTenantContext();
@@ -53,7 +183,7 @@ export function scopedQuery(table: string) {
 }
 
 /**
- * Scoped insert that automatically injects project_id and created_by.
+ * Return an INSERT that automatically injects project_id and created_by.
  */
 export function scopedInsert(table: string, data: Record<string, unknown>) {
   const ctx = getTenantContext();
@@ -64,8 +194,8 @@ export function scopedInsert(table: string, data: Record<string, unknown>) {
 }
 
 /**
- * Validate that an entity belongs to the current project before mutation.
- * Returns true if the entity is accessible, false otherwise.
+ * Confirm an entity belongs to the active project before a mutation.
+ * Returns true when the entity is accessible (or Supabase is not configured).
  */
 export async function validateOwnership(table: string, entityId: string): Promise<boolean> {
   const ctx = getTenantContext();
@@ -79,25 +209,4 @@ export async function validateOwnership(table: string, entityId: string): Promis
     .single();
 
   return !!data;
-}
-
-/**
- * RBAC permission levels for project members.
- */
-export type ProjectPermission = 'view' | 'edit' | 'approve' | 'admin';
-
-const ROLE_PERMISSIONS: Record<string, ProjectPermission[]> = {
-  project_manager: ['view', 'edit', 'approve', 'admin'],
-  superintendent: ['view', 'edit', 'approve'],
-  engineer: ['view', 'edit'],
-  subcontractor: ['view', 'edit'],
-  viewer: ['view'],
-};
-
-/**
- * Check if the current user has a specific permission in the active project.
- */
-export function hasPermission(role: string, permission: ProjectPermission): boolean {
-  const permissions = ROLE_PERMISSIONS[role] ?? ROLE_PERMISSIONS['viewer'];
-  return permissions.includes(permission);
 }
