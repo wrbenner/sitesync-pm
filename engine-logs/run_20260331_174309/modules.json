@@ -1,0 +1,162 @@
+{
+  "modules": [
+    {
+      "name": "infrastructure",
+      "label": "Infrastructure & Core Setup",
+      "description": "Application initialization, API client, routing, authentication, and query management",
+      "files": [
+        "src/App.tsx",
+        "src/App.css",
+        "src/api/client.ts",
+        "src/api/errors.ts",
+        "src/api/queryKeys.ts",
+        "src/components/auth/ProtectedRoute.tsx",
+        "src/components/auth/PermissionGate.tsx"
+      ],
+      "priority": 1
+    },
+    {
+      "name": "core-workflows",
+      "label": "Core Workflows",
+      "description": "RFIs, submittals, and task management endpoints and domain logic",
+      "files": [
+        "src/api/endpoints/rfis.ts",
+        "src/api/endpoints/submittals.ts",
+        "src/api/endpoints/tasks.ts"
+      ],
+      "priority": 2
+    },
+    {
+      "name": "financial-engine",
+      "label": "Financial Management & Budget",
+      "description": "Budget tracking, earned value analysis, cost management, and financial reporting",
+      "files": [
+        "src/api/endpoints/budget.ts",
+        "src/components/budget/BudgetUpload.tsx",
+        "src/components/budget/EarnedValueDashboard.tsx",
+        "src/components/budget/SCurve.tsx",
+        "src/components/budget/Treemap.tsx",
+        "src/components/budget/WaterfallChart.tsx",
+        "src/components/dashboard/widgets/CashFlowWidget.tsx"
+      ],
+      "priority": 3
+    },
+    {
+      "name": "scheduling",
+      "label": "Scheduling & Timeline Management",
+      "description": "Schedule management, Gantt views, milestones, and timeline visualization",
+      "files": [
+        "src/api/endpoints/schedule.ts",
+        "src/components/dashboard/widgets/MilestoneTimelineWidget.tsx"
+      ],
+      "priority": 4
+    },
+    {
+      "name": "field-operations",
+      "label": "Field Operations & Daily Logs",
+      "description": "Daily logs, field capture, crew tracking, weather, and on-site documentation",
+      "files": [
+        "src/api/endpoints/field.ts",
+        "src/components/dailylog/AutoNarrative.tsx",
+        "src/components/dailylog/CalendarNav.tsx",
+        "src/components/dailylog/CrewHoursSummary.tsx",
+        "src/components/dailylog/DayComparison.tsx",
+        "src/components/dailylog/PhotoGrid.tsx",
+        "src/components/dailylog/QuickEntry.tsx",
+        "src/components/dailylog/SignaturePad.tsx",
+        "src/components/dailylog/WeatherCard.tsx"
+      ],
+      "priority": 5
+    },
+    {
+      "name": "project-intelligence",
+      "label": "Project Intelligence & AI",
+      "description": "AI copilot, generative UI, predictive analytics, agent streaming, and project insights",
+      "files": [
+        "src/api/endpoints/ai.ts",
+        "src/components/ai/ActionConfirmCard.tsx",
+        "src/components/ai/AgentMentionInput.tsx",
+        "src/components/ai/AgentMessage.tsx",
+        "src/components/ai/agentStream/AgentStatusBadge.tsx",
+        "src/components/ai/agentStream/AgentStreamPanel.tsx",
+        "src/components/ai/agentStream/index.ts",
+        "src/components/ai/AIActionCard.tsx",
+        "src/components/ai/AIAnnotation.tsx",
+        "src/components/ai/AIContextPanel.tsx",
+        "src/components/ai/BatchActionPreview.tsx",
+        "src/components/ai/ChatMessage.tsx",
+        "src/components/ai/FloatingAIButton.tsx",
+        "src/components/ai/generativeUI/GenApprovalCard.tsx",
+        "src/components/ai/generativeUI/GenChart.tsx",
+        "src/components/ai/generativeUI/GenChecklist.tsx",
+        "src/components/ai/generativeUI/GenComparison.tsx",
+        "src/components/ai/generativeUI/GenCostBreakdown.tsx",
+        "src/components/ai/generativeUI/GenDataTable.tsx",
+        "src/components/ai/generativeUI/GenerativeUIRenderer.tsx",
+        "src/components/ai/generativeUI/GenForm.tsx",
+        "src/components/ai/generativeUI/GenMetricCards.tsx",
+        "src/components/ai/generativeUI/GenPhotoGrid.tsx",
+        "src/components/ai/generativeUI/GenRFIResponse.tsx",
+        "src/components/ai/generativeUI/GenSafetyAlert.tsx",
+        "src/components/ai/generativeUI/GenScheduleCard.tsx",
+        "src/components/ai/generativeUI/GenTimeline.tsx",
+        "src/components/ai/generativeUI/index.ts",
+        "src/components/ai/generativeUI/types.ts",
+        "src/components/ai/PredictiveAlert.tsx",
+        "src/components/ai/SuggestedPrompts.tsx",
+        "src/components/ai/ToolResultCard.tsx",
+        "src/components/dashboard/widgets/AIInsightsWidget.tsx"
+      ],
+      "priority": 6
+    },
+    {
+      "name": "document-management",
+      "label": "Document Management & BIM",
+      "description": "Document handling, file management, BIM viewer integration, and drawing management",
+      "files": [
+        "src/api/endpoints/documents.ts",
+        "src/components/dashboard/widgets/BIMPreviewWidget.tsx"
+      ],
+      "priority": 7
+    },
+    {
+      "name": "collaboration",
+      "label": "Collaboration & Communication",
+      "description": "Activity feeds, real-time presence, notifications, mentions, and team coordination",
+      "files": [
+        "src/api/endpoints/activity.ts",
+        "src/api/endpoints/people.ts",
+        "src/components/activity/ActivityCard.tsx",
+        "src/components/activity/MentionInput.tsx",
+        "src/components/collaboration/EditConflictGuard.tsx",
+        "src/components/collaboration/EntityPresence.tsx",
+        "src/components/collaboration/NotificationCenter.tsx",
+        "src/components/collaboration/PresenceBar.tsx",
+        "src/components/dashboard/widgets/PhotoFeedWidget.tsx",
+        "src/components/dashboard/widgets/LiveSiteWidget.tsx"
+      ],
+      "priority": 8
+    },
+    {
+      "name": "dashboard-ui",
+      "label": "Dashboard & UI Components",
+      "description": "Dashboard layout, widget registry, breadcrumbs, context menus, and general UI patterns",
+      "files": [
+        "src/components/Breadcrumbs.tsx",
+        "src/components/ContextMenu.tsx",
+        "src/components/dashboard/DashboardGrid.tsx",
+        "src/components/dashboard/WidgetRegistry.ts"
+      ],
+      "priority": 9
+    },
+    {
+      "name": "projects-platform",
+      "label": "Projects & Portfolio",
+      "description": "Project management, project endpoints, and project-level operations",
+      "files": [
+        "src/api/endpoints/projects.ts"
+      ],
+      "priority": 10
+    }
+  ]
+}

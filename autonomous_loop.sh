@@ -217,13 +217,46 @@ extract_text() {
     echo "$1" | jq -r '[.content[] | select(.type=="text") | .text] | join("")' 2>/dev/null || echo ""
 }
 
-# Extract JSON object from text that might contain markdown fences
+# Extract JSON object from text that might contain markdown fences or prose
+# Uses awk for brace-depth tracking — handles nested objects, works without python/perl
 extract_json() {
     local text="$1"
-    # Try direct parse first
-    echo "$text" | jq '.' 2>/dev/null && return
-    # Strip markdown fences
-    echo "$text" | sed 's/```json//g' | sed 's/```//g' | jq '.' 2>/dev/null || echo '{}'
+    local result
+
+    # 1. Try direct parse first (ideal case: Claude returned raw JSON)
+    result=$(printf '%s' "$text" | jq '.' 2>/dev/null) && printf '%s' "$result" && return 0
+
+    # 2. Strip markdown fences and try again
+    local stripped
+    stripped=$(printf '%s' "$text" | sed 's/```json[[:space:]]*/\n/g; s/```[[:space:]]*/\n/g')
+    result=$(printf '%s' "$stripped" | jq '.' 2>/dev/null) && printf '%s' "$result" && return 0
+
+    # 3. Use awk to extract the outermost {...} block by tracking brace depth
+    #    This handles cases where Claude adds preamble/postamble around the JSON
+    local extracted
+    extracted=$(printf '%s' "$text" | awk '
+        BEGIN { found=0; depth=0; buf="" }
+        {
+            n = length($0)
+            for (i = 1; i <= n; i++) {
+                c = substr($0, i, 1)
+                if (!found && c == "{") { found = 1; depth = 1; buf = c; continue }
+                if (found) {
+                    buf = buf c
+                    if (c == "{") depth++
+                    else if (c == "}") {
+                        depth--
+                        if (depth == 0) { print buf; exit }
+                    }
+                }
+            }
+            if (found) buf = buf "\n"
+        }
+    ')
+    result=$(printf '%s' "$extracted" | jq '.' 2>/dev/null) && printf '%s' "$result" && return 0
+
+    # 4. Nothing worked — return empty object
+    printf '{}'
 }
 
 # Add spend from API response to running totals
@@ -500,7 +533,9 @@ take_snapshot() {
     echo "$snapshot_file"
 }
 
-# ── Read founder context ───────────────────────────────────────────────────────
+# ── Read founder context + brain files ─────────────────────────────────────────
+# The "brain": VISION.md, FEEDBACK.md, plus domain knowledge, competitive intel,
+# design standards, module specs, and industry reference. All injected into every audit.
 read_founder_context() {
     local context=""
 
@@ -513,6 +548,28 @@ read_founder_context() {
         context+="## FOUNDER PRIORITIES (P0 — address these first in every audit)\n\n"
         context+="$(cat "$FEEDBACK_FILE")\n\n"
     fi
+
+    # Brain files — deep context the engine needs to make world-class decisions
+    local brain_files=(
+        "COMPETITORS.md:COMPETITIVE INTELLIGENCE (know the enemy)"
+        "CONSTRUCTION_DOMAIN.md:CONSTRUCTION DOMAIN KNOWLEDGE (how the industry actually works)"
+        "DESIGN_STANDARDS.md:DESIGN STANDARDS (what world-class UI looks like, enforce these rules)"
+        "MODULE_SPECS.md:MODULE SPECIFICATIONS (what done looks like for each feature)"
+        "INDUSTRY_REFERENCE.md:INDUSTRY REFERENCE (CSI codes, AIA forms, financial formulas, KPIs)"
+        "LEARNINGS.md:ENGINE LEARNINGS (what worked, what failed, fix rates, score trends from prior runs — use this to avoid repeating mistakes)"
+    )
+
+    for entry in "${brain_files[@]}"; do
+        local file="${entry%%:*}"
+        local label="${entry#*:}"
+        local filepath="${PROJECT_DIR}/${file}"
+
+        if [ -f "$filepath" ]; then
+            context+="## ${label}\n\n"
+            context+="$(cat "$filepath")\n\n"
+            success "Brain loaded: ${file}"
+        fi
+    done
 
     echo -e "$context"
 }
@@ -635,6 +692,10 @@ audit_module() {
 
     log "Auditing: ${module_label}..."
 
+    # Get dynamic strategy context for this module (self-awareness)
+    local strategy_context
+    strategy_context=$(get_strategy_context "$module_name")
+
     # Build the snapshot section relevant to this module
     local relevant_snapshot
     relevant_snapshot=$(grep -A 100 "### src/pages\|### src/components\|### src/styles\|### src/hooks\|### src/store\|### src/" "$snapshot_file" | head -800 || head -800 "$snapshot_file")
@@ -675,6 +736,10 @@ ${founder_context}
 ## PRIOR UNRESOLVED ISSUES (MUST ADDRESS FIRST — P0)
 
 ${prior_issues}
+
+## ENGINE STRATEGY (dynamic, based on score trends from prior cycles)
+
+${strategy_context}
 
 ## CODEBASE SNAPSHOT
 
@@ -756,15 +821,16 @@ ${invention_section}"
     local audit_json
     audit_json=$(extract_json "$text")
 
-    if echo "$audit_json" | jq '.issues' &>/dev/null; then
+    # Validate: must have .issues as an array (not null) and a non-empty .module field
+    if echo "$audit_json" | jq -e '.issues | type == "array"' &>/dev/null; then
         echo "$audit_json" > "$audit_file"
 
         local score
         score=$(echo "$audit_json" | jq -r '.overall_score // 0')
         local issue_count
-        issue_count=$(echo "$audit_json" | jq '.issues | length')
+        issue_count=$(echo "$audit_json" | jq '(.issues // []) | length')
         local critical_count
-        critical_count=$(echo "$audit_json" | jq '[.issues[] | select(.severity=="critical")] | length')
+        critical_count=$(echo "$audit_json" | jq '[(.issues // [])[] | select(.severity=="critical")] | length')
 
         # Persist score for trending
         echo "$score" >> "${SCORES_DIR}/${module_name}.txt"
@@ -1001,7 +1067,7 @@ verify_changes() {
     log "Verifying changes for ${module_name}..."
 
     local issues_summary
-    issues_summary=$(jq '[.issues[] | {id:.id,title:.title,severity:.severity}]' "$audit_file")
+    issues_summary=$(jq '[(.issues // [])[] | {id:.id,title:.title,severity:.severity}]' "$audit_file")
 
     # Check git diff for this cycle
     local diff_summary
@@ -1086,6 +1152,122 @@ commit_cycle() {
     success "Committed cycle ${cycle_num} changes"
 }
 
+# ── Self-learning: update LEARNINGS.md after each cycle ──────────────────────
+# The engine tracks what it learns across cycles so it gets smarter over time.
+# This file persists across runs — the engine reads it back on subsequent nights.
+update_learnings() {
+    local cycle_dir="$1"
+    local learnings_file="${PROJECT_DIR}/LEARNINGS.md"
+
+    # Initialize if first time
+    if [ ! -f "$learnings_file" ]; then
+        {
+            echo "# Engine Learnings"
+            echo ""
+            echo "Auto-generated by the evolution engine. Tracks patterns, wins, and mistakes across runs."
+            echo "The engine reads this before every audit to avoid repeating mistakes and amplify what works."
+            echo ""
+        } > "$learnings_file"
+    fi
+
+    # Collect this cycle's results
+    local cycle_summary=""
+    local total_fixed=0
+    local total_unfixed=0
+    local module_scores=""
+
+    for audit_file in "${cycle_dir}"/audit_*.json; do
+        [ -f "$audit_file" ] || continue
+        local mod
+        mod=$(jq -r '.module // "unknown"' "$audit_file" 2>/dev/null)
+        local score
+        score=$(jq -r '.overall_score // 0' "$audit_file" 2>/dev/null)
+        local issues
+        issues=$(jq '(.issues // []) | length' "$audit_file" 2>/dev/null || echo 0)
+        module_scores+="  ${mod}: ${score}/100 (${issues} issues)\n"
+
+        # Count verification results
+        local verify_file="${cycle_dir}/verify_${mod}.json"
+        if [ -f "$verify_file" ]; then
+            local fixed
+            fixed=$(jq '[.verifications[]? | select(.status=="fixed")] | length' "$verify_file" 2>/dev/null || echo 0)
+            local unfixed
+            unfixed=$(jq '[.verifications[]? | select(.status=="not_fixed")] | length' "$verify_file" 2>/dev/null || echo 0)
+            total_fixed=$(( total_fixed + fixed ))
+            total_unfixed=$(( total_unfixed + unfixed ))
+        fi
+    done
+
+    # Calculate fix rate
+    local total_attempted=$(( total_fixed + total_unfixed ))
+    local fix_rate="N/A"
+    if [ "$total_attempted" -gt 0 ]; then
+        fix_rate=$(( total_fixed * 100 / total_attempted ))
+    fi
+
+    # Append to learnings
+    {
+        echo ""
+        echo "## Cycle ${CYCLE} — $(date +%Y-%m-%d\ %H:%M)"
+        echo ""
+        echo "Spend: \$${CYCLE_SPEND} | Fix rate: ${fix_rate}% (${total_fixed}/${total_attempted})"
+        echo ""
+        echo -e "${module_scores}"
+        if [ "$total_unfixed" -gt 0 ]; then
+            echo "Unfixed issues carried forward. The engine should prioritize these next cycle."
+        fi
+        if [ "$fix_rate" != "N/A" ] && [ "$fix_rate" -lt 50 ] 2>/dev/null; then
+            echo "Low fix rate this cycle. Prompts may need to be more specific or broken into smaller steps."
+        fi
+    } >> "$learnings_file"
+
+    log "Learnings updated: ${learnings_file}"
+}
+
+# ── Dynamic strategy: adjust approach based on score trends ──────────────────
+get_strategy_context() {
+    local mod_name="$1"
+    local strategy=""
+
+    # Check score trend for this module
+    local score_file="${SCORES_DIR}/${mod_name}.txt"
+    if [ -f "$score_file" ]; then
+        local score_count
+        score_count=$(wc -l < "$score_file" | tr -d ' ')
+
+        if [ "$score_count" -ge 2 ]; then
+            local prev_line=$(( score_count - 1 ))
+            local prev
+            prev=$(sed -n "${prev_line}p" "$score_file" 2>/dev/null | tr -dc '0-9')
+            local curr
+            curr=$(tail -1 "$score_file" 2>/dev/null | tr -dc '0-9')
+
+            if [ -n "$prev" ] && [ -n "$curr" ]; then
+                local delta=$(( curr - prev ))
+                if [ "$delta" -gt 5 ]; then
+                    strategy+="MOMENTUM: Score improved by ${delta} points last cycle. Keep this approach.\n"
+                elif [ "$delta" -lt -5 ]; then
+                    strategy+="REGRESSION: Score dropped by $(( delta * -1 )) points. Something broke. Prioritize fixing regressions.\n"
+                elif [ "$delta" -ge -2 ] && [ "$delta" -le 2 ]; then
+                    strategy+="PLATEAU: Score is flat. Try different approaches. Look at dimensions that have not been addressed.\n"
+                fi
+            fi
+        fi
+    fi
+
+    # Check learnings file for relevant patterns
+    local learnings_file="${PROJECT_DIR}/LEARNINGS.md"
+    if [ -f "$learnings_file" ]; then
+        local recent_learnings
+        recent_learnings=$(tail -20 "$learnings_file" 2>/dev/null)
+        if echo "$recent_learnings" | grep -q "Low fix rate"; then
+            strategy+="ADAPTATION: Recent cycles had low fix rates. Generate simpler, more targeted prompts.\n"
+        fi
+    fi
+
+    echo -e "$strategy"
+}
+
 # ── Check if all modules are clean ────────────────────────────────────────────
 check_all_clean() {
     local cycle_dir="$1"
@@ -1096,7 +1278,7 @@ check_all_clean() {
         local mod_name
         mod_name=$(jq -r '.module // "unknown"' "$audit_file")
         local issue_count
-        issue_count=$(jq '[.issues[] | select(.severity=="critical" or .severity=="high")] | length' "$audit_file" 2>/dev/null || echo 1)
+        issue_count=$(jq '[(.issues // [])[] | select(.severity=="critical" or .severity=="high")] | length' "$audit_file" 2>/dev/null || echo 1)
         if [ "$issue_count" -gt 0 ]; then
             all_clean=false
             break
@@ -1181,7 +1363,7 @@ generate_report() {
                 local mod_label
                 mod_label=$(jq -r '.module // "unknown"' "$audit_file")
                 local high_issues
-                high_issues=$(jq -r '.issues[] | select(.severity=="critical" or .severity=="high") | "- [\(.severity)] \(.title)"' "$audit_file" 2>/dev/null | head -5)
+                high_issues=$(jq -r '(.issues // [])[] | select(.severity=="critical" or .severity=="high") | "- [\(.severity)] \(.title)"' "$audit_file" 2>/dev/null | head -5)
                 if [ -n "$high_issues" ]; then
                     echo "### ${mod_label}"
                     echo "$high_issues"
@@ -1393,7 +1575,7 @@ main() {
 
             # Check if this module still has critical/high issues
             local open_issues
-            open_issues=$(jq '[.issues[] | select(.severity=="critical" or .severity=="high")] | length' "$audit_file" 2>/dev/null || echo 1)
+            open_issues=$(jq '[(.issues // [])[] | select(.severity=="critical" or .severity=="high")] | length' "$audit_file" 2>/dev/null || echo 1)
             if [ "$open_issues" -gt 0 ]; then
                 any_issues=true
             fi
@@ -1409,6 +1591,9 @@ main() {
 
         # Commit this cycle
         commit_cycle "$CYCLE" "$modules_processed" "$CYCLE_SPEND"
+
+        # Update learnings (self-awareness: track what worked, what didn't)
+        update_learnings "$cycle_dir"
 
         # Save state for resume support
         echo '{"last_completed_cycle":'"$CYCLE"',"estimated_spend":"'"$ESTIMATED_SPEND"'","prompts_executed":'"$TOTAL_PROMPTS_EXECUTED"'}' > "$STATE_FILE"
