@@ -817,7 +817,7 @@ ${invention_section}"
     fi
 
     local response
-    response=$(call_claude "$AUDIT_MODEL" "$prompt" 16384 "" "$tools_arg")
+    response=$(call_claude "$AUDIT_MODEL" "$prompt" 32768 "" "$tools_arg")
 
     # Save raw response for debugging
     echo "$response" > "${cycle_dir}/audit_${module_name}_raw.json"
@@ -850,7 +850,7 @@ if idx < 0:
 partial = text[idx:]
 
 # Progressive cutback: strip chars from end until JSON parses
-for cutback in range(0, 3000, 10):
+for cutback in range(0, 30000, 50):
     trimmed = partial[:len(partial)-cutback] if cutback > 0 else partial
     trimmed = trimmed.rstrip().rstrip(",")
 
