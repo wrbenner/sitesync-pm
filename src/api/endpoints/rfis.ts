@@ -19,18 +19,25 @@ export const getRfis = async (
   projectId: string,
   pagination?: PaginationParams
 ): Promise<PaginatedResult<MappedRfi>> => {
+  if (pagination !== undefined && pagination.page < 1) {
+    throw new Error('pagination.page must be >= 1')
+  }
   await assertProjectAccess(projectId)
-  return buildPaginatedQuery<RfiRow, MappedRfi>(
-    (from, to) =>
-      supabase
-        .from('rfis')
-        .select('*', { count: 'exact' })
-        .eq('project_id', projectId)
-        .order('number', { ascending: false })
-        .range(from, to),
-    pagination,
-    mapRfi
-  )
+  try {
+    return await buildPaginatedQuery<RfiRow, MappedRfi>(
+      (from, to) =>
+        supabase
+          .from('rfis')
+          .select('*', { count: 'exact' })
+          .eq('project_id', projectId)
+          .order('number', { ascending: false })
+          .range(from, to),
+      pagination,
+      mapRfi
+    )
+  } catch (err) {
+    throw transformSupabaseError(err)
+  }
 }
 export const getRfiById = async (projectId: string, id: string) => {
   await assertProjectAccess(projectId)
