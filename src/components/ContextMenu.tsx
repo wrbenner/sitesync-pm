@@ -38,12 +38,38 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ items, children }) => 
     };
   }, [open]);
 
+  useEffect(() => {
+    if (open) {
+      menuRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus();
+    }
+  }, [open]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      setOpen(false);
+    } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      const items = Array.from(menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]') ?? []);
+      const focused = document.activeElement as HTMLButtonElement;
+      const idx = items.indexOf(focused);
+      if (e.key === 'ArrowUp') {
+        items[Math.max(0, idx - 1)]?.focus();
+      } else {
+        items[Math.min(items.length - 1, idx + 1)]?.focus();
+      }
+    }
+  }, []);
+
   return (
     <>
-      <div onContextMenu={handleContextMenu}>{children}</div>
+      <div onContextMenu={handleContextMenu} aria-haspopup="menu">{children}</div>
       {open && (
         <div
           ref={menuRef}
+          role="menu"
+          aria-label="Context menu"
+          onKeyDown={handleKeyDown}
           style={{
             position: 'fixed',
             top: position.y,
@@ -69,6 +95,8 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ items, children }) => 
                 />
               )}
               <button
+                role="menuitem"
+                tabIndex={0}
                 onClick={() => {
                   item.onClick();
                   setOpen(false);
