@@ -43,6 +43,10 @@ const crumbButtonStyle: React.CSSProperties = {
   fontFamily: typography.fontFamily,
   color: colors.textTertiary,
   transition: `color ${transitions.instant}, background-color ${transitions.instant}`,
+  maxWidth: '160px',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
 };
 
 export const FolderBreadcrumbs: React.FC<FolderBreadcrumbsProps> = ({ stack, onNavigate }) => {
@@ -51,7 +55,7 @@ export const FolderBreadcrumbs: React.FC<FolderBreadcrumbsProps> = ({ stack, onN
   return (
     <nav
       aria-label="Folder navigation"
-      style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], marginBottom: spacing['3'], flexWrap: 'wrap' }}
+      style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], marginBottom: spacing['3'], flexWrap: 'wrap', minWidth: 0 }}
     >
       {/* Root */}
       <button
@@ -82,6 +86,10 @@ export const FolderBreadcrumbs: React.FC<FolderBreadcrumbsProps> = ({ stack, onN
                 fontSize: typography.fontSize.sm,
                 fontWeight: typography.fontWeight.medium,
                 color: colors.textPrimary,
+                maxWidth: '160px',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
               }}>
                 <FolderOpen size={13} color={colors.primaryOrange} />
                 {segment.name}
@@ -90,6 +98,7 @@ export const FolderBreadcrumbs: React.FC<FolderBreadcrumbsProps> = ({ stack, onN
               <button
                 onClick={() => onNavigate(i)}
                 style={crumbButtonStyle}
+                title={segment.name}
                 onMouseEnter={(e) => {
                   (e.currentTarget as HTMLButtonElement).style.color = colors.primaryOrange;
                   (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.orangeSubtle;
