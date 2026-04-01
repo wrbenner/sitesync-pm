@@ -1,0 +1,133 @@
+{
+  "module": "financial-engine",
+  "scores": {
+    "visual_polish": 62,
+    "domain_depth": 58,
+    "data_richness": 52,
+    "interaction_quality": 55,
+    "ai_integration": 60,
+    "mobile_first": 48,
+    "performance": 65,
+    "typescript_quality": 63,
+    "error_handling": 57,
+    "realtime": 54,
+    "accessibility": 58,
+    "security": 72,
+    "differentiation": 50,
+    "enterprise_readiness": 61
+  },
+  "overall_score": 58,
+  "issues": [
+    {
+      "id": "financial-engine-C1-001",
+      "severity": "critical",
+      "dimension": "domain_depth",
+      "title": "approved_cost field not used in financial calculations",
+      "description": "mapChangeOrderRow in src/api/endpoints/budget.ts maps approved_cost from the DB row but computeProjectFinancials in src/lib/financialEngine.ts still derives revised contract value using estimated_cost or amount instead of approved_cost for approved COs. This produces incorrect Revised Contract Value, Over/Under, and Projected Final Cost — numbers a CFO would immediately distrust.",
+      "prompt": "FILE: src/lib/financialEngine.ts\nFILE: src/api/endpoints/budget.ts\n\nPROBLEM: computeProjectFinancials calculates revised contract value by summing change order amounts regardless of status. It must use approved_cost only for COs in 'approved' state.\n\nCHANGES REQUIRED:\n1. In financialEngine.ts, locate the loop that sums change orders into approvedChangeOrderTotal. Filter to only rows where status === 'approved', then sum the approved_cost field (not amount or estimated_cost).\n2. For pendingExposure, sum estimated_cost where status is 'pending_review'.\n3. Export a new helper: getApprovedCOTotal(changeOrders: MappedChangeOrder[]): number.\n4. Update computeDivisionFinancials to use the same approved_cost field when rolling up per-division approved COs.\n5. Add a unit test in src/test/api/budget.test.ts: given a mix of approved (approved_cost=50000), pending (estimated_cost=20000), and draft COs, assert revisedContractValue = originalBudget + 50000 and pendingExposure = 20000.\n\nACCEPTANCE CRITERIA:\n- Revised Contract Value = Original Contract + sum(approved_cost) for approved COs only.\n- Pending Exposure = sum(estimated_cost) for pending_review COs.\n- Unit test passes.\n- No TypeScript errors (strict mode)."
+    },
+    {
+      "id": "financial-engine-C2-002",
+      "severity": "critical",
+      "dimension": "data_richness",
+      "title": "13-week cash flow projection not connected to real committed cost data",
+      "description": "CashFlowWidget.tsx (343 lines) renders a cash flow chart but src/lib/financialEngine.ts has no exported 13-week projection function. The widget appears to use static or mock week data rather than computing inflows from approved pay apps and outflows from committed subcontract costs. A CFO using this for board-deck decisions would be working with fabricated numbers.",
+      "prompt": "FILE: src/lib/financialEngine.ts\nFILE: src/components/dashboard/widgets/CashFlowWidget.tsx\nFILE: src/types/financial.ts\n\nPROBLEM: No 13-week cash flow projection function exists that uses real DB data.\n\nCHANGES REQUIRED:\n1. Add to financial.ts: interface CashFlowWeek { weekLabel: string; weekStart: string; projectedInflow: number; projectedOutflow: number; netCash: number; cumulativePosition: number; }\n2. In financialEngine.ts, add: export function computeThirteenWeekCashFlow(payApps: PayAppRow[], changeOrders: MappedChangeOrder[], budgetItems: BudgetItemRow[], startDate?: Date): CashFlowWeek[]\n   - Inflow week N = approved pay apps with expected_payment_date in that week × 0.9 (retainage).\n   - If no payment dates exist, distribute remaining approved billing evenly over weeks 1-8.\n   - Outflow week N = committed subcontract costs × (1/12) monthly burn rate prorated to weekly.\n   - Accumulate cumulativePosition each week.\n   - Return exactly 13 CashFlowWeek objects.\n3. In CashFlowWidget.tsx, replace any hardcoded/mock week data with a call to computeThirteenWeekCashFlow using data from useBudgetData or equivalent hook.\n4. Show a skeleton loader while data loads; show an empty state with message 'Add pay applications to see your 13-week cash flow forecast' if payApps is empty.\n\nACCEPTANCE CRITERIA:\n- computeThirteenWeekCashFlow returns 13 weeks of real calculated data.\n- CashFlowWidget renders bars from live data, not hardcoded values.\n- Empty state shown when no pay apps exist.\n- TypeScript strict, no implicit any."
+    },
+    {
+      "id": "financial-engine-C3-003",
+      "severity": "critical",
+      "dimension": "domain_depth",
+      "title": "AIA G702/G703 schedule of values not implemented as editable pay application form",
+      "description": "src/components/export/G702ApplicationPDF.tsx and G703ContinuationPDF.tsx exist as export templates but there is no interactive G702/G703 form in src/pages/PaymentApplications.tsx where a PM can enter percent complete per line item, validate stored materials, and calculate current payment due per the AIA formula. This is the core monthly workflow for every GC and is a showstopper gap vs Procore.",
+      "prompt": "FILE: src/pages/PaymentApplications.tsx\nFILE: src/api/endpoints/payApplications.ts\nFILE: src/components/export/G702ApplicationPDF.tsx\nFILE: src/types/financial.ts\n\nPROBLEM: No interactive AIA G703 schedule of values editor exists. PMs cannot enter percent complete per line item.\n\nCHANGES REQUIRED:\n1. In src/pages/PaymentApplications.tsx, add a 'Create / Edit Pay App' drawer that renders a G703 schedule of values table. Columns: Line Item, Scheduled Value, Previous Billed %, This Period %, Stored Materials ($), Total Completed, Retainage (10%), Net Payment.\n2. Each row must be editable inline (click cell to edit percent). Validate: percent complete cannot decrease from previous application; total cannot exceed 100%.\n3. Calculate per-row and summary totals using the AIA formula: Current Payment Due = (Scheduled Value × % This Period) + Stored Materials - (Total Completed to Date × retainageRate).\n4. Add a summary section matching AIA G702: Contract Sum, Net Change by COs, Contract Sum to Date, Total Completed & Stored, Retainage, Total Earned Less Retainage, Less Previous Certs, Current Payment Due.\n5. Wire to payApplications.ts upsert mutation. On save, update pay_applications table.\n6. 'Export PDF' button calls existing G702ApplicationPDF/G703ContinuationPDF with the live data.\n\nACCEPTANCE CRITERIA:\n- PM can create a pay app, enter % per line, see AIA G702 summary totals calculated in real time.\n- Retainage defaults to 10%, is adjustable per project setting.\n- PDF export matches AIA G702/G703 format.\n- Inline validation prevents over-billing.\n- TypeScript strict, no implicit any."
+    },
+    {
+      "id": "financial-engine-C4-004",
+      "severity": "critical",
+      "dimension": "domain_depth",
+      "title": "Lien waiver workflow not integrated with pay application approval",
+      "description": "src/stores/lienWaiverStore.ts and src/api/endpoints/lienWaivers.ts exist but lien waivers are never auto-generated when a pay application is approved. The pay application approval flow in src/machines/paymentMachine.ts does not trigger conditional waiver creation per subcontractor. This is a legal and compliance gap that would make any GC's legal team reject the platform.",
+      "prompt": "FILE: src/machines/paymentMachine.ts\nFILE: src/api/endpoints/lienWaivers.ts\nFILE: src/stores/lienWaiverStore.ts\nFILE: src/api/endpoints/payApplications.ts\n\nPROBLEM: Pay app approval does not auto-generate conditional lien waivers for each subcontractor on the pay app.\n\nCHANGES REQUIRED:\n1. In paymentMachine.ts, in the 'approved' state transition (or equivalent approval action), call a new function: autoGenerateLienWaivers(payAppId, projectId).\n2. Implement autoGenerateLienWaivers in lienWaivers.ts:\n   a. Fetch all subcontractor line items on the pay app.\n   b. For each sub with a non-zero payment amount, insert a lien_waiver row: type='conditional_progress', status='pending', pay_app_id, subcontractor_id, amount, due_date = today + 7 days.\n   c. Return the created waiver IDs.\n3. In payApplications.ts approvePayApplication function, after status update, call autoGenerateLienWaivers and attach waiver IDs to the pay app record.\n4. In src/pages/PaymentApplications.tsx, add a 'Lien Waivers' tab on the pay app detail view showing each sub, waiver type, status (pending/received/overdue), and a 'Mark Received' button.\n5. Add a warning banner on the pay app if any conditional waivers are missing when the GC tries to submit the pay app to the owner.\n\nACCEPTANCE CRITERIA:\n- Approving a pay app auto-creates one conditional_progress lien waiver per sub with payment > 0.\n- Lien waiver status is visible on the pay app detail.\n- Missing waiver warning blocks or alerts owner submission.\n- No TypeScript errors."
+    },
+    {
+      "id": "financial-engine-H1-005",
+      "severity": "high",
+      "dimension": "data_richness",
+      "title": "WIP report uses placeholder data instead of real earned value calculation",
+      "description": "src/components/budget/EarnedValueDashboard.tsx was modified (151 lines) but it is unclear whether BCWP, BCWS, CPI, and SPI are computed from real budget_items and schedule data or from mock values. If EAC and variance are not using the industry formulas (CPI = BCWP/ACWP, EAC = Budget/CPI), any CFO reviewing WIP will immediately distrust the numbers.",
+      "prompt": "FILE: src/components/budget/EarnedValueDashboard.tsx\nFILE: src/lib/financialEngine.ts\nFILE: src/types/financial.ts\n\nPROBLEM: Earned value metrics may not use real construction formulas from live data.\n\nCHANGES REQUIRED:\n1. In financialEngine.ts, add: export function computeEarnedValue(budgetItems: BudgetItemRow[], changeOrders: MappedChangeOrder[], invoices: InvoiceRow[], scheduleActivities: ScheduleActivity[]): EarnedValueMetrics\n   - BCWS (Planned Value) = sum(budgetItem.budget * plannedPercentComplete) from schedule\n   - BCWP (Earned Value) = sum(budgetItem.budget * actualPercentComplete)\n   - ACWP (Actual Cost) = sum(invoices.total) for approved invoices\n   - CPI = BCWP / ACWP (guard divide-by-zero, default 1.0)\n   - SPI = BCWP / BCWS (guard divide-by-zero, default 1.0)\n   - EAC = totalBudget / CPI\n   - VAC = totalBudget - EAC\n2. Export interface EarnedValueMetrics to financial.ts with all fields typed as number.\n3. In EarnedValueDashboard.tsx, replace any hardcoded or mock values with computeEarnedValue called with real data from useBudgetData hook.\n4. Display CPI and SPI with color coding: green >= 1.0, amber 0.85-0.99, red < 0.85.\n5. Add tooltip on each metric explaining the formula in plain English.\n\nACCEPTANCE CRITERIA:\n- All 6 EV metrics computed from real data.\n- CPI/SPI color thresholds enforced.\n- No hardcoded numbers in component.\n- TypeScript strict."
+    },
+    {
+      "id": "financial-engine-H2-006",
+      "severity": "high",
+      "dimension": "error_handling",
+      "title": "No fallback or empty state when budget_items table is empty",
+      "description": "src/pages/Budget.tsx and financialEngine.ts have no guard for an empty budget_items result. computeProjectFinancials receives an empty array and returns zeroed financials, but the UI renders metric cards showing $0 values with no indication that the budget has not been set up yet. A new project looks broken rather than prompting the PM to create their budget.",
+      "prompt": "FILE: src/pages/Budget.tsx\nFILE: src/lib/financialEngine.ts\nFILE: src/components/ui/EmptyState.tsx\n\nPROBLEM: Budget page shows $0 metric cards when no budget items exist instead of a helpful empty state.\n\nCHANGES REQUIRED:\n1. In financialEngine.ts, add isEmpty: boolean to ProjectFinancials interface (already exists per prior cycles but confirm it is set: isEmpty = budgetItems.length === 0).\n2. In Budget.tsx, after loading financials, check financials.summary.isEmpty. If true, render an EmptyState component instead of metric cards.\n3. EmptyState content: icon = DollarSign (Lucide), title = 'No budget has been set up yet', description = 'Import your schedule of values or add budget line items by CSI division to start tracking costs.', primaryAction = 'Import Budget' button, secondaryAction = 'Add Line Item' button.\n4. If budgetItems exist but all have budget=0, show a warning banner: 'Budget line items exist but all values are $0. Update your budget to see accurate financial tracking.'\n5. The empty state must match design tokens: card padding 24px, border-radius 12px, orange primary CTA.\n\nACCEPTANCE CRITERIA:\n- Empty state renders when budgetItems.length === 0 with correct copy and CTAs.\n- Warning banner renders when all budget values are zero.\n- Metric cards only render when real budget data exists.\n- No TypeScript errors."
+    },
+    {
+      "id": "financial-engine-H3-007",
+      "severity": "high",
+      "dimension": "realtime",
+      "title": "Budget page has no Supabase realtime subscription for live cost updates",
+      "description": "src/api/endpoints/budget.ts was heavily modified but there is no evidence of a Supabase realtime channel subscription on budget_items or change_orders. When a PM approves a change order or a sub submits an invoice, the Budget page does not update without a manual refresh. For a CFO watching numbers in real time, this is a trust-destroying gap.",
+      "prompt": "FILE: src/hooks/queries/realtime.ts\nFILE: src/pages/Budget.tsx\nFILE: src/stores/budgetStore.ts\nFILE: src/hooks/useRealtimeSubscription.ts\n\nPROBLEM: Budget data is fetched once on mount with no realtime invalidation on budget_items, change_orders, or invoices table changes.\n\nCHANGES REQUIRED:\n1. In useRealtimeSubscription.ts (or create a new hook useBudgetRealtime.ts), subscribe to Supabase realtime channels for tables: 'budget_items', 'change_orders', 'invoices' filtered by project_id.\n2. On INSERT, UPDATE, or DELETE events for any of these tables, call queryClient.invalidateQueries(['budget', projectId]) to trigger a refetch.\n3. In Budget.tsx, call useBudgetRealtime(projectId) at the top of the component.\n4. Show a RealtimeFlash indicator (src/components/ui/RealtimeFlash.tsx) in the top-right of the budget metric cards bar when a live update is received, with text 'Budget updated just now'.\n5. Unsubscribe on component unmount to prevent memory leaks.\n6. In budgetStore.ts, ensure optimistic updates for change order approvals are reconciled with the realtime payload to prevent flicker.\n\nACCEPTANCE CRITERIA:\n- Approving a change order in one browser tab causes Budget page in another tab to update within 2 seconds.\n- RealtimeFlash indicator appears on update.\n- No memory leaks (subscription removed on unmount).\n- TypeScript strict."
+    },
+    {
+      "id": "financial-engine-H4-008",
+      "severity": "high",
+      "dimension": "interaction_quality",
+      "title": "Budget table rows not clickable to division drill-down detail view",
+      "description": "The budget overview table in src/pages/Budget.tsx lists CSI divisions with budget, committed, and variance columns but rows are not clickable. The DivisionDetail type exists in budget.ts (with costCodes, invoices, changeOrders) indicating the backend supports drill-down, but no navigation or slide-in drawer is wired to the row click. A CFO cannot trace a variance to its root cause without this.",
+      "prompt": "FILE: src/pages/Budget.tsx\nFILE: src/api/endpoints/budget.ts\nFILE: src/components/Drawer.tsx\n\nPROBLEM: Budget division rows are not clickable. DivisionDetail data exists in the API but no drill-down UI is connected.\n\nCHANGES REQUIRED:\n1. In Budget.tsx, wrap each division table row with an onClick handler: onClick={() => setSelectedDivisionId(division.id)}.\n2. Add state: const [selectedDivisionId, setSelectedDivisionId] = useState<string | null>(null).\n3. When selectedDivisionId is set, open a Drawer (src/components/Drawer.tsx) with title = division name + CSI code.\n4. Inside the drawer, fetch DivisionDetail via getDivisionDetail(projectId, divisionId) and render three tabs: 'Cost Codes', 'Invoices', 'Change Orders'.\n5. Cost Codes tab: table with columns Cost Code, Description, Amount, Cost Type, Vendor, Date.\n6. Invoices tab: table with Invoice Number, Vendor, Date, Total, Status, Due Date. Status uses color-coded dots per design standards.\n7. Change Orders tab: list of COs affecting this division with status badges.\n8. Add hover state to rows: cursor-pointer, slight background highlight (#F7F8FA on hover).\n9. Add keyboard navigation: Enter to open drawer, Escape to close.\n\nACCEPTANCE CRITERIA:\n- Every division row is hoverable (cursor-pointer) and opens the detail drawer on click.\n- All three tabs render real data from getDivisionDetail.\n- Keyboard navigation works (Enter/Escape).\n- Drawer closes cleanly, no memory leaks.\n- TypeScript strict."
+    },
+    {
+      "id": "financial-engine-M1-009",
+      "severity": "medium",
+      "dimension": "ai_integration",
+      "title": "AI variance analysis not surfacing actionable budget insights on the Budget page",
+      "description": "src/api/endpoints/ai.ts calls aiService.generateBudgetInsights when financials are provided, but Budget.tsx does not pass financial data to the AI insights hook. Division-level variances are never analyzed by the AI. The AI panel on the budget page shows generic project insights rather than specific cost warnings like 'Division 09 Finishes is tracking 12% over budget — recommend reviewing drywall subcontract.'",
+      "prompt": "FILE: src/pages/Budget.tsx\nFILE: src/api/endpoints/ai.ts\nFILE: src/lib/aiService.ts\nFILE: src/hooks/queries/index.ts\n\nPROBLEM: Budget page does not pass financials to getAiInsights, so AI variance analysis is never triggered.\n\nCHANGES REQUIRED:\n1. In Budget.tsx, after financials are loaded (summary + divisions), call useQuery for AI insights and pass financials: useQuery(['ai-insights', projectId, 'budget'], () => getAiInsights(projectId, { summary, divisions }), { enabled: !summary.isEmpty }).\n2. In aiService.ts generateBudgetInsights, ensure it produces insights for any division where variance < -5% (over budget) with severity='warning', and variance < -15% with severity='critical'. Include the division name, CSI code, overage amount, and a suggested action in the insight text.\n3. Render a compact AI Insights panel below the metric cards on Budget.tsx. Show up to 3 insights. Each insight has: colored severity dot, title, description, and a 'View Details' link.\n4. If AI is not configured, show a muted 'AI analysis unavailable — configure OpenAI key in Settings' message instead.\n5. Add a 'Refresh Analysis' button that invalidates the ai-insights query for the budget context.\n\nACCEPTANCE CRITERIA:\n- AI insights panel renders on Budget page with division-specific variance warnings.\n- Insights use real computed financials, not generic project data.\n- Panel handles AI-unavailable state gracefully.\n- TypeScript strict."
+    },
+    {
+      "id": "financial-engine-M2-010",
+      "severity": "medium",
+      "dimension": "visual_polish",
+      "title": "Financial metric cards missing trend indicators and color-coded variance",
+      "description": "Metric cards on Budget.tsx and Financials.tsx display raw dollar values but lack trend arrows, percentage-change indicators, and color-coded variance (green = under budget, red = over budget). Per design standards, every metric card must have a trend indicator (12px, green/red with arrow). Without this, a CFO scanning the page cannot instantly assess project health.",
+      "prompt": "FILE: src/pages/Budget.tsx\nFILE: src/pages/Financials.tsx\nFILE: src/components/Primitives.tsx\n\nPROBLEM: Metric cards on financial pages lack trend indicators and variance color coding.\n\nCHANGES REQUIRED:\n1. In Primitives.tsx, update the MetricCard component (or create it if it only exists inline) to accept: value: number, previousValue?: number, format: 'currency' | 'percent' | 'number', colorOverride?: 'success' | 'warning' | 'danger'.\n2. Compute trendPercent = previousValue ? ((value - previousValue) / Math.abs(previousValue)) * 100 : null.\n3. Render below the value: if trendPercent !== null, show an arrow icon (TrendingUp green or TrendingDown red) + trendPercent formatted to 1 decimal + '%' in 12px muted text.\n4. For budget variance card specifically: if variance > 0, force colorOverride='success' (green value text); if variance < 0, force colorOverride='danger' (red value text).\n5. In Budget.tsx and Financials.tsx, pass previousValue from last month's financials snapshot (query pay_applications for prior period totals, or use 0 if no history).\n6. Apply design token colors: success=#4EC896, warning=#F5A623, danger=#E74C3C for the trend text and icon.\n\nACCEPTANCE CRITERIA:\n- Every financial metric card shows a trend indicator when prior period data exists.\n- Variance card is green when under budget, red when over.\n- Trend arrows use correct design-token colors.\n- MetricCard is reusable and typed strictly.\n- No visual regression on other pages using MetricCard."
+    }
+  ],
+  "invented_features": [
+    {
+      "title": "Retainage Release Forecast Engine",
+      "description": "An AI-powered retainage release timeline that models when each subcontractor's retainage will be released based on their schedule of values completion percentage, projected substantial completion date, and contract retainage terms. Automatically generates the unconditional final lien waiver request workflow when a sub hits 98% complete. Surfaces total retainage receivable from the owner and payable to subs on a single timeline chart — a capability no competitor offers natively.",
+      "files": [
+        "src/lib/financialEngine.ts",
+        "src/pages/Financials.tsx",
+        "src/api/endpoints/lienWaivers.ts"
+      ]
+    },
+    {
+      "title": "Over/Under-Billing Early Warning System",
+      "description": "Compares earned value (BCWP) against billed value (pay app totals) per CSI division in real time. Flags divisions that are overbilled by more than 5% with an amber warning and generates a plain-English AI explanation: 'Division 03 Concrete is overbilled by $42,000. Actual field completion is 67% but billing shows 78%. Recommend adjusting next pay app or documenting stored materials.' This directly addresses the WIP audit risk that construction CFOs face every month.",
+      "files": [
+        "src/lib/financialEngine.ts",
+        "src/components/budget/EarnedValueDashboard.tsx",
+        "src/pages/Budget.tsx"
+      ]
+    },
+    {
+      "title": "Committed Cost Burn Rate Predictor",
+      "description": "Uses the last 8 weeks of invoice payment velocity per subcontractor to predict when each committed subcontract will be fully invoiced. Surfaces subs that are burning faster than their schedule implies (possible front-loading) and subs burning slower (possible schedule delay). Renders as a sparkline per division row in the budget table with a tooltip showing predicted final invoice date. Procore has no equivalent.",
+      "files": [
+        "src/lib/financialEngine.ts",
+        "src/pages/Budget.tsx",
+        "src/api/endpoints/budget.ts"
+      ]
+    }
+  ],
+  "competitive_intel": "Procore's financial module requires manual schedule-of-values setup per pay app with no AI variance analysis. It has no native 13-week cash flow forecast and lien waiver tracking is a bolt-on module requiring separate configuration. Autodesk Construction Cloud has weak financial tooling with no AIA billing workflow. SiteSyncAI has the architecture to leapfrog both — the G702/G703 export templates exist, the lien waiver store exists, the financial engine types are defined — but the critical wiring between pay app approval, lien waiver auto-generation, real-time budget updates, and AI variance analysis is incomplete. Fixing the 10 issues above would give SiteSyncAI a demonstrably superior financial module: real-time committed cost tracking, AI-driven variance warnings, AIA-compliant billing, and automated lien waiver workflows in a single platform. That combination does not exist in any competitor today.",
+  "summary": "The Financial Engine module has strong architectural bones — MappedChangeOrder, DivisionDetail, ProjectFinancials types are well-defined, the G702/G703 PDF templates exist, lien waiver store is scaffolded, and the financialEngine.ts computation layer is in place — but critical wiring is missing throughout. The approved_cost field is mapped but not used in revised contract value calculations, producing wrong numbers for every CFO metric. The 13-week cash flow widget is disconnected from real pay app and committed cost data. The AIA G702/G703 interactive editor does not exist as a form, only as a PDF export. Lien waivers are never auto-generated on pay app approval, which is a legal compliance gap. The budget table has no drill-down to division detail despite the API supporting it. Realtime subscriptions are absent from the budget page. Until these six critical and four high issues are resolved, SiteSyncAI cannot claim to match Procore's financial depth, let alone surpass it. The invented features — retainage release forecasting, over/under-billing early warning, and committed cost burn rate prediction — represent the category-defining capabilities that would make a CFO choose SiteSyncAI over any competitor."
+}

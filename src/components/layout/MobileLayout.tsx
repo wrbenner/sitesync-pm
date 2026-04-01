@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Home, ClipboardList, Camera, BookOpen, MoreHorizontal, X, Search,
-  ChevronRight, ArrowLeft, Bell, Check } from 'lucide-react';
+  ChevronRight, ArrowLeft, Bell, Check, QrCode } from 'lucide-react';
+import { QRScannerSheet } from '../workforce/QRCheckIn';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { colors, spacing, typography, borderRadius, shadows, transitions, zIndex } from '../../styles/theme';
@@ -13,9 +14,9 @@ import { NotificationList } from '../notifications/NotificationCenter';
 const tabs = [
   { id: 'dashboard', label: 'Home', icon: Home, route: '/dashboard' },
   { id: 'tasks', label: 'Tasks', icon: ClipboardList, route: '/tasks' },
+  { id: 'checkin', label: 'Check In', icon: QrCode, route: '', isCheckIn: true },
   { id: 'capture', label: 'Capture', icon: Camera, route: '/field-capture', isCapture: true },
   { id: 'daily-log', label: 'Logs', icon: BookOpen, route: '/daily-log' },
-  { id: 'notifications', label: 'Alerts', icon: Bell, route: '' },
   { id: 'more', label: 'More', icon: MoreHorizontal, route: '' },
 ];
 
@@ -62,6 +63,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
 
   const [moreOpen, setMoreOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [checkInOpen, setCheckInOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [pullDistance, setPullDistance] = useState(0);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -80,16 +82,25 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
     impact('light');
     if (tab.id === 'more') {
       setNotificationsOpen(false);
+      setCheckInOpen(false);
       setMoreOpen(!moreOpen);
       return;
     }
     if (tab.id === 'notifications') {
       setMoreOpen(false);
+      setCheckInOpen(false);
       setNotificationsOpen(!notificationsOpen);
+      return;
+    }
+    if (tab.id === 'checkin') {
+      setMoreOpen(false);
+      setNotificationsOpen(false);
+      setCheckInOpen(true);
       return;
     }
     setMoreOpen(false);
     setNotificationsOpen(false);
+    setCheckInOpen(false);
     navigate(tab.route);
   }, [navigate, moreOpen, notificationsOpen, impact]);
 
@@ -161,10 +172,14 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
   useEffect(() => {
     setMoreOpen(false);
     setNotificationsOpen(false);
+    setCheckInOpen(false);
   }, [location.pathname]);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: colors.surfacePage, overflow: 'hidden' }}>
+    <div className="mobile-layout" style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: colors.surfacePage, overflow: 'hidden', touchAction: 'manipulation' }}>
+      <style>{`
+        .mobile-layout button { min-height: 44px; touch-action: manipulation; }
+      `}</style>
       {/* ── Top Header ──────────────────────────────── */}
       <header style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -385,7 +400,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
                       onClick={markAllRead}
                       style={{
                         display: 'flex', alignItems: 'center', gap: spacing['1'],
-                        padding: `${spacing['1']} ${spacing['2']}`,
+                        padding: `${spacing['2']} ${spacing['3']}`, minHeight: '44px',
                         backgroundColor: 'transparent', border: 'none',
                         borderRadius: borderRadius.sm, cursor: 'pointer',
                         color: colors.textTertiary, fontSize: typography.fontSize.caption,
@@ -398,7 +413,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
                   <button
                     onClick={() => setNotificationsOpen(false)}
                     style={{
-                      width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center',
                       backgroundColor: colors.surfaceInset, border: 'none',
                       borderRadius: '50%', cursor: 'pointer', color: colors.textTertiary,
                     }}
@@ -423,6 +438,9 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
         </>
       )}
 
+      {/* ── QR Check-In Sheet ───────────────────────── */}
+      {checkInOpen && <QRScannerSheet onClose={() => setCheckInOpen(false)} />}
+
       {/* ── Bottom Tab Bar ──────────────────────────── */}
       <nav style={{
         position: 'fixed', bottom: 0, left: 0, right: 0,
@@ -439,6 +457,38 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
             tab.id === 'more' ? moreOpen :
             tab.id === 'notifications' ? notificationsOpen :
             activeTab === tab.id || (tab.id === 'capture' && activeTab === 'field-capture');
+
+          // Check-In button: prominent teal action
+          if ((tab as typeof tabs[0] & { isCheckIn?: boolean }).isCheckIn) {
+            return (
+              <button
+                key={tab.id}
+                onClick={() => handleTabPress(tab)}
+                style={{
+                  display: 'flex', flexDirection: 'column', alignItems: 'center',
+                  gap: 2, padding: `${spacing['1']} ${spacing['2']}`,
+                  backgroundColor: 'transparent', border: 'none', cursor: 'pointer',
+                  position: 'relative', minWidth: 44, minHeight: 48,
+                }}
+                aria-label="QR Check In"
+              >
+                <div style={{
+                  width: 44, height: 44, borderRadius: borderRadius.lg,
+                  backgroundColor: colors.statusActive,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: `0 2px 8px ${colors.statusActive}66`,
+                }}>
+                  <QrCode size={22} color={colors.white} />
+                </div>
+                <span style={{
+                  fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
+                  color: colors.statusActive,
+                }}>
+                  Check In
+                </span>
+              </button>
+            );
+          }
 
           // Capture button: elevated circle
           if (tab.isCapture) {

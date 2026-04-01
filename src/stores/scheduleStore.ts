@@ -8,7 +8,7 @@ export interface ScheduleMetrics {
   daysBeforeSchedule: number;
   milestonesHit: number;
   milestoneTotal: number;
-  aiConfidenceLevel: number;
+  aiConfidenceLevel: number | null;
 }
 
 interface ScheduleState {
@@ -25,7 +25,7 @@ const DEFAULT_METRICS: ScheduleMetrics = {
   daysBeforeSchedule: 0,
   milestonesHit: 0,
   milestoneTotal: 0,
-  aiConfidenceLevel: 0,
+  aiConfidenceLevel: null,
 };
 
 export const useScheduleStore = create<ScheduleState>()((set) => ({
@@ -98,9 +98,7 @@ export const useScheduleStore = create<ScheduleState>()((set) => ({
           daysBeforeSchedule: 0,
           milestonesHit: completedPhases,
           milestoneTotal: phases.length,
-          aiConfidenceLevel: phases.length > 0
-            ? Math.round(phases.reduce((s, p) => s + p.progress, 0) / phases.length)
-            : 0,
+          aiConfidenceLevel: null,
         },
         loading: false,
       });

@@ -3,12 +3,12 @@ import { Eraser, Check } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme';
 
 interface SignaturePadProps {
-  onSign: () => void;
+  onSigned: (blob: Blob) => void;
   signerName: string;
   signerTitle: string;
 }
 
-export const SignaturePad: React.FC<SignaturePadProps> = ({ onSign, signerName, signerTitle }) => {
+export const SignaturePad: React.FC<SignaturePadProps> = ({ onSigned, signerName, signerTitle }) => {
   const [hasSignature, setHasSignature] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
   const [paths, setPaths] = useState<string[]>([]);
@@ -76,7 +76,12 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({ onSign, signerName, 
             <Eraser size={12} /> Clear
           </button>
           <button
-            onClick={onSign}
+            onClick={() => {
+              if (!svgRef.current || !hasSignature) return;
+              const svgStr = new XMLSerializer().serializeToString(svgRef.current);
+              const blob = new Blob([svgStr], { type: 'image/svg+xml' });
+              onSigned(blob);
+            }}
             disabled={!hasSignature}
             style={{
               display: 'flex', alignItems: 'center', gap: spacing['1'],
@@ -88,7 +93,7 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({ onSign, signerName, 
               transition: `background-color ${transitions.instant}`,
             }}
           >
-            <Check size={12} /> Approve & Send
+            <Check size={12} /> Confirm Signature
           </button>
         </div>
       </div>

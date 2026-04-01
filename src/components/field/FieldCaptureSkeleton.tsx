@@ -4,14 +4,30 @@ import { spacing, borderRadius, colors } from '../../styles/theme';
 
 /**
  * Loading skeleton for the Field Capture page.
- * Mirrors the layout: 3 metric card skeletons followed by 8 capture row skeletons.
+ * Mirrors the layout: 4 metric card skeletons, Quick Capture Bar, then 8 capture row skeletons.
  */
 const FieldCaptureSkeleton: React.FC = () => (
   <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
-    {/* Metric card row */}
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: spacing['3'] }}>
-      {Array.from({ length: 3 }).map((_, i) => (
-        <Skeleton key={i} height="120px" borderRadius={borderRadius.lg} />
+    {/* Metric card row — 4 columns matching Photos Today, Voice Notes, Items Created, Pending Sync */}
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['3'] }}>
+      {Array.from({ length: 4 }).map((_, i) => (
+        <Skeleton key={i} height="88px" borderRadius={borderRadius.xl} />
+      ))}
+    </div>
+
+    {/* Quick Capture Bar skeleton — the 5-button action strip */}
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(5, 1fr)',
+        gap: spacing['3'],
+        padding: spacing['4'],
+        borderRadius: borderRadius.lg,
+        border: `1px solid ${colors.borderSubtle}`,
+      }}
+    >
+      {Array.from({ length: 5 }).map((_, i) => (
+        <Skeleton key={i} height="80px" borderRadius={borderRadius.md} />
       ))}
     </div>
 

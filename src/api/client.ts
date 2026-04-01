@@ -13,6 +13,7 @@ import { dedup, queryKey } from '../lib/requestDedup'
 
 type TableName = keyof Database['public']['Tables']
 type DbClient = typeof supabase
+type SupabaseProxyTarget = typeof supabase
 type QueryResult<T> = PromiseLike<{ data: T | null; error: { message: string; code?: string; details?: string | null } | null }>
 
 /**
@@ -22,11 +23,12 @@ type QueryResult<T> = PromiseLike<{ data: T | null; error: { message: string; co
  */
 export function createScopedClient(client: DbClient, projectId: string): DbClient {
   return new Proxy(client, {
-    get(target, prop) {
+    get(target: SupabaseProxyTarget, prop: string | symbol, receiver: unknown) {
       if (prop === 'from') {
-        return (table: string) => (target.from as (t: string) => any)(table).eq('project_id', projectId)
+        return (table: string): ReturnType<typeof supabase.from> =>
+          target.from(table as TableName).eq('project_id', projectId)
       }
-      return (target as any)[prop]
+      return Reflect.get(target, prop, receiver)
     },
   })
 }

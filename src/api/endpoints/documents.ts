@@ -1,7 +1,5 @@
 import { supabase, transformSupabaseError } from '../client'
-import { assertProjectAccess, assertProjectBelongsToOrg } from '../middleware/projectScope'
-import { ApiError } from '../errors'
-import { useOrganizationStore } from '../../stores/organizationStore'
+import { assertProjectAccess } from '../middleware/projectScope'
 import type { DrawingRow, FileRow, DrawingRevision, MappedDrawing, MappedFile } from '../../types/api'
 
 const DISCIPLINE_COLORS: Record<string, string> = {
@@ -34,11 +32,6 @@ function getDisciplineIcon(discipline: string): string {
 
 export const getDrawings = async (projectId: string): Promise<MappedDrawing[]> => {
   await assertProjectAccess(projectId)
-  const orgId = useOrganizationStore.getState().currentOrg?.id
-  if (!orgId) {
-    throw new ApiError('No active organization context', 403, 'FORBIDDEN')
-  }
-  await assertProjectBelongsToOrg(projectId, orgId)
 
   const { data: drawingData, error: drawingError } = await supabase
     .from('drawings')
@@ -97,11 +90,6 @@ export const getDrawingRevisionHistory = async (drawingId: string): Promise<Draw
 
 export const getFiles = async (projectId: string): Promise<MappedFile[]> => {
   await assertProjectAccess(projectId)
-  const orgId = useOrganizationStore.getState().currentOrg?.id
-  if (!orgId) {
-    throw new ApiError('No active organization context', 403, 'FORBIDDEN')
-  }
-  await assertProjectBelongsToOrg(projectId, orgId)
   const { data, error } = await supabase.from('files').select('*').eq('project_id', projectId).order('name')
   if (error) throw transformSupabaseError(error)
   const rows = (data || []) as FileRow[]

@@ -3,6 +3,8 @@ import {
   QrCode, Users, Clock, Building2, ArrowRight, Check,
   X, MapPin, AlertTriangle, UserCheck, Scan, LogOut,
 } from 'lucide-react'
+import { Scanner } from '@yudiel/react-qr-scanner'
+import type { IDetectedBarcode } from '@yudiel/react-qr-scanner'
 import { colors, spacing, typography, borderRadius, transitions, shadows, zIndex } from '../../styles/theme'
 import { Btn, Card, MetricBox, SectionHeader, useToast } from '../Primitives'
 import {
@@ -13,9 +15,193 @@ import {
   useWorkerLookup,
   useDailyLogCrewUpsert,
   generateQRPayload,
+  parseQRPayload,
+  useCheckIn,
 } from '../../hooks/useCheckIn'
 import type { CheckInRecord, HeadcountSummary } from '../../hooks/useCheckIn'
 import { useProjectId } from '../../hooks/useProjectId'
+import { useHaptics } from '../../hooks/useHaptics'
+import { useAuth } from '../../hooks/useAuth'
+
+// ── QRScannerSheet ────────────────────────────────────────────
+// Full-screen bottom sheet with live camera QR scanning.
+
+interface QRScannerSheetProps {
+  onClose: () => void
+}
+
+export const QRScannerSheet: React.FC<QRScannerSheetProps> = ({ onClose }) => {
+  const { user } = useAuth()
+  const { checkIn, isPending } = useCheckIn()
+  const haptics = useHaptics()
+  const [scanStatus, setScanStatus] = useState<'scanning' | 'success' | 'error'>('scanning')
+  const [checkedInLocation, setCheckedInLocation] = useState('')
+  const processingRef = useRef(false)
+
+  const handleScan = useCallback(async (result: IDetectedBarcode[]) => {
+    if (processingRef.current || scanStatus !== 'scanning') return
+    const raw = result[0]?.rawValue
+    if (!raw) return
+    const payload = parseQRPayload(raw)
+    if (!payload) return
+
+    processingRef.current = true
+    try {
+      await checkIn(user?.id ?? 'anonymous', payload.projectId, payload.locationId ?? '')
+      haptics.notification('success')
+      setCheckedInLocation(payload.locationId ?? 'this location')
+      setScanStatus('success')
+      setTimeout(() => onClose(), 2000)
+    } catch {
+      haptics.notification('error')
+      processingRef.current = false
+      setScanStatus('error')
+      setTimeout(() => setScanStatus('scanning'), 1500)
+    }
+  }, [scanStatus, checkIn, user, haptics, onClose])
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        onClick={onClose}
+        style={{
+          position: 'fixed', inset: 0,
+          backgroundColor: 'rgba(0,0,0,0.85)',
+          zIndex: (zIndex.modal as number) - 1,
+        }}
+      />
+
+      {/* Sheet */}
+      <div style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0,
+        height: '92dvh',
+        backgroundColor: '#000',
+        borderTopLeftRadius: borderRadius['2xl'],
+        borderTopRightRadius: borderRadius['2xl'],
+        zIndex: zIndex.modal as number,
+        display: 'flex', flexDirection: 'column',
+        overflow: 'hidden',
+        animation: 'slideInUp 250ms ease-out',
+      }}>
+        {/* Header */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: `${spacing['4']} ${spacing['4']} ${spacing['3']}`,
+          flexShrink: 0,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
+            <QrCode size={20} color={colors.white} />
+            <span style={{
+              fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold,
+              color: colors.white,
+            }}>
+              Scan to Check In
+            </span>
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="Close scanner"
+            style={{
+              width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              backgroundColor: 'rgba(255,255,255,0.12)', border: 'none',
+              borderRadius: '50%', cursor: 'pointer',
+            }}
+          >
+            <X size={20} color={colors.white} />
+          </button>
+        </div>
+
+        {/* Scanner / Success */}
+        <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+          {scanStatus !== 'success' ? (
+            <>
+              <Scanner
+                onScan={handleScan}
+                onError={() => {}}
+                constraints={{ facingMode: 'environment' }}
+                formats={['qr_code']}
+                styles={{
+                  container: { width: '100%', height: '100%' },
+                  video: { width: '100%', height: '100%', objectFit: 'cover' },
+                }}
+              />
+
+              {/* Aim guide */}
+              <div style={{
+                position: 'absolute', inset: 0, pointerEvents: 'none',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <div style={{
+                  width: 220, height: 220,
+                  border: `3px solid ${scanStatus === 'error' ? colors.statusCritical : colors.primaryOrange}`,
+                  borderRadius: borderRadius.xl,
+                  transition: `border-color ${transitions.quick}`,
+                }} />
+              </div>
+
+              {/* Hint label */}
+              <div style={{
+                position: 'absolute', bottom: spacing['8'], left: 0, right: 0,
+                display: 'flex', justifyContent: 'center', pointerEvents: 'none',
+              }}>
+                <div style={{
+                  padding: `${spacing['2']} ${spacing['4']}`,
+                  backgroundColor: 'rgba(0,0,0,0.65)',
+                  borderRadius: borderRadius.full,
+                }}>
+                  <span style={{ fontSize: typography.fontSize.sm, color: colors.white }}>
+                    {scanStatus === 'error' ? 'Invalid QR code, try again' : 'Point camera at the site QR code'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Processing overlay */}
+              {isPending && (
+                <div style={{
+                  position: 'absolute', inset: 0,
+                  backgroundColor: 'rgba(0,0,0,0.55)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <span style={{ color: colors.white, fontSize: typography.fontSize.body }}>
+                    Recording check-in...
+                  </span>
+                </div>
+              )}
+            </>
+          ) : (
+            /* Success state */
+            <div style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              height: '100%', gap: spacing['4'],
+            }}>
+              <div style={{
+                width: 88, height: 88, borderRadius: '50%',
+                backgroundColor: colors.statusActive,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                animation: 'fadeIn 200ms ease-out',
+              }}>
+                <Check size={44} color={colors.white} />
+              </div>
+              <p style={{
+                fontSize: typography.fontSize.heading, fontWeight: typography.fontWeight.bold,
+                color: colors.white, margin: 0,
+              }}>
+                Checked in
+              </p>
+              <p style={{
+                fontSize: typography.fontSize.body, color: 'rgba(255,255,255,0.65)',
+                margin: 0,
+              }}>
+                at {checkedInLocation}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  )
+}
 
 // ── QR Code Display (for gate/entrance) ───────────────────────
 

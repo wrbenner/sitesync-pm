@@ -1,3 +1,4 @@
+// @ts-strict-check
 import { supabase } from '../client'
 import { validateProjectId } from '../middleware/projectScope'
 import { aiService } from '../../lib/aiService'
@@ -90,7 +91,7 @@ export const getAiInsightsMeta = async (
     .single()
   return {
     live,
-    lastUpdated: (data as any)?.created_at ?? new Date().toISOString(),
+    lastUpdated: data?.created_at ?? new Date().toISOString(),
   }
 }
 

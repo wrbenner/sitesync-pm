@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Camera, Mic, FileText, AlertTriangle, MapPin, ChevronRight, Sparkles, Users, RefreshCw } from 'lucide-react';
+import { Camera, Mic, FileText, AlertTriangle, MapPin, ChevronRight, Sparkles, Users, RefreshCw, QrCode } from 'lucide-react';
 import { PageContainer, Card, Btn, SectionHeader, useToast } from '../components/Primitives';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import FieldCaptureSkeleton from '../components/field/FieldCaptureSkeleton';
@@ -8,12 +8,14 @@ import { PhotoAnnotator } from '../components/field/PhotoAnnotator';
 import { VoiceCapture } from '../components/field/VoiceCapture';
 import { CaptureTimeline } from '../components/field/CaptureTimeline';
 import { QuickCapture, type CaptureData } from '../components/field/QuickCapture';
-import { QRCheckIn } from '../components/workforce/QRCheckIn';
+import { QRCheckIn, QRScannerSheet } from '../components/workforce/QRCheckIn';
 import { useProjectId } from '../hooks/useProjectId';
 import { useFieldCaptures } from '../hooks/queries';
 import { useCreateFieldCapture } from '../hooks/mutations';
 import { useSyncOfflineCheckIns } from '../hooks/useCheckIn';
+import { useSyncStatus } from '../hooks/useSyncStatus';
 import { PermissionGate } from '../components/auth/PermissionGate';
+import EmptyState from '../components/ui/EmptyState';
 import type { ExtractedEntity } from '../hooks/useVoiceCapture';
 
 type CaptureMode = null | 'photo' | 'voice' | 'text' | 'checkin';
@@ -51,6 +53,13 @@ const FieldCaptureInner: React.FC = () => {
   const projectId = useProjectId();
   const { data: capturesData, isLoading, isError, error, refetch } = useFieldCaptures(projectId);
   const captures = capturesData ?? [];
+
+  const { pendingCount } = useSyncStatus();
+  const { photosToday, voiceNotesToday, itemsCreatedToday } = useMemo(() => ({
+    photosToday: captures.filter(c => c.type === 'photo' && isToday(c.created_at)).length,
+    voiceNotesToday: captures.filter(c => c.type === 'voice' && isToday(c.created_at)).length,
+    itemsCreatedToday: captures.filter(c => isToday(c.created_at) && (c.ai_category === 'rfi_draft' || c.ai_category === 'punch_item')).length,
+  }), [captures]);
 
   if (isLoading) {
     return (
@@ -109,6 +118,7 @@ const FieldCaptureInner: React.FC = () => {
   const [quickTextValue, setQuickTextValue] = useState('');
   const [quickTextLocation, setQuickTextLocation] = useState('');
   const [quickCaptureOpen, setQuickCaptureOpen] = useState(false);
+  const [showCheckInSheet, setShowCheckInSheet] = useState(false);
 
   const handleQuickCaptureSave = async (capture: CaptureData) => {
     try {
@@ -173,12 +183,53 @@ const FieldCaptureInner: React.FC = () => {
           AI Analysis: 85% of today's captures were auto categorized. 2 potential safety concerns flagged for review.
         </p>
       </div>
+      {/* Metric Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['3'], marginBottom: spacing['4'] }}>
+        {([
+          { icon: <Camera size={18} color={colors.statusInfo} />, label: 'Photos Today', value: photosToday, color: colors.statusInfo },
+          { icon: <Mic size={18} color={colors.statusReview} />, label: 'Voice Notes', value: voiceNotesToday, color: colors.statusReview },
+          { icon: <FileText size={18} color={colors.statusActive} />, label: 'Items Created', value: itemsCreatedToday, color: colors.statusActive },
+          { icon: <RefreshCw size={18} color={pendingCount > 0 ? colors.statusPending : colors.textTertiary} />, label: 'Pending Sync', value: pendingCount, color: pendingCount > 0 ? colors.statusPending : colors.textTertiary },
+        ] as const).map(({ icon, label, value, color }) => (
+          <div key={label} style={{ backgroundColor: colors.white, borderRadius: borderRadius.xl, padding: spacing['6'], display: 'flex', flexDirection: 'column', gap: spacing['2'], boxShadow: shadows.card }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
+              {icon}
+              <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, fontWeight: typography.fontWeight.medium }}>{label}</span>
+            </div>
+            <span style={{ fontSize: typography.fontSize['3xl'], fontWeight: typography.fontWeight.semibold, color }}>{value}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* QR Check-In Sheet */}
+      {showCheckInSheet && (
+        <QRScannerSheet onClose={() => setShowCheckInSheet(false)} />
+      )}
+
       {/* Quick Capture Bar */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: spacing['3'],
         padding: spacing['4'], backgroundColor: colors.surfaceRaised,
         borderRadius: borderRadius.lg, boxShadow: shadows.card, marginBottom: spacing['6'],
       }}>
+        <button
+          onClick={() => setShowCheckInSheet(true)}
+          style={{
+            flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['2'],
+            padding: `${spacing['4']} ${spacing['3']}`, minHeight: 44,
+            backgroundColor: `${colors.statusActive}14`,
+            color: colors.statusActive,
+            border: 'none', borderRadius: borderRadius.md, cursor: 'pointer',
+            transition: `all ${transitions.instant}`,
+          }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = `${colors.statusActive}22`; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = `${colors.statusActive}14`; }}
+        >
+          <QrCode size={24} />
+          <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold }}>Check In</span>
+          <span style={{ fontSize: typography.fontSize.caption, opacity: 0.8, fontWeight: typography.fontWeight.normal }}>Scan QR code</span>
+        </button>
+
         <PermissionGate permission="field_capture.create">
           <button
             onClick={() => setQuickCaptureOpen(true)}
@@ -378,16 +429,35 @@ const FieldCaptureInner: React.FC = () => {
       <div style={{ marginTop: quickTextType ? spacing['4'] : 0 }}>
         <SectionHeader title="Today's Captures" action={<span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{todayCaptures.length} items</span>} />
         <Card>
-          <CaptureTimeline
-            events={todayCaptures}
-            onSelect={(event) => addToast('info', `Viewing: ${event.title}`)}
-          />
+          {todayCaptures.length === 0 ? (
+            <EmptyState
+              icon={Camera}
+              title="No captures today"
+              description="Use the buttons below to log a photo, voice note, or check in"
+              action={{ label: 'Start Capturing', onClick: () => setQuickCaptureOpen(true) }}
+            />
+          ) : (
+            <CaptureTimeline
+              events={todayCaptures}
+              onSelect={(event) => addToast('info', `Viewing: ${event.title}`)}
+            />
+          )}
         </Card>
       </div>
 
       {/* Previous Captures */}
       <div style={{ marginTop: spacing['6'] }}>
         <SectionHeader title="Previous Captures" />
+        {previousCaptures.length === 0 ? (
+          <Card>
+            <EmptyState
+              icon={Camera}
+              title="No captures today"
+              description="Use the buttons below to log a photo, voice note, or check in"
+              action={{ label: 'Start Capturing', onClick: () => setQuickCaptureOpen(true) }}
+            />
+          </Card>
+        ) : (
         <Card padding="0">
           {previousCaptures.map((capture, index) => (
             <div
@@ -449,6 +519,7 @@ const FieldCaptureInner: React.FC = () => {
             </div>
           ))}
         </Card>
+        )}
       </div>
 
       {/* Overlays */}

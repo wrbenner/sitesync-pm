@@ -1,0 +1,121 @@
+{
+  "module": "field-operations",
+  "scores": {
+    "visual_polish": 62,
+    "domain_depth": 58,
+    "data_richness": 55,
+    "interaction_quality": 60,
+    "ai_integration": 63,
+    "mobile_first": 54,
+    "performance": 65,
+    "typescript_quality": 52,
+    "error_handling": 60,
+    "realtime": 65,
+    "accessibility": 48,
+    "security": 70,
+    "differentiation": 56,
+    "enterprise_readiness": 58
+  },
+  "overall_score": 59,
+  "issues": [
+    {
+      "id": "field-operations-C1-001",
+      "severity": "critical",
+      "dimension": "enterprise_readiness",
+      "title": "Daily log lacks legally-defensible immutability and signature fields",
+      "description": "Daily logs are legally discoverable evidence. The DailyLogEntry type and CreateDailyLogModal lack immutable submission (edit creates versioned audit record), superintendent signature capture, witness/approver signature, and timestamped lock after submission. Without these, logs cannot be used in claims or insurance proceedings.",
+      "prompt": "File: src/api/endpoints/field.ts, src/components/forms/CreateDailyLogModal.tsx, src/components/dailylog/SignaturePad.tsx, src/machines/dailyLogMachine.ts\n\nTask: Make daily logs legally defensible.\n\n1. In dailyLogMachine.ts: add a 'submitted' final state. Once in 'submitted', the machine must not allow direct edits — instead transition to 'amending' which creates a new version row with amended_from_id referencing the original.\n\n2. In field.ts submitDailyLog(): after INSERT, call supabase.from('daily_logs').update({ status: 'submitted', submitted_at: new Date().toISOString(), submitted_by: userId }).eq('id', logId). Subsequent edits must INSERT a new daily_log row with amended_from_id set.\n\n3. In CreateDailyLogModal.tsx: add a SignaturePad component (already exists at src/components/dailylog/SignaturePad.tsx) for superintendent signature. On submit, upload the signature blob to Supabase storage and store the URL in manager_signature_url.\n\n4. After submission, render the log read-only with a lock icon and 'Submitted [timestamp] by [name]' badge in amber/green.\n\nAcceptance criteria:\n- Submitted logs cannot be edited in-place; amendments create new versioned rows\n- superintendent signature is captured and stored as a URL\n- submitted_at and submitted_by are populated on every submission\n- UI shows lock state clearly after submission"
+    },
+    {
+      "id": "field-operations-C2-001",
+      "severity": "critical",
+      "dimension": "mobile_first",
+      "title": "Offline queue and sync status UI not implemented for field capture",
+      "description": "useOfflineMutation and offlineDb.ts exist but QuickCapture.tsx and CreateDailyLogModal.tsx do not use them. Field crews lose data when connectivity drops. No sync status banner is shown. This is a hard blocker for superintendent adoption per the product vision.",
+      "prompt": "Files: src/components/field/QuickCapture.tsx, src/components/forms/CreateDailyLogModal.tsx, src/hooks/useOfflineMutation.ts, src/services/offlineQueue.ts, src/components/ui/OfflineBanner.tsx\n\nTask: Wire offline queue to all field capture mutations.\n\n1. In QuickCapture.tsx: replace any direct supabase insert calls with useOfflineMutation(). Import useOfflineStatus() to detect connectivity. When offline, show a toast 'Saved locally — will sync when online'.\n\n2. In CreateDailyLogModal.tsx: wrap the form submit handler with useOfflineMutation(). On offline submit, enqueue to offlineQueue and close the modal with a success state showing 'Draft saved offline'.\n\n3. In OfflineBanner.tsx: add a sync progress indicator. When offlineQueue has pending items, show 'X items pending sync' with a spinning icon. When sync completes, show a green checkmark for 3 seconds then dismiss.\n\n4. Add a useSyncStatus() hook in src/hooks/ that exposes { pendingCount, isSyncing, lastSyncedAt } by reading from offlineQueue state.\n\nAcceptance criteria:\n- All field capture forms enqueue mutations when offline\n- OfflineBanner shows pending count and sync progress\n- Data is not lost on page reload when offline\n- Sync fires automatically when connection is restored"
+    },
+    {
+      "id": "field-operations-C3-001",
+      "severity": "critical",
+      "dimension": "domain_depth",
+      "title": "Punch list missing two-step verification workflow",
+      "description": "punchItemMachine.ts and CreatePunchItemModal.tsx exist but the two-step verification (sub marks complete → superintendent verifies) is not rendered in PunchList.tsx. There is no UI distinction between 'completed by sub' and 'verified by super'. This is a core construction QC workflow that competitors like Fieldwire implement natively.",
+      "prompt": "Files: src/pages/PunchList.tsx, src/machines/punchItemMachine.ts, src/components/forms/CreatePunchItemModal.tsx\n\nTask: Implement visible two-step punch list verification.\n\n1. In punchItemMachine.ts: confirm states include 'open' → 'completed_by_sub' → 'verified'. If not present, add 'completed_by_sub' as an intermediate state with events MARK_COMPLETE (sub action) and VERIFY (super action) and REJECT (returns to 'open' with rejection note).\n\n2. In PunchList.tsx table rows: show a two-column status flow: [Sub Status] → [Super Status]. Use color-coded dots: amber for 'completed_by_sub' awaiting verification, green for 'verified', red for 'rejected'. Add action buttons inline: 'Mark Complete' for assigned sub role, 'Verify' and 'Reject' for superintendent role — gated by usePermissions().\n\n3. Add a metric card at top of PunchList.tsx: 'Awaiting Verification' count (items in completed_by_sub state) highlighted in amber.\n\n4. On row click, show a detail drawer with before/after photo slots, rejection note field, and full status history timeline.\n\nAcceptance criteria:\n- Two-step states are visually distinct in the table\n- Role-based action buttons appear only for correct role\n- Metric card shows awaiting-verification count\n- Status history is visible in detail view"
+    },
+    {
+      "id": "field-operations-C4-001",
+      "severity": "critical",
+      "dimension": "typescript_quality",
+      "title": "Implicit any via spread operators and untyped JSON fields in field.ts",
+      "description": "field.ts uses Json type from database.ts for crew_entries, equipment_entries, weather_data and casts them with 'as unknown as T[]'. This propagates implicit any through the call stack and defeats TypeScript's safety net. Runtime JSON parse errors are silent.",
+      "prompt": "Files: src/api/endpoints/field.ts, src/types/api.ts\n\nTask: Replace all implicit any JSON casts with validated type guards.\n\n1. In src/api/endpoints/field.ts: find all instances of '(row.crew_entries as unknown as CrewEntry[])' and similar patterns. Replace with a typed parser:\n\n```typescript\nfunction parseJsonArray<T>(raw: Json, guard: (v: unknown) => v is T): T[] {\n  if (!Array.isArray(raw)) return []\n  return raw.filter(guard)\n}\n\nfunction isCrewEntry(v: unknown): v is CrewEntry {\n  return typeof v === 'object' && v !== null &&\n    typeof (v as CrewEntry).company === 'string' &&\n    typeof (v as CrewEntry).headcount === 'number'\n}\n```\n\n2. Add equivalent guards for EquipmentEntry, MaterialDelivery, Visitor, and IncidentDetail in src/api/endpoints/field.ts.\n\n3. In src/types/api.ts: ensure DailyLogPayload uses explicit union types for all JSON fields instead of Record<string, unknown> or Json.\n\n4. Enable 'noImplicitAny: true' in tsconfig.json if not already set and fix all resulting errors in the field module files.\n\nAcceptance criteria:\n- Zero implicit any in field.ts, verified by tsc --noImplicitAny\n- All JSON field access uses type guard parsers\n- Runtime malformed JSON returns empty array, not crash"
+    },
+    {
+      "id": "field-operations-H1-001",
+      "severity": "high",
+      "dimension": "ai_integration",
+      "title": "AI daily log summary not surfaced in UI after submission",
+      "description": "summarizeDailyLog exists in aiService.ts and the DailyLogEntry type has an ai_summary field, but there is no UI component in DailyLog.tsx or CreateDailyLogModal.tsx that calls it, displays the result, or allows the PM to copy/share the summary. The feature is invisible.",
+      "prompt": "Files: src/pages/DailyLog.tsx, src/components/dailylog/AutoNarrative.tsx, src/api/endpoints/aiService.ts\n\nTask: Surface AI daily log summary in the UI.\n\n1. In AutoNarrative.tsx: if this component exists but is not integrated, add it to the daily log detail view. It should accept logData prop (the full DailyLogEntry) and call summarizeDailyLog(logData) from aiService.ts on mount if ai_summary is null.\n\n2. Display the summary in a styled card below the narrative section: orange robot icon, 'AI Summary' label in 12px muted text, summary text in 14px body. Add a 'Copy' button (clipboard icon) and a 'Regenerate' button.\n\n3. While loading: show a skeleton of 3 lines pulsing. On error: show 'AI summary unavailable' in muted text — never crash.\n\n4. In DailyLog.tsx list view: show a 1-line preview of ai_summary in each log row as a subtitle under the date/weather line.\n\n5. After submission in CreateDailyLogModal.tsx: trigger summarizeDailyLog in the background and update the daily_log row with the result via supabase.update({ ai_summary }).\n\nAcceptance criteria:\n- AI summary appears in log detail view within 3 seconds of opening\n- Summary is persisted to ai_summary column\n- Copy button writes summary to clipboard\n- No crash if AI service unavailable"
+    },
+    {
+      "id": "field-operations-H2-001",
+      "severity": "high",
+      "dimension": "mobile_first",
+      "title": "QR code crew check-in flow not implemented",
+      "description": "QRCheckIn.tsx exists in src/components/workforce/ but is not integrated into FieldCapture.tsx or any mobile flow. The product vision explicitly requires QR/NFC crew check-in as a field-first feature. Fieldwire has this. SiteSync shows the file but delivers zero functionality.",
+      "prompt": "Files: src/components/workforce/QRCheckIn.tsx, src/pages/FieldCapture.tsx, src/hooks/useCheckIn.ts\n\nTask: Integrate QR crew check-in into the field capture flow.\n\n1. In QRCheckIn.tsx: implement a camera-based QR scanner using a lightweight library (jsQR or html5-qrcode). On scan, decode the QR payload as { projectId, locationId }. Call useCheckIn() hook to record the check-in.\n\n2. In useCheckIn.ts: implement checkIn(userId, projectId, locationId) that inserts a row into a crew_checkins table with { user_id, project_id, location_id, checked_in_at: new Date().toISOString() }. Use useOfflineMutation for offline support.\n\n3. In FieldCapture.tsx: add a 'Check In' button as the first item in the quick-action grid (44px touch target, QR icon from Lucide). Tapping it opens a bottom sheet with the QR scanner fullscreen.\n\n4. After successful check-in: show a haptic success feedback (useHaptics hook exists), display 'Checked in at [location]' confirmation for 2 seconds, then dismiss.\n\n5. On mobile (< 768px): the check-in button must be reachable with one thumb — place it in the bottom navigation bar as a prominent center action.\n\nAcceptance criteria:\n- QR scan decodes and records check-in in under 3 seconds\n- Works offline and syncs when connection returns\n- Success state is visually confirmed\n- 44px minimum touch target on all interactive elements"
+    },
+    {
+      "id": "field-operations-H3-001",
+      "severity": "high",
+      "dimension": "visual_polish",
+      "title": "FieldCapture and PunchList pages missing metric cards and empty states",
+      "description": "Per design standards, every page must start with 3-5 metric cards. FieldCapture.tsx and PunchList.tsx lack these. Empty states show generic messages. This directly violates the founder's P0 UI principles and makes the pages look unfinished compared to Linear/Stripe standards.",
+      "prompt": "Files: src/pages/FieldCapture.tsx, src/pages/PunchList.tsx, src/components/ui/EmptyState.tsx\n\nTask: Add metric cards and proper empty states to FieldCapture and PunchList pages.\n\n1. In FieldCapture.tsx: add a horizontal row of 4 metric cards at the top: 'Photos Today' (count), 'Voice Notes' (count), 'Items Created' (RFI drafts + punch items from captures today), 'Pending Sync' (offline queue count). Each card: white bg, 12px border-radius, 24px padding, icon + label + bold value.\n\n2. In PunchList.tsx: add 5 metric cards: 'Total Items', 'Open', 'Awaiting Verification', 'Verified', 'Overdue'. Color-code values: red for overdue, amber for awaiting verification, green for verified.\n\n3. In both pages: replace any 'No data found' or empty div renders with the EmptyState component. FieldCapture empty: Camera icon, 'No captures today', 'Use the buttons below to log a photo, voice note, or check in', 'Start Capturing' CTA. PunchList empty: CheckSquare icon, 'No punch items yet', 'Punch items are created during site walks and inspections', 'Create First Item' CTA.\n\n4. Ensure metric values are calculated from real data hooks — never hardcoded.\n\nAcceptance criteria:\n- Both pages show metric row before any list content\n- All metric values are real calculated numbers\n- Empty states show specific messages with CTA buttons\n- Cards match design token colors and spacing"
+    },
+    {
+      "id": "field-operations-H4-001",
+      "severity": "high",
+      "dimension": "accessibility",
+      "title": "Camera and voice capture inputs lack ARIA labels and keyboard alternatives",
+      "description": "QuickCapture.tsx and VoiceCapture.tsx use icon-only buttons without aria-label attributes. Screen readers announce nothing meaningful. There are no keyboard alternatives to camera/mic activation. This fails WCAG 2.1 AA and blocks users with disabilities from core field workflows.",
+      "prompt": "Files: src/components/field/QuickCapture.tsx, src/components/field/VoiceCapture.tsx, src/components/field/VoiceRecorder.tsx\n\nTask: Add ARIA labels and keyboard alternatives to all capture inputs.\n\n1. In QuickCapture.tsx: every icon-only button must have aria-label. Example: <button aria-label='Capture photo' ...>. Add role='button' where div elements act as buttons. Ensure all buttons are reachable via Tab key and activated via Enter/Space.\n\n2. In VoiceCapture.tsx: the record button must have aria-label='Start voice recording' when idle and aria-label='Stop recording' when active. Add aria-pressed={isRecording} to convey toggle state. Add a live region: <div aria-live='polite' aria-atomic='true'>{isRecording ? 'Recording in progress' : transcribedText}</div>.\n\n3. In VoiceRecorder.tsx: add keyboard shortcut 'R' to toggle recording when the component is focused (not globally to avoid conflicts). Show a visible focus ring on the record button (2px solid #F47820 outline).\n\n4. Add a visually-hidden text alternative for waveform animations: <span className='sr-only'>{isRecording ? 'Audio waveform active' : ''}</span>.\n\nAcceptance criteria:\n- All interactive elements have descriptive aria-label\n- Recording state is conveyed via aria-pressed\n- Transcription updates are announced via aria-live region\n- All capture actions reachable and operable by keyboard only\n- axe-core reports zero ARIA violations on these components"
+    },
+    {
+      "id": "field-operations-M1-001",
+      "severity": "medium",
+      "dimension": "error_handling",
+      "title": "Loading states use spinners instead of skeleton screens in field module",
+      "description": "FieldCaptureSkeleton.tsx and PunchListSkeleton.tsx exist but may not be used consistently. Design standards require skeleton screens matching content shape, not spinners. Any spinner-based loading in DailyLog.tsx, FieldCapture.tsx, or PunchList.tsx must be replaced.",
+      "prompt": "Files: src/pages/DailyLog.tsx, src/pages/FieldCapture.tsx, src/pages/PunchList.tsx, src/components/field/FieldCaptureSkeleton.tsx, src/components/field/PunchListSkeleton.tsx\n\nTask: Replace all spinner loading states with skeleton screens in the field module.\n\n1. Audit DailyLog.tsx, FieldCapture.tsx, and PunchList.tsx for any isLoading ? <Spinner /> or isLoading ? <div>Loading...</div> patterns. Replace each with the appropriate skeleton component.\n\n2. In FieldCaptureSkeleton.tsx: ensure it renders 3 skeleton capture cards matching the exact dimensions of real capture cards (pulse animation, gray rectangles at correct heights). If it only renders a generic skeleton, update it to match the QuickCapture grid layout.\n\n3. In PunchListSkeleton.tsx: ensure it renders skeleton rows matching the PunchList table: 48px row height, columns at correct widths, status dot placeholder.\n\n4. Create DailyLogSkeleton.tsx in src/components/dailylog/ that renders skeleton metric cards + skeleton log list rows (date, weather badge, crew count placeholders).\n\n5. All skeletons use: background #E5E7EB, border-radius matching content, opacity animation from 0.4 to 0.7 on a 1.5s cycle.\n\nAcceptance criteria:\n- Zero spinner usage in DailyLog, FieldCapture, PunchList pages\n- Skeleton shapes match rendered content dimensions\n- Skeleton components are used in isLoading branches of all three pages\n- No blank page flash on initial load"
+    },
+    {
+      "id": "field-operations-M2-001",
+      "severity": "medium",
+      "dimension": "domain_depth",
+      "title": "Weather data not auto-populated in daily log entry form",
+      "description": "WeatherCard.tsx was added and weather.ts lib exists, but the daily log entry form does not auto-populate weather fields (conditions, temperature, wind speed, precipitation) from the API. Supers must manually enter weather, which is a legal liability — auto-populated weather from an external API is the industry standard for defensible daily logs.",
+      "prompt": "Files: src/components/forms/CreateDailyLogModal.tsx, src/components/dailylog/WeatherCard.tsx, src/lib/weather.ts\n\nTask: Auto-populate weather fields in the daily log form.\n\n1. In weather.ts: confirm there is a getCurrentWeather(lat, lng) or getCurrentWeatherByProject(projectId) function that returns { conditions: string, tempHigh: number, tempLow: number, windSpeed: number, precipitation: string }. If not, implement it using the existing weather API integration.\n\n2. In CreateDailyLogModal.tsx: on modal open, call getCurrentWeather using the project's coordinates (fetch from project record). Show a loading skeleton in the weather fields while fetching. On success, pre-fill the weather form fields. Add a small 'Auto-filled' badge next to each weather field.\n\n3. Allow manual override: each auto-filled field remains editable. If the user edits a field, remove the 'Auto-filled' badge and show a pencil icon.\n\n4. Include WeatherCard.tsx as a read-only preview in the modal sidebar showing today's forecast with the 5-day outlook.\n\n5. Store weather_source: 'auto' | 'manual' in the daily log metadata so legal review can confirm the source.\n\nAcceptance criteria:\n- Weather fields are pre-populated within 2 seconds of modal open\n- weather_source is stored on every log\n- Fields are editable after auto-fill\n- If weather API fails, fields are empty and editable with no crash"
+    }
+  ],
+  "invented_features": [
+    {
+      "id": "invented-field-001",
+      "title": "AI Incident Risk Scorer",
+      "description": "After each daily log submission, an AI model scores the day's safety observations, near-misses, and crew fatigue indicators (overtime hours, heat index) to produce a 0-100 risk score. If score > 70, the AI generates a specific intervention recommendation sent to the superintendent and PM. Trains on project history to personalize thresholds. No competitor has this."
+    },
+    {
+      "id": "invented-field-002",
+      "title": "Predictive Crew Productivity Engine",
+      "description": "Using daily log crew hours, weather data, day-of-week, and historical productivity per trade and phase, an ML model predicts tomorrow's expected output per trade and flags if scheduled work exceeds realistic capacity. The superintendent sees 'Concrete crew historically 15% slower on Mondays after weekends — consider adjusting pour schedule' on the field capture home screen."
+    },
+    {
+      "id": "invented-field-003",
+      "title": "Voice-to-Punch-Item Auto-Classification",
+      "description": "When a super records a voice note in VoiceCapture, the AI not only transcribes but classifies: is this a punch item, RFI draft, daily log note, or safety observation? It auto-routes to the correct workflow with pre-filled fields. The super just says 'the drywall in room 214 is cracked' and a punch item appears, assigned to the drywall sub, pinned to the drawing location, ready to submit."
+    }
+  ],
+  "competitive_intel": "Fieldwire leads on mobile UX and offline but has zero financials or AI. Procore has the workflow depth but its daily log is a desktop form disguised for mobile. SiteSync's field module has the right architecture (machines, offline hooks, AI service) but critical workflows — offline queue, two-step punch verification, legal daily log immutability, and QR check-in — exist as stubs or disconnected files. Closing that gap would make SiteSync categorically superior to both for field crews.",
+  "summary": "The Field Operations module has a solid architectural foundation — state machines for daily log and punch items, an offline mutation hook, an AI service with summarization, and skeleton components — but the prior cycle's partial fixes have left the most critical user-facing gaps open. Daily logs are not legally defensible (no immutability, no signature lock), the offline queue is not wired to the actual field capture forms, punch list two-step verification is invisible in the UI despite machine support, and QR check-in is an orphaned file. TypeScript safety is undermined by unguarded JSON casts throughout field.ts. Accessibility violations on camera and voice inputs block WCAG 2.1 AA compliance. The module scores 59 overall — above average in infrastructure but below par in the field-first, legally-defensible, superintendent-centric workflows that differentiate SiteSync from Procore and Fieldwire. The invented features (incident risk scorer, predictive crew engine, voice-to-punch classification) represent the kind of AI-native invention the product vision demands and no competitor ships today."
+}

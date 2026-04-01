@@ -39,6 +39,61 @@ export interface IncidentDetail {
   corrective_action: string
 }
 
+// Type-safe JSON array parser — returns empty array for malformed input instead of throwing
+export function parseJsonArray<T>(raw: Json, guard: (v: unknown) => v is T): T[] {
+  if (!Array.isArray(raw)) return []
+  return raw.filter(guard)
+}
+
+export function isCrewEntry(v: unknown): v is CrewEntry {
+  return (
+    typeof v === 'object' && v !== null &&
+    typeof (v as CrewEntry).company === 'string' &&
+    typeof (v as CrewEntry).trade === 'string' &&
+    typeof (v as CrewEntry).headcount === 'number' &&
+    typeof (v as CrewEntry).hours === 'number'
+  )
+}
+
+export function isEquipmentEntry(v: unknown): v is EquipmentEntry {
+  return (
+    typeof v === 'object' && v !== null &&
+    typeof (v as EquipmentEntry).type === 'string' &&
+    typeof (v as EquipmentEntry).count === 'number' &&
+    typeof (v as EquipmentEntry).hours_operated === 'number'
+  )
+}
+
+export function isMaterialDelivery(v: unknown): v is MaterialDelivery {
+  return (
+    typeof v === 'object' && v !== null &&
+    typeof (v as MaterialDelivery).description === 'string' &&
+    typeof (v as MaterialDelivery).quantity === 'number' &&
+    typeof (v as MaterialDelivery).po_reference === 'string' &&
+    typeof (v as MaterialDelivery).delivery_ticket === 'string'
+  )
+}
+
+export function isVisitor(v: unknown): v is Visitor {
+  return (
+    typeof v === 'object' && v !== null &&
+    typeof (v as Visitor).name === 'string' &&
+    typeof (v as Visitor).company === 'string' &&
+    typeof (v as Visitor).purpose === 'string' &&
+    typeof (v as Visitor).time_in === 'string' &&
+    typeof (v as Visitor).time_out === 'string'
+  )
+}
+
+export function isIncidentDetail(v: unknown): v is IncidentDetail {
+  return (
+    typeof v === 'object' && v !== null &&
+    typeof (v as IncidentDetail).description === 'string' &&
+    typeof (v as IncidentDetail).type === 'string' &&
+    typeof (v as IncidentDetail).corrective_action === 'string'
+  )
+}
+
 // Full return shape of getDailyLogs — mirrors daily_logs DB schema plus computed fields
 
 export interface DailyLogEntry {
@@ -71,6 +126,8 @@ export interface DailyLogEntry {
   workers_onsite: number | null
   is_submitted: boolean | null
   submitted_at: string | null
+  submitted_by: string | null
+  amended_from_id: string | null
   version: number | null
   // Computed / display fields
   date: string
@@ -160,7 +217,8 @@ export const updateDailyLog = async (id: string, payload: Partial<DailyLogPayloa
 export const submitDailyLog = async (
   projectId: string,
   id: string,
-  signatureUrl?: string
+  signatureUrl?: string,
+  userId?: string
 ): Promise<DailyLogRow> => {
   validateProjectId(projectId)
   const updates: Record<string, unknown> = {
@@ -170,12 +228,41 @@ export const submitDailyLog = async (
     updated_at: new Date().toISOString(),
   }
   if (signatureUrl) updates.superintendent_signature_url = signatureUrl
+  if (userId) updates.submitted_by = userId
   return supabaseMutation<DailyLogRow>(client =>
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (client.from('daily_logs') as any)
       .update(updates)
       .eq('id', id)
       .eq('project_id', projectId)
+      .select()
+      .single()
+  )
+}
+
+export const amendDailyLog = async (
+  projectId: string,
+  originalId: string,
+  payload: import('../../types/api').DailyLogPayload
+): Promise<DailyLogRow> => {
+  validateProjectId(projectId)
+  return supabaseMutation<DailyLogRow>(client =>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (client.from('daily_logs') as any)
+      .insert({
+        ...payload,
+        project_id: projectId,
+        amended_from_id: originalId,
+        status: 'draft',
+        is_submitted: false,
+        submitted_at: null,
+        submitted_by: null,
+        approved: null,
+        approved_at: null,
+        approved_by: null,
+        superintendent_signature_url: null,
+        manager_signature_url: null,
+      })
       .select()
       .single()
   )
@@ -276,6 +363,8 @@ export const getDailyLogs = async (
       workers_onsite: l.workers_onsite,
       is_submitted: l.is_submitted,
       submitted_at: l.submitted_at,
+      submitted_by: (l as Record<string, unknown>).submitted_by as string | null ?? null,
+      amended_from_id: (l as Record<string, unknown>).amended_from_id as string | null ?? null,
       version: l.version,
       // Computed fields
       date: l.log_date,

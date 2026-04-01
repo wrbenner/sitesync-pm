@@ -1,8 +1,11 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { useProjectId } from './useProjectId'
 import { supabase } from '../lib/supabase'
 import { aiService } from '../lib/aiService'
-import type { AIMessage, AIContext } from '../types/ai'
+import { useProjectMetrics } from './useProjectMetrics'
+import { useBudgetData } from './useBudgetData'
+import { useRFIs, useSubmittals, useSchedulePhases } from './queries/index'
+import type { AIMessage, AIContext, ProjectAIContext } from '../types/ai'
 
 export interface ToolResult {
   tool: string
@@ -121,6 +124,49 @@ export function useProjectAI(pageContext?: string, entityContext?: string): UseP
   const [error, setError] = useState<string | null>(null)
   const conversationRef = useRef<ChatMessage[]>([])
 
+  const { data: metricsData } = useProjectMetrics(projectId)
+  const budgetData = useBudgetData()
+  const { data: rfisData } = useRFIs(projectId)
+  const { data: submittalsData } = useSubmittals(projectId)
+  const { data: scheduleData } = useSchedulePhases(projectId)
+
+  const projectData = useMemo((): ProjectAIContext | undefined => {
+    if (!metricsData) return undefined
+
+    const pendingChangeOrderExposure = (budgetData.changeOrders ?? [])
+      .filter(co => co.status === 'pending' || co.status === 'submitted' || co.status === 'review')
+      .reduce((sum, co) => sum + (co.amount ?? co.estimated_cost ?? 0), 0)
+
+    const criticalPathActivities = (scheduleData ?? [])
+      .filter(p => p.is_critical_path && p.percent_complete !== 100)
+      .slice(0, 5)
+      .map(p => ({ name: p.name ?? '', finishDate: p.end_date ?? '' }))
+
+    const SUBMITTAL_ACTIVE = new Set(['pending', 'under_review', 'submitted', 'in_review'])
+    const activeBallInCourtSubmittals = (submittalsData?.data ?? [])
+      .filter(s => s.assigned_to && s.status && SUBMITTAL_ACTIVE.has(s.status))
+      .slice(0, 10)
+      .map(s => ({
+        number: (s as unknown as { submittal_number?: string }).submittal_number ?? s.id.slice(0, 8),
+        title: s.title ?? '',
+        assignedTo: s.assigned_to as string,
+      }))
+
+    return {
+      projectName: metricsData.project_name ?? '',
+      contractValue: metricsData.contract_value ?? null,
+      phase: null,
+      openRfiCount: metricsData.rfis_open ?? 0,
+      overdueRfiCount: metricsData.rfis_overdue ?? 0,
+      budgetVarianceByDivision: [],
+      scheduleVarianceDays: metricsData.schedule_variance_days ?? null,
+      criticalPathActivities,
+      recentDailyLogSummaries: [],
+      activeBallInCourtSubmittals,
+      pendingChangeOrderExposure,
+    }
+  }, [metricsData, budgetData.changeOrders, scheduleData, submittalsData])
+
   useEffect(() => { conversationRef.current = messages }, [messages])
 
   const sendMessage = useCallback(async () => {
@@ -142,6 +188,7 @@ export function useProjectAI(pageContext?: string, entityContext?: string): UseP
       projectId,
       currentPage: pageContext,
       selectedEntities: entityContext ? [{ type: 'entity', id: entityContext }] : undefined,
+      projectData,
     }
 
     try {
@@ -258,7 +305,7 @@ export function useProjectAI(pageContext?: string, entityContext?: string): UseP
     } finally {
       setIsLoading(false)
     }
-  }, [input, isLoading, projectId, pageContext, entityContext])
+  }, [input, isLoading, projectId, pageContext, entityContext, projectData])
 
   const confirmAction = useCallback(async (actionId: string) => {
     const msg = conversationRef.current.find(m => m.pendingAction?.id === actionId)
@@ -277,6 +324,7 @@ export function useProjectAI(pageContext?: string, entityContext?: string): UseP
       const context: AIContext = {
         projectId,
         currentPage: pageContext,
+        projectData,
       }
 
       if (aiService.isConfigured()) {
@@ -329,7 +377,7 @@ export function useProjectAI(pageContext?: string, entityContext?: string): UseP
     } finally {
       setIsLoading(false)
     }
-  }, [projectId, pageContext])
+  }, [projectId, pageContext, projectData])
 
   const cancelAction = useCallback((actionId: string) => {
     setMessages(prev => [

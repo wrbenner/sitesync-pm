@@ -17,6 +17,8 @@ interface OfflineMutationOptions<TData, TVariables> {
   getOfflinePayload: (variables: TVariables) => Record<string, unknown>
   // PostHog event name
   analyticsEvent?: string
+  // Toast message shown when saving offline (defaults to 'Saved locally — will sync when online')
+  offlineMessage?: string
   // Additional onSuccess
   onSuccess?: (data: TData | null, variables: TVariables) => void
 }
@@ -55,7 +57,7 @@ export function useOfflineMutation<TData = unknown, TVariables = unknown>(
         await writeToCache(options.table, payload)
       }
 
-      toast.info('Saved offline. Will sync when connected.')
+      toast.info(options.offlineMessage ?? 'Saved locally \u2014 will sync when online')
       return null
     },
     onSuccess: (data, variables) => {

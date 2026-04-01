@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext, createContext, useCallback, useRef, useId } from 'react';
-import { X, Search, CheckCircle, AlertTriangle, Info, XCircle, ChevronRight, LayoutGrid, HelpCircle, Calendar, DollarSign, User, Users, ClipboardList, FileText } from 'lucide-react';
+import { X, Search, CheckCircle, AlertTriangle, Info, XCircle, ChevronRight, LayoutGrid, HelpCircle, Calendar, DollarSign, User, Users, ClipboardList, FileText, TrendingUp, TrendingDown } from 'lucide-react';
 import type { RelatedItem, EntityType } from '../utils/connections';
 import { colors, spacing, typography, borderRadius, shadows, transitions, zIndex, layout } from '../styles/theme';
 import { motion as motionTokens, easing, duration } from '../styles/animations';
@@ -296,6 +296,22 @@ export const Btn: React.FC<BtnProps> = ({
 // ─── MetricBox ──────────────────────────────────────────────────────────────
 // No icon. The number speaks for itself. Label, value, optional trend.
 
+const TREND_COLORS = {
+  success: '#4EC896',
+  warning: '#F5A623',
+  danger: '#E74C3C',
+} as const;
+
+function formatMetricValue(value: number, format: 'currency' | 'percent' | 'number'): string {
+  if (format === 'currency') {
+    if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
+    if (value >= 1_000) return `$${(value / 1_000).toFixed(0)}K`;
+    return `$${value.toLocaleString()}`;
+  }
+  if (format === 'percent') return `${value.toFixed(1)}%`;
+  return value.toLocaleString();
+}
+
 interface MetricBoxProps {
   label: string;
   value: string | number;
@@ -304,6 +320,9 @@ interface MetricBoxProps {
   changeLabel?: string;
   icon?: React.ReactNode; // kept for backwards compat but ignored
   warning?: string; // amber caution icon with tooltip when data may be incomplete
+  previousValue?: number;
+  colorOverride?: 'success' | 'warning' | 'danger';
+  format?: 'currency' | 'percent' | 'number';
 }
 
 export const MetricBox: React.FC<MetricBoxProps> = React.memo(({
@@ -313,7 +332,21 @@ export const MetricBox: React.FC<MetricBoxProps> = React.memo(({
   change,
   changeLabel,
   warning,
-}) => (
+  previousValue,
+  colorOverride,
+  format,
+}) => {
+  const trendPercent = (typeof value === 'number' && previousValue)
+    ? ((value - previousValue) / Math.abs(previousValue)) * 100
+    : null;
+
+  const displayValue = typeof value === 'number' && format
+    ? formatMetricValue(value, format)
+    : value;
+
+  const valueColor = colorOverride ? TREND_COLORS[colorOverride] : colors.textPrimary;
+
+  return (
   <div
     role="group"
     aria-label={`${label}: ${value}${unit ? ` ${unit}` : ''}${warning ? ` (${warning})` : ''}`}
@@ -361,14 +394,14 @@ export const MetricBox: React.FC<MetricBoxProps> = React.memo(({
         style={{
           fontSize: typography.fontSize['4xl'],
           fontWeight: typography.fontWeight.semibold,
-          color: colors.textPrimary,
+          color: valueColor,
           margin: 0,
           letterSpacing: typography.letterSpacing.tighter,
           lineHeight: typography.lineHeight.none,
           fontVariantNumeric: 'tabular-nums' as const,
         }}
       >
-        {value}
+        {displayValue}
       </p>
       {unit && (
         <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0, fontWeight: typography.fontWeight.medium }}>
@@ -376,7 +409,24 @@ export const MetricBox: React.FC<MetricBoxProps> = React.memo(({
         </p>
       )}
     </div>
-    {change !== undefined && changeLabel && (
+    {trendPercent !== null ? (
+      <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs, marginTop: spacing.sm }}>
+        {trendPercent >= 0
+          ? <TrendingUp size={12} color={TREND_COLORS.success} aria-hidden="true" />
+          : <TrendingDown size={12} color={TREND_COLORS.danger} aria-hidden="true" />
+        }
+        <p
+          style={{
+            fontSize: 12,
+            color: trendPercent >= 0 ? TREND_COLORS.success : TREND_COLORS.danger,
+            margin: 0,
+            fontWeight: typography.fontWeight.medium,
+          }}
+        >
+          {trendPercent >= 0 ? '+' : ''}{trendPercent.toFixed(1)}%
+        </p>
+      </div>
+    ) : change !== undefined && changeLabel ? (
       <p
         style={{
           fontSize: typography.fontSize.sm,
@@ -388,9 +438,10 @@ export const MetricBox: React.FC<MetricBoxProps> = React.memo(({
       >
         {change >= 0 ? '+' : ''}{change}% {changeLabel}
       </p>
-    )}
+    ) : null}
   </div>
-));
+  );
+});
 
 // ─── Tag ────────────────────────────────────────────────────────────────────
 // Small, round, quiet. Whispers, not shouts.

@@ -1,0 +1,122 @@
+{
+  "module": "scheduling",
+  "scores": {
+    "visual_polish": 42,
+    "domain_depth": 38,
+    "data_richness": 30,
+    "interaction_quality": 35,
+    "ai_integration": 28,
+    "mobile_first": 40,
+    "performance": 55,
+    "typescript_quality": 48,
+    "error_handling": 45,
+    "realtime": 38,
+    "accessibility": 32,
+    "security": 62,
+    "differentiation": 25,
+    "enterprise_readiness": 44
+  },
+  "overall_score": 40,
+  "issues": [
+    {
+      "id": "scheduling-C1-001",
+      "severity": "critical",
+      "dimension": "domain_depth",
+      "title": "No baseline vs actual comparison in schedule endpoint or Gantt",
+      "description": "The schedule module has no concept of a baseline schedule. There is no baseline_start, baseline_finish, or baseline_duration on schedule activity rows. The GanttChart component renders no gray baseline bars behind actuals. Without this, a superintendent cannot see slippage at a glance — the single most important schedule view in construction PM.",
+      "prompt": "FILE: src/api/endpoints/schedule.ts\nFILE: src/components/schedule/GanttChart.tsx\nFILE: src/types/api.ts\n\nTASK: Add baseline vs actual comparison to the scheduling module.\n\n1. In src/types/api.ts, add to the ScheduleActivity interface: baseline_start: string | null, baseline_finish: string | null, baseline_duration_days: number | null, slippage_days: number | null (computed as diff between baseline_finish and projected_finish).\n\n2. In src/api/endpoints/schedule.ts, update getScheduleActivities to select baseline_start, baseline_finish from the schedule_activities table. Compute slippage_days = differenceInCalendarDays(actual_finish ?? projected_finish, baseline_finish) when both are non-null, else null.\n\n3. In src/components/schedule/GanttChart.tsx, render a gray bar (bg-gray-200, opacity-70, same row, behind the actual bar) spanning baseline_start to baseline_finish when both are non-null. Add a legend at the top: gray = baseline, colored = actual. Add a 'Slippage' column showing slippage_days with red text when > 0, green when <= 0.\n\nACCEPTANCE CRITERIA:\n- Every activity row shows both a gray baseline bar and a colored actual bar when baseline data exists.\n- Slippage column shows positive days in red (#E74C3C) and zero/negative in green (#4EC896).\n- TypeScript compiles with no new errors.\n- Existing tests continue to pass."
+    },
+    {
+      "id": "scheduling-C2-002",
+      "severity": "critical",
+      "dimension": "data_richness",
+      "title": "Schedule metric cards missing — page shows no KPI summary at top",
+      "description": "The Schedule page (src/pages/Schedule.tsx) has no metric cards at the top of the page. Per design standards, every page must start with 3-5 calculated metric cards. A superintendent opening the schedule page at 6am sees no summary of schedule health, critical path length, activities on track, or projected completion — they have to scroll into the Gantt to find anything meaningful.",
+      "prompt": "FILE: src/pages/Schedule.tsx\nFILE: src/hooks/useProjectMetrics.ts (read only, do not break)\n\nTASK: Add 5 metric cards to the top of the Schedule page.\n\n1. In src/pages/Schedule.tsx, above the Gantt/tabs section, add a responsive grid of 5 metric cards using the existing Card/metric card pattern from other pages (see src/pages/Budget.tsx for reference).\n\n2. Compute the following from the schedule activities already fetched:\n   - Schedule Variance: projected completion date minus baseline completion date in days (red if positive, green if negative or zero).\n   - Critical Path Activities: count of activities where float === 0 or is_critical === true.\n   - Activities On Track: count of activities where slippage_days <= 0 or status === 'completed' as a fraction of total, shown as percentage.\n   - Overall % Complete: weighted average of percent_complete across all activities by duration.\n   - Projected Completion: formatted date string derived from the latest projected_finish among critical path activities.\n\n3. Each card: white bg, 12px rounded, 24px padding, icon (Lucide), 12px muted label, 28px bold value, trend indicator. Use existing design tokens from src/styles/tokens.css.\n\nACCEPTANCE CRITERIA:\n- 5 metric cards visible at top of /schedule route before Gantt.\n- All values are computed from real data, not hardcoded.\n- Cards are responsive: 5-column on desktop, 3-column on tablet, 2-column on mobile.\n- No TypeScript errors."
+    },
+    {
+      "id": "scheduling-C3-003",
+      "severity": "critical",
+      "dimension": "ai_integration",
+      "title": "No AI predictive delay engine — schedule has zero forward-looking intelligence",
+      "description": "The AI copilot (src/lib/aiService.ts, src/lib/predictions.ts) has no schedule-aware predictive delay function. There is no function that reads current activity progress, weather forecasts, and resource loading to predict which activities will be late by end of week. This is the north star feature of SiteSyncAI and the primary differentiator over Procore. src/lib/predictions.ts exists but contains no schedule delay logic.",
+      "prompt": "FILE: src/lib/predictions.ts\nFILE: src/lib/aiService.ts\nFILE: src/api/endpoints/ai.ts\nFILE: src/components/schedule/GanttChart.tsx\n\nTASK: Implement a predictive delay engine that surfaces schedule risk on the Gantt.\n\n1. In src/lib/predictions.ts, add function predictScheduleDelays(projectId: string, activities: ScheduleActivity[], weatherForecast: WeatherDay[]): PredictedDelay[]. PredictedDelay = { activityId: string, activityName: string, riskScore: number (0-1), predictedSlippageDays: number, reasons: string[], suggestedAction: string }. Logic: flag activities where (a) percent_complete is more than 10% behind planned_percent_complete for today, (b) activity is outdoor and weather forecast shows >60% precipitation in the next 3 days, or (c) float < 2 days and activity is not started.\n\n2. In src/lib/aiService.ts, add generateScheduleDelayInsights(projectId: string): Promise<AIInsight[]> that calls predictScheduleDelays with current activity data and returns AIInsight objects with type='schedule_risk', severity based on riskScore (>=0.7 = 'critical', >=0.4 = 'warning', else 'info').\n\n3. In src/components/schedule/GanttChart.tsx, add a yellow warning badge on any activity bar where predictedSlippageDays > 0. Tooltip shows the reasons array.\n\nACCEPTANCE CRITERIA:\n- predictScheduleDelays is unit-testable and exported.\n- At least one AIInsight of type 'schedule_risk' appears in the AI copilot panel when a project has at-risk activities.\n- Warning badges appear on Gantt bars for at-risk activities.\n- TypeScript strict mode compliant — no use of 'any'."
+    },
+    {
+      "id": "scheduling-C4-004",
+      "severity": "critical",
+      "dimension": "interaction_quality",
+      "title": "Gantt chart has no drag-to-adjust, no dependency arrows, no milestone markers",
+      "description": "src/components/schedule/GanttChart.tsx renders bars but has no drag interaction for adjusting dates, no SVG dependency arrows between activities, and no milestone diamond markers. This makes the Gantt read-only and far below the standard of Procore or even Buildertrend. A PM cannot adjust a schedule by dragging — they must go to an edit modal for every single date change.",
+      "prompt": "FILE: src/components/schedule/GanttChart.tsx\n\nTASK: Add drag-to-adjust date shifting, SVG dependency arrows, and milestone markers.\n\n1. DRAG TO ADJUST: Wrap each Gantt bar in a draggable container. On mousedown/touchstart, record dragStartX. On mousemove/touchmove, compute daysDelta = Math.round(deltaX / dayWidthPx). Show a ghost bar at the new position. On mouseup/touchend, call onActivityDateChange(activityId, newStart, newFinish) prop. Add onActivityDateChange?: (id: string, start: string, finish: string) => void to GanttChartProps. Debounce the callback 300ms.\n\n2. DEPENDENCY ARROWS: Accept a dependencies?: Array<{fromId: string, toId: string, type: 'FS'|'SS'|'FF'|'SF'}> prop. Render an SVG overlay positioned absolutely over the Gantt grid. For each dependency, draw an SVG path from the right edge of the predecessor bar to the left edge of the successor bar with a small arrowhead. Color: #6B7280 (gray), stroke-width 1.5.\n\n3. MILESTONE MARKERS: When activity.is_milestone === true, render a diamond shape (rotated square, 14px, #F47820 orange) instead of a bar. Show the milestone name as a label to the right.\n\nACCEPTANCE CRITERIA:\n- Dragging a bar updates its position visually and fires onActivityDateChange with correct ISO date strings.\n- At least 2 dependency arrow types (FS, SS) render correctly as SVG paths.\n- Milestone diamonds render in place of bars for milestone activities.\n- Touch events work on mobile (iOS Safari).\n- No TypeScript errors."
+    },
+    {
+      "id": "scheduling-H1-005",
+      "severity": "high",
+      "dimension": "mobile_first",
+      "title": "MobileScheduleView is a stub — no real look-ahead or field-usable layout",
+      "description": "src/components/schedule/MobileScheduleView.tsx exists but shows a simplified list with no look-ahead filtering, no swipe-to-complete gesture, and no touch-optimized 44px targets. A superintendent on site opening the schedule on their iPhone sees a desktop-adapted view, not a purpose-built mobile experience.",
+      "prompt": "FILE: src/components/schedule/MobileScheduleView.tsx\nFILE: src/pages/Schedule.tsx\n\nTASK: Build a proper mobile look-ahead schedule view for field use.\n\n1. In src/components/schedule/MobileScheduleView.tsx, replace the current stub with a full implementation:\n   - Header: 'Next 3 Weeks' title with a date range chip.\n   - Filter activities to those starting or active within the next 21 days from today.\n   - Group activities by week (Week 1, Week 2, Week 3) with sticky section headers (bg-white, border-bottom).\n   - Each activity card: 44px min-height, trade color left border (4px), activity name (14px bold), dates (12px muted), percent complete bar, assigned trade badge.\n   - Swipe right on a card to mark as 'in_progress', swipe left to open detail. Use touch event handlers (touchstart/touchmove/touchend), threshold 60px.\n   - Tap a card to expand inline and show description + linked RFIs.\n\n2. In src/pages/Schedule.tsx, detect mobile viewport (window.innerWidth < 768) and render MobileScheduleView instead of GanttChart. Pass the same activities data prop.\n\nACCEPTANCE CRITERIA:\n- On viewport < 768px, MobileScheduleView renders automatically.\n- Activities grouped by week with sticky headers.\n- Swipe right sets status to 'in_progress' and calls the update mutation.\n- All touch targets >= 44px.\n- No horizontal scroll required to see activity information."
+    },
+    {
+      "id": "scheduling-H2-006",
+      "severity": "high",
+      "dimension": "domain_depth",
+      "title": "Critical path calculation not surfaced in UI — float and critical path fields unused",
+      "description": "src/lib/criticalPath.ts exists suggesting CPM logic is present, but the GanttChart component does not visually highlight critical path activities in red, does not display float values per row, and the schedule endpoint does not return is_critical or float_days fields in its response type. PMs cannot see which activities cannot slip without performing mental math.",
+      "prompt": "FILE: src/lib/criticalPath.ts\nFILE: src/api/endpoints/schedule.ts\nFILE: src/components/schedule/GanttChart.tsx\nFILE: src/types/api.ts\n\nTASK: Surface critical path and float in the schedule UI.\n\n1. In src/api/endpoints/schedule.ts, after fetching activities, call the criticalPath calculator from src/lib/criticalPath.ts. Attach is_critical: boolean and float_days: number to each returned ScheduleActivity.\n\n2. In src/types/api.ts ScheduleActivity interface, add: is_critical: boolean, float_days: number.\n\n3. In src/components/schedule/GanttChart.tsx:\n   - Color critical path bars #E74C3C (red) instead of the default color.\n   - Add a 'Float' column in the activity table on the left side showing float_days. If float_days === 0, show a red '0d CRITICAL' badge. If float_days <= 2, show amber. Otherwise gray.\n   - Add a 'Critical Path' toggle button in the toolbar that, when active, dims all non-critical activities to 30% opacity.\n\nACCEPTANCE CRITERIA:\n- Critical activities render with red bars.\n- Float column visible and populated with real computed values.\n- 'Critical Path' filter toggle dims non-critical rows.\n- No TypeScript errors. Existing criticalPath.ts logic is not duplicated."
+    },
+    {
+      "id": "scheduling-H3-007",
+      "severity": "high",
+      "dimension": "realtime",
+      "title": "No real-time schedule updates — changes by one user are not reflected for others",
+      "description": "The schedule module has no Supabase Realtime subscription. When a PM updates an activity's dates or percent complete, other users on the same project see stale data until they manually refresh. The existing useRealtimeSubscription hook and useRealtimeInvalidation are used elsewhere but not wired into the schedule module.",
+      "prompt": "FILE: src/hooks/queries/realtime.ts\nFILE: src/pages/Schedule.tsx\nFILE: src/api/endpoints/schedule.ts\nFILE: src/hooks/useRealtimeSubscription.ts (read only)\n\nTASK: Add real-time schedule activity updates via Supabase Realtime.\n\n1. In src/hooks/queries/realtime.ts, add a useScheduleRealtime(projectId: string) hook that subscribes to the 'schedule_activities' table for INSERT, UPDATE, DELETE events filtered by project_id using the existing useRealtimeSubscription pattern. On any event, call queryClient.invalidateQueries({ queryKey: ['schedule', projectId] }).\n\n2. In src/pages/Schedule.tsx, call useScheduleRealtime(projectId) at the top of the component.\n\n3. In src/api/endpoints/schedule.ts, ensure the updateScheduleActivity mutation calls supabaseMutation (not supabaseQuery) and returns the updated row with select().\n\n4. Add a small 'Live' indicator badge (green dot + 'Live' text, 12px) in the Schedule page toolbar when the realtime subscription is active. Use the existing ConnectionStatus pattern from src/components/ui/ConnectionStatus.tsx.\n\nACCEPTANCE CRITERIA:\n- Opening schedule in two browser tabs: a date change in tab A appears in tab B within 2 seconds without refresh.\n- 'Live' badge visible in schedule toolbar.\n- Subscription is cleaned up on component unmount.\n- No TypeScript errors."
+    },
+    {
+      "id": "scheduling-H4-008",
+      "severity": "high",
+      "dimension": "typescript_quality",
+      "title": "Schedule endpoint uses untyped any casts — ScheduleActivity type incomplete",
+      "description": "src/api/endpoints/schedule.ts uses multiple (data as any) casts and the ScheduleActivity type in src/types/api.ts is missing critical construction fields: predecessor_ids, successor_ids, trade, assigned_sub_id, outdoor_activity, percent_complete, planned_percent_complete, wbs_code. These gaps cause runtime bugs and prevent TypeScript from catching data shape mismatches.",
+      "prompt": "FILE: src/types/api.ts\nFILE: src/api/endpoints/schedule.ts\n\nTASK: Eliminate 'any' casts and complete the ScheduleActivity type.\n\n1. In src/types/api.ts, update the ScheduleActivity interface to include ALL of the following fields with precise types:\n   id: string, project_id: string, name: string, description: string | null,\n   start_date: string, finish_date: string, baseline_start: string | null,\n   baseline_finish: string | null, actual_start: string | null, actual_finish: string | null,\n   percent_complete: number, planned_percent_complete: number,\n   duration_days: number, float_days: number, is_critical: boolean,\n   is_milestone: boolean, wbs_code: string | null, trade: string | null,\n   assigned_sub_id: string | null, outdoor_activity: boolean,\n   predecessor_ids: string[], successor_ids: string[],\n   status: 'not_started' | 'in_progress' | 'completed' | 'delayed',\n   created_at: string, updated_at: string.\n\n2. In src/api/endpoints/schedule.ts, replace all (data as any) and (row as any) casts with the properly typed ScheduleActivity. Use explicit select() column lists that match the interface. Add a mapScheduleActivityRow(row: RawRow): ScheduleActivity helper function that does safe field mapping with fallbacks.\n\nACCEPTANCE CRITERIA:\n- Zero 'any' casts remain in schedule.ts.\n- tsc --strict reports no errors in schedule.ts or types/api.ts.\n- All existing schedule-related tests pass."
+    },
+    {
+      "id": "scheduling-M1-009",
+      "severity": "medium",
+      "dimension": "accessibility",
+      "title": "Gantt chart has no ARIA roles, keyboard navigation, or screen reader support",
+      "description": "src/components/schedule/GanttChart.tsx renders a complex interactive chart with no ARIA landmark roles, no role='grid' or role='row' on the activity table, no aria-label on bars, and no keyboard navigation. Tab order is broken for users navigating by keyboard. This fails WCAG 2.1 AA and blocks enterprise customers with accessibility requirements.",
+      "prompt": "FILE: src/components/schedule/GanttChart.tsx\nFILE: src/hooks/useTableKeyboardNavigation.ts (read only, use existing hook)\n\nTASK: Add WCAG 2.1 AA accessibility to the Gantt chart.\n\n1. Wrap the activity list table in role='grid' aria-label='Schedule activities'. Each row: role='row'. Each cell: role='gridcell'. Header cells: role='columnheader' with aria-sort where applicable.\n\n2. Each Gantt bar div: add role='img', aria-label={`${activity.name}: ${activity.start_date} to ${activity.finish_date}, ${activity.percent_complete}% complete${activity.is_critical ? ', CRITICAL PATH' : ''}`}.\n\n3. Wire useTableKeyboardNavigation to the activity grid so J/K keys move focus up/down rows, Enter opens the activity detail drawer, Space toggles selection.\n\n4. Add a visually hidden <caption> inside the grid: 'Project schedule. Use J and K to navigate activities, Enter to open details.'\n\n5. Ensure all interactive elements (toolbar buttons, filter toggles) have aria-label or visible text labels and are reachable via Tab.\n\nACCEPTANCE CRITERIA:\n- axe-core audit on /schedule reports zero critical or serious violations.\n- J/K navigation moves focus between activity rows.\n- Screen reader announces each bar's name, dates, percent complete, and critical status.\n- Tab order is logical: toolbar → activity list → Gantt bars."
+    },
+    {
+      "id": "scheduling-M2-010",
+      "severity": "medium",
+      "dimension": "error_handling",
+      "title": "Schedule empty state is generic — no helpful message or action when no activities exist",
+      "description": "When a project has no schedule activities, the Schedule page renders a blank Gantt area with no illustration, no specific message, and no CTA to import a schedule or create the first activity. This contradicts the design standard requiring helpful, specific empty states with a primary action button.",
+      "prompt": "FILE: src/pages/Schedule.tsx\nFILE: src/components/schedule/GanttChart.tsx\nFILE: src/components/ui/EmptyState.tsx (read only, use existing component)\n\nTASK: Add a construction-specific empty state to the Schedule module.\n\n1. In src/components/schedule/GanttChart.tsx, add a prop: activities: ScheduleActivity[]. When activities.length === 0, render the EmptyState component instead of the chart grid.\n\n2. Pass these props to EmptyState:\n   icon: 'CalendarDays' (Lucide),\n   title: 'No schedule activities yet',\n   description: 'Import a schedule from Primavera P6 or MS Project, or create your first activity to start tracking progress against your baseline.',\n   primaryAction: { label: 'Import Schedule', onClick: onImportSchedule },\n   secondaryAction: { label: 'Add Activity', onClick: onAddActivity }.\n\n3. In src/pages/Schedule.tsx, pass onImportSchedule and onAddActivity callbacks to GanttChart. onImportSchedule opens the existing import modal (or a placeholder toast if not yet built). onAddActivity opens the create activity drawer.\n\n4. Also add a loading skeleton: when isLoading === true, render 8 GanttChartSkeleton rows (gray animated rectangles, matching the row height of the Gantt) instead of the empty state or chart.\n\nACCEPTANCE CRITERIA:\n- Empty state renders with icon, title, description, and two action buttons when activities array is empty.\n- Skeleton rows render during data fetch (not a spinner).\n- EmptyState uses existing component — no duplicate implementation.\n- No TypeScript errors."
+    }
+  ],
+  "invented_features": [
+    {
+      "name": "Schedule DNA Fingerprint",
+      "description": "An AI-generated visual 'fingerprint' of a project's schedule health shown as a sparkline mosaic — one cell per activity, colored by health score. Like a heatmap but shaped like a timeline. A PM can see at a glance which phase of the project is red, amber, or green without scrolling the Gantt. Clicking any cell jumps to that activity. Updated nightly by the prediction engine."
+    },
+    {
+      "name": "Recovery Plan Generator",
+      "description": "When the AI detects the project is more than 5 days behind on the critical path, it automatically generates a recovery plan: a list of suggested schedule compressions (fast-tracking, crashing specific activities) with estimated cost impact per option. Presented as a ranked list of options the PM can approve with one click, which then updates the schedule baseline."
+    },
+    {
+      "name": "Trade Conflict Radar",
+      "description": "Analyzes the schedule to find days when two or more trades are scheduled to work in the same zone (derived from activity location tags). Surfaces these as warnings before they become field conflicts. E.g., 'Electrical rough-in and HVAC duct installation both scheduled in Zone 3B from March 15-22. Coordinate or phase.' This is invisible in Procore."
+    },
+    {
+      "name": "Weather-Adjusted Look-Ahead",
+      "description": "The 3-week look-ahead automatically flags outdoor activities on days where the weather API forecasts rain > 40% or temperature < 32°F. Activities are automatically dimmed with a weather icon overlay. The AI suggests indoor work to pull forward and fills the affected day's schedule with those activities automatically."
+    }
+  ],
+  "competitive_intel": "Procore's schedule module is a Gantt viewer with no AI, no predictive delay engine, and no baseline/actual visual comparison built into the primary view. It requires P6/MS Project import and has no native critical path highlighting in the UI. Autodesk Construction Cloud has Construction IQ for risk prediction but it is not schedule-native. SiteSyncAI's opportunity is to be the first platform where the schedule is genuinely intelligent — it tells you what is going to slip before it slips, shows baseline vs actual as the default view (not an add-on), and generates recovery plans automatically. None of the competitors do all three. The current SiteSyncAI implementation does zero of the three, which means the platform's core differentiation promise is undelivered in this module.",
+  "summary": "The Scheduling & Timeline module is structurally present — GanttChart, MobileScheduleView, LookaheadBoard, and the criticalPath library all exist in the file tree — but the implementation is critically incomplete across almost every dimension that matters. The page has no metric cards (violating a universal design standard applied to every other page), the Gantt is read-only with no drag interaction, there are no dependency arrows, baseline vs actual comparison is absent despite being the most important schedule view in construction PM, the AI predictive delay engine is not wired into the schedule at all, and the module has zero real-time update capability. Five of the ten issues from prior cycles remain unfixed. The TypeScript quality is below standard with untyped any casts throughout the endpoint. Accessibility is near-zero on the Gantt chart. Against Procore — which at minimum offers a functional read/write Gantt with P6 import — this module would not cause a GC to switch. The fixes needed are substantial but well-scoped: baseline tracking, metric cards, CPM visualization, drag interaction, and AI integration are all achievable in a single focused sprint and would close the gap dramatically."
+}

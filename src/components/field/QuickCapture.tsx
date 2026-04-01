@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect, KeyboardEvent as ReactKeyboardEvent } from 'react';
-import { X, Camera, Mic, QrCode, MapPin, Tag, Link2, Check, ChevronDown, Square, RefreshCw, Clock, Sparkles, AlertTriangle } from 'lucide-react';
+import { X, Camera, Mic, QrCode, MapPin, Tag, Link2, Check, ChevronDown, Square, RefreshCw, Clock, Sparkles, AlertTriangle, BookOpen } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { colors, spacing, typography, borderRadius, shadows, transitions, zIndex } from '../../styles/theme';
 import { useMobileCapture, useHaptics } from '../../hooks/useMobileCapture';
 import { useOfflineMutation } from '../../hooks/useOfflineMutation';
@@ -44,6 +45,7 @@ export interface CaptureData {
 }
 
 export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSave }) => {
+  const navigate = useNavigate();
   const [mode, setMode] = useState<CaptureMode>('camera');
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [step, setStep] = useState<'capture' | 'tag'>('capture');
@@ -345,7 +347,10 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
           width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center',
           backgroundColor: step === 'capture' ? colors.overlayWhiteThin : 'transparent',
           border: 'none', borderRadius: borderRadius.full, cursor: 'pointer',
-        }}>
+          touchAction: 'manipulation',
+        }}
+          aria-label="Close"
+        >
           <X size={20} color={step === 'capture' ? 'white' : colors.textSecondary} />
         </button>
         <span style={{
@@ -360,29 +365,69 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
       {step === 'capture' ? (
         /* ── CAPTURE STEP ────────────────────────── */
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-          {/* Mode switcher */}
-          <div style={{ display: 'flex', gap: spacing['1'], padding: spacing['2'], backgroundColor: colors.darkHoverBg, borderRadius: borderRadius.full, marginBottom: spacing['10'] }}>
+          {/* Primary action cards */}
+          <div style={{
+            display: 'flex', flexDirection: 'column', gap: spacing['3'],
+            width: '100%', padding: `0 ${spacing['5']}`,
+            marginBottom: spacing['8'],
+          }}>
             {([
-              { id: 'camera' as const, icon: Camera, label: 'Photo' },
-              { id: 'voice' as const, icon: Mic, label: 'Voice' },
-              { id: 'qr' as const, icon: QrCode, label: 'QR Scan' },
+              { id: 'camera' as const, icon: Camera, label: 'Photo', desc: 'Capture site conditions' },
+              { id: 'voice' as const, icon: Mic, label: 'Voice', desc: 'Record voice note' },
+              { id: 'qr' as const, icon: QrCode, label: 'QR Scan', desc: 'Scan equipment or location' },
             ]).map((m) => (
               <button
                 key={m.id}
                 onClick={() => { impact('light'); setMode(m.id); }}
+                onTouchStart={() => { navigator.vibrate?.(10); }}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: spacing['2'],
-                  padding: `${spacing['2']} ${spacing['4']}`, minHeight: '44px',
-                  backgroundColor: mode === m.id ? colors.primaryOrange : 'transparent',
-                  color: mode === m.id ? colors.white : colors.textOnDarkMuted,
-                  border: 'none', borderRadius: borderRadius.full, cursor: 'pointer',
-                  fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold,
-                  fontFamily: typography.fontFamily, transition: `all ${transitions.quick}`,
+                  width: '100%', height: '72px',
+                  display: 'flex', alignItems: 'center', gap: spacing['4'],
+                  padding: `0 ${spacing['5']}`,
+                  backgroundColor: mode === m.id ? colors.primaryOrange : 'rgba(255,255,255,0.08)',
+                  color: colors.white,
+                  border: mode === m.id ? 'none' : '1px solid rgba(255,255,255,0.15)',
+                  borderRadius: borderRadius.xl,
+                  cursor: 'pointer',
+                  fontSize: '18px',
+                  fontWeight: typography.fontWeight.semibold,
+                  fontFamily: typography.fontFamily,
+                  transition: `background-color ${transitions.quick}`,
+                  touchAction: 'manipulation',
+                  flexShrink: 0,
                 }}
+                aria-pressed={mode === m.id}
               >
-                <m.icon size={16} /> {m.label}
+                <m.icon size={22} style={{ flexShrink: 0 }} />
+                {m.label}
               </button>
             ))}
+
+            {/* Daily Log shortcut */}
+            <button
+              onClick={() => { impact('light'); onClose(); navigate('/daily-log'); }}
+              onTouchStart={() => { navigator.vibrate?.(10); }}
+              style={{
+                width: '100%', height: '72px',
+                display: 'flex', alignItems: 'center', gap: spacing['4'],
+                padding: `0 ${spacing['5']}`,
+                backgroundColor: 'rgba(255,255,255,0.08)',
+                color: colors.white,
+                border: '1px solid rgba(255,255,255,0.15)',
+                borderRadius: borderRadius.xl,
+                cursor: 'pointer',
+                fontSize: '18px',
+                fontWeight: typography.fontWeight.semibold,
+                fontFamily: typography.fontFamily,
+                transition: `background-color ${transitions.quick}`,
+                touchAction: 'manipulation',
+                flexShrink: 0,
+              }}
+              aria-label="Open Daily Log"
+            >
+              <BookOpen size={22} style={{ flexShrink: 0 }} />
+              Daily Log
+            </button>
           </div>
 
           {/* Camera mode */}
@@ -428,6 +473,7 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
                   cursor: capturing ? 'wait' : 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   boxShadow: shadows.glow, opacity: capturing ? 0.6 : 1,
+                  touchAction: 'manipulation',
                 }}
                 aria-label="Capture photo"
               >
@@ -449,12 +495,12 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
                 onKeyDown={(e) => handleKeyActivate(e, () => fileInputRef.current?.click())}
                 style={{
                   marginTop: spacing['3'],
-                  padding: `${spacing['2']} ${spacing['4']}`, minHeight: '44px',
+                  padding: `${spacing['2']} ${spacing['4']}`, minHeight: '44px', minWidth: '44px',
                   backgroundColor: colors.overlayWhiteThin,
                   border: 'none', borderRadius: borderRadius.full, cursor: 'pointer',
                   display: 'flex', alignItems: 'center', gap: spacing['2'],
                   color: colors.textOnDarkMuted, fontSize: typography.fontSize.sm,
-                  fontFamily: typography.fontFamily,
+                  fontFamily: typography.fontFamily, touchAction: 'manipulation',
                 }}
                 aria-label="Upload photo"
               >
@@ -473,8 +519,20 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
           {/* Voice mode */}
           {mode === 'voice' && (
             <>
+              {/* Live region for recording state announcements */}
+              <div
+                aria-live="polite"
+                aria-atomic="true"
+                style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap' }}
+              >
+                {recording ? 'Recording in progress' : transcript}
+              </div>
+
               {/* Waveform */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 2, height: 48, marginBottom: spacing['6'] }}>
+              <div
+                aria-hidden="true"
+                style={{ display: 'flex', alignItems: 'center', gap: 2, height: 48, marginBottom: spacing['6'] }}
+              >
                 {waveform.map((h, i) => (
                   <div key={i} style={{
                     width: 3, height: `${h}px`, borderRadius: 2,
@@ -483,6 +541,9 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
                   }} />
                 ))}
               </div>
+              <span style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap' }}>
+                {recording ? 'Audio waveform active' : ''}
+              </span>
 
               {/* Timer */}
               <p style={{ fontSize: typography.fontSize['4xl'], fontWeight: typography.fontWeight.semibold, color: colors.white, margin: 0, marginBottom: spacing['2'], fontFeatureSettings: '"tnum"' }}>
@@ -495,14 +556,15 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
               {/* Record/Stop button */}
               <button
                 onClick={() => recording ? stopRecording() : startRecording()}
+                aria-label={recording ? 'Stop recording' : 'Start voice recording'}
+                aria-pressed={recording}
                 style={{
                   width: 72, height: 72, borderRadius: '50%',
                   backgroundColor: recording ? 'rgba(255,255,255,0.15)' : colors.statusCritical,
                   border: `3px solid ${recording ? colors.statusCritical : 'transparent'}`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  cursor: 'pointer',
+                  cursor: 'pointer', touchAction: 'manipulation',
                 }}
-                aria-label={recording ? 'Stop recording' : 'Start voice recording'}
               >
                 {recording ? <Square size={24} color="white" fill="white" /> : <Mic size={28} color="white" />}
               </button>
@@ -543,10 +605,11 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
               <button
                 onClick={handleQrScan}
                 style={{
-                  padding: `${spacing['3']} ${spacing['6']}`, minHeight: '48px',
+                  padding: `${spacing['3']} ${spacing['6']}`, minHeight: '48px', minWidth: '44px',
                   backgroundColor: colors.primaryOrange, color: colors.white,
                   border: 'none', borderRadius: borderRadius.md, cursor: 'pointer',
                   fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold,
+                  touchAction: 'manipulation',
                   fontFamily: typography.fontFamily,
                 }}
               >
@@ -606,6 +669,7 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
                   border: 'none', borderRadius: borderRadius.md, cursor: 'pointer',
                   fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold,
                   fontFamily: typography.fontFamily, marginTop: spacing['2'],
+                  touchAction: 'manipulation',
                 }}
               >
                 <AlertTriangle size={16} /> Create Safety Observation
@@ -676,8 +740,11 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
                     <button
                       onClick={() => setAiTags(tags => tags.filter(t => t !== tag))}
                       style={{
-                        background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-                        display: 'flex', alignItems: 'center', color: colors.primaryOrange, lineHeight: 1,
+                        background: 'none', border: 'none', cursor: 'pointer',
+                        padding: spacing['2'], margin: `-${spacing['2']}`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        color: colors.primaryOrange, lineHeight: 1,
+                        minWidth: '44px', minHeight: '44px', touchAction: 'manipulation',
                       }}
                       aria-label={`Remove tag ${tag}`}
                     >
@@ -699,13 +766,14 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
                 key={cat.id}
                 onClick={() => { impact('light'); setCategory(cat.id); }}
                 style={{
-                  padding: `${spacing['2']} ${spacing['4']}`, minHeight: '44px',
+                  padding: `${spacing['2']} ${spacing['4']}`, minHeight: '44px', minWidth: '44px',
                   backgroundColor: category === cat.id ? `${cat.color}15` : colors.surfaceInset,
                   color: category === cat.id ? cat.color : colors.textSecondary,
                   border: category === cat.id ? `1.5px solid ${cat.color}40` : `1.5px solid transparent`,
                   borderRadius: borderRadius.full, cursor: 'pointer',
                   fontSize: typography.fontSize.sm, fontWeight: category === cat.id ? typography.fontWeight.semibold : typography.fontWeight.normal,
                   fontFamily: typography.fontFamily, transition: `all ${transitions.instant}`,
+                  touchAction: 'manipulation',
                 }}
               >
                 {cat.label}
@@ -782,6 +850,7 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
               color: colors.white, border: 'none', borderRadius: borderRadius.md, cursor: 'pointer',
               fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold,
               fontFamily: typography.fontFamily, boxShadow: shadows.glow,
+              touchAction: 'manipulation',
             }}
           >
             <Check size={18} /> Save Capture

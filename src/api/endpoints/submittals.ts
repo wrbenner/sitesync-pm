@@ -1,6 +1,13 @@
 import { supabase, transformSupabaseError, buildPaginatedQuery, supabaseMutation } from '../client'
 import { assertProjectAccess, validateProjectId } from '../middleware/projectScope'
-import type { SubmittalRow, PaginationParams, PaginatedResult, CreateSubmittalPayload } from '../../types/api'
+import type {
+  SubmittalRow,
+  PaginationParams,
+  PaginatedResult,
+  CreateSubmittalPayload,
+  SubmittalRevision,
+  CreateSubmittalRevisionPayload,
+} from '../../types/api'
 
 function mapSubmittal(s: SubmittalRow) {
   return {
@@ -62,4 +69,78 @@ export const updateSubmittal = async (
       .single()
   )
   return mapSubmittal(data)
+}
+
+export const getSubmittalRevisions = async (submittalId: string): Promise<SubmittalRevision[]> => {
+  const { data, error } = await supabase
+    .from('submittal_revisions')
+    .select('*')
+    .eq('submittal_id', submittalId)
+    .order('revision_number', { ascending: false })
+  if (error) throw transformSupabaseError(error)
+  return data as SubmittalRevision[]
+}
+
+export const createSubmittalRevision = async (
+  submittalId: string,
+  payload: CreateSubmittalRevisionPayload
+): Promise<SubmittalRevision> => {
+  const { data: existing, error: fetchError } = await supabase
+    .from('submittal_revisions')
+    .select('revision_number')
+    .eq('submittal_id', submittalId)
+    .order('revision_number', { ascending: false })
+    .limit(1)
+  if (fetchError) throw transformSupabaseError(fetchError)
+
+  const nextRevision =
+    existing && existing.length > 0
+      ? (existing[0] as { revision_number: number }).revision_number + 1
+      : 1
+
+  const { data, error } = await supabase
+    .from('submittal_revisions')
+    .insert({
+      submittal_id: submittalId,
+      revision_number: nextRevision,
+      submitted_by: payload.submitted_by,
+      submitted_at: new Date().toISOString(),
+      reviewer_id: payload.reviewer_id ?? null,
+      reviewer_role: payload.reviewer_role,
+      review_status: 'pending',
+      review_comments: null,
+      reviewed_at: null,
+      file_urls: payload.file_urls ?? [],
+    })
+    .select()
+    .single()
+  if (error) throw transformSupabaseError(error)
+  return data as SubmittalRevision
+}
+
+export const updateRevisionReview = async (
+  revisionId: string,
+  status: SubmittalRevision['review_status'],
+  comments: string | null = null
+): Promise<SubmittalRevision> => {
+  const { data, error } = await supabase
+    .from('submittal_revisions')
+    .update({
+      review_status: status,
+      review_comments: comments,
+      reviewed_at: new Date().toISOString(),
+    })
+    .eq('id', revisionId)
+    .select()
+    .single()
+  if (error) throw transformSupabaseError(error)
+  return data as SubmittalRevision
+}
+
+/** Returns the reviewer_role of the latest pending revision, or null if none. */
+export function getBallInCourt(revisions: SubmittalRevision[]): 'gc' | 'architect' | 'engineer' | null {
+  const latestPending = [...revisions]
+    .sort((a, b) => b.revision_number - a.revision_number)
+    .find(r => r.review_status === 'pending')
+  return latestPending?.reviewer_role ?? null
 }

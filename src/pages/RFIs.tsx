@@ -1,16 +1,18 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { DataTable } from '../components/shared/DataTable';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { VirtualDataTable } from '../components/shared/VirtualDataTable';
 import { BulkActionBar } from '../components/shared/BulkActionBar';
 import { createColumnHelper } from '@tanstack/react-table';
 import { PageContainer, Card, Btn, StatusTag, PriorityTag, DetailPanel, Avatar, Tag, RelatedItems, Skeleton, useToast } from '../components/Primitives';
 import EmptyState from '../components/ui/EmptyState';
-import { MetricCardSkeleton, TableRowSkeleton } from '../components/ui/Skeletons';
+import { MetricCardSkeleton } from '../components/ui/Skeletons';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 import { useRFIs } from '../hooks/queries';
 import { AlertTriangle, FileQuestion, Plus, Clock, MessageSquare, Paperclip, Calendar, RefreshCw, Send, Sparkles, LayoutGrid, List, UserCheck, Flag, Download, XCircle } from 'lucide-react';
 import { useAppNavigate, getRelatedItemsForRfi } from '../utils/connections';
 import { useCreateRFI, useUpdateRFI } from '../hooks/mutations';
 import { useProjectId } from '../hooks/useProjectId';
+import { useNavigate } from 'react-router-dom';
+import { useCopilotStore } from '../stores/copilotStore';
 import { PermissionGate } from '../components/auth/PermissionGate';
 import { AIAnnotationIndicator } from '../components/ai/AIAnnotation';
 import { PredictiveAlertBanner } from '../components/ai/PredictiveAlert';
@@ -24,6 +26,33 @@ import { PresenceAvatars } from '../components/shared/PresenceAvatars';
 import { EditingLockBanner } from '../components/ui/EditingLockBanner';
 
 const isOverdue = (dateStr: string) => new Date(dateStr) < new Date();
+
+const BIC_COLORS: Record<string, string> = {
+  GC: '#3B82F6',
+  Architect: '#8B5CF6',
+  Engineer: '#14B8A6',
+  Owner: '#F47820',
+  Sub: '#6B7280',
+};
+
+const BallInCourtBadge: React.FC<{ value: string | null }> = ({ value }) => {
+  if (!value) return null;
+  const color = BIC_COLORS[value] ?? '#6B7280';
+  return (
+    <span style={{
+      display: 'inline-block',
+      padding: '2px 8px',
+      borderRadius: '9999px',
+      fontSize: '0.75rem',
+      fontWeight: 500,
+      backgroundColor: `${color}1A`,
+      color,
+      whiteSpace: 'nowrap',
+    }}>
+      {value}
+    </span>
+  );
+};
 
 const formatDate = (dateStr: string) =>
   new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -44,6 +73,8 @@ const MetaItem: React.FC<{ label: string; children: React.ReactNode }> = ({ labe
 
 const RFIs: React.FC = () => {
   const projectId = useProjectId();
+  const { setPageContext } = useCopilotStore();
+  useEffect(() => { setPageContext('rfis'); }, [setPageContext]);
   const { data: rfisResult, isPending: rfisLoading, error: rfisError, refetch } = useRFIs(projectId);
   const rfisRaw = rfisResult?.data ?? [];
 
@@ -61,12 +92,13 @@ const RFIs: React.FC = () => {
   const openCount = useMemo(() => rfis.filter((r: Record<string, unknown>) => r.status === 'open').length, [rfis]);
   const overdueCount = useMemo(() => rfis.filter((r: Record<string, unknown>) => r.status === 'open' && r.dueDate && isOverdue(r.dueDate as string)).length, [rfis]);
   const [selectedRfi, setSelectedRfi] = useState<any>(null);
-  const [selectedRfiIds, setSelectedRfiIds] = useState<string[]>([]);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingDetail, setEditingDetail] = useState(false);
   const { addToast } = useToast();
   const appNavigate = useAppNavigate();
+  const navigate = useNavigate();
   const createRFI = useCreateRFI();
   const updateRFI = useUpdateRFI();
 
@@ -153,18 +185,53 @@ const RFIs: React.FC = () => {
         );
       },
     }),
+    rfiColHelper.accessor('ball_in_court', {
+      header: 'Ball in Court',
+      size: 120,
+      cell: (info) => <BallInCourtBadge value={info.getValue() as string | null} />,
+    }),
   ], []);
 
-  if (rfisLoading) {
-    return (
-      <PageContainer title="RFIs" subtitle="Loading...">
-        <MetricCardSkeleton />
-        <Card padding="0">
-          <TableRowSkeleton rows={8} />
-        </Card>
-      </PageContainer>
-    );
-  }
+  const checkboxColumn = useMemo(() => rfiColHelper.display({
+    id: 'select',
+    size: 44,
+    header: () => (
+      <input
+        type="checkbox"
+        checked={selectedIds.size > 0 && selectedIds.size === rfis.length}
+        ref={(el) => { if (el) el.indeterminate = selectedIds.size > 0 && selectedIds.size < rfis.length; }}
+        onChange={(e) => {
+          if (e.target.checked) setSelectedIds(new Set(rfis.map((r: any) => String(r.id))));
+          else setSelectedIds(new Set());
+        }}
+        onClick={(e) => e.stopPropagation()}
+        aria-label="Select all RFIs"
+        style={{ cursor: 'pointer' }}
+      />
+    ),
+    cell: (info: any) => {
+      const id = String(info.row.original.id);
+      return (
+        <input
+          type="checkbox"
+          checked={selectedIds.has(id)}
+          onChange={() => {
+            setSelectedIds((prev) => {
+              const next = new Set(prev);
+              if (next.has(id)) next.delete(id);
+              else next.add(id);
+              return next;
+            });
+          }}
+          onClick={(e) => e.stopPropagation()}
+          aria-label={`Select RFI ${id}`}
+          style={{ cursor: 'pointer' }}
+        />
+      );
+    },
+  }), [selectedIds, rfis]);
+
+  const allRfiColumns = useMemo(() => [checkboxColumn, ...rfiColumns], [checkboxColumn, rfiColumns]);
 
   if (rfisError) {
     return (
@@ -198,9 +265,9 @@ const RFIs: React.FC = () => {
         }
       >
         <EmptyState
-          icon={<FileQuestion size={28} color={colors.textTertiary} />}
+          icon={FileQuestion}
           title="No RFIs yet"
-          description="RFIs track design questions and field conflicts. Create your first to get started."
+          description="Create your first RFI to track questions and clarifications with the design team."
           action={{ label: 'Create RFI', onClick: () => setShowCreateModal(true) }}
         />
       </PageContainer>
@@ -246,15 +313,26 @@ const RFIs: React.FC = () => {
 
       {viewMode === 'table' ? (
         <Card padding="0">
-          <DataTable
+          <VirtualDataTable
             data={allRfis}
-            columns={rfiColumns}
-            selectable
-            onSelectionChange={setSelectedRfiIds}
-            onRowClick={(row) => setSelectedRfi(row)}
-            selectedRowId={selectedRfi?.id ?? null}
+            columns={allRfiColumns}
+            rowHeight={48}
+            containerHeight={600}
+            onRowClick={(rfi) => navigate(`/projects/${projectId}/rfis/${rfi.id}`)}
+            selectedRowId={null}
             getRowId={(row) => String(row.id)}
+            loading={rfisLoading}
             emptyMessage="No RFIs match your filters"
+            onRowToggleSelectByIndex={(i) => {
+              const id = String(allRfis[i]?.id);
+              if (!id) return;
+              setSelectedIds((prev) => {
+                const next = new Set(prev);
+                if (next.has(id)) next.delete(id);
+                else next.add(id);
+                return next;
+              });
+            }}
           />
         </Card>
       ) : (
@@ -281,8 +359,8 @@ const RFIs: React.FC = () => {
       )}
 
       <BulkActionBar
-        selectedIds={selectedRfiIds}
-        onClearSelection={() => setSelectedRfiIds([])}
+        selectedIds={Array.from(selectedIds)}
+        onClearSelection={() => setSelectedIds(new Set())}
         entityLabel="RFIs"
         actions={[
           {
@@ -324,7 +402,7 @@ const RFIs: React.FC = () => {
             icon: <XCircle size={14} />,
             variant: 'danger',
             confirm: true,
-            confirmMessage: `Close ${selectedRfiIds.length} selected RFI${selectedRfiIds.length > 1 ? 's' : ''}? This cannot be undone.`,
+            confirmMessage: `Close ${selectedIds.size} selected RFI${selectedIds.size > 1 ? 's' : ''}? This cannot be undone.`,
             onClick: async (ids) => {
               await Promise.all(ids.map((id) => updateRFI.mutateAsync({ id, updates: { status: 'closed' }, projectId: projectId! })));
               addToast('success', `${ids.length} RFI${ids.length > 1 ? 's' : ''} closed`);

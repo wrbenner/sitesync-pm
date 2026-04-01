@@ -281,8 +281,8 @@ export function useRealtimeFieldCaptures(projectId: string | undefined) {
 }
 
 // ── Budget Realtime ──────────────────────────────────────
-// Subscribes to budget_items and change_orders for a project.
-// Invalidates both query keys on any INSERT/UPDATE/DELETE and returns
+// Subscribes to budget_items, change_orders, and invoices_payable for a project.
+// Invalidates all relevant query keys on any INSERT/UPDATE/DELETE and returns
 // a brief isFlashing flag for metric card pulse indicators.
 
 const BUDGET_DEBOUNCE_MS = 300
@@ -300,6 +300,9 @@ export function useBudgetRealtime(projectId: string | undefined): { isFlashing: 
     const handleChange = () => {
       if (debounceRef.current) clearTimeout(debounceRef.current)
       debounceRef.current = setTimeout(() => {
+        // Invalidate the composite costData query key used by Budget.tsx
+        queryClient.invalidateQueries({ queryKey: [`costData-${projectId}`] })
+        // Also invalidate individual table keys used by other consumers
         queryClient.invalidateQueries({ queryKey: queryKeys.budgetItems.all(projectId) })
         queryClient.invalidateQueries({ queryKey: queryKeys.changeOrders.all(projectId) })
         debounceRef.current = null
@@ -320,6 +323,10 @@ export function useBudgetRealtime(projectId: string | undefined): { isFlashing: 
         event: '*', schema: 'public', table: 'change_orders',
         filter: `project_id=eq.${projectId}`,
       }, handleChange)
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'invoices_payable',
+        filter: `project_id=eq.${projectId}`,
+      }, handleChange)
       .subscribe()
 
     return () => {
@@ -330,6 +337,39 @@ export function useBudgetRealtime(projectId: string | undefined): { isFlashing: 
   }, [projectId, queryClient])
 
   return { isFlashing }
+}
+
+// ── Schedule Activities ───────────────────────────────────
+// Lightweight subscription for the schedule_activities table.
+// Invalidates the schedule query on any change so both tabs stay in sync.
+
+export function useScheduleRealtime(projectId: string): { isSubscribed: boolean } {
+  const queryClient = useQueryClient()
+  const [isSubscribed, setIsSubscribed] = useState(false)
+
+  useEffect(() => {
+    if (!projectId) return
+
+    const channel = supabase
+      .channel(`schedule_activities_${projectId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'schedule_activities', filter: `project_id=eq.${projectId}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['schedule', projectId] })
+        }
+      )
+      .subscribe((status) => {
+        setIsSubscribed(status === 'SUBSCRIBED')
+      })
+
+    return () => {
+      supabase.removeChannel(channel)
+      setIsSubscribed(false)
+    }
+  }, [projectId, queryClient])
+
+  return { isSubscribed }
 }
 
 // ── Activity Feed ─────────────────────────────────────────

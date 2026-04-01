@@ -388,6 +388,102 @@ describe('Role Escalation Prevention', () => {
   })
 })
 
+// ── Member Role Hierarchy Enforcement ────────────────────
+// Maps simplified four-tier model to construction roles:
+//   viewer   → 'viewer'          (ROLE_HIERARCHY = 1)
+//   member   → 'field_engineer'  (ROLE_HIERARCHY = 3)
+//   manager  → 'project_manager' (ROLE_HIERARCHY = 5)
+//   admin    → 'project_executive' (ROLE_HIERARCHY = 7)
+
+describe('Member Role Hierarchy Enforcement', () => {
+  describe('viewer (tier 0) cannot escalate privileges', () => {
+    it('viewer cannot add a member (field_engineer)', async () => {
+      const { assertCanAssignRole } = await import('../api/endpoints/projectMembers')
+      expect(() => assertCanAssignRole('viewer', 'field_engineer')).toThrow()
+    })
+
+    it('viewer calling addProjectMember with role=project_executive receives PermissionError with status 403', async () => {
+      const { assertCanAssignRole } = await import('../api/endpoints/projectMembers')
+      let caught: unknown
+      try {
+        assertCanAssignRole('viewer', 'project_executive')
+      } catch (e) {
+        caught = e
+      }
+      expect(caught).toMatchObject({ status: 403 })
+    })
+  })
+
+  describe('manager (tier 2) cannot assign equal or higher roles', () => {
+    it('project_manager can add field_engineer (member)', async () => {
+      const { assertCanAssignRole } = await import('../api/endpoints/projectMembers')
+      expect(() => assertCanAssignRole('project_manager', 'field_engineer')).not.toThrow()
+    })
+
+    it('project_manager can add viewer', async () => {
+      const { assertCanAssignRole } = await import('../api/endpoints/projectMembers')
+      expect(() => assertCanAssignRole('project_manager', 'viewer')).not.toThrow()
+    })
+
+    it('project_manager cannot add another project_manager (equal tier)', async () => {
+      const { assertCanAssignRole } = await import('../api/endpoints/projectMembers')
+      expect(() => assertCanAssignRole('project_manager', 'project_manager')).toThrow()
+    })
+
+    it('project_manager cannot add project_executive (admin tier)', async () => {
+      const { assertCanAssignRole } = await import('../api/endpoints/projectMembers')
+      expect(() => assertCanAssignRole('project_manager', 'project_executive')).toThrow()
+    })
+  })
+
+  describe('admin (tier 3) can assign any role', () => {
+    it('project_executive can assign project_manager', async () => {
+      const { assertCanAssignRole } = await import('../api/endpoints/projectMembers')
+      expect(() => assertCanAssignRole('project_executive', 'project_manager')).not.toThrow()
+    })
+
+    it('project_executive can assign field_engineer (member)', async () => {
+      const { assertCanAssignRole } = await import('../api/endpoints/projectMembers')
+      expect(() => assertCanAssignRole('project_executive', 'field_engineer')).not.toThrow()
+    })
+
+    it('project_executive can assign viewer', async () => {
+      const { assertCanAssignRole } = await import('../api/endpoints/projectMembers')
+      expect(() => assertCanAssignRole('project_executive', 'viewer')).not.toThrow()
+    })
+
+    it('project_executive can assign superintendent', async () => {
+      const { assertCanAssignRole } = await import('../api/endpoints/projectMembers')
+      expect(() => assertCanAssignRole('project_executive', 'superintendent')).not.toThrow()
+    })
+  })
+
+  describe('updateProjectMember: caller must outrank current role AND new role', () => {
+    it('project_manager cannot modify a project_executive member even to demote them', async () => {
+      // project_manager (5) vs project_executive (7): caller does not outrank current role
+      const { assertCanAssignRole } = await import('../api/endpoints/projectMembers')
+      // Simulates the first check in updateProjectMember: assertCanAssignRole(caller, currentRole)
+      expect(() => assertCanAssignRole('project_manager', 'project_executive')).toThrow()
+    })
+
+    it('project_executive can update a project_manager to superintendent', async () => {
+      const { assertCanAssignRole } = await import('../api/endpoints/projectMembers')
+      // First check: caller outranks current role
+      expect(() => assertCanAssignRole('project_executive', 'project_manager')).not.toThrow()
+      // Second check: caller outranks new role
+      expect(() => assertCanAssignRole('project_executive', 'superintendent')).not.toThrow()
+    })
+
+    it('project_manager cannot update a superintendent to a project_manager (equal new role)', async () => {
+      const { assertCanAssignRole } = await import('../api/endpoints/projectMembers')
+      // First check: caller outranks current role (project_manager > superintendent, passes)
+      expect(() => assertCanAssignRole('project_manager', 'superintendent')).not.toThrow()
+      // Second check: caller does not outrank equal new role
+      expect(() => assertCanAssignRole('project_manager', 'project_manager')).toThrow()
+    })
+  })
+})
+
 // ── Permission Error ─────────────────────────────────────
 
 describe('PermissionError', () => {

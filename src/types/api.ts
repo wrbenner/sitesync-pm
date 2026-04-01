@@ -1,11 +1,18 @@
 import type { TableRow, InsertTables, UpdateTables } from './database'
 import type { ReasonCode } from '../machines/changeOrderMachine'
+import type { MappedSchedulePhase } from './entities'
 
 // Row types (what you GET from the database)
 export type ActivityFeedRow = TableRow<'activity_feed'>
+/** activity_feed row with the profiles join from .select('*, user:profiles(id, full_name, avatar_url)') */
+export interface ActivityFeedRowWithProfile extends ActivityFeedRow {
+  user: { id: string; full_name: string | null; avatar_url: string | null } | null
+}
 export type OrganizationMemberRow = TableRow<'organization_members'>
 export type ProjectMemberRow = TableRow<'project_members'>
 export type AiInsightRow = TableRow<'ai_insights'>
+// Minimal shape returned by the ai_insights meta query (created_at only)
+export interface AiInsightMetaRow { created_at: string }
 export type BudgetItemRow = TableRow<'budget_items'>
 export type ChangeOrderRow = TableRow<'change_orders'>
 export type CrewRow = TableRow<'crews'>
@@ -117,6 +124,32 @@ export interface ProjectMetricsResult {
   milestonesHit: number
   milestoneTotal: number
   aiConfidenceLevel: number | null
+  // Computed from financialEngine / schedule_phases
+  budgetVariance: number | null
+  scheduleVarianceDays: number | null
+  completionPercentage: number | null
+}
+
+// Submittal revision row (not yet in database.ts schema, defined here manually)
+export interface SubmittalRevision {
+  id: string
+  submittal_id: string
+  revision_number: number
+  submitted_by: string
+  submitted_at: string
+  reviewer_id: string | null
+  reviewer_role: 'gc' | 'architect' | 'engineer'
+  review_status: 'pending' | 'approved' | 'approved_as_noted' | 'revise_resubmit' | 'rejected'
+  review_comments: string | null
+  reviewed_at: string | null
+  file_urls: string[]
+}
+
+export interface CreateSubmittalRevisionPayload {
+  submitted_by: string
+  reviewer_id?: string | null
+  reviewer_role: 'gc' | 'architect' | 'engineer'
+  file_urls?: string[]
 }
 
 // Drawing revision row (not yet in database.ts schema, defined here manually)
@@ -160,38 +193,35 @@ export type LienWaiverType =
   | 'conditional_final'
   | 'unconditional_final'
 
-export type LienWaiverStatus = 'pending' | 'received' | 'verified'
+export type LienWaiverStatus = 'pending' | 'received' | 'executed'
 
 export interface LienWaiverRow {
   id: string
   project_id: string
-  pay_app_id: string | null
-  sub_id: string | null
-  sub_name: string | null
-  type: LienWaiverType
+  subcontractor_id: string
+  payment_period: string
+  waiver_type: LienWaiverType
+  amount: number
   status: LienWaiverStatus
-  amount: number | null
-  through_date: string | null
-  signed_by: string | null
-  signed_date: string | null
-  notes: string | null
-  created_at: string | null
-  updated_at: string | null
+  pay_application_id: string | null
+  waiver_date: string | null
+  submitted_at: string | null
+  received_at: string | null
+  created_at: string
 }
 
 export interface LienWaiverInsert {
   id?: string
   project_id: string
-  pay_app_id?: string | null
-  sub_id?: string | null
-  sub_name?: string | null
-  type: LienWaiverType
+  subcontractor_id: string
+  payment_period: string
+  waiver_type: LienWaiverType
+  amount: number
   status?: LienWaiverStatus
-  amount?: number | null
-  through_date?: string | null
-  signed_by?: string | null
-  signed_date?: string | null
-  notes?: string | null
+  pay_application_id?: string | null
+  waiver_date?: string | null
+  submitted_at?: string | null
+  received_at?: string | null
 }
 
 // Pay Application row (AIA G702 billing)
@@ -256,15 +286,29 @@ export function isReasonCode(v: unknown): v is ReasonCode {
   return typeof v === 'string' && REASON_CODES.has(v as ReasonCode)
 }
 
+// Incident record stored in the daily_logs.incident_data JSONB column
+export interface IncidentData {
+  description: string
+  type: string
+  corrective_action: string
+}
+
 // Payload for creating or updating a daily log via the field API and offline queue
 export interface DailyLogPayload {
   log_date: string
   weather?: string | null
+  weather_source?: 'open-meteo' | 'manual' | 'default' | null
+  temperature_high?: number | null
+  temperature_low?: number | null
+  wind_speed?: string | null
+  precipitation?: string | null   // stored as "X.XX in" string for display
   workers_onsite?: number | null
   total_hours?: number | null
   incidents?: number | null
+  incident_data?: IncidentData[] | null
   summary?: string | null
   photos?: string[]
+  amended_from_id?: string | null  // set when creating an amendment of a submitted log
 }
 
 // Payload for creating a new RFI
@@ -314,6 +358,36 @@ export type CreateDailyLogPayload = DailyLogPayload
 
 // MappedSchedulePhase is defined in entities.ts and re-exported here for backwards compatibility
 export type { MappedSchedulePhase, ScheduleWorkType } from './entities'
+
+// Canonical schedule activity type used by the schedule module.
+// Standalone interface (snake_case) with CPM-computed critical path fields.
+export interface ScheduleActivity {
+  id: string
+  project_id: string
+  name: string
+  description: string | null
+  start_date: string
+  finish_date: string
+  baseline_start: string | null
+  baseline_finish: string | null
+  actual_start: string | null
+  actual_finish: string | null
+  percent_complete: number
+  planned_percent_complete: number
+  duration_days: number
+  float_days: number
+  is_critical: boolean
+  is_milestone: boolean
+  wbs_code: string | null
+  trade: string | null
+  assigned_sub_id: string | null
+  outdoor_activity: boolean
+  predecessor_ids: string[]
+  successor_ids: string[]
+  status: 'not_started' | 'in_progress' | 'completed' | 'delayed'
+  created_at: string
+  updated_at: string
+}
 
 // Update types (what you send to patch)
 export type ActivityFeedUpdate = UpdateTables<'activity_feed'>

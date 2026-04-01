@@ -20,9 +20,11 @@ import {
   LIEN_WAIVER_FORMS,
 } from '../machines/paymentMachine'
 import type { PaymentStatus, G702Data, G703LineItem, LienWaiverState } from '../machines/paymentMachine'
-import { saveSOVProgress, approvePayApplication } from '../api/endpoints/budget'
+import { saveSOVProgress } from '../api/endpoints/budget'
 import type { PayApplicationData } from '../api/endpoints/budget'
-import { createLienWaiver, updateLienWaiverStatus } from '../api/endpoints/lienWaivers'
+import { upsertPayApplication, approvePayApplication } from '../api/endpoints/payApplications'
+import type { UpsertPayAppPayload } from '../api/endpoints/payApplications'
+import { updateLienWaiverStatus, generateWaiversFromPayApp } from '../api/endpoints/lienWaivers'
 import { LienWaiverPDF, lienWaiverDataFromRow } from '../components/export/LienWaiverPDF'
 import type { LienWaiverRowContext, WaiverState } from '../components/export/LienWaiverPDF'
 import { G702ApplicationPDF } from '../components/export/G702ApplicationPDF'
@@ -57,6 +59,9 @@ const tabs: { key: TabKey; label: string; icon: React.ElementType }[] = [
 ]
 
 // ── Pay App Table Columns ─────────────────────────────────────
+
+// Module-level ref allows the static column definitions to call into the component.
+const _editPayAppCb: { current: (app: Record<string, unknown>) => void } = { current: () => {} }
 
 const payAppCol = createColumnHelper<Record<string, unknown>>()
 const payAppColumns = [
@@ -115,6 +120,20 @@ const payAppColumns = [
       if (transitions.length === 0) return null
       return (
         <div style={{ display: 'flex', gap: spacing['1'] }}>
+          {(status === 'draft') && (
+            <button
+              onClick={(e) => { e.stopPropagation(); _editPayAppCb.current(info.row.original) }}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: spacing['1'],
+                padding: `${spacing['1']} ${spacing['3']}`, border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base,
+                backgroundColor: 'transparent', color: colors.textSecondary,
+                fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
+                cursor: 'pointer', fontFamily: typography.fontFamily,
+              }}
+            >
+              Edit SOV
+            </button>
+          )}
           {status === 'approved' && (
             <button
               onClick={() => toast.success('Payment flow initiated')}
@@ -149,6 +168,775 @@ const payAppColumns = [
   }),
 ]
 
+// ── G703 Drawer Types and Helpers ────────────────────────────
+
+interface DraftSOVRow {
+  key: string
+  description: string
+  scheduledValue: string
+  prevPct: number
+  thisPct: string
+  storedMaterials: string
+  error: string | null
+}
+
+function newBlankRow(index: number): DraftSOVRow {
+  return {
+    key: `row-${Date.now()}-${index}`,
+    description: '',
+    scheduledValue: '',
+    prevPct: 0,
+    thisPct: '0',
+    storedMaterials: '0',
+    error: null,
+  }
+}
+
+function computeRowTotals(row: DraftSOVRow, retainageRatePct: number) {
+  const sv = Math.max(0, parseFloat(row.scheduledValue) || 0)
+  const prevPct = row.prevPct
+  const thisPct = Math.min(100, Math.max(0, parseFloat(row.thisPct) || 0))
+  const mats = Math.max(0, parseFloat(row.storedMaterials) || 0)
+  const prevAmt = sv * (prevPct / 100)
+  const thisAmt = sv * (thisPct / 100)
+  const workThisPeriod = thisAmt - prevAmt
+  const totalCompleted = thisAmt + mats
+  const retainage = totalCompleted * (retainageRatePct / 100)
+  const netPayment = totalCompleted - retainage - prevAmt
+  return { sv, prevPct, thisPct, mats, prevAmt, workThisPeriod, thisAmt, totalCompleted, retainage, netPayment }
+}
+
+function computeG702FromRows(
+  rows: DraftSOVRow[],
+  retainageRatePct: number,
+  originalContractSum: number,
+  netChangeOrders: number,
+  lessPrevCerts: number,
+): G702Data {
+  const totalCompletedAndStored = rows.reduce(
+    (s, r) => s + computeRowTotals(r, retainageRatePct).totalCompleted, 0,
+  )
+  const contractSumToDate = originalContractSum + netChangeOrders
+  const retainageAmount = Math.round(totalCompletedAndStored * (retainageRatePct / 100) * 100) / 100
+  const totalEarnedLessRetainage = totalCompletedAndStored - retainageAmount
+  const currentPaymentDue = totalEarnedLessRetainage - lessPrevCerts
+  const balanceToFinish = contractSumToDate - totalCompletedAndStored
+  return {
+    applicationNumber: 0,
+    periodTo: '',
+    projectName: '',
+    contractorName: '',
+    originalContractSum,
+    netChangeOrders,
+    contractSumToDate,
+    totalCompletedAndStored,
+    retainagePercent: retainageRatePct,
+    retainageAmount,
+    totalEarnedLessRetainage,
+    lessPreviousCertificates: lessPrevCerts,
+    currentPaymentDue,
+    balanceToFinish,
+  }
+}
+
+// ── CreateEditPayAppDrawer ─────────────────────────────────────
+
+interface CreateEditPayAppDrawerProps {
+  open: boolean
+  onClose: () => void
+  projectId: string
+  contracts: Array<Record<string, unknown>>
+  editApp: Record<string, unknown> | null
+  projectName: string
+  onSaved: () => void
+}
+
+const DRAWER_WIDTH = 900
+
+const CreateEditPayAppDrawer = memo<CreateEditPayAppDrawerProps>(({
+  open, onClose, projectId, contracts, editApp, projectName, onSaved,
+}) => {
+  const queryClient = useQueryClient()
+  const isEdit = editApp !== null
+
+  // Load existing SOV when editing
+  const appNumber = isEdit ? (editApp.application_number as number) : null
+  const { data: existingSOV, isLoading: sovLoading } = usePayAppSOV(
+    isEdit ? projectId : undefined,
+    appNumber,
+  )
+
+  // Header form state
+  const [periodTo, setPeriodTo] = useState('')
+  const [periodFrom, setPeriodFrom] = useState('')
+  const [contractId, setContractId] = useState(() => contracts[0]?.id as string ?? '')
+  const [retainageRate, setRetainageRate] = useState(10)
+  const [originalContractSum, setOriginalContractSum] = useState(0)
+  const [netChangeOrders, setNetChangeOrders] = useState(0)
+  const [lessPrevCerts, setLessPrevCerts] = useState(0)
+
+  // SOV rows
+  const [rows, setRows] = useState<DraftSOVRow[]>(() =>
+    Array.from({ length: 4 }, (_, i) => newBlankRow(i + 1)),
+  )
+
+  // Sync state from edit app / loaded SOV
+  useEffect(() => {
+    if (!open) return
+    if (isEdit && editApp) {
+      setPeriodTo((editApp.period_to as string) ?? '')
+      setPeriodFrom((editApp.period_from as string) ?? '')
+      setContractId((editApp.contract_id as string) ?? (contracts[0]?.id as string ?? ''))
+      setOriginalContractSum((editApp.original_contract_sum as number) ?? 0)
+      setNetChangeOrders((editApp.net_change_orders as number) ?? 0)
+      setLessPrevCerts((editApp.less_previous_certificates as number) ?? 0)
+    } else {
+      setPeriodTo('')
+      setPeriodFrom('')
+      setContractId(contracts[0]?.id as string ?? '')
+      setRetainageRate(10)
+      setOriginalContractSum(0)
+      setNetChangeOrders(0)
+      setLessPrevCerts(0)
+      setRows(Array.from({ length: 4 }, (_, i) => newBlankRow(i + 1)))
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, isEdit])
+
+  // Once SOV loads for edit mode, populate rows and retainage
+  useEffect(() => {
+    if (!existingSOV) return
+    setRetainageRate(existingSOV.retainageRate * 100)
+    setOriginalContractSum(existingSOV.originalContractSum)
+    setNetChangeOrders(existingSOV.netChangeOrders)
+    setLessPrevCerts(existingSOV.lessPreviousCertificates)
+    if (existingSOV.lineItems.length > 0) {
+      setRows(existingSOV.lineItems.map((item) => ({
+        key: item.id,
+        description: item.description,
+        scheduledValue: String(item.scheduled_value),
+        prevPct: item.prev_pct_complete,
+        thisPct: String(item.current_pct_complete),
+        storedMaterials: String(item.stored_materials),
+        error: null,
+      })))
+    }
+  }, [existingSOV])
+
+  // Live G702
+  const g702 = useMemo(
+    () => computeG702FromRows(rows, retainageRate, originalContractSum, netChangeOrders, lessPrevCerts),
+    [rows, retainageRate, originalContractSum, netChangeOrders, lessPrevCerts],
+  )
+
+  // G703 items for PDF
+  const g703Items = useMemo((): G703LineItem[] =>
+    rows.map((row, i) => {
+      const { sv, prevAmt, workThisPeriod, mats, totalCompleted, retainage } = computeRowTotals(row, retainageRate)
+      return {
+        itemNumber: String(i + 1),
+        costCode: '',
+        description: row.description || `Line Item ${i + 1}`,
+        scheduledValue: sv,
+        previousCompleted: prevAmt,
+        thisPeroid: workThisPeriod,
+        materialsStored: mats,
+        totalCompletedAndStored: totalCompleted,
+        percentComplete: sv > 0 ? (totalCompleted / sv) * 100 : 0,
+        balanceToFinish: sv - totalCompleted,
+        retainage,
+      }
+    }),
+  [rows, retainageRate])
+
+  const selectedContract = contracts.find((c) => c.id === contractId)
+
+  const pdfG702: G702Data = useMemo(() => ({
+    ...g702,
+    applicationNumber: (editApp?.application_number as number) ?? 1,
+    periodTo,
+    projectName,
+    contractorName: (selectedContract?.counterparty as string) ?? '',
+  }), [g702, editApp, periodTo, projectName, selectedContract])
+
+  // Row mutation handlers
+  const handleRowField = useCallback((key: string, field: 'description' | 'scheduledValue' | 'storedMaterials', value: string) => {
+    setRows((prev) => prev.map((r) => r.key === key ? { ...r, [field]: value } : r))
+  }, [])
+
+  const handleThisPct = useCallback((key: string, value: string) => {
+    setRows((prev) => prev.map((r) => {
+      if (r.key !== key) return r
+      const pct = parseFloat(value) || 0
+      let error: string | null = null
+      if (pct < r.prevPct) {
+        error = `Cannot decrease below prev application (${r.prevPct.toFixed(1)}%)`
+      } else if (pct > 100) {
+        error = 'Cannot exceed 100%'
+      }
+      return { ...r, thisPct: value, error }
+    }))
+  }, [])
+
+  const addRow = useCallback(() => {
+    setRows((prev) => [...prev, newBlankRow(prev.length + 1)])
+  }, [])
+
+  const removeRow = useCallback((key: string) => {
+    setRows((prev) => prev.filter((r) => r.key !== key))
+  }, [])
+
+  // Save mutation
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      const hasErrors = rows.some((r) => r.error !== null)
+      if (hasErrors) throw new Error('Fix validation errors before saving')
+      if (!periodTo) throw new Error('Period To date is required')
+      if (!contractId) throw new Error('A contract must be selected')
+
+      const payload: UpsertPayAppPayload = {
+        ...(editApp?.id ? { id: editApp.id as string } : {}),
+        contract_id: contractId,
+        period_to: periodTo,
+        period_from: periodFrom || null,
+        original_contract_sum: originalContractSum,
+        net_change_orders: netChangeOrders,
+        total_completed_and_stored: g702.totalCompletedAndStored,
+        retainage: g702.retainageAmount,
+        total_earned_less_retainage: g702.totalEarnedLessRetainage,
+        less_previous_certificates: lessPrevCerts,
+        current_payment_due: g702.currentPaymentDue,
+        balance_to_finish: g702.balanceToFinish,
+      }
+      return upsertPayApplication(projectId, payload)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pay_applications', projectId] })
+      toast.success(isEdit ? 'Pay application updated' : 'Pay application created')
+      onSaved()
+      onClose()
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : 'Failed to save pay application'),
+  })
+
+  // Block background scroll
+  useEffect(() => {
+    document.body.style.overflow = open ? 'hidden' : ''
+    return () => { document.body.style.overflow = '' }
+  }, [open])
+
+  if (!open) return null
+
+  const hasRowErrors = rows.some((r) => r.error !== null)
+
+  // ── G702 summary rows ──
+  const g702Rows: Array<{ label: string; value: number; bold?: boolean; highlight?: boolean }> = [
+    { label: '1. Original Contract Sum', value: g702.originalContractSum },
+    { label: '2. Net Change by Change Orders', value: g702.netChangeOrders },
+    { label: '3. Contract Sum to Date (1+2)', value: g702.contractSumToDate, bold: true },
+    { label: '4. Total Completed and Stored to Date', value: g702.totalCompletedAndStored },
+    { label: `5. Retainage (${retainageRate.toFixed(0)}% of Line 4)`, value: g702.retainageAmount },
+    { label: '6. Total Earned Less Retainage (4−5)', value: g702.totalEarnedLessRetainage, bold: true },
+    { label: '7. Less Previous Certificates for Payment', value: g702.lessPreviousCertificates },
+    { label: '8. Current Payment Due (6−7)', value: g702.currentPaymentDue, bold: true, highlight: true },
+    { label: '9. Balance to Finish (3−4)', value: g702.balanceToFinish },
+  ]
+
+  // ── Styles (shared with outer file conventions) ──
+  const thStyle = (w: number | string, align: 'left' | 'right' | 'center' = 'right'): React.CSSProperties => ({
+    width: typeof w === 'number' ? w : w,
+    fontSize: typography.fontSize.caption,
+    color: colors.textSecondary,
+    fontWeight: typography.fontWeight.semibold,
+    textAlign: align,
+    padding: `${spacing['2']} ${spacing['2']}`,
+    flexShrink: 0,
+    whiteSpace: 'nowrap',
+  })
+
+  const tdStyle = (w: number | string, align: 'left' | 'right' | 'center' = 'right', extra: React.CSSProperties = {}): React.CSSProperties => ({
+    width: typeof w === 'number' ? w : w,
+    fontSize: typography.fontSize.sm,
+    textAlign: align,
+    padding: `${spacing['1.5']} ${spacing['2']}`,
+    flexShrink: 0,
+    ...extra,
+  })
+
+  const inputStyle = (highlight = false): React.CSSProperties => ({
+    width: '100%',
+    padding: `${spacing['1']} ${spacing['2']}`,
+    border: `1px solid ${highlight ? colors.primaryOrange : colors.borderDefault}`,
+    borderRadius: borderRadius.base,
+    fontSize: typography.fontSize.sm,
+    fontFamily: highlight ? typography.fontFamilyMono : typography.fontFamily,
+    textAlign: highlight ? 'right' as const : 'left' as const,
+    color: colors.textPrimary,
+    backgroundColor: highlight ? colors.orangeSubtle : colors.white,
+    outline: 'none',
+  })
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        onClick={onClose}
+        style={{
+          position: 'fixed', inset: 0,
+          backgroundColor: 'rgba(15,22,41,0.45)',
+          zIndex: 1000,
+        }}
+      />
+
+      {/* Drawer panel */}
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={isEdit ? `Edit Pay Application #${editApp?.application_number as number}` : 'New Pay Application'}
+        style={{
+          position: 'fixed', top: 0, right: 0, bottom: 0,
+          width: DRAWER_WIDTH,
+          backgroundColor: colors.white,
+          boxShadow: shadows.xl,
+          zIndex: 1001,
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Drawer header */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: spacing['3'],
+          padding: `${spacing['4']} ${spacing['5']}`,
+          borderBottom: `1px solid ${colors.borderSubtle}`,
+          backgroundColor: colors.white,
+          flexShrink: 0,
+        }}>
+          <Receipt size={18} color={colors.primaryOrange} />
+          <div style={{ flex: 1 }}>
+            <h2 style={{ margin: 0, fontSize: typography.fontSize.h3, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+              {isEdit ? `Edit Pay Application #${editApp?.application_number as number}` : 'New Pay Application'}
+            </h2>
+            <p style={{ margin: 0, fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
+              AIA G702/G703 Schedule of Values
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="Close drawer"
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: 32, height: 32, border: 'none', borderRadius: borderRadius.base,
+              backgroundColor: 'transparent', cursor: 'pointer', color: colors.textSecondary,
+            }}
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Scrollable content */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: spacing['5'], display: 'flex', flexDirection: 'column', gap: spacing['5'] }}>
+
+          {isEdit && sovLoading && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
+              {[1, 2, 3].map((i) => <Skeleton key={i} width="100%" height="40px" />)}
+            </div>
+          )}
+
+          {/* ── Section 1: Setup ── */}
+          <Card padding={spacing['4']}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['4'] }}>
+              <FileText size={14} color={colors.primaryOrange} />
+              <span style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+                Application Details
+              </span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: spacing['4'] }}>
+              {/* Contract */}
+              <div>
+                <label style={{ display: 'block', fontSize: typography.fontSize.caption, color: colors.textSecondary, marginBottom: spacing['1'], fontWeight: typography.fontWeight.medium }}>
+                  Contract *
+                </label>
+                <select
+                  value={contractId}
+                  onChange={(e) => setContractId(e.target.value)}
+                  style={{ width: '100%', padding: `${spacing['2']} ${spacing['3']}`, border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, color: colors.textPrimary, backgroundColor: colors.white, outline: 'none' }}
+                >
+                  {contracts.map((c) => (
+                    <option key={c.id as string} value={c.id as string}>{c.counterparty as string}</option>
+                  ))}
+                  {contracts.length === 0 && <option value="">No contracts</option>}
+                </select>
+              </div>
+
+              {/* Period From */}
+              <div>
+                <label style={{ display: 'block', fontSize: typography.fontSize.caption, color: colors.textSecondary, marginBottom: spacing['1'], fontWeight: typography.fontWeight.medium }}>
+                  Period From
+                </label>
+                <input
+                  type="date"
+                  value={periodFrom}
+                  onChange={(e) => setPeriodFrom(e.target.value)}
+                  style={{ width: '100%', padding: `${spacing['2']} ${spacing['3']}`, border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, color: colors.textPrimary, backgroundColor: colors.white, outline: 'none' }}
+                />
+              </div>
+
+              {/* Period To */}
+              <div>
+                <label style={{ display: 'block', fontSize: typography.fontSize.caption, color: colors.textSecondary, marginBottom: spacing['1'], fontWeight: typography.fontWeight.medium }}>
+                  Period To *
+                </label>
+                <input
+                  type="date"
+                  value={periodTo}
+                  onChange={(e) => setPeriodTo(e.target.value)}
+                  style={{ width: '100%', padding: `${spacing['2']} ${spacing['3']}`, border: `1px solid ${!periodTo ? colors.statusCritical : colors.borderDefault}`, borderRadius: borderRadius.base, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, color: colors.textPrimary, backgroundColor: colors.white, outline: 'none' }}
+                />
+              </div>
+
+              {/* Original Contract Sum */}
+              <div>
+                <label style={{ display: 'block', fontSize: typography.fontSize.caption, color: colors.textSecondary, marginBottom: spacing['1'], fontWeight: typography.fontWeight.medium }}>
+                  Original Contract Sum
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  step={1000}
+                  value={originalContractSum}
+                  onChange={(e) => setOriginalContractSum(parseFloat(e.target.value) || 0)}
+                  style={{ width: '100%', padding: `${spacing['2']} ${spacing['3']}`, border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamilyMono, color: colors.textPrimary, backgroundColor: colors.white, outline: 'none', textAlign: 'right' }}
+                />
+              </div>
+
+              {/* Net Change Orders */}
+              <div>
+                <label style={{ display: 'block', fontSize: typography.fontSize.caption, color: colors.textSecondary, marginBottom: spacing['1'], fontWeight: typography.fontWeight.medium }}>
+                  Net Change by COs
+                </label>
+                <input
+                  type="number"
+                  step={100}
+                  value={netChangeOrders}
+                  onChange={(e) => setNetChangeOrders(parseFloat(e.target.value) || 0)}
+                  style={{ width: '100%', padding: `${spacing['2']} ${spacing['3']}`, border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamilyMono, color: colors.textPrimary, backgroundColor: colors.white, outline: 'none', textAlign: 'right' }}
+                />
+              </div>
+
+              {/* Retainage Rate */}
+              <div>
+                <label style={{ display: 'block', fontSize: typography.fontSize.caption, color: colors.textSecondary, marginBottom: spacing['1'], fontWeight: typography.fontWeight.medium }}>
+                  Retainage Rate (%)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={0.5}
+                  value={retainageRate}
+                  onChange={(e) => setRetainageRate(Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
+                  style={{ width: '100%', padding: `${spacing['2']} ${spacing['3']}`, border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamilyMono, color: colors.textPrimary, backgroundColor: colors.white, outline: 'none', textAlign: 'right' }}
+                />
+              </div>
+            </div>
+          </Card>
+
+          {/* ── Section 2: G703 SOV Table ── */}
+          <Card padding={0} style={{ overflow: 'hidden' }}>
+            <div style={{ padding: `${spacing['3']} ${spacing['4']}`, borderBottom: `1px solid ${colors.borderSubtle}`, display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
+              <Receipt size={14} color={colors.primaryOrange} />
+              <span style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+                G703 Schedule of Values
+              </span>
+              <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, marginLeft: 'auto' }}>
+                {rows.length} line item{rows.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+
+            <div style={{ overflowX: 'auto' }}>
+              <div style={{ minWidth: 860 }}>
+                {/* Header row */}
+                <div style={{ display: 'flex', backgroundColor: colors.surfaceInset, borderBottom: `1px solid ${colors.borderSubtle}` }}>
+                  <span style={thStyle(32, 'center')}>#</span>
+                  <span style={thStyle(180, 'left')}>Line Item</span>
+                  <span style={thStyle(100)}>Sched. Value</span>
+                  <span style={thStyle(72)}>Prev %</span>
+                  <span style={{ ...thStyle(96), color: colors.primaryOrange }}>This Period %</span>
+                  <span style={thStyle(100)}>Stored Mats</span>
+                  <span style={thStyle(108)}>Total Completed</span>
+                  <span style={thStyle(88)}>Retainage</span>
+                  <span style={thStyle(96)}>Net Payment</span>
+                  <span style={thStyle(36, 'center')} />
+                </div>
+
+                {rows.map((row, i) => {
+                  const calc = computeRowTotals(row, retainageRate)
+                  return (
+                    <div key={row.key}>
+                      <div style={{
+                        display: 'flex', alignItems: 'center',
+                        borderBottom: row.error ? 'none' : `1px solid ${colors.borderSubtle}`,
+                        backgroundColor: i % 2 === 0 ? colors.white : colors.surfacePage,
+                      }}>
+                        {/* # */}
+                        <span style={tdStyle(32, 'center', { color: colors.textTertiary, fontFamily: typography.fontFamilyMono })}>
+                          {i + 1}
+                        </span>
+                        {/* Description */}
+                        <div style={tdStyle(180, 'left')}>
+                          <input
+                            type="text"
+                            placeholder="Description of work"
+                            value={row.description}
+                            onChange={(e) => handleRowField(row.key, 'description', e.target.value)}
+                            style={{ ...inputStyle(false), textAlign: 'left' }}
+                          />
+                        </div>
+                        {/* Scheduled Value */}
+                        <div style={tdStyle(100)}>
+                          <input
+                            type="number"
+                            min={0}
+                            step={100}
+                            placeholder="0"
+                            value={row.scheduledValue}
+                            onChange={(e) => handleRowField(row.key, 'scheduledValue', e.target.value)}
+                            style={{ ...inputStyle(false), textAlign: 'right', fontFamily: typography.fontFamilyMono }}
+                          />
+                        </div>
+                        {/* Prev % (readonly) */}
+                        <span style={tdStyle(72, 'right', { color: colors.textSecondary, fontFamily: typography.fontFamilyMono })}>
+                          {row.prevPct.toFixed(1)}%
+                        </span>
+                        {/* This Period % (editable, validated) */}
+                        <div style={tdStyle(96)}>
+                          <input
+                            type="number"
+                            min={0}
+                            max={100}
+                            step={0.1}
+                            placeholder="0"
+                            value={row.thisPct}
+                            onChange={(e) => handleThisPct(row.key, e.target.value)}
+                            style={{
+                              ...inputStyle(true),
+                              borderColor: row.error ? colors.statusCritical : colors.primaryOrange,
+                              backgroundColor: row.error ? colors.statusCriticalSubtle : colors.orangeSubtle,
+                            }}
+                          />
+                        </div>
+                        {/* Stored Materials */}
+                        <div style={tdStyle(100)}>
+                          <input
+                            type="number"
+                            min={0}
+                            step={100}
+                            placeholder="0"
+                            value={row.storedMaterials}
+                            onChange={(e) => handleRowField(row.key, 'storedMaterials', e.target.value)}
+                            style={{ ...inputStyle(false), textAlign: 'right', fontFamily: typography.fontFamilyMono }}
+                          />
+                        </div>
+                        {/* Total Completed (calculated) */}
+                        <span style={tdStyle(108, 'right', { fontFamily: typography.fontFamilyMono, color: colors.textPrimary })}>
+                          {fmtCurrency(calc.totalCompleted)}
+                        </span>
+                        {/* Retainage (calculated) */}
+                        <span style={tdStyle(88, 'right', { fontFamily: typography.fontFamilyMono, color: colors.statusPending })}>
+                          {fmtCurrency(calc.retainage)}
+                        </span>
+                        {/* Net Payment (calculated) */}
+                        <span style={tdStyle(96, 'right', { fontFamily: typography.fontFamilyMono, color: calc.netPayment >= 0 ? colors.statusActive : colors.statusCritical })}>
+                          {fmtCurrency(calc.netPayment)}
+                        </span>
+                        {/* Remove */}
+                        <div style={tdStyle(36, 'center')}>
+                          <button
+                            onClick={() => removeRow(row.key)}
+                            aria-label="Remove row"
+                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24, border: 'none', borderRadius: borderRadius.base, backgroundColor: 'transparent', cursor: 'pointer', color: colors.textTertiary }}
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      </div>
+                      {/* Validation error row */}
+                      {row.error && (
+                        <div style={{
+                          display: 'flex', alignItems: 'center', gap: spacing['2'],
+                          padding: `${spacing['1']} ${spacing['4']}`,
+                          backgroundColor: colors.statusCriticalSubtle,
+                          borderBottom: `1px solid ${colors.borderSubtle}`,
+                        }}>
+                          <AlertTriangle size={11} color={colors.statusCritical} />
+                          <span style={{ fontSize: typography.fontSize.caption, color: colors.statusCritical }}>
+                            {row.error}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Add row button */}
+            <div style={{ padding: `${spacing['2']} ${spacing['4']}`, borderTop: `1px solid ${colors.borderSubtle}` }}>
+              <button
+                onClick={addRow}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: spacing['2'],
+                  padding: `${spacing['1.5']} ${spacing['3']}`,
+                  border: `1px dashed ${colors.borderDefault}`,
+                  borderRadius: borderRadius.base, backgroundColor: 'transparent',
+                  color: colors.textSecondary, fontSize: typography.fontSize.sm,
+                  fontFamily: typography.fontFamily, cursor: 'pointer',
+                }}
+              >
+                <Plus size={13} /> Add Line Item
+              </button>
+            </div>
+          </Card>
+
+          {/* ── Section 3: G702 Summary ── */}
+          <Card padding={spacing['4']}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['4'] }}>
+              <Scale size={14} color={colors.primaryOrange} />
+              <span style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+                AIA G702 Summary
+              </span>
+              <span style={{ fontSize: typography.fontSize.caption, color: colors.statusActive, backgroundColor: colors.statusActiveSubtle, padding: `1px ${spacing.sm}`, borderRadius: borderRadius.full, marginLeft: spacing['2'] }}>
+                Live
+              </span>
+            </div>
+
+            {/* Less Previous Certs (editable) */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['3'] }}>
+              <label style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>
+                7. Less Previous Certificates for Payment
+              </label>
+              <input
+                type="number"
+                min={0}
+                step={100}
+                value={lessPrevCerts}
+                onChange={(e) => setLessPrevCerts(Math.max(0, parseFloat(e.target.value) || 0))}
+                style={{ width: 140, padding: `${spacing['1']} ${spacing['2']}`, border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamilyMono, textAlign: 'right', color: colors.textPrimary, backgroundColor: colors.white, outline: 'none' }}
+              />
+            </div>
+
+            {/* Read-only summary rows */}
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {g702Rows.map((row) => (
+                <div
+                  key={row.label}
+                  style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    padding: `${spacing['2']} ${row.highlight ? spacing['3'] : 0}`,
+                    borderBottom: `1px solid ${colors.borderSubtle}`,
+                    backgroundColor: row.highlight ? colors.orangeSubtle : 'transparent',
+                    borderRadius: row.highlight ? borderRadius.base : 0,
+                    marginBottom: row.highlight ? spacing['1'] : 0,
+                  }}
+                >
+                  <span style={{
+                    fontSize: typography.fontSize.sm,
+                    color: row.bold ? colors.textPrimary : colors.textSecondary,
+                    fontWeight: row.bold ? typography.fontWeight.semibold : typography.fontWeight.normal,
+                  }}>
+                    {row.label}
+                  </span>
+                  <span style={{
+                    fontSize: row.highlight ? typography.fontSize.title : typography.fontSize.sm,
+                    fontFamily: typography.fontFamilyMono,
+                    color: row.highlight ? colors.primaryOrange : row.bold ? colors.textPrimary : colors.textSecondary,
+                    fontWeight: row.bold || row.highlight ? typography.fontWeight.bold : typography.fontWeight.medium,
+                  }}>
+                    {fmtCurrency(row.value)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </Card>
+
+        </div>
+
+        {/* ── Drawer Footer ── */}
+        <div style={{
+          flexShrink: 0,
+          borderTop: `1px solid ${colors.borderSubtle}`,
+          padding: `${spacing['3']} ${spacing['5']}`,
+          display: 'flex', alignItems: 'center', gap: spacing['3'],
+          backgroundColor: colors.white,
+        }}>
+          {/* Payment Due callout */}
+          <div>
+            <p style={{ margin: 0, fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Current Payment Due</p>
+            <p style={{ margin: 0, fontSize: typography.fontSize.h3, fontWeight: typography.fontWeight.bold, color: colors.primaryOrange, fontFamily: typography.fontFamilyMono }}>
+              {fmtCurrency(g702.currentPaymentDue)}
+            </p>
+          </div>
+
+          <div style={{ flex: 1 }} />
+
+          {/* PDF export buttons */}
+          <Suspense fallback={<Btn variant="ghost" size="sm"><FileText size={14} /> G702 PDF</Btn>}>
+            <PDFDownloadLink
+              document={<G702ApplicationPDF data={pdfG702} />}
+              fileName={`G702_App${pdfG702.applicationNumber}_${new Date().toISOString().slice(0, 10)}.pdf`}
+            >
+              {({ loading }: { loading: boolean }) => (
+                <Btn variant="ghost" size="sm">
+                  <FileText size={14} /> {loading ? 'Building...' : 'Export G702'}
+                </Btn>
+              )}
+            </PDFDownloadLink>
+          </Suspense>
+
+          <Suspense fallback={<Btn variant="ghost" size="sm"><Receipt size={14} /> G703 PDF</Btn>}>
+            <PDFDownloadLink
+              document={
+                <G703ContinuationPDF
+                  projectName={pdfG702.projectName}
+                  applicationNumber={pdfG702.applicationNumber}
+                  periodTo={pdfG702.periodTo}
+                  lineItems={g703Items}
+                  summary={pdfG702}
+                />
+              }
+              fileName={`G703_App${pdfG702.applicationNumber}_${new Date().toISOString().slice(0, 10)}.pdf`}
+            >
+              {({ loading }: { loading: boolean }) => (
+                <Btn variant="ghost" size="sm">
+                  <Receipt size={14} /> {loading ? 'Building...' : 'Export G703'}
+                </Btn>
+              )}
+            </PDFDownloadLink>
+          </Suspense>
+
+          <Btn variant="ghost" size="sm" onClick={onClose}>
+            Cancel
+          </Btn>
+
+          <PermissionGate permission="payments.create">
+            <Btn
+              variant="primary"
+              size="sm"
+              onClick={() => saveMutation.mutate()}
+              disabled={saveMutation.isPending || hasRowErrors || !periodTo}
+            >
+              <Save size={14} />
+              {saveMutation.isPending ? 'Saving...' : isEdit ? 'Update Pay App' : 'Save Draft'}
+            </Btn>
+          </PermissionGate>
+        </div>
+      </div>
+    </>
+  )
+})
+CreateEditPayAppDrawer.displayName = 'CreateEditPayAppDrawer'
+
 // ── G702 Summary Card ─────────────────────────────────────────
 
 const G702SummaryCard = memo<{
@@ -157,7 +945,8 @@ const G702SummaryCard = memo<{
   liveG703?: G703LineItem[]
   onApprove?: () => void
   isApproving?: boolean
-}>(({ app, liveG702, liveG703, onApprove, isApproving }) => {
+  hasPendingWaivers?: boolean
+}>(({ app, liveG702, liveG703, onApprove, isApproving, hasPendingWaivers }) => {
   const g = liveG702
   const rows = [
     { label: '1. Original Contract Sum', value: fmtCurrency(g ? g.originalContractSum : (app.original_contract_sum as number)) },
@@ -234,7 +1023,8 @@ const G702SummaryCard = memo<{
               variant="primary"
               size="sm"
               onClick={onApprove}
-              disabled={isApproving}
+              disabled={isApproving || hasPendingWaivers}
+              title={hasPendingWaivers ? 'Collect all lien waivers before approving' : undefined}
             >
               <CheckCircle size={14} /> {isApproving ? 'Approving...' : 'Approve Pay App'}
             </Btn>
@@ -615,24 +1405,32 @@ const PayAppDetail = memo<{
   contracts: Array<Record<string, unknown>>
   onApprove: () => void
   isApproving: boolean
-}>(({ app, projectId, waivers, contracts, onApprove, isApproving }) => {
+  onMarkReceived: (id: string) => void
+  onMarkExecuted: (id: string) => void
+  markingWaiverId: string | null
+}>(({ app, projectId, waivers, contracts, onApprove, isApproving, onMarkReceived, onMarkExecuted, markingWaiverId }) => {
   const appNumber = app.application_number as number
   const { data: sovData, isLoading: sovLoading } = usePayAppSOV(projectId, appNumber)
   const [liveG702, setLiveG702] = useState<G702Data | undefined>()
   const [liveG703, setLiveG703] = useState<G703LineItem[] | undefined>()
+  const [detailTab, setDetailTab] = useState<'g702' | 'lien_waivers'>('g702')
 
-  // Compute which active subs are missing a lien waiver for this pay app
-  const appWaivers = waivers.filter((w) => w.pay_app_id === (app.id as string))
-  const subsWithWaivers = new Set(appWaivers.map((w) => w.sub_id).filter(Boolean))
-  const activeSubs = contracts.filter((c) => c.status !== 'terminated')
-  const missingSubs = activeSubs.filter((c) => !subsWithWaivers.has(c.id as string))
-  const showMissingWarning = missingSubs.length > 0 &&
-    !(['approved', 'paid', 'void'] as string[]).includes(app.status as string)
+  const appWaivers = waivers.filter((w) => w.pay_application_id === (app.id as string))
+  const pendingWaivers = appWaivers.filter((w) => w.status === 'pending')
+  // Show blocking warning whenever this pay app has pending waivers
+  const showMissingWarning = pendingWaivers.length > 0
 
   const handleLiveData = useCallback((g702: G702Data, g703: G703LineItem[]) => {
     setLiveG702(g702)
     setLiveG703(g703)
   }, [])
+
+  const typeLabel: Record<string, string> = {
+    conditional_progress: 'Conditional Progress',
+    unconditional_progress: 'Unconditional Progress',
+    conditional_final: 'Conditional Final',
+    unconditional_final: 'Unconditional Final',
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
@@ -645,32 +1443,199 @@ const PayAppDetail = memo<{
           <AlertTriangle size={16} color={colors.statusCritical} style={{ marginTop: 2, flexShrink: 0 }} />
           <div>
             <p style={{ margin: 0, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
-              Missing Lien Waivers
+              Pending Lien Waivers
             </p>
             <p style={{ margin: `${spacing['1']} 0 0`, fontSize: typography.fontSize.sm, color: colors.textSecondary, lineHeight: typography.lineHeight.normal }}>
-              {missingSubs.length} sub{missingSubs.length !== 1 ? 'contractor' : 'contractor'}{missingSubs.length !== 1 ? 's are' : ' is'} missing a required lien waiver before this can be submitted to the owner:{' '}
-              <span style={{ fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>
-                {missingSubs.map((s) => s.counterparty as string).join(', ')}
-              </span>
+              {pendingWaivers.length} waiver{pendingWaivers.length !== 1 ? 's' : ''} missing. Cannot submit pay app to owner until all waivers are received or executed.
             </p>
           </div>
         </div>
       )}
-      <G702SummaryCard
-        app={app}
-        liveG702={liveG702}
-        liveG703={liveG703}
-        onApprove={onApprove}
-        isApproving={isApproving}
-      />
-      {sovLoading && <Skeleton width="100%" height="200px" />}
-      {sovData && (
-        <SOVEditorPanel
-          sovData={sovData}
-          appStatus={(app.status as string) || 'draft'}
-          projectId={projectId}
-          onLiveDataChange={handleLiveData}
-        />
+
+      {/* Sub-tab bar */}
+      <div style={{ display: 'flex', gap: spacing['1'], borderBottom: `1px solid ${colors.borderSubtle}`, paddingBottom: spacing['3'] }}>
+        {([
+          { key: 'g702', label: 'G702 / SOV' },
+          { key: 'lien_waivers', label: `Lien Waivers${appWaivers.length > 0 ? ` (${appWaivers.length})` : ''}` },
+        ] as const).map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setDetailTab(t.key)}
+            style={{
+              padding: `${spacing['1.5']} ${spacing['3']}`,
+              border: 'none',
+              borderRadius: borderRadius.base,
+              backgroundColor: detailTab === t.key ? colors.primaryOrange : 'transparent',
+              color: detailTab === t.key ? colors.white : colors.textSecondary,
+              fontSize: typography.fontSize.sm,
+              fontWeight: detailTab === t.key ? typography.fontWeight.semibold : typography.fontWeight.normal,
+              cursor: 'pointer',
+              fontFamily: typography.fontFamily,
+            }}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* G702 / SOV tab */}
+      {detailTab === 'g702' && (
+        <>
+          <G702SummaryCard
+            app={app}
+            liveG702={liveG702}
+            liveG703={liveG703}
+            onApprove={onApprove}
+            isApproving={isApproving}
+            hasPendingWaivers={pendingWaivers.length > 0}
+          />
+          {sovLoading && <Skeleton width="100%" height="200px" />}
+          {sovData && (
+            <SOVEditorPanel
+              sovData={sovData}
+              appStatus={(app.status as string) || 'draft'}
+              projectId={projectId}
+              onLiveDataChange={handleLiveData}
+            />
+          )}
+        </>
+      )}
+
+      {/* Lien Waivers tab */}
+      {detailTab === 'lien_waivers' && (
+        <Card padding={0} style={{ overflow: 'hidden' }}>
+          <div style={{
+            padding: `${spacing['4']} ${spacing['5']}`,
+            borderBottom: `1px solid ${colors.borderSubtle}`,
+            display: 'flex', alignItems: 'center', gap: spacing['2'],
+          }}>
+            <Scale size={16} color={colors.primaryOrange} />
+            <span style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+              Lien Waivers
+            </span>
+            <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, marginLeft: 'auto' }}>
+              {appWaivers.length} total · {appWaivers.filter((w) => w.status !== 'pending').length} collected
+            </span>
+          </div>
+
+          {/* Blocking warning banner */}
+          {pendingWaivers.length > 0 && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: spacing['2'],
+              padding: `${spacing['3']} ${spacing['5']}`,
+              backgroundColor: colors.statusCriticalSubtle,
+              borderBottom: `1px solid ${colors.statusCritical}`,
+            }}>
+              <AlertTriangle size={14} color={colors.statusCritical} />
+              <span style={{ fontSize: typography.fontSize.sm, color: colors.statusCritical, fontWeight: typography.fontWeight.medium }}>
+                {pendingWaivers.length} waiver{pendingWaivers.length !== 1 ? 's' : ''} missing. Cannot submit pay app to owner.
+              </span>
+            </div>
+          )}
+
+          {appWaivers.length === 0 ? (
+            <div style={{ padding: spacing['6'] }}>
+              <EmptyState
+                icon={<Scale size={28} color={colors.textTertiary} />}
+                title="No lien waivers yet"
+                description={
+                  (['approved', 'paid'] as string[]).includes(app.status as string)
+                    ? 'No subcontractor line items with payment were found on this pay app.'
+                    : 'Approve this pay app to auto-generate conditional lien waiver requests for all subs with payment.'
+                }
+              />
+            </div>
+          ) : (
+            <div>
+              {/* Table header */}
+              <div style={{
+                display: 'grid', gridTemplateColumns: '1fr 140px 110px 110px 180px', gap: 0,
+                backgroundColor: colors.surfaceInset, borderBottom: `1px solid ${colors.borderSubtle}`,
+                padding: `${spacing['2']} ${spacing['5']}`,
+              }}>
+                {['Sub Name', 'Type', 'Amount', 'Status', 'Actions'].map((h) => (
+                  <span key={h} style={{ fontSize: typography.fontSize.caption, color: colors.textSecondary, fontWeight: typography.fontWeight.semibold }}>
+                    {h}
+                  </span>
+                ))}
+              </div>
+
+              {appWaivers.map((waiver, i) => {
+                const sub = contracts.find((c) => c.id === waiver.subcontractor_id)
+                const subName = (sub?.counterparty as string) ?? waiver.subcontractor_id
+                const isOverdue = waiver.status === 'pending' &&
+                  new Date(waiver.created_at).getTime() + 7 * 24 * 60 * 60 * 1000 < Date.now()
+                const displayStatus: LienWaiverStatus | 'overdue' = isOverdue ? 'overdue' : waiver.status
+                const statusCfg = LIEN_WAIVER_STATUS_CONFIG[displayStatus] ?? LIEN_WAIVER_STATUS_CONFIG.pending
+                const busy = markingWaiverId === waiver.id
+
+                return (
+                  <div
+                    key={waiver.id}
+                    style={{
+                      display: 'grid', gridTemplateColumns: '1fr 140px 110px 110px 180px', gap: 0,
+                      padding: `${spacing['3']} ${spacing['5']}`,
+                      borderBottom: `1px solid ${colors.borderSubtle}`,
+                      backgroundColor: i % 2 === 0 ? colors.white : colors.surfacePage,
+                      alignItems: 'center',
+                    }}
+                  >
+                    <p style={{ margin: 0, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>
+                      {subName}
+                    </p>
+                    <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>
+                      {typeLabel[waiver.waiver_type] ?? waiver.waiver_type}
+                    </span>
+                    <span style={{ fontSize: typography.fontSize.sm, fontFamily: typography.fontFamilyMono, color: colors.textPrimary }}>
+                      {fmtCurrency(waiver.amount)}
+                    </span>
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center', gap: spacing.xs,
+                      padding: `2px ${spacing.sm}`, borderRadius: borderRadius.full,
+                      fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
+                      color: statusCfg.color, backgroundColor: statusCfg.bg, width: 'fit-content',
+                    }}>
+                      <div style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: statusCfg.color }} />
+                      {statusCfg.label}
+                    </span>
+                    <div style={{ display: 'flex', gap: spacing['2'] }}>
+                      {waiver.status === 'pending' && (
+                        <button
+                          onClick={() => onMarkReceived(waiver.id)}
+                          disabled={busy}
+                          style={{
+                            padding: `${spacing['1']} ${spacing['2']}`, border: `1px solid ${colors.borderDefault}`,
+                            borderRadius: borderRadius.base, backgroundColor: 'transparent',
+                            color: colors.textSecondary, fontSize: typography.fontSize.caption,
+                            fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily,
+                            cursor: busy ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {busy ? 'Saving...' : 'Mark Received'}
+                        </button>
+                      )}
+                      {waiver.status === 'received' && (
+                        <button
+                          onClick={() => onMarkExecuted(waiver.id)}
+                          disabled={busy}
+                          style={{
+                            padding: `${spacing['1']} ${spacing['2']}`, border: `1px solid ${colors.statusInfo}`,
+                            borderRadius: borderRadius.base, backgroundColor: colors.statusInfoSubtle,
+                            color: colors.statusInfo, fontSize: typography.fontSize.caption,
+                            fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily,
+                            cursor: busy ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {busy ? 'Saving...' : 'Mark Executed'}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </Card>
       )}
     </div>
   )
@@ -769,7 +1734,7 @@ type WaiverCollectionStatus = 'received' | 'pending' | 'missing'
 
 function getWaiverCollectionStatus(waivers: LienWaiverRow[]): WaiverCollectionStatus {
   if (waivers.length === 0) return 'missing'
-  if (waivers.some((w) => w.status === 'received' || w.status === 'verified')) return 'received'
+  if (waivers.some((w) => w.status === 'received')) return 'received'
   return 'pending'
 }
 
@@ -780,10 +1745,11 @@ function stateToWaiverState(state: string | null | undefined): WaiverState {
   return (state && map[state.toUpperCase()]) || 'generic'
 }
 
-const LIEN_WAIVER_STATUS_CONFIG: Record<LienWaiverStatus, { label: string; color: string; bg: string }> = {
-  pending: { label: 'Pending', color: colors.statusPending, bg: colors.statusPendingSubtle },
-  received: { label: 'Received', color: colors.statusInfo, bg: colors.statusInfoSubtle },
-  verified: { label: 'Verified', color: colors.statusActive, bg: colors.statusActiveSubtle },
+const LIEN_WAIVER_STATUS_CONFIG: Record<LienWaiverStatus | 'overdue', { label: string; color: string; bg: string }> = {
+  pending:  { label: 'Pending',  color: colors.statusPending,  bg: colors.statusPendingSubtle },
+  received: { label: 'Received', color: colors.statusActive,   bg: colors.statusActiveSubtle },
+  executed: { label: 'Executed', color: colors.statusInfo,     bg: colors.statusInfoSubtle },
+  overdue:  { label: 'Overdue',  color: colors.statusCritical, bg: colors.statusCriticalSubtle },
 }
 
 const WAIVER_COLLECTION_CONFIG: Record<WaiverCollectionStatus, { label: string; color: string; bg: string }> = {
@@ -800,13 +1766,17 @@ const LienWaiverPanel = memo<{
   contracts: Array<Record<string, unknown>>
   project: { name: string; address: string | null; owner_name: string | null; general_contractor: string | null; state: string | null } | undefined
   onMarkReceived: (id: string) => void
+  onMarkExecuted: (id: string) => void
   isMarkingReceived: string | null
-}>(({ payApps, waivers, contracts, project, onMarkReceived, isMarkingReceived }) => {
+  onGenerateAll: (payAppId: string) => void
+  isGenerating: boolean
+}>(({ payApps, waivers, contracts, project, onMarkReceived, onMarkExecuted, isMarkingReceived, onGenerateAll, isGenerating }) => {
+  const [selectedPayAppId, setSelectedPayAppId] = React.useState<string>('')
   const approvedApps = payApps.filter((a) => a.status === 'approved' || a.status === 'paid')
 
   // Summary metrics
   const totalWaivers = waivers.length
-  const receivedCount = waivers.filter((w) => w.status === 'received' || w.status === 'verified').length
+  const receivedCount = waivers.filter((w) => w.status === 'received' || w.status === 'executed').length
   const pendingCount = waivers.filter((w) => w.status === 'pending').length
   const activeSubs = contracts.filter((c) => c.status !== 'terminated')
 
@@ -828,16 +1798,74 @@ const LienWaiverPanel = memo<{
         <MetricBox label="Active Subs" value={activeSubs.length} />
       </div>
 
+      {/* Blocking warning banner */}
+      {pendingCount > 0 && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: spacing['3'],
+          padding: `${spacing['3']} ${spacing['4']}`,
+          backgroundColor: colors.statusCriticalSubtle,
+          borderRadius: borderRadius.base,
+          borderLeft: `3px solid ${colors.statusCritical}`,
+        }}>
+          <AlertTriangle size={14} color={colors.statusCritical} />
+          <span style={{ fontSize: typography.fontSize.sm, color: colors.statusCritical, fontWeight: typography.fontWeight.medium }}>
+            {pendingCount} waiver{pendingCount !== 1 ? 's' : ''} missing. Cannot submit pay app to owner.
+          </span>
+        </div>
+      )}
+
       {/* Waiver table */}
       <Card padding={0} style={{ overflow: 'hidden' }}>
-        <div style={{ padding: `${spacing['4']} ${spacing['5']}`, borderBottom: `1px solid ${colors.borderSubtle}`, display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
+        <div style={{ padding: `${spacing['4']} ${spacing['5']}`, borderBottom: `1px solid ${colors.borderSubtle}`, display: 'flex', alignItems: 'center', gap: spacing['2'], flexWrap: 'wrap' }}>
           <Scale size={16} color={colors.primaryOrange} />
           <span style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
             Lien Waiver Tracker
           </span>
-          <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, marginLeft: 'auto' }}>
-            {totalWaivers} total · {receivedCount} received
+          <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
+            {totalWaivers} total · {receivedCount} collected
           </span>
+          {/* Generate All controls */}
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
+            {approvedApps.length > 0 && (
+              <>
+                <select
+                  value={selectedPayAppId}
+                  onChange={(e) => setSelectedPayAppId(e.target.value)}
+                  style={{
+                    padding: `${spacing['1']} ${spacing['2']}`, border: `1px solid ${colors.borderDefault}`,
+                    borderRadius: borderRadius.base, fontSize: typography.fontSize.sm,
+                    fontFamily: typography.fontFamily, color: colors.textPrimary,
+                    backgroundColor: colors.white, cursor: 'pointer',
+                  }}
+                >
+                  <option value="">Select pay app...</option>
+                  {approvedApps.map((a) => (
+                    <option key={a.id as string} value={a.id as string}>
+                      Pay App #{a.application_number as number} ({fmtDate(a.period_to as string)})
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={() => selectedPayAppId && onGenerateAll(selectedPayAppId)}
+                  disabled={!selectedPayAppId || isGenerating}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: spacing['1'],
+                    padding: `${spacing['1.5']} ${spacing['3']}`,
+                    border: `1px solid ${colors.primaryOrange}`, borderRadius: borderRadius.base,
+                    backgroundColor: selectedPayAppId ? colors.orangeSubtle : colors.surfaceInset,
+                    color: selectedPayAppId ? colors.orangeText : colors.textTertiary,
+                    fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
+                    fontWeight: typography.fontWeight.medium,
+                    cursor: selectedPayAppId && !isGenerating ? 'pointer' : 'not-allowed',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  <Plus size={13} />
+                  {isGenerating ? 'Generating...' : 'Generate All'}
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
         {waivers.length === 0 ? (
@@ -853,13 +1881,13 @@ const LienWaiverPanel = memo<{
             {/* Table header */}
             <div style={{
               display: 'grid',
-              gridTemplateColumns: '1fr 120px 160px 110px 200px',
+              gridTemplateColumns: '1fr 140px 110px 110px 110px 220px',
               gap: 0,
               backgroundColor: colors.surfaceInset,
               borderBottom: `1px solid ${colors.borderSubtle}`,
               padding: `${spacing['2']} ${spacing['5']}`,
             }}>
-              {['Sub Name', 'Pay Period', 'Waiver Type', 'Status', 'Actions'].map((h) => (
+              {['Sub Name', 'Type', 'Amount', 'Status', 'Waiver Date', 'Actions'].map((h) => (
                 <span key={h} style={{ fontSize: typography.fontSize.caption, color: colors.textSecondary, fontWeight: typography.fontWeight.semibold }}>
                   {h}
                 </span>
@@ -867,24 +1895,34 @@ const LienWaiverPanel = memo<{
             </div>
 
             {waivers.map((waiver, i) => {
-              const statusCfg = LIEN_WAIVER_STATUS_CONFIG[waiver.status] ?? LIEN_WAIVER_STATUS_CONFIG.pending
-              const payApp = payApps.find((a) => a.id === waiver.pay_app_id)
-              const periodLabel = payApp ? fmtDate(payApp.period_to as string) : fmtDate(waiver.through_date)
+              const isOverdue = waiver.status === 'pending' && new Date(waiver.created_at).getTime() + 7 * 24 * 60 * 60 * 1000 < Date.now()
+              const displayStatus: LienWaiverStatus | 'overdue' = isOverdue ? 'overdue' : waiver.status
+              const statusCfg = LIEN_WAIVER_STATUS_CONFIG[displayStatus] ?? LIEN_WAIVER_STATUS_CONFIG.pending
+              const payApp = payApps.find((a) => a.id === waiver.pay_application_id)
               const typeLabel: Record<string, string> = {
                 conditional_progress: 'Conditional Progress',
                 unconditional_progress: 'Unconditional Progress',
                 conditional_final: 'Conditional Final',
                 unconditional_final: 'Unconditional Final',
               }
-              const pdfData = lienWaiverDataFromRow(waiver, pdfContext)
-              const pdfFileName = `LienWaiver_${(waiver.sub_name ?? 'sub').replace(/\s+/g, '_')}_${payApp?.application_number ?? 'PA'}.pdf`
+              const subName = (contracts.find((c) => c.id === waiver.subcontractor_id)?.counterparty as string) ?? null
+              const pdfData = lienWaiverDataFromRow({
+                type: waiver.waiver_type,
+                sub_name: subName,
+                amount: waiver.amount,
+                through_date: waiver.payment_period,
+                signed_by: null,
+                signed_date: waiver.waiver_date,
+              }, pdfContext)
+              const pdfFileName = `LienWaiver_${(subName ?? 'sub').replace(/\s+/g, '_')}_${payApp?.application_number ?? 'PA'}.pdf`
+              const busy = isMarkingReceived === waiver.id
 
               return (
                 <div
                   key={waiver.id}
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: '1fr 120px 160px 110px 200px',
+                    gridTemplateColumns: '1fr 140px 110px 110px 110px 220px',
                     gap: 0,
                     padding: `${spacing['3']} ${spacing['5']}`,
                     borderBottom: `1px solid ${colors.borderSubtle}`,
@@ -893,25 +1931,18 @@ const LienWaiverPanel = memo<{
                   }}
                 >
                   {/* Sub Name */}
-                  <div>
-                    <p style={{ margin: 0, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>
-                      {waiver.sub_name ?? 'Unknown Sub'}
-                    </p>
-                    {waiver.amount != null && (
-                      <p style={{ margin: 0, fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
-                        {fmtCurrency(waiver.amount)}
-                      </p>
-                    )}
-                  </div>
+                  <p style={{ margin: 0, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>
+                    {subName ?? 'Unknown Sub'}
+                  </p>
 
-                  {/* Pay Period */}
-                  <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>
-                    {periodLabel}
+                  {/* Type */}
+                  <span style={{ fontSize: typography.fontSize.caption, color: colors.textSecondary }}>
+                    {typeLabel[waiver.waiver_type] ?? waiver.waiver_type}
                   </span>
 
-                  {/* Waiver Type */}
-                  <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>
-                    {typeLabel[waiver.type] ?? waiver.type}
+                  {/* Amount */}
+                  <span style={{ fontSize: typography.fontSize.sm, fontFamily: typography.fontFamilyMono, color: colors.textPrimary }}>
+                    {fmtCurrency(waiver.amount)}
                   </span>
 
                   {/* Status */}
@@ -925,27 +1956,47 @@ const LienWaiverPanel = memo<{
                     {statusCfg.label}
                   </span>
 
+                  {/* Waiver Date */}
+                  <span style={{ fontSize: typography.fontSize.caption, color: colors.textSecondary }}>
+                    {waiver.waiver_date ? fmtDate(waiver.waiver_date) : (waiver.received_at ? fmtDate(waiver.received_at) : '')}
+                  </span>
+
                   {/* Actions */}
-                  <div style={{ display: 'flex', gap: spacing['2'] }}>
+                  <div style={{ display: 'flex', gap: spacing['2'], flexWrap: 'wrap' }}>
                     {waiver.status === 'pending' && (
                       <button
                         onClick={() => onMarkReceived(waiver.id)}
-                        disabled={isMarkingReceived === waiver.id}
+                        disabled={busy}
                         style={{
-                          padding: `${spacing['1']} ${spacing['3']}`, border: `1px solid ${colors.borderDefault}`,
+                          padding: `${spacing['1']} ${spacing['2']}`, border: `1px solid ${colors.borderDefault}`,
                           borderRadius: borderRadius.base, backgroundColor: 'transparent',
                           color: colors.textSecondary, fontSize: typography.fontSize.caption,
                           fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily,
-                          cursor: 'pointer', whiteSpace: 'nowrap',
+                          cursor: busy ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap',
                         }}
                       >
-                        {isMarkingReceived === waiver.id ? 'Saving...' : 'Mark Received'}
+                        {busy ? 'Saving...' : 'Mark Received'}
+                      </button>
+                    )}
+                    {waiver.status === 'received' && (
+                      <button
+                        onClick={() => onMarkExecuted(waiver.id)}
+                        disabled={busy}
+                        style={{
+                          padding: `${spacing['1']} ${spacing['2']}`, border: `1px solid ${colors.statusInfo}`,
+                          borderRadius: borderRadius.base, backgroundColor: colors.statusInfoSubtle,
+                          color: colors.statusInfo, fontSize: typography.fontSize.caption,
+                          fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily,
+                          cursor: busy ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {busy ? 'Saving...' : 'Mark Executed'}
                       </button>
                     )}
                     <Suspense fallback={
                       <button
                         style={{
-                          padding: `${spacing['1']} ${spacing['3']}`, border: `1px solid ${colors.borderDefault}`,
+                          padding: `${spacing['1']} ${spacing['2']}`, border: `1px solid ${colors.borderDefault}`,
                           borderRadius: borderRadius.base, backgroundColor: 'transparent',
                           color: colors.textSecondary, fontSize: typography.fontSize.caption,
                           fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily,
@@ -960,14 +2011,14 @@ const LienWaiverPanel = memo<{
                           <button
                             style={{
                               display: 'inline-flex', alignItems: 'center', gap: spacing['1'],
-                              padding: `${spacing['1']} ${spacing['3']}`, border: `1px solid ${colors.primaryOrange}`,
+                              padding: `${spacing['1']} ${spacing['2']}`, border: `1px solid ${colors.primaryOrange}`,
                               borderRadius: borderRadius.base, backgroundColor: colors.orangeSubtle,
                               color: colors.orangeText, fontSize: typography.fontSize.caption,
                               fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily,
                               cursor: 'pointer', whiteSpace: 'nowrap',
                             }}
                           >
-                            <Download size={11} /> {loading ? 'Building...' : 'Generate PDF'}
+                            <Download size={11} /> {loading ? 'Building...' : 'PDF'}
                           </button>
                         )}
                       </PDFDownloadLink>
@@ -986,7 +2037,7 @@ const LienWaiverPanel = memo<{
           <SectionHeader title="Compliance by Pay Application" />
           <div style={{ marginTop: spacing['4'] }}>
             {approvedApps.map((app) => {
-              const appWaivers = waivers.filter((w) => w.pay_app_id === (app.id as string))
+              const appWaivers = waivers.filter((w) => w.pay_application_id === (app.id as string))
               const collectionStatus = getWaiverCollectionStatus(appWaivers)
               const statusConfig = WAIVER_COLLECTION_CONFIG[collectionStatus]
               return (
@@ -1038,6 +2089,21 @@ export const PaymentApplications: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('applications')
   const [selectedAppId, setSelectedAppId] = useState<string | null>(null)
   const [markingWaiverId, setMarkingWaiverId] = useState<string | null>(null)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [drawerEditApp, setDrawerEditApp] = useState<Record<string, unknown> | null>(null)
+
+  const openCreateDrawer = useCallback(() => {
+    setDrawerEditApp(null)
+    setDrawerOpen(true)
+  }, [])
+
+  const openEditDrawer = useCallback((app: Record<string, unknown>) => {
+    setDrawerEditApp(app)
+    setDrawerOpen(true)
+  }, [])
+
+  // Keep module-level ref in sync so static column definitions can invoke the drawer.
+  _editPayAppCb.current = openEditDrawer
   const projectId = useProjectId()
   const queryClient = useQueryClient()
   const { data: payApps, isLoading: loadingApps } = usePayApplications(projectId)
@@ -1056,28 +2122,16 @@ export const PaymentApplications: React.FC = () => {
   // ── Approve pay app + auto-create lien waivers ──
   const approvePayAppMutation = useMutation({
     mutationFn: async (app: Record<string, unknown>) => {
-      await approvePayApplication(app.id as string)
-      const activeSubs = contractList.filter((c) => c.status !== 'terminated')
-      await Promise.all(
-        activeSubs.map((sub) =>
-          createLienWaiver(
-            projectId!,
-            sub.id as string,
-            app.id as string,
-            'conditional_progress',
-            {
-              subName: sub.counterparty as string,
-              amount: (sub.revised_value ?? sub.original_value) as number,
-              throughDate: app.period_to as string,
-            },
-          ),
-        ),
-      )
+      return approvePayApplication(projectId!, app.id as string)
     },
-    onSuccess: () => {
+    onSuccess: ({ waivers: created }) => {
       queryClient.invalidateQueries({ queryKey: ['pay_applications', projectId] })
       queryClient.invalidateQueries({ queryKey: ['lien_waivers', projectId] })
-      toast.success('Pay app approved. Lien waiver requests created for all active subs.')
+      toast.success(
+        created.length > 0
+          ? `Pay app approved. ${created.length} lien waiver${created.length !== 1 ? 's' : ''} generated.`
+          : 'Pay app approved.',
+      )
     },
     onError: () => toast.error('Failed to approve pay application'),
   })
@@ -1094,6 +2148,37 @@ export const PaymentApplications: React.FC = () => {
     },
     onError: () => toast.error('Failed to update waiver status'),
     onSettled: () => setMarkingWaiverId(null),
+  })
+
+  // ── Mark waiver executed ──
+  const markExecutedMutation = useMutation({
+    mutationFn: async (waiverId: string) => {
+      setMarkingWaiverId(waiverId)
+      return updateLienWaiverStatus(waiverId, 'executed')
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lien_waivers', projectId] })
+      toast.success('Lien waiver marked as executed')
+    },
+    onError: () => toast.error('Failed to update waiver status'),
+    onSettled: () => setMarkingWaiverId(null),
+  })
+
+  // ── Generate waivers for a pay app ──
+  const generateAllMutation = useMutation({
+    mutationFn: async (payAppId: string) => {
+      if (!projectId) throw new Error('No project selected')
+      return generateWaiversFromPayApp(projectId, payAppId)
+    },
+    onSuccess: (created) => {
+      queryClient.invalidateQueries({ queryKey: ['lien_waivers', projectId] })
+      toast.success(
+        created.length > 0
+          ? `${created.length} conditional waiver${created.length !== 1 ? 's' : ''} generated`
+          : 'Waivers already exist for this pay app',
+      )
+    },
+    onError: () => toast.error('Failed to generate waivers'),
   })
 
   const handleApprove = useCallback(() => {
@@ -1171,7 +2256,7 @@ export const PaymentApplications: React.FC = () => {
             description="Create your first AIA G702 pay application to start tracking billing, retainage, and lien waivers for this project."
             action={
               <PermissionGate permission="payments.create">
-                <Btn variant="primary" icon={<Plus size={14} />} onClick={() => toast.info('Opening pay app generator...')}>New Pay Application</Btn>
+                <Btn variant="primary" icon={<Plus size={14} />} onClick={openCreateDrawer}>New Pay Application</Btn>
               </PermissionGate>
             }
           />
@@ -1184,13 +2269,13 @@ export const PaymentApplications: React.FC = () => {
           {/* Create button */}
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
             <PermissionGate permission="payments.create">
-              <Btn onClick={() => toast.info('Opening pay app generator...')} size="sm">
+              <Btn onClick={openCreateDrawer} size="sm">
                 <Plus size={14} /> New Pay Application
               </Btn>
             </PermissionGate>
           </div>
 
-          {/* Selected app detail: G702 summary + SOV editor */}
+          {/* Selected app detail: G702 summary + SOV editor + lien waivers */}
           {selectedApp && projectId && (
             <PayAppDetail
               app={selectedApp}
@@ -1199,6 +2284,9 @@ export const PaymentApplications: React.FC = () => {
               contracts={contractList}
               onApprove={handleApprove}
               isApproving={approvePayAppMutation.isPending}
+              onMarkReceived={(id) => markReceivedMutation.mutate(id)}
+              onMarkExecuted={(id) => markExecutedMutation.mutate(id)}
+              markingWaiverId={markingWaiverId}
             />
           )}
 
@@ -1221,7 +2309,7 @@ export const PaymentApplications: React.FC = () => {
                 title="No payment applications"
                 description="Create your first AIA G702 payment application from the schedule of values."
                 action={
-                  <Btn onClick={() => toast.info('Opening pay app generator...')} size="sm">
+                  <Btn onClick={openCreateDrawer} size="sm">
                     <Plus size={14} /> Create Pay App
                   </Btn>
                 }
@@ -1239,7 +2327,10 @@ export const PaymentApplications: React.FC = () => {
           contracts={contractList}
           project={project as { name: string; address: string | null; owner_name: string | null; general_contractor: string | null; state: string | null } | undefined}
           onMarkReceived={(id) => markReceivedMutation.mutate(id)}
+          onMarkExecuted={(id) => markExecutedMutation.mutate(id)}
           isMarkingReceived={markingWaiverId}
+          onGenerateAll={(payAppId) => generateAllMutation.mutate(payAppId)}
+          isGenerating={generateAllMutation.isPending}
         />
       )}
 
@@ -1247,6 +2338,19 @@ export const PaymentApplications: React.FC = () => {
       {activeTab === 'cash_flow' && !isLoading && (
         <CashFlowPanel payApps={apps} retainage={(retainage ?? []) as Array<Record<string, unknown>>} />
       )}
+
+      {/* Create / Edit Pay App Drawer */}
+      <CreateEditPayAppDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        projectId={projectId ?? ''}
+        contracts={contractList}
+        editApp={drawerEditApp}
+        projectName={project?.name ?? ''}
+        onSaved={() => {
+          setSelectedAppId(null)
+        }}
+      />
     </PageContainer>
   )
 }

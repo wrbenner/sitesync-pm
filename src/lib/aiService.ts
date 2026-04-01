@@ -1,9 +1,12 @@
 import type { AIMessage, AIContext, AIInsight, DrawingAnalysis } from '../types/ai'
 import type { ProjectFinancials, DivisionFinancials } from '../types/financial'
-import { detectBudgetAnomalies } from './financialEngine'
-import { buildBudgetInsightPrompt, CONSTRUCTION_SYSTEM_PROMPT } from './aiPrompts'
+import type { BudgetAnomaly } from './financialEngine'
+import { buildBudgetInsightPrompt, buildProjectContext, CONSTRUCTION_SYSTEM_PROMPT } from './aiPrompts'
 import { getCachedProjectContext } from '../hooks/useProjectCache'
 import { getRfiById } from '../api/endpoints/rfis'
+import { getSchedulePhases } from '../api/endpoints/schedule'
+import { getWeatherForecast } from './weather'
+import { predictScheduleDelays, type WeatherDay as PredictionWeatherDay } from './predictions'
 
 const AI_ENDPOINT = import.meta.env.VITE_AI_ENDPOINT || '/api/ai'
 const AI_API_KEY = import.meta.env.VITE_AI_API_KEY || ''
@@ -23,14 +26,6 @@ export class AIService {
     return h
   }
 
-  private async buildSystemContent(projectId: string): Promise<string> {
-    const projectContext = await getCachedProjectContext(projectId)
-    if (projectContext) {
-      return `${CONSTRUCTION_SYSTEM_PROMPT}\n\n${projectContext}`
-    }
-    return CONSTRUCTION_SYSTEM_PROMPT
-  }
-
   private makeSystemMessage(content: string): AIMessage {
     return {
       id: `sys-${Date.now()}`,
@@ -40,13 +35,46 @@ export class AIService {
     }
   }
 
+  private makeContextMessage(content: string): AIMessage {
+    return {
+      id: `ctx-${Date.now()}`,
+      role: 'user',
+      content: `PROJECT CONTEXT (use these numbers in your responses):\n${content}`,
+      timestamp: new Date().toISOString(),
+    }
+  }
+
+  private async buildEnrichedMessages(messages: AIMessage[], context: AIContext): Promise<AIMessage[]> {
+    const systemMessage = this.makeSystemMessage(CONSTRUCTION_SYSTEM_PROMPT)
+
+    // Prefer pre-fetched hook data; fall back to cached async fetch
+    let contextText: string
+    if (context.projectData) {
+      contextText = buildProjectContext(context.projectData)
+    } else {
+      contextText = await getCachedProjectContext(context.projectId)
+    }
+
+    if (contextText) {
+      const APPROX_CHARS_PER_TOKEN = 4
+      const TOTAL_TOKEN_LIMIT = 4000
+      const systemTokens = Math.ceil(CONSTRUCTION_SYSTEM_PROMPT.length / APPROX_CHARS_PER_TOKEN)
+      const contextTokens = Math.ceil(contextText.length / APPROX_CHARS_PER_TOKEN)
+      if (systemTokens + contextTokens > TOTAL_TOKEN_LIMIT) {
+        console.warn(`[aiService] Context budget exceeded: system ~${systemTokens} + context ~${contextTokens} tokens > ${TOTAL_TOKEN_LIMIT} limit`)
+      }
+      return [systemMessage, this.makeContextMessage(contextText), ...messages]
+    }
+
+    return [systemMessage, ...messages]
+  }
+
   async chat(
     messages: AIMessage[],
     context: AIContext,
     options: { stream?: boolean; tools?: string[] } = {}
   ): Promise<AIMessage | ReadableStream<string>> {
-    const systemContent = await this.buildSystemContent(context.projectId)
-    const enrichedMessages = [this.makeSystemMessage(systemContent), ...messages]
+    const enrichedMessages = await this.buildEnrichedMessages(messages, context)
 
     const response = await fetch(`${this.endpoint}/chat`, {
       method: 'POST',
@@ -146,12 +174,9 @@ export class AIService {
   }
 
   async draftRFIResponse(rfiId: string, context: AIContext): Promise<string> {
-    const [systemContent, rfiDetails] = await Promise.all([
-      this.buildSystemContent(context.projectId),
-      context.projectId
-        ? getRfiById(context.projectId, rfiId).catch(() => null)
-        : Promise.resolve(null),
-    ])
+    const rfiDetails = context.projectId
+      ? await getRfiById(context.projectId, rfiId).catch(() => null)
+      : null
 
     const rfiContext = rfiDetails
       ? [
@@ -166,7 +191,7 @@ export class AIService {
     const response = await fetch(`${this.endpoint}/draft/rfi-response`, {
       method: 'POST',
       headers: this.headers,
-      body: JSON.stringify({ rfiId, context, rfiContext, systemPrompt: systemContent }),
+      body: JSON.stringify({ rfiId, context, rfiContext, systemPrompt: CONSTRUCTION_SYSTEM_PROMPT }),
     })
 
     if (!response.ok) {
@@ -200,20 +225,41 @@ export class AIService {
   ): Promise<AIInsight[]> {
     if (summary.isEmpty) return []
 
-    const anomalies = detectBudgetAnomalies(summary, divisions)
-    if (anomalies.length === 0) return []
+    const fmtUsd = (n: number): string =>
+      n >= 1_000_000 ? `$${(n / 1_000_000).toFixed(1)}M` : `$${Math.round(n / 1_000).toLocaleString()}K`
+
+    // Produce anomalies for variance < -5% (warning) or < -15% (critical)
+    const flagged: BudgetAnomaly[] = divisions
+      .filter(d => d.variancePercent < -5)
+      .sort((a, b) => a.variancePercent - b.variancePercent)
+      .map(d => {
+        const severity: 'critical' | 'warning' = d.variancePercent < -15 ? 'critical' : 'warning'
+        const overageAmt = d.projectedFinalCost - d.revisedBudget
+        const csiCode = d.divisionCode || 'N/A'
+        return {
+          divisionName: d.divisionName,
+          severity,
+          message: `${d.divisionName} (CSI ${csiCode}) is projected to exceed budget by ${fmtUsd(overageAmt)} (${Math.abs(d.variancePercent).toFixed(1)}% over). Review scope and identify cost reduction options.`,
+          variancePct: d.variancePercent,
+        }
+      })
+
+    if (flagged.length === 0) return []
 
     const enrichedDescriptions = new Map<string, string>()
 
     if (this.isConfigured()) {
       try {
-        const prompt = buildBudgetInsightPrompt(anomalies, projectName)
-        const systemContent = await this.buildSystemContent(projectId)
+        const prompt = buildBudgetInsightPrompt(flagged, projectName)
+        const enrichedMessages = await this.buildEnrichedMessages(
+          [{ id: `budget-${Date.now()}`, role: 'user', content: prompt, timestamp: new Date().toISOString() }],
+          { projectId, currentPage: 'budget' }
+        )
         const response = await fetch(`${this.endpoint}/chat`, {
           method: 'POST',
           headers: this.headers,
           body: JSON.stringify({
-            messages: [this.makeSystemMessage(systemContent), { role: 'user', content: prompt }],
+            messages: enrichedMessages,
             context: { projectId, currentPage: 'budget' },
             tools: [],
             stream: false,
@@ -222,7 +268,7 @@ export class AIService {
         if (response.ok) {
           const data = await response.json() as { content?: string }
           const lines = (data.content || '').split('\n').filter(l => l.trim())
-          anomalies.forEach((a, i) => {
+          flagged.forEach((a, i) => {
             if (lines[i]) enrichedDescriptions.set(a.divisionName, lines[i].trim())
           })
         }
@@ -231,8 +277,8 @@ export class AIService {
       }
     }
 
-    return anomalies.map((a, i): AIInsight => ({
-      id: `budget-anomaly-${projectId}-${i}`,
+    return flagged.map((a, i): AIInsight => ({
+      id: `budget-insight-${projectId}-${i}`,
       type: 'budget_risk',
       severity: a.severity,
       title: `${a.severity === 'critical' ? 'Cost Overrun Risk' : 'Budget Alert'}: ${a.divisionName}`,
@@ -352,6 +398,54 @@ export class AIService {
     } catch {
       return []
     }
+  }
+
+  async generateScheduleDelayInsights(projectId: string): Promise<AIInsight[]> {
+    const [phases, weatherDays] = await Promise.all([
+      getSchedulePhases(projectId).catch(() => []),
+      getWeatherForecast(projectId, 3).catch(() => [] as Awaited<ReturnType<typeof getWeatherForecast>>),
+    ])
+
+    // Map WeatherDay from weather.ts to the predictions.ts WeatherDay shape
+    const forecast: PredictionWeatherDay[] = weatherDays.map(w => ({
+      date: w.date,
+      conditions: w.conditions,
+      precipitationChance: w.precip_probability,
+      tempHigh: w.temp_high,
+      tempLow: w.temp_low,
+    }))
+
+    // Map ScheduleActivity to the predictions.ts ScheduleActivity shape
+    const activities = phases.map(p => ({
+      id: p.id,
+      name: p.name,
+      percent_complete: p.percent_complete,
+      planned_percent_complete: p.planned_percent_complete,
+      work_type: p.outdoor_activity ? ('outdoor' as const) : null,
+      float_days: p.float_days,
+      status: p.status,
+      start_date: p.start_date,
+      end_date: p.finish_date,
+    }))
+
+    const delays = predictScheduleDelays(projectId, activities, forecast)
+
+    return delays.map((d, i): AIInsight => {
+      const severity: AIInsight['severity'] = d.riskScore >= 0.7 ? 'critical' : d.riskScore >= 0.4 ? 'warning' : 'info'
+      return {
+        id: `schedule-delay-${projectId}-${i}`,
+        type: 'schedule_risk',
+        severity,
+        title: `Schedule Risk: ${d.activityName}`,
+        description: d.reasons.join('. '),
+        affectedEntities: [{ type: 'schedule_phase', id: d.activityId, name: d.activityName }],
+        suggestedAction: d.suggestedAction,
+        confidence: d.riskScore,
+        source: 'live',
+        createdAt: new Date().toISOString(),
+        dismissed: false,
+      }
+    })
   }
 
   isConfigured(): boolean {

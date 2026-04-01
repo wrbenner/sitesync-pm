@@ -21,6 +21,8 @@ interface CopilotState {
   activeConversationId: string | null;
   isTyping: boolean;
   apiKey: string | null;
+  isOpen: boolean;
+  currentPageContext: string;
 
   setApiKey: (key: string) => void;
   getActiveConversation: () => Conversation | null;
@@ -28,6 +30,9 @@ interface CopilotState {
   setActiveConversation: (id: string) => void;
   sendMessage: (text: string) => Promise<void>;
   deleteConversation: (id: string) => void;
+  openCopilot: () => void;
+  closeCopilot: () => void;
+  setPageContext: (context: string) => void;
 }
 
 export const useCopilotStore = create<CopilotState>()((set, get) => ({
@@ -48,8 +53,13 @@ export const useCopilotStore = create<CopilotState>()((set, get) => ({
   activeConversationId: 'conv-default',
   isTyping: false,
   apiKey: null,
+  isOpen: false,
+  currentPageContext: 'dashboard',
 
   setApiKey: (key) => set({ apiKey: key }),
+  openCopilot: () => set({ isOpen: true }),
+  closeCopilot: () => set({ isOpen: false }),
+  setPageContext: (context) => set({ currentPageContext: context }),
 
   getActiveConversation: () => {
     const { conversations, activeConversationId } = get();

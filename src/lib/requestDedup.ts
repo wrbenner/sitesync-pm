@@ -35,3 +35,8 @@ export function dedupTtl<T>(key: string, ttlMs: number, fn: () => Promise<T>): P
 export function queryKey(table: string, filters: Record<string, unknown>): string {
   return `${table}:${JSON.stringify(filters)}`
 }
+
+// Clear the TTL cache (useful in tests to prevent cross-test contamination)
+export function clearTtlCache(): void {
+  ttlCache.clear()
+}

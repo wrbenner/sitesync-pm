@@ -67,22 +67,29 @@ export async function getAuditLog(
   return { entries: (data ?? []) as AuditLogEntry[], total: count ?? 0 }
 }
 
+const DEFAULT_ENTITY_HISTORY_PAGE_SIZE = 100
+
 export async function getEntityHistory(
   projectId: string,
   entityType: string,
-  entityId: string
-): Promise<AuditLogEntry[]> {
+  entityId: string,
+  params: { page?: number; pageSize?: number } = {}
+): Promise<{ entries: AuditLogEntry[]; total: number }> {
   validateProjectId(projectId)
   await assertProjectAccess(projectId)
 
-  const { data, error } = await supabase
+  const page = params.page ?? 1
+  const pageSize = params.pageSize ?? DEFAULT_ENTITY_HISTORY_PAGE_SIZE
+
+  const { data, error, count } = await supabase
     .from('audit_log')
-    .select('*')
+    .select('*', { count: 'exact' })
     .eq('project_id', projectId)
     .eq('entity_type', entityType)
     .eq('entity_id', entityId)
     .order('created_at', { ascending: false })
+    .range((page - 1) * pageSize, page * pageSize - 1)
 
   if (error) throw transformSupabaseError(error)
-  return (data ?? []) as AuditLogEntry[]
+  return { entries: (data ?? []) as AuditLogEntry[], total: count ?? 0 }
 }

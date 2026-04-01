@@ -462,6 +462,113 @@ export interface WeatherDay {
   tempLow: number
 }
 
+// ── Predictive Delay Engine ──────────────────────────────────
+
+export interface ScheduleActivity {
+  id: string
+  name: string
+  percent_complete: number
+  planned_percent_complete: number | null
+  work_type: 'indoor' | 'outdoor' | 'both' | null
+  float_days: number
+  status: string | null
+  start_date: string | null
+  end_date: string | null
+}
+
+export interface PredictedDelay {
+  activityId: string
+  activityName: string
+  riskScore: number          // 0 to 1
+  predictedSlippageDays: number
+  reasons: string[]
+  suggestedAction: string
+}
+
+/**
+ * Flag schedule activities at risk of slipping based on three criteria:
+ *  (a) progress more than 10% behind planned_percent_complete
+ *  (b) outdoor activity with >60% precipitation forecast in next 3 days
+ *  (c) float < 2 days and activity not yet started
+ */
+export function predictScheduleDelays(
+  _projectId: string,
+  activities: ScheduleActivity[],
+  weatherForecast: WeatherDay[],
+): PredictedDelay[] {
+  const today = new Date()
+  const todayMs = today.getTime()
+  const day3Ms = todayMs + 3 * 86_400_000
+
+  // Weather days within the next 3 calendar days
+  const next3Days = weatherForecast.filter(w => {
+    const ms = new Date(w.date).getTime()
+    return ms >= todayMs - 86_400_000 && ms <= day3Ms
+  })
+
+  const delays: PredictedDelay[] = []
+
+  for (const activity of activities) {
+    const reasons: string[] = []
+    let riskScore = 0
+    let predictedSlippageDays = 0
+
+    // (a) Percent complete behind plan
+    if (activity.planned_percent_complete != null) {
+      const gap = activity.planned_percent_complete - activity.percent_complete
+      if (gap > 10) {
+        reasons.push(`${Math.round(gap)}% behind planned progress (${activity.percent_complete}% actual vs ${activity.planned_percent_complete}% planned)`)
+        riskScore += Math.min(0.5, gap / 100)
+        predictedSlippageDays += Math.max(1, Math.ceil(gap / 10))
+      }
+    }
+
+    // (b) Outdoor work with adverse weather in next 3 days
+    if (activity.work_type === 'outdoor' || activity.work_type === 'both') {
+      const adverseDays = next3Days.filter(w => w.precipitationChance > 60)
+      if (adverseDays.length > 0) {
+        const maxPrecip = Math.max(...adverseDays.map(w => w.precipitationChance))
+        reasons.push(`${adverseDays.length} day${adverseDays.length > 1 ? 's' : ''} of precipitation forecast (up to ${maxPrecip}% chance)`)
+        riskScore += Math.min(0.4, adverseDays.length / 3 * 0.4)
+        predictedSlippageDays += adverseDays.length
+      }
+    }
+
+    // (c) Low float and not yet started
+    const notStarted = activity.percent_complete === 0 || activity.status === 'not_started'
+    if (activity.float_days < 2 && notStarted) {
+      const floatLabel = activity.float_days === 0 ? 'zero float' : `${activity.float_days}d float`
+      reasons.push(`Activity not started with ${floatLabel} remaining`)
+      riskScore += 0.4
+      predictedSlippageDays += Math.max(1, 2 - activity.float_days)
+    }
+
+    if (reasons.length === 0) continue
+
+    riskScore = Math.min(1, riskScore)
+
+    let suggestedAction = 'Review resource allocation and update the schedule baseline.'
+    if (activity.work_type === 'outdoor' || activity.work_type === 'both') {
+      suggestedAction = 'Pre-position indoor work to buffer weather delay. Accelerate outdoor tasks before the precipitation window.'
+    } else if (activity.float_days < 2 && notStarted) {
+      suggestedAction = 'Assign a dedicated crew immediately to protect the zero-float milestone.'
+    } else if (activity.planned_percent_complete != null && activity.planned_percent_complete - activity.percent_complete > 10) {
+      suggestedAction = 'Authorize overtime or add crew to recover the schedule progress gap.'
+    }
+
+    delays.push({
+      activityId: activity.id,
+      activityName: activity.name,
+      riskScore,
+      predictedSlippageDays,
+      reasons,
+      suggestedAction,
+    })
+  }
+
+  return delays.sort((a, b) => b.riskScore - a.riskScore)
+}
+
 export interface MappedPhase {
   id: string
   name: string

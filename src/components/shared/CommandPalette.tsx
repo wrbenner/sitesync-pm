@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { colors, spacing, typography, borderRadius, shadows, zIndex, transitions } from '../../styles/theme'
 import { searchAll, type SearchResult } from '../../lib/search'
+import { registerGlobal } from '../../hooks/useKeyboardShortcuts'
 
 // ---------------------------------------------------------------------------
 // Navigation pages
@@ -77,7 +78,7 @@ function getRecentPages(): Array<{ label: string; path: string }> {
 function addRecentPage(label: string, path: string) {
   const pages = getRecentPages().filter(p => p.path !== path)
   pages.unshift({ label, path })
-  localStorage.setItem(RECENT_KEY, JSON.stringify(pages.slice(0, 10)))
+  localStorage.setItem(RECENT_KEY, JSON.stringify(pages.slice(0, 5)))
 }
 
 // ---------------------------------------------------------------------------
@@ -249,15 +250,11 @@ function ensureKeyframes() {
 // Component
 // ---------------------------------------------------------------------------
 
-interface CommandPaletteProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-}
-
-export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
+export function CommandPalette() {
   const navigate = useNavigate()
   const location = useLocation()
 
+  const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
   const [searching, setSearching] = useState(false)
@@ -267,6 +264,24 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   useEffect(() => {
     ensureKeyframes()
   }, [])
+
+  // ---- Register Cmd+K globally ----
+  useEffect(() => {
+    return registerGlobal('meta+k', () => setOpen(prev => !prev))
+  }, [])
+
+  // ---- Escape closes the palette ----
+  useEffect(() => {
+    if (!open) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        setOpen(false)
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [open])
 
   // ---- Track recent pages on route changes ----
   useEffect(() => {
@@ -314,15 +329,15 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   // ---- Helpers ----
   const goTo = useCallback((path: string) => {
     navigate(path)
-    onOpenChange(false)
-  }, [navigate, onOpenChange])
+    setOpen(false)
+  }, [navigate])
 
   const recentPages = getRecentPages()
 
   if (!open) return null
 
   return (
-    <div style={overlayStyle} onClick={() => onOpenChange(false)} role="presentation" aria-hidden="true">
+    <div style={overlayStyle} onClick={() => setOpen(false)} role="presentation" aria-hidden="true">
       <div style={{ height: 'fit-content' }} onClick={e => e.stopPropagation()}>
         <Command
           label="Search or jump to..."
@@ -454,7 +469,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                       <Command.Item
                         key={`${result.type}-${result.id}`}
                         value={`${result.type} ${result.title} ${result.subtitle}`}
-                        onSelect={() => { navigate(result.link); onOpenChange(false) }}
+                        onSelect={() => { navigate(result.link); setOpen(false) }}
                         style={itemStyle}
                       >
                         <span style={typeBadgeStyle(result.type)}>

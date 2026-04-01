@@ -28,6 +28,13 @@ export const paymentMachine = setup({
       | { type: 'VOID'; reason: string }
       | { type: 'REVISE' },
   },
+  actions: {
+    // Declares the lien waiver side-effect contract. The real implementation lives in
+    // approvePayApplication (api/endpoints/payApplications.ts) and is called by the
+    // approval mutation. Provide a live implementation when creating an actor instance
+    // if the machine is used as a running service.
+    autoGenerateLienWaivers: () => {},
+  },
 }).createMachine({
   id: 'paymentApplication',
   initial: 'draft',
@@ -61,6 +68,7 @@ export const paymentMachine = setup({
       },
     },
     approved: {
+      entry: [{ type: 'autoGenerateLienWaivers' }],
       on: {
         MARK_PAID: { target: 'paid' },
         VOID: { target: 'void' },

@@ -105,7 +105,7 @@ export async function updateProjectMember(
 ): Promise<ProjectMember> {
   const { data: memberRow, error: fetchError } = await supabase
     .from('project_members')
-    .select('project_id')
+    .select('project_id, role')
     .eq('id', memberId)
     .single()
 
@@ -113,7 +113,11 @@ export async function updateProjectMember(
 
   if (updates.role !== undefined) {
     const callerRole = await getMyProjectRole(memberRow.project_id)
-    assertCanAssignRole(callerRole ?? 'viewer', updates.role)
+    const effective = callerRole ?? 'viewer'
+    // Caller must outrank the target's current role (prevents demoting higher-ranked members)
+    assertCanAssignRole(effective, memberRow.role as ProjectRole)
+    // Caller must also outrank the new role being assigned
+    assertCanAssignRole(effective, updates.role)
   }
 
   const { data, error } = await supabase
@@ -155,12 +159,16 @@ export async function removeProjectMember(memberId: string): Promise<void> {
 export async function getMyProjectRole(projectId: string): Promise<ProjectRole | null> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
+  return getCallerProjectRole(projectId, user.id)
+}
 
+// Get a specific user's role on a project (used for server-side privilege checks)
+export async function getCallerProjectRole(projectId: string, userId: string): Promise<ProjectRole | null> {
   const { data, error } = await supabase
     .from('project_members')
     .select('role')
     .eq('project_id', projectId)
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .maybeSingle()
 
   if (error || !data) return null

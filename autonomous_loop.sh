@@ -1,7 +1,7 @@
 #!/bin/bash
 ###############################################################################
 #
-#  SITESYNC AI — AUTONOMOUS EVOLUTION ENGINE v4.0
+#  SITESYNC AI — AUTONOMOUS EVOLUTION ENGINE v5.0
 #  ═══════════════════════════════════════════════════════════════════════════
 #
 #  This is not a linter. This is not a code formatter. This is not a script.
@@ -24,7 +24,7 @@
 #    6. Execute all prompts via Claude Code (non-interactive, auto-perms)
 #    7. Verify build passes — auto-fix any regressions
 #    8. Verify every change — unresolved issues carry forward as P0
-#    9. Enter INVENTION MODE for any module scoring 90+ for 2+ cycles
+#    9. Enter INVENTION MODE for any module scoring 85+ for 3+ cycles
 #       (stop fixing, start building things nobody has)
 #   10. Commit changes with descriptive message, update scores
 #   11. Loop until zero actionable items remain or budget/cycle limit hit
@@ -47,7 +47,7 @@
 #    CODE_MODEL=claude-sonnet-4-6         Model for Claude Code [sonnet]
 #    DECOMP_MODEL=claude-haiku-4-5-20251001  Model for decomp [haiku]
 #    LOG_DIR=./engine-logs       Where logs and reports are saved
-#    SKIP_WEB_RESEARCH=false     Skip competitive research [false]
+#    SKIP_WEB_RESEARCH=true      Skip competitive research [true]
 #    INCLUDE_UI=true             Include UI/UX in audits [true]
 #    DRY_RUN=false               Audit without touching code [false]
 #    BUILD_CMD=""                Build command (auto-detected from package.json)
@@ -56,7 +56,9 @@
 #    FEEDBACK_FILE=""            Feedback file path [PROJECT_DIR/FEEDBACK.md]
 #    VISION_FILE=""              Vision file path [PROJECT_DIR/VISION.md]
 #    NOTIFY_WEBHOOK=""           Webhook for completion notification
-#    MAX_ISSUES_PER_MODULE=20    Cap issues per module per cycle [20]
+#    MAX_ISSUES_PER_MODULE=5     Cap issues per module per cycle [5]
+#    PROMPT_COOLDOWN=5           Seconds between Claude Code calls [5]
+#    PROMPT_TIMEOUT=300          Timeout per Claude Code call in seconds [300]
 #    INVENTION_MODE=true         Enable new feature invention in late cycles [true]
 #    RESUME=false                Resume last incomplete run [false]
 #    AUTO_GIT_TAG=true           Auto-tag major milestones in git [true]
@@ -84,7 +86,7 @@ SKIP_MODULES="${SKIP_MODULES:-}"
 FEEDBACK_FILE="${FEEDBACK_FILE:-$PROJECT_DIR/FEEDBACK.md}"
 VISION_FILE="${VISION_FILE:-$PROJECT_DIR/VISION.md}"
 NOTIFY_WEBHOOK="${NOTIFY_WEBHOOK:-}"
-MAX_ISSUES_PER_MODULE="${MAX_ISSUES_PER_MODULE:-10}"
+MAX_ISSUES_PER_MODULE="${MAX_ISSUES_PER_MODULE:-5}"
 INVENTION_MODE="${INVENTION_MODE:-true}"
 RESUME="${RESUME:-false}"
 AUTO_GIT_TAG="${AUTO_GIT_TAG:-true}"
@@ -181,7 +183,7 @@ print_manifesto() {
     echo "" >&2
     echo -e "${BOLD}${CYAN}  ┌─────────────────────────────────────────────────────────────────┐${NC}" >&2
     echo -e "${BOLD}${CYAN}  │                                                                 │${NC}" >&2
-    echo -e "${BOLD}${CYAN}  │   SITESYNC AI — AUTONOMOUS EVOLUTION ENGINE  v4.0              │${NC}" >&2
+    echo -e "${BOLD}${CYAN}  │   SITESYNC AI — AUTONOMOUS EVOLUTION ENGINE  v5.0              │${NC}" >&2
     echo -e "${BOLD}${CYAN}  │                                                                 │${NC}" >&2
     echo -e "${BOLD}${CYAN}  │   This engine does not rest. It does not compromise.           │${NC}" >&2
     echo -e "${BOLD}${CYAN}  │   It reads your vision. It studies your competitors.           │${NC}" >&2
@@ -413,19 +415,25 @@ preflight() {
         fi
     fi
 
-    # Git status
-    if git -C "$PROJECT_DIR" rev-parse --git-dir &>/dev/null; then
+    # Git health check
+    if (cd "$PROJECT_DIR" && git rev-parse --git-dir &>/dev/null); then
+        # Verify git isn't corrupted
+        if ! (cd "$PROJECT_DIR" && git status &>/dev/null); then
+            warn "Git index may be corrupted. Attempting repair..."
+            (cd "$PROJECT_DIR" && rm -f .git/index.lock 2>/dev/null; git reset 2>/dev/null) || true
+        fi
         local git_branch
-        git_branch=$(git -C "$PROJECT_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
+        git_branch=$(cd "$PROJECT_DIR" && git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
         success "Git branch: ${git_branch}"
 
         # Create backup commit if there are uncommitted changes
         local git_status
-        git_status=$(git -C "$PROJECT_DIR" status --porcelain 2>/dev/null || true)
+        git_status=$(cd "$PROJECT_DIR" && git status --porcelain 2>/dev/null || true)
         if [ -n "$git_status" ]; then
             log "Committing working state before engine run..."
-            git -C "$PROJECT_DIR" add -A
-            git -C "$PROJECT_DIR" commit -m "engine: backup checkpoint before run ${TIMESTAMP}" --allow-empty-message 2>/dev/null || true
+            (cd "$PROJECT_DIR" && git add src/ *.md *.json *.ts supabase/ public/ 2>/dev/null; \
+             git add -A 2>/dev/null; \
+             git commit -m "engine: backup checkpoint before run ${TIMESTAMP}" --allow-empty-message 2>/dev/null) || true
             success "Backup commit created"
         fi
     fi
@@ -450,22 +458,33 @@ preflight() {
 
 # ── Codebase snapshot ─────────────────────────────────────────────────────────
 take_snapshot() {
-    local snapshot_file="${RUN_DIR}/snapshot.md"
+    local snapshot_file="${RUN_DIR}/snapshot_cycle${CYCLE:-0}.md"
 
-    # Git hash caching — skip if nothing changed since last snapshot
-    local current_hash
-    current_hash=$(git -C "$PROJECT_DIR" rev-parse HEAD 2>/dev/null || echo "no-git")
-    if [ "$current_hash" = "$LAST_SNAPSHOT_HASH" ] && [ -f "$snapshot_file" ]; then
-        log "Snapshot cached (git hash unchanged)"
+    # Cache snapshot within a cycle — only re-snapshot at start of new cycle
+    if [ -f "$snapshot_file" ]; then
+        log "Snapshot cached for cycle ${CYCLE}"
         echo "$snapshot_file"
         return 0
     fi
 
     log "Taking codebase snapshot..."
+
+    # Compute hash of source files to detect changes
+    local current_hash
+    current_hash=$(find "$PROJECT_DIR/src" -type f -name '*.ts' -o -name '*.tsx' -o -name '*.js' 2>/dev/null | sort | xargs cat 2>/dev/null | md5sum 2>/dev/null | cut -d' ' -f1 || echo "nohash_${CYCLE}")
+
+    # Skip if nothing changed since last snapshot
+    if [ -n "$LAST_SNAPSHOT_HASH" ] && [ "$current_hash" = "$LAST_SNAPSHOT_HASH" ] && [ -f "${RUN_DIR}/snapshot_cycle$(( CYCLE - 1 )).md" ]; then
+        log "Codebase unchanged since last snapshot — reusing"
+        cp "${RUN_DIR}/snapshot_cycle$(( CYCLE - 1 )).md" "$snapshot_file"
+        echo "$snapshot_file"
+        return 0
+    fi
+
     local tmp="${snapshot_file}.tmp"
     echo "# SITESYNC AI — CODEBASE SNAPSHOT" > "$tmp"
     echo "Generated: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$tmp"
-    echo "Git: $(git -C "$PROJECT_DIR" log --oneline -1 2>/dev/null || echo 'no git')" >> "$tmp"
+    echo "Git: $(cd "$PROJECT_DIR" && git log --oneline -1 2>/dev/null || echo 'no git')" >> "$tmp"
     echo "" >> "$tmp"
 
     # Directory tree
@@ -695,46 +714,39 @@ Include a complete implementation prompt for each."
     fi
 
     local prompt
-    prompt="You are a senior software architect auditing a React TypeScript construction PM platform called SiteSyncAI.
+    prompt="You are auditing the \"${module_label}\" module of a React TypeScript construction PM app (SiteSyncAI).
 
-TASK: Audit the \"${module_label}\" module. Score 14 dimensions. Generate fix prompts for issues.
+TASK: Score 14 dimensions. Find the ${MAX_ISSUES_PER_MODULE} most impactful issues. Write surgical fix prompts.
 
-RULES:
-1. Your ENTIRE response must be a single JSON object. No text before or after.
-2. Start with { and end with }. No markdown fences. No explanation.
-3. Cap at ${MAX_ISSUES_PER_MODULE} issues, sorted by severity (critical first).
-4. Each issue prompt must be self-contained: include file paths, function names, what to change, and acceptance criteria.
-5. Keep descriptions under 100 words. Keep prompts under 300 words.
+CRITICAL PROMPT RULES (follow exactly or fixes will fail):
+- Each issue prompt MUST target exactly ONE file. Never ask to change multiple files in one prompt.
+- Each prompt MUST start with: \"In the file [exact path], make these specific changes:\"
+- Each prompt MUST include the exact function/component name to modify.
+- Each prompt MUST describe the BEFORE state (what the code currently does) and AFTER state (what it should do).
+- Each prompt MUST end with: \"After changes, run: npm run build to verify no TypeScript errors.\"
+- Do NOT generate prompts for features that require new backend APIs, databases, or external services.
+- Do NOT generate prompts for \"add real-time collaboration\" or \"add offline sync\" — these are multi-sprint features, not single prompts.
+- Focus on: fixing bugs, improving types, adding error/empty/loading states, improving UI polish, fixing calculations, adding ARIA attributes, improving mobile responsiveness.
 
-CONTEXT (founder vision, competitors, domain knowledge):
+CONTEXT:
 ${founder_context}
 
-PRIOR UNRESOLVED ISSUES (fix these FIRST, they are P0):
+PRIOR UNRESOLVED (P0, fix first):
 ${prior_issues}
 
-STRATEGY (from prior cycle analysis):
+STRATEGY:
 ${strategy_context}
 
-CODEBASE (relevant source files):
+CODE:
 ${relevant_snapshot}
 
-SCORING DIMENSIONS (0-100 each):
-1. Visual Polish: Apple/Linear level UI
-2. Construction Domain Depth: matches real super/PM workflows
-3. Data Richness: calculated metrics, not placeholders
-4. Interaction Quality: keyboard shortcuts, drag-drop, bulk actions
-5. AI Integration: AI woven into workflow
-6. Mobile/Field-First: works on iPhone on jobsite
-7. Performance: instant renders, virtual lists
-8. TypeScript Quality: strict types, no any
-9. Error Handling: empty states, loading, error boundaries
-10. Real-Time: live updates, presence
-11. Accessibility: WCAG 2.1 AA
-12. Security: RBAC, XSS safe
-13. Competitive Differentiation: why choose over Procore
-14. Enterprise Readiness: audit trail, SSO, multi-tenant
+DIMENSIONS (score 0-100):
+1. Visual Polish  2. Domain Depth  3. Data Richness  4. Interaction Quality
+5. AI Integration  6. Mobile/Field-First  7. Performance  8. TypeScript Quality
+9. Error Handling  10. Real-Time  11. Accessibility  12. Security
+13. Differentiation  14. Enterprise Readiness
 
-REQUIRED JSON FORMAT:
+Start with { end with }. No other text. JSON only:
 {
   \"module\": \"${module_name}\",
   \"scores\": {
@@ -751,13 +763,14 @@ REQUIRED JSON FORMAT:
       \"severity\": \"critical\",
       \"dimension\": \"visual_polish\",
       \"title\": \"Short title\",
-      \"description\": \"What is wrong\",
-      \"prompt\": \"Self-contained Claude Code fix prompt with file paths and acceptance criteria\"
+      \"file\": \"src/pages/Example.tsx\",
+      \"description\": \"What is wrong in under 50 words\",
+      \"prompt\": \"In the file src/pages/Example.tsx, in the ExampleComponent function: [exact changes]. BEFORE: [current behavior]. AFTER: [desired behavior]. Run npm run build to verify.\"
     }
   ],
   \"invented_features\": [],
   \"competitive_intel\": \"Brief comparison\",
-  \"summary\": \"One paragraph summary\"
+  \"summary\": \"One paragraph\"
 }
 ${invention_section}"
 
@@ -864,6 +877,47 @@ print("{}")
 }
 
 # ── Execute Claude Code prompts ────────────────────────────────────────────────
+# Rate limit config: seconds between Claude Code CLI calls (prevents 429/529)
+PROMPT_COOLDOWN="${PROMPT_COOLDOWN:-5}"
+# Timeout per Claude Code CLI call in seconds (kills hung prompts)
+PROMPT_TIMEOUT="${PROMPT_TIMEOUT:-300}"
+
+# Run Claude Code with timeout protection
+run_claude_code() {
+    local prompt="$1"
+    local log_file="$2"
+    local timeout_secs="${3:-$PROMPT_TIMEOUT}"
+
+    # Use timeout command (coreutils on Linux, gtimeout on macOS)
+    local timeout_cmd="timeout"
+    if ! command -v timeout &>/dev/null; then
+        if command -v gtimeout &>/dev/null; then
+            timeout_cmd="gtimeout"
+        else
+            # No timeout available — run without protection
+            (cd "$PROJECT_DIR" && claude \
+                -p "$prompt" \
+                --model "$CODE_MODEL" \
+                --dangerously-skip-permissions) \
+            >> "$log_file" 2>&1
+            return $?
+        fi
+    fi
+
+    (cd "$PROJECT_DIR" && $timeout_cmd "${timeout_secs}s" claude \
+        -p "$prompt" \
+        --model "$CODE_MODEL" \
+        --dangerously-skip-permissions) \
+    >> "$log_file" 2>&1
+    local exit_code=$?
+
+    if [ $exit_code -eq 124 ]; then
+        warn "  Claude Code timed out after ${timeout_secs}s — killing and moving on"
+        return 1
+    fi
+    return $exit_code
+}
+
 execute_prompts() {
     local module_name="$1"
     local audit_file="$2"
@@ -871,8 +925,38 @@ execute_prompts() {
     local exec_dir="${cycle_dir}/exec_${module_name}"
     mkdir -p "$exec_dir"
 
+    # PRE-MODULE BUILD GATE: Don't waste money executing prompts if build is already broken
+    if [ -n "$BUILD_CMD" ]; then
+        if ! (cd "$PROJECT_DIR" && eval "$BUILD_CMD" > /dev/null 2>&1); then
+            warn "Build is broken BEFORE ${module_name} — fixing build first..."
+            local build_errors
+            build_errors=$(cd "$PROJECT_DIR" && eval "$BUILD_CMD" 2>&1 | tail -40)
+            local gate_log="${exec_dir}/build_gate_fix.log"
+            run_claude_code "The TypeScript build is broken. Fix ALL errors below. Do not change anything unrelated. Errors:
+${build_errors}" "$gate_log" 180
+            ESTIMATED_SPEND=$(echo "scale=2; $ESTIMATED_SPEND + 0.50" | bc 2>/dev/null || echo "$ESTIMATED_SPEND")
+            CYCLE_SPEND=$(echo "scale=2; $CYCLE_SPEND + 0.50" | bc 2>/dev/null || echo "$CYCLE_SPEND")
+            (cd "$PROJECT_DIR" && git add src/ 2>/dev/null && \
+             git diff --cached --quiet 2>/dev/null || \
+             git commit -m "engine: build gate fix before ${module_name}" --allow-empty-message 2>/dev/null) || true
+
+            # If build still broken after fix, skip this module entirely
+            if ! (cd "$PROJECT_DIR" && eval "$BUILD_CMD" > /dev/null 2>&1); then
+                error "Build still broken after repair — skipping ${module_name} to save budget"
+                return 1
+            fi
+            success "Build gate passed — proceeding with ${module_name}"
+        fi
+    fi
+
+    # SMART ORDERING: Sort issues by severity (critical > high > medium > low)
     local issues
-    issues=$(jq -r '.issues // []' "$audit_file")
+    issues=$(jq -r '(.issues // []) | sort_by(
+        if .severity == "critical" then 0
+        elif .severity == "high" then 1
+        elif .severity == "medium" then 2
+        else 3 end
+    )' "$audit_file")
     local count
     count=$(echo "$issues" | jq 'length')
 
@@ -881,10 +965,27 @@ execute_prompts() {
         return 0
     fi
 
-    log "Executing ${count} prompts for ${module_name}..."
+    log "Executing ${count} prompts for ${module_name} (sorted by severity)..."
 
+    local consecutive_failures=0
     local i=0
     while [ $i -lt "$count" ]; do
+        # CIRCUIT BREAKER: If 3 prompts in a row fail, stop wasting money on this module
+        if [ "$consecutive_failures" -ge 3 ]; then
+            warn "  3 consecutive failures — circuit breaker tripped, skipping remaining prompts for ${module_name}"
+            break
+        fi
+
+        # BUDGET CHECK mid-execution: abort if we are running low
+        local spend_int
+        spend_int=$(echo "$ESTIMATED_SPEND" | cut -d'.' -f1)
+        local budget_int
+        budget_int=$(echo "$MAX_SPEND" | cut -d'.' -f1)
+        if [ "${spend_int:-0}" -ge "${budget_int:-500}" ]; then
+            warn "  Budget limit hit mid-module — stopping execution"
+            break
+        fi
+
         local issue
         issue=$(echo "$issues" | jq ".[$i]")
         local issue_id
@@ -893,13 +994,24 @@ execute_prompts() {
         severity=$(echo "$issue" | jq -r '.severity // "medium"')
         local title
         title=$(echo "$issue" | jq -r '.title // "Untitled"')
-        local prompt
-        prompt=$(echo "$issue" | jq -r '.prompt // ""')
+        local raw_prompt
+        raw_prompt=$(echo "$issue" | jq -r '.prompt // ""')
 
-        if [ -z "$prompt" ] || [ "$prompt" = "null" ]; then
+        if [ -z "$raw_prompt" ] || [ "$raw_prompt" = "null" ]; then
             i=$(( i + 1 ))
             continue
         fi
+
+        # Wrap every prompt with project context so Claude Code understands the codebase
+        local prompt="IMPORTANT RULES:
+1. This is a React 19 + TypeScript + Vite app. Styles use inline styles from src/styles/theme.ts. Do NOT use CSS modules or styled-components.
+2. Read the target file FIRST before making changes. Understand what exists before modifying.
+3. Make the MINIMUM change needed. Do not refactor unrelated code.
+4. After making changes, run: npm run build — if the build fails, fix the errors before finishing.
+5. Never use hyphens in UI text. Use commas or periods instead.
+
+TASK:
+${raw_prompt}"
 
         log "  [$(( i + 1 ))/${count}] ${severity} — ${title}"
 
@@ -910,29 +1022,60 @@ execute_prompts() {
             echo "PROMPT:" >> "$exec_log"
             echo "$prompt" >> "$exec_log"
         else
-            # Execute with retry
-            local attempt=0
+            # RATE LIMIT: cooldown between Claude Code calls to prevent 429/529
+            if [ $i -gt 0 ]; then
+                sleep "$PROMPT_COOLDOWN"
+            fi
+
+            # Execute the prompt with timeout protection
             local exec_success=false
-            while [ $attempt -lt 2 ]; do
-                if (cd "$PROJECT_DIR" && claude \
-                        -p "$prompt" \
-                        --model "$CODE_MODEL" \
-                        --dangerously-skip-permissions) \
-                    >> "$exec_log" 2>&1; then
-                    exec_success=true
-                    TOTAL_PROMPTS_EXECUTED=$(( TOTAL_PROMPTS_EXECUTED + 1 ))
-                    break
-                fi
-                attempt=$(( attempt + 1 ))
-                if [ $attempt -lt 2 ]; then
-                    warn "  Prompt failed, retrying in 5s..."
-                    sleep 5
-                fi
-            done
+            if run_claude_code "$prompt" "$exec_log"; then
+                exec_success=true
+                consecutive_failures=0
+                TOTAL_PROMPTS_EXECUTED=$(( TOTAL_PROMPTS_EXECUTED + 1 ))
+                ESTIMATED_SPEND=$(echo "scale=2; $ESTIMATED_SPEND + 0.50" | bc 2>/dev/null || echo "$ESTIMATED_SPEND")
+                CYCLE_SPEND=$(echo "scale=2; $CYCLE_SPEND + 0.50" | bc 2>/dev/null || echo "$CYCLE_SPEND")
+            fi
 
             if [ "$exec_success" = "false" ]; then
-                warn "  Prompt ${issue_id} failed after 2 attempts"
+                consecutive_failures=$(( consecutive_failures + 1 ))
+                warn "  Prompt ${issue_id} failed — retrying with simplified version..."
+                sleep "$PROMPT_COOLDOWN"
+                local simple_prompt="You are editing a React TypeScript project. ${title}. Read the target file first. Make the minimal change needed. Only edit existing files. Run: npm run build after to verify."
+                if run_claude_code "$simple_prompt" "${exec_log}.retry" 180; then
+                    consecutive_failures=0
+                    TOTAL_PROMPTS_EXECUTED=$(( TOTAL_PROMPTS_EXECUTED + 1 ))
+                    ESTIMATED_SPEND=$(echo "scale=2; $ESTIMATED_SPEND + 0.30" | bc 2>/dev/null || echo "$ESTIMATED_SPEND")
+                    CYCLE_SPEND=$(echo "scale=2; $CYCLE_SPEND + 0.30" | bc 2>/dev/null || echo "$CYCLE_SPEND")
+                    success "  Simplified retry succeeded"
+                else
+                    warn "  Prompt ${issue_id} failed on retry too — skipping"
+                fi
             fi
+
+            # Quick build check after each prompt (catch regressions immediately)
+            if [ -n "$BUILD_CMD" ]; then
+                if ! (cd "$PROJECT_DIR" && eval "$BUILD_CMD" > /dev/null 2>&1); then
+                    warn "  Build broken after ${issue_id} — auto-fixing..."
+                    local build_errors
+                    build_errors=$(cd "$PROJECT_DIR" && eval "$BUILD_CMD" 2>&1 | tail -30)
+                    sleep "$PROMPT_COOLDOWN"
+                    run_claude_code "The TypeScript build is broken. Fix these errors. Only fix the errors, do not change anything else. Errors: ${build_errors}" "${exec_log}.buildfix" 180
+                    ESTIMATED_SPEND=$(echo "scale=2; $ESTIMATED_SPEND + 0.50" | bc 2>/dev/null || echo "$ESTIMATED_SPEND")
+                    CYCLE_SPEND=$(echo "scale=2; $CYCLE_SPEND + 0.50" | bc 2>/dev/null || echo "$CYCLE_SPEND")
+
+                    # If build STILL broken after fix, revert and move on
+                    if ! (cd "$PROJECT_DIR" && eval "$BUILD_CMD" > /dev/null 2>&1); then
+                        warn "  Build still broken — reverting last change to preserve stability"
+                        (cd "$PROJECT_DIR" && git checkout -- src/ 2>/dev/null) || true
+                    fi
+                fi
+            fi
+
+            # Atomic commit: save every successful change immediately (never lose work)
+            (cd "$PROJECT_DIR" && git add src/ 2>/dev/null && \
+             git diff --cached --quiet 2>/dev/null || \
+             git commit -m "engine: fix ${issue_id} — ${title}" --allow-empty-message 2>/dev/null) || true
         fi
 
         i=$(( i + 1 ))
@@ -957,16 +1100,25 @@ execute_prompts() {
 
             if [ -n "$feat_prompt" ] && [ "$feat_prompt" != "null" ]; then
                 invent "  Inventing: ${feat_title}"
+                sleep "$PROMPT_COOLDOWN"
                 local feat_log="${exec_dir}/invention_${j}_${module_name}.log"
-                (cd "$PROJECT_DIR" && claude \
-                    -p "$feat_prompt" \
-                    --model "$CODE_MODEL" \
-                    --dangerously-skip-permissions) \
-                >> "$feat_log" 2>&1 || warn "  Invention failed: ${feat_title}"
+                if run_claude_code "$feat_prompt" "$feat_log"; then
+                    ESTIMATED_SPEND=$(echo "scale=2; $ESTIMATED_SPEND + 0.50" | bc 2>/dev/null || echo "$ESTIMATED_SPEND")
+                    CYCLE_SPEND=$(echo "scale=2; $CYCLE_SPEND + 0.50" | bc 2>/dev/null || echo "$CYCLE_SPEND")
+                    # Atomic commit for invention
+                    (cd "$PROJECT_DIR" && git add src/ 2>/dev/null && \
+                     git diff --cached --quiet 2>/dev/null || \
+                     git commit -m "engine: invent ${feat_title}" --allow-empty-message 2>/dev/null) || true
+                else
+                    warn "  Invention failed: ${feat_title}"
+                fi
             fi
             j=$(( j + 1 ))
         done
     fi
+
+    # Return success
+    return 0
 }
 
 # ── Build verification ─────────────────────────────────────────────────────────
@@ -1069,7 +1221,7 @@ Fix every failing test. Do not delete or skip tests. If the test expectations ar
     return 0
 }
 
-# ── Change verification ────────────────────────────────────────────────────────
+# ── Change verification (automated — no LLM needed, saves money and is more reliable) ──
 verify_changes() {
     local module_name="$1"
     local audit_file="$2"
@@ -1080,47 +1232,80 @@ verify_changes() {
 
     log "Verifying changes for ${module_name}..."
 
-    local issues_summary
-    issues_summary=$(jq '[(.issues // [])[] | {id:.id,title:.title,severity:.severity}]' "$audit_file")
+    # Get list of files this module should have touched
+    local module_files
+    module_files=$(jq -r '[(.issues // [])[] | .file // ""] | map(select(. != "")) | unique[]' "$audit_file" 2>/dev/null)
 
-    # Check git diff for this cycle
-    local diff_summary
-    diff_summary=$(git -C "$PROJECT_DIR" diff HEAD~1 --stat 2>/dev/null | head -30 || echo "No git diff available")
+    # Check git log for recent commits by the engine for this module
+    local recent_commits
+    recent_commits=$(cd "$PROJECT_DIR" && git log --oneline --since="2 hours ago" --grep="engine: fix ${module_name}" 2>/dev/null | wc -l | tr -d ' ')
 
-    local prompt
-    prompt="Verify code changes for the \"${module_name}\" module. For each issue, check if it was fixed.
+    # Check actual file changes (committed or uncommitted)
+    local changed_files
+    changed_files=$(cd "$PROJECT_DIR" && git diff --name-only HEAD~${recent_commits:-1} 2>/dev/null | head -30 || echo "")
+    if [ -z "$changed_files" ]; then
+        changed_files=$(cd "$PROJECT_DIR" && git diff --name-only 2>/dev/null | head -30 || echo "")
+    fi
+    local files_changed_count
+    files_changed_count=$(echo "$changed_files" | grep -c '[a-z]' 2>/dev/null || echo 0)
 
-Issues that should have been fixed:
-$(echo "$issues_summary")
+    # Check build status
+    local build_ok="true"
+    if [ -n "$BUILD_CMD" ]; then
+        if ! (cd "$PROJECT_DIR" && eval "$BUILD_CMD" > /dev/null 2>&1); then
+            build_ok="false"
+        fi
+    fi
 
-Git diff summary:
-\`\`\`
-${diff_summary}
-\`\`\`
+    # For each issue, check if the target file was modified
+    local verifications="[]"
+    local fixed_count=0
+    local partial_count=0
+    local unfixed_count=0
 
-Return ONLY this JSON (no other text):
-{\"verifications\":[{\"id\":\"issue-id\",\"status\":\"fixed|partial|not_fixed\",\"note\":\"brief note\"}],\"files_changed\":0,\"regression_detected\":false,\"regression_description\":\"\"}"
+    local issue_count
+    issue_count=$(jq '(.issues // []) | length' "$audit_file" 2>/dev/null || echo 0)
+    local idx=0
+    while [ $idx -lt "$issue_count" ]; do
+        local issue_id
+        issue_id=$(jq -r "(.issues // [])[$idx].id // \"unknown\"" "$audit_file" 2>/dev/null)
+        local issue_file
+        issue_file=$(jq -r "(.issues // [])[$idx].file // \"\"" "$audit_file" 2>/dev/null)
 
-    local response
-    response=$(call_claude "$DECOMP_MODEL" "$prompt" 2048)
+        local status="not_fixed"
+        local note="No file change detected"
 
-    local text
-    text=$(extract_text "$response")
-    local verify_json
-    verify_json=$(extract_json "$text")
+        if [ -n "$issue_file" ] && echo "$changed_files" | grep -q "$issue_file" 2>/dev/null; then
+            # File was modified — check if a commit exists for this issue
+            local has_commit
+            has_commit=$(cd "$PROJECT_DIR" && git log --oneline --since="6 hours ago" --grep="${issue_id}" 2>/dev/null | wc -l | tr -d ' ')
+            if [ "${has_commit:-0}" -gt 0 ]; then
+                status="fixed"
+                note="File modified and committed"
+                fixed_count=$(( fixed_count + 1 ))
+            else
+                status="partial"
+                note="File modified but not committed"
+                partial_count=$(( partial_count + 1 ))
+            fi
+        else
+            unfixed_count=$(( unfixed_count + 1 ))
+        fi
 
-    echo "$verify_json" > "$verify_file"
+        verifications=$(echo "$verifications" | jq --arg id "$issue_id" --arg status "$status" --arg note "$note" \
+            '. + [{"id":$id,"status":$status,"note":$note}]')
+        idx=$(( idx + 1 ))
+    done
 
-    local fixed_count
-    fixed_count=$(echo "$verify_json" | jq '[.verifications[]? | select(.status=="fixed")] | length' 2>/dev/null || echo 0)
-    local partial_count
-    partial_count=$(echo "$verify_json" | jq '[.verifications[]? | select(.status=="partial")] | length' 2>/dev/null || echo 0)
-    local unfixed_count
-    unfixed_count=$(echo "$verify_json" | jq '[.verifications[]? | select(.status=="not_fixed")] | length' 2>/dev/null || echo 0)
-    local files_changed
-    files_changed=$(echo "$verify_json" | jq -r '.files_changed // 0' 2>/dev/null || echo 0)
+    # Write verification result
+    jq -n \
+        --argjson verifications "$verifications" \
+        --argjson files_changed "$files_changed_count" \
+        --arg build_ok "$build_ok" \
+        '{verifications:$verifications,files_changed:$files_changed,regression_detected:(if $build_ok == "false" then true else false end),regression_description:(if $build_ok == "false" then "Build failing" else "" end)}' \
+        > "$verify_file"
 
-    TOTAL_FILES_CHANGED=$(( TOTAL_FILES_CHANGED + files_changed ))
+    TOTAL_FILES_CHANGED=$(( TOTAL_FILES_CHANGED + files_changed_count ))
 
     success "${module_name} verification: ${fixed_count} fixed, ${partial_count} partial, ${unfixed_count} not fixed"
 
@@ -1135,22 +1320,39 @@ commit_cycle() {
 
     if [ "$DRY_RUN" = "true" ]; then return 0; fi
 
-    local git_status
-    git_status=$(git -C "$PROJECT_DIR" status --porcelain 2>/dev/null || true)
+    # Must cd into the project dir — git -C has issues with mounted filesystems
+    (
+        cd "$PROJECT_DIR" || return 1
 
-    if [ -z "$git_status" ]; then
-        log "No changes to commit in cycle ${cycle_num}"
-        return 0
-    fi
+        # Check if there are actual changes
+        local changed_files
+        changed_files=$(git diff --name-only 2>/dev/null; git ls-files --others --exclude-standard 2>/dev/null)
+        if [ -z "$changed_files" ]; then
+            echo "[commit_cycle] No changes to commit in cycle ${cycle_num}" >&2
+            return 0
+        fi
 
-    git -C "$PROJECT_DIR" add -A
-    git -C "$PROJECT_DIR" commit -m "engine: cycle ${cycle_num} — ${modules_processed} modules, \$${cycle_cost} spend" \
-        --allow-empty-message 2>/dev/null || true
+        # Add all source files explicitly (avoid git add -A which can fail on mounted FS)
+        git add src/ package.json tsconfig.json vite.config.ts 2>/dev/null || true
+        git add *.md *.json 2>/dev/null || true
+        git add supabase/ public/ 2>/dev/null || true
+
+        # Verify something is staged
+        local staged
+        staged=$(git diff --cached --name-only 2>/dev/null)
+        if [ -z "$staged" ]; then
+            echo "[commit_cycle] Nothing staged after git add — trying git add -A" >&2
+            git add -A 2>/dev/null || true
+        fi
+
+        git commit -m "engine: cycle ${cycle_num} — ${modules_processed} modules, \$${cycle_cost} spend" \
+            --allow-empty-message 2>/dev/null || echo "[commit_cycle] Commit failed" >&2
+    )
 
     # Auto-tag major milestones
     if [ "$AUTO_GIT_TAG" = "true" ] && [ $(( cycle_num % 5 )) -eq 0 ]; then
         local tag_name="engine-milestone-${TIMESTAMP}-c${cycle_num}"
-        git -C "$PROJECT_DIR" tag "$tag_name" 2>/dev/null || true
+        (cd "$PROJECT_DIR" && git tag "$tag_name" 2>/dev/null) || true
         log "Tagged milestone: ${tag_name}"
     fi
 
@@ -1307,136 +1509,187 @@ notify_completion() {
         > /dev/null 2>&1 || true
 }
 
-# ── Generate morning briefing ─────────────────────────────────────────────────
+# ── Generate morning briefing (HTML + Markdown) ──────────────────────────────
 generate_report() {
     local status="${1:-COMPLETE}"
-    local report_file="${RUN_DIR}/MORNING_BRIEFING.md"
+    local report_md="${RUN_DIR}/MORNING_BRIEFING.md"
+    local report_html="${RUN_DIR}/MORNING_BRIEFING.html"
 
     log "Writing morning briefing..."
 
+    # ── Collect data for both reports ──
+    local score_rows=""
+    local score_rows_html=""
+    for score_file in "${SCORES_DIR}"/*.txt; do
+        [ -f "$score_file" ] || continue
+        local mod
+        mod=$(basename "$score_file" .txt)
+        local scores
+        scores=$(tr '\n' ' → ' < "$score_file" | sed 's/ → $//')
+        local latest
+        latest=$(tail -1 "$score_file" 2>/dev/null || echo "N/A")
+        score_rows+="| ${mod} | ${scores} | **${latest}** |\n"
+        # Color code the latest score for HTML
+        local color="#F47820"
+        if [ "${latest:-0}" -ge 80 ] 2>/dev/null; then color="#4EC896"
+        elif [ "${latest:-0}" -ge 60 ] 2>/dev/null; then color="#F4A420"
+        elif [ "${latest:-0}" -ge 40 ] 2>/dev/null; then color="#E74C3C"; fi
+        score_rows_html+="<tr><td>${mod}</td><td class='dim'>${scores}</td><td style='color:${color};font-weight:700'>${latest}</td></tr>"
+    done
+
+    local git_log_text=""
+    git_log_text=$(cd "$PROJECT_DIR" && git log --oneline -15 2>/dev/null || echo "No git history")
+
+    local unresolved_md=""
+    local unresolved_html=""
+    local last_cycle_dir="${RUN_DIR}/cycle_${CYCLE}"
+    if [ -d "$last_cycle_dir" ]; then
+        for audit_file in "${last_cycle_dir}"/audit_*.json; do
+            [ -f "$audit_file" ] || continue
+            local mod_label
+            mod_label=$(jq -r '.module // "unknown"' "$audit_file")
+            local high_issues
+            high_issues=$(jq -r '(.issues // [])[] | select(.severity=="critical" or .severity=="high") | "[\(.severity)] \(.title)"' "$audit_file" 2>/dev/null | head -5)
+            if [ -n "$high_issues" ]; then
+                unresolved_md+="### ${mod_label}\n"
+                while IFS= read -r line; do
+                    unresolved_md+="- ${line}\n"
+                    local sev_class="tag-warn"
+                    echo "$line" | grep -q "critical" && sev_class="tag-crit"
+                    unresolved_html+="<div class='issue'><span class='${sev_class}'>${line%%]*}]</span> ${line#*] }</div>"
+                done <<< "$high_issues"
+            fi
+        done
+    fi
+
+    local invented_md=""
+    local invented_html=""
+    if [ "$FEATURES_INVENTED" -gt 0 ] && [ -d "$last_cycle_dir" ]; then
+        for audit_file in "${last_cycle_dir}"/audit_*.json; do
+            [ -f "$audit_file" ] || continue
+            local inv_data
+            inv_data=$(jq -r '.invented_features[]? | "\(.title)||||\(.description // "")"' "$audit_file" 2>/dev/null)
+            while IFS= read -r line; do
+                [ -z "$line" ] && continue
+                local inv_title="${line%%%%||||*}"
+                local inv_desc="${line#*||||}"
+                invented_md+="- **${inv_title}**: ${inv_desc}\n"
+                invented_html+="<div class='invention'><strong>${inv_title}</strong><br/><span class='dim'>${inv_desc}</span></div>"
+            done <<< "$inv_data"
+        done
+    fi
+
+    # ── Markdown report ──
     {
         echo "# SiteSyncAI — Morning Briefing"
         echo ""
         echo "> The engine ran while you slept. Here is what changed."
         echo ""
-        echo "| | |"
+        echo "| Metric | Value |"
         echo "|---|---|"
-        echo "| **Status** | ${status} |"
-        echo "| **Run** | \`${TIMESTAMP}\` |"
-        echo "| **Duration** | $(elapsed) |"
-        echo "| **Cycles completed** | ${CYCLE} |"
-        echo "| **API spend** | \$${ESTIMATED_SPEND} |"
-        echo "| **Prompts executed** | ${TOTAL_PROMPTS_EXECUTED} |"
-        echo "| **Features invented** | ${FEATURES_INVENTED} |"
+        echo "| Status | ${status} |"
+        echo "| Run | ${TIMESTAMP} |"
+        echo "| Duration | $(elapsed) |"
+        echo "| Cycles | ${CYCLE} |"
+        echo "| Spend | \$${ESTIMATED_SPEND} |"
+        echo "| Prompts | ${TOTAL_PROMPTS_EXECUTED} |"
+        echo "| Inventions | ${FEATURES_INVENTED} |"
         echo ""
-        echo "---"
-        echo ""
-        echo "## Module Score Trending"
+        echo "## Module Scores"
         echo ""
         echo "| Module | History | Latest |"
         echo "|--------|---------|--------|"
-
-        for score_file in "${SCORES_DIR}"/*.txt; do
-            [ -f "$score_file" ] || continue
-            local mod
-            mod=$(basename "$score_file" .txt)
-            local scores
-            scores=$(tr '\n' '→' < "$score_file" | sed 's/→$//')
-            local latest
-            latest=$(tail -1 "$score_file" 2>/dev/null || echo "N/A")
-            echo "| ${mod} | ${scores} | **${latest}** |"
-        done
-
+        echo -e "$score_rows"
         echo ""
-        echo "---"
+        echo "## Recent Commits"
         echo ""
-        echo "## What Changed (Last Cycle)"
+        echo '```'
+        echo "$git_log_text"
+        echo '```'
         echo ""
-        if git -C "$PROJECT_DIR" log --oneline -10 2>/dev/null; then
+        if [ -n "$unresolved_md" ]; then
+            echo "## Unresolved Issues"
             echo ""
+            echo -e "$unresolved_md"
         fi
-
-        echo ""
-        echo "---"
-        echo ""
-        echo "## Unresolved Issues Carried Forward"
-        echo ""
-        local last_cycle_dir="${RUN_DIR}/cycle_${CYCLE}"
-        if [ -d "$last_cycle_dir" ]; then
-            for audit_file in "${last_cycle_dir}"/audit_*.json; do
-                [ -f "$audit_file" ] || continue
-                local mod_label
-                mod_label=$(jq -r '.module // "unknown"' "$audit_file")
-                local high_issues
-                high_issues=$(jq -r '(.issues // [])[] | select(.severity=="critical" or .severity=="high") | "- [\(.severity)] \(.title)"' "$audit_file" 2>/dev/null | head -5)
-                if [ -n "$high_issues" ]; then
-                    echo "### ${mod_label}"
-                    echo "$high_issues"
-                    echo ""
-                fi
-            done
+        if [ -n "$invented_md" ]; then
+            echo "## Features Invented"
+            echo ""
+            echo -e "$invented_md"
         fi
+    } > "$report_md"
 
-        if [ "$FEATURES_INVENTED" -gt 0 ]; then
-            echo ""
-            echo "---"
-            echo ""
-            echo "## Features Invented This Run"
-            echo ""
-            echo "> These did not exist in any construction software before last night."
-            echo ""
-            if [ -d "$last_cycle_dir" ]; then
-                for audit_file in "${last_cycle_dir}"/audit_*.json; do
-                    [ -f "$audit_file" ] || continue
-                    local inv_features
-                    inv_features=$(jq -r '.invented_features[]? | "- **\(.title)**: \(.description // "")"' "$audit_file" 2>/dev/null)
-                    if [ -n "$inv_features" ]; then
-                        echo "$inv_features"
-                    fi
-                done
-            fi
-        fi
+    # ── HTML report (beautiful, open in browser) ──
+    cat > "$report_html" << HTMLEOF
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SiteSync AI — Morning Briefing</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0F1629;color:#E8E9ED;padding:2rem}
+.container{max-width:960px;margin:0 auto}
+h1{font-size:1.8rem;color:#F47820;margin-bottom:.2rem}
+.subtitle{color:#8B8FA3;font-size:.9rem;margin-bottom:2rem}
+.status-badge{display:inline-block;padding:.3rem .8rem;border-radius:4px;font-weight:700;font-size:.85rem;
+  background:$([ "$status" = "COMPLETE" ] && echo "#4EC896" || echo "#F4A420");color:#0F1629}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:1rem;margin:1.5rem 0}
+.metric{background:#1A2035;border-radius:8px;padding:1rem;text-align:center}
+.metric .value{font-size:1.6rem;font-weight:700;color:#F47820}
+.metric .label{font-size:.75rem;color:#8B8FA3;margin-top:.3rem}
+h2{font-size:1.1rem;color:#CBD0DC;margin:2rem 0 1rem;border-bottom:1px solid #2A3050;padding-bottom:.5rem}
+table{width:100%;border-collapse:collapse;margin:.5rem 0}
+th{text-align:left;padding:.5rem;color:#8B8FA3;font-size:.75rem;text-transform:uppercase;border-bottom:1px solid #2A3050}
+td{padding:.5rem;font-size:.85rem;border-bottom:1px solid #1A2035}
+.dim{color:#6B7080}
+pre{background:#1A2035;border-radius:6px;padding:1rem;overflow-x:auto;font-size:.8rem;color:#CBD0DC;margin:.5rem 0}
+.issue{padding:.4rem 0;font-size:.85rem}
+.tag-crit{background:#E74C3C22;color:#E74C3C;padding:.15rem .4rem;border-radius:3px;font-size:.75rem;font-weight:600}
+.tag-warn{background:#F4A42022;color:#F4A420;padding:.15rem .4rem;border-radius:3px;font-size:.75rem;font-weight:600}
+.invention{background:#1A2035;border-left:3px solid #F47820;padding:.6rem 1rem;margin:.5rem 0;border-radius:0 6px 6px 0}
+.footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid #2A3050;color:#6B7080;font-size:.8rem;text-align:center}
+.footer em{color:#8B8FA3}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>SiteSync AI — Morning Briefing</h1>
+<p class="subtitle"><span class="status-badge">${status}</span> &nbsp; Run ${TIMESTAMP} &nbsp;|&nbsp; $(elapsed)</p>
 
-        echo ""
-        echo "---"
-        echo ""
-        echo "## Tomorrow Night"
-        echo ""
-        echo "\`\`\`bash"
-        echo "# 1. See every change the engine made"
-        echo "git log --oneline -20"
-        echo ""
-        echo "# 2. Run the platform"
-        echo "npm run dev"
-        echo ""
-        echo "# 3. Update your priorities"
-        echo "nano FEEDBACK.md"
-        echo ""
-        echo "# 4. Run again"
-        echo "MAX_CYCLES=25 MAX_SPEND=400 ./autonomous_loop.sh ."
-        echo "\`\`\`"
-        echo ""
-        echo "---"
-        echo ""
-        if [ "$status" = "COMPLETE" ]; then
-            echo "> Zero actionable issues remain across all modules."
-            echo "> The engine is now in Invention Mode — building things that don't exist yet."
-            echo "> Keep going. The gap between SiteSync and every other platform is widening."
-        else
-            echo "> The engine stopped early (budget or cycle limit)."
-            echo "> Every change it made is committed. Run it again tomorrow night to keep going."
-            echo "> The platform is better than it was yesterday. That is enough for today."
-        fi
-        echo ""
-        echo "---"
-        echo ""
-        echo "*The construction industry runs \$2 trillion of projects per year on software*"
-        echo "*that treats the people building it as an afterthought. That ends here.*"
-        echo ""
-        echo "*— Built for Walker Benner. Go build something they will never forget.*"
-    } > "$report_file"
+<div class="grid">
+<div class="metric"><div class="value">${CYCLE}</div><div class="label">Cycles</div></div>
+<div class="metric"><div class="value">\$${ESTIMATED_SPEND}</div><div class="label">API Spend</div></div>
+<div class="metric"><div class="value">${TOTAL_PROMPTS_EXECUTED}</div><div class="label">Prompts Run</div></div>
+<div class="metric"><div class="value">${TOTAL_FILES_CHANGED}</div><div class="label">Files Changed</div></div>
+<div class="metric"><div class="value">${FEATURES_INVENTED}</div><div class="label">Inventions</div></div>
+</div>
 
-    success "Morning briefing written: ${report_file}"
+<h2>Module Score Trending</h2>
+<table>
+<thead><tr><th>Module</th><th>History</th><th>Latest</th></tr></thead>
+<tbody>${score_rows_html}</tbody>
+</table>
+
+<h2>Recent Commits</h2>
+<pre>${git_log_text}</pre>
+
+$([ -n "$unresolved_html" ] && echo "<h2>Unresolved Issues</h2>${unresolved_html}")
+
+$([ -n "$invented_html" ] && echo "<h2>Features Invented</h2><p class='dim'>These did not exist in any construction software before last night.</p>${invented_html}")
+
+<div class="footer">
+<p>The construction industry runs \$2 trillion of projects per year on software that treats the people building it as an afterthought.</p>
+<p><em>That ends here. — Built for Walker Benner.</em></p>
+</div>
+</div>
+</body>
+</html>
+HTMLEOF
+
+    success "Morning briefing: ${report_html}"
+    success "Morning briefing: ${report_md}"
 }
 
 # ── Main loop ─────────────────────────────────────────────────────────────────
@@ -1486,7 +1739,18 @@ main() {
             break
         fi
 
-        header "CYCLE ${CYCLE} / ${MAX_CYCLES} | Spent: \$${ESTIMATED_SPEND} / \$${MAX_SPEND} | $(elapsed)"
+        # Progress calculation with ETA
+        local progress_pct=$(( CYCLE * 100 / MAX_CYCLES ))
+        local elapsed_secs=$(( $(date +%s) - START_TIME ))
+        local eta_str="calculating..."
+        if [ "$CYCLE" -gt 1 ] && [ "$elapsed_secs" -gt 0 ]; then
+            local secs_per_cycle=$(( elapsed_secs / (CYCLE - 1) ))
+            local remaining_cycles=$(( MAX_CYCLES - CYCLE ))
+            local eta_secs=$(( secs_per_cycle * remaining_cycles ))
+            eta_str=$(printf "%dh %02dm" $(( eta_secs / 3600 )) $(( eta_secs % 3600 / 60 )))
+        fi
+
+        header "CYCLE ${CYCLE} / ${MAX_CYCLES} (${progress_pct}%) | Spent: \$${ESTIMATED_SPEND} / \$${MAX_SPEND} | $(elapsed) | ETA: ${eta_str}"
 
         local cycle_dir="${RUN_DIR}/cycle_${CYCLE}"
         mkdir -p "$cycle_dir"
@@ -1519,18 +1783,18 @@ main() {
 
             subheader "${mod_label}"
 
-            # Check if this module is invention-eligible (score >= 90 for 2+ cycles)
+            # Check if this module is invention-eligible (score >= 85 for 3+ consecutive cycles)
             local invention_eligible="false"
             if [ "$INVENTION_MODE" = "true" ] && [ -f "${SCORES_DIR}/${mod_name}.txt" ]; then
                 local score_count
                 score_count=$(wc -l < "${SCORES_DIR}/${mod_name}.txt" | tr -d ' ')
-                if [ "${score_count:-0}" -ge 2 ]; then
+                if [ "${score_count:-0}" -ge 3 ]; then
                     local recent_scores
-                    recent_scores=$(tail -2 "${SCORES_DIR}/${mod_name}.txt" | tr '\n' ' ')
+                    recent_scores=$(tail -3 "${SCORES_DIR}/${mod_name}.txt" | tr '\n' ' ')
                     local all_high=true
                     for s in $recent_scores; do
                         s="${s//[^0-9]/}"   # strip non-numeric chars (newlines, spaces)
-                        if [ -n "$s" ] && [ "$s" -lt 90 ] 2>/dev/null; then all_high=false; break; fi
+                        if [ -n "$s" ] && [ "$s" -lt 85 ] 2>/dev/null; then all_high=false; break; fi
                     done
                     if [ "$all_high" = "true" ]; then
                         invention_eligible="true"

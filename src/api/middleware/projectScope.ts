@@ -1,5 +1,7 @@
 import { ApiError, AuthError, ValidationError } from '../errors'
 import { supabase } from '../../lib/supabase'
+import { useOrganizationStore } from '../../stores/organizationStore'
+import { dedupTtl, queryKey } from '../../lib/requestDedup'
 import type { Database } from '../../types/database'
 
 type TableName = keyof Database['public']['Tables']
@@ -12,21 +14,41 @@ export function validateProjectId(projectId: string): void {
   }
 }
 
+export async function assertProjectBelongsToActiveOrg(projectId: string, orgId: string): Promise<void> {
+  const { data } = await supabase
+    .from('projects')
+    .select('organization_id')
+    .eq('id', projectId)
+    .maybeSingle()
+  if (!data || data.organization_id !== orgId) {
+    throw new ApiError('Forbidden', 403, 'FORBIDDEN')
+  }
+}
+
 export async function assertProjectAccess(projectId: string): Promise<void> {
   validateProjectId(projectId)
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) {
     throw new AuthError('Not authenticated')
   }
-  const { data } = await supabase
-    .from('project_members')
-    .select('id')
-    .eq('project_id', projectId)
-    .eq('user_id', user.id)
-    .maybeSingle()
-  if (!data) {
+  const key = queryKey('project_members', { project_id: projectId, user_id: user.id })
+  const memberData = await dedupTtl(key, 5000, () =>
+    supabase
+      .from('project_members')
+      .select('id')
+      .eq('project_id', projectId)
+      .eq('user_id', user.id)
+      .maybeSingle()
+      .then(({ data }) => data),
+  )
+  if (!memberData) {
     throw new ApiError('You do not have access to this project', 403, 'FORBIDDEN')
   }
+  const orgId = useOrganizationStore.getState().currentOrg?.id
+  if (!orgId) {
+    throw new ApiError('No active organization context', 403, 'FORBIDDEN')
+  }
+  await assertProjectBelongsToActiveOrg(projectId, orgId)
 }
 
 export async function assertProjectBelongsToOrg(projectId: string, orgId: string): Promise<void> {
@@ -48,6 +70,15 @@ export async function assertProjectBelongsToOrg(projectId: string, orgId: string
       'FORBIDDEN',
     )
   }
+}
+
+// Simplified four-tier role rank used for addProjectMember / updateProjectMember checks.
+// The detailed construction role hierarchy lives in src/types/tenant.ts (ROLE_HIERARCHY).
+export const ROLE_RANK: Record<string, number> = {
+  viewer: 0,
+  member: 1,
+  manager: 2,
+  admin: 3,
 }
 
 export function createProjectScopedQuery(table: TableName, projectId: string) {

@@ -157,8 +157,6 @@ export const BulkActionBar: React.FC<BulkActionBarProps> = ({
   const [confirmAction, setConfirmAction] = useState<BulkAction | null>(null)
   const count = selectedIds.length
 
-  if (count === 0) return null
-
   const handleAction = async (action: BulkAction) => {
     if (action.confirm) {
       setConfirmAction(action)
@@ -206,11 +204,13 @@ export const BulkActionBar: React.FC<BulkActionBarProps> = ({
   return (
     <>
       <AnimatePresence>
+        {count > 0 && (
         <motion.div
+          key="bulk-bar"
           initial={{ y: 80, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 80, opacity: 0 }}
-          transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+          transition={{ type: 'tween', duration: 0.15, ease: 'easeOut' }}
           style={{
             position: 'fixed',
             bottom: spacing['6'],
@@ -282,6 +282,7 @@ export const BulkActionBar: React.FC<BulkActionBarProps> = ({
             <X size={16} />
           </button>
         </motion.div>
+        )}
       </AnimatePresence>
 
       {/* Confirmation Dialog */}

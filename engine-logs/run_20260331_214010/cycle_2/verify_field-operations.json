@@ -1,0 +1,57 @@
+{
+  "verifications": [
+    {
+      "id": "field-operations-C1-001",
+      "status": "not_fixed",
+      "note": "No changes to daily log schema or signature field implementation detected in diff"
+    },
+    {
+      "id": "field-operations-C2-001",
+      "status": "not_fixed",
+      "note": "No UI components for offline queue or sync status found in changes"
+    },
+    {
+      "id": "field-operations-C3-001",
+      "status": "not_fixed",
+      "note": "No two-step verification workflow implementation in punch list changes"
+    },
+    {
+      "id": "field-operations-C4-001",
+      "status": "not_fixed",
+      "note": "No changes to field.ts type definitions; implicit any issues not resolved"
+    },
+    {
+      "id": "field-operations-H1-001",
+      "status": "not_fixed",
+      "note": "AI summary UI integration not present in code changes"
+    },
+    {
+      "id": "field-operations-H2-001",
+      "status": "not_fixed",
+      "note": "QR code crew check-in flow implementation not found"
+    },
+    {
+      "id": "field-operations-H3-001",
+      "status": "not_fixed",
+      "note": "No metric cards or empty state components in FieldCapture/PunchList pages"
+    },
+    {
+      "id": "field-operations-H4-001",
+      "status": "not_fixed",
+      "note": "Camera and voice inputs lack ARIA labels and keyboard alternatives in changes"
+    },
+    {
+      "id": "field-operations-M1-001",
+      "status": "not_fixed",
+      "note": "Loading states still use spinners; no skeleton screen implementation detected"
+    },
+    {
+      "id": "field-operations-M2-001",
+      "status": "not_fixed",
+      "note": "Weather auto-population not implemented in daily log form"
+    }
+  ],
+  "files_changed": 29,
+  "regression_detected": true,
+  "regression_description": "Diff shows only audit/verification JSON files and e2e test additions. No actual source code changes to field-operations module detected. All critical and high-severity issues remain unaddressed."
+}

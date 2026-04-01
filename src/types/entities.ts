@@ -103,6 +103,13 @@ export interface MappedSchedulePhase extends DbSchedulePhaseRow {
   planned_labor_hours: number | null
   actual_labor_hours: number | null
 
+  // Explicit baseline/critical fields used by the schedule module
+  // baseline_start is inherited from DbSchedulePhaseRow (DB column)
+  baseline_finish: string | null    // alias for baseline_end (DB column)
+  baseline_duration_days: number | null  // computed from baseline_start to baseline_finish
+  slippage_days: number | null     // diff between projected_finish and baseline_finish; null if no baseline
+  is_critical: boolean              // narrowed alias for is_critical_path
+
   // Camelcase convenience aliases (non-null / defaulted)
   startDate: string
   endDate: string

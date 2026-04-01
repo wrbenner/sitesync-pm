@@ -419,6 +419,9 @@ export const VoiceCapture: React.FC<VoiceCaptureProps> = ({ onClose, onConfirm }
                 frequencies={vc.waveform.frequencies}
                 isRecording={vc.phase === 'recording'}
               />
+              <span style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap' }}>
+                {vc.phase === 'recording' ? 'Audio waveform active' : ''}
+              </span>
             </div>
 
             {/* Timer */}
@@ -459,6 +462,7 @@ export const VoiceCapture: React.FC<VoiceCaptureProps> = ({ onClose, onConfirm }
               <button
                 onClick={vc.phase === 'recording' ? vc.stopRecording : vc.startRecording}
                 aria-label={vc.phase === 'recording' ? 'Stop recording' : 'Start voice recording'}
+                aria-pressed={vc.phase === 'recording'}
                 style={{
                   width: 72,
                   height: 72,
@@ -783,16 +787,13 @@ export const VoiceCapture: React.FC<VoiceCaptureProps> = ({ onClose, onConfirm }
         )}
       </div>
 
-      {/* Screen reader live region for recording state announcements */}
+      {/* Screen reader live region for recording state and transcription */}
       <div
         aria-live="polite"
         aria-atomic="true"
         style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap' }}
       >
-        {vc.phase === 'recording' && 'Recording started'}
-        {vc.phase === 'processing' && 'Transcribing...'}
-        {vc.phase === 'review' && 'Transcription complete'}
-        {vc.phase === 'idle' && vc.elapsed > 0 && 'Recording stopped'}
+        {vc.phase === 'recording' ? 'Recording in progress' : vc.transcript}
       </div>
 
       {/* CSS animation for spinner */}

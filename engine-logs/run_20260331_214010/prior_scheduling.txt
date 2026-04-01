@@ -1,11 +1,11 @@
-UNRESOLVED FROM CYCLE 1:
-- [not_fixed] scheduling-C1-001: No changes to baseline tracking or slippage comparison logic in schedule.ts endpoint
-- [partial] scheduling-C2-002: ai.ts and aiService.ts modified (+77, +37 lines) but no evidence of predictive delay engine implementation in diff summary
-- [not_fixed] scheduling-C3-003: No metric card components or KPI calculation logic visible in provided diff
-- [not_fixed] scheduling-H1-004: No Gantt chart component updates detected; no drag-to-adjust, dependency arrows, or milestone markers implemented
-- [partial] scheduling-H2-005: WeatherCard.tsx modified (+16 lines) suggests weather overlay work, but no trade conflict detection visible
-- [partial] scheduling-H3-006: e2e/mobile.spec.ts added (+49 lines) indicates mobile testing, but no mobile-optimized view components in diff
-- [partial] scheduling-H4-007: ErrorBoundary.tsx updated (+17 lines), but no empty state or loading skeleton implementations visible in summary
-- [not_fixed] scheduling-M1-008: schedule.ts modified (+60 lines) but no TypeScript type definitions or construction-critical field additions evident
-- [not_fixed] scheduling-M2-009: No real-time update mechanism (WebSocket, polling, subscriptions) visible in api client or schedule endpoint changes
-- [not_fixed] scheduling-M3-010: No accessibility updates detected; no ARIA roles, keyboard navigation, or screen reader improvements in diff
+UNRESOLVED FROM CYCLE 2:
+- [not_fixed] scheduling-C1-001: No code changes to schedule endpoint or Gantt component for baseline vs actual comparison
+- [not_fixed] scheduling-C2-002: No metric cards component added to schedule page
+- [not_fixed] scheduling-C3-003: No AI predictive delay engine implementation found in changes
+- [not_fixed] scheduling-C4-004: No drag-to-adjust, dependency arrows, or milestone markers added to Gantt
+- [not_fixed] scheduling-H1-005: MobileScheduleView remains a stub; e2e test added but no implementation changes
+- [not_fixed] scheduling-H2-006: Critical path calculation not surfaced in UI; float and critical path fields still unused
+- [not_fixed] scheduling-H3-007: No real-time update mechanism (WebSocket, polling, or subscription) implemented
+- [not_fixed] scheduling-H4-008: ScheduleActivity type remains incomplete; any casts still present
+- [not_fixed] scheduling-M1-009: No ARIA roles, keyboard navigation, or screen reader support added to Gantt
+- [not_fixed] scheduling-M2-010: Empty state messaging for schedule not implemented

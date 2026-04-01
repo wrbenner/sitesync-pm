@@ -1,0 +1,118 @@
+{
+  "module": "infrastructure",
+  "scores": {
+    "visual_polish": 72,
+    "domain_depth": 68,
+    "data_richness": 55,
+    "interaction_quality": 70,
+    "ai_integration": 74,
+    "mobile_first": 66,
+    "performance": 71,
+    "typescript_quality": 62,
+    "error_handling": 68,
+    "realtime": 73,
+    "accessibility": 65,
+    "security": 58,
+    "differentiation": 67,
+    "enterprise_readiness": 64
+  },
+  "overall_score": 67,
+  "issues": [
+    {
+      "id": "infrastructure-C2-001",
+      "severity": "critical",
+      "dimension": "security",
+      "title": "projectId never validated against caller's org membership server-side",
+      "description": "assertProjectAccess in src/api/middleware/projectScope.ts calls validateProjectId (format check only) then checks user membership in project_members, but never verifies the project belongs to the caller's active organization. A user from Org A who somehow obtains an Org B projectId passes the membership check if they were added as a guest, leaking cross-org data.",
+      "prompt": "File: src/api/middleware/projectScope.ts\n\nProblem: assertProjectAccess only checks project_members membership. It never verifies that the project's organization_id matches the caller's active org. This allows cross-organization data leakage.\n\nFix:\n1. In assertProjectAccess, after confirming the user is in project_members, add a query: fetch projects.organization_id for the given projectId.\n2. Compare it against the authenticated user's active organization (from the JWT claim or organizationStore). If they do not match, throw ApiError('Forbidden', 403, 'FORBIDDEN').\n3. Add a helper assertProjectBelongsToActiveOrg(projectId, orgId) that encapsulates this check and call it from assertProjectAccess.\n4. Update src/api/endpoints/documents.ts which already calls assertProjectBelongsToOrg separately — replace with the unified assertProjectAccess so there is one code path.\n\nAcceptance criteria:\n- A user authenticated under Org A cannot read, write, or enumerate any resource under a project belonging to Org B, even if they hold a project_members row for it.\n- All existing tests in src/test/api/projects.test.ts continue to pass.\n- New unit test: assertProjectAccess throws 403 when project.organization_id !== caller's active org."
+    },
+    {
+      "id": "infrastructure-C2-002",
+      "severity": "critical",
+      "dimension": "security",
+      "title": "RBAC role hierarchy not enforced in addProjectMember / updateProjectMember",
+      "description": "src/api/endpoints/projectMembers.ts allows any project member to invoke addProjectMember or updateProjectMember without checking whether the caller's own role is >= the role they are assigning. A viewer can promote themselves or others to admin.",
+      "prompt": "File: src/api/endpoints/projectMembers.ts\n\nProblem: addProjectMember and updateProjectMember do not verify the caller's role before assigning or changing roles. Any authenticated project member can escalate privileges.\n\nFix:\n1. Define role hierarchy: const ROLE_RANK = { viewer: 0, member: 1, manager: 2, admin: 3 } in src/api/middleware/projectScope.ts.\n2. In addProjectMember: after assertProjectAccess, fetch the caller's role from project_members. If ROLE_RANK[callerRole] < ROLE_RANK[targetRole], throw ApiError('Insufficient role', 403, 'FORBIDDEN').\n3. In updateProjectMember: same check — caller must outrank both the current role of the target member and the new role being assigned.\n4. Add a helper getCallerProjectRole(projectId, userId): Promise<string> that queries project_members for the current user's role.\n\nAcceptance criteria:\n- A viewer calling addProjectMember with role='admin' receives HTTP 403.\n- A manager can add a member or viewer but not another manager or admin.\n- An admin can assign any role.\n- Tests in src/test/permissions.test.ts cover all four hierarchy cases."
+    },
+    {
+      "id": "infrastructure-C2-003",
+      "severity": "critical",
+      "dimension": "data_richness",
+      "title": "Hardcoded aiHealthScore=85 and aiConfidenceLevel=74 never computed from real data",
+      "description": "Confirmed unresolved from Cycle 1. The project health score surfaced on Dashboard and Portfolio pages returns static integers. A CFO or GC executive making decisions based on these numbers is looking at fiction. This directly undermines the product vision of trustworthy, board-ready data.",
+      "prompt": "Files: locate the constants aiHealthScore=85 and aiConfidenceLevel=74 — likely in src/api/endpoints/metrics.ts or src/hooks/useProjectMetrics.ts.\n\nProblem: Health score is a hardcoded integer, not a calculation.\n\nFix:\n1. In src/lib/financialEngine.ts (or a new src/lib/healthScoring.ts), implement computeProjectHealthScore(projectId) that fetches: (a) schedule variance SPI from schedule activities, (b) budget CPI from budget line items vs actuals, (c) overdue RFI count vs total, (d) open punch items vs closed, (e) safety incident rate.\n2. Weight: schedule 25%, budget 30%, RFI turnaround 20%, punch list 15%, safety 10%. Return 0-100.\n3. computeAiConfidenceLevel: return percentage of data points that had real values vs null/missing. If < 3 data sources have data, return null and show 'Insufficient data' in UI instead of a number.\n4. Replace all static assignments of aiHealthScore and aiConfidenceLevel with calls to these functions.\n5. Cache result in React Query with a 5-minute stale time.\n\nAcceptance criteria:\n- Health score changes when a new overdue RFI is added.\n- Score shows 'Insufficient data' badge when fewer than 3 data dimensions are populated.\n- No hardcoded numeric literals for health or confidence remain in the codebase (grep check)."
+    },
+    {
+      "id": "infrastructure-C2-004",
+      "severity": "critical",
+      "dimension": "data_richness",
+      "title": "approved_cost always 0 in change order mapping — financials are wrong",
+      "description": "Confirmed unresolved from Cycle 1. mapChangeOrderRow in src/api/endpoints/budget.ts sets approved_cost to 0 regardless of DB value. Every downstream financial calculation (Revised Contract Value, budget variance, projected final cost) is therefore understated for any project with approved change orders.",
+      "prompt": "File: src/api/endpoints/budget.ts, function: mapChangeOrderRow\n\nProblem: approved_cost is set to 0 (or not read from the DB row), making all approved CO financial totals wrong.\n\nFix:\n1. In mapChangeOrderRow, read approved_cost directly from the ChangeOrderRow: approved_cost: typeof co.approved_cost === 'number' ? co.approved_cost : 0.\n2. Also read submitted_cost and estimated_cost the same way — do not default to 0 if the column exists.\n3. In src/lib/financialEngine.ts, verify computeProjectFinancials sums only rows where status === 'approved' for the Revised Contract Value calculation. Use the now-correct approved_cost field.\n4. Add a unit test in src/test/api/budget.test.ts: given a change order row with approved_cost=50000 and status='approved', computeProjectFinancials must include that 50000 in revisedContractValue.\n\nAcceptance criteria:\n- A project with one approved CO of $100,000 shows Revised Contract Value = Original + $100,000 on the Budget page.\n- No change order row maps approved_cost to 0 when the DB value is non-null.\n- src/test/api/budget.test.ts passes with the new assertion."
+    },
+    {
+      "id": "infrastructure-C2-005",
+      "severity": "high",
+      "dimension": "performance",
+      "title": "getPortfolioMetrics fetches all RFIs and punch items without pagination or limit",
+      "description": "Confirmed unresolved from Cycle 1. src/api/endpoints/metrics.ts fetches every RFI and punch item row for every project in the portfolio in a single query. A GC running 20 projects with 500 RFIs each will trigger a 10,000-row fetch on every dashboard load, causing timeouts and memory pressure.",
+      "prompt": "File: src/api/endpoints/metrics.ts, function: getPortfolioMetrics (or equivalent portfolio-level fetch)\n\nProblem: Unbounded SELECT on rfis and punch_items across all portfolio projects.\n\nFix:\n1. Replace full row fetches with count-only queries: supabase.from('rfis').select('id', { count: 'exact', head: true }).in('project_id', projectIds). This returns count without data transfer.\n2. For overdue counts, add server-side filter: .lt('due_date', new Date().toISOString()).eq('status', 'open').\n3. For punch items: same pattern — count only, filter by status.\n4. If full rows are needed for any metric, add .limit(200) and document the cap.\n5. Add a React Query staleTime of 3 minutes for portfolio metrics so repeated navigation does not re-fetch.\n\nAcceptance criteria:\n- Network tab shows no single query returning more than 200 rows for portfolio metrics.\n- Count queries use { head: true } and transfer zero data rows.\n- Portfolio dashboard loads in under 1 second for a 20-project org in Lighthouse throttled mode."
+    },
+    {
+      "id": "infrastructure-C2-006",
+      "severity": "high",
+      "dimension": "typescript_quality",
+      "title": "Widespread use of `any` in core API client and endpoint files",
+      "description": "Confirmed partially unresolved from Cycle 1. src/api/client.ts uses (target as any)[prop] and (target.from as (t: string) => any)(table) in createScopedClient. src/api/endpoints/organizations.ts and projectMembers.ts still contain untyped any casts per cycle 1 partial fix evidence. These suppress type errors that could catch auth and data mapping bugs.",
+      "prompt": "Files: src/api/client.ts, src/api/endpoints/organizations.ts, src/api/endpoints/projectMembers.ts\n\nProblem: `any` casts hide type errors in security-critical paths.\n\nFix for src/api/client.ts:\n1. Type the Proxy handler properly. Define SupabaseFromFn = (table: string) => ReturnType<DbClient['from']>. Cast target.from as SupabaseFromFn instead of any.\n2. For the property access fallback, use: return Reflect.get(target, prop, receiver) with proper Proxy handler signature including receiver.\n\nFix for organizations.ts and projectMembers.ts:\n1. Run: grep -n 'any' src/api/endpoints/organizations.ts src/api/endpoints/projectMembers.ts\n2. For each occurrence, replace with the correct Database type. Example: (data as Database['public']['Tables']['organizations']['Row'][]).\n3. Enable strict: true in tsconfig.json if not already set, and fix all new errors surfaced.\n\nAcceptance criteria:\n- tsc --noEmit reports zero errors in the three files.\n- No `as any` remains in src/api/client.ts.\n- CI TypeScript check passes."
+    },
+    {
+      "id": "infrastructure-C2-007",
+      "severity": "high",
+      "dimension": "security",
+      "title": "fetchEntityLabel in activity.ts queries rfis/submittals/change_orders without project_id scoping",
+      "description": "activity.ts fetchEntityLabel queries rfis, submittals, and change_orders by entity id alone with no project_id filter. An attacker who can write an activity_feed row with an arbitrary entity_id can cause the label resolver to read RFI subjects from other projects and surface them in the activity feed.",
+      "prompt": "File: src/api/endpoints/activity.ts, function: fetchEntityLabel\n\nProblem: Queries rfis, submittals, change_orders by id only — no project_id constraint — enabling cross-project data reads via crafted activity metadata.\n\nFix:\n1. Add projectId as a second parameter to fetchEntityLabel(entityType, entityId, projectId).\n2. Add .eq('project_id', projectId) to every query inside fetchEntityLabel.\n3. Update the call site in enrichActivityItem to pass projectId (already available as a parameter).\n4. Update setCachedEntityLabel / getCachedEntityLabel calls — cache key already includes projectId so no change needed there.\n\nAcceptance criteria:\n- fetchEntityLabel with an entityId from Project B and projectId of Project A returns empty string.\n- Unit test: mock supabase, confirm project_id filter is included in every branch of fetchEntityLabel.\n- No query in fetchEntityLabel omits the project_id eq filter."
+    },
+    {
+      "id": "infrastructure-C2-008",
+      "severity": "high",
+      "dimension": "enterprise_readiness",
+      "title": "Audit trail getEntityHistory has no row limit — large entities will OOM",
+      "description": "src/api/endpoints/auditTrail.ts getEntityHistory fetches all audit rows for an entity with no pagination or limit. An RFI that has been edited 10,000 times (common for long-running projects) returns a full unbounded result set, causing memory pressure and slow response.",
+      "prompt": "File: src/api/endpoints/auditTrail.ts, function: getEntityHistory\n\nProblem: No .limit() or pagination on the audit history query.\n\nFix:\n1. Add optional pagination params to getEntityHistory signature: (projectId, entityType, entityId, params: { page?: number; pageSize?: number } = {}).\n2. Default pageSize to 100. Apply .range((page-1)*pageSize, page*pageSize - 1) to the query.\n3. Change return type to Promise<{ entries: AuditLogEntry[]; total: number }> matching getAuditLog.\n4. Add select('*', { count: 'exact' }) to get total.\n5. Update all callers (src/hooks/useAuditTrail.ts and src/pages/AuditTrail.tsx) to handle the paginated shape and render a Load More button when total > entries.length.\n\nAcceptance criteria:\n- getEntityHistory with no params returns max 100 rows.\n- A second page call returns rows 101-200.\n- UI shows total count and a Load More control when more rows exist.\n- No unbounded SELECT * FROM audit_log remains in the function."
+    },
+    {
+      "id": "infrastructure-C2-009",
+      "severity": "medium",
+      "dimension": "typescript_quality",
+      "title": "Unused _table parameter and missing deduplication in projectScope.ts",
+      "description": "Confirmed unresolved from Cycle 1. projectScope.ts passes a _table parameter that is never used in the function body, and concurrent calls to assertProjectAccess for the same projectId fan out into multiple identical Supabase queries instead of being deduplicated.",
+      "prompt": "File: src/api/middleware/projectScope.ts\n\nProblem: _table parameter is dead code; concurrent assertProjectAccess calls for the same projectId cause redundant DB round-trips.\n\nFix:\n1. Remove the _table parameter from any function signature where it appears but is not used. Update all call sites.\n2. Import { dedup, queryKey } from '../../lib/requestDedup'.\n3. Wrap the inner Supabase membership query in assertProjectAccess with dedup: const key = queryKey('project_members', { project_id: projectId, user_id: userId }); return dedup(key, async () => { /* existing query */ }).\n4. The dedup cache should have a short TTL (5 seconds) to avoid stale auth state — confirm requestDedup supports TTL or add a manual setTimeout-based cache clear.\n\nAcceptance criteria:\n- tsc --noEmit shows no unused parameter warnings for _table.\n- 10 concurrent calls to assertProjectAccess with the same projectId result in exactly 1 Supabase query (verify with a spy in tests).\n- src/test/api/projects.test.ts passes."
+    },
+    {
+      "id": "infrastructure-C2-010",
+      "severity": "medium",
+      "dimension": "enterprise_readiness",
+      "title": "editLocks uses `supabase as any` casts — type safety bypassed in locking logic",
+      "description": "src/api/endpoints/editLocks.ts casts supabase as any for every query. This suppresses TypeScript checks on table names and column names in the pessimistic locking flow, meaning typos in column names (locked_by_user_id, expires_at) would be silent runtime failures rather than compile-time errors.",
+      "prompt": "File: src/api/endpoints/editLocks.ts\n\nProblem: Every Supabase call is preceded by (supabase as any), bypassing type checking on the edit_locks table schema.\n\nFix:\n1. Add edit_locks to src/types/database.ts Tables definition if not already present: edit_locks: { Row: { entity_type: string; entity_id: string; locked_by_user_id: string; locked_at: string; expires_at: string }; Insert: ...; Update: ... }.\n2. Remove all (supabase as any) casts in editLocks.ts. The typed supabase client will now validate column names at compile time.\n3. Verify the upsert onConflict value 'entity_type,entity_id' matches the actual unique constraint name in the DB — add a comment referencing the migration file.\n4. Run tsc --noEmit and fix any newly surfaced type errors.\n\nAcceptance criteria:\n- Zero `as any` casts in src/api/endpoints/editLocks.ts.\n- tsc --noEmit passes with no errors in editLocks.ts.\n- Misspelling locked_by_user_id as locked_by_user causes a compile-time error, not a runtime failure."
+    }
+  ],
+  "invented_features": [
+    {
+      "title": "Cross-Project RBAC Delegation Graph",
+      "description": "A visual org-level permission map showing which users have which roles across all projects. GC executives can spot a viewer who should be a manager, or a sub with access to the wrong project, in one glance. No equivalent exists in Procore."
+    },
+    {
+      "title": "Auth Anomaly Detector",
+      "description": "Background job that flags unusual auth patterns: a user accessing 10+ projects in 60 seconds, a service key used from a new IP, a role escalation within an hour of account creation. Surfaces these as security alerts in the Audit Trail page with one-click remediation (revoke session, downgrade role)."
+    },
+    {
+      "title": "Smart Deduplication Telemetry",
+      "description": "Expose a developer/admin panel showing real-time dedup hit rates per query key. Helps the engineering team identify which queries are firing redundantly in production and tune stale times without guesswork. Surfaces as a sparkline in the Developers page."
+    }
+  ],
+  "competitive_intel": "Procore's RBAC is granular but requires admin training to configure. SiteSync's current role model is simpler but has critical enforcement gaps (no org-boundary check, no role-hierarchy on assignment) that Procore handles correctly. Fieldwire has no enterprise auth at all. ACC delegates to Autodesk Account which is opaque. SiteSync can leapfrog all three by making RBAC visible, self-service, and auditable — but only after the critical auth gaps in this cycle are closed. The hardcoded financial metrics are the most dangerous competitive liability: any CFO demo where a consultant checks the numbers will immediately expose that health scores and change order financials are fiction.",
+  "summary": "The Infrastructure and Auth module has a solid architectural foundation — the projectScopedQuery proxy pattern, requestDedup, buildPaginatedQuery, and the audit trail structure are well-designed. However, four critical issues from Cycle 1 remain unresolved and continue to undermine trust: hardcoded health scores and approved_cost=0 make every financial and health metric untrustworthy; the missing org-boundary check in assertProjectAccess creates a real cross-tenant data leakage vector; and unbounded queries on RFIs and punch items for portfolio metrics will cause production timeouts at scale. Two new critical security issues were found this cycle: fetchEntityLabel leaks cross-project entity titles via unsecured queries, and role-escalation is possible because addProjectMember and updateProjectMember do not enforce role hierarchy. TypeScript quality remains a weak point with persistent any casts in security-critical paths. Fixing the four carryover criticals and the two new security issues would move this module from a 67 to an estimated 80+."
+}

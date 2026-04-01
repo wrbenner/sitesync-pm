@@ -1,0 +1,57 @@
+{
+  "verifications": [
+    {
+      "id": "ui-design-system-C2-001",
+      "status": "not_fixed",
+      "note": "No changes to empty state component rendering logic detected in diff"
+    },
+    {
+      "id": "ui-design-system-C2-002",
+      "status": "not_fixed",
+      "note": "No changes to API client or endpoint files to remove `as any` casts"
+    },
+    {
+      "id": "ui-design-system-C2-003",
+      "status": "not_fixed",
+      "note": "No skeleton loader implementation changes for data tables in diff"
+    },
+    {
+      "id": "ui-design-system-C2-004",
+      "status": "not_fixed",
+      "note": "No changes to project metrics endpoint to remove hardcoded placeholder values"
+    },
+    {
+      "id": "ui-design-system-H2-005",
+      "status": "not_fixed",
+      "note": "No ARIA roles, live region, or keyboard navigation changes to DataTable/VirtualDataTable"
+    },
+    {
+      "id": "ui-design-system-H2-006",
+      "status": "not_fixed",
+      "note": "No changes to CommandPalette Cmd+K wiring detected"
+    },
+    {
+      "id": "ui-design-system-H2-007",
+      "status": "not_fixed",
+      "note": "Mobile touch target size issues not addressed in diff; only e2e test file added"
+    },
+    {
+      "id": "ui-design-system-H2-008",
+      "status": "not_fixed",
+      "note": "No changes to tokens.css or enforcement of design token system"
+    },
+    {
+      "id": "ui-design-system-M2-009",
+      "status": "not_fixed",
+      "note": "No changes to RFIs and Submittals pages for VirtualDataTable migration"
+    },
+    {
+      "id": "ui-design-system-M2-010",
+      "status": "not_fixed",
+      "note": "No ball-in-court indicator implementation for RFI/Submittal list views"
+    }
+  ],
+  "files_changed": 20,
+  "regression_detected": false,
+  "regression_description": "Diff contains only audit report files and e2e test additions; no substantive code changes to ui-design-system module detected"
+}

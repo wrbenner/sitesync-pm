@@ -1,11 +1,11 @@
-UNRESOLVED FROM CYCLE 1:
-- [not_fixed] financial-engine-C1-001: No changes visible in budget.ts mapping logic for approved_cost field
-- [partial] financial-engine-C2-002: CashFlowWidget.tsx expanded (343 lines), likely contains 13-week projection, but financialEngine.ts not in diff
-- [not_fixed] financial-engine-C3-003: No AIA G702/G703 schedule of values implementation visible in diff
-- [not_fixed] financial-engine-H1-004: No changes to pay application approval flow or lien waiver integration
-- [partial] financial-engine-H2-005: EarnedValueDashboard.tsx modified (151 lines), suggests WIP/earned value updates, but unclear if using real data
-- [partial] financial-engine-H3-006: budget.ts heavily modified (336 lines), likely addresses type conflict but details unclear from diff
-- [not_fixed] financial-engine-H4-007: No fallback logic implementation visible for empty budget_items table
-- [partial] financial-engine-M1-008: Supabase realtime subscription logic may be in budget.ts changes (336 lines), but not explicitly shown
-- [not_fixed] financial-engine-M2-009: No drill-down functionality or clickable row implementation visible in diff
-- [partial] financial-engine-M3-010: AI endpoints modified (77 lines in ai.ts, 37 lines in aiService.ts), suggests variance analysis implementation possible
+UNRESOLVED FROM CYCLE 2:
+- [not_fixed] financial-engine-C1-001: No code changes to financial calculation logic found in diff
+- [not_fixed] financial-engine-C2-002: No changes to cash flow projection implementation visible in diff
+- [not_fixed] financial-engine-C3-003: No AIA G702/G703 form implementation found in diff
+- [not_fixed] financial-engine-C4-004: No lien waiver workflow integration changes in diff
+- [not_fixed] financial-engine-H1-005: No WIP report earned value calculation changes in diff
+- [not_fixed] financial-engine-H2-006: No empty state handling for budget_items added in diff
+- [not_fixed] financial-engine-H3-007: No Supabase realtime subscription implementation in diff
+- [not_fixed] financial-engine-H4-008: No clickable budget table rows or drill-down navigation in diff
+- [not_fixed] financial-engine-M1-009: No AI variance analysis or actionable insights changes in diff
+- [not_fixed] financial-engine-M2-010: No metric card enhancements with trend indicators in diff

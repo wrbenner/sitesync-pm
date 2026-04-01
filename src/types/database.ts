@@ -1953,6 +1953,30 @@ export type Database = {
           },
         ]
       }
+      edit_locks: {
+        Row: {
+          entity_type: string
+          entity_id: string
+          locked_by_user_id: string
+          locked_at: string
+          expires_at: string
+        }
+        Insert: {
+          entity_type: string
+          entity_id: string
+          locked_by_user_id: string
+          locked_at: string
+          expires_at: string
+        }
+        Update: {
+          entity_type?: string
+          entity_id?: string
+          locked_by_user_id?: string
+          locked_at?: string
+          expires_at?: string
+        }
+        Relationships: []
+      }
       field_captures: {
         Row: {
           ai_category: string | null

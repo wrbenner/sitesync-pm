@@ -26,6 +26,17 @@ const config: Config = {
         border: {
           DEFAULT: '#E5E7EB',
         },
+        // Semantic aliases mapped to CSS variables
+        primary: 'var(--color-primary)',
+        success: 'var(--color-success)',
+        warning: 'var(--color-warning)',
+        danger: 'var(--color-danger)',
+        'bg-page': 'var(--color-bg-page)',
+        'bg-card': 'var(--color-bg-card)',
+        sidebar: 'var(--color-sidebar)',
+        'text-primary': 'var(--color-text-primary)',
+        'text-muted': 'var(--color-text-muted)',
+        'border-color': 'var(--color-border)',
       },
     },
   },

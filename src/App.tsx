@@ -14,6 +14,7 @@ import { Sidebar } from './components/Sidebar';
 import { MobileLayout } from './components/layout/MobileLayout';
 import { OfflineBanner } from './components/ui/OfflineBanner';
 import { useUiStore, useAIAnnotationStore } from './stores';
+import { useCopilotStore } from './stores/copilotStore';
 import { colors, colorVars, layout, spacing, typography, borderRadius, transitions } from './styles/theme';
 import { keyframes as animationKeyframes } from './styles/animations';
 import { pageTransition } from './components/transitions/variants';
@@ -43,6 +44,7 @@ import { ProtectedRoute } from './components/auth/ProtectedRoute';
 // Lazy loaded overlay panels (only render when opened)
 const AIContextPanel = lazy(() => import('./components/ai/AIContextPanel').then((m) => ({ default: m.AIContextPanel })));
 const FloatingAIButton = lazy(() => import('./components/ai/FloatingAIButton').then((m) => ({ default: m.FloatingAIButton })));
+const CopilotPanel = lazy(() => import('./components/ai/CopilotPanel').then((m) => ({ default: m.CopilotPanel })));
 const NotificationCenter = lazy(() => import('./components/notifications/NotificationCenter').then((m) => ({ default: m.NotificationCenter })));
 const ShortcutOverlay = lazy(() => import('./components/ui/ShortcutOverlay').then((m) => ({ default: m.ShortcutOverlay })));
 const ExportCenter = lazy(() => import('./components/export/ExportCenter').then((m) => ({ default: m.ExportCenter })));
@@ -248,8 +250,8 @@ function AppContent() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
-  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const { toggleContextPanel } = useAIAnnotationStore();
+  const { openCopilot, closeCopilot } = useCopilotStore();
   const sidebarWidth = sidebarCollapsed ? layout.sidebarCollapsed : layout.sidebarWidth;
 
   const handleNavigate = (view: string) => {
@@ -279,15 +281,15 @@ function AppContent() {
   ];
   useKeyboardShortcuts(shortcuts);
 
-  // Global chord shortcuts — Cmd+K, Cmd+/, sequential g+x navigation, Escape
+  // Global chord shortcuts — Cmd+/, sequential g+x navigation, Escape
   useKeyboardShortcuts([
-    { keys: ['meta+k'], action: () => setCommandPaletteOpen((p) => !p) },
     { keys: ['meta+/'], action: () => setShortcutsOpen((p) => !p) },
+    { keys: ['meta+k'], action: openCopilot },
     { keys: ['g', 'd'], sequential: true, action: () => navigate('/dashboard') },
     { keys: ['g', 'r'], sequential: true, action: () => navigate('/rfis') },
     { keys: ['g', 'b'], sequential: true, action: () => navigate('/budget') },
     { keys: ['g', 's'], sequential: true, action: () => navigate('/schedule') },
-    { keys: ['escape'], action: () => { setNotificationsOpen(false); setShortcutsOpen(false); setExportOpen(false); setCommandPaletteOpen(false); } },
+    { keys: ['escape'], action: () => { setNotificationsOpen(false); setShortcutsOpen(false); setExportOpen(false); closeCopilot(); } },
   ]);
 
   // Auth pages render without the app shell (no sidebar, no offline banner)
@@ -308,6 +310,7 @@ function AppContent() {
           <AppRoutes />
         </ErrorBoundary>
         <Suspense fallback={null}><FloatingAIButton /></Suspense>
+        <Suspense fallback={null}><CopilotPanel /></Suspense>
         <ConflictResolutionModal open={conflictModalOpen} onClose={() => setConflictModalOpen(false)} />
       </MobileLayout>
     );
@@ -346,13 +349,14 @@ function AppContent() {
           </ErrorBoundary>
         </div>
 
-        <CommandPalette open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen} />
+        <CommandPalette />
         <Suspense fallback={null}>
           {notificationsOpen && <NotificationCenter open={notificationsOpen} onClose={() => setNotificationsOpen(false)} />}
           {shortcutsOpen && <ShortcutOverlay open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />}
           {exportOpen && <ExportCenter open={exportOpen} onClose={() => setExportOpen(false)} />}
           <AIContextPanel currentPage={activeView} />
           <FloatingAIButton />
+          <CopilotPanel />
         </Suspense>
         <ConflictResolutionModal open={conflictModalOpen} onClose={() => setConflictModalOpen(false)} />
       </div>

@@ -319,6 +319,187 @@ export async function getWeatherForecast(
   }
 }
 
+// ── Open-Meteo (free, no API key) ─────────────────────────────────────────────
+// WMO weather interpretation codes → human-readable condition strings
+
+const WMO_CONDITIONS: Record<number, string> = {
+  0: 'Clear',
+  1: 'Clear',
+  2: 'Partly Cloudy',
+  3: 'Cloudy',
+  45: 'Fog',
+  48: 'Fog',
+  51: 'Light Rain',
+  53: 'Light Rain',
+  55: 'Rain',
+  61: 'Rain',
+  63: 'Rain',
+  65: 'Heavy Rain',
+  71: 'Snow',
+  73: 'Snow',
+  75: 'Heavy Snow',
+  80: 'Rain',
+  81: 'Rain',
+  82: 'Heavy Rain',
+  95: 'Thunderstorm',
+  96: 'Thunderstorm',
+  99: 'Thunderstorm',
+}
+
+export interface WeatherForDate {
+  conditions: string
+  temp_high: number
+  temp_low: number
+  wind_speed: number        // mph
+  precipitation_inches: number
+  source: string            // 'open-meteo' | 'default'
+}
+
+function fallbackWeatherForDate(): WeatherForDate {
+  return { conditions: 'Clear', temp_high: 75, temp_low: 55, wind_speed: 8, precipitation_inches: 0, source: 'default' }
+}
+
+/**
+ * Fetch daily weather for a specific date using Open-Meteo (free, no API key).
+ * Results are cached in localStorage keyed by `weather:{date}:{lat}:{lon}` so
+ * re-opening the modal is instant and does not burn network requests.
+ */
+export async function fetchWeatherForDate(
+  lat: number,
+  lon: number,
+  date: string,
+): Promise<WeatherForDate> {
+  const cacheKey = `weather:${date}:${lat.toFixed(4)}:${lon.toFixed(4)}`
+  const cached = localStorage.getItem(cacheKey)
+  if (cached) {
+    try { return JSON.parse(cached) as WeatherForDate } catch { /* corrupt cache, re-fetch */ }
+  }
+
+  try {
+    const params = new URLSearchParams({
+      latitude: String(lat),
+      longitude: String(lon),
+      daily: 'temperature_2m_max,temperature_2m_min,precipitation_sum,windspeed_10m_max,weathercode',
+      temperature_unit: 'fahrenheit',
+      windspeed_unit: 'mph',
+      precipitation_unit: 'inch',
+      timezone: 'auto',
+      start_date: date,
+      end_date: date,
+    })
+    const res = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`, {
+      signal: AbortSignal.timeout(5000),
+    })
+    if (!res.ok) return fallbackWeatherForDate()
+
+    const data: {
+      daily?: {
+        weathercode?: number[]
+        temperature_2m_max?: number[]
+        temperature_2m_min?: number[]
+        windspeed_10m_max?: number[]
+        precipitation_sum?: number[]
+      }
+    } = await res.json()
+
+    const d = data.daily
+    if (!d) return fallbackWeatherForDate()
+
+    const wmo: number = d.weathercode?.[0] ?? 0
+    const result: WeatherForDate = {
+      conditions: WMO_CONDITIONS[wmo] ?? 'Clear',
+      temp_high: Math.round(d.temperature_2m_max?.[0] ?? 75),
+      temp_low: Math.round(d.temperature_2m_min?.[0] ?? 55),
+      wind_speed: Math.round(d.windspeed_10m_max?.[0] ?? 0),
+      precipitation_inches: Math.round((d.precipitation_sum?.[0] ?? 0) * 100) / 100,
+      source: 'open-meteo',
+    }
+    localStorage.setItem(cacheKey, JSON.stringify(result))
+    return result
+  } catch {
+    return fallbackWeatherForDate()
+  }
+}
+
+/**
+ * Fetch a 5-day daily forecast using Open-Meteo (free, no API key).
+ * Cached in localStorage keyed by start date and coordinates.
+ */
+export async function fetchWeatherForecast5Day(lat: number, lon: number): Promise<WeatherDay[]> {
+  const today = new Date()
+  const dates: string[] = Array.from({ length: 5 }, (_, i) => {
+    const d = new Date(today)
+    d.setDate(today.getDate() + i)
+    return d.toISOString().split('T')[0]
+  })
+  const startDate = dates[0]
+  const endDate = dates[4]
+
+  const cacheKey = `forecast5:${startDate}:${lat.toFixed(3)}:${lon.toFixed(3)}`
+  const cached = localStorage.getItem(cacheKey)
+  if (cached) {
+    try { return JSON.parse(cached) as WeatherDay[] } catch { /* corrupt, re-fetch */ }
+  }
+
+  const fallback = (): WeatherDay[] => dates.map(date => ({
+    date, temp_high: 75, temp_low: 55, conditions: 'Clear', icon: '☀️', precip_probability: 10,
+  }))
+
+  const wmoIconMap: Record<string, string> = {
+    Clear: '☀️', 'Partly Cloudy': '⛅', Cloudy: '☁️', Fog: '🌫️',
+    'Light Rain': '🌦️', Rain: '🌧️', 'Heavy Rain': '🌧️',
+    Snow: '❄️', 'Heavy Snow': '❄️', Thunderstorm: '⛈️',
+  }
+
+  try {
+    const params = new URLSearchParams({
+      latitude: String(lat),
+      longitude: String(lon),
+      daily: 'weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max',
+      temperature_unit: 'fahrenheit',
+      precipitation_unit: 'inch',
+      timezone: 'auto',
+      start_date: startDate,
+      end_date: endDate,
+    })
+    const res = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`, {
+      signal: AbortSignal.timeout(5000),
+    })
+    if (!res.ok) return fallback()
+
+    const data: {
+      daily?: {
+        time?: string[]
+        weathercode?: number[]
+        temperature_2m_max?: number[]
+        temperature_2m_min?: number[]
+        precipitation_probability_max?: number[]
+      }
+    } = await res.json()
+
+    const d = data.daily
+    if (!d) return fallback()
+
+    const result: WeatherDay[] = (d.time ?? dates).map((date: string, i: number) => {
+      const wmo: number = d.weathercode?.[i] ?? 0
+      const conditions = WMO_CONDITIONS[wmo] ?? 'Clear'
+      return {
+        date,
+        temp_high: Math.round(d.temperature_2m_max?.[i] ?? 75),
+        temp_low: Math.round(d.temperature_2m_min?.[i] ?? 55),
+        conditions,
+        icon: wmoIconMap[conditions] ?? '☀️',
+        precip_probability: Math.round(d.precipitation_probability_max?.[i] ?? 10),
+      }
+    })
+
+    localStorage.setItem(cacheKey, JSON.stringify(result))
+    return result
+  } catch {
+    return fallback()
+  }
+}
+
 export function formatWeatherSummary(w: WeatherData): string {
   return `${w.temp_high}°F ${w.conditions}`
 }

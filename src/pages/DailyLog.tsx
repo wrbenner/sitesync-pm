@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { useCopilotStore } from '../stores/copilotStore';
 import { Users, Clock, ShieldCheck, Cloud, ChevronRight, Camera, Send, BarChart3, Sparkles, Zap, CalendarDays, X, Lock, AlertTriangle, BookOpen, RefreshCw, Truck, UserPlus, FileEdit, HardHat } from 'lucide-react';
 import { PageContainer, Card, Btn, Skeleton, SectionHeader, useToast } from '../components/Primitives';
 import EmptyState from '../components/ui/EmptyState';
@@ -9,6 +10,7 @@ import { DailyLogPDF } from '../components/export/DailyLogPDF';
 import type { DailyLogPDFData } from '../components/export/DailyLogPDF';
 import { toast } from 'sonner';
 import { AutoNarrative } from '../components/dailylog/AutoNarrative';
+import DailyLogSkeleton from '../components/dailylog/DailyLogSkeleton';
 import { DayComparison } from '../components/dailylog/DayComparison';
 import { SignaturePad } from '../components/dailylog/SignaturePad';
 import { WeatherCard } from '../components/dailylog/WeatherCard';
@@ -31,6 +33,8 @@ import type { DailyLogState } from '../machines/dailyLogMachine';
 export const DailyLog: React.FC = () => {
   const { addToast } = useToast();
   const projectId = useProjectId();
+  const { setPageContext } = useCopilotStore();
+  useEffect(() => { setPageContext('daily-log'); }, [setPageContext]);
   const { data: dailyLogData, isPending: loading, error: logError, refetch } = useDailyLogs(projectId);
   const updateDailyLog = useUpdateDailyLog();
   const createDailyLog = useCreateDailyLog();
@@ -235,22 +239,7 @@ export const DailyLog: React.FC = () => {
   if (loading) {
     return (
       <PageContainer title="Daily Log" subtitle="Loading...">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['6'] }}>
-          <Card padding={spacing['5']}>
-            <Skeleton width="240px" height="24px" />
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'], marginTop: spacing['4'] }}>
-              {[1, 2, 3, 4].map((i) => <Skeleton key={i} height="72px" />)}
-            </div>
-          </Card>
-          <Card padding={spacing['5']}>
-            <Skeleton width="180px" height="20px" />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'], marginTop: spacing['4'] }}>
-              {Array.from({ length: 6 }).map((_, i) => (
-                <Skeleton key={i} height="36px" />
-              ))}
-            </div>
-          </Card>
-        </div>
+        <DailyLogSkeleton />
       </PageContainer>
     );
   }
@@ -316,7 +305,7 @@ export const DailyLog: React.FC = () => {
             onClose={() => setShowCreateModal(false)}
             projectId={projectId ?? undefined}
             onSubmit={async (data) => {
-              await createDailyLog.mutateAsync({
+              const created = await createDailyLog.mutateAsync({
                 projectId: projectId!,
                 data: {
                   project_id: projectId!,
@@ -331,6 +320,7 @@ export const DailyLog: React.FC = () => {
               });
               setShowCreateModal(false);
               addToast('success', 'Daily log created');
+              return { id: created?.data?.id as string | undefined };
             }}
           />
         )}
@@ -650,13 +640,7 @@ export const DailyLog: React.FC = () => {
           )}
 
           {/* AI Auto Narrative */}
-          <AutoNarrative
-            workers={today.workers_onsite ?? 0}
-            hours={today.total_hours ?? 0}
-            incidents={today.incidents ?? 0}
-            weather={today.weather ?? (weather ? formatWeatherSummary(weather) : 'N/A')}
-            summary={today.summary ?? ''}
-          />
+          <AutoNarrative logData={today as unknown as Record<string, unknown>} />
 
           {/* Day Comparison */}
           {showComparison && yesterday && (
@@ -773,7 +757,12 @@ export const DailyLog: React.FC = () => {
                       gap: spacing['4'],
                     }}
                   >
-                    <span style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, minWidth: '120px', flexShrink: 0 }}>{formatted}</span>
+                    <div style={{ minWidth: '120px', flexShrink: 0 }}>
+                      <span style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, display: 'block' }}>{formatted}</span>
+                      {log.ai_summary && (
+                        <span style={{ fontSize: '11px', color: colors.textTertiary, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px' }}>{log.ai_summary}</span>
+                      )}
+                    </div>
                     {/* Status badge */}
                     <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: sc.color, backgroundColor: sc.bg, padding: `1px ${spacing['2']}`, borderRadius: borderRadius.full, flexShrink: 0 }}>{sc.label}</span>
                     <span style={{ fontSize: typography.fontSize.body, color: colors.textSecondary, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{log.summary ?? ''}</span>

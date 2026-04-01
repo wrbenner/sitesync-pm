@@ -70,8 +70,24 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onClose, onSave })
       role="dialog"
       aria-modal="true"
       aria-label="Voice recorder"
+      onKeyDown={(e) => {
+        if (e.key === 'r' || e.key === 'R') {
+          // Only trigger if focus is within this dialog and not in an input
+          const tag = (e.target as HTMLElement).tagName;
+          if (tag !== 'INPUT' && tag !== 'TEXTAREA') {
+            e.preventDefault();
+            recording ? handleStop() : setRecording(true);
+          }
+        }
+      }}
       style={{ position: 'fixed', inset: 0, zIndex: zIndex.tooltip as number, backgroundColor: colors.viewerBg, backdropFilter: 'blur(12px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}
     >
+      <style>{`
+        .voice-record-btn:focus-visible {
+          outline: 2px solid #F47820;
+          outline-offset: 3px;
+        }
+      `}</style>
       {/* Live region for recording state */}
       <div
         aria-live="polite"
@@ -92,7 +108,7 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onClose, onSave })
       </button>
 
       {/* Waveform */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 2, height: 64, marginBottom: spacing['6'] }}>
+      <div aria-hidden="true" style={{ display: 'flex', alignItems: 'center', gap: 2, height: 64, marginBottom: spacing['6'] }}>
         {waveform.map((h, i) => (
           <div
             key={i}
@@ -105,6 +121,9 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onClose, onSave })
           />
         ))}
       </div>
+      <span style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap' }}>
+        {recording ? 'Audio waveform active' : ''}
+      </span>
 
       {/* Timer */}
       <p style={{ fontSize: typography.fontSize['4xl'], fontWeight: typography.fontWeight.semibold, color: colors.white, margin: 0, marginBottom: spacing['2'], fontFeatureSettings: '"tnum"' }}>
@@ -117,8 +136,10 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onClose, onSave })
       {/* Record / Stop button */}
       {!showExtraction && (
         <button
+          className="voice-record-btn"
           onClick={() => recording ? handleStop() : setRecording(true)}
           aria-label={recording ? 'Stop recording' : 'Start voice recording'}
+          aria-pressed={recording}
           style={{
             width: 72, height: 72, borderRadius: '50%',
             backgroundColor: recording ? 'rgba(255, 255, 255, 0.15)' : colors.statusCritical, /* between overlayWhiteThin and overlayWhiteMedium */
@@ -166,12 +187,14 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onClose, onSave })
             <div style={{ display: 'flex', gap: spacing['2'] }}>
               <button
                 onClick={() => onSave(transcript)}
+                aria-label="Confirm and save voice note"
                 style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: spacing['2'], padding: `${spacing['3']}`, backgroundColor: colors.statusReview, color: colors.white, border: 'none', borderRadius: borderRadius.base, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, fontFamily: typography.fontFamily, cursor: 'pointer' }}
               >
                 <CheckCircle size={16} /> Confirm
               </button>
               <button
                 onClick={onClose}
+                aria-label="Discard voice note"
                 style={{ padding: `${spacing['3']} ${spacing['4']}`, backgroundColor: colors.overlayWhiteThin, color: 'rgba(255,255,255,0.6)', border: 'none', borderRadius: borderRadius.base, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, cursor: 'pointer' }}
               >
                 Discard

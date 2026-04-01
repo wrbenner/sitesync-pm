@@ -1,9 +1,11 @@
-UNRESOLVED FROM CYCLE 1:
-- [partial] infrastructure-C1-001: projectScope.ts modified but no evidence of server-side RBAC enforcement added; client projectId still not validated against user permissions
-- [partial] infrastructure-C1-003: organizations.ts and projectMembers.ts modified (129 and 63 lines changed) but diff summary insufficient to confirm all `any` types removed
-- [partial] infrastructure-C1-004: organizations.ts and projects.ts updated but no confirmation of field selection or org membership guard implementation in diff
-- [not_fixed] infrastructure-H1-006: No evidence in diff that hardcoded aiHealthScore=85 and aiConfidenceLevel=74 values were replaced with real calculations
-- [not_fixed] infrastructure-H1-007: budget.ts modified (10 lines) but no indication that hardcoded approved_cost=0 was replaced with actual value calculation
-- [not_fixed] infrastructure-H1-008: No evidence in diff of pagination, filtering, or memory optimization for getPortfolioMetrics RFI/punch item fetching
-- [not_fixed] infrastructure-M1-009: projectMembers.ts modified but no evidence of role hierarchy enforcement checks added to addProjectMember/updateProjectMember
-- [not_fixed] infrastructure-M1-010: projectScope.ts modified (19 lines) but no evidence that unused _table parameter was removed or deduplication implemented
+UNRESOLVED FROM CYCLE 2:
+- [not_fixed] infrastructure-C2-001: No code changes to validate projectId against org membership in API handlers
+- [not_fixed] infrastructure-C2-002: No RBAC hierarchy enforcement added to addProjectMember/updateProjectMember functions
+- [not_fixed] infrastructure-C2-003: No computation logic added for aiHealthScore and aiConfidenceLevel; hardcoded values remain
+- [not_fixed] infrastructure-C2-004: No changes to change order mapping to compute approved_cost from real financial data
+- [not_fixed] infrastructure-C2-005: No pagination or limit added to getPortfolioMetrics RFI and punch item queries
+- [not_fixed] infrastructure-C2-006: No TypeScript type improvements to replace `any` casts in core API client files
+- [not_fixed] infrastructure-C2-007: No project_id scoping added to fetchEntityLabel queries in activity.ts
+- [not_fixed] infrastructure-C2-008: No row limit added to getEntityHistory audit trail query
+- [not_fixed] infrastructure-C2-009: No cleanup of unused _table parameter or deduplication logic in projectScope.ts
+- [not_fixed] infrastructure-C2-010: No type safety improvements to editLocks; `supabase as any` casts remain

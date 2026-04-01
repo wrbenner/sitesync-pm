@@ -7,8 +7,11 @@ import type {
   WeeklyCashFlowRow,
   PayApplicationRow,
   SubInvoiceRow,
+  PayAppRow,
+  InvoiceRow,
 } from '../types/financial'
 import type { MappedDivision, MappedChangeOrder } from '../api/endpoints/budget'
+import type { BudgetItemRow, ScheduleActivity } from '../types/api'
 
 function assertFinancialInputs(divisions: MappedDivision[], changeOrders: MappedChangeOrder[]): void {
   if (!Array.isArray(divisions) || !Array.isArray(changeOrders)) throw new Error('Invalid financial inputs')
@@ -32,6 +35,14 @@ export function computeProjectFinancials(
     .filter(co => co.status === 'pending_review')
     .reduce((sum, co) => sum + co.amount, 0)
 
+  const pendingCOValue = changeOrders
+    .filter(co => co.status === 'pending_review')
+    .reduce((sum, co) => sum + co.submitted_cost, 0)
+
+  const pendingExposure = changeOrders
+    .filter(co => co.status === 'pending_review')
+    .reduce((sum, co) => sum + co.estimated_cost, 0)
+
   const totalPotentialContract = revisedContractValue + pendingChangeOrders
 
   const committedCost = divisions.reduce((s, d) => s + d.committed, 0)
@@ -47,8 +58,11 @@ export function computeProjectFinancials(
     isEmpty: divisions.length === 0,
     originalContractValue,
     approvedChangeOrders,
+    approvedCOValue: approvedChangeOrders,
     revisedContractValue,
     pendingChangeOrders,
+    pendingCOValue,
+    pendingExposure,
     totalPotentialContract,
     committedCost,
     invoicedToDate,
@@ -61,6 +75,12 @@ export function computeProjectFinancials(
     retainageReceivable: invoicedToDate * 0.10,
     overUnder: variance,
   }
+}
+
+export function getApprovedCOTotal(changeOrders: MappedChangeOrder[]): number {
+  return changeOrders
+    .filter(co => co.status === 'approved')
+    .reduce((sum, co) => sum + co.approved_cost, 0)
 }
 
 export function computeDivisionFinancials(
@@ -95,22 +115,74 @@ export function computeDivisionFinancials(
   })
 }
 
+/**
+ * Computes earned value metrics from live project data.
+ *
+ * BCWS (Planned Value)  = BAC * time-elapsed fraction derived from schedule activity dates
+ * BCWP (Earned Value)   = sum(budgetItem.originalBudget * actualPercentComplete)
+ * ACWP (Actual Cost)    = sum(approved or paid invoice totals)
+ * CPI                   = BCWP / ACWP  (defaults to 1.0 when ACWP = 0)
+ * SPI                   = BCWP / BCWS  (defaults to 1.0 when BCWS = 0)
+ * EAC                   = BAC / CPI
+ * VAC                   = BAC - EAC
+ */
 export function computeEarnedValue(
-  divisions: MappedDivision[],
-  contractValue: number,
-  elapsedFraction: number // 0-1, derived from schedule progress
+  budgetItems: BudgetItemRow[],
+  changeOrders: MappedChangeOrder[],
+  invoices: InvoiceRow[],
+  scheduleActivities: ScheduleActivity[],
 ): EarnedValueMetrics {
-  const bcws = contractValue * elapsedFraction
-  const bcwp = divisions.reduce((s, d) => s + d.budget * (d.progress / 100), 0)
-  const acwp = divisions.reduce((s, d) => s + d.spent, 0)
-  const spi = bcws > 0 ? bcwp / bcws : 1
-  const cpi = acwp > 0 ? bcwp / acwp : 1
-  const eac = cpi > 0 ? contractValue / cpi : contractValue
+  const totalBudget = budgetItems.reduce((s, b) => s + (b.original_amount ?? 0), 0)
+  const approvedCO = changeOrders
+    .filter(co => co.status === 'approved')
+    .reduce((s, co) => s + co.approved_cost, 0)
+  const bac = totalBudget + approvedCO
+
+  // BCWP: budgeted cost of work performed = physical % complete applied to each budget line
+  const bcwp = budgetItems.reduce(
+    (s, b) => s + (b.original_amount ?? 0) * ((b.percent_complete ?? 0) / 100),
+    0,
+  )
+
+  // BCWS: budgeted cost of work scheduled = BAC * time-elapsed fraction from schedule dates
+  let bcws = 0
+  if (scheduleActivities.length > 0) {
+    const starts = scheduleActivities
+      .map(a => new Date(a.start_date).getTime())
+      .filter(t => !isNaN(t))
+    const ends = scheduleActivities
+      .map(a => new Date(a.finish_date).getTime())
+      .filter(t => !isNaN(t))
+    if (starts.length > 0 && ends.length > 0) {
+      const projectStart = Math.min(...starts)
+      const projectEnd = Math.max(...ends)
+      const elapsed =
+        projectEnd > projectStart
+          ? Math.max(0, Math.min(1, (Date.now() - projectStart) / (projectEnd - projectStart)))
+          : 0
+      bcws = bac * elapsed
+    }
+  }
+
+  // ACWP: actual cost of work performed = sum of approved/paid invoice totals
+  const acwp = invoices
+    .filter(inv => inv.status === 'approved' || inv.status === 'paid')
+    .reduce((s, inv) => s + inv.total, 0)
+
+  const cpi = acwp > 0 ? bcwp / acwp : 1.0
+  const spi = bcws > 0 ? bcwp / bcws : 1.0
+  const eac = cpi > 0 ? bac / cpi : bac
   const etc = eac - acwp
-  const vac = contractValue - eac
+  const vac = bac - eac
   const costVariance = bcwp - acwp
-  // Estimated days: schedule variance as a fraction of a 365-day reference duration
-  const scheduleVarianceDays = Math.round(((bcwp - bcws) / contractValue) * 365)
+
+  const scheduleVarianceDays =
+    scheduleActivities.length > 0
+      ? Math.round(
+          scheduleActivities.reduce((s, a) => s + a.scheduleVarianceDays, 0) /
+            scheduleActivities.length,
+        )
+      : 0
 
   return { bcws, bcwp, acwp, spi, cpi, eac, etc, vac, scheduleVarianceDays, costVariance }
 }
@@ -252,11 +324,11 @@ export function computeCashFlowForecast(
     weekStart.setDate(weekStart.getDate() + i * 7)
 
     weeks.push({
-      weekNumber: i + 1,
-      weekStartDate: weekStart.toISOString().slice(0, 10),
-      projectedInflows: inflow,
-      projectedOutflows: outflow,
-      netCashFlow: net,
+      weekLabel: `Wk ${i + 1}`,
+      weekStart: weekStart.toISOString().slice(0, 10),
+      projectedInflow: inflow,
+      projectedOutflow: outflow,
+      netCash: net,
       cumulativePosition: cumulative,
     })
   }
@@ -267,4 +339,68 @@ export function computeCashFlowForecast(
     lowestProjectedPosition: lowest,
     lowestPositionWeek: lowestWeek,
   }
+}
+
+const WEEK_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'] as const
+
+export function computeThirteenWeekCashFlow(
+  payApps: PayAppRow[],
+  changeOrders: MappedChangeOrder[],
+  budgetItems: BudgetItemRow[],
+  startDate?: Date,
+): CashFlowWeek[] {
+  void changeOrders // reserved for future CO-driven inflow adjustments
+
+  const start = startDate ? new Date(startDate) : new Date()
+  start.setHours(0, 0, 0, 0)
+
+  // Weekly outflow: committed costs spread at a 1/12 monthly burn rate, prorated to weekly
+  const totalCommitted = budgetItems.reduce((s, b) => s + (b.committed_amount ?? 0), 0)
+  const weeklyOutflow = totalCommitted / 52
+
+  const approvedApps = payApps.filter(pa => pa.status === 'approved')
+  const hasPaymentDates = approvedApps.some(pa => pa.approved_date != null)
+  const totalApprovedBilling = approvedApps.reduce(
+    (s, pa) => s + (pa.current_payment_due ?? 0),
+    0,
+  )
+
+  let cumulative = 0
+  const weeks: CashFlowWeek[] = []
+
+  for (let i = 0; i < 13; i++) {
+    const weekStart = new Date(start)
+    weekStart.setDate(start.getDate() + i * 7)
+    const weekEnd = new Date(weekStart)
+    weekEnd.setDate(weekStart.getDate() + 6)
+
+    let inflow: number
+    if (hasPaymentDates) {
+      const gross = approvedApps
+        .filter(pa => {
+          if (!pa.approved_date) return false
+          const d = new Date(pa.approved_date)
+          return d >= weekStart && d <= weekEnd
+        })
+        .reduce((s, pa) => s + (pa.current_payment_due ?? 0), 0)
+      inflow = gross * 0.9
+    } else {
+      // Distribute remaining approved billing evenly over weeks 1-8
+      inflow = i < 8 ? (totalApprovedBilling / 8) * 0.9 : 0
+    }
+
+    const netCash = inflow - weeklyOutflow
+    cumulative += netCash
+
+    weeks.push({
+      weekLabel: `${WEEK_MONTHS[weekStart.getMonth()]} ${weekStart.getDate()}`,
+      weekStart: weekStart.toISOString().slice(0, 10),
+      projectedInflow: inflow,
+      projectedOutflow: weeklyOutflow,
+      netCash,
+      cumulativePosition: cumulative,
+    })
+  }
+
+  return weeks
 }

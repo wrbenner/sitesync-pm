@@ -36,7 +36,7 @@ export async function acquireEditLock(
   const expiresAt = new Date(now.getTime() + LOCK_DURATION_MS)
 
   // Check for an existing lock on this entity
-  const { data: existing, error: fetchError } = await (supabase as any)
+  const { data: existing, error: fetchError } = await supabase
     .from('edit_locks')
     .select('locked_by_user_id, expires_at')
     .eq('entity_type', entityType)
@@ -51,7 +51,7 @@ export async function acquireEditLock(
 
     if (!isExpired && !ownedByUs) {
       // Active lock held by someone else: fetch their display name
-      const { data: profile } = await (supabase as any)
+      const { data: profile } = await supabase
         .from('profiles')
         .select('full_name')
         .eq('id', existing.locked_by_user_id)
@@ -68,7 +68,7 @@ export async function acquireEditLock(
   }
 
   // Safe to upsert: no lock, expired lock, or we already own it
-  const { error: upsertError } = await (supabase as any)
+  const { error: upsertError } = await supabase
     .from('edit_locks')
     .upsert(
       {
@@ -78,6 +78,7 @@ export async function acquireEditLock(
         locked_at: now.toISOString(),
         expires_at: expiresAt.toISOString(),
       },
+      // onConflict matches the unique constraint defined in supabase/migrations/*_create_edit_locks.sql
       { onConflict: 'entity_type,entity_id' },
     )
 
@@ -97,7 +98,7 @@ export async function renewEditLock(
 ): Promise<void> {
   const expiresAt = new Date(Date.now() + LOCK_DURATION_MS)
 
-  const { error } = await (supabase as any)
+  const { error } = await supabase
     .from('edit_locks')
     .update({ expires_at: expiresAt.toISOString() })
     .eq('entity_type', entityType)
@@ -116,7 +117,7 @@ export async function releaseEditLock(
   entityId: string,
   userId: string,
 ): Promise<void> {
-  const { error } = await (supabase as any)
+  const { error } = await supabase
     .from('edit_locks')
     .delete()
     .eq('entity_type', entityType)

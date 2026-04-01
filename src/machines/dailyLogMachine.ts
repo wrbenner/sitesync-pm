@@ -2,7 +2,7 @@ import { setup, assign, fromPromise } from 'xstate'
 import { colors } from '../styles/theme'
 import type { DailyLogPayload } from '../types/api'
 
-export type DailyLogState = 'draft' | 'submitted' | 'approved' | 'rejected'
+export type DailyLogState = 'draft' | 'submitted' | 'amending' | 'approved' | 'rejected'
 
 // Actor implementations for production. Inject via machine.provide({ actors: dailyLogActors }).
 // The machine's setup() uses no-op placeholders so tests run without real API calls.
@@ -29,12 +29,14 @@ export const dailyLogMachine = setup({
       is_submitted: boolean
       submitted_at: string | null
       version: number
+      amended_from_id: string | null
     },
     events: {} as
       | { type: 'SAVE_DRAFT' }
       | { type: 'SUBMIT'; signatureUrl?: string }
       | { type: 'APPROVE'; signatureUrl?: string; userId: string }
-      | { type: 'REJECT'; comments: string; userId: string },
+      | { type: 'REJECT'; comments: string; userId: string }
+      | { type: 'AMEND'; payload: import('../types/api').DailyLogPayload },
   },
   // No-op placeholders. Override in production:
   //   dailyLogMachine.provide({ actors: createDailyLogActors(submitDailyLog, createDailyLog) })
@@ -49,7 +51,7 @@ export const dailyLogMachine = setup({
 }).createMachine({
   id: 'dailyLog',
   initial: 'draft',
-  context: { dailyLogId: '', projectId: '', error: null, is_submitted: false, submitted_at: null, version: 1 },
+  context: { dailyLogId: '', projectId: '', error: null, is_submitted: false, submitted_at: null, version: 1, amended_from_id: null as string | null },
   states: {
     draft: {
       on: {
@@ -64,11 +66,42 @@ export const dailyLogMachine = setup({
       },
     },
     submitted: {
-      // No SAVE_DRAFT or edit transitions: submitted logs are immutable.
-      // To modify a submitted log, call forkLogVersion() to create a new draft version.
+      // Direct edits are blocked. AMEND creates a new versioned row (amended_from_id = original id).
       on: {
         APPROVE: { target: 'approved' },
         REJECT: { target: 'rejected' },
+        AMEND: {
+          target: 'amending',
+          actions: assign({
+            amended_from_id: ({ context }) => context.dailyLogId,
+          }),
+        },
+      },
+    },
+    amending: {
+      // Invokes createLog to insert a new daily_log row with amended_from_id set.
+      // On success, the machine returns to draft with the new row's version.
+      invoke: {
+        src: 'createLog',
+        input: ({ context, event }) => ({
+          projectId: context.projectId,
+          payload: {
+            ...(event as { type: 'AMEND'; payload: import('../types/api').DailyLogPayload }).payload,
+            amended_from_id: context.dailyLogId,
+          },
+        }),
+        onDone: {
+          target: 'draft',
+          actions: assign({
+            is_submitted: () => false,
+            submitted_at: () => null,
+            version: ({ context }) => context.version + 1,
+          }),
+        },
+        onError: {
+          target: 'submitted',
+          actions: assign({ error: ({ event }) => String((event as { error: unknown }).error) }),
+        },
       },
     },
     approved: {
@@ -95,9 +128,9 @@ export const dailyLogMachine = setup({
 export function getValidDailyLogTransitions(status: DailyLogState): string[] {
   const transitions: Record<DailyLogState, string[]> = {
     draft: ['Save Draft', 'Submit for Approval'],
-    submitted: ['Approve', 'Reject'],
+    submitted: ['Approve', 'Reject', 'Amend'],
+    amending: [],
     approved: [],
-    // BUG #2 FIX: Rejection goes to edit (draft), not directly to resubmit
     rejected: ['Edit Draft', 'Resubmit'],
   }
   return transitions[status] || []
@@ -108,7 +141,7 @@ export function getValidDailyLogTransitions(status: DailyLogState): string[] {
 export function getNextDailyLogStatus(currentStatus: DailyLogState, action: string): DailyLogState | null {
   const map: Record<string, Record<string, DailyLogState>> = {
     draft: { 'Save Draft': 'draft', 'Submit for Approval': 'submitted' },
-    submitted: { 'Approve': 'approved', 'Reject': 'rejected' },
+    submitted: { 'Approve': 'approved', 'Reject': 'rejected', 'Amend': 'amending' },
     rejected: {
       // BUG #2 FIX: 'Edit Draft' goes to draft (not submitted).
       // 'Resubmit' also goes to draft first — user must save before resubmitting.
@@ -127,6 +160,7 @@ export function getDailyLogStatusConfig(status: DailyLogState) {
   const config: Record<DailyLogState, { label: string; color: string; bg: string }> = {
     draft: { label: 'Draft', color: colors.statusNeutral, bg: colors.statusNeutralSubtle },
     submitted: { label: 'Submitted', color: colors.statusInfo, bg: colors.statusInfoSubtle },
+    amending: { label: 'Creating Amendment', color: colors.statusPending, bg: colors.statusPendingSubtle },
     approved: { label: 'Approved', color: colors.statusActive, bg: colors.statusActiveSubtle },
     rejected: { label: 'Returned', color: colors.statusCritical, bg: colors.statusCriticalSubtle },
   }
@@ -153,6 +187,7 @@ export const ENTRY_TYPES = [
 export function canEditLog(log: { status?: string | null; is_submitted?: boolean | null }): boolean {
   const s = log.status ?? 'draft'
   if (log.is_submitted) return false
+  if (s === 'submitted' || s === 'amending' || s === 'approved') return false
   return s === 'draft' || s === 'rejected'
 }
 

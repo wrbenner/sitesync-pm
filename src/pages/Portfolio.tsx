@@ -1,11 +1,12 @@
-import React, { useState, useCallback } from 'react'
-import { Briefcase, Plus, FileText, BarChart3 } from 'lucide-react'
+import React, { useState } from 'react'
+import { Briefcase, Plus, FileText, BarChart3, AlertTriangle } from 'lucide-react'
 import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton } from '../components/Primitives'
 import { DataTable, createColumnHelper } from '../components/shared/DataTable'
 import { ErrorBoundary } from '../components/ErrorBoundary'
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme'
 import { usePortfolios, usePortfolioProjects, useExecutiveReports, useOrgPortfolioMetrics } from '../hooks/queries'
-import { useQueryClient } from '@tanstack/react-query'
+import { usePortfolioMetrics } from '../hooks/useProjectMetrics'
+import { captureException } from '../lib/errorTracking'
 import { toast } from 'sonner'
 
 // ── Column helpers ─────────────────────────────────────────
@@ -127,6 +128,64 @@ const tabs: { key: TabKey; label: string; icon: React.ElementType }[] = [
   { key: 'reports', label: 'Reports', icon: FileText },
 ]
 
+// ── Error Fallbacks ────────────────────────────────────────
+
+const PortfolioErrorFallback: React.FC = () => (
+  <div style={{
+    display: 'flex',
+    alignItems: 'center',
+    gap: spacing['3'],
+    padding: spacing['4'],
+    backgroundColor: colors.statusCriticalSubtle,
+    borderRadius: borderRadius.base,
+    marginBottom: spacing['6'],
+  }}>
+    <AlertTriangle size={20} color={colors.statusCritical} style={{ flexShrink: 0 }} />
+    <span style={{ fontSize: typography.fontSize.sm, color: colors.statusCritical, flex: 1 }}>
+      Portfolio data temporarily unavailable. Some projects may have sync issues.
+    </span>
+    <button
+      onClick={() => window.location.reload()}
+      style={{
+        padding: `${spacing['1']} ${spacing['3']}`,
+        backgroundColor: 'transparent',
+        border: `1px solid ${colors.statusCritical}`,
+        borderRadius: borderRadius.base,
+        fontSize: typography.fontSize.sm,
+        fontFamily: typography.fontFamily,
+        color: colors.statusCritical,
+        cursor: 'pointer',
+        flexShrink: 0,
+      }}
+    >
+      Retry
+    </button>
+  </div>
+)
+
+interface ProjectCardErrorProps {
+  projectId: string
+}
+
+const ProjectCardError: React.FC<ProjectCardErrorProps> = () => (
+  <Card>
+    <div style={{
+      padding: spacing['4'],
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: spacing['2'],
+      minHeight: '160px',
+    }}>
+      <AlertTriangle size={20} color={colors.statusCritical} />
+      <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, textAlign: 'center' }}>
+        Project data could not be loaded.
+      </span>
+    </div>
+  </Card>
+)
+
 // ── Portfolio Metrics Section ──────────────────────────────
 // Rendered inside an ErrorBoundary so a total metrics failure shows
 // a targeted error state rather than crashing the whole page.
@@ -183,7 +242,6 @@ const PortfolioMetricsSection: React.FC<PortfolioMetricsSectionProps> = ({
 export const Portfolio: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('overview')
   const portfolioId = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'
-  const queryClient = useQueryClient()
 
   const { data: portfolios } = usePortfolios(ORG_ID)
   const { data: portfolioProjects, isPending: loading } = usePortfolioProjects(portfolioId)
@@ -191,14 +249,13 @@ export const Portfolio: React.FC = () => {
 
   const projects = (portfolioProjects || []).map((pp: any) => pp.projects).filter(Boolean)
 
+  const projectIds: string[] = projects.map((p: any) => p.id as string)
+  const { metricsMap, isLoading: metricsLoading } = usePortfolioMetrics(projectIds)
+
   const totalValue = projects.reduce((s: number, p: any) => s + (p.contract_value || 0), 0)
   const activeCount = projects.filter((p: any) => p.status === 'active').length
   const currentPortfolio = (portfolios || []).find((p: any) => p.id === portfolioId)
   const latestReport = (reports || [])[0]
-
-  const handleMetricsRetry = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['org_portfolio_metrics', ORG_ID] })
-  }, [queryClient])
 
   return (
     <PageContainer
@@ -265,8 +322,8 @@ export const Portfolio: React.FC = () => {
 
       {/* KPI Row — wrapped in ErrorBoundary so a total metrics failure shows a targeted error state */}
       <ErrorBoundary
-        message="Portfolio metrics could not be loaded. Check your connection and try again."
-        onRetry={handleMetricsRetry}
+        fallback={<PortfolioErrorFallback />}
+        onError={(error) => captureException(error, { action: 'portfolio_metrics_error' })}
       >
         <PortfolioMetricsSection
           totalValue={totalValue}
@@ -307,6 +364,11 @@ export const Portfolio: React.FC = () => {
                   : project.status === 'on_hold' ? colors.statusPendingSubtle
                   : colors.surfaceInset
                 return (
+                  <ErrorBoundary
+                    key={project.id}
+                    fallback={<ProjectCardError projectId={project.id} />}
+                    onError={(error) => captureException(error, { projectId: project.id, action: 'project_card_error' })}
+                  >
                   <Card key={project.id}>
                     <div style={{ padding: spacing['4'] }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing['3'] }}>
@@ -358,6 +420,43 @@ export const Portfolio: React.FC = () => {
                         )}
                       </div>
 
+                      {/* Metrics row — single bulk fetch, not per-project */}
+                      {metricsLoading ? (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: spacing['2'], marginBottom: spacing['4'] }}>
+                          {[1, 2, 3].map((i) => <Skeleton key={i} width="100%" height="40px" />)}
+                        </div>
+                      ) : metricsMap[project.id] ? (() => {
+                        const m = metricsMap[project.id]
+                        const budgetVariancePct = m.budget_total > 0
+                          ? ((m.budget_spent - m.budget_total) / m.budget_total) * 100
+                          : null
+                        const healthColor = (m.aiHealthScore ?? 0) >= 75 ? colors.statusActive
+                          : (m.aiHealthScore ?? 0) >= 50 ? colors.statusPending
+                          : colors.statusCritical
+                        return (
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: spacing['2'], marginBottom: spacing['4'] }}>
+                            <div style={{ textAlign: 'center', padding: `${spacing['2']} 0`, borderTop: `1px solid ${colors.borderSubtle}` }}>
+                              <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, marginBottom: '2px' }}>Health</div>
+                              <div style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: healthColor }}>
+                                {m.aiHealthScore != null ? `${Math.round(m.aiHealthScore)}` : 'N/A'}
+                              </div>
+                            </div>
+                            <div style={{ textAlign: 'center', padding: `${spacing['2']} 0`, borderTop: `1px solid ${colors.borderSubtle}` }}>
+                              <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, marginBottom: '2px' }}>Budget Var.</div>
+                              <div style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: budgetVariancePct != null && budgetVariancePct > 5 ? colors.statusCritical : colors.textPrimary }}>
+                                {budgetVariancePct != null ? `${budgetVariancePct > 0 ? '+' : ''}${budgetVariancePct.toFixed(1)}%` : 'N/A'}
+                              </div>
+                            </div>
+                            <div style={{ textAlign: 'center', padding: `${spacing['2']} 0`, borderTop: `1px solid ${colors.borderSubtle}` }}>
+                              <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, marginBottom: '2px' }}>Open RFIs</div>
+                              <div style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: m.rfis_open > 0 ? colors.statusPending : colors.textPrimary }}>
+                                {m.rfis_open}
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })() : null}
+
                       <Btn
                         variant="ghost"
                         size="sm"
@@ -366,6 +465,7 @@ export const Portfolio: React.FC = () => {
                       >View Project</Btn>
                     </div>
                   </Card>
+                  </ErrorBoundary>
                 )
               })}
             </div>

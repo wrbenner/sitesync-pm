@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useRef, useEffect, useId, useCallback } from 'react';
 import { useTableKeyboardNavigation } from '../../hooks/useTableKeyboardNavigation';
-import { GitBranch, Sparkles, Zap } from 'lucide-react';
-import type { PredictedRisk } from '../../lib/predictions';
+import { CalendarDays, GitBranch, Sparkles, Zap } from 'lucide-react';
+import EmptyState from '../ui/EmptyState';
+import type { PredictedRisk, PredictedDelay } from '../../lib/predictions';
 import type { MappedSchedulePhase } from '../../types/entities';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
 import { AIAnnotationIndicator } from '../ai/AIAnnotation';
@@ -12,6 +13,8 @@ export type TimeScale = 'month' | 'quarter';
 const ROW_HEIGHT = 40; // 32px bar + 8px margin
 const DAY_MS = 86_400_000;
 const LABEL_WIDTH = 170;
+const SLIPPAGE_COL_WIDTH = 72;
+const FLOAT_COL_WIDTH = 84;
 
 function toISO(ms: number): string {
   return new Date(ms).toISOString().slice(0, 10);
@@ -21,50 +24,83 @@ export type GanttPhase = MappedSchedulePhase;
 
 interface DragState {
   phaseId: string;
-  side: 'start' | 'end';
+  side: 'start' | 'end' | 'both';
   startX: number;
   origStart: number;
   origEnd: number;
 }
 
+export interface GanttDependency {
+  fromId: string;
+  toId: string;
+  type: 'FS' | 'SS' | 'FF' | 'SF';
+}
+
 interface GanttChartProps {
   phases: GanttPhase[];
   whatIfMode: boolean;
+  isLoading?: boolean;
+  onImportSchedule?: () => void;
+  onAddActivity?: () => void;
   onPhaseClick?: (phase: GanttPhase) => void;
   onPhaseDrag?: (phaseId: string, newEndDate: string) => void;
   onPhaseUpdate?: (id: string, update: { start_date: string; end_date: string }) => void;
+  onActivityDateChange?: (id: string, start: string, finish: string) => void;
   baselinePhases?: GanttPhase[];
   risks?: PredictedRisk[];
+  delays?: PredictedDelay[];
+  dependencies?: GanttDependency[];
 }
+
+const SKELETON_ROW_WIDTHS = ['70%', '55%', '85%', '40%', '90%', '60%', '75%', '45%'];
 
 export const GanttChart: React.FC<GanttChartProps> = ({
   phases,
   whatIfMode,
+  isLoading = false,
+  onImportSchedule,
+  onAddActivity,
   onPhaseClick,
   onPhaseDrag: _onPhaseDrag,
   onPhaseUpdate,
+  onActivityDateChange,
   baselinePhases,
   risks = [],
+  delays = [],
+  dependencies = [],
 }) => {
   const uid = useId().replace(/:/g, '');
 
   const [timeScale, setTimeScale] = useState<TimeScale>('quarter');
   const [hoveredPhase, setHoveredPhase] = useState<string | null>(null);
-  const [showBaseline, setShowBaseline] = useState(false);
+  const [showBaseline, setShowBaseline] = useState(true);
+  const [showCriticalPath, setShowCriticalPath] = useState(false);
   const [riskTooltipPhase, setRiskTooltipPhase] = useState<string | null>(null);
+  const [delayTooltipPhase, setDelayTooltipPhase] = useState<string | null>(null);
   const [localPhases, setLocalPhases] = useState<GanttPhase[]>(phases);
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
   const [activeDrag, setActiveDrag] = useState<DragState | null>(null);
   const [announcement, setAnnouncement] = useState('');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [trackWidth, setTrackWidth] = useState(0);
 
   const probeRef = useRef<HTMLDivElement>(null);
   const trackWidthRef = useRef(0);
   const ganttGridRef = useRef<HTMLDivElement>(null);
+  const activityChangeDebouncerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { focusedIndex: ganttFocused, handleKeyDown: ganttHandleKeyDown, activeRowId: ganttActiveRowId } = useTableKeyboardNavigation({
     rowCount: localPhases.length,
     onActivate: useCallback((i: number) => onPhaseClick?.(localPhases[i]), [localPhases, onPhaseClick]),
+    onToggleSelect: useCallback((i: number) => {
+      const id = localPhases[i]?.id;
+      if (!id) return;
+      setSelectedIds(prev => {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id); else next.add(id);
+        return next;
+      });
+    }, [localPhases]),
     rowIdPrefix: `${uid}-gantt`,
   });
 
@@ -127,15 +163,32 @@ export const GanttChart: React.FC<GanttChartProps> = ({
         let newEnd = activeDrag.origEnd;
         if (activeDrag.side === 'start') {
           newStart = Math.min(activeDrag.origStart + deltaMs, activeDrag.origEnd - DAY_MS);
-        } else {
+        } else if (activeDrag.side === 'end') {
           newEnd = Math.max(activeDrag.origEnd + deltaMs, activeDrag.origStart + DAY_MS);
+        } else {
+          newStart = activeDrag.origStart + deltaMs;
+          newEnd = activeDrag.origEnd + deltaMs;
         }
         return { ...p, startDate: toISO(newStart), endDate: toISO(newEnd) };
       }));
     };
 
-    const onUp = () => {
+    const onUp = (e: MouseEvent | TouchEvent) => {
       setPendingIds(s => new Set([...s, activeDrag.phaseId]));
+      if (activeDrag.side === 'both' && onActivityDateChange) {
+        const clientX = 'changedTouches' in e
+          ? (e as TouchEvent).changedTouches[0]?.clientX ?? activeDrag.startX
+          : (e as MouseEvent).clientX;
+        const dx = clientX - activeDrag.startX;
+        const pxPerMs = trackWidthRef.current / timelineSpanRef.current;
+        const deltaMs = pxPerMs ? Math.round(dx / pxPerMs / DAY_MS) * DAY_MS : 0;
+        const newStart = toISO(activeDrag.origStart + deltaMs);
+        const newFinish = toISO(activeDrag.origEnd + deltaMs);
+        if (activityChangeDebouncerRef.current) clearTimeout(activityChangeDebouncerRef.current);
+        activityChangeDebouncerRef.current = setTimeout(() => {
+          onActivityDateChange(activeDrag.phaseId, newStart, newFinish);
+        }, 300);
+      }
       setActiveDrag(null);
     };
 
@@ -210,7 +263,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   const getBarColor = (phase: GanttPhase) => {
     if (phase.completed) return colors.statusActive;
     if (whatIfMode && activeDrag?.phaseId === phase.id) return colors.statusReview;
-    if (phase.critical) return colors.statusCritical;
+    if (phase.critical) return '#E74C3C';
     if (phase.progress === 0) return colors.textTertiary;
     return colors.statusInfo;
   };
@@ -243,10 +296,48 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [localPhases, trackWidth, timelineStart, timelineSpan]);
 
+  // Typed dependency arrows from the `dependencies` prop (FS, SS, FF, SF)
+  const typedDependencyArrows = useMemo(() => {
+    if (trackWidth === 0 || dependencies.length === 0) return [];
+    return dependencies.map(dep => {
+      const fromIdx = localPhases.findIndex(p => p.id === dep.fromId);
+      const toIdx = localPhases.findIndex(p => p.id === dep.toId);
+      if (fromIdx === -1 || toIdx === -1) return null;
+      const fromPos = getPhasePos(localPhases[fromIdx]);
+      const toPos = getPhasePos(localPhases[toIdx]);
+      const y1 = fromIdx * ROW_HEIGHT + ROW_HEIGHT / 2;
+      const y2 = toIdx * ROW_HEIGHT + ROW_HEIGHT / 2;
+      let x1: number;
+      let x2: number;
+      if (dep.type === 'FS') {
+        x1 = ((fromPos.left + fromPos.width) / 100) * trackWidth;
+        x2 = (toPos.left / 100) * trackWidth;
+      } else if (dep.type === 'SS') {
+        x1 = (fromPos.left / 100) * trackWidth;
+        x2 = (toPos.left / 100) * trackWidth;
+      } else if (dep.type === 'FF') {
+        x1 = ((fromPos.left + fromPos.width) / 100) * trackWidth;
+        x2 = ((toPos.left + toPos.width) / 100) * trackWidth;
+      } else {
+        // SF
+        x1 = (fromPos.left / 100) * trackWidth;
+        x2 = ((toPos.left + toPos.width) / 100) * trackWidth;
+      }
+      const midX = (x1 + x2) / 2;
+      return {
+        key: `typed-${dep.fromId}-${dep.toId}-${dep.type}`,
+        d: `M ${x1} ${y1} C ${midX} ${y1} ${midX} ${y2} ${x2} ${y2}`,
+        type: dep.type,
+      };
+    }).filter(Boolean) as { key: string; d: string; type: string }[];
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dependencies, localPhases, trackWidth, timelineStart, timelineSpan]);
+
+
   const startDrag = (
     e: React.MouseEvent | React.TouchEvent,
     phaseId: string,
-    side: 'start' | 'end',
+    side: 'start' | 'end' | 'both',
   ) => {
     e.stopPropagation();
     e.preventDefault();
@@ -359,7 +450,54 @@ export const GanttChart: React.FC<GanttChartProps> = ({
         {announcement}
       </div>
 
+      {/* Loading skeleton rows */}
+      {isLoading && (
+        <>
+          <style>{`@keyframes ganttPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }`}</style>
+          {SKELETON_ROW_WIDTHS.map((rowWidth, i) => (
+            <div
+              key={i}
+              style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: i === 0 ? 0 : '8px' }}
+            >
+              <div
+                style={{
+                  flexShrink: 0,
+                  width: `${LABEL_WIDTH}px`,
+                  height: '32px',
+                  backgroundColor: '#E5E7EB',
+                  borderRadius: '4px',
+                  animation: 'ganttPulse 1.5s ease-in-out infinite',
+                  animationDelay: `${i * 0.08}s`,
+                }}
+              />
+              <div
+                style={{
+                  width: rowWidth,
+                  height: '32px',
+                  backgroundColor: '#E5E7EB',
+                  borderRadius: '4px',
+                  animation: 'ganttPulse 1.5s ease-in-out infinite',
+                  animationDelay: `${i * 0.08 + 0.05}s`,
+                }}
+              />
+            </div>
+          ))}
+        </>
+      )}
+
+      {/* Empty state */}
+      {!isLoading && phases.length === 0 && (
+        <EmptyState
+          icon={CalendarDays}
+          title="No schedule activities yet"
+          description="Import a schedule from Primavera P6 or MS Project, or create your first activity to start tracking progress against your baseline."
+          action={{ label: 'Import Schedule', onClick: onImportSchedule ?? (() => {}) }}
+          secondaryAction={{ label: 'Add Activity', onClick: onAddActivity ?? (() => {}) }}
+        />
+      )}
+
       {/* Controls */}
+      {!isLoading && phases.length > 0 && (<>
       <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'], marginBottom: spacing['4'], flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', gap: spacing['1'], backgroundColor: colors.surfaceInset, borderRadius: borderRadius.full, padding: 2 }}>
           {(['month', 'quarter'] as TimeScale[]).map(scale => (
@@ -399,6 +537,23 @@ export const GanttChart: React.FC<GanttChartProps> = ({
           <GitBranch size={12} /> {showBaseline ? 'Hide Baseline' : 'Show Baseline'}
         </button>
 
+        <button
+          aria-label={showCriticalPath ? 'Show all activities' : 'Highlight critical path only'}
+          aria-pressed={showCriticalPath}
+          onClick={() => setShowCriticalPath(!showCriticalPath)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: spacing['1'],
+            padding: `${spacing['1']} ${spacing['3']}`, borderRadius: borderRadius.full,
+            border: showCriticalPath ? '1px solid #E74C3C' : '1px solid transparent',
+            backgroundColor: showCriticalPath ? '#E74C3C14' : 'transparent',
+            color: showCriticalPath ? '#E74C3C' : colors.textTertiary,
+            fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
+            fontFamily: typography.fontFamily, cursor: 'pointer',
+          }}
+        >
+          Critical Path
+        </button>
+
         {whatIfMode && (
           <span style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], fontSize: typography.fontSize.caption, color: colors.statusReview, fontWeight: typography.fontWeight.semibold }}>
             <Sparkles size={12} /> What If Mode: Drag tasks to see cascade effects
@@ -407,24 +562,31 @@ export const GanttChart: React.FC<GanttChartProps> = ({
 
         {/* Legend */}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: spacing['3'], flexWrap: 'wrap', alignItems: 'center' }}>
-          {[
-            { color: colors.statusActive, label: 'Complete', shape: 'bar' },
-            { color: colors.statusCritical, label: 'Critical', shape: 'bar' },
-            { color: colors.statusInfo, label: 'Active', shape: 'bar' },
-            { color: colors.textTertiary, label: 'Future', shape: 'bar' },
-            { color: colors.primaryOrange, label: 'Milestone', shape: 'diamond' },
-            { color: '#9CA3AF', label: 'Baseline', shape: 'dashed' },
-          ].map(l => (
-            <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
-              {l.shape === 'dashed'
-                ? <div style={{ width: 8, height: 4, borderRadius: 2, border: '1px dashed #9CA3AF', opacity: 0.5 }} />
-                : l.shape === 'diamond'
-                  ? <div style={{ width: 8, height: 8, backgroundColor: l.color, transform: 'rotate(45deg)', flexShrink: 0 }} />
-                  : <div style={{ width: 8, height: 4, borderRadius: 2, backgroundColor: l.color }} />
-              }
-              <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{l.label}</span>
+          {/* Baseline */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
+            <div style={{ width: 16, height: 6, borderRadius: 2, backgroundColor: '#E5E7EB' }} />
+            <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Baseline</span>
+          </div>
+          {/* Actual */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
+            <div style={{ width: 16, height: 6, borderRadius: 2, backgroundColor: colors.primaryOrange }} />
+            <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Actual</span>
+          </div>
+          {/* Critical Path */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
+            <div style={{ width: 16, height: 12, borderLeft: '3px solid #E74C3C', paddingLeft: 2 }}>
+              <div style={{ width: '100%', height: '100%', borderRadius: 2, backgroundColor: colors.statusCritical, opacity: 0.3 }} />
             </div>
-          ))}
+            <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Critical Path</span>
+          </div>
+          {/* Float */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <div style={{ width: 10, height: 6, borderRadius: '2px 0 0 2px', backgroundColor: colors.statusInfo }} />
+              <div style={{ width: 8, height: 6, borderRadius: '0 2px 2px 0', backgroundColor: colors.statusInfo, opacity: 0.15 }} />
+            </div>
+            <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Float</span>
+          </div>
         </div>
       </div>
 
@@ -461,6 +623,22 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                 </span>
               ))}
             </div>
+            <div style={{
+              width: SLIPPAGE_COL_WIDTH, flexShrink: 0, textAlign: 'right',
+              paddingRight: spacing['2'], height: 20, display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
+            }}>
+              <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, fontWeight: typography.fontWeight.semibold, textTransform: 'uppercase', letterSpacing: typography.letterSpacing.wider }}>
+                Slip
+              </span>
+            </div>
+            <div style={{
+              width: FLOAT_COL_WIDTH, flexShrink: 0, textAlign: 'right',
+              paddingRight: spacing['2'], height: 20, display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
+            }}>
+              <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, fontWeight: typography.fontWeight.semibold, textTransform: 'uppercase', letterSpacing: typography.letterSpacing.wider }}>
+                Float
+              </span>
+            </div>
           </div>
 
           {/* Phase rows + SVG dependency overlay */}
@@ -481,9 +659,21 @@ export const GanttChart: React.FC<GanttChartProps> = ({
             }}
             style={{ position: 'relative', outline: 'none' }}
           >
+            {/* Visually hidden caption — read by screen readers as grid description */}
+            <p style={{ position: 'absolute', left: -9999, width: 1, height: 1, overflow: 'hidden', margin: 0 }}>
+              Project schedule. Use J and K to navigate activities, Enter to open details.
+            </p>
+
+            {/* Visually hidden header row so screen readers announce column names */}
+            <div role="row" style={{ position: 'absolute', left: -9999, width: 1, height: 1, overflow: 'hidden' }}>
+              <div role="columnheader" style={{}}>Activity</div>
+              <div role="columnheader" style={{}}>Schedule</div>
+              <div role="columnheader" style={{}}>Slippage</div>
+              <div role="columnheader" style={{}}>Float</div>
+            </div>
 
             {/* SVG overlay for dependency arrows */}
-            {dependencyArrows.length > 0 && (
+            {(dependencyArrows.length > 0 || typedDependencyArrows.length > 0) && (
               <svg
                 aria-hidden="true"
                 style={{
@@ -508,6 +698,16 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                   >
                     <path d="M0,0 L0,6 L6,3 z" fill="#6B7280" />
                   </marker>
+                  <marker
+                    id={`arr-typed-${uid}`}
+                    markerWidth="6"
+                    markerHeight="6"
+                    refX="5"
+                    refY="3"
+                    orient="auto"
+                  >
+                    <path d="M0,0 L0,6 L6,3 z" fill="#6B7280" />
+                  </marker>
                 </defs>
                 {dependencyArrows.map(arrow => (
                   <path
@@ -518,6 +718,18 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                     fill="none"
                     opacity={arrow.isCritical ? 0.8 : 0.45}
                     markerEnd={`url(#arr-${uid})`}
+                  />
+                ))}
+                {typedDependencyArrows.map(arrow => (
+                  <path
+                    key={arrow.key}
+                    d={arrow.d}
+                    stroke="#6B7280"
+                    strokeWidth="1.5"
+                    fill="none"
+                    opacity={0.7}
+                    strokeDasharray={arrow.type === 'SS' || arrow.type === 'FF' ? '4 3' : undefined}
+                    markerEnd={`url(#arr-typed-${uid})`}
                   />
                 ))}
               </svg>
@@ -531,10 +743,18 @@ export const GanttChart: React.FC<GanttChartProps> = ({
               const isHovered = hoveredPhase === phase.id;
               const predIds = phase.predecessor_ids ?? phase.dependencies ?? [];
               const isCascadeAffected = whatIfMode && activeDrag && predIds.includes(activeDrag.phaseId);
-              const isCriticalPathRow = phase.critical && phase.floatDays === 0;
+              const isCriticalPathRow = phase.is_critical;
               const phaseRisk = risks.find(r => r.phaseId === phase.id);
+              const phaseDelay = delays.find(d => d.activityId === phase.id && d.predictedSlippageDays > 0);
               const isDraggingThis = activeDrag?.phaseId === phase.id;
+              const isDraggingBoth = isDraggingThis && activeDrag?.side === 'both';
               const canDrag = !phase.completed && !phase.is_milestone;
+              const ghostLeft = isDraggingBoth
+                ? ((activeDrag!.origStart - timelineStart) / timelineSpan) * 100
+                : null;
+              const ghostWidth = isDraggingBoth
+                ? (((activeDrag!.origEnd - activeDrag!.origStart) / timelineSpan) * 100)
+                : null;
 
               return (
                 <div
@@ -543,30 +763,26 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                   data-gantt-index={index}
                   role="row"
                   aria-rowindex={index + 1}
+                  aria-selected={selectedIds.has(phase.id)}
                   aria-label={`${phase.name}: ${new Date(phase.startDate).toLocaleDateString()} to ${new Date(phase.endDate).toLocaleDateString()}, ${phase.progress}% complete${phase.floatDays != null ? `, ${phase.floatDays} days float` : ''}${phase.critical ? ', critical path' : ''}`}
                   tabIndex={ganttFocused === index ? 0 : -1}
                   className="gantt-phase-row"
                   style={{
                     display: 'flex', alignItems: 'center', marginBottom: spacing['2'], position: 'relative',
-                    borderLeft: isCriticalPathRow ? `3px solid ${colors.statusCritical}` : '3px solid transparent',
+                    borderLeft: isCriticalPathRow ? '3px solid #E74C3C' : '3px solid transparent',
                     paddingLeft: isCriticalPathRow ? spacing['2'] : 0,
                     outline: 'none',
+                    opacity: showCriticalPath && !phase.is_critical ? 0.3 : 1,
+                    transition: `opacity ${transitions.quick}`,
                   }}
                   onMouseEnter={() => setHoveredPhase(phase.id)}
                   onMouseLeave={() => setHoveredPhase(null)}
                   onFocus={e => { setHoveredPhase(phase.id); e.currentTarget.style.boxShadow = `0 0 0 2px ${colors.primaryOrange}50`; }}
                   onBlur={e => { setHoveredPhase(null); e.currentTarget.style.boxShadow = 'none'; }}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      onPhaseClick?.(phase);
-                    } else {
-                      handleBarKeyDown(e, phase);
-                    }
-                  }}
+                  onKeyDown={e => handleBarKeyDown(e, phase)}
                 >
                   {/* Label */}
-                  <div style={{ width: `${LABEL_WIDTH}px`, flexShrink: 0, paddingRight: spacing['3'] }}>
+                  <div role="gridcell" style={{ width: `${LABEL_WIDTH}px`, flexShrink: 0, paddingRight: spacing['3'] }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                       {phase.critical && !phase.completed && (
                         <div style={{ width: 4, height: 4, borderRadius: '50%', backgroundColor: colors.statusCritical }} />
@@ -627,11 +843,12 @@ export const GanttChart: React.FC<GanttChartProps> = ({
 
                   {/* Track */}
                   <div
+                    role="gridcell"
                     className="gantt-phase-track"
                     style={{
                       flex: 1, height: 32, position: 'relative',
                       backgroundColor: colors.surfaceInset, borderRadius: borderRadius.sm,
-                      cursor: isDraggingThis ? 'col-resize' : 'pointer',
+                      cursor: isDraggingBoth ? 'grabbing' : isDraggingThis ? 'col-resize' : 'pointer',
                       userSelect: 'none',
                     }}
                     onClick={() => { if (!isDraggingThis) onPhaseClick?.(phase); }}
@@ -647,19 +864,33 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                         <div style={{
                           position: 'absolute', top: '50%', transform: 'translateY(-50%)',
                           height: 8, left: `${bLeft}%`, width: `${bWidth}%`,
-                          backgroundColor: '#9CA3AF', opacity: 0.35,
+                          backgroundColor: '#E5E7EB', opacity: 0.85,
                           borderRadius: borderRadius.sm, pointerEvents: 'none',
                         }} />
                       );
                     })()}
 
+                    {/* Ghost bar shown at original position during whole-bar drag */}
+                    {isDraggingBoth && ghostLeft !== null && ghostWidth !== null && (
+                      <div
+                        aria-hidden="true"
+                        style={{
+                          position: 'absolute', top: 4, bottom: 4,
+                          left: `${ghostLeft}%`, width: `${ghostWidth}%`,
+                          borderRadius: borderRadius.sm,
+                          border: `2px dashed ${colors.textTertiary}`,
+                          backgroundColor: `${colors.textTertiary}18`,
+                          pointerEvents: 'none',
+                          zIndex: 1,
+                        }}
+                      />
+                    )}
+
                     {/* Milestone diamond */}
                     {phase.is_milestone ? (
                       <div
-                        role="button"
-                        tabIndex={-1}
-                        aria-label={`${phase.name} milestone, ${new Date(phase.startDate).toLocaleDateString()}. Use arrow keys to shift date.`}
-                        onKeyDown={e => handleBarKeyDown(e, phase)}
+                        role="img"
+                        aria-label={`${phase.name}: ${phase.startDate} to ${phase.endDate}, milestone${phase.critical || phase.is_critical ? ', CRITICAL PATH' : ''}`}
                         style={{
                           position: 'absolute',
                           left: `${pos.left}%`,
@@ -667,29 +898,47 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                           transform: 'translate(-50%, -50%) rotate(45deg)',
                           width: 14, height: 14,
                           backgroundColor: colors.primaryOrange,
-                          cursor: 'pointer',
-                          outline: 'none',
                           zIndex: 2,
                         }}
-                        onFocus={e => { e.currentTarget.style.boxShadow = `0 0 0 3px ${colors.primaryOrange}40`; }}
-                        onBlur={e => { e.currentTarget.style.boxShadow = 'none'; }}
                       />
-                    ) : (
+                    ) : null}
+                    {/* Milestone label to the right of the diamond */}
+                    {phase.is_milestone && (
+                      <span
+                        aria-hidden="true"
+                        style={{
+                          position: 'absolute',
+                          left: `calc(${pos.left}% + 12px)`,
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          fontSize: typography.fontSize.caption,
+                          fontWeight: typography.fontWeight.semibold,
+                          color: colors.primaryOrange,
+                          whiteSpace: 'nowrap',
+                          pointerEvents: 'none',
+                          zIndex: 3,
+                        }}
+                      >
+                        {phase.name}
+                      </span>
+                    )}
+                    {!phase.is_milestone && (
                       /* Regular phase bar */
                       <div
-                        role="button"
-                        tabIndex={-1}
-                        aria-label={`${phase.name}: ${new Date(phase.startDate).toLocaleDateString()} to ${new Date(phase.endDate).toLocaleDateString()}, ${phase.progress}% complete. Use arrow keys to shift date.`}
-                        onKeyDown={e => handleBarKeyDown(e, phase)}
+                        role="img"
+                        aria-label={`${phase.name}: ${phase.startDate} to ${phase.endDate}, ${phase.progress}% complete${phase.critical || phase.is_critical ? ', CRITICAL PATH' : ''}`}
+                        onMouseDown={canDrag ? e => startDrag(e, phase.id, 'both') : undefined}
+                        onTouchStart={canDrag ? e => startDrag(e, phase.id, 'both') : undefined}
                         style={{
                           position: 'absolute', top: 4, bottom: 4,
                           left: `${pos.left}%`, width: `${pos.width}%`,
                           borderRadius: borderRadius.sm, overflow: 'visible',
                           border: isCascadeAffected ? `2px dashed ${colors.statusReview}` : 'none',
                           boxShadow: isHovered ? `0 0 0 2px ${barColor}30` : 'none',
+                          opacity: isDraggingBoth ? 0.75 : 1,
                           transition: isDraggingThis ? 'none' : `box-shadow ${transitions.instant}`,
                           outline: 'none',
-                          cursor: canDrag ? 'grab' : 'pointer',
+                          cursor: isDraggingBoth ? 'grabbing' : canDrag ? 'grab' : 'pointer',
                         }}
                         onFocus={e => { e.currentTarget.style.boxShadow = `0 0 0 2px ${barColor}60`; }}
                         onBlur={e => { e.currentTarget.style.boxShadow = isHovered ? `0 0 0 2px ${barColor}30` : 'none'; }}
@@ -706,6 +955,22 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                           style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: `${phase.progress}%`, backgroundColor: barColor, borderRadius: borderRadius.sm }}
                         />
 
+                        {/* Float extension bar */}
+                        {phase.floatDays > 0 && (
+                          <div
+                            aria-hidden="true"
+                            style={{
+                              position: 'absolute', top: 0, bottom: 0,
+                              left: '100%',
+                              width: `${(phase.floatDays * DAY_MS / timelineSpan) * 100}%`,
+                              backgroundColor: barColor,
+                              opacity: 0.12,
+                              borderRadius: `0 ${borderRadius.sm} ${borderRadius.sm} 0`,
+                              pointerEvents: 'none',
+                            }}
+                          />
+                        )}
+
                         {/* Slippage badge */}
                         {(phase.slippageDays ?? 0) > 0 && (
                           <div style={{
@@ -716,6 +981,53 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                             lineHeight: '16px', whiteSpace: 'nowrap', pointerEvents: 'none',
                           }}>
                             +{phase.slippageDays}d
+                          </div>
+                        )}
+
+                        {/* Predicted delay warning badge */}
+                        {phaseDelay && (
+                          <div style={{
+                            position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)',
+                            zIndex: 3,
+                          }}>
+                            <button
+                              aria-label={`Predicted delay: ${phaseDelay.predictedSlippageDays} day${phaseDelay.predictedSlippageDays > 1 ? 's' : ''} slippage. ${phaseDelay.reasons.join('. ')}`}
+                              onMouseEnter={e => { e.stopPropagation(); setDelayTooltipPhase(phase.id); }}
+                              onMouseLeave={() => setDelayTooltipPhase(null)}
+                              onFocus={() => setDelayTooltipPhase(phase.id)}
+                              onBlur={() => setDelayTooltipPhase(null)}
+                              style={{
+                                display: 'flex', alignItems: 'center', gap: 2,
+                                backgroundColor: '#FEF08A', border: '1px solid #CA8A04',
+                                borderRadius: 3, padding: '0 4px', lineHeight: '16px',
+                                fontSize: 10, fontWeight: 700, color: '#92400E',
+                                cursor: 'pointer', whiteSpace: 'nowrap',
+                                fontFamily: 'inherit',
+                              }}
+                            >
+                              {`\u26A0 +${phaseDelay.predictedSlippageDays}d`}
+                            </button>
+                            {delayTooltipPhase === phase.id && (
+                              <div style={{
+                                position: 'absolute', bottom: '100%', left: 0,
+                                marginBottom: 6, padding: '8px 12px',
+                                backgroundColor: '#FEFCE8', border: '1px solid #CA8A04',
+                                borderRadius: 6, boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
+                                zIndex: 20, width: 260, pointerEvents: 'none',
+                              }}>
+                                <p style={{ margin: 0, fontWeight: 700, color: '#92400E', fontSize: 11 }}>
+                                  {`Predicted delay: +${phaseDelay.predictedSlippageDays}d`}
+                                </p>
+                                <ul style={{ margin: '4px 0 0', paddingLeft: 14, fontSize: 11, color: '#713F12', lineHeight: 1.5 }}>
+                                  {phaseDelay.reasons.map((r, ri) => (
+                                    <li key={ri}>{r}</li>
+                                  ))}
+                                </ul>
+                                <p style={{ margin: '6px 0 0', fontSize: 11, color: '#78350F', fontStyle: 'italic' }}>
+                                  {phaseDelay.suggestedAction}
+                                </p>
+                              </div>
+                            )}
                           </div>
                         )}
 
@@ -812,6 +1124,66 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                       </div>
                     )}
                   </div>
+
+                  {/* Slippage column */}
+                  {(() => {
+                    const slip = phase.slippage_days;
+                    if (slip == null) {
+                      return (
+                        <div role="gridcell" style={{ width: SLIPPAGE_COL_WIDTH, flexShrink: 0, textAlign: 'right', paddingRight: spacing['2'] }}>
+                          <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>—</span>
+                        </div>
+                      );
+                    }
+                    const slipColor = slip > 0 ? '#E74C3C' : '#4EC896';
+                    const slipLabel = slip > 0 ? `+${slip}d` : slip === 0 ? '0d' : `${slip}d`;
+                    return (
+                      <div role="gridcell" style={{ width: SLIPPAGE_COL_WIDTH, flexShrink: 0, textAlign: 'right', paddingRight: spacing['2'] }}>
+                        <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: slipColor }}>
+                          {slipLabel}
+                        </span>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Float column */}
+                  {(() => {
+                    const fd = phase.floatDays;
+                    if (fd === 0) {
+                      return (
+                        <div role="gridcell" style={{ width: FLOAT_COL_WIDTH, flexShrink: 0, textAlign: 'right', paddingRight: spacing['2'] }}>
+                          <span style={{
+                            fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
+                            backgroundColor: '#E74C3C18', color: '#E74C3C',
+                            padding: '0 5px', borderRadius: borderRadius.sm, lineHeight: '16px',
+                            whiteSpace: 'nowrap',
+                          }}>
+                            0d CRITICAL
+                          </span>
+                        </div>
+                      );
+                    }
+                    if (fd <= 2) {
+                      return (
+                        <div role="gridcell" style={{ width: FLOAT_COL_WIDTH, flexShrink: 0, textAlign: 'right', paddingRight: spacing['2'] }}>
+                          <span style={{
+                            fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
+                            backgroundColor: `${colors.statusPending}18`, color: colors.statusPending,
+                            padding: '0 5px', borderRadius: borderRadius.sm, lineHeight: '16px',
+                          }}>
+                            {fd}d
+                          </span>
+                        </div>
+                      );
+                    }
+                    return (
+                      <div role="gridcell" style={{ width: FLOAT_COL_WIDTH, flexShrink: 0, textAlign: 'right', paddingRight: spacing['2'] }}>
+                        <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
+                          {fd}d
+                        </span>
+                      </div>
+                    );
+                  })()}
                 </div>
               );
             })}
@@ -859,6 +1231,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
 
         </div>
       </div>
+      </>)}
     </div>
   );
 };

@@ -6,6 +6,7 @@ import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { useProjectId } from './useProjectId'
+import { useOfflineMutation } from './useOfflineMutation'
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -44,11 +45,11 @@ export function generateQRPayload(projectId: string): string {
   })
 }
 
-export function parseQRPayload(data: string): { projectId: string } | null {
+export function parseQRPayload(data: string): { projectId: string; locationId?: string } | null {
   try {
     const parsed = JSON.parse(data)
     if (parsed.type !== 'sitesync_checkin' || !parsed.projectId) return null
-    return { projectId: parsed.projectId }
+    return { projectId: parsed.projectId, locationId: parsed.locationId }
   } catch {
     return null
   }
@@ -418,6 +419,50 @@ function writeOfflineQueue(items: OfflinePendingCheckIn[]) {
 
 export function enqueueOfflineCheckIn(item: Omit<OfflinePendingCheckIn, 'tempId'>) {
   writeOfflineQueue([...readOfflineQueue(), { ...item, tempId: crypto.randomUUID() }])
+}
+
+// ── useCheckIn ────────────────────────────────────────────────
+// Records a QR-scanned crew check-in into crew_checkins with offline support.
+
+export function useCheckIn() {
+  const projectId = useProjectId()
+
+  const mutation = useOfflineMutation<unknown, { userId: string; projectId: string; locationId: string }>({
+    table: 'crew_checkins',
+    operation: 'insert',
+    mutationFn: async (variables) => {
+      if (!isSupabaseConfigured) throw new Error('Supabase not configured')
+      const { data, error } = await supabase
+        .from('crew_checkins')
+        .insert({
+          user_id: variables.userId,
+          project_id: variables.projectId,
+          location_id: variables.locationId,
+          checked_in_at: new Date().toISOString(),
+        })
+        .select()
+        .single()
+      if (error) throw error
+      return data
+    },
+    getOfflinePayload: (variables) => ({
+      id: crypto.randomUUID(),
+      user_id: variables.userId,
+      project_id: variables.projectId,
+      location_id: variables.locationId,
+      checked_in_at: new Date().toISOString(),
+    }),
+    invalidateKeys: [['headcount', projectId]],
+    offlineMessage: 'Check-in saved locally, will sync when online',
+  })
+
+  const checkIn = useCallback(
+    (userId: string, checkinProjectId: string, locationId: string) =>
+      mutation.mutateAsync({ userId, projectId: checkinProjectId, locationId }),
+    [mutation],
+  )
+
+  return { checkIn, isPending: mutation.isPending }
 }
 
 // ── useSyncOfflineCheckIns ────────────────────────────────────

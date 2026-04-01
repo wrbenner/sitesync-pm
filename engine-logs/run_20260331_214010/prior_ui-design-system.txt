@@ -1,10 +1,11 @@
-UNRESOLVED FROM CYCLE 1:
-- [partial] ui-design-system-C1-001: VirtualDataTable.tsx and DataTable.tsx modified with 233 lines added, but no skeleton loader component found in diff. Changes suggest optimization but skeleton implementation unclear.
-- [partial] ui-design-system-C1-002: useTableKeyboardNavigation.ts expanded (69 lines), DataTable.tsx modified with 98 changes. Keyboard navigation enhanced but ARIA roles in diff not explicitly confirmed.
-- [partial] ui-design-system-C1-003: projects.ts endpoint modified (35 lines changed), but diff summary doesn't show the actual hardcoded value removal. Cannot confirm fix without content review.
-- [not_fixed] ui-design-system-C1-004: No empty state component changes detected in diff. Pages modified but no evidence of empty state illustrations, CTAs, or messaging components added.
-- [partial] ui-design-system-H1-005: api/errors.test.ts added (41 lines) and api.ts modified, suggesting type safety improvements. But widespread `as any` removal not confirmed in endpoint changes.
-- [partial] ui-design-system-H1-006: CommandPalette.tsx (29 lines) and useKeyboardShortcuts.ts (135 lines) significantly expanded. App.tsx modified (18 lines). Wiring appears in progress but full app-wide integration not confirmed.
-- [partial] ui-design-system-H1-007: mobile.spec.ts added (49 lines) and MobileTaskCards.tsx modified. Mobile testing added but specific touch target sizing fixes not evident in diff.
-- [partial] ui-design-system-H1-008: tokens.css added (44 lines) confirming token system work, but no evidence of enforcement mechanism or Tailwind class blocking in diff.
-- [partial] ui-design-system-M1-009: VirtualDataTable.tsx enhanced (135 lines) and RFIs.tsx/Submittals.tsx heavily modified (212/193 lines). Migration may be in progress but not conclusively confirmed as completed.
+UNRESOLVED FROM CYCLE 2:
+- [not_fixed] ui-design-system-C2-001: No changes to empty state component rendering logic detected in diff
+- [not_fixed] ui-design-system-C2-002: No changes to API client or endpoint files to remove `as any` casts
+- [not_fixed] ui-design-system-C2-003: No skeleton loader implementation changes for data tables in diff
+- [not_fixed] ui-design-system-C2-004: No changes to project metrics endpoint to remove hardcoded placeholder values
+- [not_fixed] ui-design-system-H2-005: No ARIA roles, live region, or keyboard navigation changes to DataTable/VirtualDataTable
+- [not_fixed] ui-design-system-H2-006: No changes to CommandPalette Cmd+K wiring detected
+- [not_fixed] ui-design-system-H2-007: Mobile touch target size issues not addressed in diff; only e2e test file added
+- [not_fixed] ui-design-system-H2-008: No changes to tokens.css or enforcement of design token system
+- [not_fixed] ui-design-system-M2-009: No changes to RFIs and Submittals pages for VirtualDataTable migration
+- [not_fixed] ui-design-system-M2-010: No ball-in-court indicator implementation for RFI/Submittal list views

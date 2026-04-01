@@ -1,0 +1,57 @@
+{
+  "verifications": [
+    {
+      "id": "infrastructure-C2-001",
+      "status": "not_fixed",
+      "note": "No code changes to validate projectId against org membership in API handlers"
+    },
+    {
+      "id": "infrastructure-C2-002",
+      "status": "not_fixed",
+      "note": "No RBAC hierarchy enforcement added to addProjectMember/updateProjectMember functions"
+    },
+    {
+      "id": "infrastructure-C2-003",
+      "status": "not_fixed",
+      "note": "No computation logic added for aiHealthScore and aiConfidenceLevel; hardcoded values remain"
+    },
+    {
+      "id": "infrastructure-C2-004",
+      "status": "not_fixed",
+      "note": "No changes to change order mapping to compute approved_cost from real financial data"
+    },
+    {
+      "id": "infrastructure-C2-005",
+      "status": "not_fixed",
+      "note": "No pagination or limit added to getPortfolioMetrics RFI and punch item queries"
+    },
+    {
+      "id": "infrastructure-C2-006",
+      "status": "not_fixed",
+      "note": "No TypeScript type improvements to replace `any` casts in core API client files"
+    },
+    {
+      "id": "infrastructure-C2-007",
+      "status": "not_fixed",
+      "note": "No project_id scoping added to fetchEntityLabel queries in activity.ts"
+    },
+    {
+      "id": "infrastructure-C2-008",
+      "status": "not_fixed",
+      "note": "No row limit added to getEntityHistory audit trail query"
+    },
+    {
+      "id": "infrastructure-C2-009",
+      "status": "not_fixed",
+      "note": "No cleanup of unused _table parameter or deduplication logic in projectScope.ts"
+    },
+    {
+      "id": "infrastructure-C2-010",
+      "status": "not_fixed",
+      "note": "No type safety improvements to editLocks; `supabase as any` casts remain"
+    }
+  ],
+  "files_changed": 49,
+  "regression_detected": true,
+  "regression_description": "Diff shows only audit/verification JSON files and e2e test additions—no actual infrastructure module source code modifications. All 10 critical and high-severity security/performance issues remain unfixed."
+}

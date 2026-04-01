@@ -19,6 +19,15 @@
   --color-text-disabled: #9CA3AF;
   --color-border: #E5E7EB;
 
+  /* ── Semantic Aliases (used by Tailwind CSS var mappings) ── */
+  --color-success: #4EC896;
+  --color-warning: #F5A623;
+  --color-danger: #E74C3C;
+  --color-info: #3B82F6;
+  --color-bg-page: #F7F8FA;
+  --color-bg-card: #FFFFFF;
+  --color-sidebar: #0F1629;
+
   /* ── Brand / Primary ──────────────────────────────── */
   --color-primary: #F47820;
   --color-primary-hover: #E06A10;

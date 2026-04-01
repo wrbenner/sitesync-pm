@@ -1,16 +1,17 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { DataTable } from '../components/shared/DataTable';
+import { VirtualDataTable } from '../components/shared/VirtualDataTable';
 import { BulkActionBar } from '../components/shared/BulkActionBar';
 import { createColumnHelper } from '@tanstack/react-table';
 import { PageContainer, Card, Btn, StatusTag, PriorityTag, DetailPanel, RelatedItems, Skeleton, useToast } from '../components/Primitives';
 import EmptyState from '../components/ui/EmptyState';
-import { MetricCardSkeleton, TableRowSkeleton } from '../components/ui/Skeletons';
+import { MetricCardSkeleton } from '../components/ui/Skeletons';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 import { useSubmittals } from '../hooks/queries';
 import { AlertTriangle, Calendar, Clock, ArrowRight, CheckCircle, ClipboardList, Paperclip, LayoutGrid, List, RefreshCw, Sparkles, UserCheck, Tag as TagIcon, Download } from 'lucide-react';
 import { useAppNavigate, getRelatedItemsForSubmittal } from '../utils/connections';
 import { useCreateSubmittal, useUpdateSubmittal } from '../hooks/mutations';
 import { useProjectId } from '../hooks/useProjectId';
+import { useNavigate } from 'react-router-dom';
 import { PermissionGate } from '../components/auth/PermissionGate';
 import { AIAnnotationIndicator } from '../components/ai/AIAnnotation';
 import { PredictiveAlertBanner } from '../components/ai/PredictiveAlert';
@@ -27,16 +28,44 @@ import { EditingLockBanner } from '../components/ui/EditingLockBanner';
 
 const isOverdue = (dateStr: string) => new Date(dateStr) < new Date();
 
+const BIC_COLORS: Record<string, string> = {
+  GC: '#3B82F6',
+  Architect: '#8B5CF6',
+  Engineer: '#14B8A6',
+  Owner: '#F47820',
+  Sub: '#6B7280',
+};
+
+const BallInCourtBadge: React.FC<{ value: string | null }> = ({ value }) => {
+  if (!value) return null;
+  const color = BIC_COLORS[value] ?? '#6B7280';
+  return (
+    <span style={{
+      display: 'inline-block',
+      padding: '2px 8px',
+      borderRadius: '9999px',
+      fontSize: '0.75rem',
+      fontWeight: 500,
+      backgroundColor: `${color}1A`,
+      color,
+      whiteSpace: 'nowrap',
+    }}>
+      {value}
+    </span>
+  );
+};
+
 const subColHelper = createColumnHelper<any>();
 
 const Submittals: React.FC = () => {
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [selectedSubmittalIds, setSelectedSubmittalIds] = useState<string[]>([]);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingDetail, setEditingDetail] = useState(false);
   const { addToast } = useToast();
   const appNavigate = useAppNavigate();
+  const navigate = useNavigate();
   const projectId = useProjectId();
   const createSubmittal = useCreateSubmittal();
   const updateSubmittal = useUpdateSubmittal();
@@ -50,17 +79,6 @@ const Submittals: React.FC = () => {
     from: (s.subcontractor as string) || (s.created_by as string) || '',
     dueDate: (s.due_date as string) || '',
   })), [submittalsRaw]);
-
-  if (loading) {
-    return (
-      <PageContainer title="Submittals" subtitle="Loading...">
-        <MetricCardSkeleton />
-        <Card padding="0">
-          <TableRowSkeleton rows={8} />
-        </Card>
-      </PageContainer>
-    );
-  }
 
   if (submittalsError) {
     return (
@@ -87,9 +105,9 @@ const Submittals: React.FC = () => {
         actions={<PermissionGate permission="submittals.create"><Btn onClick={() => setShowCreateModal(true)}>New Submittal</Btn></PermissionGate>}
       >
         <EmptyState
-          icon={<ClipboardList size={28} color={colors.textTertiary} />}
-          title="No submittals on file"
-          description="Submittals track shop drawings and product data approvals."
+          icon={ClipboardList}
+          title="No submittals yet"
+          description="Track shop drawings, product data, and samples through the approval workflow."
           action={{ label: 'Create Submittal', onClick: () => setShowCreateModal(true) }}
         />
       </PageContainer>
@@ -171,7 +189,54 @@ const Submittals: React.FC = () => {
         );
       },
     }),
+    subColHelper.accessor('ball_in_court', {
+      header: 'Ball in Court',
+      size: 120,
+      cell: (info) => <BallInCourtBadge value={info.getValue() as string | null} />,
+    }),
   ], []);
+
+  const checkboxColumn = useMemo(() => subColHelper.display({
+    id: 'select',
+    size: 44,
+    header: () => (
+      <input
+        type="checkbox"
+        checked={selectedIds.size > 0 && selectedIds.size === allSubmittals.length}
+        ref={(el) => { if (el) el.indeterminate = selectedIds.size > 0 && selectedIds.size < allSubmittals.length; }}
+        onChange={(e) => {
+          if (e.target.checked) setSelectedIds(new Set(allSubmittals.map((s: any) => String(s.id))));
+          else setSelectedIds(new Set());
+        }}
+        onClick={(e) => e.stopPropagation()}
+        aria-label="Select all submittals"
+        style={{ cursor: 'pointer' }}
+      />
+    ),
+    cell: (info: any) => {
+      const id = String(info.row.original.id);
+      return (
+        <input
+          type="checkbox"
+          checked={selectedIds.has(id)}
+          onChange={() => {
+            setSelectedIds((prev) => {
+              const next = new Set(prev);
+              if (next.has(id)) next.delete(id);
+              else next.add(id);
+              return next;
+            });
+          }}
+          onClick={(e) => e.stopPropagation()}
+          aria-label={`Select submittal ${id}`}
+          style={{ cursor: 'pointer' }}
+        />
+      );
+    },
+  }), [selectedIds, allSubmittals]);
+
+  const allSubColumns = useMemo(() => [checkboxColumn, ...subColumns], [checkboxColumn, subColumns]);
+
   const selected = allSubmittals.find((s: Record<string, unknown>) => s.id === selectedId) || null;
   const timeline: Array<{ date: string; event: string; by: string; status: 'complete' | 'active' | 'pending' }> = [];
 
@@ -253,15 +318,26 @@ const Submittals: React.FC = () => {
 
       {viewMode === 'table' ? (
         <Card padding="0">
-          <DataTable
+          <VirtualDataTable
             data={allSubmittals}
-            columns={subColumns}
-            selectable
-            onSelectionChange={setSelectedSubmittalIds}
-            onRowClick={(row) => setSelectedId(row.id)}
-            selectedRowId={selectedId}
+            columns={allSubColumns}
+            rowHeight={48}
+            containerHeight={600}
+            onRowClick={(sub) => navigate(`/projects/${projectId}/submittals/${sub.id}`)}
+            selectedRowId={null}
             getRowId={(row) => String(row.id)}
+            loading={loading}
             emptyMessage="No submittals match your filters"
+            onRowToggleSelectByIndex={(i) => {
+              const id = String(allSubmittals[i]?.id);
+              if (!id) return;
+              setSelectedIds((prev) => {
+                const next = new Set(prev);
+                if (next.has(id)) next.delete(id);
+                else next.add(id);
+                return next;
+              });
+            }}
           />
         </Card>
       ) : (
@@ -309,8 +385,8 @@ const Submittals: React.FC = () => {
       )}
 
       <BulkActionBar
-        selectedIds={selectedSubmittalIds}
-        onClearSelection={() => setSelectedSubmittalIds([])}
+        selectedIds={Array.from(selectedIds)}
+        onClearSelection={() => setSelectedIds(new Set())}
         entityLabel="submittals"
         actions={[
           {

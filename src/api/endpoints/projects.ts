@@ -2,86 +2,70 @@ import { supabase, transformSupabaseError } from '../client'
 import { ApiError } from '../errors'
 import type { EnrichedProject } from '../../types/project'
 import type { ProjectMetrics, ProjectMetricsResult } from '../../types/api'
+import { computeProjectFinancials } from '../../lib/financialEngine'
+import { computeProjectHealthScore, computeAiConfidenceLevel } from '../../lib/healthScoring'
+import { getCostData } from './budget'
 
-// Health score component weights (must sum to 1)
-const SCHEDULE_WEIGHT = 0.35
-const BUDGET_WEIGHT = 0.35
-const RFI_WEIGHT = 0.20
-const SAFETY_WEIGHT = 0.10
+// Queries schedule_phases for a project and derives schedule variance and weighted completion.
+// Returns nulls when no phase data exists — never fake zeros.
+async function fetchScheduleMetrics(projectId: string): Promise<{
+  scheduleVarianceDays: number | null
+  completionPercentage: number | null
+}> {
+  const { data, error } = await supabase
+    .from('schedule_phases')
+    .select('baseline_start, baseline_end, end_date, percent_complete, is_critical_path')
+    .eq('project_id', projectId)
+  if (error || !data || data.length === 0) return { scheduleVarianceDays: null, completionPercentage: null }
 
-// Thresholds at which each negative indicator drives the component to 0
-const SCHEDULE_VARIANCE_THRESHOLD_DAYS = 20   // days behind schedule
-const BUDGET_OVERRUN_THRESHOLD = 0.10          // fraction over budget (e.g. 0.10 = 10% overrun)
-const RFI_OVERDUE_THRESHOLD = 10              // count of overdue RFIs
-const SAFETY_INCIDENT_THRESHOLD = 3           // incidents this month
+  // COMPUTED: source = financialEngine
+  // schedule_variance_days: days behind on last critical path item (positive = late)
+  const criticalItems = data.filter(p => p.is_critical_path && p.baseline_end)
+  let scheduleVarianceDays: number | null = null
+  if (criticalItems.length > 0) {
+    criticalItems.sort((a, b) =>
+      new Date(b.baseline_end!).getTime() - new Date(a.baseline_end!).getTime()
+    )
+    const last = criticalItems[0]
+    const plannedEnd = new Date(last.baseline_end!)
+    const actualEnd = last.end_date ? new Date(last.end_date) : new Date()
+    scheduleVarianceDays = Math.round(
+      (actualEnd.getTime() - plannedEnd.getTime()) / 86400000
+    )
+  }
 
-function componentScore(negativeIndicator: number, threshold: number): number {
-  return 100 * (1 - Math.min(1, negativeIndicator / threshold))
-}
+  // COMPUTED: source = financialEngine
+  // completion_percentage: sum(percent_complete * duration_days) / sum(duration_days)
+  let weightedSum = 0
+  let totalDuration = 0
+  for (const phase of data) {
+    if (phase.baseline_start && phase.baseline_end && phase.percent_complete != null) {
+      const duration = Math.max(
+        1,
+        (new Date(phase.baseline_end).getTime() - new Date(phase.baseline_start).getTime()) / 86400000
+      )
+      weightedSum += phase.percent_complete * duration
+      totalDuration += duration
+    }
+  }
+  const completionPercentage = totalDuration > 0 ? weightedSum / totalDuration : null
 
-// Fields used to compute data completeness (excludes id/name identifiers)
-const METRICS_COMPLETENESS_FIELDS: (keyof ProjectMetrics)[] = [
-  'overall_progress',
-  'milestones_completed',
-  'milestones_total',
-  'schedule_variance_days',
-  'rfis_open',
-  'rfis_overdue',
-  'rfis_total',
-  'avg_rfi_response_days',
-  'punch_open',
-  'punch_total',
-  'budget_total',
-  'budget_spent',
-  'budget_committed',
-  'crews_active',
-  'workers_onsite',
-  'safety_incidents_this_month',
-  'submittals_pending',
-  'submittals_approved',
-  'submittals_total',
-]
-
-// Returns null when no fields are populated — never a fake zero.
-export function computeMetricsConfidence(data: ProjectMetrics): number | null {
-  const nonNull = METRICS_COMPLETENESS_FIELDS.filter(f => data[f] != null).length
-  if (nonNull === 0) return null
-  return Math.round((nonNull / METRICS_COMPLETENESS_FIELDS.length) * 100)
-}
-
-// Returns null when all health-relevant fields are absent — never a fake perfect score.
-export function computeHealthScoreFromMetrics(data: ProjectMetrics): number | null {
-  const hasScheduleData = data.schedule_variance_days != null
-  const hasBudgetData = data.budget_total > 0
-  const hasRfiData = data.rfis_overdue != null
-  if (!hasScheduleData && !hasBudgetData && !hasRfiData) return null
-
-  const scheduleHealth = componentScore(
-    Math.max(0, data.schedule_variance_days ?? 0),
-    SCHEDULE_VARIANCE_THRESHOLD_DAYS
-  )
-  const budgetOverrunFraction = data.budget_total
-    ? Math.max(0, data.budget_spent / data.budget_total - 1)
-    : 0
-  const budgetHealth = componentScore(budgetOverrunFraction, BUDGET_OVERRUN_THRESHOLD)
-  const rfiHealth = componentScore(data.rfis_overdue ?? 0, RFI_OVERDUE_THRESHOLD)
-  const safetyHealth = componentScore(data.safety_incidents_this_month ?? 0, SAFETY_INCIDENT_THRESHOLD)
-  return Math.round(
-    scheduleHealth * SCHEDULE_WEIGHT +
-    budgetHealth * BUDGET_WEIGHT +
-    rfiHealth * RFI_WEIGHT +
-    safetyHealth * SAFETY_WEIGHT
-  )
+  return { scheduleVarianceDays, completionPercentage }
 }
 
 export async function getProject(projectId: string): Promise<EnrichedProject> {
   if (!projectId) throw new ApiError('projectId is required to load project data', 400, 'MISSING_PROJECT_ID', 'No project selected.')
-  const { data, error } = await supabase.from('projects').select('*').eq('id', projectId).single()
-  if (error) throw transformSupabaseError(error)
+  const [projectResult, { completionPercentage }] = await Promise.all([
+    supabase.from('projects').select('*').eq('id', projectId).single(),
+    fetchScheduleMetrics(projectId),
+  ])
+  if (projectResult.error) throw transformSupabaseError(projectResult.error)
+  const data = projectResult.data
   return {
     ...data,
     totalValue: data.contract_value || 0,
-    completionPercentage: 0,
+    // COMPUTED: source = financialEngine
+    completionPercentage: completionPercentage ?? 0,
     daysRemaining: data.target_completion
       ? Math.max(0, Math.ceil((new Date(data.target_completion).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
       : 0,
@@ -93,18 +77,34 @@ export async function getProject(projectId: string): Promise<EnrichedProject> {
 
 export async function getMetrics(projectId: string): Promise<ProjectMetricsResult> {
   if (!projectId) throw new ApiError('projectId is required to load project data', 400, 'MISSING_PROJECT_ID', 'No project selected.')
-  const project = await getProject(projectId)
-  const { data, error } = await supabase
-    .from('project_metrics')
-    .select('*')
-    .eq('project_id', project.id)
-    .single()
-  if (error) throw transformSupabaseError(error)
-  const metrics = data as ProjectMetrics
+
+  const [projectResult, metricsResult, scheduleMetrics, costData] = await Promise.all([
+    supabase.from('projects').select('*').eq('id', projectId).single(),
+    supabase.from('project_metrics').select('*').eq('project_id', projectId).single(),
+    fetchScheduleMetrics(projectId),
+    getCostData(projectId).catch(() => null),
+  ])
+
+  if (projectResult.error) throw transformSupabaseError(projectResult.error)
+  if (metricsResult.error) throw transformSupabaseError(metricsResult.error)
+
+  const project = projectResult.data
+  const metrics = metricsResult.data as ProjectMetrics
   const contractValue = project.contract_value || 0
+
+  // COMPUTED: source = financialEngine
+  const budgetVariance: number | null = (() => {
+    if (!costData) return null
+    const summary = computeProjectFinancials(costData.divisions, costData.changeOrders, contractValue)
+    return summary.variance
+  })()
+
+  const { scheduleVarianceDays, completionPercentage } = scheduleMetrics
+
   const daysBeforeSchedule = project.target_completion
     ? Math.ceil((new Date(project.target_completion).getTime() - Date.now()) / 86400000) - (metrics.planned_duration_days ?? 0)
     : 0
+
   return {
     progress: metrics.overall_progress,
     budgetSpent: metrics.budget_spent,
@@ -114,10 +114,16 @@ export async function getMetrics(projectId: string): Promise<ProjectMetricsResul
     rfiOpen: metrics.rfis_open,
     rfiOverdue: metrics.rfis_overdue,
     punchListOpen: metrics.punch_open,
-    aiHealthScore: computeHealthScoreFromMetrics(metrics),
+    aiHealthScore: computeProjectHealthScore(metrics),
     daysBeforeSchedule,
     milestonesHit: metrics.milestones_completed,
     milestoneTotal: metrics.milestones_total,
-    aiConfidenceLevel: computeMetricsConfidence(metrics),
+    aiConfidenceLevel: computeAiConfidenceLevel(metrics),
+    // COMPUTED: source = financialEngine
+    budgetVariance,
+    // COMPUTED: source = financialEngine
+    scheduleVarianceDays,
+    // COMPUTED: source = financialEngine
+    completionPercentage,
   }
 }

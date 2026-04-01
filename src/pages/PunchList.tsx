@@ -7,7 +7,8 @@ import PunchListSkeleton from '../components/field/PunchListSkeleton';
 import EmptyState from '../components/ui/EmptyState';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 import { usePunchItems, useDirectoryContacts } from '../hooks/queries';
-import { AlertTriangle, Camera, CheckCircle, CheckSquare, Inbox, MessageSquare, RefreshCw, Sparkles } from 'lucide-react';
+import { AlertTriangle, Camera, CheckCircle, CheckSquare, Clock, Inbox, MessageSquare, RefreshCw, Sparkles, XCircle } from 'lucide-react';
+import { usePermissions } from '../hooks/usePermissions';
 import { useAppNavigate, getRelatedItemsForPunchItem } from '../utils/connections';
 import { AIAnnotationIndicator } from '../components/ai/AIAnnotation';
 import { PredictiveAlertBanner } from '../components/ai/PredictiveAlert';
@@ -39,24 +40,45 @@ const statusLabel: Record<string, string> = {
 
 const plColHelper = createColumnHelper<PunchItem>();
 
-// Two-step verification badge: dot 1 = sub completion, dot 2 = GC verification
+// Two-step verification badge: [Sub Status] → [GC Status]
 const TwoStepBadge: React.FC<{ verificationStatus: string }> = ({ verificationStatus }) => {
   const step1Done = verificationStatus === 'sub_complete' || verificationStatus === 'verified';
   const step2Done = verificationStatus === 'verified';
   const isRejected = verificationStatus === 'rejected';
-  const step1Color = isRejected ? colors.statusCritical : step1Done ? colors.statusPending : colors.borderDefault;
-  const step2Color = step2Done ? colors.statusActive : colors.borderDefault;
-  const label = statusLabel[verificationStatus] ?? verificationStatus;
-  const labelColor = isRejected ? colors.statusCritical
-    : step2Done ? colors.statusActive
-    : step1Done ? colors.statusPending
-    : colors.textTertiary;
+
+  const step1Dot = isRejected ? colors.statusCritical : step1Done ? colors.statusPending : colors.borderDefault;
+  const step2Dot = step2Done ? colors.statusActive : colors.borderDefault;
+
+  const step1Text = isRejected ? colors.statusCritical : step1Done ? colors.statusPending : colors.textTertiary;
+  const step2Text = step2Done ? colors.statusActive : colors.textTertiary;
+
+  const step1Label = isRejected ? 'Rejected' : step1Done ? 'Done' : 'Pending';
+  const step2Label = step2Done ? 'Verified' : 'Awaiting';
+
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-      <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: step1Color, flexShrink: 0 }} />
-      <div style={{ width: 12, height: 1, backgroundColor: colors.borderDefault, flexShrink: 0 }} />
-      <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: step2Color, flexShrink: 0 }} />
-      <span style={{ fontSize: 11, fontWeight: 500, color: labelColor, marginLeft: 4 }}>{label}</span>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+      {/* Sub node */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+        <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: step1Dot, flexShrink: 0 }} />
+        <span style={{ fontSize: 9, fontWeight: 600, color: step1Text, lineHeight: 1, whiteSpace: 'nowrap' as const }}>Sub</span>
+      </div>
+      {/* Connector */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+        <div style={{ width: 14, height: 1, backgroundColor: colors.borderDefault }} />
+        <span style={{ fontSize: 9, color: 'transparent', lineHeight: 1 }}>·</span>
+      </div>
+      {/* GC node */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+        <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: step2Dot, flexShrink: 0 }} />
+        <span style={{ fontSize: 9, fontWeight: 600, color: step2Text, lineHeight: 1, whiteSpace: 'nowrap' as const }}>GC</span>
+      </div>
+      {/* Status label */}
+      <span style={{
+        fontSize: 11, fontWeight: 500, marginLeft: 5,
+        color: isRejected ? colors.statusCritical : step2Done ? colors.statusActive : step1Done ? colors.statusPending : colors.textTertiary,
+      }}>
+        {statusLabel[verificationStatus] ?? verificationStatus}
+      </span>
     </div>
   );
 };
@@ -126,7 +148,10 @@ const PunchListPage: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [bulkSelected, setBulkSelected] = useState<Set<string>>(new Set());
   const [editingDetail, setEditingDetail] = useState(false);
+  const [rejectNote, setRejectNote] = useState('');
+  const [showRejectNote, setShowRejectNote] = useState(false);
   const { addToast } = useToast();
+  const { hasPermission } = usePermissions();
   const appNavigate = useAppNavigate();
   const projectId = useProjectId();
   const createPunchItem = useCreatePunchItem();
@@ -174,11 +199,12 @@ const PunchListPage: React.FC = () => {
   // Counts (memoized)
   const {
     openCount, subCompleteCount, verifiedCount, rejectedCount,
-    totalCount, completionPct,
+    totalCount, completionPct, overdueCount,
     criticalCount, highCount, mediumCount, lowCount,
   } = useMemo(() => {
-    let open = 0, subComplete = 0, verified = 0, rejected = 0;
+    let open = 0, subComplete = 0, verified = 0, rejected = 0, overdue = 0;
     let critical = 0, high = 0, medium = 0, low = 0;
+    const now = new Date();
     for (const p of punchListItems) {
       if (p.verification_status === 'sub_complete') subComplete++;
       else if (p.verification_status === 'verified') verified++;
@@ -188,12 +214,13 @@ const PunchListPage: React.FC = () => {
       else if (p.priority === 'high') high++;
       else if (p.priority === 'medium') medium++;
       else if (p.priority === 'low') low++;
+      if (p.verification_status === 'open' && p.dueDate && new Date(p.dueDate) < now) overdue++;
     }
     const total = punchListItems.length;
     const pct = total > 0 ? Math.round((verified / total) * 100) : 0;
     return {
       openCount: open, subCompleteCount: subComplete, verifiedCount: verified, rejectedCount: rejected,
-      totalCount: total, completionPct: pct,
+      totalCount: total, completionPct: pct, overdueCount: overdue,
       criticalCount: critical, highCount: high, mediumCount: medium, lowCount: low,
     };
   }, [punchListItems]);
@@ -221,6 +248,32 @@ const PunchListPage: React.FC = () => {
 
   const selected = punchListItems.find(p => p.id === selectedId) || null;
   const comments: Comment[] = []; // TODO: load from punch_item_comments query
+
+  const handleMarkSubCompleteById = useCallback(async (item: PunchItem) => {
+    try {
+      await updatePunchItem.mutateAsync({
+        id: String(item.id),
+        updates: { verification_status: 'sub_complete', sub_completed_at: new Date().toISOString() },
+        projectId: projectId!,
+      });
+      toast.success(`${item.itemNumber} marked sub-complete. Superintendent notified for verification.`);
+    } catch {
+      toast.error('Failed to update status');
+    }
+  }, [updatePunchItem, projectId]);
+
+  const handleVerifyById = useCallback(async (item: PunchItem) => {
+    try {
+      await updatePunchItem.mutateAsync({
+        id: String(item.id),
+        updates: { verification_status: 'verified', verified_at: new Date().toISOString() },
+        projectId: projectId!,
+      });
+      toast.success(`${item.itemNumber} verified and closed.`);
+    } catch {
+      toast.error('Failed to verify item');
+    }
+  }, [updatePunchItem, projectId]);
 
   const handleMarkSubComplete = useCallback(async () => {
     if (!selected) return;
@@ -257,15 +310,17 @@ const PunchListPage: React.FC = () => {
     try {
       await updatePunchItem.mutateAsync({
         id: String(selected.id),
-        updates: { verification_status: 'rejected' },
+        updates: { verification_status: 'rejected', rejection_reason: rejectNote || undefined },
         projectId: projectId!,
       });
       toast.error(`${selected.itemNumber} rejected. Subcontractor notified to rework.`);
+      setRejectNote('');
+      setShowRejectNote(false);
       setSelectedId(null);
     } catch {
       toast.error('Failed to reject item');
     }
-  }, [selected, updatePunchItem, projectId]);
+  }, [selected, updatePunchItem, projectId, rejectNote]);
 
   const handleAddPhoto = useCallback(() => {
     addToast('info', 'Photo capture loading');
@@ -383,7 +438,43 @@ const PunchListPage: React.FC = () => {
         </span>
       ),
     }),
-  ], [bulkSelected, setBulkSelected, updatePunchItem, projectId]);
+    plColHelper.display({
+      id: 'inline_actions',
+      header: '',
+      size: 160,
+      cell: (info) => {
+        const item = info.row.original;
+        return (
+          <div onClick={(e) => e.stopPropagation()} style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+            {item.verification_status === 'open' && hasPermission('punch_list.edit') && (
+              <button
+                onClick={() => handleMarkSubCompleteById(item)}
+                style={{ padding: '3px 8px', fontSize: 11, fontWeight: 600, fontFamily: 'inherit', backgroundColor: colors.statusPendingSubtle, color: colors.statusPending, border: `1px solid ${colors.statusPending}40`, borderRadius: borderRadius.base, cursor: 'pointer', whiteSpace: 'nowrap' as const }}
+              >
+                Mark Complete
+              </button>
+            )}
+            {item.verification_status === 'sub_complete' && hasPermission('punch_list.verify') && (
+              <>
+                <button
+                  onClick={() => handleVerifyById(item)}
+                  style={{ padding: '3px 8px', fontSize: 11, fontWeight: 600, fontFamily: 'inherit', backgroundColor: colors.statusActiveSubtle, color: colors.statusActive, border: `1px solid ${colors.statusActive}40`, borderRadius: borderRadius.base, cursor: 'pointer', whiteSpace: 'nowrap' as const }}
+                >
+                  Verify
+                </button>
+                <button
+                  onClick={() => { setSelectedId(item.id); setShowRejectNote(true); }}
+                  style={{ padding: '3px 8px', fontSize: 11, fontWeight: 600, fontFamily: 'inherit', backgroundColor: colors.statusCriticalSubtle, color: colors.statusCritical, border: `1px solid ${colors.statusCritical}40`, borderRadius: borderRadius.base, cursor: 'pointer', whiteSpace: 'nowrap' as const }}
+                >
+                  Reject
+                </button>
+              </>
+            )}
+          </div>
+        );
+      },
+    }),
+  ], [bulkSelected, setBulkSelected, updatePunchItem, projectId, hasPermission, handleMarkSubCompleteById, handleVerifyById]);
 
   if (loading) {
     return (
@@ -418,10 +509,10 @@ const PunchListPage: React.FC = () => {
         actions={<PermissionGate permission="punch_list.create"><Btn onClick={() => setShowCreateModal(true)}>New Item</Btn></PermissionGate>}
       >
         <EmptyState
-          icon={<CheckSquare size={28} color={colors.textTertiary} />}
-          title="Punch list is clear"
-          description="All items resolved. New punch items appear here during inspections."
-          action={{ label: 'Add Item', onClick: () => setShowCreateModal(true) }}
+          icon={CheckSquare}
+          title="No punch items yet"
+          description="Punch items are created during site walks and inspections"
+          action={{ label: 'Create First Item', onClick: () => setShowCreateModal(true) }}
         />
       </PageContainer>
     );
@@ -449,27 +540,40 @@ const PunchListPage: React.FC = () => {
 
       {/* Metric Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: spacing['3'], marginBottom: spacing['4'] }}>
-        <Card padding={spacing['4']}>
+        <Card padding={spacing['6']}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['2'] }}>
+            <CheckSquare size={16} color={colors.textTertiary} />
+            <span style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, fontWeight: typography.fontWeight.medium }}>Total Items</span>
+          </div>
           <div style={{ fontSize: typography.fontSize['3xl'], fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>{totalCount}</div>
-          <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, marginTop: spacing['1'] }}>Total Items</div>
         </Card>
-        <Card padding={spacing['4']}>
+        <Card padding={spacing['6']}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['2'] }}>
+            <Inbox size={16} color={colors.statusCritical} />
+            <span style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, fontWeight: typography.fontWeight.medium }}>Open</span>
+          </div>
           <div style={{ fontSize: typography.fontSize['3xl'], fontWeight: typography.fontWeight.semibold, color: colors.statusCritical }}>{openCount}</div>
-          <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, marginTop: spacing['1'] }}>Open</div>
         </Card>
-        <Card padding={spacing['4']}>
+        <Card padding={spacing['6']} style={{ border: subCompleteCount > 0 ? `2px solid ${colors.statusPending}` : undefined, backgroundColor: subCompleteCount > 0 ? colors.statusPendingSubtle : undefined }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['2'] }}>
+            <Clock size={16} color={colors.statusPending} />
+            <span style={{ fontSize: typography.fontSize.xs, color: colors.statusPending, fontWeight: typography.fontWeight.medium }}>Awaiting Verification</span>
+          </div>
           <div style={{ fontSize: typography.fontSize['3xl'], fontWeight: typography.fontWeight.semibold, color: colors.statusPending }}>{subCompleteCount}</div>
-          <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, marginTop: spacing['1'] }}>Sub Complete</div>
-          <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Pending verification</div>
         </Card>
-        <Card padding={spacing['4']}>
+        <Card padding={spacing['6']}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['2'] }}>
+            <CheckCircle size={16} color={colors.statusActive} />
+            <span style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, fontWeight: typography.fontWeight.medium }}>Verified</span>
+          </div>
           <div style={{ fontSize: typography.fontSize['3xl'], fontWeight: typography.fontWeight.semibold, color: colors.statusActive }}>{verifiedCount}</div>
-          <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, marginTop: spacing['1'] }}>Verified</div>
         </Card>
-        <Card padding={spacing['4']}>
-          <div style={{ fontSize: typography.fontSize['3xl'], fontWeight: typography.fontWeight.semibold, color: colors.primaryOrange }}>{completionPct}%</div>
-          <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, marginTop: spacing['1'] }}>Completion</div>
-          <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{verifiedCount} of {totalCount} verified</div>
+        <Card padding={spacing['6']}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['2'] }}>
+            <AlertTriangle size={16} color={overdueCount > 0 ? colors.statusCritical : colors.textTertiary} />
+            <span style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, fontWeight: typography.fontWeight.medium }}>Overdue</span>
+          </div>
+          <div style={{ fontSize: typography.fontSize['3xl'], fontWeight: typography.fontWeight.semibold, color: overdueCount > 0 ? colors.statusCritical : colors.textTertiary }}>{overdueCount}</div>
         </Card>
       </div>
 
@@ -530,7 +634,7 @@ const PunchListPage: React.FC = () => {
 
       <DetailPanel
         open={!!selected}
-        onClose={() => { setSelectedId(null); setEditingDetail(false); }}
+        onClose={() => { setSelectedId(null); setEditingDetail(false); setShowRejectNote(false); setRejectNote(''); }}
         title={selected?.itemNumber || ''}
       >
         {selected && (
@@ -698,6 +802,50 @@ const PunchListPage: React.FC = () => {
               )}
             </div>
 
+            {/* Status History Timeline */}
+            <div>
+              <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, marginBottom: spacing.sm, textTransform: 'uppercase' as const, letterSpacing: '0.5px' }}>Status History</div>
+              <div style={{ position: 'relative', paddingLeft: spacing['5'] }}>
+                {/* Vertical line */}
+                <div style={{ position: 'absolute', left: 7, top: 8, bottom: 8, width: 1, backgroundColor: colors.borderLight }} />
+                {[
+                  selected.createdDate ? {
+                    label: 'Item reported',
+                    sub: selected.reportedBy,
+                    date: formatDate(selected.createdDate),
+                    dot: colors.statusCritical,
+                  } : null,
+                  selected.sub_completed_at ? {
+                    label: 'Marked complete by sub',
+                    sub: selected.assigned,
+                    date: formatDate(selected.sub_completed_at),
+                    dot: colors.statusPending,
+                  } : null,
+                  selected.rejection_reason ? {
+                    label: 'Rejected by superintendent',
+                    sub: selected.rejection_reason,
+                    date: '',
+                    dot: colors.statusCritical,
+                  } : null,
+                  selected.verified_at ? {
+                    label: 'Verified and closed',
+                    sub: selected.verified_by || '',
+                    date: formatDate(selected.verified_at),
+                    dot: colors.statusActive,
+                  } : null,
+                ].filter(Boolean).map((event, idx) => event && (
+                  <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: spacing['3'], marginBottom: spacing['3'], position: 'relative' }}>
+                    <div style={{ width: 14, height: 14, borderRadius: '50%', backgroundColor: event.dot, border: `2px solid white`, boxShadow: `0 0 0 1px ${event.dot}`, flexShrink: 0, marginTop: 1, zIndex: 1 }} />
+                    <div>
+                      <div style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>{event.label}</div>
+                      {event.sub && <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{event.sub}</div>}
+                    </div>
+                    {event.date && <div style={{ marginLeft: 'auto', fontSize: typography.fontSize.caption, color: colors.textTertiary, whiteSpace: 'nowrap' as const }}>{event.date}</div>}
+                  </div>
+                ))}
+              </div>
+            </div>
+
             {/* Comments */}
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.lg }}>
@@ -749,7 +897,24 @@ const PunchListPage: React.FC = () => {
                     <Btn variant="primary" onClick={handleVerify} icon={<CheckCircle size={16} />}>Verify</Btn>
                   </PermissionGate>
                   <PermissionGate permission="punch_list.verify">
-                    <Btn variant="secondary" onClick={handleReject}>Reject</Btn>
+                    {showRejectNote ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm, width: '100%' }}>
+                        <textarea
+                          autoFocus
+                          value={rejectNote}
+                          onChange={(e) => setRejectNote(e.target.value)}
+                          placeholder="Describe what needs to be corrected (required)"
+                          rows={3}
+                          style={{ width: '100%', padding: spacing.sm, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, border: `1px solid ${colors.statusCritical}80`, borderRadius: borderRadius.base, resize: 'none', outline: 'none', color: colors.textPrimary, backgroundColor: colors.statusCriticalSubtle, boxSizing: 'border-box' as const }}
+                        />
+                        <div style={{ display: 'flex', gap: spacing.sm }}>
+                          <Btn variant="secondary" size="sm" icon={<XCircle size={14} />} onClick={handleReject} style={{ color: colors.statusCritical, borderColor: colors.statusCritical }}>Confirm Reject</Btn>
+                          <Btn variant="secondary" size="sm" onClick={() => { setShowRejectNote(false); setRejectNote(''); }}>Cancel</Btn>
+                        </div>
+                      </div>
+                    ) : (
+                      <Btn variant="secondary" onClick={() => setShowRejectNote(true)}>Reject</Btn>
+                    )}
                   </PermissionGate>
                 </>
               )}

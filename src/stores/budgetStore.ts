@@ -129,11 +129,17 @@ export const useBudgetStore = create<BudgetState>()((set, get) => ({
     const updates: Partial<ChangeOrder> = { status, updated_at: new Date().toISOString() };
     if (approvedBy) updates.approved_by = approvedBy;
 
+    // Optimistically apply before the DB write so the UI reflects the change immediately.
+    // Capture previous state for rollback on error.
+    const previous = get().changeOrders;
+    set((s) => ({
+      changeOrders: s.changeOrders.map((co) => (co.id === id ? { ...co, ...updates } : co)),
+    }));
+
     const { error } = await (supabase.from('change_orders') as any).update(updates).eq('id', id);
-    if (!error) {
-      set((s) => ({
-        changeOrders: s.changeOrders.map((co) => (co.id === id ? { ...co, ...updates } : co)),
-      }));
+    if (error) {
+      // Roll back the optimistic update so the UI stays consistent with the DB.
+      set({ changeOrders: previous });
     }
     return { error: error?.message ?? null };
   },

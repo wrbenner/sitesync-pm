@@ -392,6 +392,16 @@ export const Financials: React.FC = () => {
     ? ((billedToDate - costsToDate) / billedToDate) * 100
     : 0
 
+  // Previous period billed: sum all pay apps except most recent (by period_to).
+  // Falls back to 0 (no trend shown) when fewer than 2 pay apps exist.
+  const previousBilledToDate = (() => {
+    if (!payApps || payApps.length < 2) return 0;
+    const sorted = [...payApps].sort((a: any, b: any) =>
+      new Date(a.period_to || 0).getTime() - new Date(b.period_to || 0).getTime()
+    );
+    return sorted.slice(0, -1).reduce((s: number, p: any) => s + (p.total_completed_and_stored || 0), 0);
+  })()
+
   // ── Tab actions ────────────────────────────────────────────
 
   const addButtonLabel: Record<TabKey, string> = {
@@ -491,44 +501,46 @@ export const Financials: React.FC = () => {
             <MetricFlash isFlashing={isFlashing}>
               <MetricBox
                 label="Contract Value"
-                value={fmtCurrency(contractValue)}
-                changeLabel="prime contracts"
+                value={contractValue}
+                format="currency"
               />
             </MetricFlash>
             <MetricFlash isFlashing={isFlashing}>
               <MetricBox
                 label="Billed to Date"
-                value={fmtCurrency(billedToDate)}
-                change={billedToDate > 0 ? 1 : 0}
-                changeLabel="completed and stored"
+                value={billedToDate}
+                format="currency"
+                previousValue={previousBilledToDate}
               />
             </MetricFlash>
             <MetricFlash isFlashing={isFlashing}>
               <MetricBox
                 label="Costs to Date"
-                value={fmtCurrency(costsToDate)}
-                changeLabel="all cost types"
+                value={costsToDate}
+                format="currency"
               />
             </MetricFlash>
             <MetricFlash isFlashing={isFlashing}>
               <MetricBox
                 label="Retainage Held"
-                value={fmtCurrency(retainageHeld)}
-                changeLabel="held by owner"
+                value={retainageHeld}
+                format="currency"
               />
             </MetricFlash>
             <MetricFlash isFlashing={isFlashing}>
               <MetricBox
                 label="AP Outstanding"
-                value={fmtCurrency(apOutstanding)}
-                change={apOutstanding > 0 ? -1 : 0}
-                changeLabel="unpaid invoices"
+                value={apOutstanding}
+                format="currency"
+                colorOverride={apOutstanding > 0 ? 'warning' : undefined}
               />
             </MetricFlash>
             <MetricFlash isFlashing={isFlashing}>
               <MetricBox
                 label="Gross Margin"
-                value={fmtPct(grossMargin)}
+                value={grossMargin}
+                format="percent"
+                colorOverride={grossMargin >= 10 ? 'success' : 'danger'}
                 change={grossMargin >= 10 ? 1 : -1}
                 changeLabel="billed vs costs"
               />

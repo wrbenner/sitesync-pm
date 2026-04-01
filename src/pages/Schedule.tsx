@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Sparkles, AlertTriangle, ChevronDown, ChevronUp, CheckCircle, RefreshCw, Zap, CalendarClock, TrendingUp, GitBranch, Gauge, CalendarCheck, CalendarX } from 'lucide-react';
+import { Sparkles, AlertTriangle, ChevronDown, ChevronUp, CheckCircle, RefreshCw, Zap, CalendarClock, TrendingUp, GitBranch, Gauge, CalendarCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { PageContainer, Card, SectionHeader, MetricBox, Skeleton, Btn, useToast } from '../components/Primitives';
-import { useRealtimeSchedulePhases } from '../hooks/queries/realtime';
+import { useRealtimeSchedulePhases, useScheduleRealtime } from '../hooks/queries/realtime';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../styles/theme';
 import { useScheduleStore } from '../stores/scheduleStore';
 import { useProjectContext } from '../stores/projectContextStore';
+import { useProjectMetrics } from '../hooks/useProjectMetrics';
 import { useCopilotStore } from '../stores/copilotStore';
 import { PredictiveAlertBanner } from '../components/ai/PredictiveAlert';
 import { getPredictiveAlertsForPage } from '../data/aiAnnotations';
@@ -77,8 +78,11 @@ export const Schedule: React.FC = () => {
   const isMobile = useMediaQuery('(max-width: 767px)');
   const { activeProject } = useProjectContext();
   const { phases: schedulePhases, metrics, loading, error, loadSchedule } = useScheduleStore();
-  const { createConversation, sendMessage, setActiveConversation } = useCopilotStore();
+  const { data: projectMetrics } = useProjectMetrics(activeProject?.id);
+  const { createConversation, sendMessage, setActiveConversation, setPageContext } = useCopilotStore();
   const navigate = useNavigate();
+
+  useEffect(() => { setPageContext('schedule'); }, [setPageContext]);
 
   useEffect(() => {
     if (activeProject?.id) loadSchedule(activeProject.id);
@@ -91,10 +95,12 @@ export const Schedule: React.FC = () => {
   // dirtyPhaseIds: pass phase IDs currently being edited to get conflict toasts.
   // Populated by whichever editing UI sets them; empty set is safe.
   const [dirtyPhaseIds] = useState<ReadonlySet<string>>(() => new Set());
-  const { isSubscribed: liveActive } = useRealtimeSchedulePhases(
+  const { isSubscribed: phasesSubscribed } = useRealtimeSchedulePhases(
     activeProject?.id ?? '',
     dirtyPhaseIds
   );
+  const { isSubscribed: activitiesSubscribed } = useScheduleRealtime(activeProject?.id ?? '');
+  const liveActive = phasesSubscribed || activitiesSubscribed;
 
   // Predictive risk state
   const [risks, setRisks] = useState<PredictedRisk[]>([]);
@@ -104,7 +110,71 @@ export const Schedule: React.FC = () => {
   const [minutesAgo, setMinutesAgo] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const kpis = useMemo(() => computeScheduleKPIs(schedulePhases), [schedulePhases]);
+  const kpis = useMemo(() => computeScheduleKPIs(schedulePhases), [schedulePhases])
+
+  const activityMetrics = useMemo(() => {
+    if (schedulePhases.length === 0) {
+      return {
+        scheduleVarianceDays: 0,
+        criticalPathCount: 0,
+        activitiesOnTrackPct: 0,
+        overallPctComplete: 0,
+        projectedCompletion: null as string | null,
+      }
+    }
+
+    const criticalActivities = schedulePhases.filter(p => p.floatDays === 0 || p.critical)
+
+    // Schedule Variance: projected minus baseline for last critical activity (positive = behind)
+    let scheduleVarianceDays = 0
+    if (criticalActivities.length > 0) {
+      const lastCritical = criticalActivities.reduce((latest, p) =>
+        new Date(p.endDate) > new Date(latest.endDate) ? p : latest
+      )
+      if (lastCritical.baselineEndDate) {
+        const projected = new Date(lastCritical.endDate)
+        const baseline = new Date(lastCritical.baselineEndDate)
+        projected.setHours(0, 0, 0, 0)
+        baseline.setHours(0, 0, 0, 0)
+        scheduleVarianceDays = Math.round((projected.getTime() - baseline.getTime()) / 86400000)
+      }
+    }
+
+    // Activities On Track: slippageDays <= 0 or completed
+    const onTrackCount = schedulePhases.filter(p => p.slippageDays <= 0 || p.completed).length
+    const activitiesOnTrackPct = Math.round((onTrackCount / schedulePhases.length) * 100)
+
+    // Overall % Complete: weighted average by duration
+    let totalDuration = 0
+    let weightedProgress = 0
+    for (const p of schedulePhases) {
+      const start = new Date(p.startDate)
+      const end = new Date(p.endDate)
+      start.setHours(0, 0, 0, 0)
+      end.setHours(0, 0, 0, 0)
+      const duration = Math.max(1, (end.getTime() - start.getTime()) / 86400000)
+      totalDuration += duration
+      weightedProgress += p.progress * duration
+    }
+    const overallPctComplete = totalDuration > 0 ? Math.round(weightedProgress / totalDuration) : 0
+
+    // Projected Completion: latest endDate among critical path activities
+    let projectedCompletion: string | null = null
+    if (criticalActivities.length > 0) {
+      const latestCritical = criticalActivities.reduce((latest, p) =>
+        new Date(p.endDate) > new Date(latest.endDate) ? p : latest
+      )
+      projectedCompletion = latestCritical.endDate
+    }
+
+    return {
+      scheduleVarianceDays,
+      criticalPathCount: criticalActivities.length,
+      activitiesOnTrackPct,
+      overallPctComplete,
+      projectedCompletion,
+    }
+  }, [schedulePhases]);
 
   const runAnalysis = useCallback(() => {
     setAnalyzing(true);
@@ -150,6 +220,7 @@ export const Schedule: React.FC = () => {
     return (
       <PageContainer title="Schedule" subtitle="Loading...">
         <style>{`
+          @media (max-width: 1024px) and (min-width: 641px) { .kpi-grid { grid-template-columns: repeat(3, 1fr) !important; } }
           @media (max-width: 640px) { .kpi-grid { grid-template-columns: repeat(2, 1fr) !important; } }
           @keyframes schedPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
         `}</style>
@@ -327,6 +398,7 @@ export const Schedule: React.FC = () => {
       )}
 
       <style>{`
+        @media (max-width: 1024px) and (min-width: 641px) { .kpi-grid { grid-template-columns: repeat(3, 1fr) !important; } }
         @media (max-width: 640px) { .kpi-grid { grid-template-columns: repeat(2, 1fr) !important; } }
         @keyframes livePulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.35); } }
       `}</style>
@@ -341,47 +413,47 @@ export const Schedule: React.FC = () => {
           marginBottom: spacing['2xl'],
         }}
       >
-        {/* Schedule Variance */}
+        {/* Schedule Variance: positive = behind (red), negative/zero = ahead (green) */}
         <ScheduleKPICard
-          icon={<CalendarClock size={24} color={kpis.scheduleVarianceDays >= 0 ? colors.statusActive : colors.statusCritical} />}
+          icon={<CalendarClock size={24} color={activityMetrics.scheduleVarianceDays > 0 ? colors.statusCritical : colors.statusActive} />}
           label="Schedule Variance"
-          value={`${kpis.scheduleVarianceDays >= 0 ? '+' : ''}${kpis.scheduleVarianceDays}d`}
-          valueColor={kpis.scheduleVarianceDays >= 0 ? colors.statusActive : colors.statusCritical}
-          trend={kpis.scheduleVarianceDays >= 0 ? 'up' : 'down'}
+          value={`${activityMetrics.scheduleVarianceDays > 0 ? '+' : ''}${activityMetrics.scheduleVarianceDays}d`}
+          valueColor={activityMetrics.scheduleVarianceDays > 0 ? colors.statusCritical : colors.statusActive}
+          trend={activityMetrics.scheduleVarianceDays > 0 ? 'down' : activityMetrics.scheduleVarianceDays < 0 ? 'up' : 'neutral'}
         />
-        {/* SPI */}
-        <ScheduleKPICard
-          icon={<TrendingUp size={24} color={kpis.spi >= 1 ? colors.statusActive : kpis.spi >= 0.85 ? colors.statusPending : colors.statusCritical} />}
-          label="SPI"
-          value={kpis.spi.toFixed(2)}
-          valueColor={kpis.spi >= 1 ? colors.statusActive : kpis.spi >= 0.85 ? colors.statusPending : colors.statusCritical}
-          trend={kpis.spi >= 1 ? 'up' : 'down'}
-        />
-        {/* Critical Path */}
+        {/* Critical Path Activities */}
         <ScheduleKPICard
           icon={<GitBranch size={24} color={colors.primaryOrange} />}
-          label="Critical Path"
-          value={`${kpis.criticalPathLength} activities`}
+          label="Critical Path Activities"
+          value={String(activityMetrics.criticalPathCount)}
           valueColor={colors.textPrimary}
           trend="neutral"
         />
-        {/* Float Consumed */}
+        {/* Activities On Track */}
         <ScheduleKPICard
-          icon={<Gauge size={24} color={kpis.floatConsumedPct >= 80 ? colors.statusCritical : kpis.floatConsumedPct >= 50 ? colors.statusPending : colors.statusActive} />}
-          label="Float Consumed"
-          value={`${kpis.floatConsumedPct}%`}
-          valueColor={kpis.floatConsumedPct >= 80 ? colors.statusCritical : kpis.floatConsumedPct >= 50 ? colors.statusPending : colors.statusActive}
-          trend={kpis.floatConsumedPct >= 80 ? 'down' : 'neutral'}
+          icon={<TrendingUp size={24} color={activityMetrics.activitiesOnTrackPct >= 80 ? colors.statusActive : activityMetrics.activitiesOnTrackPct >= 60 ? colors.statusPending : colors.statusCritical} />}
+          label="Activities On Track"
+          value={`${activityMetrics.activitiesOnTrackPct}%`}
+          valueColor={activityMetrics.activitiesOnTrackPct >= 80 ? colors.statusActive : activityMetrics.activitiesOnTrackPct >= 60 ? colors.statusPending : colors.statusCritical}
+          trend={activityMetrics.activitiesOnTrackPct >= 80 ? 'up' : 'down'}
+        />
+        {/* Overall % Complete */}
+        <ScheduleKPICard
+          icon={<Gauge size={24} color={colors.primaryOrange} />}
+          label="Overall % Complete"
+          value={`${activityMetrics.overallPctComplete}%`}
+          valueColor={colors.textPrimary}
+          trend="neutral"
         />
         {/* Projected Completion */}
         <ScheduleKPICard
-          icon={<CalendarCheck size={24} color={kpis.scheduleVarianceDays >= 0 ? colors.statusActive : colors.statusCritical} />}
+          icon={<CalendarCheck size={24} color={activityMetrics.scheduleVarianceDays <= 0 ? colors.statusActive : colors.statusCritical} />}
           label="Projected Completion"
-          value={kpis.projectedCompletionDate
-            ? new Date(kpis.projectedCompletionDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+          value={activityMetrics.projectedCompletion
+            ? new Date(activityMetrics.projectedCompletion + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
             : 'N/A'}
-          valueColor={kpis.scheduleVarianceDays >= 0 ? colors.statusActive : colors.statusCritical}
-          trend={kpis.scheduleVarianceDays >= 0 ? 'up' : 'down'}
+          valueColor={activityMetrics.scheduleVarianceDays <= 0 ? colors.statusActive : colors.statusCritical}
+          trend={activityMetrics.scheduleVarianceDays <= 0 ? 'up' : 'down'}
         />
       </div>
 
@@ -396,7 +468,11 @@ export const Schedule: React.FC = () => {
       >
         <MetricBox label="Days Ahead" value={metrics.daysBeforeSchedule} />
         <MetricBox label="Milestones" value={`${metrics.milestonesHit}/${metrics.milestoneTotal}`} />
-        <MetricBox label="AI Confidence" value={metrics.aiConfidenceLevel} unit="%" />
+        <MetricBox
+          label="AI Confidence"
+          value={projectMetrics?.aiConfidenceLevel == null ? 'Insufficient data' : projectMetrics.aiConfidenceLevel}
+          unit={projectMetrics?.aiConfidenceLevel == null ? undefined : '%'}
+        />
       </div>
 
       {/* AI Risk Panel */}
@@ -580,34 +656,6 @@ export const Schedule: React.FC = () => {
               </button>
             </div>
           </div>
-        ) : schedulePhases.length === 0 ? (
-          /* Empty state */
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: `${spacing['2xl']} ${spacing['5']}`,
-            backgroundColor: colors.surfaceRaised,
-            borderRadius: borderRadius.lg,
-            border: `1px solid ${colors.borderDefault}`,
-            textAlign: 'center',
-            gap: spacing['4'],
-          }}>
-            <CalendarX size={48} color="#9CA3AF" />
-            <div>
-              <p style={{ margin: 0, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, fontSize: typography.fontSize.body }}>
-                No schedule activities yet
-              </p>
-              <p style={{ margin: `${spacing['2']} 0 0`, color: colors.textSecondary, fontSize: typography.fontSize.sm }}>
-                Import your CPM schedule or add activities manually to get started.
-              </p>
-            </div>
-            <div style={{ display: 'flex', gap: spacing['3'] }}>
-              <Btn variant="primary" size="sm">Import Schedule</Btn>
-              <Btn variant="secondary" size="sm">Add First Activity</Btn>
-            </div>
-          </div>
         ) : isMobile ? (
           <MobileScheduleView phases={schedulePhases} risks={risks} />
         ) : (
@@ -685,6 +733,9 @@ export const Schedule: React.FC = () => {
                 <GanttChart
                   phases={schedulePhases}
                   whatIfMode={whatIfMode}
+                  isLoading={loading}
+                  onImportSchedule={() => addToast('info', 'Schedule import coming soon')}
+                  onAddActivity={() => addToast('info', 'Activity drawer coming soon')}
                   onPhaseClick={(phase) => addToast('info', `${phase.name}: ${phase.progress}% complete`)}
                   baselinePhases={schedulePhases}
                   risks={risks}

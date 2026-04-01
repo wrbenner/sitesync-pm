@@ -43,13 +43,18 @@ const PunchListSkeleton: React.FC = () => (
           <Skeleton width="240px" height="14px" />
           {/* Assigned */}
           <Skeleton width="100px" height="14px" />
-          {/* Due date */}
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: spacing['3'] }}>
+          {/* Due date + priority + two-step status dot + status */}
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
             <Skeleton width="64px" height="14px" />
-            {/* Priority */}
+            {/* Priority pill */}
             <Skeleton width="56px" height="20px" borderRadius="9999px" />
-            {/* Status */}
-            <Skeleton width="80px" height="14px" />
+            {/* Two-step verification dot placeholder: Sub dot — connector — GC dot + label */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+              <Skeleton width="8px" height="8px" borderRadius="50%" />
+              <Skeleton width="14px" height="2px" />
+              <Skeleton width="8px" height="8px" borderRadius="50%" />
+              <Skeleton width="52px" height="14px" />
+            </div>
           </div>
         </div>
       ))}

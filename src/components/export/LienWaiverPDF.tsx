@@ -24,6 +24,12 @@ const s = StyleSheet.create({
   signatureLabel: { fontSize: 8, color: colors.textSecondary },
   notice: { marginTop: 20, padding: 12, backgroundColor: colors.surfaceSelected, borderRadius: 4, borderWidth: 0.5, borderColor: colors.primaryOrange },
   noticeText: { fontSize: 8, color: colors.textSecondary, lineHeight: 1.5 },
+  notaryBlock: { marginTop: 28, padding: 12, borderWidth: 0.5, borderColor: vizColors.darkText, borderRadius: 2 },
+  notaryTitle: { fontSize: 9, fontFamily: 'Helvetica-Bold', marginBottom: 8 },
+  notaryRow: { flexDirection: 'row', gap: 12, marginBottom: 8 },
+  notaryField: { flex: 1 },
+  notaryLine: { borderBottomWidth: 0.5, borderBottomColor: vizColors.darkText, minHeight: 14, marginBottom: 2 },
+  notaryLabel: { fontSize: 7, color: colors.textSecondary },
   footer: { position: 'absolute', bottom: 24, left: 48, right: 48, borderTopWidth: 0.5, borderTopColor: colors.borderDefault, paddingTop: 8 },
   footerText: { fontSize: 7, color: colors.textTertiary },
   header: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 24, paddingBottom: 12, borderBottomWidth: 2, borderBottomColor: colors.darkNavy },
@@ -269,6 +275,37 @@ export const LienWaiverPDF: React.FC<{ data: LienWaiverData }> = ({ data }) => {
               <View style={s.underline}><Text style={s.value} /></View>
             </View>
           </View>
+        </View>
+
+        {/* Notary Block (AIA G706A format) */}
+        <View style={s.notaryBlock}>
+          <Text style={s.notaryTitle}>NOTARY ACKNOWLEDGMENT</Text>
+          <View style={s.notaryRow}>
+            <View style={s.notaryField}>
+              <Text style={s.notaryLabel}>STATE OF</Text>
+              <View style={s.notaryLine} />
+            </View>
+            <View style={s.notaryField}>
+              <Text style={s.notaryLabel}>COUNTY OF</Text>
+              <View style={s.notaryLine} />
+            </View>
+          </View>
+          <Text style={{ fontSize: 8, lineHeight: 1.5, marginBottom: 8 }}>
+            {`Subscribed and sworn to before me this ______ day of _________________, ________.`}
+          </Text>
+          <View style={s.notaryRow}>
+            <View style={s.notaryField}>
+              <View style={s.notaryLine} />
+              <Text style={s.notaryLabel}>Notary Public</Text>
+            </View>
+            <View style={s.notaryField}>
+              <View style={s.notaryLine} />
+              <Text style={s.notaryLabel}>My Commission Expires</Text>
+            </View>
+          </View>
+          <Text style={{ fontSize: 7, color: colors.textTertiary, marginTop: 6 }}>
+            (SEAL)
+          </Text>
         </View>
 
         {/* Footer */}

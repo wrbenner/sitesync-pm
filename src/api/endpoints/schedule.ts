@@ -1,53 +1,127 @@
-import { supabase, transformSupabaseError } from '../client'
+import { supabase, supabaseMutation, transformSupabaseError } from '../client'
 import { assertProjectAccess } from '../middleware/projectScope'
-import type { MappedSchedulePhase } from '../../types/entities'
+import type { ScheduleActivity, SchedulePhaseRow, SchedulePhaseUpdate } from '../../types/api'
+import { calculateCriticalPath, tasksToCPM } from '../../lib/criticalPath'
 
-export const getSchedulePhases = async (projectId: string): Promise<MappedSchedulePhase[]> => {
+// Columns fetched from schedule_phases; must match fields used in mapScheduleActivityRow.
+const SCHEDULE_SELECT =
+  'id, project_id, name, start_date, end_date, baseline_start, baseline_end, ' +
+  'percent_complete, float_days, is_critical_path, dependencies, status, created_at, updated_at'
+
+type RawRow = Pick<
+  SchedulePhaseRow,
+  | 'id'
+  | 'project_id'
+  | 'name'
+  | 'start_date'
+  | 'end_date'
+  | 'baseline_start'
+  | 'baseline_end'
+  | 'percent_complete'
+  | 'float_days'
+  | 'is_critical_path'
+  | 'dependencies'
+  | 'status'
+  | 'created_at'
+  | 'updated_at'
+>
+
+const VALID_STATUSES = new Set<ScheduleActivity['status']>([
+  'not_started',
+  'in_progress',
+  'completed',
+  'delayed',
+])
+
+function toActivityStatus(s: string | null): ScheduleActivity['status'] {
+  if (s !== null && VALID_STATUSES.has(s as ScheduleActivity['status'])) {
+    return s as ScheduleActivity['status']
+  }
+  return 'not_started'
+}
+
+export function mapScheduleActivityRow(row: RawRow): ScheduleActivity {
+  const startDate = row.start_date ?? ''
+  const finishDate = row.end_date ?? ''
+  const durationDays =
+    startDate && finishDate
+      ? Math.max(
+          0,
+          Math.ceil(
+            (new Date(finishDate).getTime() - new Date(startDate).getTime()) / 86400000,
+          ),
+        )
+      : 0
+  return {
+    id: row.id,
+    project_id: row.project_id,
+    name: row.name,
+    description: null,
+    start_date: startDate,
+    finish_date: finishDate,
+    baseline_start: row.baseline_start ?? null,
+    baseline_finish: row.baseline_end ?? null,
+    actual_start: null,
+    actual_finish: null,
+    percent_complete: row.percent_complete ?? 0,
+    planned_percent_complete: 0,
+    duration_days: durationDays,
+    float_days: row.float_days ?? 0,
+    is_critical: row.is_critical_path ?? false,
+    is_milestone: false,
+    wbs_code: null,
+    trade: null,
+    assigned_sub_id: null,
+    outdoor_activity: false,
+    predecessor_ids: row.dependencies ?? [],
+    successor_ids: [],
+    status: toActivityStatus(row.status),
+    created_at: row.created_at ?? '',
+    updated_at: row.updated_at ?? '',
+  }
+}
+
+export const getSchedulePhases = async (projectId: string): Promise<ScheduleActivity[]> => {
   await assertProjectAccess(projectId)
-  const { data, error } = await supabase.from('schedule_phases').select('*').eq('project_id', projectId).order('start_date')
+  const { data, error } = await supabase
+    .from('schedule_phases')
+    .select(SCHEDULE_SELECT)
+    .eq('project_id', projectId)
+    .order('start_date')
   if (error) throw transformSupabaseError(error)
-  return (data || []).map((raw): MappedSchedulePhase => {
-    const baselineEnd = raw.baseline_end ?? null
-    const endDate = raw.end_date ?? ''
-    const slippageDays = baselineEnd && endDate
-      ? Math.ceil((new Date(endDate).getTime() - new Date(baselineEnd).getTime()) / 86400000)
-      : 0
-    const scheduleVarianceDays = baselineEnd && endDate
-      ? Math.ceil((new Date(baselineEnd).getTime() - new Date(endDate).getTime()) / 86400000)
-      : 0
-    return {
-      ...raw,
-      // Extended domain fields not yet in DB schema — default null
-      baseline_start_date: null,
-      baseline_end_date: null,
-      baseline_percent_complete: null,
-      is_milestone: null,
-      predecessor_ids: raw.dependencies ?? null,
-      work_type: null,
-      location: null,
-      assigned_trade: null,
-      planned_labor_hours: null,
-      actual_labor_hours: null,
-      // Camelcase convenience
-      startDate: raw.start_date ?? '',
-      endDate,
-      progress: raw.percent_complete ?? 0,
-      critical: raw.is_critical_path ?? false,
-      completed: (raw.percent_complete ?? 0) >= 100 || raw.status === 'completed',
-      baselineStartDate: raw.baseline_start ?? null,
-      baselineEndDate: baselineEnd,
-      baselineProgress: 0,
-      slippageDays,
-      earnedValue: raw.earned_value ?? 0,
-      // Computed
-      isOnCriticalPath: raw.is_critical_path ?? false,
-      floatDays: raw.float_days ?? 0,
-      scheduleVarianceDays,
-      // New domain camelCase
-      isMilestone: false,
-      predecessorIds: raw.dependencies ?? [],
-      plannedLaborHours: 0,
-      actualLaborHours: 0,
-    }
+
+  const rows = (data ?? []) as RawRow[]
+
+  const cpmInput = tasksToCPM(
+    rows.map(r => ({
+      id: r.id,
+      title: r.name,
+      start_date: r.start_date,
+      end_date: r.end_date,
+      predecessor_ids: r.dependencies ?? null,
+      estimated_hours: null,
+    })),
+  )
+  const cpmResults = calculateCriticalPath(cpmInput)
+
+  return rows.map((raw): ScheduleActivity => {
+    const base = mapScheduleActivityRow(raw)
+    const cpm = cpmResults.get(raw.id)
+    if (!cpm) return base
+    return { ...base, is_critical: cpm.isCritical, float_days: cpm.totalFloat }
   })
+}
+
+export const updateScheduleActivity = async (
+  id: string,
+  updates: SchedulePhaseUpdate,
+) => {
+  return supabaseMutation((client) =>
+    client
+      .from('schedule_phases')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single()
+  )
 }

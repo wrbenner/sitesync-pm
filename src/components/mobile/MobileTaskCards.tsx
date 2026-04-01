@@ -137,19 +137,28 @@ const MobileTaskCard: React.FC<{
         <button onClick={() => { onAction('edit'); setOffsetX(0); }} style={{
           flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
           backgroundColor: colors.statusInfo, border: 'none', cursor: 'pointer', color: colors.white,
-        }}>
+          minHeight: '44px', minWidth: '44px', touchAction: 'manipulation',
+        }}
+          aria-label="Edit task"
+        >
           <MoreHorizontal size={18} />
         </button>
         <button onClick={() => { onAction('reassign'); setOffsetX(0); }} style={{
           flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
           backgroundColor: colors.statusPending, border: 'none', cursor: 'pointer', color: colors.white,
-        }}>
+          minHeight: '44px', minWidth: '44px', touchAction: 'manipulation',
+        }}
+          aria-label="Reassign task"
+        >
           <User size={18} />
         </button>
         <button onClick={() => { onAction('flag'); setOffsetX(0); }} style={{
           flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
           backgroundColor: colors.statusCritical, border: 'none', cursor: 'pointer', color: colors.white,
-        }}>
+          minHeight: '44px', minWidth: '44px', touchAction: 'manipulation',
+        }}
+          aria-label="Flag task"
+        >
           <Flag size={18} />
         </button>
       </div>
@@ -272,13 +281,13 @@ export const MobileTaskCards: React.FC<MobileTaskCardsProps> = ({ tasks, onCompl
               onClick={() => { impact('light'); setFilter(f.id); }}
               style={{
                 display: 'flex', alignItems: 'center', gap: spacing['1'],
-                padding: `${spacing['2']} ${spacing['3']}`, minHeight: '44px',
+                padding: `${spacing['2']} ${spacing['3']}`, minHeight: '44px', minWidth: '44px',
                 backgroundColor: filter === f.id ? colors.primaryOrange : colors.surfaceRaised,
                 color: filter === f.id ? 'white' : colors.textSecondary,
                 border: filter === f.id ? 'none' : `1px solid ${colors.borderDefault}`,
                 borderRadius: borderRadius.full, cursor: 'pointer', whiteSpace: 'nowrap',
                 fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium,
-                fontFamily: typography.fontFamily,
+                fontFamily: typography.fontFamily, touchAction: 'manipulation',
               }}
             >
               {f.label}

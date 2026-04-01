@@ -24,12 +24,32 @@ export interface CollaborationContext {
   mostOverdueAssignee: { name: string; itemCount: number } | null
 }
 
+export interface ProjectAIContext {
+  projectName: string
+  contractValue: number | null
+  phase: string | null
+  openRfiCount: number
+  overdueRfiCount: number
+  budgetVarianceByDivision: Array<{
+    csiCode: string | null
+    divisionName: string
+    budgetVariancePct: number
+    varianceAmount: number
+  }>
+  scheduleVarianceDays: number | null
+  criticalPathActivities: Array<{ name: string; finishDate: string }>
+  recentDailyLogSummaries: Array<{ date: string; summary: string }>
+  activeBallInCourtSubmittals: Array<{ number: string; title: string; assignedTo: string }>
+  pendingChangeOrderExposure: number
+}
+
 export interface AIContext {
   projectId: string
   currentPage?: string
   selectedEntities?: Array<{ type: string; id: string }>
   projectMetrics?: Record<string, number>
   collaborationContext?: CollaborationContext
+  projectData?: ProjectAIContext
 }
 
 export interface AIToolCall {
@@ -40,7 +60,7 @@ export interface AIToolCall {
 
 export interface AIInsight {
   id: string
-  type: 'risk' | 'recommendation' | 'anomaly' | 'prediction' | 'budget_risk'
+  type: 'risk' | 'recommendation' | 'anomaly' | 'prediction' | 'budget_risk' | 'schedule_risk'
   severity: 'info' | 'warning' | 'critical'
   title: string
   description: string

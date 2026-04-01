@@ -1,0 +1,57 @@
+{
+  "verifications": [
+    {
+      "id": "scheduling-C1-001",
+      "status": "not_fixed",
+      "note": "No code changes to schedule endpoint or Gantt component for baseline vs actual comparison"
+    },
+    {
+      "id": "scheduling-C2-002",
+      "status": "not_fixed",
+      "note": "No metric cards component added to schedule page"
+    },
+    {
+      "id": "scheduling-C3-003",
+      "status": "not_fixed",
+      "note": "No AI predictive delay engine implementation found in changes"
+    },
+    {
+      "id": "scheduling-C4-004",
+      "status": "not_fixed",
+      "note": "No drag-to-adjust, dependency arrows, or milestone markers added to Gantt"
+    },
+    {
+      "id": "scheduling-H1-005",
+      "status": "not_fixed",
+      "note": "MobileScheduleView remains a stub; e2e test added but no implementation changes"
+    },
+    {
+      "id": "scheduling-H2-006",
+      "status": "not_fixed",
+      "note": "Critical path calculation not surfaced in UI; float and critical path fields still unused"
+    },
+    {
+      "id": "scheduling-H3-007",
+      "status": "not_fixed",
+      "note": "No real-time update mechanism (WebSocket, polling, or subscription) implemented"
+    },
+    {
+      "id": "scheduling-H4-008",
+      "status": "not_fixed",
+      "note": "ScheduleActivity type remains incomplete; any casts still present"
+    },
+    {
+      "id": "scheduling-M1-009",
+      "status": "not_fixed",
+      "note": "No ARIA roles, keyboard navigation, or screen reader support added to Gantt"
+    },
+    {
+      "id": "scheduling-M2-010",
+      "status": "not_fixed",
+      "note": "Empty state messaging for schedule not implemented"
+    }
+  ],
+  "files_changed": 30,
+  "regression_detected": false,
+  "regression_description": "Changes appear to be audit/verification reports and test files only; no actual module code modifications detected"
+}

@@ -28,11 +28,11 @@ export interface Metrics {
   rfiOpen: number;
   rfiOverdue: number;
   punchListOpen: number;
-  aiHealthScore: number;
+  aiHealthScore: number | null;
   daysBeforeSchedule: number;
   milestonesHit: number;
   milestoneTotal: number;
-  aiConfidenceLevel: number;
+  aiConfidenceLevel: number | null;
 }
 
 interface ProjectState {

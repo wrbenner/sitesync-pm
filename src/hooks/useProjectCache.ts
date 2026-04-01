@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { syncManager } from '../lib/syncManager'
 import { getSyncMetadata } from '../lib/offlineDb'
-import { buildProjectContext } from '../lib/aiPrompts'
+import { fetchAndBuildProjectContext } from '../lib/aiPrompts'
 
 interface ContextCacheEntry {
   context: string
@@ -18,7 +18,7 @@ export async function getCachedProjectContext(projectId: string): Promise<string
     return entry.context
   }
   try {
-    const context = await buildProjectContext(projectId)
+    const context = await fetchAndBuildProjectContext(projectId)
     contextCache.set(projectId, { context, fetchedAt: Date.now() })
     return context
   } catch {

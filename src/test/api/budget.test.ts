@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import type { MappedChangeOrder, MappedDivision } from '../../api/endpoints/budget'
-import { computeProjectFinancials } from '../../lib/financialEngine'
+import { computeProjectFinancials, getApprovedCOTotal } from '../../lib/financialEngine'
 
 function makeCO(overrides: Partial<MappedChangeOrder> = {}): MappedChangeOrder {
   return {
@@ -125,6 +125,49 @@ describe('computeProjectFinancials: mixed approved/pending/draft COs', () => {
     expect(result.approvedChangeOrders).toBe(50_000)
     expect(result.revisedContractValue).toBe(1_050_000)
     expect(result.pendingChangeOrders).toBe(15_000)
+  })
+})
+
+describe('computeProjectFinancials: revisedContractValue and pendingExposure', () => {
+  const originalBudget = 1_000_000
+  const divisions = [makeDivision({ budget: originalBudget })]
+
+  it('revisedContractValue = originalBudget + approved_cost; pendingExposure = estimated_cost of pending_review', () => {
+    const approvedCO = makeCO({
+      id: 'co-approved',
+      status: 'approved',
+      approved_cost: 50_000,
+      amount: 55_000,
+      estimated_cost: 55_000,
+    })
+    const pendingCO = makeCO({
+      id: 'co-pending',
+      status: 'pending_review',
+      approved_cost: 0,
+      amount: 22_000,
+      estimated_cost: 20_000,
+    })
+    const draftCO = makeCO({
+      id: 'co-draft',
+      status: 'draft',
+      approved_cost: 0,
+      amount: 30_000,
+      estimated_cost: 30_000,
+    })
+
+    const result = computeProjectFinancials(divisions, [approvedCO, pendingCO, draftCO], originalBudget)
+
+    expect(result.revisedContractValue).toBe(originalBudget + 50_000)
+    expect(result.pendingExposure).toBe(20_000)
+  })
+
+  it('getApprovedCOTotal returns sum of approved_cost for approved COs only', () => {
+    const cos = [
+      makeCO({ id: 'a', status: 'approved', approved_cost: 50_000 }),
+      makeCO({ id: 'b', status: 'pending_review', approved_cost: 0 }),
+      makeCO({ id: 'c', status: 'draft', approved_cost: 0 }),
+    ]
+    expect(getApprovedCOTotal(cos)).toBe(50_000)
   })
 })
 

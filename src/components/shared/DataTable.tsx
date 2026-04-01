@@ -14,7 +14,8 @@ import {
   type Row,
 } from '@tanstack/react-table';
 import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme';
-import { Skeleton } from '../Primitives';
+import { useUiStore } from '../../stores';
+import { TableSkeleton } from '../ui/Skeletons';
 import { ArrowUp, ArrowDown, ChevronLeft, ChevronRight, Search, Download, Keyboard } from 'lucide-react';
 import { useTableKeyboardNavigation } from '../../hooks/useTableKeyboardNavigation';
 
@@ -284,6 +285,29 @@ export function DataTable<T>({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rowSelection]);
 
+  const announceStatus = useUiStore((s) => s.announceStatus);
+  const filteredRowCount = table.getFilteredRowModel().rows.length;
+
+  useEffect(() => {
+    if (sorting.length === 0) return;
+    const col = sorting[0];
+    const colDef = effectiveColumns.find((c) => c.id === col.id || (c as any).accessorKey === col.id);
+    const colName = colDef
+      ? typeof colDef.header === 'string'
+        ? colDef.header
+        : col.id
+      : col.id;
+    const direction = col.desc ? 'descending' : 'ascending';
+    announceStatus(`Table sorted by ${colName} ${direction}. ${filteredRowCount} results shown.`);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sorting]);
+
+  useEffect(() => {
+    if (!enableGlobalFilter || globalFilter === '') return;
+    announceStatus(`${filteredRowCount} results shown.`);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [globalFilter, filteredRowCount]);
+
   const handleExport = useCallback(() => {
     exportToCsv(table, effectiveColumns);
   }, [table, effectiveColumns]);
@@ -306,16 +330,6 @@ export function DataTable<T>({
       row?.focus({ preventScroll: false });
     }
   }, [focusedIndex]);
-
-  if (loading) {
-    return (
-      <div style={{ padding: spacing['4'], display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
-        {Array.from({ length: 6 }).map((_, i) => (
-          <Skeleton key={i} height="40px" />
-        ))}
-      </div>
-    );
-  }
 
   return (
     <div>
@@ -385,6 +399,7 @@ export function DataTable<T>({
         <table
           role="grid"
           aria-rowcount={data.length}
+          aria-colcount={effectiveColumns.length}
           style={{ width: '100%', borderCollapse: 'collapse' }}
         >
           <thead>
@@ -436,18 +451,26 @@ export function DataTable<T>({
             ))}
           </thead>
           <tbody>
-            {rows.map((row, index) => (
-              <MemoizedRow
-                key={row.id}
-                row={row}
-                onClick={onRowClick}
-                selected={selectedRowId != null && getRowId ? getRowId(row.original) === String(selectedRowId) : false}
-                columns={effectiveColumns}
-                index={index}
-                focused={focusedIndex === index}
-                rowId={`${tableId}-row-${index}`}
-              />
-            ))}
+            {loading ? (
+              <tr>
+                <td colSpan={effectiveColumns.length} style={{ padding: 0, border: 'none' }}>
+                  <TableSkeleton columns={effectiveColumns.length} rows={8} />
+                </td>
+              </tr>
+            ) : (
+              rows.map((row, index) => (
+                <MemoizedRow
+                  key={row.id}
+                  row={row}
+                  onClick={onRowClick}
+                  selected={selectedRowId != null && getRowId ? getRowId(row.original) === String(selectedRowId) : false}
+                  columns={effectiveColumns}
+                  index={index}
+                  focused={focusedIndex === index}
+                  rowId={`${tableId}-row-${index}`}
+                />
+              ))
+            )}
           </tbody>
         </table>
       </div>

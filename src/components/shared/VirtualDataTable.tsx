@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback, useEffect } from 'react';
+import React, { useRef, useState, useCallback, useEffect, useMemo } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
@@ -11,7 +11,8 @@ import {
 } from '@tanstack/react-table';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { colors, spacing, typography, transitions } from '../../styles/theme';
-import { Skeleton } from '../Primitives';
+import { useUiStore } from '../../stores';
+import { TableSkeleton } from '../ui/Skeletons';
 import { ArrowUp, ArrowDown } from 'lucide-react';
 import { useTableKeyboardNavigation } from '../../hooks/useTableKeyboardNavigation';
 
@@ -29,6 +30,7 @@ interface VirtualDataTableProps<T> {
   overscan?: number;
   selectedRows?: Set<string>;
   onSelectionChange?: (rows: Set<string>) => void;
+  onRowToggleSelectByIndex?: (index: number) => void;
 }
 
 const ROW_HEIGHT = 44;
@@ -117,6 +119,7 @@ export function VirtualDataTable<T>({
   rowHeight = ROW_HEIGHT,
   containerHeight = 600,
   overscan = 10,
+  onRowToggleSelectByIndex,
 }: VirtualDataTableProps<T>) {
   const parentRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
@@ -145,7 +148,27 @@ export function VirtualDataTable<T>({
   const { focusedIndex, handleKeyDown } = useTableKeyboardNavigation({
     rowCount: rows.length,
     onActivate: (i) => onRowClick?.(rows[i].original),
+    onToggleSelect: onRowToggleSelectByIndex,
   });
+
+  const announceStatus = useUiStore((s) => s.announceStatus);
+
+  const columnHeaders = useMemo(
+    () => Object.fromEntries(columns.map((c) => [
+      (c as any).accessorKey ?? c.id ?? '',
+      typeof c.header === 'string' ? c.header : (c.id ?? ''),
+    ])),
+    [columns],
+  );
+
+  useEffect(() => {
+    if (sorting.length === 0) return;
+    const col = sorting[0];
+    const colName = columnHeaders[col.id] ?? col.id;
+    const direction = col.desc ? 'descending' : 'ascending';
+    announceStatus(`Table sorted by ${colName} ${direction}. ${rows.length} results shown.`);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sorting]);
 
   useEffect(() => {
     virtualizer.scrollToIndex(focusedIndex, { align: 'auto' });
@@ -157,21 +180,12 @@ export function VirtualDataTable<T>({
     }
   }, [focusedIndex]);
 
-  if (loading) {
-    return (
-      <div style={{ padding: spacing['4'], display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
-        {Array.from({ length: 8 }).map((_, i) => (
-          <Skeleton key={i} height="40px" />
-        ))}
-      </div>
-    );
-  }
-
   return (
     <div
       ref={gridRef}
       role="grid"
       aria-rowcount={data.length}
+      aria-colcount={columns.length}
       tabIndex={0}
       className="sitesync-grid"
       onKeyDown={handleKeyDown}
@@ -194,11 +208,13 @@ export function VirtualDataTable<T>({
                 key={header.id}
                 role="columnheader"
                 aria-sort={
-                  header.column.getIsSorted() === 'asc'
-                    ? 'ascending'
-                    : header.column.getIsSorted() === 'desc'
-                    ? 'descending'
-                    : 'none'
+                  header.column.getCanSort()
+                    ? header.column.getIsSorted() === 'asc'
+                      ? 'ascending'
+                      : header.column.getIsSorted() === 'desc'
+                      ? 'descending'
+                      : 'none'
+                    : undefined
                 }
                 onClick={header.column.getCanSort() ? header.column.getToggleSortingHandler() : undefined}
                 style={{
@@ -231,29 +247,33 @@ export function VirtualDataTable<T>({
         role="rowgroup"
         style={{ height: `${containerHeight}px`, overflow: 'auto' }}
       >
-        <div style={{ height: `${virtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
-          {virtualizer.getVirtualItems().map((virtualRow) => {
-            const row = rows[virtualRow.index];
-            return (
-              <VirtualRow
-                key={row.id}
-                row={row}
-                onClick={onRowClick}
-                selected={selectedRowId != null && getRowId ? getRowId(row.original) === String(selectedRowId) : false}
-                index={virtualRow.index}
-                focused={focusedIndex === virtualRow.index}
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: '100%',
-                  height: `${virtualRow.size}px`,
-                  transform: `translateY(${virtualRow.start}px)`,
-                }}
-              />
-            );
-          })}
-        </div>
+        {loading ? (
+          <TableSkeleton columns={columns.length} rows={10} />
+        ) : (
+          <div style={{ height: `${virtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
+            {virtualizer.getVirtualItems().map((virtualRow) => {
+              const row = rows[virtualRow.index];
+              return (
+                <VirtualRow
+                  key={row.id}
+                  row={row}
+                  onClick={onRowClick}
+                  selected={selectedRowId != null && getRowId ? getRowId(row.original) === String(selectedRowId) : false}
+                  index={virtualRow.index}
+                  focused={focusedIndex === virtualRow.index}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: `${virtualRow.size}px`,
+                    transform: `translateY(${virtualRow.start}px)`,
+                  }}
+                />
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Empty state */}

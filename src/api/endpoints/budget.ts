@@ -1,3 +1,4 @@
+// @ts-strict-check
 import { supabase, transformSupabaseError, supabaseMutation } from '../client'
 import type { ChangeOrderType, ChangeOrderState, ReasonCode } from '../../machines/changeOrderMachine'
 import { assertProjectAccess, validateProjectId } from '../middleware/projectScope'
@@ -5,6 +6,11 @@ import type { BudgetItemRow, ChangeOrderRow, CreateChangeOrderPayload } from '..
 import { isReasonCode } from '../../types/api'
 import { computeProjectFinancials, computeDivisionFinancials } from '../../lib/financialEngine'
 import type { ProjectFinancials, DivisionFinancials } from '../../types/financial'
+
+// Typed alias for the PromiseLike shape that supabaseMutation expects.
+// Avoids untyped casts while satisfying the narrower error shape required
+// by supabaseMutation.
+type MutationResult<T> = PromiseLike<{ data: T | null; error: { message: string; code?: string; details?: string | null } | null }>
 
 const CHANGE_ORDER_STATES = new Set<ChangeOrderState>(['draft', 'pending_review', 'approved', 'rejected', 'void'])
 function isChangeOrderState(v: unknown): v is ChangeOrderState {
@@ -98,9 +104,9 @@ function mapChangeOrderRow(co: ChangeOrderRow): MappedChangeOrder {
     title: co.title || co.description || '',
     description: co.description || '',
     amount: co.amount ?? 0,
-    estimated_cost: co.amount ?? 0,
-    submitted_cost: ['submitted', 'approved', 'rejected'].includes(co.status ?? '') ? (co.amount ?? 0) : 0,
-    approved_cost: co.status === 'approved' ? (co.approved_amount ?? co.amount ?? 0) : 0,
+    estimated_cost: typeof co.amount === 'number' ? co.amount : 0,
+    submitted_cost: typeof co.amount === 'number' && ['submitted', 'approved', 'rejected'].includes(co.status ?? '') ? co.amount : 0,
+    approved_cost: typeof co.approved_amount === 'number' ? co.approved_amount : 0,
     status: isChangeOrderState(co.status) ? co.status : 'draft',
     type,
     reason_code: isReasonCode(co.reason) ? co.reason : null,
@@ -134,11 +140,10 @@ export const createChangeOrder = async (
 ): Promise<MappedChangeOrder> => {
   validateProjectId(projectId)
   const data = await supabaseMutation<ChangeOrderRow>(client =>
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (client.from('change_orders') as any)
+    client.from('change_orders')
       .insert({ ...payload, project_id: projectId, status: payload.status || 'draft', type: payload.type || 'pco' })
       .select()
-      .single()
+      .single() as unknown as MutationResult<ChangeOrderRow>
   )
   return mapChangeOrderRow(data)
 }
@@ -151,13 +156,12 @@ export const updateChangeOrderStatus = async (
 ): Promise<MappedChangeOrder> => {
   validateProjectId(projectId)
   const data = await supabaseMutation<ChangeOrderRow>(client =>
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (client.from('change_orders') as any)
+    client.from('change_orders')
       .update({ ...updates, status, updated_at: new Date().toISOString() })
       .eq('id', id)
       .eq('project_id', projectId)
       .select()
-      .single()
+      .single() as unknown as MutationResult<ChangeOrderRow>
   )
   return mapChangeOrderRow(data)
 }
@@ -171,7 +175,9 @@ export const getCostData = async (projectId: string) => {
   if (budgetRes.error) throw transformSupabaseError(budgetRes.error)
   if (coRes.error) throw transformSupabaseError(coRes.error)
 
-  const divisions: MappedDivision[] = (budgetRes.data || []).map((b: BudgetItemRow) => ({
+  const rawBudgetItems: BudgetItemRow[] = budgetRes.data || []
+
+  const divisions: MappedDivision[] = rawBudgetItems.map((b: BudgetItemRow) => ({
     id: b.id,
     name: b.division,
     csi_division: b.csi_division || null,
@@ -184,7 +190,7 @@ export const getCostData = async (projectId: string) => {
 
   const changeOrders: MappedChangeOrder[] = (coRes.data || []).map(mapChangeOrderRow)
 
-  return { divisions, changeOrders }
+  return { divisions, changeOrders, budgetItems: rawBudgetItems }
 }
 
 export async function getProjectFinancials(

@@ -1,10 +1,14 @@
 import React, { useState, useMemo, useRef, useEffect, useId } from 'react';
+import { useCopilotStore } from '../stores/copilotStore';
 import { PageContainer, Card, SectionHeader, MetricBox, ProgressBar, StatusTag, DetailPanel, RelatedItems, Skeleton, useToast } from '../components/Primitives';
 import { MetricCardSkeleton, TableRowSkeleton } from '../components/ui/Skeletons';
 import { Btn } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 import { useQuery } from '../hooks/useQuery';
 import { getCostData, getCostCodesByDivision } from '../api/endpoints/budget';
+import { usePayApplications } from '../hooks/queries';
+import { getAiInsights } from '../api/endpoints/ai';
+import { aiService } from '../lib/aiService';
 import type { MappedDivision } from '../api/endpoints/budget';
 import { getProject } from '../api/endpoints/projects';
 import { Drawer } from '../components/Drawer';
@@ -17,10 +21,10 @@ import { Treemap } from '../components/budget/Treemap';
 import { SCurve } from '../components/budget/SCurve';
 import { EarnedValueDashboard } from '../components/budget/EarnedValueDashboard';
 import { WaterfallChart } from '../components/budget/WaterfallChart';
-import { Download, AlertTriangle, ChevronRight, ArrowRight, BookOpen, Upload, Sparkles, X } from 'lucide-react';
+import { Download, AlertTriangle, ChevronRight, ArrowRight, DollarSign, Upload, Sparkles, X, RefreshCw } from 'lucide-react';
 import { computeDivisionFinancials, computeProjectFinancials, detectBudgetAnomalies } from '../lib/financialEngine';
 import { BudgetUpload } from '../components/budget/BudgetUpload';
-import { EmptyState } from '../components/Primitives';
+import EmptyState from '../components/ui/EmptyState';
 import { toast } from 'sonner';
 import { useProjectId } from '../hooks/useProjectId';
 import { useUpdateChangeOrder } from '../hooks/mutations';
@@ -37,7 +41,26 @@ const fmt = (n: number): string => {
   return `$${n.toLocaleString()}`;
 };
 
+type DivisionDrawerTab = 'cost-codes' | 'invoices' | 'change-orders';
+
+const DIVISION_DRAWER_TABS: { id: DivisionDrawerTab; label: string }[] = [
+  { id: 'cost-codes', label: 'Cost Codes' },
+  { id: 'invoices', label: 'Invoices' },
+  { id: 'change-orders', label: 'Change Orders' },
+];
+
+function invoiceStatusDot(status: string | null): string {
+  switch (status?.toLowerCase()) {
+    case 'paid': return colors.statusActive;
+    case 'overdue': return colors.statusCritical;
+    case 'pending':
+    case 'open': return colors.statusPending;
+    default: return colors.textTertiary;
+  }
+}
+
 const DivisionDrawerContent: React.FC<{ division: MappedDivision; projectId: string }> = ({ division, projectId }) => {
+  const [activeTab, setActiveTab] = useState<DivisionDrawerTab>('cost-codes');
   const { data, loading } = useQuery(
     `division-detail-${division.id}`,
     () => getCostCodesByDivision(projectId, division.id),
@@ -57,45 +80,40 @@ const DivisionDrawerContent: React.FC<{ division: MappedDivision; projectId: str
     marginBottom: spacing['1'],
   };
 
-  const sectionTitleStyle: React.CSSProperties = {
+  const colHead: React.CSSProperties = {
+    fontSize: typography.fontSize.caption,
+    fontWeight: typography.fontWeight.medium,
+    color: colors.textTertiary,
+  };
+
+  const cell: React.CSSProperties = {
     fontSize: typography.fontSize.sm,
-    fontWeight: typography.fontWeight.semibold,
     color: colors.textPrimary,
-    marginBottom: spacing['3'],
-    marginTop: spacing['5'],
+  };
+
+  const tabCount = (tab: DivisionDrawerTab): number => {
+    if (!data) return 0;
+    if (tab === 'cost-codes') return data.costCodes.length;
+    if (tab === 'invoices') return data.invoices.length;
+    return data.changeOrders.length;
   };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
-      {/* Header */}
-      <div>
-        {division.csi_division && (
-          <p style={{ ...labelStyle, margin: 0, marginBottom: spacing['1'] }}>{division.csi_division}</p>
-        )}
-        <h3 style={{ fontSize: typography.fontSize['2xl'], fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0 }}>
-          {division.name}
-        </h3>
-        {division.cost_code && (
-          <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0, marginTop: spacing['1'] }}>
-            Cost Code: {division.cost_code}
-          </p>
-        )}
-      </div>
-
-      {/* Budget vs Committed vs Spent stacked bar */}
+      {/* Budget stacked bar summary */}
       <div>
         <p style={labelStyle}>Budget Breakdown</p>
-        <div style={{ display: 'flex', height: 12, borderRadius: borderRadius.full, overflow: 'hidden', gap: 2 }}>
-          <div style={{ width: `${budgetPct}%`, backgroundColor: colors.statusInfo, borderRadius: borderRadius.full, transition: 'width 0.3s ease' }} title={`Budget: ${fmt(division.budget)}`} />
-          <div style={{ width: `${committedPct}%`, backgroundColor: colors.statusPending, borderRadius: borderRadius.full, transition: 'width 0.3s ease' }} title={`Committed: ${fmt(division.committed)}`} />
-          <div style={{ width: `${spentPct}%`, backgroundColor: colors.statusCritical, borderRadius: borderRadius.full, transition: 'width 0.3s ease' }} title={`Spent: ${fmt(division.spent)}`} />
+        <div style={{ display: 'flex', height: 10, borderRadius: borderRadius.full, overflow: 'hidden', gap: 2 }}>
+          <div style={{ width: `${budgetPct}%`, backgroundColor: colors.statusInfo, borderRadius: borderRadius.full }} title={`Budget: ${fmt(division.budget)}`} />
+          <div style={{ width: `${committedPct}%`, backgroundColor: colors.statusPending, borderRadius: borderRadius.full }} title={`Committed: ${fmt(division.committed)}`} />
+          <div style={{ width: `${spentPct}%`, backgroundColor: colors.statusCritical, borderRadius: borderRadius.full }} title={`Spent: ${fmt(division.spent)}`} />
         </div>
         <div style={{ display: 'flex', gap: spacing['4'], marginTop: spacing['2'] }}>
-          {[
+          {([
             { label: 'Budget', value: division.budget, color: colors.statusInfo },
             { label: 'Committed', value: division.committed, color: colors.statusPending },
             { label: 'Spent', value: division.spent, color: colors.statusCritical },
-          ].map(({ label, value, color }) => (
+          ] as const).map(({ label, value, color }) => (
             <div key={label} style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
               <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: color, flexShrink: 0 }} />
               <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{label}: </span>
@@ -105,87 +123,130 @@ const DivisionDrawerContent: React.FC<{ division: MappedDivision; projectId: str
         </div>
       </div>
 
+      {/* Tab bar */}
+      <div style={{ display: 'flex', borderBottom: `1px solid ${colors.borderSubtle}`, gap: 0 }}>
+        {DIVISION_DRAWER_TABS.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            style={{
+              padding: `${spacing['2']} ${spacing['3']}`,
+              border: 'none',
+              borderBottom: activeTab === tab.id ? `2px solid ${colors.primaryOrange}` : '2px solid transparent',
+              backgroundColor: 'transparent',
+              color: activeTab === tab.id ? colors.textPrimary : colors.textTertiary,
+              fontSize: typography.fontSize.sm,
+              fontWeight: activeTab === tab.id ? typography.fontWeight.semibold : typography.fontWeight.normal,
+              fontFamily: typography.fontFamily,
+              cursor: 'pointer',
+              marginBottom: '-1px',
+              transition: 'color 0.15s ease',
+            }}
+          >
+            {tab.label}
+            {data !== undefined && (
+              <span style={{ marginLeft: spacing['1'], fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
+                ({tabCount(tab.id)})
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
       {loading && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'] }}>
           {[1, 2, 3].map((i) => <Skeleton key={i} height="36px" />)}
         </div>
       )}
 
-      {data && (
-        <>
-          {/* Cost Codes / Job Cost Entries */}
-          <div>
-            <p style={sectionTitleStyle}>Cost Entries ({data.costCodes.length})</p>
-            {data.costCodes.length === 0 ? (
-              <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0 }}>No cost entries recorded.</p>
-            ) : (
-              <div style={{ border: `1px solid ${colors.borderSubtle}`, borderRadius: borderRadius.base, overflow: 'hidden' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr 80px 100px', padding: `${spacing['2']} ${spacing['3']}`, borderBottom: `1px solid ${colors.borderSubtle}`, backgroundColor: colors.surfaceInset }}>
-                  {['Date', 'Description', 'Type', 'Amount'].map((h) => (
-                    <span key={h} style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: colors.textTertiary }}>{h}</span>
-                  ))}
-                </div>
-                {data.costCodes.map((entry, i) => (
-                  <div key={entry.id} style={{ display: 'grid', gridTemplateColumns: '100px 1fr 80px 100px', padding: `${spacing['2']} ${spacing['3']}`, borderBottom: i < data.costCodes.length - 1 ? `1px solid ${colors.borderSubtle}` : 'none', alignItems: 'center' }}>
-                    <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{entry.date ?? 'N/A'}</span>
-                    <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary }}>{entry.description || entry.cost_code}</span>
-                    <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{entry.cost_type ?? ''}</span>
-                    <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>{fmt(entry.amount ?? 0)}</span>
-                  </div>
-                ))}
+      {/* Cost Codes tab */}
+      {data && activeTab === 'cost-codes' && (
+        data.costCodes.length === 0 ? (
+          <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0 }}>No cost entries recorded.</p>
+        ) : (
+          <div style={{ border: `1px solid ${colors.borderSubtle}`, borderRadius: borderRadius.base, overflow: 'hidden' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '90px 1fr 80px 70px 100px 85px', padding: `${spacing['2']} ${spacing['3']}`, borderBottom: `1px solid ${colors.borderSubtle}`, backgroundColor: colors.surfaceInset }}>
+              {['Cost Code', 'Description', 'Amount', 'Type', 'Vendor', 'Date'].map((h) => (
+                <span key={h} style={colHead}>{h}</span>
+              ))}
+            </div>
+            {data.costCodes.map((entry, i) => (
+              <div
+                key={entry.id}
+                style={{ display: 'grid', gridTemplateColumns: '90px 1fr 80px 70px 100px 85px', padding: `${spacing['2']} ${spacing['3']}`, borderBottom: i < data.costCodes.length - 1 ? `1px solid ${colors.borderSubtle}` : 'none', alignItems: 'center' }}
+              >
+                <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>{entry.cost_code}</span>
+                <span style={cell}>{entry.description ?? ''}</span>
+                <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>{fmt(entry.amount ?? 0)}</span>
+                <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{entry.cost_type ?? ''}</span>
+                <span style={{ fontSize: typography.fontSize.caption, color: colors.textSecondary }}>{entry.vendor ?? ''}</span>
+                <span style={{ fontSize: typography.fontSize.caption, color: colors.textSecondary }}>{entry.date ?? ''}</span>
               </div>
-            )}
+            ))}
           </div>
+        )
+      )}
 
-          {/* Change Orders */}
-          <div>
-            <p style={sectionTitleStyle}>Change Orders ({data.changeOrders.length})</p>
-            {data.changeOrders.length === 0 ? (
-              <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0 }}>No change orders linked to this division.</p>
-            ) : (
-              <div style={{ border: `1px solid ${colors.borderSubtle}`, borderRadius: borderRadius.base, overflow: 'hidden' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr 90px', padding: `${spacing['2']} ${spacing['3']}`, borderBottom: `1px solid ${colors.borderSubtle}`, backgroundColor: colors.surfaceInset }}>
-                  {['Number', 'Title', 'Amount'].map((h) => (
-                    <span key={h} style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: colors.textTertiary }}>{h}</span>
-                  ))}
+      {/* Invoices tab */}
+      {data && activeTab === 'invoices' && (
+        data.invoices.length === 0 ? (
+          <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0 }}>No invoices recorded for this division.</p>
+        ) : (
+          <div style={{ border: `1px solid ${colors.borderSubtle}`, borderRadius: borderRadius.base, overflow: 'hidden' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '85px 1fr 80px 80px 90px 85px', padding: `${spacing['2']} ${spacing['3']}`, borderBottom: `1px solid ${colors.borderSubtle}`, backgroundColor: colors.surfaceInset }}>
+              {['Invoice No.', 'Vendor', 'Date', 'Total', 'Status', 'Due Date'].map((h) => (
+                <span key={h} style={colHead}>{h}</span>
+              ))}
+            </div>
+            {data.invoices.map((inv, i) => (
+              <div
+                key={inv.id}
+                style={{ display: 'grid', gridTemplateColumns: '85px 1fr 80px 80px 90px 85px', padding: `${spacing['2']} ${spacing['3']}`, borderBottom: i < data.invoices.length - 1 ? `1px solid ${colors.borderSubtle}` : 'none', alignItems: 'center' }}
+              >
+                <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>{inv.invoice_number ?? 'N/A'}</span>
+                <span style={cell}>{inv.vendor}</span>
+                <span style={{ fontSize: typography.fontSize.caption, color: colors.textSecondary }}>{inv.invoice_date ?? ''}</span>
+                <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>{fmt(inv.total ?? 0)}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
+                  <div style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: invoiceStatusDot(inv.status), flexShrink: 0 }} />
+                  <span style={{ fontSize: typography.fontSize.caption, color: colors.textSecondary, textTransform: 'capitalize' }}>{inv.status ?? 'unknown'}</span>
                 </div>
-                {data.changeOrders.map((co, i) => (
-                  <div key={co.id} style={{ display: 'grid', gridTemplateColumns: '80px 1fr 90px', padding: `${spacing['2']} ${spacing['3']}`, borderBottom: i < data.changeOrders.length - 1 ? `1px solid ${colors.borderSubtle}` : 'none', alignItems: 'center' }}>
-                    <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>{co.coNumber}</span>
-                    <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary }}>{co.title}</span>
-                    <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>{fmt(co.amount)}</span>
-                  </div>
-                ))}
+                <span style={{ fontSize: typography.fontSize.caption, color: colors.textSecondary }}>{inv.due_date ?? ''}</span>
               </div>
-            )}
+            ))}
           </div>
+        )
+      )}
 
-          {/* Invoices */}
-          <div>
-            <p style={sectionTitleStyle}>Invoices to Date ({data.invoices.length})</p>
-            {data.invoices.length === 0 ? (
-              <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0 }}>No invoices recorded for this division.</p>
-            ) : (
-              <div style={{ border: `1px solid ${colors.borderSubtle}`, borderRadius: borderRadius.base, overflow: 'hidden' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 90px', padding: `${spacing['2']} ${spacing['3']}`, borderBottom: `1px solid ${colors.borderSubtle}`, backgroundColor: colors.surfaceInset }}>
-                  {['Vendor', 'Date', 'Total'].map((h) => (
-                    <span key={h} style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: colors.textTertiary }}>{h}</span>
-                  ))}
+      {/* Change Orders tab */}
+      {data && activeTab === 'change-orders' && (
+        data.changeOrders.length === 0 ? (
+          <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0 }}>No change orders linked to this division.</p>
+        ) : (
+          <div style={{ border: `1px solid ${colors.borderSubtle}`, borderRadius: borderRadius.base, overflow: 'hidden' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr 90px 110px', padding: `${spacing['2']} ${spacing['3']}`, borderBottom: `1px solid ${colors.borderSubtle}`, backgroundColor: colors.surfaceInset }}>
+              {['Number', 'Title', 'Amount', 'Status'].map((h) => (
+                <span key={h} style={colHead}>{h}</span>
+              ))}
+            </div>
+            {data.changeOrders.map((co, i) => {
+              const statusConfig = getCOStatusConfig(co.status as ChangeOrderState);
+              return (
+                <div
+                  key={co.id}
+                  style={{ display: 'grid', gridTemplateColumns: '80px 1fr 90px 110px', padding: `${spacing['2']} ${spacing['3']}`, borderBottom: i < data.changeOrders.length - 1 ? `1px solid ${colors.borderSubtle}` : 'none', alignItems: 'center' }}
+                >
+                  <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>{co.coNumber}</span>
+                  <span style={cell}>{co.title}</span>
+                  <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>{fmt(co.amount)}</span>
+                  <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: statusConfig.color, backgroundColor: statusConfig.bg, padding: `2px ${spacing['2']}`, borderRadius: borderRadius.full, textAlign: 'center', whiteSpace: 'nowrap' }}>
+                    {statusConfig.label}
+                  </span>
                 </div>
-                {data.invoices.map((inv, i) => (
-                  <div key={inv.id} style={{ display: 'grid', gridTemplateColumns: '1fr 80px 90px', padding: `${spacing['2']} ${spacing['3']}`, borderBottom: i < data.invoices.length - 1 ? `1px solid ${colors.borderSubtle}` : 'none', alignItems: 'center' }}>
-                    <div>
-                      <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary }}>{inv.vendor}</span>
-                      {inv.invoice_number && <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, display: 'block' }}>#{inv.invoice_number}</span>}
-                    </div>
-                    <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{inv.invoice_date ?? 'N/A'}</span>
-                    <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>{fmt(inv.total ?? 0)}</span>
-                  </div>
-                ))}
-              </div>
-            )}
+              );
+            })}
           </div>
-        </>
+        )
       )}
     </div>
   );
@@ -196,10 +257,13 @@ export const Budget: React.FC = () => {
   const navigate = useNavigate();
   const { addToast } = useToast();
   const projectId = useProjectId();
+  const { setPageContext } = useCopilotStore();
+  useEffect(() => { setPageContext('budget'); }, [setPageContext]);
   const updateCO = useUpdateChangeOrder();
   const { isFlashing } = useBudgetRealtime(projectId);
   const { data: costData, loading: costLoading } = useQuery(`costData-${projectId}`, () => getCostData(projectId!), { enabled: !!projectId });
   const { data: projectData, loading: projectLoading } = useQuery(`projectData-${projectId}`, () => getProject(projectId!), { enabled: !!projectId });
+  const { data: payApps } = usePayApplications(projectId);
   const [selectedCO, setSelectedCO] = useState<NonNullable<typeof costData>['changeOrders'][0] | null>(null);
   const [selectedDivision, setSelectedDivision] = useState<MappedDivision | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'earned-value'>('overview');
@@ -233,6 +297,7 @@ export const Budget: React.FC = () => {
   }
 
   const isEmpty = costData.divisions.length === 0;
+  const allBudgetZero = !isEmpty && costData.divisions.every(d => d.budget === 0);
   const pageAlerts = getPredictiveAlertsForPage('budget');
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
@@ -252,9 +317,27 @@ export const Budget: React.FC = () => {
   );
   const criticalAnomalies = budgetAnomalies.filter(a => a.severity === 'critical');
 
+  const aiConfigured = aiService.isConfigured();
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const { data: aiInsightsData, loading: aiInsightsLoading, refetch: refreshAiInsights } = useQuery(
+    `ai-insights-budget-${projectId}`,
+    () => getAiInsights(projectId!, { summary: projectFinancials, divisions: divisionFinancials }),
+    { enabled: aiConfigured && !projectFinancials.isEmpty && !!projectId },
+  );
+
   const committed = useMemo(() => costData.divisions.reduce((sum, d) => sum + d.committed, 0), [costData.divisions]);
   const spent = useMemo(() => costData.divisions.reduce((sum, d) => sum + d.spent, 0), [costData.divisions]);
   const remaining = useMemo(() => projectData.totalValue - spent - committed, [projectData.totalValue, spent, committed]);
+
+  // Previous period spent: sum of all pay apps except the most recent (sorted by period end date).
+  // Used as a prior period proxy for trend indicators. Falls back to 0 (no trend) when no history exists.
+  const previousBilledToDate = useMemo(() => {
+    if (!payApps || payApps.length < 2) return 0;
+    const sorted = [...payApps].sort((a: any, b: any) =>
+      new Date(a.period_to || 0).getTime() - new Date(b.period_to || 0).getTime()
+    );
+    return sorted.slice(0, -1).reduce((s: number, p: any) => s + (p.total_completed_and_stored || 0), 0);
+  }, [payApps]);
 
   // elapsedFraction: weighted average physical progress across divisions, used as schedule proxy
   const elapsedFraction = useMemo(() => {
@@ -292,20 +375,36 @@ export const Budget: React.FC = () => {
       <BudgetUpload open={uploadOpen} onClose={() => setUploadOpen(false)} onSuccess={() => setUploadOpen(false)} />
 
       {isEmpty ? (
-        <Card padding={spacing['5']}>
+        <div style={{ padding: '24px', backgroundColor: '#FFFFFF', borderRadius: '12px', border: `1px solid ${colors.border}` }}>
           <EmptyState
-            icon={<BookOpen size={48} />}
-            title="No Budget Set Up Yet"
-            description="Import your Schedule of Values or create budget line items by CSI division to unlock job costing, earned value, and cash flow forecasting."
-            action={
-              <div style={{ display: 'flex', gap: spacing['3'], justifyContent: 'center' }}>
-                <Btn variant="primary" icon={<Upload size={14} />} onClick={() => setUploadOpen(true)}>Import Budget</Btn>
-                <Btn variant="secondary" onClick={() => addToast('info', 'Manual entry form coming soon')}>Create Manually</Btn>
-              </div>
-            }
+            icon={DollarSign}
+            title="No budget has been set up yet"
+            description="Import your schedule of values or add budget line items by CSI division to start tracking costs."
+            action={{ label: 'Import Budget', onClick: () => setUploadOpen(true) }}
+            secondaryAction={{ label: 'Add Line Item', onClick: () => addToast('info', 'Manual entry form coming soon') }}
           />
-        </Card>
+        </div>
       ) : (<>
+      {allBudgetZero && (
+        <div
+          role="alert"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: spacing['3'],
+            padding: `${spacing['3']} ${spacing['4']}`,
+            marginBottom: spacing['4'],
+            backgroundColor: '#FFFBEB',
+            border: '1px solid #FDE68A',
+            borderRadius: borderRadius.base,
+          }}
+        >
+          <AlertTriangle size={16} color="#D97706" style={{ flexShrink: 0 }} />
+          <span style={{ fontSize: typography.fontSize.sm, color: '#92400E' }}>
+            Budget line items exist but all values are $0. Update your budget to see accurate financial tracking.
+          </span>
+        </div>
+      )}
       {pageAlerts.map((alert) => (
         <PredictiveAlertBanner key={alert.id} alert={alert} />
       ))}
@@ -338,20 +437,44 @@ export const Budget: React.FC = () => {
       )}
 
       {/* Summary Metrics */}
-      <div
-        role="group"
-        aria-label="Budget summary metrics"
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: spacing.lg,
-          marginBottom: spacing['4'],
-        }}
-      >
-        <MetricFlash isFlashing={isFlashing}><MetricBox label="Total Project" value={fmt(projectData.totalValue)} /></MetricFlash>
-        <MetricFlash isFlashing={isFlashing}><MetricBox label="Spent to Date" value={fmt(spent)} /></MetricFlash>
-        <MetricFlash isFlashing={isFlashing}><MetricBox label="Committed" value={fmt(committed)} /></MetricFlash>
-        <MetricFlash isFlashing={isFlashing}><MetricBox label="Remaining" value={fmt(remaining)} /></MetricFlash>
+      <div style={{ position: 'relative', marginBottom: spacing['4'] }}>
+        {isFlashing && (
+          <div
+            aria-live="polite"
+            aria-atomic="true"
+            style={{
+              position: 'absolute',
+              top: -8,
+              right: 0,
+              display: 'flex',
+              alignItems: 'center',
+              gap: spacing['1'],
+              padding: `2px ${spacing['2']}`,
+              backgroundColor: '#F47820',
+              borderRadius: borderRadius.full,
+              zIndex: 10,
+            }}
+          >
+            <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#FFFFFF', display: 'inline-block', flexShrink: 0 }} />
+            <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: '#FFFFFF', whiteSpace: 'nowrap' }}>
+              Budget updated just now
+            </span>
+          </div>
+        )}
+        <div
+          role="group"
+          aria-label="Budget summary metrics"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, 1fr)',
+            gap: spacing.lg,
+          }}
+        >
+          <MetricFlash isFlashing={isFlashing}><MetricBox label="Total Project" value={projectData.totalValue} format="currency" /></MetricFlash>
+          <MetricFlash isFlashing={isFlashing}><MetricBox label="Spent to Date" value={spent} format="currency" previousValue={previousBilledToDate} /></MetricFlash>
+          <MetricFlash isFlashing={isFlashing}><MetricBox label="Committed" value={committed} format="currency" /></MetricFlash>
+          <MetricFlash isFlashing={isFlashing}><MetricBox label="Remaining" value={remaining} format="currency" colorOverride={remaining >= 0 ? 'success' : 'danger'} /></MetricFlash>
+        </div>
       </div>
 
       {/* Fix 5: Contingency Drawdown */}
@@ -366,6 +489,119 @@ export const Budget: React.FC = () => {
           </span>
         </div>
       </div>
+
+      {/* AI Insights Panel */}
+      {aiConfigured ? (
+        !aiInsightsLoading && (aiInsightsData?.insights ?? []).length > 0 ? (
+          <div
+            style={{
+              marginBottom: spacing['4'],
+              backgroundColor: colors.surfaceRaised,
+              border: `1px solid ${colors.border}`,
+              borderRadius: borderRadius.base,
+              overflow: 'hidden',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: `${spacing['3']} ${spacing['4']}`,
+                borderBottom: `1px solid ${colors.border}`,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
+                <Sparkles size={14} color={colors.primary} />
+                <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+                  AI Variance Analysis
+                </span>
+              </div>
+              <button
+                onClick={() => void refreshAiInsights()}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: spacing['1'],
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: `${spacing['1']} ${spacing['2']}`,
+                  borderRadius: borderRadius.sm,
+                  fontSize: typography.fontSize.caption,
+                  color: colors.textTertiary,
+                  fontFamily: typography.fontFamily,
+                }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = colors.textSecondary; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = colors.textTertiary; }}
+              >
+                <RefreshCw size={12} />
+                Refresh Analysis
+              </button>
+            </div>
+            {(aiInsightsData?.insights ?? []).slice(0, 3).map((insight) => (
+              <div
+                key={insight.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: spacing['3'],
+                  padding: `${spacing['3']} ${spacing['4']}`,
+                  borderBottom: `1px solid ${colors.border}`,
+                }}
+              >
+                <div
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    backgroundColor: insight.severity === 'critical' ? colors.statusCritical : colors.statusPending,
+                    flexShrink: 0,
+                    marginTop: 5,
+                  }}
+                />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ margin: 0, marginBottom: spacing['1'], fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>
+                    {insight.title}
+                  </p>
+                  <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textSecondary, lineHeight: 1.5 }}>
+                    {insight.description}
+                  </p>
+                </div>
+                <button
+                  onClick={() => navigate('/copilot', { state: { initialContext: 'budget', initialMessage: `Analyze: ${insight.title}` } })}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: 0,
+                    fontSize: typography.fontSize.caption,
+                    color: colors.primary,
+                    fontFamily: typography.fontFamily,
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                  }}
+                >
+                  View Details
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : null
+      ) : (
+        <div
+          style={{
+            marginBottom: spacing['4'],
+            padding: `${spacing['3']} ${spacing['4']}`,
+            backgroundColor: colors.surfaceInset,
+            borderRadius: borderRadius.base,
+            fontSize: typography.fontSize.sm,
+            color: colors.textTertiary,
+          }}
+        >
+          AI analysis unavailable — configure OpenAI key in Settings
+        </div>
+      )}
 
       {/* Tab Toggle */}
       <div role="tablist" aria-label="Budget views" style={{ display: 'flex', gap: spacing['1'], backgroundColor: colors.surfaceInset, borderRadius: borderRadius.full, padding: 2, marginBottom: spacing['5'] }}>
@@ -634,13 +870,13 @@ export const Budget: React.FC = () => {
           <SectionHeader title="Earned Value Analysis" />
           <Card padding={spacing['5']}>
             <div role="img" aria-label="Earned value analysis dashboard showing budget performance indicators">
-              <EarnedValueDashboard divisions={costData.divisions} contractValue={projectData.totalValue} elapsedFraction={elapsedFraction} />
+              <EarnedValueDashboard />
             </div>
           </Card>
         </div>
       )}
 
-      <Drawer open={!!selectedDivision} onClose={() => setSelectedDivision(null)} title={selectedDivision?.name ?? ''}>
+      <Drawer open={!!selectedDivision} onClose={() => setSelectedDivision(null)} title={selectedDivision ? `${selectedDivision.name}${selectedDivision.csi_division ? ` · ${selectedDivision.csi_division}` : ''}` : ''}>
         {selectedDivision && projectId && (
           <DivisionDrawerContent division={selectedDivision} projectId={projectId} />
         )}

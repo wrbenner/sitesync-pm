@@ -1,5 +1,5 @@
 import type { BudgetAnomaly } from './financialEngine'
-import type { CollaborationContext, CollaborationBlockerItem } from '../types/ai'
+import type { CollaborationContext, CollaborationBlockerItem, ProjectAIContext } from '../types/ai'
 import { getProject } from '../api/endpoints/projects'
 import { getRfis } from '../api/endpoints/rfis'
 import { getCostData } from '../api/endpoints/budget'
@@ -122,7 +122,7 @@ function fmtDollars(n: number): string {
   return `${sign}$${abs.toFixed(0)}`
 }
 
-export async function buildProjectContext(projectId: string): Promise<string> {
+export async function fetchAndBuildProjectContext(projectId: string): Promise<string> {
   const [projectRes, rfisRes, costRes, schedRes, logsRes] = await Promise.allSettled([
     getProject(projectId),
     getRfis(projectId),
@@ -171,14 +171,14 @@ export async function buildProjectContext(projectId: string): Promise<string> {
   if (schedRes.status === 'fulfilled') {
     const today = new Date().toISOString().slice(0, 10)
     const upcoming = schedRes.value
-      .filter(s => !s.completed && s.endDate >= today)
-      .sort((a, b) => a.endDate.localeCompare(b.endDate))
+      .filter(s => s.percent_complete < 100 && s.status !== 'completed' && s.finish_date >= today)
+      .sort((a, b) => a.finish_date.localeCompare(b.finish_date))
       .slice(0, 3)
     lines.push('')
     lines.push('--- Schedule Milestones (Next 3) ---')
     for (const m of upcoming) {
-      const critical = m.critical ? ' [CRITICAL PATH]' : ''
-      lines.push(`${m.name}: due ${m.endDate}${critical}`)
+      const critical = m.is_critical ? ' [CRITICAL PATH]' : ''
+      lines.push(`${m.name}: due ${m.finish_date}${critical}`)
     }
   }
 
@@ -220,6 +220,76 @@ export async function buildProjectContext(projectId: string): Promise<string> {
   return lines.join('\n')
 }
 
+const APPROX_CHARS_PER_TOKEN = 4
+const CONTEXT_TOKEN_LIMIT = 3000
+
+export function buildProjectContext(data: ProjectAIContext): string {
+  const lines: string[] = []
+
+  lines.push(`=== PROJECT: ${data.projectName} ===`)
+  const value = data.contractValue ? fmtDollars(data.contractValue) : 'N/A'
+  lines.push(`Contract Value: ${value} | Phase: ${data.phase ?? 'N/A'}`)
+
+  lines.push('')
+  lines.push('--- RFIs ---')
+  lines.push(`Open: ${data.openRfiCount} | Overdue: ${data.overdueRfiCount}`)
+
+  if (data.budgetVarianceByDivision.length > 0) {
+    lines.push('')
+    lines.push('--- Budget (Top CSI Divisions by Variance) ---')
+    for (const d of data.budgetVarianceByDivision.slice(0, 3)) {
+      const label = d.csiCode ? `CSI ${d.csiCode} ${d.divisionName}` : d.divisionName
+      const sign = d.budgetVariancePct >= 0 ? '+' : ''
+      lines.push(`${label}: Variance ${sign}${fmtDollars(d.varianceAmount)} (${sign}${d.budgetVariancePct.toFixed(1)}%)`)
+    }
+  }
+
+  if (data.scheduleVarianceDays !== null) {
+    const ahead = data.scheduleVarianceDays >= 0
+    lines.push('')
+    lines.push('--- Schedule ---')
+    lines.push(`Variance: ${ahead ? '+' : ''}${data.scheduleVarianceDays} days (${ahead ? 'ahead' : 'behind'})`)
+  }
+
+  if (data.criticalPathActivities.length > 0) {
+    lines.push('Critical Path:')
+    for (const a of data.criticalPathActivities.slice(0, 5)) {
+      lines.push(`  ${a.name}: due ${a.finishDate}`)
+    }
+  }
+
+  if (data.recentDailyLogSummaries.length > 0) {
+    lines.push('')
+    lines.push('--- Recent Daily Logs ---')
+    for (const log of data.recentDailyLogSummaries.slice(0, 5)) {
+      lines.push(`[${log.date}] ${log.summary.slice(0, 150)}`)
+    }
+  }
+
+  if (data.activeBallInCourtSubmittals.length > 0) {
+    lines.push('')
+    lines.push('--- Active Submittals (Ball in Court) ---')
+    for (const s of data.activeBallInCourtSubmittals) {
+      lines.push(`${s.number} "${s.title}": waiting on ${s.assignedTo}`)
+    }
+  }
+
+  if (data.pendingChangeOrderExposure > 0) {
+    lines.push('')
+    lines.push('--- Pending Change Order Exposure ---')
+    lines.push(`Total: ${fmtDollars(data.pendingChangeOrderExposure)}`)
+  }
+
+  const result = lines.join('\n')
+  const estimatedTokens = Math.ceil(result.length / APPROX_CHARS_PER_TOKEN)
+  if (estimatedTokens > CONTEXT_TOKEN_LIMIT) {
+    const maxChars = CONTEXT_TOKEN_LIMIT * APPROX_CHARS_PER_TOKEN
+    console.warn(`[aiPrompts] Project context truncated: ~${estimatedTokens} tokens exceeds ${CONTEXT_TOKEN_LIMIT} token limit`)
+    return result.slice(0, maxChars)
+  }
+  return result
+}
+
 export function buildBudgetInsightPrompt(anomalies: BudgetAnomaly[], projectName: string): string {
   const lines = anomalies
     .map(a => `${a.divisionName} (${a.severity.toUpperCase()}): ${a.message}`)
@@ -227,17 +297,7 @@ export function buildBudgetInsightPrompt(anomalies: BudgetAnomaly[], projectName
   return `You are analyzing budget risk for construction project "${projectName}". The following cost anomalies were detected:\n\n${lines}\n\nProvide a concise plain-English risk summary for the project superintendent. For each anomaly explain the financial exposure and recommend one specific mitigation action. Keep each response to 1 to 2 sentences. Do not use hyphens.`
 }
 
-export const CONSTRUCTION_SYSTEM_PROMPT = `You are a senior project engineer on a commercial construction project with 15 years of field experience. You have deep expertise in construction contracts, project controls, cost management, and field operations.
-
-You use construction industry terminology correctly and precisely: RFI (Request for Information), submittal, change order, retainage, CSI (Construction Specifications Institute) division codes, AIA G702 (Application and Certificate for Payment), AIA G703 (Continuation Sheet), PCO (Proposed Change Order), COR (Change Order Request), GMP (Guaranteed Maximum Price), substantial completion, notice to proceed, lien waiver, pay application, cost code, earned value, critical path method, float, and schedule of values.
-
-When responding:
-- Lead with the most critical information first
-- Reference specific RFI numbers, submittal log entries, drawing numbers, and specification sections when available
-- Quantify schedule and cost impacts with concrete numbers and dates
-- Flag anything that could trigger a contract dispute, a delay claim, or impact the next AIA G702 pay application
-- Suggest concrete next actions with a responsible party and a due date
-- Never use hyphens in your responses. Use commas, periods, or restructure sentences instead.`
+export const CONSTRUCTION_SYSTEM_PROMPT = `You are SiteSync AI, the most experienced construction project engineer in the world. You know CSI MasterFormat, AIA billing, CPM scheduling, OSHA safety, lien waiver law, and every workflow a GC runs daily. You speak like a construction professional, not a generic assistant. Always use real numbers from the project context provided. Never say 'I don't have access to that data' as the data is in your context window.`
 
 export const SYSTEM_PROMPT = `You are the SiteSync AI Copilot, an expert construction project engineer and project management assistant. You have deep knowledge of construction processes, contracts, specifications, and field operations.
 

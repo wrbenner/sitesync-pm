@@ -39,7 +39,7 @@ export const AuditTrail: React.FC = () => {
   const [filterEntity, setFilterEntity] = useState<string>('');
   const [filterAction, setFilterAction] = useState<string>('');
 
-  const { data: entries, isPending: loading, isError, error } = useAuditTrail({
+  const { data: entries, total, hasMore, loadMore, loadingMore, isPending: loading, isError, error } = useAuditTrail({
     entityType: filterEntity || undefined,
     action: filterAction || undefined,
   });
@@ -95,7 +95,7 @@ export const AuditTrail: React.FC = () => {
   return (
     <PageContainer
       title="Audit Trail"
-      subtitle={`${filtered.length} entries`}
+      subtitle={total > 0 ? `${filtered.length} of ${total} entries` : `${filtered.length} entries`}
       actions={
         <PermissionGate permission="export.data">
           <Btn variant="secondary" size="sm" icon={<Download size={14} />} onClick={handleExport}>Export CSV</Btn>
@@ -141,8 +141,8 @@ export const AuditTrail: React.FC = () => {
             <Clock size={32} color={colors.textTertiary} style={{ marginBottom: spacing['3'] }} />
             <p style={{ fontSize: typography.fontSize.body, color: colors.textTertiary, margin: 0 }}>No audit entries found</p>
           </div>
-        ) : (
-          filtered.map((entry, i) => (
+        ) : (<>
+          {filtered.map((entry, i) => (
             <div key={entry.id} style={{
               display: 'flex', alignItems: 'flex-start', gap: spacing['3'],
               padding: `${spacing['3']} ${spacing['4']}`,
@@ -186,8 +186,15 @@ export const AuditTrail: React.FC = () => {
                 {formatRelativeTime(entry.created_at)}
               </span>
             </div>
-          ))
-        )}
+          ))}
+          {hasMore && !searchQuery && (
+            <div style={{ padding: spacing['4'], textAlign: 'center', borderTop: `1px solid ${colors.borderSubtle}` }}>
+              <Btn variant="secondary" size="sm" onClick={loadMore} disabled={loadingMore}>
+                {loadingMore ? 'Loading...' : `Load more (${total - entries.length} remaining)`}
+              </Btn>
+            </div>
+          )}
+        </>)}
       </Card>
     </PageContainer>
   );

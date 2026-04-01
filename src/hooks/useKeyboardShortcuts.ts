@@ -187,6 +187,42 @@ export function useDetailShortcuts(options: DetailShortcutOptions) {
   useKeyboardShortcuts(shortcuts)
 }
 
+// ── Global Shortcut Registry ─────────────────────────────
+// Module-level map so components can register shortcuts without raw addEventListener.
+// Usage in a component:
+//   useEffect(() => registerGlobal('meta+k', handler), [])
+// The returned cleanup removes the handler on unmount.
+
+const _globalHandlers = new Map<string, Set<() => void>>()
+let _globalActive = false
+
+function _initGlobalListener() {
+  if (_globalActive || typeof window === 'undefined') return
+  _globalActive = true
+  window.addEventListener('keydown', (e: KeyboardEvent) => {
+    const parts: string[] = []
+    if (e.metaKey || e.ctrlKey) parts.push('meta')
+    if (e.shiftKey) parts.push('shift')
+    parts.push(e.key.toLowerCase())
+    const key = parts.join('+')
+    const handlers = _globalHandlers.get(key)
+    if (handlers?.size) {
+      e.preventDefault()
+      handlers.forEach(h => h())
+    }
+  })
+}
+
+export function registerGlobal(key: string, handler: () => void): () => void {
+  _initGlobalListener()
+  const k = key.toLowerCase()
+  if (!_globalHandlers.has(k)) _globalHandlers.set(k, new Set())
+  _globalHandlers.get(k)!.add(handler)
+  return () => {
+    _globalHandlers.get(k)?.delete(handler)
+  }
+}
+
 // ── Global Shortcuts Reference ───────────────────────────
 
 export type GlobalShortcutEntry = Omit<Shortcut, 'action'> & { chord?: [string, string] }

@@ -488,7 +488,7 @@ describe('Cross-Org Document Access Control', () => {
     it('returns drawings array when project belongs to the active org (criterion 3)', async () => {
       mockMaybySingle
         .mockResolvedValueOnce({ data: { id: 'member-1' }, error: null })
-        .mockResolvedValueOnce({ data: { id: PROJ_ID }, error: null })
+        .mockResolvedValueOnce({ data: { organization_id: ORG_A_ID }, error: null })
       const result = await getDrawings(PROJ_ID)
       expect(Array.isArray(result)).toBe(true)
     })
@@ -508,7 +508,7 @@ describe('Cross-Org Document Access Control', () => {
     it('returns files array when project belongs to the active org (criterion 3)', async () => {
       mockMaybySingle
         .mockResolvedValueOnce({ data: { id: 'member-1' }, error: null })
-        .mockResolvedValueOnce({ data: { id: PROJ_ID }, error: null })
+        .mockResolvedValueOnce({ data: { organization_id: ORG_A_ID }, error: null })
       const result = await getFiles(PROJ_ID)
       expect(Array.isArray(result)).toBe(true)
     })

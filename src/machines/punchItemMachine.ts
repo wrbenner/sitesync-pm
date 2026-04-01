@@ -1,49 +1,51 @@
 import { setup } from 'xstate'
 import { colors } from '../styles/theme'
 
-export type PunchItemState = 'open' | 'in_progress' | 'resolved' | 'verified'
+export type PunchItemState = 'open' | 'completed_by_sub' | 'verified' | 'rejected'
 
 export const punchItemMachine = setup({
   types: {
     context: {} as {
       punchItemId: string
       projectId: string
+      rejectionNote: string
       error: string | null
     },
     events: {} as
-      | { type: 'START_WORK' }           // Assignee starts work
-      | { type: 'VERIFY_DIRECT' }        // Super verifies item already complete at creation
-      | { type: 'RESOLVE' }              // Assignee marks their work done
-      | { type: 'VERIFY' }               // Super verifies completion
-      | { type: 'REJECT_VERIFICATION' }  // Super rejects, sends back to in_progress
-      | { type: 'REOPEN' },              // Manually reopen
+      | { type: 'MARK_COMPLETE' }           // Sub marks their work done
+      | { type: 'VERIFY' }                   // Superintendent verifies completion
+      | { type: 'REJECT'; note: string }     // Superintendent rejects, returns to open
+      | { type: 'REOPEN' },                  // Manually reopen a verified item
   },
 }).createMachine({
   id: 'punchItem',
   initial: 'open',
-  context: { punchItemId: '', projectId: '', error: null },
+  context: { punchItemId: '', projectId: '', rejectionNote: '', error: null },
   states: {
     open: {
       on: {
-        START_WORK: { target: 'in_progress' },
-        VERIFY_DIRECT: { target: 'verified' },
+        MARK_COMPLETE: { target: 'completed_by_sub' },
       },
     },
-    in_progress: {
-      on: {
-        RESOLVE: { target: 'resolved' },
-        REOPEN: { target: 'open' },
-      },
-    },
-    resolved: {
+    completed_by_sub: {
       on: {
         VERIFY: { target: 'verified' },
-        REOPEN: { target: 'open' },
+        REJECT: {
+          target: 'open',
+          actions: ({ context, event }) => {
+            context.rejectionNote = event.note
+          },
+        },
       },
     },
     verified: {
       on: {
-        REJECT_VERIFICATION: { target: 'in_progress' },
+        REOPEN: { target: 'open' },
+      },
+    },
+    rejected: {
+      on: {
+        MARK_COMPLETE: { target: 'completed_by_sub' },
       },
     },
   },
@@ -53,10 +55,10 @@ export const punchItemMachine = setup({
 
 export function getValidPunchTransitions(status: PunchItemState): string[] {
   const transitions: Record<PunchItemState, string[]> = {
-    open: ['Start Work', 'Verify (Complete at Creation)'],
-    in_progress: ['Mark Resolved', 'Reopen'],
-    resolved: ['Verify', 'Reopen'],
-    verified: ['Reject Verification'],
+    open: ['Mark Complete'],
+    completed_by_sub: ['Verify', 'Reject'],
+    verified: ['Reopen'],
+    rejected: ['Mark Complete'],
   }
   return transitions[status] || []
 }
@@ -65,10 +67,10 @@ export function getValidPunchTransitions(status: PunchItemState): string[] {
 
 export function getNextPunchStatus(currentStatus: PunchItemState, action: string): PunchItemState | null {
   const map: Record<string, Record<string, PunchItemState>> = {
-    open: { 'Start Work': 'in_progress', 'Verify (Complete at Creation)': 'verified' },
-    in_progress: { 'Mark Resolved': 'resolved', 'Reopen': 'open' },
-    resolved: { 'Verify': 'verified', 'Reopen': 'open' },
-    verified: { 'Reject Verification': 'in_progress' },
+    open: { 'Mark Complete': 'completed_by_sub' },
+    completed_by_sub: { 'Verify': 'verified', 'Reject': 'open' },
+    verified: { 'Reopen': 'open' },
+    rejected: { 'Mark Complete': 'completed_by_sub' },
   }
   return map[currentStatus]?.[action] || null
 }
@@ -78,9 +80,9 @@ export function getNextPunchStatus(currentStatus: PunchItemState, action: string
 export function getPunchStatusConfig(status: PunchItemState) {
   const config: Record<PunchItemState, { label: string; color: string; bg: string }> = {
     open: { label: 'Open', color: colors.statusCritical, bg: colors.statusCriticalSubtle },
-    in_progress: { label: 'In Progress', color: colors.statusInfo, bg: colors.statusInfoSubtle },
-    resolved: { label: 'Resolved', color: colors.statusPending, bg: colors.statusPendingSubtle },
+    completed_by_sub: { label: 'Awaiting Verification', color: colors.statusPending, bg: colors.statusPendingSubtle },
     verified: { label: 'Verified', color: colors.statusActive, bg: colors.statusActiveSubtle },
+    rejected: { label: 'Rejected', color: colors.statusCritical, bg: colors.statusCriticalSubtle },
   }
   return config[status] || config.open
 }

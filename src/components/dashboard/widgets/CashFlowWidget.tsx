@@ -2,27 +2,18 @@ import React, { useState, useMemo } from 'react';
 import { DollarSign } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, shadows } from '../../../styles/theme';
 import { useProjectId } from '../../../hooks/useProjectId';
-import { useBudgetItems } from '../../../hooks/queries';
-import { compute13WeekCashFlow } from '../../../lib/financialEngine';
-import type { MappedDivision } from '../../../api/endpoints/budget';
-import type { PayApplicationRow, SubInvoiceRow } from '../../../types/financial';
+import { useBudgetItems, usePayApplications } from '../../../hooks/queries';
+import { computeThirteenWeekCashFlow } from '../../../lib/financialEngine';
+import type { CashFlowWeek } from '../../../types/financial';
+import type { PayAppRow } from '../../../types/financial';
 
 const RETAINAGE_OPTIONS = [
   { label: '5%', value: 0.05 },
   { label: '10%', value: 0.10 },
 ];
 
-const COLLECTION_LAG_DAYS = 30;
-const PAYMENT_LAG_DAYS = 30;
-
-// No pay apps or sub invoices in DB yet — empty until those tables are connected
-const EMPTY_PAY_APPS: PayApplicationRow[] = [];
-const EMPTY_SUB_INVOICES: SubInvoiceRow[] = [];
-
-function formatWeekLabel(isoDate: string): string {
-  const [, mm, dd] = isoDate.split('-');
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  return `${months[parseInt(mm, 10) - 1]} ${parseInt(dd, 10)}`;
+function formatWeekLabel(label: string): string {
+  return label;
 }
 
 function formatDollars(n: number): string {
@@ -32,44 +23,77 @@ function formatDollars(n: number): string {
   return `${n < 0 ? '-' : ''}$${Math.round(abs)}`;
 }
 
+function SkeletonLoader(): React.ReactElement {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['3'] }}>
+        <DollarSign size={16} color={colors.textTertiary} />
+        <div style={{ width: 120, height: 12, borderRadius: 4, backgroundColor: colors.borderSubtle }} />
+      </div>
+      <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', gap: 4 }}>
+        {Array.from({ length: 13 }).map((_, i) => (
+          <div
+            key={i}
+            style={{
+              flex: 1,
+              height: `${30 + Math.random() * 60}%`,
+              borderRadius: 2,
+              backgroundColor: colors.borderSubtle,
+              opacity: 0.6 + (i % 3) * 0.1,
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function EmptyState(): React.ReactElement {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', alignItems: 'center', justifyContent: 'center', gap: spacing['2'] }}>
+      <DollarSign size={24} color={colors.textTertiary} />
+      <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0, textAlign: 'center' }}>
+        Add pay applications to see your 13-week cash flow forecast
+      </p>
+    </div>
+  );
+}
+
 export const CashFlowWidget: React.FC = React.memo(() => {
   const [hovered, setHovered] = useState<number | null>(null);
   const [retainageRate, setRetainageRate] = useState(0.10);
+  void retainageRate; // retained for UI toggle but computeThirteenWeekCashFlow uses fixed 0.9 net
   const projectId = useProjectId();
-  const { data: budgetItems } = useBudgetItems(projectId);
+  const { data: budgetItems, isLoading: budgetLoading } = useBudgetItems(projectId);
+  const { data: rawPayApps, isLoading: payAppsLoading } = usePayApplications(projectId);
 
-  const divisions: MappedDivision[] = useMemo(() => {
-    if (!budgetItems) return [];
-    return budgetItems.map(b => ({
-      id: b.id,
-      name: b.division,
-      budget: b.original_amount ?? 0,
-      spent: b.actual_amount ?? 0,
-      committed: b.committed_amount ?? 0,
-      progress: b.percent_complete ?? 0,
-      cost_code: b.cost_code ?? null,
+  const payApps: PayAppRow[] = useMemo(() => {
+    if (!rawPayApps) return [];
+    return rawPayApps.map(pa => ({
+      id: pa.id,
+      project_id: pa.project_id,
+      status: pa.status,
+      approved_date: pa.approved_date,
+      period_to: pa.period_to ?? null,
+      current_payment_due: pa.current_payment_due,
     }));
-  }, [budgetItems]);
+  }, [rawPayApps]);
 
-  const rows = useMemo(
-    () => compute13WeekCashFlow(
-      EMPTY_PAY_APPS,
-      EMPTY_SUB_INVOICES,
-      divisions,
-      retainageRate,
-      COLLECTION_LAG_DAYS,
-      PAYMENT_LAG_DAYS,
+  const rows: CashFlowWeek[] = useMemo(
+    () => computeThirteenWeekCashFlow(
+      payApps,
+      [],
+      budgetItems ?? [],
     ),
-    [divisions, retainageRate]
+    [payApps, budgetItems]
   );
 
-  if (rows.length === 0) {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
-        <DollarSign size={24} color={colors.textTertiary} />
-        <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, marginTop: spacing['2'] }}>Loading budget data...</p>
-      </div>
-    );
+  if (budgetLoading || payAppsLoading) {
+    return <SkeletonLoader />;
+  }
+
+  if (payApps.length === 0) {
+    return <EmptyState />;
   }
 
   const chartHeight = 120;
@@ -78,12 +102,12 @@ export const CashFlowWidget: React.FC = React.memo(() => {
   const barWidth = barGroupWidth * 0.35;
   const padding = 4;
 
-  const maxOutflow = Math.max(...rows.map(r => r.outflow));
-  const maxInflow = Math.max(...rows.map(r => r.inflow));
+  const maxOutflow = Math.max(...rows.map(r => r.projectedOutflow));
+  const maxInflow = Math.max(...rows.map(r => r.projectedInflow));
   const maxBar = Math.max(maxOutflow, maxInflow, 1);
 
-  const minCumulative = Math.min(...rows.map(r => r.cumulativeBalance));
-  const maxCumulative = Math.max(...rows.map(r => r.cumulativeBalance), 0);
+  const minCumulative = Math.min(...rows.map(r => r.cumulativePosition));
+  const maxCumulative = Math.max(...rows.map(r => r.cumulativePosition), 0);
   const cumulativeRange = Math.max(Math.abs(maxCumulative - minCumulative), 1);
 
   function barY(val: number): number {
@@ -100,14 +124,14 @@ export const CashFlowWidget: React.FC = React.memo(() => {
   const curvePath = rows
     .map((r, i) => {
       const cx = i * barGroupWidth + barGroupWidth / 2;
-      const cy = lineY(r.cumulativeBalance);
+      const cy = lineY(r.cumulativePosition);
       return `${i === 0 ? 'M' : 'L'} ${cx} ${cy}`;
     })
     .join(' ');
 
-  const totalInflow = rows.reduce((s, r) => s + r.inflow, 0);
-  const totalOutflow = rows.reduce((s, r) => s + r.outflow, 0);
-  const endBalance = rows[rows.length - 1].cumulativeBalance;
+  const totalInflow = rows.reduce((s, r) => s + r.projectedInflow, 0);
+  const totalOutflow = rows.reduce((s, r) => s + r.projectedOutflow, 0);
+  const endBalance = rows[rows.length - 1].cumulativePosition;
 
   const labelEvery = 2;
 
@@ -192,7 +216,6 @@ export const CashFlowWidget: React.FC = React.memo(() => {
                 onMouseLeave={() => setHovered(null)}
                 style={{ cursor: 'pointer' }}
               >
-                {/* Hover bg */}
                 {isHovered && (
                   <rect
                     x={groupX}
@@ -202,27 +225,24 @@ export const CashFlowWidget: React.FC = React.memo(() => {
                     fill={`${colors.primaryOrange}08`}
                   />
                 )}
-                {/* Inflow bar */}
                 <rect
                   x={inflowX}
-                  y={barY(row.inflow)}
+                  y={barY(row.projectedInflow)}
                   width={barWidth}
-                  height={barH(row.inflow)}
+                  height={barH(row.projectedInflow)}
                   fill={colors.primaryOrange}
                   opacity={isHovered ? 1 : 0.85}
                   rx={0.5}
                 />
-                {/* Outflow bar */}
                 <rect
                   x={outflowX}
-                  y={barY(row.outflow)}
+                  y={barY(row.projectedOutflow)}
                   width={barWidth}
-                  height={barH(row.outflow)}
+                  height={barH(row.projectedOutflow)}
                   fill="#94A3B8"
                   opacity={isHovered ? 1 : 0.7}
                   rx={0.5}
                 />
-                {/* X label every other week */}
                 {i % labelEvery === 0 && (
                   <text
                     x={centerX}
@@ -232,7 +252,7 @@ export const CashFlowWidget: React.FC = React.memo(() => {
                     fontSize="5"
                     fontFamily={typography.fontFamily}
                   >
-                    {formatWeekLabel(row.weekStart)}
+                    {formatWeekLabel(row.weekLabel)}
                   </text>
                 )}
               </g>
@@ -249,13 +269,13 @@ export const CashFlowWidget: React.FC = React.memo(() => {
             strokeLinejoin="round"
           />
 
-          {/* Cumulative dots */}
+          {/* Cumulative dots on hover */}
           {rows.map((row, i) => (
             hovered === i ? (
               <circle
                 key={row.weekStart}
                 cx={i * barGroupWidth + barGroupWidth / 2}
-                cy={lineY(row.cumulativeBalance)}
+                cy={lineY(row.cumulativePosition)}
                 r={2}
                 fill="#4EC896"
                 stroke={colors.surfaceRaised ?? '#fff'}
@@ -285,11 +305,11 @@ export const CashFlowWidget: React.FC = React.memo(() => {
             }}
           >
             <div style={{ fontWeight: typography.fontWeight.semibold, marginBottom: 2 }}>
-              {formatWeekLabel(rows[hovered].weekStart)}
+              {rows[hovered].weekLabel}
             </div>
-            <div style={{ color: colors.primaryOrange }}>In: {formatDollars(rows[hovered].inflow)}</div>
-            <div style={{ color: '#94A3B8' }}>Out: {formatDollars(rows[hovered].outflow)}</div>
-            <div style={{ color: '#4EC896' }}>Net balance: {formatDollars(rows[hovered].cumulativeBalance)}</div>
+            <div style={{ color: colors.primaryOrange }}>In: {formatDollars(rows[hovered].projectedInflow)}</div>
+            <div style={{ color: '#94A3B8' }}>Out: {formatDollars(rows[hovered].projectedOutflow)}</div>
+            <div style={{ color: '#4EC896' }}>Net balance: {formatDollars(rows[hovered].cumulativePosition)}</div>
           </div>
         )}
       </div>

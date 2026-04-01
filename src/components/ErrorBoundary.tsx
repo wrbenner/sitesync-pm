@@ -9,8 +9,10 @@ interface Props {
   message?: string;
   /** Called when the retry button is clicked. Defaults to window.location.reload(). */
   onRetry?: () => void;
-  /** Custom fallback renderer. When provided, overrides the default error UI. */
-  fallback?: (error: Error) => React.ReactNode;
+  /** Custom fallback node. When provided, overrides the default error UI. */
+  fallback?: React.ReactNode;
+  /** Called after the error is captured, with the error and errorInfo. */
+  onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
 }
 
 interface State {
@@ -34,12 +36,13 @@ export class ErrorBoundary extends React.Component<Props, State> {
       extra: { componentStack: errorInfo.componentStack || '' },
     });
     addBreadcrumb('Error boundary caught error', 'error', { message: error.message });
+    this.props.onError?.(error, errorInfo);
   }
 
   render() {
     if (this.state.hasError) {
-      if (this.props.fallback && this.state.error) {
-        return <>{this.props.fallback(this.state.error)}</>;
+      if (this.props.fallback != null) {
+        return <>{this.props.fallback}</>;
       }
       return (
         <div

@@ -1,0 +1,57 @@
+{
+  "verifications": [
+    {
+      "id": "core-workflows-C2-001",
+      "status": "not_fixed",
+      "note": "No code changes found for schedule baseline vs. actual comparison implementation"
+    },
+    {
+      "id": "core-workflows-C2-002",
+      "status": "not_fixed",
+      "note": "No API endpoints or data model additions detected for lien waiver workflow"
+    },
+    {
+      "id": "core-workflows-C2-003",
+      "status": "not_fixed",
+      "note": "No weather API integration or incident fields added to daily log"
+    },
+    {
+      "id": "core-workflows-C2-004",
+      "status": "not_fixed",
+      "note": "No type safety improvements found in AI and budget endpoints"
+    },
+    {
+      "id": "core-workflows-C2-005",
+      "status": "not_fixed",
+      "note": "No bulk actions or row-click navigation implemented for RFI and submittal views"
+    },
+    {
+      "id": "core-workflows-C2-006",
+      "status": "not_fixed",
+      "note": "No ErrorBoundary implementation detected in portfolio metrics query"
+    },
+    {
+      "id": "core-workflows-C2-007",
+      "status": "not_fixed",
+      "note": "No budget financials refactoring to use MappedChangeOrder type"
+    },
+    {
+      "id": "core-workflows-C2-008",
+      "status": "not_fixed",
+      "note": "No conversion of AI Copilot from separate page to slide-in panel"
+    },
+    {
+      "id": "core-workflows-C2-009",
+      "status": "not_fixed",
+      "note": "No mobile optimization for one-handed iPhone use in forms"
+    },
+    {
+      "id": "core-workflows-C2-010",
+      "status": "not_fixed",
+      "note": "No submittal re-submission tracking or multi-party review chain implemented"
+    }
+  ],
+  "files_changed": 49,
+  "regression_detected": true,
+  "regression_description": "Changes appear to be audit and verification JSON files only with one mobile E2E test file. No actual source code changes to core-workflows module detected. All 10 critical and high-severity issues remain unaddressed."
+}

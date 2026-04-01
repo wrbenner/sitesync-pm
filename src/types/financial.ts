@@ -2,8 +2,11 @@ export interface ProjectFinancials {
   isEmpty: boolean
   originalContractValue: number
   approvedChangeOrders: number
+  approvedCOValue: number
   revisedContractValue: number
   pendingChangeOrders: number
+  pendingCOValue: number
+  pendingExposure: number
   totalPotentialContract: number
   committedCost: number
   invoicedToDate: number
@@ -46,11 +49,11 @@ export interface EarnedValueMetrics {
 }
 
 export interface CashFlowWeek {
-  weekNumber: number
-  weekStartDate: string
-  projectedInflows: number
-  projectedOutflows: number
-  netCashFlow: number
+  weekLabel: string
+  weekStart: string
+  projectedInflow: number
+  projectedOutflow: number
+  netCash: number
   cumulativePosition: number
 }
 
@@ -71,6 +74,15 @@ export interface WeeklyCashFlowRow {
   cumulativeBalance: number
 }
 
+export interface PayAppRow {
+  id: string
+  project_id: string
+  status: 'draft' | 'submitted' | 'approved' | 'rejected'
+  approved_date: string | null
+  period_to: string | null
+  current_payment_due: number | null
+}
+
 export interface PayApplicationRow {
   id: string
   project_id: string
@@ -87,4 +99,10 @@ export interface SubInvoiceRow {
   amount: number
   submitted_date: string | null
   due_date: string | null
+}
+
+export interface InvoiceRow {
+  id: string
+  total: number
+  status: string // 'approved' | 'paid' | 'pending' | 'draft'
 }

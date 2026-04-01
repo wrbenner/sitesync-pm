@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { WifiOff, RefreshCw, Check, AlertTriangle, Cloud, Clock, ChevronDown, ChevronUp, X } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
 import { useOfflineStatus } from '../../hooks/useOfflineStatus';
@@ -17,14 +17,28 @@ export const OfflineBanner: React.FC = () => {
   } = useOfflineStatus();
   const [expanded, setExpanded] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [justSynced, setJustSynced] = useState(false);
+  const prevHadActivity = useRef(false);
 
   const isSyncing = syncState === 'syncing';
   const isCaching = syncState === 'caching';
   const hasConflicts = conflictCount > 0;
   const hasPending = pendingChanges > 0;
+  const hasActivity = hasPending || hasConflicts || isSyncing || isCaching;
 
-  // Don't show banner when online, idle, with nothing pending
-  if (isOnline && !isSyncing && !isCaching && !hasPending && !hasConflicts) return null;
+  // Show green checkmark for 3 seconds after sync clears
+  useEffect(() => {
+    if (prevHadActivity.current && isOnline && !hasActivity) {
+      setJustSynced(true);
+      const timer = setTimeout(() => setJustSynced(false), 3000);
+      prevHadActivity.current = false;
+      return () => clearTimeout(timer);
+    }
+    if (hasActivity) prevHadActivity.current = true;
+  }, [isOnline, hasActivity]);
+
+  // Don't show banner when online, idle, with nothing pending and no just-synced flash
+  if (isOnline && !isSyncing && !isCaching && !hasPending && !hasConflicts && !justSynced) return null;
 
   // Determine banner state
   let config: { bg: string; border: string; icon: React.ReactNode; text: string; iconColor: string };

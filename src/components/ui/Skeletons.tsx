@@ -50,31 +50,38 @@ export const MetricCardSkeleton: React.FC = () => (
 );
 
 // ── TableRowSkeleton ───────────────────────────────────────────────────────
-// N rows at 48px with 4 column placeholders.
+// Single row at 48px with column-count-matched placeholders.
 
-interface TableRowSkeletonProps {
-  rows?: number;
-}
+const CELL_WIDTHS = ['60%', '40%', '80%'];
 
-export const TableRowSkeleton: React.FC<TableRowSkeletonProps> = ({ rows = 8 }) => (
-  <div aria-hidden="true" style={{ display: 'flex', flexDirection: 'column' }}>
-    {Array.from({ length: rows }).map((_, i) => (
+export const TableRowSkeleton: React.FC<{ columns: number }> = ({ columns }) => (
+  <div
+    aria-hidden="true"
+    style={{
+      height: 48,
+      display: 'flex',
+      alignItems: 'center',
+      gap: spacing['4'],
+      padding: `0 ${spacing['4']}`,
+      borderBottom: '1px solid #F0EDE9',
+    }}
+  >
+    {Array.from({ length: columns }).map((_, i) => (
       <div
         key={i}
-        style={{
-          height: 48,
-          display: 'flex',
-          alignItems: 'center',
-          gap: spacing['4'],
-          padding: `0 ${spacing['4']}`,
-          borderBottom: '1px solid #F0EDE9',
-        }}
-      >
-        <div style={{ ...pulseStyle, width: '8%', height: 14 }} />
-        <div style={{ ...pulseStyle, flex: 1, height: 14 }} />
-        <div style={{ ...pulseStyle, width: '14%', height: 14 }} />
-        <div style={{ ...pulseStyle, width: '10%', height: 20, borderRadius: borderRadius.full }} />
-      </div>
+        style={{ ...pulseStyle, width: CELL_WIDTHS[i % 3], height: 16, flexShrink: 0 }}
+      />
+    ))}
+  </div>
+);
+
+// ── TableSkeleton ──────────────────────────────────────────────────────────
+// Renders rows x TableRowSkeleton with matching column count.
+
+export const TableSkeleton: React.FC<{ columns: number; rows?: number }> = ({ columns, rows = 8 }) => (
+  <div aria-hidden="true" style={{ display: 'flex', flexDirection: 'column' }}>
+    {Array.from({ length: rows }).map((_, i) => (
+      <TableRowSkeleton key={i} columns={columns} />
     ))}
   </div>
 );
