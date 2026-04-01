@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { colors, spacing, typography, borderRadius, shadows, zIndex, transitions } from '../styles/theme';
 
 interface ContextMenuItem {
+  id?: string;
   label: string;
   icon?: React.ReactNode;
   onClick: () => void;
@@ -84,7 +85,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ items, children }) => 
           }}
         >
           {items.map((item, i) => (
-            <React.Fragment key={i}>
+            <React.Fragment key={item.id ?? `${item.label}-${i}`}>
               {item.divider && (
                 <div
                   style={{
