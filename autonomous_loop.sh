@@ -769,7 +769,7 @@ Rate each: impact (1-10), buildability (1-10), wow-factor (1-10)."
     local prompt
     prompt="You are auditing the \"${module_label}\" module of a React TypeScript construction PM app (SiteSyncAI).
 
-THINKING MODE: ${thinking_mode^^}
+THINKING MODE: $(echo "$thinking_mode" | tr '[:lower:]' '[:upper:]')
 ${mode_instructions}
 
 TASK: Score 14 dimensions. Find the ${MAX_ISSUES_PER_MODULE} most impactful issues. Write surgical fix prompts.
@@ -1502,7 +1502,7 @@ update_learnings() {
     # Append to learnings
     {
         echo ""
-        echo "## Cycle ${CYCLE} — $(date +%Y-%m-%d\ %H:%M) — MODE: ${thinking_mode^^}"
+        echo "## Cycle ${CYCLE} — $(date +%Y-%m-%d\ %H:%M) — MODE: $(echo "$thinking_mode" | tr '[:lower:]' '[:upper:]')"
         echo ""
         echo "Spend: \$${CYCLE_SPEND} | Fix rate: ${fix_rate}% (${total_fixed}/${total_attempted})"
         echo ""

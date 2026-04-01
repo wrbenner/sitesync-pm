@@ -1,0 +1,155 @@
+{
+  "modules": [
+    {
+      "name": "ui-design-system",
+      "label": "UI Design System",
+      "description": "Design tokens, shared UI primitives, and component library",
+      "files": [
+        "src/App.css",
+        "src/components/Breadcrumbs.tsx",
+        "src/components/ContextMenu.tsx"
+      ],
+      "priority": 1
+    },
+    {
+      "name": "core-workflows",
+      "label": "Core Workflows",
+      "description": "RFIs, submittals, change orders, and punch list management",
+      "files": [
+        "src/api/endpoints/rfis.ts",
+        "src/api/endpoints/submittals.ts",
+        "src/api/endpoints/lienWaivers.ts",
+        "src/components/ai/generativeUI/GenRFIResponse.tsx"
+      ],
+      "priority": 2
+    },
+    {
+      "name": "financial-engine",
+      "label": "Financial Engine",
+      "description": "Budget tracking, pay applications, and earned value analysis",
+      "files": [
+        "src/api/endpoints/budget.ts",
+        "src/api/endpoints/payApplications.ts",
+        "src/api/endpoints/metrics.ts",
+        "src/components/budget/BudgetUpload.tsx",
+        "src/components/budget/EarnedValueDashboard.tsx",
+        "src/components/budget/SCurve.tsx",
+        "src/components/budget/Treemap.tsx",
+        "src/components/budget/WaterfallChart.tsx"
+      ],
+      "priority": 3
+    },
+    {
+      "name": "scheduling",
+      "label": "Scheduling",
+      "description": "Project schedule, Gantt charts, and phase management",
+      "files": [
+        "src/api/endpoints/schedule.ts",
+        "src/api/endpoints/tasks.ts",
+        "src/components/ai/generativeUI/GenScheduleCard.tsx",
+        "src/components/ai/generativeUI/GenTimeline.tsx"
+      ],
+      "priority": 4
+    },
+    {
+      "name": "field-operations",
+      "label": "Field Operations",
+      "description": "Daily logs, field capture, crew management, and site activities",
+      "files": [
+        "src/api/endpoints/activity.ts",
+        "src/api/endpoints/people.ts",
+        "src/api/endpoints/projectMembers.ts",
+        "src/components/activity/ActivityCard.tsx",
+        "src/components/activity/MentionInput.tsx",
+        "src/components/ai/generativeUI/GenPhotoGrid.tsx",
+        "src/components/ai/generativeUI/GenSafetyAlert.tsx"
+      ],
+      "priority": 5
+    },
+    {
+      "name": "project-intelligence",
+      "label": "Project Intelligence",
+      "description": "AI copilot, generative UI, predictive alerts, and intelligent insights",
+      "files": [
+        "src/api/endpoints/ai.ts",
+        "src/api/endpoints/aiService.ts",
+        "src/components/ai/CopilotPanel.tsx",
+        "src/components/ai/FloatingAIButton.tsx",
+        "src/components/ai/ChatMessage.tsx",
+        "src/components/ai/AgentMessage.tsx",
+        "src/components/ai/AgentMentionInput.tsx",
+        "src/components/ai/AIContextPanel.tsx",
+        "src/components/ai/AIAnnotation.tsx",
+        "src/components/ai/ActionConfirmCard.tsx",
+        "src/components/ai/AIActionCard.tsx",
+        "src/components/ai/BatchActionPreview.tsx",
+        "src/components/ai/ToolResultCard.tsx",
+        "src/components/ai/PredictiveAlert.tsx",
+        "src/components/ai/SuggestedPrompts.tsx",
+        "src/components/ai/agentStream/AgentStatusBadge.tsx",
+        "src/components/ai/agentStream/AgentStreamPanel.tsx",
+        "src/components/ai/agentStream/index.ts",
+        "src/components/ai/generativeUI/GenerativeUIRenderer.tsx",
+        "src/components/ai/generativeUI/GenApprovalCard.tsx",
+        "src/components/ai/generativeUI/GenChart.tsx",
+        "src/components/ai/generativeUI/GenChecklist.tsx",
+        "src/components/ai/generativeUI/GenComparison.tsx",
+        "src/components/ai/generativeUI/GenCostBreakdown.tsx",
+        "src/components/ai/generativeUI/GenDataTable.tsx",
+        "src/components/ai/generativeUI/GenForm.tsx",
+        "src/components/ai/generativeUI/GenMetricCards.tsx",
+        "src/components/ai/generativeUI/types.ts",
+        "src/components/ai/generativeUI/index.ts"
+      ],
+      "priority": 6
+    },
+    {
+      "name": "document-management",
+      "label": "Document Management",
+      "description": "Drawings, files, documents, and file storage",
+      "files": [
+        "src/api/endpoints/documents.ts",
+        "src/api/endpoints/field.ts",
+        "src/components/budget/BudgetUpload.tsx"
+      ],
+      "priority": 7
+    },
+    {
+      "name": "collaboration",
+      "label": "Collaboration",
+      "description": "Team communication, presence, message reactions, and edit conflict management",
+      "files": [
+        "src/api/endpoints/messageReactions.ts",
+        "src/api/endpoints/auditTrail.ts",
+        "src/api/endpoints/editLocks.ts",
+        "src/components/collaboration/EditConflictGuard.tsx",
+        "src/components/collaboration/EntityPresence.tsx",
+        "src/components/collaboration/PresenceBar.tsx"
+      ],
+      "priority": 8
+    },
+    {
+      "name": "infrastructure",
+      "label": "Infrastructure",
+      "description": "Application core, routing, authentication, API client, and middleware",
+      "files": [
+        "src/App.tsx",
+        "src/api/client.ts",
+        "src/api/errors.ts",
+        "src/api/invalidation.ts",
+        "src/api/queryKeys.ts",
+        "src/api/middleware/organizationScope.ts",
+        "src/api/middleware/projectScope.ts",
+        "src/api/middleware/tenantGuard.ts",
+        "src/api/v1/index.ts",
+        "src/api/v1/router.ts",
+        "src/api/endpoints/organizations.ts",
+        "src/api/endpoints/projects.ts",
+        "src/api/endpoints/webhooks.ts",
+        "src/components/auth/PermissionGate.tsx",
+        "src/components/auth/ProtectedRoute.tsx"
+      ],
+      "priority": 9
+    }
+  ]
+}
