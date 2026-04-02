@@ -4,6 +4,8 @@ import { Sparkles, AlertTriangle, ChevronDown, ChevronUp, CheckCircle, RefreshCw
 import { useNavigate } from 'react-router-dom';
 import { PageContainer, Card, SectionHeader, MetricBox, Skeleton, Btn, useToast } from '../components/Primitives';
 import { useRealtimeSchedulePhases, useScheduleRealtime } from '../hooks/queries/realtime';
+import { useQueryClient } from '@tanstack/react-query';
+import { supabase } from '../lib/supabase';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../styles/theme';
 import { useScheduleStore } from '../stores/scheduleStore';
 import { useProjectContext } from '../stores/projectContextStore';
@@ -78,6 +80,7 @@ const MOCK_FORECAST: WeatherDay[] = Array.from({ length: 7 }, (_, i) => {
 export const Schedule: React.FC = () => {
   const isMobile = useMediaQuery('(max-width: 767px)');
   const { activeProject } = useProjectContext();
+  const queryClient = useQueryClient();
   const { phases: schedulePhases, metrics, loading, error, loadSchedule } = useScheduleStore();
   const { data: projectMetrics } = useProjectMetrics(activeProject?.id);
   const { createConversation, sendMessage, setActiveConversation, setPageContext } = useCopilotStore();
@@ -92,6 +95,18 @@ export const Schedule: React.FC = () => {
   useEffect(() => {
     if (activeProject?.id) loadSchedule(activeProject.id);
   }, [activeProject?.id]);
+
+  useEffect(() => {
+    const projectId = activeProject?.id;
+    if (!projectId) return;
+    const channel = supabase
+      .channel('schedule:' + projectId)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'schedule_phases', filter: 'project_id=eq.' + projectId }, () => {
+        queryClient.invalidateQueries({ queryKey: ['schedule', projectId] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [activeProject?.id, queryClient]);
 
   const [whatIfMode, setWhatIfMode] = useState(false);
   const [showBaseline, setShowBaseline] = useState(false);
