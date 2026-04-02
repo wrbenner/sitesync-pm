@@ -1,4 +1,4 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react'
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react'
 import { AlertTriangle, Camera, ClipboardCheck, Award, Eye, TrendingUp, Users, Plus } from 'lucide-react'
 import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton } from '../components/Primitives'
 import { DataTable, createColumnHelper } from '../components/shared/DataTable'
@@ -393,6 +393,76 @@ export const Safety: React.FC = () => {
   // Detect when queries have settled but returned no data (tables not yet seeded)
   const isSampleData = !loadingIncidents && incidents === null
 
+  // ── Incident form state ────────────────────────────────────
+
+  const [showIncidentModal, setShowIncidentModal] = useState(false)
+  const [incidentForm, setIncidentForm] = useState({
+    date: '',
+    location: '',
+    description: '',
+    severity: '',
+    involved_persons: '',
+  })
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+
+  const dateRef = useRef<HTMLInputElement>(null)
+  const locationRef = useRef<HTMLInputElement>(null)
+  const descriptionRef = useRef<HTMLTextAreaElement>(null)
+  const severityRef = useRef<HTMLSelectElement>(null)
+  const involvedPersonsRef = useRef<HTMLInputElement>(null)
+
+  const requiredFields: { key: keyof typeof incidentForm; label: string }[] = [
+    { key: 'date', label: 'Date' },
+    { key: 'location', label: 'Location' },
+    { key: 'description', label: 'Description' },
+    { key: 'severity', label: 'Severity' },
+    { key: 'involved_persons', label: 'Involved persons' },
+  ]
+
+  const validateField = (key: string, value: string): string => {
+    if (!value.trim()) {
+      const found = requiredFields.find((f) => f.key === key)
+      return found ? `${found.label} is required` : 'This field is required'
+    }
+    return ''
+  }
+
+  const handleFieldBlur = (key: string, value: string) => {
+    const error = validateField(key, value)
+    setFieldErrors((prev) => ({ ...prev, [key]: error }))
+  }
+
+  const handleIncidentSubmit = () => {
+    const errors: Record<string, string> = {}
+    requiredFields.forEach(({ key }) => {
+      const err = validateField(key, incidentForm[key])
+      if (err) errors[key] = err
+    })
+    setFieldErrors(errors)
+
+    if (Object.keys(errors).length > 0) {
+      toast.error('Please complete all required fields')
+      // Focus first invalid field
+      if (errors.date) dateRef.current?.focus()
+      else if (errors.location) locationRef.current?.focus()
+      else if (errors.description) descriptionRef.current?.focus()
+      else if (errors.severity) severityRef.current?.focus()
+      else if (errors.involved_persons) involvedPersonsRef.current?.focus()
+      return
+    }
+
+    toast.info('Form submission requires backend configuration')
+    setShowIncidentModal(false)
+    setIncidentForm({ date: '', location: '', description: '', severity: '', involved_persons: '' })
+    setFieldErrors({})
+  }
+
+  const handleCloseModal = () => {
+    setShowIncidentModal(false)
+    setIncidentForm({ date: '', location: '', description: '', severity: '', involved_persons: '' })
+    setFieldErrors({})
+  }
+
   // ── Tab actions ────────────────────────────────────────────
 
   const addButtonLabel: Record<TabKey, string> = {
@@ -402,10 +472,15 @@ export const Safety: React.FC = () => {
     toolbox: 'New Talk',
     certifications: 'Add Certification',
     observations: 'Add Observation',
+    ai_analysis: '',
   }
 
   const handleAdd = () => {
-    toast.info('Form submission requires backend configuration')
+    if (activeTab === 'incidents') {
+      setShowIncidentModal(true)
+    } else {
+      toast.info('Form submission requires backend configuration')
+    }
   }
 
   // ── Render ─────────────────────────────────────────────────
@@ -789,6 +864,199 @@ export const Safety: React.FC = () => {
         <Suspense fallback={<Skeleton height="300px" />}>
           <AIPhotoAnalysis />
         </Suspense>
+      )}
+
+      {/* Incident Creation Modal */}
+      {showIncidentModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Report Incident"
+          style={{
+            position: 'fixed', inset: 0, zIndex: 1000,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            backgroundColor: 'rgba(0,0,0,0.45)',
+          }}
+          onClick={(e) => { if (e.target === e.currentTarget) handleCloseModal() }}
+        >
+          <div style={{
+            backgroundColor: '#fff',
+            borderRadius: borderRadius.lg,
+            padding: spacing['6'],
+            width: '100%',
+            maxWidth: 520,
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing['5'] }}>
+              <h2 style={{ margin: 0, fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+                Report Incident
+              </h2>
+              <button
+                onClick={handleCloseModal}
+                aria-label="Close"
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  fontSize: 20, color: colors.textSecondary, lineHeight: 1, padding: 4,
+                }}
+              >
+                &times;
+              </button>
+            </div>
+
+            {/* Date */}
+            <div style={{ marginBottom: spacing['4'] }}>
+              <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+                Date<span style={{ color: '#E74C3C', marginLeft: 2 }}>*</span>
+              </label>
+              <input
+                ref={dateRef}
+                type="date"
+                value={incidentForm.date}
+                onChange={(e) => setIncidentForm((p) => ({ ...p, date: e.target.value }))}
+                onBlur={(e) => handleFieldBlur('date', e.target.value)}
+                style={{
+                  width: '100%', boxSizing: 'border-box',
+                  padding: `${spacing['2']} ${spacing['3']}`,
+                  border: fieldErrors.date ? '1px solid #E74C3C' : '1px solid #E5E7EB',
+                  borderRadius: borderRadius.base,
+                  fontSize: typography.fontSize.sm,
+                  fontFamily: typography.fontFamily,
+                  color: colors.textPrimary,
+                  outline: 'none',
+                }}
+              />
+              {fieldErrors.date && (
+                <p style={{ color: '#E74C3C', fontSize: 12, marginTop: 4, margin: '4px 0 0' }}>{fieldErrors.date}</p>
+              )}
+            </div>
+
+            {/* Location */}
+            <div style={{ marginBottom: spacing['4'] }}>
+              <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+                Location<span style={{ color: '#E74C3C', marginLeft: 2 }}>*</span>
+              </label>
+              <input
+                ref={locationRef}
+                type="text"
+                placeholder="e.g. Level 3 stairwell"
+                value={incidentForm.location}
+                onChange={(e) => setIncidentForm((p) => ({ ...p, location: e.target.value }))}
+                onBlur={(e) => handleFieldBlur('location', e.target.value)}
+                style={{
+                  width: '100%', boxSizing: 'border-box',
+                  padding: `${spacing['2']} ${spacing['3']}`,
+                  border: fieldErrors.location ? '1px solid #E74C3C' : '1px solid #E5E7EB',
+                  borderRadius: borderRadius.base,
+                  fontSize: typography.fontSize.sm,
+                  fontFamily: typography.fontFamily,
+                  color: colors.textPrimary,
+                  outline: 'none',
+                }}
+              />
+              {fieldErrors.location && (
+                <p style={{ color: '#E74C3C', fontSize: 12, marginTop: 4, margin: '4px 0 0' }}>{fieldErrors.location}</p>
+              )}
+            </div>
+
+            {/* Severity */}
+            <div style={{ marginBottom: spacing['4'] }}>
+              <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+                Severity<span style={{ color: '#E74C3C', marginLeft: 2 }}>*</span>
+              </label>
+              <select
+                ref={severityRef}
+                value={incidentForm.severity}
+                onChange={(e) => setIncidentForm((p) => ({ ...p, severity: e.target.value }))}
+                onBlur={(e) => handleFieldBlur('severity', e.target.value)}
+                style={{
+                  width: '100%', boxSizing: 'border-box',
+                  padding: `${spacing['2']} ${spacing['3']}`,
+                  border: fieldErrors.severity ? '1px solid #E74C3C' : '1px solid #E5E7EB',
+                  borderRadius: borderRadius.base,
+                  fontSize: typography.fontSize.sm,
+                  fontFamily: typography.fontFamily,
+                  color: incidentForm.severity ? colors.textPrimary : colors.textTertiary,
+                  backgroundColor: '#fff',
+                  outline: 'none',
+                }}
+              >
+                <option value="" disabled>Select severity</option>
+                <option value="minor">Minor</option>
+                <option value="moderate">Moderate</option>
+                <option value="serious">Serious</option>
+                <option value="fatality">Fatality</option>
+              </select>
+              {fieldErrors.severity && (
+                <p style={{ color: '#E74C3C', fontSize: 12, marginTop: 4, margin: '4px 0 0' }}>{fieldErrors.severity}</p>
+              )}
+            </div>
+
+            {/* Involved Persons */}
+            <div style={{ marginBottom: spacing['4'] }}>
+              <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+                Involved Persons<span style={{ color: '#E74C3C', marginLeft: 2 }}>*</span>
+              </label>
+              <input
+                ref={involvedPersonsRef}
+                type="text"
+                placeholder="Names or crew"
+                value={incidentForm.involved_persons}
+                onChange={(e) => setIncidentForm((p) => ({ ...p, involved_persons: e.target.value }))}
+                onBlur={(e) => handleFieldBlur('involved_persons', e.target.value)}
+                style={{
+                  width: '100%', boxSizing: 'border-box',
+                  padding: `${spacing['2']} ${spacing['3']}`,
+                  border: fieldErrors.involved_persons ? '1px solid #E74C3C' : '1px solid #E5E7EB',
+                  borderRadius: borderRadius.base,
+                  fontSize: typography.fontSize.sm,
+                  fontFamily: typography.fontFamily,
+                  color: colors.textPrimary,
+                  outline: 'none',
+                }}
+              />
+              {fieldErrors.involved_persons && (
+                <p style={{ color: '#E74C3C', fontSize: 12, marginTop: 4, margin: '4px 0 0' }}>{fieldErrors.involved_persons}</p>
+              )}
+            </div>
+
+            {/* Description */}
+            <div style={{ marginBottom: spacing['5'] }}>
+              <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+                Description<span style={{ color: '#E74C3C', marginLeft: 2 }}>*</span>
+              </label>
+              <textarea
+                ref={descriptionRef}
+                rows={4}
+                placeholder="Describe what happened"
+                value={incidentForm.description}
+                onChange={(e) => setIncidentForm((p) => ({ ...p, description: e.target.value }))}
+                onBlur={(e) => handleFieldBlur('description', e.target.value)}
+                style={{
+                  width: '100%', boxSizing: 'border-box',
+                  padding: `${spacing['2']} ${spacing['3']}`,
+                  border: fieldErrors.description ? '1px solid #E74C3C' : '1px solid #E5E7EB',
+                  borderRadius: borderRadius.base,
+                  fontSize: typography.fontSize.sm,
+                  fontFamily: typography.fontFamily,
+                  color: colors.textPrimary,
+                  resize: 'vertical',
+                  outline: 'none',
+                }}
+              />
+              {fieldErrors.description && (
+                <p style={{ color: '#E74C3C', fontSize: 12, marginTop: 4, margin: '4px 0 0' }}>{fieldErrors.description}</p>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: spacing['3'] }}>
+              <Btn variant="ghost" onClick={handleCloseModal}>Cancel</Btn>
+              <Btn variant="primary" onClick={handleIncidentSubmit}>Submit Incident</Btn>
+            </div>
+          </div>
+        </div>
       )}
     </PageContainer>
   )
