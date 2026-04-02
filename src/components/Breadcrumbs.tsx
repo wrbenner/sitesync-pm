@@ -79,13 +79,13 @@ export const FolderBreadcrumbs: React.FC<FolderBreadcrumbsProps> = ({ stack, onN
   const [expanded, setExpanded] = React.useState(false);
 
   React.useEffect(() => {
-    const mq = window.matchMedia('(max-width: 767px)');
-    const handler = (e: MediaQueryListEvent) => {
-      setIsMobile(e.matches);
-      if (!e.matches) setExpanded(false);
+    const handler = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (!mobile) setExpanded(false);
     };
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
   }, []);
 
   if (stack.length === 0) return null;
