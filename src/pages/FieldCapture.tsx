@@ -267,19 +267,21 @@ const FieldCaptureInner: React.FC = () => {
       />
 
       {/* Offline banner */}
-      {(!isOnline || pendingCount > 0) && (
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: spacing['2'],
-          padding: '12px', marginBottom: spacing['4'],
-          backgroundColor: '#FEF3C7',
-          border: '1px solid #F59E0B',
-          borderRadius: borderRadius.base,
-        }}>
+      {!isOnline && (
+        <div
+          aria-live="assertive"
+          role="status"
+          style={{
+            display: 'flex', alignItems: 'center', gap: spacing['2'],
+            padding: '12px', marginBottom: spacing['4'],
+            backgroundColor: '#FEF3C7',
+            border: '1px solid #F59E0B',
+            borderRadius: borderRadius.base,
+          }}
+        >
           <AlertTriangle size={16} color="#B45309" style={{ flexShrink: 0 }} />
           <span style={{ fontSize: typography.fontSize.sm, color: '#92400E', fontWeight: typography.fontWeight.medium }}>
-            {!isOnline
-              ? `You are offline. ${pendingCount} photo${pendingCount !== 1 ? 's' : ''} pending upload.`
-              : `${pendingCount} photo${pendingCount !== 1 ? 's' : ''} pending upload.`}
+            You are offline. Photos will sync when you reconnect.
           </span>
         </div>
       )}
@@ -616,6 +618,38 @@ const FieldCaptureInner: React.FC = () => {
       )}
 
       {/* Today's Timeline */}
+      {captures.length === 0 ? (
+        <div style={{ marginTop: quickTextType ? spacing['4'] : 0 }}>
+          <Card padding={spacing['10']}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['4'], textAlign: 'center' }}>
+              <div style={{ width: 64, height: 64, borderRadius: '50%', backgroundColor: `${colors.primaryOrange}14`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Camera size={32} color={colors.primaryOrange} />
+              </div>
+              <div>
+                <p style={{ fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>No field captures yet</p>
+                <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: 0 }}>Start documenting site conditions with photos.</p>
+              </div>
+              <button
+                aria-label="Capture photo"
+                onClick={handlePhotoButtonClick}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: spacing['2'],
+                  padding: `${spacing['3']} ${spacing['6']}`,
+                  backgroundColor: colors.primaryOrange, color: colors.white,
+                  border: 'none', borderRadius: borderRadius.lg,
+                  fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold,
+                  fontFamily: typography.fontFamily, cursor: 'pointer',
+                  minHeight: 44,
+                }}
+              >
+                <Camera size={18} />
+                Capture
+              </button>
+            </div>
+          </Card>
+        </div>
+      ) : (
+        <>
       <div style={{ marginTop: quickTextType ? spacing['4'] : 0 }}>
         <SectionHeader title="Today's Captures" action={<span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{todayCaptures.length} items</span>} />
         <Card>
@@ -718,6 +752,45 @@ const FieldCaptureInner: React.FC = () => {
         </Card>
         )}
       </div>
+      </>
+      )}
+
+      {/* Fixed bottom Capture button */}
+      <PermissionGate permission="field_capture.create">
+        <div style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: zIndex.modal as number, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['2'] }}>
+          {pendingCount > 0 && (
+            <div style={{
+              backgroundColor: '#F59E0B', color: '#fff',
+              borderRadius: borderRadius.full,
+              padding: `2px ${spacing['3']}`,
+              fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
+              whiteSpace: 'nowrap', boxShadow: shadows.card,
+            }}>
+              {pendingCount} photo{pendingCount !== 1 ? 's' : ''} pending upload
+            </div>
+          )}
+          <button
+            aria-label="Capture photo"
+            onClick={handlePhotoButtonClick}
+            style={{
+              width: 64, height: 64,
+              borderRadius: '50%',
+              backgroundColor: colors.primaryOrange,
+              color: colors.white,
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 4px 16px rgba(244,120,32,0.45)',
+              transition: `background-color ${transitions.instant}`,
+            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.orangeHover; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.primaryOrange; }}
+          >
+            <Camera size={28} />
+          </button>
+          <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, backgroundColor: colors.white, borderRadius: borderRadius.full, padding: `2px ${spacing['3']}`, boxShadow: shadows.card }}>Capture</span>
+        </div>
+      </PermissionGate>
 
       {/* Overlays */}
       {showAnnotator && (
