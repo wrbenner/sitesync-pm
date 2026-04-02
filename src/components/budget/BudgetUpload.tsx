@@ -89,6 +89,8 @@ export function BudgetUpload({ open, onClose, onSuccess }: BudgetUploadProps) {
   const { importDivisions } = useBudgetStore();
   const { activeProject } = useProjectContext();
   const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
+  const [warnings, setWarnings] = useState<string[]>([]);
+  const [showAllWarnings, setShowAllWarnings] = useState(false);
   const [parsing, setParsing] = useState(false);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState('');
@@ -142,12 +144,24 @@ export function BudgetUpload({ open, onClose, onSuccess }: BudgetUploadProps) {
           return l.includes('code') || l.includes('csi') || l.includes('division');
         });
 
+        const newWarnings: string[] = [];
+
         const rows: ParsedRow[] = json
-          .map((row) => {
+          .map((row, index) => {
             const rawName = String(row[nameCol!] ?? '').trim();
             if (!rawName) return null;
 
-            const budgetAmount = budgetCol ? parseNumber(row[budgetCol]) : 0;
+            let budgetAmount = 0;
+            if (budgetCol) {
+              const rawBudget = row[budgetCol];
+              budgetAmount = parseNumber(rawBudget);
+              if (budgetAmount === 0 && rawBudget !== undefined && rawBudget !== null && rawBudget !== 0 && rawBudget !== '') {
+                const cleaned = typeof rawBudget === 'string' ? rawBudget.replace(/[$,\s]/g, '') : String(rawBudget);
+                if (isNaN(parseFloat(cleaned))) {
+                  newWarnings.push(`Row ${index + 1}: '${rawBudget}' in budget column is not a number, defaulting to $0`);
+                }
+              }
+            }
             const spentAmount = spentCol ? parseNumber(row[spentCol]) : 0;
             const committedAmount = committedCol ? parseNumber(row[committedCol]) : 0;
 
@@ -180,6 +194,8 @@ export function BudgetUpload({ open, onClose, onSuccess }: BudgetUploadProps) {
           .filter(Boolean) as ParsedRow[];
 
         setParsedRows(rows);
+        setWarnings(newWarnings);
+        setShowAllWarnings(false);
         setParsing(false);
       } catch (err) {
         setError(`Failed to parse file: ${(err as Error).message}`);
@@ -221,6 +237,8 @@ export function BudgetUpload({ open, onClose, onSuccess }: BudgetUploadProps) {
 
   const handleClose = () => {
     setParsedRows([]);
+    setWarnings([]);
+    setShowAllWarnings(false);
     setError('');
     setFileName('');
     onClose();
@@ -337,12 +355,45 @@ export function BudgetUpload({ open, onClose, onSuccess }: BudgetUploadProps) {
                   </span>
                 </div>
                 <button
-                  onClick={() => { setParsedRows([]); setFileName(''); }}
+                  onClick={() => { setParsedRows([]); setWarnings([]); setShowAllWarnings(false); setFileName(''); }}
                   style={{ padding: `${spacing['1']} ${spacing['3']}`, border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base, backgroundColor: 'transparent', fontSize: typography.fontSize.caption, color: colors.textSecondary, cursor: 'pointer', fontFamily: typography.fontFamily }}
                 >
                   Upload Different File
                 </button>
               </div>
+
+              {/* Validation warnings */}
+              {warnings.length > 0 && (
+                <div style={{
+                  backgroundColor: `${colors.statusPending}1A`,
+                  border: `1px solid ${colors.statusPending}`,
+                  borderRadius: borderRadius.md,
+                  padding: spacing['3'],
+                  marginBottom: spacing['3'],
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
+                      <AlertCircle size={14} color={colors.statusPending} />
+                      <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.statusPending }}>
+                        {warnings.length} {warnings.length === 1 ? 'row had issues' : 'rows had issues'} and defaulted to $0
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setShowAllWarnings((v) => !v)}
+                      style={{ fontSize: typography.fontSize.caption, color: colors.statusPending, background: 'none', border: 'none', cursor: 'pointer', fontFamily: typography.fontFamily, textDecoration: 'underline', padding: 0 }}
+                    >
+                      {showAllWarnings ? 'Hide' : 'Show details'}
+                    </button>
+                  </div>
+                  {showAllWarnings && (
+                    <ul style={{ margin: `${spacing['2']} 0 0 0`, paddingLeft: spacing['5'], listStyle: 'disc' }}>
+                      {warnings.map((w, i) => (
+                        <li key={i} style={{ fontSize: typography.fontSize.caption, color: colors.textSecondary, lineHeight: 1.6 }}>{w}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
 
               {/* Preview table */}
               <div style={{ border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.md, overflow: 'hidden', maxHeight: '340px', overflowY: 'auto' }}>
