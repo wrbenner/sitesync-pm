@@ -64,6 +64,7 @@ function EntityLabel({ target, entityPath, onEntityClick }: { target: string; en
     return (
       <button
         onClick={(e) => { e.stopPropagation(); onEntityClick?.(entityPath); }}
+        aria-label={`View ${target}`}
         style={{
           display: 'inline-flex', alignItems: 'center', gap: 2,
           fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium,
@@ -83,6 +84,7 @@ function EntityLabel({ target, entityPath, onEntityClick }: { target: string; en
 export const ActivityCard: React.FC<ActivityCardProps> = ({ item, onComment, onClick, onEntityClick }) => {
   const [liked, setLiked] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [focused, setFocused] = useState(false);
   const color = typeColors[item.type] || colors.textSecondary;
 
   const avatarWidth = 32;
@@ -92,6 +94,12 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({ item, onComment, onC
   return (
     <div
       onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      aria-label={onClick ? `Activity: ${item.user} ${item.action} ${item.target}` : undefined}
+      onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } } : undefined}
+      onFocus={() => { if (onClick) setFocused(true); }}
+      onBlur={() => setFocused(false)}
       style={{
         paddingTop: item.isGrouped ? spacing['2'] : spacing['4'],
         paddingBottom: spacing['4'],
@@ -99,6 +107,8 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({ item, onComment, onC
         paddingRight: spacing['5'],
         cursor: onClick ? 'pointer' : 'default',
         transition: `background-color ${transitions.instant}`,
+        outline: focused ? `2px solid ${colors.primaryOrange}` : 'none',
+        outlineOffset: focused ? '2px' : undefined,
       }}
       onMouseEnter={(e) => { if (onClick) (e.currentTarget as HTMLDivElement).style.backgroundColor = colors.surfaceHover; }}
       onMouseLeave={(e) => { if (onClick) (e.currentTarget as HTMLDivElement).style.backgroundColor = 'transparent'; }}
