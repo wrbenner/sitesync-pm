@@ -127,8 +127,15 @@ export const CopilotPanel: React.FC = () => {
   } = useMultiAgentChat(currentPageContext)
 
   const [exportOpen, setExportOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const hasMessages = messages.length > 0
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -190,7 +197,9 @@ export const CopilotPanel: React.FC = () => {
           position: 'fixed',
           top: 0,
           right: 0,
-          width: '420px',
+          ...(isMobile
+            ? { left: 0, bottom: 0, width: '100vw', maxWidth: '100vw' }
+            : { width: 'min(480px, 100vw)', maxWidth: '100vw' }),
           height: '100vh',
           backgroundColor: colors.surfaceRaised,
           boxShadow: shadows.panel,
@@ -392,7 +401,7 @@ export const CopilotPanel: React.FC = () => {
             display: 'flex',
             flexDirection: 'column',
             gap: spacing['4'],
-            padding: `${spacing['4']} ${spacing['4']} ${spacing['2']}`,
+            padding: `${spacing['4']} ${spacing['4']} ${isMobile ? '80px' : spacing['2']}`,
           }}
         >
           {/* Empty state with context-aware prompts */}
@@ -421,6 +430,7 @@ export const CopilotPanel: React.FC = () => {
                     onClick={() => handleSendMessage(prompt.label)}
                     style={{
                       padding: `${spacing['3']} ${spacing['3']}`,
+                      minHeight: '44px',
                       textAlign: 'left',
                       backgroundColor: colors.surfacePage,
                       border: `1px solid ${colors.borderSubtle}`,
@@ -602,7 +612,15 @@ export const CopilotPanel: React.FC = () => {
         </div>
 
         {/* Input */}
-        <div style={{ padding: `0 ${spacing['4']} ${spacing['4']}`, flexShrink: 0 }}>
+        <div
+          style={{
+            ...(isMobile
+              ? { position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: colors.surfaceRaised, borderTop: `1px solid ${colors.borderSubtle}`, zIndex: 51 }
+              : {}),
+            padding: `${spacing['3']} ${spacing['4']} ${spacing['4']}`,
+            flexShrink: 0,
+          }}
+        >
           <AgentMentionInput
             onSend={handleSendMessage}
             disabled={isProcessing}
