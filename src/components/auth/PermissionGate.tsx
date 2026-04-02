@@ -54,7 +54,7 @@ export const PermissionGate: React.FC<PermissionGateProps> = ({
 // ── PermissionDenied: inline message for gated content ────────
 
 const PermissionDenied: React.FC = () => (
-  <div style={{
+  <div role="alert" aria-live="polite" style={{
     display: 'flex', alignItems: 'center', gap: spacing['2'],
     padding: `${spacing['2']} ${spacing['3']}`,
     backgroundColor: colors.surfaceInset,
@@ -77,12 +77,17 @@ export const RequestAccessPage: React.FC<{ moduleName?: string }> = ({ moduleNam
   return (
     <div style={{ maxWidth: 480, margin: 'auto', padding: 48, textAlign: 'center' }}>
       <ShieldAlert size={48} color={colors.textTertiary} />
-      <h2>Access Restricted</h2>
+      <h2 style={{
+        fontSize: typography.fontSize['2xl'],
+        fontWeight: typography.fontWeight.semibold,
+        color: colors.textPrimary,
+        margin: `${spacing['4']} 0 ${spacing['2']}`,
+      }}>Access Restricted</h2>
       <p style={{ color: colors.textSecondary }}>
-        You do not have permission to access {moduleName || 'this module'}. Your current role is {role || 'unknown'}.
+        You do not have permission to access {moduleName || 'this section'}. Your current role is {role || 'unknown'}.
       </p>
       <button
-        onClick={() => navigate(-1)}
+        onClick={() => navigate('/')}
         style={{
           backgroundColor: colors.primary,
           color: 'white',
@@ -93,7 +98,7 @@ export const RequestAccessPage: React.FC<{ moduleName?: string }> = ({ moduleNam
           fontSize: 14,
         }}
       >
-        Go Back
+        Go to Dashboard
       </button>
     </div>
   );
