@@ -10,6 +10,7 @@ import { useSubmittals } from '../hooks/queries';
 import { AlertTriangle, Calendar, Clock, ArrowRight, CheckCircle, ClipboardList, Paperclip, LayoutGrid, List, RefreshCw, Sparkles, UserCheck, Tag as TagIcon, Download } from 'lucide-react';
 import { useAppNavigate, getRelatedItemsForSubmittal } from '../utils/connections';
 import { useCreateSubmittal, useUpdateSubmittal } from '../hooks/mutations';
+import { useSubmittalReviewers } from '../hooks/queries';
 import { useProjectId } from '../hooks/useProjectId';
 import { useNavigate } from 'react-router-dom';
 import { PermissionGate } from '../components/auth/PermissionGate';
@@ -28,113 +29,153 @@ import { EditingLockBanner } from '../components/ui/EditingLockBanner';
 
 const isOverdue = (dateStr: string) => new Date(dateStr) < new Date();
 
-// ── ApprovalStepper ──────────────────────────────────────
-const STEPPER_STEPS = [
-  { label: 'Submitted' },
-  { label: 'GC Review' },
-  { label: 'Architect Review' },
-  { label: 'Final' },
-];
+// ── ReviewerStepper ──────────────────────────────────────
+type StepStatus = 'pending' | 'current' | 'approved' | 'rejected' | 'approved_as_noted';
 
-function getStepperState(status: string): { activeStep: number; isRejected: boolean } {
-  switch (status) {
-    case 'pending':            return { activeStep: 0, isRejected: false };
-    case 'submitted':          return { activeStep: 1, isRejected: false };
-    case 'review_in_progress': return { activeStep: 2, isRejected: false };
-    case 'approved':
-    case 'approved_as_noted':  return { activeStep: 3, isRejected: false };
-    case 'rejected':           return { activeStep: 2, isRejected: true };
-    default:                   return { activeStep: 0, isRejected: false };
-  }
+const STEP_COLORS: Record<StepStatus, { bg: string; fg: string }> = {
+  pending:           { bg: '#E5E7EB', fg: '#9CA3AF' },
+  current:           { bg: '#3B82F6', fg: '#FFFFFF' },
+  approved:          { bg: '#4EC896', fg: '#FFFFFF' },
+  rejected:          { bg: '#EF4444', fg: '#FFFFFF' },
+  approved_as_noted: { bg: '#F59E0B', fg: '#FFFFFF' },
+};
+
+interface ReviewerStep {
+  id: string | number;
+  role: string;
+  date?: string;
+  status: StepStatus;
 }
 
-const ApprovalStepper: React.FC<{ status: string }> = ({ status }) => {
-  const { activeStep, isRejected } = getStepperState(status);
+function buildFallbackSteps(status: string): ReviewerStep[] {
+  let s0: StepStatus = 'pending';
+  let s1: StepStatus = 'pending';
+  let s2: StepStatus = 'pending';
+
+  if (status === 'pending') {
+    s0 = 'current';
+  } else if (status === 'submitted' || status === 'under_review' || status === 'review_in_progress') {
+    s0 = 'approved'; s1 = 'current';
+  } else if (status === 'approved') {
+    s0 = 'approved'; s1 = 'approved'; s2 = 'approved';
+  } else if (status === 'approved_as_noted') {
+    s0 = 'approved'; s1 = 'approved'; s2 = 'approved_as_noted';
+  } else if (status === 'rejected' || status === 'revise_resubmit') {
+    s0 = 'approved'; s1 = 'approved'; s2 = 'rejected';
+  } else {
+    s0 = 'current';
+  }
+
+  return [
+    { id: 1, role: 'Submitted', status: s0 },
+    { id: 2, role: 'Review', status: s1 },
+    { id: 3, role: 'Decision', status: s2 },
+  ];
+}
+
+type ReviewerRow = { id: string; role: string | null; status: string | null; stamp: string | null; comments: string | null; approver_id: string | null };
+
+function buildReviewerSteps(reviewers: ReviewerRow[]): ReviewerStep[] {
+  return reviewers.map((r) => {
+    let stepStatus: StepStatus = 'pending';
+    if (r.status === 'approved') stepStatus = 'approved';
+    else if (r.status === 'approved_as_noted') stepStatus = 'approved_as_noted';
+    else if (r.status === 'rejected' || r.status === 'revise_resubmit') stepStatus = 'rejected';
+    else if (r.status === 'current' || r.status === 'in_review') stepStatus = 'current';
+    return {
+      id: r.id,
+      role: r.role || 'Reviewer',
+      status: stepStatus,
+      date: r.stamp ? new Date(r.stamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : undefined,
+    };
+  });
+}
+
+const ReviewerStepper: React.FC<{ status: string; reviewers: ReviewerRow[] }> = ({ status, reviewers }) => {
+  const steps: ReviewerStep[] = useMemo(
+    () => reviewers.length ? buildReviewerSteps(reviewers) : buildFallbackSteps(status),
+    [reviewers, status],
+  );
 
   return (
-    <>
-      <style>{`
-        @keyframes stepper-pulse {
-          0%, 100% { box-shadow: 0 0 0 0 rgba(244, 120, 32, 0.4); }
-          50% { box-shadow: 0 0 0 5px rgba(244, 120, 32, 0); }
-        }
-      `}</style>
-      <div
-        aria-label="Approval progress"
-        style={{ display: 'flex', alignItems: 'flex-start', marginBottom: '16px' }}
-      >
-        {STEPPER_STEPS.map((step, idx) => {
-          const isCompleted = idx < activeStep;
-          const isCurrent = idx === activeStep;
-          const isFuture = idx > activeStep;
+    <div aria-label="Approval chain" style={{ display: 'flex', alignItems: 'flex-start' }}>
+      {steps.map((step, idx) => {
+        const { bg, fg } = STEP_COLORS[step.status];
+        const isDone = step.status === 'approved' || step.status === 'approved_as_noted' || step.status === 'rejected';
+        const isLast = idx === steps.length - 1;
 
-          let circleStyle: React.CSSProperties = {
-            width: 24,
-            height: 24,
-            borderRadius: '9999px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-            fontSize: '11px',
-            fontWeight: 600,
-            color: colors.white,
-            transition: 'all 200ms ease',
-          };
-
-          if (isCompleted) {
-            circleStyle = { ...circleStyle, backgroundColor: colors.statusActive };
-          } else if (isCurrent) {
-            const currentBg = isRejected ? colors.statusCritical : colors.primaryOrange;
-            circleStyle = {
-              ...circleStyle,
-              backgroundColor: currentBg,
-              animation: isRejected ? undefined : 'stepper-pulse 1.8s ease-in-out infinite',
-            };
-          } else {
-            circleStyle = {
-              ...circleStyle,
-              backgroundColor: 'transparent',
-              border: `2px solid ${colors.borderSubtle}`,
-              color: colors.textTertiary,
-            };
-          }
-
-          return (
-            <React.Fragment key={step.label}>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                <div
-                  style={circleStyle}
-                  aria-current={isCurrent ? 'step' : undefined}
-                >
-                  {isCompleted ? (
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                      <path d="M2 6l3 3 5-5" stroke={colors.white} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  ) : (
-                    <span>{idx + 1}</span>
-                  )}
-                </div>
-                <span style={{ fontSize: '12px', color: colors.textTertiary, whiteSpace: 'nowrap', fontWeight: isCurrent ? 500 : 400 }}>
-                  {step.label}
-                </span>
+        return (
+          <React.Fragment key={step.id}>
+            {/* Circle + label column */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, minWidth: 56 }}>
+              <div
+                aria-current={step.status === 'current' ? 'step' : undefined}
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: '50%',
+                  backgroundColor: bg,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                {step.status === 'approved' && (
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <path d="M2.5 7l3 3 6-6" stroke={fg} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                )}
+                {step.status === 'rejected' && (
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                    <path d="M2 2l8 8M10 2l-8 8" stroke={fg} strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                )}
+                {step.status === 'approved_as_noted' && (
+                  <span style={{ fontSize: 14, fontWeight: 700, color: fg, lineHeight: 1 }}>~</span>
+                )}
+                {step.status === 'current' && (
+                  <div style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: fg }} />
+                )}
+                {step.status === 'pending' && (
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: fg }} />
+                )}
               </div>
-              {idx < STEPPER_STEPS.length - 1 && (
-                <div style={{
-                  flex: 1,
-                  height: 2,
-                  marginTop: 11,
-                  marginLeft: 4,
-                  marginRight: 4,
-                  backgroundColor: idx < activeStep ? colors.statusActive : colors.borderSubtle,
-                  transition: 'background-color 300ms ease',
-                }} />
+              <span style={{
+                fontSize: 11,
+                fontWeight: step.status === 'current' ? 600 : 400,
+                color: step.status === 'pending' ? colors.textTertiary : colors.textSecondary,
+                textAlign: 'center',
+                whiteSpace: 'nowrap',
+                lineHeight: 1.3,
+              }}>
+                {step.role}
+              </span>
+              {step.date && (
+                <span style={{ fontSize: 10, color: colors.textTertiary, textAlign: 'center', whiteSpace: 'nowrap', lineHeight: 1.2 }}>
+                  {step.date}
+                </span>
               )}
-            </React.Fragment>
-          );
-        })}
-      </div>
-    </>
+            </div>
+            {/* Connector line */}
+            {!isLast && (
+              <div style={{
+                flex: 1,
+                height: 2,
+                marginTop: 15,
+                ...(isDone
+                  ? { backgroundColor: '#4EC896' }
+                  : {
+                      backgroundImage: 'repeating-linear-gradient(90deg, #D1D5DB 0, #D1D5DB 6px, transparent 6px, transparent 12px)',
+                      backgroundColor: 'transparent',
+                    }
+                ),
+              }} />
+            )}
+          </React.Fragment>
+        );
+      })}
+    </div>
   );
 };
 
@@ -180,6 +221,8 @@ const Submittals: React.FC = () => {
   const createSubmittal = useCreateSubmittal();
   const updateSubmittal = useUpdateSubmittal();
   const { data: submittalsResult, isPending: loading, error: submittalsError, refetch } = useSubmittals(projectId);
+  const selectedIdStr = selectedId != null ? String(selectedId) : undefined;
+  const { data: reviewersData = [] } = useSubmittalReviewers(selectedIdStr);
   const submittalsRaw = submittalsResult?.data ?? [];
 
   // Map API data to component shape
@@ -568,7 +611,7 @@ const Submittals: React.FC = () => {
             </div>
 
             {/* Approval Stepper */}
-            <ApprovalStepper status={selected.status} />
+            <ReviewerStepper status={selected.status} reviewers={reviewersData} />
 
             {/* Details grid */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing.lg }}>

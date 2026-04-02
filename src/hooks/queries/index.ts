@@ -133,6 +133,30 @@ export function useSubmittal(id: string | undefined) {
   })
 }
 
+export function useSubmittalReviewers(submittalId: string | undefined) {
+  return useQuery({
+    queryKey: ['submittal_approvals', submittalId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('submittal_approvals')
+        .select('*')
+        .eq('submittal_id', submittalId!)
+        .order('created_at' as any, { ascending: true })
+      if (error) throw error
+      return (data ?? []) as Array<{
+        id: string
+        submittal_id: string
+        role: string | null
+        status: string | null
+        stamp: string | null
+        comments: string | null
+        approver_id: string | null
+      }>
+    },
+    enabled: !!submittalId,
+  })
+}
+
 // ── Punch Items ───────────────────────────────────────────
 
 export function usePunchItems(projectId: string | undefined, pagination?: PaginationParams) {
