@@ -74,6 +74,8 @@ export const DailyLog: React.FC = () => {
   const [addendumText, setAddendumText] = useState('');
   const [addendumSubmitting, setAddendumSubmitting] = useState(false);
 
+  const [historySearch, setHistorySearch] = useState('');
+
   const { hasPermission } = usePermissions();
 
   const manpowerSeeded = React.useRef(false);
@@ -269,18 +271,16 @@ export const DailyLog: React.FC = () => {
       <PageContainer title="Daily Log" subtitle="Loading...">
         <style>{`@keyframes pulse-dl { 0%,100% { opacity: 0.3; } 50% { opacity: 0.7; } }`}</style>
         <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['6'] }}>
-          {/* 4 metric card placeholders */}
+          {/* 4 metric card skeletons */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'] }}>
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} style={{ backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.xl, padding: spacing['5'], border: `1px solid ${colors.borderSubtle}`, animation: 'pulse-dl 1.5s ease-in-out infinite', height: 96 }} aria-hidden="true" />
+              <div key={i} style={{ backgroundColor: colors.surfaceFlat, borderRadius: '12px', border: `1px solid ${colors.borderSubtle}`, animation: 'pulse-dl 1.5s ease-in-out infinite', height: 96 }} aria-hidden="true" />
             ))}
           </div>
-          {/* Calendar placeholder */}
-          <div style={{ height: 220, backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.xl, border: `1px solid ${colors.borderSubtle}`, animation: 'pulse-dl 1.5s ease-in-out infinite' }} aria-hidden="true" />
-          {/* 3 row placeholders */}
+          {/* 6 table row skeletons */}
           <div style={{ backgroundColor: colors.white, borderRadius: borderRadius.xl, border: `1px solid ${colors.borderSubtle}`, overflow: 'hidden' }}>
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} style={{ height: 56, margin: `${spacing['3']} ${spacing['5']}`, backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.md, animation: 'pulse-dl 1.5s ease-in-out infinite', borderBottom: i < 2 ? `1px solid ${colors.borderSubtle}` : 'none' }} aria-hidden="true" />
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} style={{ height: 48, margin: `${spacing['2']} ${spacing['5']}`, backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.md, animation: 'pulse-dl 1.5s ease-in-out infinite', borderBottom: i < 5 ? `1px solid ${colors.borderSubtle}` : 'none' }} aria-hidden="true" />
             ))}
           </div>
         </div>
@@ -327,14 +327,19 @@ export const DailyLog: React.FC = () => {
         {!logError && (
           <Card padding={spacing['10']}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: spacing['4'] }}>
-              <Calendar size={64} color={colors.borderDefault} />
+              <Calendar size={64} color="#9CA3AF" />
               <div>
-                <p style={{ fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>No daily logs yet.</p>
+                <p style={{ fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>No daily logs yet</p>
                 <p style={{ fontSize: typography.fontSize.body, color: colors.textTertiary, margin: 0, maxWidth: '440px' }}>
-                  The daily log is your project's official record. Start documenting site conditions.
+                  The daily log is your project official record. Start documenting site conditions, crew activity, and weather.
                 </p>
               </div>
-              <Btn variant="primary" size="md" onClick={() => { setSelectedDate(new Date().toISOString().split('T')[0]); setShowCreateModal(true); }}>Start Today's Log</Btn>
+              <button
+                onClick={() => { setSelectedDate(new Date().toISOString().split('T')[0]); setShowCreateModal(true); }}
+                style={{ backgroundColor: '#F47820', color: '#FFFFFF', border: 'none', borderRadius: '8px', height: 40, padding: `0 ${spacing['4']}`, fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily, cursor: 'pointer' }}
+              >
+                Start Today Log
+              </button>
             </div>
           </Card>
         )}
@@ -372,6 +377,17 @@ export const DailyLog: React.FC = () => {
   const yesterday = dailyLogHistory[1];
   const lastWeek = dailyLogHistory[4];
   const previousDays = dailyLogHistory.slice(1);
+
+  const filteredPreviousDays = historySearch.trim()
+    ? previousDays.filter((l: any) => {
+        const q = historySearch.toLowerCase();
+        return (
+          (l.log_date ?? '').includes(q) ||
+          (l.summary ?? '').toLowerCase().includes(q) ||
+          (l.ai_summary ?? '').toLowerCase().includes(q)
+        );
+      })
+    : previousDays;
 
   const todayDate = new Date(today.log_date + 'T12:00:00');
   const todayFormatted = todayDate.toLocaleDateString('en-US', {
@@ -552,6 +568,16 @@ export const DailyLog: React.FC = () => {
         )}
       </div>
     }>
+      {logError && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'], padding: `${spacing['3']} ${spacing['4']}`, backgroundColor: '#FEF2F2', border: `1px solid #FECACA`, borderRadius: borderRadius.lg, marginBottom: spacing['4'] }}>
+          <AlertTriangle size={16} color={colors.statusCritical} style={{ flexShrink: 0 }} />
+          <p style={{ fontSize: typography.fontSize.sm, color: colors.statusCritical, margin: 0, flex: 1 }}>
+            {(logError as Error).message || 'Failed to load daily log data'}
+          </p>
+          <Btn variant="ghost" size="sm" icon={<RefreshCw size={13} />} onClick={() => refetch()}>Retry</Btn>
+        </div>
+      )}
+
       <div style={{ display: 'flex', gap: spacing['6'] }}>
         {/* Main content */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: spacing['6'] }}>
@@ -886,13 +912,35 @@ export const DailyLog: React.FC = () => {
 
           {/* Previous Days */}
           <div>
-            <SectionHeader title="Previous Days" />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['3'] }}>
+              <SectionHeader title="Previous Days" />
+              <input
+                type="text"
+                value={historySearch}
+                onChange={e => setHistorySearch(e.target.value)}
+                placeholder="Search logs..."
+                style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.md, outline: 'none', color: colors.textPrimary, backgroundColor: colors.white, width: 200 }}
+              />
+            </div>
+            {filteredPreviousDays.length === 0 && previousDays.length > 0 ? (
+              <Card padding={spacing['6']}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: spacing['3'] }}>
+                  <p style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, margin: 0 }}>No logs match your filters</p>
+                  <button
+                    onClick={() => setHistorySearch('')}
+                    style={{ backgroundColor: 'transparent', border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.md, padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, color: colors.textSecondary, cursor: 'pointer' }}
+                  >
+                    Clear filters
+                  </button>
+                </div>
+              </Card>
+            ) : (
             <Card padding="0">
-              {previousDays.map((log: any, index: number) => {
+              {filteredPreviousDays.map((log: any, index: number) => {
                 const logDate = new Date(log.log_date + 'T12:00:00');
                 const formatted = logDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
                 const isHovered = hoveredRow === log.id;
-                const isLast = index === previousDays.length - 1;
+                const isLast = index === filteredPreviousDays.length - 1;
                 const entryStatus = log.status || (log.approved ? 'approved' : 'draft');
                 const sc = getDailyLogStatusConfig(entryStatus);
 
@@ -940,6 +988,7 @@ export const DailyLog: React.FC = () => {
                 );
               })}
             </Card>
+            )}
           </div>
         </div>
 
