@@ -44,6 +44,7 @@ export const AgentMentionInput = memo<AgentMentionInputProps>(
     const [agentFilter, setAgentFilter] = useState('')
     const [selectedIndex, setSelectedIndex] = useState(0)
     const inputRef = useRef<HTMLTextAreaElement>(null)
+    const toastShownRef = useRef(false)
 
     const filteredAgents = useMemo(() => {
       if (!agentFilter) return [...AGENT_DOMAINS]
@@ -58,7 +59,15 @@ export const AgentMentionInput = memo<AgentMentionInputProps>(
 
     const handleChange = useCallback(
       (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        const text = e.target.value
+        let text = e.target.value
+        if (text.length > MAX_MESSAGE_LENGTH) {
+          text = text.slice(0, MAX_MESSAGE_LENGTH)
+          if (!toastShownRef.current) {
+            toastShownRef.current = true
+            toast.error('Message is too long. Maximum 4000 characters.')
+            setTimeout(() => { toastShownRef.current = false }, 3000)
+          }
+        }
         setValue(text)
 
         // Detect @mention trigger
@@ -270,6 +279,7 @@ export const AgentMentionInput = memo<AgentMentionInputProps>(
             placeholder={placeholder}
             disabled={disabled}
             rows={1}
+            maxLength={MAX_MESSAGE_LENGTH}
             aria-label="Message to AI copilot"
             style={{
               flex: 1,
