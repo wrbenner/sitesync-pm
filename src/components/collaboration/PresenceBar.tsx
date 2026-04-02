@@ -6,6 +6,50 @@ import { usePresenceStore } from '../../stores/presenceStore';
 import { useOthers } from '../../lib/liveblocks';
 import type { PresenceUserWithAction } from '../../stores/presenceStore';
 
+// ── Error boundary ────────────────────────────────────────────────────────────
+
+interface PresenceBarErrorBoundaryState {
+  hasError: boolean;
+}
+
+class PresenceBarErrorBoundary extends React.Component<
+  React.PropsWithChildren<object>,
+  PresenceBarErrorBoundaryState
+> {
+  constructor(props: React.PropsWithChildren<object>) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(): PresenceBarErrorBoundaryState {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error) {
+    console.warn('[PresenceBar] Error boundary caught:', error);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
+          <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
+            Presence unavailable
+          </span>
+          <button
+            onClick={() => window.location.reload()}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}
+            aria-label="Reload page"
+          >
+            <RefreshCw size={12} color={colors.textTertiary} />
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 // ── Responsive maxVisible ─────────────────────────────────────────────────────
 
 const MAX_VISIBLE_DEFAULT = 5;
@@ -486,6 +530,24 @@ export const DrawingPresenceBar: React.FC = () => {
   const visible = others.slice(0, 5);
   const overflow = others.length - 5;
 
+  type SafeOther = { connectionId: number; lastSeen: number; status: ReturnType<typeof getPresenceStatus>; displayName: string; role: string | undefined; color: string; initials: string };
+  const safeVisible: SafeOther[] = [];
+  for (const other of visible) {
+    try {
+      safeVisible.push({
+        connectionId: other.connectionId,
+        lastSeen: (other.presence as any).lastSeen ?? Date.now(),
+        status: getPresenceStatus((other.presence as any).lastSeen ?? Date.now()),
+        displayName: (other.presence as any).displayName || (other.presence as any).name || 'Someone',
+        role: (other.presence as any).role,
+        color: (other.presence as any).color || colors.statusInfo,
+        initials: (other.presence as any).initials || '?',
+      });
+    } catch {
+      // skip malformed presence entry
+    }
+  }
+
   return (
     <>
       <style>{`@keyframes presenceTooltipIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } } .presence-avatar-btn { background: none; font: inherit; line-height: 1; outline-offset: 2px; } .presence-avatar-btn:focus-visible { outline: 2px solid ${colors.primaryOrange}; outline-offset: 2px; }`}</style>
@@ -501,13 +563,10 @@ export const DrawingPresenceBar: React.FC = () => {
             Also viewing:
           </span>
           <div role="group" aria-label="Users currently viewing this page" style={{ display: 'flex', alignItems: 'center' }}>
-            {visible.map((other, i) => {
-              const lastSeen: number = (other.presence as any).lastSeen ?? Date.now();
-              const status = getPresenceStatus(lastSeen);
-              const displayName: string = (other.presence as any).displayName || other.presence.name || 'Someone';
-              const role: string | undefined = (other.presence as any).role;
+            {safeVisible.map((sv, i) => {
+              const { lastSeen, status, displayName, role } = sv;
               return (
-                <Tooltip.Root key={other.connectionId}>
+                <Tooltip.Root key={sv.connectionId}>
                   <Tooltip.Trigger asChild>
                     <button
                       className="presence-avatar-btn"
@@ -537,7 +596,7 @@ export const DrawingPresenceBar: React.FC = () => {
                         width: AVATAR_SIZE,
                         height: AVATAR_SIZE,
                         borderRadius: '50%',
-                        backgroundColor: other.presence.color || colors.statusInfo,
+                        backgroundColor: sv.color,
                         border: `2px solid ${colors.white}`,
                         boxShadow: `0 0 0 2px ${STATUS_BORDER[status]}`,
                         display: 'flex',
@@ -548,7 +607,7 @@ export const DrawingPresenceBar: React.FC = () => {
                         color: colors.white,
                         pointerEvents: 'none',
                       }}>
-                        {other.presence.initials || '?'}
+                        {sv.initials}
                       </div>
                     </button>
                   </Tooltip.Trigger>
@@ -637,3 +696,13 @@ export const DrawingPresenceBar: React.FC = () => {
     </>
   );
 };
+
+// ── Default export (PresenceBar wrapped in error boundary) ────────────────────
+
+const PresenceBarWithErrorBoundary: React.FC<PresenceBarProps> = (props) => (
+  <PresenceBarErrorBoundary>
+    <PresenceBar {...props} />
+  </PresenceBarErrorBoundary>
+);
+
+export default PresenceBarWithErrorBoundary;
