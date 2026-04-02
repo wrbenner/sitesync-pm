@@ -19,20 +19,39 @@ type QueryResult<T> = PromiseLike<{ data: T | null; error: { message: string; co
 // Tables that do not have a project_id column and must NOT receive the auto-scoped .eq filter.
 const UNSCOPED_TABLES = new Set(['organizations', 'organization_members', 'auth', 'storage'])
 
+const SCOPED_CLIENT_CACHE_MAX = 5
+const scopedClientCache = new Map<string, DbClient>()
+
+/** Clears the scoped client cache. Call on logout or project switching. */
+export function clearScopedClientCache(): void {
+  scopedClientCache.clear()
+}
+
 /**
  * Wraps the Supabase client so that every terminal operation (select, insert,
  * update, delete, upsert) automatically appends .eq('project_id', projectId).
  * The .eq() is injected after the terminal call so that callers receive a
  * full PostgrestQueryBuilder from .from() and can chain freely before the
  * filter is applied. Tables in UNSCOPED_TABLES are excluded from scoping.
+ *
+ * Results are cached by projectId (LRU, max 5 entries) to avoid allocating a
+ * new Proxy pair on every call with the same projectId.
  */
 export function createScopedClient(client: DbClient, projectId: string): DbClient {
+  const cached = scopedClientCache.get(projectId)
+  if (cached !== undefined) {
+    // Refresh LRU position
+    scopedClientCache.delete(projectId)
+    scopedClientCache.set(projectId, cached)
+    return cached
+  }
+
   const TERMINAL_OPS = new Set(['select', 'insert', 'update', 'delete', 'upsert'])
   // Type for a terminal method after invocation — all return something with .eq()
   type ScopedResult = { eq(col: string, val: unknown): unknown }
   type TerminalMethod = (...args: unknown[]) => ScopedResult
 
-  return new Proxy(client, {
+  const proxy = new Proxy(client, {
     get(target: SupabaseProxyTarget, prop: string | symbol, receiver: unknown) {
       if (prop === 'from') {
         return (table: string): ReturnType<typeof supabase.from> => {
@@ -57,6 +76,14 @@ export function createScopedClient(client: DbClient, projectId: string): DbClien
       return Reflect.get(target, prop, receiver)
     },
   })
+
+  // Evict LRU entry if at capacity
+  if (scopedClientCache.size >= SCOPED_CLIENT_CACHE_MAX) {
+    const lruKey = scopedClientCache.keys().next().value
+    if (lruKey !== undefined) scopedClientCache.delete(lruKey)
+  }
+  scopedClientCache.set(projectId, proxy)
+  return proxy
 }
 
 /**
