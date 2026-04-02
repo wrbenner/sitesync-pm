@@ -51,10 +51,13 @@ const deriveBic = (rfi: any): string | null => {
 };
 
 const BallInCourtCell: React.FC<{ rfi: any }> = ({ rfi }) => {
-  const party = deriveBic(rfi);
+  const party = rfi.assigned_to || null;
   if (!party) {
     return (
-      <span style={{ fontSize: 14, color: '#9CA3AF', fontStyle: 'italic' }}>Unassigned</span>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+        <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#6B7280', flexShrink: 0, display: 'inline-block' }} />
+        <span style={{ fontSize: 14, color: '#9CA3AF', fontStyle: 'italic' }}>Unassigned</span>
+      </span>
     );
   }
   const color = getBicColor(party);
@@ -185,13 +188,20 @@ const RFIs: React.FC = () => {
       size: 150,
       cell: (info) => <BallInCourtCell rfi={info.row.original} />,
     }),
-    rfiColHelper.accessor('submitDate', {
-      header: 'Days',
-      size: 70,
+    rfiColHelper.display({
+      id: 'days_open',
+      header: 'Days Open',
+      size: 90,
       cell: (info) => {
-        const days = Math.ceil((Date.now() - new Date(info.getValue()).getTime()) / (1000 * 60 * 60 * 24));
+        const rfi = info.row.original;
+        let days: number;
+        if (rfi.status === 'closed' && rfi.closed_at) {
+          days = Math.floor((new Date(rfi.closed_at).getTime() - new Date(rfi.created_at).getTime()) / 86400000);
+        } else {
+          days = Math.floor((Date.now() - new Date(rfi.created_at).getTime()) / 86400000);
+        }
         const dColor = days > 10 ? colors.statusCritical : days > 5 ? colors.statusPending : colors.statusActive;
-        return <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: dColor, fontVariantNumeric: 'tabular-nums' as const }}>{days}d</span>;
+        return <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: dColor, fontVariantNumeric: 'tabular-nums' as const }}>{days}</span>;
       },
     }),
     rfiColHelper.accessor('dueDate', {
@@ -199,7 +209,7 @@ const RFIs: React.FC = () => {
       size: 100,
       cell: (info) => {
         const rfi = info.row.original;
-        const overdue = isOverdue(info.getValue()) && rfi.status !== 'approved';
+        const overdue = isOverdue(info.getValue()) && rfi.status !== 'closed';
         return (
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <span style={{ fontSize: typography.fontSize.sm, color: overdue ? colors.statusCritical : colors.textTertiary, fontVariantNumeric: 'tabular-nums' as const }}>
