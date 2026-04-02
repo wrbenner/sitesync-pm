@@ -65,6 +65,22 @@ export const ChangeOrders: React.FC = () => {
   const [newScheduleImpact, setNewScheduleImpact] = useState('0');
   const [newCostCode, setNewCostCode] = useState('');
 
+  // Create form cost breakdown
+  const [newLabor, setNewLabor] = useState('');
+  const [newMaterial, setNewMaterial] = useState('');
+  const [newEquipment, setNewEquipment] = useState('');
+  const [newSubcontractor, setNewSubcontractor] = useState('');
+  const [newOhMarkup, setNewOhMarkup] = useState('10');
+  const [newProfitMarkup, setNewProfitMarkup] = useState('10');
+
+  // Detail panel cost breakdown
+  const [detailLabor, setDetailLabor] = useState('0');
+  const [detailMaterial, setDetailMaterial] = useState('0');
+  const [detailEquipment, setDetailEquipment] = useState('0');
+  const [detailSubcontractor, setDetailSubcontractor] = useState('0');
+  const [detailOhMarkup, setDetailOhMarkup] = useState('10');
+  const [detailProfitMarkup, setDetailProfitMarkup] = useState('10');
+
   const allCOs: MappedChangeOrder[] = costData?.changeOrders || [];
   const originalContract = projectData?.totalValue || 0;
 
@@ -101,6 +117,14 @@ export const ChangeOrders: React.FC = () => {
 
   const handleCreate = async () => {
     if (!newTitle.trim()) { addToast('error', 'Title is required'); return; }
+    const laborAmt = parseFloat(newLabor) || 0;
+    const materialAmt = parseFloat(newMaterial) || 0;
+    const equipAmt = parseFloat(newEquipment) || 0;
+    const subAmt = parseFloat(newSubcontractor) || 0;
+    const ohPct = parseFloat(newOhMarkup) || 0;
+    const profitPct = parseFloat(newProfitMarkup) || 0;
+    const directCost = laborAmt + materialAmt + equipAmt + subAmt;
+    const calcTotal = directCost > 0 ? directCost * (1 + (ohPct + profitPct) / 100) : (parseFloat(newEstimatedCost) || 0);
     try {
       await createCO.mutateAsync({
         projectId: projectId!,
@@ -110,8 +134,8 @@ export const ChangeOrders: React.FC = () => {
           description: newDescription.trim(),
           type: newType,
           reason_code: newReasonCode,
-          estimated_cost: parseFloat(newEstimatedCost) || 0,
-          amount: parseFloat(newEstimatedCost) || 0,
+          estimated_cost: calcTotal,
+          amount: calcTotal,
           schedule_impact_days: parseInt(newScheduleImpact) || 0,
           cost_code: newCostCode || null,
           status: 'draft',
@@ -129,6 +153,8 @@ export const ChangeOrders: React.FC = () => {
     setNewTitle(''); setNewDescription(''); setNewType('pco');
     setNewReasonCode('field_condition'); setNewEstimatedCost('');
     setNewScheduleImpact('0'); setNewCostCode('');
+    setNewLabor(''); setNewMaterial(''); setNewEquipment(''); setNewSubcontractor('');
+    setNewOhMarkup('10'); setNewProfitMarkup('10');
   };
 
   const handleAction = async (co: MappedChangeOrder, action: string) => {
@@ -267,10 +293,18 @@ export const ChangeOrders: React.FC = () => {
 
           <div style={{ padding: `0 ${spacing['5']} ${spacing['5']}` }}>
             {/* Type + Number */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['3'] }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['3'], flexWrap: 'wrap' }}>
               <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: typeConfig.color, backgroundColor: typeConfig.bg, padding: `2px ${spacing['2']}`, borderRadius: borderRadius.sm }}>{typeConfig.shortLabel}</span>
               <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>{co.coNumber}</span>
               <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: statusConfig.color, backgroundColor: statusConfig.bg, padding: `2px ${spacing['2']}`, borderRadius: borderRadius.full }}>{statusConfig.label}</span>
+              {getNextCOType(co.type) && (
+                <PermissionGate permission="change_orders.approve">
+                  <Btn variant="primary" size="sm" icon={<ArrowRight size={12} />} iconPosition="right"
+                    onClick={() => handleAction(co, `Promote to ${getCOTypeConfig(getNextCOType(co.type)!).shortLabel}`)}>
+                    Promote to {getCOTypeConfig(getNextCOType(co.type)!).shortLabel}
+                  </Btn>
+                </PermissionGate>
+              )}
             </div>
 
             <h2 style={{ fontSize: typography.fontSize['4xl'], fontWeight: typography.fontWeight.bold, color: colors.textPrimary, margin: 0, marginBottom: spacing['5'], lineHeight: typography.lineHeight.tight }}>{co.title}</h2>
@@ -305,6 +339,67 @@ export const ChangeOrders: React.FC = () => {
                 </div>
               </div>
             </div>
+
+            {/* Cost Breakdown */}
+            {(() => {
+              const labor = parseFloat(detailLabor) || 0;
+              const material = parseFloat(detailMaterial) || 0;
+              const equipment = parseFloat(detailEquipment) || 0;
+              const sub = parseFloat(detailSubcontractor) || 0;
+              const oh = parseFloat(detailOhMarkup) || 0;
+              const profit = parseFloat(detailProfitMarkup) || 0;
+              const direct = labor + material + equipment + sub;
+              const total = direct * (1 + (oh + profit) / 100);
+              const inputStyle: React.CSSProperties = {
+                width: '100%', padding: `${spacing['1']} ${spacing['2']}`,
+                fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
+                border: `1px solid ${colors.borderDefault}`, backgroundColor: colors.white,
+                borderRadius: borderRadius.sm, outline: 'none', boxSizing: 'border-box', textAlign: 'right',
+              };
+              const rowStyle: React.CSSProperties = {
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: `${spacing['2']} ${spacing['3']}`,
+              };
+              return (
+                <div style={{ marginBottom: spacing['5'] }}>
+                  <h3 style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['3'] }}>Cost Breakdown</h3>
+                  <div style={{ border: `1px solid ${colors.borderSubtle}`, borderRadius: borderRadius.md, overflow: 'hidden' }}>
+                    {[
+                      { label: 'Labor', val: detailLabor, set: setDetailLabor },
+                      { label: 'Material', val: detailMaterial, set: setDetailMaterial },
+                      { label: 'Equipment', val: detailEquipment, set: setDetailEquipment },
+                      { label: 'Subcontractor', val: detailSubcontractor, set: setDetailSubcontractor },
+                    ].map(({ label, val, set }, i) => (
+                      <div key={label} style={{ ...rowStyle, borderBottom: `1px solid ${colors.borderSubtle}`, backgroundColor: i % 2 === 0 ? colors.surfaceInset : colors.white }}>
+                        <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, minWidth: 110 }}>{label}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
+                          <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>$</span>
+                          <input type="number" value={val} min="0" onChange={e => set(e.target.value)} style={{ ...inputStyle, width: 100 }} />
+                        </div>
+                      </div>
+                    ))}
+                    <div style={{ ...rowStyle, borderBottom: `1px solid ${colors.borderSubtle}`, backgroundColor: colors.surfaceInset }}>
+                      <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, minWidth: 110 }}>OH Markup</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
+                        <input type="number" value={detailOhMarkup} min="0" max="100" onChange={e => setDetailOhMarkup(e.target.value)} style={{ ...inputStyle, width: 70 }} />
+                        <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>%</span>
+                      </div>
+                    </div>
+                    <div style={{ ...rowStyle, borderBottom: `1px solid ${colors.borderSubtle}`, backgroundColor: colors.white }}>
+                      <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, minWidth: 110 }}>Profit Markup</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
+                        <input type="number" value={detailProfitMarkup} min="0" max="100" onChange={e => setDetailProfitMarkup(e.target.value)} style={{ ...inputStyle, width: 70 }} />
+                        <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>%</span>
+                      </div>
+                    </div>
+                    <div style={{ ...rowStyle, backgroundColor: colors.surfaceInset }}>
+                      <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>Total</span>
+                      <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.bold, color: colors.primaryOrange }}>{fmt(total)}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Details */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'], marginBottom: spacing['5'] }}>
@@ -434,7 +529,7 @@ export const ChangeOrders: React.FC = () => {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: spacing['3'], marginBottom: spacing['4'] }}>
         <MetricBox label="Approved COs" value={fmt(metrics.approvedCOsTotal)} colorOverride="success" />
         <MetricBox label="Pending CORs" value={fmt(metrics.pendingCORsTotal)} colorOverride="warning" />
-        <MetricBox label="Open PCOs" value={fmt(metrics.openPCOsTotal)} />
+        <MetricBox label="Pending PCOs" value={fmt(metrics.openPCOsTotal)} />
       </div>
 
       {/* Waterfall Chart */}
@@ -461,7 +556,8 @@ export const ChangeOrders: React.FC = () => {
         <div style={{ display: 'flex', gap: spacing['1'] }}>
           {(['all', 'pco', 'cor', 'co'] as const).map(t => {
             const active = filterType === t;
-            const label = t === 'all' ? 'All' : getCOTypeConfig(t as ChangeOrderType).shortLabel;
+            const labelMap = { all: 'All', pco: 'Potential (PCO)', cor: 'Request (COR)', co: 'Approved (CO)' } as const;
+            const label = labelMap[t];
             return (
               <button key={t} onClick={() => setFilterType(t)}
                 style={{
@@ -616,12 +712,62 @@ export const ChangeOrders: React.FC = () => {
             </div>
           </div>
 
+          {/* Cost breakdown */}
+          <div>
+            <label style={{ display: 'block', fontSize: typography.fontSize.label, fontWeight: typography.fontWeight.medium, color: colors.textSecondary, marginBottom: spacing['2'], textTransform: 'uppercase', letterSpacing: typography.letterSpacing.wider }}>Cost Breakdown</label>
+            <div style={{ border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.md, overflow: 'hidden' }}>
+              {[
+                { label: 'Labor', val: newLabor, set: setNewLabor },
+                { label: 'Material', val: newMaterial, set: setNewMaterial },
+                { label: 'Equipment', val: newEquipment, set: setNewEquipment },
+                { label: 'Subcontractor', val: newSubcontractor, set: setNewSubcontractor },
+              ].map(({ label, val, set }, i) => (
+                <div key={label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: `${spacing['2']} ${spacing['3']}`, borderBottom: `1px solid ${colors.borderSubtle}`, backgroundColor: i % 2 === 0 ? colors.surfaceInset : colors.white }}>
+                  <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, minWidth: 100 }}>{label}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
+                    <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>$</span>
+                    <input type="number" value={val} min="0" placeholder="0" onChange={e => set(e.target.value)}
+                      style={{ width: 110, padding: `${spacing['1']} ${spacing['2']}`, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, border: `1px solid ${colors.borderDefault}`, backgroundColor: colors.white, borderRadius: borderRadius.sm, outline: 'none', textAlign: 'right' }} />
+                  </div>
+                </div>
+              ))}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderBottom: `1px solid ${colors.borderSubtle}`, backgroundColor: colors.surfaceInset }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: `${spacing['2']} ${spacing['3']}`, borderRight: `1px solid ${colors.borderSubtle}` }}>
+                  <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>OH Markup</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
+                    <input type="number" value={newOhMarkup} min="0" max="100" onChange={e => setNewOhMarkup(e.target.value)}
+                      style={{ width: 60, padding: `${spacing['1']} ${spacing['2']}`, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, border: `1px solid ${colors.borderDefault}`, backgroundColor: colors.white, borderRadius: borderRadius.sm, outline: 'none', textAlign: 'right' }} />
+                    <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>%</span>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: `${spacing['2']} ${spacing['3']}` }}>
+                  <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>Profit Markup</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
+                    <input type="number" value={newProfitMarkup} min="0" max="100" onChange={e => setNewProfitMarkup(e.target.value)}
+                      style={{ width: 60, padding: `${spacing['1']} ${spacing['2']}`, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, border: `1px solid ${colors.borderDefault}`, backgroundColor: colors.white, borderRadius: borderRadius.sm, outline: 'none', textAlign: 'right' }} />
+                    <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>%</span>
+                  </div>
+                </div>
+              </div>
+              {(() => {
+                const d = (parseFloat(newLabor)||0) + (parseFloat(newMaterial)||0) + (parseFloat(newEquipment)||0) + (parseFloat(newSubcontractor)||0);
+                const t = d * (1 + ((parseFloat(newOhMarkup)||0) + (parseFloat(newProfitMarkup)||0)) / 100);
+                return (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: `${spacing['2']} ${spacing['3']}`, backgroundColor: colors.white }}>
+                    <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>Total</span>
+                    <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.bold, color: colors.primaryOrange }}>{fmt(d > 0 ? t : (parseFloat(newEstimatedCost)||0))}</span>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['3'] }}>
             <div>
-              <label style={{ display: 'block', fontSize: typography.fontSize.label, fontWeight: typography.fontWeight.medium, color: colors.textSecondary, marginBottom: spacing['1'], textTransform: 'uppercase', letterSpacing: typography.letterSpacing.wider }}>Estimated Cost</label>
+              <label style={{ display: 'block', fontSize: typography.fontSize.label, fontWeight: typography.fontWeight.medium, color: colors.textSecondary, marginBottom: spacing['1'], textTransform: 'uppercase', letterSpacing: typography.letterSpacing.wider }}>Fallback Estimated Cost</label>
               <div style={{ position: 'relative' }}>
                 <span style={{ position: 'absolute', left: spacing['3'], top: '50%', transform: 'translateY(-50%)', fontSize: typography.fontSize.body, color: colors.textTertiary }}>$</span>
-                <input type="number" value={newEstimatedCost} onChange={e => setNewEstimatedCost(e.target.value)} placeholder="0" min="0"
+                <input type="number" value={newEstimatedCost} onChange={e => setNewEstimatedCost(e.target.value)} placeholder="Used if no breakdown entered" min="0"
                   style={{ width: '100%', padding: spacing['3'], paddingLeft: spacing['6'], fontSize: typography.fontSize.body, fontFamily: typography.fontFamily, border: `1px solid ${colors.borderDefault}`, backgroundColor: colors.white, borderRadius: borderRadius.md, outline: 'none', boxSizing: 'border-box' }} />
               </div>
             </div>
