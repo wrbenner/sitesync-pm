@@ -39,11 +39,15 @@ export const SCurve: React.FC<SCurveProps> = ({ totalBudget: _totalBudget, spent
         <svg
           viewBox={`-8 -8 ${W + 16} ${H + 28}`}
           preserveAspectRatio="xMidYMid meet"
+          role="img"
+          aria-label="S-Curve chart showing planned versus actual project spend over time"
           style={{
             width: '100%', height: '220px',
             overflow: 'visible',
           }}
         >
+          <title>S-Curve chart showing planned versus actual project spend over time</title>
+          <desc>Planned spend: $47.5M, Actual spend to date: $38.5M</desc>
           {/* Grid */}
           {[10, 20, 30, 40].map((v) => (
             <React.Fragment key={v}>
@@ -81,18 +85,31 @@ export const SCurve: React.FC<SCurveProps> = ({ totalBudget: _totalBudget, spent
 
           {/* Data points */}
           {actualData.map((v, i) => (
-            <circle
+            <g
               key={i}
-              cx={i * stepX}
-              cy={yPos(v)}
-              r={hovered === i ? 2.5 : 1.5}
-              fill={colors.primaryOrange}
-              stroke={colors.surfaceRaised}
-              strokeWidth="0.8"
-              style={{ cursor: 'pointer', opacity: animated ? 1 : 0, transition: `opacity 0.5s ease-out ${i * 0.1}s` }}
-              onMouseEnter={() => setHovered(i)}
-              onMouseLeave={() => setHovered(null)}
-            />
+              tabIndex={0}
+              role="button"
+              aria-label={`Month ${i + 1}: $${v}M actual, $${plannedData[i]}M planned`}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setHovered(i);
+                }
+              }}
+              onBlur={() => setHovered(null)}
+            >
+              <circle
+                cx={i * stepX}
+                cy={yPos(v)}
+                r={hovered === i ? 2.5 : 1.5}
+                fill={colors.primaryOrange}
+                stroke={colors.surfaceRaised}
+                strokeWidth="0.8"
+                style={{ cursor: 'pointer', opacity: animated ? 1 : 0, transition: `opacity 0.5s ease-out ${i * 0.1}s` }}
+                onMouseEnter={() => setHovered(i)}
+                onMouseLeave={() => setHovered(null)}
+              />
+            </g>
           ))}
 
           {/* X axis labels */}
