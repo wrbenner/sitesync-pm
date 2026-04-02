@@ -357,14 +357,18 @@ export const Safety: React.FC = () => {
 
   // ── KPIs ───────────────────────────────────────────────────
 
-  const lastIncident = incidents?.find(i => i.severity !== 'first_aid')
-  const daysSinceIncident = lastIncident
-    ? Math.floor((Date.now() - new Date(lastIncident.date).getTime()) / (1000 * 60 * 60 * 24))
-    : 999
+  const recordableSeverities = ['medical_treatment', 'lost_time', 'fatality']
 
-  const totalHours = dailyLogs?.reduce((s: number, l: any) => s + (l.total_hours || 0), 0) || 1
-  const recordableIncidents = incidents?.filter((i: any) => i.osha_recordable).length || 0
-  const trir = ((recordableIncidents * 200000) / totalHours).toFixed(2)
+  // Days Since Last Incident: only recordable severity levels count
+  const lastRecordableIncident = incidents?.find((i: any) => recordableSeverities.includes(i.severity))
+  const daysSinceIncident = lastRecordableIncident
+    ? Math.floor((Date.now() - new Date(lastRecordableIncident.date).getTime()) / 86400000)
+    : null
+
+  // TRIR: uses recordable severity filter; null when no hours have been logged
+  const totalHoursWorked = dailyLogs?.reduce((s: number, l: any) => s + (l.total_hours || 0), 0) ?? 0
+  const recordableCount = incidents?.filter((i: any) => recordableSeverities.includes(i.severity)).length ?? 0
+  const trir = totalHoursWorked > 0 ? ((recordableCount * 200000) / totalHoursWorked).toFixed(2) : null
 
   const nearMisses = incidents?.filter((i: any) => i.type === 'near_miss').length || 0
   const totalIncidents = incidents?.length || 1
@@ -375,12 +379,19 @@ export const Safety: React.FC = () => {
   const certCompliance = totalCerts > 0 ? Math.round((validCerts / totalCerts) * 100) : 100
 
   const now = new Date()
+  // Expiring within 30 days
   const expiringCerts = certifications?.filter((c: any) => {
     if (!c.expiration_date) return false
     const exp = new Date(c.expiration_date)
     const daysUntil = (exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-    return daysUntil > 0 && daysUntil <= 60
-  }).length || 0
+    return daysUntil > 0 && daysUntil <= 30
+  }).length ?? 0
+
+  // Open corrective actions: incidents with status 'open'
+  const openCorrectiveActions = incidents?.filter((i: any) => i.status === 'open').length ?? 0
+
+  // Detect when queries have settled but returned no data (tables not yet seeded)
+  const isSampleData = !loadingIncidents && incidents === null
 
   // ── Tab actions ────────────────────────────────────────────
 
@@ -483,29 +494,33 @@ export const Safety: React.FC = () => {
               style={{ minWidth: 280, flex: 1 }}
               role="status"
               aria-live="polite"
-              aria-label={`Days Without Incident: ${daysSinceIncident > 900 ? '999 or more' : daysSinceIncident}`}
+              aria-label={`Days Without Incident: ${daysSinceIncident ?? 'No recordable incidents'}`}
             >
               <MetricBox
                 label="Days Without Incident"
-                value={daysSinceIncident > 900 ? '999+' : daysSinceIncident}
-                change={daysSinceIncident > 30 ? 1 : -1}
-                changeLabel="recordable"
+                value={daysSinceIncident ?? 'No recordable incidents'}
+                change={daysSinceIncident !== null ? (daysSinceIncident > 30 ? 1 : -1) : 1}
+                changeLabel={daysSinceIncident === null ? undefined : 'recordable'}
+                colorOverride={daysSinceIncident === null ? 'success' : undefined}
+                warning={isSampleData ? 'Sample data. Connect backend to see live metrics.' : undefined}
               />
             </div>
             <div
               style={{ minWidth: 280, flex: 1 }}
-              aria-label={`Total Recordable Incident Rate: ${trir}`}
+              aria-label={`Total Recordable Incident Rate: ${trir ?? 'N/A'}`}
             >
               <MetricBox
                 label="TRIR"
-                value={trir}
-                changeLabel="per 200K hours"
+                value={trir ?? 'N/A'}
+                changeLabel={trir === null ? 'log crew hours to calculate' : 'per 200K hours'}
+                warning={isSampleData ? 'Sample data. Connect backend to see live metrics.' : undefined}
               />
             </div>
             <div style={{ minWidth: 280, flex: 1 }}>
               <MetricBox
-                label="Open Inspections"
-                value={inspections?.filter((i: any) => i.status === 'pending' || i.status === 'in_progress').length || 0}
+                label="Open Corrective Actions"
+                value={openCorrectiveActions}
+                warning={isSampleData ? 'Sample data. Connect backend to see live metrics.' : undefined}
               />
             </div>
             <div style={{ minWidth: 280, flex: 1 }}>
@@ -526,7 +541,8 @@ export const Safety: React.FC = () => {
               <MetricBox
                 label="Expiring Certs"
                 value={expiringCerts}
-                changeLabel="within 60 days"
+                changeLabel="within 30 days"
+                warning={isSampleData ? 'Sample data. Connect backend to see live metrics.' : undefined}
               />
             </div>
           </div>
@@ -623,7 +639,7 @@ export const Safety: React.FC = () => {
                     if (!c.expiration_date) return false
                     const exp = new Date(c.expiration_date)
                     const daysUntil = (exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-                    return daysUntil > 0 && daysUntil <= 60
+                    return daysUntil > 0 && daysUntil <= 30
                   })
                   .map((cert: any, idx: number) => (
                     <div
