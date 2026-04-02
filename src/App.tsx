@@ -372,9 +372,9 @@ function AppContent() {
             flex: 1,
             display: 'flex',
             flexDirection: 'column',
-            marginLeft: sidebarWidth,
+            marginLeft: isMobile ? 0 : (sidebarCollapsed ? 64 : 240),
             overflow: 'auto',
-            transition: `margin-left ${transitions.smooth}`,
+            transition: 'margin-left 150ms ease-out',
           }}
         >
           <OfflineBanner />
