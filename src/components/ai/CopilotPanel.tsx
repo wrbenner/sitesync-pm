@@ -229,9 +229,8 @@ export const CopilotPanel: React.FC = () => {
           top: 0,
           right: 0,
           ...(isMobile
-            ? { left: 0, bottom: 0, width: '100vw', maxWidth: '100vw' }
-            : { width: 'min(480px, 100vw)', maxWidth: '100vw' }),
-          height: '100vh',
+            ? { inset: 0, width: '100%', height: '100%', borderRadius: 0 }
+            : { width: '100vw', maxWidth: '480px', height: '100vh' }),
           backgroundColor: colors.surfaceRaised,
           boxShadow: shadows.panel,
           zIndex: 50,
@@ -525,6 +524,7 @@ export const CopilotPanel: React.FC = () => {
                           alignItems: 'center',
                           gap: spacing['1'],
                           padding: `${spacing['1']} ${spacing['2']}`,
+                          minHeight: '44px',
                           borderRadius: borderRadius.full,
                           backgroundColor: agentColors.subtle,
                           color: agentColors.fg,
