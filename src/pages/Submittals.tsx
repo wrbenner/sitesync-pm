@@ -249,23 +249,27 @@ const Submittals: React.FC = () => {
             <div
               key={i}
               style={{
-                height: 48,
+                height: 52,
                 borderBottom: `1px solid ${colors.borderLight}`,
                 padding: `0 ${spacing['4']}`,
                 display: 'grid',
-                gridTemplateColumns: '100px 1fr 120px 100px 80px 72px',
+                gridTemplateColumns: '100px 1fr 140px 100px 90px',
                 alignItems: 'center',
                 gap: spacing['4'],
                 animation: 'submittals-pulse 1.5s ease-in-out infinite',
                 animationDelay: `${i * 0.08}s`,
               }}
             >
-              <div style={{ width: 80, height: 14, borderRadius: 4, backgroundColor: colors.border }} />
-              <div style={{ height: 14, borderRadius: 4, backgroundColor: colors.border }} />
-              <div style={{ width: 100, height: 14, borderRadius: 4, backgroundColor: colors.border }} />
-              <div style={{ width: 80, height: 22, borderRadius: 9999, backgroundColor: colors.border }} />
-              <div style={{ width: 64, height: 14, borderRadius: 4, backgroundColor: colors.border }} />
-              <div style={{ width: 48, height: 14, borderRadius: 4, backgroundColor: colors.border }} />
+              {/* Submittal number */}
+              <div style={{ width: 76, height: 14, borderRadius: borderRadius.sm, backgroundColor: colors.border }} />
+              {/* Title */}
+              <div style={{ height: 14, borderRadius: borderRadius.sm, backgroundColor: colors.border }} />
+              {/* Spec section */}
+              <div style={{ width: 110, height: 14, borderRadius: borderRadius.sm, backgroundColor: colors.border }} />
+              {/* Status */}
+              <div style={{ width: 80, height: 22, borderRadius: borderRadius.full, backgroundColor: colors.border }} />
+              {/* Due date */}
+              <div style={{ width: 72, height: 14, borderRadius: borderRadius.sm, backgroundColor: colors.border }} />
             </div>
           ))}
         </Card>
@@ -309,15 +313,39 @@ const Submittals: React.FC = () => {
         subtitle="No items"
         actions={<PermissionGate permission="submittals.create"><Btn onClick={() => setShowCreateModal(true)}>New Submittal</Btn></PermissionGate>}
       >
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 32px', gap: '16px' }}>
-          <FileText size={48} color={colors.textTertiary} />
-          <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <h3 style={{ fontSize: typography.fontSize.xl, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0 }}>No submittals yet</h3>
-            <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: 0 }}>Track material approvals to keep procurement on schedule</p>
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: `${spacing['20']} ${spacing['8']}`,
+          gap: spacing['5'],
+        }}>
+          <div style={{
+            width: 64,
+            height: 64,
+            borderRadius: borderRadius.xl,
+            backgroundColor: colors.orangeSubtle,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+            <ClipboardList size={32} color={colors.primaryOrange} />
           </div>
-          <PermissionGate permission="submittals.create">
-            <Btn onClick={() => setShowCreateModal(true)}>Create Submittal</Btn>
-          </PermissionGate>
+          <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: spacing['2'] }}>
+            <h3 style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0 }}>
+              No submittals yet
+            </h3>
+            <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: 0, maxWidth: 380 }}>
+              Track material approvals to keep procurement on schedule
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: spacing['3'], marginTop: spacing['2'] }}>
+            <PermissionGate permission="submittals.create">
+              <Btn variant="primary" onClick={() => setShowCreateModal(true)}>Create Submittal</Btn>
+            </PermissionGate>
+            <Btn variant="secondary" onClick={() => {}}>Import from Spec</Btn>
+          </div>
         </div>
         <CreateSubmittalModal
           open={showCreateModal}
