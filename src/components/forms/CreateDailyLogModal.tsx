@@ -13,8 +13,9 @@ import {
   FormCheckbox,
 } from './FormPrimitives'
 import { colors, spacing, typography, borderRadius, zIndex } from '../../styles/theme'
-import { fetchWeatherForDate, fetchWeatherForecast5Day } from '../../lib/weather'
+import { fetchWeatherForDate, fetchWeatherForecast5Day, fetchWeather } from '../../lib/weather'
 import type { WeatherForDate, WeatherDay, WeatherData } from '../../lib/weather'
+import { toast } from 'sonner'
 import { SignaturePad } from '../dailylog/SignaturePad'
 import { WeatherCard } from '../dailylog/WeatherCard'
 import { supabase } from '../../api/client'
@@ -238,6 +239,7 @@ const CreateDailyLogModal: React.FC<CreateDailyLogModalProps> = ({
   const [forecast5Day, setForecast5Day] = useState<WeatherDay[]>([])
   const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set())
   const [editedAfterAutoFill, setEditedAfterAutoFill] = useState<Set<string>>(new Set())
+  const [sameAsYesterdayLoading, setSameAsYesterdayLoading] = useState(false)
   const [incidentOpen, setIncidentOpen] = useState(false)
   const [signatureBlob, setSignatureBlob] = useState<Blob | null>(null)
   const [isMobile, setIsMobile] = useState(() =>
@@ -286,7 +288,32 @@ const CreateDailyLogModal: React.FC<CreateDailyLogModalProps> = ({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, form.date, projectLat, projectLon])
 
-  const set = <K extends keyof CreateDailyLogFormData>(k: K, v: CreateDailyLogFormData[K]) =>
+  // Fallback: no coordinates provided — use fetchWeather() cache for current conditions
+  useEffect(() => {
+    if (!open || isSubmittedView) return
+    if (projectLat && projectLon) return
+    setWeatherLoading(true)
+    setAutoFilledFields(new Set())
+    setEditedAfterAutoFill(new Set())
+    fetchWeather().then((w) => {
+      const windNumeric = parseInt(w.wind_speed) || 0
+      setForm(f => ({
+        ...f,
+        temperature_high: w.temp_high,
+        temperature_low: w.temp_low,
+        wind_speed: windNumeric,
+        weather_condition: conditionToSelect(w.conditions),
+        weather_source: w.source === 'openweathermap' ? 'auto' : 'manual',
+        weather_fetched_at: w.source === 'openweathermap' ? new Date().toISOString() : '',
+      }))
+      if (w.source === 'openweathermap') {
+        setAutoFilledFields(new Set(['weather_condition', 'temperature_high', 'temperature_low', 'wind_speed']))
+      }
+    }).finally(() => setWeatherLoading(false))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, isSubmittedView, projectLat, projectLon])
+
+  const set =<K extends keyof CreateDailyLogFormData>(k: K, v: CreateDailyLogFormData[K]) =>
     setForm(f => ({ ...f, [k]: v }))
 
   const markManual = (field: string) => {
@@ -310,13 +337,14 @@ const CreateDailyLogModal: React.FC<CreateDailyLogModalProps> = ({
         <span style={{
           display: 'inline-flex', alignItems: 'center',
           marginTop: spacing['1'],
-          fontSize: typography.fontSize.caption,
-          color: colors.statusActive,
-          backgroundColor: colors.statusActiveSubtle,
-          borderRadius: borderRadius.sm,
-          padding: `1px ${spacing['2']}`,
+          fontSize: '10px',
+          color: '#2E7D32',
+          backgroundColor: '#E8F5E9',
+          borderRadius: '4px',
+          padding: '2px 6px',
+          fontWeight: 600,
         }}>
-          Auto-filled
+          Auto
         </span>
       )
     }
@@ -396,6 +424,31 @@ const CreateDailyLogModal: React.FC<CreateDailyLogModalProps> = ({
     }
   }
 
+  const handleSameAsYesterday = async () => {
+    if (!projectId) return
+    setSameAsYesterdayLoading(true)
+    try {
+      const { data: rows } = await supabase
+        .from('daily_logs')
+        .select('workers_onsite')
+        .eq('project_id', projectId)
+        .order('log_date', { ascending: false })
+        .limit(1)
+      if (rows && rows.length > 0) {
+        const prev = rows[0] as { workers_onsite?: number }
+        setForm(f => ({
+          ...f,
+          crew_count: prev.workers_onsite ?? f.crew_count,
+        }))
+        toast.success('Pre-filled from previous log')
+      }
+    } catch {
+      // silent
+    } finally {
+      setSameAsYesterdayLoading(false)
+    }
+  }
+
   // ── Form body (shared between mobile and desktop) ────────
 
   const formBody = (
@@ -430,6 +483,31 @@ const CreateDailyLogModal: React.FC<CreateDailyLogModalProps> = ({
           }}>
             Locked
           </span>
+        </div>
+      )}
+
+      {/* Same as yesterday */}
+      {!isSubmittedView && (
+        <div style={{ marginBottom: spacing['2'] }}>
+          <button
+            type="button"
+            onClick={handleSameAsYesterday}
+            disabled={sameAsYesterdayLoading || !projectId}
+            style={{
+              background: '#FFFFFF',
+              border: '1px solid #D0D5DD',
+              borderRadius: borderRadius.md,
+              padding: `${spacing['2']} ${spacing['3']}`,
+              fontSize: typography.fontSize.sm,
+              color: colors.textPrimary,
+              cursor: sameAsYesterdayLoading || !projectId ? 'not-allowed' : 'pointer',
+              fontFamily: typography.fontFamily,
+              fontWeight: typography.fontWeight.medium,
+              opacity: sameAsYesterdayLoading || !projectId ? 0.6 : 1,
+            }}
+          >
+            {sameAsYesterdayLoading ? 'Loading...' : 'Same as yesterday'}
+          </button>
         </div>
       )}
 
