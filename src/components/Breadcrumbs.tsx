@@ -88,13 +88,13 @@ export const FolderBreadcrumbs: React.FC<FolderBreadcrumbsProps> = ({ stack, onN
         {/* Root */}
         <button
           onClick={() => onNavigate(-1)}
-          style={crumbButtonStyle}
+          style={{ ...crumbButtonStyle, color: colors.textSecondary }}
           onMouseEnter={(e) => {
             (e.currentTarget as HTMLButtonElement).style.color = colors.primaryOrange;
-            (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.orangeSubtle;
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.surfaceHover;
           }}
           onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.color = colors.textTertiary;
+            (e.currentTarget as HTMLButtonElement).style.color = colors.textSecondary;
             (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
           }}
         >
@@ -197,7 +197,7 @@ export const Breadcrumbs: React.FC = () => {
           alignItems: 'center',
           border: 'none',
           backgroundColor: 'transparent',
-          color: colors.textTertiary,
+          color: colors.textSecondary,
           cursor: 'pointer',
           padding: `${spacing['1']} ${spacing['1']}`,
           borderRadius: borderRadius.sm,
@@ -208,7 +208,7 @@ export const Breadcrumbs: React.FC = () => {
           (e.currentTarget as HTMLButtonElement).style.color = colors.primaryOrange;
         }}
         onMouseLeave={(e) => {
-          (e.currentTarget as HTMLButtonElement).style.color = colors.textTertiary;
+          (e.currentTarget as HTMLButtonElement).style.color = colors.textSecondary;
         }}
       >
         <Home size={14} />
@@ -322,7 +322,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({
         width,
         height: resolvedHeight,
         borderRadius: resolvedBorderRadius,
-        backgroundColor: '#E5E7EB',
+        backgroundColor: colors.surfaceInset,
         animation: 'skeleton-pulse 1.5s ease-in-out infinite',
         flexShrink: 0,
       }}
