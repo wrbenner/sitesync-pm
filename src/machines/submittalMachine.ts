@@ -2,14 +2,13 @@ import { setup, assign } from 'xstate'
 import { colors } from '../styles/theme'
 
 export type SubmittalState =
-  | 'in_preparation'
-  | 'submitted_to_gc'
+  | 'draft'
+  | 'submitted'
   | 'gc_review'
-  | 'submitted_to_architect'
   | 'architect_review'
   | 'approved'
-  | 'revise_resubmit'
   | 'rejected'
+  | 'resubmit'
   | 'closed'
 export type SubmittalStamp = 'approved' | 'approved_as_noted' | 'rejected' | 'revise_and_resubmit'
 
@@ -27,11 +26,9 @@ export const submittalMachine = setup({
       | { type: 'SUBMIT' }
       | { type: 'GC_APPROVE' }
       | { type: 'GC_REJECT' }
-      | { type: 'ARCHITECT_RECEIVE' }
       | { type: 'ARCHITECT_APPROVE' }
       | { type: 'ARCHITECT_REJECT' }
       | { type: 'ARCHITECT_REVISE' }
-      | { type: 'REQUEST_RESUBMIT' }
       | { type: 'RESUBMIT' }
       | { type: 'CLOSE' },
   },
@@ -44,46 +41,40 @@ export const submittalMachine = setup({
   },
 }).createMachine({
   id: 'submittal',
-  initial: 'in_preparation',
+  initial: 'draft',
   context: { submittalId: '', projectId: '', revisionNumber: 1, error: null },
   states: {
-    in_preparation: {
-      on: { SUBMIT: { target: 'submitted_to_gc' } },
+    draft: {
+      on: { SUBMIT: { target: 'submitted' } },
     },
-    submitted_to_gc: {
+    submitted: {
       on: {
         GC_APPROVE: { target: 'gc_review' },
-        GC_REJECT: { target: 'revise_resubmit' },
+        GC_REJECT: { target: 'rejected' },
       },
     },
     gc_review: {
       on: {
-        GC_APPROVE: { target: 'submitted_to_architect' },
-        GC_REJECT: { target: 'revise_resubmit' },
-        REQUEST_RESUBMIT: { target: 'revise_resubmit' },
-      },
-    },
-    submitted_to_architect: {
-      on: {
-        ARCHITECT_RECEIVE: { target: 'architect_review' },
-        REQUEST_RESUBMIT: { target: 'revise_resubmit' },
+        // GC_APPROVE from gc_review forwards to architect (BUG #1 FIX)
+        GC_APPROVE: { target: 'architect_review' },
+        GC_REJECT: { target: 'rejected' },
+        ARCHITECT_REVISE: { target: 'resubmit' },
       },
     },
     architect_review: {
       on: {
         ARCHITECT_APPROVE: { target: 'approved' },
-        ARCHITECT_REJECT: { target: 'revise_resubmit' },
-        ARCHITECT_REVISE: { target: 'revise_resubmit' },
-        REQUEST_RESUBMIT: { target: 'revise_resubmit' },
+        ARCHITECT_REJECT: { target: 'rejected' },
+        ARCHITECT_REVISE: { target: 'resubmit' },
       },
     },
     approved: {
       on: { CLOSE: { target: 'closed' } },
     },
-    revise_resubmit: {
+    rejected: {
       on: {
         RESUBMIT: {
-          target: 'in_preparation',
+          target: 'draft',
           actions: [
             assign({ revisionNumber: ({ context }) => context.revisionNumber + 1 }),
             'triggerRevisionCreation',
@@ -91,11 +82,10 @@ export const submittalMachine = setup({
         },
       },
     },
-    // Kept for backwards compatibility with persisted state records
-    rejected: {
+    resubmit: {
       on: {
         RESUBMIT: {
-          target: 'in_preparation',
+          target: 'draft',
           actions: [
             assign({ revisionNumber: ({ context }) => context.revisionNumber + 1 }),
             'triggerRevisionCreation',
@@ -111,14 +101,13 @@ export const submittalMachine = setup({
 
 export function getValidSubmittalTransitions(status: SubmittalState): string[] {
   const transitions: Record<SubmittalState, string[]> = {
-    in_preparation: ['Submit for Review'],
-    submitted_to_gc: ['GC Approve', 'GC Reject'],
+    draft: ['Submit for Review'],
+    submitted: ['GC Approve', 'GC Reject'],
     gc_review: ['Forward to Architect', 'GC Reject', 'Revise and Resubmit'],
-    submitted_to_architect: ['Architect Receive', 'Revise and Resubmit'],
     architect_review: ['Architect Approve', 'Architect Reject', 'Revise and Resubmit'],
     approved: ['Close Out'],
-    revise_resubmit: ['Resubmit'],
-    rejected: ['Resubmit'],
+    rejected: ['Revise and Resubmit'],
+    resubmit: ['Revise and Resubmit'],
     closed: [],
   }
   return transitions[status] || []
@@ -128,25 +117,21 @@ export function getValidSubmittalTransitions(status: SubmittalState): string[] {
 
 export function getNextSubmittalStatus(currentStatus: SubmittalState, action: string): SubmittalState | null {
   const map: Record<string, Record<string, SubmittalState>> = {
-    in_preparation: { 'Submit for Review': 'submitted_to_gc' },
-    submitted_to_gc: { 'GC Approve': 'gc_review', 'GC Reject': 'revise_resubmit' },
+    draft: { 'Submit for Review': 'submitted' },
+    submitted: { 'GC Approve': 'gc_review', 'GC Reject': 'rejected' },
     gc_review: {
-      'Forward to Architect': 'submitted_to_architect',
-      'GC Reject': 'revise_resubmit',
-      'Revise and Resubmit': 'revise_resubmit',
-    },
-    submitted_to_architect: {
-      'Architect Receive': 'architect_review',
-      'Revise and Resubmit': 'revise_resubmit',
+      'Forward to Architect': 'architect_review',
+      'GC Reject': 'rejected',
+      'Revise and Resubmit': 'resubmit',
     },
     architect_review: {
       'Architect Approve': 'approved',
-      'Architect Reject': 'revise_resubmit',
-      'Revise and Resubmit': 'revise_resubmit',
+      'Architect Reject': 'rejected',
+      'Revise and Resubmit': 'resubmit',
     },
     approved: { 'Close Out': 'closed' },
-    revise_resubmit: { Resubmit: 'in_preparation' },
-    rejected: { Resubmit: 'in_preparation' },
+    rejected: { 'Revise and Resubmit': 'draft' },
+    resubmit: { 'Revise and Resubmit': 'draft' },
   }
   return map[currentStatus]?.[action] || null
 }
@@ -155,17 +140,16 @@ export function getNextSubmittalStatus(currentStatus: SubmittalState, action: st
 
 export function getSubmittalStatusConfig(status: SubmittalState) {
   const config: Record<SubmittalState, { label: string; color: string; bg: string }> = {
-    in_preparation: { label: 'In Preparation', color: colors.statusNeutral, bg: colors.statusNeutralSubtle },
-    submitted_to_gc: { label: 'Submitted to GC', color: colors.statusInfo, bg: colors.statusInfoSubtle },
+    draft: { label: 'Draft', color: colors.statusNeutral, bg: colors.statusNeutralSubtle },
+    submitted: { label: 'Submitted', color: colors.statusInfo, bg: colors.statusInfoSubtle },
     gc_review: { label: 'GC Review', color: colors.statusPending, bg: colors.statusPendingSubtle },
-    submitted_to_architect: { label: 'Submitted to A/E', color: colors.statusInfo, bg: colors.statusInfoSubtle },
     architect_review: { label: 'A/E Review', color: colors.statusReview, bg: colors.statusReviewSubtle },
     approved: { label: 'Approved', color: colors.statusActive, bg: colors.statusActiveSubtle },
-    revise_resubmit: { label: 'Revise and Resubmit', color: colors.statusPending, bg: colors.statusPendingSubtle },
     rejected: { label: 'Rejected', color: colors.statusCritical, bg: colors.statusCriticalSubtle },
+    resubmit: { label: 'Revise and Resubmit', color: colors.statusPending, bg: colors.statusPendingSubtle },
     closed: { label: 'Closed', color: colors.statusNeutral, bg: colors.statusNeutralSubtle },
   }
-  return config[status] || config.in_preparation
+  return config[status] || config.draft
 }
 
 // ── Stamp Display ────────────────────────────────────────

@@ -1,6 +1,7 @@
 import { ApiError, AuthError, ValidationError } from '../errors'
 import { supabase } from '../../lib/supabase'
 import { dedupTtl, queryKey } from '../../lib/requestDedup'
+import { useOrganizationStore } from '../../stores/organizationStore'
 import type { Database } from '../../types/database'
 
 type TableName = keyof Database['public']['Tables']
@@ -31,13 +32,12 @@ export async function assertProjectAccess(projectId: string): Promise<void> {
     throw new AuthError('Not authenticated')
   }
   try {
+    // Deduplicated project membership check (TTL 1s to minimise stale-access window)
     const key = queryKey('project_members', { project_id: projectId, user_id: user.id })
-    // TTL reduced to 1s to minimize stale access window after role revocation.
-    // For write operations on sensitive entities, use assertProjectAccessNoCache instead.
     const memberData = await dedupTtl(key, 1000, () =>
       supabase
         .from('project_members')
-        .select('id, project:projects(organization_id)')
+        .select('id')
         .eq('project_id', projectId)
         .eq('user_id', user.id)
         .maybeSingle()
@@ -46,17 +46,19 @@ export async function assertProjectAccess(projectId: string): Promise<void> {
     if (!memberData) {
       throw new ApiError('You do not have access to this project', 403, 'FORBIDDEN')
     }
-    const orgId = (memberData as { id: string; project: { organization_id: string } | null }).project?.organization_id
-    if (!orgId) {
+
+    // Cross-org isolation: verify the project belongs to the caller's active org
+    const currentOrg = useOrganizationStore.getState().currentOrg
+    if (!currentOrg) {
       throw new ApiError('Forbidden', 403, 'FORBIDDEN')
     }
-    const { data: orgMember } = await supabase
-      .from('organization_members')
-      .select('id')
-      .eq('organization_id', orgId)
-      .eq('user_id', user.id)
+    const { data: projectData } = await supabase
+      .from('projects')
+      .select('organization_id')
+      .eq('id', projectId)
       .maybeSingle()
-    if (!orgMember) {
+    const orgId = (projectData as { organization_id: string } | null)?.organization_id
+    if (orgId !== currentOrg.id) {
       throw new ApiError('Forbidden', 403, 'FORBIDDEN')
     }
   } catch (err) {

@@ -15,21 +15,31 @@ The engine reads this before every audit to avoid repeating mistakes and amplify
 - Creating new files without adding proper TypeScript types causes build failures
 - Installing npm packages without importing them correctly leads to wasted prompts on build fixes
 
-## Scoring Trends (across 7 runs as of 2026-04-02 15:00)
+## Scoring Trends (across 8 runs as of 2026-04-02 18:00)
 - Run 1 (Apr 1 19:47) average: ~41/100 (11 modules, 136 commits, crashed at quality gates jq error)
 - Run 3 (Apr 2 08:34) average: ~47/100 (8 modules scored, 35 commits)
 - Run 4 (Apr 2 09:51) average: ~44/100 (11 modules, Cycle 1 Surgeon, $4.77 spent, 100% fix rate 60/60)
-- Run 5 (Apr 2 11:55) average: ~42/100 (11 modules, Cycle 1 Surgeon, $4.56 spent, 100% fix rate 55/55)
-- Scores plateau in 30 to 57 range during Surgeon mode (fixing bugs does not create new capability)
-- Multiple modules regressed between runs 4 and 5 (auth-rbac 41→32, core-workflows 47→39, field-ops 40→33). Auditor variance likely: different issues flagged each run, prior fixes may conflict.
-- Real score jumps expected in Architect mode when P0 features from PRODUCTION_ROADMAP.md land
-- Resume bug now FIXED. Engine should finally reach cycle 4 (Architect mode) in the current run.
+- Run 5 (Apr 2 11:55) Cycle 1: avg ~42, Cycle 2: avg ~40, Cycle 3 in progress: avg ~27 (declining!)
+- CRITICAL FINDING: Scores DECLINE within a run across surgeon cycles despite 100% fix rate:
+  - auth-rbac: 32 → 26 → 21 (dropping 5 to 6 per cycle)
+  - scheduling: 30 → 25 → 22 (dropping 3 to 5 per cycle)
+  - field-operations: 33 → 26 → 22 (dropping 4 to 7 per cycle)
+  - core-workflows: 39 → 35 → 29 (dropping 4 to 6 per cycle)
+  - infrastructure: 57 → 57 (stable, highest scorer)
+  - project-intelligence: 56 → 58 (slight up, second highest)
+  - ui-design-system: 47 → 47 (stable)
+- Root cause of decline: The auditor scores the FULL module each cycle, not just fixed issues. As the codebase grows with each fix (more code = more surface area for the auditor to flag), scores can drop even when the fix itself was correct. The audit is also noisy: different LLM calls surface different issues each time.
+- Scores plateau in 20 to 57 range during Surgeon mode. Bug fixes do not create new capability.
+- Real score jumps expected in Architect mode (cycle 4+) when P0 features from PRODUCTION_ROADMAP.md land
+- Resume bug FIXED. Engine has now successfully completed cycles 1 and 2, cycle 3 in progress. Architect mode transition imminent at cycle 4.
 
-## Known Issues (as of 2026-04-02 15:00)
+## Known Issues (as of 2026-04-02 18:00)
 - document-management module has files: [] in modules.json. Haiku decomposition is not assigning Drawings.tsx, Files.tsx, DrawingViewer.tsx to this module. The audit still works via snapshot but fix prompts may be less targeted.
-- [FIXED 2026-04-02 15:00] Multiple runs resetting to cycle 0. ROOT CAUSE: state.json was overwritten with cycle 0 on every launch, including hot-reload resumes. Also ESTIMATED_SPEND and TOTAL_PROMPTS_EXECUTED were reset to 0 on resume. Fixed by preserving state.json during resume and restoring spend/prompt counters from state.
-- [FIXED 2026-04-02 15:00] "unknown: 0/100" entries in LEARNINGS. ROOT CAUSE: audit_*_raw.json files were matched by the audit_*.json glob. Raw files have no .module field. Fixed by adding [[ *_raw.json ]] skip guard to all four audit file loops.
-- [FIXED 2026-04-02 15:00] Tests always failing with "Unknown option --watchAll". ROOT CAUSE: vitest uses --run not --watchAll=false (that is a Jest flag). Fixed in auto-detect logic.
+- "unknown: 0/100" entries STILL appearing in LEARNINGS cycle summaries. The raw.json skip guard was added but the logging loop still picks up stray files. Check that ALL audit file globs use the skip guard consistently.
+- Polish scan static at 60 issues across cycles (20 hardcoded colors, 20 hardcoded pixels, 20 console.logs). Surgeon mode does not target these systemic issues. Consider adding a "polish sweep" cycle between Surgeon and Architect that targets hardcoded colors, pixels, and console.log removal.
+- Bundle size grew from 6.4MB to 8.8MB between cycles 1 and 2 (37% increase). Monitor for bloat as Architect mode adds features.
+- [FIXED 2026-04-02 15:00] Multiple runs resetting to cycle 0. Fixed by preserving state.json during resume.
+- [FIXED 2026-04-02 15:00] Tests always failing with "Unknown option --watchAll". Fixed: vitest uses --run not --watchAll=false.
 
 ## Rules for Architect Mode (Cycles 4 through 10)
 - Read PRODUCTION_ROADMAP.md to find the highest priority unfinished P0 item
@@ -39,6 +49,13 @@ The engine reads this before every audit to avoid repeating mistakes and amplify
 - New edge functions go in supabase/functions/<name>/index.ts using Deno + shared auth
 - Always run npm run build after creating new files to verify types
 - git add supabase/ src/ package.json package-lock.json tsconfig.json
+
+## Rules for Architect Mode — Priority Reminders
+- CRITICAL: Cycle 4 is Architect mode. The engine MUST read PRODUCTION_ROADMAP.md first.
+- P0-1 (Sage Intacct) is the highest value item. Implement end to end: migrations, edge functions, frontend.
+- P0-2 (Schedule Import P6/MS Project) is second highest. The schedule module is the weakest (22/100).
+- Do NOT spend Architect cycles on more ARIA fixes, loading skeletons, or mobile responsive tweaks. Those are Surgeon mode work. Architect mode builds NEW CAPABILITY.
+- Each Architect cycle should produce at least one new database table, one edge function, and one UI component.
 
 ## Common Mistakes to Avoid
 - Do NOT recreate existing tables. Check CODEBASE_PATTERNS.md for the full table list.

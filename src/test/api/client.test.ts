@@ -35,6 +35,7 @@ describe('createScopedClient', () => {
     return {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
+      is: vi.fn().mockReturnThis(),
       maybeSingle: vi.fn().mockResolvedValue({ data: [], error: null }),
     }
   }
@@ -80,6 +81,7 @@ describe('projectScopedQuery tenant isolation', () => {
     const builder = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
+      is: vi.fn().mockReturnThis(),
       then: undefined as any,
     }
     // Make the builder thenable so await works
@@ -104,6 +106,7 @@ describe('projectScopedQuery tenant isolation', () => {
     const builder = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
+      is: vi.fn().mockReturnThis(),
       then: (resolve: (v: { data: unknown[]; error: null }) => void) =>
         resolve({ data: [], error: null }),
     }

@@ -3,7 +3,7 @@ import { createRoomContext } from '@liveblocks/react'
 
 const client = createClient({
   authEndpoint: import.meta.env.VITE_LIVEBLOCKS_AUTH_ENDPOINT || undefined,
-  publicApiKey: import.meta.env.VITE_LIVEBLOCKS_PUBLIC_KEY || undefined,
+  publicApiKey: import.meta.env.VITE_LIVEBLOCKS_PUBLIC_KEY || 'pk_dev_placeholder_not_active',
 })
 
 type Presence = {
