@@ -242,6 +242,7 @@ function AppContent() {
   const userInitials = userName.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2) || 'U';
   usePresence(isAuthPage ? undefined : projectId, isAuthPage ? undefined : user?.id, userName, userInitials, activeView);
 
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
@@ -279,12 +280,12 @@ function AppContent() {
   // Global chord shortcuts — Cmd+/, sequential g+x navigation, Escape
   useKeyboardShortcuts([
     { keys: ['meta+/'], action: () => setShortcutsOpen((p) => !p) },
-    { keys: ['meta+k'], action: openCopilot },
+    { keys: ['meta+k'], action: () => setCommandPaletteOpen(prev => !prev) },
     { keys: ['g', 'd'], sequential: true, action: () => navigate('/dashboard') },
     { keys: ['g', 'r'], sequential: true, action: () => navigate('/rfis') },
     { keys: ['g', 'b'], sequential: true, action: () => navigate('/budget') },
     { keys: ['g', 's'], sequential: true, action: () => navigate('/schedule') },
-    { keys: ['escape'], action: () => { setNotificationsOpen(false); setShortcutsOpen(false); setExportOpen(false); closeCopilot(); } },
+    { keys: ['escape'], action: () => { setCommandPaletteOpen(false); setNotificationsOpen(false); setShortcutsOpen(false); setExportOpen(false); closeCopilot(); } },
   ]);
 
   // Auth pages render without the app shell (no sidebar, no offline banner)
@@ -345,7 +346,7 @@ function AppContent() {
           </ErrorBoundary>
         </main>
 
-        <CommandPalette />
+        <CommandPalette open={commandPaletteOpen} onClose={() => setCommandPaletteOpen(false)} />
         <Suspense fallback={null}>
           {notificationsOpen && <NotificationCenter open={notificationsOpen} onClose={() => setNotificationsOpen(false)} />}
           {shortcutsOpen && <ShortcutOverlay open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />}

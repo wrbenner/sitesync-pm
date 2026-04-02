@@ -250,25 +250,37 @@ function ensureKeyframes() {
 // Component
 // ---------------------------------------------------------------------------
 
-export function CommandPalette() {
+interface CommandPaletteProps {
+  open?: boolean
+  onClose?: () => void
+}
+
+export function CommandPalette({ open: controlledOpen, onClose }: CommandPaletteProps = {}) {
   const navigate = useNavigate()
   const location = useLocation()
 
-  const [open, setOpen] = useState(false)
+  const [internalOpen, setInternalOpen] = useState(false)
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen
   const [query, setQuery] = useState('')
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
   const [searching, setSearching] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const handleClose = useCallback(() => {
+    setInternalOpen(false)
+    onClose?.()
+  }, [onClose])
 
   // Inject keyframes on mount
   useEffect(() => {
     ensureKeyframes()
   }, [])
 
-  // ---- Register Cmd+K globally ----
+  // ---- Register Cmd+K globally only when uncontrolled ----
   useEffect(() => {
-    return registerGlobal('meta+k', () => setOpen(prev => !prev))
-  }, [])
+    if (controlledOpen !== undefined) return
+    return registerGlobal('meta+k', () => setInternalOpen(prev => !prev))
+  }, [controlledOpen])
 
   // ---- Escape closes the palette ----
   useEffect(() => {
@@ -276,12 +288,12 @@ export function CommandPalette() {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault()
-        setOpen(false)
+        handleClose()
       }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [open])
+  }, [open, handleClose])
 
   // ---- Track recent pages on route changes ----
   useEffect(() => {
@@ -324,20 +336,20 @@ export function CommandPalette() {
       setQuery('')
       setSearchResults([])
     }
-  }, [open])
+  }, [open])  // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---- Helpers ----
   const goTo = useCallback((path: string) => {
     navigate(path)
-    setOpen(false)
-  }, [navigate])
+    handleClose()
+  }, [navigate, handleClose])
 
   const recentPages = getRecentPages()
 
   if (!open) return null
 
   return (
-    <div style={overlayStyle} onClick={() => setOpen(false)} role="presentation" aria-hidden="true">
+    <div style={overlayStyle} onClick={handleClose} role="presentation" aria-hidden="true">
       <div style={{ height: 'fit-content' }} onClick={e => e.stopPropagation()}>
         <Command
           label="Search or jump to..."
@@ -469,7 +481,7 @@ export function CommandPalette() {
                       <Command.Item
                         key={`${result.type}-${result.id}`}
                         value={`${result.type} ${result.title} ${result.subtitle}`}
-                        onSelect={() => { navigate(result.link); setOpen(false) }}
+                        onSelect={() => { navigate(result.link); handleClose() }}
                         style={itemStyle}
                       >
                         <span style={typeBadgeStyle(result.type)}>
