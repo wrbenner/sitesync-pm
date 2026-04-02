@@ -79,24 +79,32 @@ export const ProtectedRoute: React.FC<Props> = ({ children, requiredPermission, 
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           {/* Topbar placeholder */}
           <div style={{
-            height: layout.topbarHeight,
+            height: '56px',
             borderBottom: `1px solid ${colors.border}`,
             padding: `0 ${spacing['6']}`,
             display: 'flex',
             alignItems: 'center',
             gap: spacing['3'],
+            flexShrink: 0,
           }}>
             <Skeleton width="280px" height="36px" />
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: spacing['3'] }}>
+              <Skeleton width="36px" height="36px" />
+              <Skeleton width="36px" height="36px" />
+            </div>
           </div>
           {/* Page content placeholder */}
-          <div style={{ flex: 1, padding: `${layout.contentPaddingY} ${layout.contentPaddingX}`, display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
+          <div style={{ flex: 1, padding: `${layout.contentPaddingY} ${layout.contentPaddingX}`, display: 'flex', flexDirection: 'column', gap: spacing['4'], overflowY: 'auto' }}>
             <Skeleton width="220px" height="28px" />
-            <div style={{ display: 'flex', gap: spacing['4'] }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'] }}>
               {Array.from({ length: 4 }).map((_, i) => (
                 <Skeleton key={i} width="100%" height="100px" />
               ))}
             </div>
-            <Skeleton width="100%" height="300px" />
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: spacing['4'] }}>
+              <Skeleton width="100%" height="280px" />
+              <Skeleton width="100%" height="280px" />
+            </div>
           </div>
         </div>
       </div>
