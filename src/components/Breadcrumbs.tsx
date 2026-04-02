@@ -149,8 +149,7 @@ export const FolderBreadcrumbs: React.FC<FolderBreadcrumbsProps> = ({ stack, onN
   return (
     <div style={{ overflowX: 'auto', flexWrap: 'nowrap', display: 'flex', alignItems: 'center', WebkitOverflowScrolling: 'touch' }}>
       <nav
-        role="navigation"
-        aria-label="Folder navigation"
+        aria-label="Breadcrumb"
       >
         <ol
           style={{
@@ -226,93 +225,109 @@ export const Breadcrumbs: React.FC = () => {
 
   return (
     <nav
+      aria-label="Breadcrumb"
       style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: spacing['1'],
         marginBottom: spacing['4'],
         overflowX: 'auto',
         maxWidth: '100%',
-        flexWrap: 'nowrap',
         WebkitOverflowScrolling: 'touch',
         scrollbarWidth: 'none',
         msOverflowStyle: 'none',
       }}
     >
-      <button
-        onClick={() => navigate('/')}
+      <ol
+        role="list"
         style={{
           display: 'flex',
           alignItems: 'center',
-          border: 'none',
-          backgroundColor: 'transparent',
-          color: colors.textSecondary,
-          cursor: 'pointer',
-          padding: `${spacing['1']} ${spacing['1']}`,
-          borderRadius: borderRadius.sm,
-          transition: `color ${transitions.instant}`,
-          flexShrink: 0,
-        }}
-        onMouseEnter={(e) => {
-          (e.currentTarget as HTMLButtonElement).style.color = colors.primaryOrange;
-        }}
-        onMouseLeave={(e) => {
-          (e.currentTarget as HTMLButtonElement).style.color = colors.textSecondary;
+          gap: spacing['1'],
+          listStyle: 'none',
+          margin: 0,
+          padding: 0,
+          flexWrap: 'nowrap',
         }}
       >
-        <Home size={14} />
-      </button>
+        <li>
+          <button
+            onClick={() => navigate('/')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              border: 'none',
+              backgroundColor: 'transparent',
+              color: colors.textSecondary,
+              cursor: 'pointer',
+              padding: `${spacing['1']} ${spacing['1']}`,
+              borderRadius: borderRadius.sm,
+              transition: `color ${transitions.instant}`,
+              flexShrink: 0,
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.color = colors.primaryOrange;
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.color = colors.textSecondary;
+            }}
+          >
+            <Home size={14} />
+          </button>
+        </li>
 
-      {pathSegments.map((segment, i) => {
-        const isUuidOrId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(segment) || /^\d+$/.test(segment);
-        if (isUuidOrId) return null;
-        const isLast = i === pathSegments.length - 1;
-        const label = routeLabels[segment] || segment.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-        const path = '/' + pathSegments.slice(0, i + 1).join('/');
+        {pathSegments.map((segment, i) => {
+          const isUuidOrId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(segment) || /^\d+$/.test(segment);
+          if (isUuidOrId) return null;
+          const isLast = i === pathSegments.length - 1;
+          const label = routeLabels[segment] || segment.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+          const path = '/' + pathSegments.slice(0, i + 1).join('/');
 
-        return (
-          <React.Fragment key={segment}>
-            <ChevronRight size={12} style={{ color: colors.textTertiary, flexShrink: 0 }} />
-            {isLast ? (
-              <span
-                aria-current="page"
-                style={{
-                  fontSize: typography.fontSize.sm,
-                  fontWeight: typography.fontWeight.medium,
-                  color: colors.textPrimary,
-                  flexShrink: 0,
-                }}
-              >
-                {label}
-              </span>
-            ) : (
-              <button
-                onClick={() => navigate(path)}
-                style={{
-                  border: 'none',
-                  backgroundColor: 'transparent',
-                  color: colors.textTertiary,
-                  cursor: 'pointer',
-                  fontSize: typography.fontSize.sm,
-                  fontFamily: typography.fontFamily,
-                  padding: `${spacing['1']} ${spacing['1']}`,
-                  borderRadius: borderRadius.sm,
-                  transition: `color ${transitions.instant}`,
-                  flexShrink: 0,
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.color = colors.primaryOrange;
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.color = colors.textTertiary;
-                }}
-              >
-                {label}
-              </button>
-            )}
-          </React.Fragment>
-        );
-      })}
+          return (
+            <React.Fragment key={segment}>
+              <li aria-hidden="true">
+                <ChevronRight size={12} style={{ color: colors.textTertiary, flexShrink: 0 }} />
+              </li>
+              <li>
+                {isLast ? (
+                  <span
+                    aria-current="page"
+                    style={{
+                      fontSize: typography.fontSize.sm,
+                      fontWeight: typography.fontWeight.medium,
+                      color: colors.textPrimary,
+                      flexShrink: 0,
+                    }}
+                  >
+                    {label}
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => navigate(path)}
+                    style={{
+                      border: 'none',
+                      backgroundColor: 'transparent',
+                      color: colors.textTertiary,
+                      cursor: 'pointer',
+                      fontSize: typography.fontSize.sm,
+                      fontFamily: typography.fontFamily,
+                      padding: `${spacing['1']} ${spacing['1']}`,
+                      borderRadius: borderRadius.sm,
+                      transition: `color ${transitions.instant}`,
+                      flexShrink: 0,
+                    }}
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLButtonElement).style.color = colors.primaryOrange;
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLButtonElement).style.color = colors.textTertiary;
+                    }}
+                  >
+                    {label}
+                  </button>
+                )}
+              </li>
+            </React.Fragment>
+          );
+        })}
+      </ol>
     </nav>
   );
 };
