@@ -141,7 +141,7 @@ function ToastEntry({ toast, onClose }: { toast: ToastItem; onClose: (id: string
           background: 'transparent',
           cursor: 'pointer',
           color: style.text,
-          fontSize: '18px',
+          fontSize: typography.fontSize.subtitle,
           lineHeight: 1,
           padding: 0,
           display: 'flex',
@@ -158,7 +158,7 @@ function ToastEntry({ toast, onClose }: { toast: ToastItem; onClose: (id: string
         onMouseEnter={(e) => {
           const btn = e.currentTarget as HTMLButtonElement;
           btn.style.color = colors.textPrimary;
-          btn.style.backgroundColor = 'rgba(0,0,0,0.08)';
+          btn.style.backgroundColor = colors.overlayBlackThin;
         }}
         onMouseLeave={(e) => {
           const btn = e.currentTarget as HTMLButtonElement;
@@ -266,7 +266,7 @@ export class ErrorBoundary extends Component<{ children: React.ReactNode }, Erro
             onClick={() => this.setState({ hasError: false, error: null })}
             style={{
               background: colors.primaryOrange,
-              color: '#ffffff',
+              color: colors.white,
               borderRadius: borderRadius.md,
               padding: `${spacing['2']} ${spacing['4']}`,
               cursor: 'pointer',
@@ -396,7 +396,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ items, children }) => 
             zIndex: zIndex.popover,
             backgroundColor: colors.surfaceRaised,
             borderRadius: borderRadius.md,
-            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+            boxShadow: shadows.dropdown,
             padding: `${spacing['1']} 0`,
             minWidth: '180px',
             opacity: visible ? 1 : 0,
@@ -412,9 +412,9 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ items, children }) => 
                 {item.divider && (
                   <div
                     style={{
-                      height: 1,
-                      backgroundColor: '#E5E7EB',
-                      margin: '4px 0',
+                      height: spacing.px,
+                      backgroundColor: colors.borderSubtle,
+                      margin: `${spacing['1']} 0`,
                     }}
                   />
                 )}
