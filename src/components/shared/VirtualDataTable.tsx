@@ -31,6 +31,7 @@ interface VirtualDataTableProps<T> {
   selectedRows?: Set<string>;
   onSelectionChange?: (rows: Set<string>) => void;
   onRowToggleSelectByIndex?: (index: number) => void;
+  'aria-label'?: string;
 }
 
 const ROW_HEIGHT = 44;
@@ -56,10 +57,11 @@ const VirtualRow = React.memo(function VirtualRow<T>({
       role="row"
       aria-rowindex={index + 1}
       aria-selected={selected}
-      tabIndex={focused ? 0 : -1}
+      tabIndex={0}
       data-row-index={index}
       className="sitesync-grid-row"
       onClick={onClick ? () => onClick(row.original) : undefined}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick?.(row.original); } }}
       style={{
         ...style,
         display: 'flex',
@@ -120,6 +122,7 @@ export function VirtualDataTable<T>({
   containerHeight = 600,
   overscan = 10,
   onRowToggleSelectByIndex,
+  'aria-label': ariaLabel,
 }: VirtualDataTableProps<T>) {
   const parentRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
@@ -184,6 +187,7 @@ export function VirtualDataTable<T>({
     <div
       ref={gridRef}
       role="grid"
+      aria-label={ariaLabel}
       aria-rowcount={data.length}
       aria-colcount={columns.length}
       tabIndex={0}

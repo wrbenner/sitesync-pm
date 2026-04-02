@@ -153,15 +153,15 @@ const RFIs: React.FC = () => {
     rfiColHelper.accessor('priority', {
       header: 'Priority',
       size: 90,
-      cell: (info) => <PriorityTag priority={info.getValue() as any} />,
+      cell: (info) => <span aria-label={`Priority: ${info.getValue()}`}><PriorityTag priority={info.getValue() as any} /></span>,
     }),
     rfiColHelper.accessor('status', {
       header: 'Status',
       size: 110,
       cell: (info) => info.getValue() === 'pending' ? (
-        <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.statusInfoBright, backgroundColor: colors.statusInfoSubtle, padding: '2px 8px', borderRadius: borderRadius.full }}>Pending</span>
+        <span aria-label={`Status: ${info.getValue()}`} style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.statusInfoBright, backgroundColor: colors.statusInfoSubtle, padding: '2px 8px', borderRadius: borderRadius.full }}>Pending</span>
       ) : (
-        <StatusTag status={info.getValue() as any} />
+        <span aria-label={`Status: ${info.getValue()}`}><StatusTag status={info.getValue() as any} /></span>
       ),
     }),
     rfiColHelper.accessor('submitDate', {
@@ -178,10 +178,16 @@ const RFIs: React.FC = () => {
       size: 100,
       cell: (info) => {
         const rfi = info.row.original;
+        const overdue = isOverdue(info.getValue()) && rfi.status !== 'approved';
         return (
-          <span style={{ fontSize: typography.fontSize.sm, color: isOverdue(info.getValue()) && rfi.status !== 'approved' ? colors.statusCritical : colors.textTertiary, fontVariantNumeric: 'tabular-nums' as const }}>
-            {formatDate(info.getValue())}
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ fontSize: typography.fontSize.sm, color: overdue ? colors.statusCritical : colors.textTertiary, fontVariantNumeric: 'tabular-nums' as const }}>
+              {formatDate(info.getValue())}
+            </span>
+            {overdue && (
+              <span aria-label="Overdue" style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', backgroundColor: colors.statusCritical, flexShrink: 0 }} />
+            )}
+          </div>
         );
       },
     }),
@@ -336,6 +342,7 @@ const RFIs: React.FC = () => {
       {viewMode === 'table' ? (
         <Card padding="0">
           <VirtualDataTable
+            aria-label="RFI Register"
             data={allRfis}
             columns={allRfiColumns}
             rowHeight={48}
