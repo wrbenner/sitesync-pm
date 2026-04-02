@@ -2,9 +2,9 @@
 // Shows who is viewing/editing a specific entity.
 // Warning banner when another user is actively editing.
 
-import React from 'react'
+import React, { useState, useRef } from 'react'
 import { usePresenceStore } from '../../stores/presenceStore'
-import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme'
+import { colors, spacing, typography, borderRadius, transitions, shadows } from '../../styles/theme'
 
 // ── Presence Dots (for list rows) ────────────────────────
 
@@ -19,13 +19,30 @@ export const PresenceDots: React.FC<PresenceDotsProps> = ({ entityId, maxVisible
   // No explicit registration is needed here.
   const viewers = usePresenceStore((s) => s.getUsersViewingEntity(entityId))
   const isInitialized = usePresenceStore((s) => s.isInitialized)
+  const [overflowOpen, setOverflowOpen] = useState(false)
+  const overflowContainerRef = useRef<HTMLDivElement>(null)
 
   if (!isInitialized || viewers.length === 0) {
     return null
   }
 
   const visible = viewers.slice(0, maxVisible)
-  const overflow = viewers.length - maxVisible
+  const overflowViewers = viewers.slice(maxVisible)
+  const overflow = overflowViewers.length
+
+  const handleOverflowKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      setOverflowOpen((o) => !o)
+    }
+  }
+
+  const handleOverflowBlur = (e: React.FocusEvent<HTMLDivElement>) => {
+    // Close only when focus leaves the entire container (button + dropdown)
+    if (!overflowContainerRef.current?.contains(e.relatedTarget as Node)) {
+      setOverflowOpen(false)
+    }
+  }
 
   return (
     <div
@@ -72,37 +89,96 @@ export const PresenceDots: React.FC<PresenceDotsProps> = ({ entityId, maxVisible
         </button>
       ))}
       {overflow > 0 && (
-        <button
-          aria-label={`${overflow} more people viewing`}
-          role="status"
-          style={{
-            minWidth: 44,
-            minHeight: 44,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: 'transparent',
-            border: 'none',
-            cursor: 'pointer',
-            padding: 0,
-          }}
+        <div
+          ref={overflowContainerRef}
+          style={{ position: 'relative' }}
+          onBlur={handleOverflowBlur}
         >
-          <div style={{
-            width: 24,
-            height: 24,
-            borderRadius: '50%',
-            backgroundColor: colors.textTertiary,
-            border: `2px solid ${colors.surfaceRaised}`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: typography.fontSize.caption,
-            fontWeight: typography.fontWeight.bold,
-            color: colors.white,
-          }}>
-            +{overflow}
-          </div>
-        </button>
+          <button
+            aria-label={`${overflow} more people viewing`}
+            aria-expanded={overflowOpen}
+            aria-haspopup="true"
+            onClick={() => setOverflowOpen((o) => !o)}
+            onKeyDown={handleOverflowKeyDown}
+            style={{
+              minWidth: 44,
+              minHeight: 44,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              padding: 0,
+            }}
+          >
+            <div style={{
+              width: 24,
+              height: 24,
+              borderRadius: '50%',
+              backgroundColor: colors.textTertiary,
+              border: `2px solid ${colors.surfaceRaised}`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: typography.fontSize.caption,
+              fontWeight: typography.fontWeight.bold,
+              color: colors.white,
+            }}>
+              +{overflow}
+            </div>
+          </button>
+          {overflowOpen && (
+            <div
+              role="list"
+              style={{
+                position: 'absolute',
+                top: '100%',
+                left: 0,
+                background: colors.surfaceRaised,
+                border: '1px solid ' + colors.border,
+                borderRadius: borderRadius.md,
+                padding: spacing.sm,
+                boxShadow: shadows.md,
+                zIndex: 50,
+                minWidth: 140,
+              }}
+            >
+              {overflowViewers.map((user) => (
+                <div
+                  key={user.userId}
+                  role="listitem"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: spacing['2'],
+                    padding: `${spacing['1']} 0`,
+                    fontSize: typography.fontSize.sm,
+                    color: colors.textPrimary,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  <div style={{
+                    width: 18,
+                    height: 18,
+                    borderRadius: '50%',
+                    backgroundColor: user.color,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: typography.fontSize.caption,
+                    fontWeight: typography.fontWeight.bold,
+                    color: colors.white,
+                    flexShrink: 0,
+                  }}>
+                    {user.initials}
+                  </div>
+                  {user.name}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       )}
     </div>
   )
