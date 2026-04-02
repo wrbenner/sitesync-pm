@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import JSZip from 'jszip';
-import { Grid, List, Upload as UploadIcon, FolderOpen, FileText, Sparkles, Search, Download, FolderInput, Trash2, Link2 } from 'lucide-react';
+import { Grid, List, Upload as UploadIcon, FolderOpen, FileText, Sparkles, Search, Download, FolderInput, Trash2, Link2, Files as FilesIcon, FileImage, HardDrive } from 'lucide-react';
 import { Card, Btn, useToast, PageContainer } from '../components/Primitives';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import EmptyState from '../components/ui/EmptyState';
@@ -76,6 +76,20 @@ const _FilesPage: React.FC = () => {
     })),
     [rawFiles]
   );
+
+  // ── Summary metrics ───────────────────────────────────
+  const metrics = useMemo(() => {
+    const all = rawFiles || [];
+    const totalFiles = all.length;
+    const drawings = all.filter((f: any) => f.category === 'drawing' || (f.file_type && String(f.file_type).includes('pdf'))).length;
+    const weekAgo = Date.now() - 7 * 86400000;
+    const recentUploads = all.filter((f: any) => {
+      const ts = f.uploaded_at || f.created_at;
+      return ts && new Date(ts).getTime() > weekAgo;
+    }).length;
+    const totalBytes = all.reduce((sum: number, f: any) => sum + (f.file_size_bytes || 0), 0);
+    return { totalFiles, drawings, recentUploads, totalBytes };
+  }, [rawFiles]);
 
   // ── View mode ─────────────────────────────────────────
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
@@ -429,6 +443,24 @@ const _FilesPage: React.FC = () => {
         </div>
       }
     >
+      {/* Summary metrics */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: spacing.md, marginBottom: spacing['4'] }}>
+        {[
+          { label: 'Total Files', value: metrics.totalFiles, icon: <FilesIcon size={20} color={colors.primaryOrange} /> },
+          { label: 'Drawings', value: metrics.drawings, icon: <FileImage size={20} color={colors.statusInfo} /> },
+          { label: 'This Week', value: metrics.recentUploads, icon: <UploadIcon size={20} color={colors.statusActive} /> },
+          { label: 'Total Size', value: formatBytes(metrics.totalBytes), icon: <HardDrive size={20} color={colors.textSecondary} /> },
+        ].map(({ label, value, icon }) => (
+          <div key={label} style={{ background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: 12, padding: 24 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <span style={{ fontSize: 12, color: colors.textTertiary, fontWeight: typography.fontWeight.medium }}>{label}</span>
+              {icon}
+            </div>
+            <span style={{ fontSize: 28, fontWeight: typography.fontWeight.bold, color: colors.textPrimary, lineHeight: 1 }}>{value}</span>
+          </div>
+        ))}
+      </div>
+
       {/* AI insight banner */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: spacing['3'], padding: `${spacing['3']} ${spacing['4']}`, marginBottom: spacing['4'], backgroundColor: colors.statusReviewSubtle, borderRadius: borderRadius.md, borderLeft: `3px solid ${colors.statusReview}` }}>
         <Sparkles size={14} color={colors.statusReview} style={{ marginTop: 2, flexShrink: 0 }} />
