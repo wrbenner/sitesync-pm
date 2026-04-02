@@ -92,8 +92,11 @@ export const ChangeOrders: React.FC = () => {
     const pendingTotal = allCOs.filter(co => co.status !== 'approved' && co.status !== 'rejected' && co.status !== 'void').reduce((s, co) => s + co.estimated_cost, 0);
     const rejectedTotal = allCOs.filter(co => co.status === 'rejected').reduce((s, co) => s + co.estimated_cost, 0);
     const scheduleImpact = allCOs.filter(co => co.status === 'approved').reduce((s, co) => s + co.schedule_impact_days, 0);
+    const approvedCOsTotal = cos.filter(co => co.status === 'approved').reduce((s, co) => s + (co.approved_cost || co.amount), 0);
+    const pendingCORsTotal = cors.filter(co => co.status !== 'approved' && co.status !== 'rejected' && co.status !== 'void').reduce((s, co) => s + co.estimated_cost, 0);
+    const openPCOsTotal = pcos.filter(co => co.status !== 'void').reduce((s, co) => s + co.estimated_cost, 0);
 
-    return { pcos, cors, cos, approvedTotal, pendingTotal, rejectedTotal, scheduleImpact };
+    return { pcos, cors, cos, approvedTotal, pendingTotal, rejectedTotal, scheduleImpact, approvedCOsTotal, pendingCORsTotal, openPCOsTotal };
   }, [allCOs]);
 
   const handleCreate = async () => {
@@ -428,12 +431,10 @@ export const ChangeOrders: React.FC = () => {
       )}
 
       {/* Summary Metrics */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: spacing['3'], marginBottom: spacing['4'] }}>
-        <MetricBox label="PCOs" value={String(metrics.pcos.length)} />
-        <MetricBox label="CORs" value={String(metrics.cors.length)} />
-        <MetricBox label="COs" value={String(metrics.cos.length)} />
-        <MetricBox label="Approved" value={fmt(metrics.approvedTotal)} />
-        <MetricBox label="Pending" value={fmt(metrics.pendingTotal)} />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: spacing['3'], marginBottom: spacing['4'] }}>
+        <MetricBox label="Approved COs" value={fmt(metrics.approvedCOsTotal)} colorOverride="success" />
+        <MetricBox label="Pending CORs" value={fmt(metrics.pendingCORsTotal)} colorOverride="warning" />
+        <MetricBox label="Open PCOs" value={fmt(metrics.openPCOsTotal)} />
       </div>
 
       {/* Waterfall Chart */}
@@ -500,17 +501,20 @@ export const ChangeOrders: React.FC = () => {
       {/* List View */}
       {viewMode === 'list' && (
         <Card padding="0">
-          <div style={{ display: 'grid', gridTemplateColumns: '80px 60px 1fr 100px 100px 80px 120px', padding: `${spacing['2']} ${spacing['4']}`, borderBottom: `1px solid ${colors.borderSubtle}` }}>
-            {['Number', 'Type', 'Title', 'Amount', 'Impact', 'Days', 'Status'].map(h => (
+          <div style={{ display: 'grid', gridTemplateColumns: '80px 70px 1fr 110px 100px 80px 120px 110px', padding: `${spacing['2']} ${spacing['4']}`, borderBottom: `1px solid ${colors.borderSubtle}` }}>
+            {['Number', 'Type', 'Title', 'Amount', 'Impact', 'Days', 'Status', ''].map(h => (
               <span key={h} style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: typography.letterSpacing.wider }}>{h}</span>
             ))}
           </div>
           {filteredCOs.map((co, i) => {
             const typeConfig = getCOTypeConfig(co.type);
             const statusConfig = getCOStatusConfig(co.status);
+            const canPromote = co.type === 'pco' && co.status === 'pending_review';
+            const amountColor = co.estimated_cost < 0 ? colors.statusCritical : colors.textPrimary;
+            const amountLabel = co.estimated_cost > 0 ? `+${fmt(co.estimated_cost)}` : fmt(co.estimated_cost);
             return (
               <div key={co.id} onClick={() => setSelectedCO(co)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedCO(co); } }} style={{
-                display: 'grid', gridTemplateColumns: '80px 60px 1fr 100px 100px 80px 120px',
+                display: 'grid', gridTemplateColumns: '80px 70px 1fr 110px 100px 80px 120px 110px',
                 padding: `${spacing['3']} ${spacing['4']}`,
                 borderBottom: i < filteredCOs.length - 1 ? `1px solid ${colors.borderSubtle}` : 'none',
                 cursor: 'pointer', alignItems: 'center',
@@ -520,12 +524,19 @@ export const ChangeOrders: React.FC = () => {
                 onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.backgroundColor = 'transparent'; }}
               >
                 <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>{co.coNumber}</span>
-                <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: typeConfig.color }}>{typeConfig.shortLabel}</span>
+                <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: typeConfig.color, backgroundColor: typeConfig.bg, padding: `2px ${spacing['2']}`, borderRadius: borderRadius.full, display: 'inline-block' }}>{typeConfig.shortLabel}</span>
                 <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{co.title}</span>
-                <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>{fmt(co.estimated_cost)}</span>
+                <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: amountColor }}>{amountLabel}</span>
                 <span style={{ fontSize: typography.fontSize.sm, color: co.reason_code ? getReasonCodeConfig(co.reason_code).color : colors.textTertiary }}>{co.reason_code ? getReasonCodeConfig(co.reason_code).label : 'N/A'}</span>
                 <span style={{ fontSize: typography.fontSize.sm, color: co.schedule_impact_days > 0 ? colors.statusPending : colors.textTertiary }}>{co.schedule_impact_days > 0 ? `+${co.schedule_impact_days}d` : '0d'}</span>
                 <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: statusConfig.color, backgroundColor: statusConfig.bg, padding: `2px ${spacing['2']}`, borderRadius: borderRadius.full, textAlign: 'center' }}>{statusConfig.label}</span>
+                <div onClick={e => e.stopPropagation()}>
+                  {canPromote && (
+                    <PermissionGate permission="change_orders.approve">
+                      <Btn variant="secondary" size="sm" icon={<ArrowRight size={12} />} iconPosition="right" onClick={() => handleAction(co, 'Promote to COR')}>Promote</Btn>
+                    </PermissionGate>
+                  )}
+                </div>
               </div>
             );
           })}
