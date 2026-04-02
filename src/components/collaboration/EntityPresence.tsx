@@ -21,9 +21,7 @@ export const PresenceDots: React.FC<PresenceDotsProps> = ({ entityId, maxVisible
   const isInitialized = usePresenceStore((s) => s.isInitialized)
 
   if (!isInitialized || viewers.length === 0) {
-    return (
-      <div style={{ height: 24, minWidth: 24, visibility: 'hidden' }} aria-hidden="true" />
-    )
+    return null
   }
 
   const visible = viewers.slice(0, maxVisible)
