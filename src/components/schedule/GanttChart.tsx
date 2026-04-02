@@ -651,7 +651,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
             ref={ganttGridRef}
             id="gantt-activities"
             role="grid"
-            aria-label="Schedule activities"
+            aria-label="Project Schedule Gantt Chart"
             aria-rowcount={localPhases.length}
             aria-activedescendant={ganttActiveRowId}
             tabIndex={0}
@@ -852,7 +852,6 @@ export const GanttChart: React.FC<GanttChartProps> = ({
 
                   {/* Track */}
                   <div
-                    role="gridcell"
                     className="gantt-phase-track"
                     style={{
                       flex: 1, height: 32, position: 'relative',
@@ -932,11 +931,23 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                         {phase.name}
                       </span>
                     )}
-                    {!phase.is_milestone && (
+                    {!phase.is_milestone && (() => {
+                      const barStatus = phase.completed
+                        ? 'complete'
+                        : (phase.slippageDays ?? 0) > 0
+                          ? 'delayed'
+                          : phase.critical || phase.is_critical
+                            ? 'critical path'
+                            : 'on track';
+                      const fmtDate = (d: string) =>
+                        new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                      return (
                       /* Regular phase bar */
                       <div
-                        role="img"
-                        aria-label={`${phase.name}: ${phase.startDate} to ${phase.endDate}, ${phase.progress}% complete${phase.critical || phase.is_critical ? ', CRITICAL PATH' : ''}`}
+                        role="gridcell"
+                        data-gantt-bar="true"
+                        aria-label={`${phase.name}, ${fmtDate(phase.startDate)} to ${fmtDate(phase.endDate)}, ${phase.progress}% complete, ${barStatus}`}
+                        tabIndex={0}
                         onMouseDown={canDrag ? e => startDrag(e, phase.id, 'both') : undefined}
                         onTouchStart={canDrag ? e => startDrag(e, phase.id, 'both') : undefined}
                         style={{
@@ -952,6 +963,24 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                         }}
                         onFocus={e => { e.currentTarget.style.boxShadow = `0 0 0 2px ${barColor}60`; }}
                         onBlur={e => { e.currentTarget.style.boxShadow = isHovered ? `0 0 0 2px ${barColor}30` : 'none'; }}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            onPhaseClick?.(phase);
+                          } else if (e.key === 'ArrowDown') {
+                            e.preventDefault();
+                            ganttGridRef.current
+                              ?.querySelector<HTMLElement>(`[data-gantt-index="${index + 1}"]`)
+                              ?.querySelector<HTMLElement>('[data-gantt-bar]')
+                              ?.focus();
+                          } else if (e.key === 'ArrowUp') {
+                            e.preventDefault();
+                            ganttGridRef.current
+                              ?.querySelector<HTMLElement>(`[data-gantt-index="${index - 1}"]`)
+                              ?.querySelector<HTMLElement>('[data-gantt-bar]')
+                              ?.focus();
+                          }
+                        }}
                       >
                         {/* Bar fill */}
                         <div style={{ position: 'absolute', inset: 0, backgroundColor: barColor, opacity: 0.25, borderRadius: borderRadius.sm }} />
@@ -1086,7 +1115,8 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                           />
                         )}
                       </div>
-                    )}
+                      );
+                    })()}
 
                     {/* Cascade highlight */}
                     {isCascadeAffected && (
