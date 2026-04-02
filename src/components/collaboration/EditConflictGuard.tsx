@@ -42,12 +42,12 @@ export function useOptimisticLock(
 
     if (error || !data) {
       useUiStore.getState().addToast({
-        type: 'warning',
+        type: 'error',
         title: 'Conflict check failed',
-        message: 'Could not verify if someone else edited this item. Save with caution.',
+        message: 'Could not verify if someone else edited this item. Save blocked until verification succeeds. Please retry.',
       });
       setCheckFailed(true);
-      return false;
+      return true;
     }
 
     setCheckFailed(false);
