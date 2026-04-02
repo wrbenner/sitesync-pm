@@ -1,5 +1,5 @@
 import { supabase } from '../../lib/supabase'
-import { transformSupabaseError } from '../client'
+import { transformSupabaseError } from '../errors'
 import { assertProjectAccess, validateProjectId } from '../middleware/projectScope'
 
 export interface AuditLogEntry {
