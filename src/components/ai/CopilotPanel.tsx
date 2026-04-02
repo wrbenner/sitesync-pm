@@ -131,12 +131,16 @@ export const CopilotPanel: React.FC = () => {
 
   const [exportOpen, setExportOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768)
+  const [panelWidth, setPanelWidth] = useState<string>(() => window.innerWidth < 640 ? '100vw' : '360px')
   const [conversationId, setConversationId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const hasMessages = messages.length > 0
 
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth <= 768)
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768)
+      setPanelWidth(window.innerWidth < 640 ? '100vw' : '360px')
+    }
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
@@ -230,7 +234,7 @@ export const CopilotPanel: React.FC = () => {
           right: 0,
           ...(isMobile
             ? { inset: 0, width: '100%', height: '100%', borderRadius: 0 }
-            : { width: 'min(480px, 100vw)', height: '100vh' }),
+            : { width: panelWidth, maxWidth: panelWidth === '100vw' ? '100vw' : '85vw', height: '100vh' }),
           backgroundColor: colors.surfaceRaised,
           boxShadow: shadows.panel,
           zIndex: 50,
