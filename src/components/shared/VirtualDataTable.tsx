@@ -86,7 +86,7 @@ const VirtualRow = React.memo(function VirtualRow<T>({
       {row.getVisibleCells().map((cell) => (
         <div
           key={cell.id}
-          role="gridcell"
+          role="cell"
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -192,7 +192,7 @@ export function VirtualDataTable<T>({
   return (
     <div
       ref={gridRef}
-      role="grid"
+      role="table"
       aria-label={ariaLabel}
       aria-rowcount={data.length}
       aria-colcount={columns.length}
@@ -206,6 +206,7 @@ export function VirtualDataTable<T>({
         }
       }}
     >
+      <style>{`.sitesync-grid-row:focus-visible { outline: 2px solid #F47820; outline-offset: -2px; }`}</style>
       {/* Header */}
       <div
         role="rowgroup"
