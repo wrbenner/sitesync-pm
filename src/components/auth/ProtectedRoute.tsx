@@ -18,7 +18,7 @@ interface Props {
 }
 
 const DevBanner: React.FC = () => (
-  <div style={{
+  <div role="alert" style={{
     position: 'fixed', top: 0, left: 0, right: 0, zIndex: zIndex.toast,
     backgroundColor: colors.statusPending, color: colors.white,
     padding: `${spacing['1']} ${spacing['4']}`,
@@ -39,8 +39,8 @@ function isDevBypassActive(): boolean {
   return true
 }
 
-const SkeletonLoader: React.FC = () => (
-  <div role="status" style={{
+const SkeletonLoader: React.FC<{ ariaLabel: string }> = ({ ariaLabel }) => (
+  <div role="status" aria-busy="true" aria-label={ariaLabel} style={{
     display: 'flex', height: '100vh', fontFamily: typography.fontFamily,
   }}>
     {/* Sidebar skeleton */}
@@ -132,17 +132,24 @@ export const ProtectedRoute: React.FC<Props> = ({ children, requiredPermission, 
 
   // Auth loading: show skeleton
   if (authLoading) {
-    return <SkeletonLoader />
+    return <SkeletonLoader ariaLabel="Loading authentication" />
   }
 
   // Permissions loading (auth resolved but permissions not yet): show skeleton
   if (!authLoading && permLoading) {
-    return <SkeletonLoader />
+    return <SkeletonLoader ariaLabel="Checking permissions" />
   }
 
   // No user or expired session: redirect to login with return path
   if (!user || !isSessionValid) {
-    return <Navigate to="/login" state={{ from: location }} replace />
+    return (
+      <>
+        <span style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden' }} aria-live="polite">
+          Redirecting to login
+        </span>
+        <Navigate to="/login" state={{ from: location }} replace />
+      </>
+    )
   }
 
   // Module permission check
