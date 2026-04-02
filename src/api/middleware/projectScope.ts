@@ -30,35 +30,42 @@ export async function assertProjectAccess(projectId: string): Promise<void> {
   if (authError || !user) {
     throw new AuthError('Not authenticated')
   }
-  const key = queryKey('project_members', { project_id: projectId, user_id: user.id })
-  const memberData = await dedupTtl(key, 5000, () =>
-    supabase
-      .from('project_members')
+  try {
+    const key = queryKey('project_members', { project_id: projectId, user_id: user.id })
+    const memberData = await dedupTtl(key, 5000, () =>
+      supabase
+        .from('project_members')
+        .select('id')
+        .eq('project_id', projectId)
+        .eq('user_id', user.id)
+        .maybeSingle()
+        .then(({ data }) => data),
+    )
+    if (!memberData) {
+      throw new ApiError('You do not have access to this project', 403, 'FORBIDDEN')
+    }
+    const { data: project } = await supabase
+      .from('projects')
+      .select('organization_id')
+      .eq('id', projectId)
+      .maybeSingle()
+    if (!project) {
+      throw new ApiError('Forbidden', 403, 'FORBIDDEN')
+    }
+    const { data: orgMember } = await supabase
+      .from('organization_members')
       .select('id')
-      .eq('project_id', projectId)
+      .eq('organization_id', project.organization_id)
       .eq('user_id', user.id)
       .maybeSingle()
-      .then(({ data }) => data),
-  )
-  if (!memberData) {
-    throw new ApiError('You do not have access to this project', 403, 'FORBIDDEN')
-  }
-  const { data: project } = await supabase
-    .from('projects')
-    .select('organization_id')
-    .eq('id', projectId)
-    .maybeSingle()
-  if (!project) {
-    throw new ApiError('Forbidden', 403, 'FORBIDDEN')
-  }
-  const { data: orgMember } = await supabase
-    .from('organization_members')
-    .select('id')
-    .eq('organization_id', project.organization_id)
-    .eq('user_id', user.id)
-    .maybeSingle()
-  if (!orgMember) {
-    throw new ApiError('Forbidden', 403, 'FORBIDDEN')
+    if (!orgMember) {
+      throw new ApiError('Forbidden', 403, 'FORBIDDEN')
+    }
+  } catch (err) {
+    if (err instanceof ApiError || err instanceof AuthError || err instanceof ValidationError) {
+      throw err
+    }
+    throw new ApiError('Unable to verify project access. Please try again.', 503, 'SERVICE_UNAVAILABLE')
   }
 }
 
@@ -75,11 +82,7 @@ export async function assertProjectBelongsToOrg(projectId: string, orgId: string
     .eq('organization_id', orgId)
     .maybeSingle()
   if (!data) {
-    throw new ApiError(
-      `Project ${projectId} does not belong to organization ${orgId}`,
-      403,
-      'FORBIDDEN',
-    )
+    throw new ApiError('Project does not belong to this organization', 403, 'FORBIDDEN')
   }
 }
 
