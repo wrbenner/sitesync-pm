@@ -131,7 +131,6 @@ export const CopilotPanel: React.FC = () => {
 
   const [exportOpen, setExportOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768)
-  const [panelWidth, setPanelWidth] = useState<string>(() => window.innerWidth < 640 ? '100vw' : '360px')
   const [conversationId, setConversationId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const hasMessages = messages.length > 0
@@ -139,7 +138,6 @@ export const CopilotPanel: React.FC = () => {
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth <= 768)
-      setPanelWidth(window.innerWidth < 640 ? '100vw' : '360px')
     }
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
@@ -234,7 +232,7 @@ export const CopilotPanel: React.FC = () => {
           right: 0,
           ...(isMobile
             ? { inset: 0, width: '100%', height: '100%', borderRadius: 0 }
-            : { width: panelWidth, maxWidth: panelWidth === '100vw' ? '100vw' : '85vw', height: '100vh' }),
+            : { width: 'min(400px, 100vw)', height: '100vh' }),
           backgroundColor: colors.surfaceRaised,
           boxShadow: shadows.panel,
           zIndex: 50,
@@ -442,7 +440,7 @@ export const CopilotPanel: React.FC = () => {
         >
           {/* Empty state with context-aware prompts */}
           {!hasMessages && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
+            <div style={{ display: 'flex', flexDirection: 'column', flexWrap: 'wrap', gap: spacing['3'] }}>
               <div style={{ textAlign: 'center', paddingTop: spacing['4'], paddingBottom: spacing['2'] }}>
                 <p
                   style={{
@@ -468,6 +466,7 @@ export const CopilotPanel: React.FC = () => {
                     style={{
                       padding: `${spacing['3']} ${spacing['3']}`,
                       minHeight: '44px',
+                      minWidth: 0,
                       textAlign: 'left',
                       backgroundColor: colors.surfacePage,
                       border: `1px solid ${colors.borderSubtle}`,
