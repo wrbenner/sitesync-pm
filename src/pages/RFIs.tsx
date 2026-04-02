@@ -233,19 +233,41 @@ const RFIs: React.FC = () => {
 
   const allRfiColumns = useMemo(() => [checkboxColumn, ...rfiColumns], [checkboxColumn, rfiColumns]);
 
+  if (rfisLoading) {
+    return (
+      <PageContainer title="RFIs" subtitle="Loading...">
+        <style>{`@keyframes rfi-skeleton-pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 0.7; } }`}</style>
+        <Card padding="0">
+          <div style={{ padding: `${spacing['3']} ${spacing['4']}`, borderBottom: `1px solid ${colors.borderSubtle}`, display: 'flex', gap: spacing['3'] }}>
+            {[44, 90, 360, 140, 90, 110, 70, 100].map((w, i) => (
+              <div key={i} style={{ width: w, height: 14, borderRadius: borderRadius.sm, backgroundColor: colors.borderSubtle, animation: 'rfi-skeleton-pulse 1.5s ease-in-out infinite', flexShrink: 0 }} />
+            ))}
+          </div>
+          {Array.from({ length: 5 }).map((_, rowIdx) => (
+            <div key={rowIdx} style={{ display: 'flex', alignItems: 'center', gap: spacing['3'], padding: `${spacing['3']} ${spacing['4']}`, borderBottom: `1px solid ${colors.borderSubtle}` }}>
+              <div style={{ width: 44, height: 16, borderRadius: borderRadius.sm, backgroundColor: colors.borderSubtle, flexShrink: 0, animation: 'rfi-skeleton-pulse 1.5s ease-in-out infinite', animationDelay: `${rowIdx * 0.1}s` }} />
+              <div style={{ width: 90, height: 16, borderRadius: borderRadius.sm, backgroundColor: colors.borderSubtle, flexShrink: 0, animation: 'rfi-skeleton-pulse 1.5s ease-in-out infinite', animationDelay: `${rowIdx * 0.1}s` }} />
+              <div style={{ width: 320, height: 16, borderRadius: borderRadius.sm, backgroundColor: colors.borderSubtle, flexShrink: 0, animation: 'rfi-skeleton-pulse 1.5s ease-in-out infinite', animationDelay: `${rowIdx * 0.1 + 0.05}s` }} />
+              <div style={{ width: 120, height: 16, borderRadius: borderRadius.sm, backgroundColor: colors.borderSubtle, flexShrink: 0, animation: 'rfi-skeleton-pulse 1.5s ease-in-out infinite', animationDelay: `${rowIdx * 0.1 + 0.05}s` }} />
+              <div style={{ width: 72, height: 24, borderRadius: borderRadius.full, backgroundColor: colors.borderSubtle, flexShrink: 0, animation: 'rfi-skeleton-pulse 1.5s ease-in-out infinite', animationDelay: `${rowIdx * 0.1 + 0.1}s` }} />
+              <div style={{ width: 88, height: 24, borderRadius: borderRadius.full, backgroundColor: colors.borderSubtle, flexShrink: 0, animation: 'rfi-skeleton-pulse 1.5s ease-in-out infinite', animationDelay: `${rowIdx * 0.1 + 0.1}s` }} />
+              <div style={{ width: 48, height: 16, borderRadius: borderRadius.sm, backgroundColor: colors.borderSubtle, flexShrink: 0, animation: 'rfi-skeleton-pulse 1.5s ease-in-out infinite', animationDelay: `${rowIdx * 0.1 + 0.15}s` }} />
+              <div style={{ width: 80, height: 16, borderRadius: borderRadius.sm, backgroundColor: colors.borderSubtle, flexShrink: 0, animation: 'rfi-skeleton-pulse 1.5s ease-in-out infinite', animationDelay: `${rowIdx * 0.1 + 0.15}s` }} />
+            </div>
+          ))}
+        </Card>
+      </PageContainer>
+    );
+  }
+
   if (rfisError) {
     return (
-      <PageContainer title="RFIs" subtitle="Unable to load">
-        <Card padding={spacing['6']}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['4'], padding: spacing['6'], textAlign: 'center' }}>
-            <AlertTriangle size={40} color={colors.statusCritical} />
-            <div>
-              <p style={{ fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>Failed to load RFIs</p>
-              <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: 0 }}>{(rfisError as Error).message || 'Unable to fetch request data'}</p>
-            </div>
-            <Btn variant="primary" size="sm" icon={<RefreshCw size={14} />} onClick={() => refetch()}>Try Again</Btn>
-          </div>
-        </Card>
+      <PageContainer title="RFIs" subtitle="0 open · 0 overdue">
+        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'], padding: `${spacing['3']} ${spacing['4']}`, backgroundColor: colors.statusCriticalSubtle, borderRadius: borderRadius.md, border: `1px solid ${colors.statusCritical}30` }}>
+          <AlertTriangle size={16} color={colors.statusCritical} style={{ flexShrink: 0 }} />
+          <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, flex: 1 }}>Unable to load RFIs</span>
+          <Btn variant="secondary" size="sm" icon={<RefreshCw size={14} />} onClick={() => refetch()}>Retry</Btn>
+        </div>
       </PageContainer>
     );
   }
