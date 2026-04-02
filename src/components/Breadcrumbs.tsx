@@ -77,12 +77,13 @@ export const FolderBreadcrumbs: React.FC<FolderBreadcrumbsProps> = ({ stack, onN
   if (stack.length === 0) return null;
 
   const showEllipsis = isMobile && !expanded && stack.length > 2;
-  const visibleStack = showEllipsis ? stack.slice(-2) : stack;
+  const visibleStack = showEllipsis ? stack.slice(-1) : stack;
 
   return (
-    <div style={{ overflow: 'hidden', maxWidth: '100%' }}>
+    <div style={{ overflowX: 'auto', display: 'flex', alignItems: 'center', WebkitOverflowScrolling: 'touch' }}>
       <nav
-        aria-label="Folder navigation"
+        role="navigation"
+        aria-label="Breadcrumb navigation"
         style={{
           display: 'flex',
           alignItems: 'center',
