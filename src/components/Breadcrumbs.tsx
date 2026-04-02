@@ -32,8 +32,10 @@ interface FolderBreadcrumbsProps {
 }
 
 const crumbButtonStyle: React.CSSProperties = {
-  all: 'unset',
+  background: 'none',
+  border: 'none',
   cursor: 'pointer',
+  textDecoration: 'none',
   display: 'flex',
   alignItems: 'center',
   gap: spacing['1'],
@@ -79,9 +81,9 @@ export const FolderBreadcrumbs: React.FC<FolderBreadcrumbsProps> = ({ stack, onN
           alignItems: 'center',
           gap: spacing['1'],
           marginBottom: spacing['3'],
-          flexWrap: 'wrap',
+          flexWrap: 'nowrap',
           minWidth: 0,
-          overflowX: 'auto',
+          overflow: 'auto',
           WebkitOverflowScrolling: 'touch',
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
@@ -110,8 +112,8 @@ export const FolderBreadcrumbs: React.FC<FolderBreadcrumbsProps> = ({ stack, onN
             <button
               onClick={() => setExpanded(true)}
               style={crumbButtonStyle}
-              aria-label="Show full path"
-              title="Show full path"
+              aria-label="Show full folder path"
+              title="Show full folder path"
             >
               ...
             </button>
