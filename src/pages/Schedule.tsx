@@ -224,64 +224,92 @@ export const Schedule: React.FC = () => {
       <PageContainer title="Schedule" subtitle="Loading...">
         <style>{`@keyframes schedPulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 0.7; } }`}</style>
         <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-            gap: spacing.lg,
-            marginBottom: spacing['2xl'],
-          }}
+          aria-busy={true}
+          style={{ display: 'flex', flexDirection: 'column', gap: spacing['2xl'] }}
         >
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div
-              key={i}
-              style={{
-                height: '80px',
-                backgroundColor: '#E5E7EB',
-                borderRadius: '12px',
-                animation: 'schedPulse 1.5s ease-in-out infinite',
-                animationDelay: `${i * 0.1}s`,
-              }}
-            />
-          ))}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+              gap: spacing.lg,
+            }}
+          >
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div
+                key={i}
+                style={{
+                  height: '96px',
+                  backgroundColor: '#E5E7EB',
+                  borderRadius: '12px',
+                  animation: 'schedPulse 1.5s ease-in-out infinite',
+                  animationDelay: `${i * 0.1}s`,
+                }}
+              />
+            ))}
+          </div>
+          <div
+            style={{
+              height: '400px',
+              backgroundColor: '#E5E7EB',
+              borderRadius: '12px',
+              animation: 'schedPulse 1.5s ease-in-out infinite',
+            }}
+          />
         </div>
-        <Card padding={spacing.xl}>
-          {GANTT_ROW_WIDTHS.map((rowWidth, i) => (
-            <div
-              key={i}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                marginTop: i === 0 ? 0 : '8px',
-              }}
-            >
-              <div
-                style={{
-                  flexShrink: 0,
-                  width: '200px',
-                  height: '48px',
-                  backgroundColor: '#E5E7EB',
-                  borderRadius: '4px',
-                  animation: 'schedPulse 1.5s ease-in-out infinite',
-                  animationDelay: `${i * 0.08}s`,
-                }}
-              />
-              <div
-                style={{
-                  width: rowWidth,
-                  height: '48px',
-                  backgroundColor: '#E5E7EB',
-                  borderRadius: '4px',
-                  animation: 'schedPulse 1.5s ease-in-out infinite',
-                  animationDelay: `${i * 0.08 + 0.05}s`,
-                }}
-              />
-            </div>
-          ))}
-        </Card>
       </PageContainer>
     );
   }
+
+  if (error && schedulePhases.length === 0) {
+    return (
+      <PageContainer title="Schedule" subtitle="">
+        <div
+          role="alert"
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: spacing.lg,
+            padding: spacing['2xl'],
+            backgroundColor: colors.surfaceRaised,
+            borderRadius: borderRadius.xl,
+            border: `1px solid ${colors.borderDefault}`,
+            minHeight: '240px',
+            textAlign: 'center',
+          }}
+        >
+          <AlertTriangle size={32} color={colors.statusPending} />
+          <span style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+            Unable to load schedule data
+          </span>
+          <span style={{ fontSize: typography.fontSize.body, color: colors.textTertiary }}>
+            {(error as Error)?.message ?? String(error)}
+          </span>
+          <button
+            onClick={refetch}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: spacing.sm,
+              padding: `${spacing.sm} ${spacing.xl}`,
+              backgroundColor: colors.primaryOrange,
+              color: colors.white,
+              border: 'none',
+              borderRadius: borderRadius.md,
+              fontSize: typography.fontSize.body,
+              fontWeight: typography.fontWeight.semibold,
+              cursor: 'pointer',
+            }}
+          >
+            <RefreshCw size={14} />
+            Retry
+          </button>
+        </div>
+      </PageContainer>
+    );
+  }
+
   const pageAlerts = getPredictiveAlertsForPage('schedule');
 
   const liveIndicator = liveActive ? (
