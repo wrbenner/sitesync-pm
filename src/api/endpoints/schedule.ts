@@ -104,12 +104,29 @@ export const getSchedulePhases = async (projectId: string): Promise<ScheduleActi
   )
   const cpmResults = calculateCriticalPath(cpmInput)
 
-  return rows.map((raw): ScheduleActivity => {
+  const activities = rows.map((raw): ScheduleActivity => {
     const base = mapScheduleActivityRow(raw)
     const cpm = cpmResults.get(raw.id)
     if (!cpm) return base
     return { ...base, is_critical: cpm.isCritical, float_days: cpm.totalFloat }
   })
+
+  const successorMap = new Map<string, string[]>()
+  for (const activity of activities) {
+    for (const predecessorId of activity.predecessor_ids) {
+      const existing = successorMap.get(predecessorId)
+      if (existing) {
+        existing.push(activity.id)
+      } else {
+        successorMap.set(predecessorId, [activity.id])
+      }
+    }
+  }
+  for (const activity of activities) {
+    activity.successor_ids = successorMap.get(activity.id) ?? []
+  }
+
+  return activities
 }
 
 export const updateScheduleActivity = async (
