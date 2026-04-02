@@ -159,6 +159,7 @@ function AuthenticatedProviders({ activeView }: { activeView: string }) {
   const userInitials = userName.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2) || 'U';
   useRealtimeSubscription(projectId, user?.id);
   usePresence(projectId, user?.id, userName, userInitials, activeView);
+  // TODO: Scope realtime subscriptions to active project to reduce bandwidth
   useRealtimeInvalidation();
   useNotificationRealtime();
   return null;
