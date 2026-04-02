@@ -284,6 +284,7 @@ export const AgentMentionInput = memo<AgentMentionInputProps>(
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
             disabled={disabled}
+            aria-disabled={disabled}
             rows={1}
             maxLength={MAX_MESSAGE_LENGTH}
             aria-label="Message to AI copilot"
@@ -299,12 +300,15 @@ export const AgentMentionInput = memo<AgentMentionInputProps>(
               lineHeight: typography.lineHeight.normal,
               maxHeight: '160px',
               overflow: 'auto',
+              opacity: disabled ? 0.5 : 1,
+              cursor: disabled ? 'not-allowed' : 'text',
             }}
           />
           <button
             onClick={handleSend}
             disabled={!value.trim() || disabled}
             aria-label="Send message"
+            aria-disabled={disabled}
             style={{
               width: 36,
               height: 36,
@@ -316,7 +320,8 @@ export const AgentMentionInput = memo<AgentMentionInputProps>(
               color: value.trim() && !disabled ? colors.white : colors.textTertiary,
               border: 'none',
               borderRadius: borderRadius.base,
-              cursor: value.trim() && !disabled ? 'pointer' : 'default',
+              cursor: disabled ? 'not-allowed' : value.trim() ? 'pointer' : 'default',
+              opacity: disabled ? 0.5 : 1,
               transition: `all ${transitions.quick}`,
               flexShrink: 0,
             }}
