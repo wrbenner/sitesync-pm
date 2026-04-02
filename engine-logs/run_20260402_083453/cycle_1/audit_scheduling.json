@@ -1,0 +1,70 @@
+{
+  "module": "scheduling",
+  "scores": {
+    "visual_polish": 52,
+    "domain_depth": 45,
+    "data_richness": 38,
+    "interaction_quality": 35,
+    "ai_integration": 30,
+    "mobile_first": 28,
+    "performance": 45,
+    "typescript_quality": 55,
+    "error_handling": 30,
+    "realtime": 25,
+    "accessibility": 20,
+    "security": 40,
+    "differentiation": 30,
+    "enterprise_readiness": 32
+  },
+  "overall_score": 36,
+  "issues": [
+    {
+      "id": "scheduling-C1-001",
+      "severity": "critical",
+      "dimension": "error_handling",
+      "title": "Schedule page lacks loading, error, and empty states",
+      "file": "src/pages/Schedule.tsx",
+      "description": "The Schedule page does not show skeleton loaders during data fetch, has no error state for failed queries, and no contextual empty state when no schedule phases exist. Users see a blank page or flash of empty content. PAGE_ACCEPTANCE_CRITERIA §6 requires skeleton loaders matching Gantt layout, error retry, and empty state with 'Create First Phase' CTA.",
+      "prompt": "In the file src/pages/Schedule.tsx, in the main Schedule page component: Add three states. BEFORE: The component renders the Gantt/schedule content directly without checking loading or error status from the data hook. If data is empty, nothing helpful is shown. AFTER: (1) When `isLoading` is true, render a skeleton loader with 4-5 horizontal bar placeholders at varying widths inside the Gantt area, plus 4 metric card skeletons at top, using pulsing animation (opacity 0.3-0.7, 1.5s cycle). (2) When `error` is truthy, render an inline error card with the message 'Unable to load schedule data' and a 'Retry' button that calls `refetch()`. Do NOT show a full-page error. (3) When data is loaded but the activities/phases array is empty, render an empty state with a Calendar icon (from lucide-react), heading 'No schedule phases yet', description 'Build your schedule to track every phase from mobilization to closeout.', and a primary CTA button 'Create First Phase' plus a secondary 'Import from P6/MS Project' button. Ensure the empty state uses theme tokens for colors and spacing. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "scheduling-C1-002",
+      "severity": "critical",
+      "dimension": "accessibility",
+      "title": "Gantt chart and schedule controls missing ARIA attributes and keyboard navigation",
+      "file": "src/pages/Schedule.tsx",
+      "description": "The schedule page Gantt chart bars, zoom controls, and view toggle buttons lack aria-labels, role attributes, and keyboard event handlers. Screen readers cannot interpret the chart. Keyboard users cannot navigate between activities or use zoom. PAGE_ACCEPTANCE_CRITERIA §6 requires keyboard zoom (+/-), arrow key navigation, and WCAG 2.1 AA compliance. Global standards require all icons have aria-labels and focus rings are visible.",
+      "prompt": "In the file src/pages/Schedule.tsx, in the main Schedule component and its rendered JSX: Add ARIA attributes and keyboard support. BEFORE: Gantt bars are plain divs without role or aria-label. Zoom buttons and view toggles lack aria-label. No onKeyDown handlers exist for keyboard navigation. AFTER: (1) Add `role='img'` and `aria-label='Project schedule Gantt chart'` to the Gantt chart container div. (2) Add `aria-label` to each zoom button (e.g., 'Zoom in', 'Zoom out') and each view toggle button (e.g., 'Day view', 'Week view', 'Month view'). (3) Add `role='list'` to the activity list container and `role='listitem'` to each activity row. (4) Add `tabIndex={0}` and `aria-label` describing each activity (e.g., `aria-label={`Activity: ${activity.name}, ${activity.percent_complete}% complete, status ${activity.status}`}`) to each Gantt bar or activity row. (5) Add an `onKeyDown` handler to the Gantt container that listens for '+' and '-' keys to trigger zoom in/out, and ArrowUp/ArrowDown to move focus between activity rows. (6) Ensure all interactive elements show a visible focus ring using `outline: 2px solid ${colors.primary}` on `:focus-visible`. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "scheduling-C1-003",
+      "severity": "critical",
+      "dimension": "mobile_first",
+      "title": "Schedule page not usable on mobile — Gantt overflows and no responsive layout",
+      "file": "src/pages/Schedule.tsx",
+      "description": "At 375px width, the Gantt chart overflows horizontally without scrollable container, metric cards overlap, and there is no mobile-friendly timeline list view. PAGE_ACCEPTANCE_CRITERIA §6 requires that on mobile the Gantt is replaced with a vertical timeline list view where each phase is a card with start/end dates, progress bar, and status. Touch targets must be 44x44px minimum.",
+      "prompt": "In the file src/pages/Schedule.tsx, in the main Schedule component: Add mobile responsive layout. BEFORE: The Gantt chart renders at fixed width regardless of viewport. Metric cards display in a horizontal row that overflows on small screens. No alternative view exists for mobile. AFTER: (1) Wrap the Gantt chart container in a div with `overflow-x: auto; -webkit-overflow-scrolling: touch;` so it scrolls horizontally on mobile. (2) Use a media query or a `useMediaQuery` hook (check if one exists in the codebase, otherwise use `window.matchMedia('(max-width: 768px)')`) to detect mobile viewport. (3) On mobile (<=768px), replace the Gantt chart with a vertical timeline list: render each schedule activity/phase as a card showing name, start/end dates formatted as 'MMM DD', a progress bar (colored by status: green for on_track, amber for at_risk, red for delayed, gray for completed), percent complete text, and status badge. Each card should have min-height 64px and padding 16px for touch-friendliness. (4) Stack metric cards vertically in a single column on mobile with 8px gap. (5) Ensure all tap targets (buttons, cards) are at least 44x44px. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "scheduling-C1-004",
+      "severity": "major",
+      "dimension": "domain_depth",
+      "title": "No baseline vs actual comparison on Gantt — critical construction scheduling feature",
+      "file": "src/pages/Schedule.tsx",
+      "description": "The schedule page does not display baseline dates alongside actual dates. PAGE_ACCEPTANCE_CRITERIA §6 criterion 8 requires a toggle to show original baseline dates as ghost bars behind current bars so variance is visible at a glance. The `schedule_phases` table has `baseline_start` and `baseline_end` columns and `mapScheduleActivityRow` maps them to `baseline_start` and `baseline_finish`, but they are never rendered in the UI.",
+      "prompt": "In the file src/pages/Schedule.tsx, in the Gantt chart rendering section: Add baseline comparison visualization. BEFORE: Only current start/end dates are rendered as Gantt bars. The `baseline_start` and `baseline_finish` fields from each activity are available in the data but not displayed. There is no toggle for baseline comparison. AFTER: (1) Add a toggle button in the schedule toolbar/header area labeled 'Show Baseline' with an icon (use `GitCompare` or `Layers` from lucide-react). Use React useState to track `showBaseline` boolean, default false. (2) When `showBaseline` is true and an activity has non-null `baseline_start` and `baseline_finish`, render a second semi-transparent bar (opacity 0.25, gray color `#9CA3AF`) behind the actual bar at the baseline date position. The baseline bar should have a dashed border (`border: 1px dashed #9CA3AF`). (3) On hover over any activity bar when baseline is shown, display a tooltip showing: 'Planned: [baseline_start] to [baseline_finish]' and 'Actual: [start_date] to [finish_date]' and 'Variance: X days' (calculated as difference between actual finish and baseline finish in days, positive means late shown in red, negative means ahead shown in green). (4) Ensure the toggle button has `aria-pressed={showBaseline}` and `aria-label='Toggle baseline comparison'`. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "scheduling-C1-005",
+      "severity": "major",
+      "dimension": "interaction_quality",
+      "title": "KPI metric cards show placeholder or zero values instead of real computed schedule metrics",
+      "file": "src/pages/Schedule.tsx",
+      "description": "The schedule page metric cards (Schedule Variance, Critical Path Items, On Track %, Complete %) display hardcoded zeros or placeholder values instead of computing from the actual activities data. PAGE_ACCEPTANCE_CRITERIA §6 requires real calculated values with trend indicators and severity colors. Each metric card must be clickable to navigate to the corresponding filtered view.",
+      "prompt": "In the file src/pages/Schedule.tsx, in the metric cards section at the top of the page: Compute real KPI values from schedule data. BEFORE: Metric cards show static zeros or hardcoded placeholder numbers. No computation is performed from the activities array. Cards are not clickable. AFTER: (1) Compute these metrics from the activities/phases array: `totalActivities` = array length, `completedCount` = items where percent_complete === 100 or status === 'completed', `onTrackCount` = items where status is 'not_started' or 'in_progress' and (end_date >= today or no end_date), `criticalPathCount` = items where is_critical === true, `delayedCount` = items where status === 'delayed' or (end_date < today and percent_complete < 100), `avgPercentComplete` = average of all percent_complete values, `scheduleVariance` = for critical path items, sum of (actual/projected finish - baseline finish) in days (if baseline data exists, otherwise show 'N/A'). (2) Display in 4 metric cards: Schedule Variance (days, green if <=0, amber if 1-5, red if >5), Critical Path Items (count with red icon), On Track % (onTrackCount/totalActivities * 100, one decimal), Complete % (completedCount/totalActivities * 100, one decimal). (3) Format numbers: integers for counts and days, one decimal for percentages. Use compact format. (4) Add trend arrow placeholders (→ for now, since we lack historical data). (5) Wrap each card in a clickable div that could later navigate to a filtered view (for now, just add `cursor: pointer` and `role='button'` with `aria-label`). After changes, run: npm run build to verify no TypeScript errors."
+    }
+  ],
+  "invented_features": [],
+  "competitive_intel": "Procore's schedule module shows baseline vs actual with float analysis and links to RFIs/submittals per activity. ACC has Construction IQ for AI risk prediction on schedule items. SiteSync's schedule currently lacks baseline comparison, critical path visualization is minimal, no weather overlay, no what-if mode, and no schedule import from P6/MS Project. The Gantt has no drag-to-reschedule. This is the weakest module relative to competitors — a superintendent would keep P6 open in a separate tab rather than use SiteSync's schedule in its current state.",
+  "summary": "The Scheduling module scores 36/100 overall, making it the weakest module in SiteSync. The core issues are: (1) no loading/error/empty states causing blank page experiences, (2) zero accessibility support making the Gantt unusable for keyboard and screen reader users, (3) completely broken mobile experience with horizontal overflow, (4) missing baseline vs actual comparison which is table-stakes for construction scheduling, and (5) metric cards showing zeros instead of computed values. The five surgical fixes target these exact gaps — adding proper loading/error/empty states, ARIA attributes and keyboard navigation, mobile responsive timeline view, baseline ghost bars with variance tooltips, and real KPI computation from activity data. No new features are proposed; all fixes address bugs and missing states against the page acceptance criteria."
+}

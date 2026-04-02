@@ -1,0 +1,59 @@
+{
+  "verifications": [
+    {
+      "id": "infrastructure-C1-001",
+      "status": "fixed",
+      "note": "Target file was modified"
+    },
+    {
+      "id": "infrastructure-C1-002",
+      "status": "not_fixed",
+      "note": "No matching commit found"
+    },
+    {
+      "id": "infrastructure-C1-003",
+      "status": "not_fixed",
+      "note": "No matching commit found"
+    },
+    {
+      "id": "infrastructure-C1-004",
+      "status": "fixed",
+      "note": "Target file was modified"
+    },
+    {
+      "id": "infrastructure-C1-005",
+      "status": "fixed",
+      "note": "Target file was modified"
+    },
+    {
+      "id": "infrastructure-C1-006",
+      "status": "fixed",
+      "note": "Target file was modified"
+    },
+    {
+      "id": "infrastructure-C1-007",
+      "status": "fixed",
+      "note": "Target file was modified"
+    },
+    {
+      "id": "infrastructure-C1-008",
+      "status": "fixed",
+      "note": "Target file was modified"
+    },
+    {
+      "id": "infrastructure-C1-009",
+      "status": "fixed",
+      "note": "Target file was modified"
+    },
+    {
+      "id": "infrastructure-C1-010",
+      "status": "fixed",
+      "note": "Commit found matching issue ID"
+    }
+  ],
+  "files_changed": 2,
+  "fixed": 8,
+  "partial": 0,
+  "unfixed": 2,
+  "regression_detected": false
+}

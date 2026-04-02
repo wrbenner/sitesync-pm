@@ -221,6 +221,7 @@ export const Schedule: React.FC = () => {
         <style>{`
           @media (max-width: 1024px) and (min-width: 641px) { .kpi-grid { grid-template-columns: repeat(2, 1fr) !important; } }
           @media (max-width: 640px) { .kpi-grid { grid-template-columns: 1fr !important; } }
+          @keyframes schedPulse { 0%, 100% { opacity: 0.7; } 50% { opacity: 0.3; } }
         `}</style>
         <div
           className="kpi-grid"
@@ -278,7 +279,7 @@ export const Schedule: React.FC = () => {
               }}
             >
               <motion.div
-                animate={{ opacity: [1, 0.45, 1] }}
+                animate={{ opacity: [0.7, 0.3, 0.7] }}
                 transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut', delay: i * 0.08 }}
                 style={{
                   flexShrink: 0,
@@ -289,7 +290,7 @@ export const Schedule: React.FC = () => {
                 }}
               />
               <motion.div
-                animate={{ opacity: [1, 0.45, 1] }}
+                animate={{ opacity: [0.7, 0.3, 0.7] }}
                 transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut', delay: i * 0.08 + 0.05 }}
                 style={{
                   width: rowWidth,
@@ -671,10 +672,10 @@ export const Schedule: React.FC = () => {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'] }}>
                 <p style={{ margin: 0, fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
-                  No schedule activities yet
+                  No schedule phases yet
                 </p>
                 <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textSecondary, maxWidth: '400px', lineHeight: typography.lineHeight.relaxed }}>
-                  Build your schedule to track every phase from mobilization to closeout
+                  Build your schedule to track every phase from mobilization to closeout.
                 </p>
               </div>
               <div style={{ display: 'flex', gap: spacing['3'], flexWrap: 'wrap', justifyContent: 'center' }}>

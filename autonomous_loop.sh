@@ -1871,14 +1871,13 @@ verify_changes() {
 
     log "Verifying changes for ${module_name}..."
 
-    # Get the timestamp when this cycle started (from cycle dir creation)
-    local cycle_start_time
-    cycle_start_time=$(date -r "$cycle_dir" "+%Y-%m-%d %H:%M" 2>/dev/null || date "+%Y-%m-%d 00:00")
+    # Get ALL files changed by engine commits today (use run start date, not cycle dir mtime
+    # which gets updated as files are written and ends up AFTER the commits it should find)
+    local run_start_date
+    run_start_date=$(date -d "@${START_TIME}" "+%Y-%m-%d" 2>/dev/null || date "+%Y-%m-%d")
 
-    # Get ALL files changed by engine commits since cycle start
-    # Matches both "engine: fix" and "engine: build gate" and "engine: invent"
     local all_engine_changes
-    all_engine_changes=$(cd "$PROJECT_DIR" && git log --name-only --since="${cycle_start_time}" --grep="engine:" --pretty=format:"" 2>/dev/null | sort -u | grep -v '^$' || echo "")
+    all_engine_changes=$(cd "$PROJECT_DIR" && git log --name-only --since="${run_start_date}" --grep="engine:" --pretty=format:"" 2>/dev/null | sort -u | grep -v '^$' || echo "")
 
     # Also include uncommitted changes (work in progress)
     local uncommitted
@@ -1905,7 +1904,7 @@ verify_changes() {
     # This is far more accurate than filename matching — the engine tags every
     # commit with the exact issue ID (e.g. "engine: fix ui-design-system-C1-002")
     local all_commit_messages
-    all_commit_messages=$(cd "$PROJECT_DIR" && git log --oneline --since="${cycle_start_time}" --grep="engine:" 2>/dev/null || echo "")
+    all_commit_messages=$(cd "$PROJECT_DIR" && git log --oneline --since="${run_start_date}" --grep="engine:" 2>/dev/null || echo "")
 
     local verifications="[]"
     local fixed_count=0

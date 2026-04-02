@@ -1,0 +1,70 @@
+{
+  "module": "project-intelligence",
+  "scores": {
+    "visual_polish": 72,
+    "domain_depth": 65,
+    "data_richness": 58,
+    "interaction_quality": 70,
+    "ai_integration": 78,
+    "mobile_first": 45,
+    "performance": 62,
+    "typescript_quality": 64,
+    "error_handling": 55,
+    "realtime": 40,
+    "accessibility": 35,
+    "security": 60,
+    "differentiation": 75,
+    "enterprise_readiness": 50
+  },
+  "overall_score": 59,
+  "issues": [
+    {
+      "id": "project-intelligence-C1-001",
+      "severity": "critical",
+      "dimension": "accessibility",
+      "title": "CopilotPanel chat input and buttons lack ARIA labels and keyboard handling",
+      "file": "src/components/ai/CopilotPanel.tsx",
+      "description": "The copilot panel has no aria-label on the chat message list, no role='log' or aria-live='polite' on the message container, and suggested prompt buttons lack aria-labels. Screen readers cannot navigate the conversation. Keyboard users cannot submit with Enter from the input area reliably.",
+      "prompt": "In the file src/components/ai/CopilotPanel.tsx, in the PanelMessageRenderer and the main CopilotPanel component, make these specific changes: BEFORE: The messages container div has no ARIA attributes. Suggested prompt buttons use generic onClick with no aria-label. The scrollable message area has no role. AFTER: Add role='log' and aria-live='polite' to the messages scroll container div. Add aria-label to each suggested prompt button using its label text (e.g., aria-label={prompt.label}). Add aria-label='AI Copilot conversation' to the outer panel wrapper. Ensure the close button has aria-label='Close AI Copilot'. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "project-intelligence-C1-002",
+      "severity": "critical",
+      "dimension": "error_handling",
+      "title": "FloatingAIButton shows no retry or fallback when AI insights query fails",
+      "file": "src/components/ai/FloatingAIButton.tsx",
+      "description": "When useAIInsights returns isError=true, the button shows a tiny AlertTriangle icon but provides no way to retry or communicate the error to the user. Clicking the button opens the copilot without any indication that insights failed to load. The acceptance criteria require inline retry buttons on fetch failures, not silent icons.",
+      "prompt": "In the file src/components/ai/FloatingAIButton.tsx, in the FloatingAIButton component, make these specific changes: BEFORE: When isError is true, a tiny AlertTriangle (10px) renders in the corner badge with no tooltip text and no retry mechanism. The titleText for the error state is not set, falling through to the default 'Open AI Copilot'. AFTER: When isError is true, set titleText to 'AI insights unavailable. Click to retry.' Add an onClick handler that, when isError is true, calls the refetch function from useAIInsights instead of openCopilot. Destructure refetch from the useAIInsights hook (add it to the hook call). Increase the AlertTriangle badge size to 14px for visibility. Add aria-label={titleText} to the button (it already exists, just ensure it reflects the error state text). After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "project-intelligence-C1-003",
+      "severity": "major",
+      "dimension": "mobile_first",
+      "title": "CopilotPanel has no responsive behavior for mobile viewports",
+      "file": "src/components/ai/CopilotPanel.tsx",
+      "description": "The copilot panel uses a fixed 480px width with no responsive adaptation. On mobile (375px), it overflows the viewport. The design standards require full-screen on mobile with bottom sheet pattern. Touch targets for suggested prompts and action buttons are below the 44px minimum.",
+      "prompt": "In the file src/components/ai/CopilotPanel.tsx, in the main CopilotPanel component's outer wrapper style, make these specific changes: BEFORE: The panel likely has a fixed width (e.g., width: '480px' or similar) with no maxWidth or responsive check. Suggested prompt buttons have small padding that creates touch targets under 44px. AFTER: Change the panel width to use maxWidth: '480px' and width: '100vw' so it fills the screen on mobile but caps at 480px on desktop. Add a media query check using window.innerWidth or a CSS approach: on viewports under 768px, set the panel to position: fixed, inset: 0, width: '100%', height: '100%', borderRadius: 0. Ensure all suggested prompt buttons and action buttons have minHeight: '44px' for touch targets. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "project-intelligence-C1-004",
+      "severity": "major",
+      "dimension": "error_handling",
+      "title": "AgentMentionInput silently swallows empty or over-length messages",
+      "file": "src/components/ai/AgentMentionInput.tsx",
+      "description": "The MAX_MESSAGE_LENGTH constant is defined at 4000 but never enforced in the handleChange or submit logic. Users can type beyond 4000 characters with no visual feedback. Empty messages (whitespace only) are not validated before calling onSend. No toast or inline error is shown for either case.",
+      "prompt": "In the file src/components/ai/AgentMentionInput.tsx, in the AgentMentionInput component, make these specific changes: BEFORE: The MAX_MESSAGE_LENGTH=4000 constant exists but is never checked. The submit handler (or handleSend equivalent) calls onSend(value) without trimming or length validation. There is no character count indicator. AFTER: In the submit/send handler, add a guard: if value.trim().length === 0, return early (do not call onSend). If value.length > MAX_MESSAGE_LENGTH, show toast.error('Message too long. Maximum 4000 characters.') and return early. Add a character count display below the textarea showing `${value.length}/${MAX_MESSAGE_LENGTH}` that turns red (colors.statusCritical) when value.length > MAX_MESSAGE_LENGTH * 0.9. In handleChange, allow typing beyond the limit but show the visual warning (do not truncate, as that frustrates users). After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "project-intelligence-C1-005",
+      "severity": "major",
+      "dimension": "realtime",
+      "title": "AI insights and copilot messages have no real-time subscription",
+      "file": "src/components/ai/PredictiveAlert.tsx",
+      "description": "The PredictiveAlertBanner and the dashboard AI insights panel fetch data once but never subscribe to real-time updates. When another user dismisses an alert or when new AI insights are generated server-side, the UI remains stale. The acceptance criteria require any entity modified by another user to reflect within 2 seconds via Supabase Realtime.",
+      "prompt": "In the file src/components/ai/PredictiveAlert.tsx, in the component that renders the list of predictive alerts (the section that calls useAIInsights), make these specific changes: BEFORE: The useAIInsights hook is called and data is rendered, but there is no Supabase Realtime subscription on the ai_insights table. Dismissed alerts are stored only in local Zustand state (useAIAnnotationStore) and not synced. AFTER: Add a useEffect that subscribes to the Supabase Realtime channel for the ai_insights table filtered by project_id. On INSERT events, invalidate the useAIInsights query (call queryClient.invalidateQueries or the refetch from the hook). On UPDATE events (e.g., dismissed=true), also invalidate. Return a cleanup function that removes the channel subscription. Import supabase from '../../lib/supabase' and useQueryClient from '@tanstack/react-query' (or the equivalent query invalidation pattern used in the codebase). After changes, run: npm run build to verify no TypeScript errors."
+    }
+  ],
+  "invented_features": [],
+  "competitive_intel": "SiteSync's multi-agent copilot with @mention routing, generative UI blocks (charts, approval cards, safety alerts, cost breakdowns), and batch action previews is genuinely ahead of Procore Assist (which is a simple search chatbot) and Autodesk Construction IQ (which only does risk prediction, not conversational interaction). The specialist agent architecture (schedule, cost, safety, quality, compliance, document) mirrors how real construction teams delegate expertise. However, Procore's Quick Capture voice-to-punch-item flow works offline with zero friction, while SiteSync's copilot requires connectivity and has no offline queue for AI requests. The generative UI system is a strong differentiator that no competitor ships today.",
+  "summary": "The Project Intelligence & AI Copilot module has an impressively deep generative UI system with 13+ interactive block types, multi-agent routing, and batch action previews, placing it well ahead of competitors on differentiation. However, surgical issues undermine its production readiness: the copilot panel has zero ARIA attributes making it inaccessible to screen reader users (P0 violation of global acceptance standards), the floating AI button swallows errors silently instead of offering retry, the panel has no mobile responsive behavior and will overflow on any phone viewport, the agent mention input fails to enforce its own 4000 character limit, and there are no real-time subscriptions on AI insights meaning stale data persists indefinitely. These five fixes target the highest-impact gaps: accessibility compliance, error recovery, mobile usability, input validation, and real-time data freshness."
+}
