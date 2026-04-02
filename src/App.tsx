@@ -222,9 +222,10 @@ function AppContent() {
   // Show SW update toast
   useEffect(() => {
     if (updateAvailable) {
-      toast('A new version is available.', {
-        action: { label: 'Update', onClick: applyUpdate },
+      toast('New version available', {
+        action: { label: 'Update Now', onClick: () => applyUpdate() },
         duration: Infinity,
+        id: 'sw-update',
       });
     }
   }, [updateAvailable, applyUpdate]);
