@@ -1,0 +1,6 @@
+Build passes. The warnings are pre-existing and unrelated to this change.
+
+The fix works by leveraging the CSS classes that were already defined in the component's `<style>` block:
+- Each drawing now renders two siblings: a `.drawing-row-mobile` card (visible on ≤768px) and a `.drawing-row-desktop` grid row (hidden on mobile)
+- The mobile card shows thumbnail, title, set/revision/discipline summary, and a chevron arrow
+- The desktop table header already had `.drawing-table-header` hiding it on mobile

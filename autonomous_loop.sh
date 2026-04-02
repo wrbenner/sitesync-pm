@@ -612,6 +612,7 @@ read_founder_context() {
         "PAGE_ACCEPTANCE_CRITERIA.md:PAGE ACCEPTANCE CRITERIA (GOSPEL — explicit definition of done for every page. Each numbered criterion is a test case. Violations are bugs. Score against these BEFORE the 14 dimensions.)"
         "VERIFICATION_TESTS.md:VERIFICATION TESTS (executable test specs for auth flows, RLS security, data integrity, and permission gates. After fixing auth/security/data issues, GENERATE and RUN the relevant test. A fix that compiles but fails verification is NOT fixed. RLS failures are P0 — stop everything.)"
         "PRODUCTION_ROADMAP.md:PRODUCTION ROADMAP (what to BUILD to reach shippable product. P0 items are dealbreakers — GCs will not sign without them. In ARCHITECT mode, pick the highest-priority unfinished P0 item for this module and implement it. In VISIONARY mode, build P1/P2 items. Each item has exact database schemas, edge function specs, file paths, and acceptance tests. Follow them precisely.)"
+        "CODEBASE_PATTERNS.md:CODEBASE PATTERNS (CRITICAL — existing database tables, edge function patterns, React hook patterns, service patterns, page component patterns, migration patterns with RLS. Follow these EXACTLY when creating new files. Do NOT recreate existing tables. Check table list before writing migrations.)"
     )
 
     for entry in "${brain_files[@]}"; do
@@ -875,26 +876,32 @@ ${invention_section}"
         tools_arg="$WEB_SEARCH_TOOLS"
     fi
 
-    # ── STRIPE INTELLIGENCE: Multi-model routing ──
-    # Route audit to the RIGHT model based on module maturity.
-    # Low-scoring modules (<60) get Opus for deep architectural thinking.
-    # Mid-scoring modules (60-85) get Sonnet for balanced analysis.
-    # High-scoring modules (>85) get Haiku for fast polish checks (saves 10x cost).
+    # ── DYNAMIC MODEL ROUTING ──
+    # Routes based on BOTH mode and score. Feature-building modes always get Opus.
+    # Surgeon mode uses score thresholds to save cost on well-scoring modules.
     local audit_model_for_module="$AUDIT_MODEL"
     local latest_mod_score=50
     if [ -f "${SCORES_DIR}/${module_name}.txt" ]; then
         latest_mod_score=$(tail -1 "${SCORES_DIR}/${module_name}.txt" | tr -dc '0-9')
         [ -z "$latest_mod_score" ] && latest_mod_score=50
     fi
-    if [ "$latest_mod_score" -lt 60 ] 2>/dev/null; then
+
+    if [ "$thinking_mode" = "architect" ] || [ "$thinking_mode" = "visionary" ]; then
+        # Feature-building modes ALWAYS get Opus — building new code needs the best model
         audit_model_for_module="claude-opus-4-6"
-        log "  Model routing: Opus (score ${latest_mod_score} < 60, needs deep analysis)"
+        log "  Model routing: Opus (${thinking_mode} mode, always uses best model for feature building)"
+    elif [ "$latest_mod_score" -lt 70 ] 2>/dev/null; then
+        # Surgeon mode: low scores get Opus for deep diagnosis
+        audit_model_for_module="claude-opus-4-6"
+        log "  Model routing: Opus (surgeon, score ${latest_mod_score} < 70, needs deep analysis)"
     elif [ "$latest_mod_score" -gt 85 ] 2>/dev/null; then
+        # Surgeon mode: high scores get Haiku for fast polish
         audit_model_for_module="$DECOMP_MODEL"
-        log "  Model routing: Haiku (score ${latest_mod_score} > 85, just needs polish)"
+        log "  Model routing: Haiku (surgeon, score ${latest_mod_score} > 85, just needs polish)"
     else
+        # Surgeon mode: mid scores get Sonnet
         audit_model_for_module="${AUDIT_MODEL}"
-        log "  Model routing: ${AUDIT_MODEL} (score ${latest_mod_score}, standard audit)"
+        log "  Model routing: ${AUDIT_MODEL} (surgeon, score ${latest_mod_score}, standard audit)"
     fi
 
     local response
@@ -996,7 +1003,7 @@ print("{}")
 # Rate limit config: seconds between Claude Code CLI calls (prevents 429/529)
 PROMPT_COOLDOWN="${PROMPT_COOLDOWN:-5}"
 # Timeout per Claude Code CLI call in seconds (kills hung prompts)
-PROMPT_TIMEOUT="${PROMPT_TIMEOUT:-300}"
+PROMPT_TIMEOUT="${PROMPT_TIMEOUT:-600}"
 
 # Run Claude Code with timeout protection
 run_claude_code() {
@@ -1165,7 +1172,7 @@ ${raw_prompt}"
                 warn "  Prompt ${issue_id} failed — retrying with simplified version..."
                 sleep "$PROMPT_COOLDOWN"
                 local simple_prompt="You are editing a React TypeScript project. ${title}. Read the target file first. Make the minimal change needed. Only edit existing files. Run: npm run build after to verify."
-                if run_claude_code "$simple_prompt" "${exec_log}.retry" 180; then
+                if run_claude_code "$simple_prompt" "${exec_log}.retry" 300; then
                     consecutive_failures=0
                     TOTAL_PROMPTS_EXECUTED=$(( TOTAL_PROMPTS_EXECUTED + 1 ))
                     ESTIMATED_SPEND=$(echo "scale=2; $ESTIMATED_SPEND + 0.05" | bc 2>/dev/null || echo "$ESTIMATED_SPEND")
@@ -1183,7 +1190,7 @@ ${raw_prompt}"
                     local build_errors
                     build_errors=$(run_build 2>&1 | tail -30)
                     sleep "$PROMPT_COOLDOWN"
-                    run_claude_code "The TypeScript build is broken. Fix these errors. Only fix the errors, do not change anything else. Errors: ${build_errors}" "${exec_log}.buildfix" 180
+                    run_claude_code "The TypeScript build is broken. Fix these errors. Only fix the errors, do not change anything else. Errors: ${build_errors}" "${exec_log}.buildfix" 300
                     ESTIMATED_SPEND=$(echo "scale=2; $ESTIMATED_SPEND + 0.08" | bc 2>/dev/null || echo "$ESTIMATED_SPEND")
                     CYCLE_SPEND=$(echo "scale=2; $CYCLE_SPEND + 0.08" | bc 2>/dev/null || echo "$CYCLE_SPEND")
 
@@ -1290,7 +1297,7 @@ ${build_errors}
 
 Fix every error. Do not introduce any new errors. After fixing, confirm that \`${BUILD_CMD}\` would succeed."
 
-    run_claude_code "$fix_prompt" "${cycle_dir}/build_fix.log" 180 || true
+    run_claude_code "$fix_prompt" "${cycle_dir}/build_fix.log" 300 || true
     ESTIMATED_SPEND=$(echo "scale=2; $ESTIMATED_SPEND + 0.08" | bc 2>/dev/null || echo "$ESTIMATED_SPEND")
     CYCLE_SPEND=$(echo "scale=2; $CYCLE_SPEND + 0.08" | bc 2>/dev/null || echo "$CYCLE_SPEND")
 
@@ -1338,7 +1345,7 @@ ${test_errors}
 
 Fix every failing test. Do not delete or skip tests. If the test expectations are wrong because the code was intentionally changed, update the test expectations to match the new behavior."
 
-    run_claude_code "$fix_prompt" "${cycle_dir}/test_fix.log" 180 || true
+    run_claude_code "$fix_prompt" "${cycle_dir}/test_fix.log" 300 || true
     ESTIMATED_SPEND=$(echo "scale=2; $ESTIMATED_SPEND + 0.08" | bc 2>/dev/null || echo "$ESTIMATED_SPEND")
     CYCLE_SPEND=$(echo "scale=2; $CYCLE_SPEND + 0.08" | bc 2>/dev/null || echo "$CYCLE_SPEND")
 
@@ -2608,7 +2615,7 @@ Also create playwright.config.ts at the project root with:
   - chromium only
   - screenshot on failure"
 
-        if run_claude_code "$e2e_prompt" "${cycle_dir}/e2e_generate.log" 180; then
+        if run_claude_code "$e2e_prompt" "${cycle_dir}/e2e_generate.log" 360; then
             ESTIMATED_SPEND=$(echo "scale=2; $ESTIMATED_SPEND + 0.08" | bc 2>/dev/null || echo "$ESTIMATED_SPEND")
             CYCLE_SPEND=$(echo "scale=2; $CYCLE_SPEND + 0.08" | bc 2>/dev/null || echo "$CYCLE_SPEND")
             success "E2E: Test suite generated"
@@ -2655,7 +2662,7 @@ Fix the issues in the source code (NOT the test file) so these tests pass.
 The app is a React + TypeScript + Vite construction management platform.
 Run 'npm run build' after fixing to verify the build still works."
 
-        if run_claude_code "$fix_prompt" "${cycle_dir}/e2e_fix.log" 240; then
+        if run_claude_code "$fix_prompt" "${cycle_dir}/e2e_fix.log" 360; then
             ESTIMATED_SPEND=$(echo "scale=2; $ESTIMATED_SPEND + 0.12" | bc 2>/dev/null || echo "$ESTIMATED_SPEND")
             CYCLE_SPEND=$(echo "scale=2; $CYCLE_SPEND + 0.12" | bc 2>/dev/null || echo "$CYCLE_SPEND")
             success "E2E: Auto-fix applied for ${failed} failing tests"
@@ -2806,9 +2813,30 @@ main() {
 
     CYCLE=$RESUME_CYCLE
 
+    # Hot-reload: track script checksum so we can re-exec on changes
+    local script_path
+    script_path="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
+    local script_checksum
+    script_checksum=$(md5sum "$script_path" 2>/dev/null | awk '{print $1}' || md5 -q "$script_path" 2>/dev/null || echo "unknown")
+
     while true; do
         CYCLE=$(( CYCLE + 1 ))
         CYCLE_SPEND="0.00"
+
+        # ── HOT RELOAD: Check if script was edited since last cycle ──
+        local current_checksum
+        current_checksum=$(md5sum "$script_path" 2>/dev/null | awk '{print $1}' || md5 -q "$script_path" 2>/dev/null || echo "unknown")
+        if [ "$current_checksum" != "$script_checksum" ] && [ "$current_checksum" != "unknown" ]; then
+            log "HOT RELOAD: Script changed on disk. Saving state and re-launching..."
+            # Save state so RESUME picks up where we left off
+            jq -n --argjson cycle "${CYCLE}" --arg spend "${ESTIMATED_SPEND:-0.00}" --argjson prompts "${TOTAL_PROMPTS_EXECUTED:-0}" \
+                '{last_completed_cycle:($cycle - 1), estimated_spend:$spend, prompts_executed:$prompts}' \
+                > "$STATE_FILE" 2>/dev/null || \
+                echo '{"last_completed_cycle":'"$(( CYCLE - 1 ))"',"estimated_spend":"'"${ESTIMATED_SPEND:-0.00}"'"}' > "$STATE_FILE"
+            # Re-exec with RESUME=true, preserving all env vars
+            export RESUME=true MAX_CYCLES="$MAX_CYCLES" MAX_SPEND="$MAX_SPEND"
+            exec "$script_path" "$PROJECT_DIR"
+        fi
 
         # Check cycle limit
         if [ "$CYCLE" -gt "$MAX_CYCLES" ]; then

@@ -1,0 +1,11 @@
+{"module":"auth-rbac","fix_rate":100,"fixed":5,"total":5,"model":"sonnet","mode":"surgeon","cycle":1}
+{"module":"collaboration","fix_rate":100,"fixed":5,"total":5,"model":"sonnet","mode":"surgeon","cycle":1}
+{"module":"core-workflows","fix_rate":100,"fixed":5,"total":5,"model":"sonnet","mode":"surgeon","cycle":1}
+{"module":"database-api","fix_rate":100,"fixed":5,"total":5,"model":"sonnet","mode":"surgeon","cycle":1}
+{"module":"document-management","fix_rate":100,"fixed":5,"total":5,"model":"sonnet","mode":"surgeon","cycle":1}
+{"module":"field-operations","fix_rate":100,"fixed":5,"total":5,"model":"sonnet","mode":"surgeon","cycle":1}
+{"module":"financial-engine","fix_rate":100,"fixed":5,"total":5,"model":"sonnet","mode":"surgeon","cycle":1}
+{"module":"infrastructure","fix_rate":100,"fixed":10,"total":10,"model":"sonnet","mode":"surgeon","cycle":1}
+{"module":"project-intelligence","fix_rate":100,"fixed":5,"total":5,"model":"sonnet","mode":"surgeon","cycle":1}
+{"module":"scheduling","fix_rate":100,"fixed":5,"total":5,"model":"sonnet","mode":"surgeon","cycle":1}
+{"module":"ui-design-system","fix_rate":100,"fixed":5,"total":5,"model":"sonnet","mode":"surgeon","cycle":1}

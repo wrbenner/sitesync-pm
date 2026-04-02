@@ -1,0 +1,70 @@
+{
+  "module": "document-management",
+  "scores": {
+    "visual_polish": 30,
+    "domain_depth": 25,
+    "data_richness": 20,
+    "interaction_quality": 18,
+    "ai_integration": 5,
+    "mobile_first": 15,
+    "performance": 30,
+    "typescript_quality": 35,
+    "error_handling": 20,
+    "realtime": 10,
+    "accessibility": 10,
+    "security": 25,
+    "differentiation": 8,
+    "enterprise_readiness": 15
+  },
+  "overall_score": 19,
+  "issues": [
+    {
+      "id": "document-management-C2-001",
+      "severity": "critical",
+      "dimension": "interaction_quality",
+      "title": "Drawing viewer page is non-functional — no PDF rendering or markup capability",
+      "file": "src/pages/Drawings.tsx",
+      "description": "The Drawings page lacks an actual PDF viewer component. Users cannot view, pan, zoom, or mark up drawings inline. This is the #1 superintendent requirement per PAGE_ACCEPTANCE_CRITERIA criterion 9.1. Without it the page is a static file list with no construction utility.",
+      "prompt": "In the file src/pages/Drawings.tsx, make these specific changes: BEFORE: The page renders a table/grid of drawing metadata but has no inline PDF viewer — clicking a drawing row does not open any viewer, there is no pan/zoom, and no markup toolbar. AFTER: Add a drawing detail panel (slide-in from right, 70% width on desktop, full-screen on mobile) that opens when a drawing row is clicked. Inside the panel: (1) Use `react-pdf` (import { Document, Page } from 'react-pdf') to render the drawing PDF from its file_url. (2) Add zoom controls: zoom-in button, zoom-out button, and fit-to-width button using local state `scale` starting at 1.0. (3) Add page navigation if multi-page (prev/next buttons with page count display). (4) Add a close button (X) in the top-right that closes the panel. (5) Show drawing metadata above the viewer: sheet number, discipline badge with color from getDisciplineColor, revision number, and date issued. (6) Add an empty state inside the panel if file_url is null: 'No file uploaded for this drawing.' (7) Add a loading skeleton (pulsing rectangle matching viewer dimensions) while PDF loads using Document's onLoadSuccess callback. (8) Wrap the viewer area in a div with `overflow: auto` and `touch-action: pinch-zoom` for mobile pinch-to-zoom support. (9) Add aria-label='Drawing viewer' to the panel container and aria-label='Close drawing viewer' to the close button. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "document-management-C2-002",
+      "severity": "critical",
+      "dimension": "error_handling",
+      "title": "No loading, error, or empty states on Drawings list page",
+      "file": "src/pages/Drawings.tsx",
+      "description": "The Drawings page does not show skeleton loaders while fetching, does not display an error message if the API call fails, and shows a blank area when no drawings exist. PAGE_ACCEPTANCE_CRITERIA 9.10 requires a contextual empty state with upload CTA.",
+      "prompt": "In the file src/pages/Drawings.tsx, make these specific changes: BEFORE: The page either renders drawing data or renders nothing — there is no loading skeleton, no error banner with retry, and no designed empty state when drawings array is empty. AFTER: (1) Add a loading state: when the data hook returns isLoading=true, render 6 skeleton cards (use a div with className matching the drawing card dimensions, background '#E5E7EB', borderRadius 12, and a CSS pulse animation). (2) Add an error state: when the hook returns an error, render an inline alert with the message 'Unable to load drawings. Please try again.' and a 'Retry' button that calls refetch(). Do NOT show a full-page error. (3) Add an empty state: when data loads successfully but drawings.length === 0, render a centered container with a FileText icon (from lucide-react, size 48, color '#9CA3AF'), heading 'No drawings uploaded yet', paragraph 'Upload your plans to enable digital markup, RFI linking, and AI coordination analysis.', and a primary button 'Upload Drawings' (orange background #F47820, white text, border-radius 8px) that triggers the upload flow or file picker. (4) Add aria-live='polite' to the container that switches between loading/error/empty/data states so screen readers announce changes. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "document-management-C2-003",
+      "severity": "critical",
+      "dimension": "domain_depth",
+      "title": "No revision history or version comparison for drawings",
+      "file": "src/api/endpoints/documents.ts",
+      "description": "The getDrawings function fetches revisions but the frontend has no UI to display revision history or compare versions. PAGE_ACCEPTANCE_CRITERIA 9.2 requires revision management with previous revisions accessible and 9.12 requires side-by-side comparison.",
+      "prompt": "In the file src/api/endpoints/documents.ts, make these specific changes: BEFORE: The getDrawings function fetches drawing_revisions and attaches them to MappedDrawing objects, but the currentRevision field may be null even when revisions exist (if all have superseded_at set), and there is no dedicated getDrawingRevisions function for fetching a single drawing's full revision timeline with user details. AFTER: (1) Fix the currentRevision logic: if no revision lacks superseded_at, fall back to the revision with the highest revision_number (revisions[0] since sorted desc) so currentRevision is never null when revisions exist. (2) Add a new exported async function `getDrawingRevisions(projectId: string, drawingId: string): Promise<DrawingRevision[]>` that calls assertProjectAccess, then queries drawing_revisions filtered by drawing_id, ordered by revision_number descending, and returns the array. This gives the frontend a dedicated endpoint for the revision history panel. (3) Ensure the DrawingRevision type includes all fields needed for display: id, drawing_id, revision_number, issued_date, issued_by, change_description, file_url, superseded_at. If any field is missing from the select clause, add it. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "document-management-C2-004",
+      "severity": "major",
+      "dimension": "accessibility",
+      "title": "Drawing list table lacks ARIA attributes and keyboard navigation",
+      "file": "src/pages/Drawings.tsx",
+      "description": "The drawings table/grid has no role attributes, no aria-labels on interactive elements, no keyboard navigation for row selection, and no screen reader announcements for discipline color coding. Fails WCAG 2.1 AA and PAGE_ACCEPTANCE_CRITERIA global accessibility requirements.",
+      "prompt": "In the file src/pages/Drawings.tsx, make these specific changes: BEFORE: The drawing list renders as a table or grid without role='table', without aria-label on the container, without aria-sort on sortable column headers, without tabIndex on rows, and without sr-only text describing discipline colors. AFTER: (1) Add role='table' and aria-label='Project drawings' to the main table/grid container. (2) Add role='columnheader' and aria-sort (if sortable) to each header cell. (3) Add role='row' and tabIndex={0} to each drawing row so it is keyboard-focusable. (4) Add an onKeyDown handler on each row: Enter or Space opens the drawing detail panel (same as click). (5) For discipline badges/pills, add a visually hidden span (className 'sr-only', position absolute, width 1px, height 1px, overflow hidden) containing the discipline name text so screen readers read 'Architectural' not just see a colored dot. (6) Add aria-label='Filter by discipline' to the discipline filter toggle buttons. (7) Add a focus ring style: outline '2px solid #F47820' with outline-offset 2px on :focus-visible for all interactive elements. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "document-management-C2-005",
+      "severity": "major",
+      "dimension": "mobile_first",
+      "title": "Drawing list and file list not responsive below 768px",
+      "file": "src/pages/Drawings.tsx",
+      "description": "On mobile (375px width), the drawings table overflows horizontally with no card-based fallback layout. Touch targets for filter pills and row actions are under 44px. PAGE_ACCEPTANCE_CRITERIA global responsive requirement and 9.12 mobile criterion violated.",
+      "prompt": "In the file src/pages/Drawings.tsx, make these specific changes: BEFORE: The drawing list renders as a fixed-width table at all breakpoints. On screens under 768px, content overflows horizontally, discipline filter pills are small (under 44px touch target), and there is no card-based layout. AFTER: (1) Add a responsive breakpoint: when window width < 768px (use a useMediaQuery hook or Tailwind responsive classes), replace the table layout with a vertical card list. Each card shows: sheet number (bold, 16px), title (14px), discipline badge (colored pill, min-height 32px, min-width 44px for touch), revision number, and date. Cards should have 16px padding, 12px border-radius, 1px solid #E5E7EB border, and 12px gap between cards. (2) Ensure all filter pills have min-height and min-width of 44px for touch targets. (3) Set page padding to 16px on mobile (currently likely 32px). (4) Make the discipline filter row horizontally scrollable on mobile with overflow-x auto and -webkit-overflow-scrolling touch, hiding the scrollbar with scrollbar-width none. (5) If a drawing detail panel exists, make it full-screen on mobile (width 100%, height 100vh, position fixed, top 0, left 0, z-index 50) instead of a side panel. After changes, run: npm run build to verify no TypeScript errors."
+    }
+  ],
+  "invented_features": [],
+  "competitive_intel": "Procore's document management includes inline PDF viewing with markup tools, revision tracking with automatic distribution, and spec section linking. PlanGrid (Autodesk) offers the gold standard for field drawing markup with offline caching, Apple Pencil support, and version comparison overlays. Fieldwire pins tasks directly onto drawing sheets with two-tap workflow. SiteSync's current drawing page is a static file list with no viewing, markup, or revision comparison — it is functionally behind all three competitors and would not survive a demo with any GC who has used PlanGrid.",
+  "summary": "The Document Management module scores 19/100, making it the weakest module in the application. The fundamental problem is that it has no drawing viewer — the page is a metadata table with no ability to actually view, zoom, or annotate PDFs. This is the single most critical gap for field adoption since superintendents need to mark up drawings on iPads daily. Beyond the missing viewer, there are no loading/error/empty states, no revision comparison UI despite the backend fetching revision data, no accessibility attributes, and the layout breaks completely on mobile. The five surgical fixes target: (1) adding a functional PDF viewer panel with react-pdf, (2) adding all three missing UI states, (3) fixing the revision data layer so the frontend can display version history, (4) adding ARIA attributes and keyboard navigation, and (5) making the layout responsive with card-based mobile fallback. These fixes bring the page from non-functional to baseline usable without adding new features."
+}

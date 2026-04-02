@@ -1,0 +1,70 @@
+{
+  "module": "financial-engine",
+  "scores": {
+    "visual_polish": 62,
+    "domain_depth": 72,
+    "data_richness": 58,
+    "interaction_quality": 55,
+    "ai_integration": 35,
+    "mobile_first": 40,
+    "performance": 60,
+    "typescript_quality": 65,
+    "error_handling": 58,
+    "realtime": 30,
+    "accessibility": 32,
+    "security": 55,
+    "differentiation": 50,
+    "enterprise_readiness": 48
+  },
+  "overall_score": 51,
+  "issues": [
+    {
+      "id": "financial-engine-C1-001",
+      "severity": "critical",
+      "dimension": "accessibility",
+      "title": "SCurve SVG missing ARIA roles and keyboard interaction for data points",
+      "file": "src/components/budget/SCurve.tsx",
+      "description": "The SCurve chart has role='img' and a title/desc, but individual data points rendered on hover lack aria-label attributes. The tooltip div that appears on hover has no aria-live region, so screen readers never announce the hovered value. Additionally, there is no keyboard mechanism to navigate between data points — the chart is completely inaccessible to non-mouse users.",
+      "prompt": "In the file src/components/budget/SCurve.tsx, make these specific changes: 1) On the outer container div that wraps the SVG, add `tabIndex={0}` and `onKeyDown` handler that increments/decrements `hovered` index with ArrowLeft/ArrowRight keys. 2) On the tooltip div that appears when `hovered !== null`, add `role=\"status\"` and `aria-live=\"polite\"` so screen readers announce the currently focused data point value. 3) On each invisible hover-target `<rect>` element inside the SVG (the ones that trigger `setHovered`), add `aria-label={`Month ${months[i]}: Planned $${plannedData[i]}M, Actual $${actualData[i] ?? 'N/A'}M`}`. BEFORE: Chart is mouse-only with no screen reader announcements for data points. AFTER: Users can arrow-key through data points and screen readers announce each value via aria-live region. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "financial-engine-C1-002",
+      "severity": "critical",
+      "dimension": "error_handling",
+      "title": "Pay application list page has no loading skeleton or empty state per acceptance criteria",
+      "file": "src/api/endpoints/payApplications.ts",
+      "description": "The `getPayApplications` function returns an empty array when no pay apps exist but the consuming page component lacks a dedicated empty state with the required message: 'No payment applications yet. Create your first pay app to start billing against the schedule of values.' and prerequisite check for SOV existence. The acceptance criteria (Section 10, criterion 12) explicitly requires this. Additionally, no skeleton loader is shown during fetch.",
+      "prompt": "In the file src/api/endpoints/payApplications.ts, make these specific changes: 1) Add a new exported function `getPayApplicationsWithMeta(projectId: string): Promise<{ payApps: PayApplication[]; hasScheduleOfValues: boolean }>` that calls `getPayApplications` AND also queries `budget_items` table to check if any SOV line items exist (SELECT count from budget_items WHERE project_id = projectId AND deleted_at IS NULL). Return `{ payApps: result, hasScheduleOfValues: count > 0 }`. 2) In the existing `getPayApplications` function, add a JSDoc comment documenting the three return states: empty array (show empty state), populated array (show list), thrown Error (show error toast). BEFORE: Only returns PayApplication[] with no metadata about whether SOV exists for prerequisite check. AFTER: Returns both pay apps and hasScheduleOfValues boolean so the UI can conditionally show 'You need a schedule of values before creating a pay app' per acceptance criteria. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "financial-engine-C1-003",
+      "severity": "critical",
+      "dimension": "domain_depth",
+      "title": "computeCurrentPaymentDue uses floating point math for money calculations",
+      "file": "src/api/endpoints/payApplications.ts",
+      "description": "The `computeCurrentPaymentDue` function performs all calculations using floating-point numbers (JavaScript Number type). Acceptance criteria Section 10, criterion 1 states: 'All financial calculations MUST be server-verified — never trust client-side math alone' and the API spec says 'All monetary values are stored in cents (integers) to avoid floating point precision issues.' The current implementation uses raw dollar amounts with multiplication/division, which will produce rounding errors on real pay applications (e.g., $1,234,567.89 * 0.10 retainage).",
+      "prompt": "In the file src/api/endpoints/payApplications.ts, in the `computeCurrentPaymentDue` function, make these specific changes: 1) Add a comment at the top of the function: `// All monetary inputs are in dollars. Internal calculations use Math.round to avoid floating-point drift on penny amounts.` 2) Wrap every multiplication result with `Math.round(value * 100) / 100` to ensure penny-level precision. Specifically: change `const previousWork = scheduledValue * (prevPctComplete / 100)` to `const previousWork = Math.round(scheduledValue * prevPctComplete) / 100`, change `const workThisPeriod = scheduledValue * (currentPctComplete / 100) - previousWork` to `const currentWork = Math.round(scheduledValue * currentPctComplete) / 100; const workThisPeriod = Math.round((currentWork - previousWork) * 100) / 100`, change `const retainageOnWork = (previousWork + workThisPeriod) * retainageRate` to `const retainageOnWork = Math.round((previousWork + workThisPeriod) * retainageRate * 100) / 100`, change `const retainageOnStored = storedMaterials * storedMaterialRetainageRate` to `const retainageOnStored = Math.round(storedMaterials * storedMaterialRetainageRate * 100) / 100`, and compute `currentPaymentDue` as `Math.round((totalCompletedAndStored - retainageOnWork - retainageOnStored - previousCertificates) * 100) / 100`. BEFORE: Floating-point multiplication produces values like $123,456.7800000001 causing penny rounding errors on AIA G702 forms. AFTER: All intermediate monetary values are rounded to the nearest cent, matching AIA billing precision requirements. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "financial-engine-C1-004",
+      "severity": "major",
+      "dimension": "mobile_first",
+      "title": "Treemap component has no responsive breakpoint — grid overflows on mobile",
+      "file": "src/components/budget/Treemap.tsx",
+      "description": "The Treemap component uses `gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))'` for the drill-down view, but the parent treemap layout uses percentage-based flex widths that don't collapse on screens under 768px. On a 375px iPhone SE screen, the treemap cells become unreadable (< 60px wide) and touch targets are too small (well under the 44x44px minimum per Apple HIG). The design standards require all components to be usable at 375px width.",
+      "prompt": "In the file src/components/budget/Treemap.tsx, make these specific changes: 1) In the main treemap rendering (the non-drilldown view), wrap the division cells in a container with a CSS media query approach using a `style` object: when the container is rendered, check `window.innerWidth` (or better, use a state variable set via a resize listener) and if width < 768, switch from the horizontal treemap layout to a vertical stacked bar layout where each division is a full-width horizontal bar with the division name, budget amount, and a proportional-width colored fill. 2) Since inline styles can't use media queries, add a `const [isMobile, setIsMobile] = useState(window.innerWidth < 768)` state with a `useEffect` that listens to `resize` events (debounced). 3) In the mobile layout, ensure each division bar is at least 48px tall (touch target compliance) and shows the division name and `fmt(budget)` value. 4) On the drill-down children grid, change `minmax(140px, 1fr)` to `minmax(100%, 1fr)` when `isMobile` is true, making each child card full-width and stacked vertically. BEFORE: Treemap cells are tiny and untappable on mobile screens under 768px. AFTER: Mobile devices see a stacked horizontal bar layout with 48px-tall touch targets showing division name and budget. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "financial-engine-C1-005",
+      "severity": "major",
+      "dimension": "interaction_quality",
+      "title": "Lien waiver status transitions have no optimistic update or toast feedback",
+      "file": "src/api/endpoints/lienWaivers.ts",
+      "description": "The `updateLienWaiverStatus` function performs a synchronous Supabase update with no optimistic UI update pattern and no toast notification on success or failure. The founder priorities state: 'Optimistic updates: instant UI feedback on mutations, rollback on error' and 'Toast notifications for all user actions (created, updated, deleted, error).' When a user marks a lien waiver as received, nothing happens visually until the network round-trip completes, which feels broken. On failure, the error is thrown but not caught at the UI layer with a user-friendly message.",
+      "prompt": "In the file src/api/endpoints/lienWaivers.ts, make these specific changes: 1) In the `updateLienWaiverStatus` function, add a return type annotation that includes both the updated row and a rollback function: `Promise<{ data: LienWaiverRow; rollback: () => void }>`. 2) Before the Supabase `.update()` call, fetch the current row state with a `.select().eq('id', id).single()` query and store it as `previousState`. 3) After successful update, return `{ data: mapDbRow(updatedRow), rollback: async () => { await supabase.from('lien_waivers').update({ status: mapStatusToDb(previousState.status) }).eq('id', id) } }`. 4) In the error path, re-throw with a user-friendly message: `throw new Error('Unable to update lien waiver status. Please try again.')` instead of the raw Supabase error. 5) Add a JSDoc comment: `/** Updates lien waiver status with rollback support for optimistic UI updates. The calling component should update local state immediately, then call this function, and invoke rollback() + show error toast on failure. */`. BEFORE: No rollback data returned, no user-friendly error messages, calling code cannot implement optimistic updates. AFTER: Returns rollback function and user-friendly errors, enabling the UI layer to show instant feedback and gracefully handle failures. After changes, run: npm run build to verify no TypeScript errors."
+    }
+  ],
+  "invented_features": [],
+  "competitive_intel": "Procore's financial module lacks AIA G702/G703 generation and earned value analysis — SiteSync's computeEarnedValue and computeCurrentPaymentDue functions are genuine differentiators. However, Procore has polished mobile pay app workflows and real-time cost sync with Sage/Viewpoint that SiteSync lacks entirely. The SCurve and Waterfall charts exceed Procore's visualization quality but are desktop-only. Fieldwire has zero financial capability. The lien waiver tracking workflow is a unique feature no competitor offers natively, but it currently lacks the optimistic update patterns and notification triggers needed for field adoption.",
+  "summary": "The Financial Engine module scores 51 overall — strong domain depth in AIA billing formulas and earned value calculations, but critically weak in accessibility (SCurve chart is mouse-only), mobile responsiveness (Treemap unusable on phones), and interaction quality (no optimistic updates or toast feedback on mutations). The pay application calculation uses floating-point math for money which will produce penny rounding errors on real G702 forms — this is a P0 fix for CFO trust. The lien waiver workflow exists but lacks the optimistic update and rollback pattern specified in founder priorities. Real-time subscriptions are absent from all financial pages. The five surgical fixes target: (1) SCurve accessibility via keyboard navigation and aria-live, (2) pay app metadata for empty state and SOV prerequisite check, (3) penny-precise math in computeCurrentPaymentDue, (4) Treemap mobile responsiveness with stacked bar fallback, and (5) lien waiver optimistic update support with rollback functions."
+}

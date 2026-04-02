@@ -1,0 +1,70 @@
+{
+  "module": "ui-design-system",
+  "scores": {
+    "visual_polish": 68,
+    "domain_depth": 55,
+    "data_richness": 40,
+    "interaction_quality": 62,
+    "ai_integration": 10,
+    "mobile_first": 45,
+    "performance": 60,
+    "typescript_quality": 65,
+    "error_handling": 58,
+    "realtime": 30,
+    "accessibility": 35,
+    "security": 50,
+    "differentiation": 40,
+    "enterprise_readiness": 48
+  },
+  "overall_score": 47,
+  "issues": [
+    {
+      "id": "ui-design-system-C1-001",
+      "severity": "critical",
+      "dimension": "accessibility",
+      "title": "Toast dismiss buttons and context menu items lack ARIA attributes and keyboard support",
+      "file": "src/components/ContextMenu.tsx",
+      "description": "Toast dismiss buttons have no aria-label. Toast container lacks role='status' and aria-live='polite'. Context menu items lack role='menuitem'. Screen readers cannot interpret toasts or menus.",
+      "prompt": "In the file src/components/ContextMenu.tsx, make these specific changes: In the ToastEntry component, add role='status' and aria-live='polite' to the toast wrapper div. Add aria-label='Dismiss notification' to the dismiss/close button element. In any context menu list rendering, add role='menu' to the container and role='menuitem' to each item. BEFORE: Toast wrapper is a plain div with no ARIA roles; dismiss button has no aria-label; menu items have no role attributes. AFTER: Toast wrapper has role='status' aria-live='polite'; dismiss button has aria-label='Dismiss notification'; menu container has role='menu' and each item has role='menuitem'. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "ui-design-system-C1-002",
+      "severity": "critical",
+      "dimension": "mobile_first",
+      "title": "Breadcrumb crumb buttons have hardcoded maxWidth truncation with no touch-friendly overflow on mobile",
+      "file": "src/components/Breadcrumbs.tsx",
+      "description": "crumbButtonStyle has maxWidth: 160px, overflow: hidden, textOverflow: ellipsis which silently truncates long folder names. On mobile (375px) the breadcrumb row can overflow horizontally. The minHeight/minWidth of 44px is set but the row itself has no horizontal scroll or collapse behavior.",
+      "prompt": "In the file src/components/Breadcrumbs.tsx, make these specific changes: In the FolderBreadcrumbs component, wrap the breadcrumb trail in a container div with style overflow-x: auto, display: flex, alignItems: center, and -webkit-overflow-scrolling: touch. On mobile (when isMobile is true and stack.length > 2 and expanded is false), show only the root crumb, an ellipsis button '...' that calls setExpanded(true), and the last crumb. Add aria-label='Breadcrumb navigation' and role='navigation' to the outer nav/div wrapper. BEFORE: Breadcrumb row renders all items inline with no horizontal scroll or mobile collapse, causing overflow on small screens. AFTER: On mobile with deep paths, breadcrumbs collapse to root > ... > current with expand capability; the container scrolls horizontally if needed; wrapper has role='navigation' and aria-label. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "ui-design-system-C1-003",
+      "severity": "major",
+      "dimension": "error_handling",
+      "title": "Toast error severity has null auto-dismiss duration causing error toasts to persist forever with no visible dismiss affordance",
+      "file": "src/components/ContextMenu.tsx",
+      "description": "TOAST_DURATION for error is null meaning error toasts never auto-dismiss. If the dismiss button is not visually prominent or the user does not know to click it, error toasts stack permanently and obscure the UI. There is no maximum toast count limit either.",
+      "prompt": "In the file src/components/ContextMenu.tsx, make these specific changes: In the ToastProvider or toast container component, add a maximum visible toast count of 5. When a new toast arrives and 5 are already showing, remove the oldest one. For error severity toasts, keep the null auto-dismiss but ensure the dismiss/close button is visually prominent: give it a minimum size of 32x32px, use an X icon or the text 'Dismiss', and set cursor: pointer with a hover background highlight. Add a fallback auto-dismiss of 15000ms for error toasts so they do not persist indefinitely if the user ignores them. BEFORE: Error toasts never auto-dismiss and can stack infinitely; dismiss button may be too small or invisible. AFTER: Error toasts auto-dismiss after 15 seconds as fallback; max 5 toasts visible at once; dismiss button is clearly visible at 32x32px minimum with hover state. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "ui-design-system-C1-004",
+      "severity": "major",
+      "dimension": "visual_polish",
+      "title": "Theme tokens not enforced in inline styles — hardcoded color and spacing values throughout components",
+      "file": "src/components/ContextMenu.tsx",
+      "description": "TOAST_SEVERITY_STYLES references theme colors correctly but the component uses inline React.CSSProperties objects with direct string references to theme tokens mixed with potential hardcoded values. The design standards require no hardcoded colors or spacing — all must flow through theme tokens. Several style objects use string concatenation for spacing values which could drift from the 8px grid.",
+      "prompt": "In the file src/components/ContextMenu.tsx, make these specific changes: Audit all inline style objects in the file. Replace any hardcoded pixel values for padding, margin, gap, or border-radius with the corresponding spacing or borderRadius token from '../styles/theme'. Replace any hardcoded color hex values (like '#fff', '#000', or any hex not from the theme) with the appropriate colors token. Specifically check the ToastEntry component's container style, the dismiss button style, and any menu item styles. BEFORE: Some inline styles may use hardcoded pixel values or hex colors instead of theme tokens. AFTER: All inline styles reference only spacing, colors, borderRadius, typography, and other tokens from the theme file. No raw hex colors or pixel values appear except through theme token references. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "ui-design-system-C1-005",
+      "severity": "major",
+      "dimension": "interaction_quality",
+      "title": "Breadcrumbs FolderBreadcrumbs component incomplete — function body cut off before return statement",
+      "file": "src/components/Breadcrumbs.tsx",
+      "description": "The FolderBreadcrumbs component code provided ends abruptly after the early return for empty stack. The actual rendering logic including the mobile collapse, expanded state toggle, separator chevrons, and click handlers appears to be missing or incomplete, meaning the component may render nothing or crash.",
+      "prompt": "In the file src/components/Breadcrumbs.tsx, in the FolderBreadcrumbs component function, make these specific changes: Ensure the component has a complete return statement that renders: (1) a nav element with role='navigation' and aria-label='Folder navigation', (2) an ordered list (ol) with display:flex, alignItems:center, gap from spacing tokens, (3) a root/home crumb button that calls onNavigate(-1) showing a FolderOpen icon, (4) for each item in the stack array, render a ChevronRight separator and a button with the folder name that calls onNavigate(index), (5) the last item in the stack should be rendered as a span (not clickable) with aria-current='page' and bolder text color. Apply the crumbButtonStyle to each button. On mobile when stack.length > 2 and not expanded, collapse middle items to an ellipsis button. BEFORE: Component body is incomplete/truncated after the empty stack guard clause. AFTER: Component renders a fully functional breadcrumb trail with separators, click navigation, mobile collapse, and proper ARIA attributes. After changes, run: npm run build to verify no TypeScript errors."
+    }
+  ],
+  "invented_features": [],
+  "competitive_intel": "Procore's UI uses a consistent design system with Procore Design Language tokens, ARIA-compliant components, and responsive layouts tested across field devices. Fieldwire excels at mobile-first touch interactions with 44px+ targets and offline-capable UI components. SiteSync's design system has the right token architecture but incomplete component implementations, missing ARIA roles, and untested mobile overflow behaviors that would fail basic field usability testing.",
+  "summary": "The UI Design System module has a solid foundation with theme tokens for colors, spacing, typography, and transitions, but suffers from incomplete component implementations (Breadcrumbs body is truncated), missing ARIA attributes across toast notifications and context menus, mobile overflow issues in breadcrumb navigation, and error toast stacking that can permanently obscure the UI. The toast system correctly uses theme tokens for severity colors but lacks max-count limits and fallback auto-dismiss for errors. Per the Global Acceptance Standards in PAGE_ACCEPTANCE_CRITERIA.md, all pages must pass axe-core with zero critical violations (currently would fail due to missing roles and aria-labels), touch targets must be 44x44px minimum (partially met), and every component must work at 375px width (breadcrumbs overflow). The five surgical fixes target: ARIA compliance on toasts and menus, mobile breadcrumb collapse and scroll, error toast dismiss UX and stacking limits, theme token enforcement to eliminate hardcoded values, and completing the truncated FolderBreadcrumbs render logic."
+}

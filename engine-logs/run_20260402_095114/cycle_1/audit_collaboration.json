@@ -1,0 +1,70 @@
+{
+  "module": "collaboration",
+  "scores": {
+    "visual_polish": 58,
+    "domain_depth": 45,
+    "data_richness": 40,
+    "interaction_quality": 52,
+    "ai_integration": 10,
+    "mobile_first": 35,
+    "performance": 50,
+    "typescript_quality": 55,
+    "error_handling": 48,
+    "realtime": 62,
+    "accessibility": 30,
+    "security": 55,
+    "differentiation": 45,
+    "enterprise_readiness": 42
+  },
+  "overall_score": 45,
+  "issues": [
+    {
+      "id": "collaboration-C1-001",
+      "severity": "critical",
+      "dimension": "accessibility",
+      "title": "PresenceBar avatars and dots lack ARIA roles, labels, and keyboard focus",
+      "file": "src/components/collaboration/PresenceBar.tsx",
+      "description": "Presence avatar circles are plain divs with no role, aria-label, or tabIndex. Screen readers cannot announce who is viewing. Tooltip triggers are not keyboard-focusable. The overflow '+N' count has no accessible description. Violates WCAG 2.1 AA and PAGE_ACCEPTANCE_CRITERIA Global Standards for accessibility.",
+      "prompt": "In the file src/components/collaboration/PresenceBar.tsx, make these specific changes: In every avatar div rendered inside the presence bar list, add role=\"img\" and aria-label={`${user.displayName} is ${statusLabel}`} where statusLabel is derived from getPresenceStatus(). Add tabIndex={0} to each avatar div so keyboard users can tab to it and trigger the Radix Tooltip. On the overflow '+N' span, add role=\"status\" and aria-label={`${overflow} more users viewing`}. On the outer container wrapping all avatars, add role=\"group\" and aria-label=\"Users currently viewing this page\". BEFORE: Avatar divs are plain unsemantic divs with no keyboard access or screen reader announcements. AFTER: Each avatar is role=\"img\" with descriptive aria-label, is keyboard-focusable, and the group is announced as a named region. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "collaboration-C1-002",
+      "severity": "critical",
+      "dimension": "error_handling",
+      "title": "EditConflictGuard useOptimisticLock silently fails when table query errors",
+      "file": "src/components/collaboration/EditConflictGuard.tsx",
+      "description": "In useOptimisticLock, when the supabase query to check updated_at fails (error truthy), the function shows a toast but returns false, letting the user proceed to save and potentially overwrite another user's changes. The checkFailed state is set but nothing blocks the save. This can cause silent data loss on concurrent edits. Per PAGE_ACCEPTANCE_CRITERIA: 'Optimistic update rollbacks: toast with changes couldn't be saved' and edit lock conflicts must be surfaced, never silently overwritten.",
+      "prompt": "In the file src/components/collaboration/EditConflictGuard.tsx, in the useOptimisticLock hook's checkConflict callback, make these specific changes: BEFORE: When `error || !data` is true, the function calls addToast with type 'warning', sets checkFailed to true, and returns false — meaning callers treat it as 'no conflict detected' and proceed with the save. AFTER: When `error || !data` is true, still call addToast but change the return value to true (conflict assumed) so the caller blocks the save. This follows the safety principle from PAGE_ACCEPTANCE_CRITERIA: 'When in doubt, the answer is lock it down and show a clear error.' Also update the toast message to: 'Could not verify if someone else edited this item. Save blocked until verification succeeds. Please retry.' and change the toast type from 'warning' to 'error'. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "collaboration-C1-003",
+      "severity": "major",
+      "dimension": "mobile_first",
+      "title": "EntityPresence dots use hardcoded pixel sizes with no responsive scaling or touch targets",
+      "file": "src/components/collaboration/EntityPresence.tsx",
+      "description": "PresenceDots render 20px avatar circles which are well below the 44x44px minimum touch target from Apple HIG and PAGE_ACCEPTANCE_CRITERIA Global Standards. On mobile, these are impossible to tap to see who is viewing. The negative margin overlap makes them even harder to interact with. The EditingWarning banner also lacks responsive width handling.",
+      "prompt": "In the file src/components/collaboration/EntityPresence.tsx, in the PresenceDots component, make these specific changes: BEFORE: Each avatar div has width: 20, height: 20, and the negative marginLeft is -6px, making touch targets roughly 14-20px. AFTER: Wrap each avatar div in a button element (or make the div a button role) with minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: 'none', cursor: 'pointer', padding: 0. Keep the inner colored circle at 24px (slightly larger for visibility) but ensure the tappable area is 44x44px. Remove the negative marginLeft on the outer button; instead use gap: spacing['1'] on the parent flex container for consistent spacing. Add aria-label={`${user.name} is viewing`} to each button. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "collaboration-C1-004",
+      "severity": "major",
+      "dimension": "domain_depth",
+      "title": "Directory page missing company grouping, insurance status, search, and linked data per acceptance criteria",
+      "file": "src/api/endpoints/people.ts",
+      "description": "PAGE_ACCEPTANCE_CRITERIA Section 12 (Directory) requires: company-grouped view, insurance certificate status tracking, fuzzy search across all fields, linked RFIs/tasks/submittals per contact, and vCard export. The getDirectory endpoint only does a flat select with name ordering and no search, no company grouping, no insurance join, and no linked entity counts. The contactName transform is redundant (same as name). This makes the directory a basic phone list instead of the rich project directory GCs need.",
+      "prompt": "In the file src/api/endpoints/people.ts, in the getDirectory function, make these specific changes: BEFORE: The query is `scoped.from('directory_contacts').select('*', { count: 'exact' }).order('name').range(from, to)` with a trivial transform that just copies name to contactName. AFTER: 1) Add a `search` parameter to the function signature: `getDirectory(projectId: string, pagination?: PaginationParams, search?: string)`. 2) If search is provided and non-empty, add `.or(`name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%,company.ilike.%${search}%,trade.ilike.%${search}%`)` to the query chain before `.order('name')`. 3) Change the `.order('name')` to `.order('company', { ascending: true, nullsFirst: false }).order('name', { ascending: true })` so results are grouped by company then sorted by name. 4) In the transform function, add `companyGroup: d.company || 'Unaffiliated'` to the returned object so the frontend can render grouped sections. BEFORE behavior: flat list, no search, no grouping. AFTER behavior: searchable across 5 fields, ordered by company then name, with companyGroup field for frontend grouping. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "collaboration-C1-005",
+      "severity": "major",
+      "dimension": "realtime",
+      "title": "PresenceBar does not announce presence changes to screen readers via aria-live",
+      "file": "src/components/collaboration/PresenceBar.tsx",
+      "description": "PAGE_ACCEPTANCE_CRITERIA Global Standards require 'all status changes announced via aria-live regions.' When users join or leave, the presence bar visually updates but no aria-live region announces the change. Blind users have no awareness of who else is on the page. The component references a global LiveRegion in App.tsx but never dispatches announcements to it when the user list changes.",
+      "prompt": "In the file src/components/collaboration/PresenceBar.tsx, make these specific changes: Add a hidden aria-live region inside the component (or use the existing useUiStore announcement mechanism). Add a useEffect that watches the presence user list. When the list changes compared to the previous render (use a useRef to track previous user IDs), compute the diff: new users who joined and users who left. For each join, announce via a visually hidden aria-live='polite' div: `${userName} started viewing this page`. For each leave: `${userName} stopped viewing this page`. BEFORE: The presence bar's outer container has no aria-live and presence changes are silent to assistive technology. AFTER: A `<div aria-live=\"polite\" aria-atomic=\"false\" className=\"sr-only\" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)' }}>` is rendered inside the component, and its textContent is updated when the user list changes to announce joins/leaves. After changes, run: npm run build to verify no TypeScript errors."
+    }
+  ],
+  "invented_features": [],
+  "competitive_intel": "Procore offers an unlimited-user directory with email reply integration and company-level insurance tracking. Fieldwire has excellent real-time presence on drawings. SiteSync's collaboration module has basic presence and edit locking but lacks the directory depth (company grouping, insurance, linked data) and accessibility polish that enterprise GCs expect. The edit conflict guard is a genuine differentiator concept but needs reliability fixes to be trustworthy in production.",
+  "summary": "The Collaboration & Directory module scores 45/100. Real-time presence infrastructure exists via Liveblocks integration and the PresenceBar/EditConflictGuard components show ambition, but critical gaps undermine usability: accessibility is severely lacking (no ARIA roles on presence avatars, no aria-live announcements for status changes, no keyboard navigation on presence dots), the edit conflict guard has a safety bug where failed conflict checks allow saves instead of blocking them, mobile touch targets are half the required 44px minimum, and the Directory endpoint is a flat list missing the company grouping, search, insurance status, and linked entity counts required by acceptance criteria. The five surgical fixes target: (1) PresenceBar ARIA and keyboard access, (2) EditConflictGuard fail-safe behavior, (3) EntityPresence mobile touch targets, (4) Directory search and company grouping, and (5) aria-live presence change announcements."
+}
