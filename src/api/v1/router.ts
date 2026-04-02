@@ -65,15 +65,18 @@ export function resolveRequiredScope(
   method: string,
   path: string,
 ): ApiKeyScope | null | undefined {
-  const route = v1Routes.find(r => r.method === method && pathMatches(r.path, path))
+  const route = v1Routes.find(r => r.method === method && pathMatches(r.path, normalize(path)))
   if (!route) return undefined
   return route.requiredScope
 }
 
+const normalize = (p: string) =>
+  decodeURIComponent(p).replace(/\/+/g, '/').replace(/\/$/, '') || '/'
+
 /** Minimal path matching: supports :param segments. Exported for unit testing. */
 export function pathMatches(pattern: string, actual: string): boolean {
-  const patternParts = pattern.split('/')
-  const actualParts = actual.split('/')
+  const patternParts = normalize(pattern).split('/')
+  const actualParts = normalize(actual).split('/')
   if (patternParts.length !== actualParts.length) return false
   return patternParts.every(
     (segment, i) => segment.startsWith(':') || segment === actualParts[i],
