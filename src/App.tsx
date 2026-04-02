@@ -215,7 +215,7 @@ function AppContent() {
   const projectId = useProjectId();
   const { user } = useAuth();
   const { conflictCount } = useOfflineStatus();
-  const { updateAvailable, applyUpdate } = useServiceWorkerUpdate();
+  const { needRefresh, offlineReady, updateServiceWorker } = useServiceWorkerUpdate();
   const [conflictModalOpen, setConflictModalOpen] = useState(false);
 
   // Auth pages render without the app shell (no sidebar, no offline banner)
@@ -232,14 +232,20 @@ function AppContent() {
 
   // Show SW update toast
   useEffect(() => {
-    if (updateAvailable) {
-      toast('New version available', {
-        action: { label: 'Update Now', onClick: () => applyUpdate() },
+    if (needRefresh) {
+      toast.info('A new version of SiteSync is available', {
         duration: Infinity,
+        action: { label: 'Update Now', onClick: () => updateServiceWorker(true) },
         id: 'sw-update',
       });
     }
-  }, [updateAvailable, applyUpdate]);
+  }, [needRefresh, updateServiceWorker]);
+
+  useEffect(() => {
+    if (offlineReady) {
+      toast.success('SiteSync is ready for offline use');
+    }
+  }, [offlineReady]);
 
   // Auto-open conflict modal when conflicts appear
   useEffect(() => {

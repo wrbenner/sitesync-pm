@@ -1,34 +1,42 @@
 import { useState, useEffect, useCallback } from 'react'
 
 interface SWUpdateState {
-  updateAvailable: boolean
-  applyUpdate: () => void
+  needRefresh: boolean
+  offlineReady: boolean
+  updateServiceWorker: (reloadPage?: boolean) => void
 }
 
 export function useServiceWorkerUpdate(): SWUpdateState {
   const [registration, setRegistration] = useState<ServiceWorkerRegistration | null>(null)
-  const [updateAvailable, setUpdateAvailable] = useState(false)
+  const [needRefresh, setNeedRefresh] = useState(false)
+  const [offlineReady, setOfflineReady] = useState(false)
 
   useEffect(() => {
-    const handler = (event: Event) => {
+    const updateHandler = (event: Event) => {
       const detail = (event as CustomEvent).detail
       setRegistration(detail.registration)
-      setUpdateAvailable(true)
+      setNeedRefresh(true)
     }
+    const offlineHandler = () => setOfflineReady(true)
 
-    window.addEventListener('sw-update-available', handler)
-    return () => window.removeEventListener('sw-update-available', handler)
+    window.addEventListener('sw-update-available', updateHandler)
+    window.addEventListener('sw-offline-ready', offlineHandler)
+    return () => {
+      window.removeEventListener('sw-update-available', updateHandler)
+      window.removeEventListener('sw-offline-ready', offlineHandler)
+    }
   }, [])
 
-  const applyUpdate = useCallback(() => {
+  const updateServiceWorker = useCallback((reloadPage = false) => {
     if (registration?.waiting) {
       registration.waiting.postMessage({ type: 'SKIP_WAITING' })
-      // Reload once the new SW takes over
       navigator.serviceWorker.addEventListener('controllerchange', () => {
         window.location.reload()
       })
+    } else if (reloadPage) {
+      window.location.reload()
     }
   }, [registration])
 
-  return { updateAvailable, applyUpdate }
+  return { needRefresh, offlineReady, updateServiceWorker }
 }
