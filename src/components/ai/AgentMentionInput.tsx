@@ -162,7 +162,7 @@ export const AgentMentionInput = memo<AgentMentionInputProps>(
               zIndex: 100,
             }}
             role="listbox"
-            aria-label="Select an agent"
+            aria-label="Select AI agent"
           >
             <div
               style={{
@@ -191,6 +191,7 @@ export const AgentMentionInput = memo<AgentMentionInputProps>(
               return (
                 <button
                   key={domain}
+                  id={`agent-option-${index}`}
                   onClick={() => insertAgent(domain)}
                   role="option"
                   aria-selected={isSelected}
@@ -287,7 +288,8 @@ export const AgentMentionInput = memo<AgentMentionInputProps>(
             aria-disabled={disabled}
             rows={1}
             maxLength={MAX_MESSAGE_LENGTH}
-            aria-label="Message to AI copilot"
+            aria-label="Message AI copilot"
+            aria-activedescendant={showAgentMenu ? `agent-option-${selectedIndex}` : undefined}
             style={{
               flex: 1,
               resize: 'none',
