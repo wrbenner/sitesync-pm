@@ -23,6 +23,7 @@ const trendIcons = {
 
 export const AIContextPanel: React.FC<AIContextPanelProps> = ({ currentPage }) => {
   const { contextPanelOpen, setContextPanelOpen } = useAIAnnotationStore();
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
   return (
     <AnimatePresence>
@@ -48,7 +49,8 @@ export const AIContextPanel: React.FC<AIContextPanelProps> = ({ currentPage }) =
             transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
             style={{
               position: 'fixed', top: 0, right: 0, bottom: 0,
-              width: '360px', maxWidth: '85vw',
+              width: isMobile ? '100%' : '360px',
+              maxWidth: isMobile ? '100vw' : '85vw',
               backgroundColor: colors.surfaceRaised,
               boxShadow: shadows.panel,
               zIndex: zIndex.modal as number,
@@ -56,6 +58,12 @@ export const AIContextPanel: React.FC<AIContextPanelProps> = ({ currentPage }) =
               overflow: 'hidden',
             }}
           >
+            {/* Drag handle for mobile bottom-sheet affordance */}
+            {isMobile && (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: `${spacing['2']} 0`, flexShrink: 0 }}>
+                <div style={{ width: 40, height: 8, borderRadius: borderRadius.full ?? '9999px', backgroundColor: colors.borderDefault }} />
+              </div>
+            )}
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'], padding: `${spacing['4']} ${spacing['5']}`, borderBottom: `1px solid ${colors.borderSubtle}`, flexShrink: 0 }}>
               <div style={{ width: 28, height: 28, borderRadius: '50%', background: `linear-gradient(135deg, ${colors.statusReview} 0%, #9B8ADB 100%)` /* decorative AI gradient */, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
