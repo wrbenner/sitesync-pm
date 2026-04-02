@@ -9,10 +9,11 @@ interface ToastItem {
   id: string;
   message: string;
   severity: ToastSeverity;
+  action?: { label: string; onClick: () => void };
 }
 
 interface ToastContextValue {
-  showToast: (message: string, severity: ToastSeverity) => void;
+  showToast: (message: string, severity: ToastSeverity, action?: { label: string; onClick: () => void }) => void;
 }
 
 const ToastContext = createContext<ToastContextValue | null>(null);
@@ -30,19 +31,52 @@ const TOAST_SEVERITY_STYLES: Record<ToastSeverity, { bg: string; border: string;
   info:    { bg: colors.statusInfoSubtle, border: colors.statusInfo, text: colors.statusInfo },
 };
 
+const TOAST_DURATION: Record<ToastSeverity, number | null> = {
+  success: 5000,
+  info: 5000,
+  warning: 8000,
+  error: null,
+};
+
 function ToastEntry({ toast, onClose }: { toast: ToastItem; onClose: (id: string) => void }) {
   const style = TOAST_SEVERITY_STYLES[toast.severity];
   const [dismissFocused, setDismissFocused] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const remainingRef = useRef<number | null>(TOAST_DURATION[toast.severity]);
+  const startedAtRef = useRef<number>(Date.now());
 
   useEffect(() => {
-    const timer = setTimeout(() => onClose(toast.id), 5000);
-    return () => clearTimeout(timer);
+    const duration = TOAST_DURATION[toast.severity];
+    if (duration === null) return;
+    remainingRef.current = duration;
+    startedAtRef.current = Date.now();
+    timerRef.current = setTimeout(() => onClose(toast.id), duration);
+    return () => {
+      if (timerRef.current !== null) clearTimeout(timerRef.current);
+    };
+  }, [toast.id, toast.severity, onClose]);
+
+  const handleMouseEnter = useCallback(() => {
+    if (remainingRef.current === null) return;
+    if (timerRef.current !== null) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    remainingRef.current = Math.max(0, remainingRef.current - (Date.now() - startedAtRef.current));
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    if (remainingRef.current === null) return;
+    startedAtRef.current = Date.now();
+    timerRef.current = setTimeout(() => onClose(toast.id), remainingRef.current);
   }, [toast.id, onClose]);
 
   return (
     <div
       role={toast.severity === 'error' ? 'alert' : 'status'}
       aria-live={toast.severity === 'error' ? 'assertive' : 'polite'}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -67,6 +101,24 @@ function ToastEntry({ toast, onClose }: { toast: ToastItem; onClose: (id: string
       >
         {toast.message}
       </span>
+      {toast.action && (
+        <button
+          onClick={() => { toast.action!.onClick(); onClose(toast.id); }}
+          style={{
+            border: 'none',
+            background: 'transparent',
+            cursor: 'pointer',
+            color: style.text,
+            fontSize: typography.fontSize.sm,
+            fontFamily: typography.fontFamily,
+            fontWeight: 600,
+            padding: `0 ${spacing['2']}`,
+            flexShrink: 0,
+          }}
+        >
+          {toast.action.label}
+        </button>
+      )}
       <button
         aria-label="Dismiss notification"
         onClick={() => onClose(toast.id)}
@@ -100,10 +152,10 @@ function ToastEntry({ toast, onClose }: { toast: ToastItem; onClose: (id: string
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
-  const showToast = useCallback((message: string, severity: ToastSeverity) => {
+  const showToast = useCallback((message: string, severity: ToastSeverity, action?: { label: string; onClick: () => void }) => {
     const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     setToasts(prev => {
-      const next = [...prev, { id, message, severity }];
+      const next = [...prev, { id, message, severity, action }];
       return next.length > 5 ? next.slice(next.length - 5) : next;
     });
   }, []);
