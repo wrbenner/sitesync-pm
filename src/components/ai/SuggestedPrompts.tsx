@@ -4,6 +4,12 @@ import { colors, spacing, typography, borderRadius, transitions } from '../../st
 interface SuggestedPromptsProps {
   prompts: string[];
   onSelect: (prompt: string) => void;
+  contextData?: {
+    overdueRfis?: number;
+    openPunchItems?: number;
+    budgetVariance?: string;
+    daysToMilestone?: number;
+  };
 }
 
 const pageContextPrompts: Record<string, string[]> = {
@@ -97,10 +103,21 @@ export function getPromptsForPage(page: string): string[] {
   return pageContextPrompts[page] || pageContextPrompts.default;
 }
 
-export const SuggestedPrompts: React.FC<SuggestedPromptsProps> = React.memo(({ prompts, onSelect }) => {
+export const SuggestedPrompts: React.FC<SuggestedPromptsProps> = React.memo(({ prompts, onSelect, contextData }) => {
+  const dynamicPrompts: string[] = [];
+  if (contextData) {
+    if (contextData.overdueRfis && contextData.overdueRfis > 0) {
+      dynamicPrompts.push(`Review ${contextData.overdueRfis} overdue RFIs and suggest follow up actions`);
+    }
+    if (contextData.openPunchItems && contextData.openPunchItems > 0) {
+      dynamicPrompts.push(`Analyze ${contextData.openPunchItems} open punch items by trade`);
+    }
+  }
+  const allPrompts = [...dynamicPrompts, ...prompts];
+
   return (
     <div style={{ display: 'flex', gap: spacing['2'], flexWrap: 'wrap' }}>
-      {prompts.map((prompt, idx) => (
+      {allPrompts.map((prompt, idx) => (
         <button
           key={idx}
           onClick={() => onSelect(prompt)}
