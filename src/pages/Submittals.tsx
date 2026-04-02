@@ -7,7 +7,7 @@ import EmptyState from '../components/ui/EmptyState';
 import { MetricCardSkeleton } from '../components/ui/Skeletons';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 import { useSubmittals } from '../hooks/queries';
-import { AlertTriangle, Calendar, Clock, ArrowRight, CheckCircle, ClipboardList, Paperclip, LayoutGrid, List, RefreshCw, Sparkles, UserCheck, Tag as TagIcon, Download } from 'lucide-react';
+import { AlertTriangle, Calendar, Clock, ArrowRight, CheckCircle, ClipboardList, FileText, Paperclip, LayoutGrid, List, RefreshCw, Sparkles, UserCheck, Tag as TagIcon, Download } from 'lucide-react';
 import { useAppNavigate, getRelatedItemsForSubmittal } from '../utils/connections';
 import { useCreateSubmittal, useUpdateSubmittal } from '../hooks/mutations';
 import { useSubmittalReviewers } from '../hooks/queries';
@@ -214,6 +214,9 @@ const Submittals: React.FC = () => {
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingDetail, setEditingDetail] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const hasActiveFilters = statusFilter !== null;
+  const clearFilters = () => setStatusFilter(null);
   const { addToast } = useToast();
   const appNavigate = useAppNavigate();
   const navigate = useNavigate();
@@ -299,18 +302,30 @@ const Submittals: React.FC = () => {
     );
   }
 
-  if (!submittals.length) {
+  if (!submittals.length && !hasActiveFilters) {
     return (
       <PageContainer
         title="Submittals"
         subtitle="No items"
         actions={<PermissionGate permission="submittals.create"><Btn onClick={() => setShowCreateModal(true)}>New Submittal</Btn></PermissionGate>}
       >
-        <EmptyState
-          icon={ClipboardList}
-          title="No submittals yet"
-          description="Track shop drawings, product data, and samples through the approval workflow."
-          action={{ label: 'Create Submittal', onClick: () => setShowCreateModal(true) }}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 32px', gap: '16px' }}>
+          <FileText size={48} color={colors.textTertiary} />
+          <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <h3 style={{ fontSize: typography.fontSize.xl, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0 }}>No submittals yet</h3>
+            <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: 0 }}>Track material approvals to keep procurement on schedule</p>
+          </div>
+          <PermissionGate permission="submittals.create">
+            <Btn onClick={() => setShowCreateModal(true)}>Create Submittal</Btn>
+          </PermissionGate>
+        </div>
+        <CreateSubmittalModal
+          open={showCreateModal}
+          onClose={() => setShowCreateModal(false)}
+          onSubmit={async (data) => {
+            await createSubmittal.mutateAsync({ projectId: projectId!, data: { ...data, project_id: projectId! } });
+            toast.success('Submittal created: ' + (data.title || 'New Submittal'));
+          }}
         />
       </PageContainer>
     );
@@ -539,29 +554,36 @@ const Submittals: React.FC = () => {
       ))}
 
       {viewMode === 'table' ? (
-        <Card padding="0">
-          <VirtualDataTable
-            data={allSubmittals}
-            columns={allSubColumns}
-            rowHeight={48}
-            containerHeight={600}
-            onRowClick={(sub) => navigate(`/projects/${projectId}/submittals/${sub.id}`)}
-            selectedRowId={null}
-            getRowId={(row) => String(row.id)}
-            loading={loading}
-            emptyMessage="No submittals match your filters"
-            onRowToggleSelectByIndex={(i) => {
-              const id = String(allSubmittals[i]?.id);
-              if (!id) return;
-              setSelectedIds((prev) => {
-                const next = new Set(prev);
-                if (next.has(id)) next.delete(id);
-                else next.add(id);
-                return next;
-              });
-            }}
-          />
-        </Card>
+        allSubmittals.length === 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '64px 32px', gap: '12px' }}>
+            <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: 0 }}>No submittals match your filters</p>
+            <Btn variant="secondary" size="sm" onClick={clearFilters}>Clear Filters</Btn>
+          </div>
+        ) : (
+          <Card padding="0">
+            <VirtualDataTable
+              data={allSubmittals}
+              columns={allSubColumns}
+              rowHeight={48}
+              containerHeight={600}
+              onRowClick={(sub) => navigate(`/projects/${projectId}/submittals/${sub.id}`)}
+              selectedRowId={null}
+              getRowId={(row) => String(row.id)}
+              loading={loading}
+              emptyMessage="No submittals match your filters"
+              onRowToggleSelectByIndex={(i) => {
+                const id = String(allSubmittals[i]?.id);
+                if (!id) return;
+                setSelectedIds((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(id)) next.delete(id);
+                  else next.add(id);
+                  return next;
+                });
+              }}
+            />
+          </Card>
+        )
       ) : (
         <KanbanBoard
           columns={kanbanColumns}
