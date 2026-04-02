@@ -39,6 +39,82 @@ function isDevBypassActive(): boolean {
   return true
 }
 
+const SkeletonLoader: React.FC = () => (
+  <div role="status" style={{
+    display: 'flex', height: '100vh', fontFamily: typography.fontFamily,
+  }}>
+    {/* Sidebar skeleton */}
+    <div style={{
+      width: 220, backgroundColor: colors.surfaceSidebar, flexShrink: 0,
+      padding: spacing['4'],
+    }} />
+    {/* Content area skeleton */}
+    <div style={{
+      flex: 1, backgroundColor: colors.surfacePage, padding: spacing['6'],
+      display: 'flex', flexDirection: 'column', gap: spacing['3'],
+    }}>
+      <div style={{
+        height: 20, borderRadius: borderRadius.sm,
+        backgroundColor: colors.surfaceInset, width: '40%',
+      }} />
+      <div style={{
+        height: 20, borderRadius: borderRadius.sm,
+        backgroundColor: colors.surfaceInset, width: '60%',
+      }} />
+      <div style={{
+        height: 20, borderRadius: borderRadius.sm,
+        backgroundColor: colors.surfaceInset, width: '50%',
+      }} />
+    </div>
+  </div>
+)
+
+interface RequestAccessPageProps {
+  moduleName?: string
+}
+
+const RequestAccessPage: React.FC<RequestAccessPageProps> = ({ moduleName }) => (
+  <div style={{
+    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+    minHeight: '60vh', textAlign: 'center', padding: spacing['6'],
+  }}>
+    <div style={{
+      width: 64, height: 64, borderRadius: borderRadius.full,
+      backgroundColor: colors.surfaceInset,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      marginBottom: spacing['4'],
+    }}>
+      <ShieldAlert size={28} color={colors.textTertiary} />
+    </div>
+    <h2 style={{
+      fontSize: typography.fontSize.subtitle, fontWeight: typography.fontWeight.semibold,
+      color: colors.textPrimary, margin: 0, marginBottom: spacing['2'],
+    }}>
+      Access Restricted
+    </h2>
+    <p style={{
+      fontSize: typography.fontSize.body, color: colors.textSecondary,
+      margin: 0, marginBottom: spacing['5'], maxWidth: 400, lineHeight: typography.lineHeight.relaxed,
+    }}>
+      {moduleName
+        ? `You do not have permission to access ${moduleName}.`
+        : 'You do not have permission to access this page.'}
+    </p>
+    <button
+      onClick={() => {/* TODO: wire up request access flow */}}
+      style={{
+        backgroundColor: colors.brand400, color: colors.white,
+        border: 'none', borderRadius: borderRadius.md,
+        padding: `${spacing['2']} ${spacing['5']}`,
+        fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium,
+        cursor: 'pointer', fontFamily: typography.fontFamily,
+      }}
+    >
+      Request Access
+    </button>
+  </div>
+)
+
 export const ProtectedRoute: React.FC<Props> = ({ children, requiredPermission, moduleId, moduleName }) => {
   const { user, loading: authLoading, isSessionValid } = useAuth()
   const { hasPermission, canAccessModule, loading: permLoading } = usePermissions()
@@ -54,72 +130,29 @@ export const ProtectedRoute: React.FC<Props> = ({ children, requiredPermission, 
     )
   }
 
+  // Auth loading: show skeleton
   if (authLoading) {
-    return (
-      <div role="status" style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        height: '100vh', fontSize: typography.fontSize.body, color: colors.textSecondary,
-        fontFamily: typography.fontFamily,
-      }}>
-        Verifying access...
-      </div>
-    )
+    return <SkeletonLoader />
   }
 
-  // No user or expired session → redirect to login with return path
+  // Permissions loading (auth resolved but permissions not yet): show skeleton
+  if (!authLoading && permLoading) {
+    return <SkeletonLoader />
+  }
+
+  // No user or expired session: redirect to login with return path
   if (!user || !isSessionValid) {
-    const dest = location.pathname + location.search
-    const returnTo = dest !== '/login' ? `?returnTo=${encodeURIComponent(dest)}` : ''
-    return <Navigate to={`/login${returnTo}`} replace />
+    return <Navigate to="/login" state={{ from: location }} replace />
   }
 
-  // Permission check (only after auth confirmed and permissions loaded)
-  if (!permLoading) {
-    const denied =
-      (requiredPermission && !hasPermission(requiredPermission)) ||
-      (moduleId && !canAccessModule(moduleId))
+  // Module permission check
+  if (moduleId && !canAccessModule(moduleId)) {
+    return <RequestAccessPage moduleName={moduleName || moduleId} />
+  }
 
-    if (denied) {
-      return (
-        <div style={{
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          minHeight: '60vh', textAlign: 'center', padding: spacing['6'],
-        }}>
-          <div style={{
-            width: 64, height: 64, borderRadius: borderRadius.full,
-            backgroundColor: colors.surfaceInset,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            marginBottom: spacing['4'],
-          }}>
-            <ShieldAlert size={28} color={colors.textTertiary} />
-          </div>
-          <h2 style={{
-            fontSize: typography.fontSize.subtitle, fontWeight: typography.fontWeight.semibold,
-            color: colors.textPrimary, margin: 0, marginBottom: spacing['2'],
-          }}>
-            Access Restricted
-          </h2>
-          <p style={{
-            fontSize: typography.fontSize.body, color: colors.textSecondary,
-            margin: 0, marginBottom: spacing['5'], maxWidth: 400, lineHeight: typography.lineHeight.relaxed,
-          }}>
-            You do not have permission to access this page.
-          </p>
-          <button
-            onClick={() => {/* TODO: wire up request access flow */}}
-            style={{
-              backgroundColor: colors.brand, color: colors.white,
-              border: 'none', borderRadius: borderRadius.md,
-              padding: `${spacing['2']} ${spacing['5']}`,
-              fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium,
-              cursor: 'pointer', fontFamily: typography.fontFamily,
-            }}
-          >
-            Request Access
-          </button>
-        </div>
-      )
-    }
+  // Specific permission check
+  if (requiredPermission && !hasPermission(requiredPermission)) {
+    return <RequestAccessPage moduleName={moduleName} />
   }
 
   return <>{children}</>
