@@ -91,15 +91,20 @@ export async function getPortfolioMetrics(orgId: string): Promise<PortfolioMetri
       const { data: rpcRows, error: rpcError } = await supabase.rpc('get_portfolio_metrics', { org_id: orgId })
 
       if (rpcError) {
-        if (rpcError.code === '42883') {
-          // RPC function does not exist in the database — fall back to manual aggregation
-          // using direct table queries scoped to the org's project IDs.
+        console.warn('get_portfolio_metrics RPC unavailable, computing from queries:', rpcError.message)
+        // Fall back to manual aggregation using direct table queries scoped to the org's project IDs.
+        // This handles missing RPC (42883), permission errors, and any other RPC failure.
+        try {
           const { data: projectRows, error: projectsError } = await supabase
             .from('projects')
             .select('id, status, contract_value')
             .eq('organization_id', orgId)
 
-          if (projectsError || !projectRows || projectRows.length === 0) {
+          if (projectsError || !projectRows) {
+            return ZERO_METRICS
+          }
+
+          if (projectRows.length === 0) {
             return ZERO_METRICS
           }
 
@@ -144,9 +149,9 @@ export async function getPortfolioMetrics(orgId: string): Promise<PortfolioMetri
             projects_on_schedule: 0,
             projects_at_risk: 0,
           }
+        } catch {
+          return ZERO_METRICS
         }
-
-        throw transformSupabaseError(rpcError)
       }
 
       const row = rpcRows?.[0]
