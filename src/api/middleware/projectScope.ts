@@ -32,7 +32,9 @@ export async function assertProjectAccess(projectId: string): Promise<void> {
   }
   try {
     const key = queryKey('project_members', { project_id: projectId, user_id: user.id })
-    const memberData = await dedupTtl(key, 30000, () =>
+    // TTL kept short (5s) to minimize stale access window after role revocation.
+    // For write operations on sensitive entities (budget, pay apps), consider bypassing cache entirely.
+    const memberData = await dedupTtl(key, 5000, () =>
       supabase
         .from('project_members')
         .select('id, project:projects(organization_id)')
