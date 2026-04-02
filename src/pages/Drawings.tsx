@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { DrawingsEmptyState } from '../components/drawings/DrawingsEmptyState';
 import { TableRowSkeleton } from '../components/ui/Skeletons';
-import { Upload, X, Sparkles, FileText, AlertTriangle, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import { Upload, X, Sparkles, FileText, AlertTriangle, AlertCircle, CheckCircle2, Loader2, ChevronRight } from 'lucide-react';
 import { aiService } from '../lib/aiService';
 import type { DrawingAnalysis } from '../types/ai';
 import { PageContainer, Card, Btn, Tag, useToast } from '../components/Primitives';
@@ -114,7 +114,20 @@ const _DrawingsPage: React.FC = () => {
         </PermissionGate>
       }
     >
-      <style>{`@media(max-width:768px){.drawings-layout{grid-template-columns:1fr!important;}}`}</style>
+      <style>{`
+        @media(max-width:768px){
+          .drawings-layout{grid-template-columns:1fr!important;}
+          .drawing-table-header{display:none!important;}
+          .drawings-list{display:grid;grid-template-columns:1fr;gap:8px;padding:8px;}
+          .drawing-row-desktop{display:none!important;}
+          .drawing-row-mobile{display:flex!important;}
+        }
+        @media(min-width:769px){
+          .drawing-row-mobile{display:none!important;}
+        }
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+        .drawing-row:focus-visible{outline:2px solid #F47820;outline-offset:-2px;}
+      `}</style>
       <div
         className="drawings-layout"
         style={{
@@ -171,7 +184,8 @@ const _DrawingsPage: React.FC = () => {
           </div>
 
           {/* Discipline filter pills */}
-          <div style={{ display: 'flex', gap: spacing.sm, marginBottom: spacing.xl, flexWrap: 'wrap', alignItems: 'center' }}>
+          <div style={{ position: 'sticky', top: 0, zIndex: 10, backgroundColor: '#ffffff', paddingTop: spacing['2'], paddingBottom: spacing['2'], marginBottom: spacing.xl }}>
+          <div style={{ display: 'flex', gap: spacing.sm, flexWrap: 'wrap', alignItems: 'center' }}>
             {uniqueDisciplines.map((discipline) => {
               const isActive = activeFilters.has(discipline);
               const pillColor = getDisciplineColor(discipline);
@@ -241,6 +255,7 @@ const _DrawingsPage: React.FC = () => {
               </button>
             )}
           </div>
+          </div>
 
           {/* Results count — aria-live announces filter changes to screen readers */}
           <p
@@ -255,7 +270,7 @@ const _DrawingsPage: React.FC = () => {
           <div style={{ overflowX: 'auto' }}>
           <Card padding="0">
             {/* Custom sortable header */}
-            <div style={{ display: 'grid', gridTemplateColumns: gridColumns, padding: `${spacing.md} ${spacing.lg}`, borderBottom: `1px solid ${colors.border}` }}>
+            <div className="drawing-table-header" style={{ display: 'grid', gridTemplateColumns: gridColumns, padding: `${spacing.md} ${spacing.lg}`, borderBottom: `1px solid ${colors.border}` }}>
               {/* thumbnail col, no sort */}
               <span></span>
               {[
@@ -279,7 +294,6 @@ const _DrawingsPage: React.FC = () => {
 
             {loading && (
               <>
-                <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}`}</style>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: spacing['4'], padding: spacing['4'] }}>
                   {Array.from({ length: 6 }).map((_, i) => (
                     <div
@@ -320,20 +334,55 @@ const _DrawingsPage: React.FC = () => {
               const thumbColor = drawing.disciplineColor || getDisciplineColor(drawing.discipline || '');
               const linked = linkedItems[drawing.id];
               const viewed = lastViewed[drawing.id];
+              const rowBorder = index < sortedDrawings.length - 1 ? `1px solid ${colors.border}` : 'none';
               return (
+                <React.Fragment key={drawing.id}>
+                {/* Mobile card row */}
                 <div
-                  key={drawing.id}
                   role="listitem"
                   tabIndex={0}
                   aria-label={`Drawing ${drawing.sheetNumber} ${drawing.title}, revision ${drawing.currentRevision?.revision_number ?? 0}, discipline ${drawing.disciplineLabel}`}
-                  className="drawing-row"
+                  className="drawing-row drawing-row-mobile"
+                  onClick={() => setSelectedDrawing(drawing)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedDrawing(drawing); } }}
+                  style={{
+                    display: 'none',
+                    padding: `${spacing.md} ${spacing.lg}`,
+                    borderBottom: rowBorder,
+                    cursor: 'pointer',
+                    alignItems: 'center',
+                    gap: spacing['3'],
+                    transition: `background-color ${transitions.quick}`,
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = colors.surfaceHover; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                >
+                  <div style={{ width: 40, height: 32, borderRadius: borderRadius.sm, backgroundColor: thumbColor, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, flexShrink: 0 }}>
+                    {drawing.discipline[0]}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ margin: 0, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {drawing.title}
+                    </p>
+                    <p style={{ margin: 0, fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
+                      {drawing.setNumber} · Rev {drawing.currentRevision?.revision_number ?? drawing.revision} · {drawing.discipline}
+                    </p>
+                  </div>
+                  <ChevronRight size={16} color={colors.textTertiary} style={{ flexShrink: 0 }} />
+                </div>
+                {/* Desktop table row */}
+                <div
+                  role="listitem"
+                  tabIndex={0}
+                  aria-label={`Drawing ${drawing.sheetNumber} ${drawing.title}, revision ${drawing.currentRevision?.revision_number ?? 0}, discipline ${drawing.disciplineLabel}`}
+                  className="drawing-row drawing-row-desktop"
                   onClick={() => setSelectedDrawing(drawing)}
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedDrawing(drawing); } }}
                   style={{
                     display: 'grid',
                     gridTemplateColumns: gridColumns,
                     padding: `${spacing.md} ${spacing.lg}`,
-                    borderBottom: index < sortedDrawings.length - 1 ? `1px solid ${colors.border}` : 'none',
+                    borderBottom: rowBorder,
                     cursor: 'pointer',
                     alignItems: 'center',
                     transition: `background-color ${transitions.quick}`,
@@ -453,6 +502,7 @@ const _DrawingsPage: React.FC = () => {
                     )}
                   </div>
                 </div>
+                </React.Fragment>
               );
             })}
               </div>
