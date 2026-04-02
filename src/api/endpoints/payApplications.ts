@@ -68,24 +68,22 @@ export function computeCurrentPaymentDue(params: {
  */
 export const getPayApplications = async (projectId: string): Promise<PayApplication[]> => {
   await assertProjectAccess(projectId)
-  try {
-    const { data, error } = await supabase
-      .from('pay_applications')
-      .select('*')
-      .eq('project_id', projectId)
-      .order('application_number', { ascending: false })
-    if (error) throw error
-    return (data || []) as PayApplication[]
-  } catch (err: unknown) {
-    const supaError = err && typeof err === 'object' && 'code' in err ? err as { code?: string; message?: string } : null
-    if (supaError?.code === 'PGRST301' || supaError?.code === '42501') {
+  const { data, error } = await supabase
+    .from('pay_applications')
+    .select('*')
+    .eq('project_id', projectId)
+    .order('application_number', { ascending: false })
+  if (error) {
+    if (
+      error.code === '42501' ||
+      error.message?.toLowerCase().includes('permission') ||
+      error.message?.toLowerCase().includes('policy')
+    ) {
       throw new Error('You do not have permission to view payment applications for this project.')
     }
-    if (supaError?.code === 'PGRST116') {
-      throw new Error('Project not found. It may have been deleted or you may not have access.')
-    }
-    throw new Error('Unable to load payment applications. Please check your connection and try again.')
+    throw transformSupabaseError(error)
   }
+  return (data || []) as PayApplication[]
 }
 
 /**
