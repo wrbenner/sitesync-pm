@@ -26,6 +26,7 @@ import { EditingLockBanner } from '../components/ui/EditingLockBanner';
 
 const statusMap: Record<string, 'pending' | 'active' | 'complete'> = {
   open: 'pending',
+  in_progress: 'active',
   sub_complete: 'active',
   verified: 'complete',
   rejected: 'pending',
@@ -33,9 +34,18 @@ const statusMap: Record<string, 'pending' | 'active' | 'complete'> = {
 
 const statusLabel: Record<string, string> = {
   open: 'Open',
+  in_progress: 'In Progress',
   sub_complete: 'Sub Complete',
   verified: 'Verified',
   rejected: 'Rejected',
+};
+
+const STATUS_COLORS: Record<string, string> = {
+  open: '#F5A623',
+  in_progress: '#3B82F6',
+  sub_complete: '#8B5CF6',
+  verified: '#4EC896',
+  rejected: '#E74C3C',
 };
 
 const plColHelper = createColumnHelper<PunchItem>();
@@ -45,16 +55,14 @@ const TwoStepBadge: React.FC<{ verificationStatus: string }> = ({ verificationSt
   const step1Done = verificationStatus === 'sub_complete' || verificationStatus === 'verified';
   const step2Done = verificationStatus === 'verified';
   const isRejected = verificationStatus === 'rejected';
+  const isInProgress = verificationStatus === 'in_progress';
 
-  const subStepColor = verificationStatus === 'sub_complete' ? '#7C3AED' : colors.statusPending;
-  const step1Dot = isRejected ? colors.statusCritical : step1Done ? subStepColor : colors.borderDefault;
-  const step2Dot = step2Done ? colors.statusActive : colors.borderDefault;
+  const statusColor = STATUS_COLORS[verificationStatus] ?? colors.textTertiary;
+  const step1Dot = isRejected ? STATUS_COLORS.rejected : step1Done ? STATUS_COLORS.sub_complete : isInProgress ? STATUS_COLORS.in_progress : colors.borderDefault;
+  const step2Dot = step2Done ? STATUS_COLORS.verified : colors.borderDefault;
 
-  const step1Text = isRejected ? colors.statusCritical : step1Done ? subStepColor : colors.textTertiary;
-  const step2Text = step2Done ? colors.statusActive : colors.textTertiary;
-
-  const step1Label = isRejected ? 'Rejected' : step1Done ? 'Done' : 'Pending';
-  const step2Label = step2Done ? 'Verified' : 'Awaiting';
+  const step1Text = isRejected ? STATUS_COLORS.rejected : step1Done ? STATUS_COLORS.sub_complete : isInProgress ? STATUS_COLORS.in_progress : colors.textTertiary;
+  const step2Text = step2Done ? STATUS_COLORS.verified : colors.textTertiary;
 
   return (
     <div
@@ -78,10 +86,7 @@ const TwoStepBadge: React.FC<{ verificationStatus: string }> = ({ verificationSt
         <span style={{ fontSize: 9, fontWeight: 600, color: step2Text, lineHeight: 1, whiteSpace: 'nowrap' as const }}>GC</span>
       </div>
       {/* Status label */}
-      <span style={{
-        fontSize: 11, fontWeight: 500, marginLeft: 5,
-        color: isRejected ? colors.statusCritical : step2Done ? colors.statusActive : step1Done ? subStepColor : colors.textTertiary,
-      }}>
+      <span style={{ fontSize: 11, fontWeight: 500, marginLeft: 5, color: statusColor }}>
         {statusLabel[verificationStatus] ?? verificationStatus}
       </span>
     </div>
@@ -212,15 +217,16 @@ const PunchListPage: React.FC = () => {
 
   // Counts (memoized)
   const {
-    openCount, subCompleteCount, verifiedCount, rejectedCount,
+    openCount, inProgressCount, subCompleteCount, verifiedCount, rejectedCount,
     totalCount, completionPct, overdueCount,
     criticalCount, highCount, mediumCount, lowCount,
   } = useMemo(() => {
-    let open = 0, subComplete = 0, verified = 0, rejected = 0, overdue = 0;
+    let open = 0, inProgress = 0, subComplete = 0, verified = 0, rejected = 0, overdue = 0;
     let critical = 0, high = 0, medium = 0, low = 0;
     const now = new Date();
     for (const p of punchListItems) {
-      if (p.verification_status === 'sub_complete') subComplete++;
+      if (p.verification_status === 'in_progress') inProgress++;
+      else if (p.verification_status === 'sub_complete') subComplete++;
       else if (p.verification_status === 'verified') verified++;
       else if (p.verification_status === 'rejected') rejected++;
       else open++;
@@ -233,7 +239,7 @@ const PunchListPage: React.FC = () => {
     const total = punchListItems.length;
     const pct = total > 0 ? Math.round((verified / total) * 100) : 0;
     return {
-      openCount: open, subCompleteCount: subComplete, verifiedCount: verified, rejectedCount: rejected,
+      openCount: open, inProgressCount: inProgress, subCompleteCount: subComplete, verifiedCount: verified, rejectedCount: rejected,
       totalCount: total, completionPct: pct, overdueCount: overdue,
       criticalCount: critical, highCount: high, mediumCount: medium, lowCount: low,
     };
@@ -274,6 +280,20 @@ const PunchListPage: React.FC = () => {
   const selected = punchListItems.find(p => p.id === selectedId) || null;
   const comments: Comment[] = []; // TODO: load from punch_item_comments query
 
+  const handleMarkInProgressById = useCallback(async (item: PunchItem) => {
+    try {
+      await updatePunchItem.mutateAsync({
+        id: String(item.id),
+        updates: { verification_status: 'in_progress' },
+        projectId: projectId!,
+      });
+      toast.success(`${item.itemNumber} marked in progress.`);
+      setAriaAnnouncement(`${item.itemNumber} marked in progress`);
+    } catch {
+      toast.error('Failed to update status');
+    }
+  }, [updatePunchItem, projectId]);
+
   const handleMarkSubCompleteById = useCallback(async (item: PunchItem) => {
     try {
       await updatePunchItem.mutateAsync({
@@ -301,6 +321,22 @@ const PunchListPage: React.FC = () => {
       toast.error('Failed to verify item');
     }
   }, [updatePunchItem, projectId]);
+
+  const handleMarkInProgress = useCallback(async () => {
+    if (!selected) return;
+    try {
+      await updatePunchItem.mutateAsync({
+        id: String(selected.id),
+        updates: { verification_status: 'in_progress' },
+        projectId: projectId!,
+      });
+      toast.success(`${selected.itemNumber} marked in progress.`);
+      setAriaAnnouncement(`${selected.itemNumber} marked in progress`);
+      setSelectedId(null);
+    } catch {
+      toast.error('Failed to update status');
+    }
+  }, [selected, updatePunchItem, projectId]);
 
   const handleMarkSubComplete = useCallback(async () => {
     if (!selected) return;
@@ -445,6 +481,7 @@ const PunchListPage: React.FC = () => {
               type="select"
               options={[
                 { value: 'open', label: 'Open' },
+                { value: 'in_progress', label: 'In Progress' },
                 { value: 'sub_complete', label: 'Sub Complete' },
                 { value: 'verified', label: 'Verified' },
                 { value: 'rejected', label: 'Rejected' },
@@ -478,8 +515,16 @@ const PunchListPage: React.FC = () => {
           <div onClick={(e) => e.stopPropagation()} style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
             {item.verification_status === 'open' && hasPermission('punch_list.edit') && (
               <button
+                onClick={() => handleMarkInProgressById(item)}
+                style={{ padding: '3px 8px', fontSize: 11, fontWeight: 600, fontFamily: 'inherit', backgroundColor: '#EFF6FF', color: STATUS_COLORS.in_progress, border: `1px solid ${STATUS_COLORS.in_progress}40`, borderRadius: borderRadius.base, cursor: 'pointer', whiteSpace: 'nowrap' as const }}
+              >
+                Start Work
+              </button>
+            )}
+            {item.verification_status === 'in_progress' && hasPermission('punch_list.edit') && (
+              <button
                 onClick={() => handleMarkSubCompleteById(item)}
-                style={{ padding: '3px 8px', fontSize: 11, fontWeight: 600, fontFamily: 'inherit', backgroundColor: colors.statusPendingSubtle, color: colors.statusPending, border: `1px solid ${colors.statusPending}40`, borderRadius: borderRadius.base, cursor: 'pointer', whiteSpace: 'nowrap' as const }}
+                style={{ padding: '3px 8px', fontSize: 11, fontWeight: 600, fontFamily: 'inherit', backgroundColor: '#F5F3FF', color: STATUS_COLORS.sub_complete, border: `1px solid ${STATUS_COLORS.sub_complete}40`, borderRadius: borderRadius.base, cursor: 'pointer', whiteSpace: 'nowrap' as const }}
               >
                 Mark Complete
               </button>
@@ -504,7 +549,7 @@ const PunchListPage: React.FC = () => {
         );
       },
     }),
-  ], [bulkSelected, setBulkSelected, updatePunchItem, projectId, hasPermission, handleMarkSubCompleteById, handleVerifyById]);
+  ], [bulkSelected, setBulkSelected, updatePunchItem, projectId, hasPermission, handleMarkInProgressById, handleMarkSubCompleteById, handleVerifyById]);
 
   if (loading) {
     return (
@@ -620,10 +665,11 @@ const PunchListPage: React.FC = () => {
       <div style={{ display: 'flex', gap: spacing['2'], marginBottom: spacing['3'], flexWrap: 'wrap' as const }}>
         {[
           { value: 'all', label: 'All', count: totalCount, color: colors.textSecondary, activeBg: `${colors.primaryOrange}15`, activeColor: colors.primaryOrange },
-          { value: 'open', label: 'Open', count: openCount, color: colors.statusCritical, activeBg: `${colors.statusCritical}15`, activeColor: colors.statusCritical },
-          { value: 'sub_complete', label: 'Awaiting Verification', count: subCompleteCount, color: '#7C3AED', activeBg: '#EDE9FE', activeColor: '#7C3AED' },
-          { value: 'verified', label: 'Verified', count: verifiedCount, color: colors.statusActive, activeBg: `${colors.statusActive}15`, activeColor: colors.statusActive },
-          { value: 'rejected', label: 'Rejected', count: rejectedCount, color: colors.statusCritical, activeBg: `${colors.statusCritical}15`, activeColor: colors.statusCritical },
+          { value: 'open', label: 'Open', count: openCount, color: STATUS_COLORS.open, activeBg: '#FEF3C7', activeColor: STATUS_COLORS.open },
+          { value: 'in_progress', label: 'In Progress', count: inProgressCount, color: STATUS_COLORS.in_progress, activeBg: '#EFF6FF', activeColor: STATUS_COLORS.in_progress },
+          { value: 'sub_complete', label: 'Awaiting Verification', count: subCompleteCount, color: STATUS_COLORS.sub_complete, activeBg: '#F5F3FF', activeColor: STATUS_COLORS.sub_complete },
+          { value: 'verified', label: 'Verified', count: verifiedCount, color: STATUS_COLORS.verified, activeBg: `${STATUS_COLORS.verified}20`, activeColor: STATUS_COLORS.verified },
+          { value: 'rejected', label: 'Rejected', count: rejectedCount, color: STATUS_COLORS.rejected, activeBg: `${STATUS_COLORS.rejected}15`, activeColor: STATUS_COLORS.rejected },
         ].map(tab => {
           const isActive = statusFilter === tab.value;
           return (
@@ -712,10 +758,7 @@ const PunchListPage: React.FC = () => {
             </div>
           )}
           {filteredList.map((item) => {
-            const statusDotColor =
-              item.verification_status === 'verified' ? colors.statusActive :
-              item.verification_status === 'sub_complete' ? '#7C3AED' :
-              colors.statusCritical;
+            const statusDotColor = STATUS_COLORS[item.verification_status] ?? STATUS_COLORS.open;
             return (
               <div
                 key={item.id}
@@ -895,6 +938,7 @@ const PunchListPage: React.FC = () => {
                 type="select"
                 options={[
                   { value: 'open', label: 'Open' },
+                  { value: 'in_progress', label: 'In Progress' },
                   { value: 'sub_complete', label: 'Sub Complete' },
                   { value: 'verified', label: 'Verified' },
                   { value: 'rejected', label: 'Rejected' },
@@ -1075,7 +1119,12 @@ const PunchListPage: React.FC = () => {
             <div style={{ display: 'flex', gap: spacing.sm, paddingTop: spacing.md, borderTop: `1px solid ${colors.borderLight}` }}>
               {selected.verification_status === 'open' && (
                 <PermissionGate permission="punch_list.edit">
-                  <Btn variant="primary" onClick={handleMarkSubComplete} icon={<CheckCircle size={16} />}>Mark Sub-Complete</Btn>
+                  <Btn variant="secondary" onClick={handleMarkInProgress} icon={<CheckCircle size={16} />}>Start Work</Btn>
+                </PermissionGate>
+              )}
+              {selected.verification_status === 'in_progress' && (
+                <PermissionGate permission="punch_list.edit">
+                  <Btn variant="primary" onClick={handleMarkSubComplete} icon={<CheckCircle size={16} />}>Mark Complete</Btn>
                 </PermissionGate>
               )}
               {selected.verification_status === 'sub_complete' && (
