@@ -266,7 +266,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   const getBarColor = (phase: GanttPhase) => {
     if (phase.completed) return colors.statusActive;
     if (whatIfMode && activeDrag?.phaseId === phase.id) return colors.statusReview;
-    if (phase.critical) return '#E74C3C';
+    if (phase.is_critical || phase.critical) return '#E74C3C';
     if (phase.progress === 0) return colors.textTertiary;
     return colors.statusInfo;
   };
@@ -543,7 +543,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
         )}
 
         <button
-          aria-label={showCriticalPath ? 'Show all activities' : 'Highlight critical path only'}
+          aria-label={showCriticalPath ? 'Show all activities' : 'Filter to critical path only'}
           aria-pressed={showCriticalPath}
           onClick={() => setShowCriticalPath(!showCriticalPath)}
           style={{
@@ -556,7 +556,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
             fontFamily: typography.fontFamily, cursor: 'pointer',
           }}
         >
-          Critical Path
+          Critical Path Only
         </button>
 
         {whatIfMode && (
@@ -773,12 +773,11 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                   tabIndex={ganttFocused === index ? 0 : -1}
                   className="gantt-phase-row"
                   style={{
-                    display: 'flex', alignItems: 'center', marginBottom: spacing['2'], position: 'relative',
+                    display: showCriticalPath && !phase.is_critical ? 'none' : 'flex',
+                    alignItems: 'center', marginBottom: spacing['2'], position: 'relative',
                     borderLeft: isCriticalPathRow ? '3px solid #E74C3C' : '3px solid transparent',
                     paddingLeft: isCriticalPathRow ? spacing['2'] : 0,
                     outline: 'none',
-                    opacity: showCriticalPath && !phase.is_critical ? 0.3 : 1,
-                    transition: `opacity ${transitions.quick}`,
                   }}
                   onMouseEnter={() => setHoveredPhase(phase.id)}
                   onMouseLeave={() => setHoveredPhase(null)}
@@ -789,8 +788,13 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                   {/* Label */}
                   <div role="gridcell" style={{ width: `${LABEL_WIDTH}px`, flexShrink: 0, paddingRight: spacing['3'] }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                      {phase.critical && !phase.completed && (
-                        <div style={{ width: 4, height: 4, borderRadius: '50%', backgroundColor: colors.statusCritical }} />
+                      {phase.is_critical && !phase.completed && (
+                        <span style={{
+                          fontSize: '10px', fontWeight: 700,
+                          backgroundColor: '#E74C3C', color: '#fff',
+                          padding: '0 4px', borderRadius: '3px',
+                          lineHeight: '16px', flexShrink: 0,
+                        }}>CP</span>
                       )}
                       <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>
                         {phase.name}
