@@ -287,8 +287,8 @@ function AppContent() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
-  const { toggleContextPanel } = useAIAnnotationStore();
-  const { openCopilot, closeCopilot } = useCopilotStore();
+  const { toggleContextPanel, contextPanelOpen } = useAIAnnotationStore();
+  const { openCopilot, closeCopilot, isOpen: copilotOpen } = useCopilotStore();
   const sidebarWidth = sidebarCollapsed ? layout.sidebarCollapsed : layout.sidebarWidth;
 
   const handleNavigate = (view: string) => {
@@ -343,7 +343,7 @@ function AppContent() {
         <AppRoutes />
       </ErrorBoundary>
       <Suspense fallback={null}><FloatingAIButton /></Suspense>
-      <Suspense fallback={null}><CopilotPanel /></Suspense>
+      {copilotOpen && <Suspense fallback={null}><CopilotPanel /></Suspense>}
       <ConflictResolutionModal open={conflictModalOpen} onClose={() => setConflictModalOpen(false)} />
     </MobileLayout>
   ) : (
@@ -384,14 +384,12 @@ function AppContent() {
         </main>
 
         <CommandPalette open={commandPaletteOpen} onClose={() => setCommandPaletteOpen(false)} />
-        <Suspense fallback={null}>
-          {notificationsOpen && <NotificationCenter open={notificationsOpen} onClose={() => setNotificationsOpen(false)} />}
-          {shortcutsOpen && <ShortcutOverlay open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />}
-          {exportOpen && <ExportCenter open={exportOpen} onClose={() => setExportOpen(false)} />}
-          <AIContextPanel currentPage={activeView} />
-          <FloatingAIButton />
-          <CopilotPanel />
-        </Suspense>
+        {notificationsOpen && <Suspense fallback={null}><NotificationCenter open={notificationsOpen} onClose={() => setNotificationsOpen(false)} /></Suspense>}
+        {shortcutsOpen && <Suspense fallback={null}><ShortcutOverlay open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} /></Suspense>}
+        {exportOpen && <Suspense fallback={null}><ExportCenter open={exportOpen} onClose={() => setExportOpen(false)} /></Suspense>}
+        {contextPanelOpen && <Suspense fallback={null}><AIContextPanel currentPage={activeView} /></Suspense>}
+        <Suspense fallback={null}><FloatingAIButton /></Suspense>
+        {copilotOpen && <Suspense fallback={null}><CopilotPanel /></Suspense>}
         <ConflictResolutionModal open={conflictModalOpen} onClose={() => setConflictModalOpen(false)} />
       </div>
     </SidebarContext.Provider>
