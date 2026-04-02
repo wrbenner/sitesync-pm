@@ -144,8 +144,7 @@ function ToastEntry({ toast, onClose }: { toast: ToastItem; onClose: (id: string
       }}
     >
     <div
-      role="alert"
-      aria-live="assertive"
+      role={toast.severity === 'error' ? 'alert' : undefined}
       tabIndex={0}
       onKeyDown={(e) => { if (e.key === 'Escape') handleClose(toast.id); }}
       onMouseEnter={handleMouseEnter}
@@ -303,7 +302,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     <ToastContext.Provider value={{ showToast }}>
       {children}
       <div
-        role="region"
+        role="status"
         aria-live="polite"
         aria-label="Notifications"
         style={{
