@@ -75,27 +75,26 @@ export const RequestAccessPage: React.FC<{ moduleName?: string }> = ({ moduleNam
   const navigate = useNavigate();
 
   return (
-    <div style={{ maxWidth: 480, margin: 'auto', padding: 48, textAlign: 'center' }}>
+    <div role="alert" aria-live="polite" style={{ maxWidth: 480, margin: 'auto', padding: 48, textAlign: 'center' }}>
       <ShieldAlert size={48} color={colors.textTertiary} />
       <h2 style={{
-        fontSize: typography.fontSize['2xl'],
+        fontSize: typography.fontSize.xl,
         fontWeight: typography.fontWeight.semibold,
         color: colors.textPrimary,
         margin: `${spacing['4']} 0 ${spacing['2']}`,
       }}>Access Restricted</h2>
       <p style={{ color: colors.textSecondary }}>
-        You do not have permission to access {moduleName || 'this section'}. Your current role is {role || 'unknown'}.
+        You do not have permission to view {moduleName || 'this page'}. Your current role is {role || 'unknown'}.
       </p>
       <button
-        onClick={() => navigate('/')}
+        onClick={() => navigate('/dashboard')}
         style={{
           backgroundColor: colors.primary,
           color: 'white',
-          padding: '10px 24px',
-          borderRadius: 8,
+          padding: `${spacing['2']} ${spacing['4']}`,
+          borderRadius: borderRadius.md,
           border: 'none',
           cursor: 'pointer',
-          fontSize: 14,
         }}
       >
         Go to Dashboard
