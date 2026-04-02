@@ -1,33 +1,38 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
-import type { Profile, Company } from '../types/database';
+import type { Profile, Organization } from '../types/database';
 import type { Session, User } from '@supabase/supabase-js';
 
 interface AuthState {
   session: Session | null;
   user: User | null;
   profile: Profile | null;
-  company: Company | null;
+  organization: Organization | null;
   loading: boolean;
   initialized: boolean;
+  error: Error | null;
 
   initialize: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
-  signUp: (email: string, password: string, firstName: string, lastName: string) => Promise<{ error: string | null }>;
+  signUp: (email: string, password: string, fullName: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<{ error: string | null }>;
+  updatePassword: (newPassword: string) => Promise<{ error: string | null }>;
   loadProfile: () => Promise<void>;
-  loadCompany: () => Promise<void>;
+  loadOrganization: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<{ error: string | null }>;
-  createCompany: (name: string) => Promise<{ error: string | null; company: Company | null }>;
+  createOrganization: (name: string) => Promise<{ error: string | null; organization: Organization | null }>;
+  clearError: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   session: null,
   user: null,
   profile: null,
-  company: null,
+  organization: null,
   loading: true,
   initialized: false,
+  error: null,
 
   initialize: async () => {
     try {
@@ -36,7 +41,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       if (session?.user) {
         await get().loadProfile();
-        await get().loadCompany();
+        await get().loadOrganization();
       }
 
       // Listen for auth changes
@@ -44,41 +49,102 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         set({ session, user: session?.user ?? null });
         if (session?.user) {
           await get().loadProfile();
-          await get().loadCompany();
+          await get().loadOrganization();
         } else {
-          set({ profile: null, company: null });
+          set({ profile: null, organization: null });
         }
       });
     } catch (error) {
       console.error('Auth initialization failed:', error);
+      set({ error: error instanceof Error ? error : new Error(String(error)) });
     } finally {
       set({ loading: false, initialized: true });
     }
   },
 
   signIn: async (email, password) => {
-    set({ loading: true });
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    set({ loading: false });
-    return { error: error?.message ?? null };
+    set({ loading: true, error: null });
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        set({ error });
+      }
+      set({ loading: false });
+      return { error: error?.message ?? null };
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      set({ error, loading: false });
+      return { error: error.message };
+    }
   },
 
-  signUp: async (email, password, firstName, lastName) => {
-    set({ loading: true });
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { first_name: firstName, last_name: lastName },
-      },
-    });
-    set({ loading: false });
-    return { error: error?.message ?? null };
+  signUp: async (email, password, fullName) => {
+    set({ loading: true, error: null });
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { full_name: fullName },
+        },
+      });
+      if (error) {
+        set({ error });
+      }
+      set({ loading: false });
+      return { error: error?.message ?? null };
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      set({ error, loading: false });
+      return { error: error.message };
+    }
   },
 
   signOut: async () => {
-    await supabase.auth.signOut();
-    set({ session: null, user: null, profile: null, company: null });
+    set({ loading: true });
+    try {
+      await supabase.auth.signOut();
+      set({ session: null, user: null, profile: null, organization: null, loading: false });
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      set({ error, loading: false });
+    }
+  },
+
+  resetPassword: async (email: string) => {
+    set({ loading: true, error: null });
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) {
+        set({ error });
+      }
+      set({ loading: false });
+      return { error: error?.message ?? null };
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      set({ error, loading: false });
+      return { error: error.message };
+    }
+  },
+
+  updatePassword: async (newPassword: string) => {
+    set({ loading: true, error: null });
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+      if (error) {
+        set({ error });
+      }
+      set({ loading: false });
+      return { error: error?.message ?? null };
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      set({ error, loading: false });
+      return { error: error.message };
+    }
   },
 
   loadProfile: async () => {
@@ -88,7 +154,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', user.id)
+      .eq('user_id', user.id)
       .single();
 
     if (!error && data) {
@@ -96,18 +162,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  loadCompany: async () => {
+  loadOrganization: async () => {
     const { profile } = get();
-    if (!profile?.company_id) return;
+    if (!profile?.organization_id) return;
 
     const { data, error } = await supabase
-      .from('companies')
+      .from('organizations')
       .select('*')
-      .eq('id', profile.company_id)
+      .eq('id', profile.organization_id)
       .single();
 
     if (!error && data) {
-      set({ company: data as Company });
+      set({ organization: data as Organization });
     }
   },
 
@@ -115,41 +181,53 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const { user } = get();
     if (!user) return { error: 'Not authenticated' };
 
-    const { error } = await (supabase
-      .from('profiles') as any)
-      .update(updates)
-      .eq('id', user.id);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('user_id', user.id);
 
-    if (!error) {
-      await get().loadProfile();
+      if (!error) {
+        await get().loadProfile();
+      }
+
+      return { error: error?.message ?? null };
+    } catch (err) {
+      const error = err instanceof Error ? err.message : String(err);
+      return { error };
     }
-
-    return { error: error?.message ?? null };
   },
 
-  createCompany: async (name) => {
+  createOrganization: async (name) => {
     const { user } = get();
-    if (!user) return { error: 'Not authenticated', company: null };
+    if (!user) return { error: 'Not authenticated', organization: null };
 
-    const { data, error } = await (supabase
-      .from('companies') as any)
-      .insert({ name, logo_url: null, subscription_tier: 'free' })
-      .select()
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from('organizations')
+        .insert({ name, slug: name.toLowerCase().replace(/\s+/g, '-') })
+        .select()
+        .single();
 
-    if (error) return { error: error.message, company: null };
+      if (error) return { error: error.message, organization: null };
 
-    const company = data as Company;
+      const organization = data as Organization;
 
-    // Link user to company
-    await (supabase
-      .from('profiles') as any)
-      .update({ company_id: company.id, role: 'company_admin' })
-      .eq('id', user.id);
+      // Link user to organization
+      await supabase
+        .from('profiles')
+        .update({ organization_id: organization.id })
+        .eq('user_id', user.id);
 
-    await get().loadProfile();
-    set({ company });
+      await get().loadProfile();
+      set({ organization });
 
-    return { error: null, company };
+      return { error: null, organization };
+    } catch (err) {
+      const error = err instanceof Error ? err.message : String(err);
+      return { error, organization: null };
+    }
   },
+
+  clearError: () => set({ error: null }),
 }));

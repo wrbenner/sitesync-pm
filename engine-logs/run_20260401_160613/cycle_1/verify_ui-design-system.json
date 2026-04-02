@@ -1,0 +1,34 @@
+{
+  "verifications": [
+    {
+      "id": "ui-design-system-C2-001",
+      "status": "fixed",
+      "note": "Target file was modified"
+    },
+    {
+      "id": "ui-design-system-C2-002",
+      "status": "partial",
+      "note": "Related file in same directory modified"
+    },
+    {
+      "id": "ui-design-system-C2-003",
+      "status": "fixed",
+      "note": "Target file was modified"
+    },
+    {
+      "id": "ui-design-system-C2-004",
+      "status": "partial",
+      "note": "Related file in same directory modified"
+    },
+    {
+      "id": "ui-design-system-C2-005",
+      "status": "fixed",
+      "note": "Target file was modified"
+    }
+  ],
+  "files_changed": 1,
+  "fixed": 3,
+  "partial": 2,
+  "unfixed": 0,
+  "regression_detected": false
+}

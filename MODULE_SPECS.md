@@ -253,3 +253,93 @@ Features:
 - Action items extracted and assigned automatically
 - Minutes distributed to attendees with follow-up reminders
 - Linked to calendar integration
+
+## Backend: Authentication & User Management
+
+The foundation. Every user, every role, every permission flows through here.
+
+Must have:
+- Supabase Auth integration with email/password, magic link, and Google OAuth
+- Profile management: extends auth.users table with role, avatar, phone, company
+- Role-based access control (RBAC) via project_members table with role enum (owner, admin, lead, team_member, viewer)
+- RLS (Row Level Security) policies on all tables (only your projects, only accessible to your role)
+- Protected route wrapper component in React (redirects to login, handles loading state)
+- Auth context/store using Zustand in src/stores/authStore.ts with user, session, loading, error
+- Login page with email/password tab and magic link tab, brand colors
+- Signup flow: enter email, set password, create organization, invite team
+- Invite flow: admin enters email, user gets magic link, completes profile, auto-joins project
+- Session persistence with localStorage and automatic token refresh
+- Logout clears all user state, tokens, and redirects to login
+- Password reset via email link
+- Multi-project support: user sees all projects they are member of, switcher in header
+
+## Backend: Database & API Layer
+
+The nervous system. Every query must return in milliseconds.
+
+Must have:
+- Supabase client initialized in src/lib/supabase.ts with typed Database interface (auto-generated from schema)
+- Custom React hooks in src/hooks/useSupabase.ts for every entity: useRFIs, useSubmittals, useChangeOrders, usePunchList, useDailyLogs, useBudget, useSchedule, useCrew, useFiles, useNotifications, useActivityFeed
+- Real-time subscriptions on tables: rfis, daily_logs, punch_list_items, notifications, activity_feed (auto-update UI when other users change data)
+- Optimistic updates: instant UI feedback on mutations, rollback on error
+- Cursor-based pagination on all list views (RFI list, submittal register, punch list, crew, etc.)
+- Full-text search across RFIs (subject + description), submittals (spec section), punch list (description), files (filename)
+- Error handling: user-friendly messages, retry logic, circuit breaker pattern on API calls
+- Loading states: skeleton screens on all data-fetching components, not spinners
+- Type safety: all database queries and mutations are fully typed
+
+## Backend: AI Features (Edge Functions)
+
+The intelligence layer. All AI calls go through Supabase Edge Functions.
+
+Must have:
+- AI Copilot: conversational assistant in chat panel, knows project context (RFIs, schedule, budget, weather, daily logs), answers questions, drafts documents
+- AI RFI Drafter: takes informal description (from voice or text), generates formal RFI with spec references, linked drawings, cost/schedule impact
+- AI Daily Summary: generates one-paragraph narrative of the day's activity (crew, weather, deliveries, work completed, issues)
+- AI Schedule Risk: analyzes schedule activities for risk, calculates probability of delay based on weather, resource constraints, prior performance
+- AI Conflict Detection: cross-references schedule vs. submittals vs. RFIs vs. weather to surface conflicts (slab pour 3 days before waterproofing, supplier out of stock on critical item, etc.)
+- All AI calls routed through Supabase Edge Functions (never direct from frontend)
+- Conversation memory stored in ai_conversations + ai_messages tables
+- Cost tracking per conversation (for monitoring spend)
+- Rate limiting: max 10 requests per minute per user per function
+- Fallback responses if AI is unavailable
+
+## Backend: File Storage & Drawings
+
+Document management and markup.
+
+Must have:
+- Supabase Storage buckets: project-files, field-photos, avatars, exports
+- Direct browser upload with progress tracking and abort capability
+- Image compression on client before upload for field photos (max 1024x1024 or 500KB)
+- Drawing viewer using PDF.js for PDF files with zoom, pan, navigation
+- Markup/annotation layer on drawings: draw freehand, add text, draw boxes, measure tool
+- Markup history: undo/redo, version history per drawing
+- Save markups to drawing_markups table, linkable to RFIs and punch list items
+- Version history on all uploaded files: timestamp, uploader, ability to download previous version
+- File search: full-text on filename, ability to filter by type (drawing, photo, spec, contract)
+- Share links: generate temporary public links to files/drawings (7-day expiry)
+
+## Backend: Notifications & Activity Feed
+
+Stay in the loop.
+
+Must have:
+- In-app notifications with unread count badge in header
+- Real-time notification delivery via Supabase Realtime (new RFI assigned, change order approved, punch item verified, etc.)
+- Activity feed showing all project actions: "John opened RFI-23," "Sarah approved Submittal 15," "Weather logged for 2026-03-15"
+- Notification preferences per user: toggles for email, push, in-app for each notification type (RFI responses, submittals, change orders, daily updates, team mentions)
+- Email notifications via SendGrid or Resend for critical items only (overdue RFIs, rejected submittals, approved change orders, urgent messages)
+- Mention system: tag users with @name in comments, creates notification
+
+## Backend: Integrations
+
+Connect to the real world.
+
+Must have:
+- Weather API integration (OpenWeather or similar): auto-populate daily log with weather, surface to schedule risk, display on dashboard
+- Calendar sync: Google Calendar and Outlook calendar integration to sync meetings, display on dashboard
+- PDF export: RFI log report, submittal register, daily log reports, pay applications (AIA G702/G703 format)
+- CSV/Excel export: budget by CSI division, schedule (for Excel Gantt), crew hours, activity feed
+- Procore integration (stretch goal): sync users, pull actual cost, sync RFIs, push daily logs
+- Email integration: ability to forward emails into app (create RFI or attach to existing RFI), send email summaries

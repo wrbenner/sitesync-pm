@@ -118,9 +118,16 @@ CREATE POLICY activity_feed_select ON activity_feed FOR SELECT
   ));
 
 -- ── audit_log ────────────────────────────────────────────
+-- Guard: audit_log may not exist if 00001a migration was skipped
 
-DROP POLICY IF EXISTS audit_log_select ON audit_log;
-CREATE POLICY audit_log_select ON audit_log FOR SELECT
-  USING (project_id IN (
-    SELECT project_id FROM project_members WHERE user_id = auth.uid()
-  ));
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'audit_log') THEN
+    EXECUTE 'DROP POLICY IF EXISTS audit_log_select ON audit_log';
+    EXECUTE $p$
+      CREATE POLICY audit_log_select ON audit_log FOR SELECT
+        USING (project_id IN (
+          SELECT project_id FROM project_members WHERE user_id = auth.uid()
+        ))
+    $p$;
+  END IF;
+END $$;

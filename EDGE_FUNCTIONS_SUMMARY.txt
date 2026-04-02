@@ -1,0 +1,265 @@
+SUPABASE EDGE FUNCTIONS - CREATION SUMMARY
+===========================================
+
+Project: SiteSync AI - Construction Operating System
+Date: 2026-04-01
+Status: COMPLETE
+
+FILES CREATED
+=============
+
+1. /supabase/functions/ai-copilot/index.ts (225 lines)
+   - Multi-turn conversational AI assistant
+   - Loads project context (RFIs, schedule, budget, weather)
+   - Stores conversations in ai_conversations & ai_messages tables
+   - Returns: { response, conversation_id, tokens_used }
+
+2. /supabase/functions/ai-rfi-draft/index.ts (143 lines)
+   - Converts field descriptions to formal RFI documents
+   - Suggests assignee role and spec section
+   - Stores drafts for later submission
+   - Returns: { subject, question, suggested_assignee, spec_section }
+
+3. /supabase/functions/ai-daily-summary/index.ts (200 lines)
+   - Aggregates daily logs, RFI activity, punch list changes
+   - Generates narrative summaries for stakeholders
+   - Extracts highlights and concerns
+   - Returns: { summary, highlights[], concerns[] }
+
+4. /supabase/functions/ai-schedule-risk/index.ts (190 lines)
+   - Analyzes schedule activities for delay risks
+   - Considers weather, crew availability, RFI dependencies
+   - Prioritizes critical path items
+   - Returns: { risks: [{ activity_id, risk_level, probability, impact_days, reason, mitigation }] }
+
+5. /supabase/functions/ai-conflict-detection/index.ts (185 lines)
+   - Detects timeline and dependency conflicts
+   - Cross-references schedule vs. submittals vs. RFIs
+   - Analyzes weather impact on critical path
+   - Returns: { conflicts: [{ type, severity, description, affected_items, recommendation }] }
+
+6. /supabase/functions/weather-sync/index.ts (149 lines)
+   - Fetches 10-day forecast from OpenWeatherMap
+   - Caches in weather_cache table
+   - CRON-only function (service role authentication)
+   - Returns: { cached, forecast_days }
+
+7. /supabase/functions/EDGE_FUNCTIONS_GUIDE.md
+   - Complete 400+ line deployment and usage guide
+   - Detailed function descriptions with examples
+   - Database schema requirements (SQL)
+   - Environment variable setup
+   - Error handling patterns
+   - Security notes and cost considerations
+
+8. /supabase/functions/QUICK_REFERENCE.md
+   - Fast lookup for API endpoints
+   - Code patterns and examples
+   - Testing instructions
+   - Performance notes
+   - Debugging tips
+
+TECHNOLOGY STACK
+================
+
+Runtime: Deno v2
+Language: TypeScript
+Framework: Supabase Edge Functions
+
+Dependencies (via esm.sh):
+- @supabase/supabase-js@2 - Database & auth
+- std@0.168.0/http/server.ts - HTTP handling
+
+External APIs:
+- Anthropic Claude API (claude-sonnet-4-6)
+- OpenWeatherMap API (5-day forecast)
+
+AUTHENTICATION & SECURITY
+=========================
+
+User-facing functions:
+- JWT authentication via Supabase Auth
+- Project membership verification
+- Row-level security checks
+
+CRON-only function (weather-sync):
+- Requires CRON_SECRET in Authorization header
+- Uses service role key for admin operations
+
+Input validation:
+- UUID validation for project_id
+- Date format validation (YYYY-MM-DD)
+- HTML/script sanitization for text inputs
+- Text length limits to prevent abuse
+
+CORS:
+- http://localhost:5173
+- http://localhost:3000
+- https://sitesync.ai
+- https://app.sitesync.ai
+
+KEY FEATURES
+============
+
+1. AI-Native Construction Intelligence
+   - Claude Sonnet 4.6 for reasoning and generation
+   - Construction-specific system prompts
+   - Field-first language (talks like a superintendent)
+
+2. Context Awareness
+   - Loads relevant project data automatically
+   - Maintains conversation history
+   - Considers weather, crew, RFIs, schedule interdependencies
+
+3. Production-Quality
+   - Comprehensive error handling
+   - Input validation and sanitization
+   - CORS support for browser requests
+   - Proper HTTP status codes
+   - Cost tracking (tokens used)
+
+4. Database Integration
+   - Stores conversations for audit and replay
+   - Caches RFI drafts for review
+   - Records daily summaries
+   - Maintains weather forecast cache
+
+ENVIRONMENT VARIABLES REQUIRED
+==============================
+
+SUPABASE_URL                  (auto-set by Supabase)
+SUPABASE_SERVICE_ROLE_KEY     (auto-set by Supabase)
+SUPABASE_ANON_KEY             (auto-set by Supabase)
+ANTHROPIC_API_KEY             (set manually)
+OPENWEATHER_API_KEY           (set manually)
+CRON_SECRET                   (optional, for weather-sync)
+
+DEPLOYMENT
+==========
+
+Local testing:
+  supabase start
+  supabase functions serve
+
+Production deployment:
+  supabase functions deploy
+  supabase functions deploy ai-copilot  # single function
+
+View logs:
+  supabase functions list
+  supabase functions serve ai-copilot
+
+DATABASE TABLES (required)
+==========================
+
+ai_conversations
+  id (uuid pk)
+  project_id (uuid)
+  user_id (uuid)
+  last_message_at (timestamp)
+  created_at (timestamp)
+
+ai_messages
+  id (bigserial pk)
+  conversation_id (uuid fk)
+  role (text: 'user' | 'assistant')
+  content (text)
+  tokens (int)
+  created_at (timestamp)
+
+rfi_drafts
+  id (uuid pk)
+  project_id (uuid)
+  user_id (uuid)
+  subject (text)
+  question (text)
+  source_description (text)
+  source_photo (text)
+  source_drawing (text)
+  created_at (timestamp)
+
+daily_summaries
+  id (uuid pk)
+  project_id (uuid)
+  date (date)
+  summary (text)
+  highlights (text[])
+  concerns (text[])
+  generated_by (uuid)
+  created_at (timestamp)
+  unique(project_id, date)
+
+weather_cache
+  id (uuid pk)
+  project_id (uuid unique)
+  forecast_data (jsonb)
+  cached_at (timestamp)
+  created_at (timestamp)
+  updated_at (timestamp)
+
+COST ANALYSIS
+=============
+
+Claude API (Anthropic):
+- Input: $3 per 1M tokens
+- Output: $15 per 1M tokens
+- Typical per-call cost: $0.003-$0.012
+
+OpenWeatherMap:
+- Free tier: 1000 calls/day
+- Typical cost: $0 (free tier sufficient for hourly updates)
+
+Estimated monthly cost (100 projects, 10 calls/day):
+- ai-copilot: ~$10/month
+- ai-rfi-draft: ~$15/month
+- ai-daily-summary: ~$20/month
+- ai-schedule-risk: ~$25/month
+- ai-conflict-detection: ~$20/month
+- weather-sync: ~$0/month
+Total: ~$90/month (before volume discounts)
+
+NEXT STEPS
+==========
+
+1. Create required database tables (SQL provided)
+2. Set environment variables in Supabase dashboard
+3. Deploy: supabase functions deploy
+4. Test each function with sample project data
+5. Enable Row Level Security on all tables
+6. Configure project_members table
+7. Set up monitoring and cost alerts
+8. Document any customizations
+
+CODE QUALITY NOTES
+==================
+
+- All functions follow shared auth.ts patterns
+- Consistent error handling with HttpError class
+- CORS headers included on all responses
+- Input validation before processing
+- Parallel database queries where possible
+- Efficient JSON parsing with regex extraction
+- No hardcoded secrets or credentials
+- Proper async/await patterns
+- TypeScript strict typing throughout
+- Construction-industry appropriate language in prompts
+
+TESTING CHECKLIST
+=================
+
+- [ ] Local: supabase start
+- [ ] Set environment variables
+- [ ] Deploy: supabase functions deploy
+- [ ] Test ai-copilot with sample conversation
+- [ ] Test ai-rfi-draft with field description
+- [ ] Test ai-daily-summary with date
+- [ ] Test ai-schedule-risk on project
+- [ ] Test ai-conflict-detection on project
+- [ ] Test weather-sync with valid coordinates
+- [ ] Verify database tables created with RLS
+- [ ] Check API response formats match spec
+- [ ] Verify CORS headers present
+- [ ] Monitor logs for errors
+- [ ] Check token usage tracking
+- [ ] Test error conditions (invalid JWT, missing data)
+

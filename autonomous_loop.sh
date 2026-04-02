@@ -585,6 +585,10 @@ read_founder_context() {
         "DESIGN_STANDARDS.md:DESIGN STANDARDS (what world-class UI looks like, enforce these rules)"
         "MODULE_SPECS.md:MODULE SPECIFICATIONS (what done looks like for each feature)"
         "INDUSTRY_REFERENCE.md:INDUSTRY REFERENCE (CSI codes, AIA forms, financial formulas, KPIs)"
+        "BACKEND_ARCHITECTURE.md:BACKEND ARCHITECTURE (Supabase schema, RLS, edge functions, storage, real-time subscriptions)"
+        "AUTH_SPECS.md:AUTHENTICATION SPECIFICATIONS (roles, permissions, RLS policies, auth flows, session management)"
+        "API_SPECS.md:API SPECIFICATIONS (query patterns, React hooks, edge function endpoints, error handling)"
+        "INTEGRATIONS.md:INTEGRATION SPECIFICATIONS (weather, Procore, calendar, email, SMS, AI providers)"
         "LEARNINGS.md:ENGINE LEARNINGS (what worked, what failed, fix rates, score trends from prior runs — use this to avoid repeating mistakes)"
     )
 
@@ -626,7 +630,7 @@ $(grep -A 100 '## Directory Structure' "$snapshot_file" | head -80)
 JSON format (start with { end with }):
 {\"modules\":[{\"name\":\"ui-design-system\",\"label\":\"UI Design System\",\"description\":\"Design tokens, primitives, shared components\",\"files\":[\"src/styles/theme.ts\",\"src/components/Primitives.tsx\"],\"priority\":1}]}
 
-Use these modules: ui-design-system, core-workflows (RFIs/submittals/change-orders/punch-list), financial-engine (budget/pay-apps), scheduling (gantt/phases), field-operations (daily-log/field-capture/crews), project-intelligence (AI-copilot), document-management (drawings/files), collaboration (meetings/directory), infrastructure (App.tsx/routing/auth)."
+Use these modules: ui-design-system, core-workflows (RFIs/submittals/change-orders/punch-list), financial-engine (budget/pay-apps), scheduling (gantt/phases), field-operations (daily-log/field-capture/crews), project-intelligence (AI-copilot), document-management (drawings/files), collaboration (meetings/directory), infrastructure (App.tsx/routing), auth-rbac (Supabase auth, roles, RLS, login/signup), database-api (Supabase client, hooks, real-time subscriptions), ai-features (edge functions for AI copilot, RFI drafter, schedule risk, conflict detection), integrations (weather API, file storage, PDF export, calendar sync, notifications)."
 
     local response
     response=$(call_claude "$DECOMP_MODEL" "$prompt" 4096)
@@ -652,7 +656,11 @@ Use these modules: ui-design-system, core-workflows (RFIs/submittals/change-orde
     {"name":"scheduling","label":"Scheduling","description":"Schedule, lookahead, gantt","files":[],"priority":2},
     {"name":"field-operations","label":"Field Operations","description":"Daily log, crews, safety","files":[],"priority":2},
     {"name":"project-intelligence","label":"Project Intelligence","description":"AI copilot, agents, insights","files":[],"priority":2},
-    {"name":"infrastructure","label":"Infrastructure","description":"Routing, state, API, auth","files":[],"priority":3}
+    {"name":"infrastructure","label":"Infrastructure","description":"Routing, state, API, auth","files":[],"priority":3},
+    {"name":"auth-rbac","label":"Authentication & RBAC","description":"Supabase Auth, profiles, roles, RLS, login/signup flows","files":["src/lib/supabase.ts","src/stores/authStore.ts"],"priority":1},
+    {"name":"database-api","label":"Database & API Layer","description":"Supabase client, typed hooks, real-time subscriptions, optimistic updates","files":["src/lib/supabase.ts","src/types/database.ts","src/hooks/useSupabase.ts"],"priority":1},
+    {"name":"ai-features","label":"AI Features","description":"Edge functions for copilot, RFI drafter, schedule risk, conflict detection","files":[],"priority":2},
+    {"name":"integrations","label":"Integrations & Storage","description":"Weather API, file storage, PDF export, calendar sync, notifications","files":[],"priority":3}
   ]
 }
 EOF
@@ -835,8 +843,30 @@ ${invention_section}"
         tools_arg="$WEB_SEARCH_TOOLS"
     fi
 
+    # ── STRIPE INTELLIGENCE: Multi-model routing ──
+    # Route audit to the RIGHT model based on module maturity.
+    # Low-scoring modules (<60) get Opus for deep architectural thinking.
+    # Mid-scoring modules (60-85) get Sonnet for balanced analysis.
+    # High-scoring modules (>85) get Haiku for fast polish checks (saves 10x cost).
+    local audit_model_for_module="$AUDIT_MODEL"
+    local latest_mod_score=50
+    if [ -f "${SCORES_DIR}/${module_name}.txt" ]; then
+        latest_mod_score=$(tail -1 "${SCORES_DIR}/${module_name}.txt" | tr -dc '0-9')
+        [ -z "$latest_mod_score" ] && latest_mod_score=50
+    fi
+    if [ "$latest_mod_score" -lt 60 ] 2>/dev/null; then
+        audit_model_for_module="claude-opus-4-6"
+        log "  Model routing: Opus (score ${latest_mod_score} < 60, needs deep analysis)"
+    elif [ "$latest_mod_score" -gt 85 ] 2>/dev/null; then
+        audit_model_for_module="$DECOMP_MODEL"
+        log "  Model routing: Haiku (score ${latest_mod_score} > 85, just needs polish)"
+    else
+        audit_model_for_module="${AUDIT_MODEL}"
+        log "  Model routing: ${AUDIT_MODEL} (score ${latest_mod_score}, standard audit)"
+    fi
+
     local response
-    response=$(call_claude "$AUDIT_MODEL" "$prompt" 16384 "" "$tools_arg")
+    response=$(call_claude "$audit_model_for_module" "$prompt" 16384 "" "$tools_arg")
 
     # Save raw response for debugging
     echo "$response" > "${cycle_dir}/audit_${module_name}_raw.json"
@@ -918,10 +948,8 @@ print("{}")
         # Persist score for trending
         echo "$score" >> "${SCORES_DIR}/${module_name}.txt"
 
-        # Count invented features
-        local invented
-        invented=$(echo "$audit_json" | jq '.invented_features // [] | length' 2>/dev/null || echo 0)
-        FEATURES_INVENTED=$(( FEATURES_INVENTED + invented ))
+        # Note: invented feature candidates are counted here for audit logging only.
+        # FEATURES_INVENTED is incremented in execute_prompts() on successful execution.
 
         success "${module_label}: score ${score}/100 | ${issue_count} issues (${critical_count} critical)"
     else
@@ -1034,12 +1062,8 @@ ${build_errors}" "$gate_log" 180
             break
         fi
 
-        # BUDGET CHECK mid-execution: abort if we are running low
-        local spend_int
-        spend_int=$(echo "$ESTIMATED_SPEND" | cut -d'.' -f1)
-        local budget_int
-        budget_int=$(echo "$MAX_SPEND" | cut -d'.' -f1)
-        if [ "${spend_int:-0}" -ge "${budget_int:-500}" ]; then
+        # BUDGET CHECK mid-execution: abort if we are running low (decimal-safe)
+        if [ "$(echo "${ESTIMATED_SPEND:-0} >= ${MAX_SPEND:-500}" | bc 2>/dev/null)" = "1" ]; then
             warn "  Budget limit hit mid-module — stopping execution"
             break
         fi
@@ -1067,6 +1091,7 @@ ${build_errors}" "$gate_log" 180
 3. Make the MINIMUM change needed. Do not refactor unrelated code.
 4. After making changes, run: npm run build — if the build fails, fix the errors before finishing.
 5. Never use hyphens in UI text. Use commas or periods instead.
+6. For Supabase/backend code: Use the client from src/lib/supabase.ts. Type all queries against the Database interface in src/types/database.ts. Use hooks from src/hooks/useSupabase.ts. Follow RLS patterns (all tables filtered by project_id). Add real-time subscriptions for rfis, daily_logs, punch_list_items, notifications. Implement optimistic updates on all mutations. Edge functions go in supabase/functions/.
 
 TASK:
 ${raw_prompt}"
@@ -1122,11 +1147,13 @@ ${raw_prompt}"
                     ESTIMATED_SPEND=$(echo "scale=2; $ESTIMATED_SPEND + 0.08" | bc 2>/dev/null || echo "$ESTIMATED_SPEND")
                     CYCLE_SPEND=$(echo "scale=2; $CYCLE_SPEND + 0.08" | bc 2>/dev/null || echo "$CYCLE_SPEND")
 
-                    # If build STILL broken after fix, revert and move on
+                    # If build STILL broken after fix, revert ONLY uncommitted changes and move on
                     if ! (cd "$PROJECT_DIR" && eval "$BUILD_CMD" > /dev/null 2>&1); then
-                        warn "  Build still broken — reverting to last good state"
+                        warn "  Build still broken — reverting uncommitted changes to last good commit"
                         # Save what we're reverting for debugging
                         (cd "$PROJECT_DIR" && git diff src/ > "${exec_dir}/reverted_${issue_id}.patch" 2>/dev/null) || true
+                        # Stash uncommitted changes (safer than checkout -- which nukes everything)
+                        (cd "$PROJECT_DIR" && git stash push -m "engine: reverted broken fix ${issue_id}" -- src/ 2>/dev/null) || \
                         (cd "$PROJECT_DIR" && git checkout -- src/ 2>/dev/null) || true
                         consecutive_failures=$(( consecutive_failures + 1 ))
                     fi
@@ -1169,6 +1196,8 @@ ${raw_prompt}"
                 if run_claude_code "$feat_prompt" "$feat_log"; then
                     ESTIMATED_SPEND=$(echo "scale=2; $ESTIMATED_SPEND + 0.08" | bc 2>/dev/null || echo "$ESTIMATED_SPEND")
                     CYCLE_SPEND=$(echo "scale=2; $CYCLE_SPEND + 0.08" | bc 2>/dev/null || echo "$CYCLE_SPEND")
+                    # Only count inventions that actually executed successfully
+                    FEATURES_INVENTED=$(( FEATURES_INVENTED + 1 ))
                     # Atomic commit for invention
                     (cd "$PROJECT_DIR" && \
                      git add src/ package.json tsconfig.json 2>/dev/null; \
@@ -1281,6 +1310,489 @@ Fix every failing test. Do not delete or skip tests. If the test expectations ar
 
     warn "Tests still failing after auto-fix — continuing (issues logged)"
     return 0
+}
+
+# ── NETFLIX: Visual verification via dev server + screenshot ─────────────────
+# Start the dev server, capture a screenshot, and ask Claude vision to evaluate.
+# This catches UI regressions that TypeScript can't see: layout breaks, color
+# errors, missing content, overlapping elements.
+verify_visual() {
+    local cycle_dir="$1"
+
+    # Only run visual verification every 3 cycles (expensive) or on final cycle
+    if [ $(( CYCLE % 3 )) -ne 0 ] && [ "$CYCLE" -lt "$MAX_CYCLES" ]; then
+        return 0
+    fi
+
+    # Check if we can take screenshots (need npx or playwright installed)
+    if ! command -v npx &>/dev/null; then
+        log "Visual verification skipped (npx not available)"
+        return 0
+    fi
+
+    log "VISUAL VERIFICATION: Starting dev server for screenshot..."
+
+    # Start dev server in background
+    local dev_pid=""
+    local dev_log="${cycle_dir}/dev_server.log"
+    (cd "$PROJECT_DIR" && npx vite --port 5199 > "$dev_log" 2>&1) &
+    dev_pid=$!
+
+    # Wait for server to be ready (up to 30 seconds)
+    local wait_count=0
+    while [ $wait_count -lt 30 ]; do
+        if curl -s -o /dev/null http://localhost:5199 2>/dev/null; then
+            break
+        fi
+        sleep 1
+        wait_count=$(( wait_count + 1 ))
+    done
+
+    if [ $wait_count -ge 30 ]; then
+        warn "Dev server did not start in 30s — skipping visual verification"
+        kill "$dev_pid" 2>/dev/null; wait "$dev_pid" 2>/dev/null || true
+        return 0
+    fi
+
+    # Take screenshot using Claude Code (it can use a headless browser)
+    local screenshot_file="${cycle_dir}/ui_screenshot.png"
+    local vis_log="${cycle_dir}/visual_verification.log"
+
+    # Use Claude Code to take a screenshot and evaluate the UI
+    local vis_prompt="VISUAL QA TASK:
+1. First, install playwright if needed: npx playwright install chromium --with-deps 2>/dev/null || true
+2. Take a screenshot of http://localhost:5199 and save it to ${screenshot_file}. Use this Node.js script:
+   const { chromium } = require('playwright');
+   (async () => {
+     const browser = await chromium.launch();
+     const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+     await page.goto('http://localhost:5199', { waitUntil: 'networkidle', timeout: 15000 });
+     await page.screenshot({ path: '${screenshot_file}', fullPage: false });
+     await browser.close();
+   })();
+3. If the screenshot was taken successfully, report: VISUAL_CHECK=PASS
+4. If the page shows errors, blank content, or failed to render, report: VISUAL_CHECK=FAIL and describe what you see."
+
+    run_claude_code "$vis_prompt" "$vis_log" 120 || true
+    ESTIMATED_SPEND=$(echo "scale=2; $ESTIMATED_SPEND + 0.08" | bc 2>/dev/null || echo "$ESTIMATED_SPEND")
+
+    # Kill the dev server
+    kill "$dev_pid" 2>/dev/null; wait "$dev_pid" 2>/dev/null || true
+
+    if [ -f "$screenshot_file" ]; then
+        success "Visual verification: screenshot captured (${screenshot_file})"
+    else
+        warn "Visual verification: screenshot capture failed (check ${vis_log})"
+    fi
+}
+
+# ── AMAZON: Quality gates beyond build ────────────────────────────────────────
+# Track bundle size, TypeScript error count, and other health metrics.
+# Prevents silent regressions the build can't catch.
+verify_quality_gates() {
+    local cycle_dir="$1"
+    local quality_file="${cycle_dir}/quality_gates.json"
+
+    log "Running quality gates..."
+
+    # Bundle size tracking
+    local bundle_size=0
+    local dist_dir="${PROJECT_DIR}/dist"
+    if [ -d "$dist_dir" ]; then
+        bundle_size=$(find "$dist_dir" -type f \( -name '*.js' -o -name '*.css' \) -exec wc -c {} + 2>/dev/null | tail -1 | awk '{print $1}')
+        [ -z "$bundle_size" ] && bundle_size=0
+    fi
+
+    # TypeScript strict error count (count unique errors, don't fail)
+    local ts_errors=0
+    if [ -n "$BUILD_CMD" ]; then
+        ts_errors=$(cd "$PROJECT_DIR" && npx tsc --noEmit 2>&1 | grep -c "error TS" 2>/dev/null || echo 0)
+    fi
+
+    # Source file count and total lines
+    local src_files
+    src_files=$(find "$PROJECT_DIR/src" -type f \( -name '*.ts' -o -name '*.tsx' \) 2>/dev/null | wc -l | tr -d ' ')
+    local src_lines
+    src_lines=$(find "$PROJECT_DIR/src" -type f \( -name '*.ts' -o -name '*.tsx' \) -exec wc -l {} + 2>/dev/null | tail -1 | awk '{print $1}')
+
+    # Track in quality file
+    jq -n \
+        --argjson bundle_size "${bundle_size:-0}" \
+        --argjson ts_errors "${ts_errors:-0}" \
+        --argjson src_files "${src_files:-0}" \
+        --argjson src_lines "${src_lines:-0}" \
+        --argjson cycle "$CYCLE" \
+        '{cycle:$cycle, bundle_size_bytes:$bundle_size, typescript_errors:$ts_errors, source_files:$src_files, source_lines:$src_lines}' \
+        > "$quality_file"
+
+    # Append to trending file
+    local trending_file="${RUN_DIR}/quality_trend.jsonl"
+    cat "$quality_file" >> "$trending_file"
+
+    # Alert on regression
+    if [ -f "$trending_file" ]; then
+        local prev_bundle
+        prev_bundle=$(tail -2 "$trending_file" | head -1 | jq '.bundle_size_bytes // 0' 2>/dev/null || echo 0)
+        if [ "$bundle_size" -gt 0 ] && [ "$prev_bundle" -gt 0 ]; then
+            local growth_pct=$(( (bundle_size - prev_bundle) * 100 / prev_bundle ))
+            if [ "$growth_pct" -gt 15 ]; then
+                warn "BUNDLE BLOAT: Size grew ${growth_pct}% this cycle (${prev_bundle} → ${bundle_size}). Consider code splitting."
+            fi
+        fi
+    fi
+
+    success "Quality gates: ${src_files} files, ${src_lines} lines, ${ts_errors} TS errors, $(format_bytes ${bundle_size:-0}) bundle"
+}
+
+# ── TESLA: Self-improving prompt patterns ─────────────────────────────────────
+# Track which prompt patterns lead to highest fix rates. Evolve strategy.
+# Writes prompt_patterns.json each cycle; the engine reads it next cycle
+# to weight prompt construction toward patterns that historically work.
+evolve_prompt_strategy() {
+    local cycle_dir="$1"
+    local patterns_file="${RUN_DIR}/prompt_patterns.json"
+
+    log "TESLA: Analyzing prompt effectiveness..."
+
+    # Collect per-module results this cycle
+    local pattern_data="[]"
+    for verify_file in "${cycle_dir}"/verify_*.json; do
+        [ -f "$verify_file" ] || continue
+        local mod
+        mod=$(basename "$verify_file" | sed 's/verify_//; s/\.json//')
+
+        local fixed
+        fixed=$(jq '[.verifications[]? | select(.status=="fixed")] | length' "$verify_file" 2>/dev/null || echo 0)
+        local total
+        total=$(jq '[.verifications[]?] | length' "$verify_file" 2>/dev/null || echo 0)
+
+        [ "$total" -eq 0 ] && continue
+
+        local rate=$(( fixed * 100 / total ))
+
+        # Check what model was used (from audit file)
+        local audit_file="${cycle_dir}/audit_${mod}.json"
+        local model_used="sonnet"
+        if [ -f "$audit_file" ]; then
+            model_used=$(jq -r '.model // "sonnet"' "$audit_file" 2>/dev/null || echo "sonnet")
+        fi
+
+        # Check thinking mode
+        local tmode="surgeon"
+        if [ "$CYCLE" -le 3 ]; then tmode="surgeon"
+        elif [ "$CYCLE" -le 10 ]; then tmode="architect"
+        else tmode="visionary"; fi
+
+        pattern_data=$(echo "$pattern_data" | jq \
+            --arg mod "$mod" \
+            --argjson rate "$rate" \
+            --argjson fixed "$fixed" \
+            --argjson total "$total" \
+            --arg model "$model_used" \
+            --arg mode "$tmode" \
+            --argjson cycle "$CYCLE" \
+            '. + [{"module":$mod,"fix_rate":$rate,"fixed":$fixed,"total":$total,"model":$model,"mode":$mode,"cycle":$cycle}]')
+    done
+
+    # Write this cycle's patterns
+    echo "$pattern_data" | jq '.' > "${cycle_dir}/prompt_patterns.json" 2>/dev/null || true
+
+    # Append to running patterns log
+    echo "$pattern_data" | jq -c '.[]' >> "${RUN_DIR}/prompt_patterns.jsonl" 2>/dev/null || true
+
+    # Analyze trends: which model + mode combos work best?
+    if [ -f "${RUN_DIR}/prompt_patterns.jsonl" ]; then
+        local line_count
+        line_count=$(wc -l < "${RUN_DIR}/prompt_patterns.jsonl" | tr -d ' ')
+
+        if [ "${line_count:-0}" -ge 5 ]; then
+            # Calculate average fix rate per model
+            local model_stats
+            model_stats=$(cat "${RUN_DIR}/prompt_patterns.jsonl" | jq -s '
+                group_by(.model) | map({
+                    model: .[0].model,
+                    avg_fix_rate: ([.[].fix_rate] | add / length | floor),
+                    total_prompts: ([.[].total] | add),
+                    total_fixed: ([.[].fixed] | add)
+                }) | sort_by(-.avg_fix_rate)
+            ' 2>/dev/null || echo "[]")
+
+            # Write strategy recommendations
+            local strategy_file="${RUN_DIR}/prompt_strategy.json"
+            jq -n \
+                --argjson model_stats "$model_stats" \
+                --argjson cycle "$CYCLE" \
+                --argjson total_patterns "$line_count" \
+                '{
+                    cycle: $cycle,
+                    total_data_points: $total_patterns,
+                    model_effectiveness: $model_stats,
+                    recommendation: (
+                        if ($model_stats | length) > 0 then
+                            "Best performing model: " + $model_stats[0].model + " at " + ($model_stats[0].avg_fix_rate | tostring) + "% fix rate"
+                        else "Insufficient data" end
+                    )
+                }' > "$strategy_file" 2>/dev/null || true
+
+            # Log insights
+            local best_model
+            best_model=$(echo "$model_stats" | jq -r '.[0].model // "unknown"' 2>/dev/null || echo "unknown")
+            local best_rate
+            best_rate=$(echo "$model_stats" | jq -r '.[0].avg_fix_rate // 0' 2>/dev/null || echo 0)
+            log "TESLA: Best model: ${best_model} (${best_rate}% avg fix rate over ${line_count} data points)"
+
+            # Adaptive threshold: if overall fix rate is dropping, lower the Opus threshold
+            local recent_avg
+            recent_avg=$(tail -10 "${RUN_DIR}/prompt_patterns.jsonl" | jq -s '[.[].fix_rate] | add / length | floor' 2>/dev/null || echo 50)
+            if [ "${recent_avg:-50}" -lt 40 ]; then
+                log "TESLA: Fix rates declining. Recommend more Opus usage next cycle."
+            fi
+        fi
+    fi
+
+    success "TESLA: Prompt pattern analysis complete"
+}
+
+# ── META: Cycle planning phase ────────────────────────────────────────────────
+# Before diving into audits, take a step back: review scores, identify focus
+# areas, and create a strategic plan. This turns the engine from a bug fixer
+# into a strategic builder that thinks before it acts.
+plan_cycle() {
+    local cycle_dir="$1"
+    local cycle_num="$2"
+    local plan_file="${cycle_dir}/cycle_plan.json"
+
+    log "META: Strategic planning for cycle ${cycle_num}..."
+
+    # Gather all module scores
+    local score_summary="[]"
+    if [ -d "$SCORES_DIR" ]; then
+        for score_file in "${SCORES_DIR}"/*.txt; do
+            [ -f "$score_file" ] || continue
+            local mod_name
+            mod_name=$(basename "$score_file" .txt)
+            local latest_score
+            latest_score=$(tail -1 "$score_file" 2>/dev/null | tr -dc '0-9')
+            [ -z "$latest_score" ] && latest_score=0
+
+            local score_count
+            score_count=$(wc -l < "$score_file" | tr -d ' ')
+            local trend="stable"
+            if [ "${score_count:-0}" -ge 2 ]; then
+                local prev
+                prev=$(sed -n "$(( score_count - 1 ))p" "$score_file" 2>/dev/null | tr -dc '0-9')
+                if [ -n "$prev" ] && [ -n "$latest_score" ]; then
+                    local delta=$(( latest_score - prev ))
+                    if [ "$delta" -gt 3 ]; then trend="improving"
+                    elif [ "$delta" -lt -3 ]; then trend="declining"
+                    fi
+                fi
+            fi
+
+            score_summary=$(echo "$score_summary" | jq \
+                --arg mod "$mod_name" \
+                --argjson score "${latest_score:-0}" \
+                --arg trend "$trend" \
+                --argjson cycles "${score_count:-0}" \
+                '. + [{"module":$mod,"score":$score,"trend":$trend,"cycles_tracked":$cycles}]')
+        done
+    fi
+
+    # Determine thinking mode
+    local thinking_mode="surgeon"
+    if [ "$cycle_num" -le 3 ]; then thinking_mode="surgeon"
+    elif [ "$cycle_num" -le 10 ]; then thinking_mode="architect"
+    else thinking_mode="visionary"; fi
+
+    # Identify priority areas
+    local weakest_modules
+    weakest_modules=$(echo "$score_summary" | jq '[sort_by(.score)[:3] | .[].module] // []' 2>/dev/null || echo "[]")
+    local declining_modules
+    declining_modules=$(echo "$score_summary" | jq '[.[] | select(.trend=="declining") | .module] // []' 2>/dev/null || echo "[]")
+    local avg_score
+    avg_score=$(echo "$score_summary" | jq '[.[].score] | if length > 0 then add / length | floor else 0 end' 2>/dev/null || echo 0)
+
+    # Check prompt strategy from TESLA
+    local prompt_recommendation="No data yet"
+    local strategy_file="${RUN_DIR}/prompt_strategy.json"
+    if [ -f "$strategy_file" ]; then
+        prompt_recommendation=$(jq -r '.recommendation // "No data yet"' "$strategy_file" 2>/dev/null || echo "No data yet")
+    fi
+
+    # Check quality gates trend
+    local quality_trend="stable"
+    local trending_file="${RUN_DIR}/quality_trend.jsonl"
+    if [ -f "$trending_file" ]; then
+        local trend_count
+        trend_count=$(wc -l < "$trending_file" | tr -d ' ')
+        if [ "${trend_count:-0}" -ge 2 ]; then
+            local prev_errors
+            prev_errors=$(tail -2 "$trending_file" | head -1 | jq '.typescript_errors // 0' 2>/dev/null || echo 0)
+            local curr_errors
+            curr_errors=$(tail -1 "$trending_file" | jq '.typescript_errors // 0' 2>/dev/null || echo 0)
+            if [ "${curr_errors:-0}" -gt "${prev_errors:-0}" ]; then
+                quality_trend="degrading"
+            elif [ "${curr_errors:-0}" -lt "${prev_errors:-0}" ]; then
+                quality_trend="improving"
+            fi
+        fi
+    fi
+
+    # Build the plan
+    jq -n \
+        --argjson cycle "$cycle_num" \
+        --arg mode "$thinking_mode" \
+        --argjson avg_score "${avg_score:-0}" \
+        --argjson weakest "$weakest_modules" \
+        --argjson declining "$declining_modules" \
+        --arg quality_trend "$quality_trend" \
+        --arg prompt_strategy "$prompt_recommendation" \
+        --argjson scores "$score_summary" \
+        '{
+            cycle: $cycle,
+            thinking_mode: $mode,
+            average_score: $avg_score,
+            focus_modules: $weakest,
+            declining_modules: $declining,
+            quality_trend: $quality_trend,
+            prompt_strategy: $prompt_strategy,
+            plan: (
+                if $avg_score < 50 then "TRIAGE: Focus exclusively on critical bugs and build failures. Skip cosmetic issues."
+                elif $avg_score < 70 then "STABILIZE: Fix high-severity issues first. Start improving architecture in top modules."
+                elif $avg_score < 85 then "POLISH: All modules functional. Focus on UX, performance, and edge cases."
+                else "INNOVATE: Platform is strong. Invent new features, push for world-class quality."
+                end
+            ),
+            module_scores: $scores
+        }' > "$plan_file" 2>/dev/null || true
+
+    # Log the plan
+    local plan_summary
+    plan_summary=$(jq -r '.plan // "No plan"' "$plan_file" 2>/dev/null || echo "No plan")
+    log "META: Avg score: ${avg_score} | Mode: $(echo "$thinking_mode" | tr '[:lower:]' '[:upper:]') | Strategy: ${plan_summary}"
+
+    if [ "$(echo "$declining_modules" | jq 'length')" -gt 0 ] 2>/dev/null; then
+        local declining_list
+        declining_list=$(echo "$declining_modules" | jq -r 'join(", ")' 2>/dev/null || echo "")
+        warn "META: Declining modules detected: ${declining_list} — will receive extra attention"
+    fi
+
+    success "META: Cycle ${cycle_num} plan ready"
+}
+
+# ── APPLE: UI polish verification ─────────────────────────────────────────────
+# Checks for design consistency: spacing, color token usage, alignment, and
+# visual hierarchy. Runs via static analysis (grep/ast), not screenshots.
+verify_ui_polish() {
+    local cycle_dir="$1"
+    local polish_file="${cycle_dir}/ui_polish.json"
+
+    log "APPLE: Checking UI polish..."
+
+    local issues=0
+    local warnings=""
+
+    # Check 1: Hardcoded colors (should use theme tokens)
+    local hardcoded_colors
+    hardcoded_colors=$(grep -rn "color:\s*['\"]#" "$PROJECT_DIR/src/" --include="*.tsx" --include="*.ts" 2>/dev/null | grep -v "theme\." | grep -v "styles/" | grep -v "node_modules" | head -20 || true)
+    local hc_count
+    hc_count=$(echo "$hardcoded_colors" | grep -c '#' 2>/dev/null || echo 0)
+    if [ "${hc_count:-0}" -gt 0 ]; then
+        issues=$(( issues + hc_count ))
+        warnings="${warnings}Hardcoded colors found (${hc_count} instances) — should use theme tokens\n"
+    fi
+
+    # Check 2: Inline px values that should be spacing tokens
+    local hardcoded_px
+    hardcoded_px=$(grep -rn ":\s*['\"][0-9]\+px" "$PROJECT_DIR/src/" --include="*.tsx" 2>/dev/null | grep -v "theme\." | grep -v "styles/" | grep -v "node_modules" | grep -v "1px\|2px" | head -20 || true)
+    local px_count
+    px_count=$(echo "$hardcoded_px" | grep -c 'px' 2>/dev/null || echo 0)
+    if [ "${px_count:-0}" -gt 5 ]; then
+        issues=$(( issues + px_count ))
+        warnings="${warnings}Hardcoded pixel values (${px_count} instances) — should use spacing tokens\n"
+    fi
+
+    # Check 3: Inconsistent border radius
+    local radius_values
+    radius_values=$(grep -roh "borderRadius:\s*['\"]\\?[0-9]\\+" "$PROJECT_DIR/src/" --include="*.tsx" 2>/dev/null | sort | uniq -c | sort -rn | head -10 || true)
+    local unique_radii
+    unique_radii=$(echo "$radius_values" | grep -c '[0-9]' 2>/dev/null || echo 0)
+    if [ "${unique_radii:-0}" -gt 4 ]; then
+        warnings="${warnings}Too many unique border radius values (${unique_radii}) — standardize to 2 or 3 sizes\n"
+    fi
+
+    # Check 4: Missing hover/focus states on interactive elements
+    local buttons_without_hover
+    buttons_without_hover=$(grep -rn "onClick=" "$PROJECT_DIR/src/" --include="*.tsx" 2>/dev/null | grep -v "cursor:\s*['\"]pointer" | grep -v "Btn\|Button\|button" | head -10 || true)
+    local no_cursor_count
+    no_cursor_count=$(echo "$buttons_without_hover" | grep -c 'onClick' 2>/dev/null || echo 0)
+    if [ "${no_cursor_count:-0}" -gt 3 ]; then
+        issues=$(( issues + no_cursor_count ))
+        warnings="${warnings}Clickable elements without cursor:pointer (${no_cursor_count}) — add pointer cursor\n"
+    fi
+
+    # Check 5: Console.log left in production code
+    local console_logs
+    console_logs=$(grep -rn "console\.log\|console\.warn\|console\.error" "$PROJECT_DIR/src/" --include="*.tsx" --include="*.ts" 2>/dev/null | grep -v "node_modules" | grep -v "//.*console" | head -20 || true)
+    local log_count
+    log_count=$(echo "$console_logs" | grep -c 'console\.' 2>/dev/null || echo 0)
+    if [ "${log_count:-0}" -gt 3 ]; then
+        warnings="${warnings}Console statements in production code (${log_count}) — clean up before ship\n"
+    fi
+
+    # Check 6: Brand color consistency (primary orange usage)
+    local orange_usage
+    orange_usage=$(grep -rn "F47820\|#f47820" "$PROJECT_DIR/src/" --include="*.tsx" --include="*.ts" 2>/dev/null | grep -v "theme\." | grep -v "styles/" | head -10 || true)
+    local direct_orange
+    direct_orange=$(echo "$orange_usage" | grep -c 'F47820\|f47820' 2>/dev/null || echo 0)
+    if [ "${direct_orange:-0}" -gt 2 ]; then
+        warnings="${warnings}Direct orange hex usage (${direct_orange}) — use theme.colors.primary instead\n"
+    fi
+
+    # Check 7: Hyphens in UI text (violates brand rules)
+    local hyphen_text
+    hyphen_text=$(grep -rn ">[^<]*-[^<]*<" "$PROJECT_DIR/src/" --include="*.tsx" 2>/dev/null | grep -v "node_modules\|aria-\|data-\|class-\|font-\|x-\|re-\|pre-\|sub-\|en-\|de-\|co-" | head -10 || true)
+    local hyphen_count
+    hyphen_count=$(echo "$hyphen_text" | grep -c '\-' 2>/dev/null || echo 0)
+    if [ "${hyphen_count:-0}" -gt 0 ]; then
+        issues=$(( issues + hyphen_count ))
+        warnings="${warnings}Hyphens in UI text (${hyphen_count}) — use commas or periods instead\n"
+    fi
+
+    # Write polish report
+    jq -n \
+        --argjson issues "${issues:-0}" \
+        --argjson cycle "$CYCLE" \
+        --arg warnings "$(printf '%b' "$warnings")" \
+        --argjson hardcoded_colors "${hc_count:-0}" \
+        --argjson hardcoded_px "${px_count:-0}" \
+        --argjson console_logs "${log_count:-0}" \
+        '{
+            cycle: $cycle,
+            total_polish_issues: $issues,
+            hardcoded_colors: $hardcoded_colors,
+            hardcoded_pixels: $hardcoded_px,
+            console_logs: $console_logs,
+            warnings: ($warnings | split("\n") | map(select(length > 0))),
+            grade: (
+                if $issues == 0 then "A+"
+                elif $issues < 5 then "A"
+                elif $issues < 15 then "B"
+                elif $issues < 30 then "C"
+                else "D" end
+            )
+        }' > "$polish_file" 2>/dev/null || true
+
+    # Append to trending
+    jq -c '.' "$polish_file" >> "${RUN_DIR}/polish_trend.jsonl" 2>/dev/null || true
+
+    local grade
+    grade=$(jq -r '.grade // "?"' "$polish_file" 2>/dev/null || echo "?")
+    success "APPLE: Polish grade: ${grade} (${issues} issues found)"
+
+    if [ "${issues:-0}" -gt 15 ]; then
+        warn "APPLE: UI polish needs work. ${issues} issues flagged."
+    fi
 }
 
 # ── Change verification (git-based — fast, accurate, no LLM needed) ──────────
@@ -1426,9 +1938,17 @@ commit_cycle() {
             return 0
         fi
 
-        git commit -m "engine: cycle ${cycle_num} — ${modules_processed} modules, \$${cycle_cost} spend" \
-            2>/dev/null || echo "[commit_cycle] Commit failed" >&2
+        if ! git commit -m "engine: cycle ${cycle_num} — ${modules_processed} modules, \$${cycle_cost} spend" 2>/dev/null; then
+            echo "[commit_cycle] Commit failed for cycle ${cycle_num}" >&2
+            return 1
+        fi
+
+        # Verify commit actually landed
+        if ! git diff --cached --quiet 2>/dev/null; then
+            echo "[commit_cycle] WARNING: staged changes remain after commit — commit may have failed" >&2
+        fi
     )
+    local commit_exit=$?
 
     # Auto-tag major milestones
     if [ "$AUTO_GIT_TAG" = "true" ] && [ $(( cycle_num % 5 )) -eq 0 ]; then
@@ -1437,7 +1957,11 @@ commit_cycle() {
         log "Tagged milestone: ${tag_name}"
     fi
 
-    success "Committed cycle ${cycle_num} changes"
+    if [ "$commit_exit" -eq 0 ]; then
+        success "Committed cycle ${cycle_num} changes"
+    else
+        warn "Cycle ${cycle_num} commit may have failed — changes preserved in working tree"
+    fi
 }
 
 # ── Self-learning: update LEARNINGS.md after each cycle ──────────────────────
@@ -1567,7 +2091,7 @@ get_strategy_context() {
                 all_scores=$(tail -5 "$score_file" | grep -v '^$' | tr '\n' ' ')
                 local min=100 max=0
                 for s in $all_scores; do
-                    s="${s//[^0-9]/}"
+                    s=$(echo "$s" | tr -dc '0-9')
                     [ -z "$s" ] && continue
                     [ "$s" -lt "$min" ] 2>/dev/null && min="$s"
                     [ "$s" -gt "$max" ] 2>/dev/null && max="$s"
@@ -1826,8 +2350,375 @@ HTMLEOF
 }
 
 # ── Main loop ─────────────────────────────────────────────────────────────────
+
+# ── INFRASTRUCTURE: Supabase provisioning and edge function deployment ────────
+# Runs once at engine start. Checks if Supabase CLI is available, migrations
+# have been pushed, and edge functions are deployed. Fixes what it can.
+provision_infrastructure() {
+    log "INFRA: Checking infrastructure status..."
+
+    local infra_status="${RUN_DIR}/infra_status.json"
+    local supabase_ok=false
+    local migrations_ok=false
+    local functions_ok=false
+    local env_ok=false
+
+    # Check .env.local exists with required keys
+    local env_file="${PROJECT_DIR}/.env.local"
+    if [ -f "$env_file" ]; then
+        local has_url has_anon has_service
+        has_url=$(grep -c 'VITE_SUPABASE_URL' "$env_file" 2>/dev/null || echo 0)
+        has_anon=$(grep -c 'VITE_SUPABASE_ANON_KEY' "$env_file" 2>/dev/null || echo 0)
+        has_service=$(grep -c 'SUPABASE_SERVICE_ROLE_KEY' "$env_file" 2>/dev/null || echo 0)
+        if [ "$has_url" -gt 0 ] && [ "$has_anon" -gt 0 ] && [ "$has_service" -gt 0 ]; then
+            env_ok=true
+            success "INFRA: .env.local configured with Supabase credentials"
+        else
+            warn "INFRA: .env.local exists but missing some keys"
+        fi
+    else
+        warn "INFRA: No .env.local found — Supabase integration will use fallback values"
+    fi
+
+    # Check if Supabase CLI is installed
+    if command -v supabase >/dev/null 2>&1; then
+        supabase_ok=true
+        local sb_version
+        sb_version=$(supabase --version 2>&1 | head -1)
+        success "INFRA: Supabase CLI found (${sb_version})"
+
+        # Check if project is linked
+        # NOTE: supabase link requires interactive auth (browser/token).
+        # We NEVER try to auto-link because it hangs in non-interactive shells.
+        # The user must run: supabase link --project-ref REF manually (or via setup.sh).
+        local linked=false
+        if [ -f "${PROJECT_DIR}/supabase/.temp/project-ref" ]; then
+            linked=true
+            success "INFRA: Supabase project linked (ref: $(cat "${PROJECT_DIR}/supabase/.temp/project-ref" 2>/dev/null))"
+        else
+            local project_ref
+            project_ref=$(grep 'SUPABASE_PROJECT_REF' "$env_file" 2>/dev/null | cut -d'=' -f2 | tr -d ' "'"'"'')
+            warn "INFRA: Supabase project NOT linked. Run this first:"
+            warn "  cd ${PROJECT_DIR} && supabase link --project-ref ${project_ref:-YOUR_REF}"
+            log "INFRA: Skipping migrations and function deploy (project not linked)"
+        fi
+
+        # Push migrations if linked
+        if [ "$linked" = "true" ]; then
+            log "INFRA: Pushing database migrations..."
+            local push_output
+            push_output=$(cd "$PROJECT_DIR" && supabase db push 2>&1) || true
+            if echo "$push_output" | grep -qi "error\|fatal" 2>/dev/null; then
+                warn "INFRA: Some migrations may have failed. Check: supabase db push"
+                log "INFRA: Output: $(echo "$push_output" | tail -5)"
+            else
+                migrations_ok=true
+                success "INFRA: Database migrations pushed"
+            fi
+
+            # Deploy edge functions
+            local functions_dir="${PROJECT_DIR}/supabase/functions"
+            if [ -d "$functions_dir" ]; then
+                local func_count=0
+                local func_ok=0
+                for func_dir in "$functions_dir"/*/; do
+                    [ -d "$func_dir" ] || continue
+                    local func_name
+                    func_name=$(basename "$func_dir")
+                    # Skip directories without an index.ts
+                    [ -f "${func_dir}/index.ts" ] || continue
+                    func_count=$(( func_count + 1 ))
+                    log "INFRA: Deploying edge function: ${func_name}..."
+                    if (cd "$PROJECT_DIR" && supabase functions deploy "$func_name" --no-verify-jwt 2>/dev/null); then
+                        func_ok=$(( func_ok + 1 ))
+                    else
+                        warn "INFRA: Failed to deploy ${func_name}"
+                    fi
+                done
+                if [ "$func_count" -gt 0 ]; then
+                    if [ "$func_ok" -eq "$func_count" ]; then
+                        functions_ok=true
+                        success "INFRA: All ${func_count} edge functions deployed"
+                    else
+                        warn "INFRA: ${func_ok}/${func_count} edge functions deployed"
+                    fi
+                fi
+            fi
+        fi
+    else
+        warn "INFRA: Supabase CLI not installed. Install with: brew install supabase/tap/supabase"
+        log "INFRA: Engine will still work — it will generate code for Supabase, just won't auto-push migrations"
+    fi
+
+    # Check if Vercel CLI is available (for deploy phase)
+    local vercel_ok=false
+    if command -v vercel >/dev/null 2>&1; then
+        vercel_ok=true
+        success "INFRA: Vercel CLI found"
+    else
+        log "INFRA: Vercel CLI not installed. Auto-deploy disabled. Install with: npm i -g vercel && vercel link"
+    fi
+
+    # Check if Playwright is available (for E2E tests)
+    local playwright_ok=false
+    if npx playwright --version >/dev/null 2>&1; then
+        playwright_ok=true
+        success "INFRA: Playwright available for E2E tests"
+    else
+        log "INFRA: Playwright not installed. Installing..."
+        if (cd "$PROJECT_DIR" && npm install -D @playwright/test 2>/dev/null && npx playwright install chromium 2>/dev/null); then
+            playwright_ok=true
+            success "INFRA: Playwright installed"
+        else
+            warn "INFRA: Could not install Playwright. E2E tests will be skipped."
+        fi
+    fi
+
+    # Write status file
+    jq -n \
+        --argjson env_ok "$( [ "$env_ok" = "true" ] && echo true || echo false )" \
+        --argjson supabase_cli "$( [ "$supabase_ok" = "true" ] && echo true || echo false )" \
+        --argjson migrations "$( [ "$migrations_ok" = "true" ] && echo true || echo false )" \
+        --argjson functions "$( [ "$functions_ok" = "true" ] && echo true || echo false )" \
+        --argjson vercel "$( [ "$vercel_ok" = "true" ] && echo true || echo false )" \
+        --argjson playwright "$( [ "$playwright_ok" = "true" ] && echo true || echo false )" \
+        '{
+            env_configured: $env_ok,
+            supabase_cli: $supabase_cli,
+            migrations_pushed: $migrations,
+            functions_deployed: $functions,
+            vercel_available: $vercel,
+            playwright_available: $playwright
+        }' > "$infra_status" 2>/dev/null || true
+
+    success "INFRA: Infrastructure check complete"
+}
+
+# ── E2E TESTING: Playwright browser tests against the running app ─────────────
+# Spins up the dev server, runs real user flows (navigate, click, fill forms),
+# and reports pass/fail. This catches issues that build + unit tests miss.
+run_e2e_tests() {
+    local cycle_dir="$1"
+    local e2e_results="${cycle_dir}/e2e_results.json"
+
+    # Only run every 3 cycles to save time
+    if [ $(( CYCLE % 3 )) -ne 0 ] && [ "$CYCLE" -ne 1 ]; then
+        log "E2E: Skipping (runs every 3 cycles, next at cycle $(( CYCLE + 3 - CYCLE % 3 )))"
+        return 0
+    fi
+
+    # Check if Playwright is available
+    local infra_status="${RUN_DIR}/infra_status.json"
+    if [ -f "$infra_status" ]; then
+        local pw_ok
+        pw_ok=$(jq -r '.playwright_available // false' "$infra_status" 2>/dev/null)
+        if [ "$pw_ok" != "true" ]; then
+            log "E2E: Playwright not available, skipping"
+            return 0
+        fi
+    fi
+
+    log "E2E: Starting browser tests..."
+
+    # Check if test file exists, create if not
+    local test_dir="${PROJECT_DIR}/e2e"
+    local test_file="${test_dir}/smoke.spec.ts"
+    if [ ! -f "$test_file" ]; then
+        log "E2E: Generating smoke test suite via Claude Code..."
+        local e2e_prompt="Create a Playwright E2E smoke test file at e2e/smoke.spec.ts for this React + Vite construction management app.
+
+The app runs on http://localhost:5173 and uses HashRouter.
+
+Write tests that:
+1. Navigate to the app and verify it loads (check for the sidebar)
+2. Click each main nav item (Dashboard, RFIs, Submittals, Schedule, Budget, Daily Log, Punch List) and verify the page loads
+3. Check that metric cards render on the Dashboard
+4. Verify the AI Copilot page loads with a chat interface
+5. Check that tables render with data rows on list pages
+
+Use page.waitForSelector with reasonable timeouts (10s).
+Do NOT test auth flows (there is no login page yet in the prototype).
+Create the e2e/ directory if it doesn't exist.
+Also create playwright.config.ts at the project root with:
+  - baseURL: http://localhost:5173
+  - webServer that runs 'npm run dev' on port 5173
+  - chromium only
+  - screenshot on failure"
+
+        if run_claude_code "$e2e_prompt" "${cycle_dir}/e2e_generate.log" 180; then
+            ESTIMATED_SPEND=$(echo "scale=2; $ESTIMATED_SPEND + 0.08" | bc 2>/dev/null || echo "$ESTIMATED_SPEND")
+            CYCLE_SPEND=$(echo "scale=2; $CYCLE_SPEND + 0.08" | bc 2>/dev/null || echo "$CYCLE_SPEND")
+            success "E2E: Test suite generated"
+        else
+            warn "E2E: Could not generate test suite"
+            return 0
+        fi
+    fi
+
+    # Run the tests
+    log "E2E: Running Playwright tests..."
+    local e2e_output
+    e2e_output=$(cd "$PROJECT_DIR" && npx playwright test --reporter=json 2>&1 | tail -100) || true
+
+    # Parse results
+    local passed=0
+    local failed=0
+    local total=0
+    passed=$(echo "$e2e_output" | jq -r '.stats.expected // 0' 2>/dev/null || echo 0)
+    failed=$(echo "$e2e_output" | jq -r '.stats.unexpected // 0' 2>/dev/null || echo 0)
+    total=$(( passed + failed ))
+
+    # Write results
+    jq -n \
+        --argjson cycle "$CYCLE" \
+        --argjson passed "${passed:-0}" \
+        --argjson failed "${failed:-0}" \
+        --argjson total "${total:-0}" \
+        '{cycle: $cycle, passed: $passed, failed: $failed, total: $total, pass_rate: (if $total > 0 then ($passed * 100 / $total) else 0 end)}' \
+        > "$e2e_results" 2>/dev/null || true
+
+    # Append to trending
+    jq -c '.' "$e2e_results" >> "${RUN_DIR}/e2e_trend.jsonl" 2>/dev/null || true
+
+    if [ "${failed:-0}" -gt 0 ]; then
+        warn "E2E: ${passed}/${total} passed, ${failed} FAILED"
+        # Feed failures back to Claude Code to fix
+        log "E2E: Feeding failures to Claude Code for auto-fix..."
+        local fix_prompt="Playwright E2E tests failed. Here are the results:
+
+${e2e_output}
+
+Fix the issues in the source code (NOT the test file) so these tests pass.
+The app is a React + TypeScript + Vite construction management platform.
+Run 'npm run build' after fixing to verify the build still works."
+
+        if run_claude_code "$fix_prompt" "${cycle_dir}/e2e_fix.log" 240; then
+            ESTIMATED_SPEND=$(echo "scale=2; $ESTIMATED_SPEND + 0.12" | bc 2>/dev/null || echo "$ESTIMATED_SPEND")
+            CYCLE_SPEND=$(echo "scale=2; $CYCLE_SPEND + 0.12" | bc 2>/dev/null || echo "$CYCLE_SPEND")
+            success "E2E: Auto-fix applied for ${failed} failing tests"
+        fi
+    else
+        success "E2E: All ${total} tests passed"
+    fi
+}
+
+# ── DEPLOY: Auto-deploy to Vercel after successful cycles ─────────────────────
+# Only deploys if: build passes, quality gates are green, and Vercel CLI is
+# available. Preview deploys on every cycle, production only on final.
+deploy_cycle() {
+    local cycle_dir="$1"
+    local is_final="${2:-false}"
+    local deploy_file="${cycle_dir}/deploy.json"
+
+    # Check if Vercel is available
+    local infra_status="${RUN_DIR}/infra_status.json"
+    if [ -f "$infra_status" ]; then
+        local vercel_ok
+        vercel_ok=$(jq -r '.vercel_available // false' "$infra_status" 2>/dev/null)
+        if [ "$vercel_ok" != "true" ]; then
+            log "DEPLOY: Vercel not available, skipping"
+            return 0
+        fi
+    else
+        return 0
+    fi
+
+    # Check if Vercel project is actually linked (not just CLI installed)
+    if [ ! -f "${PROJECT_DIR}/.vercel/project.json" ]; then
+        log "DEPLOY: Vercel project not linked, skipping. Run: cd ${PROJECT_DIR} && vercel link"
+        return 0
+    fi
+
+    # Only deploy every 5 cycles (or final cycle) to avoid spamming
+    if [ "$is_final" != "true" ] && [ $(( CYCLE % 5 )) -ne 0 ]; then
+        log "DEPLOY: Skipping (deploys every 5 cycles, next at cycle $(( CYCLE + 5 - CYCLE % 5 )))"
+        return 0
+    fi
+
+    # Check build passes first
+    if [ -n "$BUILD_CMD" ]; then
+        if ! (cd "$PROJECT_DIR" && eval "$BUILD_CMD" > /dev/null 2>&1); then
+            warn "DEPLOY: Build failing, skipping deploy"
+            return 0
+        fi
+    fi
+
+    log "DEPLOY: Deploying to Vercel..."
+
+    local deploy_output
+    local deploy_url=""
+
+    if [ "$is_final" = "true" ]; then
+        log "DEPLOY: PRODUCTION deploy (final cycle)"
+        deploy_output=$(cd "$PROJECT_DIR" && vercel --prod --yes 2>&1) || true
+    else
+        deploy_output=$(cd "$PROJECT_DIR" && vercel --yes 2>&1) || true
+    fi
+
+    # Extract deploy URL
+    deploy_url=$(echo "$deploy_output" | grep -oE 'https://[^ ]+\.vercel\.app' | head -1 || echo "")
+
+    # Write results
+    jq -n \
+        --argjson cycle "$CYCLE" \
+        --arg url "$deploy_url" \
+        --arg type "$([ "$is_final" = "true" ] && echo "production" || echo "preview")" \
+        '{cycle: $cycle, deploy_url: $url, deploy_type: $type, timestamp: now | todate}' \
+        > "$deploy_file" 2>/dev/null || true
+
+    if [ -n "$deploy_url" ]; then
+        success "DEPLOY: Live at ${deploy_url}"
+    else
+        warn "DEPLOY: Deploy may have failed. Check: vercel ls"
+        log "DEPLOY: Output: $(echo "$deploy_output" | tail -5)"
+    fi
+}
+
+# ── RE-PUSH MIGRATIONS: After engine modifies Supabase files ──────────────────
+# If the engine created or modified migration files, push them.
+sync_supabase() {
+    local cycle_dir="$1"
+
+    # Check if Supabase CLI is linked
+    if ! command -v supabase >/dev/null 2>&1; then return 0; fi
+    if [ ! -f "${PROJECT_DIR}/supabase/.temp/project-ref" ]; then return 0; fi
+
+    # Check if any migration files were modified this cycle
+    local migration_changes
+    migration_changes=$(cd "$PROJECT_DIR" && git diff --name-only HEAD~1 2>/dev/null | grep "supabase/migrations\|supabase/functions" || echo "")
+
+    if [ -n "$migration_changes" ]; then
+        log "SYNC: Supabase files changed this cycle, pushing..."
+
+        # Push new migrations
+        if echo "$migration_changes" | grep -q "migrations"; then
+            local push_out
+            push_out=$(cd "$PROJECT_DIR" && supabase db push 2>&1) || true
+            if echo "$push_out" | grep -qi "error"; then
+                warn "SYNC: Migration push had errors: $(echo "$push_out" | tail -3)"
+            else
+                success "SYNC: Migrations pushed"
+            fi
+        fi
+
+        # Deploy modified functions
+        if echo "$migration_changes" | grep -q "functions"; then
+            for changed_func in $(echo "$migration_changes" | grep "functions/" | sed 's|supabase/functions/||; s|/.*||' | sort -u); do
+                if [ -f "${PROJECT_DIR}/supabase/functions/${changed_func}/index.ts" ]; then
+                    log "SYNC: Deploying updated function: ${changed_func}"
+                    (cd "$PROJECT_DIR" && supabase functions deploy "$changed_func" --no-verify-jwt 2>/dev/null) || true
+                fi
+            done
+            success "SYNC: Edge functions redeployed"
+        fi
+    fi
+}
+
 main() {
     preflight
+
+    # INFRASTRUCTURE: One-time setup check
+    provision_infrastructure
 
     # Take initial snapshot
     local snapshot_file
@@ -1862,12 +2753,8 @@ main() {
             break
         fi
 
-        # Check budget
-        local spend_int
-        spend_int=$(echo "$ESTIMATED_SPEND" | cut -d'.' -f1)
-        local budget_int
-        budget_int=$(echo "$MAX_SPEND" | cut -d'.' -f1)
-        if [ "${spend_int:-0}" -ge "${budget_int:-500}" ]; then
+        # Check budget (decimal-safe comparison via bc)
+        if [ "$(echo "${ESTIMATED_SPEND:-0} >= ${MAX_SPEND:-500}" | bc 2>/dev/null)" = "1" ]; then
             warn "Budget limit \$${MAX_SPEND} reached (spent \$${ESTIMATED_SPEND})"
             break
         fi
@@ -1891,15 +2778,67 @@ main() {
         # Re-snapshot if codebase changed
         snapshot_file=$(take_snapshot)
 
+        # ── META: Strategic planning phase ──
+        # Before diving into audits, review scores and create a plan.
+        plan_cycle "$cycle_dir" "$CYCLE"
+
+        # ── GOOGLE INTELLIGENCE: Data-driven module ordering ──
+        # Sort modules by score ascending so the WORST modules get attention first.
+        # Modules scoring >90 for 3+ consecutive cycles are auto-skipped (mastered).
+        # This prevents wasting tokens polishing perfect modules while bad ones rot.
+        local sorted_modules="$modules"
+        if [ -d "$SCORES_DIR" ] && [ "$(ls -A "$SCORES_DIR" 2>/dev/null)" ]; then
+            sorted_modules=$(echo "$modules" | jq --arg dir "$SCORES_DIR" '
+                [.[] | . as $mod |
+                    {mod: ., score: (
+                        ($dir + "/" + .name + ".txt") as $f |
+                        try (input | tonumber) catch 50
+                    )}
+                ] | sort_by(.score) | [.[].mod]
+            ' 2>/dev/null || echo "$modules")
+            # Fallback if jq file reading fails (likely) — use shell to build order
+            local order_file="${cycle_dir}/module_order.txt"
+            : > "$order_file"
+            local mod_idx=0
+            while [ $mod_idx -lt "$module_count" ]; do
+                local mn
+                mn=$(echo "$modules" | jq -r ".[$mod_idx].name")
+                local sf="${SCORES_DIR}/${mn}.txt"
+                local latest_score=50
+                if [ -f "$sf" ]; then
+                    latest_score=$(tail -1 "$sf" | tr -dc '0-9')
+                    [ -z "$latest_score" ] && latest_score=50
+                fi
+                echo "${latest_score} ${mod_idx}" >> "$order_file"
+                mod_idx=$(( mod_idx + 1 ))
+            done
+            # Sort by score ascending (worst first)
+            local sorted_order
+            sorted_order=$(sort -n "$order_file" | awk '{print $2}')
+            log "Module processing order (worst-first): $(sort -n "$order_file" | awk '{printf "%s(%s) ", $2, $1}')"
+        fi
+
         local any_issues=false
         local modules_processed=0
         local modules_failed=0
         local cycle_total_fixed=0
         local cycle_total_attempted=0
 
-        # Process each module
-        local i=0
-        while [ $i -lt "$module_count" ]; do
+        # Process each module (in score-sorted order if available)
+        local process_order=""
+        if [ -n "${sorted_order:-}" ]; then
+            process_order="$sorted_order"
+        else
+            local seq_idx=0
+            while [ $seq_idx -lt "$module_count" ]; do
+                process_order="${process_order}${seq_idx}
+"
+                seq_idx=$(( seq_idx + 1 ))
+            done
+        fi
+
+        local _mod_loop_counter=0
+        for i in $process_order; do
             local module
             module=$(echo "$modules" | jq ".[$i]")
             local mod_name
@@ -1909,18 +2848,43 @@ main() {
             local mod_desc
             mod_desc=$(echo "$module" | jq -r '.description')
 
-            i=$(( i + 1 ))
-
             # Skip if requested
             if should_skip_module "$mod_name"; then
                 log "Skipping module: ${mod_name}"
                 continue
             fi
 
+            # ── ADAPTIVE SKIPPING: Mastered modules get skipped ──
+            # If a module scored >90 for 3+ consecutive cycles, skip it.
+            # This frees budget for modules that actually need work.
+            local score_file="${SCORES_DIR}/${mod_name}.txt"
+            if [ -f "$score_file" ]; then
+                local sc_count
+                sc_count=$(wc -l < "$score_file" | tr -d ' ')
+                if [ "${sc_count:-0}" -ge 3 ]; then
+                    local all_above_90=true
+                    local recent
+                    recent=$(tail -3 "$score_file")
+                    while IFS= read -r sc_line; do
+                        local sc_val
+                        sc_val=$(echo "$sc_line" | tr -dc '0-9')
+                        if [ -n "$sc_val" ] && [ "$sc_val" -lt 90 ] 2>/dev/null; then
+                            all_above_90=false
+                            break
+                        fi
+                    done <<< "$recent"
+                    if [ "$all_above_90" = "true" ]; then
+                        log "MASTERED: ${mod_label} scored >90 for 3+ cycles — skipping to invest tokens elsewhere"
+                        continue
+                    fi
+                fi
+            fi
+
             # Cooldown between modules to prevent API rate limits on audit calls
-            if [ "$i" -gt 1 ]; then
+            if [ "$_mod_loop_counter" -gt 0 ]; then
                 sleep "$PROMPT_COOLDOWN"
             fi
+            _mod_loop_counter=$(( _mod_loop_counter + 1 ))
 
             subheader "${mod_label}"
 
@@ -1934,7 +2898,7 @@ main() {
                     recent_scores=$(tail -3 "${SCORES_DIR}/${mod_name}.txt" | tr '\n' ' ')
                     local all_high=true
                     for s in $recent_scores; do
-                        s="${s//[^0-9]/}"   # strip non-numeric chars (newlines, spaces)
+                        s=$(echo "$s" | tr -dc '0-9')
                         if [ -n "$s" ] && [ "$s" -lt 85 ] 2>/dev/null; then all_high=false; break; fi
                     done
                     if [ "$all_high" = "true" ]; then
@@ -2025,16 +2989,36 @@ main() {
         if [ "$DRY_RUN" != "true" ]; then
             verify_build "$cycle_dir"
             verify_tests "$cycle_dir"
+            verify_quality_gates "$cycle_dir"
+            verify_ui_polish "$cycle_dir"
+            verify_visual "$cycle_dir"
+            run_e2e_tests "$cycle_dir"
         fi
 
         # Commit this cycle
         commit_cycle "$CYCLE" "$modules_processed" "$CYCLE_SPEND"
 
+        # Sync Supabase if migration/function files changed
+        sync_supabase "$cycle_dir"
+
         # Update learnings (self-awareness: track what worked, what didn't)
         update_learnings "$cycle_dir"
 
-        # Save state for resume support
-        echo '{"last_completed_cycle":'"$CYCLE"',"estimated_spend":"'"$ESTIMATED_SPEND"'","prompts_executed":'"$TOTAL_PROMPTS_EXECUTED"'}' > "$STATE_FILE"
+        # TESLA: Evolve prompt strategy based on what worked
+        evolve_prompt_strategy "$cycle_dir"
+
+        # DEPLOY: Auto-deploy preview every 5 cycles
+        deploy_cycle "$cycle_dir" "false"
+
+        # Save state for resume support (use jq for safe JSON construction)
+        jq -n \
+            --argjson cycle "${CYCLE:-0}" \
+            --arg spend "${ESTIMATED_SPEND:-0.00}" \
+            --argjson prompts "${TOTAL_PROMPTS_EXECUTED:-0}" \
+            --argjson inventions "${FEATURES_INVENTED:-0}" \
+            '{last_completed_cycle:$cycle, estimated_spend:$spend, prompts_executed:$prompts, features_invented:$inventions}' \
+            > "$STATE_FILE" 2>/dev/null || \
+        echo '{"last_completed_cycle":'"${CYCLE:-0}"',"estimated_spend":"'"${ESTIMATED_SPEND:-0.00}"'","prompts_executed":'"${TOTAL_PROMPTS_EXECUTED:-0}"'}' > "$STATE_FILE"
 
         # Status summary with fix rate
         local cycle_fix_rate="N/A"
@@ -2049,6 +3033,8 @@ main() {
         if [ "$any_issues" = "false" ]; then
             ALL_CLEAN=true
             header "ZERO ACTIONABLE ISSUES REMAINING — EVOLUTION COMPLETE"
+            # Final production deploy
+            deploy_cycle "$cycle_dir" "true"
             break
         fi
     done

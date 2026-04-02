@@ -18,8 +18,14 @@ CREATE TABLE IF NOT EXISTS project_members (
   UNIQUE(project_id, user_id)
 );
 
-ALTER TABLE project_members ADD CONSTRAINT IF NOT EXISTS project_members_role_check
-  CHECK (role IN ('owner', 'admin', 'project_manager', 'superintendent', 'subcontractor', 'viewer', 'member'));
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'project_members_role_check'
+  ) THEN
+    ALTER TABLE project_members ADD CONSTRAINT project_members_role_check
+      CHECK (role IN ('owner', 'admin', 'project_manager', 'superintendent', 'subcontractor', 'viewer', 'member'));
+  END IF;
+END $$;
 
 ALTER TABLE project_members ENABLE ROW LEVEL SECURITY;
 

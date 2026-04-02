@@ -6442,3 +6442,24 @@ export type Meeting = TableRow<'meetings'>
 export type Priority = 'low' | 'medium' | 'high' | 'critical'
 export type TaskStatus = 'todo' | 'in_progress' | 'in_review' | 'done'
 export type RFIResponse = TableRow<'rfi_responses'>
+export type Organization = TableRow<'organizations'>
+
+// Profile: the DB has no dedicated profiles table yet.
+// Define a lightweight interface matching the shape authStore and supabase.ts expect
+// so the app compiles. Replace with TableRow<'profiles'> once the migration lands.
+export interface Profile {
+  id: string
+  user_id: string
+  full_name: string | null
+  phone: string | null
+  company: string | null
+  trade: string | null
+  avatar_url: string | null
+  notification_preferences: Json | null
+  organization_id: string | null
+  role: string | null
+  created_at: string | null
+  updated_at: string | null
+}
+
+export { UserRole } from './enums'
