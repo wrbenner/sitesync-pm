@@ -56,6 +56,13 @@ function ToastEntry({ toast, onClose }: { toast: ToastItem; onClose: (id: string
     };
   }, [toast.id, toast.severity, onClose]);
 
+  // Fallback auto-dismiss for error toasts (15s) so they never persist indefinitely
+  useEffect(() => {
+    if (toast.severity !== 'error') return;
+    const t = setTimeout(() => onClose(toast.id), 15000);
+    return () => clearTimeout(t);
+  }, [toast.id, toast.severity, onClose]);
+
   const handleMouseEnter = useCallback(() => {
     if (remainingRef.current === null) return;
     if (timerRef.current !== null) {
@@ -148,8 +155,16 @@ function ToastEntry({ toast, onClose }: { toast: ToastItem; onClose: (id: string
           outline: dismissFocused ? `2px solid ${colors.primary}` : 'none',
           outlineOffset: dismissFocused ? '2px' : undefined,
         }}
-        onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = colors.textPrimary; }}
-        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = style.text; }}
+        onMouseEnter={(e) => {
+          const btn = e.currentTarget as HTMLButtonElement;
+          btn.style.color = colors.textPrimary;
+          btn.style.backgroundColor = 'rgba(0,0,0,0.08)';
+        }}
+        onMouseLeave={(e) => {
+          const btn = e.currentTarget as HTMLButtonElement;
+          btn.style.color = style.text;
+          btn.style.backgroundColor = 'transparent';
+        }}
       >
         &#x2715;
       </button>
