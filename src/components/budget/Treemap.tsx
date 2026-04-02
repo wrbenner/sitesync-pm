@@ -35,22 +35,41 @@ export const Treemap: React.FC<TreemapProps> = ({ divisions }) => {
   if (drillDown !== null) {
     const div = divisions.find((d) => d.id === drillDown);
     const children = div?.children || [];
-    const ddIndex = typeof drillDown === 'number' ? drillDown - 1 : 0;
-    const divColor = divisionColors[ddIndex % divisionColors.length];
+    const ddIndex = divisions.findIndex(d => d.id === drillDown);
+    const divColor = divisionColors[Math.max(0, ddIndex) % divisionColors.length];
+
+    const backButton = (
+      <button
+        onClick={() => setDrillDown(null)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: spacing['1'],
+          marginBottom: spacing['3'], padding: `${spacing['1']} ${spacing['2']}`,
+          backgroundColor: 'transparent', border: 'none', cursor: 'pointer',
+          color: colors.textTertiary, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
+        }}
+      >
+        <ChevronLeft size={14} /> Back to all divisions
+      </button>
+    );
+
+    if (children.length === 0) {
+      return (
+        <div>
+          {backButton}
+          <p style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['3'] }}>
+            {div?.name} · {fmt(div?.budget || 0)}
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: spacing['8'], color: colors.textTertiary, gap: spacing['2'] }}>
+            <ChevronLeft size={32} style={{ opacity: 0.3, transform: 'rotate(90deg)' }} />
+            <span style={{ fontSize: typography.fontSize.body }}>No cost breakdown available for this division</span>
+          </div>
+        </div>
+      );
+    }
 
     return (
       <div>
-        <button
-          onClick={() => setDrillDown(null)}
-          style={{
-            display: 'flex', alignItems: 'center', gap: spacing['1'],
-            marginBottom: spacing['3'], padding: `${spacing['1']} ${spacing['2']}`,
-            backgroundColor: 'transparent', border: 'none', cursor: 'pointer',
-            color: colors.textTertiary, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
-          }}
-        >
-          <ChevronLeft size={14} /> Back to all divisions
-        </button>
+        {backButton}
         <p style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['3'] }}>
           {div?.name} · {fmt(div?.budget || 0)}
         </p>
