@@ -327,16 +327,13 @@ export const DailyLog: React.FC = () => {
         {!logError && (
           <Card padding={spacing['10']}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: spacing['4'] }}>
-              <Calendar size={64} color="#9CA3AF" />
-              <div>
-                <p style={{ fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>No daily logs yet</p>
-                <p style={{ fontSize: typography.fontSize.body, color: colors.textTertiary, margin: 0, maxWidth: '440px' }}>
-                  The daily log is your project official record. Start documenting site conditions, crew activity, and weather.
-                </p>
-              </div>
+              <Calendar size={48} color={colors.textTertiary} />
+              <p style={{ fontSize: typography.fontSize.body, color: colors.textTertiary, margin: 0, maxWidth: '440px' }}>
+                No daily logs yet. The daily log is your project official record.
+              </p>
               <button
                 onClick={() => { setSelectedDate(new Date().toISOString().split('T')[0]); setShowCreateModal(true); }}
-                style={{ backgroundColor: '#F47820', color: '#FFFFFF', border: 'none', borderRadius: '8px', height: 40, padding: `0 ${spacing['4']}`, fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily, cursor: 'pointer' }}
+                style={{ backgroundColor: colors.primaryOrange, color: '#FFFFFF', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily, cursor: 'pointer' }}
               >
                 Start Today Log
               </button>
