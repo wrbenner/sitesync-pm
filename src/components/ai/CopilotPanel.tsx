@@ -220,8 +220,8 @@ export const CopilotPanel: React.FC = () => {
 
       {/* Slide-in panel */}
       <div
-        role="complementary"
-        aria-label="AI Copilot conversation"
+        role="dialog"
+        aria-label="AI Copilot"
         aria-modal="true"
         onKeyDown={(e) => { if (e.key === 'Escape') closeCopilot() }}
         style={{
@@ -424,6 +424,7 @@ export const CopilotPanel: React.FC = () => {
         <div
           role="log"
           aria-live="polite"
+          aria-relevant="additions"
           aria-label="AI conversation messages"
           style={{
             flex: 1,
