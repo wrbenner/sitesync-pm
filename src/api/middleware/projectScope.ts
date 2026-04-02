@@ -1,6 +1,5 @@
 import { ApiError, AuthError, ValidationError } from '../errors'
 import { supabase } from '../../lib/supabase'
-import { useOrganizationStore } from '../../stores/organizationStore'
 import { dedupTtl, queryKey } from '../../lib/requestDedup'
 import type { Database } from '../../types/database'
 
@@ -44,11 +43,23 @@ export async function assertProjectAccess(projectId: string): Promise<void> {
   if (!memberData) {
     throw new ApiError('You do not have access to this project', 403, 'FORBIDDEN')
   }
-  const orgId = useOrganizationStore.getState().currentOrg?.id
-  if (!orgId) {
-    throw new ApiError('No active organization context', 403, 'FORBIDDEN')
+  const { data: project } = await supabase
+    .from('projects')
+    .select('organization_id')
+    .eq('id', projectId)
+    .maybeSingle()
+  if (!project) {
+    throw new ApiError('Forbidden', 403, 'FORBIDDEN')
   }
-  await assertProjectBelongsToActiveOrg(projectId, orgId)
+  const { data: orgMember } = await supabase
+    .from('organization_members')
+    .select('id')
+    .eq('organization_id', project.organization_id)
+    .eq('user_id', user.id)
+    .maybeSingle()
+  if (!orgMember) {
+    throw new ApiError('Forbidden', 403, 'FORBIDDEN')
+  }
 }
 
 export async function assertProjectBelongsToOrg(projectId: string, orgId: string): Promise<void> {
