@@ -53,19 +53,25 @@ export const v1Routes: V1Route[] = [
   { method: 'POST',   path: '/api/v1/projects/:projectId/schedule',       requiredScope: 'schedule:write', description: 'Create a schedule phase' },
 ]
 
-// Resolve which scope a given method + path requires.
-// Returns null when no matching route is registered (treat as 403).
+/**
+ * Resolve which scope a given method + path requires.
+ *
+ * Return values:
+ *   - `undefined`  — no matching route registered (caller should respond 404/403)
+ *   - `null`       — route found, session auth only; no API key scope required
+ *   - `ApiKeyScope` — route found, API key must carry this scope
+ */
 export function resolveRequiredScope(
   method: string,
   path: string,
 ): ApiKeyScope | null | undefined {
   const route = v1Routes.find(r => r.method === method && pathMatches(r.path, path))
-  if (!route) return undefined // not found
+  if (!route) return undefined
   return route.requiredScope
 }
 
-// Minimal path matching: supports :param segments
-function pathMatches(pattern: string, actual: string): boolean {
+/** Minimal path matching: supports :param segments. Exported for unit testing. */
+export function pathMatches(pattern: string, actual: string): boolean {
   const patternParts = pattern.split('/')
   const actualParts = actual.split('/')
   if (patternParts.length !== actualParts.length) return false
