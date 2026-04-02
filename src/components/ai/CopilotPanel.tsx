@@ -230,7 +230,7 @@ export const CopilotPanel: React.FC = () => {
           right: 0,
           ...(isMobile
             ? { inset: 0, width: '100%', height: '100%', borderRadius: 0 }
-            : { width: '100vw', maxWidth: '480px', height: '100vh' }),
+            : { width: 'min(480px, 100vw)', height: '100vh' }),
           backgroundColor: colors.surfaceRaised,
           boxShadow: shadows.panel,
           zIndex: 50,
@@ -649,7 +649,7 @@ export const CopilotPanel: React.FC = () => {
             ...(isMobile
               ? { position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: colors.surfaceRaised, borderTop: `1px solid ${colors.borderSubtle}`, zIndex: 51 }
               : {}),
-            padding: `${spacing['3']} ${spacing['4']} ${spacing['4']}`,
+            padding: `${spacing['3']} ${spacing['4']} ${isMobile ? 'max(env(safe-area-inset-bottom), 16px)' : spacing['4']}`,
             flexShrink: 0,
           }}
         >
