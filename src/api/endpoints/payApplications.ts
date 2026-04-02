@@ -34,15 +34,27 @@ export function computeCurrentPaymentDue(params: {
   return { workThisPeriod, totalCompletedAndStored, retainageAmount, currentPaymentDue }
 }
 
+/**
+ * Fetches all pay applications for a project.
+ *
+ * Returns:
+ *   - Empty array: project exists but has no pay applications yet (UI should show empty state)
+ *   - Populated array: one or more pay applications found
+ *   - Throws Error: network failure, permission denied, or other fetch error (user-friendly message)
+ */
 export const getPayApplications = async (projectId: string): Promise<PayApplication[]> => {
   await assertProjectAccess(projectId)
-  const { data, error } = await supabase
-    .from('pay_applications')
-    .select('*')
-    .eq('project_id', projectId)
-    .order('application_number', { ascending: false })
-  if (error) throw transformSupabaseError(error)
-  return (data || []) as PayApplication[]
+  try {
+    const { data, error } = await supabase
+      .from('pay_applications')
+      .select('*')
+      .eq('project_id', projectId)
+      .order('application_number', { ascending: false })
+    if (error) throw error
+    return (data || []) as PayApplication[]
+  } catch {
+    throw new Error('Unable to load payment applications. Please check your connection and try again.')
+  }
 }
 
 export const getPayApplicationById = async (
