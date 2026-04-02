@@ -33,32 +33,46 @@ export const PresenceDots: React.FC<PresenceDotsProps> = ({ entityId, maxVisible
 
   return (
     <div
-      style={{ display: 'flex', alignItems: 'center', gap: '-4px' }}
+      style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}
       title={viewers.map((u) => u.name).join(', ')}
       aria-label={`Being viewed by ${viewers.map((u) => u.name).join(', ')}`}
     >
       {visible.map((user) => (
-        <div
+        <button
           key={user.userId}
+          aria-label={`${user.name} is viewing`}
           style={{
-            width: 20,
-            height: 20,
-            borderRadius: '50%',
-            backgroundColor: user.color,
-            border: `2px solid ${colors.surfaceRaised}`,
+            minWidth: 44,
+            minHeight: 44,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: typography.fontSize.caption,
-            fontWeight: typography.fontWeight.bold,
-            color: colors.white,
-            marginLeft: visible.indexOf(user) > 0 ? '-6px' : 0,
-            position: 'relative',
-            zIndex: maxVisible - visible.indexOf(user),
+            background: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            padding: 0,
           }}
         >
-          {user.initials}
-        </div>
+          <div
+            style={{
+              width: 24,
+              height: 24,
+              borderRadius: '50%',
+              backgroundColor: user.color,
+              border: `2px solid ${colors.surfaceRaised}`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: typography.fontSize.caption,
+              fontWeight: typography.fontWeight.bold,
+              color: colors.white,
+              position: 'relative',
+              zIndex: maxVisible - visible.indexOf(user),
+            }}
+          >
+            {user.initials}
+          </div>
+        </button>
       ))}
       {overflow > 0 && (
         <span style={{
