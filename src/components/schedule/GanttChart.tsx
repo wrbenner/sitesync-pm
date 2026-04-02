@@ -685,6 +685,28 @@ export const GanttChart: React.FC<GanttChartProps> = ({
             )}
           </div>
 
+          {/* Legend */}
+          <div
+            aria-label="Gantt chart legend"
+            style={{
+              display: 'flex', alignItems: 'center', gap: spacing['4'],
+              paddingLeft: LABEL_WIDTH, paddingBottom: spacing['2'],
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
+              <div style={{ width: 16, height: 9, borderRadius: 2, backgroundColor: '#D1D5DB', opacity: 0.5 }} />
+              <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Baseline</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
+              <div style={{ width: 16, height: 9, borderRadius: 2, backgroundColor: colors.primaryOrange }} />
+              <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Actual</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
+              <div style={{ width: 16, height: 9, borderRadius: 2, backgroundColor: '#E74C3C', boxShadow: '0 0 0 2px rgba(231, 76, 60, 0.3)' }} />
+              <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Critical Path</span>
+            </div>
+          </div>
+
           {/* Phase rows + SVG dependency overlay */}
           <div
             ref={ganttGridRef}
@@ -925,9 +947,10 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                       return (
                         <div aria-hidden="true" style={{
                           position: 'absolute', top: '50%', transform: 'translateY(-50%)',
-                          height: 8,
+                          height: 14,
                           left: `${bLeft}%`, width: `${bWidth}%`,
                           backgroundColor: '#D1D5DB',
+                          opacity: 0.5,
                           borderRadius: borderRadius.sm, pointerEvents: 'none',
                           zIndex: 0,
                         }} />
@@ -1010,7 +1033,9 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                           left: `${pos.left}%`, width: `${pos.width}%`,
                           borderRadius: borderRadius.sm, overflow: 'visible',
                           border: isCascadeAffected ? `2px dashed ${colors.statusReview}` : 'none',
-                          boxShadow: isHovered ? `0 0 0 2px ${barColor}30` : 'none',
+                          boxShadow: (phase.is_critical || phase.critical)
+                            ? '0 0 0 2px rgba(231, 76, 60, 0.3)'
+                            : isHovered ? `0 0 0 2px ${barColor}30` : 'none',
                           opacity: isDraggingBoth ? 0.75 : 1,
                           transition: isDraggingThis ? 'none' : `box-shadow ${transitions.instant}`,
                           outline: 'none',
