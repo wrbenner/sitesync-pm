@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, memo, useMemo } from 'react'
+import React, { useState, useRef, useCallback, memo, useMemo, useEffect } from 'react'
 import { toast } from 'sonner'
 import {
   Send, Calendar, DollarSign, ShieldCheck, ClipboardCheck, Scale, FileSearch,
@@ -83,6 +83,12 @@ export const AgentMentionInput = memo<AgentMentionInputProps>(
       },
       [],
     )
+
+    useEffect(() => {
+      if (!inputRef.current) return
+      inputRef.current.style.height = 'auto'
+      inputRef.current.style.height = Math.min(inputRef.current.scrollHeight, 160) + 'px'
+    }, [value])
 
     const insertAgent = useCallback(
       (domain: AgentDomain) => {
@@ -291,13 +297,8 @@ export const AgentMentionInput = memo<AgentMentionInputProps>(
               fontFamily: typography.fontFamily,
               color: colors.textPrimary,
               lineHeight: typography.lineHeight.normal,
-              maxHeight: '120px',
+              maxHeight: '160px',
               overflow: 'auto',
-            }}
-            onInput={(e) => {
-              const target = e.target as HTMLTextAreaElement
-              target.style.height = 'auto'
-              target.style.height = `${Math.min(target.scrollHeight, 120)}px`
             }}
           />
           <button
@@ -323,17 +324,16 @@ export const AgentMentionInput = memo<AgentMentionInputProps>(
             <Send size={16} />
           </button>
         </div>
-        {value.length > 0 && (
+        {value.length > 3500 && (
           <div
             style={{
               textAlign: 'right',
               marginTop: spacing['1'],
               fontSize: typography.fontSize.caption,
-              color: value.length > MAX_MESSAGE_LENGTH * 0.9 ? colors.statusCritical : colors.textTertiary,
-              transition: `color ${transitions.quick}`,
+              color: colors.textTertiary,
             }}
           >
-            {value.length}/{MAX_MESSAGE_LENGTH}
+            {MAX_MESSAGE_LENGTH - value.length} characters remaining
           </div>
         )}
         </div>
