@@ -1,4 +1,4 @@
-import React, { useState, lazy, Suspense } from 'react'
+import React, { useState, useEffect, lazy, Suspense } from 'react'
 import { AlertTriangle, Camera, ClipboardCheck, Award, Eye, TrendingUp, Users, Plus } from 'lucide-react'
 import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton } from '../components/Primitives'
 import { DataTable, createColumnHelper } from '../components/shared/DataTable'
@@ -390,6 +390,14 @@ export const Safety: React.FC = () => {
 
   const isLoading = loadingInspections || loadingIncidents || loadingTalks || loadingCerts || loadingObs
 
+  const [windowWidth, setWindowWidth] = useState(() => window.innerWidth)
+  useEffect(() => {
+    const onResize = () => setWindowWidth(window.innerWidth)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+  const isMobile = windowWidth < 768
+
   return (
     <PageContainer
       title="Safety"
@@ -459,37 +467,49 @@ export const Safety: React.FC = () => {
       {activeTab === 'overview' && !isLoading && (
         <>
           {/* KPI Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: spacing['4'], marginBottom: spacing['2xl'] }}>
-            <MetricBox
-              label="Days Without Incident"
-              value={daysSinceIncident > 900 ? '999+' : daysSinceIncident}
-              change={daysSinceIncident > 30 ? 1 : -1}
-              changeLabel="recordable"
-            />
-            <MetricBox
-              label="TRIR"
-              value={trir}
-              changeLabel="per 200K hours"
-            />
-            <MetricBox
-              label="Open Inspections"
-              value={inspections?.filter((i: any) => i.status === 'pending' || i.status === 'in_progress').length || 0}
-            />
-            <MetricBox
-              label="Near Miss Ratio"
-              value={nearMissRatio}
-              changeLabel="near misses to incidents"
-            />
-            <MetricBox
-              label="Cert Compliance"
-              value={`${certCompliance}%`}
-              change={certCompliance >= 90 ? 1 : -1}
-            />
-            <MetricBox
-              label="Expiring Certs"
-              value={expiringCerts}
-              changeLabel="within 60 days"
-            />
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, marginBottom: spacing['2xl'] }}>
+            <div style={{ minWidth: 280, flex: 1 }}>
+              <MetricBox
+                label="Days Without Incident"
+                value={daysSinceIncident > 900 ? '999+' : daysSinceIncident}
+                change={daysSinceIncident > 30 ? 1 : -1}
+                changeLabel="recordable"
+              />
+            </div>
+            <div style={{ minWidth: 280, flex: 1 }}>
+              <MetricBox
+                label="TRIR"
+                value={trir}
+                changeLabel="per 200K hours"
+              />
+            </div>
+            <div style={{ minWidth: 280, flex: 1 }}>
+              <MetricBox
+                label="Open Inspections"
+                value={inspections?.filter((i: any) => i.status === 'pending' || i.status === 'in_progress').length || 0}
+              />
+            </div>
+            <div style={{ minWidth: 280, flex: 1 }}>
+              <MetricBox
+                label="Near Miss Ratio"
+                value={nearMissRatio}
+                changeLabel="near misses to incidents"
+              />
+            </div>
+            <div style={{ minWidth: 280, flex: 1 }}>
+              <MetricBox
+                label="Cert Compliance"
+                value={`${certCompliance}%`}
+                change={certCompliance >= 90 ? 1 : -1}
+              />
+            </div>
+            <div style={{ minWidth: 280, flex: 1 }}>
+              <MetricBox
+                label="Expiring Certs"
+                value={expiringCerts}
+                changeLabel="within 60 days"
+              />
+            </div>
           </div>
 
           {/* Recent Inspections */}
@@ -618,24 +638,75 @@ export const Safety: React.FC = () => {
 
       {/* Inspections Tab */}
       {activeTab === 'inspections' && !isLoading && (
-        <Card>
-          <DataTable
-            columns={inspectionColumns}
-            data={inspections || []}
-            enableSorting
-          />
-        </Card>
+        <div style={{ overflowX: 'auto' }}>
+          <style>{`.insp-table-wrap td:first-child,.insp-table-wrap th:first-child{position:sticky;left:0;background:white;z-index:1}`}</style>
+          <div className="insp-table-wrap">
+            <Card>
+              <DataTable
+                columns={inspectionColumns}
+                data={inspections || []}
+                enableSorting
+              />
+            </Card>
+          </div>
+        </div>
       )}
 
       {/* Incidents Tab */}
       {activeTab === 'incidents' && !isLoading && (
-        <Card>
-          <DataTable
-            columns={incidentColumns}
-            data={incidents || []}
-            enableSorting
-          />
-        </Card>
+        isMobile ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
+            {(incidents || []).length === 0 && (
+              <p style={{ color: colors.textTertiary, fontSize: typography.fontSize.sm }}>No incidents recorded.</p>
+            )}
+            {(incidents || []).map((inc: any, idx: number) => {
+              const severityColor = inc.severity === 'serious' || inc.severity === 'fatality' ? colors.statusCritical
+                : inc.severity === 'moderate' ? colors.statusPending
+                : colors.statusActive
+              const severityBg = inc.severity === 'serious' || inc.severity === 'fatality' ? colors.statusCriticalSubtle
+                : inc.severity === 'moderate' ? colors.statusPendingSubtle
+                : colors.statusActiveSubtle
+              const statusColor = inc.status === 'closed' ? colors.statusActive : inc.status === 'investigating' ? colors.statusPending : colors.statusInfo
+              return (
+                <Card key={inc.id || idx} padding={spacing['4']}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing['2'] }}>
+                    <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.orangeText }}>
+                      {inc.incident_number}
+                    </span>
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center', gap: spacing.xs,
+                      padding: `2px ${spacing.sm}`, borderRadius: borderRadius.full,
+                      fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
+                      color: severityColor, backgroundColor: severityBg,
+                    }}>
+                      <div style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: severityColor }} />
+                      {inc.severity ? inc.severity.charAt(0).toUpperCase() + inc.severity.slice(1) : ''}
+                    </span>
+                  </div>
+                  <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+                    {inc.type ? inc.type.replace(/_/g, ' ') : ''}
+                  </p>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing['2'] }}>
+                    <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
+                      {inc.date ? new Date(inc.date).toLocaleDateString() : ''}
+                    </span>
+                    <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: statusColor }}>
+                      {inc.status ? inc.status.charAt(0).toUpperCase() + inc.status.slice(1) : ''}
+                    </span>
+                  </div>
+                </Card>
+              )
+            })}
+          </div>
+        ) : (
+          <Card>
+            <DataTable
+              columns={incidentColumns}
+              data={incidents || []}
+              enableSorting
+            />
+          </Card>
+        )
       )}
 
       {/* Toolbox Talks Tab */}
