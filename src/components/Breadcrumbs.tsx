@@ -77,10 +77,12 @@ export const FolderBreadcrumbs: React.FC<FolderBreadcrumbsProps> = ({ stack, onN
           alignItems: 'center',
           gap: spacing['1'],
           marginBottom: spacing['3'],
-          flexWrap: 'wrap',
+          flexWrap: 'nowrap',
           minWidth: 0,
           overflowX: 'auto',
           WebkitOverflowScrolling: 'touch',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
         }}
       >
         {/* Root */}
@@ -180,6 +182,12 @@ export const Breadcrumbs: React.FC = () => {
         alignItems: 'center',
         gap: spacing['1'],
         marginBottom: spacing['4'],
+        overflowX: 'auto',
+        maxWidth: '100%',
+        flexWrap: 'nowrap',
+        WebkitOverflowScrolling: 'touch',
+        scrollbarWidth: 'none',
+        msOverflowStyle: 'none',
       }}
     >
       <button
@@ -194,6 +202,7 @@ export const Breadcrumbs: React.FC = () => {
           padding: `${spacing['1']} ${spacing['1']}`,
           borderRadius: borderRadius.sm,
           transition: `color ${transitions.instant}`,
+          flexShrink: 0,
         }}
         onMouseEnter={(e) => {
           (e.currentTarget as HTMLButtonElement).style.color = colors.primaryOrange;
@@ -212,13 +221,14 @@ export const Breadcrumbs: React.FC = () => {
 
         return (
           <React.Fragment key={segment}>
-            <ChevronRight size={12} style={{ color: colors.textTertiary }} />
+            <ChevronRight size={12} style={{ color: colors.textTertiary, flexShrink: 0 }} />
             {isLast ? (
               <span
                 style={{
                   fontSize: typography.fontSize.sm,
                   fontWeight: typography.fontWeight.medium,
                   color: colors.textPrimary,
+                  flexShrink: 0,
                 }}
               >
                 {label}
@@ -236,6 +246,7 @@ export const Breadcrumbs: React.FC = () => {
                   padding: `${spacing['1']} ${spacing['1']}`,
                   borderRadius: borderRadius.sm,
                   transition: `color ${transitions.instant}`,
+                  flexShrink: 0,
                 }}
                 onMouseEnter={(e) => {
                   (e.currentTarget as HTMLButtonElement).style.color = colors.primaryOrange;
