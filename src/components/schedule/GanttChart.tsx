@@ -583,11 +583,13 @@ export const GanttChart: React.FC<GanttChartProps> = ({
 
         {/* Legend */}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: spacing['3'], flexWrap: 'wrap', alignItems: 'center' }}>
-          {/* Baseline */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
-            <div style={{ width: 16, height: 6, borderRadius: 2, backgroundColor: '#9CA3AF', opacity: 0.3 }} />
-            <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Baseline</span>
-          </div>
+          {/* Baseline — shown only when baseline toggle is on */}
+          {showBaseline && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
+              <div style={{ width: 16, height: 6, borderRadius: 2, backgroundColor: '#D1D5DB' }} />
+              <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Baseline</span>
+            </div>
+          )}
           {/* Actual */}
           <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
             <div style={{ width: 16, height: 6, borderRadius: 2, backgroundColor: colors.primaryOrange }} />
@@ -919,9 +921,10 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                       const bWidth = ((new Date(bEnd).getTime() - new Date(bStart).getTime()) / timelineSpan) * 100;
                       return (
                         <div aria-hidden="true" style={{
-                          position: 'absolute', top: 4, bottom: 4,
+                          position: 'absolute', top: '50%', transform: 'translateY(-50%)',
+                          height: 8,
                           left: `${bLeft}%`, width: `${bWidth}%`,
-                          backgroundColor: '#9CA3AF', opacity: 0.3,
+                          backgroundColor: '#D1D5DB',
                           borderRadius: borderRadius.sm, pointerEvents: 'none',
                           zIndex: 0,
                         }} />
@@ -1184,6 +1187,30 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                         </div>
                       </div>
                     )}
+
+                    {/* Baseline variance text next to bar */}
+                    {showBaseline && !phase.is_milestone && (() => {
+                      const bEnd = phase.baselineEndDate ?? (baselinePhases?.find(b => b.id === phase.id)?.baselineEndDate ?? null);
+                      if (!bEnd) return null;
+                      const variance = Math.round((new Date(phase.endDate).getTime() - new Date(bEnd).getTime()) / DAY_MS);
+                      if (variance === 0) return null;
+                      return (
+                        <div aria-hidden="true" style={{
+                          position: 'absolute',
+                          left: `calc(${pos.left + pos.width}% + 4px)`,
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          fontSize: '10px',
+                          fontWeight: 600,
+                          color: variance > 0 ? '#E74C3C' : '#4EC896',
+                          whiteSpace: 'nowrap',
+                          pointerEvents: 'none',
+                          zIndex: 4,
+                        }}>
+                          {variance > 0 ? `+${variance}d` : `${variance}d`}
+                        </div>
+                      );
+                    })()}
 
                     {/* Today marker */}
                     {todayOffset > 0 && todayOffset < 100 && (
