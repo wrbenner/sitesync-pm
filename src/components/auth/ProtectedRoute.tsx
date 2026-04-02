@@ -126,8 +126,8 @@ const RequestAccessPage: React.FC<RequestAccessPageProps> = ({ moduleName }) => 
 )
 
 export const ProtectedRoute: React.FC<Props> = ({ children, requiredPermission, moduleId, moduleName }) => {
-  const { user, loading: authLoading, isSessionValid } = useAuth()
-  const { hasPermission, canAccessModule, loading: permLoading } = usePermissions()
+  const { user, loading: authLoading } = useAuth()
+  const { hasPermission, canAccessModule } = usePermissions()
   const location = useLocation()
 
   // Dev bypass: explicit opt-in only, with prominent warning banner
@@ -140,26 +140,14 @@ export const ProtectedRoute: React.FC<Props> = ({ children, requiredPermission, 
     )
   }
 
-  // Auth loading: show skeleton
-  if (authLoading) {
-    return <SkeletonLoader ariaLabel="Loading authentication" />
+  // Auth loading: show skeleton while session has not been checked yet
+  if (user === null && authLoading) {
+    return <SkeletonLoader ariaLabel="Verifying authentication" />
   }
 
-  // Permissions loading (auth resolved but permissions not yet): show skeleton
-  if (!authLoading && permLoading) {
-    return <SkeletonLoader ariaLabel="Checking permissions" />
-  }
-
-  // No user or expired session: redirect to login with return path
-  if (!user || !isSessionValid) {
-    return (
-      <>
-        <span style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden' }} aria-live="polite">
-          Redirecting to login
-        </span>
-        <Navigate to="/login" state={{ from: location }} replace />
-      </>
-    )
+  // No user after auth check: redirect to login with return path
+  if (!user) {
+    return <Navigate to={`/login?returnTo=${encodeURIComponent(location.pathname + location.search)}`} replace />
   }
 
   // Module permission check
