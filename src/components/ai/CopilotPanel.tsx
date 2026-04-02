@@ -400,7 +400,7 @@ export const CopilotPanel: React.FC = () => {
           {/* Close button */}
           <button
             onClick={closeCopilot}
-            aria-label="Close AI Copilot"
+            aria-label="Close AI copilot panel"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -424,7 +424,7 @@ export const CopilotPanel: React.FC = () => {
         <div
           role="log"
           aria-live="polite"
-          aria-label="AI Copilot conversation"
+          aria-label="AI conversation messages"
           style={{
             flex: 1,
             overflow: 'auto',

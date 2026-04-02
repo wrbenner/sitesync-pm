@@ -270,7 +270,7 @@ export const AgentMentionInput = memo<AgentMentionInputProps>(
             placeholder={placeholder}
             disabled={disabled}
             rows={1}
-            aria-label="Message input"
+            aria-label="Message to AI copilot"
             style={{
               flex: 1,
               resize: 'none',
