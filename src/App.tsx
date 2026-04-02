@@ -38,6 +38,21 @@ import { useOfflineStatus } from './hooks/useOfflineStatus';
 import { syncManager } from './lib/syncManager';
 import { OrganizationProvider } from './hooks/useOrganization';
 
+function lazyWithRetry(importFn: () => Promise<any>, retries = 3, delay = 1000) {
+  return lazy(() => new Promise<{ default: any }>((resolve, reject) => {
+    function attempt(retriesLeft: number) {
+      importFn().then(resolve).catch((err: Error) => {
+        if (retriesLeft > 0) {
+          setTimeout(() => attempt(retriesLeft - 1), delay);
+        } else {
+          reject(err);
+        }
+      });
+    }
+    attempt(retries);
+  }));
+}
+
 // Auth pages
 const Login = lazy(() => import('./pages/auth/Login').then((m) => ({ default: m.Login })));
 const Signup = lazy(() => import('./pages/auth/Signup').then((m) => ({ default: m.Signup })));
@@ -52,17 +67,17 @@ const ShortcutOverlay = lazy(() => import('./components/ui/ShortcutOverlay').the
 const ExportCenter = lazy(() => import('./components/export/ExportCenter').then((m) => ({ default: m.ExportCenter })));
 
 // Lazy loaded pages
-const Dashboard = lazy(() => import('./pages/Dashboard').then((m) => ({ default: m.Dashboard })));
+const Dashboard = lazyWithRetry(() => import('./pages/Dashboard').then((m) => ({ default: m.Dashboard })));
 const Tasks = lazy(() => import('./pages/Tasks').then((m) => ({ default: m.Tasks })));
 const Drawings = lazy(() => import('./pages/Drawings').then((m) => ({ default: m.Drawings })));
-const RFIs = lazy(() => import('./pages/RFIs').then((m) => ({ default: m.RFIs })));
+const RFIs = lazyWithRetry(() => import('./pages/RFIs').then((m) => ({ default: m.RFIs })));
 const Submittals = lazy(() => import('./pages/Submittals').then((m) => ({ default: m.Submittals })));
-const Schedule = lazy(() => import('./pages/Schedule').then((m) => ({ default: m.Schedule })));
+const Schedule = lazyWithRetry(() => import('./pages/Schedule').then((m) => ({ default: m.Schedule })));
 const Budget = lazy(() => import('./pages/Budget').then((m) => ({ default: m.Budget })));
 const ChangeOrders = lazy(() => import('./pages/ChangeOrders').then((m) => ({ default: m.ChangeOrders })));
-const DailyLog = lazy(() => import('./pages/DailyLog').then((m) => ({ default: m.DailyLog })));
+const DailyLog = lazyWithRetry(() => import('./pages/DailyLog').then((m) => ({ default: m.DailyLog })));
 const FieldCapture = lazy(() => import('./pages/FieldCapture').then((m) => ({ default: m.FieldCapture })));
-const PunchList = lazy(() => import('./pages/PunchList').then((m) => ({ default: m.PunchList })));
+const PunchList = lazyWithRetry(() => import('./pages/PunchList').then((m) => ({ default: m.PunchList })));
 const Crews = lazy(() => import('./pages/Crews').then((m) => ({ default: m.Crews })));
 const Directory = lazy(() => import('./pages/Directory').then((m) => ({ default: m.Directory })));
 const Meetings = lazy(() => import('./pages/Meetings').then((m) => ({ default: m.Meetings })));
