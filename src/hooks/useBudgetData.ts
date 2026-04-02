@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useQuery } from './useQuery'
 import { useProjectId } from './useProjectId'
 import { getCostData } from '../api/endpoints/budget'
@@ -13,22 +13,28 @@ export interface BudgetData {
   invoices: InvoiceRow[]
   scheduleActivities: ScheduleActivity[]
   loading: boolean
+  refetch: () => void
 }
 
 export function useBudgetData(): BudgetData {
   const projectId = useProjectId()
 
-  const { data: costData, loading: costLoading } = useQuery(
+  const { data: costData, loading: costLoading, refetch: refetchCost } = useQuery(
     `cost-data-${projectId}`,
     () => getCostData(projectId!),
     { enabled: !!projectId },
   )
 
-  const { data: scheduleData, loading: scheduleLoading } = useQuery(
+  const { data: scheduleData, loading: scheduleLoading, refetch: refetchSchedule } = useQuery(
     `schedule-phases-${projectId}`,
     () => getSchedulePhases(projectId!),
     { enabled: !!projectId },
   )
+
+  const refetch = useCallback(() => {
+    void refetchCost()
+    void refetchSchedule()
+  }, [refetchCost, refetchSchedule])
 
   // Derive invoices from budget items: each item with actual spend represents an approved cost
   const invoices = useMemo<InvoiceRow[]>(
@@ -49,5 +55,6 @@ export function useBudgetData(): BudgetData {
     invoices,
     scheduleActivities: scheduleData ?? [],
     loading: costLoading || scheduleLoading,
+    refetch,
   }
 }

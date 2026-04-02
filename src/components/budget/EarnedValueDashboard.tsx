@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
 import { computeEarnedValue } from '../../lib/financialEngine';
 import { useBudgetData } from '../../hooks/useBudgetData';
 import { Skeleton } from '../Primitives';
+import { supabase } from '../../lib/supabase';
+import { useProjectContext } from '../../stores/projectContextStore';
 
 interface EVMetric {
   label: string;
@@ -31,7 +33,18 @@ const METRIC_COUNT = 6; // CPI, SPI, EAC, ETC, VAC, CV
 const METRIC_GRID = 'repeat(3, 1fr)';
 
 export const EarnedValueDashboard: React.FC = () => {
-  const { budgetItems, changeOrders, invoices, scheduleActivities, loading } = useBudgetData();
+  const { budgetItems, changeOrders, invoices, scheduleActivities, loading, refetch } = useBudgetData();
+  const { activeProjectId } = useProjectContext();
+
+  useEffect(() => {
+    if (!activeProjectId) return;
+    const channel = supabase
+      .channel('ev-dashboard-' + activeProjectId)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'budget_items', filter: 'project_id=eq.' + activeProjectId }, () => { refetch(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'change_orders', filter: 'project_id=eq.' + activeProjectId }, () => { refetch(); })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [activeProjectId, refetch]);
 
   if (loading) {
     return (
