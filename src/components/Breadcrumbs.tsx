@@ -20,6 +20,13 @@ const routeLabels: Record<string, string> = {
   files: 'Files',
   copilot: 'AI Copilot',
   vision: 'Vision',
+  safety: 'Safety',
+  'change-orders': 'Change Orders',
+  'pay-apps': 'Payment Applications',
+  settings: 'Settings',
+  portal: 'Owner Portal',
+  reports: 'Reports',
+  integrations: 'Integrations',
 };
 
 // ── FolderBreadcrumbs ──────────────────────────────────
@@ -223,7 +230,7 @@ export const Breadcrumbs: React.FC = () => {
 
       {pathSegments.map((segment, i) => {
         const isLast = i === pathSegments.length - 1;
-        const label = routeLabels[segment] || segment;
+        const label = routeLabels[segment] || segment.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
         const path = '/' + pathSegments.slice(0, i + 1).join('/');
 
         return (
