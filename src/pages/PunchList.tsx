@@ -7,7 +7,7 @@ import PunchListSkeleton from '../components/field/PunchListSkeleton';
 import EmptyState from '../components/ui/EmptyState';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 import { usePunchItems, useDirectoryContacts } from '../hooks/queries';
-import { AlertTriangle, Camera, CheckCircle, CheckSquare, Clock, Inbox, MessageSquare, RefreshCw, Sparkles, XCircle } from 'lucide-react';
+import { AlertTriangle, Camera, CheckCircle, CheckSquare, Clock, Inbox, MessageSquare, RefreshCw, Search, Sparkles, XCircle } from 'lucide-react';
 import { usePermissions } from '../hooks/usePermissions';
 import { useAppNavigate, getRelatedItemsForPunchItem } from '../utils/connections';
 import { AIAnnotationIndicator } from '../components/ai/AIAnnotation';
@@ -257,6 +257,13 @@ const PunchListPage: React.FC = () => {
     }
     return list;
   }, [punchListItems, atRiskFilter, areaFilter]);
+
+  const hasActiveFilters = atRiskFilter || areaFilter !== 'all';
+
+  const clearAllFilters = useCallback(() => {
+    setAtRiskFilter(false);
+    setAreaFilter('all');
+  }, []);
 
   const selected = punchListItems.find(p => p.id === selectedId) || null;
   const comments: Comment[] = []; // TODO: load from punch_item_comments query
@@ -647,9 +654,16 @@ const PunchListPage: React.FC = () => {
 
       {isMobile ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
-          {filteredList.length === 0 && (
-            <div style={{ textAlign: 'center', padding: spacing['6'], color: colors.textTertiary, fontSize: typography.fontSize.sm }}>
-              No items match your filters
+          {filteredList.length === 0 && hasActiveFilters && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['3'], padding: `${spacing['8']} ${spacing['4']}`, textAlign: 'center' }}>
+              <Search size={32} color={colors.textTertiary} />
+              <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: 0 }}>No punch items match your current filters</p>
+              <button
+                onClick={clearAllFilters}
+                style={{ padding: `${spacing['2']} ${spacing['4']}`, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, fontWeight: typography.fontWeight.medium, backgroundColor: colors.primaryOrange, color: colors.white, border: 'none', borderRadius: borderRadius.base, cursor: 'pointer' }}
+              >
+                Clear All Filters
+              </button>
             </div>
           )}
           {filteredList.map((item) => {
@@ -725,17 +739,30 @@ const PunchListPage: React.FC = () => {
         </div>
       ) : (
         <Card padding="0">
-          <VirtualDataTable
-            aria-label="Punch list items"
-            data={filteredList}
-            columns={plColumns}
-            rowHeight={48}
-            containerHeight={600}
-            onRowClick={(row) => setSelectedId(row.id)}
-            selectedRowId={selectedId}
-            getRowId={(row) => String(row.id)}
-            emptyMessage="No items match your filters"
-          />
+          {filteredList.length === 0 && hasActiveFilters ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['3'], padding: `${spacing['12']} ${spacing['4']}`, textAlign: 'center' }}>
+              <Search size={36} color={colors.textTertiary} />
+              <p style={{ fontSize: typography.fontSize.base, color: colors.textSecondary, margin: 0 }}>No punch items match your current filters</p>
+              <button
+                onClick={clearAllFilters}
+                style={{ padding: `${spacing['2']} ${spacing['4']}`, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, fontWeight: typography.fontWeight.medium, backgroundColor: colors.primaryOrange, color: colors.white, border: 'none', borderRadius: borderRadius.base, cursor: 'pointer' }}
+              >
+                Clear All Filters
+              </button>
+            </div>
+          ) : (
+            <VirtualDataTable
+              aria-label="Punch list items"
+              data={filteredList}
+              columns={plColumns}
+              rowHeight={48}
+              containerHeight={600}
+              onRowClick={(row) => setSelectedId(row.id)}
+              selectedRowId={selectedId}
+              getRowId={(row) => String(row.id)}
+              emptyMessage="No items match your filters"
+            />
+          )}
         </Card>
       )}
 
