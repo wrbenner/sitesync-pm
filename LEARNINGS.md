@@ -15,19 +15,21 @@ The engine reads this before every audit to avoid repeating mistakes and amplify
 - Creating new files without adding proper TypeScript types causes build failures
 - Installing npm packages without importing them correctly leads to wasted prompts on build fixes
 
-## Scoring Trends (across 6 runs as of 2026-04-02 12:00)
+## Scoring Trends (across 7 runs as of 2026-04-02 15:00)
 - Run 1 (Apr 1 19:47) average: ~41/100 (11 modules, 136 commits, crashed at quality gates jq error)
 - Run 3 (Apr 2 08:34) average: ~47/100 (8 modules scored, 35 commits)
 - Run 4 (Apr 2 09:51) average: ~44/100 (11 modules, Cycle 1 Surgeon, $4.77 spent, 100% fix rate 60/60)
-- Run 5 (Apr 2 11:55) average: ~33/100 (only document-management scored so far, cycle 1 in progress)
-- Scores plateau in 45 to 55 range during Surgeon mode (fixing bugs does not create new capability)
+- Run 5 (Apr 2 11:55) average: ~42/100 (11 modules, Cycle 1 Surgeon, $4.56 spent, 100% fix rate 55/55)
+- Scores plateau in 30 to 57 range during Surgeon mode (fixing bugs does not create new capability)
+- Multiple modules regressed between runs 4 and 5 (auth-rbac 41→32, core-workflows 47→39, field-ops 40→33). Auditor variance likely: different issues flagged each run, prior fixes may conflict.
 - Real score jumps expected in Architect mode when P0 features from PRODUCTION_ROADMAP.md land
-- CRITICAL: Engine keeps resetting to cycle 1 across runs. It has never reached cycle 4 (Architect mode). Runs are restarting fresh instead of resuming. This must be fixed or the engine will polish forever without building P0 features.
+- Resume bug now FIXED. Engine should finally reach cycle 4 (Architect mode) in the current run.
 
-## Known Issues (as of 2026-04-02 12:00)
+## Known Issues (as of 2026-04-02 15:00)
 - document-management module has files: [] in modules.json. Haiku decomposition is not assigning Drawings.tsx, Files.tsx, DrawingViewer.tsx to this module. The audit still works via snapshot but fix prompts may be less targeted.
-- Multiple runs start and complete 0 cycles before a new run begins. Possible causes: script edits triggering hot-reload mid-cycle, tmux session restarts, or unhandled errors causing exit under set -euo pipefail.
-- The "unknown: 0/100" entries in LEARNINGS cycle summaries suggest the score logging has a bug where module names are not being captured correctly for some entries.
+- [FIXED 2026-04-02 15:00] Multiple runs resetting to cycle 0. ROOT CAUSE: state.json was overwritten with cycle 0 on every launch, including hot-reload resumes. Also ESTIMATED_SPEND and TOTAL_PROMPTS_EXECUTED were reset to 0 on resume. Fixed by preserving state.json during resume and restoring spend/prompt counters from state.
+- [FIXED 2026-04-02 15:00] "unknown: 0/100" entries in LEARNINGS. ROOT CAUSE: audit_*_raw.json files were matched by the audit_*.json glob. Raw files have no .module field. Fixed by adding [[ *_raw.json ]] skip guard to all four audit file loops.
+- [FIXED 2026-04-02 15:00] Tests always failing with "Unknown option --watchAll". ROOT CAUSE: vitest uses --run not --watchAll=false (that is a Jest flag). Fixed in auto-detect logic.
 
 ## Rules for Architect Mode (Cycles 4 through 10)
 - Read PRODUCTION_ROADMAP.md to find the highest priority unfinished P0 item
@@ -70,6 +72,35 @@ Spend: $4.77 | Fix rate: 100% (60/60)
   project-intelligence: 59/100 (5 issues)
   unknown: 0/100 (0 issues)
   scheduling: 31/100 (5 issues)
+  unknown: 0/100 (0 issues)
+  ui-design-system: 47/100 (5 issues)
+
+MOMENTUM: High fix rate. Current prompt strategy is working well.
+
+## Cycle 1 — 2026-04-02 14:54 — MODE: SURGEON
+
+Spend: $4.56 | Fix rate: 100% (55/55)
+
+  unknown: 0/100 (0 issues)
+  auth-rbac: 32/100 (5 issues)
+  unknown: 0/100 (0 issues)
+  collaboration: 40/100 (5 issues)
+  unknown: 0/100 (0 issues)
+  core-workflows: 39/100 (5 issues)
+  unknown: 0/100 (0 issues)
+  database-api: 47/100 (5 issues)
+  unknown: 0/100 (0 issues)
+  document-management: 33/100 (5 issues)
+  unknown: 0/100 (0 issues)
+  field-operations: 33/100 (5 issues)
+  unknown: 0/100 (0 issues)
+  financial-engine: 51/100 (5 issues)
+  unknown: 0/100 (0 issues)
+  infrastructure: 57/100 (5 issues)
+  unknown: 0/100 (0 issues)
+  project-intelligence: 56/100 (5 issues)
+  unknown: 0/100 (0 issues)
+  scheduling: 30/100 (5 issues)
   unknown: 0/100 (0 issues)
   ui-design-system: 47/100 (5 issues)
 
