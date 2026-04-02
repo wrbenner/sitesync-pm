@@ -216,9 +216,9 @@ const RFIs: React.FC = () => {
               {formatDate(info.getValue())}
             </span>
             {overdue && (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+              <span aria-label="Overdue" style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
                 <span aria-hidden="true" style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', backgroundColor: colors.statusCritical, flexShrink: 0 }} />
-                <span style={{ fontSize: '0.65rem', fontWeight: typography.fontWeight.semibold, color: colors.statusCritical, textTransform: 'uppercase' as const, letterSpacing: '0.3px' }}>Overdue</span>
+                <span aria-hidden="true" style={{ fontSize: '0.65rem', fontWeight: typography.fontWeight.semibold, color: colors.statusCritical, textTransform: 'uppercase' as const, letterSpacing: '0.3px' }}>Overdue</span>
               </span>
             )}
           </div>
