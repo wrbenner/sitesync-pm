@@ -1,5 +1,5 @@
-import React from 'react';
-import { colors, spacing, typography, borderRadius } from '../../styles/theme';
+import React, { useState } from 'react';
+import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme';
 
 interface WaterfallChartProps {
   originalContract: number;
@@ -17,6 +17,7 @@ const fmt = (n: number): string => {
 export const WaterfallChart: React.FC<WaterfallChartProps> = ({
   originalContract, approvedCOs, pendingCOs,
 }) => {
+  const [hoveredBar, setHoveredBar] = useState<string | null>(null);
   const revisedContract = originalContract + approvedCOs;
   const maxVal = Math.max(originalContract, revisedContract, originalContract + approvedCOs + pendingCOs) * 1.1;
 
@@ -31,7 +32,11 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = ({
   const barGap = 12;
 
   return (
-    <div style={{ overflowX: 'auto', minWidth: 280 }}>
+    <div
+      role="img"
+      aria-label="Contract value waterfall chart showing original contract, approved changes, pending changes, and revised contract total"
+      style={{ overflowX: 'auto', minWidth: 280 }}
+    >
       <div style={{ width: '100%', padding: `${spacing['4']} 0` }}>
         {/* Value labels row */}
         <div style={{ display: 'flex', gap: barGap, marginBottom: spacing['2'] }}>
@@ -50,6 +55,9 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = ({
             const barHeight = maxVal > 0 ? (Math.abs(bar.value) / maxVal) * chartHeight : 0;
             const bottomOffset = maxVal > 0 ? (bar.cumStart / maxVal) * chartHeight : 0;
 
+            const isCO = bar.label === 'Approved COs' || bar.label === 'Pending COs';
+            const isHovered = hoveredBar === bar.label;
+
             return (
               <div key={bar.label} style={{ flex: '1 1 0', minWidth: 0, position: 'relative', height: '100%' }}>
                 {/* Connector line (for non-totals) */}
@@ -61,14 +69,45 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = ({
                     borderTop: `1px dashed ${colors.textTertiary}`,
                   }} />
                 )}
+                {/* Tooltip */}
+                {isHovered && (
+                  <div style={{
+                    position: 'absolute',
+                    bottom: bottomOffset + barHeight + 8,
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    backgroundColor: '#ffffff',
+                    boxShadow: shadows.dropdown,
+                    borderRadius: borderRadius.md,
+                    padding: spacing['2'],
+                    fontSize: typography.fontSize.sm,
+                    zIndex: 10,
+                    whiteSpace: 'nowrap',
+                    pointerEvents: 'none',
+                  }}>
+                    <div style={{ fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: 2 }}>{bar.label}</div>
+                    <div style={{ color: bar.color }}>{bar.value >= 0 ? '+' : ''}{fmt(bar.value)}</div>
+                    {!bar.isTotal && (
+                      <div style={{ color: colors.textTertiary, marginTop: 2 }}>
+                        {((Math.abs(bar.value) / originalContract) * 100).toFixed(1)}% of original
+                      </div>
+                    )}
+                  </div>
+                )}
                 {/* Bar */}
-                <div style={{
-                  position: 'absolute', bottom: bottomOffset,
-                  width: '100%', height: barHeight,
-                  backgroundColor: bar.isTotal ? bar.color : `${bar.color}CC`,
-                  borderRadius: `${borderRadius.sm} ${borderRadius.sm} 0 0`,
-                  transition: 'height 0.3s ease',
-                }} />
+                <div
+                  aria-label={`${bar.label}: ${fmt(bar.value)}`}
+                  onMouseEnter={() => setHoveredBar(bar.label)}
+                  onMouseLeave={() => setHoveredBar(null)}
+                  style={{
+                    position: 'absolute', bottom: bottomOffset,
+                    width: '100%', height: barHeight,
+                    backgroundColor: bar.isTotal ? bar.color : `${bar.color}CC`,
+                    borderRadius: `${borderRadius.sm} ${borderRadius.sm} 0 0`,
+                    transition: 'height 0.3s ease',
+                    cursor: isCO ? 'pointer' : 'default',
+                  }}
+                />
               </div>
             );
           })}
