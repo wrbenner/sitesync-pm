@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { Plus, Search, X, ArrowRight, GitBranch, Clock, AlertTriangle, ChevronRight } from 'lucide-react';
+import { Plus, Search, X, ArrowRight, GitBranch, Clock, AlertTriangle, ChevronRight, FileText } from 'lucide-react';
 import { PageContainer, Card, Btn, MetricBox, SectionHeader, Skeleton, useToast, Modal, TabBar } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, shadows, transitions, zIndex } from '../styles/theme';
 import { WaterfallChart } from '../components/budget/WaterfallChart';
@@ -83,6 +83,7 @@ export const ChangeOrders: React.FC = () => {
 
   const allCOs: MappedChangeOrder[] = costData?.changeOrders || [];
   const originalContract = projectData?.totalValue || 0;
+  const hasActiveFilters = searchQuery !== '' || filterType !== 'all';
 
   const filteredCOs = useMemo(() => {
     return allCOs.filter(co => {
@@ -583,8 +584,22 @@ export const ChangeOrders: React.FC = () => {
         />
       </div>
 
+      {/* Empty state — no change orders at all */}
+      {allCOs.length === 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: `${spacing['16']} ${spacing['8']}`, textAlign: 'center' }}>
+          <FileText size={48} color="#9CA3AF" style={{ marginBottom: spacing['4'] }} />
+          <h3 style={{ fontSize: 18, fontWeight: 600, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>No Change Orders Yet</h3>
+          <p style={{ fontSize: 14, color: '#6B7280', margin: 0, marginBottom: spacing['5'], maxWidth: 360 }}>Scope is holding steady. When changes arise, document them here to keep the budget accurate.</p>
+          <PermissionGate permission="change_orders.create">
+            <button onClick={() => setShowCreateModal(true)} style={{ height: 40, padding: `0 ${spacing['5']}`, backgroundColor: '#F47820', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, fontFamily: typography.fontFamily, cursor: 'pointer' }}>
+              Create Change Order
+            </button>
+          </PermissionGate>
+        </div>
+      )}
+
       {/* Pipeline View */}
-      {viewMode === 'pipeline' && (
+      {allCOs.length > 0 && viewMode === 'pipeline' && (
         <div style={{ display: 'flex', gap: spacing['4'], alignItems: 'flex-start' }}>
           {renderPipelineColumn('pco', filteredCOs.filter(co => co.type === 'pco'))}
           <div style={{ display: 'flex', alignItems: 'center', paddingTop: spacing['12'], color: colors.textTertiary }}><ChevronRight size={20} /></div>
@@ -595,7 +610,7 @@ export const ChangeOrders: React.FC = () => {
       )}
 
       {/* List View */}
-      {viewMode === 'list' && (
+      {allCOs.length > 0 && viewMode === 'list' && (
         <Card padding="0">
           <div style={{ display: 'grid', gridTemplateColumns: '80px 70px 1fr 110px 100px 80px 120px 110px', padding: `${spacing['2']} ${spacing['4']}`, borderBottom: `1px solid ${colors.borderSubtle}` }}>
             {['Number', 'Type', 'Title', 'Amount', 'Impact', 'Days', 'Status', ''].map(h => (
@@ -637,8 +652,15 @@ export const ChangeOrders: React.FC = () => {
             );
           })}
           {filteredCOs.length === 0 && (
-            <div style={{ padding: spacing['6'], textAlign: 'center' }}>
-              <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>No change orders match your filters</span>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: `${spacing['12']} ${spacing['8']}`, textAlign: 'center' }}>
+              <FileText size={48} color="#9CA3AF" style={{ marginBottom: spacing['4'] }} />
+              <h3 style={{ fontSize: 18, fontWeight: 600, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>No change orders match your filters</h3>
+              <p style={{ fontSize: 14, color: '#6B7280', margin: 0, marginBottom: spacing['5'] }}>Try adjusting your search or filter criteria.</p>
+              {hasActiveFilters && (
+                <button onClick={() => { setSearchQuery(''); setFilterType('all'); }} style={{ height: 40, padding: `0 ${spacing['5']}`, backgroundColor: '#F47820', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, fontFamily: typography.fontFamily, cursor: 'pointer' }}>
+                  Clear Filters
+                </button>
+              )}
             </div>
           )}
         </Card>
