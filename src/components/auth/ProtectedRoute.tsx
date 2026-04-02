@@ -3,8 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { usePermissions } from '../../hooks/usePermissions'
 import type { Permission } from '../../hooks/usePermissions'
-import { Skeleton } from '../Primitives'
-import { colors, spacing, typography, zIndex, layout, borderRadius } from '../../styles/theme'
+import { colors, spacing, typography, zIndex, borderRadius } from '../../styles/theme'
 import { MODULE_PERMISSIONS } from '../../hooks/usePermissions'
 import { ShieldAlert } from 'lucide-react'
 
@@ -57,56 +56,12 @@ export const ProtectedRoute: React.FC<Props> = ({ children, requiredPermission, 
 
   if (authLoading) {
     return (
-      <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
-        {/* Sidebar placeholder */}
-        <div style={{
-          width: layout.sidebarWidth,
-          flexShrink: 0,
-          backgroundColor: colors.surfaceSidebar,
-          padding: spacing['4'],
-          display: window.innerWidth < 768 ? 'none' : 'flex',
-          flexDirection: 'column',
-          gap: spacing['3'],
-        }}>
-          <Skeleton width="120px" height="32px" />
-          <div style={{ marginTop: spacing['4'], display: 'flex', flexDirection: 'column', gap: spacing['2'] }}>
-            {Array.from({ length: 8 }).map((_, i) => (
-              <Skeleton key={i} width="100%" height="36px" />
-            ))}
-          </div>
-        </div>
-        {/* Content area skeleton */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          {/* Topbar placeholder */}
-          <div style={{
-            height: '56px',
-            borderBottom: `1px solid ${colors.border}`,
-            padding: `0 ${spacing['6']}`,
-            display: 'flex',
-            alignItems: 'center',
-            gap: spacing['3'],
-            flexShrink: 0,
-          }}>
-            <Skeleton width="280px" height="36px" />
-            <div style={{ marginLeft: 'auto', display: 'flex', gap: spacing['3'] }}>
-              <Skeleton width="36px" height="36px" />
-              <Skeleton width="36px" height="36px" />
-            </div>
-          </div>
-          {/* Page content placeholder */}
-          <div style={{ flex: 1, padding: `${layout.contentPaddingY} ${layout.contentPaddingX}`, display: 'flex', flexDirection: 'column', gap: spacing['4'], overflowY: 'auto' }}>
-            <Skeleton width="220px" height="28px" />
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'] }}>
-              {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} width="100%" height="100px" />
-              ))}
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: spacing['4'] }}>
-              <Skeleton width="100%" height="280px" />
-              <Skeleton width="100%" height="280px" />
-            </div>
-          </div>
-        </div>
+      <div role="status" style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        height: '100vh', fontSize: typography.fontSize.body, color: colors.textSecondary,
+        fontFamily: typography.fontFamily,
+      }}>
+        Verifying access...
       </div>
     )
   }
