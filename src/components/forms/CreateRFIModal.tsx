@@ -34,6 +34,7 @@ const CreateRFIModal: React.FC<CreateRFIModalProps> = ({ open, onClose, onSubmit
     fields={fields}
     defaults={{ priority: 'medium' }}
     submitLabel="Create RFI"
+    submittingLabel="Creating..."
     draftKey="draft_rfi"
   />
 )

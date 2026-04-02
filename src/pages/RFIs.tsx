@@ -796,11 +796,16 @@ const RFIs: React.FC = () => {
         open={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         onSubmit={async (data) => {
-          await createRFI.mutateAsync({
-            projectId: projectId!,
-            data: { ...data, project_id: projectId! },
-          });
-          toast.success('RFI created: ' + (data.title || 'New RFI'));
+          try {
+            await createRFI.mutateAsync({
+              projectId: projectId!,
+              data: { ...data, project_id: projectId! },
+            });
+            toast.success('RFI created successfully');
+          } catch (err) {
+            toast.error('Failed to create RFI. Please try again.');
+            throw err;
+          }
         }}
       />
     </PageContainer>

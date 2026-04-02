@@ -98,6 +98,7 @@ interface EntityFormModalProps<T extends z.ZodObject<z.ZodRawShape>> {
   fields: FieldConfig[]
   defaults?: Partial<z.infer<T>>
   submitLabel?: string
+  submittingLabel?: string
   draftKey?: string
   width?: number
 }
@@ -111,6 +112,7 @@ export function EntityFormModal<T extends z.ZodObject<z.ZodRawShape>>({
   fields,
   defaults = {},
   submitLabel = 'Create',
+  submittingLabel,
   draftKey,
   width,
 }: EntityFormModalProps<T>) {
@@ -342,7 +344,7 @@ export function EntityFormModal<T extends z.ZodObject<z.ZodRawShape>>({
             }}
           >
             {submitting && <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />}
-            {submitLabel}
+            {submitting && submittingLabel ? submittingLabel : submitLabel}
           </button>
         </div>
       </FormBody>
