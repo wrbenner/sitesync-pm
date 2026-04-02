@@ -221,7 +221,7 @@ export const CopilotPanel: React.FC = () => {
       {/* Slide-in panel */}
       <div
         role="complementary"
-        aria-label="AI Copilot"
+        aria-label="AI Copilot conversation"
         aria-modal="true"
         onKeyDown={(e) => { if (e.key === 'Escape') closeCopilot() }}
         style={{
@@ -459,6 +459,7 @@ export const CopilotPanel: React.FC = () => {
                   <button
                     key={prompt.label}
                     onClick={() => handleSendMessage(prompt.label)}
+                    aria-label={prompt.label}
                     style={{
                       padding: `${spacing['3']} ${spacing['3']}`,
                       minHeight: '44px',
