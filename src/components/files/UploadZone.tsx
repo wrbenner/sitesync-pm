@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef } from 'react';
-import { Upload, File, CheckCircle, Sparkles, Folder, Tag } from 'lucide-react';
+import { Upload, File, CheckCircle, Sparkles, Folder, Tag, AlertCircle, RefreshCw } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme';
 import { aiService } from '../../lib/aiService';
 
@@ -54,8 +54,10 @@ export const UploadZone: React.FC<UploadZoneProps> = ({ onUpload, onTagsSuggeste
   const [isDragging, setIsDragging] = useState(false);
   const [isDraggingFolder, setIsDraggingFolder] = useState(false);
   const [uploads, setUploads] = useState<UploadItem[]>([]);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
+  const retryFilesRef = useRef<File[]>([]);
 
   const simulateUpload = useCallback((name: string, opts?: { isFolder?: boolean; fileCount?: number }) => {
     const id = Date.now() + Math.random();
@@ -115,14 +117,25 @@ export const UploadZone: React.FC<UploadZoneProps> = ({ onUpload, onTagsSuggeste
     e.preventDefault();
     setIsDragging(false);
     setIsDraggingFolder(false);
+    setUploadError(null);
 
-    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
-      await processDataTransferItems(e.dataTransfer.items);
-    } else if (e.dataTransfer.files.length > 0) {
-      Array.from(e.dataTransfer.files).forEach((f) => {
-        onFileReady?.(f);
-        simulateUpload(f.name);
-      });
+    try {
+      if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+        const rawFiles = Array.from(e.dataTransfer.files);
+        retryFilesRef.current = rawFiles;
+        await processDataTransferItems(e.dataTransfer.items);
+      } else if (e.dataTransfer.files.length > 0) {
+        const files = Array.from(e.dataTransfer.files);
+        retryFilesRef.current = files;
+        files.forEach((f) => {
+          onFileReady?.(f);
+          simulateUpload(f.name);
+        });
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      setUploadError(message);
+      window.alert(`Upload failed: ${message}. Please try again.`);
     }
   }, [processDataTransferItems, simulateUpload]);
 
@@ -137,30 +150,61 @@ export const UploadZone: React.FC<UploadZoneProps> = ({ onUpload, onTagsSuggeste
   const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
-    Array.from(files).forEach((f) => {
-      onFileReady?.(f);
-      simulateUpload(f.name);
-    });
+    setUploadError(null);
+    try {
+      const fileArr = Array.from(files);
+      retryFilesRef.current = fileArr;
+      fileArr.forEach((f) => {
+        onFileReady?.(f);
+        simulateUpload(f.name);
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      setUploadError(message);
+      window.alert(`Upload failed: ${message}. Please try again.`);
+    }
     e.target.value = '';
   }, [simulateUpload, onFileReady]);
 
   const handleFolderInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
-
-    // Group by top-level folder
-    const folderMap = new Map<string, number>();
-    Array.from(files).forEach((f) => {
-      const parts = (f as File & { webkitRelativePath: string }).webkitRelativePath.split('/');
-      const topFolder = parts[0];
-      folderMap.set(topFolder, (folderMap.get(topFolder) || 0) + 1);
-    });
-
-    folderMap.forEach((count, folderName) => {
-      simulateUpload(folderName + '/', { isFolder: true, fileCount: count });
-    });
+    setUploadError(null);
+    try {
+      retryFilesRef.current = Array.from(files);
+      // Group by top-level folder
+      const folderMap = new Map<string, number>();
+      Array.from(files).forEach((f) => {
+        const parts = (f as File & { webkitRelativePath: string }).webkitRelativePath.split('/');
+        const topFolder = parts[0];
+        folderMap.set(topFolder, (folderMap.get(topFolder) || 0) + 1);
+      });
+      folderMap.forEach((count, folderName) => {
+        simulateUpload(folderName + '/', { isFolder: true, fileCount: count });
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      setUploadError(message);
+      window.alert(`Upload failed: ${message}. Please try again.`);
+    }
     e.target.value = '';
   }, [simulateUpload]);
+
+  const handleRetry = useCallback(() => {
+    const files = retryFilesRef.current;
+    if (!files.length) return;
+    setUploadError(null);
+    try {
+      files.forEach((f) => {
+        onFileReady?.(f);
+        simulateUpload(f.name);
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      setUploadError(message);
+      window.alert(`Upload failed: ${message}. Please try again.`);
+    }
+  }, [simulateUpload, onFileReady]);
 
   const dropZoneBg = isDragging
     ? isDraggingFolder
@@ -267,6 +311,48 @@ export const UploadZone: React.FC<UploadZoneProps> = ({ onUpload, onTagsSuggeste
           </button>
         </div>
       </div>
+
+      {/* Error message */}
+      {uploadError && (
+        <div
+          aria-live="polite"
+          style={{
+            marginTop: spacing['3'],
+            padding: `${spacing['3']} ${spacing['4']}`,
+            backgroundColor: '#FEF2F2',
+            border: `1px solid #FECACA`,
+            borderRadius: borderRadius.md,
+            display: 'flex',
+            alignItems: 'center',
+            gap: spacing['3'],
+          }}
+        >
+          <AlertCircle size={16} color="#DC2626" style={{ flexShrink: 0 }} />
+          <span style={{ flex: 1, fontSize: typography.fontSize.sm, color: '#DC2626' }}>
+            Upload failed: {uploadError}. Please try again.
+          </span>
+          <button
+            onClick={handleRetry}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: spacing['1'],
+              padding: `${spacing['1']} ${spacing['3']}`,
+              fontSize: typography.fontSize.sm,
+              fontFamily: typography.fontFamily,
+              fontWeight: typography.fontWeight.medium,
+              border: `1px solid #DC2626`,
+              borderRadius: borderRadius.md,
+              backgroundColor: 'transparent',
+              color: '#DC2626',
+              cursor: 'pointer',
+              flexShrink: 0,
+            }}
+          >
+            <RefreshCw size={12} /> Retry
+          </button>
+        </div>
+      )}
 
       {/* Upload queue */}
       {uploads.length > 0 && (
