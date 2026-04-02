@@ -75,7 +75,7 @@ export const AgentMessage = memo<AgentMessageProps>(({ message }) => {
             width: 28,
             height: 28,
             borderRadius: borderRadius.full,
-            background: `linear-gradient(135deg, ${colors.statusReview} 0%, ${colors.indigo} 100%)`,
+            background: `linear-gradient(135deg, ${colors.statusReview} 0%, ${colors.statusInfo} 100%)`,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
