@@ -257,6 +257,7 @@ export const Btn: React.FC<BtnProps> = ({
         justifyContent: 'center',
         gap: spacing.sm,
         boxShadow: shadows.none,
+        ...styleProp,
       }}
       onMouseEnter={(e) => {
         if (!disabled) {

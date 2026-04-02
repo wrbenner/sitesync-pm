@@ -419,6 +419,7 @@ export const Safety: React.FC = () => {
     return () => window.removeEventListener('resize', onResize)
   }, [])
   const isMobile = windowWidth < 768
+  const isSmallMobile = windowWidth < 480
 
   return (
     <PageContainer
@@ -428,7 +429,7 @@ export const Safety: React.FC = () => {
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
           <ExportButton pdfFilename="SiteSync_Safety_Report" />
           {activeTab !== 'overview' && (
-            <Btn variant="primary" icon={<Plus size={16} />} onClick={handleAdd}>
+            <Btn variant="primary" icon={<Plus size={16} />} onClick={handleAdd} style={{ minHeight: 44, minWidth: 44 }}>
               {addButtonLabel[activeTab]}
             </Btn>
           )}
@@ -489,9 +490,13 @@ export const Safety: React.FC = () => {
       {activeTab === 'overview' && !isLoading && (
         <>
           {/* KPI Grid */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, marginBottom: spacing['2xl'] }}>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: isSmallMobile ? 'repeat(1, 1fr)' : isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
+            gap: 16,
+            marginBottom: spacing['2xl'],
+          }}>
             <div
-              style={{ minWidth: 280, flex: 1 }}
               role="status"
               aria-live="polite"
               aria-label={`Days Without Incident: ${daysSinceIncident ?? 'No recordable incidents'}`}
@@ -506,7 +511,6 @@ export const Safety: React.FC = () => {
               />
             </div>
             <div
-              style={{ minWidth: 280, flex: 1 }}
               aria-label={`Total Recordable Incident Rate: ${trir ?? 'N/A'}`}
             >
               <MetricBox
@@ -516,28 +520,28 @@ export const Safety: React.FC = () => {
                 warning={isSampleData ? 'Sample data. Connect backend to see live metrics.' : undefined}
               />
             </div>
-            <div style={{ minWidth: 280, flex: 1 }}>
+            <div>
               <MetricBox
                 label="Open Corrective Actions"
                 value={openCorrectiveActions}
                 warning={isSampleData ? 'Sample data. Connect backend to see live metrics.' : undefined}
               />
             </div>
-            <div style={{ minWidth: 280, flex: 1 }}>
+            <div>
               <MetricBox
                 label="Near Miss Ratio"
                 value={nearMissRatio}
                 changeLabel="near misses to incidents"
               />
             </div>
-            <div style={{ minWidth: 280, flex: 1 }}>
+            <div>
               <MetricBox
                 label="Cert Compliance"
                 value={`${certCompliance}%`}
                 change={certCompliance >= 90 ? 1 : -1}
               />
             </div>
-            <div style={{ minWidth: 280, flex: 1 }}>
+            <div>
               <MetricBox
                 label="Expiring Certs"
                 value={expiringCerts}
