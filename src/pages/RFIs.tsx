@@ -438,7 +438,7 @@ const RFIs: React.FC = () => {
             })}
           </div>
           <VirtualDataTable
-            aria-label="RFI Register"
+            aria-label="RFI list"
             data={filteredRfis}
             columns={allRfiColumns}
             rowHeight={48}
