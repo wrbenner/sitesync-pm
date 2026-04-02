@@ -211,6 +211,7 @@ const _DrawingsPage: React.FC = () => {
                 <button
                   key={discipline}
                   role="button"
+                  tabIndex={0}
                   aria-label={`Filter by ${discipline} discipline`}
                   aria-pressed={isActive}
                   onClick={() => {
@@ -220,6 +221,17 @@ const _DrawingsPage: React.FC = () => {
                       else next.add(discipline);
                       return next;
                     });
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setActiveFilters((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(discipline)) next.delete(discipline);
+                        else next.add(discipline);
+                        return next;
+                      });
+                    }
                   }}
                   style={{
                     display: 'flex',
@@ -357,9 +369,9 @@ const _DrawingsPage: React.FC = () => {
                 <React.Fragment key={drawing.id}>
                 {/* Mobile card row */}
                 <div
-                  role="listitem"
+                  role="article"
                   tabIndex={0}
-                  aria-label={`Drawing ${drawing.setNumber} ${drawing.disciplineLabel} ${drawing.title || ''}`}
+                  aria-label={`Drawing ${(drawing as any).sheetNumber || drawing.title}, ${drawing.disciplineLabel}, Revision ${drawing.currentRevision?.revision_number || 0}`}
                   className="drawing-row drawing-row-mobile"
                   onClick={() => setSelectedDrawing(drawing)}
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedDrawing(drawing); } }}
@@ -390,9 +402,9 @@ const _DrawingsPage: React.FC = () => {
                 </div>
                 {/* Desktop table row */}
                 <div
-                  role="listitem"
+                  role="article"
                   tabIndex={0}
-                  aria-label={`Drawing ${drawing.setNumber} ${drawing.disciplineLabel} ${drawing.title || ''}`}
+                  aria-label={`Drawing ${(drawing as any).sheetNumber || drawing.title}, ${drawing.disciplineLabel}, Revision ${drawing.currentRevision?.revision_number || 0}`}
                   className="drawing-row drawing-row-desktop"
                   onClick={() => setSelectedDrawing(drawing)}
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedDrawing(drawing); } }}
