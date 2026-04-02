@@ -18,19 +18,26 @@ export const getCrews = async (projectId: string) => {
 
 export const getDirectory = async (
   projectId: string,
-  pagination?: PaginationParams
-): Promise<PaginatedResult<DirectoryContactRow & { contactName: string | null }>> => {
+  pagination?: PaginationParams,
+  search?: string
+): Promise<PaginatedResult<DirectoryContactRow & { contactName: string | null; companyGroup: string }>> => {
   await assertProjectAccess(projectId)
   const scoped = createScopedClient(supabase, projectId)
-  return buildPaginatedQuery<DirectoryContactRow, DirectoryContactRow & { contactName: string | null }>(
-    (from, to) =>
-      scoped
+  return buildPaginatedQuery<DirectoryContactRow, DirectoryContactRow & { contactName: string | null; companyGroup: string }>(
+    (from, to) => {
+      let q = scoped
         .from('directory_contacts')
         .select('*', { count: 'exact' })
-        .order('name')
-        .range(from, to),
+      if (search && search.trim()) {
+        q = q.or(`name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%,company.ilike.%${search}%,trade.ilike.%${search}%`)
+      }
+      return q
+        .order('company', { ascending: true, nullsFirst: false })
+        .order('name', { ascending: true })
+        .range(from, to)
+    },
     pagination,
-    (d) => ({ ...d, contactName: d.name })
+    (d) => ({ ...d, contactName: d.name, companyGroup: d.company || 'Unaffiliated' })
   )
 }
 
