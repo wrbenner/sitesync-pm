@@ -219,93 +219,43 @@ export const Schedule: React.FC = () => {
 
   const GANTT_ROW_WIDTHS = ['70%', '55%', '85%', '40%', '90%', '60%', '75%', '45%'];
 
-  if (loading && schedulePhases.length === 0) {
+  if (loading) {
     return (
       <PageContainer title="Schedule" subtitle="Loading...">
         <style>{`@keyframes schedPulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 0.7; } }`}</style>
-        <div
-          aria-busy={true}
-          style={{ display: 'flex', flexDirection: 'column', gap: spacing['2xl'] }}
-        >
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-              gap: spacing.lg,
-            }}
-          >
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div
-                key={i}
-                style={{
-                  height: '96px',
-                  backgroundColor: '#E5E7EB',
-                  borderRadius: '12px',
-                  animation: 'schedPulse 1.5s ease-in-out infinite',
-                  animationDelay: `${i * 0.1}s`,
-                }}
-              />
-            ))}
-          </div>
-          <div
-            style={{
-              height: '400px',
-              backgroundColor: '#E5E7EB',
-              borderRadius: '12px',
-              animation: 'schedPulse 1.5s ease-in-out infinite',
-            }}
-          />
-        </div>
+        <Card style={{ padding: spacing.lg }}>
+          {([{ width: '60%' }, { width: '45%' }, { width: '75%' }, { width: '30%' }]).map((bar, i) => (
+            <div
+              key={i}
+              style={{
+                height: '32px',
+                width: bar.width,
+                backgroundColor: '#E5E7EB',
+                borderRadius: borderRadius.md,
+                animation: 'schedPulse 1.5s ease-in-out infinite',
+                animationDelay: `${i * 0.15}s`,
+                marginBottom: i < 3 ? spacing.md : 0,
+              }}
+            />
+          ))}
+        </Card>
       </PageContainer>
     );
   }
 
-  if (error && schedulePhases.length === 0) {
+  if (!loading && !error && schedulePhases.length === 0) {
     return (
       <PageContainer title="Schedule" subtitle="">
-        <div
-          role="alert"
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: spacing.lg,
-            padding: spacing['2xl'],
-            backgroundColor: colors.surfaceRaised,
-            borderRadius: borderRadius.xl,
-            border: `1px solid ${colors.borderDefault}`,
-            minHeight: '240px',
-            textAlign: 'center',
-          }}
-        >
-          <AlertTriangle size={32} color={colors.statusPending} />
-          <span style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
-            Unable to load schedule data
+        <Card style={{ padding: spacing.lg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: spacing.lg, minHeight: '320px', textAlign: 'center' }}>
+          <Calendar size={40} color={colors.textTertiary} />
+          <span style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, maxWidth: '420px', lineHeight: typography.lineHeight.normal }}>
+            Build your schedule to track every phase from mobilization to closeout
           </span>
-          <span style={{ fontSize: typography.fontSize.body, color: colors.textTertiary }}>
-            {(error as Error)?.message ?? String(error)}
-          </span>
-          <button
-            onClick={refetch}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: spacing.sm,
-              padding: `${spacing.sm} ${spacing.xl}`,
-              backgroundColor: colors.primaryOrange,
-              color: colors.white,
-              border: 'none',
-              borderRadius: borderRadius.md,
-              fontSize: typography.fontSize.body,
-              fontWeight: typography.fontWeight.semibold,
-              cursor: 'pointer',
-            }}
-          >
-            <RefreshCw size={14} />
-            Retry
-          </button>
-        </div>
+          <div style={{ display: 'flex', gap: spacing.md }}>
+            <Btn variant="primary">Create First Phase</Btn>
+            <Btn variant="secondary">Import from P6 / MS Project</Btn>
+          </div>
+        </Card>
       </PageContainer>
     );
   }
@@ -382,6 +332,46 @@ export const Schedule: React.FC = () => {
       >
         Skip to schedule activities
       </a>
+      {error && (
+        <div
+          role="alert"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: spacing.md,
+            padding: `${spacing.md} ${spacing.lg}`,
+            backgroundColor: colors.statusCriticalSubtle,
+            border: `1px solid ${colors.statusCritical}`,
+            borderRadius: borderRadius.md,
+            marginBottom: spacing.lg,
+          }}
+        >
+          <span style={{ fontSize: typography.fontSize.body, color: colors.statusCritical }}>
+            {(error as Error)?.message ?? String(error)}
+          </span>
+          <button
+            onClick={refetch}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: spacing.sm,
+              padding: `${spacing['1']} ${spacing.md}`,
+              backgroundColor: colors.statusCritical,
+              color: colors.white,
+              border: 'none',
+              borderRadius: borderRadius.base,
+              fontSize: typography.fontSize.sm,
+              fontWeight: typography.fontWeight.semibold,
+              cursor: 'pointer',
+              flexShrink: 0,
+              fontFamily: typography.fontFamily,
+            }}
+          >
+            Retry
+          </button>
+        </div>
+      )}
       {pageAlerts.map((alert) => (
         <PredictiveAlertBanner key={alert.id} alert={alert} onAction={() => setRecoveryExpanded(!recoveryExpanded)} />
       ))}
