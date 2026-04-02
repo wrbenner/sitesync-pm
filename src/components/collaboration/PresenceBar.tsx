@@ -160,11 +160,13 @@ interface AvatarProps {
 const PresenceAvatar: React.FC<AvatarProps> = ({ user, index, total }) => {
   const status = getPresenceStatus(user.lastSeen);
   return (
-    <Tooltip.Root>
+    <div role="listitem">
+    <Tooltip.Root delayDuration={0}>
       <Tooltip.Trigger asChild>
         <button
           className="presence-avatar-btn"
-          aria-label={`${user.displayName} is ${getPresenceStatus(user.lastSeen)}`}
+          tabIndex={0}
+          aria-label={`${user.displayName}, ${status}`}
           style={{
             width: AVATAR_SIZE,
             height: AVATAR_SIZE,
@@ -205,6 +207,7 @@ const PresenceAvatar: React.FC<AvatarProps> = ({ user, index, total }) => {
         </Tooltip.Content>
       </Tooltip.Portal>
     </Tooltip.Root>
+    </div>
   );
 };
 
@@ -218,8 +221,13 @@ export const PresenceBar: React.FC<PresenceBarProps> = ({ page }) => {
   const users = usePresenceStore(s => s.getUsersOnPage(page));
   const maxVisible = useMaxVisible();
   const [announcement, setAnnouncement] = useState('');
+  const [viewerCountText, setViewerCountText] = useState('');
   // Stores previous snapshot as a map of userId -> displayName so we can name departing users
   const prevUsersRef = useRef<Map<string, string>>(new Map());
+
+  useEffect(() => {
+    setViewerCountText(`${users.length} ${users.length === 1 ? 'person' : 'people'} viewing this page`);
+  }, [users.length]);
 
   useEffect(() => {
     const prev = prevUsersRef.current;
@@ -259,7 +267,7 @@ export const PresenceBar: React.FC<PresenceBarProps> = ({ page }) => {
         {announcement}
       </div>
       <style>{`@keyframes presenceTooltipIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } } .presence-avatar-btn { background: none; font: inherit; line-height: 1; outline-offset: 2px; } .presence-avatar-btn:focus-visible { outline: 2px solid ${colors.primary}; }`}</style>
-      <Tooltip.Provider delayDuration={150}>
+      <Tooltip.Provider delayDuration={0}>
         <div style={{
           display: 'flex', alignItems: 'center', gap: spacing['2'],
           padding: `${spacing['1']} ${spacing['3']}`,
@@ -271,16 +279,17 @@ export const PresenceBar: React.FC<PresenceBarProps> = ({ page }) => {
           <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
             Currently viewing:
           </span>
-          <div role="group" aria-label="Users currently viewing this page" style={{ display: 'flex', alignItems: 'center' }}>
+          <div role="list" aria-label="People currently viewing this page" style={{ display: 'flex', alignItems: 'center' }}>
             {visible.map((user, i) => (
               <PresenceAvatar key={user.userId} user={user} index={i} total={visible.length} />
             ))}
             {overflow > 0 && (
-              <Tooltip.Root>
+              <div role="listitem">
+              <Tooltip.Root delayDuration={0}>
                 <Tooltip.Trigger asChild>
                   <button
                     className="presence-avatar-btn"
-                    role="status"
+                    tabIndex={0}
                     aria-label={`${overflow} more people viewing`}
                     style={{
                       width: AVATAR_SIZE,
@@ -319,10 +328,18 @@ export const PresenceBar: React.FC<PresenceBarProps> = ({ page }) => {
                   </Tooltip.Content>
                 </Tooltip.Portal>
               </Tooltip.Root>
+              </div>
             )}
           </div>
         </div>
       </Tooltip.Provider>
+      <div
+        aria-live="polite"
+        aria-atomic="true"
+        style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)' }}
+      >
+        {viewerCountText}
+      </div>
     </>
   );
 };
