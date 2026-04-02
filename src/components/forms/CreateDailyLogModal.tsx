@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { ChevronDown, ChevronRight, Loader2, Lock, Pencil, X } from 'lucide-react'
+import { Copy, Loader2, Lock, Pencil, X } from 'lucide-react'
 import { summarizeDailyLog } from '../../api/endpoints/aiService'
 import {
   FormModal,
@@ -21,6 +21,39 @@ import { WeatherCard } from '../dailylog/WeatherCard'
 import { supabase } from '../../api/client'
 import { useIsOnline } from '../../hooks/useOfflineStatus'
 import { useOfflineMutation } from '../../hooks/useOfflineMutation'
+
+// ── Toggle Switch ─────────────────────────────────────────
+
+const ToggleSwitch: React.FC<{ id: string; checked: boolean; onChange: (v: boolean) => void }> = ({ id, checked, onChange }) => (
+  <button
+    type="button"
+    id={id}
+    role="switch"
+    aria-checked={checked}
+    onClick={() => onChange(!checked)}
+    style={{
+      width: 40, height: 22,
+      borderRadius: 11,
+      backgroundColor: checked ? '#F47820' : '#D1D5DB',
+      border: 'none',
+      cursor: 'pointer',
+      position: 'relative',
+      transition: 'background-color 0.2s',
+      flexShrink: 0,
+    }}
+  >
+    <span style={{
+      position: 'absolute',
+      top: 2,
+      left: checked ? 20 : 2,
+      width: 18, height: 18,
+      borderRadius: '50%',
+      backgroundColor: '#FFFFFF',
+      transition: 'left 0.2s',
+      display: 'block',
+    }} />
+  </button>
+)
 
 // ── Section Header ────────────────────────────────────────
 
@@ -173,6 +206,7 @@ export interface CreateDailyLogFormData {
   delays: string
   has_incident: boolean
   incident: IncidentData
+  visitors?: string
   superintendent_signature_url?: string
 }
 
@@ -205,6 +239,7 @@ const EMPTY_FORM: CreateDailyLogFormData = {
   delays: '',
   has_incident: false,
   incident: EMPTY_INCIDENT,
+  visitors: '',
 }
 
 const CreateDailyLogModal: React.FC<CreateDailyLogModalProps> = ({
@@ -240,7 +275,8 @@ const CreateDailyLogModal: React.FC<CreateDailyLogModalProps> = ({
   const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set())
   const [editedAfterAutoFill, setEditedAfterAutoFill] = useState<Set<string>>(new Set())
   const [sameAsYesterdayLoading, setSameAsYesterdayLoading] = useState(false)
-  const [incidentOpen, setIncidentOpen] = useState(false)
+  const [noIncidentsToday, setNoIncidentsToday] = useState<boolean>(true)
+  const [noVisitorsToday, setNoVisitorsToday] = useState<boolean>(true)
   const [signatureBlob, setSignatureBlob] = useState<Blob | null>(null)
   const [isMobile, setIsMobile] = useState(() =>
     typeof window !== 'undefined' && window.innerWidth < 768
@@ -430,17 +466,18 @@ const CreateDailyLogModal: React.FC<CreateDailyLogModalProps> = ({
     try {
       const { data: rows } = await supabase
         .from('daily_logs')
-        .select('workers_onsite')
+        .select('workers_onsite, visitors')
         .eq('project_id', projectId)
         .order('log_date', { ascending: false })
         .limit(1)
       if (rows && rows.length > 0) {
-        const prev = rows[0] as { workers_onsite?: number }
+        const prev = rows[0] as { workers_onsite?: number; visitors?: string }
         setForm(f => ({
           ...f,
           crew_count: prev.workers_onsite ?? f.crew_count,
+          visitors: prev.visitors ?? f.visitors,
         }))
-        toast.success('Pre-filled from previous log')
+        toast.success('Copied from previous log')
       }
     } catch {
       // silent
@@ -491,9 +528,11 @@ const CreateDailyLogModal: React.FC<CreateDailyLogModalProps> = ({
         <div style={{ marginBottom: spacing['2'] }}>
           <button
             type="button"
+            aria-label="Copy crew and equipment from previous daily log"
             onClick={handleSameAsYesterday}
             disabled={sameAsYesterdayLoading || !projectId}
             style={{
+              display: 'inline-flex', alignItems: 'center', gap: spacing['1'],
               background: '#FFFFFF',
               border: '1px solid #D0D5DD',
               borderRadius: borderRadius.md,
@@ -506,7 +545,8 @@ const CreateDailyLogModal: React.FC<CreateDailyLogModalProps> = ({
               opacity: sameAsYesterdayLoading || !projectId ? 0.6 : 1,
             }}
           >
-            {sameAsYesterdayLoading ? 'Loading...' : 'Same as yesterday'}
+            <Copy size={14} />
+            {sameAsYesterdayLoading ? 'Loading...' : 'Same as Yesterday'}
           </button>
         </div>
       )}
@@ -656,44 +696,70 @@ const CreateDailyLogModal: React.FC<CreateDailyLogModalProps> = ({
 
       {/* Incident section */}
       <div>
-        <button
-          type="button"
-          onClick={() => {
-            const next = !form.has_incident
-            set('has_incident', next)
-            setIncidentOpen(next)
-          }}
-          style={{
-            display: 'flex', alignItems: 'center', gap: spacing['2'],
-            background: 'none', border: 'none', cursor: 'pointer',
-            padding: `${spacing['3']} 0`,
-            minHeight: '48px',
-            fontSize: typography.fontSize.label,
-            fontWeight: typography.fontWeight.medium,
-            color: form.has_incident ? colors.statusCritical : colors.textSecondary,
-            textTransform: 'uppercase',
-            letterSpacing: typography.letterSpacing.wider,
-            fontFamily: typography.fontFamily,
-          }}
-        >
-          {incidentOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-          Record Safety Incident
-          {form.has_incident && (
-            <span style={{
-              fontSize: typography.fontSize.caption,
-              backgroundColor: colors.statusCriticalSubtle,
-              color: colors.statusCritical,
-              borderRadius: borderRadius.sm,
-              padding: `1px ${spacing['2']}`,
-              marginLeft: spacing['1'],
-            }}>
-              OSHA Required
-            </span>
-          )}
-        </button>
-        {incidentOpen && (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          borderBottom: `2px solid ${colors.borderSubtle}`,
+          padding: `${spacing['3']} 0 ${spacing['2']}`,
+          marginTop: spacing['2'],
+        }}>
+          <span style={{
+            fontSize: '17px', fontWeight: 700, color: colors.textPrimary,
+            fontFamily: typography.fontFamily, letterSpacing: '-0.01em',
+          }}>
+            Incidents
+          </span>
+          <label htmlFor="no-incidents-toggle" style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], cursor: 'pointer' }}>
+            <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>No incidents today</span>
+            <ToggleSwitch
+              id="no-incidents-toggle"
+              checked={noIncidentsToday}
+              onChange={(v) => {
+                setNoIncidentsToday(v)
+                set('has_incident', !v)
+              }}
+            />
+          </label>
+        </div>
+        {!noIncidentsToday && (
           <div style={{ marginTop: spacing['3'] }}>
             <IncidentForm value={form.incident} onChange={v => set('incident', v)} />
+          </div>
+        )}
+      </div>
+
+      {/* Visitors section */}
+      <div>
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          borderBottom: `2px solid ${colors.borderSubtle}`,
+          padding: `${spacing['3']} 0 ${spacing['2']}`,
+          marginTop: spacing['2'],
+        }}>
+          <span style={{
+            fontSize: '17px', fontWeight: 700, color: colors.textPrimary,
+            fontFamily: typography.fontFamily, letterSpacing: '-0.01em',
+          }}>
+            Visitors
+          </span>
+          <label htmlFor="no-visitors-toggle" style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], cursor: 'pointer' }}>
+            <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>No visitors today</span>
+            <ToggleSwitch
+              id="no-visitors-toggle"
+              checked={noVisitorsToday}
+              onChange={setNoVisitorsToday}
+            />
+          </label>
+        </div>
+        {!noVisitorsToday && (
+          <div style={{ marginTop: spacing['3'] }}>
+            <FormField label="Visitor Names">
+              <FormTextarea
+                value={form.visitors ?? ''}
+                onChange={e => set('visitors', e.target.value)}
+                placeholder="List visitor names and company affiliations"
+                rows={2}
+              />
+            </FormField>
           </div>
         )}
       </div>
