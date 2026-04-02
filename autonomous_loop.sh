@@ -391,7 +391,8 @@ preflight() {
         exit 1
     fi
     local cc_ver
-    cc_ver=$(claude --version 2>/dev/null | head -1 || echo "installed")
+    cc_ver=$(claude --version 2>/dev/null || echo "installed")
+    cc_ver="${cc_ver%%$'\n'*}"
     success "Claude Code CLI: ${cc_ver}"
 
     # Required tools
@@ -2387,7 +2388,8 @@ provision_infrastructure() {
     if command -v supabase >/dev/null 2>&1; then
         supabase_ok=true
         local sb_version
-        sb_version=$(supabase --version 2>&1 | head -1)
+        sb_version=$(supabase --version 2>&1 || true)
+        sb_version="${sb_version%%$'\n'*}"
         success "INFRA: Supabase CLI found (${sb_version})"
 
         # Check if project is linked
