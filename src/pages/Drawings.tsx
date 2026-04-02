@@ -7,12 +7,13 @@ import { aiService } from '../lib/aiService';
 import type { DrawingAnalysis } from '../types/ai';
 import { PageContainer, Card, Btn, Tag, useToast } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme';
-import { getDrawings, getDisciplineColor } from '../api/endpoints/documents';
+import { getDrawings, getDisciplineColor, getDrawingRevisionHistory } from '../api/endpoints/documents';
 import { useQuery } from '../hooks/useQuery';
 import { useProjectId } from '../hooks/useProjectId';
 import { AIAnnotationIndicator } from '../components/ai/AIAnnotation';
 import { getAnnotationsForEntity } from '../data/aiAnnotations';
 import { DrawingViewer } from '../components/drawings/DrawingViewer';
+import { VersionCompare } from '../components/drawings/VersionCompare';
 import { PermissionGate } from '../components/auth/PermissionGate';
 
 
@@ -69,8 +70,15 @@ const _DrawingsPage: React.FC = () => {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [viewingRevisionNum, setViewingRevisionNum] = useState<number | null>(null);
+  const [showVersionCompare, setShowVersionCompare] = useState(false);
 
-  React.useEffect(() => { setViewingRevisionNum(null); }, [selectedDrawing?.id]);
+  const { data: revisionHistory } = useQuery(
+    `revision-history-${selectedDrawing?.id ?? 'none'}`,
+    () => getDrawingRevisionHistory(String(selectedDrawing!.id)),
+    { enabled: !!selectedDrawing?.id },
+  );
+
+  React.useEffect(() => { setViewingRevisionNum(null); setShowVersionCompare(false); }, [selectedDrawing?.id]);
 
   const formatRevDate = (dateStr: string | null): string => {
     if (!dateStr) return '—';
@@ -663,25 +671,26 @@ const _DrawingsPage: React.FC = () => {
                 </Btn>
               </div>
 
-              {selectedDrawing.revisions && selectedDrawing.revisions.length > 0 && (
+              {revisionHistory && revisionHistory.length > 0 && (
                 <div style={{ marginTop: spacing.xl, borderTop: `1px solid ${colors.border}`, paddingTop: spacing.xl }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md }}>
                     <p style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0 }}>
                       Revision History
                     </p>
                     <button
-                      onClick={() => addToast('info', 'Version comparison coming soon')}
-                      style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, border: `1px solid ${colors.border}`, borderRadius: borderRadius.base, backgroundColor: 'transparent', cursor: 'pointer', padding: '3px 8px', fontFamily: typography.fontFamily }}
-                      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = colors.surfaceHover; }}
+                      onClick={() => setShowVersionCompare(true)}
+                      disabled={revisionHistory.length < 2}
+                      style={{ fontSize: typography.fontSize.caption, color: revisionHistory.length >= 2 ? colors.primaryOrange : colors.textTertiary, border: `1px solid ${revisionHistory.length >= 2 ? `${colors.primaryOrange}40` : colors.border}`, borderRadius: borderRadius.base, backgroundColor: 'transparent', cursor: revisionHistory.length >= 2 ? 'pointer' : 'default', padding: '3px 8px', fontFamily: typography.fontFamily }}
+                      onMouseEnter={(e) => { if (revisionHistory.length >= 2) e.currentTarget.style.backgroundColor = `${colors.primaryOrange}10`; }}
                       onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
                     >
                       Compare Versions
                     </button>
                   </div>
                   <div>
-                    {selectedDrawing.revisions.map((rev, idx) => {
+                    {revisionHistory.map((rev, idx) => {
                       const isCurrent = !rev.superseded_at;
-                      const isLast = idx === selectedDrawing.revisions.length - 1;
+                      const isLast = idx === revisionHistory.length - 1;
                       return (
                         <div
                           key={rev.id}
@@ -735,6 +744,61 @@ const _DrawingsPage: React.FC = () => {
           drawing={viewerDrawing}
           onClose={() => setViewerDrawing(null)}
         />
+      )}
+
+      {showVersionCompare && selectedDrawing && revisionHistory && revisionHistory.length >= 2 && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Compare versions: ${selectedDrawing.title}`}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 1001,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            backgroundColor: 'rgba(15, 22, 41, 0.55)',
+          }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowVersionCompare(false); }}
+        >
+          <div
+            style={{
+              backgroundColor: colors.surfaceRaised,
+              borderRadius: borderRadius.lg,
+              border: `1px solid ${colors.borderSubtle}`,
+              padding: spacing['5'],
+              width: '90vw',
+              maxWidth: 1100,
+              height: '80vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.18)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['4'], flexShrink: 0 }}>
+              <h2 style={{ fontSize: typography.fontSize.xl, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0 }}>
+                Compare Versions: {selectedDrawing.title}
+              </h2>
+              <button
+                onClick={() => setShowVersionCompare(false)}
+                aria-label="Close version compare"
+                style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', border: 'none', borderRadius: borderRadius.md, cursor: 'pointer', color: colors.textTertiary }}
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = colors.surfaceInset; }}
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div style={{ flex: 1, minHeight: 0 }}>
+              <VersionCompare
+                currentRev={String(revisionHistory[0].revision_number)}
+                previousRev={String(revisionHistory[1].revision_number)}
+                drawingTitle={selectedDrawing.title}
+                currentRevision={revisionHistory[0]}
+                previousRevision={revisionHistory[1]}
+                revisionHistory={revisionHistory}
+              />
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Upload Drawings Modal */}
