@@ -149,6 +149,7 @@ interface ContextMenuProps {
 
 export const ContextMenu: React.FC<ContextMenuProps> = ({ items, children }) => {
   const [open, setOpen] = useState(false);
+  const [visible, setVisible] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -177,7 +178,13 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ items, children }) => 
 
   useEffect(() => {
     if (open) {
+      setVisible(false);
+      requestAnimationFrame(() => {
+        setVisible(true);
+      });
       menuRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus();
+    } else {
+      setVisible(false);
     }
   }, [open]);
 
@@ -215,10 +222,13 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ items, children }) => 
             zIndex: zIndex.popover,
             backgroundColor: colors.surfaceRaised,
             borderRadius: borderRadius.md,
-            boxShadow: shadows.dropdown,
+            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
             padding: `${spacing['1']} 0`,
             minWidth: '180px',
-            animation: 'scaleIn 100ms ease-out',
+            opacity: visible ? 1 : 0,
+            transform: visible ? 'scale(1)' : 'scale(0.95)',
+            transition: 'opacity 150ms ease-out, transform 150ms ease-out',
+            transformOrigin: 'top left',
           }}
         >
           {items.map((item, i) => (
@@ -227,8 +237,8 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ items, children }) => 
                 <div
                   style={{
                     height: 1,
-                    backgroundColor: colors.borderSubtle,
-                    margin: `${spacing['1']} 0`,
+                    backgroundColor: '#E5E7EB',
+                    margin: '4px 0',
                   }}
                 />
               )}
