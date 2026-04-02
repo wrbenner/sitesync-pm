@@ -85,8 +85,10 @@ function ToastEntry({ toast, onClose }: { toast: ToastItem; onClose: (id: string
 
   return (
     <div
-      role="status"
-      aria-live="polite"
+      role="alert"
+      aria-live="assertive"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Escape') onClose(toast.id); }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       style={{
