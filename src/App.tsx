@@ -151,6 +151,117 @@ function PageSuspense({ children }: { children: React.ReactNode }) {
   return <Suspense fallback={<PageLoadingFallback />}>{children}</Suspense>;
 }
 
+function ChunkLoadFallback() {
+  return (
+    <div
+      role="alert"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '100vh',
+        backgroundColor: colors.bgLight,
+        padding: spacing['8'],
+      }}
+    >
+      <div
+        style={{
+          backgroundColor: colors.white,
+          borderRadius: '12px',
+          padding: '32px',
+          maxWidth: '480px',
+          width: '100%',
+          textAlign: 'center',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: spacing['4'],
+        }}
+      >
+        <h2
+          style={{
+            fontSize: typography.fontSize.heading,
+            fontWeight: typography.fontWeight.semibold,
+            color: colors.textPrimary,
+            margin: 0,
+          }}
+        >
+          This page failed to load
+        </h2>
+        <p
+          style={{
+            fontSize: typography.fontSize.body,
+            color: colors.textSecondary,
+            margin: 0,
+          }}
+        >
+          A network issue may have interrupted the page. Please reload to try again.
+        </p>
+        <button
+          onClick={() => window.location.reload()}
+          style={{
+            width: '100%',
+            padding: `${spacing['3']} ${spacing['6']}`,
+            backgroundColor: colors.primaryOrange,
+            color: colors.white,
+            border: 'none',
+            borderRadius: '6px',
+            fontSize: typography.fontSize.body,
+            fontWeight: typography.fontWeight.medium,
+            fontFamily: typography.fontFamily,
+            cursor: 'pointer',
+          }}
+        >
+          Reload Page
+        </button>
+        <a
+          href="#/"
+          style={{
+            fontSize: typography.fontSize.body,
+            color: colors.textSecondary,
+            textDecoration: 'none',
+          }}
+        >
+          Go to Dashboard
+        </a>
+      </div>
+    </div>
+  );
+}
+
+interface ChunkLoadErrorBoundaryState {
+  error: Error | null;
+}
+
+class ChunkLoadErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  ChunkLoadErrorBoundaryState
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { error: null };
+  }
+
+  static getDerivedStateFromError(error: Error): ChunkLoadErrorBoundaryState {
+    return { error };
+  }
+
+  render() {
+    const { error } = this.state;
+    if (error) {
+      const isChunkError =
+        error.message.includes('Loading chunk') ||
+        error.message.includes('Failed to fetch dynamically imported module');
+      if (isChunkError) {
+        return <ChunkLoadFallback />;
+      }
+      // Not a chunk error: re-throw so the outer Sentry ErrorBoundary handles it
+      throw error;
+    }
+    return this.props.children;
+  }
+}
+
 
 function AuthenticatedProviders({ activeView }: { activeView: string }) {
   const { user } = useAuth();
@@ -339,9 +450,11 @@ function AppContent() {
     <MobileLayout>
       {user && <AuthenticatedProviders activeView={activeView} />}
       <OfflineBanner />
-      <ErrorBoundary fallback={<ErrorFallback />}>
-        <AppRoutes />
-      </ErrorBoundary>
+      <ChunkLoadErrorBoundary>
+        <ErrorBoundary fallback={<ErrorFallback />}>
+          <AppRoutes />
+        </ErrorBoundary>
+      </ChunkLoadErrorBoundary>
       <Suspense fallback={null}><FloatingAIButton /></Suspense>
       {copilotOpen && <Suspense fallback={null}><CopilotPanel /></Suspense>}
       <ConflictResolutionModal open={conflictModalOpen} onClose={() => setConflictModalOpen(false)} />
@@ -378,9 +491,11 @@ function AppContent() {
           }}
         >
           <OfflineBanner />
-          <ErrorBoundary>
-            <AppRoutes />
-          </ErrorBoundary>
+          <ChunkLoadErrorBoundary>
+            <ErrorBoundary>
+              <AppRoutes />
+            </ErrorBoundary>
+          </ChunkLoadErrorBoundary>
         </main>
 
         <CommandPalette open={commandPaletteOpen} onClose={() => setCommandPaletteOpen(false)} />
