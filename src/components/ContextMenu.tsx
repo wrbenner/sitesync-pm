@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, createContext, useContext } from 'react';
+import React, { useState, useEffect, useRef, useCallback, createContext, useContext, Component } from 'react';
 import { colors, spacing, typography, borderRadius, shadows, zIndex, transitions } from '../styles/theme';
 
 // ── Toast System ─────────────────────────────────────────
@@ -135,6 +135,78 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       </div>
     </ToastContext.Provider>
   );
+}
+
+// ── Error Boundary ───────────────────────────────────────
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+export class ErrorBoundary extends Component<{ children: React.ReactNode }, ErrorBoundaryState> {
+  state: ErrorBoundaryState = { hasError: false, error: null };
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minHeight: '400px',
+            gap: spacing['4'],
+            padding: spacing['6'],
+            fontFamily: typography.fontFamily,
+          }}
+        >
+          <span style={{ fontSize: '32px', lineHeight: 1 }}>⚠️</span>
+          <span
+            style={{
+              fontSize: typography.fontSize.lg,
+              color: colors.textPrimary,
+              fontWeight: 600,
+            }}
+          >
+            Something went wrong
+          </span>
+          <span
+            style={{
+              fontSize: typography.fontSize.sm,
+              color: colors.textTertiary,
+              textAlign: 'center',
+              maxWidth: '360px',
+            }}
+          >
+            {this.state.error?.message}
+          </span>
+          <button
+            onClick={() => this.setState({ hasError: false, error: null })}
+            style={{
+              background: colors.primaryOrange,
+              color: '#ffffff',
+              borderRadius: borderRadius.md,
+              padding: `${spacing['2']} ${spacing['4']}`,
+              cursor: 'pointer',
+              border: 'none',
+              fontSize: typography.fontSize.sm,
+              fontFamily: typography.fontFamily,
+              fontWeight: 500,
+            }}
+          >
+            Try Again
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }
 
 // ── Context Menu ─────────────────────────────────────────
