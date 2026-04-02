@@ -20,7 +20,11 @@ export const PresenceDots: React.FC<PresenceDotsProps> = ({ entityId, maxVisible
   const viewers = usePresenceStore((s) => s.getUsersViewingEntity(entityId))
   const isInitialized = usePresenceStore((s) => s.isInitialized)
 
-  if (!isInitialized || viewers.length === 0) return null
+  if (!isInitialized || viewers.length === 0) {
+    return (
+      <div style={{ height: 24, minWidth: 24, visibility: 'hidden' }} aria-hidden="true" />
+    )
+  }
 
   const visible = viewers.slice(0, maxVisible)
   const overflow = viewers.length - maxVisible
@@ -30,6 +34,7 @@ export const PresenceDots: React.FC<PresenceDotsProps> = ({ entityId, maxVisible
       style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}
       title={viewers.map((u) => u.name).join(', ')}
       aria-label={`Being viewed by ${viewers.map((u) => u.name).join(', ')}`}
+      aria-live="polite"
     >
       {visible.map((user) => (
         <button
@@ -84,13 +89,21 @@ export const PresenceDots: React.FC<PresenceDotsProps> = ({ entityId, maxVisible
             padding: 0,
           }}
         >
-          <span style={{
+          <div style={{
+            width: 24,
+            height: 24,
+            borderRadius: '50%',
+            backgroundColor: colors.textTertiary,
+            border: `2px solid ${colors.surfaceRaised}`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
             fontSize: typography.fontSize.caption,
-            color: colors.textTertiary,
-            marginLeft: spacing['1'],
+            fontWeight: typography.fontWeight.bold,
+            color: colors.white,
           }}>
             +{overflow}
-          </span>
+          </div>
         </button>
       )}
     </div>
