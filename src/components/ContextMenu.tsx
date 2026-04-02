@@ -74,7 +74,6 @@ function ToastEntry({ toast, onClose }: { toast: ToastItem; onClose: (id: string
   return (
     <div
       role={toast.severity === 'error' ? 'alert' : 'status'}
-      aria-live={toast.severity === 'error' ? 'assertive' : 'polite'}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       style={{
@@ -169,6 +168,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       {children}
       <div
         role="region"
+        aria-live="polite"
         aria-label="Notifications"
         style={{
           position: 'fixed',
