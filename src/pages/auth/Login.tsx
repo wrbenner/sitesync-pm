@@ -66,7 +66,7 @@ export const Login: React.FC = () => {
 
   const inputStyle: React.CSSProperties = {
     width: '100%',
-    minHeight: '44px',
+    height: '48px',
     padding: `${spacing['3']} ${spacing['4']}`,
     fontSize: '16px',
     fontFamily: typography.fontFamily,
@@ -107,18 +107,18 @@ export const Login: React.FC = () => {
         style={{
           width: '100%',
           maxWidth: '400px',
-          padding: spacing['8'],
+          padding: 'clamp(16px, 4vw, 48px)',
         }}
       >
         {/* Logo / Brand */}
-        <div style={{ textAlign: 'center', marginBottom: spacing['8'] }}>
+        <div style={{ textAlign: 'center', marginBottom: spacing['5'] }}>
           <div
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
-              width: '48px',
-              height: '48px',
+              width: '40px',
+              height: '40px',
               borderRadius: borderRadius.lg,
               backgroundColor: colors.primaryOrange,
               marginBottom: spacing['4'],
@@ -180,7 +180,7 @@ export const Login: React.FC = () => {
               </div>
             )}
 
-            <div style={{ marginBottom: spacing['5'] }}>
+            <div style={{ marginBottom: spacing['4'] }}>
               <label style={labelStyle} htmlFor="login-email">Email address</label>
               <input
                 type="email"
@@ -214,7 +214,7 @@ export const Login: React.FC = () => {
               )}
             </div>
 
-            <div style={{ marginBottom: spacing['5'] }}>
+            <div style={{ marginBottom: spacing['4'] }}>
               <label style={labelStyle} htmlFor="login-password">Password</label>
               <input
                 type="password"
@@ -233,7 +233,7 @@ export const Login: React.FC = () => {
               />
             </div>
 
-            <div style={{ textAlign: 'right', marginBottom: spacing['5'] }}>
+            <div style={{ textAlign: 'right', marginBottom: spacing['4'] }}>
               <button
                 type="button"
                 onClick={() => { setShowReset(true); setResetEmail(email); setResetSent(false); setResetError(null) }}
@@ -259,7 +259,7 @@ export const Login: React.FC = () => {
               style={{
                 width: '100%',
                 minWidth: '160px',
-                minHeight: '44px',
+                height: '48px',
                 padding: `${spacing['3']} ${spacing['4']}`,
                 fontSize: '16px',
                 fontWeight: typography.fontWeight.semibold,
