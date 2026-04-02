@@ -46,89 +46,109 @@ export class ErrorBoundary extends React.Component<Props, State> {
       }
       return (
         <div
+          aria-live="assertive"
           style={{
             display: 'flex',
-            flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            minHeight: '60vh',
-            textAlign: 'center',
-            gap: spacing['6'],
+            minHeight: '100vh',
             padding: spacing['8'],
+            backgroundColor: colors.bgLight,
           }}
         >
           <div
             style={{
-              width: 80,
-              height: 80,
-              borderRadius: '50%',
-              backgroundColor: colors.statusCriticalSubtle,
+              backgroundColor: colors.white,
+              borderRadius: '12px',
+              padding: '48px',
+              maxWidth: '480px',
+              width: '100%',
+              margin: 'auto',
+              textAlign: 'center',
               display: 'flex',
+              flexDirection: 'column',
               alignItems: 'center',
-              justifyContent: 'center',
+              gap: spacing['6'],
             }}
           >
-            <AlertTriangle size={36} color={colors.statusCritical} />
-          </div>
-          <div>
-            <h1
+            <div
               style={{
-                fontSize: typography.fontSize.heading,
-                fontWeight: typography.fontWeight.semibold,
-                color: colors.textPrimary,
-                margin: 0,
-                marginBottom: spacing['2'],
+                fontSize: '24px',
+                fontWeight: typography.fontWeight.bold,
+                color: colors.primaryOrange,
+                letterSpacing: '-0.5px',
               }}
             >
-              Something went wrong
-            </h1>
-            <p
+              SiteSync AI
+            </div>
+            <div
               style={{
-                fontSize: typography.fontSize.body,
-                color: colors.textSecondary,
-                margin: 0,
-                maxWidth: '400px',
+                width: 72,
+                height: 72,
+                borderRadius: '50%',
+                backgroundColor: colors.statusCriticalSubtle,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
             >
-              {this.props.message ?? 'An unexpected error occurred. Try refreshing the page.'}
-            </p>
-            {this.state.error && (
-              <p
+              <AlertTriangle size={32} color={colors.statusCritical} />
+            </div>
+            <div>
+              <h1
                 style={{
-                  fontSize: typography.fontSize.sm,
-                  color: colors.textTertiary,
+                  fontSize: typography.fontSize.heading,
+                  fontWeight: typography.fontWeight.semibold,
+                  color: colors.textPrimary,
                   margin: 0,
-                  marginTop: spacing['3'],
-                  fontFamily: 'monospace',
+                  marginBottom: spacing['2'],
                 }}
               >
-                {this.state.error.message}
+                Something went wrong
+              </h1>
+              <p
+                style={{
+                  fontSize: typography.fontSize.body,
+                  color: colors.textSecondary,
+                  margin: 0,
+                }}
+              >
+                {this.props.message ?? 'An unexpected error occurred. Your data is safe.'}
               </p>
-            )}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['3'], width: '100%' }}>
+              <button
+                onClick={() => {
+                  this.setState({ hasError: false, error: null });
+                  this.props.onRetry?.();
+                }}
+                style={{
+                  width: '100%',
+                  padding: `${spacing['3']} ${spacing['6']}`,
+                  backgroundColor: colors.primaryOrange,
+                  color: colors.white,
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: typography.fontSize.body,
+                  fontWeight: typography.fontWeight.medium,
+                  fontFamily: typography.fontFamily,
+                  cursor: 'pointer',
+                }}
+              >
+                Try Again
+              </button>
+              <a
+                href="/"
+                style={{
+                  fontSize: typography.fontSize.body,
+                  color: colors.textSecondary,
+                  textDecoration: 'none',
+                }}
+              >
+                Go to Dashboard
+              </a>
+            </div>
           </div>
-          <button
-            onClick={() => {
-              this.setState({ hasError: false, error: null });
-              if (this.props.onRetry) {
-                this.props.onRetry();
-              } else {
-                window.location.reload();
-              }
-            }}
-            style={{
-              padding: `${spacing['3']} ${spacing['6']}`,
-              backgroundColor: colors.primaryOrange,
-              color: colors.white,
-              border: 'none',
-              borderRadius: '6px',
-              fontSize: typography.fontSize.body,
-              fontWeight: typography.fontWeight.medium,
-              fontFamily: typography.fontFamily,
-              cursor: 'pointer',
-            }}
-          >
-            Reload Page
-          </button>
         </div>
       );
     }
