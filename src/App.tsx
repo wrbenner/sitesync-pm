@@ -120,8 +120,19 @@ function PageSkeleton() {
   );
 }
 
+function PageLoadingFallback() {
+  return (
+    <div role="status" aria-live="polite" aria-label="Loading page content">
+      <span style={{ position: 'absolute', width: '1px', height: '1px', overflow: 'hidden', clip: 'rect(0,0,0,0)' }}>
+        Loading page content
+      </span>
+      <PageSkeleton />
+    </div>
+  );
+}
+
 function PageSuspense({ children }: { children: React.ReactNode }) {
-  return <Suspense fallback={<PageSkeleton />}>{children}</Suspense>;
+  return <Suspense fallback={<PageLoadingFallback />}>{children}</Suspense>;
 }
 
 
