@@ -18,7 +18,7 @@ function mapAuthError(message: string): string {
 export const Login: React.FC = () => {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const { signIn, resetPassword } = useAuth()
+  const { signIn, resetPassword, loading } = useAuth()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -254,8 +254,8 @@ export const Login: React.FC = () => {
 
             <button
               type="submit"
-              disabled={isSubmitting}
-              aria-busy={isSubmitting}
+              disabled={loading}
+              aria-busy={loading}
               style={{
                 width: '100%',
                 minWidth: '160px',
@@ -265,23 +265,23 @@ export const Login: React.FC = () => {
                 fontWeight: typography.fontWeight.semibold,
                 fontFamily: typography.fontFamily,
                 color: colors.white,
-                backgroundColor: isSubmitting ? colors.orangeHover : colors.primaryOrange,
+                backgroundColor: loading ? colors.orangeHover : colors.primaryOrange,
                 border: 'none',
                 borderRadius: borderRadius.md,
-                cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                cursor: loading ? 'not-allowed' : 'pointer',
                 transition: `background-color ${transitions.quick}`,
                 letterSpacing: typography.letterSpacing.normal,
-                opacity: isSubmitting ? 0.7 : 1,
+                opacity: loading ? 0.7 : 1,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: spacing['2'],
               }}
-              onMouseEnter={(e) => { if (!isSubmitting) e.currentTarget.style.backgroundColor = colors.orangeHover }}
-              onMouseLeave={(e) => { if (!isSubmitting) e.currentTarget.style.backgroundColor = colors.primaryOrange }}
+              onMouseEnter={(e) => { if (!loading) e.currentTarget.style.backgroundColor = colors.orangeHover }}
+              onMouseLeave={(e) => { if (!loading) e.currentTarget.style.backgroundColor = colors.primaryOrange }}
             >
-              {isSubmitting && <Loader2 size={16} style={{ animation: 'spin-loader 0.75s linear infinite' }} />}
-              {isSubmitting ? 'Signing In...' : 'Sign In'}
+              {loading && <Loader2 size={16} style={{ animation: 'spin-loader 0.75s linear infinite' }} />}
+              {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
         </div>
