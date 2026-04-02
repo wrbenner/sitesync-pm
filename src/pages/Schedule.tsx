@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Sparkles, AlertTriangle, ChevronDown, ChevronUp, CheckCircle, RefreshCw, Zap, CalendarClock, TrendingUp, GitBranch, Gauge, CalendarCheck, Calendar, BarChart3, ToggleLeft, ToggleRight, ClipboardList } from 'lucide-react';
+import { Sparkles, AlertTriangle, ChevronDown, ChevronUp, CheckCircle, RefreshCw, Zap, CalendarClock, TrendingUp, GitBranch, Gauge, CalendarCheck, Calendar, BarChart3, ToggleLeft, ToggleRight, ClipboardList, Upload, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { PageContainer, Card, SectionHeader, MetricBox, Skeleton, Btn, useToast, Tag } from '../components/Primitives';
 import { useRealtimeSchedulePhases, useScheduleRealtime } from '../hooks/queries/realtime';
@@ -80,6 +80,161 @@ const MOCK_FORECAST: WeatherDay[] = Array.from({ length: 7 }, (_, i) => {
   };
 });
 
+interface ScheduleImportModalProps {
+  open: boolean;
+  onClose: () => void;
+  onImportComplete: () => void;
+}
+
+const ScheduleImportModal: React.FC<ScheduleImportModalProps> = ({ open, onClose, onImportComplete }) => {
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [dragOver, setDragOver] = useState(false);
+  const { addToast } = useToast();
+  const titleId = 'schedule-import-modal-title';
+
+  if (!open) return null;
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    setSelectedFile(file);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files?.[0] ?? null;
+    if (file) setSelectedFile(file);
+  };
+
+  const handlePreviewImport = () => {
+    addToast('info', 'Schedule import coming soon');
+    onImportComplete();
+  };
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: zIndex.modal,
+        backgroundColor: colors.overlayBackdrop,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        style={{
+          background: colors.surfaceRaised,
+          borderRadius: borderRadius.xl,
+          padding: spacing.xl,
+          width: '480px',
+          maxWidth: 'calc(100vw - 32px)',
+          boxShadow: shadows.panel,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: spacing.lg,
+        }}
+      >
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span
+            id={titleId}
+            style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}
+          >
+            Import Schedule
+          </span>
+          <button
+            aria-label="Close import dialog"
+            onClick={onClose}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: spacing.sm,
+              borderRadius: borderRadius.md,
+              color: colors.textTertiary,
+              display: 'flex',
+              alignItems: 'center',
+            }}
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Drop zone */}
+        <div
+          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={handleDrop}
+          style={{
+            border: `2px dashed ${dragOver ? colors.primaryOrange : colors.borderDefault}`,
+            borderRadius: borderRadius.lg,
+            padding: `${spacing.xxl} ${spacing.xl}`,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: spacing.md,
+            backgroundColor: dragOver ? colors.orangeSubtle : colors.surfaceInset,
+            transition: transitions.quick,
+            cursor: 'pointer',
+          }}
+          onClick={() => document.getElementById('schedule-file-input')?.click()}
+        >
+          <Upload size={28} color={dragOver ? colors.primaryOrange : colors.textTertiary} />
+          <span style={{ fontSize: typography.fontSize.body, color: colors.textSecondary, textAlign: 'center' }}>
+            Drag and drop your schedule file here, or click to browse
+          </span>
+          <span style={{ fontSize: typography.fontSize.label, color: colors.textTertiary }}>
+            Supported formats: .xer, .xml, .mpp
+          </span>
+          <input
+            id="schedule-file-input"
+            type="file"
+            accept=".xer,.xml,.mpp"
+            style={{ display: 'none' }}
+            onChange={handleFileChange}
+          />
+        </div>
+
+        {/* Selected file display */}
+        {selectedFile && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: spacing.md,
+            padding: `${spacing.md} ${spacing.lg}`,
+            backgroundColor: colors.surfaceInset,
+            borderRadius: borderRadius.md,
+            border: `1px solid ${colors.borderSubtle}`,
+          }}>
+            <Upload size={16} color={colors.primaryOrange} />
+            <span style={{ fontSize: typography.fontSize.body, color: colors.textPrimary, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {selectedFile.name}
+            </span>
+          </div>
+        )}
+
+        {/* Actions */}
+        <div style={{ display: 'flex', gap: spacing.md, justifyContent: 'flex-end' }}>
+          <Btn variant="secondary" onClick={onClose}>Cancel</Btn>
+          <Btn
+            variant="primary"
+            onClick={handlePreviewImport}
+            disabled={!selectedFile}
+          >
+            Preview and Import
+          </Btn>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const Schedule: React.FC = () => {
   const isMobile = useMediaQuery('(max-width: 768px)');
   const { activeProject } = useProjectContext();
@@ -115,6 +270,7 @@ export const Schedule: React.FC = () => {
   const [showBaseline, setShowBaseline] = useState(false);
   const [recoveryExpanded, setRecoveryExpanded] = useState(false);
   const [scheduleAnnouncement, setScheduleAnnouncement] = useState('');
+  const [showImportModal, setShowImportModal] = useState(false);
   const { addToast } = useToast();
 
   // dirtyPhaseIds: pass phase IDs currently being edited to get conflict toasts.
@@ -295,7 +451,34 @@ export const Schedule: React.FC = () => {
     <PageContainer
       title="Schedule"
       subtitle={`${metrics.daysBeforeSchedule} days ahead \u00B7 ${metrics.milestonesHit}/${metrics.milestoneTotal} milestones`}
-      actions={liveIndicator}
+      actions={
+        <div style={{ display: 'flex', alignItems: 'center', gap: spacing.md }}>
+          <button
+            onClick={() => setShowImportModal(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: spacing.sm,
+              padding: `${spacing.sm} ${spacing.lg}`,
+              border: `1px solid ${colors.borderDefault}`,
+              borderRadius: borderRadius.md,
+              background: 'none',
+              cursor: 'pointer',
+              fontSize: typography.fontSize.body,
+              fontWeight: typography.fontWeight.medium,
+              color: colors.textPrimary,
+              fontFamily: 'inherit',
+              transition: transitions.quick,
+            }}
+            onMouseEnter={e => (e.currentTarget.style.backgroundColor = colors.surfaceHover)}
+            onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+          >
+            <Upload size={15} />
+            Import Schedule
+          </button>
+          {liveIndicator}
+        </div>
+      }
       aria-label="Project Schedule"
     >
       {/* Global aria-live region: announces filter changes and status updates */}
@@ -884,6 +1067,11 @@ export const Schedule: React.FC = () => {
           </>
         )}
       </div>
+      <ScheduleImportModal
+        open={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onImportComplete={() => { setShowImportModal(false); }}
+      />
     </PageContainer>
   );
 };
