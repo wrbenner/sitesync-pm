@@ -1717,3 +1717,82 @@ export const EmptyState: React.FC<EmptyStateProps> = React.memo(({ icon, title, 
     {action}
   </div>
 ));
+
+// ─── Skeleton Loading Primitives ─────────────────────────────────────────────
+
+// Inject keyframes once into the document head
+if (typeof document !== 'undefined' && !document.getElementById('skeleton-pulse-keyframes')) {
+  const style = document.createElement('style');
+  style.id = 'skeleton-pulse-keyframes';
+  style.textContent = `@keyframes skeletonPulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 0.7; } }`;
+  document.head.appendChild(style);
+}
+
+interface SkeletonPulseProps {
+  style?: React.CSSProperties;
+  children?: React.ReactNode;
+}
+
+export const SkeletonPulse: React.FC<SkeletonPulseProps> = ({ style: styleProp, children }) => (
+  <div
+    style={{
+      animation: 'skeletonPulse 1.5s ease-in-out infinite',
+      ...styleProp,
+    }}
+  >
+    {children}
+  </div>
+);
+
+interface SkeletonTextProps {
+  width?: string;
+  height?: string;
+  style?: React.CSSProperties;
+}
+
+export const SkeletonText: React.FC<SkeletonTextProps> = ({ width = '100%', height = '14px', style: styleProp }) => (
+  <SkeletonPulse
+    style={{
+      width,
+      height,
+      borderRadius: '4px',
+      backgroundColor: '#E5E7EB',
+      ...styleProp,
+    }}
+  />
+);
+
+interface SkeletonCardProps {
+  style?: React.CSSProperties;
+}
+
+export const SkeletonCard: React.FC<SkeletonCardProps> = ({ style: styleProp }) => (
+  <div
+    style={{
+      borderRadius: '12px',
+      padding: '24px',
+      border: '1px solid #E5E7EB',
+      backgroundColor: '#FFFFFF',
+      ...styleProp,
+    }}
+  >
+    <SkeletonText width="60%" style={{ marginBottom: '12px' }} />
+    <SkeletonText width="100%" style={{ marginBottom: '12px' }} />
+    <SkeletonText width="80%" />
+  </div>
+);
+
+interface SkeletonRowProps {
+  style?: React.CSSProperties;
+}
+
+export const SkeletonRow: React.FC<SkeletonRowProps> = ({ style: styleProp }) => (
+  <SkeletonPulse
+    style={{
+      height: '48px',
+      borderRadius: '8px',
+      backgroundColor: '#E5E7EB',
+      ...styleProp,
+    }}
+  />
+);
