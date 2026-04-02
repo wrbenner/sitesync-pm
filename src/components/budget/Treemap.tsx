@@ -120,47 +120,43 @@ export const Treemap: React.FC<TreemapProps> = ({ divisions }) => {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'] }}>
         {divisions.map((div, i) => {
-          const pct = (div.budget / total) * 100;
-          const spentPct = Math.round((div.spent / div.budget) * 100);
+          const spentPct = Math.min(100, Math.round((div.spent / div.budget) * 100));
           const divColor = divisionColors[i % divisionColors.length];
 
           return (
             <div
               key={div.id}
               onClick={() => setDrillDown(div.id)}
+              aria-label={`${div.name}: ${fmt(div.budget)} budget, ${fmt(div.spent)} spent`}
               style={{
-                position: 'relative', overflow: 'hidden',
-                minHeight: '48px', borderRadius: borderRadius.md,
-                backgroundColor: `${divColor}0A`,
-                border: `1px solid ${divColor}18`,
-                cursor: 'pointer',
+                width: '100%', minHeight: '56px', borderRadius: borderRadius.md,
+                backgroundColor: colors.surfaceRaised,
+                border: `1px solid ${divColor}30`,
+                cursor: 'pointer', padding: spacing['3'],
+                boxSizing: 'border-box',
+                display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: spacing['2'],
               }}
             >
-              {/* Proportional fill bar */}
-              <div style={{
-                position: 'absolute', top: 0, left: 0, bottom: 0,
-                width: `${pct}%`,
-                backgroundColor: `${divColor}18`,
-                transition: `width ${transitions.smooth}`,
-              }} />
-              <div style={{
-                position: 'relative',
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: `0 ${spacing['3']}`,
-                minHeight: '48px',
-              }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
                   {div.name}
                 </span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
-                  <span style={{ fontSize: typography.fontSize.caption, color: spentPct >= 90 ? colors.statusCritical : colors.textTertiary }}>
-                    {spentPct}% spent
-                  </span>
-                  <span style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
-                    {fmt(div.budget)}
-                  </span>
-                </div>
+                <span style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+                  {fmt(div.budget)}
+                </span>
               </div>
+              <div style={{ width: '100%', height: '6px', borderRadius: borderRadius.full, backgroundColor: `${divColor}20`, overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%',
+                  width: `${spentPct}%`,
+                  borderRadius: borderRadius.full,
+                  backgroundColor: spentPct >= 90 ? colors.statusCritical : divColor,
+                  transition: `width ${transitions.smooth}`,
+                }} />
+              </div>
+              <span style={{ fontSize: typography.fontSize.caption, color: spentPct >= 90 ? colors.statusCritical : colors.textTertiary }}>
+                {fmt(div.spent)} spent of {fmt(div.budget)}
+              </span>
             </div>
           );
         })}
@@ -181,9 +177,11 @@ export const Treemap: React.FC<TreemapProps> = ({ divisions }) => {
           <div
             key={div.id}
             onClick={() => setDrillDown(div.id)}
+            aria-label={`${div.name}: ${fmt(div.budget)} budget, ${fmt(div.spent)} spent`}
             style={{
               flex: `1 1 ${flexBasis}%`,
               minWidth: '140px',
+              minHeight: '44px',
               padding: spacing['4'], borderRadius: borderRadius.lg,
               backgroundColor: `${divColor}0A`,
               border: `1px solid ${divColor}18`,
