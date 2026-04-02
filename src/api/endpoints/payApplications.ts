@@ -11,6 +11,9 @@ import { autoGenerateLienWaivers } from './lienWaivers'
  * Line 6  = Total Earned Less Retainage (Line 5 - Line 5a - Line 5b)
  * Line 7  = Less Previous Certificates for Payment
  * Line 8  = Current Payment Due (Line 6 - Line 7)
+ *
+ * @param params.prevPctComplete    Decimal fraction from 0.0 to 1.0 (e.g. 0.45 means 45% complete)
+ * @param params.currentPctComplete Decimal fraction from 0.0 to 1.0 (e.g. 0.60 means 60% complete)
  */
 export function computeCurrentPaymentDue(params: {
   scheduledValue: number
@@ -40,9 +43,10 @@ export function computeCurrentPaymentDue(params: {
     previousCertificates = 0,
     storedMaterialRetainageRate = 0,
   } = params
-  // All monetary inputs are in dollars. Internal calculations use Math.round to avoid floating-point drift on penny amounts.
-  const previousWork = Math.round(scheduledValue * prevPctComplete) / 100
-  const currentWork = Math.round(scheduledValue * currentPctComplete) / 100
+  // All monetary inputs are in dollars. Each intermediate value is rounded to cents before
+  // further arithmetic to match AIA G702 requirements and avoid floating-point penny drift.
+  const previousWork = Math.round(scheduledValue * prevPctComplete * 100) / 100
+  const currentWork = Math.round(scheduledValue * currentPctComplete * 100) / 100
   const workThisPeriod = Math.round((currentWork - previousWork) * 100) / 100
   const totalCompletedAndStored = previousWork + workThisPeriod + storedMaterials
   // AIA G702 line numbers
