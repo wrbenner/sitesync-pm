@@ -67,9 +67,7 @@ const _FilesPage: React.FC = () => {
   const { addToast } = useToast();
   const projectId = useProjectId();
   const createFile = useCreateFile();
-  const { data: rawFiles, isPending: loading, isError, error } = useFiles(projectId);
-
-  if (isError) throw error ?? new Error('Failed to load documents');
+  const { data: rawFiles, isPending: loading, isError, error, refetch } = useFiles(projectId);
 
   const files = useMemo(() =>
     (rawFiles || []).map(f => ({
@@ -330,26 +328,56 @@ const _FilesPage: React.FC = () => {
     }),
   ], []);
 
-  if (loading) {
+  if (isError) {
+    const message = error instanceof Error ? error.message : 'Failed to load documents';
     return (
       <PageContainer title="Files">
-        <div style={{ display: 'flex', gap: spacing['4'], marginBottom: spacing['5'] }}>
-          {[0, 1, 2, 3].map((i) => (
-            <div
-              key={i}
-              style={{
-                flex: '1 1 0',
-                height: 80,
-                borderRadius: 12,
-                backgroundColor: '#E5E7EB',
-                animation: 'pulse 1.5s ease-in-out infinite',
-                opacity: 0.6,
-              }}
-            />
-          ))}
+        <div aria-live="polite" role="status">
+          <Card>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['4'], padding: `${spacing['6']} ${spacing['4']}`, textAlign: 'center' }}>
+              <p style={{ fontSize: typography.fontSize.body, color: colors.textPrimary, margin: 0 }}>
+                {message}
+              </p>
+              <Btn variant="primary" size="sm" onClick={() => refetch()}>
+                Retry
+              </Btn>
+            </div>
+          </Card>
         </div>
+      </PageContainer>
+    );
+  }
+
+  if (loading) {
+    const skeletonPulse: React.CSSProperties = {
+      backgroundColor: '#E5E7EB',
+      animation: 'pulse 1.5s ease-in-out infinite',
+      borderRadius: 4,
+      opacity: 0.6,
+    };
+    return (
+      <PageContainer title="Files">
         <Card padding="0">
-          <TableSkeleton columns={5} rows={8} />
+          <div aria-hidden="true">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div
+                key={i}
+                style={{
+                  height: 48,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: spacing['4'],
+                  padding: `0 ${spacing['4']}`,
+                  borderBottom: '1px solid #F0EDE9',
+                }}
+              >
+                <div style={{ ...skeletonPulse, width: 24, height: 24, borderRadius: 6, flexShrink: 0 }} />
+                <div style={{ ...skeletonPulse, width: 200, height: 14 }} />
+                <div style={{ ...skeletonPulse, width: 60, height: 14 }} />
+                <div style={{ ...skeletonPulse, width: 80, height: 14 }} />
+              </div>
+            ))}
+          </div>
         </Card>
       </PageContainer>
     );
