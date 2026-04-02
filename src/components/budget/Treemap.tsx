@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChevronLeft } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme';
 
@@ -29,6 +29,22 @@ const fmt = (n: number) => n >= 1000000 ? `$${(n / 1000000).toFixed(1)}M` : `$${
 
 export const Treemap: React.FC<TreemapProps> = ({ divisions }) => {
   const [drillDown, setDrillDown] = useState<string | number | null>(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    let debounceTimer: ReturnType<typeof setTimeout>;
+    const handleResize = () => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        setIsMobile(window.innerWidth < 768);
+      }, 100);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => {
+      clearTimeout(debounceTimer);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
 
   const total = divisions.reduce((s, d) => s + d.budget, 0);
 
@@ -73,7 +89,7 @@ export const Treemap: React.FC<TreemapProps> = ({ divisions }) => {
         <p style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['3'] }}>
           {div?.name} · {fmt(div?.budget || 0)}
         </p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: spacing['2'] }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'minmax(100%, 1fr)' : 'repeat(auto-fill, minmax(140px, 1fr))', gap: spacing['2'] }}>
           {children.map((child: { name: string; amount: number; pct: number }, i: number) => (
             <div
               key={child.name}
@@ -96,6 +112,58 @@ export const Treemap: React.FC<TreemapProps> = ({ divisions }) => {
             </div>
           ))}
         </div>
+      </div>
+    );
+  }
+
+  if (isMobile) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'] }}>
+        {divisions.map((div, i) => {
+          const pct = (div.budget / total) * 100;
+          const spentPct = Math.round((div.spent / div.budget) * 100);
+          const divColor = divisionColors[i % divisionColors.length];
+
+          return (
+            <div
+              key={div.id}
+              onClick={() => setDrillDown(div.id)}
+              style={{
+                position: 'relative', overflow: 'hidden',
+                minHeight: '48px', borderRadius: borderRadius.md,
+                backgroundColor: `${divColor}0A`,
+                border: `1px solid ${divColor}18`,
+                cursor: 'pointer',
+              }}
+            >
+              {/* Proportional fill bar */}
+              <div style={{
+                position: 'absolute', top: 0, left: 0, bottom: 0,
+                width: `${pct}%`,
+                backgroundColor: `${divColor}18`,
+                transition: `width ${transitions.smooth}`,
+              }} />
+              <div style={{
+                position: 'relative',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: `0 ${spacing['3']}`,
+                minHeight: '48px',
+              }}>
+                <span style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+                  {div.name}
+                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
+                  <span style={{ fontSize: typography.fontSize.caption, color: spentPct >= 90 ? colors.statusCritical : colors.textTertiary }}>
+                    {spentPct}% spent
+                  </span>
+                  <span style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+                    {fmt(div.budget)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
     );
   }
