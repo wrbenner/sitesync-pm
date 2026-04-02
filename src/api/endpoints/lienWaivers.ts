@@ -27,9 +27,8 @@ interface PayAppLineItemRow {
 }
 
 function mapDbRow(row: DbLienWaiverRow): LienWaiverRow {
-  // DB 'missing' is legacy for waivers not yet actioned — treat as 'pending'
-  const status: LienWaiverStatus =
-    row.status === 'missing' ? 'pending' : (row.status as LienWaiverStatus)
+  // Missing waivers must be visually distinct from pending waivers per AIA billing requirements
+  const status: LienWaiverStatus = row.status
   return {
     id: row.id,
     project_id: row.project_id,
@@ -38,6 +37,7 @@ function mapDbRow(row: DbLienWaiverRow): LienWaiverRow {
     waiver_type: row.type,
     amount: row.amount ?? 0,
     status,
+    is_missing: row.status === 'missing',
     pay_application_id: row.payment_app_id,
     waiver_date: row.waiver_date ?? null,
     submitted_at: null,
@@ -47,7 +47,8 @@ function mapDbRow(row: DbLienWaiverRow): LienWaiverRow {
 }
 
 function mapStatusToDb(status: LienWaiverStatus): DbLienWaiverRow['status'] {
-  // All three app statuses map directly; no legacy translation needed
+  // Missing waivers must be visually distinct from pending waivers per AIA billing requirements
+  // 'missing' maps back to 'missing' in the DB to preserve the distinction
   return status
 }
 
@@ -179,14 +180,15 @@ export const autoGenerateLienWaivers = generateWaiversFromPayApp
 export async function getLienWaiverSummary(projectId: string): Promise<LienWaiverSummary> {
   const waivers = await getLienWaivers(projectId)
   const received = waivers.filter((w) => w.status === 'received' || w.status === 'executed').length
-  const pendingWaivers = waivers.filter((w) => w.status === 'pending')
+  // Missing waivers must be visually distinct from pending waivers per AIA billing requirements
+  const missingWaivers = waivers.filter((w) => w.is_missing)
   const missingSubcontractors = [
-    ...new Set(pendingWaivers.map((w) => w.subcontractor_id).filter((id) => id !== '')),
+    ...new Set(missingWaivers.map((w) => w.subcontractor_id).filter((id) => id !== '')),
   ]
   return {
     total: waivers.length,
     received,
-    missing: pendingWaivers.length,
+    missing: missingWaivers.length,
     missingSubcontractors,
   }
 }

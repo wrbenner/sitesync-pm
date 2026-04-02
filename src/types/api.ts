@@ -193,7 +193,7 @@ export type LienWaiverType =
   | 'conditional_final'
   | 'unconditional_final'
 
-export type LienWaiverStatus = 'pending' | 'received' | 'executed'
+export type LienWaiverStatus = 'pending' | 'received' | 'executed' | 'missing'
 
 export interface LienWaiverRow {
   id: string
@@ -203,6 +203,8 @@ export interface LienWaiverRow {
   waiver_type: LienWaiverType
   amount: number
   status: LienWaiverStatus
+  // Missing waivers must be visually distinct from pending waivers per AIA billing requirements
+  is_missing: boolean
   pay_application_id: string | null
   waiver_date: string | null
   submitted_at: string | null
