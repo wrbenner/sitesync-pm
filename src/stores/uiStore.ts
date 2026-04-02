@@ -10,6 +10,13 @@ function readStoredTheme(): 'light' | 'dark' | 'system' {
   return 'light';
 }
 
+export interface Toast {
+  id: string;
+  type: 'info' | 'success' | 'warning' | 'error';
+  title: string;
+  message?: string;
+}
+
 interface UiState {
   sidebarCollapsed: boolean;
   activeView: string;
@@ -18,6 +25,7 @@ interface UiState {
   themeMode: 'light' | 'dark' | 'system';
   a11yStatusMessage: string;
   a11yAlertMessage: string;
+  toasts: Toast[];
 
   setSidebarCollapsed: (v: boolean) => void;
   toggleSidebar: () => void;
@@ -27,6 +35,8 @@ interface UiState {
   setThemeMode: (mode: 'light' | 'dark' | 'system') => void;
   announceStatus: (message: string) => void;
   announceAlert: (message: string) => void;
+  addToast: (toast: Omit<Toast, 'id'>) => void;
+  dismissToast: (id: string) => void;
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -37,6 +47,7 @@ export const useUiStore = create<UiState>((set) => ({
   themeMode: readStoredTheme(),
   a11yStatusMessage: '',
   a11yAlertMessage: '',
+  toasts: [],
 
   setSidebarCollapsed: (v) => set({ sidebarCollapsed: v }),
   toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
@@ -55,4 +66,10 @@ export const useUiStore = create<UiState>((set) => ({
     set({ a11yAlertMessage: message });
     setTimeout(() => set({ a11yAlertMessage: '' }), 100);
   },
+  addToast: (toast) => {
+    const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    set((s) => ({ toasts: [...s.toasts, { ...toast, id }] }));
+    setTimeout(() => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), 5000);
+  },
+  dismissToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
 }));

@@ -20,6 +20,7 @@ interface UseOptimisticLockReturn {
   conflictDetected: boolean;
   serverUpdatedAt: string | null;
   dismissConflict: () => void;
+  checkFailed: boolean;
 }
 
 export function useOptimisticLock(
@@ -29,6 +30,7 @@ export function useOptimisticLock(
 ): UseOptimisticLockReturn {
   const [conflictDetected, setConflictDetected] = useState(false);
   const [serverUpdatedAt, setServerUpdatedAt] = useState<string | null>(null);
+  const [checkFailed, setCheckFailed] = useState(false);
 
   const checkConflict = useCallback(async () => {
     if (!entityId || !lastKnownUpdatedAt) return false;
@@ -38,8 +40,17 @@ export function useOptimisticLock(
       .eq('id', entityId)
       .single();
 
-    if (error || !data) return false;
+    if (error || !data) {
+      useUiStore.getState().addToast({
+        type: 'warning',
+        title: 'Conflict check failed',
+        message: 'Could not verify if someone else edited this item. Save with caution.',
+      });
+      setCheckFailed(true);
+      return false;
+    }
 
+    setCheckFailed(false);
     const serverTime = data.updated_at;
     if (serverTime && serverTime !== lastKnownUpdatedAt) {
       setConflictDetected(true);
@@ -54,7 +65,7 @@ export function useOptimisticLock(
     setServerUpdatedAt(null);
   }, []);
 
-  return { checkConflict, conflictDetected, serverUpdatedAt, dismissConflict };
+  return { checkConflict, conflictDetected, serverUpdatedAt, dismissConflict, checkFailed };
 }
 
 // ── Conflict Warning Banner ────────────────────────────────
