@@ -694,14 +694,24 @@ export const GanttChart: React.FC<GanttChartProps> = ({
               >
                 <defs>
                   <marker
-                    id={`arr-${uid}`}
+                    id={`arr-nc-${uid}`}
                     markerWidth="6"
                     markerHeight="6"
                     refX="5"
                     refY="3"
                     orient="auto"
                   >
-                    <path d="M0,0 L0,6 L6,3 z" fill="#6B7280" />
+                    <path d="M0,0 L0,6 L6,3 z" fill="#9CA3AF" />
+                  </marker>
+                  <marker
+                    id={`arr-crit-${uid}`}
+                    markerWidth="6"
+                    markerHeight="6"
+                    refX="5"
+                    refY="3"
+                    orient="auto"
+                  >
+                    <path d="M0,0 L0,6 L6,3 z" fill="#E74C3C" />
                   </marker>
                   <marker
                     id={`arr-typed-${uid}`}
@@ -711,18 +721,18 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                     refY="3"
                     orient="auto"
                   >
-                    <path d="M0,0 L0,6 L6,3 z" fill="#6B7280" />
+                    <path d="M0,0 L0,6 L6,3 z" fill="#9CA3AF" />
                   </marker>
                 </defs>
                 {dependencyArrows.map(arrow => (
                   <path
                     key={arrow.key}
                     d={arrow.d}
-                    stroke="#6B7280"
+                    stroke={arrow.isCritical ? '#E74C3C' : '#9CA3AF'}
                     strokeWidth="1.5"
                     fill="none"
-                    opacity={arrow.isCritical ? 0.8 : 0.45}
-                    markerEnd={`url(#arr-${uid})`}
+                    opacity={arrow.isCritical ? 0.9 : 0.7}
+                    markerEnd={`url(#${arrow.isCritical ? `arr-crit-${uid}` : `arr-nc-${uid}`})`}
                   />
                 ))}
                 {typedDependencyArrows.map(arrow => (
@@ -1139,6 +1149,29 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                     {/* Today marker */}
                     {todayOffset > 0 && todayOffset < 100 && (
                       <div style={{ position: 'absolute', top: 0, bottom: 0, left: `${todayOffset}%`, width: 1, borderLeft: `1px dashed ${colors.statusCritical}`, opacity: 0.4, pointerEvents: 'none' }} />
+                    )}
+
+                    {/* Float pill below bar */}
+                    {phase.floatDays != null && (
+                      <div
+                        aria-hidden="true"
+                        style={{
+                          position: 'absolute',
+                          top: 30,
+                          left: `${pos.left}%`,
+                          fontSize: '12px',
+                          color: phase.floatDays === 0 ? '#E74C3C' : '#6B7280',
+                          backgroundColor: phase.floatDays === 0 ? '#FEE2E2' : '#F3F4F6',
+                          padding: '0 5px',
+                          borderRadius: '10px',
+                          lineHeight: '16px',
+                          whiteSpace: 'nowrap',
+                          pointerEvents: 'none',
+                          zIndex: 4,
+                        }}
+                      >
+                        {phase.floatDays}d float
+                      </div>
                     )}
 
                     {/* Hover popover */}
