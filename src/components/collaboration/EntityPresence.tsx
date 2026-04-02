@@ -75,13 +75,29 @@ export const PresenceDots: React.FC<PresenceDotsProps> = ({ entityId, maxVisible
         </button>
       ))}
       {overflow > 0 && (
-        <span style={{
-          fontSize: typography.fontSize.caption,
-          color: colors.textTertiary,
-          marginLeft: spacing['1'],
-        }}>
-          +{overflow}
-        </span>
+        <button
+          aria-label={`${overflow} more people viewing`}
+          role="status"
+          style={{
+            minWidth: 44,
+            minHeight: 44,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            padding: 0,
+          }}
+        >
+          <span style={{
+            fontSize: typography.fontSize.caption,
+            color: colors.textTertiary,
+            marginLeft: spacing['1'],
+          }}>
+            +{overflow}
+          </span>
+        </button>
       )}
     </div>
   )
