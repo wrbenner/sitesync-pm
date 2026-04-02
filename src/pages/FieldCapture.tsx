@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { Camera, Mic, FileText, AlertTriangle, MapPin, ChevronRight, Sparkles, Users, RefreshCw, QrCode } from 'lucide-react';
 import { PageContainer, Card, Btn, SectionHeader, useToast } from '../components/Primitives';
 import { ErrorBoundary } from '../components/ErrorBoundary';
@@ -121,6 +121,27 @@ const FieldCaptureInner: React.FC = () => {
   const [showCheckInSheet, setShowCheckInSheet] = useState(false);
   const [liveAnnouncement, setLiveAnnouncement] = useState('');
 
+  // Offline detection
+  const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
+  React.useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // Photo capture via file input
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
+  const [photoTitle, setPhotoTitle] = useState('');
+  const [photoNotes, setPhotoNotes] = useState('');
+  const [photoTags, setPhotoTags] = useState('');
+  const [photoLinkTo, setPhotoLinkTo] = useState('');
+
   React.useEffect(() => {
     if (pendingCount === 0) {
       setLiveAnnouncement('All captures synced');
@@ -151,13 +172,52 @@ const FieldCaptureInner: React.FC = () => {
     }
   };
 
-  const handlePhotoCapture = () => {
-    setCaptureMode('photo');
-    // Simulate camera "capture" then open annotator
-    setTimeout(() => {
-      setCaptureMode(null);
-      setShowAnnotator(true);
-    }, 1200);
+  const handlePhotoButtonClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setPhotoDataUrl(ev.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handlePhotoMetaSave = async () => {
+    try {
+      await createFieldCapture.mutateAsync({
+        projectId: projectId!,
+        data: {
+          project_id: projectId!,
+          type: 'photo',
+          content: photoTitle || photoNotes || 'Photo capture',
+          location: null,
+          ai_category: null,
+        },
+      });
+      addToast('success', 'Photo saved');
+      setLiveAnnouncement('Photo saved successfully');
+      setPhotoDataUrl(null);
+      setPhotoTitle('');
+      setPhotoNotes('');
+      setPhotoTags('');
+      setPhotoLinkTo('');
+    } catch {
+      addToast('error', 'Failed to save photo');
+      setLiveAnnouncement('Failed to save photo');
+    }
+  };
+
+  const handlePhotoMetaCancel = () => {
+    setPhotoDataUrl(null);
+    setPhotoTitle('');
+    setPhotoNotes('');
+    setPhotoTags('');
+    setPhotoLinkTo('');
   };
 
   const handleQuickTextSend = async () => {
@@ -194,6 +254,111 @@ const FieldCaptureInner: React.FC = () => {
     <PageContainer title="Field Capture" subtitle="Capture photos, voice notes, and observations from the field">
       <div aria-live="polite" aria-atomic="true" style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}>{liveAnnouncement}</div>
       <QuickCapture open={quickCaptureOpen} onClose={() => setQuickCaptureOpen(false)} onSave={handleQuickCaptureSave} />
+
+      {/* Hidden file input for camera capture */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={handleFileInputChange}
+        style={{ display: 'none' }}
+        aria-hidden="true"
+      />
+
+      {/* Offline banner */}
+      {(!isOnline || pendingCount > 0) && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: spacing['2'],
+          padding: '12px', marginBottom: spacing['4'],
+          backgroundColor: '#FEF3C7',
+          border: '1px solid #F59E0B',
+          borderRadius: borderRadius.base,
+        }}>
+          <AlertTriangle size={16} color="#B45309" style={{ flexShrink: 0 }} />
+          <span style={{ fontSize: typography.fontSize.sm, color: '#92400E', fontWeight: typography.fontWeight.medium }}>
+            {!isOnline
+              ? `You are offline. ${pendingCount} photo${pendingCount !== 1 ? 's' : ''} pending upload.`
+              : `${pendingCount} photo${pendingCount !== 1 ? 's' : ''} pending upload.`}
+          </span>
+        </div>
+      )}
+
+      {/* Photo metadata overlay */}
+      {photoDataUrl && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: zIndex.tooltip as number,
+          backgroundColor: 'rgba(0,0,0,0.65)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: spacing['4'],
+        }}>
+          <div style={{
+            backgroundColor: colors.white, borderRadius: borderRadius.xl,
+            width: '100%', maxWidth: '480px', maxHeight: '90vh', overflowY: 'auto',
+            display: 'flex', flexDirection: 'column',
+          }}>
+            <img
+              src={photoDataUrl}
+              alt="Captured photo preview"
+              style={{ width: '100%', aspectRatio: '4/3', objectFit: 'cover', borderRadius: `${borderRadius.xl} ${borderRadius.xl} 0 0`, display: 'block' }}
+            />
+            <div style={{ padding: spacing['4'], display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
+              <input
+                type="text"
+                value={photoTitle}
+                onChange={(e) => setPhotoTitle(e.target.value)}
+                placeholder="Title (optional)"
+                style={{
+                  width: '100%', padding: `${spacing['2']} ${spacing['3']}`,
+                  border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.md,
+                  fontSize: typography.fontSize.body, fontFamily: typography.fontFamily,
+                  color: colors.textPrimary, outline: 'none', boxSizing: 'border-box',
+                }}
+              />
+              <textarea
+                value={photoNotes}
+                onChange={(e) => setPhotoNotes(e.target.value)}
+                placeholder="Notes (optional)"
+                rows={3}
+                style={{
+                  width: '100%', padding: spacing['3'],
+                  border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.md,
+                  fontSize: typography.fontSize.body, fontFamily: typography.fontFamily,
+                  color: colors.textPrimary, resize: 'vertical', outline: 'none', boxSizing: 'border-box',
+                }}
+              />
+              <input
+                type="text"
+                value={photoTags}
+                onChange={(e) => setPhotoTags(e.target.value)}
+                placeholder="Tags, comma separated (optional)"
+                style={{
+                  width: '100%', padding: `${spacing['2']} ${spacing['3']}`,
+                  border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.md,
+                  fontSize: typography.fontSize.body, fontFamily: typography.fontFamily,
+                  color: colors.textPrimary, outline: 'none', boxSizing: 'border-box',
+                }}
+              />
+              <input
+                type="text"
+                value={photoLinkTo}
+                onChange={(e) => setPhotoLinkTo(e.target.value)}
+                placeholder="Link to RFI, punch item, or drawing (optional)"
+                style={{
+                  width: '100%', padding: `${spacing['2']} ${spacing['3']}`,
+                  border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.md,
+                  fontSize: typography.fontSize.body, fontFamily: typography.fontFamily,
+                  color: colors.textPrimary, outline: 'none', boxSizing: 'border-box',
+                }}
+              />
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: spacing['2'] }}>
+                <Btn variant="ghost" size="sm" onClick={handlePhotoMetaCancel}>Cancel</Btn>
+                <Btn variant="primary" size="sm" onClick={handlePhotoMetaSave}>Save</Btn>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: spacing['3'], padding: `${spacing['3']} ${spacing['4']}`, marginBottom: spacing['4'], backgroundColor: colors.statusReviewSubtle, borderRadius: borderRadius.base, borderLeft: `3px solid ${colors.statusReview}` }}>
         <Sparkles size={14} color={colors.statusReview} style={{ marginTop: 2, flexShrink: 0 }} />
         <p style={{ fontSize: typography.fontSize.caption, color: colors.textPrimary, margin: 0, lineHeight: 1.5 }}>
@@ -251,7 +416,7 @@ const FieldCaptureInner: React.FC = () => {
         <PermissionGate permission="field_capture.create">
           <button
             aria-label="Capture photo"
-            onClick={() => setQuickCaptureOpen(true)}
+            onClick={handlePhotoButtonClick}
             style={{
               flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['2'],
               padding: `${spacing['4']} ${spacing['3']}`, minHeight: 44, minWidth: 44,
