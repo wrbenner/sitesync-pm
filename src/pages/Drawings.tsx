@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { DrawingsEmptyState } from '../components/drawings/DrawingsEmptyState';
 import { TableRowSkeleton } from '../components/ui/Skeletons';
-import { Upload, X, Sparkles, FileText, AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
+import { Upload, X, Sparkles, FileText, AlertTriangle, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { aiService } from '../lib/aiService';
 import type { DrawingAnalysis } from '../types/ai';
 import { PageContainer, Card, Btn, Tag, useToast } from '../components/Primitives';
@@ -274,22 +274,31 @@ const _DrawingsPage: React.FC = () => {
                     <div
                       key={i}
                       style={{
-                        aspectRatio: '4/3',
+                        height: 200,
                         borderRadius: 12,
                         backgroundColor: colors.surfaceInset,
                         border: `1px solid ${colors.borderSubtle}`,
                         animation: 'pulse 1.5s ease-in-out infinite',
                         animationDelay: `${i * 0.1}s`,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        overflow: 'hidden',
                       }}
-                    />
+                    >
+                      <div style={{ flex: 1, backgroundColor: colors.borderSubtle }} />
+                      <div style={{ padding: `${spacing['2']} ${spacing['3']}`, display: 'flex', flexDirection: 'column', gap: spacing['2'] }}>
+                        <div style={{ height: 12, borderRadius: 6, backgroundColor: colors.borderSubtle, width: '70%' }} />
+                        <div style={{ height: 10, borderRadius: 6, backgroundColor: colors.borderSubtle, width: '45%' }} />
+                      </div>
+                    </div>
                   ))}
                 </div>
               </>
             )}
             {!loading && error && (
-              <div style={{ margin: spacing['4'], padding: spacing['4'], backgroundColor: '#fff', border: `1px solid ${colors.borderSubtle}`, borderRadius: 12, display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
-                <AlertTriangle size={16} color={colors.statusCritical} style={{ flexShrink: 0 }} />
-                <p style={{ flex: 1, margin: 0, fontSize: typography.fontSize.sm, color: colors.textPrimary }}>{error}</p>
+              <div role="alert" style={{ margin: spacing['4'], padding: spacing['4'], backgroundColor: '#fff', border: `1px solid ${colors.borderSubtle}`, borderRadius: 12, display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
+                <AlertCircle size={16} color={colors.statusCritical} style={{ flexShrink: 0 }} />
+                <p style={{ flex: 1, margin: 0, fontSize: typography.fontSize.sm, color: colors.textPrimary }}>Unable to load drawings. Check your connection and try again.</p>
                 <Btn variant="secondary" size="sm" onClick={() => refetch()}>Retry</Btn>
               </div>
             )}
@@ -440,10 +449,15 @@ const _DrawingsPage: React.FC = () => {
             {!loading && !error && sortedDrawings.length === 0 && (
               allDrawings.length === 0 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: `${spacing['10']} ${spacing['4']}`, textAlign: 'center' }}>
-                  <FileText size={40} color={colors.textTertiary} style={{ marginBottom: spacing['4'] }} />
+                  <Upload size={40} color={colors.textTertiary} style={{ marginBottom: spacing['4'] }} />
                   <p style={{ fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>No drawings uploaded yet.</p>
                   <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0, marginBottom: spacing['5'], maxWidth: 420 }}>Upload your plans to enable digital markup, RFI linking, and AI coordination analysis.</p>
-                  <Btn variant="primary" size="md" icon={<Upload size={16} />} aria-label="Upload drawings" onClick={() => setShowUploadModal(true)}>Upload Drawings</Btn>
+                  <button
+                    onClick={() => setShowUploadModal(true)}
+                    style={{ backgroundColor: '#F47820', color: '#fff', borderRadius: 8, padding: '8px 16px', border: 'none', cursor: 'pointer', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, fontFamily: typography.fontFamily }}
+                  >
+                    Upload Drawings
+                  </button>
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: `${spacing['6']} ${spacing['4']}`, textAlign: 'center' }}>
