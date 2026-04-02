@@ -8,8 +8,8 @@ function mapAuthError(message: string): string {
   const msg = message.toLowerCase()
   if (msg.includes('invalid') || msg.includes('credentials')) return 'Email or password is incorrect'
   if (msg.includes('email not confirmed')) return 'Please check your email to confirm your account'
-  if (msg.includes('rate limit') || msg.includes('too many')) return 'Too many attempts, try again shortly'
-  if (msg.includes('fetch') || msg.includes('network')) return 'Unable to connect, check your internet'
+  if (msg.includes('rate limit') || msg.includes('too many')) return 'Too many attempts. Please try again in a few minutes'
+  if (msg.includes('fetch') || msg.includes('network') || msg.includes('failed')) return 'Unable to connect. Check your internet connection'
   if (msg.includes('already registered') || msg.includes('already been registered')) return 'An account with this email already exists'
   if (msg.includes('password') && msg.includes('short')) return 'Password must be at least 6 characters'
   return message
@@ -407,7 +407,7 @@ export const Login: React.FC = () => {
                       lineHeight: typography.lineHeight.normal,
                     }}
                   >
-                    {resetError}
+                    {mapAuthError(resetError)}
                   </div>
                 )}
                 <div style={{ marginBottom: spacing['5'] }}>
