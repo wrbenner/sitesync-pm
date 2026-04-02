@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { VirtualDataTable } from '../components/shared/VirtualDataTable';
 import { createColumnHelper } from '@tanstack/react-table';
 import { PageContainer, Card, Btn, StatusTag, PriorityTag, DetailPanel, Avatar, RelatedItems, useToast, Skeleton } from '../components/Primitives';
@@ -150,6 +150,13 @@ const PunchListPage: React.FC = () => {
   const [editingDetail, setEditingDetail] = useState(false);
   const [rejectNote, setRejectNote] = useState('');
   const [showRejectNote, setShowRejectNote] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const { addToast } = useToast();
   const { hasPermission } = usePermissions();
   const appNavigate = useAppNavigate();
@@ -539,7 +546,7 @@ const PunchListPage: React.FC = () => {
       </div>
 
       {/* Metric Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: spacing['3'], marginBottom: spacing['4'] }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(5, 1fr)', gap: isMobile ? '8px' : spacing['3'], marginBottom: spacing['4'] }}>
         <Card padding={spacing['6']}>
           <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['2'] }}>
             <CheckSquare size={16} color={colors.textTertiary} />
@@ -619,18 +626,80 @@ const PunchListPage: React.FC = () => {
         )}
       </div>
 
-      <Card padding="0">
-        <VirtualDataTable
-          data={filteredList}
-          columns={plColumns}
-          rowHeight={48}
-          containerHeight={600}
-          onRowClick={(row) => setSelectedId(row.id)}
-          selectedRowId={selectedId}
-          getRowId={(row) => String(row.id)}
-          emptyMessage="No items match your filters"
-        />
-      </Card>
+      {isMobile ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
+          {filteredList.length === 0 && (
+            <div style={{ textAlign: 'center', padding: spacing['6'], color: colors.textTertiary, fontSize: typography.fontSize.sm }}>
+              No items match your filters
+            </div>
+          )}
+          {filteredList.map((item) => {
+            const statusDotColor =
+              item.verification_status === 'verified' ? colors.statusActive :
+              item.verification_status === 'sub_complete' ? colors.statusPending :
+              colors.statusCritical;
+            return (
+              <div
+                key={item.id}
+                onClick={() => setSelectedId(item.id)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedId(item.id); } }}
+                style={{
+                  backgroundColor: colors.white,
+                  borderRadius: borderRadius.md,
+                  border: `1px solid ${colors.borderDefault}`,
+                  padding: '16px',
+                  minHeight: '72px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '6px',
+                }}
+              >
+                <div style={{ fontSize: '16px', fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, lineHeight: 1.3 }}>
+                  {item.description}
+                </div>
+                {item.area && (
+                  <div style={{ fontSize: '14px', color: colors.textTertiary }}>{item.area}</div>
+                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' as const }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: statusDotColor, flexShrink: 0 }} />
+                    <span style={{ fontSize: '13px', color: statusDotColor, fontWeight: 500 }}>
+                      {statusLabel[item.verification_status] ?? item.verification_status}
+                    </span>
+                  </div>
+                  <PriorityTag priority={item.priority as any} />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '2px' }}>
+                  {item.assigned && (
+                    <span style={{ fontSize: '13px', color: colors.textSecondary }}>{item.assigned}</span>
+                  )}
+                  {item.dueDate && (
+                    <span style={{ fontSize: '13px', fontWeight: 500, color: getDueDateColor(item.dueDate) }}>
+                      Due {formatDate(item.dueDate)}
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <Card padding="0">
+          <VirtualDataTable
+            data={filteredList}
+            columns={plColumns}
+            rowHeight={48}
+            containerHeight={600}
+            onRowClick={(row) => setSelectedId(row.id)}
+            selectedRowId={selectedId}
+            getRowId={(row) => String(row.id)}
+            emptyMessage="No items match your filters"
+          />
+        </Card>
+      )}
 
       <DetailPanel
         open={!!selected}
