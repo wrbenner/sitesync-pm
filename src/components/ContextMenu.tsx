@@ -41,6 +41,7 @@ const TOAST_DURATION: Record<ToastSeverity, number | null> = {
 function ToastEntry({ toast, onClose }: { toast: ToastItem; onClose: (id: string) => void }) {
   const style = TOAST_SEVERITY_STYLES[toast.severity];
   const [dismissFocused, setDismissFocused] = useState(false);
+  const [actionFocused, setActionFocused] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(toast.severity === 'error' ? 60 : null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const remainingRef = useRef<number | null>(TOAST_DURATION[toast.severity]);
@@ -159,6 +160,9 @@ function ToastEntry({ toast, onClose }: { toast: ToastItem; onClose: (id: string
         <button
           aria-label={toast.action.label}
           onClick={() => { toast.action!.onClick(); onClose(toast.id); }}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toast.action!.onClick(); onClose(toast.id); } }}
+          onFocus={() => setActionFocused(true)}
+          onBlur={() => setActionFocused(false)}
           style={{
             border: 'none',
             background: 'transparent',
@@ -175,6 +179,8 @@ function ToastEntry({ toast, onClose }: { toast: ToastItem; onClose: (id: string
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            outline: actionFocused ? `2px solid ${colors.primary}` : 'none',
+            outlineOffset: actionFocused ? '2px' : undefined,
           }}
         >
           {toast.action.label}
@@ -184,6 +190,9 @@ function ToastEntry({ toast, onClose }: { toast: ToastItem; onClose: (id: string
         <button
           aria-label={toast.action.label}
           onClick={() => { toast.action!.onClick(); onClose(toast.id); }}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toast.action!.onClick(); onClose(toast.id); } }}
+          onFocus={() => setActionFocused(true)}
+          onBlur={() => setActionFocused(false)}
           style={{
             border: 'none',
             background: 'transparent',
@@ -194,6 +203,8 @@ function ToastEntry({ toast, onClose }: { toast: ToastItem; onClose: (id: string
             fontWeight: 600,
             padding: `0 ${spacing['2']}`,
             flexShrink: 0,
+            outline: actionFocused ? `2px solid ${colors.primary}` : 'none',
+            outlineOffset: actionFocused ? '2px' : undefined,
           }}
         >
           {toast.action.label}
@@ -202,6 +213,7 @@ function ToastEntry({ toast, onClose }: { toast: ToastItem; onClose: (id: string
       <button
         aria-label="Dismiss notification"
         onClick={() => onClose(toast.id)}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClose(toast.id); } }}
         onFocus={() => setDismissFocused(true)}
         onBlur={() => setDismissFocused(false)}
         style={{
