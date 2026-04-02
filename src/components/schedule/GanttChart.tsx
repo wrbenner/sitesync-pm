@@ -8,7 +8,7 @@ import { colors, spacing, typography, borderRadius, shadows, transitions } from 
 import { AIAnnotationIndicator } from '../ai/AIAnnotation';
 import { getAnnotationsForEntity } from '../../data/aiAnnotations';
 
-export type TimeScale = 'month' | 'quarter';
+export type TimeScale = 'week' | 'month' | 'quarter';
 
 const ROW_HEIGHT = 40; // 32px bar + 8px margin
 const DAY_MS = 86_400_000;
@@ -215,7 +215,20 @@ export const GanttChart: React.FC<GanttChartProps> = ({
     const labels: { label: string; offset: number }[] = [];
     const start = new Date(timelineStart);
     const end = new Date(timelineEnd);
-    if (timeScale === 'month') {
+    if (timeScale === 'week') {
+      const d = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+      d.setDate(d.getDate() - d.getDay()); // rewind to Sunday
+      while (d.getTime() <= timelineEnd) {
+        const offset = ((d.getTime() - timelineStart) / timelineSpan) * 100;
+        if (offset <= 100) {
+          labels.push({
+            label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            offset: Math.max(0, offset),
+          });
+        }
+        d.setDate(d.getDate() + 7);
+      }
+    } else if (timeScale === 'month') {
       const d = new Date(start.getFullYear(), start.getMonth(), 1);
       while (d <= end) {
         const offset = ((d.getTime() - timelineStart) / timelineSpan) * 100;
@@ -264,8 +277,10 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   };
 
   const getBarColor = (phase: GanttPhase) => {
-    if (phase.completed) return colors.statusActive;
+    if (phase.completed || phase.status === 'completed' || phase.status === 'on_track') return colors.statusActive;
     if (whatIfMode && activeDrag?.phaseId === phase.id) return colors.statusReview;
+    if (phase.status === 'delayed') return colors.statusCritical;
+    if (phase.status === 'in_progress') return colors.statusPending;
     if (phase.is_critical || phase.critical) return '#E74C3C';
     if (phase.progress === 0) return colors.textTertiary;
     return colors.statusInfo;
@@ -503,7 +518,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
       {!isLoading && phases.length > 0 && (<>
       <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'], marginBottom: spacing['4'], flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', gap: spacing['1'], backgroundColor: colors.surfaceInset, borderRadius: borderRadius.full, padding: 2 }}>
-          {(['month', 'quarter'] as TimeScale[]).map(scale => (
+          {(['week', 'month', 'quarter'] as TimeScale[]).map(scale => (
             <button
               key={scale}
               aria-label={`View by ${scale}`}
@@ -610,7 +625,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
       )}
 
       {/* Timeline */}
-      <div style={{ overflowX: 'auto' }}>
+      <div style={{ overflowX: 'auto', minHeight: '400px' }}>
         <div style={{ minWidth: '900px' }}>
 
           {/* Time labels header + width probe */}
