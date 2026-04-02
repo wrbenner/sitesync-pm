@@ -28,6 +28,116 @@ import { EditingLockBanner } from '../components/ui/EditingLockBanner';
 
 const isOverdue = (dateStr: string) => new Date(dateStr) < new Date();
 
+// ── ApprovalStepper ──────────────────────────────────────
+const STEPPER_STEPS = [
+  { label: 'Submitted' },
+  { label: 'GC Review' },
+  { label: 'Architect Review' },
+  { label: 'Final' },
+];
+
+function getStepperState(status: string): { activeStep: number; isRejected: boolean } {
+  switch (status) {
+    case 'pending':            return { activeStep: 0, isRejected: false };
+    case 'submitted':          return { activeStep: 1, isRejected: false };
+    case 'review_in_progress': return { activeStep: 2, isRejected: false };
+    case 'approved':
+    case 'approved_as_noted':  return { activeStep: 3, isRejected: false };
+    case 'rejected':           return { activeStep: 2, isRejected: true };
+    default:                   return { activeStep: 0, isRejected: false };
+  }
+}
+
+const ApprovalStepper: React.FC<{ status: string }> = ({ status }) => {
+  const { activeStep, isRejected } = getStepperState(status);
+
+  return (
+    <>
+      <style>{`
+        @keyframes stepper-pulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(244, 120, 32, 0.4); }
+          50% { box-shadow: 0 0 0 5px rgba(244, 120, 32, 0); }
+        }
+      `}</style>
+      <div
+        aria-label="Approval progress"
+        style={{ display: 'flex', alignItems: 'flex-start', marginBottom: '16px' }}
+      >
+        {STEPPER_STEPS.map((step, idx) => {
+          const isCompleted = idx < activeStep;
+          const isCurrent = idx === activeStep;
+          const isFuture = idx > activeStep;
+
+          let circleStyle: React.CSSProperties = {
+            width: 24,
+            height: 24,
+            borderRadius: '9999px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+            fontSize: '11px',
+            fontWeight: 600,
+            color: colors.white,
+            transition: 'all 200ms ease',
+          };
+
+          if (isCompleted) {
+            circleStyle = { ...circleStyle, backgroundColor: colors.statusActive };
+          } else if (isCurrent) {
+            const currentBg = isRejected ? colors.statusCritical : colors.primaryOrange;
+            circleStyle = {
+              ...circleStyle,
+              backgroundColor: currentBg,
+              animation: isRejected ? undefined : 'stepper-pulse 1.8s ease-in-out infinite',
+            };
+          } else {
+            circleStyle = {
+              ...circleStyle,
+              backgroundColor: 'transparent',
+              border: `2px solid ${colors.borderSubtle}`,
+              color: colors.textTertiary,
+            };
+          }
+
+          return (
+            <React.Fragment key={step.label}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                <div
+                  style={circleStyle}
+                  aria-current={isCurrent ? 'step' : undefined}
+                >
+                  {isCompleted ? (
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                      <path d="M2 6l3 3 5-5" stroke={colors.white} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  ) : (
+                    <span>{idx + 1}</span>
+                  )}
+                </div>
+                <span style={{ fontSize: '12px', color: colors.textTertiary, whiteSpace: 'nowrap', fontWeight: isCurrent ? 500 : 400 }}>
+                  {step.label}
+                </span>
+              </div>
+              {idx < STEPPER_STEPS.length - 1 && (
+                <div style={{
+                  flex: 1,
+                  height: 2,
+                  marginTop: 11,
+                  marginLeft: 4,
+                  marginRight: 4,
+                  backgroundColor: idx < activeStep ? colors.statusActive : colors.borderSubtle,
+                  transition: 'background-color 300ms ease',
+                }} />
+              )}
+            </React.Fragment>
+          );
+        })}
+      </div>
+    </>
+  );
+};
+
 const BIC_COLORS: Record<string, string> = {
   GC: '#3B82F6',
   Architect: '#8B5CF6',
@@ -456,6 +566,9 @@ const Submittals: React.FC = () => {
                 <StatusTag status={selected.status as any} />
               </div>
             </div>
+
+            {/* Approval Stepper */}
+            <ApprovalStepper status={selected.status} />
 
             {/* Details grid */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing.lg }}>
