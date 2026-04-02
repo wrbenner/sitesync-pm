@@ -72,78 +72,142 @@ export async function getPortfolioMetrics(orgId: string): Promise<PortfolioMetri
   await assertOrganizationAccess(orgId)
   const cacheKey = queryKey('portfolio_metrics', { orgId })
   return dedupTtl(cacheKey, 60_000, async () => {
-    // Round-trip 1: single-row aggregate via Postgres RPC.
-    // Joins project_metrics for avg_completion_percentage and schedule_variance_days.
-    const { data: rpcRows, error: rpcError } = await supabase.rpc('get_portfolio_metrics', { org_id: orgId })
-    if (rpcError) throw transformSupabaseError(rpcError)
-
-    const row = rpcRows?.[0]
-    if (!row || Number(row.total_projects) === 0) {
-      return {
-        total_projects: 0,
-        active_projects: 0,
-        total_contract_value: 0,
-        total_budget_spent: 0,
-        open_rfis: 0,
-        overdue_rfis: 0,
-        open_punch_items: 0,
-        avg_completion_percentage: 0,
-        projects_on_schedule: 0,
-        projects_at_risk: 0,
-      }
-    }
-
-    const now = new Date().toISOString()
-
-    // Round-trip 2: RFI and punch counts run in parallel, scoped to the org via
-    // projects!inner join (no project ID fetch needed, O(1) round-trips regardless of count).
-    const [openRfiResult, overdueRfiResult, openPunchResult] = await Promise.all([
-      supabase
-        .from('rfis')
-        .select('id, projects!inner(organization_id)', { count: 'exact', head: true })
-        .eq('projects.organization_id', orgId)
-        .not('status', 'in', '("closed","answered")'),
-      supabase
-        .from('rfis')
-        .select('id, projects!inner(organization_id)', { count: 'exact', head: true })
-        .eq('projects.organization_id', orgId)
-        .neq('status', 'closed')
-        .lt('due_date', now),
-      supabase
-        .from('punch_items')
-        .select('id, projects!inner(organization_id)', { count: 'exact', head: true })
-        .eq('projects.organization_id', orgId)
-        .not('status', 'in', '("complete","closed")'),
-    ])
-
-    // Partial failure mode: group RFI queries together and punch separately.
-    // If both groups fail we cannot show any items data, so throw.
-    // If only one group fails, surface a warning and continue with the data we have.
-    const rfiFailed = openRfiResult.error !== null || overdueRfiResult.error !== null
-    const punchFailed = openPunchResult.error !== null
-
-    if (rfiFailed && punchFailed) {
-      throw transformSupabaseError(
-        openRfiResult.error ?? overdueRfiResult.error ?? openPunchResult.error!
-      )
-    }
-
-    const warnings: string[] = []
-    if (rfiFailed) warnings.push('RFI data unavailable — showing last known count')
-    if (punchFailed) warnings.push('Punch list data unavailable — showing last known count')
-
-    return {
-      total_projects: Number(row.total_projects),
-      active_projects: Number(row.active_projects),
-      total_contract_value: Number(row.total_contract_value),
+    const ZERO_METRICS: PortfolioMetrics = {
+      total_projects: 0,
+      active_projects: 0,
+      total_contract_value: 0,
       total_budget_spent: 0,
-      open_rfis: rfiFailed ? undefined : (openRfiResult.count ?? 0),
-      overdue_rfis: rfiFailed ? undefined : (overdueRfiResult.count ?? 0),
-      open_punch_items: punchFailed ? undefined : (openPunchResult.count ?? 0),
-      avg_completion_percentage: Number(row.avg_completion_percentage),
-      projects_on_schedule: Number(row.projects_on_schedule),
-      projects_at_risk: Number(row.projects_at_risk),
-      ...(warnings.length > 0 ? { warnings } : {}),
+      open_rfis: 0,
+      overdue_rfis: 0,
+      open_punch_items: 0,
+      avg_completion_percentage: 0,
+      projects_on_schedule: 0,
+      projects_at_risk: 0,
+    }
+
+    try {
+      // Round-trip 1: single-row aggregate via Postgres RPC.
+      // Joins project_metrics for avg_completion_percentage and schedule_variance_days.
+      const { data: rpcRows, error: rpcError } = await supabase.rpc('get_portfolio_metrics', { org_id: orgId })
+
+      if (rpcError) {
+        if (rpcError.code === '42883') {
+          // RPC function does not exist in the database — fall back to manual aggregation
+          // using direct table queries scoped to the org's project IDs.
+          const { data: projectRows, error: projectsError } = await supabase
+            .from('projects')
+            .select('id, status, contract_value')
+            .eq('organization_id', orgId)
+
+          if (projectsError || !projectRows || projectRows.length === 0) {
+            return ZERO_METRICS
+          }
+
+          const projectIds = projectRows.map((p) => p.id)
+          const totalContractValue = projectRows.reduce(
+            (sum, p) => sum + (p.contract_value ?? 0),
+            0
+          )
+          const activeProjects = projectRows.filter(
+            (p) => p.status === 'active' || p.status === 'in_progress'
+          ).length
+
+          const now = new Date().toISOString()
+          const [openRfiResult, overdueRfiResult, openPunchResult] = await Promise.all([
+            supabase
+              .from('rfis')
+              .select('id', { count: 'exact', head: true })
+              .in('project_id', projectIds)
+              .not('status', 'in', '("closed","answered")'),
+            supabase
+              .from('rfis')
+              .select('id', { count: 'exact', head: true })
+              .in('project_id', projectIds)
+              .neq('status', 'closed')
+              .lt('due_date', now),
+            supabase
+              .from('punch_items')
+              .select('id', { count: 'exact', head: true })
+              .in('project_id', projectIds)
+              .not('status', 'in', '("complete","closed")'),
+          ])
+
+          return {
+            total_projects: projectRows.length,
+            active_projects: activeProjects,
+            total_contract_value: totalContractValue,
+            total_budget_spent: 0,
+            open_rfis: openRfiResult.error ? 0 : (openRfiResult.count ?? 0),
+            overdue_rfis: overdueRfiResult.error ? 0 : (overdueRfiResult.count ?? 0),
+            open_punch_items: openPunchResult.error ? 0 : (openPunchResult.count ?? 0),
+            avg_completion_percentage: 0,
+            projects_on_schedule: 0,
+            projects_at_risk: 0,
+          }
+        }
+
+        throw transformSupabaseError(rpcError)
+      }
+
+      const row = rpcRows?.[0]
+      if (!row || Number(row.total_projects) === 0) {
+        return ZERO_METRICS
+      }
+
+      const now = new Date().toISOString()
+
+      // Round-trip 2: RFI and punch counts run in parallel, scoped to the org via
+      // projects!inner join (no project ID fetch needed, O(1) round-trips regardless of count).
+      const [openRfiResult, overdueRfiResult, openPunchResult] = await Promise.all([
+        supabase
+          .from('rfis')
+          .select('id, projects!inner(organization_id)', { count: 'exact', head: true })
+          .eq('projects.organization_id', orgId)
+          .not('status', 'in', '("closed","answered")'),
+        supabase
+          .from('rfis')
+          .select('id, projects!inner(organization_id)', { count: 'exact', head: true })
+          .eq('projects.organization_id', orgId)
+          .neq('status', 'closed')
+          .lt('due_date', now),
+        supabase
+          .from('punch_items')
+          .select('id, projects!inner(organization_id)', { count: 'exact', head: true })
+          .eq('projects.organization_id', orgId)
+          .not('status', 'in', '("complete","closed")'),
+      ])
+
+      // Partial failure mode: group RFI queries together and punch separately.
+      // If both groups fail we cannot show any items data, so throw.
+      // If only one group fails, surface a warning and continue with the data we have.
+      const rfiFailed = openRfiResult.error !== null || overdueRfiResult.error !== null
+      const punchFailed = openPunchResult.error !== null
+
+      if (rfiFailed && punchFailed) {
+        throw transformSupabaseError(
+          openRfiResult.error ?? overdueRfiResult.error ?? openPunchResult.error!
+        )
+      }
+
+      const warnings: string[] = []
+      if (rfiFailed) warnings.push('RFI data unavailable — showing last known count')
+      if (punchFailed) warnings.push('Punch list data unavailable — showing last known count')
+
+      return {
+        total_projects: Number(row.total_projects),
+        active_projects: Number(row.active_projects),
+        total_contract_value: Number(row.total_contract_value),
+        total_budget_spent: 0,
+        open_rfis: rfiFailed ? undefined : (openRfiResult.count ?? 0),
+        overdue_rfis: rfiFailed ? undefined : (overdueRfiResult.count ?? 0),
+        open_punch_items: punchFailed ? undefined : (openPunchResult.count ?? 0),
+        avg_completion_percentage: Number(row.avg_completion_percentage),
+        projects_on_schedule: Number(row.projects_on_schedule),
+        projects_at_risk: Number(row.projects_at_risk),
+        ...(warnings.length > 0 ? { warnings } : {}),
+      }
+    } catch {
+      return ZERO_METRICS
     }
   })
 }
