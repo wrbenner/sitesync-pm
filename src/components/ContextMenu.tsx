@@ -43,6 +43,8 @@ function ToastEntry({ toast, onClose }: { toast: ToastItem; onClose: (id: string
   const [dismissFocused, setDismissFocused] = useState(false);
   const [actionFocused, setActionFocused] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(toast.severity === 'error' ? 60 : null);
+  const [isVisible, setIsVisible] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const remainingRef = useRef<number | null>(TOAST_DURATION[toast.severity]);
   const startedAtRef = useRef<number>(Date.now());
@@ -52,22 +54,31 @@ function ToastEntry({ toast, onClose }: { toast: ToastItem; onClose: (id: string
   const fallbackStartedAtRef = useRef<number>(Date.now());
 
   useEffect(() => {
+    requestAnimationFrame(() => setIsVisible(true));
+  }, []);
+
+  const handleClose = useCallback((id: string) => {
+    setIsExiting(true);
+    setTimeout(() => onClose(id), 150);
+  }, [onClose]);
+
+  useEffect(() => {
     const duration = TOAST_DURATION[toast.severity];
     if (duration === null) return;
     remainingRef.current = duration;
     startedAtRef.current = Date.now();
-    timerRef.current = setTimeout(() => onClose(toast.id), duration);
+    timerRef.current = setTimeout(() => handleClose(toast.id), duration);
     return () => {
       if (timerRef.current !== null) clearTimeout(timerRef.current);
     };
-  }, [toast.id, toast.severity, onClose]);
+  }, [toast.id, toast.severity, handleClose]);
 
   // Fallback auto-dismiss for error toasts (60s) with visible countdown
   useEffect(() => {
     if (toast.severity !== 'error') return;
     fallbackRemainingRef.current = 60000;
     fallbackStartedAtRef.current = Date.now();
-    fallbackTimerRef.current = setTimeout(() => onClose(toast.id), 60000);
+    fallbackTimerRef.current = setTimeout(() => handleClose(toast.id), 60000);
     let countdownSecs = 60;
     countdownIntervalRef.current = setInterval(() => {
       countdownSecs -= 1;
@@ -108,12 +119,12 @@ function ToastEntry({ toast, onClose }: { toast: ToastItem; onClose: (id: string
         timerRef.current = null;
       }
       startedAtRef.current = Date.now();
-      timerRef.current = setTimeout(() => onClose(toast.id), remainingRef.current);
+      timerRef.current = setTimeout(() => handleClose(toast.id), remainingRef.current);
     }
     if (toast.severity === 'error') {
       if (fallbackRemainingRef.current <= 0) fallbackRemainingRef.current = 1000;
       fallbackStartedAtRef.current = Date.now();
-      fallbackTimerRef.current = setTimeout(() => onClose(toast.id), fallbackRemainingRef.current);
+      fallbackTimerRef.current = setTimeout(() => handleClose(toast.id), fallbackRemainingRef.current);
       const resumeSeconds = Math.ceil(fallbackRemainingRef.current / 1000);
       setCountdown(resumeSeconds);
       let countdownSecs = resumeSeconds;
@@ -122,14 +133,21 @@ function ToastEntry({ toast, onClose }: { toast: ToastItem; onClose: (id: string
         setCountdown(Math.max(0, countdownSecs));
       }, 1000);
     }
-  }, [toast.id, onClose, toast.severity]);
+  }, [toast.id, handleClose, toast.severity]);
 
   return (
+    <div
+      style={{
+        transition: 'opacity 150ms ease-out, transform 150ms ease-out',
+        opacity: isVisible && !isExiting ? 1 : 0,
+        transform: isExiting ? 'translateY(-8px)' : isVisible ? 'translateY(0)' : 'translateY(16px)',
+      }}
+    >
     <div
       role="alert"
       aria-live="assertive"
       tabIndex={0}
-      onKeyDown={(e) => { if (e.key === 'Escape') onClose(toast.id); }}
+      onKeyDown={(e) => { if (e.key === 'Escape') handleClose(toast.id); }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       style={{
@@ -159,8 +177,8 @@ function ToastEntry({ toast, onClose }: { toast: ToastItem; onClose: (id: string
       {toast.severity === 'error' && toast.action && (
         <button
           aria-label={toast.action.label}
-          onClick={() => { toast.action!.onClick(); onClose(toast.id); }}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toast.action!.onClick(); onClose(toast.id); } }}
+          onClick={() => { toast.action!.onClick(); handleClose(toast.id); }}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toast.action!.onClick(); handleClose(toast.id); } }}
           onFocus={() => setActionFocused(true)}
           onBlur={() => setActionFocused(false)}
           style={{
@@ -189,8 +207,8 @@ function ToastEntry({ toast, onClose }: { toast: ToastItem; onClose: (id: string
       {toast.severity !== 'error' && toast.action && (
         <button
           aria-label={toast.action.label}
-          onClick={() => { toast.action!.onClick(); onClose(toast.id); }}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toast.action!.onClick(); onClose(toast.id); } }}
+          onClick={() => { toast.action!.onClick(); handleClose(toast.id); }}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toast.action!.onClick(); handleClose(toast.id); } }}
           onFocus={() => setActionFocused(true)}
           onBlur={() => setActionFocused(false)}
           style={{
@@ -212,8 +230,8 @@ function ToastEntry({ toast, onClose }: { toast: ToastItem; onClose: (id: string
       )}
       <button
         aria-label="Dismiss notification"
-        onClick={() => onClose(toast.id)}
-        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClose(toast.id); } }}
+        onClick={() => handleClose(toast.id)}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClose(toast.id); } }}
         onFocus={() => setDismissFocused(true)}
         onBlur={() => setDismissFocused(false)}
         style={{
@@ -261,6 +279,7 @@ function ToastEntry({ toast, onClose }: { toast: ToastItem; onClose: (id: string
           Dismisses in {countdown}s
         </span>
       )}
+    </div>
     </div>
   );
 }
