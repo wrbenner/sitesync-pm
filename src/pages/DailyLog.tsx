@@ -30,6 +30,14 @@ import { PermissionGate } from '../components/auth/PermissionGate';
 import { getDailyLogStatusConfig } from '../machines/dailyLogMachine';
 import type { DailyLogState } from '../machines/dailyLogMachine';
 
+interface ManpowerRow {
+  id: string;
+  trade: string;
+  company: string;
+  headcount: number;
+  hours: number;
+}
+
 export const DailyLog: React.FC = () => {
   const { addToast } = useToast();
   const projectId = useProjectId();
@@ -57,6 +65,9 @@ export const DailyLog: React.FC = () => {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showAmendmentModal, setShowAmendmentModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+
+  const manpowerSeeded = React.useRef(false);
+  const [manpowerRows, setManpowerRows] = useState<ManpowerRow[]>([]);
 
   // Auto-fetch weather on mount
   useEffect(() => {
