@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useCopilotStore } from '../stores/copilotStore';
-import { Users, Clock, ShieldCheck, Cloud, ChevronRight, Camera, Send, BarChart3, Sparkles, Zap, CalendarDays, X, Lock, AlertTriangle, BookOpen, RefreshCw, Truck, UserPlus, FileEdit, HardHat } from 'lucide-react';
+import { Users, Clock, ShieldCheck, Cloud, ChevronRight, Camera, Send, BarChart3, Sparkles, Zap, CalendarDays, Calendar, X, Lock, AlertTriangle, BookOpen, RefreshCw, Truck, UserPlus, FileEdit, HardHat } from 'lucide-react';
 import { PageContainer, Card, Btn, Skeleton, SectionHeader, useToast } from '../components/Primitives';
 import EmptyState from '../components/ui/EmptyState';
 import CreateDailyLogModal from '../components/forms/CreateDailyLogModal';
@@ -51,6 +51,8 @@ export const DailyLog: React.FC = () => {
   const rejectDailyLog = useRejectDailyLog();
 
   const dailyLogHistory = dailyLogData?.data ?? [];
+  const todayStr = new Date().toISOString().split('T')[0];
+  const hasTodayLog = dailyLogHistory.some((l: any) => l.log_date?.split('T')[0] === todayStr);
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
   const [showComparison, setShowComparison] = useState(false);
   const [showSignature, setShowSignature] = useState(false);
@@ -250,14 +252,30 @@ export const DailyLog: React.FC = () => {
   // Show toast when fetch error occurs
   useEffect(() => {
     if (logError) {
-      toast.error((logError as Error).message || 'Failed to load daily log data');
+      addToast('error', (logError as Error).message || 'Failed to load daily log data');
     }
-  }, [logError]);
+  }, [logError, addToast]);
 
   if (loading) {
     return (
       <PageContainer title="Daily Log" subtitle="Loading...">
-        <DailyLogSkeleton />
+        <style>{`@keyframes pulse-dl { 0%,100% { opacity: 0.3; } 50% { opacity: 0.7; } }`}</style>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['6'] }}>
+          {/* 4 metric card placeholders */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'] }}>
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} style={{ backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.xl, padding: spacing['5'], border: `1px solid ${colors.borderSubtle}`, animation: 'pulse-dl 1.5s ease-in-out infinite', height: 96 }} aria-hidden="true" />
+            ))}
+          </div>
+          {/* Calendar placeholder */}
+          <div style={{ height: 220, backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.xl, border: `1px solid ${colors.borderSubtle}`, animation: 'pulse-dl 1.5s ease-in-out infinite' }} aria-hidden="true" />
+          {/* 3 row placeholders */}
+          <div style={{ backgroundColor: colors.white, borderRadius: borderRadius.xl, border: `1px solid ${colors.borderSubtle}`, overflow: 'hidden' }}>
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} style={{ height: 56, margin: `${spacing['3']} ${spacing['5']}`, backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.md, animation: 'pulse-dl 1.5s ease-in-out infinite', borderBottom: i < 2 ? `1px solid ${colors.borderSubtle}` : 'none' }} aria-hidden="true" />
+            ))}
+          </div>
+        </div>
       </PageContainer>
     );
   }
@@ -301,14 +319,14 @@ export const DailyLog: React.FC = () => {
         {!logError && (
           <Card padding={spacing['10']}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: spacing['4'] }}>
-              <HardHat size={64} color={colors.borderDefault} />
+              <Calendar size={64} color={colors.borderDefault} />
               <div>
                 <p style={{ fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>No daily logs yet.</p>
-                <p style={{ fontSize: typography.fontSize.body, color: colors.textTertiary, margin: 0, maxWidth: '400px' }}>
-                  The daily log is your project's official record.
+                <p style={{ fontSize: typography.fontSize.body, color: colors.textTertiary, margin: 0, maxWidth: '440px' }}>
+                  The daily log is your project's official record. Start documenting site conditions.
                 </p>
               </div>
-              <Btn variant="primary" size="md" onClick={() => setShowCreateModal(true)}>Start Today's Log</Btn>
+              <Btn variant="primary" size="md" onClick={() => { setSelectedDate(new Date().toISOString().split('T')[0]); setShowCreateModal(true); }}>Start Today's Log</Btn>
             </div>
           </Card>
         )}
@@ -471,6 +489,27 @@ export const DailyLog: React.FC = () => {
       <div style={{ display: 'flex', gap: spacing['6'] }}>
         {/* Main content */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: spacing['6'] }}>
+          {/* Today's log not started banner */}
+          {!hasTodayLog && (
+            <div
+              aria-live="polite"
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: `${spacing['3']} ${spacing['4']}`,
+                backgroundColor: colors.orangeSubtle, borderRadius: borderRadius.md,
+                borderLeft: `3px solid ${colors.primaryOrange}`,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
+                <Calendar size={14} color={colors.primaryOrange} />
+                <span style={{ fontSize: typography.fontSize.sm, color: colors.orangeText, fontWeight: typography.fontWeight.medium }}>
+                  Today's daily log hasn't been started
+                </span>
+              </div>
+              <Btn size="sm" variant="primary" onClick={() => { setSelectedDate(todayStr); setShowCreateModal(true); }}>Start Log</Btn>
+            </div>
+          )}
+
           {/* Status banner */}
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
