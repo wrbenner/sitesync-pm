@@ -179,6 +179,8 @@ const _DrawingsPage: React.FC = () => {
               return (
                 <button
                   key={discipline}
+                  aria-label={`Filter by ${discipline}`}
+                  aria-pressed={isActive}
                   onClick={() => {
                     setActiveFilters((prev) => {
                       const next = new Set(prev);
@@ -239,6 +241,15 @@ const _DrawingsPage: React.FC = () => {
               </button>
             )}
           </div>
+
+          {/* Results count — aria-live announces filter changes to screen readers */}
+          <p
+            aria-live="polite"
+            style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0, marginBottom: spacing.md }}
+          >
+            {sortedDrawings.length} drawing{sortedDrawings.length !== 1 ? 's' : ''}
+            {activeFilters.size > 0 ? ` matching selected filters` : ''}
+          </p>
 
           {/* Drawings Table */}
           <div style={{ overflowX: 'auto' }}>
@@ -314,7 +325,7 @@ const _DrawingsPage: React.FC = () => {
                   key={drawing.id}
                   role="listitem"
                   tabIndex={0}
-                  aria-label={`Drawing ${drawing.setNumber || drawing.title}, ${drawing.discipline}, revision ${drawing.revision || 0}`}
+                  aria-label={`Drawing ${drawing.sheetNumber} ${drawing.title}, revision ${drawing.currentRevision?.revision_number ?? 0}, discipline ${drawing.disciplineLabel}`}
                   className="drawing-row"
                   onClick={() => setSelectedDrawing(drawing)}
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedDrawing(drawing); } }}
