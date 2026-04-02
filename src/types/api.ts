@@ -270,6 +270,7 @@ export interface PaginatedResult<T> {
   total: number
   page: number
   pageSize: number
+  hasMore: boolean
 }
 
 // Type guard for ReasonCode (used by budget.ts to safely narrow co.reason)

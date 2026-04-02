@@ -131,6 +131,7 @@ export async function buildPaginatedQuery<TRaw, TResult = TRaw>(
     total: count ?? 0,
     page,
     pageSize,
+    hasMore: (from + pageSize) < (count ?? 0),
   }
 }
 
