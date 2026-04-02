@@ -1,14 +1,17 @@
 import React, { useEffect } from 'react';
 import { Sparkles, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 import { colors, borderRadius, shadows, transitions, spacing, typography, zIndex as themeZIndex } from '../../styles/theme';
 import { useProjectId } from '../../hooks/useProjectId';
 import { useAIInsights } from '../../hooks/queries';
 import { useCopilotStore } from '../../stores/copilotStore';
+import { supabase } from '../../lib/supabase';
 
 export const FloatingAIButton: React.FC = () => {
   const { openCopilot, isOpen } = useCopilotStore();
   const projectId = useProjectId();
+  const queryClient = useQueryClient();
   const { data: insights, isLoading, isError, refetch } = useAIInsights(projectId);
   const insightCount = insights?.length || 0;
 
@@ -18,6 +21,31 @@ export const FloatingAIButton: React.FC = () => {
     document.head.appendChild(style);
     return () => { document.head.removeChild(style); };
   }, []);
+
+  useEffect(() => {
+    if (!projectId) return;
+
+    const channel = supabase
+      .channel(`ai-insights-${projectId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'ai_insights', filter: `project_id=eq.${projectId}` },
+        () => { queryClient.invalidateQueries({ queryKey: ['ai-insights', projectId] }); }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'ai_insights', filter: `project_id=eq.${projectId}` },
+        () => { queryClient.invalidateQueries({ queryKey: ['ai-insights', projectId] }); }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'notifications', filter: `project_id=eq.${projectId}` },
+        () => { queryClient.invalidateQueries({ queryKey: ['ai-insights', projectId] }); }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [projectId, queryClient]);
 
   const titleText = isError
     ? 'AI insights could not load. Click to open copilot and retry.'
