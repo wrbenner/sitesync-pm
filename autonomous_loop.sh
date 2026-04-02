@@ -592,6 +592,7 @@ read_founder_context() {
         "INTEGRATIONS.md:INTEGRATION SPECIFICATIONS (weather, Procore, calendar, email, SMS, AI providers)"
         "LEARNINGS.md:ENGINE LEARNINGS (what worked, what failed, fix rates, score trends from prior runs — use this to avoid repeating mistakes)"
         "PAGE_ACCEPTANCE_CRITERIA.md:PAGE ACCEPTANCE CRITERIA (GOSPEL — explicit definition of done for every page. Each numbered criterion is a test case. Violations are bugs. Score against these BEFORE the 14 dimensions.)"
+        "VERIFICATION_TESTS.md:VERIFICATION TESTS (executable test specs for auth flows, RLS security, data integrity, and permission gates. After fixing auth/security/data issues, GENERATE and RUN the relevant test. A fix that compiles but fails verification is NOT fixed. RLS failures are P0 — stop everything.)"
     )
 
     for entry in "${brain_files[@]}"; do
@@ -1098,6 +1099,7 @@ ${build_errors}" "$gate_log" 180
 4. After making changes, run: npm run build — if the build fails, fix the errors before finishing.
 5. Never use hyphens in UI text. Use commas or periods instead.
 6. For Supabase/backend code: Use the client from src/lib/supabase.ts. Type all queries against the Database interface in src/types/database.ts. Use hooks from src/hooks/useSupabase.ts. Follow RLS patterns (all tables filtered by project_id). Add real-time subscriptions for rfis, daily_logs, punch_list_items, notifications. Implement optimistic updates on all mutations. Edge functions go in supabase/functions/.
+7. VERIFICATION: If this fix touches auth (useAuth, Login, Signup, ProtectedRoute), RLS (rls.ts, migrations), permissions (usePermissions, PermissionGate), or data seeding (seed.sql, mockData), you MUST also generate and run the relevant verification test from VERIFICATION_TESTS.md. A fix that compiles but fails verification is NOT fixed. Write the test file, run it with 'npx vitest run' or 'npx playwright test', and include the result. RLS test failures are P0.
 
 TASK:
 ${raw_prompt}"
