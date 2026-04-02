@@ -20,6 +20,7 @@ import { keyframes as animationKeyframes } from './styles/animations';
 import { pageTransition } from './components/transitions/variants';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import type { Shortcut } from './hooks/useKeyboardShortcuts';
+import { useMediaQuery } from './hooks/useMediaQuery';
 import { useTheme } from './hooks/useTheme';
 import { useRealtimeSubscription, usePresence } from './hooks/useRealtimeSubscription';
 import { useRealtimeInvalidation } from './hooks/useRealtimeInvalidation';
@@ -96,17 +97,6 @@ const NotFound = lazy(() => import('./pages/errors/NotFound').then((m) => ({ def
 
 const typographyConfig = { fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' };
 
-const MOBILE_BREAKPOINT = 768;
-
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth < MOBILE_BREAKPOINT);
-  useEffect(() => {
-    const handler = () => setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
-    window.addEventListener('resize', handler);
-    return () => window.removeEventListener('resize', handler);
-  }, []);
-  return isMobile;
-}
 
 function PageLoader() {
   const skeletonStyle: React.CSSProperties = {
@@ -208,7 +198,7 @@ function AppContent() {
   const { sidebarCollapsed, setSidebarCollapsed, setActiveView } = useUiStore();
   const navigate = useNavigate();
   const location = useLocation();
-  const isMobile = useIsMobile();
+  const isMobile = useMediaQuery('(max-width: 767px)');
   useTheme();
 
   const projectId = useProjectId();
