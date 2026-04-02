@@ -78,7 +78,8 @@ function ToastEntry({ toast, onClose }: { toast: ToastItem; onClose: (id: string
 
   return (
     <div
-      role={toast.severity === 'error' ? 'alert' : 'status'}
+      role="status"
+      aria-live="polite"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       style={{
