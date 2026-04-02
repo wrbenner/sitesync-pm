@@ -5,8 +5,6 @@ import { colors, spacing, typography, borderRadius, shadows } from '../../styles
 import { usePresenceStore } from '../../stores/presenceStore';
 import { useOthers } from '../../lib/liveblocks';
 import type { PresenceUserWithAction } from '../../stores/presenceStore';
-import { useUiStore } from '../../stores';
-// Announcements are delivered through the global LiveRegion rendered in App.tsx
 
 // ── Responsive maxVisible ─────────────────────────────────────────────────────
 
@@ -218,8 +216,8 @@ interface PresenceBarProps {
 
 export const PresenceBar: React.FC<PresenceBarProps> = ({ page }) => {
   const users = usePresenceStore(s => s.getUsersOnPage(page));
-  const announceStatus = useUiStore(s => s.announceStatus);
   const maxVisible = useMaxVisible();
+  const [announcement, setAnnouncement] = useState('');
   // Stores previous snapshot as a map of userId -> displayName so we can name departing users
   const prevUsersRef = useRef<Map<string, string>>(new Map());
 
@@ -227,15 +225,19 @@ export const PresenceBar: React.FC<PresenceBarProps> = ({ page }) => {
     const prev = prevUsersRef.current;
     const curr = new Map(users.map(u => [u.userId, u.displayName]));
 
+    const messages: string[] = [];
+
     // Joined: in curr but not in prev
     users
       .filter(u => !prev.has(u.userId))
-      .forEach(u => announceStatus(`${u.displayName} joined the session`));
+      .forEach(u => messages.push(`${u.displayName} started viewing this page`));
 
     // Left: in prev but not in curr
     prev.forEach((name, id) => {
-      if (!curr.has(id)) announceStatus(`${name} left the session`);
+      if (!curr.has(id)) messages.push(`${name} stopped viewing this page`);
     });
+
+    if (messages.length > 0) setAnnouncement(messages.join('. '));
 
     prevUsersRef.current = curr;
   // Only re-run when the user list identity changes
@@ -249,6 +251,13 @@ export const PresenceBar: React.FC<PresenceBarProps> = ({ page }) => {
 
   return (
     <>
+      <div
+        aria-live="polite"
+        aria-atomic="false"
+        style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)' }}
+      >
+        {announcement}
+      </div>
       <style>{`@keyframes presenceTooltipIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } } .presence-avatar-btn { background: none; font: inherit; line-height: 1; outline-offset: 2px; } .presence-avatar-btn:focus-visible { outline: 2px solid ${colors.primary}; }`}</style>
       <Tooltip.Provider delayDuration={150}>
         <div style={{
