@@ -1,5 +1,7 @@
+import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../client'
 import { ApiError, transformSupabaseError } from '../errors'
+import { queryKeys } from '../queryKeys'
 import type { EnrichedProject } from '../../types/project'
 import type { ProjectMetrics, ProjectMetricsResult } from '../../types/api'
 import { computeProjectFinancials } from '../../lib/financialEngine'
@@ -126,4 +128,22 @@ export async function getMetrics(projectId: string): Promise<ProjectMetricsResul
     // COMPUTED: source = financialEngine
     completionPercentage,
   }
+}
+
+export function useProject(projectId: string) {
+  return useQuery({
+    queryKey: queryKeys.projects.detail(projectId),
+    queryFn: () => getProject(projectId),
+    enabled: !!projectId,
+    staleTime: 30_000,
+  })
+}
+
+export function useProjectMetrics(projectId: string) {
+  return useQuery({
+    queryKey: queryKeys.metrics.project(projectId),
+    queryFn: () => getMetrics(projectId),
+    enabled: !!projectId,
+    staleTime: 60_000,
+  })
 }
