@@ -430,6 +430,7 @@ export const CopilotPanel: React.FC = () => {
           aria-live="polite"
           aria-relevant="additions"
           aria-label="AI conversation messages"
+          tabIndex={0}
           style={{
             flex: 1,
             overflow: 'auto',
