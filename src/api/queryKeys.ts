@@ -51,8 +51,18 @@ export const queryKeys = {
   schedulePhases: {
     all: (projectId: string) => ['schedule_phases', projectId] as const,
   },
+  safetyInspections: {
+    all: (projectId: string) => ['safety_inspections', projectId] as const,
+  },
   notifications: {
-    all: (userId: string) => ['notifications', userId] as const,
+    all: ['notifications'] as const,
+    unread: ['notifications', 'unread'] as const,
+  },
+  weather: {
+    byProject: (projectId: string) => ['weather', projectId] as const,
+  },
+  paymentApplications: {
+    all: (projectId: string) => ['payment_applications', projectId] as const,
   },
   activityFeed: {
     all: (projectId: string) => ['activity_feed', projectId] as const,
