@@ -46,10 +46,11 @@ const TwoStepBadge: React.FC<{ verificationStatus: string }> = ({ verificationSt
   const step2Done = verificationStatus === 'verified';
   const isRejected = verificationStatus === 'rejected';
 
-  const step1Dot = isRejected ? colors.statusCritical : step1Done ? colors.statusPending : colors.borderDefault;
+  const subStepColor = verificationStatus === 'sub_complete' ? '#7C3AED' : colors.statusPending;
+  const step1Dot = isRejected ? colors.statusCritical : step1Done ? subStepColor : colors.borderDefault;
   const step2Dot = step2Done ? colors.statusActive : colors.borderDefault;
 
-  const step1Text = isRejected ? colors.statusCritical : step1Done ? colors.statusPending : colors.textTertiary;
+  const step1Text = isRejected ? colors.statusCritical : step1Done ? subStepColor : colors.textTertiary;
   const step2Text = step2Done ? colors.statusActive : colors.textTertiary;
 
   const step1Label = isRejected ? 'Rejected' : step1Done ? 'Done' : 'Pending';
@@ -79,7 +80,7 @@ const TwoStepBadge: React.FC<{ verificationStatus: string }> = ({ verificationSt
       {/* Status label */}
       <span style={{
         fontSize: 11, fontWeight: 500, marginLeft: 5,
-        color: isRejected ? colors.statusCritical : step2Done ? colors.statusActive : step1Done ? colors.statusPending : colors.textTertiary,
+        color: isRejected ? colors.statusCritical : step2Done ? colors.statusActive : step1Done ? subStepColor : colors.textTertiary,
       }}>
         {statusLabel[verificationStatus] ?? verificationStatus}
       </span>
@@ -148,6 +149,7 @@ function formatDate(dateStr: string): string {
 const PunchListPage: React.FC = () => {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [atRiskFilter, setAtRiskFilter] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [areaFilter, setAreaFilter] = useState<string>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [bulkSelected, setBulkSelected] = useState<Set<string>>(new Set());
@@ -249,6 +251,9 @@ const PunchListPage: React.FC = () => {
   // Filter logic
   const filteredList = useMemo(() => {
     let list = punchListItems;
+    if (statusFilter !== 'all') {
+      list = list.filter(p => p.verification_status === statusFilter);
+    }
     if (atRiskFilter) {
       list = list.filter(p => p.verification_status === 'open' && (p.priority === 'high' || p.priority === 'critical'));
     }
@@ -256,13 +261,14 @@ const PunchListPage: React.FC = () => {
       list = list.filter(p => p.area.startsWith(areaFilter));
     }
     return list;
-  }, [punchListItems, atRiskFilter, areaFilter]);
+  }, [punchListItems, statusFilter, atRiskFilter, areaFilter]);
 
-  const hasActiveFilters = atRiskFilter || areaFilter !== 'all';
+  const hasActiveFilters = atRiskFilter || areaFilter !== 'all' || statusFilter !== 'all';
 
   const clearAllFilters = useCallback(() => {
     setAtRiskFilter(false);
     setAreaFilter('all');
+    setStatusFilter('all');
   }, []);
 
   const selected = punchListItems.find(p => p.id === selectedId) || null;
@@ -610,6 +616,45 @@ const PunchListPage: React.FC = () => {
         </Card>
       </div>
 
+      {/* Status Filter Tabs */}
+      <div style={{ display: 'flex', gap: spacing['2'], marginBottom: spacing['3'], flexWrap: 'wrap' as const }}>
+        {[
+          { value: 'all', label: 'All', count: totalCount, color: colors.textSecondary, activeBg: `${colors.primaryOrange}15`, activeColor: colors.primaryOrange },
+          { value: 'open', label: 'Open', count: openCount, color: colors.statusCritical, activeBg: `${colors.statusCritical}15`, activeColor: colors.statusCritical },
+          { value: 'sub_complete', label: 'Awaiting Verification', count: subCompleteCount, color: '#7C3AED', activeBg: '#EDE9FE', activeColor: '#7C3AED' },
+          { value: 'verified', label: 'Verified', count: verifiedCount, color: colors.statusActive, activeBg: `${colors.statusActive}15`, activeColor: colors.statusActive },
+          { value: 'rejected', label: 'Rejected', count: rejectedCount, color: colors.statusCritical, activeBg: `${colors.statusCritical}15`, activeColor: colors.statusCritical },
+        ].map(tab => {
+          const isActive = statusFilter === tab.value;
+          return (
+            <button
+              key={tab.value}
+              onClick={() => { setStatusFilter(tab.value); setAtRiskFilter(false); }}
+              style={{
+                padding: `${spacing['1']} ${spacing['3']}`,
+                fontSize: typography.fontSize.sm,
+                fontFamily: typography.fontFamily,
+                fontWeight: isActive ? typography.fontWeight.semibold : typography.fontWeight.medium,
+                backgroundColor: isActive ? tab.activeBg : 'transparent',
+                color: isActive ? tab.activeColor : colors.textSecondary,
+                border: `1px solid ${isActive ? tab.activeColor : colors.borderDefault}`,
+                borderRadius: borderRadius.full,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: spacing['1'],
+                transition: 'all 0.1s',
+              }}
+            >
+              {tab.label}
+              <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, opacity: 0.8 }}>
+                {tab.count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
       {/* Area/Floor Filter */}
       <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'], marginBottom: spacing['3'] }}>
         <label style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, fontWeight: typography.fontWeight.medium }}>Filter by Area:</label>
@@ -669,7 +714,7 @@ const PunchListPage: React.FC = () => {
           {filteredList.map((item) => {
             const statusDotColor =
               item.verification_status === 'verified' ? colors.statusActive :
-              item.verification_status === 'sub_complete' ? colors.statusPending :
+              item.verification_status === 'sub_complete' ? '#7C3AED' :
               colors.statusCritical;
             return (
               <div
