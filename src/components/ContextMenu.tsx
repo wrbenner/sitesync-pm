@@ -229,7 +229,9 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ items, children }) => 
   const [open, setOpen] = useState(false);
   const [visible, setVisible] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [focusedIndex, setFocusedIndex] = useState(-1);
   const menuRef = useRef<HTMLDivElement>(null);
+  const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -257,31 +259,44 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ items, children }) => 
   useEffect(() => {
     if (open) {
       setVisible(false);
+      setFocusedIndex(0);
       requestAnimationFrame(() => {
         setVisible(true);
       });
-      menuRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus();
     } else {
       setVisible(false);
+      setFocusedIndex(-1);
     }
   }, [open]);
+
+  useEffect(() => {
+    if (focusedIndex >= 0) {
+      itemRefs.current[focusedIndex]?.focus();
+    }
+  }, [focusedIndex]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
       e.preventDefault();
       setOpen(false);
-    } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+    } else if (e.key === 'ArrowDown') {
       e.preventDefault();
-      const items = Array.from(menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]') ?? []);
-      const focused = document.activeElement as HTMLButtonElement;
-      const idx = items.indexOf(focused);
-      if (e.key === 'ArrowUp') {
-        items[Math.max(0, idx - 1)]?.focus();
-      } else {
-        items[Math.min(items.length - 1, idx + 1)]?.focus();
+      setFocusedIndex(prev => (prev + 1) % items.length);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setFocusedIndex(prev => (prev - 1 + items.length) % items.length);
+    } else if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      if (focusedIndex >= 0 && focusedIndex < items.length) {
+        items[focusedIndex].onClick();
+        setOpen(false);
       }
     }
-  }, []);
+  }, [focusedIndex, items]);
+
+  const focusedItemId = focusedIndex >= 0
+    ? (items[focusedIndex]?.id ?? `context-menu-item-${focusedIndex}`)
+    : undefined;
 
   return (
     <>
@@ -292,7 +307,9 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ items, children }) => 
           role="menu"
           aria-label="Context menu"
           aria-orientation="vertical"
+          aria-activedescendant={focusedItemId}
           onKeyDown={handleKeyDown}
+          tabIndex={-1}
           style={{
             position: 'fixed',
             top: position.y,
@@ -309,52 +326,57 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ items, children }) => 
             transformOrigin: 'top left',
           }}
         >
-          {items.map((item, i) => (
-            <React.Fragment key={item.id ?? `${item.label}-${i}`}>
-              {item.divider && (
-                <div
-                  style={{
-                    height: 1,
-                    backgroundColor: '#E5E7EB',
-                    margin: '4px 0',
+          {items.map((item, i) => {
+            const itemId = item.id ?? `context-menu-item-${i}`;
+            return (
+              <React.Fragment key={itemId}>
+                {item.divider && (
+                  <div
+                    style={{
+                      height: 1,
+                      backgroundColor: '#E5E7EB',
+                      margin: '4px 0',
+                    }}
+                  />
+                )}
+                <button
+                  id={itemId}
+                  role="menuitem"
+                  tabIndex={focusedIndex === i ? 0 : -1}
+                  ref={el => { itemRefs.current[i] = el; }}
+                  aria-label={item.label}
+                  onClick={() => {
+                    item.onClick();
+                    setOpen(false);
                   }}
-                />
-              )}
-              <button
-                role="menuitem"
-                tabIndex={-1}
-                aria-label={item.label}
-                onClick={() => {
-                  item.onClick();
-                  setOpen(false);
-                }}
-                style={{
-                  width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: spacing['3'],
-                  padding: `${spacing['2']} ${spacing['3']}`,
-                  border: 'none',
-                  backgroundColor: 'transparent',
-                  color: item.danger ? colors.statusCritical : colors.textPrimary,
-                  fontSize: typography.fontSize.sm,
-                  fontFamily: typography.fontFamily,
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  transition: `background-color ${transitions.instant}`,
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.surfaceHover;
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
-                }}
-              >
-                {item.icon && <span style={{ display: 'flex', color: item.danger ? colors.statusCritical : colors.textTertiary }}>{item.icon}</span>}
-                <span>{item.label}</span>
-              </button>
-            </React.Fragment>
-          ))}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: spacing['3'],
+                    padding: `${spacing['2']} ${spacing['3']}`,
+                    border: 'none',
+                    backgroundColor: 'transparent',
+                    color: item.danger ? colors.statusCritical : colors.textPrimary,
+                    fontSize: typography.fontSize.sm,
+                    fontFamily: typography.fontFamily,
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: `background-color ${transitions.instant}`,
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.surfaceHover;
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
+                  }}
+                >
+                  {item.icon && <span style={{ display: 'flex', color: item.danger ? colors.statusCritical : colors.textTertiary }}>{item.icon}</span>}
+                  <span>{item.label}</span>
+                </button>
+              </React.Fragment>
+            );
+          })}
         </div>
       )}
     </>
