@@ -22,6 +22,12 @@ const tabs: { key: TabKey; label: string; icon: React.ElementType }[] = [
   { key: 'ai_analysis', label: 'AI Photo Analysis', icon: Camera },
 ]
 
+// Visually hidden helper for screen readers
+const srOnly: React.CSSProperties = {
+  position: 'absolute', width: 1, height: 1, padding: 0, margin: -1,
+  overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0,
+}
+
 // ── Column helpers ───────────────────────────────────────────
 
 const inspectionCol = createColumnHelper<any>()
@@ -121,15 +127,20 @@ const incidentColumns = [
       const severityBg = v === 'serious' || v === 'fatality' ? colors.statusCriticalSubtle
         : v === 'moderate' ? colors.statusPendingSubtle
         : colors.statusActiveSubtle
+      const severityLabel = v ? v.charAt(0).toUpperCase() + v.slice(1).replace(/_/g, ' ') : ''
       return (
-        <span style={{
-          display: 'inline-flex', alignItems: 'center', gap: spacing.xs,
-          padding: `2px ${spacing.sm}`, borderRadius: borderRadius.full,
-          fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
-          color: severityColor, backgroundColor: severityBg,
-        }}>
-          <div style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: severityColor }} />
-          {v ? v.charAt(0).toUpperCase() + v.slice(1).replace(/_/g, ' ') : ''}
+        <span
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: spacing.xs,
+            padding: `2px ${spacing.sm}`, borderRadius: borderRadius.full,
+            fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
+            color: severityColor, backgroundColor: severityBg,
+          }}
+          aria-label={`Severity: ${severityLabel}`}
+        >
+          <div style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: severityColor }} aria-hidden="true" />
+          <span aria-hidden="true">{severityLabel}</span>
+          <span style={srOnly}>{severityLabel}</span>
         </span>
       )
     },
@@ -468,7 +479,12 @@ export const Safety: React.FC = () => {
         <>
           {/* KPI Grid */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, marginBottom: spacing['2xl'] }}>
-            <div style={{ minWidth: 280, flex: 1 }}>
+            <div
+              style={{ minWidth: 280, flex: 1 }}
+              role="status"
+              aria-live="polite"
+              aria-label={`Days Without Incident: ${daysSinceIncident > 900 ? '999 or more' : daysSinceIncident}`}
+            >
               <MetricBox
                 label="Days Without Incident"
                 value={daysSinceIncident > 900 ? '999+' : daysSinceIncident}
@@ -476,7 +492,10 @@ export const Safety: React.FC = () => {
                 changeLabel="recordable"
               />
             </div>
-            <div style={{ minWidth: 280, flex: 1 }}>
+            <div
+              style={{ minWidth: 280, flex: 1 }}
+              aria-label={`Total Recordable Incident Rate: ${trir}`}
+            >
               <MetricBox
                 label="TRIR"
                 value={trir}
@@ -673,14 +692,18 @@ export const Safety: React.FC = () => {
                     <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.orangeText }}>
                       {inc.incident_number}
                     </span>
-                    <span style={{
-                      display: 'inline-flex', alignItems: 'center', gap: spacing.xs,
-                      padding: `2px ${spacing.sm}`, borderRadius: borderRadius.full,
-                      fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
-                      color: severityColor, backgroundColor: severityBg,
-                    }}>
-                      <div style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: severityColor }} />
-                      {inc.severity ? inc.severity.charAt(0).toUpperCase() + inc.severity.slice(1) : ''}
+                    <span
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: spacing.xs,
+                        padding: `2px ${spacing.sm}`, borderRadius: borderRadius.full,
+                        fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
+                        color: severityColor, backgroundColor: severityBg,
+                      }}
+                      aria-label={`Severity: ${inc.severity ? inc.severity.charAt(0).toUpperCase() + inc.severity.slice(1) : 'Unknown'}`}
+                    >
+                      <div style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: severityColor }} aria-hidden="true" />
+                      <span aria-hidden="true">{inc.severity ? inc.severity.charAt(0).toUpperCase() + inc.severity.slice(1) : ''}</span>
+                      <span style={srOnly}>{inc.severity ? inc.severity.charAt(0).toUpperCase() + inc.severity.slice(1) : ''}</span>
                     </span>
                   </div>
                   <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textPrimary, marginBottom: spacing['1'] }}>
