@@ -41,9 +41,14 @@ const TOAST_DURATION: Record<ToastSeverity, number | null> = {
 function ToastEntry({ toast, onClose }: { toast: ToastItem; onClose: (id: string) => void }) {
   const style = TOAST_SEVERITY_STYLES[toast.severity];
   const [dismissFocused, setDismissFocused] = useState(false);
+  const [countdown, setCountdown] = useState<number | null>(toast.severity === 'error' ? 60 : null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const remainingRef = useRef<number | null>(TOAST_DURATION[toast.severity]);
   const startedAtRef = useRef<number>(Date.now());
+  const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const fallbackRemainingRef = useRef<number>(60000);
+  const fallbackStartedAtRef = useRef<number>(Date.now());
 
   useEffect(() => {
     const duration = TOAST_DURATION[toast.severity];
@@ -56,32 +61,67 @@ function ToastEntry({ toast, onClose }: { toast: ToastItem; onClose: (id: string
     };
   }, [toast.id, toast.severity, onClose]);
 
-  // Fallback auto-dismiss for error toasts (15s) so they never persist indefinitely
+  // Fallback auto-dismiss for error toasts (60s) with visible countdown
   useEffect(() => {
     if (toast.severity !== 'error') return;
-    const t = setTimeout(() => onClose(toast.id), 30000);
-    return () => clearTimeout(t);
+    fallbackRemainingRef.current = 60000;
+    fallbackStartedAtRef.current = Date.now();
+    fallbackTimerRef.current = setTimeout(() => onClose(toast.id), 60000);
+    let countdownSecs = 60;
+    countdownIntervalRef.current = setInterval(() => {
+      countdownSecs -= 1;
+      setCountdown(Math.max(0, countdownSecs));
+    }, 1000);
+    return () => {
+      if (fallbackTimerRef.current !== null) clearTimeout(fallbackTimerRef.current);
+      if (countdownIntervalRef.current !== null) clearInterval(countdownIntervalRef.current);
+    };
   }, [toast.id, toast.severity, onClose]);
 
   const handleMouseEnter = useCallback(() => {
-    if (remainingRef.current === null) return;
-    if (timerRef.current !== null) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
+    if (remainingRef.current !== null) {
+      if (timerRef.current !== null) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+      remainingRef.current = Math.max(0, remainingRef.current - (Date.now() - startedAtRef.current));
     }
-    remainingRef.current = Math.max(0, remainingRef.current - (Date.now() - startedAtRef.current));
-  }, []);
+    if (toast.severity === 'error') {
+      if (fallbackTimerRef.current !== null) {
+        clearTimeout(fallbackTimerRef.current);
+        fallbackTimerRef.current = null;
+      }
+      if (countdownIntervalRef.current !== null) {
+        clearInterval(countdownIntervalRef.current);
+        countdownIntervalRef.current = null;
+      }
+      fallbackRemainingRef.current = Math.max(0, fallbackRemainingRef.current - (Date.now() - fallbackStartedAtRef.current));
+    }
+  }, [toast.severity]);
 
   const handleMouseLeave = useCallback(() => {
-    if (remainingRef.current === null) return;
-    if (remainingRef.current <= 0) remainingRef.current = 1000;
-    if (timerRef.current !== null) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
+    if (remainingRef.current !== null) {
+      if (remainingRef.current <= 0) remainingRef.current = 1000;
+      if (timerRef.current !== null) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+      startedAtRef.current = Date.now();
+      timerRef.current = setTimeout(() => onClose(toast.id), remainingRef.current);
     }
-    startedAtRef.current = Date.now();
-    timerRef.current = setTimeout(() => onClose(toast.id), remainingRef.current);
-  }, [toast.id, onClose]);
+    if (toast.severity === 'error') {
+      if (fallbackRemainingRef.current <= 0) fallbackRemainingRef.current = 1000;
+      fallbackStartedAtRef.current = Date.now();
+      fallbackTimerRef.current = setTimeout(() => onClose(toast.id), fallbackRemainingRef.current);
+      const resumeSeconds = Math.ceil(fallbackRemainingRef.current / 1000);
+      setCountdown(resumeSeconds);
+      let countdownSecs = resumeSeconds;
+      countdownIntervalRef.current = setInterval(() => {
+        countdownSecs -= 1;
+        setCountdown(Math.max(0, countdownSecs));
+      }, 1000);
+    }
+  }, [toast.id, onClose, toast.severity]);
 
   return (
     <div
@@ -196,6 +236,19 @@ function ToastEntry({ toast, onClose }: { toast: ToastItem; onClose: (id: string
       >
         &#x2715;
       </button>
+      {toast.severity === 'error' && countdown !== null && (
+        <span
+          style={{
+            fontSize: typography.fontSize.sm,
+            color: style.text,
+            opacity: 0.7,
+            flexShrink: 0,
+            whiteSpace: 'nowrap',
+          }}
+        >
+          Dismisses in {countdown}s
+        </span>
+      )}
     </div>
   );
 }
