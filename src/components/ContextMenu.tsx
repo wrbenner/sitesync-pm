@@ -74,6 +74,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ items, children }) => 
           ref={menuRef}
           role="menu"
           aria-label="Context menu"
+          aria-orientation="vertical"
           onKeyDown={handleKeyDown}
           style={{
             position: 'fixed',
@@ -101,7 +102,8 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ items, children }) => 
               )}
               <button
                 role="menuitem"
-                tabIndex={0}
+                tabIndex={-1}
+                aria-label={item.label}
                 onClick={() => {
                   item.onClick();
                   setOpen(false);
