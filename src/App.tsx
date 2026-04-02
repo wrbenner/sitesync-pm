@@ -98,18 +98,18 @@ const NotFound = lazy(() => import('./pages/errors/NotFound').then((m) => ({ def
 const typographyConfig = { fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' };
 
 
-function PageLoader() {
+function PageSkeleton() {
   const skeletonStyle: React.CSSProperties = {
     backgroundColor: '#E5E7EB',
     borderRadius: '12px',
-    animation: 'page-loader-pulse 1.5s ease-in-out infinite',
+    animation: 'page-skeleton-pulse 1.5s ease-in-out infinite',
   };
   return (
     <>
-      <style>{`@keyframes page-loader-pulse { 0%, 100% { opacity: 0.4 } 50% { opacity: 0.7 } }`}</style>
-      <div style={{ padding: '32px', flex: 1 }}>
+      <style>{`@keyframes page-skeleton-pulse { 0%, 100% { opacity: 0.4 } 50% { opacity: 0.7 } }`}</style>
+      <div style={{ padding: '32px', flex: 1, minHeight: '100vh' }}>
         <div style={{ display: 'flex', gap: '16px', marginBottom: '24px' }}>
-          {[1, 2, 3, 4].map((i) => (
+          {[1, 2, 3].map((i) => (
             <div key={i} style={{ ...skeletonStyle, height: '100px', flex: '1' }} />
           ))}
         </div>
@@ -117,6 +117,10 @@ function PageLoader() {
       </div>
     </>
   );
+}
+
+function PageSuspense({ children }: { children: React.ReactNode }) {
+  return <Suspense fallback={<PageSkeleton />}>{children}</Suspense>;
 }
 
 
@@ -135,56 +139,54 @@ function AppRoutes() {
           transition={{ duration: 0.15, ease: 'easeOut' }}
           style={{ width: '100%', minHeight: '100vh' }}
         >
-          <Suspense fallback={<PageLoader />}>
-            <Routes location={location}>
-              <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<Signup />} />
-              <Route path="/portfolio" element={<ProtectedRoute moduleId="portfolio" moduleName="Portfolio"><Portfolio /></ProtectedRoute>} />
-              <Route path="/" element={<ProtectedRoute moduleId="dashboard" moduleName="Dashboard"><Dashboard /></ProtectedRoute>} />
-              <Route path="/dashboard" element={<ProtectedRoute moduleId="dashboard" moduleName="Dashboard"><Dashboard /></ProtectedRoute>} />
-              <Route path="/tasks" element={<ProtectedRoute moduleId="tasks" moduleName="Tasks"><Tasks /></ProtectedRoute>} />
-              <Route path="/drawings" element={<ProtectedRoute moduleId="drawings" moduleName="Drawings"><Drawings /></ProtectedRoute>} />
-              <Route path="/rfis" element={<ProtectedRoute moduleId="rfis" moduleName="RFIs"><RFIs /></ProtectedRoute>} />
-              <Route path="/submittals" element={<ProtectedRoute moduleId="submittals" moduleName="Submittals"><Submittals /></ProtectedRoute>} />
-              <Route path="/schedule" element={<ProtectedRoute moduleId="schedule" moduleName="Schedule"><Schedule /></ProtectedRoute>} />
-              <Route path="/lookahead" element={<ProtectedRoute moduleId="lookahead" moduleName="Lookahead"><Lookahead /></ProtectedRoute>} />
-              <Route path="/budget" element={<ProtectedRoute moduleId="budget" moduleName="Budget"><Budget /></ProtectedRoute>} />
-              <Route path="/change-orders" element={<ProtectedRoute moduleId="change-orders" moduleName="Change Orders"><ChangeOrders /></ProtectedRoute>} />
-              <Route path="/daily-log" element={<ProtectedRoute moduleId="daily-log" moduleName="Daily Log"><DailyLog /></ProtectedRoute>} />
-              <Route path="/field-capture" element={<ProtectedRoute moduleId="field-capture" moduleName="Field Capture"><FieldCapture /></ProtectedRoute>} />
-              <Route path="/punch-list" element={<ProtectedRoute moduleId="punch-list" moduleName="Punch List"><PunchList /></ProtectedRoute>} />
-              <Route path="/crews" element={<ProtectedRoute moduleId="crews" moduleName="Crews"><Crews /></ProtectedRoute>} />
-              <Route path="/safety" element={<ProtectedRoute moduleId="safety" moduleName="Safety"><Safety /></ProtectedRoute>} />
-              <Route path="/estimating" element={<ProtectedRoute moduleId="estimating" moduleName="Estimating"><Estimating /></ProtectedRoute>} />
-              <Route path="/procurement" element={<ProtectedRoute moduleId="procurement" moduleName="Procurement"><Procurement /></ProtectedRoute>} />
-              <Route path="/equipment" element={<ProtectedRoute moduleId="equipment" moduleName="Equipment"><EquipmentPage /></ProtectedRoute>} />
-              <Route path="/directory" element={<ProtectedRoute moduleId="directory" moduleName="Directory"><Directory /></ProtectedRoute>} />
-              <Route path="/meetings" element={<ProtectedRoute moduleId="meetings" moduleName="Meetings"><Meetings /></ProtectedRoute>} />
-              <Route path="/files" element={<ProtectedRoute moduleId="files" moduleName="Files"><Files /></ProtectedRoute>} />
-              <Route path="/copilot" element={<ProtectedRoute moduleId="copilot" moduleName="AI Copilot"><AICopilot /></ProtectedRoute>} />
-              <Route path="/activity" element={<ProtectedRoute moduleId="activity" moduleName="Activity"><Activity /></ProtectedRoute>} />
-              <Route path="/audit-trail" element={<ProtectedRoute moduleId="audit-trail" moduleName="Audit Trail"><AuditTrail /></ProtectedRoute>} />
-              <Route path="/time-machine" element={<ProtectedRoute moduleId="time-machine" moduleName="Time Machine"><TimeMachine /></ProtectedRoute>} />
-              <Route path="/project-health" element={<ProtectedRoute moduleId="project-health" moduleName="Project Health"><ProjectHealth /></ProtectedRoute>} />
-              <Route path="/financials" element={<ProtectedRoute moduleId="financials" moduleName="Financials"><Financials /></ProtectedRoute>} />
-              <Route path="/pay-apps" element={<ProtectedRoute moduleId="pay-apps" moduleName="Payment Applications"><PaymentApplications /></ProtectedRoute>} />
-              <Route path="/insurance" element={<ProtectedRoute moduleId="insurance" moduleName="Insurance"><Insurance /></ProtectedRoute>} />
-              <Route path="/portal/owner" element={<ProtectedRoute requiredPermission="project.settings" moduleName="Owner Portal"><OwnerPortal /></ProtectedRoute>} />
-              <Route path="/ai-agents" element={<ProtectedRoute moduleId="ai-agents" moduleName="AI Agents"><AIAgents /></ProtectedRoute>} />
-              <Route path="/workforce" element={<ProtectedRoute moduleId="workforce" moduleName="Workforce"><Workforce /></ProtectedRoute>} />
-              <Route path="/permits" element={<ProtectedRoute moduleId="permits" moduleName="Permits"><Permits /></ProtectedRoute>} />
-              <Route path="/integrations" element={<ProtectedRoute moduleId="integrations" moduleName="Integrations"><Integrations /></ProtectedRoute>} />
-              <Route path="/marketplace" element={<ProtectedRoute moduleId="marketplace" moduleName="App Marketplace"><Marketplace /></ProtectedRoute>} />
-              <Route path="/developers" element={<ProtectedRoute moduleId="developers" moduleName="Developer Portal"><Developers /></ProtectedRoute>} />
-              <Route path="/reports" element={<ProtectedRoute moduleId="reports" moduleName="Reports"><Reports /></ProtectedRoute>} />
-              <Route path="/sustainability" element={<ProtectedRoute moduleId="sustainability" moduleName="Sustainability"><Sustainability /></ProtectedRoute>} />
-              <Route path="/benchmarks" element={<ProtectedRoute moduleId="benchmarks" moduleName="Platform Intelligence"><Benchmarks /></ProtectedRoute>} />
-              <Route path="/warranties" element={<ProtectedRoute moduleId="warranties" moduleName="Warranties"><WarrantiesPage /></ProtectedRoute>} />
-              <Route path="/onboarding" element={<Onboarding />} />
-              <Route path="/vision" element={<ProtectedRoute><Vision /></ProtectedRoute>} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
+          <Routes location={location}>
+            <Route path="/login" element={<PageSuspense><Login /></PageSuspense>} />
+            <Route path="/signup" element={<PageSuspense><Signup /></PageSuspense>} />
+            <Route path="/portfolio" element={<PageSuspense><ProtectedRoute moduleId="portfolio" moduleName="Portfolio"><Portfolio /></ProtectedRoute></PageSuspense>} />
+            <Route path="/" element={<PageSuspense><ProtectedRoute moduleId="dashboard" moduleName="Dashboard"><Dashboard /></ProtectedRoute></PageSuspense>} />
+            <Route path="/dashboard" element={<PageSuspense><ProtectedRoute moduleId="dashboard" moduleName="Dashboard"><Dashboard /></ProtectedRoute></PageSuspense>} />
+            <Route path="/tasks" element={<PageSuspense><ProtectedRoute moduleId="tasks" moduleName="Tasks"><Tasks /></ProtectedRoute></PageSuspense>} />
+            <Route path="/drawings" element={<PageSuspense><ProtectedRoute moduleId="drawings" moduleName="Drawings"><Drawings /></ProtectedRoute></PageSuspense>} />
+            <Route path="/rfis" element={<PageSuspense><ProtectedRoute moduleId="rfis" moduleName="RFIs"><RFIs /></ProtectedRoute></PageSuspense>} />
+            <Route path="/submittals" element={<PageSuspense><ProtectedRoute moduleId="submittals" moduleName="Submittals"><Submittals /></ProtectedRoute></PageSuspense>} />
+            <Route path="/schedule" element={<PageSuspense><ProtectedRoute moduleId="schedule" moduleName="Schedule"><Schedule /></ProtectedRoute></PageSuspense>} />
+            <Route path="/lookahead" element={<PageSuspense><ProtectedRoute moduleId="lookahead" moduleName="Lookahead"><Lookahead /></ProtectedRoute></PageSuspense>} />
+            <Route path="/budget" element={<PageSuspense><ProtectedRoute moduleId="budget" moduleName="Budget"><Budget /></ProtectedRoute></PageSuspense>} />
+            <Route path="/change-orders" element={<PageSuspense><ProtectedRoute moduleId="change-orders" moduleName="Change Orders"><ChangeOrders /></ProtectedRoute></PageSuspense>} />
+            <Route path="/daily-log" element={<PageSuspense><ProtectedRoute moduleId="daily-log" moduleName="Daily Log"><DailyLog /></ProtectedRoute></PageSuspense>} />
+            <Route path="/field-capture" element={<PageSuspense><ProtectedRoute moduleId="field-capture" moduleName="Field Capture"><FieldCapture /></ProtectedRoute></PageSuspense>} />
+            <Route path="/punch-list" element={<PageSuspense><ProtectedRoute moduleId="punch-list" moduleName="Punch List"><PunchList /></ProtectedRoute></PageSuspense>} />
+            <Route path="/crews" element={<PageSuspense><ProtectedRoute moduleId="crews" moduleName="Crews"><Crews /></ProtectedRoute></PageSuspense>} />
+            <Route path="/safety" element={<PageSuspense><ProtectedRoute moduleId="safety" moduleName="Safety"><Safety /></ProtectedRoute></PageSuspense>} />
+            <Route path="/estimating" element={<PageSuspense><ProtectedRoute moduleId="estimating" moduleName="Estimating"><Estimating /></ProtectedRoute></PageSuspense>} />
+            <Route path="/procurement" element={<PageSuspense><ProtectedRoute moduleId="procurement" moduleName="Procurement"><Procurement /></ProtectedRoute></PageSuspense>} />
+            <Route path="/equipment" element={<PageSuspense><ProtectedRoute moduleId="equipment" moduleName="Equipment"><EquipmentPage /></ProtectedRoute></PageSuspense>} />
+            <Route path="/directory" element={<PageSuspense><ProtectedRoute moduleId="directory" moduleName="Directory"><Directory /></ProtectedRoute></PageSuspense>} />
+            <Route path="/meetings" element={<PageSuspense><ProtectedRoute moduleId="meetings" moduleName="Meetings"><Meetings /></ProtectedRoute></PageSuspense>} />
+            <Route path="/files" element={<PageSuspense><ProtectedRoute moduleId="files" moduleName="Files"><Files /></ProtectedRoute></PageSuspense>} />
+            <Route path="/copilot" element={<PageSuspense><ProtectedRoute moduleId="copilot" moduleName="AI Copilot"><AICopilot /></ProtectedRoute></PageSuspense>} />
+            <Route path="/activity" element={<PageSuspense><ProtectedRoute moduleId="activity" moduleName="Activity"><Activity /></ProtectedRoute></PageSuspense>} />
+            <Route path="/audit-trail" element={<PageSuspense><ProtectedRoute moduleId="audit-trail" moduleName="Audit Trail"><AuditTrail /></ProtectedRoute></PageSuspense>} />
+            <Route path="/time-machine" element={<PageSuspense><ProtectedRoute moduleId="time-machine" moduleName="Time Machine"><TimeMachine /></ProtectedRoute></PageSuspense>} />
+            <Route path="/project-health" element={<PageSuspense><ProtectedRoute moduleId="project-health" moduleName="Project Health"><ProjectHealth /></ProtectedRoute></PageSuspense>} />
+            <Route path="/financials" element={<PageSuspense><ProtectedRoute moduleId="financials" moduleName="Financials"><Financials /></ProtectedRoute></PageSuspense>} />
+            <Route path="/pay-apps" element={<PageSuspense><ProtectedRoute moduleId="pay-apps" moduleName="Payment Applications"><PaymentApplications /></ProtectedRoute></PageSuspense>} />
+            <Route path="/insurance" element={<PageSuspense><ProtectedRoute moduleId="insurance" moduleName="Insurance"><Insurance /></ProtectedRoute></PageSuspense>} />
+            <Route path="/portal/owner" element={<PageSuspense><ProtectedRoute requiredPermission="project.settings" moduleName="Owner Portal"><OwnerPortal /></ProtectedRoute></PageSuspense>} />
+            <Route path="/ai-agents" element={<PageSuspense><ProtectedRoute moduleId="ai-agents" moduleName="AI Agents"><AIAgents /></ProtectedRoute></PageSuspense>} />
+            <Route path="/workforce" element={<PageSuspense><ProtectedRoute moduleId="workforce" moduleName="Workforce"><Workforce /></ProtectedRoute></PageSuspense>} />
+            <Route path="/permits" element={<PageSuspense><ProtectedRoute moduleId="permits" moduleName="Permits"><Permits /></ProtectedRoute></PageSuspense>} />
+            <Route path="/integrations" element={<PageSuspense><ProtectedRoute moduleId="integrations" moduleName="Integrations"><Integrations /></ProtectedRoute></PageSuspense>} />
+            <Route path="/marketplace" element={<PageSuspense><ProtectedRoute moduleId="marketplace" moduleName="App Marketplace"><Marketplace /></ProtectedRoute></PageSuspense>} />
+            <Route path="/developers" element={<PageSuspense><ProtectedRoute moduleId="developers" moduleName="Developer Portal"><Developers /></ProtectedRoute></PageSuspense>} />
+            <Route path="/reports" element={<PageSuspense><ProtectedRoute moduleId="reports" moduleName="Reports"><Reports /></ProtectedRoute></PageSuspense>} />
+            <Route path="/sustainability" element={<PageSuspense><ProtectedRoute moduleId="sustainability" moduleName="Sustainability"><Sustainability /></ProtectedRoute></PageSuspense>} />
+            <Route path="/benchmarks" element={<PageSuspense><ProtectedRoute moduleId="benchmarks" moduleName="Platform Intelligence"><Benchmarks /></ProtectedRoute></PageSuspense>} />
+            <Route path="/warranties" element={<PageSuspense><ProtectedRoute moduleId="warranties" moduleName="Warranties"><WarrantiesPage /></ProtectedRoute></PageSuspense>} />
+            <Route path="/onboarding" element={<PageSuspense><Onboarding /></PageSuspense>} />
+            <Route path="/vision" element={<PageSuspense><ProtectedRoute><Vision /></ProtectedRoute></PageSuspense>} />
+            <Route path="*" element={<PageSuspense><NotFound /></PageSuspense>} />
+          </Routes>
         </motion.div>
       </AnimatePresence>
     </>
@@ -290,11 +292,7 @@ function AppContent() {
 
   // Auth pages render without the app shell (no sidebar, no offline banner)
   if (isAuthPage) {
-    return (
-      <Suspense fallback={<PageLoader />}>
-        <AppRoutes />
-      </Suspense>
-    );
+    return <AppRoutes />;
   }
 
   // Mobile layout

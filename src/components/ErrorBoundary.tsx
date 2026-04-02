@@ -137,6 +137,23 @@ export class ErrorBoundary extends React.Component<Props, State> {
               >
                 Try Again
               </button>
+              <button
+                onClick={() => window.location.reload()}
+                style={{
+                  width: '100%',
+                  padding: `${spacing['3']} ${spacing['6']}`,
+                  backgroundColor: 'transparent',
+                  color: colors.textSecondary,
+                  border: `1px solid ${colors.borderLight}`,
+                  borderRadius: '6px',
+                  fontSize: typography.fontSize.body,
+                  fontWeight: typography.fontWeight.medium,
+                  fontFamily: typography.fontFamily,
+                  cursor: 'pointer',
+                }}
+              >
+                Reload Page
+              </button>
               <a
                 href="/"
                 style={{
