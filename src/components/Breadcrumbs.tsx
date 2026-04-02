@@ -33,6 +33,15 @@ const routeLabels: Record<string, string> = {
   insurance: 'Insurance',
   sustainability: 'Sustainability',
   bim: 'BIM',
+  warranties: 'Warranties',
+  equipment: 'Equipment',
+  portfolio: 'Portfolio',
+  photos: 'Photos',
+  'prevailing-wage': 'Prevailing Wage',
+  workforce: 'Workforce',
+  deliveries: 'Deliveries',
+  notifications: 'Notifications',
+  profile: 'Profile',
 };
 
 // ── FolderBreadcrumbs ──────────────────────────────────
