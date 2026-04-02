@@ -935,8 +935,8 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                     }}
                     onClick={() => { if (!isDraggingThis) onPhaseClick?.(phase); }}
                   >
-                    {/* Baseline ghost bar — always visible when baseline data exists */}
-                    {(() => {
+                    {/* Baseline ghost bar — visible when showBaseline is true and baseline data exists */}
+                    {showBaseline && (() => {
                       const bStart = phase.baselineStartDate ?? (baselinePhases?.find(b => b.id === phase.id)?.baselineStartDate ?? null);
                       const bEnd = phase.baselineEndDate ?? (baselinePhases?.find(b => b.id === phase.id)?.baselineEndDate ?? null);
                       if (!bStart || !bEnd) return null;
@@ -947,8 +947,8 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                           position: 'absolute', top: '50%', transform: 'translateY(-50%)',
                           height: 8,
                           left: `${bLeft}%`, width: `${bWidth}%`,
-                          backgroundColor: colors.borderDefault,
-                          opacity: 0.5,
+                          background: 'rgba(156, 163, 175, 0.3)',
+                          border: '1px dashed #9CA3AF',
                           borderRadius: 4, pointerEvents: 'none',
                           zIndex: 0,
                         }} />

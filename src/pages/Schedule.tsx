@@ -293,6 +293,11 @@ export const Schedule: React.FC = () => {
 
   const kpis = useMemo(() => computeScheduleKPIs(schedulePhases), [schedulePhases])
 
+  const hasBaselineData = useMemo(
+    () => schedulePhases.some(p => p.baselineStartDate != null && p.baselineEndDate != null),
+    [schedulePhases]
+  );
+
   const activityMetrics = useMemo(() => {
     if (schedulePhases.length === 0) {
       return {
@@ -964,15 +969,38 @@ export const Schedule: React.FC = () => {
                 </span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
-                <Btn
-                  variant={showBaseline ? 'primary' : 'secondary'}
-                  size="sm"
-                  icon={showBaseline ? <ToggleRight size={14} /> : <ToggleLeft size={14} />}
-                  onClick={() => setShowBaseline(!showBaseline)}
-                  aria-label={showBaseline ? 'Hide baseline comparison' : 'Show baseline comparison'}
+                {hasBaselineData && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <div
+                      aria-hidden="true"
+                      style={{
+                        width: 24,
+                        height: 10,
+                        background: 'rgba(156, 163, 175, 0.3)',
+                        border: '1px dashed #9CA3AF',
+                        borderRadius: 2,
+                        flexShrink: 0,
+                      }}
+                    />
+                    <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Baseline</span>
+                  </div>
+                )}
+                <span
+                  title={!hasBaselineData ? 'No baseline dates available' : undefined}
+                  style={{ display: 'inline-flex' }}
                 >
-                  {showBaseline ? 'Hide Baseline' : 'Show Baseline'}
-                </Btn>
+                  <Btn
+                    variant={showBaseline ? 'primary' : 'secondary'}
+                    size="sm"
+                    icon={showBaseline ? <ToggleRight size={14} /> : <ToggleLeft size={14} />}
+                    onClick={() => setShowBaseline(!showBaseline)}
+                    aria-label={showBaseline ? 'Hide baseline comparison' : 'Show baseline comparison'}
+                    disabled={!hasBaselineData}
+                    style={!showBaseline ? { border: `1px solid ${colors.borderDefault}`, background: 'transparent', color: colors.textPrimary } : {}}
+                  >
+                    {showBaseline ? 'Hide Baseline' : 'Show Baseline'}
+                  </Btn>
+                </span>
                 <Btn
                   variant={whatIfMode ? 'primary' : 'secondary'}
                   size="sm"
