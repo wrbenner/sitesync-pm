@@ -37,7 +37,7 @@ export const getDirectory = async (
         .range(from, to)
     },
     pagination,
-    (d) => ({ ...d, contactName: d.name, companyGroup: d.company || 'Unaffiliated' })
+    (d) => ({ ...d, contactName: d.name ?? null, companyGroup: d.company ?? 'Unaffiliated' })
   )
 }
 
@@ -58,7 +58,7 @@ export const getMeetings = async (
     (m) => ({
       ...m,
       attendeeCount: 0,
-      time: m.date ? new Date(m.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '',
+      time: m.date && !isNaN(new Date(m.date).getTime()) ? new Date(m.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '',
       hasMinutes: !!m.notes,
       status: m.date && new Date(m.date) < new Date() ? 'completed' : 'scheduled',
     })
