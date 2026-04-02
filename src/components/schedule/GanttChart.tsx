@@ -632,9 +632,9 @@ export const GanttChart: React.FC<GanttChartProps> = ({
         <div style={{ minWidth: '900px' }}>
 
           {/* Time labels header + width probe */}
-          <div style={{ display: 'flex', marginBottom: spacing['2'] }}>
-            <div aria-hidden="true" style={{ width: LABEL_WIDTH, flexShrink: 0, position: 'sticky', left: 0, backgroundColor: colors.surfaceRaised, zIndex: 7 }} />
-            <div ref={probeRef} style={{ flex: 1, position: 'relative', height: 20 }}>
+          <div role="row" style={{ display: 'flex', marginBottom: spacing['2'] }}>
+            <div role="columnheader" scope="col" aria-label="Activity" style={{ width: LABEL_WIDTH, flexShrink: 0, position: 'sticky', left: 0, backgroundColor: colors.surfaceRaised, zIndex: 7 }} />
+            <div role="columnheader" scope="col" aria-label="Timeline" ref={probeRef} style={{ flex: 1, position: 'relative', height: 20 }}>
               {timeLabels.map(tl => (
                 <span
                   key={tl.label + tl.offset}
@@ -647,7 +647,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                 </span>
               ))}
             </div>
-            <div style={{
+            <div role="columnheader" scope="col" style={{
               width: SLIPPAGE_COL_WIDTH, flexShrink: 0, textAlign: 'right',
               paddingRight: spacing['2'], height: 20, display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
             }}>
@@ -655,7 +655,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                 Slip
               </span>
             </div>
-            <div style={{
+            <div role="columnheader" scope="col" style={{
               width: FLOAT_COL_WIDTH, flexShrink: 0, textAlign: 'right',
               paddingRight: spacing['2'], height: 20, display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
             }}>
@@ -664,7 +664,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
               </span>
             </div>
             {showBaseline && (
-              <div style={{
+              <div role="columnheader" scope="col" style={{
                 width: BASELINE_DATE_COL_WIDTH, flexShrink: 0, textAlign: 'right',
                 paddingRight: spacing['2'], height: 20, display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
               }}>
@@ -674,7 +674,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
               </div>
             )}
             {showBaseline && (
-              <div style={{
+              <div role="columnheader" scope="col" style={{
                 width: BASELINE_DATE_COL_WIDTH, flexShrink: 0, textAlign: 'right',
                 paddingRight: spacing['2'], height: 20, display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
               }}>
@@ -732,12 +732,12 @@ export const GanttChart: React.FC<GanttChartProps> = ({
 
             {/* Visually hidden header row so screen readers announce column names */}
             <div role="row" style={{ position: 'absolute', left: -9999, width: 1, height: 1, overflow: 'hidden' }}>
-              <div role="columnheader" aria-sort="none" style={{}}>Activity</div>
-              <div role="columnheader" aria-sort="none" style={{}}>Schedule</div>
-              <div role="columnheader" aria-sort="none" style={{}}>Slippage</div>
-              <div role="columnheader" aria-sort="none" style={{}}>Float</div>
-              {showBaseline && <div role="columnheader" aria-sort="none" style={{}}>Baseline Start</div>}
-              {showBaseline && <div role="columnheader" aria-sort="none" style={{}}>Baseline End</div>}
+              <div role="columnheader" scope="col" aria-sort="none" style={{}}>Activity</div>
+              <div role="columnheader" scope="col" aria-sort="none" style={{}}>Schedule</div>
+              <div role="columnheader" scope="col" aria-sort="none" style={{}}>Slippage</div>
+              <div role="columnheader" scope="col" aria-sort="none" style={{}}>Float</div>
+              {showBaseline && <div role="columnheader" scope="col" aria-sort="none" style={{}}>Baseline Start</div>}
+              {showBaseline && <div role="columnheader" scope="col" aria-sort="none" style={{}}>Baseline End</div>}
             </div>
 
             {/* SVG overlay for dependency arrows */}

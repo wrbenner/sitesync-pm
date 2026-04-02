@@ -493,14 +493,20 @@ export const Schedule: React.FC = () => {
         boxShadow: shadows.sm,
       }}>
         {/* Panel header */}
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: `${spacing['3']} ${spacing['4']}`,
-          borderBottom: riskPanelOpen ? `1px solid ${colors.borderDefault}` : 'none',
-          cursor: 'pointer',
-          backgroundColor: risks.length > 0 ? `${colors.primaryOrange}05` : 'transparent',
-        }}
+        <div
+          role="button"
+          tabIndex={0}
+          aria-expanded={riskPanelOpen}
+          aria-label={`AI Risk Analysis panel, ${riskPanelOpen ? 'expanded' : 'collapsed'}`}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: `${spacing['3']} ${spacing['4']}`,
+            borderBottom: riskPanelOpen ? `1px solid ${colors.borderDefault}` : 'none',
+            cursor: 'pointer',
+            backgroundColor: risks.length > 0 ? `${colors.primaryOrange}05` : 'transparent',
+          }}
           onClick={() => setRiskPanelOpen((v) => !v)}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setRiskPanelOpen((v) => !v); } }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
             <Zap size={15} color={risks.length > 0 ? colors.primaryOrange : colors.statusActive} fill={risks.length > 0 ? colors.primaryOrange : colors.statusActive} />
@@ -727,6 +733,10 @@ export const Schedule: React.FC = () => {
               return (
                 <div
                   key={phase.id}
+                  role="row"
+                  tabIndex={0}
+                  aria-label={`${phase.name}, ${phase.progress}% complete, ${(phase.status ?? 'not started').replace(/_/g, ' ')}`}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setScheduleAnnouncement(`Schedule updated: ${phase.name} is now ${(phase.status ?? 'not started').replace(/_/g, ' ')}`); } }}
                   style={{
                     backgroundColor: '#FFFFFF',
                     borderRadius: 8,
@@ -734,6 +744,8 @@ export const Schedule: React.FC = () => {
                     borderLeft: isCritical ? '3px solid #E74C3C' : '1px solid #E5E7EB',
                     minHeight: 64,
                     padding: 16,
+                    cursor: 'pointer',
+                    outline: 'none',
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, gap: 8 }}>
@@ -804,14 +816,18 @@ export const Schedule: React.FC = () => {
                 </Btn>
               </div>
             </div>
-            <div style={{
-              backgroundColor: colors.surfaceRaised,
-              borderRadius: borderRadius.lg,
-              padding: spacing['5'],
-              boxShadow: whatIfMode ? `0 0 0 2px ${colors.statusPending}40` : shadows.card,
-              transition: `box-shadow ${transitions.quick}`,
-              overflowX: 'auto',
-            }}>
+            <div
+              role="table"
+              aria-label="Project schedule"
+              style={{
+                backgroundColor: colors.surfaceRaised,
+                borderRadius: borderRadius.lg,
+                padding: spacing['5'],
+                boxShadow: whatIfMode ? `0 0 0 2px ${colors.statusPending}40` : shadows.card,
+                transition: `box-shadow ${transitions.quick}`,
+                overflowX: 'auto',
+              }}
+            >
               {whatIfMode && (
                 <div style={{
                   display: 'flex', alignItems: 'center', gap: spacing['2'],
@@ -872,7 +888,7 @@ export const Schedule: React.FC = () => {
                   onAddActivity={() => addToast('info', 'Activity drawer coming soon')}
                   onPhaseClick={(phase) => {
                     addToast('info', `${phase.name}: ${phase.progress}% complete`);
-                    setScheduleAnnouncement(`Activity ${phase.name} selected, ${phase.progress}% complete`);
+                    setScheduleAnnouncement(`Schedule updated: ${phase.name} is now ${(phase.status ?? 'not started').replace(/_/g, ' ')}`);
                   }}
                   baselinePhases={schedulePhases}
                   showBaseline={showBaseline}
