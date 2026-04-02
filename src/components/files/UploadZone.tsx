@@ -54,7 +54,7 @@ export const UploadZone: React.FC<UploadZoneProps> = ({ onUpload, onTagsSuggeste
   const [isDragging, setIsDragging] = useState(false);
   const [isDraggingFolder, setIsDraggingFolder] = useState(false);
   const [uploads, setUploads] = useState<UploadItem[]>([]);
-  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<{ fileName: string; message: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const retryFilesRef = useRef<File[]>([]);
@@ -83,6 +83,7 @@ export const UploadZone: React.FC<UploadZoneProps> = ({ onUpload, onTagsSuggeste
           const suggestedTags = await aiService.tagDocumentOnUpload(String(id), name, '');
           setUploads((prev) => prev.map((u) => u.id === id ? { ...u, status: 'done', aiCategory: cat, aiTags: suggestedTags } : u));
           onUpload(name);
+          setUploadError(null);
           if (suggestedTags.length > 0) onTagsSuggested?.(name, suggestedTags);
         }, 800);
       } else {
@@ -133,9 +134,8 @@ export const UploadZone: React.FC<UploadZoneProps> = ({ onUpload, onTagsSuggeste
         });
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      setUploadError(message);
-      window.alert(`Upload failed: ${message}. Please try again.`);
+      const firstName = retryFilesRef.current[0]?.name ?? 'file';
+      setUploadError({ fileName: firstName, message: err instanceof Error ? err.message : 'Upload failed' });
     }
   }, [processDataTransferItems, simulateUpload]);
 
@@ -159,9 +159,8 @@ export const UploadZone: React.FC<UploadZoneProps> = ({ onUpload, onTagsSuggeste
         simulateUpload(f.name);
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      setUploadError(message);
-      window.alert(`Upload failed: ${message}. Please try again.`);
+      const firstName = retryFilesRef.current[0]?.name ?? 'file';
+      setUploadError({ fileName: firstName, message: err instanceof Error ? err.message : 'Upload failed' });
     }
     e.target.value = '';
   }, [simulateUpload, onFileReady]);
@@ -183,9 +182,8 @@ export const UploadZone: React.FC<UploadZoneProps> = ({ onUpload, onTagsSuggeste
         simulateUpload(folderName + '/', { isFolder: true, fileCount: count });
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      setUploadError(message);
-      window.alert(`Upload failed: ${message}. Please try again.`);
+      const firstName = retryFilesRef.current[0]?.name ?? 'file';
+      setUploadError({ fileName: firstName, message: err instanceof Error ? err.message : 'Upload failed' });
     }
     e.target.value = '';
   }, [simulateUpload]);
@@ -200,9 +198,8 @@ export const UploadZone: React.FC<UploadZoneProps> = ({ onUpload, onTagsSuggeste
         simulateUpload(f.name);
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      setUploadError(message);
-      window.alert(`Upload failed: ${message}. Please try again.`);
+      const firstName = files[0]?.name ?? 'file';
+      setUploadError({ fileName: firstName, message: err instanceof Error ? err.message : 'Upload failed' });
     }
   }, [simulateUpload, onFileReady]);
 
@@ -317,40 +314,60 @@ export const UploadZone: React.FC<UploadZoneProps> = ({ onUpload, onTagsSuggeste
         <div
           aria-live="polite"
           style={{
-            marginTop: spacing['3'],
-            padding: `${spacing['3']} ${spacing['4']}`,
-            backgroundColor: '#FEF2F2',
-            border: `1px solid #FECACA`,
-            borderRadius: borderRadius.md,
+            padding: 12,
+            background: '#FEF2F2',
+            border: '1px solid #FECACA',
+            borderRadius: 8,
+            marginTop: 8,
             display: 'flex',
             alignItems: 'center',
-            gap: spacing['3'],
+            justifyContent: 'space-between',
+            gap: spacing['2'],
           }}
         >
-          <AlertCircle size={16} color="#DC2626" style={{ flexShrink: 0 }} />
-          <span style={{ flex: 1, fontSize: typography.fontSize.sm, color: '#DC2626' }}>
-            Upload failed: {uploadError}. Please try again.
-          </span>
-          <button
-            onClick={handleRetry}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: spacing['1'],
-              padding: `${spacing['1']} ${spacing['3']}`,
-              fontSize: typography.fontSize.sm,
-              fontFamily: typography.fontFamily,
-              fontWeight: typography.fontWeight.medium,
-              border: `1px solid #DC2626`,
-              borderRadius: borderRadius.md,
-              backgroundColor: 'transparent',
-              color: '#DC2626',
-              cursor: 'pointer',
-              flexShrink: 0,
-            }}
-          >
-            <RefreshCw size={12} /> Retry
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], minWidth: 0 }}>
+            <AlertCircle size={16} color="#DC2626" style={{ flexShrink: 0 }} />
+            <span style={{ fontSize: typography.fontSize.sm, color: '#DC2626', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {uploadError.fileName}: {uploadError.message}
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], flexShrink: 0 }}>
+            <button
+              onClick={handleRetry}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: spacing['1'],
+                padding: `${spacing['1']} ${spacing['3']}`,
+                fontSize: typography.fontSize.sm,
+                fontFamily: typography.fontFamily,
+                fontWeight: typography.fontWeight.medium,
+                border: '1px solid #DC2626',
+                borderRadius: borderRadius.md,
+                backgroundColor: 'transparent',
+                color: '#DC2626',
+                cursor: 'pointer',
+              }}
+            >
+              <RefreshCw size={12} /> Retry
+            </button>
+            <button
+              onClick={() => setUploadError(null)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                padding: 4,
+                border: 'none',
+                background: 'transparent',
+                color: '#DC2626',
+                cursor: 'pointer',
+                lineHeight: 1,
+              }}
+              aria-label="Dismiss error"
+            >
+              &#x2715;
+            </button>
+          </div>
         </div>
       )}
 
