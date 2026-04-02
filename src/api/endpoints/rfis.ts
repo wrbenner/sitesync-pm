@@ -24,7 +24,7 @@ export const getRfis = async (
   }
   await assertProjectAccess(projectId)
   try {
-    return await buildPaginatedQuery<RfiRow, MappedRfi>(
+    const result = await buildPaginatedQuery<RfiRow, MappedRfi>(
       (from, to) =>
         supabase
           .from('rfis')
@@ -35,8 +35,11 @@ export const getRfis = async (
       pagination,
       mapRfi
     )
+    return { ...result, isEmpty: result.data.length === 0 && result.total === 0 }
   } catch (err) {
-    throw transformSupabaseError(err)
+    const base = transformSupabaseError(err)
+    base.message = 'Failed to load RFIs. Check your connection and try again.'
+    throw base
   }
 }
 export const getRfiById = async (projectId: string, id: string) => {

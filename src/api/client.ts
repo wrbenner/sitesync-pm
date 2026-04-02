@@ -134,12 +134,15 @@ export async function buildPaginatedQuery<TRaw, TResult = TRaw>(
   const { data, error, count } = await queryFn(from, to)
   if (error) throw transformSupabaseError(error)
   const rows = (data ?? []) as TRaw[]
+  const mappedData = transform ? rows.map(transform) : (rows as unknown as TResult[])
+  const total = count ?? 0
   return {
-    data: transform ? rows.map(transform) : (rows as unknown as TResult[]),
-    total: count ?? 0,
+    data: mappedData,
+    total,
     page,
     pageSize,
-    hasMore: (from + pageSize) < (count ?? 0),
+    hasMore: (from + pageSize) < total,
+    isEmpty: mappedData.length === 0 && total === 0,
   }
 }
 
