@@ -76,64 +76,26 @@ export const RequestAccessPage: React.FC<{ moduleName?: string }> = ({ moduleNam
   const navigate = useNavigate();
 
   return (
-    <div style={{
-      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      minHeight: '60vh', textAlign: 'center', padding: spacing['6'],
-    }}>
-      <div style={{
-        width: 64, height: 64, borderRadius: borderRadius.full,
-        backgroundColor: colors.surfaceInset,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        marginBottom: spacing['4'],
-      }}>
-        <ShieldAlert size={28} color={colors.textTertiary} />
-      </div>
-      <h2 style={{
-        fontSize: typography.fontSize.subtitle, fontWeight: typography.fontWeight.semibold,
-        color: colors.textPrimary, margin: 0, marginBottom: spacing['2'],
-      }}>
-        Access Restricted
-      </h2>
-      <p style={{
-        fontSize: typography.fontSize.body, color: colors.textSecondary,
-        margin: 0, marginBottom: spacing['4'], maxWidth: 400, lineHeight: typography.lineHeight.relaxed,
-      }}>
-        {moduleName
-          ? `You don't have permission to access ${moduleName}. Your current role is "${role || 'none'}".`
-          : `You don't have the required permissions to view this page.`
-        }
+    <div style={{ maxWidth: 480, margin: 'auto', padding: 48, textAlign: 'center' }}>
+      <ShieldAlert size={48} color={colors.textTertiary} />
+      <h2>Access Restricted</h2>
+      <p style={{ color: colors.textSecondary }}>
+        You do not have permission to access {moduleName || 'this module'}. Your current role is {role || 'unknown'}.
       </p>
-      <p style={{
-        fontSize: typography.fontSize.sm, color: colors.textTertiary,
-        margin: 0, maxWidth: 400,
-      }}>
-        Contact your project administrator to request access.
-      </p>
-      <div style={{ display: 'flex', gap: spacing['3'], marginTop: spacing['6'] }}>
-        <button
-          onClick={() => navigate('/dashboard')}
-          style={{
-            backgroundColor: colors.primary, color: colors.white,
-            padding: `${spacing['2']} ${spacing['4']}`,
-            borderRadius: borderRadius.md, border: 'none', cursor: 'pointer',
-            fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium,
-          }}
-        >
-          Return to Dashboard
-        </button>
-        <button
-          onClick={() => window.history.back()}
-          style={{
-            backgroundColor: 'transparent', color: colors.textSecondary,
-            border: `1px solid ${colors.borderDefault}`,
-            padding: `${spacing['2']} ${spacing['4']}`,
-            borderRadius: borderRadius.md, cursor: 'pointer',
-            fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium,
-          }}
-        >
-          Go Back
-        </button>
-      </div>
+      <button
+        onClick={() => navigate(-1)}
+        style={{
+          backgroundColor: colors.primary,
+          color: 'white',
+          padding: '10px 24px',
+          borderRadius: 8,
+          border: 'none',
+          cursor: 'pointer',
+          fontSize: 14,
+        }}
+      >
+        Go Back
+      </button>
     </div>
   );
 };
