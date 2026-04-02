@@ -52,7 +52,6 @@ const crumbButtonStyle: React.CSSProperties = {
   fontFamily: typography.fontFamily,
   color: colors.textTertiary,
   transition: `color ${transitions.instant}, background-color ${transitions.instant}`,
-  maxWidth: '160px',
   overflow: 'hidden',
   textOverflow: 'ellipsis',
   whiteSpace: 'nowrap',
@@ -76,11 +75,62 @@ export const FolderBreadcrumbs: React.FC<FolderBreadcrumbsProps> = ({ stack, onN
 
   if (stack.length === 0) return null;
 
+  const maxWidth = isMobile ? '120px' : '160px';
+  const dynCrumbStyle: React.CSSProperties = { ...crumbButtonStyle, maxWidth };
+
   const showEllipsis = isMobile && !expanded && stack.length > 2;
-  const visibleStack = showEllipsis ? stack.slice(-1) : stack;
+
+  const renderSegment = (segment: { id: string; name: string }, fullIndex: number) => {
+    const isLast = fullIndex === stack.length - 1;
+    return (
+      <React.Fragment key={segment.id}>
+        <li aria-hidden="true">
+          <ChevronRight size={12} style={{ color: colors.textTertiary, flexShrink: 0 }} />
+        </li>
+        <li>
+          {isLast ? (
+            <span
+              aria-current="page"
+              style={{
+                display: 'flex', alignItems: 'center', gap: spacing['1'],
+                padding: `${spacing['2']} ${spacing['3']}`,
+                fontSize: typography.fontSize.sm,
+                fontWeight: typography.fontWeight.semibold,
+                color: colors.textPrimary,
+                maxWidth,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              <FolderOpen size={13} color={colors.primaryOrange} />
+              {segment.name}
+            </span>
+          ) : (
+            <button
+              onClick={() => onNavigate(fullIndex)}
+              style={dynCrumbStyle}
+              title={segment.name}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.color = colors.primaryOrange;
+                (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.orangeSubtle;
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.color = colors.textTertiary;
+                (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
+              }}
+            >
+              <FolderOpen size={13} />
+              {segment.name}
+            </button>
+          )}
+        </li>
+      </React.Fragment>
+    );
+  };
 
   return (
-    <div style={{ overflowX: 'auto', display: 'flex', alignItems: 'center', WebkitOverflowScrolling: 'touch' }}>
+    <div style={{ overflowX: 'auto', flexWrap: 'nowrap', display: 'flex', alignItems: 'center', WebkitOverflowScrolling: 'touch' }}>
       <nav
         role="navigation"
         aria-label="Folder navigation"
@@ -101,7 +151,7 @@ export const FolderBreadcrumbs: React.FC<FolderBreadcrumbsProps> = ({ stack, onN
           <li>
             <button
               onClick={() => onNavigate(-1)}
-              style={{ ...crumbButtonStyle, color: colors.textSecondary }}
+              style={{ ...dynCrumbStyle, color: colors.textSecondary }}
               aria-label="Go to root folder"
               onMouseEnter={(e) => {
                 (e.currentTarget as HTMLButtonElement).style.color = colors.primaryOrange;
@@ -117,73 +167,27 @@ export const FolderBreadcrumbs: React.FC<FolderBreadcrumbsProps> = ({ stack, onN
             </button>
           </li>
 
-          {showEllipsis && (
+          {showEllipsis ? (
             <React.Fragment>
+              {renderSegment(stack[0], 0)}
               <li aria-hidden="true">
                 <ChevronRight size={12} style={{ color: colors.textTertiary, flexShrink: 0 }} />
               </li>
               <li>
                 <button
                   onClick={() => setExpanded(true)}
-                  style={crumbButtonStyle}
-                  aria-label="Show full folder path"
-                  title="Show full folder path"
+                  style={{ ...dynCrumbStyle, minWidth: '44px', minHeight: '44px' }}
+                  aria-label="Show full path"
+                  title="Show full path"
                 >
                   ...
                 </button>
               </li>
+              {renderSegment(stack[stack.length - 1], stack.length - 1)}
             </React.Fragment>
+          ) : (
+            stack.map((segment, i) => renderSegment(segment, i))
           )}
-
-          {visibleStack.map((segment, i) => {
-            const fullIndex = showEllipsis ? stack.length - 2 + i : i;
-            const isLast = fullIndex === stack.length - 1;
-            return (
-              <React.Fragment key={segment.id}>
-                <li aria-hidden="true">
-                  <ChevronRight size={12} style={{ color: colors.textTertiary, flexShrink: 0 }} />
-                </li>
-                <li>
-                  {isLast ? (
-                    <span
-                      aria-current="page"
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: spacing['1'],
-                        padding: `${spacing['2']} ${spacing['3']}`,
-                        fontSize: typography.fontSize.sm,
-                        fontWeight: typography.fontWeight.semibold,
-                        color: colors.textPrimary,
-                        maxWidth: '160px',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      <FolderOpen size={13} color={colors.primaryOrange} />
-                      {segment.name}
-                    </span>
-                  ) : (
-                    <button
-                      onClick={() => onNavigate(fullIndex)}
-                      style={crumbButtonStyle}
-                      title={segment.name}
-                      onMouseEnter={(e) => {
-                        (e.currentTarget as HTMLButtonElement).style.color = colors.primaryOrange;
-                        (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.orangeSubtle;
-                      }}
-                      onMouseLeave={(e) => {
-                        (e.currentTarget as HTMLButtonElement).style.color = colors.textTertiary;
-                        (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
-                      }}
-                    >
-                      <FolderOpen size={13} />
-                      {segment.name}
-                    </button>
-                  )}
-                </li>
-              </React.Fragment>
-            );
-          })}
         </ol>
       </nav>
     </div>
