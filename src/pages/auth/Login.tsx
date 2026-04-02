@@ -151,7 +151,7 @@ export const Login: React.FC = () => {
             boxShadow: shadows.card,
           }}
         >
-          <form onSubmit={handleSubmit} aria-describedby="login-error">
+          <form onSubmit={handleSubmit} aria-label="Sign in to SiteSync" aria-describedby="login-error">
             {error && (
               <div
                 id="login-error"
@@ -182,6 +182,7 @@ export const Login: React.FC = () => {
                 required
                 aria-required="true"
                 aria-invalid={!!error}
+                aria-describedby="login-error"
                 autoComplete="email"
                 style={inputStyle}
                 onFocus={(e) => { e.currentTarget.style.borderColor = colors.borderFocus }}
@@ -200,6 +201,7 @@ export const Login: React.FC = () => {
                 required
                 aria-required="true"
                 aria-invalid={!!error}
+                aria-describedby="login-error"
                 autoComplete="current-password"
                 style={inputStyle}
                 onFocus={(e) => { e.currentTarget.style.borderColor = colors.borderFocus }}
