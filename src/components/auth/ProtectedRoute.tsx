@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { usePermissions } from '../../hooks/usePermissions'
@@ -39,15 +39,24 @@ function isDevBypassActive(): boolean {
   return true
 }
 
-const SkeletonLoader: React.FC<{ ariaLabel: string }> = ({ ariaLabel }) => (
+const SkeletonLoader: React.FC<{ ariaLabel: string }> = ({ ariaLabel }) => {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  return (
   <div role="status" aria-busy="true" aria-label={ariaLabel} style={{
     display: 'flex', height: '100vh', fontFamily: typography.fontFamily,
   }}>
     {/* Sidebar skeleton */}
-    <div style={{
+    {!isMobile && <div style={{
       width: 220, backgroundColor: colors.surfaceSidebar, flexShrink: 0,
       padding: spacing['4'],
-    }} />
+    }} />}
     {/* Content area skeleton */}
     <div style={{
       flex: 1, backgroundColor: colors.surfacePage, padding: spacing['6'],
@@ -67,7 +76,8 @@ const SkeletonLoader: React.FC<{ ariaLabel: string }> = ({ ariaLabel }) => (
       }} />
     </div>
   </div>
-)
+  )
+}
 
 interface RequestAccessPageProps {
   moduleName?: string
