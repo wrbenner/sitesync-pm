@@ -87,23 +87,44 @@ export async function createLienWaiver(
   return mapDbRow(data as DbLienWaiverRow)
 }
 
+/**
+ * Updates lien waiver status with rollback support for optimistic UI updates.
+ * The calling component should update local state immediately, then call this function,
+ * and invoke rollback() + show error toast on failure.
+ */
 export async function updateLienWaiverStatus(
   id: string,
   status: LienWaiverStatus,
   timestamp?: string,
-): Promise<LienWaiverRow> {
+): Promise<{ data: LienWaiverRow; rollback: () => void }> {
+  const { data: previousRow, error: fetchError } = await supabase
+    .from('lien_waivers')
+    .select('*')
+    .eq('id', id)
+    .single()
+  if (fetchError) throw new Error('Unable to update lien waiver status. Please try again.')
+  const previousState = previousRow as DbLienWaiverRow
+
   const ts = timestamp ?? new Date().toISOString()
   const update: Partial<DbLienWaiverRow> = { status: mapStatusToDb(status) }
   if (status === 'received') update.received_at = ts
   if (status === 'executed') update.waiver_date = ts
-  const { data, error } = await supabase
+  const { data: updatedRow, error } = await supabase
     .from('lien_waivers')
     .update(update)
     .eq('id', id)
     .select()
     .single()
-  if (error) throw transformSupabaseError(error)
-  return mapDbRow(data as DbLienWaiverRow)
+  if (error) throw new Error('Unable to update lien waiver status. Please try again.')
+  return {
+    data: mapDbRow(updatedRow as DbLienWaiverRow),
+    rollback: async () => {
+      await supabase
+        .from('lien_waivers')
+        .update({ status: mapStatusToDb(previousState.status) })
+        .eq('id', id)
+    },
+  }
 }
 
 export async function generateWaiversFromPayApp(
@@ -161,10 +182,10 @@ export async function generateWaiversFromPayApp(
 
 // Convenience wrappers kept for backwards compatibility
 export const markReceived = (waiverId: string, receivedAt: string): Promise<LienWaiverRow> =>
-  updateLienWaiverStatus(waiverId, 'received', receivedAt)
+  updateLienWaiverStatus(waiverId, 'received', receivedAt).then((r) => r.data)
 
 export const markLienWaiverReceived = (waiverId: string): Promise<LienWaiverRow> =>
-  updateLienWaiverStatus(waiverId, 'received', new Date().toISOString())
+  updateLienWaiverStatus(waiverId, 'received', new Date().toISOString()).then((r) => r.data)
 
 export interface LienWaiverSummary {
   total: number
