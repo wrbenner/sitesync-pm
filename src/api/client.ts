@@ -145,22 +145,35 @@ export async function buildPaginatedQuery<TRaw, TResult = TRaw>(
 
 /**
  * Creates a typed Supabase Realtime subscription for a given table filtered by
- * project_id. Returns an unsubscribe function for cleanup (e.g. in useEffect).
+ * project_id. Returns an object with an unsubscribe function for cleanup (e.g. in useEffect).
  */
 export function subscribeToTable(
   table: string,
   projectId: string,
-  onInsert?: (row: unknown) => void,
-  onUpdate?: (row: unknown) => void,
-  onDelete?: (row: unknown) => void
-): () => void {
+  event: '*' | 'INSERT' | 'UPDATE' | 'DELETE',
+  onPayload: (payload: { eventType: string; new: Record<string, unknown>; old: Record<string, unknown> }) => void
+): { unsubscribe: () => void } {
   const channel = supabase
-    .channel(`${table}:${projectId}`)
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table, filter: `project_id=eq.${projectId}` }, payload => onInsert?.(payload.new))
-    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table, filter: `project_id=eq.${projectId}` }, payload => onUpdate?.(payload.new))
-    .on('postgres_changes', { event: 'DELETE', schema: 'public', table, filter: `project_id=eq.${projectId}` }, payload => onDelete?.(payload.old))
+    .channel(`realtime:${table}:${projectId}`)
+    .on('postgres_changes', { event, schema: 'public', table, filter: `project_id=eq.${projectId}` }, onPayload)
     .subscribe()
-  return () => { supabase.removeChannel(channel) }
+  return { unsubscribe: () => { supabase.removeChannel(channel) } }
+}
+
+/**
+ * Creates a Supabase Realtime subscription for the notifications table filtered
+ * by user_id instead of project_id. Returns an object with an unsubscribe function.
+ */
+export function subscribeToUserNotifications(
+  userId: string,
+  event: '*' | 'INSERT' | 'UPDATE' | 'DELETE',
+  onPayload: (payload: { eventType: string; new: Record<string, unknown>; old: Record<string, unknown> }) => void
+): { unsubscribe: () => void } {
+  const channel = supabase
+    .channel(`realtime:notifications:${userId}`)
+    .on('postgres_changes', { event, schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` }, onPayload)
+    .subscribe()
+  return { unsubscribe: () => { supabase.removeChannel(channel) } }
 }
 
 // Re-export for convenience
