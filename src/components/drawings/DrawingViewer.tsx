@@ -94,6 +94,7 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({ drawing, onClos
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
   const [activeTool, setActiveTool] = useState<MarkupTool>('select');
   const [markups, setMarkups] = useState<MarkupItem[]>([]);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -108,6 +109,12 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({ drawing, onClos
   const canvasOuterRef = useRef<HTMLDivElement>(null);
   const panStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
   const drawStart = useRef({ x: 0, y: 0 });
+
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
 
   const announceStatus = useUiStore((s) => s.announceStatus);
 
@@ -203,6 +210,15 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({ drawing, onClos
   const handleMouseLeave = () => {
     updateMyPresence({ cursor: null });
   };
+
+  // Touch handler stubs: prevent toolbar from blocking the viewport on mobile
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    e.stopPropagation();
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    e.stopPropagation();
+  }, []);
 
   const handleTextSubmit = () => {
     if (!textPos || !textInput.trim()) { setTextPos(null); return; }
@@ -319,7 +335,7 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({ drawing, onClos
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: zIndex.modal as number, backgroundColor: vizColors.dark, display: 'flex', flexDirection: 'column' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: zIndex.modal as number, backgroundColor: vizColors.dark, display: 'flex', flexDirection: 'column', width: '100%', maxWidth: '100vw', overflow: 'hidden' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: `${spacing['3']} ${spacing['4']}`, backgroundColor: colors.toolbarBg, flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['4'] }}>
@@ -399,9 +415,11 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({ drawing, onClos
             role="application"
             aria-label="Drawing viewer - use arrow keys to pan, plus/minus to zoom"
             tabIndex={0}
-            style={{ flex: 1, position: 'relative', overflow: 'hidden' }}
+            style={{ flex: 1, position: 'relative', overflow: 'hidden', touchAction: 'none', width: '100%', height: 'calc(100vh - 120px)' }}
             onMouseLeave={handleMouseLeave}
             onKeyDown={handleKeyDown}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
           >
             {/* Remote cursors rendered in outer container (stable coordinate space) */}
             {others.map((other) => {
@@ -540,7 +558,7 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({ drawing, onClos
             </div>
 
             {/* Markup toolbar with Save */}
-            <div style={{ position: 'absolute', bottom: spacing['4'], left: '50%', transform: 'translateX(-50%)', zIndex: 5 }}>
+            <div style={{ position: 'absolute', bottom: spacing['4'], left: '50%', transform: 'translateX(-50%)', zIndex: 5, display: 'flex', ...(isMobile ? { flexWrap: 'wrap' as const, padding: '8px' } : {}) }}>
               <MarkupToolbar
                 activeTool={activeTool}
                 onToolChange={setActiveTool}
