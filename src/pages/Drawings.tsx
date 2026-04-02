@@ -56,7 +56,7 @@ const _DrawingsPage: React.FC = () => {
   const { addToast } = useToast();
   const projectId = useProjectId();
   const { data: drawings, loading, error, refetch } = useQuery(`drawings-${projectId}`, () => getDrawings(projectId!), { enabled: !!projectId });
-  const [filter, setFilter] = useState('All');
+  const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set());
   const [selectedDrawing, setSelectedDrawing] = useState<NonNullable<typeof drawings>[0] | null>(null);
   const [viewerDrawing, setViewerDrawing] = useState<NonNullable<typeof drawings>[0] | null>(null);
   const [sortField, setSortField] = useState<string>('setNumber');
@@ -69,11 +69,10 @@ const _DrawingsPage: React.FC = () => {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const disciplines = ['All', 'Architectural', 'Structural', 'Mechanical', 'Electrical', 'Plumbing', 'Landscape', 'Fire Protection', 'Civil', 'Interior Design'];
-
   const allDrawings = drawings || [];
+  const uniqueDisciplines = Array.from(new Set(allDrawings.map((d) => d.discipline).filter(Boolean))) as string[];
   const filteredDrawings =
-    filter === 'All' ? allDrawings : allDrawings.filter((d) => d.discipline === filter);
+    activeFilters.size === 0 ? allDrawings : allDrawings.filter((d) => activeFilters.has(d.discipline));
 
   const handleSort = (field: string) => {
     if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -172,22 +171,30 @@ const _DrawingsPage: React.FC = () => {
           </div>
 
           {/* Discipline filter pills */}
-          <div style={{ display: 'flex', gap: spacing.sm, marginBottom: spacing.xl, flexWrap: 'wrap' }}>
-            {disciplines.map((discipline) => {
-              const isActive = filter === discipline;
-              const dotColor = discipline !== 'All' ? getDisciplineColor(discipline) : null;
+          <div style={{ display: 'flex', gap: spacing.sm, marginBottom: spacing.xl, flexWrap: 'wrap', alignItems: 'center' }}>
+            {uniqueDisciplines.map((discipline) => {
+              const isActive = activeFilters.has(discipline);
+              const pillColor = getDisciplineColor(discipline);
+              const count = allDrawings.filter((d) => d.discipline === discipline).length;
               return (
                 <button
                   key={discipline}
-                  onClick={() => setFilter(discipline)}
+                  onClick={() => {
+                    setActiveFilters((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(discipline)) next.delete(discipline);
+                      else next.add(discipline);
+                      return next;
+                    });
+                  }}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: spacing['1'],
-                    padding: `${spacing.sm} ${spacing.lg}`,
-                    backgroundColor: isActive ? colors.surfaceInset : 'transparent',
-                    color: isActive ? colors.textPrimary : colors.textTertiary,
-                    border: 'none',
+                    padding: `${spacing.sm} ${spacing.md}`,
+                    backgroundColor: isActive ? pillColor : 'transparent',
+                    color: isActive ? '#ffffff' : pillColor,
+                    border: `1.5px solid ${pillColor}`,
                     borderRadius: borderRadius.full,
                     cursor: 'pointer',
                     fontSize: typography.fontSize.sm,
@@ -196,22 +203,41 @@ const _DrawingsPage: React.FC = () => {
                     transition: `all ${transitions.quick}`,
                   }}
                 >
-                  {dotColor && (
-                    <span
-                      style={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: '50%',
-                        backgroundColor: dotColor,
-                        flexShrink: 0,
-                        display: 'inline-block',
-                      }}
-                    />
-                  )}
                   {discipline}
+                  <span style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    minWidth: 18,
+                    height: 18,
+                    borderRadius: borderRadius.full,
+                    backgroundColor: isActive ? 'rgba(255,255,255,0.25)' : `${pillColor}22`,
+                    fontSize: typography.fontSize.caption,
+                    fontWeight: typography.fontWeight.semibold,
+                    padding: '0 4px',
+                  }}>
+                    {count}
+                  </span>
                 </button>
               );
             })}
+            {activeFilters.size > 0 && (
+              <button
+                onClick={() => setActiveFilters(new Set())}
+                style={{
+                  padding: `${spacing.sm} ${spacing.md}`,
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: typography.fontSize.sm,
+                  fontFamily: typography.fontFamily,
+                  color: colors.textTertiary,
+                  textDecoration: 'underline',
+                }}
+              >
+                Clear Filters
+              </button>
+            )}
           </div>
 
           {/* Drawings Table */}
@@ -333,9 +359,16 @@ const _DrawingsPage: React.FC = () => {
                   <Tag label={drawing.discipline} />
 
                   {/* Revision */}
-                  <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>
-                    Rev {drawing.revision}
-                  </span>
+                  <div>
+                    <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, display: 'block' }}>
+                      Rev {drawing.currentRevision?.revision_number ?? drawing.revision}
+                    </span>
+                    {drawing.revisions.length > 1 && (
+                      <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
+                        {drawing.revisions.length} revisions
+                      </span>
+                    )}
+                  </div>
 
                   {/* Date */}
                   <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>
@@ -417,8 +450,8 @@ const _DrawingsPage: React.FC = () => {
                   <FileText size={32} color={colors.textTertiary} style={{ marginBottom: spacing['3'] }} />
                   <p style={{ fontSize: typography.fontSize.body, fontWeight: 500, color: colors.textPrimary, margin: 0, marginBottom: spacing['1'] }}>No drawings match your filters</p>
                   <p style={{ fontSize: typography.fontSize.sm, color: colors.gray600, margin: 0, marginBottom: spacing['4'] }}>Try adjusting your discipline filter</p>
-                  <button onClick={() => setFilter('All')} style={{ padding: `${spacing['1']} ${spacing['4']}`, backgroundColor: 'transparent', border: `1px solid ${colors.border}`, borderRadius: borderRadius.md, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, color: colors.gray600, cursor: 'pointer' }}>
-                    Clear Filters
+                  <button onClick={() => setActiveFilters(new Set())} style={{ padding: `${spacing['1']} ${spacing['4']}`, backgroundColor: 'transparent', border: `1px solid ${colors.border}`, borderRadius: borderRadius.md, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, color: colors.gray600, cursor: 'pointer' }}>
+                    Clear filters
                   </button>
                 </div>
               )
