@@ -1,10 +1,11 @@
-import { supabase, transformSupabaseError, buildPaginatedQuery } from '../client'
+import { supabase, createScopedClient, transformSupabaseError, buildPaginatedQuery } from '../client'
 import { assertProjectAccess } from '../middleware/projectScope'
 import type { CrewRow, DirectoryContactRow, MeetingRow, PaginationParams, PaginatedResult } from '../../types/api'
 
 export const getCrews = async (projectId: string) => {
   await assertProjectAccess(projectId)
-  const { data, error } = await supabase.from('crews').select('*').eq('project_id', projectId)
+  const scoped = createScopedClient(supabase, projectId)
+  const { data, error } = await scoped.from('crews').select('*')
   if (error) throw transformSupabaseError(error)
   return (data || []).map((c: CrewRow) => ({
     ...c,
@@ -20,12 +21,12 @@ export const getDirectory = async (
   pagination?: PaginationParams
 ): Promise<PaginatedResult<DirectoryContactRow & { contactName: string | null }>> => {
   await assertProjectAccess(projectId)
+  const scoped = createScopedClient(supabase, projectId)
   return buildPaginatedQuery<DirectoryContactRow, DirectoryContactRow & { contactName: string | null }>(
     (from, to) =>
-      supabase
+      scoped
         .from('directory_contacts')
         .select('*', { count: 'exact' })
-        .eq('project_id', projectId)
         .order('name')
         .range(from, to),
     pagination,
@@ -38,12 +39,12 @@ export const getMeetings = async (
   pagination?: PaginationParams
 ): Promise<PaginatedResult<MeetingRow & { attendeeCount: number; time: string; hasMinutes: boolean; status: string }>> => {
   await assertProjectAccess(projectId)
+  const scoped = createScopedClient(supabase, projectId)
   return buildPaginatedQuery<MeetingRow, MeetingRow & { attendeeCount: number; time: string; hasMinutes: boolean; status: string }>(
     (from, to) =>
-      supabase
+      scoped
         .from('meetings')
         .select('*', { count: 'exact' })
-        .eq('project_id', projectId)
         .order('date', { ascending: false })
         .range(from, to),
     pagination,
@@ -59,7 +60,8 @@ export const getMeetings = async (
 
 export const getUpcomingMeetings = async (projectId: string) => {
   await assertProjectAccess(projectId)
-  const { data, error } = await supabase.from('meetings').select('*').eq('project_id', projectId).gte('date', new Date().toISOString()).order('date')
+  const scoped = createScopedClient(supabase, projectId)
+  const { data, error } = await scoped.from('meetings').select('*').gte('date', new Date().toISOString()).order('date')
   if (error) throw transformSupabaseError(error)
   return data || []
 }
