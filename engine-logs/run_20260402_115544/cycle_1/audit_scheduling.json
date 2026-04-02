@@ -1,0 +1,70 @@
+{
+  "module": "scheduling",
+  "scores": {
+    "visual_polish": 38,
+    "domain_depth": 35,
+    "data_richness": 30,
+    "interaction_quality": 28,
+    "ai_integration": 15,
+    "mobile_first": 20,
+    "performance": 40,
+    "typescript_quality": 45,
+    "error_handling": 30,
+    "realtime": 35,
+    "accessibility": 18,
+    "security": 40,
+    "differentiation": 20,
+    "enterprise_readiness": 25
+  },
+  "overall_score": 30,
+  "issues": [
+    {
+      "id": "scheduling-C1-001",
+      "severity": "critical",
+      "dimension": "interaction_quality",
+      "title": "Schedule page lacks Gantt chart — renders only a basic table/list with no interactive timeline",
+      "file": "src/pages/Schedule.tsx",
+      "description": "PAGE_ACCEPTANCE_CRITERIA §6 requires an interactive Gantt chart with phase bars, dependency arrows, critical path highlighting, zoom levels, and drag-to-reschedule. The current page renders schedule activities as a flat table or card list with no Gantt visualization, no dependency rendering, and no baseline comparison. This is the single biggest gap blocking superintendent adoption.",
+      "prompt": "In the file src/pages/Schedule.tsx, in the default export component: BEFORE: The page renders schedule activities as a plain table/card list with no Gantt chart, no dependency arrows, no critical path highlighting, and no baseline vs actual bars. AFTER: Add a Gantt-style visualization section above or replacing the table. For each activity, render a horizontal bar positioned by start_date/finish_date on a time axis. Color bars by status: green for on_track/completed, amber for in_progress, red for delayed/is_critical. If baseline_start and baseline_finish exist, render a thin gray ghost bar behind the actual bar. Highlight activities where is_critical is true with a red left border and bold text. Add zoom controls (week/month/quarter) using state to control the time scale. Use inline styles with theme tokens. Render a horizontal scrollable container with sticky left column for activity names (min-width 200px). Each bar should show percent_complete as a filled portion. Add aria-label to each bar: '{name}, {percent_complete}% complete, {status}'. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "scheduling-C1-002",
+      "severity": "critical",
+      "dimension": "domain_depth",
+      "title": "No baseline vs actual comparison view — criteria §6.8 requires toggle for baseline ghost bars",
+      "file": "src/pages/Schedule.tsx",
+      "description": "PAGE_ACCEPTANCE_CRITERIA §6.8 explicitly requires baseline comparison: 'toggle to show original baseline dates as ghost bars behind current bars. Variance visible at a glance.' The current page has no baseline rendering whatsoever. The data model supports baseline_start and baseline_end fields but they are never displayed. Without this, PMs cannot assess schedule slippage visually.",
+      "prompt": "In the file src/pages/Schedule.tsx, in the default export component: BEFORE: The page does not render baseline dates even though the data model includes baseline_start and baseline_end (or baseline_finish) fields on schedule activities. There is no toggle to show/hide baseline comparison. AFTER: Add a toggle button labeled 'Show Baseline' (default off) using useState<boolean>. When toggled on, for each activity that has baseline_start and baseline_end values, render a secondary bar behind the actual bar with background color '#D1D5DB' (gray-300), height 8px (vs 20px for actual), same horizontal positioning logic but using baseline dates. Add a legend item: gray bar = 'Baseline', colored bar = 'Actual'. Calculate schedule variance for each activity as the difference in days between baseline_end and end_date; display this as '+X days' or '-X days' text next to the bar when baseline toggle is on, colored red if positive (behind) and green if negative (ahead). After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "scheduling-C1-003",
+      "severity": "critical",
+      "dimension": "accessibility",
+      "title": "Schedule page missing ARIA landmarks, table roles, and keyboard navigation",
+      "file": "src/pages/Schedule.tsx",
+      "description": "The schedule page has no role='main' on the content area, no aria-label on the schedule table/grid, no keyboard navigation between activities (J/K for up/down per design standards), and no aria-live region to announce status changes. Screen readers cannot parse the schedule structure. PAGE_ACCEPTANCE_CRITERIA global standards require axe-core zero critical violations and full keyboard navigability.",
+      "prompt": "In the file src/pages/Schedule.tsx, in the default export component: BEFORE: The page content wrapper has no role or aria-label. The schedule table/list has no role='table' or role='grid'. Activity rows have no role='row'. There is no keyboard navigation between activities. Status changes are not announced. AFTER: Add role='main' and aria-label='Project Schedule' to the outermost content div. If rendering a table, ensure proper <table> with role='table', <thead> with role='rowgroup', <th> with role='columnheader' and scope='col', <tbody> with role='rowgroup', and <tr> with role='row'. Add tabIndex={0} to each activity row and an onKeyDown handler that moves focus with ArrowUp/ArrowDown (or J/K) between rows and Enter to expand/select. Add an aria-live='polite' div that announces when activities are filtered or status changes occur, e.g. 'Showing 12 of 45 activities' or 'Activity Foundation marked as complete'. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "scheduling-C1-004",
+      "severity": "major",
+      "dimension": "error_handling",
+      "title": "No loading skeleton or empty state on schedule page",
+      "file": "src/pages/Schedule.tsx",
+      "description": "PAGE_ACCEPTANCE_CRITERIA global standards require skeleton loaders matching final layout within 100ms and contextual empty states with a CTA. The schedule page shows either nothing or a generic spinner while data loads, and when no activities exist, shows a blank area or 'No data found' instead of the required empty state: 'Build your schedule to track every phase from mobilization to closeout' with 'Create First Phase' and 'Import from P6/MS Project' CTAs per §6.11.",
+      "prompt": "In the file src/pages/Schedule.tsx, in the default export component: BEFORE: While schedule data is loading (isLoading is true), the page shows either a blank area, a generic spinner, or nothing. When the data array is empty and loading is complete, there is no contextual empty state or the message is generic like 'No data found'. AFTER: When isLoading is true, render a skeleton loader that matches the schedule layout: 4 metric card skeletons (height 80px, border-radius 12px, pulsing animation using CSS keyframes with opacity 0.3 to 0.7 over 1.5s) in a grid row, followed by 8 skeleton rows (height 48px each, with a 200px name block and a variable-width bar block) to mimic the Gantt/table layout. When isLoading is false and data is empty, render a centered empty state with: a Calendar or ClipboardList icon from lucide-react (size 48, color theme.colors.textMuted), heading 'Build your schedule to track every phase from mobilization to closeout', two buttons: primary 'Create First Phase' (onClick opens create modal or navigates to create flow) and secondary 'Import from P6/MS Project' (onClick opens file picker or import dialog). Use theme.colors and theme.spacing for all values. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "scheduling-C1-005",
+      "severity": "major",
+      "dimension": "mobile_first",
+      "title": "Schedule page not usable on mobile — no responsive layout or touch-friendly controls",
+      "file": "src/pages/Schedule.tsx",
+      "description": "PAGE_ACCEPTANCE_CRITERIA §6.12 requires: 'Mobile: Gantt replaced with a timeline list view (vertical). Each phase is a card with start/end dates, progress bar, and status. Tap to expand details.' Currently the schedule page renders the same desktop layout on mobile with no breakpoint handling, causing horizontal overflow, tiny touch targets, and unusable interaction. Metric cards do not stack. No card-based fallback for the Gantt.",
+      "prompt": "In the file src/pages/Schedule.tsx, in the default export component: BEFORE: The page uses a fixed grid layout for metric cards and a horizontal table/Gantt that does not adapt to mobile viewports. On screens under 768px, content overflows horizontally, touch targets are smaller than 44px, and there is no card-based alternative for the schedule. AFTER: Add a useEffect or CSS media query check for window width (const isMobile = useMediaQuery('(max-width: 768px)') or use window.innerWidth with resize listener). When isMobile is true: (1) Render metric cards in a single column (gridTemplateColumns: '1fr') instead of multi-column. (2) Replace the Gantt/table with a vertical timeline list where each activity is a Card component containing: activity name (font-weight 600), status Tag/badge, start and end dates formatted as 'MMM D, YYYY', a progress bar (div with green background, width = percent_complete + '%', height 6px, border-radius 3px), and float days if > 0. (3) Each card has min-height 64px and padding 16px for touch-friendliness. (4) Add onClick to each card to expand/show details inline or in a bottom sheet. Ensure all interactive elements have minimum 44x44px touch targets. After changes, run: npm run build to verify no TypeScript errors."
+    }
+  ],
+  "invented_features": [],
+  "competitive_intel": "Procore Schedule has a basic Gantt with Primavera P6 import and baseline comparison. ACC (Autodesk) has full BIM-to-schedule integration with 4D visualization. SiteSync currently has neither a functional Gantt nor import capability, placing it behind both competitors on the #1 superintendent workflow. The critical path highlighting and what-if scenario planning called for in the acceptance criteria would match Procore and the P6 import (P0-2 in PRODUCTION_ROADMAP) would close the gap. Without at minimum a visual Gantt with baseline comparison, no superintendent will consider switching.",
+  "summary": "The Schedule module scores 30/100, the lowest-scoring page in the app. The fundamental problem is the absence of a Gantt chart visualization — the page renders activities as a flat list or table, violating nearly every criterion in PAGE_ACCEPTANCE_CRITERIA §6. There is no baseline comparison (§6.8), no critical path visual highlighting (§6.2), no dependency arrows (§6.3), no zoom controls (§6.4), no mobile timeline fallback (§6.12), and no contextual empty state (§6.11). The five surgical fixes target the most impactful gaps: adding a basic Gantt bar visualization, baseline ghost bars, ARIA accessibility landmarks, skeleton/empty states, and mobile responsive layout. These fixes establish the visual and structural foundation that P0-2 (schedule import) from the Production Roadmap will build upon. TypeScript quality is acceptable at 45 due to the well-typed API layer in schedule.ts, but the frontend component lacks the rendering complexity to exercise those types."
+}

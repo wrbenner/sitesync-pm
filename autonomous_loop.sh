@@ -104,12 +104,16 @@ TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 mkdir -p "$LOG_DIR"
 
 # Resume: find last incomplete run if requested
+RESUME_SPEND="0.00"
+RESUME_PROMPTS=0
 if [ "$RESUME" = "true" ]; then
     LAST_RUN=$(ls -1d "${LOG_DIR}"/run_* 2>/dev/null | tail -1 || true)
     if [ -n "$LAST_RUN" ] && [ -f "${LAST_RUN}/state.json" ]; then
         RESUME_CYCLE=$(jq -r '.last_completed_cycle // 0' "${LAST_RUN}/state.json" 2>/dev/null || echo "0")
+        RESUME_SPEND=$(jq -r '.estimated_spend // "0.00"' "${LAST_RUN}/state.json" 2>/dev/null || echo "0.00")
+        RESUME_PROMPTS=$(jq -r '.prompts_executed // 0' "${LAST_RUN}/state.json" 2>/dev/null || echo "0")
         RUN_DIR="$LAST_RUN"
-        echo "Resuming from ${RUN_DIR} at cycle ${RESUME_CYCLE}"
+        echo "Resuming from ${RUN_DIR} at cycle ${RESUME_CYCLE} (spend: \$${RESUME_SPEND})"
     else
         RESUME_CYCLE=0
         RUN_DIR="${LOG_DIR}/run_${TIMESTAMP}"
@@ -127,7 +131,7 @@ exec > >(tee -a "${RUN_DIR}/engine.log") 2>&1
 # ── Global state ──────────────────────────────────────────────────────────────
 TOTAL_INPUT_TOKENS=0
 TOTAL_OUTPUT_TOKENS=0
-ESTIMATED_SPEND="0.00"
+ESTIMATED_SPEND="${RESUME_SPEND:-0.00}"
 CYCLE_SPEND="0.00"
 CYCLE=0
 START_TIME=$(date +%s)
@@ -135,16 +139,18 @@ LAST_SNAPSHOT_HASH=""
 ALL_CLEAN=false
 _INTERRUPTED=false
 TOTAL_FILES_CHANGED=0
-TOTAL_PROMPTS_EXECUTED=0
+TOTAL_PROMPTS_EXECUTED="${RESUME_PROMPTS:-0}"
 FEATURES_INVENTED=0
 
 # Score tracking (file-based, bash 3 compatible)
 SCORES_DIR="${RUN_DIR}/scores"
 mkdir -p "$SCORES_DIR"
 
-# State file for resume support
+# State file for resume support — only initialize if this is a fresh run
 STATE_FILE="${RUN_DIR}/state.json"
-echo '{"last_completed_cycle":0,"start_time":"'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'"}' > "$STATE_FILE"
+if [ "$RESUME" != "true" ] || [ ! -f "$STATE_FILE" ]; then
+    echo '{"last_completed_cycle":0,"start_time":"'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'"}' > "$STATE_FILE"
+fi
 
 # ── Signal handling — graceful Ctrl+C ─────────────────────────────────────────
 _handle_interrupt() {
@@ -437,7 +443,7 @@ preflight() {
     fi
     if [ -z "$TEST_CMD" ] && [ -f "$PROJECT_DIR/package.json" ]; then
         if jq -e '.scripts.test' "$PROJECT_DIR/package.json" &>/dev/null; then
-            TEST_CMD="npm test -- --watchAll=false"
+            TEST_CMD="npm test -- --run"
             log "Auto-detected test command: ${TEST_CMD}"
         fi
     fi
@@ -2065,6 +2071,8 @@ update_learnings() {
 
     for audit_file in "${cycle_dir}"/audit_*.json; do
         [ -f "$audit_file" ] || continue
+        # Skip raw audit files (they lack structured module data)
+        [[ "$audit_file" == *_raw.json ]] && continue
         local mod
         mod=$(jq -r '.module // "unknown"' "$audit_file" 2>/dev/null)
         local score
@@ -2209,6 +2217,7 @@ check_all_clean() {
 
     for audit_file in "${cycle_dir}"/audit_*.json; do
         [ -f "$audit_file" ] || continue
+        [[ "$audit_file" == *_raw.json ]] && continue
         local mod_name
         mod_name=$(jq -r '.module // "unknown"' "$audit_file")
         local issue_count
@@ -2278,6 +2287,7 @@ generate_report() {
     if [ -d "$last_cycle_dir" ]; then
         for audit_file in "${last_cycle_dir}"/audit_*.json; do
             [ -f "$audit_file" ] || continue
+            [[ "$audit_file" == *_raw.json ]] && continue
             local mod_label
             mod_label=$(jq -r '.module // "unknown"' "$audit_file")
             local high_issues
@@ -2299,6 +2309,7 @@ generate_report() {
     if [ "$FEATURES_INVENTED" -gt 0 ] && [ -d "$last_cycle_dir" ]; then
         for audit_file in "${last_cycle_dir}"/audit_*.json; do
             [ -f "$audit_file" ] || continue
+            [[ "$audit_file" == *_raw.json ]] && continue
             local inv_data
             inv_data=$(jq -r '.invented_features[]? | "\(.title)||||\(.description // "")"' "$audit_file" 2>/dev/null)
             while IFS= read -r line; do

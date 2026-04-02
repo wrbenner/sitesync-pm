@@ -1,0 +1,70 @@
+{
+  "module": "scheduling",
+  "scores": {
+    "visual_polish": 32,
+    "domain_depth": 35,
+    "data_richness": 25,
+    "interaction_quality": 28,
+    "ai_integration": 10,
+    "mobile_first": 18,
+    "performance": 30,
+    "typescript_quality": 38,
+    "error_handling": 22,
+    "realtime": 25,
+    "accessibility": 15,
+    "security": 35,
+    "differentiation": 18,
+    "enterprise_readiness": 22
+  },
+  "overall_score": 25,
+  "issues": [
+    {
+      "id": "scheduling-C2-001",
+      "severity": "critical",
+      "dimension": "error_handling",
+      "title": "Schedule page has no loading skeleton or error state",
+      "file": "src/pages/Schedule.tsx",
+      "description": "The Schedule page renders no skeleton loader during data fetch and shows no error UI when the query fails. Users see a blank page or flash of empty content, violating global acceptance criteria for loading and error states.",
+      "prompt": "In the file src/pages/Schedule.tsx, in the default exported Schedule component: BEFORE: The component renders content immediately with no check for loading or error states from the schedule data hook. When data is loading, users see either a blank area or an empty Gantt placeholder. When data fetch fails, no error message or retry button appears. AFTER: At the top of the component render, check the isLoading state from the schedule hook. If isLoading is true, render a skeleton loader that matches the page layout: a row of 4 pulsing metric card placeholders (height 96px, border-radius 12px, background #E5E7EB with opacity animation 0.3 to 0.7 over 1.5s), followed by a large rectangular skeleton (height 400px) representing the Gantt chart area. If error is truthy, render an error card with a warning icon, the message 'Unable to load schedule data', the error.message in muted text below, and a 'Retry' button that calls the refetch function. Use inline styles with theme tokens from src/styles/theme.ts. Add aria-busy={true} to the skeleton container and role='alert' to the error container. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "scheduling-C2-002",
+      "severity": "critical",
+      "dimension": "accessibility",
+      "title": "Gantt chart and schedule table lack ARIA attributes and keyboard navigation",
+      "file": "src/pages/Schedule.tsx",
+      "description": "The Gantt chart and activity list have no ARIA roles, labels, or keyboard navigation. Screen readers cannot interpret the schedule. Tab key does not move between activities. This fails WCAG 2.1 AA and the global acceptance criteria for keyboard navigability.",
+      "prompt": "In the file src/pages/Schedule.tsx, in the component that renders the activity list or Gantt rows: BEFORE: The schedule table/list has no role attributes, no aria-label on the container, no aria-sort on sortable column headers, and no keyboard event handlers. Individual activity rows have no role='row' and cells have no role='cell'. The Gantt visualization has no aria-label describing what it represents. AFTER: Add role='table' and aria-label='Project schedule activities' to the main schedule container. Add role='columnheader' and aria-sort attributes to sortable column headers. Add role='row' to each activity row and role='cell' to each cell. Add tabIndex={0} to each activity row so it can receive focus. Add an onKeyDown handler on each row that opens the activity detail when Enter is pressed. Add aria-label='Gantt chart showing project timeline' to the Gantt chart container. For critical path items, add aria-label that includes 'Critical path activity' prefix. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "scheduling-C2-003",
+      "severity": "critical",
+      "dimension": "mobile_first",
+      "title": "Schedule page is unusable on mobile devices",
+      "file": "src/pages/Schedule.tsx",
+      "description": "The Gantt chart renders at full desktop width with no responsive handling. On 375px screens, content overflows horizontally, metric cards do not stack, and there is no mobile-optimized timeline list view. The page acceptance criteria require a vertical timeline list on mobile replacing the Gantt.",
+      "prompt": "In the file src/pages/Schedule.tsx, in the default exported component: BEFORE: The page layout uses a fixed grid for metric cards (e.g. gridTemplateColumns repeat 4 1fr) that does not adapt below 768px. The Gantt chart renders at full width with no overflow handling. There is no media query or responsive check. On mobile, content is cut off or requires horizontal scrolling. AFTER: Add a useMediaQuery or window.innerWidth check (using a useState + useEffect with resize listener) to detect screens below 768px. For the metric cards grid, change to gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)'. For the Gantt chart section, when isMobile is true, render a vertical timeline list instead: each activity as a card with name, start/end dates as text, a progress bar showing percent_complete, and a colored status badge (green for completed, blue for in_progress, amber for not_started, red for delayed). Critical path activities show a red left border (3px solid #E74C3C). Cards should have minHeight 64px, padding 16px, and touch targets of at least 44px. Add overflowX: 'auto' to the Gantt container on desktop as a safety measure. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "scheduling-C2-004",
+      "severity": "major",
+      "dimension": "domain_depth",
+      "title": "No baseline vs actual comparison or critical path highlighting on Gantt",
+      "file": "src/pages/Schedule.tsx",
+      "description": "Page acceptance criteria require baseline dates shown as ghost bars behind actual bars, and critical path activities highlighted in red. Neither feature exists. Without baseline comparison, PMs cannot see schedule slippage. Without critical path highlighting, the Gantt is just a colored bar chart with no CPM intelligence.",
+      "prompt": "In the file src/pages/Schedule.tsx, in the component that renders Gantt bars for each activity: BEFORE: Each activity renders a single colored bar based on status. There is no rendering of baseline_start/baseline_finish dates. There is no visual distinction for activities where is_critical is true. The bars all use the same opacity and there are no ghost/shadow bars showing original planned dates. AFTER: For each activity that has non-null baseline_start and baseline_finish values, render a secondary bar behind the actual bar. The baseline bar should use background '#D1D5DB' (gray-300), opacity 0.5, height 60% of the actual bar height, and be positioned at the baseline date range. The actual bar renders on top at full height. For activities where is_critical is true, change the bar color to '#E74C3C' (red) instead of the default status color, and add a subtle box-shadow: '0 0 0 2px rgba(231, 76, 60, 0.3)'. Add a legend below the Gantt header showing: a gray bar labeled 'Baseline', a colored bar labeled 'Actual', and a red bar labeled 'Critical Path'. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "scheduling-C2-005",
+      "severity": "major",
+      "dimension": "interaction_quality",
+      "title": "Empty state is missing or generic when no schedule data exists",
+      "file": "src/pages/Schedule.tsx",
+      "description": "When no schedule activities exist, the page shows either a blank Gantt area or a generic 'No data' message. The acceptance criteria require a specific empty state with an illustration, contextual message, and CTA buttons for 'Create First Phase' and 'Import from P6/MS Project'.",
+      "prompt": "In the file src/pages/Schedule.tsx, in the default exported component: BEFORE: When the activities array is empty and isLoading is false, the page renders either nothing in the Gantt area or a generic empty message like 'No data found' or 'No activities'. There are no CTAs to guide the user. AFTER: When data is an empty array and isLoading is false, render a centered empty state container with: (1) a Calendar or GanttChart icon from lucide-react at 48px, color '#9CA3AF', (2) a heading 'Build your project schedule' at 18px font weight 600, (3) a description paragraph 'Create phases and activities to track every milestone from mobilization to closeout. Import from Primavera P6 or Microsoft Project to get started quickly.' at 14px color '#6B7280', (4) two buttons side by side: a primary button 'Create First Phase' with background '#F47820' and white text, and a secondary outlined button 'Import Schedule' with border '1px solid #E5E7EB'. Center the entire container vertically and horizontally within the Gantt area. Use padding 48px and maxWidth 480px. After changes, run: npm run build to verify no TypeScript errors."
+    }
+  ],
+  "invented_features": [],
+  "competitive_intel": "Procore's schedule module is basic (no native CPM, relies on P6 import). Fieldwire has zero schedule capability. Buildertrend has a simple Gantt but no critical path or baseline comparison. SiteSync's schedule page currently underperforms all competitors due to missing loading states, no baseline comparison, no critical path visualization, and broken mobile experience. Implementing baseline vs actual and critical path highlighting would immediately match Procore. Adding P6 import (P0-2 in roadmap) would surpass Procore by making the schedule viewable without a separate P6 license.",
+  "summary": "The Scheduling module scores 25/100, the lowest-scoring module in the audit. Five critical gaps dominate: (1) no loading skeleton or error handling, causing blank page flashes; (2) zero accessibility support with no ARIA roles or keyboard navigation on the Gantt; (3) completely broken mobile experience where the Gantt overflows and metric cards don't stack; (4) missing baseline vs actual comparison and critical path highlighting, which are the two most important CPM visualization features any superintendent expects; (5) generic or absent empty state when no schedule data exists. All five issues are surgical fixes targeting a single file (Schedule.tsx) and require no new features, just implementing the states and visual treatments that the acceptance criteria mandate."
+}

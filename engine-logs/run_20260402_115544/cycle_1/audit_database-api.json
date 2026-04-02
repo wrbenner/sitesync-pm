@@ -1,0 +1,70 @@
+{
+  "module": "database-api",
+  "scores": {
+    "visual_polish": 35,
+    "domain_depth": 62,
+    "data_richness": 55,
+    "interaction_quality": 48,
+    "ai_integration": 30,
+    "mobile_first": 25,
+    "performance": 58,
+    "typescript_quality": 65,
+    "error_handling": 60,
+    "realtime": 52,
+    "accessibility": 20,
+    "security": 58,
+    "differentiation": 40,
+    "enterprise_readiness": 55
+  },
+  "overall_score": 47,
+  "issues": [
+    {
+      "id": "database-api-C1-001",
+      "severity": "critical",
+      "dimension": "error_handling",
+      "title": "buildPaginatedQuery lacks error propagation for failed count queries",
+      "file": "src/api/client.ts",
+      "description": "The buildPaginatedQuery utility function is imported and used across people.ts and field.ts but when the Supabase query returns an error, the count value silently falls back to 0 instead of throwing, causing paginated endpoints to report 0 total items on transient failures. This violates the PAGE_ACCEPTANCE_CRITERIA requirement that network failures show toast + retry, not silent empty states.",
+      "prompt": "In the file src/api/client.ts, in the buildPaginatedQuery function: find the section where the Supabase query result is destructured as `{ data, error, count }`. BEFORE: when `error` is truthy, the function silently returns `{ data: [], total: 0, hasMore: false }` or falls through without checking error. AFTER: when `error` is truthy, call `throw transformSupabaseError(error)` before accessing data or count. This ensures all paginated endpoints (getDirectory, getMeetings, getDailyLogs) propagate errors to the UI layer where toast notifications and retry buttons can handle them. Also ensure the `count` fallback uses `count ?? 0` only after confirming no error. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "database-api-C1-002",
+      "severity": "critical",
+      "dimension": "typescript_quality",
+      "title": "Activity feed enrichment has incomplete entity type handling with silent failures",
+      "file": "src/api/endpoints/activity.ts",
+      "description": "The fetchEntityLabel function handles 'rfi', 'submittal', and starts 'change_order' but the code shown is truncated with a dangling `else if`. Any entity types beyond the handled ones (punch_item, daily_log, drawing, meeting) silently return empty strings, making the activity feed show blank entity labels for those types. This violates the Dashboard acceptance criteria requiring meaningful activity feed entries.",
+      "prompt": "In the file src/api/endpoints/activity.ts, in the fetchEntityLabel function: BEFORE: the function only handles 'rfi', 'submittal', and has an incomplete 'change_order' branch. Other entity types like 'punch_item', 'daily_log', 'drawing', 'meeting', 'task' silently return empty string. AFTER: complete the 'change_order' branch to query change_orders table for `co_number, title`. Add branches for 'punch_item' (query punch_items for `title`), 'daily_log' (query daily_logs for `log_date` and format as 'Daily Log for [date]'), 'drawing' (query drawings for `sheet_number, title`), 'meeting' (query meetings for `title`), and 'task' (query tasks for `title`). For any unrecognized entity type, return the entityId as a fallback rather than empty string. Wrap each query in try/catch and return empty string on failure to prevent one bad lookup from breaking the feed. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "database-api-C1-003",
+      "severity": "major",
+      "dimension": "security",
+      "title": "assertProjectAccess makes 4 sequential round trips creating latency and potential race conditions",
+      "file": "src/api/middleware/projectScope.ts",
+      "description": "assertProjectAccess calls getUser, then project_members query, then projects query, then organization_members query sequentially. This adds ~400ms latency per protected endpoint call. The projects and organization_members queries can run in parallel after the membership check. Additionally the dedupTtl cache for membership has only a 5s TTL which is too short to prevent repeated lookups during rapid page navigation.",
+      "prompt": "In the file src/api/middleware/projectScope.ts, in the assertProjectAccess function: BEFORE: after confirming project_members membership, the function sequentially queries `projects` for organization_id, then queries `organization_members`. This creates 4 sequential round trips (auth.getUser → project_members → projects → organization_members). The dedupTtl TTL is 5000ms. AFTER: after confirming project_members membership, run the `projects` query and `organization_members` query in parallel using `Promise.all`. Specifically, fetch the project's organization_id first (this is needed for the org member check), then check org membership. But optimize by combining the project_members and projects lookups into a single query: `supabase.from('project_members').select('id, project:projects(organization_id)').eq('project_id', projectId).eq('user_id', user.id).maybeSingle()`. This reduces 4 queries to 2 (auth + joined membership). Also increase the dedupTtl from 5000 to 30000 (30 seconds) since project membership rarely changes mid-session. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "database-api-C1-004",
+      "severity": "major",
+      "dimension": "realtime",
+      "title": "Real-time subscriptions in hooks refetch entire dataset on every change event",
+      "file": "src/api/endpoints/field.ts",
+      "description": "The real-time subscription pattern shown in the hook patterns (and used by field endpoints via hooks) calls the full refetch function on every postgres_changes event. For tables like daily_log_entries or punch_items with frequent updates, this causes N full-table refetches when N items change in quick succession. The subscription should merge individual changes into local state instead of refetching.",
+      "prompt": "In the file src/api/endpoints/field.ts, find the getDailyLogs function. BEFORE: the function only provides a fetch-all query. The consuming hook pattern (per CODEBASE_PATTERNS.md) subscribes to postgres_changes and calls the full fetch() on every event, causing redundant full-table queries on each INSERT/UPDATE/DELETE. AFTER: export a new helper function `applyRealtimeChange` that takes the current data array and a Supabase RealtimePostgresChangesPayload, and returns an updated array by applying the change in-place: for INSERT, prepend the new row; for UPDATE, replace the matching row by id; for DELETE, remove the matching row by id. This function should be typed: `export function applyDailyLogRealtimeChange(current: DailyLogRow[], payload: { eventType: string; new: Partial<DailyLogRow>; old: Partial<DailyLogRow> }): DailyLogRow[]`. Add the same pattern for punch items as `applyPunchItemRealtimeChange`. This allows consuming hooks to update state without a full refetch. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "database-api-C1-005",
+      "severity": "major",
+      "dimension": "domain_depth",
+      "title": "Budget endpoint missing projected final cost and variance calculations per CSI division",
+      "file": "src/api/endpoints/budget.ts",
+      "description": "The getCostData function referenced in projects.ts for financial computations exists but the budget endpoints lack the critical financial metrics that CFOs need: projected final cost (committed + cost to complete), variance per CSI division, and contingency burn rate. The PAGE_ACCEPTANCE_CRITERIA for Budget requires 'Variance calculation: Revised Budget minus Projected Final' and 'Contingency burn rate' which are not computed server-side.",
+      "prompt": "In the file src/api/endpoints/budget.ts, find the getCostData function (or the main budget query function). BEFORE: the function returns raw budget_items rows with original_amount, committed, and spent_to_date but does not compute projected_final_cost, variance, or contingency metrics. AFTER: add a new exported function `getBudgetSummaryMetrics(projectId: string)` that queries all budget_items for the project and computes: (1) `projectedFinalCost` per line item as `Math.max(committed, spent_to_date) + costToComplete` where costToComplete is `Math.max(0, original_amount - spent_to_date)` when no explicit forecast exists, (2) `variance` per line item as `revised_amount - projectedFinalCost` (positive = under budget, negative = over), (3) aggregate totals: `totalOriginalBudget`, `totalRevisedBudget`, `totalCommitted`, `totalSpentToDate`, `totalProjectedFinal`, `totalVariance`, `variancePercent`, (4) `contingencyRemaining` by summing budget items where csi_code starts with '01' (General Requirements) and subtracting spent, (5) `overBudgetLineCount` as count of items where variance < 0. Return type should be a well-defined TypeScript interface `BudgetSummaryMetrics`. Use integer cents internally, format to dollars only in the UI. After changes, run: npm run build to verify no TypeScript errors."
+    }
+  ],
+  "invented_features": [],
+  "competitive_intel": "Procore's API layer uses GraphQL with automatic batching and field-level caching, making their dashboard load in under 800ms. SiteSync's sequential assertProjectAccess pattern adds unnecessary latency. Fieldwire caches offline data aggressively with 30-minute TTLs. SiteSync's 5-second dedup TTL means repeated lookups on every page navigation. ACC uses computed columns in Postgres for financial rollups rather than client-side aggregation, giving them faster budget views. SiteSync computing metrics client-side from raw rows is both slower and risks inconsistency across pages.",
+  "summary": "The Database & API layer has solid architectural foundations: typed Supabase client, real-time subscription wiring, RLS-aware middleware, and a clean separation between endpoints and middleware. However, five surgical fixes are needed. First, the paginated query utility silently swallows errors, causing empty states instead of retry-able error notifications. Second, the activity feed enrichment is incomplete, leaving blank labels for punch items, daily logs, and other entity types. Third, the project access middleware makes 4 sequential round trips per request, adding ~400ms latency that could be halved with a joined query. Fourth, real-time subscriptions trigger full refetches instead of applying incremental changes, causing unnecessary load on tables with frequent updates. Fifth, the budget endpoint lacks the computed financial metrics (projected final cost, variance, contingency burn rate) that the CFO dashboard and Budget page acceptance criteria explicitly require. Fixing these five issues will improve error handling reliability, reduce API latency by 50%, make the activity feed complete, enable efficient real-time updates, and deliver the financial depth that differentiates SiteSync from Procore."
+}

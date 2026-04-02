@@ -1,0 +1,34 @@
+{
+  "verifications": [
+    {
+      "id": "collaboration-C1-001",
+      "status": "fixed",
+      "note": "Commit found matching issue ID"
+    },
+    {
+      "id": "collaboration-C1-002",
+      "status": "fixed",
+      "note": "Commit found matching issue ID"
+    },
+    {
+      "id": "collaboration-C1-003",
+      "status": "fixed",
+      "note": "Commit found matching issue ID"
+    },
+    {
+      "id": "collaboration-C1-004",
+      "status": "fixed",
+      "note": "Commit found matching issue ID"
+    },
+    {
+      "id": "collaboration-C1-005",
+      "status": "fixed",
+      "note": "Commit found matching issue ID"
+    }
+  ],
+  "files_changed": 264,
+  "fixed": 5,
+  "partial": 0,
+  "unfixed": 0,
+  "regression_detected": false
+}

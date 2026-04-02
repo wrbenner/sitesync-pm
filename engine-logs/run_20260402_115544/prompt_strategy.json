@@ -1,0 +1,13 @@
+{
+  "cycle": 2,
+  "total_data_points": 22,
+  "model_effectiveness": [
+    {
+      "model": "sonnet",
+      "avg_fix_rate": 100,
+      "total_prompts": 110,
+      "total_fixed": 110
+    }
+  ],
+  "recommendation": "Best performing model: sonnet at 100% fix rate"
+}

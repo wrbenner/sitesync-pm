@@ -1,0 +1,70 @@
+{
+  "module": "core-workflows",
+  "scores": {
+    "visual_polish": 42,
+    "domain_depth": 44,
+    "data_richness": 38,
+    "interaction_quality": 35,
+    "ai_integration": 18,
+    "mobile_first": 25,
+    "performance": 40,
+    "typescript_quality": 48,
+    "error_handling": 40,
+    "realtime": 35,
+    "accessibility": 20,
+    "security": 42,
+    "differentiation": 22,
+    "enterprise_readiness": 35
+  },
+  "overall_score": 35,
+  "issues": [
+    {
+      "id": "core-workflows-C2-001",
+      "severity": "critical",
+      "dimension": "accessibility",
+      "title": "RFI list table rows missing keyboard navigation and ARIA roles",
+      "file": "src/pages/RFIs.tsx",
+      "description": "PAGE_ACCEPTANCE_CRITERIA §3 requires table rows to be clickable to detail views and keyboard navigable (Tab order, Enter to open). The RFI table rows lack role='row', aria-label on status badges, and onClick/onKeyDown handlers for keyboard-only navigation. This fails axe-core audit and violates Global Acceptance Standards for accessibility.",
+      "prompt": "In the file src/pages/RFIs.tsx, in the component that renders the RFI table rows: BEFORE: table rows are plain <tr> or <div> elements with no role, no tabIndex, no onKeyDown handler, and status badges have no aria-label. AFTER: Each row gets role='row', tabIndex={0}, an onKeyDown handler that navigates to RFI detail on Enter/Space, and each status badge gets aria-label describing the status (e.g. aria-label='Status: Open'). Each priority badge gets aria-label='Priority: High'. The overdue badge gets aria-label='Overdue'. Add cursor: 'pointer' to row hover styles. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "core-workflows-C2-002",
+      "severity": "critical",
+      "dimension": "interaction_quality",
+      "title": "Submittals page missing empty state and filtered-empty state per acceptance criteria",
+      "file": "src/pages/Submittals.tsx",
+      "description": "PAGE_ACCEPTANCE_CRITERIA §4 criterion 9 requires: 'No submittals yet — track material approvals to keep procurement on schedule' with CTA 'Create Submittal'. Currently the page shows a blank table or generic 'No data found' text when no submittals exist. Filtered-empty state ('No submittals match your filters' with removable chips) is also missing per Global Acceptance Standards.",
+      "prompt": "In the file src/pages/Submittals.tsx, in the main component function: BEFORE: When the submittals array is empty, the page renders an empty table body or a generic 'No data' message. There is no distinction between true-empty and filtered-empty. AFTER: Add two empty state branches. (1) True empty (no submittals at all, no active filters): render a centered container with a FileText icon (from lucide-react, 48px, color theme.colors.textMuted), heading 'No submittals yet', subtext 'Track material approvals to keep procurement on schedule', and a primary CTA button 'Create Submittal' that opens the create modal. (2) Filtered empty (submittals exist but filters exclude all): render 'No submittals match your filters' with a 'Clear Filters' button that resets all filter state. Use inline styles with theme tokens. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "core-workflows-C2-003",
+      "severity": "critical",
+      "dimension": "mobile_first",
+      "title": "Change Orders table not responsive at 375px width, causes horizontal overflow",
+      "file": "src/pages/ChangeOrders.tsx",
+      "description": "PAGE_ACCEPTANCE_CRITERIA §15 criterion 13 states 'Mobile: view and approve COs.' Global Standards require usability at 375px with no horizontal scroll. The change orders table renders all columns at fixed widths causing overflow and unusable UI on mobile. Touch targets for status badges are below 44px minimum.",
+      "prompt": "In the file src/pages/ChangeOrders.tsx, in the component that renders the change order table: BEFORE: The table renders all columns (CO#, Title, Type, Status, Amount, Impact, Requested By, Date) at desktop widths with no responsive breakpoint, causing horizontal overflow at 375px. Status and action buttons are smaller than 44px touch targets. AFTER: Add a responsive check using window.innerWidth or a useMediaQuery hook. Below 768px, replace the table with a card-based layout: each change order renders as a Card with CO# and title on the first line, amount and status badge on the second line, and type/date on the third line. Ensure all tappable elements (status badge, card itself for navigation) are minimum 44x44px. The card should have onClick to navigate to detail. Use theme.spacing and theme.colors for all values. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "core-workflows-C2-004",
+      "severity": "major",
+      "dimension": "error_handling",
+      "title": "RFI create mutation silently fails without user feedback on API error",
+      "file": "src/api/endpoints/rfis.ts",
+      "description": "PAGE_ACCEPTANCE_CRITERIA §3 criterion 6 requires RFI creation with proper feedback. Global Standards require 'toast notifications for all user actions (created, updated, deleted, error)'. The createRfi function in the API layer throws an error but the calling page component does not catch it or show a toast. On network failure or RLS denial, the user sees nothing happen.",
+      "prompt": "In the file src/pages/RFIs.tsx, in the function that handles RFI creation form submission (the onSubmit or handleCreate callback): BEFORE: The function calls createRfi() but does not wrap it in try/catch, so API errors propagate unhandled. No success toast is shown on successful creation either. AFTER: Wrap the createRfi() call in a try/catch block. On success: show a toast notification 'RFI created successfully' (use the existing toast system or add a simple toast state with a 3 second auto-dismiss div positioned fixed at bottom-right, green background, white text). On error: show a toast 'Failed to create RFI. Please try again.' with red background. Also add a loading state to the submit button: while the mutation is in flight, disable the button and show 'Creating...' text. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "core-workflows-C2-005",
+      "severity": "major",
+      "dimension": "domain_depth",
+      "title": "Punch list missing two-step verification workflow (sub complete → GC verify)",
+      "file": "src/pages/PunchList.tsx",
+      "description": "PAGE_ACCEPTANCE_CRITERIA §8 criterion 1 requires two-step verification: 'Sub marks Complete → item moves to Sub Complete state → GC verifies by reviewing after-photo and clicking Verify or Reject.' Currently the punch list only has open/in_progress/completed statuses with no 'sub_complete' intermediate state and no verify/reject actions for GC role. This is the core differentiator per the spec.",
+      "prompt": "In the file src/pages/PunchList.tsx, in the component that renders punch list item status and action buttons: BEFORE: Status values are only 'open', 'in_progress', 'completed', and 'deferred'. There is no 'sub_complete' status. The complete action directly moves to 'completed' without a verification step. There are no Verify/Reject buttons. AFTER: (1) Add 'sub_complete' to the status type and status filter tabs. (2) When a user with subcontractor role clicks 'Mark Complete', set status to 'sub_complete' (not 'completed'). (3) When status is 'sub_complete', show two buttons visible only to superintendent+ roles: 'Verify' (sets status to 'completed' and records verified_at timestamp) and 'Reject' (sets status back to 'open' with a required rejection note via a prompt or inline input). (4) Add a purple status color for 'sub_complete' in the status badge rendering: { backgroundColor: '#EDE9FE', color: '#7C3AED' }. (5) Update the stats bar to show 'Awaiting Verification' count for sub_complete items. After changes, run: npm run build to verify no TypeScript errors."
+    }
+  ],
+  "invented_features": [],
+  "competitive_intel": "Procore's RFI workflow handles email reply from architects without login, which SiteSync lacks entirely. Procore's Quick Capture converts video to punch items with transcription. Fieldwire's two-step punch verification and Apple Pencil markup are strong field differentiators that SiteSync's punch list and drawing viewer do not yet match. The absence of email notifications (P0-5 in roadmap) means RFIs sit unanswered, which is the single biggest workflow gap versus every competitor.",
+  "summary": "Core Workflows scores 35/100, held back by missing acceptance criteria compliance across all four pages (RFIs, Submittals, Change Orders, Punch List). The most impactful gaps are: (1) no accessibility on table rows making keyboard-only navigation impossible, (2) missing contextual empty states on Submittals violating Global Standards, (3) Change Orders page breaks at mobile widths failing the 375px requirement, (4) silent mutation failures on RFI creation with no toast feedback, and (5) punch list lacks the two-step sub-complete-then-verify workflow that the acceptance criteria defines as the core differentiator. The API layer in rfis.ts and submittals.ts is reasonably well-typed but the page components consuming them do not handle loading, error, and empty states consistently. Real-time subscriptions exist in hook patterns but are not wired to all four workflow pages. AI integration is minimal with no inline draft or conflict detection on any workflow page."
+}
