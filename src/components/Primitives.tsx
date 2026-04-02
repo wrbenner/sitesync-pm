@@ -27,11 +27,13 @@ interface PageContainerProps {
   subtitle?: string;
   actions?: React.ReactNode;
   children: React.ReactNode;
+  'aria-label'?: string;
 }
 
-export const PageContainer: React.FC<PageContainerProps> = ({ title, subtitle, actions, children }) => {
+export const PageContainer: React.FC<PageContainerProps> = ({ title, subtitle, actions, children, 'aria-label': ariaLabel }) => {
   return (
     <main
+      aria-label={ariaLabel}
       style={{
         flex: 1,
         overflow: 'auto',

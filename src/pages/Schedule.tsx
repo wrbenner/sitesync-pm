@@ -114,6 +114,7 @@ export const Schedule: React.FC = () => {
   const [whatIfMode, setWhatIfMode] = useState(false);
   const [showBaseline, setShowBaseline] = useState(false);
   const [recoveryExpanded, setRecoveryExpanded] = useState(false);
+  const [scheduleAnnouncement, setScheduleAnnouncement] = useState('');
   const { addToast } = useToast();
 
   // dirtyPhaseIds: pass phase IDs currently being edited to get conflict toasts.
@@ -339,7 +340,18 @@ export const Schedule: React.FC = () => {
       title="Schedule"
       subtitle={`${metrics.daysBeforeSchedule} days ahead \u00B7 ${metrics.milestonesHit}/${metrics.milestoneTotal} milestones`}
       actions={liveIndicator}
+      aria-label="Project Schedule"
     >
+      {/* Global aria-live region: announces filter changes and status updates */}
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        style={{ position: 'absolute', left: -9999, width: 1, height: 1, overflow: 'hidden' }}
+      >
+        {scheduleAnnouncement}
+      </div>
+
       <a
         href="#gantt-activities"
         style={{
@@ -686,8 +698,7 @@ export const Schedule: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
                 <SectionHeader title="Project Timeline" />
                 <span
-                  aria-live="polite"
-                  aria-atomic="true"
+                  aria-hidden="true"
                   style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}
                 >
                   {schedulePhases.length > 0 ? `${schedulePhases.length} ${schedulePhases.length === 1 ? 'activity' : 'activities'}` : ''}
@@ -779,7 +790,10 @@ export const Schedule: React.FC = () => {
                   isLoading={loading}
                   onImportSchedule={() => addToast('info', 'Schedule import coming soon')}
                   onAddActivity={() => addToast('info', 'Activity drawer coming soon')}
-                  onPhaseClick={(phase) => addToast('info', `${phase.name}: ${phase.progress}% complete`)}
+                  onPhaseClick={(phase) => {
+                    addToast('info', `${phase.name}: ${phase.progress}% complete`);
+                    setScheduleAnnouncement(`Activity ${phase.name} selected, ${phase.progress}% complete`);
+                  }}
                   baselinePhases={schedulePhases}
                   showBaseline={showBaseline}
                   risks={risks}
