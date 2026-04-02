@@ -5,8 +5,8 @@ import { autoGenerateLienWaivers } from './lienWaivers'
 
 /**
  * AIA G702 formula for a single SOV line item.
- * Retainage is calculated on work completed only, not on materials presently stored, per AIA Document G702.
- * Current Payment Due = (Work Completed + Stored Materials) - Retainage on Work - Previous Certificates
+ * Retainage on stored materials defaults to 0% per standard AIA practice but is configurable per contract.
+ * Current Payment Due = (Total Completed and Stored to Date) - (Retainage on Completed Work) - (Retainage on Stored Materials) - (Previous Certificates for Payment)
  */
 export function computeCurrentPaymentDue(params: {
   scheduledValue: number
@@ -15,10 +15,12 @@ export function computeCurrentPaymentDue(params: {
   storedMaterials: number
   retainageRate: number
   previousCertificates?: number
+  storedMaterialRetainageRate?: number
 }): {
   workThisPeriod: number
   totalCompletedAndStored: number
   retainageAmount: number
+  retainageOnStored: number
   currentPaymentDue: number
 } {
   const {
@@ -28,13 +30,15 @@ export function computeCurrentPaymentDue(params: {
     storedMaterials,
     retainageRate,
     previousCertificates = 0,
+    storedMaterialRetainageRate = 0,
   } = params
   const previousWork = scheduledValue * (prevPctComplete / 100)
   const workThisPeriod = scheduledValue * (currentPctComplete / 100) - previousWork
   const totalCompletedAndStored = previousWork + workThisPeriod + storedMaterials
   const retainageOnWork = (previousWork + workThisPeriod) * retainageRate
-  const currentPaymentDue = totalCompletedAndStored - retainageOnWork - previousCertificates
-  return { workThisPeriod, totalCompletedAndStored, retainageAmount: retainageOnWork, currentPaymentDue }
+  const retainageOnStored = storedMaterials * storedMaterialRetainageRate
+  const currentPaymentDue = totalCompletedAndStored - retainageOnWork - retainageOnStored - previousCertificates
+  return { workThisPeriod, totalCompletedAndStored, retainageAmount: retainageOnWork, retainageOnStored, currentPaymentDue }
 }
 
 /**
