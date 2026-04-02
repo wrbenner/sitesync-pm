@@ -387,8 +387,20 @@ export const Safety: React.FC = () => {
     return daysUntil > 0 && daysUntil <= 30
   }).length ?? 0
 
-  // Open corrective actions: incidents with status 'open'
-  const openCorrectiveActions = incidents?.filter((i: any) => i.status === 'open').length ?? 0
+  // Open corrective actions: any incident not yet closed
+  const openCorrectiveActions = incidents?.filter((i: any) => i.status !== 'closed').length ?? 0
+
+  // Inspections This Week: Monday through Sunday of the current week
+  const weekStart = new Date(now)
+  weekStart.setHours(0, 0, 0, 0)
+  weekStart.setDate(now.getDate() - ((now.getDay() + 6) % 7)) // Monday
+  const weekEnd = new Date(weekStart)
+  weekEnd.setDate(weekStart.getDate() + 7) // next Monday (exclusive)
+  const inspectionsThisWeek = inspections?.filter((insp: any) => {
+    if (!insp.date) return false
+    const d = new Date(insp.date)
+    return d >= weekStart && d < weekEnd
+  }).length ?? 0
 
   // Detect when queries have settled but returned no data (tables not yet seeded)
   const isSampleData = !loadingIncidents && incidents === null
@@ -578,10 +590,15 @@ export const Safety: React.FC = () => {
             >
               <MetricBox
                 label="Days Without Incident"
-                value={daysSinceIncident ?? 'No recordable incidents'}
+                value={daysSinceIncident ?? 'No incidents recorded'}
                 change={daysSinceIncident !== null ? (daysSinceIncident > 30 ? 1 : -1) : 1}
                 changeLabel={daysSinceIncident === null ? undefined : 'recordable'}
-                colorOverride={daysSinceIncident === null ? 'success' : undefined}
+                colorOverride={
+                  daysSinceIncident === null ? 'success'
+                  : daysSinceIncident > 30 ? 'success'
+                  : daysSinceIncident > 0 ? 'warning'
+                  : 'danger'
+                }
                 warning={isSampleData ? 'Sample data. Connect backend to see live metrics.' : undefined}
               />
             </div>
@@ -592,6 +609,12 @@ export const Safety: React.FC = () => {
                 label="TRIR"
                 value={trir ?? 'N/A'}
                 changeLabel={trir === null ? 'log crew hours to calculate' : 'per 200K hours'}
+                colorOverride={
+                  trir === null ? undefined
+                  : parseFloat(trir) > 3.0 ? 'danger'
+                  : parseFloat(trir) > 2.0 ? 'warning'
+                  : 'success'
+                }
                 warning={isSampleData ? 'Sample data. Connect backend to see live metrics.' : undefined}
               />
             </div>
@@ -599,6 +622,20 @@ export const Safety: React.FC = () => {
               <MetricBox
                 label="Open Corrective Actions"
                 value={openCorrectiveActions}
+                colorOverride={
+                  openCorrectiveActions === 0 ? 'success'
+                  : openCorrectiveActions <= 5 ? 'warning'
+                  : 'danger'
+                }
+                warning={isSampleData ? 'Sample data. Connect backend to see live metrics.' : undefined}
+              />
+            </div>
+            <div>
+              <MetricBox
+                label="Inspections This Week"
+                value={inspectionsThisWeek}
+                changeLabel="Mon to Sun"
+                colorOverride={inspectionsThisWeek > 0 ? 'success' : 'warning'}
                 warning={isSampleData ? 'Sample data. Connect backend to see live metrics.' : undefined}
               />
             </div>
