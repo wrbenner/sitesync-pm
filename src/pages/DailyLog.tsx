@@ -27,6 +27,7 @@ import { useUpdateDailyLog, useCreateDailyLog, useSubmitDailyLog, useApproveDail
 import { fetchWeather, formatWeatherSummary } from '../lib/weather';
 import type { WeatherData } from '../lib/weather';
 import { PermissionGate } from '../components/auth/PermissionGate';
+import { usePermissions } from '../hooks/usePermissions';
 import { getDailyLogStatusConfig } from '../machines/dailyLogMachine';
 import type { DailyLogState } from '../machines/dailyLogMachine';
 
@@ -67,6 +68,13 @@ export const DailyLog: React.FC = () => {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showAmendmentModal, setShowAmendmentModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showReturnToDraftModal, setShowReturnToDraftModal] = useState(false);
+  const [returnToDraftNote, setReturnToDraftNote] = useState('');
+  const [showAddendumForm, setShowAddendumForm] = useState(false);
+  const [addendumText, setAddendumText] = useState('');
+  const [addendumSubmitting, setAddendumSubmitting] = useState(false);
+
+  const { hasPermission } = usePermissions();
 
   const manpowerSeeded = React.useRef(false);
   const [manpowerRows, setManpowerRows] = useState<ManpowerRow[]>([]);
@@ -373,9 +381,59 @@ export const DailyLog: React.FC = () => {
   const logStatus: DailyLogState = (today as any).status || (today.approved ? 'approved' : 'draft');
   const statusConfig = getDailyLogStatusConfig(logStatus);
   const isLocked = (today as any).is_submitted === true || logStatus === 'approved';
+  const isApproved = logStatus === 'approved';
+  const isSubmittedOnly = logStatus === 'submitted';
   const isRejected = logStatus === 'rejected';
   const submittedAt: string | null = (today as any).submitted_at ?? null;
+  const approvedAt: string | null = (today as any).approved_at ?? null;
   const rejectionComments = (today as any).rejection_comments;
+
+  const canReturnToDraft = isSubmittedOnly && hasPermission('daily_log.reject');
+
+  const handleReturnToDraft = async () => {
+    if (!returnToDraftNote.trim()) { addToast('error', 'Please provide a note explaining the reason.'); return; }
+    try {
+      await updateDailyLog.mutateAsync({
+        id: today.id,
+        updates: { status: 'draft', is_submitted: false, rejection_comments: returnToDraftNote },
+        projectId: projectId!,
+      });
+      setShowReturnToDraftModal(false);
+      setReturnToDraftNote('');
+      addToast('success', 'Daily log returned to draft');
+    } catch {
+      addToast('error', 'Failed to return log to draft');
+    }
+  };
+
+  const handleAddendumSubmit = async () => {
+    if (!addendumText.trim()) { addToast('error', 'Addendum cannot be empty.'); return; }
+    setAddendumSubmitting(true);
+    try {
+      await createDailyLog.mutateAsync({
+        projectId: projectId!,
+        data: {
+          project_id: projectId!,
+          log_date: today.log_date,
+          workers_onsite: 0,
+          total_hours: 0,
+          incidents: 0,
+          summary: addendumText,
+          status: 'submitted',
+          is_submitted: true,
+          submitted_at: new Date().toISOString(),
+          addendum_of: today.id,
+        } as Parameters<typeof createDailyLog.mutateAsync>[0]['data'],
+      });
+      setShowAddendumForm(false);
+      setAddendumText('');
+      addToast('success', 'Addendum saved and linked to original log');
+    } catch {
+      addToast('error', 'Failed to save addendum');
+    } finally {
+      setAddendumSubmitting(false);
+    }
+  };
 
   const todayMetrics = [
     { icon: <Users size={16} style={{ color: colors.textTertiary }} />, label: 'Workers', value: (today.workers_onsite ?? 0).toString(), valueColor: colors.textPrimary },
@@ -475,11 +533,19 @@ export const DailyLog: React.FC = () => {
         {logStatus === 'draft' && !isLocked && (
           <PermissionGate permission="daily_log.submit"><Btn size="sm" icon={<Lock size={14} />} onClick={handleSubmit}>Submit and Lock</Btn></PermissionGate>
         )}
-        {logStatus === 'submitted' && (
+        {isSubmittedOnly && (
           <>
             <PermissionGate permission="daily_log.approve"><Btn size="sm" variant="primary" icon={<ShieldCheck size={14} />} onClick={() => setShowSignature(true)}>Approve</Btn></PermissionGate>
             <span style={{ color: colors.statusCritical }}><PermissionGate permission="daily_log.reject"><Btn size="sm" variant="ghost" onClick={() => setShowRejectModal(true)}>Reject</Btn></PermissionGate></span>
+            {canReturnToDraft && (
+              <Btn size="sm" variant="ghost" icon={<RefreshCw size={14} />} onClick={() => setShowReturnToDraftModal(true)}>Return to Draft</Btn>
+            )}
           </>
+        )}
+        {isApproved && (
+          <PermissionGate permission="daily_log.create">
+            <Btn size="sm" variant="secondary" icon={<FileEdit size={14} />} onClick={() => setShowAddendumForm(true)}>Add Addendum</Btn>
+          </PermissionGate>
         )}
         {isRejected && (
           <PermissionGate permission="daily_log.submit"><Btn size="sm" icon={<Send size={14} />} onClick={handleSubmit}>Resubmit</Btn></PermissionGate>
@@ -520,13 +586,21 @@ export const DailyLog: React.FC = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
               {isLocked && <Lock size={13} color={statusConfig.color} />}
               <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: statusConfig.color }}>{statusConfig.label}</span>
-              {isLocked && submittedAt && (
+              {isApproved && approvedAt && (
                 <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>
-                  Submitted {new Date(submittedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}. Edits create an amendment.
+                  This log was approved on {new Date(approvedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}. Changes require an addendum.
                 </span>
               )}
-              {isLocked && !submittedAt && (
-                <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>This log is locked. Edits create an amendment.</span>
+              {isApproved && !approvedAt && (
+                <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>This log is approved. Changes require an addendum.</span>
+              )}
+              {isSubmittedOnly && submittedAt && (
+                <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>
+                  This log was submitted on {new Date(submittedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} and is locked for editing.
+                </span>
+              )}
+              {isSubmittedOnly && !submittedAt && (
+                <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>This log has been submitted and is locked for editing.</span>
               )}
             </div>
           </div>
@@ -723,6 +797,34 @@ export const DailyLog: React.FC = () => {
             <PhotoGrid photos={photos} onCapture={!isLocked ? handlePhotoCapture : undefined} />
           </div>
 
+          {/* Addendum form — appended below original log content, original remains unmodified */}
+          {showAddendumForm && isApproved && (
+            <Card>
+              <SectionHeader title="Add Addendum" action={
+                <button onClick={() => setShowAddendumForm(false)} aria-label="Close addendum form" style={{ backgroundColor: 'transparent', border: 'none', cursor: 'pointer', color: colors.textTertiary, padding: spacing['1'] }}><X size={14} /></button>
+              } />
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: spacing['2'], padding: spacing['3'], backgroundColor: colors.orangeSubtle, borderRadius: borderRadius.md, marginBottom: spacing['4'] }}>
+                <Lock size={13} color={colors.orangeText} style={{ marginTop: 2, flexShrink: 0 }} />
+                <p style={{ fontSize: typography.fontSize.sm, color: colors.orangeText, margin: 0 }}>
+                  The original log is preserved. This addendum will be saved as a separate record linked to this log, with its own timestamp and author.
+                </p>
+              </div>
+              <textarea
+                value={addendumText}
+                onChange={e => setAddendumText(e.target.value)}
+                placeholder="Describe the addendum, correction, or additional information..."
+                disabled={addendumSubmitting}
+                style={{ width: '100%', padding: spacing['3'], fontSize: typography.fontSize.body, fontFamily: typography.fontFamily, border: `1px solid ${colors.borderDefault}`, backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.md, outline: 'none', resize: 'vertical', minHeight: '96px', boxSizing: 'border-box', color: colors.textPrimary }}
+              />
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: spacing['2'], marginTop: spacing['3'] }}>
+                <Btn variant="ghost" size="md" onClick={() => { setShowAddendumForm(false); setAddendumText(''); }}>Cancel</Btn>
+                <Btn variant="primary" size="md" icon={<FileEdit size={14} />} onClick={handleAddendumSubmit} disabled={addendumSubmitting}>
+                  {addendumSubmitting ? 'Saving...' : 'Save Addendum'}
+                </Btn>
+              </div>
+            </Card>
+          )}
+
           {/* Signature / Approval */}
           {showSignature && logStatus === 'submitted' && (
             <SignaturePad
@@ -816,8 +918,11 @@ export const DailyLog: React.FC = () => {
                         <span style={{ fontSize: '11px', color: colors.textTertiary, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px' }}>{log.ai_summary}</span>
                       )}
                     </div>
-                    {/* Status badge */}
-                    <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: sc.color, backgroundColor: sc.bg, padding: `1px ${spacing['2']}`, borderRadius: borderRadius.full, flexShrink: 0 }}>{sc.label}</span>
+                    {/* Status badge with lock indicator for submitted/approved */}
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: sc.color, backgroundColor: sc.bg, padding: `1px ${spacing['2']}`, borderRadius: borderRadius.full, flexShrink: 0 }}>
+                      {(entryStatus === 'submitted' || entryStatus === 'approved') && <Lock size={10} />}
+                      {sc.label}
+                    </span>
                     <span style={{ fontSize: typography.fontSize.body, color: colors.textSecondary, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{log.summary ?? ''}</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: spacing['4'], flexShrink: 0 }}>
                       <span style={{ fontSize: typography.fontSize.label, color: colors.textTertiary }}>{log.workers_onsite ?? 0} workers</span>
@@ -895,6 +1000,28 @@ export const DailyLog: React.FC = () => {
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: spacing['2'] }}>
               <Btn variant="ghost" size="md" onClick={() => setShowAmendmentModal(false)}>Cancel</Btn>
               <Btn variant="primary" size="md" icon={<FileEdit size={14} />} onClick={() => { setShowAmendmentModal(false); setShowQuickEntry(true); }}>Create Amendment</Btn>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Return to Draft Modal */}
+      {showReturnToDraftModal && (
+        <>
+          <div onClick={() => setShowReturnToDraftModal(false)} role="presentation" aria-hidden="true" style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.3)', zIndex: 1039 }} />
+          <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 440, backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.lg, boxShadow: '0 16px 48px rgba(0,0,0,0.15)', zIndex: 1040, padding: spacing['6'] }}>
+            <h3 style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['4'] }}>Return to Draft</h3>
+            <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: 0, marginBottom: spacing['3'] }}>Provide a note explaining why this log is being returned to draft. This will be visible to the submitter.</p>
+            <textarea
+              value={returnToDraftNote}
+              onChange={e => setReturnToDraftNote(e.target.value)}
+              placeholder="Reason for returning to draft..."
+              autoFocus
+              style={{ width: '100%', padding: spacing['3'], fontSize: typography.fontSize.body, fontFamily: typography.fontFamily, border: 'none', backgroundColor: colors.surfaceInset, borderRadius: borderRadius.md, outline: 'none', resize: 'vertical', minHeight: '96px', boxSizing: 'border-box' }}
+            />
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: spacing['2'], marginTop: spacing['4'] }}>
+              <Btn variant="ghost" size="md" onClick={() => { setShowReturnToDraftModal(false); setReturnToDraftNote(''); }}>Cancel</Btn>
+              <Btn variant="primary" size="md" onClick={handleReturnToDraft}>Return to Draft</Btn>
             </div>
           </div>
         </>
