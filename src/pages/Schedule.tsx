@@ -420,7 +420,7 @@ export const Schedule: React.FC = () => {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(160px, 1fr))',
+          gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)',
           gap: spacing.lg,
           marginBottom: spacing['2xl'],
         }}
@@ -689,7 +689,61 @@ export const Schedule: React.FC = () => {
             </div>
           </Card>
         ) : isMobile ? (
-          <MobileScheduleView phases={schedulePhases} risks={risks} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {schedulePhases.map((phase) => {
+              const statusColor =
+                phase.status === 'completed' ? '#4EC896'
+                : phase.status === 'in_progress' ? '#3B82F6'
+                : phase.status === 'delayed' ? '#E74C3C'
+                : '#F59E0B';
+              const isCritical = phase.is_critical_path === true;
+              return (
+                <div
+                  key={phase.id}
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    borderRadius: 8,
+                    border: '1px solid #E5E7EB',
+                    borderLeft: isCritical ? '3px solid #E74C3C' : '1px solid #E5E7EB',
+                    minHeight: 64,
+                    padding: 16,
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, gap: 8 }}>
+                    <span style={{ fontWeight: 600, fontSize: 14, color: colors.textPrimary, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {phase.name}
+                    </span>
+                    <span style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      backgroundColor: statusColor + '22',
+                      color: statusColor,
+                      padding: '0 10px',
+                      borderRadius: 99,
+                      minHeight: 44,
+                      display: 'flex',
+                      alignItems: 'center',
+                      whiteSpace: 'nowrap',
+                      flexShrink: 0,
+                    }}>
+                      {(phase.status ?? 'not started').replace(/_/g, ' ')}
+                    </span>
+                  </div>
+                  <span style={{ fontSize: 12, color: colors.textTertiary, display: 'block', marginBottom: 8 }}>
+                    {new Date(phase.startDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    {' \u2013 '}
+                    {new Date(phase.endDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </span>
+                  <div style={{ height: 4, backgroundColor: '#F3F4F6', borderRadius: 99, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${phase.progress}%`, backgroundColor: statusColor, borderRadius: 99 }} />
+                  </div>
+                  <span style={{ fontSize: 11, color: colors.textTertiary, marginTop: 4, display: 'block' }}>
+                    {phase.progress}% complete
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         ) : (
           <>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['3'] }}>
@@ -729,6 +783,7 @@ export const Schedule: React.FC = () => {
               padding: spacing['5'],
               boxShadow: whatIfMode ? `0 0 0 2px ${colors.statusPending}40` : shadows.card,
               transition: `box-shadow ${transitions.quick}`,
+              overflowX: 'auto',
             }}>
               {whatIfMode && (
                 <div style={{
