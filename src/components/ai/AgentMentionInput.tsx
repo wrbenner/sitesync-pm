@@ -90,7 +90,7 @@ export const AgentMentionInput = memo<AgentMentionInputProps>(
     const handleSend = useCallback(() => {
       const trimmed = value.trim()
       if (!trimmed || disabled) return
-      if (trimmed.length > MAX_MESSAGE_LENGTH) {
+      if (value.length > MAX_MESSAGE_LENGTH) {
         toast.error(`Message too long. Maximum ${MAX_MESSAGE_LENGTH} characters.`)
         return
       }
@@ -248,6 +248,7 @@ export const AgentMentionInput = memo<AgentMentionInputProps>(
         )}
 
         {/* Input area */}
+        <div>
         <div
           style={{
             display: 'flex',
@@ -311,6 +312,20 @@ export const AgentMentionInput = memo<AgentMentionInputProps>(
           >
             <Send size={16} />
           </button>
+        </div>
+        {value.length > 0 && (
+          <div
+            style={{
+              textAlign: 'right',
+              marginTop: spacing['1'],
+              fontSize: typography.fontSize.caption,
+              color: value.length > MAX_MESSAGE_LENGTH * 0.9 ? colors.statusCritical : colors.textTertiary,
+              transition: `color ${transitions.quick}`,
+            }}
+          >
+            {value.length}/{MAX_MESSAGE_LENGTH}
+          </div>
+        )}
         </div>
       </div>
     )
