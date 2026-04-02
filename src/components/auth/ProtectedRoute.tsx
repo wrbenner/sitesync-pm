@@ -125,40 +125,32 @@ const RequestAccessPage: React.FC<RequestAccessPageProps> = ({ moduleName }) => 
   </div>
 )
 
-export const ProtectedRoute: React.FC<Props> = ({ children, requiredPermission, moduleId, moduleName }) => {
-  const { user, loading: authLoading } = useAuth()
-  const { hasPermission, canAccessModule } = usePermissions()
+const ProtectedRoute: React.FC<Props> = ({ children, requiredPermission, moduleId, moduleName }) => {
+  const { user, loading } = useAuth()
+  const { hasPermission } = usePermissions()
   const location = useLocation()
 
-  // Dev bypass: explicit opt-in only, with prominent warning banner
-  if (isDevBypassActive()) {
-    return (
-      <>
-        <DevBanner />
-        <div style={{ marginTop: spacing['7'] }}>{children}</div>
-      </>
-    )
+  if (loading) {
+    return <SkeletonLoader ariaLabel="Loading application" />
   }
 
-  // Auth loading: show skeleton while session has not been checked yet
-  if (user === null && authLoading) {
-    return <SkeletonLoader ariaLabel="Verifying authentication" />
-  }
-
-  // No user after auth check: redirect to login with return path
   if (!user) {
-    return <Navigate to={`/login?returnTo=${encodeURIComponent(location.pathname + location.search)}`} replace />
+    return <Navigate to="/login" state={{ returnTo: location.pathname }} replace />
   }
 
-  // Module permission check
-  if (moduleId && !canAccessModule(moduleId)) {
-    return <RequestAccessPage moduleName={moduleName || moduleId} />
-  }
+  const requiredPerm = requiredPermission ?? MODULE_PERMISSIONS[moduleId ?? '']
 
-  // Specific permission check
-  if (requiredPermission && !hasPermission(requiredPermission)) {
+  if (requiredPerm && !hasPermission(requiredPerm)) {
     return <RequestAccessPage moduleName={moduleName} />
   }
 
-  return <>{children}</>
+  return (
+    <>
+      {isDevBypassActive() && <DevBanner />}
+      {children}
+    </>
+  )
 }
+
+export { ProtectedRoute }
+export default ProtectedRoute
