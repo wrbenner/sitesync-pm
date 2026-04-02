@@ -39,7 +39,7 @@ describe('createScopedClient', () => {
     }
   }
 
-  it('automatically appends .eq(project_id) on .from() calls', async () => {
+  it('automatically appends .eq(project_id) after a terminal operation', async () => {
     const { createScopedClient } = await import('../../api/client')
     const { supabase } = await import('../../lib/supabase')
 
@@ -47,7 +47,8 @@ describe('createScopedClient', () => {
     vi.mocked(supabase.from).mockReturnValue(builder as any)
 
     const scoped = createScopedClient(supabase as any, PROJECT_A)
-    scoped.from('rfis' as any)
+    // .eq() is injected after the terminal call so the QueryBuilder chain is not broken
+    scoped.from('rfis' as any).select('*' as any)
 
     expect(supabase.from).toHaveBeenCalledWith('rfis')
     expect(builder.eq).toHaveBeenCalledWith('project_id', PROJECT_A)

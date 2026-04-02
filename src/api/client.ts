@@ -17,16 +17,31 @@ type SupabaseProxyTarget = typeof supabase
 type QueryResult<T> = PromiseLike<{ data: T | null; error: { message: string; code?: string; details?: string | null } | null }>
 
 /**
- * Wraps the Supabase client so that every .from() call automatically
- * appends .eq('project_id', projectId). This prevents callers from
- * accidentally reading rows that belong to a different project.
+ * Wraps the Supabase client so that every terminal operation (select, insert,
+ * update, delete, upsert) automatically appends .eq('project_id', projectId).
+ * The .eq() is injected after the terminal call so that callers receive a
+ * full PostgrestQueryBuilder from .from() and can chain freely before the
+ * filter is applied.
  */
 export function createScopedClient(client: DbClient, projectId: string): DbClient {
+  const TERMINAL_OPS = new Set(['select', 'insert', 'update', 'delete', 'upsert'])
   return new Proxy(client, {
     get(target: SupabaseProxyTarget, prop: string | symbol, receiver: unknown) {
       if (prop === 'from') {
-        return (table: string): ReturnType<typeof supabase.from> =>
-          target.from(table as TableName).eq('project_id', projectId)
+        return (table: string): ReturnType<typeof supabase.from> => {
+          const qb = target.from(table as TableName)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          return new Proxy(qb, {
+            get(qbTarget, qbProp, qbReceiver) {
+              if (typeof qbProp === 'string' && TERMINAL_OPS.has(qbProp)) {
+                return (...args: unknown[]) =>
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  ((qbTarget as any)[qbProp](...args) as any).eq('project_id', projectId)
+              }
+              return Reflect.get(qbTarget, qbProp, qbReceiver)
+            },
+          }) as ReturnType<typeof supabase.from>
+        }
       }
       return Reflect.get(target, prop, receiver)
     },
