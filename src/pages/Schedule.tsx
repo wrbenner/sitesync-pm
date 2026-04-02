@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { motion } from 'framer-motion';
 import { Sparkles, AlertTriangle, ChevronDown, ChevronUp, CheckCircle, RefreshCw, Zap, CalendarClock, TrendingUp, GitBranch, Gauge, CalendarCheck, Calendar, BarChart3, ToggleLeft, ToggleRight, ClipboardList } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { PageContainer, Card, SectionHeader, MetricBox, Skeleton, Btn, useToast } from '../components/Primitives';
+import { PageContainer, Card, SectionHeader, MetricBox, Skeleton, Btn, useToast, Tag } from '../components/Primitives';
 import { useRealtimeSchedulePhases, useScheduleRealtime } from '../hooks/queries/realtime';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
@@ -722,63 +722,48 @@ export const Schedule: React.FC = () => {
             </div>
           </Card>
         ) : isMobile ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
             {schedulePhases.map((phase) => {
               const statusColor =
                 phase.status === 'completed' ? '#4EC896'
                 : phase.status === 'in_progress' ? '#3B82F6'
                 : phase.status === 'delayed' ? '#E74C3C'
                 : '#F59E0B';
-              const isCritical = phase.is_critical_path === true;
+              const statusLabel = (phase.status ?? 'not started').replace(/_/g, ' ');
               return (
                 <div
                   key={phase.id}
                   role="row"
                   tabIndex={0}
-                  aria-label={`${phase.name}, ${phase.progress}% complete, ${(phase.status ?? 'not started').replace(/_/g, ' ')}`}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setScheduleAnnouncement(`Schedule updated: ${phase.name} is now ${(phase.status ?? 'not started').replace(/_/g, ' ')}`); } }}
+                  aria-label={`${phase.name}, ${phase.progress}% complete, ${statusLabel}`}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setScheduleAnnouncement(`Schedule updated: ${phase.name} is now ${statusLabel}`); } }}
                   style={{
                     backgroundColor: '#FFFFFF',
-                    borderRadius: 8,
-                    border: '1px solid #E5E7EB',
-                    borderLeft: isCritical ? '3px solid #E74C3C' : '1px solid #E5E7EB',
-                    minHeight: 64,
+                    borderRadius: 12,
+                    border: `1px solid ${colors.borderDefault}`,
                     padding: 16,
+                    marginBottom: 12,
                     cursor: 'pointer',
                     outline: 'none',
                   }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, gap: 8 }}>
-                    <span style={{ fontWeight: 600, fontSize: 14, color: colors.textPrimary, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {phase.name}
-                    </span>
-                    <span style={{
-                      fontSize: 11,
-                      fontWeight: 600,
-                      backgroundColor: statusColor + '22',
-                      color: statusColor,
-                      padding: '0 10px',
-                      borderRadius: 99,
-                      minHeight: 44,
-                      display: 'flex',
-                      alignItems: 'center',
-                      whiteSpace: 'nowrap',
-                      flexShrink: 0,
-                    }}>
-                      {(phase.status ?? 'not started').replace(/_/g, ' ')}
-                    </span>
-                  </div>
+                  <span style={{ fontWeight: 600, fontSize: 16, color: colors.textPrimary, display: 'block', marginBottom: 6 }}>
+                    {phase.name}
+                  </span>
                   <span style={{ fontSize: 12, color: colors.textTertiary, display: 'block', marginBottom: 8 }}>
-                    {new Date(phase.startDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    {new Date(phase.startDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: '2-digit' })}
                     {' \u2013 '}
-                    {new Date(phase.endDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    {new Date(phase.endDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: '2-digit' })}
                   </span>
-                  <div style={{ height: 4, backgroundColor: '#F3F4F6', borderRadius: 99, overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${phase.progress}%`, backgroundColor: statusColor, borderRadius: 99 }} />
+                  <div style={{ height: 6, backgroundColor: colors.borderDefault, borderRadius: 3, overflow: 'hidden', marginBottom: 6 }}>
+                    <div style={{ height: '100%', width: `${phase.progress}%`, backgroundColor: colors.primaryOrange, borderRadius: 3 }} />
                   </div>
-                  <span style={{ fontSize: 11, color: colors.textTertiary, marginTop: 4, display: 'block' }}>
-                    {phase.progress}% complete
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
+                    <Tag label={statusLabel} color={statusColor} backgroundColor={statusColor + '22'} />
+                    <span style={{ fontSize: 11, color: colors.textTertiary }}>
+                      {phase.progress}% complete
+                    </span>
+                  </div>
                 </div>
               );
             })}
