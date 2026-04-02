@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { DrawingsEmptyState } from '../components/drawings/DrawingsEmptyState';
 import { TableRowSkeleton } from '../components/ui/Skeletons';
@@ -64,6 +64,10 @@ const _DrawingsPage: React.FC = () => {
   const [showConflicts, setShowConflicts] = useState(false);
   const [analyzingId, setAnalyzingId] = useState<number | null>(null);
   const [analysisResults, setAnalysisResults] = useState<Record<number, DrawingAnalysis>>({});
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadFiles, setUploadFiles] = useState<File[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const disciplines = ['All', 'Architectural', 'Structural', 'Mechanical', 'Electrical', 'Plumbing', 'Landscape', 'Fire Protection', 'Civil', 'Interior Design'];
 
@@ -105,8 +109,8 @@ const _DrawingsPage: React.FC = () => {
       title="Drawings"
       actions={
         <PermissionGate permission="drawings.upload">
-          <Btn variant="primary" size="md" icon={<Upload size={16} />} onClick={() => addToast('success', 'Drawing set uploaded successfully')}>
-            Upload Set
+          <Btn variant="primary" size="md" icon={<Upload size={16} />} aria-label="Upload drawings" onClick={() => setShowUploadModal(true)}>
+            Upload Drawings
           </Btn>
         </PermissionGate>
       }
@@ -392,7 +396,7 @@ const _DrawingsPage: React.FC = () => {
                   <FileText size={40} color={colors.textTertiary} style={{ marginBottom: spacing['4'] }} />
                   <p style={{ fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>No drawings uploaded yet.</p>
                   <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0, marginBottom: spacing['5'], maxWidth: 420 }}>Upload your plans to enable digital markup, RFI linking, and AI coordination analysis.</p>
-                  <Btn variant="primary" size="md" icon={<Upload size={16} />} onClick={() => addToast('success', 'Drawing set uploaded successfully')}>Upload Drawings</Btn>
+                  <Btn variant="primary" size="md" icon={<Upload size={16} />} aria-label="Upload drawings" onClick={() => setShowUploadModal(true)}>Upload Drawings</Btn>
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: `${spacing['6']} ${spacing['4']}`, textAlign: 'center' }}>
@@ -521,6 +525,152 @@ const _DrawingsPage: React.FC = () => {
           drawing={viewerDrawing}
           onClose={() => setViewerDrawing(null)}
         />
+      )}
+
+      {/* Upload Drawings Modal */}
+      {showUploadModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Upload drawings"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'rgba(15, 22, 41, 0.55)',
+          }}
+          onClick={(e) => { if (e.target === e.currentTarget) { setShowUploadModal(false); setUploadFiles([]); setIsDragging(false); } }}
+        >
+          <div
+            style={{
+              backgroundColor: colors.surfaceRaised,
+              borderRadius: borderRadius.lg,
+              border: `1px solid ${colors.borderSubtle}`,
+              padding: spacing['6'],
+              width: '100%',
+              maxWidth: 520,
+              boxShadow: '0 20px 60px rgba(0,0,0,0.18)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['5'] }}>
+              <h2 style={{ fontSize: typography.fontSize.xl, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0 }}>
+                Upload Drawings
+              </h2>
+              <button
+                onClick={() => { setShowUploadModal(false); setUploadFiles([]); setIsDragging(false); }}
+                style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', border: 'none', borderRadius: borderRadius.md, cursor: 'pointer', color: colors.textTertiary }}
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = colors.surfaceInset; }}
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                aria-label="Close upload modal"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Drop zone */}
+            <div
+              style={{
+                minHeight: 200,
+                border: `2px dashed ${isDragging ? colors.primaryOrange : colors.border}`,
+                borderRadius: borderRadius.md,
+                backgroundColor: isDragging ? `${colors.primaryOrange}08` : colors.surfaceInset,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: spacing['3'],
+                cursor: 'pointer',
+                transition: `border-color 0.15s, background-color 0.15s`,
+                padding: spacing['6'],
+                textAlign: 'center',
+              }}
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setIsDragging(false);
+                const dropped = Array.from(e.dataTransfer.files).filter((f) =>
+                  /\.(pdf|dwg|dxf)$/i.test(f.name)
+                );
+                if (dropped.length > 0) setUploadFiles(dropped);
+              }}
+            >
+              <Upload size={32} color={isDragging ? colors.primaryOrange : colors.textTertiary} />
+              <p style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, margin: 0 }}>
+                Drag and drop drawing files here, or click to browse
+              </p>
+              <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0 }}>
+                Accepted formats: .pdf, .dwg, .dxf
+              </p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.dwg,.dxf"
+                multiple
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  const selected = Array.from(e.target.files || []);
+                  if (selected.length > 0) setUploadFiles(selected);
+                  e.target.value = '';
+                }}
+              />
+            </div>
+
+            {/* Selected files */}
+            {uploadFiles.length > 0 && (
+              <div style={{ marginTop: spacing['4'], display: 'flex', flexDirection: 'column', gap: spacing['2'] }}>
+                {uploadFiles.map((file, i) => (
+                  <div
+                    key={`${file.name}-${i}`}
+                    style={{
+                      padding: `${spacing['2']} ${spacing['3']}`,
+                      backgroundColor: colors.surfaceInset,
+                      borderRadius: borderRadius.base,
+                      border: `1px solid ${colors.borderSubtle}`,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['1'] }}>
+                      <FileText size={14} color={colors.textTertiary} />
+                      <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, fontWeight: typography.fontWeight.medium, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {file.name}
+                      </span>
+                      <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, flexShrink: 0 }}>
+                        {(file.size / 1024).toFixed(0)} KB
+                      </span>
+                    </div>
+                    {/* Simulated progress bar */}
+                    <div style={{ height: 4, backgroundColor: colors.border, borderRadius: borderRadius.full, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: '40%', backgroundColor: colors.borderSubtle, borderRadius: borderRadius.full }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Coming soon notice */}
+            <div style={{ marginTop: spacing['4'], padding: `${spacing['2']} ${spacing['3']}`, backgroundColor: `${colors.primaryOrange}0D`, border: `1px solid ${colors.primaryOrange}30`, borderRadius: borderRadius.base }}>
+              <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: 0 }}>
+                Upload functionality coming soon. File selection is enabled for preview only.
+              </p>
+            </div>
+
+            {/* Footer */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: spacing['3'], marginTop: spacing['5'] }}>
+              <Btn variant="secondary" size="md" onClick={() => { setShowUploadModal(false); setUploadFiles([]); setIsDragging(false); }}>
+                Cancel
+              </Btn>
+              <Btn variant="primary" size="md" icon={<Upload size={16} />} aria-label="Upload drawings" disabled>
+                Upload
+              </Btn>
+            </div>
+          </div>
+        </div>
       )}
     </PageContainer>
   );
