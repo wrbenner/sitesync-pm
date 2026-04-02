@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Plus, Search, X, ArrowRight, GitBranch, Clock, AlertTriangle, ChevronRight, FileText } from 'lucide-react';
 import { PageContainer, Card, Btn, MetricBox, SectionHeader, Skeleton, useToast, Modal, TabBar } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, shadows, transitions, zIndex } from '../styles/theme';
@@ -55,6 +55,13 @@ export const ChangeOrders: React.FC = () => {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectComments, setRejectComments] = useState('');
   const [viewMode, setViewMode] = useState<'pipeline' | 'list'>('pipeline');
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Create form state
   const [newTitle, setNewTitle] = useState('');
@@ -612,55 +619,104 @@ export const ChangeOrders: React.FC = () => {
       {/* List View */}
       {allCOs.length > 0 && viewMode === 'list' && (
         <Card padding="0">
-          <div style={{ display: 'grid', gridTemplateColumns: '80px 70px 1fr 110px 100px 80px 120px 110px', padding: `${spacing['2']} ${spacing['4']}`, borderBottom: `1px solid ${colors.borderSubtle}` }}>
-            {['Number', 'Type', 'Title', 'Amount', 'Impact', 'Days', 'Status', ''].map(h => (
-              <span key={h} style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: typography.letterSpacing.wider }}>{h}</span>
-            ))}
-          </div>
-          {filteredCOs.map((co, i) => {
-            const typeConfig = getCOTypeConfig(co.type);
-            const statusConfig = getCOStatusConfig(co.status);
-            const canPromote = co.type === 'pco' && co.status === 'pending_review';
-            const amountColor = co.estimated_cost < 0 ? colors.statusCritical : colors.textPrimary;
-            const amountLabel = co.estimated_cost > 0 ? `+${fmt(co.estimated_cost)}` : fmt(co.estimated_cost);
-            return (
-              <div key={co.id} onClick={() => setSelectedCO(co)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedCO(co); } }} style={{
-                display: 'grid', gridTemplateColumns: '80px 70px 1fr 110px 100px 80px 120px 110px',
-                padding: `${spacing['3']} ${spacing['4']}`,
-                borderBottom: i < filteredCOs.length - 1 ? `1px solid ${colors.borderSubtle}` : 'none',
-                cursor: 'pointer', alignItems: 'center',
-                transition: `background-color ${transitions.quick}`,
-              }}
-                onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.backgroundColor = colors.surfaceHover; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.backgroundColor = 'transparent'; }}
-              >
-                <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>{co.coNumber}</span>
-                <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: typeConfig.color, backgroundColor: typeConfig.bg, padding: `2px ${spacing['2']}`, borderRadius: borderRadius.full, display: 'inline-block' }}>{typeConfig.shortLabel}</span>
-                <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{co.title}</span>
-                <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: amountColor }}>{amountLabel}</span>
-                <span style={{ fontSize: typography.fontSize.sm, color: co.reason_code ? getReasonCodeConfig(co.reason_code).color : colors.textTertiary }}>{co.reason_code ? getReasonCodeConfig(co.reason_code).label : 'N/A'}</span>
-                <span style={{ fontSize: typography.fontSize.sm, color: co.schedule_impact_days > 0 ? colors.statusPending : colors.textTertiary }}>{co.schedule_impact_days > 0 ? `+${co.schedule_impact_days}d` : '0d'}</span>
-                <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: statusConfig.color, backgroundColor: statusConfig.bg, padding: `2px ${spacing['2']}`, borderRadius: borderRadius.full, textAlign: 'center' }}>{statusConfig.label}</span>
-                <div onClick={e => e.stopPropagation()}>
-                  {canPromote && (
-                    <PermissionGate permission="change_orders.approve">
-                      <Btn variant="secondary" size="sm" icon={<ArrowRight size={12} />} iconPosition="right" onClick={() => handleAction(co, 'Promote to COR')}>Promote</Btn>
-                    </PermissionGate>
+          {isMobile ? (
+            /* Mobile: stacked cards */
+            <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'], padding: spacing['3'] }}>
+              {filteredCOs.map((co) => {
+                const typeConfig = getCOTypeConfig(co.type);
+                const statusConfig = getCOStatusConfig(co.status);
+                const amountColor = co.estimated_cost < 0 ? colors.statusCritical : colors.textPrimary;
+                const amountLabel = co.estimated_cost > 0 ? `+${fmt(co.estimated_cost)}` : fmt(co.estimated_cost);
+                return (
+                  <div key={co.id} onClick={() => setSelectedCO(co)} role="button" tabIndex={0}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedCO(co); } }}
+                    style={{
+                      padding: spacing['4'], backgroundColor: colors.surfaceRaised,
+                      borderRadius: borderRadius.md, cursor: 'pointer',
+                      boxShadow: shadows.card, transition: `box-shadow ${transitions.quick}`,
+                      border: `1px solid ${colors.borderSubtle}`,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['2'] }}>
+                      <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>{co.coNumber} {co.title}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: statusConfig.color, backgroundColor: statusConfig.bg, padding: `2px ${spacing['2']}`, borderRadius: borderRadius.full }}>{statusConfig.label}</span>
+                      <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: amountColor }}>{amountLabel}</span>
+                      <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: typeConfig.color, backgroundColor: typeConfig.bg, padding: `2px ${spacing['2']}`, borderRadius: borderRadius.full }}>{typeConfig.shortLabel}</span>
+                    </div>
+                  </div>
+                );
+              })}
+              {filteredCOs.length === 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: `${spacing['12']} ${spacing['8']}`, textAlign: 'center' }}>
+                  <FileText size={48} color="#9CA3AF" style={{ marginBottom: spacing['4'] }} />
+                  <h3 style={{ fontSize: 18, fontWeight: 600, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>No change orders match your filters</h3>
+                  <p style={{ fontSize: 14, color: '#6B7280', margin: 0, marginBottom: spacing['5'] }}>Try adjusting your search or filter criteria.</p>
+                  {hasActiveFilters && (
+                    <button onClick={() => { setSearchQuery(''); setFilterType('all'); }} style={{ height: 40, padding: `0 ${spacing['5']}`, backgroundColor: '#F47820', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, fontFamily: typography.fontFamily, cursor: 'pointer' }}>
+                      Clear Filters
+                    </button>
                   )}
                 </div>
-              </div>
-            );
-          })}
-          {filteredCOs.length === 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: `${spacing['12']} ${spacing['8']}`, textAlign: 'center' }}>
-              <FileText size={48} color="#9CA3AF" style={{ marginBottom: spacing['4'] }} />
-              <h3 style={{ fontSize: 18, fontWeight: 600, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>No change orders match your filters</h3>
-              <p style={{ fontSize: 14, color: '#6B7280', margin: 0, marginBottom: spacing['5'] }}>Try adjusting your search or filter criteria.</p>
-              {hasActiveFilters && (
-                <button onClick={() => { setSearchQuery(''); setFilterType('all'); }} style={{ height: 40, padding: `0 ${spacing['5']}`, backgroundColor: '#F47820', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, fontFamily: typography.fontFamily, cursor: 'pointer' }}>
-                  Clear Filters
-                </button>
               )}
+            </div>
+          ) : (
+            /* Tablet/Desktop: scrollable table */
+            <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+              <div style={{ minWidth: 760 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '80px 70px 1fr 110px 100px 80px 120px 110px', padding: `${spacing['2']} ${spacing['4']}`, borderBottom: `1px solid ${colors.borderSubtle}` }}>
+                  {['Number', 'Type', 'Title', 'Amount', 'Impact', 'Days', 'Status', ''].map(h => (
+                    <span key={h} style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: typography.letterSpacing.wider }}>{h}</span>
+                  ))}
+                </div>
+                {filteredCOs.map((co, i) => {
+                  const typeConfig = getCOTypeConfig(co.type);
+                  const statusConfig = getCOStatusConfig(co.status);
+                  const canPromote = co.type === 'pco' && co.status === 'pending_review';
+                  const amountColor = co.estimated_cost < 0 ? colors.statusCritical : colors.textPrimary;
+                  const amountLabel = co.estimated_cost > 0 ? `+${fmt(co.estimated_cost)}` : fmt(co.estimated_cost);
+                  return (
+                    <div key={co.id} onClick={() => setSelectedCO(co)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedCO(co); } }} style={{
+                      display: 'grid', gridTemplateColumns: '80px 70px 1fr 110px 100px 80px 120px 110px',
+                      padding: `${spacing['3']} ${spacing['4']}`,
+                      borderBottom: i < filteredCOs.length - 1 ? `1px solid ${colors.borderSubtle}` : 'none',
+                      cursor: 'pointer', alignItems: 'center',
+                      transition: `background-color ${transitions.quick}`,
+                    }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.backgroundColor = colors.surfaceHover; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.backgroundColor = 'transparent'; }}
+                    >
+                      <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>{co.coNumber}</span>
+                      <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: typeConfig.color, backgroundColor: typeConfig.bg, padding: `2px ${spacing['2']}`, borderRadius: borderRadius.full, display: 'inline-block' }}>{typeConfig.shortLabel}</span>
+                      <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{co.title}</span>
+                      <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: amountColor }}>{amountLabel}</span>
+                      <span style={{ fontSize: typography.fontSize.sm, color: co.reason_code ? getReasonCodeConfig(co.reason_code).color : colors.textTertiary }}>{co.reason_code ? getReasonCodeConfig(co.reason_code).label : 'N/A'}</span>
+                      <span style={{ fontSize: typography.fontSize.sm, color: co.schedule_impact_days > 0 ? colors.statusPending : colors.textTertiary }}>{co.schedule_impact_days > 0 ? `+${co.schedule_impact_days}d` : '0d'}</span>
+                      <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: statusConfig.color, backgroundColor: statusConfig.bg, padding: `2px ${spacing['2']}`, borderRadius: borderRadius.full, textAlign: 'center' }}>{statusConfig.label}</span>
+                      <div onClick={e => e.stopPropagation()}>
+                        {canPromote && (
+                          <PermissionGate permission="change_orders.approve">
+                            <Btn variant="secondary" size="sm" icon={<ArrowRight size={12} />} iconPosition="right" onClick={() => handleAction(co, 'Promote to COR')}>Promote</Btn>
+                          </PermissionGate>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+                {filteredCOs.length === 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: `${spacing['12']} ${spacing['8']}`, textAlign: 'center' }}>
+                    <FileText size={48} color="#9CA3AF" style={{ marginBottom: spacing['4'] }} />
+                    <h3 style={{ fontSize: 18, fontWeight: 600, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>No change orders match your filters</h3>
+                    <p style={{ fontSize: 14, color: '#6B7280', margin: 0, marginBottom: spacing['5'] }}>Try adjusting your search or filter criteria.</p>
+                    {hasActiveFilters && (
+                      <button onClick={() => { setSearchQuery(''); setFilterType('all'); }} style={{ height: 40, padding: `0 ${spacing['5']}`, backgroundColor: '#F47820', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, fontFamily: typography.fontFamily, cursor: 'pointer' }}>
+                        Clear Filters
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </Card>
