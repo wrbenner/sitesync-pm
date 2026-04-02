@@ -568,7 +568,7 @@ export const Safety: React.FC = () => {
 
       {/* Loading State */}
       {isLoading && (
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(280px, 1fr))', gap: spacing['4'], marginBottom: spacing['2xl'] }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: spacing['4'], marginBottom: spacing['2xl'] }}>
           {[1, 2, 3, 4, 5, 6].map((i) => <Skeleton key={i} width="100%" height="100px" />)}
         </div>
       )}
@@ -579,8 +579,8 @@ export const Safety: React.FC = () => {
           {/* KPI Grid */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(280px, 1fr))',
-            gap: isMobile ? spacing.md : spacing.lg,
+            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+            gap: spacing.lg,
             marginBottom: spacing['2xl'],
           }}>
             <div
@@ -854,47 +854,55 @@ export const Safety: React.FC = () => {
             })}
           </div>
         ) : (
-          <Card>
-            <DataTable
-              columns={incidentColumns}
-              data={incidents || []}
-              enableSorting
-            />
-          </Card>
+          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+            <Card>
+              <DataTable
+                columns={incidentColumns}
+                data={incidents || []}
+                enableSorting
+              />
+            </Card>
+          </div>
         )
       )}
 
       {/* Toolbox Talks Tab */}
       {activeTab === 'toolbox' && !isLoading && (
-        <Card>
-          <DataTable
-            columns={talkColumns}
-            data={talks || []}
-            enableSorting
-          />
-        </Card>
+        <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+          <Card>
+            <DataTable
+              columns={talkColumns}
+              data={talks || []}
+              enableSorting
+            />
+          </Card>
+        </div>
       )}
 
       {/* Certifications Tab */}
       {activeTab === 'certifications' && !isLoading && (
-        <Card>
-          <DataTable
-            columns={certColumns}
-            data={certifications || []}
-            enableSorting
-          />
-        </Card>
+        <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+          <Card>
+            <DataTable
+              columns={certColumns}
+              data={certifications || []}
+              enableSorting
+            />
+          </Card>
+        </div>
       )}
 
       {/* Observations Tab */}
       {activeTab === 'observations' && !isLoading && (
-        <Card>
-          <DataTable
-            columns={obsColumns}
-            data={observations || []}
-            enableSorting
-          />
-        </Card>
+        <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+          <Card>
+            <DataTable
+              columns={obsColumns}
+              data={observations || []}
+              enableSorting
+            />
+          </Card>
+        </div>
       )}
 
       {activeTab === 'ai_analysis' && (
