@@ -233,19 +233,43 @@ const Submittals: React.FC = () => {
     dueDate: (s.due_date as string) || '',
   })), [submittalsRaw]);
 
-  if (submittalsError) {
+  if (loading) {
     return (
-      <PageContainer title="Submittals" subtitle="Unable to load">
-        <Card padding={spacing['6']}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['4'], padding: spacing['6'], textAlign: 'center' }}>
-            <AlertTriangle size={40} color={colors.statusCritical} />
-            <div>
-              <p style={{ fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>Failed to load submittals</p>
-              <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: 0 }}>{(submittalsError as Error).message || 'Unable to fetch submittal data'}</p>
+      <PageContainer title="Submittals" subtitle="Loading...">
+        <div style={{ display: 'flex', gap: spacing['4'], marginBottom: spacing['6'] }}>
+          {Array.from({ length: 5 }).map((_, i) => (
+            <MetricCardSkeleton key={i} />
+          ))}
+        </div>
+        <Card padding="0">
+          {Array.from({ length: 9 }).map((_, i) => (
+            <div
+              key={i}
+              style={{
+                height: 48,
+                borderBottom: `1px solid ${colors.borderLight}`,
+                padding: `0 ${spacing['4']}`,
+                display: 'flex',
+                alignItems: 'center',
+                gap: spacing['4'],
+                animation: 'submittals-pulse 1.5s ease-in-out infinite',
+                animationDelay: `${i * 0.08}s`,
+              }}
+            >
+              <div style={{ width: 80, height: 14, borderRadius: 4, backgroundColor: colors.borderLight }} />
+              <div style={{ flex: 1, height: 14, borderRadius: 4, backgroundColor: colors.borderLight }} />
+              <div style={{ width: 100, height: 14, borderRadius: 4, backgroundColor: colors.borderLight }} />
+              <div style={{ width: 80, height: 22, borderRadius: 9999, backgroundColor: colors.borderLight }} />
+              <div style={{ width: 64, height: 14, borderRadius: 4, backgroundColor: colors.borderLight }} />
             </div>
-            <Btn variant="primary" size="sm" icon={<RefreshCw size={14} />} onClick={() => refetch()}>Try Again</Btn>
-          </div>
+          ))}
         </Card>
+        <style>{`
+          @keyframes submittals-pulse {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.7; }
+          }
+        `}</style>
       </PageContainer>
     );
   }
@@ -465,6 +489,26 @@ const Submittals: React.FC = () => {
         </div>
       }
     >
+      {submittalsError && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: spacing['3'],
+          padding: `${spacing['3']} ${spacing['4']}`,
+          marginBottom: spacing['4'],
+          backgroundColor: '#FEF2F2',
+          border: `1px solid #FECACA`,
+          borderRadius: borderRadius.md,
+          color: colors.statusCritical,
+        }}>
+          <AlertTriangle size={16} style={{ flexShrink: 0 }} />
+          <span style={{ flex: 1, fontSize: typography.fontSize.sm, color: '#991B1B' }}>
+            Unable to load submittals. Check your connection and try again.
+          </span>
+          <Btn variant="secondary" size="sm" icon={<RefreshCw size={14} />} onClick={() => refetch()}>Retry</Btn>
+        </div>
+      )}
+
       {pageAlerts.map((alert) => (
         <PredictiveAlertBanner key={alert.id} alert={alert} />
       ))}
