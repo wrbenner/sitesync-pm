@@ -64,7 +64,7 @@ export const ProtectedRoute: React.FC<Props> = ({ children, requiredPermission, 
           flexShrink: 0,
           backgroundColor: colors.surfaceSidebar,
           padding: spacing['4'],
-          display: 'flex',
+          display: window.innerWidth < 768 ? 'none' : 'flex',
           flexDirection: 'column',
           gap: spacing['3'],
         }}>
