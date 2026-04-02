@@ -359,11 +359,14 @@ function AppContent() {
       >
         {user && <AuthenticatedProviders activeView={activeView} />}
         <SkipToContent />
-        <Sidebar activeView={activeView} onNavigate={handleNavigate} />
+        <nav aria-label="Main navigation">
+          <Sidebar activeView={activeView} onNavigate={handleNavigate} />
+        </nav>
 
         <main
           id="main-content"
           role="main"
+          aria-label="Page content"
           tabIndex={-1}
           style={{
             flex: 1,
