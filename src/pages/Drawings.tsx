@@ -68,6 +68,15 @@ const _DrawingsPage: React.FC = () => {
   const [uploadFiles, setUploadFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [viewingRevisionNum, setViewingRevisionNum] = useState<number | null>(null);
+
+  React.useEffect(() => { setViewingRevisionNum(null); }, [selectedDrawing?.id]);
+
+  const formatRevDate = (dateStr: string | null): string => {
+    if (!dateStr) return '—';
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+  };
 
   const allDrawings = drawings || [];
   const uniqueDisciplines = Array.from(new Set(allDrawings.map((d) => d.discipline).filter(Boolean))) as string[];
@@ -539,6 +548,19 @@ const _DrawingsPage: React.FC = () => {
         {selectedDrawing && (
           <div style={{ position: 'sticky', top: spacing.xl, height: 'fit-content' }}>
             <Card padding={spacing.xl}>
+              {viewingRevisionNum !== null && (
+                <div style={{ marginBottom: spacing.xl, padding: `${spacing.sm} ${spacing.md}`, backgroundColor: '#FFFBEB', border: '1px solid #F59E0B', borderRadius: borderRadius.base, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm }}>
+                  <span style={{ fontSize: typography.fontSize.sm, color: '#92400E' }}>
+                    Viewing Revision {viewingRevisionNum} — not the current version
+                  </span>
+                  <button
+                    onClick={() => setViewingRevisionNum(null)}
+                    style={{ fontSize: typography.fontSize.sm, color: '#D97706', fontWeight: typography.fontWeight.semibold, border: 'none', background: 'none', cursor: 'pointer', padding: 0, fontFamily: typography.fontFamily, whiteSpace: 'nowrap' }}
+                  >
+                    Back to Current
+                  </button>
+                </div>
+              )}
               <div
                 style={{
                   display: 'flex',
@@ -639,6 +661,70 @@ const _DrawingsPage: React.FC = () => {
                   AI Scan
                 </Btn>
               </div>
+
+              {selectedDrawing.revisions && selectedDrawing.revisions.length > 0 && (
+                <div style={{ marginTop: spacing.xl, borderTop: `1px solid ${colors.border}`, paddingTop: spacing.xl }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md }}>
+                    <p style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0 }}>
+                      Revision History
+                    </p>
+                    <button
+                      onClick={() => addToast('info', 'Version comparison coming soon')}
+                      style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, border: `1px solid ${colors.border}`, borderRadius: borderRadius.base, backgroundColor: 'transparent', cursor: 'pointer', padding: '3px 8px', fontFamily: typography.fontFamily }}
+                      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = colors.surfaceHover; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                    >
+                      Compare Versions
+                    </button>
+                  </div>
+                  <div>
+                    {selectedDrawing.revisions.map((rev, idx) => {
+                      const isCurrent = !rev.superseded_at;
+                      const isLast = idx === selectedDrawing.revisions.length - 1;
+                      return (
+                        <div
+                          key={rev.id}
+                          style={{ paddingTop: spacing.sm, paddingBottom: spacing.sm, borderBottom: isLast ? 'none' : `1px solid ${colors.border}`, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing.sm }}
+                        >
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, marginBottom: 2 }}>
+                              <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+                                Rev {rev.revision_number}
+                              </span>
+                              {isCurrent && (
+                                <span style={{ fontSize: typography.fontSize.caption, backgroundColor: `${colors.statusActive}18`, color: colors.statusActive, padding: '1px 7px', borderRadius: borderRadius.full, fontWeight: typography.fontWeight.semibold }}>
+                                  Current
+                                </span>
+                              )}
+                            </div>
+                            <p style={{ margin: 0, fontSize: typography.fontSize.caption, color: colors.gray600 }}>
+                              {formatRevDate(rev.issued_date)}{rev.issued_by ? ` · ${rev.issued_by}` : ''}
+                            </p>
+                            {rev.change_description && (
+                              <p style={{ margin: 0, marginTop: 2, fontSize: typography.fontSize.caption, color: colors.gray600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {rev.change_description}
+                              </p>
+                            )}
+                          </div>
+                          {!isCurrent && (
+                            <button
+                              onClick={() => {
+                                setViewingRevisionNum(rev.revision_number);
+                                setViewerDrawing({ ...selectedDrawing, revision: `Rev ${rev.revision_number}` });
+                              }}
+                              style={{ fontSize: typography.fontSize.caption, color: colors.primaryOrange, border: `1px solid ${colors.primaryOrange}40`, borderRadius: borderRadius.base, backgroundColor: 'transparent', cursor: 'pointer', padding: '3px 8px', fontFamily: typography.fontFamily, whiteSpace: 'nowrap', flexShrink: 0 }}
+                              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${colors.primaryOrange}10`; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                            >
+                              View
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </Card>
           </div>
         )}
