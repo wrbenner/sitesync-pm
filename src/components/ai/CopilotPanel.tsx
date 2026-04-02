@@ -174,9 +174,10 @@ export const CopilotPanel: React.FC = () => {
 
       {/* Slide-in panel */}
       <div
-        role="dialog"
+        role="complementary"
         aria-label="AI Copilot"
         aria-modal="true"
+        onKeyDown={(e) => { if (e.key === 'Escape') closeCopilot() }}
         style={{
           position: 'fixed',
           top: 0,
@@ -374,6 +375,9 @@ export const CopilotPanel: React.FC = () => {
 
         {/* Messages area */}
         <div
+          role="log"
+          aria-live="polite"
+          aria-label="AI Copilot conversation"
           style={{
             flex: 1,
             overflow: 'auto',
@@ -493,7 +497,9 @@ export const CopilotPanel: React.FC = () => {
 
           {/* Chat messages */}
           {messages.map((msg) => (
-            <PanelMessageRenderer key={msg.id} message={msg} onSend={handleSendMessage} />
+            <div key={msg.id} role="listitem">
+              <PanelMessageRenderer message={msg} onSend={handleSendMessage} />
+            </div>
           ))}
 
           {/* Typing indicators */}
