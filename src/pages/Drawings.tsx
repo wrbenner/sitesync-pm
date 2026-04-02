@@ -264,14 +264,22 @@ const _DrawingsPage: React.FC = () => {
                 <Btn variant="secondary" size="sm" onClick={() => refetch()}>Retry</Btn>
               </div>
             )}
-            {!loading && !error && sortedDrawings.map((drawing, index) => {
+            {!loading && !error && (
+              <div role="list" aria-label="Project drawings">
+              <style>{`.drawing-row:focus-visible{outline:2px solid #F47820;outline-offset:-2px;}`}</style>
+              {sortedDrawings.map((drawing, index) => {
               const thumbColor = drawing.disciplineColor || getDisciplineColor(drawing.discipline || '');
               const linked = linkedItems[drawing.id];
               const viewed = lastViewed[drawing.id];
               return (
                 <div
                   key={drawing.id}
+                  role="listitem"
+                  tabIndex={0}
+                  aria-label={`Drawing ${drawing.setNumber || drawing.title}, ${drawing.discipline}, revision ${drawing.revision || 0}`}
+                  className="drawing-row"
                   onClick={() => setSelectedDrawing(drawing)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedDrawing(drawing); } }}
                   style={{
                     display: 'grid',
                     gridTemplateColumns: gridColumns,
@@ -297,6 +305,7 @@ const _DrawingsPage: React.FC = () => {
                   {/* Title */}
                   <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
                     <span
+                      aria-hidden="true"
                       style={{
                         width: 8,
                         height: 8,
@@ -390,6 +399,8 @@ const _DrawingsPage: React.FC = () => {
                 </div>
               );
             })}
+              </div>
+            )}
             {!loading && !error && sortedDrawings.length === 0 && (
               allDrawings.length === 0 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: `${spacing['10']} ${spacing['4']}`, textAlign: 'center' }}>
