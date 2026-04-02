@@ -232,9 +232,11 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ items, children }) => 
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const menuRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const triggerRef = useRef<HTMLElement | null>(null);
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
+    triggerRef.current = e.currentTarget as HTMLElement;
     const MENU_WIDTH = 188;
     const MENU_HEIGHT = items.length * 36 + 8;
     const clampedX = e.clientX + MENU_WIDTH > window.innerWidth ? e.clientX - MENU_WIDTH : e.clientX;
@@ -266,6 +268,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ items, children }) => 
     } else {
       setVisible(false);
       setFocusedIndex(-1);
+      triggerRef.current?.focus();
     }
   }, [open]);
 
