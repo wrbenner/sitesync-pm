@@ -42,8 +42,11 @@ export function createScopedClient(client: DbClient, projectId: string): DbClien
             get(qbTarget, qbProp, qbReceiver) {
               if (!skipScoping && typeof qbProp === 'string' && TERMINAL_OPS.has(qbProp)) {
                 return (...args: unknown[]) => {
-                  const method = qbTarget[qbProp as keyof typeof qbTarget] as TerminalMethod
-                  return method.call(qbTarget, ...args).eq('project_id', projectId)
+                  const result = (qbTarget[qbProp as keyof typeof qbTarget] as TerminalMethod).call(qbTarget, ...args).eq('project_id', projectId)
+                  if (qbProp === 'select') {
+                    return (result as any).is('deleted_at', null)
+                  }
+                  return result
                 }
               }
               return Reflect.get(qbTarget, qbProp, qbReceiver)
