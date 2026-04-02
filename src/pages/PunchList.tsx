@@ -676,32 +676,47 @@ const PunchListPage: React.FC = () => {
                   gap: '6px',
                 }}
               >
-                <div style={{ fontSize: '16px', fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, lineHeight: 1.3 }}>
-                  {item.description}
-                </div>
-                {item.area && (
-                  <div style={{ fontSize: '14px', color: colors.textTertiary }}>{item.area}</div>
-                )}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' as const }}>
-                  <div
-                    style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-                    aria-label={`Status: ${statusLabel[item.verification_status] ?? item.verification_status}`}
-                  >
-                    <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: statusDotColor, flexShrink: 0 }} aria-hidden="true" />
-                    <span style={{ fontSize: '13px', color: statusDotColor, fontWeight: 500 }} aria-hidden="true">
-                      {statusLabel[item.verification_status] ?? item.verification_status}
-                    </span>
+                <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                  {/* Card content */}
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div style={{ fontSize: '16px', fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, lineHeight: 1.3 }}>
+                      {item.description}
+                    </div>
+                    {item.area && (
+                      <div style={{ fontSize: '14px', color: colors.textTertiary }}>{item.area}</div>
+                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' as const }}>
+                      <div
+                        style={{ display: 'flex', alignItems: 'center', gap: '4px', minHeight: '44px', minWidth: '44px' }}
+                        aria-label={`Status: ${statusLabel[item.verification_status] ?? item.verification_status}`}
+                      >
+                        <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: statusDotColor, flexShrink: 0 }} aria-hidden="true" />
+                        <span style={{ fontSize: '13px', color: statusDotColor, fontWeight: 500 }} aria-hidden="true">
+                          {statusLabel[item.verification_status] ?? item.verification_status}
+                        </span>
+                      </div>
+                      <PriorityTag priority={item.priority as any} />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '2px' }}>
+                      {item.assigned && (
+                        <span style={{ fontSize: '13px', color: colors.textSecondary }}>{item.assigned}</span>
+                      )}
+                      {item.dueDate && (
+                        <span style={{ fontSize: '13px', fontWeight: 500, color: getDueDateColor(item.dueDate) }}>
+                          Due {formatDate(item.dueDate)}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <PriorityTag priority={item.priority as any} />
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '2px' }}>
-                  {item.assigned && (
-                    <span style={{ fontSize: '13px', color: colors.textSecondary }}>{item.assigned}</span>
-                  )}
-                  {item.dueDate && (
-                    <span style={{ fontSize: '13px', fontWeight: 500, color: getDueDateColor(item.dueDate) }}>
-                      Due {formatDate(item.dueDate)}
-                    </span>
+                  {/* Before photo thumbnail */}
+                  {item.before_photo_url && (
+                    <div style={{ flexShrink: 0 }}>
+                      <img
+                        src={item.before_photo_url}
+                        alt="Before"
+                        style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: borderRadius.base, border: `1px solid ${colors.borderDefault}` }}
+                      />
+                    </div>
                   )}
                 </div>
               </div>
@@ -840,9 +855,17 @@ const PunchListPage: React.FC = () => {
             {/* Before / After Photos */}
             <div>
               <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, marginBottom: spacing.sm, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Before / After Photos</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing.sm }}>
+              <div style={isMobile ? {
+                display: 'flex',
+                overflowX: 'auto',
+                scrollSnapType: 'x mandatory',
+                WebkitOverflowScrolling: 'touch',
+                scrollbarWidth: 'none',
+                gap: 0,
+                borderRadius: borderRadius.base,
+              } : { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing.sm }}>
                 {/* Before Photo */}
-                <div>
+                <div style={isMobile ? { scrollSnapAlign: 'start', minWidth: '100%', flexShrink: 0 } : {}}>
                   <div style={{ fontSize: typography.fontSize.caption, fontWeight: 600, color: colors.textSecondary, marginBottom: spacing.xs }}>Before</div>
                   {selected.before_photo_url ? (
                     <img
@@ -862,7 +885,7 @@ const PunchListPage: React.FC = () => {
                   )}
                 </div>
                 {/* After Photo */}
-                <div>
+                <div style={isMobile ? { scrollSnapAlign: 'start', minWidth: '100%', flexShrink: 0 } : {}}>
                   <div style={{ fontSize: typography.fontSize.caption, fontWeight: 600, color: colors.textSecondary, marginBottom: spacing.xs }}>After</div>
                   {selected.after_photo_url ? (
                     <img
@@ -1047,6 +1070,32 @@ const PunchListPage: React.FC = () => {
           toast.success('Punch item created: ' + (data.title || 'New Item'));
         }}
       />
+
+      {/* Mobile FAB: quick punch item capture */}
+      {isMobile && (
+        <button
+          onClick={() => setShowCreateModal(true)}
+          aria-label="Quick capture punch item"
+          style={{
+            position: 'fixed',
+            bottom: 24,
+            right: 24,
+            width: 56,
+            height: 56,
+            borderRadius: '50%',
+            backgroundColor: colors.primaryOrange,
+            border: 'none',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 4px 16px rgba(244, 120, 32, 0.4)',
+            zIndex: 100,
+          }}
+        >
+          <Camera size={24} color="white" />
+        </button>
+      )}
 
       <PermissionGate permission="punch_list.edit">
       <BulkActionBar
