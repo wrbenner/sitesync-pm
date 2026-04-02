@@ -78,7 +78,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   const [hoveredPhase, setHoveredPhase] = useState<string | null>(null);
   const [showBaselineInternal, setShowBaselineInternal] = useState(true);
   const showBaseline = showBaselineProp !== undefined ? showBaselineProp : showBaselineInternal;
-  const [showCriticalPath, setShowCriticalPath] = useState(false);
+  const [showCriticalOnly, setShowCriticalOnly] = useState(false);
   const [riskTooltipPhase, setRiskTooltipPhase] = useState<string | null>(null);
   const [delayTooltipPhase, setDelayTooltipPhase] = useState<string | null>(null);
   const [localPhases, setLocalPhases] = useState<GanttPhase[]>(phases);
@@ -282,7 +282,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
     if (whatIfMode && activeDrag?.phaseId === phase.id) return colors.statusReview;
     if (phase.status === 'delayed') return colors.statusCritical;
     if (phase.status === 'in_progress') return colors.statusPending;
-    if (phase.is_critical || phase.critical) return '#E74C3C';
+    if (phase.is_critical || phase.critical || phase.floatDays === 0) return '#EF4444';
     if (phase.progress === 0) return colors.textTertiary;
     return colors.statusInfo;
   };
@@ -559,15 +559,15 @@ export const GanttChart: React.FC<GanttChartProps> = ({
         )}
 
         <button
-          aria-label={showCriticalPath ? 'Show all activities' : 'Filter to critical path only'}
-          aria-pressed={showCriticalPath}
-          onClick={() => setShowCriticalPath(!showCriticalPath)}
+          aria-label={showCriticalOnly ? 'Show all activities' : 'Filter to critical path only'}
+          aria-pressed={showCriticalOnly}
+          onClick={() => setShowCriticalOnly(!showCriticalOnly)}
           style={{
             display: 'flex', alignItems: 'center', gap: spacing['1'],
             padding: `${spacing['1']} ${spacing['3']}`, borderRadius: borderRadius.full,
-            border: showCriticalPath ? '1px solid #E74C3C' : '1px solid transparent',
-            backgroundColor: showCriticalPath ? '#E74C3C14' : 'transparent',
-            color: showCriticalPath ? '#E74C3C' : colors.textTertiary,
+            border: showCriticalOnly ? '1px solid #EF4444' : '1px solid transparent',
+            backgroundColor: showCriticalOnly ? '#EF444414' : 'transparent',
+            color: showCriticalOnly ? '#EF4444' : colors.textTertiary,
             fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
             fontFamily: typography.fontFamily, cursor: 'pointer',
           }}
@@ -595,8 +595,8 @@ export const GanttChart: React.FC<GanttChartProps> = ({
           </div>
           {/* Critical Path */}
           <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
-            <div style={{ width: 16, height: 12, borderLeft: '3px solid #E74C3C', paddingLeft: 2 }}>
-              <div style={{ width: '100%', height: '100%', borderRadius: 2, backgroundColor: colors.statusCritical, opacity: 0.3 }} />
+            <div style={{ width: 16, height: 12, borderLeft: '3px solid #EF4444', paddingLeft: 2 }}>
+              <div style={{ width: '100%', height: '100%', borderRadius: 2, backgroundColor: '#EF4444', opacity: 0.3 }} />
             </div>
             <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Critical Path</span>
           </div>
@@ -700,7 +700,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
               <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Actual</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
-              <div style={{ width: 16, height: 9, borderRadius: 2, backgroundColor: '#E74C3C', boxShadow: '0 0 0 2px rgba(231, 76, 60, 0.3)' }} />
+              <div style={{ width: 16, height: 9, borderRadius: 2, backgroundColor: '#EF4444', boxShadow: '0 0 8px rgba(239, 68, 68, 0.3)' }} />
               <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Critical Path</span>
             </div>
           </div>
@@ -819,7 +819,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
               const isHovered = hoveredPhase === phase.id;
               const predIds = phase.predecessor_ids ?? phase.dependencies ?? [];
               const isCascadeAffected = whatIfMode && activeDrag && predIds.includes(activeDrag.phaseId);
-              const isCriticalPathRow = phase.is_critical;
+              const isCriticalPathRow = phase.is_critical || phase.floatDays === 0;
               const phaseRisk = risks.find(r => r.phaseId === phase.id);
               const phaseDelay = delays.find(d => d.activityId === phase.id && d.predictedSlippageDays > 0);
               const isDraggingThis = activeDrag?.phaseId === phase.id;
@@ -844,9 +844,9 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                   tabIndex={0}
                   className="gantt-phase-row"
                   style={{
-                    display: showCriticalPath && !phase.is_critical ? 'none' : 'flex',
+                    display: showCriticalOnly && !phase.is_critical && phase.floatDays !== 0 ? 'none' : 'flex',
                     alignItems: 'center', marginBottom: spacing['2'], position: 'relative',
-                    borderLeft: isCriticalPathRow ? '3px solid #E74C3C' : '3px solid transparent',
+                    borderLeft: isCriticalPathRow ? '3px solid #EF4444' : '3px solid transparent',
                     paddingLeft: isCriticalPathRow ? spacing['2'] : 0,
                     outline: 'none',
                   }}
@@ -862,10 +862,10 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                   {/* Label */}
                   <div role="cell" style={{ width: `${LABEL_WIDTH}px`, flexShrink: 0, paddingRight: spacing['3'], position: 'sticky', left: 0, backgroundColor: colors.surfaceRaised, zIndex: 6 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                      {phase.is_critical && !phase.completed && (
+                      {isCriticalPathRow && !phase.completed && (
                         <span style={{
                           fontSize: '10px', fontWeight: 700,
-                          backgroundColor: '#E74C3C', color: '#fff',
+                          backgroundColor: '#EF4444', color: '#fff',
                           padding: '0 4px', borderRadius: '3px',
                           lineHeight: '16px', flexShrink: 0,
                         }}>CP</span>
@@ -1026,13 +1026,18 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                         tabIndex={0}
                         onMouseDown={canDrag ? e => startDrag(e, phase.id, 'both') : undefined}
                         onTouchStart={canDrag ? e => startDrag(e, phase.id, 'both') : undefined}
+                        title={isCriticalPathRow
+                          ? 'Critical Path \u2014 0 days float'
+                          : phase.floatDays != null
+                            ? `Float: ${phase.floatDays} days`
+                            : undefined}
                         style={{
                           position: 'absolute', top: 4, bottom: 4,
                           left: `${pos.left}%`, width: `${pos.width}%`,
                           borderRadius: borderRadius.sm, overflow: 'visible',
                           border: isCascadeAffected ? `2px dashed ${colors.statusReview}` : 'none',
-                          boxShadow: (phase.is_critical || phase.critical)
-                            ? '0 0 0 2px rgba(231, 76, 60, 0.3)'
+                          boxShadow: isCriticalPathRow
+                            ? '0 0 8px rgba(239, 68, 68, 0.3)'
                             : isHovered ? `0 0 0 2px ${barColor}30` : 'none',
                           opacity: isDraggingBoth ? 0.75 : 1,
                           transition: isDraggingThis ? 'none' : `box-shadow ${transitions.instant}`,
