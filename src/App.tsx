@@ -379,6 +379,19 @@ function SentryFallback({ error }: { error?: Error }) {
 }
 
 function App() {
+  useEffect(() => {
+    const handler = (event: PromiseRejectionEvent) => {
+      const reason = event.reason?.message || String(event.reason || '');
+      if (reason.includes('Loading chunk') || reason.includes('Failed to fetch dynamically imported module')) {
+        toast.error('A new version is available. Please refresh the page.', {
+          action: { label: 'Refresh', onClick: () => window.location.reload() },
+        });
+      }
+    };
+    window.addEventListener('unhandledrejection', handler);
+    return () => window.removeEventListener('unhandledrejection', handler);
+  }, []);
+
   return (
     <Sentry.ErrorBoundary fallback={({ error }: { error?: Error }) => <SentryFallback error={error} />}>
       <style>{animationKeyframes}</style>
