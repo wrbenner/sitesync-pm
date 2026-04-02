@@ -59,7 +59,7 @@ function ToastEntry({ toast, onClose }: { toast: ToastItem; onClose: (id: string
   // Fallback auto-dismiss for error toasts (15s) so they never persist indefinitely
   useEffect(() => {
     if (toast.severity !== 'error') return;
-    const t = setTimeout(() => onClose(toast.id), 15000);
+    const t = setTimeout(() => onClose(toast.id), 30000);
     return () => clearTimeout(t);
   }, [toast.id, toast.severity, onClose]);
 
@@ -115,7 +115,31 @@ function ToastEntry({ toast, onClose }: { toast: ToastItem; onClose: (id: string
       >
         {toast.message}
       </span>
-      {toast.action && (
+      {toast.severity === 'error' && toast.action && (
+        <button
+          onClick={() => { toast.action!.onClick(); onClose(toast.id); }}
+          style={{
+            border: 'none',
+            background: 'transparent',
+            cursor: 'pointer',
+            color: style.text,
+            fontSize: typography.fontSize.sm,
+            fontFamily: typography.fontFamily,
+            fontWeight: 600,
+            padding: `0 ${spacing['2']}`,
+            flexShrink: 0,
+            textDecoration: 'underline',
+            minHeight: '44px',
+            minWidth: '44px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          {toast.action.label}
+        </button>
+      )}
+      {toast.severity !== 'error' && toast.action && (
         <button
           onClick={() => { toast.action!.onClick(); onClose(toast.id); }}
           style={{
