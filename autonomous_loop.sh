@@ -2368,11 +2368,9 @@ provision_infrastructure() {
     # Check .env.local exists with required keys
     local env_file="${PROJECT_DIR}/.env.local"
     if [ -f "$env_file" ]; then
-        local has_url has_anon has_service
-        has_url=$(grep -c 'VITE_SUPABASE_URL' "$env_file" 2>/dev/null | tail -1 || echo 0)
-        has_anon=$(grep -c 'VITE_SUPABASE_ANON_KEY' "$env_file" 2>/dev/null | tail -1 || echo 0)
-        has_service=$(grep -c 'SUPABASE_SERVICE_ROLE_KEY' "$env_file" 2>/dev/null | tail -1 || echo 0)
-        if [ "${has_url:-0}" -gt 0 ] && [ "${has_anon:-0}" -gt 0 ] && [ "${has_service:-0}" -gt 0 ]; then
+        if grep -q 'VITE_SUPABASE_URL' "$env_file" 2>/dev/null && \
+           grep -q 'VITE_SUPABASE_ANON_KEY' "$env_file" 2>/dev/null && \
+           grep -q 'SUPABASE_SERVICE_ROLE_KEY' "$env_file" 2>/dev/null; then
             env_ok=true
             success "INFRA: .env.local configured with Supabase credentials"
         else
