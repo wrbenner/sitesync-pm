@@ -475,3 +475,18 @@ export const focusRing = {
   outline: `2px solid ${colors.borderFocus}`,
   outlineOffset: '2px',
 } as const;
+
+// ── Skeleton Loader Tokens ───────────────────────────────
+
+export const skeleton = {
+  baseColor: '#E5E7EB',
+  highlightColor: '#F3F4F6',
+  animation: 'pulse 1.5s ease-in-out infinite',
+  borderRadius: borderRadius.md,
+} as const;
+
+// ── Keyframes ────────────────────────────────────────────
+
+export const keyframes = {
+  pulse: '@keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 0.7; } }',
+} as const;
