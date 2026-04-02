@@ -119,77 +119,74 @@ function PageLoader() {
   );
 }
 
-function AnimatedPage({ children }: { children: React.ReactNode }) {
-  return (
-    <motion.div
-      initial={pageTransition.initial}
-      animate={pageTransition.animate}
-      exit={pageTransition.exit}
-      transition={pageTransition.transition}
-    >
-      {children}
-    </motion.div>
-  );
-}
 
 function AppRoutes() {
   const location = useLocation();
 
   return (
     <>
-    <RouteAnnouncer />
-    <AnimatePresence mode="wait">
-      <Suspense fallback={<PageLoader />}>
-        <Routes location={location} key={location.pathname}>
-          <Route path="/login" element={<AnimatedPage><Login /></AnimatedPage>} />
-          <Route path="/signup" element={<AnimatedPage><Signup /></AnimatedPage>} />
-          <Route path="/portfolio" element={<ProtectedRoute moduleId="portfolio" moduleName="Portfolio"><AnimatedPage><Portfolio /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/" element={<ProtectedRoute moduleId="dashboard" moduleName="Dashboard"><AnimatedPage><Dashboard /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/dashboard" element={<ProtectedRoute moduleId="dashboard" moduleName="Dashboard"><AnimatedPage><Dashboard /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/tasks" element={<ProtectedRoute moduleId="tasks" moduleName="Tasks"><AnimatedPage><Tasks /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/drawings" element={<ProtectedRoute moduleId="drawings" moduleName="Drawings"><AnimatedPage><Drawings /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/rfis" element={<ProtectedRoute moduleId="rfis" moduleName="RFIs"><AnimatedPage><RFIs /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/submittals" element={<ProtectedRoute moduleId="submittals" moduleName="Submittals"><AnimatedPage><Submittals /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/schedule" element={<ProtectedRoute moduleId="schedule" moduleName="Schedule"><AnimatedPage><Schedule /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/lookahead" element={<ProtectedRoute moduleId="lookahead" moduleName="Lookahead"><AnimatedPage><Lookahead /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/budget" element={<ProtectedRoute moduleId="budget" moduleName="Budget"><AnimatedPage><Budget /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/change-orders" element={<ProtectedRoute moduleId="change-orders" moduleName="Change Orders"><AnimatedPage><ChangeOrders /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/daily-log" element={<ProtectedRoute moduleId="daily-log" moduleName="Daily Log"><AnimatedPage><DailyLog /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/field-capture" element={<ProtectedRoute moduleId="field-capture" moduleName="Field Capture"><AnimatedPage><FieldCapture /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/punch-list" element={<ProtectedRoute moduleId="punch-list" moduleName="Punch List"><AnimatedPage><PunchList /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/crews" element={<ProtectedRoute moduleId="crews" moduleName="Crews"><AnimatedPage><Crews /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/safety" element={<ProtectedRoute moduleId="safety" moduleName="Safety"><AnimatedPage><Safety /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/estimating" element={<ProtectedRoute moduleId="estimating" moduleName="Estimating"><AnimatedPage><Estimating /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/procurement" element={<ProtectedRoute moduleId="procurement" moduleName="Procurement"><AnimatedPage><Procurement /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/equipment" element={<ProtectedRoute moduleId="equipment" moduleName="Equipment"><AnimatedPage><EquipmentPage /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/directory" element={<ProtectedRoute moduleId="directory" moduleName="Directory"><AnimatedPage><Directory /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/meetings" element={<ProtectedRoute moduleId="meetings" moduleName="Meetings"><AnimatedPage><Meetings /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/files" element={<ProtectedRoute moduleId="files" moduleName="Files"><AnimatedPage><Files /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/copilot" element={<ProtectedRoute moduleId="copilot" moduleName="AI Copilot"><AnimatedPage><AICopilot /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/activity" element={<ProtectedRoute moduleId="activity" moduleName="Activity"><AnimatedPage><Activity /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/audit-trail" element={<ProtectedRoute moduleId="audit-trail" moduleName="Audit Trail"><AnimatedPage><AuditTrail /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/time-machine" element={<ProtectedRoute moduleId="time-machine" moduleName="Time Machine"><AnimatedPage><TimeMachine /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/project-health" element={<ProtectedRoute moduleId="project-health" moduleName="Project Health"><AnimatedPage><ProjectHealth /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/financials" element={<ProtectedRoute moduleId="financials" moduleName="Financials"><AnimatedPage><Financials /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/pay-apps" element={<ProtectedRoute moduleId="pay-apps" moduleName="Payment Applications"><AnimatedPage><PaymentApplications /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/insurance" element={<ProtectedRoute moduleId="insurance" moduleName="Insurance"><AnimatedPage><Insurance /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/portal/owner" element={<ProtectedRoute requiredPermission="project.settings" moduleName="Owner Portal"><AnimatedPage><OwnerPortal /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/ai-agents" element={<ProtectedRoute moduleId="ai-agents" moduleName="AI Agents"><AnimatedPage><AIAgents /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/workforce" element={<ProtectedRoute moduleId="workforce" moduleName="Workforce"><AnimatedPage><Workforce /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/permits" element={<ProtectedRoute moduleId="permits" moduleName="Permits"><AnimatedPage><Permits /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/integrations" element={<ProtectedRoute moduleId="integrations" moduleName="Integrations"><AnimatedPage><Integrations /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/marketplace" element={<ProtectedRoute moduleId="marketplace" moduleName="App Marketplace"><AnimatedPage><Marketplace /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/developers" element={<ProtectedRoute moduleId="developers" moduleName="Developer Portal"><AnimatedPage><Developers /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/reports" element={<ProtectedRoute moduleId="reports" moduleName="Reports"><AnimatedPage><Reports /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/sustainability" element={<ProtectedRoute moduleId="sustainability" moduleName="Sustainability"><AnimatedPage><Sustainability /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/benchmarks" element={<ProtectedRoute moduleId="benchmarks" moduleName="Platform Intelligence"><AnimatedPage><Benchmarks /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/warranties" element={<ProtectedRoute moduleId="warranties" moduleName="Warranties"><AnimatedPage><WarrantiesPage /></AnimatedPage></ProtectedRoute>} />
-          <Route path="/onboarding" element={<AnimatedPage><Onboarding /></AnimatedPage>} />
-          <Route path="/vision" element={<ProtectedRoute><AnimatedPage><Vision /></AnimatedPage></ProtectedRoute>} />
-          <Route path="*" element={<AnimatedPage><NotFound /></AnimatedPage>} />
-        </Routes>
-      </Suspense>
-    </AnimatePresence>
+      <RouteAnnouncer />
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={location.pathname}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15, ease: 'easeOut' }}
+          style={{ width: '100%', minHeight: '100vh' }}
+        >
+          <Suspense fallback={<PageLoader />}>
+            <Routes location={location}>
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
+              <Route path="/portfolio" element={<ProtectedRoute moduleId="portfolio" moduleName="Portfolio"><Portfolio /></ProtectedRoute>} />
+              <Route path="/" element={<ProtectedRoute moduleId="dashboard" moduleName="Dashboard"><Dashboard /></ProtectedRoute>} />
+              <Route path="/dashboard" element={<ProtectedRoute moduleId="dashboard" moduleName="Dashboard"><Dashboard /></ProtectedRoute>} />
+              <Route path="/tasks" element={<ProtectedRoute moduleId="tasks" moduleName="Tasks"><Tasks /></ProtectedRoute>} />
+              <Route path="/drawings" element={<ProtectedRoute moduleId="drawings" moduleName="Drawings"><Drawings /></ProtectedRoute>} />
+              <Route path="/rfis" element={<ProtectedRoute moduleId="rfis" moduleName="RFIs"><RFIs /></ProtectedRoute>} />
+              <Route path="/submittals" element={<ProtectedRoute moduleId="submittals" moduleName="Submittals"><Submittals /></ProtectedRoute>} />
+              <Route path="/schedule" element={<ProtectedRoute moduleId="schedule" moduleName="Schedule"><Schedule /></ProtectedRoute>} />
+              <Route path="/lookahead" element={<ProtectedRoute moduleId="lookahead" moduleName="Lookahead"><Lookahead /></ProtectedRoute>} />
+              <Route path="/budget" element={<ProtectedRoute moduleId="budget" moduleName="Budget"><Budget /></ProtectedRoute>} />
+              <Route path="/change-orders" element={<ProtectedRoute moduleId="change-orders" moduleName="Change Orders"><ChangeOrders /></ProtectedRoute>} />
+              <Route path="/daily-log" element={<ProtectedRoute moduleId="daily-log" moduleName="Daily Log"><DailyLog /></ProtectedRoute>} />
+              <Route path="/field-capture" element={<ProtectedRoute moduleId="field-capture" moduleName="Field Capture"><FieldCapture /></ProtectedRoute>} />
+              <Route path="/punch-list" element={<ProtectedRoute moduleId="punch-list" moduleName="Punch List"><PunchList /></ProtectedRoute>} />
+              <Route path="/crews" element={<ProtectedRoute moduleId="crews" moduleName="Crews"><Crews /></ProtectedRoute>} />
+              <Route path="/safety" element={<ProtectedRoute moduleId="safety" moduleName="Safety"><Safety /></ProtectedRoute>} />
+              <Route path="/estimating" element={<ProtectedRoute moduleId="estimating" moduleName="Estimating"><Estimating /></ProtectedRoute>} />
+              <Route path="/procurement" element={<ProtectedRoute moduleId="procurement" moduleName="Procurement"><Procurement /></ProtectedRoute>} />
+              <Route path="/equipment" element={<ProtectedRoute moduleId="equipment" moduleName="Equipment"><EquipmentPage /></ProtectedRoute>} />
+              <Route path="/directory" element={<ProtectedRoute moduleId="directory" moduleName="Directory"><Directory /></ProtectedRoute>} />
+              <Route path="/meetings" element={<ProtectedRoute moduleId="meetings" moduleName="Meetings"><Meetings /></ProtectedRoute>} />
+              <Route path="/files" element={<ProtectedRoute moduleId="files" moduleName="Files"><Files /></ProtectedRoute>} />
+              <Route path="/copilot" element={<ProtectedRoute moduleId="copilot" moduleName="AI Copilot"><AICopilot /></ProtectedRoute>} />
+              <Route path="/activity" element={<ProtectedRoute moduleId="activity" moduleName="Activity"><Activity /></ProtectedRoute>} />
+              <Route path="/audit-trail" element={<ProtectedRoute moduleId="audit-trail" moduleName="Audit Trail"><AuditTrail /></ProtectedRoute>} />
+              <Route path="/time-machine" element={<ProtectedRoute moduleId="time-machine" moduleName="Time Machine"><TimeMachine /></ProtectedRoute>} />
+              <Route path="/project-health" element={<ProtectedRoute moduleId="project-health" moduleName="Project Health"><ProjectHealth /></ProtectedRoute>} />
+              <Route path="/financials" element={<ProtectedRoute moduleId="financials" moduleName="Financials"><Financials /></ProtectedRoute>} />
+              <Route path="/pay-apps" element={<ProtectedRoute moduleId="pay-apps" moduleName="Payment Applications"><PaymentApplications /></ProtectedRoute>} />
+              <Route path="/insurance" element={<ProtectedRoute moduleId="insurance" moduleName="Insurance"><Insurance /></ProtectedRoute>} />
+              <Route path="/portal/owner" element={<ProtectedRoute requiredPermission="project.settings" moduleName="Owner Portal"><OwnerPortal /></ProtectedRoute>} />
+              <Route path="/ai-agents" element={<ProtectedRoute moduleId="ai-agents" moduleName="AI Agents"><AIAgents /></ProtectedRoute>} />
+              <Route path="/workforce" element={<ProtectedRoute moduleId="workforce" moduleName="Workforce"><Workforce /></ProtectedRoute>} />
+              <Route path="/permits" element={<ProtectedRoute moduleId="permits" moduleName="Permits"><Permits /></ProtectedRoute>} />
+              <Route path="/integrations" element={<ProtectedRoute moduleId="integrations" moduleName="Integrations"><Integrations /></ProtectedRoute>} />
+              <Route path="/marketplace" element={<ProtectedRoute moduleId="marketplace" moduleName="App Marketplace"><Marketplace /></ProtectedRoute>} />
+              <Route path="/developers" element={<ProtectedRoute moduleId="developers" moduleName="Developer Portal"><Developers /></ProtectedRoute>} />
+              <Route path="/reports" element={<ProtectedRoute moduleId="reports" moduleName="Reports"><Reports /></ProtectedRoute>} />
+              <Route path="/sustainability" element={<ProtectedRoute moduleId="sustainability" moduleName="Sustainability"><Sustainability /></ProtectedRoute>} />
+              <Route path="/benchmarks" element={<ProtectedRoute moduleId="benchmarks" moduleName="Platform Intelligence"><Benchmarks /></ProtectedRoute>} />
+              <Route path="/warranties" element={<ProtectedRoute moduleId="warranties" moduleName="Warranties"><WarrantiesPage /></ProtectedRoute>} />
+              <Route path="/onboarding" element={<Onboarding />} />
+              <Route path="/vision" element={<ProtectedRoute><Vision /></ProtectedRoute>} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
+        </motion.div>
+      </AnimatePresence>
     </>
   );
 }
