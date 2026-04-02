@@ -47,6 +47,8 @@ const crumbButtonStyle: React.CSSProperties = {
   overflow: 'hidden',
   textOverflow: 'ellipsis',
   whiteSpace: 'nowrap',
+  minHeight: '44px',
+  minWidth: '44px',
 };
 
 export const FolderBreadcrumbs: React.FC<FolderBreadcrumbsProps> = ({ stack, onNavigate }) => {
@@ -77,7 +79,7 @@ export const FolderBreadcrumbs: React.FC<FolderBreadcrumbsProps> = ({ stack, onN
           alignItems: 'center',
           gap: spacing['1'],
           marginBottom: spacing['3'],
-          flexWrap: 'nowrap',
+          flexWrap: 'wrap',
           minWidth: 0,
           overflowX: 'auto',
           WebkitOverflowScrolling: 'touch',
@@ -123,17 +125,20 @@ export const FolderBreadcrumbs: React.FC<FolderBreadcrumbsProps> = ({ stack, onN
             <React.Fragment key={segment.id}>
               <ChevronRight size={12} style={{ color: colors.textTertiary, flexShrink: 0 }} />
               {isLast ? (
-                <span style={{
-                  display: 'flex', alignItems: 'center', gap: spacing['1'],
-                  padding: `${spacing['2']} ${spacing['3']}`,
-                  fontSize: typography.fontSize.sm,
-                  fontWeight: typography.fontWeight.medium,
-                  color: colors.textPrimary,
-                  maxWidth: '160px',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}>
+                <span
+                  aria-current="page"
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: spacing['1'],
+                    padding: `${spacing['2']} ${spacing['3']}`,
+                    fontSize: typography.fontSize.sm,
+                    fontWeight: typography.fontWeight.medium,
+                    color: colors.textPrimary,
+                    maxWidth: '160px',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
                   <FolderOpen size={13} color={colors.primaryOrange} />
                   {segment.name}
                 </span>
@@ -224,6 +229,7 @@ export const Breadcrumbs: React.FC = () => {
             <ChevronRight size={12} style={{ color: colors.textTertiary, flexShrink: 0 }} />
             {isLast ? (
               <span
+                aria-current="page"
                 style={{
                   fontSize: typography.fontSize.sm,
                   fontWeight: typography.fontWeight.medium,
