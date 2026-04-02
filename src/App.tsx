@@ -331,9 +331,10 @@ function AppContent() {
         <SkipToContent />
         <Sidebar activeView={activeView} onNavigate={handleNavigate} />
 
-        <div
+        <main
           id="main-content"
           role="main"
+          tabIndex={-1}
           style={{
             flex: 1,
             display: 'flex',
@@ -347,7 +348,7 @@ function AppContent() {
           <ErrorBoundary>
             <AppRoutes />
           </ErrorBoundary>
-        </div>
+        </main>
 
         <CommandPalette />
         <Suspense fallback={null}>
