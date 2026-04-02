@@ -67,6 +67,11 @@ function ToastEntry({ toast, onClose }: { toast: ToastItem; onClose: (id: string
 
   const handleMouseLeave = useCallback(() => {
     if (remainingRef.current === null) return;
+    if (remainingRef.current <= 0) remainingRef.current = 1000;
+    if (timerRef.current !== null) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
     startedAtRef.current = Date.now();
     timerRef.current = setTimeout(() => onClose(toast.id), remainingRef.current);
   }, [toast.id, onClose]);
