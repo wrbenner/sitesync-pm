@@ -3,10 +3,16 @@ import { assertProjectAccess } from '../middleware/projectScope'
 import type { ScheduleActivity, SchedulePhaseRow, SchedulePhaseUpdate } from '../../types/api'
 import { calculateCriticalPath, tasksToCPM } from '../../lib/criticalPath'
 
-// Columns fetched from schedule_phases; must match fields used in mapScheduleActivityRow.
-const SCHEDULE_SELECT =
+// Base columns always present in schedule_phases.
+const SCHEDULE_SELECT_BASE =
   'id, project_id, name, start_date, end_date, baseline_start, baseline_end, ' +
   'percent_complete, float_days, is_critical_path, dependencies, status, created_at, updated_at'
+
+// Extended select that also fetches optional columns. Falls back to base if these columns
+// do not yet exist in the database.
+const SCHEDULE_SELECT =
+  SCHEDULE_SELECT_BASE +
+  ', actual_start, actual_finish, wbs_code, trade, assigned_sub_id, is_milestone, outdoor_activity, planned_percent_complete'
 
 type RawRow = Pick<
   SchedulePhaseRow,
@@ -24,7 +30,16 @@ type RawRow = Pick<
   | 'status'
   | 'created_at'
   | 'updated_at'
->
+> & {
+  actual_start?: string | null
+  actual_finish?: string | null
+  wbs_code?: string | null
+  trade?: string | null
+  assigned_sub_id?: string | null
+  is_milestone?: boolean | null
+  outdoor_activity?: boolean | null
+  planned_percent_complete?: number | null
+}
 
 const VALID_STATUSES = new Set<ScheduleActivity['status']>([
   'not_started',
@@ -61,18 +76,18 @@ export function mapScheduleActivityRow(row: RawRow): ScheduleActivity {
     finish_date: finishDate,
     baseline_start: row.baseline_start ?? null,
     baseline_finish: row.baseline_end ?? null,
-    actual_start: null,
-    actual_finish: null,
+    actual_start: row.actual_start ?? null,
+    actual_finish: row.actual_finish ?? null,
     percent_complete: row.percent_complete ?? 0,
-    planned_percent_complete: 0,
+    planned_percent_complete: row.planned_percent_complete ?? 0,
     duration_days: durationDays,
     float_days: row.float_days ?? 0,
     is_critical: row.is_critical_path ?? false,
-    is_milestone: false,
-    wbs_code: null,
-    trade: null,
-    assigned_sub_id: null,
-    outdoor_activity: false,
+    is_milestone: row.is_milestone ?? false,
+    wbs_code: row.wbs_code ?? null,
+    trade: row.trade ?? null,
+    assigned_sub_id: row.assigned_sub_id ?? null,
+    outdoor_activity: row.outdoor_activity ?? false,
     predecessor_ids: row.dependencies ?? [],
     successor_ids: [],
     status: toActivityStatus(row.status),
@@ -83,14 +98,26 @@ export function mapScheduleActivityRow(row: RawRow): ScheduleActivity {
 
 export const getSchedulePhases = async (projectId: string): Promise<ScheduleActivity[]> => {
   await assertProjectAccess(projectId)
-  const { data, error } = await supabase
-    .from('schedule_phases')
-    .select(SCHEDULE_SELECT)
-    .eq('project_id', projectId)
-    .order('start_date')
-  if (error) throw transformSupabaseError(error)
 
-  const rows = (data ?? []) as RawRow[]
+  let rows: RawRow[]
+  try {
+    const { data, error } = await supabase
+      .from('schedule_phases')
+      .select(SCHEDULE_SELECT)
+      .eq('project_id', projectId)
+      .order('start_date')
+    if (error) throw error
+    rows = (data ?? []) as RawRow[]
+  } catch {
+    // Extended columns may not exist yet; fall back to base columns with hardcoded defaults.
+    const { data, error } = await supabase
+      .from('schedule_phases')
+      .select(SCHEDULE_SELECT_BASE)
+      .eq('project_id', projectId)
+      .order('start_date')
+    if (error) throw transformSupabaseError(error)
+    rows = (data ?? []) as RawRow[]
+  }
 
   const cpmInput = tasksToCPM(
     rows.map(r => ({
