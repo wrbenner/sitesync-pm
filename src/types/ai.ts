@@ -60,13 +60,14 @@ export interface AIToolCall {
 
 export interface AIInsight {
   id: string
-  type: 'risk' | 'recommendation' | 'anomaly' | 'prediction' | 'budget_risk' | 'schedule_risk'
+  type: 'risk' | 'recommendation' | 'anomaly' | 'prediction' | 'budget_risk' | 'schedule_risk' | 'onboarding'
   severity: 'info' | 'warning' | 'critical'
   title: string
   description: string
   affectedEntities: Array<{ type: string; id: string; name: string }>
   suggestedAction?: string
   confidence: number // 0-1
+  isPlaceholder?: boolean // true for onboarding prompts, not real analysis results
   source?: 'live' | 'cached' | 'supabase' | 'fallback' // which analysis generated this
   createdAt: string
   generatedAt?: string
