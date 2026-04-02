@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as Tooltip from '@radix-ui/react-tooltip';
-import { Eye } from 'lucide-react';
+import { Eye, RefreshCw } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme';
 import { usePresenceStore } from '../../stores/presenceStore';
 import { useOthers } from '../../lib/liveblocks';
@@ -406,7 +406,55 @@ export const SidebarPresenceDot: React.FC<SidebarPresenceDotProps> = ({ page }) 
 // Must be rendered inside a Liveblocks RoomProvider.
 
 export const DrawingPresenceBar: React.FC = () => {
-  const others = useOthers();
+  const others = useOthers() ?? [];
+  const prevLengthRef = useRef<number>(0);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [isReconnecting, setIsReconnecting] = useState(false);
+
+  useEffect(() => {
+    try {
+      if (others.length === 0 && prevLengthRef.current > 0) {
+        setIsReconnecting(true);
+        if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = setTimeout(() => setIsReconnecting(false), 5000);
+      } else if (others.length > 0) {
+        if (reconnectTimerRef.current) {
+          clearTimeout(reconnectTimerRef.current);
+          reconnectTimerRef.current = null;
+        }
+        setIsReconnecting(false);
+      }
+      prevLengthRef.current = others.length;
+    } catch (err) {
+      console.warn('[PresenceBar] Error syncing presence state:', err);
+    }
+  }, [others.length]);
+
+  useEffect(() => {
+    return () => {
+      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+    };
+  }, []);
+
+  if (others.length === 0 && isReconnecting) {
+    return (
+      <>
+        <style>{`@keyframes presenceTooltipIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } } @keyframes presenceSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } } .presence-avatar-btn { background: none; font: inherit; line-height: 1; outline-offset: 2px; } .presence-avatar-btn:focus-visible { outline: 2px solid ${colors.primary}; }`}</style>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: spacing['2'],
+          padding: `${spacing['1']} ${spacing['3']}`,
+          backgroundColor: 'rgba(255, 255, 255, 0.08)',
+          borderRadius: borderRadius.full,
+          opacity: 0.7,
+        }}>
+          <RefreshCw size={12} color="rgba(255,255,255,0.5)" style={{ animation: 'presenceSpin 1s linear infinite' }} />
+          <span style={{ fontSize: typography.fontSize.caption, color: 'rgba(255,255,255,0.5)' }}>
+            Reconnecting...
+          </span>
+        </div>
+      </>
+    );
+  }
 
   if (others.length === 0) return null;
 
