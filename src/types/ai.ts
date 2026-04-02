@@ -67,7 +67,7 @@ export interface AIInsight {
   affectedEntities: Array<{ type: string; id: string; name: string }>
   suggestedAction?: string
   confidence: number // 0-1
-  source?: 'live' | 'cached' | 'supabase' // which analysis generated this
+  source?: 'live' | 'cached' | 'supabase' | 'fallback' // which analysis generated this
   createdAt: string
   generatedAt?: string
   expiresAt?: string
@@ -76,8 +76,8 @@ export interface AIInsight {
 
 export interface AiInsightsResponse {
   insights: AIInsight[]
-  /** 'ai-live' when served directly from the AI service; 'ai-cached' when served from Supabase after aiService failed. */
-  dataSource: 'ai-live' | 'ai-cached'
+  /** 'ai-live' when served directly from the AI service; 'ai-cached' when served from Supabase after aiService failed; 'ai-fallback' when no data exists and starter insights are shown. */
+  dataSource: 'ai-live' | 'ai-cached' | 'ai-fallback'
   /** ISO timestamp set when results were served from Supabase cache after aiService failed. */
   lastFallbackAt?: string
 }

@@ -52,25 +52,91 @@ export const getAiInsights = async (
     )
   }
 
+  const cachedInsights = (data || []).map((row): AIInsight => ({
+    id: row.id,
+    type: row.type,
+    severity: row.severity,
+    title: row.title,
+    description: row.description,
+    affectedEntities: row.affected_entities || [],
+    suggestedAction: row.suggested_action,
+    confidence: row.confidence ?? 1,
+    source: 'cached' as const,
+    createdAt: row.created_at,
+    generatedAt: row.created_at,
+    expiresAt: row.expires_at,
+    dismissed: row.dismissed,
+  }))
+
+  if (cachedInsights.length === 0 && budgetInsights.length === 0) {
+    const now = new Date().toISOString()
+    const starterInsights: AIInsight[] = [
+      {
+        id: 'fallback-1',
+        type: 'schedule_risk',
+        severity: 'info',
+        title: 'Schedule Analysis Available',
+        description: 'Add schedule phases to enable AI delay prediction and critical path analysis.',
+        affectedEntities: [],
+        suggestedAction: 'Navigate to Schedule to add project phases',
+        confidence: 1,
+        source: 'fallback' as const,
+        createdAt: now,
+        generatedAt: now,
+        expiresAt: null,
+        dismissed: false,
+      },
+      {
+        id: 'fallback-2',
+        type: 'budget_risk',
+        severity: 'info',
+        title: 'Budget Tracking Ready',
+        description: 'Enter contract values and cost codes to unlock variance alerts and cost forecasting.',
+        affectedEntities: [],
+        suggestedAction: 'Navigate to Budget to set up cost divisions',
+        confidence: 1,
+        source: 'fallback' as const,
+        createdAt: now,
+        generatedAt: now,
+        expiresAt: null,
+        dismissed: false,
+      },
+      {
+        id: 'fallback-3',
+        type: 'recommendation',
+        severity: 'info',
+        title: 'RFI Tracking Improves Closeout',
+        description: 'Log RFIs as they arise to keep a complete record and avoid disputes at project closeout.',
+        affectedEntities: [],
+        suggestedAction: 'Navigate to RFIs to log your first request',
+        confidence: 1,
+        source: 'fallback' as const,
+        createdAt: now,
+        generatedAt: now,
+        expiresAt: null,
+        dismissed: false,
+      },
+      {
+        id: 'fallback-4',
+        type: 'risk',
+        severity: 'info',
+        title: 'Safety Observation Cadence',
+        description: 'Daily safety observations in the field log build a defensible record and surface leading indicators early.',
+        affectedEntities: [],
+        suggestedAction: 'Navigate to Daily Log to add a safety observation',
+        confidence: 1,
+        source: 'fallback' as const,
+        createdAt: now,
+        generatedAt: now,
+        expiresAt: null,
+        dismissed: false,
+      },
+    ]
+    return { insights: starterInsights, dataSource: 'ai-fallback' as const }
+  }
+
   return {
-    insights: [
-      ...(data || []).map((row): AIInsight => ({
-        id: row.id,
-        type: row.type,
-        severity: row.severity,
-        title: row.title,
-        description: row.description,
-        affectedEntities: row.affected_entities || [],
-        suggestedAction: row.suggested_action,
-        confidence: row.confidence ?? 1,
-        source: 'cached' as const,
-        createdAt: row.created_at,
-        generatedAt: row.created_at,
-        expiresAt: row.expires_at,
-        dismissed: row.dismissed,
-      })),
-      ...budgetInsights,
-    ],
+    insights: [...cachedInsights, ...budgetInsights],
     dataSource: 'ai-cached' as const,
     lastFallbackAt: new Date().toISOString(),
   }
