@@ -70,15 +70,22 @@ export function resolveRequiredScope(
   return route.requiredScope
 }
 
-const normalize = (p: string) =>
-  decodeURIComponent(p).replace(/\/+/g, '/').replace(/\/$/, '') || '/'
+const normalize = (p: string): string => {
+  const segments = decodeURIComponent(p)
+    .split('/')
+    .filter(s => s !== '' && s !== '.' && s !== '..')
+  return '/' + segments.join('/')
+}
 
 /** Minimal path matching: supports :param segments. Exported for unit testing. */
 export function pathMatches(pattern: string, actual: string): boolean {
   const patternParts = normalize(pattern).split('/')
   const actualParts = normalize(actual).split('/')
   if (patternParts.length !== actualParts.length) return false
-  return patternParts.every(
-    (segment, i) => segment.startsWith(':') || segment === actualParts[i],
-  )
+  return patternParts.every((segment, i) => {
+    if (segment.startsWith(':')) {
+      return /^[a-zA-Z0-9-]+$/.test(actualParts[i])
+    }
+    return segment === actualParts[i]
+  })
 }
