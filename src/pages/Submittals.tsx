@@ -242,25 +242,27 @@ const Submittals: React.FC = () => {
           ))}
         </div>
         <Card padding="0">
-          {Array.from({ length: 9 }).map((_, i) => (
+          {Array.from({ length: 5 }).map((_, i) => (
             <div
               key={i}
               style={{
                 height: 48,
                 borderBottom: `1px solid ${colors.borderLight}`,
                 padding: `0 ${spacing['4']}`,
-                display: 'flex',
+                display: 'grid',
+                gridTemplateColumns: '100px 1fr 120px 100px 80px 72px',
                 alignItems: 'center',
                 gap: spacing['4'],
                 animation: 'submittals-pulse 1.5s ease-in-out infinite',
                 animationDelay: `${i * 0.08}s`,
               }}
             >
-              <div style={{ width: 80, height: 14, borderRadius: 4, backgroundColor: colors.borderLight }} />
-              <div style={{ flex: 1, height: 14, borderRadius: 4, backgroundColor: colors.borderLight }} />
-              <div style={{ width: 100, height: 14, borderRadius: 4, backgroundColor: colors.borderLight }} />
-              <div style={{ width: 80, height: 22, borderRadius: 9999, backgroundColor: colors.borderLight }} />
-              <div style={{ width: 64, height: 14, borderRadius: 4, backgroundColor: colors.borderLight }} />
+              <div style={{ width: 80, height: 14, borderRadius: 4, backgroundColor: colors.border }} />
+              <div style={{ height: 14, borderRadius: 4, backgroundColor: colors.border }} />
+              <div style={{ width: 100, height: 14, borderRadius: 4, backgroundColor: colors.border }} />
+              <div style={{ width: 80, height: 22, borderRadius: 9999, backgroundColor: colors.border }} />
+              <div style={{ width: 64, height: 14, borderRadius: 4, backgroundColor: colors.border }} />
+              <div style={{ width: 48, height: 14, borderRadius: 4, backgroundColor: colors.border }} />
             </div>
           ))}
         </Card>
@@ -270,6 +272,29 @@ const Submittals: React.FC = () => {
             50% { opacity: 0.7; }
           }
         `}</style>
+      </PageContainer>
+    );
+  }
+
+  if (submittalsError) {
+    return (
+      <PageContainer title="Submittals" subtitle="">
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: spacing['3'],
+          padding: `${spacing['4']} ${spacing['5']}`,
+          backgroundColor: '#FEF2F2',
+          border: `1px solid #FECACA`,
+          borderRadius: borderRadius.md,
+          color: colors.statusCritical,
+        }}>
+          <AlertTriangle size={16} style={{ flexShrink: 0 }} />
+          <span style={{ flex: 1, fontSize: typography.fontSize.sm, color: '#991B1B' }}>
+            Unable to load submittals. Check your connection and try again.
+          </span>
+          <Btn variant="secondary" size="sm" icon={<RefreshCw size={14} />} onClick={() => refetch()}>Retry</Btn>
+        </div>
       </PageContainer>
     );
   }
