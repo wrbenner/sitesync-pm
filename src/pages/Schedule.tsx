@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Sparkles, AlertTriangle, ChevronDown, ChevronUp, CheckCircle, RefreshCw, Zap, CalendarClock, TrendingUp, GitBranch, Gauge, CalendarCheck } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Sparkles, AlertTriangle, ChevronDown, ChevronUp, CheckCircle, RefreshCw, Zap, CalendarClock, TrendingUp, GitBranch, Gauge, CalendarCheck, Calendar } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { PageContainer, Card, SectionHeader, MetricBox, Skeleton, Btn, useToast } from '../components/Primitives';
 import { useRealtimeSchedulePhases, useScheduleRealtime } from '../hooks/queries/realtime';
@@ -81,6 +82,10 @@ export const Schedule: React.FC = () => {
   const { data: projectMetrics } = useProjectMetrics(activeProject?.id);
   const { createConversation, sendMessage, setActiveConversation, setPageContext } = useCopilotStore();
   const navigate = useNavigate();
+
+  const refetch = useCallback(() => {
+    if (activeProject?.id) loadSchedule(activeProject.id);
+  }, [activeProject?.id, loadSchedule]);
 
   useEffect(() => { setPageContext('schedule'); }, [setPageContext]);
 
@@ -222,7 +227,6 @@ export const Schedule: React.FC = () => {
         <style>{`
           @media (max-width: 1024px) and (min-width: 641px) { .kpi-grid { grid-template-columns: repeat(3, 1fr) !important; } }
           @media (max-width: 640px) { .kpi-grid { grid-template-columns: repeat(2, 1fr) !important; } }
-          @keyframes schedPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
         `}</style>
         <div
           className="kpi-grid"
@@ -279,25 +283,25 @@ export const Schedule: React.FC = () => {
                 marginTop: i === 0 ? 0 : '8px',
               }}
             >
-              <div
+              <motion.div
+                animate={{ opacity: [1, 0.45, 1] }}
+                transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut', delay: i * 0.08 }}
                 style={{
                   flexShrink: 0,
                   width: '170px',
                   height: '32px',
                   backgroundColor: '#E5E7EB',
                   borderRadius: '4px',
-                  animation: 'schedPulse 1.5s ease-in-out infinite',
-                  animationDelay: `${i * 0.08}s`,
                 }}
               />
-              <div
+              <motion.div
+                animate={{ opacity: [1, 0.45, 1] }}
+                transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut', delay: i * 0.08 + 0.05 }}
                 style={{
                   width: rowWidth,
                   height: '32px',
                   backgroundColor: '#E5E7EB',
                   borderRadius: '4px',
-                  animation: 'schedPulse 1.5s ease-in-out infinite',
-                  animationDelay: `${i * 0.08 + 0.05}s`,
                 }}
               />
             </div>
@@ -633,29 +637,56 @@ export const Schedule: React.FC = () => {
             <AlertTriangle size={20} color={colors.statusCritical} style={{ flexShrink: 0, marginTop: 2 }} />
             <div style={{ flex: 1 }}>
               <p style={{ margin: 0, fontWeight: typography.fontWeight.semibold, color: colors.statusCritical, fontSize: typography.fontSize.sm }}>
-                Schedule data could not be loaded
+                Unable to load schedule data
               </p>
               <p style={{ margin: `${spacing['1']} 0 ${spacing['3']}`, color: colors.textSecondary, fontSize: typography.fontSize.sm }}>
                 {error}
               </p>
-              <button
-                onClick={() => activeProject?.id && loadSchedule(activeProject.id)}
-                style={{
-                  padding: `${spacing['2']} ${spacing['4']}`,
-                  backgroundColor: colors.statusCritical,
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: borderRadius.base,
-                  fontSize: typography.fontSize.sm,
-                  fontWeight: typography.fontWeight.medium,
-                  fontFamily: typography.fontFamily,
-                  cursor: 'pointer',
-                }}
-              >
+              <Btn variant="danger" size="sm" onClick={refetch}>
                 Retry
-              </button>
+              </Btn>
             </div>
           </div>
+        ) : !loading && schedulePhases.length === 0 ? (
+          <Card padding={spacing['5']}>
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: `${spacing['2xl']} ${spacing['5']}`,
+              textAlign: 'center',
+              gap: spacing['4'],
+            }}>
+              <div style={{
+                width: '56px',
+                height: '56px',
+                borderRadius: borderRadius.lg,
+                backgroundColor: `${colors.primaryOrange}12`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+                <Calendar size={28} color={colors.primaryOrange} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'] }}>
+                <p style={{ margin: 0, fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+                  No schedule activities yet
+                </p>
+                <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textSecondary, maxWidth: '400px', lineHeight: typography.lineHeight.relaxed }}>
+                  Build your schedule to track every phase from mobilization to closeout
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: spacing['3'], flexWrap: 'wrap', justifyContent: 'center' }}>
+                <Btn variant="primary" size="md" onClick={() => addToast('info', 'Phase creation coming soon')}>
+                  Create First Phase
+                </Btn>
+                <Btn variant="secondary" size="md" onClick={() => addToast('info', 'P6/MS Project import coming soon')}>
+                  Import from P6/MS Project
+                </Btn>
+              </div>
+            </div>
+          </Card>
         ) : isMobile ? (
           <MobileScheduleView phases={schedulePhases} risks={risks} />
         ) : (
