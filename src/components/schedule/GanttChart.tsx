@@ -15,6 +15,7 @@ const DAY_MS = 86_400_000;
 const LABEL_WIDTH = 170;
 const SLIPPAGE_COL_WIDTH = 72;
 const FLOAT_COL_WIDTH = 84;
+const BASELINE_DATE_COL_WIDTH = 88;
 
 function toISO(ms: number): string {
   return new Date(ms).toISOString().slice(0, 10);
@@ -659,6 +660,26 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                 Float
               </span>
             </div>
+            {showBaseline && (
+              <div style={{
+                width: BASELINE_DATE_COL_WIDTH, flexShrink: 0, textAlign: 'right',
+                paddingRight: spacing['2'], height: 20, display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
+              }}>
+                <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, fontWeight: typography.fontWeight.semibold, textTransform: 'uppercase', letterSpacing: typography.letterSpacing.wider }}>
+                  Bsln Start
+                </span>
+              </div>
+            )}
+            {showBaseline && (
+              <div style={{
+                width: BASELINE_DATE_COL_WIDTH, flexShrink: 0, textAlign: 'right',
+                paddingRight: spacing['2'], height: 20, display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
+              }}>
+                <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, fontWeight: typography.fontWeight.semibold, textTransform: 'uppercase', letterSpacing: typography.letterSpacing.wider }}>
+                  Bsln End
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Phase rows + SVG dependency overlay */}
@@ -690,6 +711,8 @@ export const GanttChart: React.FC<GanttChartProps> = ({
               <div role="columnheader" style={{}}>Schedule</div>
               <div role="columnheader" style={{}}>Slippage</div>
               <div role="columnheader" style={{}}>Float</div>
+              {showBaseline && <div role="columnheader" style={{}}>Baseline Start</div>}
+              {showBaseline && <div role="columnheader" style={{}}>Baseline End</div>}
             </div>
 
             {/* SVG overlay for dependency arrows */}
@@ -1269,6 +1292,68 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                         <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
                           {fd}d
                         </span>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Baseline Start column */}
+                  {showBaseline && (() => {
+                    const bStart = phase.baselineStartDate;
+                    if (!bStart) {
+                      return (
+                        <div role="gridcell" style={{ width: BASELINE_DATE_COL_WIDTH, flexShrink: 0, textAlign: 'right', paddingRight: spacing['2'] }}>
+                          <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>—</span>
+                        </div>
+                      );
+                    }
+                    const variance = Math.ceil((new Date(phase.startDate).getTime() - new Date(bStart).getTime()) / 86400000);
+                    const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                    return (
+                      <div role="gridcell" style={{ width: BASELINE_DATE_COL_WIDTH, flexShrink: 0, textAlign: 'right', paddingRight: spacing['2'] }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+                          <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{fmtDate(bStart)}</span>
+                          {variance !== 0 && (
+                            <span style={{
+                              fontSize: '10px', fontWeight: typography.fontWeight.semibold,
+                              color: variance > 0 ? '#E74C3C' : '#4EC896',
+                              backgroundColor: variance > 0 ? '#FEE2E2' : '#D1FAE5',
+                              padding: '0 4px', borderRadius: borderRadius.sm, lineHeight: '16px',
+                            }}>
+                              {variance > 0 ? `+${variance}d` : `${variance}d`}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Baseline End column */}
+                  {showBaseline && (() => {
+                    const bEnd = phase.baselineEndDate;
+                    if (!bEnd) {
+                      return (
+                        <div role="gridcell" style={{ width: BASELINE_DATE_COL_WIDTH, flexShrink: 0, textAlign: 'right', paddingRight: spacing['2'] }}>
+                          <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>—</span>
+                        </div>
+                      );
+                    }
+                    const variance = Math.ceil((new Date(phase.endDate).getTime() - new Date(bEnd).getTime()) / 86400000);
+                    const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                    return (
+                      <div role="gridcell" style={{ width: BASELINE_DATE_COL_WIDTH, flexShrink: 0, textAlign: 'right', paddingRight: spacing['2'] }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+                          <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{fmtDate(bEnd)}</span>
+                          {variance !== 0 && (
+                            <span style={{
+                              fontSize: '10px', fontWeight: typography.fontWeight.semibold,
+                              color: variance > 0 ? '#E74C3C' : '#4EC896',
+                              backgroundColor: variance > 0 ? '#FEE2E2' : '#D1FAE5',
+                              padding: '0 4px', borderRadius: borderRadius.sm, lineHeight: '16px',
+                            }}>
+                              {variance > 0 ? `+${variance}d` : `${variance}d`}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     );
                   })()}

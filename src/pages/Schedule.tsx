@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Sparkles, AlertTriangle, ChevronDown, ChevronUp, CheckCircle, RefreshCw, Zap, CalendarClock, TrendingUp, GitBranch, Gauge, CalendarCheck, Calendar, BarChart3 } from 'lucide-react';
+import { Sparkles, AlertTriangle, ChevronDown, ChevronUp, CheckCircle, RefreshCw, Zap, CalendarClock, TrendingUp, GitBranch, Gauge, CalendarCheck, Calendar, BarChart3, ToggleLeft, ToggleRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { PageContainer, Card, SectionHeader, MetricBox, Skeleton, Btn, useToast } from '../components/Primitives';
 import { useRealtimeSchedulePhases, useScheduleRealtime } from '../hooks/queries/realtime';
@@ -693,7 +693,7 @@ export const Schedule: React.FC = () => {
                 <Btn
                   variant={showBaseline ? 'primary' : 'secondary'}
                   size="sm"
-                  icon={<GitBranch size={14} />}
+                  icon={showBaseline ? <ToggleRight size={14} /> : <ToggleLeft size={14} />}
                   onClick={() => setShowBaseline(!showBaseline)}
                 >
                   {showBaseline ? 'Hide Baseline' : 'Show Baseline'}
