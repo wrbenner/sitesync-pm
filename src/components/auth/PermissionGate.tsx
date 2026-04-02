@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { usePermissions } from '../../hooks/usePermissions';
 import type { Permission, ProjectRole } from '../../hooks/usePermissions';
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
@@ -72,6 +73,7 @@ const PermissionDenied: React.FC = () => (
 
 export const RequestAccessPage: React.FC<{ moduleName?: string }> = ({ moduleName }) => {
   const { role } = usePermissions();
+  const navigate = useNavigate();
 
   return (
     <div style={{
@@ -107,6 +109,31 @@ export const RequestAccessPage: React.FC<{ moduleName?: string }> = ({ moduleNam
       }}>
         Contact your project administrator to request access.
       </p>
+      <div style={{ display: 'flex', gap: spacing['3'], marginTop: spacing['6'] }}>
+        <button
+          onClick={() => navigate('/dashboard')}
+          style={{
+            backgroundColor: colors.primary, color: colors.white,
+            padding: `${spacing['2']} ${spacing['4']}`,
+            borderRadius: borderRadius.md, border: 'none', cursor: 'pointer',
+            fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium,
+          }}
+        >
+          Return to Dashboard
+        </button>
+        <button
+          onClick={() => window.history.back()}
+          style={{
+            backgroundColor: 'transparent', color: colors.textSecondary,
+            border: `1px solid ${colors.borderDefault}`,
+            padding: `${spacing['2']} ${spacing['4']}`,
+            borderRadius: borderRadius.md, cursor: 'pointer',
+            fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium,
+          }}
+        >
+          Go Back
+        </button>
+      </div>
     </div>
   );
 };
