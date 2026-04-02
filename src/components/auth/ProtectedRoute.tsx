@@ -4,9 +4,9 @@ import { useAuth } from '../../hooks/useAuth'
 import { usePermissions } from '../../hooks/usePermissions'
 import type { Permission } from '../../hooks/usePermissions'
 import { Skeleton } from '../Primitives'
-import { RequestAccessPage } from './PermissionGate'
-import { colors, spacing, typography, zIndex } from '../../styles/theme'
+import { colors, spacing, typography, zIndex, layout, borderRadius } from '../../styles/theme'
 import { MODULE_PERMISSIONS } from '../../hooks/usePermissions'
+import { ShieldAlert } from 'lucide-react'
 
 interface Props {
   children: React.ReactNode
@@ -57,27 +57,105 @@ export const ProtectedRoute: React.FC<Props> = ({ children, requiredPermission, 
 
   if (authLoading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
-        <Skeleton width="200px" height="24px" />
+      <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+        {/* Sidebar placeholder */}
+        <div style={{
+          width: layout.sidebarWidth,
+          flexShrink: 0,
+          backgroundColor: colors.surfaceSidebar,
+          padding: spacing['4'],
+          display: 'flex',
+          flexDirection: 'column',
+          gap: spacing['3'],
+        }}>
+          <Skeleton width="120px" height="32px" />
+          <div style={{ marginTop: spacing['4'], display: 'flex', flexDirection: 'column', gap: spacing['2'] }}>
+            {Array.from({ length: 8 }).map((_, i) => (
+              <Skeleton key={i} width="100%" height="36px" />
+            ))}
+          </div>
+        </div>
+        {/* Content area skeleton */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          {/* Topbar placeholder */}
+          <div style={{
+            height: layout.topbarHeight,
+            borderBottom: `1px solid ${colors.border}`,
+            padding: `0 ${spacing['6']}`,
+            display: 'flex',
+            alignItems: 'center',
+            gap: spacing['3'],
+          }}>
+            <Skeleton width="280px" height="36px" />
+          </div>
+          {/* Page content placeholder */}
+          <div style={{ flex: 1, padding: `${layout.contentPaddingY} ${layout.contentPaddingX}`, display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
+            <Skeleton width="220px" height="28px" />
+            <div style={{ display: 'flex', gap: spacing['4'] }}>
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} width="100%" height="100px" />
+              ))}
+            </div>
+            <Skeleton width="100%" height="300px" />
+          </div>
+        </div>
       </div>
     )
   }
 
   // No user or expired session → redirect to login with return path
   if (!user || !isSessionValid) {
-    const returnTo = location.pathname !== '/login' ? `?returnTo=${encodeURIComponent(location.pathname)}` : ''
+    const dest = location.pathname + location.search
+    const returnTo = dest !== '/login' ? `?returnTo=${encodeURIComponent(dest)}` : ''
     return <Navigate to={`/login${returnTo}`} replace />
   }
 
   // Permission check (only after auth confirmed and permissions loaded)
   if (!permLoading) {
-    // Check explicit permission
-    if (requiredPermission && !hasPermission(requiredPermission)) {
-      return <RequestAccessPage moduleName={moduleName} />
-    }
-    // Check module-level permission
-    if (moduleId && !canAccessModule(moduleId)) {
-      return <RequestAccessPage moduleName={moduleName || moduleId} />
+    const denied =
+      (requiredPermission && !hasPermission(requiredPermission)) ||
+      (moduleId && !canAccessModule(moduleId))
+
+    if (denied) {
+      return (
+        <div style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          minHeight: '60vh', textAlign: 'center', padding: spacing['6'],
+        }}>
+          <div style={{
+            width: 64, height: 64, borderRadius: borderRadius.full,
+            backgroundColor: colors.surfaceInset,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            marginBottom: spacing['4'],
+          }}>
+            <ShieldAlert size={28} color={colors.textTertiary} />
+          </div>
+          <h2 style={{
+            fontSize: typography.fontSize.subtitle, fontWeight: typography.fontWeight.semibold,
+            color: colors.textPrimary, margin: 0, marginBottom: spacing['2'],
+          }}>
+            Access Restricted
+          </h2>
+          <p style={{
+            fontSize: typography.fontSize.body, color: colors.textSecondary,
+            margin: 0, marginBottom: spacing['5'], maxWidth: 400, lineHeight: typography.lineHeight.relaxed,
+          }}>
+            You do not have permission to access this page.
+          </p>
+          <button
+            onClick={() => {/* TODO: wire up request access flow */}}
+            style={{
+              backgroundColor: colors.brand, color: colors.white,
+              border: 'none', borderRadius: borderRadius.md,
+              padding: `${spacing['2']} ${spacing['5']}`,
+              fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium,
+              cursor: 'pointer', fontFamily: typography.fontFamily,
+            }}
+          >
+            Request Access
+          </button>
+        </div>
+      )
     }
   }
 
