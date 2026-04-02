@@ -117,7 +117,7 @@ const _DrawingsPage: React.FC = () => {
       title="Drawings"
       actions={
         <PermissionGate permission="drawings.upload">
-          <Btn variant="primary" size="md" icon={<Upload size={16} />} aria-label="Upload drawings" onClick={() => setShowUploadModal(true)}>
+          <Btn variant="primary" size="md" icon={<Upload size={16} />} aria-label="Upload new drawing" onClick={() => setShowUploadModal(true)}>
             Upload Drawings
           </Btn>
         </PermissionGate>
@@ -202,7 +202,8 @@ const _DrawingsPage: React.FC = () => {
               return (
                 <button
                   key={discipline}
-                  aria-label={`Filter by ${discipline}`}
+                  role="button"
+                  aria-label={`Filter by ${discipline} discipline`}
                   aria-pressed={isActive}
                   onClick={() => {
                     setActiveFilters((prev) => {
@@ -348,9 +349,9 @@ const _DrawingsPage: React.FC = () => {
                 <React.Fragment key={drawing.id}>
                 {/* Mobile card row */}
                 <div
-                  role="listitem"
+                  role="article"
                   tabIndex={0}
-                  aria-label={`Drawing ${drawing.sheetNumber} ${drawing.title}, revision ${drawing.currentRevision?.revision_number ?? 0}, discipline ${drawing.disciplineLabel}`}
+                  aria-label={`Drawing ${drawing.setNumber} ${drawing.disciplineLabel}`}
                   className="drawing-row drawing-row-mobile"
                   onClick={() => setSelectedDrawing(drawing)}
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedDrawing(drawing); } }}
@@ -381,9 +382,9 @@ const _DrawingsPage: React.FC = () => {
                 </div>
                 {/* Desktop table row */}
                 <div
-                  role="listitem"
+                  role="article"
                   tabIndex={0}
-                  aria-label={`Drawing ${drawing.sheetNumber} ${drawing.title}, revision ${drawing.currentRevision?.revision_number ?? 0}, discipline ${drawing.disciplineLabel}`}
+                  aria-label={`Drawing ${drawing.setNumber} ${drawing.disciplineLabel}`}
                   className="drawing-row drawing-row-desktop"
                   onClick={() => setSelectedDrawing(drawing)}
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedDrawing(drawing); } }}
