@@ -3,6 +3,16 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { colors, spacing, typography, borderRadius, shadows, transitions, zIndex } from '../../styles/theme'
 
+function mapAuthError(msg: string): string {
+  const m = msg.toLowerCase()
+  if (m.includes('invalid login') || m.includes('invalid_credentials')) return 'Email or password is incorrect'
+  if (m.includes('email not confirmed')) return 'Please check your email to confirm your account'
+  if (m.includes('rate limit') || m.includes('too many')) return 'Too many attempts. Please try again in a few minutes'
+  if (m.includes('fetch') || m.includes('network') || m.includes('failed')) return 'Unable to connect. Check your internet connection'
+  if (m.includes('already registered') || m.includes('already been registered')) return 'An account with this email already exists'
+  return msg
+}
+
 export const Login: React.FC = () => {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -26,7 +36,7 @@ export const Login: React.FC = () => {
     const { error: signInError } = await signIn(email, password)
 
     if (signInError) {
-      setError(signInError)
+      setError(mapAuthError(signInError))
       setLoading(false)
     } else {
       navigate(searchParams.get('returnTo') || '/dashboard')
@@ -142,6 +152,8 @@ export const Login: React.FC = () => {
           <form onSubmit={handleSubmit}>
             {error && (
               <div
+                role="alert"
+                aria-live="polite"
                 style={{
                   padding: `${spacing['3']} ${spacing['4']}`,
                   borderRadius: borderRadius.md,
