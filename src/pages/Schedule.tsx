@@ -665,26 +665,63 @@ export const Schedule: React.FC = () => {
           <Card padding={spacing['5']}>
             <div style={{
               display: 'flex',
-              flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              padding: `${spacing['2xl']} ${spacing['5']}`,
-              textAlign: 'center',
-              gap: spacing['4'],
+              minHeight: '320px',
             }}>
-              <ClipboardList size={48} color={colors.textTertiary} />
-              <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'] }}>
-                <p style={{ margin: 0, fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
-                  Build your schedule to track every phase from mobilization to closeout
-                </p>
-              </div>
-              <div style={{ display: 'flex', gap: spacing['3'] }}>
-                <Btn variant="primary" size="md" onClick={() => addToast('info', 'Phase creation coming soon')}>
-                  Create First Phase
-                </Btn>
-                <Btn variant="secondary" size="md" onClick={() => addToast('info', 'P6/MS Project import coming soon')}>
-                  Import from P6/MS Project
-                </Btn>
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '48px',
+                maxWidth: '480px',
+                textAlign: 'center',
+                gap: spacing['4'],
+              }}>
+                <Calendar size={48} color="#9CA3AF" />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'] }}>
+                  <p style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: colors.textPrimary }}>
+                    Build your project schedule
+                  </p>
+                  <p style={{ margin: 0, fontSize: '14px', color: '#6B7280', lineHeight: typography.lineHeight.relaxed }}>
+                    Create phases and activities to track every milestone from mobilization to closeout. Import from Primavera P6 or Microsoft Project to get started quickly.
+                  </p>
+                </div>
+                <div style={{ display: 'flex', gap: spacing['3'] }}>
+                  <button
+                    onClick={() => addToast('info', 'Phase creation coming soon')}
+                    style={{
+                      padding: `${spacing.sm} ${spacing.xl}`,
+                      backgroundColor: '#F47820',
+                      color: '#FFFFFF',
+                      border: 'none',
+                      borderRadius: borderRadius.md,
+                      fontSize: typography.fontSize.body,
+                      fontWeight: typography.fontWeight.semibold,
+                      fontFamily: typography.fontFamily,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Create First Phase
+                  </button>
+                  <button
+                    onClick={() => addToast('info', 'P6/MS Project import coming soon')}
+                    style={{
+                      padding: `${spacing.sm} ${spacing.xl}`,
+                      backgroundColor: 'transparent',
+                      color: colors.textPrimary,
+                      border: '1px solid #E5E7EB',
+                      borderRadius: borderRadius.md,
+                      fontSize: typography.fontSize.body,
+                      fontWeight: typography.fontWeight.semibold,
+                      fontFamily: typography.fontFamily,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Import Schedule
+                  </button>
+                </div>
               </div>
             </div>
           </Card>
