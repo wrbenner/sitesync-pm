@@ -60,7 +60,10 @@ const ScheduleKPICard: React.FC<ScheduleKPICardProps> = ({ icon, label, value, v
       {value}
     </span>
     <span style={{ fontSize: '12px', color: trend === 'up' ? colors.statusActive : trend === 'down' ? colors.statusCritical : colors.textTertiary }}>
-      {trend === 'up' ? '▲' : trend === 'down' ? '▼' : '─'}
+      <span aria-hidden="true">{trend === 'up' ? '▲' : trend === 'down' ? '▼' : '─'}</span>
+      <span style={{ position: 'absolute', width: '1px', height: '1px', overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap' }}>
+        {trend === 'up' ? 'Status: Improving' : trend === 'down' ? 'Status: Declining' : 'Status: Stable'}
+      </span>
     </span>
   </div>
 );
@@ -688,13 +691,23 @@ export const Schedule: React.FC = () => {
         ) : (
           <>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['3'] }}>
-              <SectionHeader title="Project Timeline" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
+                <SectionHeader title="Project Timeline" />
+                <span
+                  aria-live="polite"
+                  aria-atomic="true"
+                  style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}
+                >
+                  {schedulePhases.length > 0 ? `${schedulePhases.length} ${schedulePhases.length === 1 ? 'activity' : 'activities'}` : ''}
+                </span>
+              </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
                 <Btn
                   variant={showBaseline ? 'primary' : 'secondary'}
                   size="sm"
                   icon={showBaseline ? <ToggleRight size={14} /> : <ToggleLeft size={14} />}
                   onClick={() => setShowBaseline(!showBaseline)}
+                  aria-label={showBaseline ? 'Hide baseline comparison' : 'Show baseline comparison'}
                 >
                   {showBaseline ? 'Hide Baseline' : 'Show Baseline'}
                 </Btn>
@@ -703,6 +716,7 @@ export const Schedule: React.FC = () => {
                   size="sm"
                   icon={<Sparkles size={14} />}
                   onClick={() => setWhatIfMode(!whatIfMode)}
+                  aria-label={whatIfMode ? 'Exit what-if scenario mode' : 'Enable what-if scenario mode'}
                 >
                   {whatIfMode ? 'Exit What If Mode' : 'What If Mode'}
                 </Btn>
