@@ -262,7 +262,7 @@ export const PresenceBar: React.FC<PresenceBarProps> = ({ page }) => {
           <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
             Currently viewing:
           </span>
-          <div role="group" aria-label="Team members currently online" style={{ display: 'flex', alignItems: 'center' }}>
+          <div role="group" aria-label="Users currently viewing this page" style={{ display: 'flex', alignItems: 'center' }}>
             {visible.map((user, i) => (
               <PresenceAvatar key={user.userId} user={user} index={i} total={visible.length} />
             ))}
@@ -271,7 +271,8 @@ export const PresenceBar: React.FC<PresenceBarProps> = ({ page }) => {
                 <Tooltip.Trigger asChild>
                   <button
                     className="presence-avatar-btn"
-                    aria-label={`${overflow} more team members online`}
+                    role="status"
+                    aria-label={`${overflow} more users viewing`}
                     style={{
                       width: AVATAR_SIZE,
                       height: AVATAR_SIZE,
@@ -400,7 +401,7 @@ export const DrawingPresenceBar: React.FC = () => {
           <span style={{ fontSize: typography.fontSize.caption, color: 'rgba(255, 255, 255, 0.5)' }}>
             Also viewing:
           </span>
-          <div role="group" aria-label="Team members currently online" style={{ display: 'flex', alignItems: 'center' }}>
+          <div role="group" aria-label="Users currently viewing this page" style={{ display: 'flex', alignItems: 'center' }}>
             {visible.map((other, i) => {
               const lastSeen: number = (other.presence as any).lastSeen ?? Date.now();
               const status = getPresenceStatus(lastSeen);
@@ -457,7 +458,8 @@ export const DrawingPresenceBar: React.FC = () => {
                 <Tooltip.Trigger asChild>
                   <button
                     className="presence-avatar-btn"
-                    aria-label={`${overflow} more team members online`}
+                    role="status"
+                    aria-label={`${overflow} more users viewing`}
                     style={{
                       width: AVATAR_SIZE,
                       height: AVATAR_SIZE,
