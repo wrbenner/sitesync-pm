@@ -14,26 +14,35 @@ async function fetchScheduleMetrics(projectId: string): Promise<{
   scheduleVarianceDays: number | null
   completionPercentage: number | null
 }> {
-  const { data, error } = await supabase
-    .from('schedule_phases')
-    .select('baseline_start, baseline_end, end_date, percent_complete, is_critical_path')
-    .eq('project_id', projectId)
-  if (error) {
-    console.warn('fetchScheduleMetrics failed for project', projectId, error.message)
+  const [criticalResult, completionResult] = await Promise.all([
+    supabase
+      .from('schedule_phases')
+      .select('baseline_end, end_date')
+      .eq('project_id', projectId)
+      .eq('is_critical_path', true)
+      .order('baseline_end', { ascending: false })
+      .limit(1),
+    supabase
+      .from('schedule_phases')
+      .select('baseline_start, baseline_end, percent_complete')
+      .eq('project_id', projectId),
+  ])
+
+  if (criticalResult.error) {
+    console.warn('fetchScheduleMetrics critical query failed for project', projectId, criticalResult.error.message)
     return { scheduleVarianceDays: null, completionPercentage: null }
   }
-  if (!data || data.length === 0) return { scheduleVarianceDays: null, completionPercentage: null }
+  if (completionResult.error) {
+    console.warn('fetchScheduleMetrics completion query failed for project', projectId, completionResult.error.message)
+    return { scheduleVarianceDays: null, completionPercentage: null }
+  }
 
   // COMPUTED: source = financialEngine
   // schedule_variance_days: days behind on last critical path item (positive = late)
-  const criticalItems = data.filter(p => p.is_critical_path && p.baseline_end)
   let scheduleVarianceDays: number | null = null
-  if (criticalItems.length > 0) {
-    criticalItems.sort((a, b) =>
-      new Date(b.baseline_end!).getTime() - new Date(a.baseline_end!).getTime()
-    )
-    const last = criticalItems[0]
-    const plannedEnd = new Date(last.baseline_end!)
+  const last = criticalResult.data?.[0]
+  if (last?.baseline_end) {
+    const plannedEnd = new Date(last.baseline_end)
     const actualEnd = last.end_date ? new Date(last.end_date) : new Date()
     scheduleVarianceDays = Math.round(
       (actualEnd.getTime() - plannedEnd.getTime()) / 86400000
@@ -44,7 +53,7 @@ async function fetchScheduleMetrics(projectId: string): Promise<{
   // completion_percentage: sum(percent_complete * duration_days) / sum(duration_days)
   let weightedSum = 0
   let totalDuration = 0
-  for (const phase of data) {
+  for (const phase of (completionResult.data ?? [])) {
     if (phase.baseline_start && phase.baseline_end && phase.percent_complete != null) {
       const duration = Math.max(
         1,
