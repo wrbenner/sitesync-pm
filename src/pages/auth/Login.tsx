@@ -71,6 +71,7 @@ export const Login: React.FC = () => {
     border: `1px solid ${colors.borderDefault}`,
     borderRadius: borderRadius.md,
     outline: 'none',
+    boxShadow: 'none',
     transition: `border-color ${transitions.quick}`,
     boxSizing: 'border-box' as const,
     letterSpacing: typography.letterSpacing.normal,
@@ -173,10 +174,10 @@ export const Login: React.FC = () => {
             )}
 
             <div style={{ marginBottom: spacing['5'] }}>
-              <label style={labelStyle} htmlFor="email">Email</label>
+              <label style={labelStyle} htmlFor="login-email">Email address</label>
               <input
                 type="email"
-                id="email"
+                id="login-email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@company.com"
@@ -186,16 +187,16 @@ export const Login: React.FC = () => {
                 aria-describedby="login-error"
                 autoComplete="email"
                 style={inputStyle}
-                onFocus={(e) => { e.currentTarget.style.borderColor = colors.borderFocus }}
-                onBlur={(e) => { e.currentTarget.style.borderColor = colors.borderDefault }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = colors.borderFocus; e.currentTarget.style.boxShadow = '0 0 0 2px #F47820' }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = colors.borderDefault; e.currentTarget.style.boxShadow = 'none' }}
               />
             </div>
 
             <div style={{ marginBottom: spacing['5'] }}>
-              <label style={labelStyle} htmlFor="password">Password</label>
+              <label style={labelStyle} htmlFor="login-password">Password</label>
               <input
                 type="password"
-                id="password"
+                id="login-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter your password"
@@ -205,8 +206,8 @@ export const Login: React.FC = () => {
                 aria-describedby="login-error"
                 autoComplete="current-password"
                 style={inputStyle}
-                onFocus={(e) => { e.currentTarget.style.borderColor = colors.borderFocus }}
-                onBlur={(e) => { e.currentTarget.style.borderColor = colors.borderDefault }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = colors.borderFocus; e.currentTarget.style.boxShadow = '0 0 0 2px #F47820' }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = colors.borderDefault; e.currentTarget.style.boxShadow = 'none' }}
               />
             </div>
 
@@ -232,6 +233,7 @@ export const Login: React.FC = () => {
             <button
               type="submit"
               disabled={loading}
+              aria-busy={loading}
               style={{
                 width: '100%',
                 padding: `${spacing['3']} ${spacing['4']}`,
