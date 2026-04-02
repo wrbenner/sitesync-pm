@@ -1,4 +1,5 @@
-import { supabase, transformSupabaseError } from '../client'
+import { supabase } from '../../lib/supabase'
+import { transformSupabaseError } from '../errors'
 import type { ProjectMetrics } from '../../types/api'
 import { computeProjectHealthScore, computeAiConfidenceLevel } from '../../lib/healthScoring'
 
