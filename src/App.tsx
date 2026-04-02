@@ -109,16 +109,23 @@ function useIsMobile() {
 }
 
 function PageLoader() {
+  const skeletonStyle: React.CSSProperties = {
+    backgroundColor: '#E5E7EB',
+    borderRadius: '12px',
+    animation: 'page-loader-pulse 1.5s ease-in-out infinite',
+  };
   return (
-    <div style={{ padding: spacing['8'], maxWidth: layout.contentMaxWidth, margin: '0 auto' }}>
-      <Skeleton width="200px" height="28px" />
-      <div style={{ marginTop: spacing['4'] }}><Skeleton width="100%" height="16px" /></div>
-      <div style={{ marginTop: spacing['2'] }}><Skeleton width="80%" height="16px" /></div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'], marginTop: spacing['8'] }}>
-        {[1, 2, 3, 4].map((i) => <Skeleton key={i} width="100%" height="100px" />)}
+    <>
+      <style>{`@keyframes page-loader-pulse { 0%, 100% { opacity: 0.4 } 50% { opacity: 0.7 } }`}</style>
+      <div style={{ padding: '32px', flex: 1 }}>
+        <div style={{ display: 'flex', gap: '16px', marginBottom: '24px' }}>
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} style={{ ...skeletonStyle, height: '100px', flex: '1' }} />
+          ))}
+        </div>
+        <div style={{ ...skeletonStyle, height: '400px', width: '100%' }} />
       </div>
-      <div style={{ marginTop: spacing['6'] }}><Skeleton width="100%" height="300px" /></div>
-    </div>
+    </>
   );
 }
 
