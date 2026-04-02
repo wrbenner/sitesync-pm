@@ -142,7 +142,9 @@ const PresenceAvatar: React.FC<AvatarProps> = ({ user, index, total }) => {
   return (
     <Tooltip.Root>
       <Tooltip.Trigger asChild>
-        <div
+        <button
+          className="presence-avatar-btn"
+          aria-label={`${user.displayName} is ${getPresenceStatus(user.lastSeen)}`}
           style={{
             width: AVATAR_SIZE,
             height: AVATAR_SIZE,
@@ -161,10 +163,11 @@ const PresenceAvatar: React.FC<AvatarProps> = ({ user, index, total }) => {
             zIndex: total - index,
             cursor: 'default',
             flexShrink: 0,
+            padding: 0,
           }}
         >
           {user.initials}
-        </div>
+        </button>
       </Tooltip.Trigger>
       <Tooltip.Portal>
         <Tooltip.Content
@@ -221,7 +224,7 @@ export const PresenceBar: React.FC<PresenceBarProps> = ({ page }) => {
 
   return (
     <>
-      <style>{`@keyframes presenceTooltipIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }`}</style>
+      <style>{`@keyframes presenceTooltipIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } } .presence-avatar-btn { background: none; font: inherit; line-height: 1; outline-offset: 2px; } .presence-avatar-btn:focus-visible { outline: 2px solid ${colors.primary}; }`}</style>
       <Tooltip.Provider delayDuration={150}>
         <div style={{
           display: 'flex', alignItems: 'center', gap: spacing['2'],
@@ -234,31 +237,36 @@ export const PresenceBar: React.FC<PresenceBarProps> = ({ page }) => {
           <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
             Currently viewing:
           </span>
-          <div style={{ display: 'flex', alignItems: 'center' }}>
+          <div role="group" aria-label="Team members currently online" style={{ display: 'flex', alignItems: 'center' }}>
             {visible.map((user, i) => (
               <PresenceAvatar key={user.userId} user={user} index={i} total={visible.length} />
             ))}
             {overflow > 0 && (
               <Tooltip.Root>
                 <Tooltip.Trigger asChild>
-                  <div style={{
-                    width: AVATAR_SIZE,
-                    height: AVATAR_SIZE,
-                    borderRadius: '50%',
-                    backgroundColor: colors.surfaceInset,
-                    border: `2px solid ${colors.white}`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 11,
-                    fontWeight: typography.fontWeight.semibold,
-                    color: colors.textSecondary,
-                    marginLeft: AVATAR_OVERLAP,
-                    cursor: 'default',
-                    flexShrink: 0,
-                  }}>
+                  <button
+                    className="presence-avatar-btn"
+                    aria-label={`${overflow} more team members online`}
+                    style={{
+                      width: AVATAR_SIZE,
+                      height: AVATAR_SIZE,
+                      borderRadius: '50%',
+                      backgroundColor: colors.surfaceInset,
+                      border: `2px solid ${colors.white}`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 11,
+                      fontWeight: typography.fontWeight.semibold,
+                      color: colors.textSecondary,
+                      marginLeft: AVATAR_OVERLAP,
+                      cursor: 'default',
+                      flexShrink: 0,
+                      padding: 0,
+                    }}
+                  >
                     +{overflow}
-                  </div>
+                  </button>
                 </Tooltip.Trigger>
                 <Tooltip.Portal>
                   <Tooltip.Content
@@ -353,7 +361,7 @@ export const DrawingPresenceBar: React.FC = () => {
 
   return (
     <>
-      <style>{`@keyframes presenceTooltipIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }`}</style>
+      <style>{`@keyframes presenceTooltipIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } } .presence-avatar-btn { background: none; font: inherit; line-height: 1; outline-offset: 2px; } .presence-avatar-btn:focus-visible { outline: 2px solid ${colors.primary}; }`}</style>
       <Tooltip.Provider delayDuration={150}>
         <div style={{
           display: 'flex', alignItems: 'center', gap: spacing['2'],
@@ -365,7 +373,7 @@ export const DrawingPresenceBar: React.FC = () => {
           <span style={{ fontSize: typography.fontSize.caption, color: 'rgba(255, 255, 255, 0.5)' }}>
             Also viewing:
           </span>
-          <div style={{ display: 'flex', alignItems: 'center' }}>
+          <div role="group" aria-label="Team members currently online" style={{ display: 'flex', alignItems: 'center' }}>
             {visible.map((other, i) => {
               const lastSeen: number = (other.presence as any).lastSeen ?? Date.now();
               const status = getPresenceStatus(lastSeen);
@@ -374,27 +382,32 @@ export const DrawingPresenceBar: React.FC = () => {
               return (
                 <Tooltip.Root key={other.connectionId}>
                   <Tooltip.Trigger asChild>
-                    <div style={{
-                      width: AVATAR_SIZE,
-                      height: AVATAR_SIZE,
-                      borderRadius: '50%',
-                      backgroundColor: other.presence.color || colors.statusInfo,
-                      border: `2px solid ${colors.white}`,
-                      boxShadow: `0 0 0 2px ${STATUS_BORDER[status]}`,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: 11,
-                      fontWeight: typography.fontWeight.bold,
-                      color: colors.white,
-                      marginLeft: i > 0 ? AVATAR_OVERLAP : 0,
-                      position: 'relative',
-                      zIndex: others.length - i,
-                      cursor: 'default',
-                      flexShrink: 0,
-                    }}>
+                    <button
+                      className="presence-avatar-btn"
+                      aria-label={`${displayName} is ${getPresenceStatus(lastSeen)}`}
+                      style={{
+                        width: AVATAR_SIZE,
+                        height: AVATAR_SIZE,
+                        borderRadius: '50%',
+                        backgroundColor: other.presence.color || colors.statusInfo,
+                        border: `2px solid ${colors.white}`,
+                        boxShadow: `0 0 0 2px ${STATUS_BORDER[status]}`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 11,
+                        fontWeight: typography.fontWeight.bold,
+                        color: colors.white,
+                        marginLeft: i > 0 ? AVATAR_OVERLAP : 0,
+                        position: 'relative',
+                        zIndex: others.length - i,
+                        cursor: 'default',
+                        flexShrink: 0,
+                        padding: 0,
+                      }}
+                    >
                       {other.presence.initials || '?'}
-                    </div>
+                    </button>
                   </Tooltip.Trigger>
                   <Tooltip.Portal>
                     <Tooltip.Content
@@ -415,24 +428,29 @@ export const DrawingPresenceBar: React.FC = () => {
             {overflow > 0 && (
               <Tooltip.Root>
                 <Tooltip.Trigger asChild>
-                  <div style={{
-                    width: AVATAR_SIZE,
-                    height: AVATAR_SIZE,
-                    borderRadius: '50%',
-                    backgroundColor: 'rgba(255,255,255,0.12)',
-                    border: `2px solid rgba(255,255,255,0.2)`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 11,
-                    fontWeight: typography.fontWeight.semibold,
-                    color: 'rgba(255,255,255,0.7)',
-                    marginLeft: AVATAR_OVERLAP,
-                    cursor: 'default',
-                    flexShrink: 0,
-                  }}>
+                  <button
+                    className="presence-avatar-btn"
+                    aria-label={`${overflow} more team members online`}
+                    style={{
+                      width: AVATAR_SIZE,
+                      height: AVATAR_SIZE,
+                      borderRadius: '50%',
+                      backgroundColor: 'rgba(255,255,255,0.12)',
+                      border: `2px solid rgba(255,255,255,0.2)`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 11,
+                      fontWeight: typography.fontWeight.semibold,
+                      color: 'rgba(255,255,255,0.7)',
+                      marginLeft: AVATAR_OVERLAP,
+                      cursor: 'default',
+                      flexShrink: 0,
+                      padding: 0,
+                    }}
+                  >
                     +{overflow}
-                  </div>
+                  </button>
                 </Tooltip.Trigger>
                 <Tooltip.Portal>
                   <Tooltip.Content
