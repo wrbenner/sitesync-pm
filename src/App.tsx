@@ -66,6 +66,7 @@ const NotificationCenter = lazy(() => import('./components/notifications/Notific
 const ShortcutOverlay = lazy(() => import('./components/ui/ShortcutOverlay').then((m) => ({ default: m.ShortcutOverlay })));
 const ExportCenter = lazy(() => import('./components/export/ExportCenter').then((m) => ({ default: m.ExportCenter })));
 
+// TODO: Consider grouping related pages (RFIs + Submittals + ChangeOrders) into a single chunk using webpackChunkName or Vite manual chunks for frequently co-visited pages
 // Lazy loaded pages
 const Dashboard = lazyWithRetry(() => import('./pages/Dashboard').then((m) => ({ default: m.Dashboard })));
 const Tasks = lazy(() => import('./pages/Tasks').then((m) => ({ default: m.Tasks })));
