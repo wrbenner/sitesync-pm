@@ -1,11 +1,13 @@
 import React from 'react';
 import { AlertTriangle, Sparkles, X, Clock, ChevronRight, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme';
 import type { PredictiveAlertData } from '../../data/aiAnnotations';
 import type { AIInsight } from '../../types/database';
 import { useAIAnnotationStore } from '../../stores';
 import { useProjectId } from '../../hooks/useProjectId';
 import { useAIInsights } from '../../hooks/queries';
+import { supabase } from '../../lib/supabase';
 
 interface PredictiveAlertBannerProps {
   alert: PredictiveAlertData;
@@ -205,6 +207,27 @@ const DatabaseInsightBanner: React.FC<{ insight: AIInsight }> = ({ insight }) =>
 export const PageInsightBanners: React.FC<{ page: string }> = ({ page }) => {
   const projectId = useProjectId();
   const { data: insights } = useAIInsights(projectId, page);
+  const queryClient = useQueryClient();
+
+  React.useEffect(() => {
+    if (!projectId) return;
+
+    const channel = supabase
+      .channel(`ai_insights_${projectId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'ai_insights', filter: `project_id=eq.${projectId}` },
+        () => { queryClient.invalidateQueries({ queryKey: ['ai_insights', projectId] }); }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'ai_insights', filter: `project_id=eq.${projectId}` },
+        () => { queryClient.invalidateQueries({ queryKey: ['ai_insights', projectId] }); }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [projectId, queryClient]);
 
   if (!insights || insights.length === 0) return null;
 
