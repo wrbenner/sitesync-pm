@@ -3,7 +3,7 @@ import JSZip from 'jszip';
 import { Grid, List, Upload as UploadIcon, FolderOpen, FileText, Sparkles, Search, Download, FolderInput, Trash2, Link2 } from 'lucide-react';
 import { Card, Btn, useToast, PageContainer } from '../components/Primitives';
 import { ErrorBoundary } from '../components/ErrorBoundary';
-import { DocumentsEmptyState } from '../components/files/DocumentsEmptyState';
+import EmptyState from '../components/ui/EmptyState';
 import { TableSkeleton } from '../components/ui/Skeletons';
 import { UploadZone } from '../components/files/UploadZone';
 import { DocumentSearch } from '../components/files/DocumentSearch';
@@ -551,7 +551,12 @@ const _FilesPage: React.FC = () => {
                   </p>
                 </div>
               ) : (
-                <DocumentsEmptyState onUpload={() => setShowUpload(true)} />
+                <EmptyState
+                  icon={FileText}
+                  title="No files uploaded yet"
+                  description="Upload project documents, drawings, and photos to keep everything organized in one place."
+                  action={{ label: 'Upload Files', onClick: () => setShowUpload(true) }}
+                />
               )}
             </div>
           )}
@@ -563,7 +568,12 @@ const _FilesPage: React.FC = () => {
         <Card padding="0">
           <>
               {visibleFiles.length === 0 && !currentFolderId ? (
-                <DocumentsEmptyState onUpload={() => setShowUpload(true)} />
+                <EmptyState
+                  icon={FileText}
+                  title="No files uploaded yet"
+                  description="Upload project documents, drawings, and photos to keep everything organized in one place."
+                  action={{ label: 'Upload Files', onClick: () => setShowUpload(true) }}
+                />
               ) : (
                 <div
                   ref={listRef}
