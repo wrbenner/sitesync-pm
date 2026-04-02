@@ -5,7 +5,9 @@ import {
 } from 'lucide-react'
 import { colors, spacing, typography, borderRadius, transitions, shadows } from '../../styles/theme'
 import { useCopilotStore } from '../../stores/copilotStore'
+import { useAgentOrchestrator } from '../../stores/agentOrchestrator'
 import { useMultiAgentChat } from '../../hooks/useMultiAgentChat'
+import { supabase } from '../../lib/supabase'
 import { AgentMessage, AgentTypingIndicator, AGENT_COLORS } from './AgentMessage'
 import { BatchActionPreview } from './BatchActionPreview'
 import { AgentMentionInput } from './AgentMentionInput'
@@ -108,6 +110,7 @@ PanelMessageRenderer.displayName = 'PanelMessageRenderer'
 export const CopilotPanel: React.FC = () => {
   const { isOpen, closeCopilot, currentPageContext } = useCopilotStore()
   const { addToast } = useToast()
+  const { addCoordinatorMessage } = useAgentOrchestrator()
 
   const {
     messages,
@@ -128,6 +131,7 @@ export const CopilotPanel: React.FC = () => {
 
   const [exportOpen, setExportOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768)
+  const [conversationId, setConversationId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const hasMessages = messages.length > 0
 
@@ -150,6 +154,33 @@ export const CopilotPanel: React.FC = () => {
       toast.error('AI response failed')
     }
   }, [error])
+
+  useEffect(() => {
+    if (!conversationId) return
+
+    const channel = supabase
+      .channel(`copilot:${conversationId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'ai_messages',
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        (payload) => {
+          const row = payload.new as { role?: string; content?: string }
+          if (row.role === 'assistant' && row.content) {
+            addCoordinatorMessage(row.content)
+          }
+        },
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [conversationId, addCoordinatorMessage])
 
   const handleSendMessage = useCallback(
     (text: string) => {
