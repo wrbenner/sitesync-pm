@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { ZoomIn, ZoomOut, X, Eye, EyeOff, Maximize2 } from 'lucide-react';
-import { colors, spacing, typography, borderRadius, shadows, transitions, zIndex, vizColors } from '../../styles/theme';
+import { ZoomIn, ZoomOut, X, Eye, EyeOff, Maximize2, ChevronUp, ChevronDown } from 'lucide-react';
+import { colors, spacing, typography, borderRadius, shadows, transitions, vizColors } from '../../styles/theme';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { MarkupToolbar } from './MarkupToolbar';
 import type { MarkupTool } from './MarkupToolbar';
 import { IssueOverlay } from './IssueOverlay';
@@ -91,10 +92,11 @@ interface DrawingViewerInnerProps extends DrawingViewerProps {
 }
 
 const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({ drawing, onClose, demoUser }) => {
+  const isMobile = useMediaQuery('(max-width: 768px)');
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+  const [toolbarCollapsed, setToolbarCollapsed] = useState(false);
   const [activeTool, setActiveTool] = useState<MarkupTool>('select');
   const [markups, setMarkups] = useState<MarkupItem[]>([]);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -109,12 +111,6 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({ drawing, onClos
   const canvasOuterRef = useRef<HTMLDivElement>(null);
   const panStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
   const drawStart = useRef({ x: 0, y: 0 });
-
-  useEffect(() => {
-    const handler = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', handler);
-    return () => window.removeEventListener('resize', handler);
-  }, []);
 
   const announceStatus = useUiStore((s) => s.announceStatus);
 
@@ -335,7 +331,7 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({ drawing, onClos
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: zIndex.modal as number, backgroundColor: vizColors.dark, display: 'flex', flexDirection: 'column', width: '100%', maxWidth: '100vw', overflow: 'hidden' }}>
+    <div style={{ position: 'relative', width: '100%', height: '100%', backgroundColor: vizColors.dark, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: `${spacing['3']} ${spacing['4']}`, backgroundColor: colors.toolbarBg, flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['4'] }}>
@@ -415,7 +411,7 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({ drawing, onClos
             role="application"
             aria-label="Drawing viewer - use arrow keys to pan, plus/minus to zoom"
             tabIndex={0}
-            style={{ flex: 1, position: 'relative', overflow: 'hidden', touchAction: 'none', width: '100%', height: 'calc(100vh - 120px)' }}
+            style={{ flex: 1, position: 'relative', overflow: 'hidden', touchAction: 'manipulation', width: '100%' }}
             onMouseLeave={handleMouseLeave}
             onKeyDown={handleKeyDown}
             onTouchStart={handleTouchStart}
@@ -551,23 +547,47 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({ drawing, onClos
 
             {/* Zoom controls */}
             <div style={{ position: 'absolute', bottom: spacing['4'], left: spacing['4'], display: 'flex', flexDirection: 'column', gap: spacing['1'], zIndex: 5 }}>
-              <button onClick={() => setZoom((z) => { const next = Math.min(4, parseFloat((z + 0.25).toFixed(2))); announceStatus(`Zoomed to ${Math.round(next * 100)}%`); return next; })} aria-label="Zoom in" title="Zoom in" style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceRaised, border: 'none', borderRadius: borderRadius.md, cursor: 'pointer', color: colors.textSecondary, boxShadow: shadows.card }}><ZoomIn size={16} /></button>
-              <button onClick={() => setZoom((z) => { const next = Math.max(0.25, parseFloat((z - 0.25).toFixed(2))); announceStatus(`Zoomed to ${Math.round(next * 100)}%`); return next; })} aria-label="Zoom out" title="Zoom out" style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceRaised, border: 'none', borderRadius: borderRadius.md, cursor: 'pointer', color: colors.textSecondary, boxShadow: shadows.card }}><ZoomOut size={16} /></button>
-              <button onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); announceStatus('View reset to fit'); }} aria-label="Reset zoom and pan" title="Reset zoom and pan" style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceRaised, border: 'none', borderRadius: borderRadius.md, cursor: 'pointer', color: colors.textSecondary, boxShadow: shadows.card }}><Maximize2 size={16} /></button>
+              <button onClick={() => setZoom((z) => { const next = Math.min(4, parseFloat((z + 0.25).toFixed(2))); announceStatus(`Zoomed to ${Math.round(next * 100)}%`); return next; })} aria-label="Zoom in" title="Zoom in" style={{ minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceRaised, border: 'none', borderRadius: borderRadius.md, cursor: 'pointer', color: colors.textSecondary, boxShadow: shadows.card }}><ZoomIn size={16} /></button>
+              <button onClick={() => setZoom((z) => { const next = Math.max(0.25, parseFloat((z - 0.25).toFixed(2))); announceStatus(`Zoomed to ${Math.round(next * 100)}%`); return next; })} aria-label="Zoom out" title="Zoom out" style={{ minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceRaised, border: 'none', borderRadius: borderRadius.md, cursor: 'pointer', color: colors.textSecondary, boxShadow: shadows.card }}><ZoomOut size={16} /></button>
+              <button onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); announceStatus('View reset to fit'); }} aria-label="Reset zoom and pan" title="Reset zoom and pan" style={{ minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceRaised, border: 'none', borderRadius: borderRadius.md, cursor: 'pointer', color: colors.textSecondary, boxShadow: shadows.card }}><Maximize2 size={16} /></button>
               <div style={{ padding: `${spacing['1']} 0`, textAlign: 'center', fontSize: typography.fontSize.caption, color: colors.textOnDarkMuted }}>{Math.round(zoom * 100)}%</div>
             </div>
 
             {/* Markup toolbar with Save */}
-            <div style={{ position: 'absolute', bottom: spacing['4'], left: '50%', transform: 'translateX(-50%)', zIndex: 5, display: 'flex', ...(isMobile ? { flexWrap: 'wrap' as const, padding: '8px' } : {}) }}>
-              <MarkupToolbar
-                activeTool={activeTool}
-                onToolChange={setActiveTool}
-                onUndo={handleUndo}
-                canUndo={markups.length > 0}
-                onSave={handleSaveMarkups}
-                isSaving={isSaving}
-              />
-            </div>
+            {isMobile ? (
+              <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50, backgroundColor: colors.toolbarBg, borderTop: `1px solid rgba(255,255,255,0.1)` }}>
+                <button
+                  onClick={() => setToolbarCollapsed((c) => !c)}
+                  aria-label={toolbarCollapsed ? 'Expand toolbar' : 'Collapse toolbar'}
+                  style={{ minWidth: 44, minHeight: 44, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', border: 'none', cursor: 'pointer', color: colors.textOnDarkMuted }}
+                >
+                  {toolbarCollapsed ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                </button>
+                {!toolbarCollapsed && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap' as const, padding: '8px', justifyContent: 'center' }}>
+                    <MarkupToolbar
+                      activeTool={activeTool}
+                      onToolChange={setActiveTool}
+                      onUndo={handleUndo}
+                      canUndo={markups.length > 0}
+                      onSave={handleSaveMarkups}
+                      isSaving={isSaving}
+                    />
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div style={{ position: 'absolute', bottom: spacing['4'], left: '50%', transform: 'translateX(-50%)', zIndex: 5, display: 'flex' }}>
+                <MarkupToolbar
+                  activeTool={activeTool}
+                  onToolChange={setActiveTool}
+                  onUndo={handleUndo}
+                  canUndo={markups.length > 0}
+                  onSave={handleSaveMarkups}
+                  isSaving={isSaving}
+                />
+              </div>
+            )}
           </div>
         </div>
       )}
