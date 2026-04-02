@@ -58,8 +58,8 @@ export async function enrichActivityItem(
 
 async function fetchEntityLabel(entityType: string, entityId: string, projectId: string): Promise<string> {
   if (!entityId) return ''
-  try {
-    if (entityType === 'rfi') {
+  if (entityType === 'rfi') {
+    try {
       const { data } = await supabase
         .from('rfis')
         .select('rfi_number, subject')
@@ -67,7 +67,11 @@ async function fetchEntityLabel(entityType: string, entityId: string, projectId:
         .eq('project_id', projectId)
         .single()
       if (data) return `RFI-${String(data.rfi_number).padStart(3, '0')} ${data.subject}`
-    } else if (entityType === 'submittal') {
+    } catch {
+      return ''
+    }
+  } else if (entityType === 'submittal') {
+    try {
       const { data } = await supabase
         .from('submittals')
         .select('submittal_number, title')
@@ -75,17 +79,83 @@ async function fetchEntityLabel(entityType: string, entityId: string, projectId:
         .eq('project_id', projectId)
         .single()
       if (data) return `SUB-${String(data.submittal_number).padStart(3, '0')} ${data.title}`
-    } else if (entityType === 'change_order') {
+    } catch {
+      return ''
+    }
+  } else if (entityType === 'change_order') {
+    try {
       const { data } = await supabase
         .from('change_orders')
-        .select('co_number, description')
+        .select('co_number, title')
         .eq('id', entityId)
         .eq('project_id', projectId)
         .single()
-      if (data) return `CO-${String(data.co_number).padStart(3, '0')} ${data.description}`
+      if (data) return `CO-${String(data.co_number).padStart(3, '0')} ${data.title}`
+    } catch {
+      return ''
     }
-  } catch {
-    // fall through
+  } else if (entityType === 'punch_item') {
+    try {
+      const { data } = await supabase
+        .from('punch_items')
+        .select('title')
+        .eq('id', entityId)
+        .eq('project_id', projectId)
+        .single()
+      if (data) return data.title
+    } catch {
+      return ''
+    }
+  } else if (entityType === 'daily_log') {
+    try {
+      const { data } = await supabase
+        .from('daily_logs')
+        .select('log_date')
+        .eq('id', entityId)
+        .eq('project_id', projectId)
+        .single()
+      if (data) return `Daily Log for ${data.log_date}`
+    } catch {
+      return ''
+    }
+  } else if (entityType === 'drawing') {
+    try {
+      const { data } = await supabase
+        .from('drawings')
+        .select('sheet_number, title')
+        .eq('id', entityId)
+        .eq('project_id', projectId)
+        .single()
+      if (data) return `${data.sheet_number} ${data.title}`
+    } catch {
+      return ''
+    }
+  } else if (entityType === 'meeting') {
+    try {
+      const { data } = await supabase
+        .from('meetings')
+        .select('title')
+        .eq('id', entityId)
+        .eq('project_id', projectId)
+        .single()
+      if (data) return data.title
+    } catch {
+      return ''
+    }
+  } else if (entityType === 'task') {
+    try {
+      const { data } = await supabase
+        .from('tasks')
+        .select('title')
+        .eq('id', entityId)
+        .eq('project_id', projectId)
+        .single()
+      if (data) return data.title
+    } catch {
+      return ''
+    }
+  } else {
+    return entityId
   }
   return ''
 }
