@@ -56,7 +56,8 @@ async function batchFetchEntityLabels(
             labelMap.set(row.id, label)
             setCachedEntityLabel(`${projectId}:rfi:${row.id}`, label)
           }
-        }),
+        })
+        .catch(() => {}),
     )
   }
 
@@ -73,7 +74,8 @@ async function batchFetchEntityLabels(
             labelMap.set(row.id, label)
             setCachedEntityLabel(`${projectId}:submittal:${row.id}`, label)
           }
-        }),
+        })
+        .catch(() => {}),
     )
   }
 
@@ -90,7 +92,8 @@ async function batchFetchEntityLabels(
             labelMap.set(row.id, label)
             setCachedEntityLabel(`${projectId}:change_order:${row.id}`, label)
           }
-        }),
+        })
+        .catch(() => {}),
     )
   }
 
@@ -106,7 +109,8 @@ async function batchFetchEntityLabels(
             labelMap.set(row.id, row.title)
             setCachedEntityLabel(`${projectId}:punch_item:${row.id}`, row.title)
           }
-        }),
+        })
+        .catch(() => {}),
     )
   }
 
@@ -123,7 +127,8 @@ async function batchFetchEntityLabels(
             labelMap.set(row.id, label)
             setCachedEntityLabel(`${projectId}:daily_log:${row.id}`, label)
           }
-        }),
+        })
+        .catch(() => {}),
     )
   }
 
@@ -140,7 +145,8 @@ async function batchFetchEntityLabels(
             labelMap.set(row.id, label)
             setCachedEntityLabel(`${projectId}:drawing:${row.id}`, label)
           }
-        }),
+        })
+        .catch(() => {}),
     )
   }
 
@@ -156,7 +162,8 @@ async function batchFetchEntityLabels(
             labelMap.set(row.id, row.title)
             setCachedEntityLabel(`${projectId}:meeting:${row.id}`, row.title)
           }
-        }),
+        })
+        .catch(() => {}),
     )
   }
 
@@ -172,11 +179,16 @@ async function batchFetchEntityLabels(
             labelMap.set(row.id, row.title)
             setCachedEntityLabel(`${projectId}:task:${row.id}`, row.title)
           }
-        }),
+        })
+        .catch(() => {}),
     )
   }
 
-  await Promise.all(fetches)
+  try {
+    await Promise.all(fetches)
+  } catch {
+    return labelMap
+  }
   return labelMap
 }
 
