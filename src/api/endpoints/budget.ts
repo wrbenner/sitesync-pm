@@ -204,6 +204,124 @@ export async function getProjectFinancials(
   }
 }
 
+// ── Budget Summary Metrics ───────────────────────────────────
+
+export interface BudgetLineMetrics {
+  id: string
+  division: string
+  csi_division: string | null
+  cost_code: string | null
+  originalAmount: number
+  revisedAmount: number
+  committed: number
+  spentToDate: number
+  costToComplete: number
+  projectedFinalCost: number
+  variance: number
+}
+
+export interface BudgetSummaryMetrics {
+  lineItems: BudgetLineMetrics[]
+  totalOriginalBudget: number
+  totalRevisedBudget: number
+  totalCommitted: number
+  totalSpentToDate: number
+  totalProjectedFinal: number
+  totalVariance: number
+  variancePercent: number
+  contingencyRemaining: number
+  overBudgetLineCount: number
+}
+
+export async function getBudgetSummaryMetrics(projectId: string): Promise<BudgetSummaryMetrics> {
+  await assertProjectAccess(projectId)
+
+  const { data, error } = await supabase
+    .from('budget_items')
+    .select('*')
+    .eq('project_id', projectId)
+  if (error) throw transformSupabaseError(error)
+
+  const rows: BudgetItemRow[] = data || []
+
+  // Work in integer cents to avoid floating point drift; convert to dollars on return.
+  const toCents = (v: number | null | undefined): number => Math.round((v ?? 0) * 100)
+  const toDollars = (cents: number): number => cents / 100
+
+  let totalOriginalCents = 0
+  let totalRevisedCents = 0
+  let totalCommittedCents = 0
+  let totalSpentCents = 0
+  let totalProjectedCents = 0
+  let totalVarianceCents = 0
+  let contingencyCents = 0
+  let overBudgetLineCount = 0
+
+  const lineItems: BudgetLineMetrics[] = rows.map((b) => {
+    const originalCents = toCents(b.original_amount)
+    // forecast_amount is the explicit revised budget when set; fall back to original.
+    const revisedCents = b.forecast_amount !== null ? toCents(b.forecast_amount) : originalCents
+    const committedCents = toCents(b.committed_amount)
+    const spentCents = toCents(b.actual_amount)
+
+    // Cost to complete: remaining work not yet spent.
+    const costToCompleteCents = b.forecast_amount !== null
+      ? Math.max(0, toCents(b.forecast_amount) - spentCents)
+      : Math.max(0, originalCents - spentCents)
+
+    // Projected final = exposure floor (max of committed vs spent) + remaining work.
+    const projectedFinalCents = Math.max(committedCents, spentCents) + costToCompleteCents
+
+    // Variance: positive = under budget, negative = over.
+    const varianceCents = revisedCents - projectedFinalCents
+
+    totalOriginalCents += originalCents
+    totalRevisedCents += revisedCents
+    totalCommittedCents += committedCents
+    totalSpentCents += spentCents
+    totalProjectedCents += projectedFinalCents
+    totalVarianceCents += varianceCents
+
+    if (varianceCents < 0) overBudgetLineCount++
+
+    // CSI Division 01 = General Requirements; treated as contingency pool.
+    if (b.csi_division?.startsWith('01')) {
+      contingencyCents += Math.max(0, revisedCents - spentCents)
+    }
+
+    return {
+      id: b.id,
+      division: b.division,
+      csi_division: b.csi_division || null,
+      cost_code: b.cost_code || null,
+      originalAmount: toDollars(originalCents),
+      revisedAmount: toDollars(revisedCents),
+      committed: toDollars(committedCents),
+      spentToDate: toDollars(spentCents),
+      costToComplete: toDollars(costToCompleteCents),
+      projectedFinalCost: toDollars(projectedFinalCents),
+      variance: toDollars(varianceCents),
+    }
+  })
+
+  const variancePercent = totalRevisedCents !== 0
+    ? Math.round((totalVarianceCents / totalRevisedCents) * 10000) / 100
+    : 0
+
+  return {
+    lineItems,
+    totalOriginalBudget: toDollars(totalOriginalCents),
+    totalRevisedBudget: toDollars(totalRevisedCents),
+    totalCommitted: toDollars(totalCommittedCents),
+    totalSpentToDate: toDollars(totalSpentCents),
+    totalProjectedFinal: toDollars(totalProjectedCents),
+    totalVariance: toDollars(totalVarianceCents),
+    variancePercent,
+    contingencyRemaining: toDollars(contingencyCents),
+    overBudgetLineCount,
+  }
+}
+
 // ── Pay Application SOV ──────────────────────────────────────
 
 export interface SOVLineItem {
