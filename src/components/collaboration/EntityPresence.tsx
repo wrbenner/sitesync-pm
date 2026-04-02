@@ -2,7 +2,7 @@
 // Shows who is viewing/editing a specific entity.
 // Warning banner when another user is actively editing.
 
-import React from 'react'
+import React, { useEffect } from 'react'
 import { usePresenceStore } from '../../stores/presenceStore'
 import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme'
 
@@ -15,8 +15,18 @@ interface PresenceDotsProps {
 
 export const PresenceDots: React.FC<PresenceDotsProps> = ({ entityId, maxVisible = 3 }) => {
   const viewers = usePresenceStore((s) => s.getUsersViewingEntity(entityId))
+  const isInitialized = usePresenceStore((s) => s.isInitialized)
 
-  if (viewers.length === 0) return null
+  useEffect(() => {
+    const store = usePresenceStore.getState()
+    if (typeof (store as any).trackEntity === 'function') {
+      ;(store as any).trackEntity(entityId)
+      return () => { (store as any).untrackEntity(entityId) }
+    }
+    // TODO: presenceStore.trackEntity not yet implemented — presence data depends on parent PresenceBar subscription
+  }, [entityId])
+
+  if (!isInitialized || viewers.length === 0) return null
 
   const visible = viewers.slice(0, maxVisible)
   const overflow = viewers.length - maxVisible
