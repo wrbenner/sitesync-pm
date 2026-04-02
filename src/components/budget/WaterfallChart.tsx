@@ -59,11 +59,11 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = ({
               const isCO = bar.label === 'Approved COs' || bar.label === 'Pending COs';
               const isHovered = hoveredBar === bar.label;
               return (
-                <div key={bar.label} style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], minHeight: 48 }}>
+                <div key={bar.label} style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], minHeight: 56 }}>
                   {/* Label */}
                   <div style={{ width: 90, flexShrink: 0 }}>
                     <span style={{
-                      fontSize: typography.fontSize.xs,
+                      fontSize: typography.fontSize.sm,
                       color: bar.isTotal ? colors.textSecondary : colors.textTertiary,
                       fontWeight: bar.isTotal ? typography.fontWeight.semibold : typography.fontWeight.normal,
                     }}>
@@ -71,11 +71,12 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = ({
                     </span>
                   </div>
                   {/* Bar track */}
-                  <div style={{ flex: 1, position: 'relative', height: 28, backgroundColor: colors.surfaceInset, borderRadius: borderRadius.sm }}>
+                  <div style={{ flex: 1, position: 'relative', height: 44, backgroundColor: colors.surfaceInset, borderRadius: borderRadius.sm }}>
                     <div
                       aria-label={`${bar.label}: ${fmt(bar.value)}`}
                       onMouseEnter={() => setHoveredBar(bar.label)}
                       onMouseLeave={() => setHoveredBar(null)}
+                      onClick={() => setHoveredBar(hoveredBar === bar.label ? null : bar.label)}
                       style={{
                         position: 'absolute',
                         left: `${offsetPct}%`,
