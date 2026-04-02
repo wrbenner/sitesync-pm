@@ -19,7 +19,7 @@ export const FloatingAIButton: React.FC = () => {
   }, []);
 
   const titleText = isError
-    ? 'AI insights unavailable. Click to retry.'
+    ? 'AI insights could not load. Click to open copilot and retry.'
     : isLoading
       ? 'Loading AI insights...'
       : insightCount > 0
@@ -28,7 +28,7 @@ export const FloatingAIButton: React.FC = () => {
 
   return (
     <button
-      onClick={isError ? () => refetch() : openCopilot}
+      onClick={isError ? () => { refetch(); openCopilot(); } : openCopilot}
       title={titleText}
       aria-label={titleText}
       style={{
