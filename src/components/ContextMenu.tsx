@@ -117,6 +117,7 @@ function ToastEntry({ toast, onClose }: { toast: ToastItem; onClose: (id: string
       </span>
       {toast.severity === 'error' && toast.action && (
         <button
+          aria-label={toast.action.label}
           onClick={() => { toast.action!.onClick(); onClose(toast.id); }}
           style={{
             border: 'none',
@@ -141,6 +142,7 @@ function ToastEntry({ toast, onClose }: { toast: ToastItem; onClose: (id: string
       )}
       {toast.severity !== 'error' && toast.action && (
         <button
+          aria-label={toast.action.label}
           onClick={() => { toast.action!.onClick(); onClose(toast.id); }}
           style={{
             border: 'none',
