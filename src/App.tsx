@@ -124,6 +124,18 @@ function PageSuspense({ children }: { children: React.ReactNode }) {
 }
 
 
+function AuthenticatedProviders({ activeView }: { activeView: string }) {
+  const { user } = useAuth();
+  const projectId = useProjectId();
+  const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
+  const userInitials = userName.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2) || 'U';
+  useRealtimeSubscription(projectId, user?.id);
+  usePresence(projectId, user?.id, userName, userInitials, activeView);
+  useRealtimeInvalidation();
+  useNotificationRealtime();
+  return null;
+}
+
 function AppRoutes() {
   const location = useLocation();
 
@@ -209,10 +221,7 @@ function AppContent() {
   // Auth pages render without the app shell (no sidebar, no offline banner)
   const isAuthPage = ['/login', '/signup', '/onboarding'].includes(location.pathname);
 
-  useRealtimeSubscription(isAuthPage ? undefined : projectId, isAuthPage ? undefined : user?.id);
-  useRealtimeInvalidation();
   useProjectCache(isAuthPage ? undefined : projectId);
-  useNotificationRealtime();
 
   // Listen for background sync completion from SW
   useEffect(() => {
@@ -238,11 +247,6 @@ function AppContent() {
   }, [conflictCount]);
 
   const activeView = location.pathname.replace('/', '') || 'dashboard';
-
-  // Track presence (who is on which page)
-  const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
-  const userInitials = userName.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2) || 'U';
-  usePresence(isAuthPage ? undefined : projectId, isAuthPage ? undefined : user?.id, userName, userInitials, activeView);
 
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -299,6 +303,7 @@ function AppContent() {
   if (isMobile) {
     return (
       <MobileLayout>
+        {user && <AuthenticatedProviders activeView={activeView} />}
         <OfflineBanner />
         <ErrorBoundary>
           <AppRoutes />
@@ -322,6 +327,7 @@ function AppContent() {
           fontFamily: typographyConfig.fontFamily,
         }}
       >
+        {user && <AuthenticatedProviders activeView={activeView} />}
         <SkipToContent />
         <Sidebar activeView={activeView} onNavigate={handleNavigate} />
 
