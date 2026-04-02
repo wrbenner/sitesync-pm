@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import type { PaginationParams, PaginatedResult } from '../../types/api'
 import { getAiInsights } from '../../api/endpoints/ai'
@@ -497,6 +498,21 @@ export function useActivityFeed(projectId: string | undefined) {
 // ── AI Insights ───────────────────────────────────────────
 
 export function useAIInsights(projectId: string | undefined, page?: string | null) {
+  const queryClient = useQueryClient()
+
+  useEffect(() => {
+    if (!projectId) return
+    const channel = supabase
+      .channel(`ai_insights:${projectId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'ai_insights', filter: `project_id=eq.${projectId}` },
+        () => { queryClient.invalidateQueries({ queryKey: ['ai_insights', projectId] }) }
+      )
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [projectId, queryClient])
+
   return useQuery({
     queryKey: ['ai_insights', projectId, page ?? null],
     queryFn: async () => {
