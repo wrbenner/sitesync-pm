@@ -126,12 +126,12 @@ const RequestAccessPage: React.FC<RequestAccessPageProps> = ({ moduleName }) => 
 )
 
 const ProtectedRoute: React.FC<Props> = ({ children, requiredPermission, moduleId, moduleName }) => {
-  const { user, loading } = useAuth()
-  const { hasPermission } = usePermissions()
+  const { user, loading: authLoading } = useAuth()
+  const { hasPermission, loading: permissionsLoading } = usePermissions()
   const location = useLocation()
 
-  if (loading) {
-    return <SkeletonLoader ariaLabel="Loading application" />
+  if (authLoading || permissionsLoading) {
+    return <SkeletonLoader ariaLabel="Verifying access" />
   }
 
   if (!user) {
