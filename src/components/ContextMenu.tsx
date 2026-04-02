@@ -127,12 +127,15 @@ function ToastEntry({ toast, onClose }: { toast: ToastItem; onClose: (id: string
           border: 'none',
           background: 'transparent',
           cursor: 'pointer',
-          color: colors.textTertiary,
+          color: style.text,
           fontSize: '18px',
           lineHeight: 1,
-          padding: `0 ${spacing['1']}`,
+          padding: 0,
           display: 'flex',
           alignItems: 'center',
+          justifyContent: 'center',
+          minWidth: '44px',
+          minHeight: '44px',
           borderRadius: borderRadius.sm,
           flexShrink: 0,
           transition: `color ${transitions.instant}`,
@@ -140,7 +143,7 @@ function ToastEntry({ toast, onClose }: { toast: ToastItem; onClose: (id: string
           outlineOffset: dismissFocused ? '2px' : undefined,
         }}
         onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = colors.textPrimary; }}
-        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = colors.textTertiary; }}
+        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = style.text; }}
       >
         &#x2715;
       </button>
