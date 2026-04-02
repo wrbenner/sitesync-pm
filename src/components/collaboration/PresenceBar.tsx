@@ -166,12 +166,30 @@ const PresenceAvatar: React.FC<AvatarProps> = ({ user, index, total }) => {
         <button
           className="presence-avatar-btn"
           tabIndex={0}
-          aria-label={`${user.displayName}, ${status}`}
+          role="img"
+          aria-label={`${user.displayName} is ${status}`}
           style={{
+            width: 44,
+            height: 44,
+            minWidth: 44,
+            minHeight: 44,
+            borderRadius: '50%',
+            backgroundColor: 'transparent',
+            border: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginLeft: index > 0 ? -20 : 0,
+            position: 'relative',
+            zIndex: total - index,
+            cursor: 'default',
+            flexShrink: 0,
+            padding: 0,
+          }}
+        >
+          <div style={{
             width: AVATAR_SIZE,
             height: AVATAR_SIZE,
-            minWidth: 32,
-            minHeight: 32,
             borderRadius: '50%',
             backgroundColor: user.color,
             border: `2px solid ${colors.white}`,
@@ -182,15 +200,10 @@ const PresenceAvatar: React.FC<AvatarProps> = ({ user, index, total }) => {
             fontSize: 11,
             fontWeight: typography.fontWeight.bold,
             color: colors.white,
-            marginLeft: index > 0 ? AVATAR_OVERLAP : 0,
-            position: 'relative',
-            zIndex: total - index,
-            cursor: 'default',
-            flexShrink: 0,
-            padding: 0,
-          }}
-        >
-          {user.initials}
+            pointerEvents: 'none',
+          }}>
+            {user.initials}
+          </div>
         </button>
       </Tooltip.Trigger>
       <Tooltip.Portal>
@@ -266,7 +279,7 @@ export const PresenceBar: React.FC<PresenceBarProps> = ({ page }) => {
       >
         {announcement}
       </div>
-      <style>{`@keyframes presenceTooltipIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } } .presence-avatar-btn { background: none; font: inherit; line-height: 1; outline-offset: 2px; } .presence-avatar-btn:focus-visible { outline: 2px solid ${colors.primary}; }`}</style>
+      <style>{`@keyframes presenceTooltipIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } } .presence-avatar-btn { background: none; font: inherit; line-height: 1; outline-offset: 2px; } .presence-avatar-btn:focus-visible { outline: 2px solid ${colors.primaryOrange}; outline-offset: 2px; }`}</style>
       <Tooltip.Provider delayDuration={0}>
         <div style={{
           display: 'flex', alignItems: 'center', gap: spacing['2'],
@@ -292,10 +305,25 @@ export const PresenceBar: React.FC<PresenceBarProps> = ({ page }) => {
                     tabIndex={0}
                     aria-label={`${overflow} more people viewing`}
                     style={{
+                      width: 44,
+                      height: 44,
+                      minWidth: 44,
+                      minHeight: 44,
+                      borderRadius: '50%',
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginLeft: -20,
+                      cursor: 'default',
+                      flexShrink: 0,
+                      padding: 0,
+                    }}
+                  >
+                    <div style={{
                       width: AVATAR_SIZE,
                       height: AVATAR_SIZE,
-                      minWidth: 32,
-                      minHeight: 32,
                       borderRadius: '50%',
                       backgroundColor: colors.surfaceOverlay,
                       border: `2px solid ${colors.white}`,
@@ -305,13 +333,10 @@ export const PresenceBar: React.FC<PresenceBarProps> = ({ page }) => {
                       fontSize: 11,
                       fontWeight: typography.fontWeight.semibold,
                       color: colors.textSecondary,
-                      marginLeft: AVATAR_OVERLAP,
-                      cursor: 'default',
-                      flexShrink: 0,
-                      padding: 0,
-                    }}
-                  >
-                    +{overflow}
+                      pointerEvents: 'none',
+                    }}>
+                      +{overflow}
+                    </div>
                   </button>
                 </Tooltip.Trigger>
                 <Tooltip.Portal>
@@ -439,7 +464,7 @@ export const DrawingPresenceBar: React.FC = () => {
   if (others.length === 0 && isReconnecting) {
     return (
       <>
-        <style>{`@keyframes presenceTooltipIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } } @keyframes presenceSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } } .presence-avatar-btn { background: none; font: inherit; line-height: 1; outline-offset: 2px; } .presence-avatar-btn:focus-visible { outline: 2px solid ${colors.primary}; }`}</style>
+        <style>{`@keyframes presenceTooltipIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } } @keyframes presenceSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } } .presence-avatar-btn { background: none; font: inherit; line-height: 1; outline-offset: 2px; } .presence-avatar-btn:focus-visible { outline: 2px solid ${colors.primaryOrange}; outline-offset: 2px; }`}</style>
         <div style={{
           display: 'flex', alignItems: 'center', gap: spacing['2'],
           padding: `${spacing['1']} ${spacing['3']}`,
@@ -463,7 +488,7 @@ export const DrawingPresenceBar: React.FC = () => {
 
   return (
     <>
-      <style>{`@keyframes presenceTooltipIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } } .presence-avatar-btn { background: none; font: inherit; line-height: 1; outline-offset: 2px; } .presence-avatar-btn:focus-visible { outline: 2px solid ${colors.primary}; }`}</style>
+      <style>{`@keyframes presenceTooltipIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } } .presence-avatar-btn { background: none; font: inherit; line-height: 1; outline-offset: 2px; } .presence-avatar-btn:focus-visible { outline: 2px solid ${colors.primaryOrange}; outline-offset: 2px; }`}</style>
       <Tooltip.Provider delayDuration={150}>
         <div style={{
           display: 'flex', alignItems: 'center', gap: spacing['2'],
@@ -486,8 +511,29 @@ export const DrawingPresenceBar: React.FC = () => {
                   <Tooltip.Trigger asChild>
                     <button
                       className="presence-avatar-btn"
+                      tabIndex={0}
+                      role="img"
                       aria-label={`${displayName} is ${getPresenceStatus(lastSeen)}`}
                       style={{
+                        width: 44,
+                        height: 44,
+                        minWidth: 44,
+                        minHeight: 44,
+                        borderRadius: '50%',
+                        backgroundColor: 'transparent',
+                        border: 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginLeft: i > 0 ? -20 : 0,
+                        position: 'relative',
+                        zIndex: others.length - i,
+                        cursor: 'default',
+                        flexShrink: 0,
+                        padding: 0,
+                      }}
+                    >
+                      <div style={{
                         width: AVATAR_SIZE,
                         height: AVATAR_SIZE,
                         borderRadius: '50%',
@@ -500,15 +546,10 @@ export const DrawingPresenceBar: React.FC = () => {
                         fontSize: 11,
                         fontWeight: typography.fontWeight.bold,
                         color: colors.white,
-                        marginLeft: i > 0 ? AVATAR_OVERLAP : 0,
-                        position: 'relative',
-                        zIndex: others.length - i,
-                        cursor: 'default',
-                        flexShrink: 0,
-                        padding: 0,
-                      }}
-                    >
-                      {other.presence.initials || '?'}
+                        pointerEvents: 'none',
+                      }}>
+                        {other.presence.initials || '?'}
+                      </div>
                     </button>
                   </Tooltip.Trigger>
                   <Tooltip.Portal>
@@ -535,6 +576,23 @@ export const DrawingPresenceBar: React.FC = () => {
                     role="status"
                     aria-label={`${overflow} more people viewing`}
                     style={{
+                      width: 44,
+                      height: 44,
+                      minWidth: 44,
+                      minHeight: 44,
+                      borderRadius: '50%',
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginLeft: -20,
+                      cursor: 'default',
+                      flexShrink: 0,
+                      padding: 0,
+                    }}
+                  >
+                    <div style={{
                       width: AVATAR_SIZE,
                       height: AVATAR_SIZE,
                       borderRadius: '50%',
@@ -546,13 +604,10 @@ export const DrawingPresenceBar: React.FC = () => {
                       fontSize: 11,
                       fontWeight: typography.fontWeight.semibold,
                       color: 'rgba(255,255,255,0.7)',
-                      marginLeft: AVATAR_OVERLAP,
-                      cursor: 'default',
-                      flexShrink: 0,
-                      padding: 0,
-                    }}
-                  >
-                    +{overflow}
+                      pointerEvents: 'none',
+                    }}>
+                      +{overflow}
+                    </div>
                   </button>
                 </Tooltip.Trigger>
                 <Tooltip.Portal>
