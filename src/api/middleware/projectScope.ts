@@ -32,10 +32,10 @@ export async function assertProjectAccess(projectId: string): Promise<void> {
   }
   try {
     const key = queryKey('project_members', { project_id: projectId, user_id: user.id })
-    const memberData = await dedupTtl(key, 5000, () =>
+    const memberData = await dedupTtl(key, 30000, () =>
       supabase
         .from('project_members')
-        .select('id')
+        .select('id, project:projects(organization_id)')
         .eq('project_id', projectId)
         .eq('user_id', user.id)
         .maybeSingle()
@@ -44,18 +44,14 @@ export async function assertProjectAccess(projectId: string): Promise<void> {
     if (!memberData) {
       throw new ApiError('You do not have access to this project', 403, 'FORBIDDEN')
     }
-    const { data: project } = await supabase
-      .from('projects')
-      .select('organization_id')
-      .eq('id', projectId)
-      .maybeSingle()
-    if (!project) {
+    const orgId = (memberData as { id: string; project: { organization_id: string } | null }).project?.organization_id
+    if (!orgId) {
       throw new ApiError('Forbidden', 403, 'FORBIDDEN')
     }
     const { data: orgMember } = await supabase
       .from('organization_members')
       .select('id')
-      .eq('organization_id', project.organization_id)
+      .eq('organization_id', orgId)
       .eq('user_id', user.id)
       .maybeSingle()
     if (!orgMember) {
