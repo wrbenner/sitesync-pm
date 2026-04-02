@@ -33,7 +33,8 @@ export function useRealtimeInvalidation() {
   useEffect(() => {
     if (!projectId) return
 
-    const channel = supabase.channel(`project-${projectId}-changes`)
+    const channelName = `project-${projectId}-changes`
+    const channel = supabase.channel(channelName)
 
     CRITICAL_TABLES.forEach((table) => {
       channel.on(
@@ -57,8 +58,14 @@ export function useRealtimeInvalidation() {
     })
 
     channel.subscribe()
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[Realtime] Subscribed to', channelName)
+    }
 
     return () => {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Realtime] Unsubscribed from', channelName)
+      }
       supabase.removeChannel(channel)
     }
   }, [projectId])
