@@ -29,7 +29,7 @@ export const FloatingAIButton: React.FC = () => {
 
   return (
     <button
-      onClick={isError ? async () => { try { await refetch(); } catch { toast.error('Unable to load AI insights. Please try again.'); } openCopilot(); } : openCopilot}
+      onClick={isError ? async () => { try { await refetch(); openCopilot(); } catch { toast.error('Unable to load AI insights. Please try again.'); } } : openCopilot}
       title={titleText}
       aria-label={titleText}
       style={{
@@ -61,7 +61,7 @@ export const FloatingAIButton: React.FC = () => {
     >
       <Sparkles size={20} color={isOpen ? colors.statusReview : colors.white} />
       {isError && (
-        <span aria-label="AI insights failed to load" style={{
+        <span aria-label="AI insights failed to load" aria-live="polite" style={{
           position: 'absolute',
           top: -4,
           right: -4,
