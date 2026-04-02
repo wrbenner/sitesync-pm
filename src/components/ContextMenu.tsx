@@ -32,6 +32,7 @@ const TOAST_SEVERITY_STYLES: Record<ToastSeverity, { bg: string; border: string;
 
 function ToastEntry({ toast, onClose }: { toast: ToastItem; onClose: (id: string) => void }) {
   const style = TOAST_SEVERITY_STYLES[toast.severity];
+  const [dismissFocused, setDismissFocused] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => onClose(toast.id), 5000);
@@ -69,6 +70,8 @@ function ToastEntry({ toast, onClose }: { toast: ToastItem; onClose: (id: string
       <button
         aria-label="Dismiss notification"
         onClick={() => onClose(toast.id)}
+        onFocus={() => setDismissFocused(true)}
+        onBlur={() => setDismissFocused(false)}
         style={{
           border: 'none',
           background: 'transparent',
@@ -82,6 +85,8 @@ function ToastEntry({ toast, onClose }: { toast: ToastItem; onClose: (id: string
           borderRadius: borderRadius.sm,
           flexShrink: 0,
           transition: `color ${transitions.instant}`,
+          outline: dismissFocused ? `2px solid ${colors.primary}` : 'none',
+          outlineOffset: dismissFocused ? '2px' : undefined,
         }}
         onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = colors.textPrimary; }}
         onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = colors.textTertiary; }}
@@ -111,12 +116,13 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     <ToastContext.Provider value={{ showToast }}>
       {children}
       <div
+        role="region"
         aria-label="Notifications"
         style={{
           position: 'fixed',
-          bottom: spacing['6'],
-          right: spacing['6'],
-          zIndex: zIndex.toast,
+          bottom: spacing['4'],
+          right: spacing['4'],
+          zIndex: zIndex.toast || 9999,
           display: 'flex',
           flexDirection: 'column',
           gap: spacing['2'],
