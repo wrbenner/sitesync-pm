@@ -221,7 +221,7 @@ function AppContent() {
   const { sidebarCollapsed, setSidebarCollapsed, setActiveView } = useUiStore();
   const navigate = useNavigate();
   const location = useLocation();
-  const isMobile = useMediaQuery('(max-width: 767px)');
+  const isMobile = useMediaQuery('(max-width: 768px)');
   useTheme();
 
   const projectId = useProjectId();
@@ -317,24 +317,19 @@ function AppContent() {
     return <AppRoutes />;
   }
 
-  // Mobile layout
-  if (isMobile) {
-    return (
-      <MobileLayout>
-        {user && <AuthenticatedProviders activeView={activeView} />}
-        <OfflineBanner />
-        <ErrorBoundary fallback={<ErrorFallback />}>
-          <AppRoutes />
-        </ErrorBoundary>
-        <Suspense fallback={null}><FloatingAIButton /></Suspense>
-        <Suspense fallback={null}><CopilotPanel /></Suspense>
-        <ConflictResolutionModal open={conflictModalOpen} onClose={() => setConflictModalOpen(false)} />
-      </MobileLayout>
-    );
-  }
-
-  // Desktop layout
-  return (
+  // Strictly exclusive layout: mobile uses bottom nav (MobileLayout), desktop uses Sidebar
+  return isMobile ? (
+    <MobileLayout>
+      {user && <AuthenticatedProviders activeView={activeView} />}
+      <OfflineBanner />
+      <ErrorBoundary fallback={<ErrorFallback />}>
+        <AppRoutes />
+      </ErrorBoundary>
+      <Suspense fallback={null}><FloatingAIButton /></Suspense>
+      <Suspense fallback={null}><CopilotPanel /></Suspense>
+      <ConflictResolutionModal open={conflictModalOpen} onClose={() => setConflictModalOpen(false)} />
+    </MobileLayout>
+  ) : (
     <SidebarContext.Provider value={{ collapsed: sidebarCollapsed, setCollapsed: setSidebarCollapsed }}>
       <div
         style={{
