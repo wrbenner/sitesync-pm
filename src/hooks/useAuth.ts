@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useSyncExternalStore } from 'react'
+import { useNavigate } from 'react-router-dom'
 import type { User, Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import { queryClient } from '../lib/queryClient'
@@ -12,9 +13,10 @@ interface SharedAuthState {
   user: User | null
   session: Session | null
   loading: boolean
+  error: string | null
 }
 
-let state: SharedAuthState = { user: null, session: null, loading: true }
+let state: SharedAuthState = { user: null, session: null, loading: true, error: null }
 const listeners = new Set<() => void>()
 let initialized = false
 
@@ -50,12 +52,18 @@ function initAuth() {
   })
 
   supabase.auth.onAuthStateChange((_event, s) => {
-    setState({ session: s, user: s?.user ?? null })
-    if (_event === 'SIGNED_OUT') {
+    if (_event === 'SIGNED_IN') {
+      setState({ session: s, user: s?.user ?? null, error: null })
+      if (s?.user) setSentryUser(s.user.id, s.user.email ?? '', s.user.user_metadata?.role)
+    } else if (_event === 'SIGNED_OUT') {
+      setState({ session: null, user: null, error: null })
       queryClient.clear()
       clearSentryUser()
-    } else if (s?.user) {
-      setSentryUser(s.user.id, s.user.email ?? '', s.user.user_metadata?.role)
+    } else if (_event === 'TOKEN_REFRESHED') {
+      setState({ session: s, user: s?.user ?? null })
+    } else {
+      setState({ session: s, user: s?.user ?? null })
+      if (s?.user) setSentryUser(s.user.id, s.user.email ?? '', s.user.user_metadata?.role)
     }
   })
 }
@@ -79,6 +87,7 @@ export interface AuthState {
   user: User | null
   session: Session | null
   loading: boolean
+  error: string | null
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
   signUp: (email: string, password: string, name: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
@@ -87,11 +96,13 @@ export interface AuthState {
 }
 
 export function useAuth(): AuthState {
+  const navigate = useNavigate()
+
   // Start auth initialization on first mount
   useEffect(() => { initAuth() }, [])
 
   // All callers share the same snapshot
-  const { user, session, loading } = useSyncExternalStore(subscribe, getSnapshot)
+  const { user, session, loading, error } = useSyncExternalStore(subscribe, getSnapshot)
 
   const signIn = useCallback(async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
@@ -103,22 +114,37 @@ export function useAuth(): AuthState {
   }, [])
 
   const signUp = useCallback(async (email: string, password: string, name: string) => {
-    const { data, error } = await supabase.auth.signUp({
+    const { data, error: authError } = await supabase.auth.signUp({
       email,
       password,
       options: { data: { full_name: name } },
     })
-    if (!error && data.session) {
+    if (authError) return { error: mapAuthError(authError.message) }
+    if (data.user) {
+      const nameParts = name.trim().split(' ')
+      const first_name = nameParts[0] ?? ''
+      const last_name = nameParts.slice(1).join(' ') || null
+      // Insert profile row into users table (errors here are non-fatal)
+      await (supabase.from as (t: string) => ReturnType<typeof supabase.from>)('users').insert({
+        id: data.user.id,
+        email,
+        first_name,
+        last_name,
+        organization_id: null,
+      })
+    }
+    if (data.session) {
       setState({ session: data.session, user: data.session.user })
     }
-    return { error: error ? mapAuthError(error.message) : null }
+    return { error: null }
   }, [])
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut()
     queryClient.clear()
     setState({ user: null, session: null })
-  }, [])
+    navigate('/login')
+  }, [navigate])
 
   const resetPassword = useCallback(async (email: string) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email)
@@ -127,5 +153,5 @@ export function useAuth(): AuthState {
 
   const isSessionValid = !!session && !!session.expires_at && session.expires_at > Math.floor(Date.now() / 1000)
 
-  return { user, session, loading, signIn, signUp, signOut, resetPassword, isSessionValid }
+  return { user, session, loading, error, signIn, signUp, signOut, resetPassword, isSessionValid }
 }
