@@ -115,7 +115,9 @@ const _DrawingsPage: React.FC = () => {
         </PermissionGate>
       }
     >
+      <style>{`@media(max-width:768px){.drawings-layout{grid-template-columns:1fr!important;}}`}</style>
       <div
+        className="drawings-layout"
         style={{
           display: 'grid',
           gridTemplateColumns: selectedDrawing ? '1fr 380px' : '1fr',
@@ -213,6 +215,7 @@ const _DrawingsPage: React.FC = () => {
           </div>
 
           {/* Drawings Table */}
+          <div style={{ overflowX: 'auto' }}>
           <Card padding="0">
             {/* Custom sortable header */}
             <div style={{ display: 'grid', gridTemplateColumns: gridColumns, padding: `${spacing.md} ${spacing.lg}`, borderBottom: `1px solid ${colors.border}` }}>
@@ -421,6 +424,7 @@ const _DrawingsPage: React.FC = () => {
               )
             )}
           </Card>
+          </div>
         </div>
 
         {/* Detail Panel */}
