@@ -8,19 +8,19 @@ export const queryClient = new QueryClient({
     queries: {
       staleTime: 30_000,           // 30 seconds — prevents unnecessary refetches on component mounts
       gcTime: 5 * 60 * 1000,      // 5 minutes garbage collection
-      refetchOnWindowFocus: true,
+      refetchOnWindowFocus: false,
       retry: (failureCount, error) => {
         // Don't retry 4xx errors
         if (error instanceof NotFoundError) return false
         if (error instanceof AuthError) return false
         if (error instanceof PermissionError) return false
         if (error instanceof ApiError && error.status >= 400 && error.status < 500) return false
-        return failureCount < 3
+        return failureCount < 2
       },
       retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30_000),
     },
     mutations: {
-      retry: false,
+      retry: 1,
       onError: (error) => {
         // Global mutation error handler: show toast and report to Sentry
         if (error instanceof ApiError) {
