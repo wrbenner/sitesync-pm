@@ -96,20 +96,15 @@ export const ConflictBanner: React.FC<ConflictBannerProps> = ({ onRefresh, onDis
   <div style={{
     display: 'flex', alignItems: 'center', gap: spacing['3'],
     padding: `${spacing['3']} ${spacing['4']}`,
-    backgroundColor: colors.statusPendingSubtle,
+    backgroundColor: colors.statusCriticalSubtle ?? '#FEF2F2',
     borderRadius: borderRadius.md,
-    borderLeft: `3px solid ${colors.statusPending}`,
+    borderLeft: `3px solid ${colors.statusCritical}`,
     marginBottom: spacing['3'],
   }}>
-    <AlertTriangle size={16} color={colors.statusPending} style={{ flexShrink: 0 }} />
-    <div style={{ flex: 1 }}>
-      <p style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0 }}>
-        This item was updated by someone else
-      </p>
-      <p style={{ fontSize: typography.fontSize.caption, color: colors.textSecondary, margin: `${spacing['1']} 0 0` }}>
-        Your changes may overwrite their edits. Refresh to see the latest version.
-      </p>
-    </div>
+    <AlertTriangle size={16} color={colors.statusCritical} style={{ flexShrink: 0 }} />
+    <span style={{ flex: 1, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+      This item was modified by another user
+    </span>
     <Btn variant="secondary" size="sm" icon={<RefreshCw size={13} />} onClick={onRefresh}>Refresh</Btn>
     <button onClick={onDismiss} style={{ padding: spacing['1'], backgroundColor: 'transparent', border: 'none', cursor: 'pointer', color: colors.textTertiary }}>
       <X size={14} />
