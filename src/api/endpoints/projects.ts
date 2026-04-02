@@ -18,7 +18,11 @@ async function fetchScheduleMetrics(projectId: string): Promise<{
     .from('schedule_phases')
     .select('baseline_start, baseline_end, end_date, percent_complete, is_critical_path')
     .eq('project_id', projectId)
-  if (error || !data || data.length === 0) return { scheduleVarianceDays: null, completionPercentage: null }
+  if (error) {
+    console.warn('fetchScheduleMetrics failed for project', projectId, error.message)
+    return { scheduleVarianceDays: null, completionPercentage: null }
+  }
+  if (!data || data.length === 0) return { scheduleVarianceDays: null, completionPercentage: null }
 
   // COMPUTED: source = financialEngine
   // schedule_variance_days: days behind on last critical path item (positive = late)
