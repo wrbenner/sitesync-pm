@@ -36,6 +36,7 @@ interface UseMultiAgentChatReturn {
   approveAllPending: () => Promise<void>
   rejectAllPending: () => void
   clearMessages: () => void
+  error: string | null
 }
 
 export function useMultiAgentChat(
@@ -64,6 +65,7 @@ export function useMultiAgentChat(
       const userMsg = store.addUserMessage(text)
       store.setInput('')
       store.setProcessing(true)
+      store.setError(null)
 
       try {
         if (!isSupabaseConfigured) {
@@ -116,6 +118,7 @@ export function useMultiAgentChat(
       } catch (err) {
         store.setProcessing(false)
         store.setActiveAgents([])
+        store.setError((err as Error).message || 'Unknown error')
         store.addCoordinatorMessage(
           `I encountered an error: ${(err as Error).message}. Please try again.`,
         )
@@ -209,6 +212,7 @@ export function useMultiAgentChat(
     approveAllPending,
     rejectAllPending,
     clearMessages: store.clearMessages,
+    error: store.error,
   }
 }
 

@@ -14,6 +14,7 @@ import { ToolResultCard } from './ToolResultCard'
 import { SPECIALIST_AGENTS, AGENT_DOMAINS } from '../../types/agents'
 import type { AgentDomain, AgentConversationMessage } from '../../types/agents'
 import { useToast } from '../Primitives'
+import { toast } from 'sonner'
 
 // ── Context-aware suggested prompts ──────────────────────────
 
@@ -122,6 +123,7 @@ export const CopilotPanel: React.FC = () => {
     approveAllPending,
     rejectAllPending,
     clearMessages,
+    error,
   } = useMultiAgentChat(currentPageContext)
 
   const [exportOpen, setExportOpen] = useState(false)
@@ -135,6 +137,12 @@ export const CopilotPanel: React.FC = () => {
   useEffect(() => {
     scrollToBottom()
   }, [messages, isProcessing, scrollToBottom])
+
+  useEffect(() => {
+    if (error) {
+      toast.error('AI response failed')
+    }
+  }, [error])
 
   const handleSendMessage = useCallback(
     (text: string) => {
@@ -546,6 +554,49 @@ export const CopilotPanel: React.FC = () => {
               })}
             </div>
           )}
+
+          {/* Error banner */}
+          {error && (() => {
+            const lastUserMessage = [...messages].reverse().find((m) => m.role === 'user')
+            return (
+              <div
+                role="alert"
+                style={{
+                  backgroundColor: colors.statusCriticalSubtle,
+                  borderLeft: `3px solid ${colors.statusCritical}`,
+                  padding: spacing['3'],
+                  borderRadius: borderRadius.md,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: spacing['2'],
+                }}
+              >
+                <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.statusCritical }}>
+                  Unable to get a response. Check your connection.
+                </p>
+                {lastUserMessage && (
+                  <button
+                    onClick={() => handleSendMessage(lastUserMessage.content)}
+                    style={{
+                      flexShrink: 0,
+                      padding: `${spacing['1']} ${spacing['2']}`,
+                      backgroundColor: colors.statusCritical,
+                      border: 'none',
+                      borderRadius: borderRadius.base,
+                      fontSize: typography.fontSize.caption,
+                      fontWeight: typography.fontWeight.semibold,
+                      fontFamily: typography.fontFamily,
+                      color: colors.white,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Retry
+                  </button>
+                )}
+              </div>
+            )
+          })()}
 
           <div ref={messagesEndRef} />
         </div>

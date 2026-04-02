@@ -22,6 +22,7 @@ interface AgentOrchestratorState {
   isProcessing: boolean
   activeAgents: AgentDomain[] // Which agents are currently responding
   lastIntent: IntentClassification | null
+  error: string | null
 
   // Agent registry
   agentStates: Record<AgentDomain, AgentState>
@@ -45,6 +46,7 @@ interface AgentOrchestratorState {
   setActiveAgents: (agents: AgentDomain[]) => void
   setProcessing: (val: boolean) => void
   setLastIntent: (intent: IntentClassification) => void
+  setError: (err: string | null) => void
   clearMessages: () => void
 
   // Handle full orchestrator response from edge function
@@ -87,6 +89,7 @@ export const useAgentOrchestrator = create<AgentOrchestratorState>()((set, get) 
   isProcessing: false,
   activeAgents: [],
   lastIntent: null,
+  error: null,
   agentStates: createInitialAgentStates(),
   pendingBatch: null,
   actionHistory: [],
@@ -139,6 +142,7 @@ export const useAgentOrchestrator = create<AgentOrchestratorState>()((set, get) 
   setActiveAgents: (agents) => set({ activeAgents: agents }),
   setProcessing: (val) => set({ isProcessing: val }),
   setLastIntent: (intent) => set({ lastIntent: intent }),
+  setError: (err) => set({ error: err }),
 
   clearMessages: () =>
     set({
@@ -146,6 +150,7 @@ export const useAgentOrchestrator = create<AgentOrchestratorState>()((set, get) 
       activeAgents: [],
       lastIntent: null,
       pendingBatch: null,
+      error: null,
     }),
 
   handleOrchestratorResponse: (response) => {
