@@ -55,7 +55,14 @@ export const getPayApplications = async (projectId: string): Promise<PayApplicat
       .order('application_number', { ascending: false })
     if (error) throw error
     return (data || []) as PayApplication[]
-  } catch {
+  } catch (err: unknown) {
+    const supaError = err && typeof err === 'object' && 'code' in err ? err as { code?: string; message?: string } : null
+    if (supaError?.code === 'PGRST301' || supaError?.code === '42501') {
+      throw new Error('You do not have permission to view payment applications for this project.')
+    }
+    if (supaError?.code === 'PGRST116') {
+      throw new Error('Project not found. It may have been deleted or you may not have access.')
+    }
     throw new Error('Unable to load payment applications. Please check your connection and try again.')
   }
 }
