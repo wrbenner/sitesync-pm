@@ -1,4 +1,5 @@
 import React, { Suspense, lazy, useState, useEffect } from 'react';
+import { HardHat } from 'lucide-react';
 import { HashRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { SidebarContext, ToastProvider, Skeleton } from './components/Primitives';
@@ -311,7 +312,7 @@ function AppContent() {
       <MobileLayout>
         {user && <AuthenticatedProviders activeView={activeView} />}
         <OfflineBanner />
-        <ErrorBoundary>
+        <ErrorBoundary fallback={<ErrorFallback />}>
           <AppRoutes />
         </ErrorBoundary>
         <Suspense fallback={null}><FloatingAIButton /></Suspense>
@@ -380,6 +381,96 @@ function SentryFallback({ error }: { error?: Error }) {
       <button onClick={() => window.location.reload()} style={{ padding: `${spacing['2']} ${spacing['6']}`, backgroundColor: colors.primaryOrange, color: colors.white, border: 'none', borderRadius: borderRadius.base, fontSize: typography.fontSize.body, cursor: 'pointer' }}>
         Reload Page
       </button>
+    </div>
+  );
+}
+
+function ErrorFallback() {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '100vh',
+        backgroundColor: colors.bgLight,
+        padding: spacing['8'],
+      }}
+    >
+      <div
+        style={{
+          backgroundColor: colors.white,
+          borderRadius: '12px',
+          padding: '24px',
+          maxWidth: '480px',
+          width: '100%',
+          textAlign: 'center',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: spacing['4'],
+        }}
+      >
+        <div
+          style={{
+            width: 64,
+            height: 64,
+            borderRadius: '50%',
+            backgroundColor: colors.statusCriticalSubtle,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <HardHat size={32} color={colors.statusCritical} />
+        </div>
+        <h2
+          style={{
+            fontSize: typography.fontSize.heading,
+            fontWeight: typography.fontWeight.semibold,
+            color: colors.textPrimary,
+            margin: 0,
+          }}
+        >
+          Something went wrong
+        </h2>
+        <p
+          style={{
+            fontSize: typography.fontSize.body,
+            color: colors.textSecondary,
+            margin: 0,
+          }}
+        >
+          An unexpected error occurred. Please try again.
+        </p>
+        <button
+          onClick={() => window.location.reload()}
+          style={{
+            width: '100%',
+            padding: `${spacing['3']} ${spacing['6']}`,
+            backgroundColor: colors.primaryOrange,
+            color: colors.white,
+            border: 'none',
+            borderRadius: '6px',
+            fontSize: typography.fontSize.body,
+            fontWeight: typography.fontWeight.medium,
+            fontFamily: typography.fontFamily,
+            cursor: 'pointer',
+          }}
+        >
+          Reload Page
+        </button>
+        <a
+          href="/"
+          style={{
+            fontSize: typography.fontSize.body,
+            color: colors.textSecondary,
+            textDecoration: 'none',
+          }}
+        >
+          Go to Dashboard
+        </a>
+      </div>
     </div>
   );
 }
