@@ -35,8 +35,7 @@ export const PermissionGate: React.FC<PermissionGateProps> = ({
         height: '32px',
         backgroundColor: colors.surfaceInset,
         borderRadius: borderRadius.md,
-        opacity: 0.5,
-        animation: 'pulse 1.5s ease-in-out infinite',
+        opacity: 0.6,
       }} />
     );
   }
