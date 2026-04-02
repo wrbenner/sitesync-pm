@@ -97,7 +97,7 @@ export function getPromptsForPage(page: string): string[] {
   return pageContextPrompts[page] || pageContextPrompts.default;
 }
 
-export const SuggestedPrompts: React.FC<SuggestedPromptsProps> = ({ prompts, onSelect }) => {
+export const SuggestedPrompts: React.FC<SuggestedPromptsProps> = React.memo(({ prompts, onSelect }) => {
   return (
     <div style={{ display: 'flex', gap: spacing['2'], flexWrap: 'wrap' }}>
       {prompts.map((prompt, idx) => (
@@ -132,4 +132,6 @@ export const SuggestedPrompts: React.FC<SuggestedPromptsProps> = ({ prompts, onS
       ))}
     </div>
   );
-};
+});
+
+SuggestedPrompts.displayName = 'SuggestedPrompts';
