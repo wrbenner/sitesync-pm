@@ -32,9 +32,9 @@ export async function assertProjectAccess(projectId: string): Promise<void> {
   }
   try {
     const key = queryKey('project_members', { project_id: projectId, user_id: user.id })
-    // TTL kept short (5s) to minimize stale access window after role revocation.
-    // For write operations on sensitive entities (budget, pay apps), consider bypassing cache entirely.
-    const memberData = await dedupTtl(key, 5000, () =>
+    // TTL reduced to 1s to minimize stale access window after role revocation.
+    // For write operations on sensitive entities, use assertProjectAccessNoCache instead.
+    const memberData = await dedupTtl(key, 1000, () =>
       supabase
         .from('project_members')
         .select('id, project:projects(organization_id)')
@@ -63,6 +63,45 @@ export async function assertProjectAccess(projectId: string): Promise<void> {
     if (err instanceof ApiError || err instanceof AuthError || err instanceof ValidationError) {
       throw err
     }
+    if (err instanceof Error && err.message.includes('permission')) throw new ApiError('Access denied', 403, 'FORBIDDEN')
+    throw new ApiError('Unable to verify project access. Please try again.', 503, 'SERVICE_UNAVAILABLE')
+  }
+}
+
+export async function assertProjectAccessNoCache(projectId: string): Promise<void> {
+  validateProjectId(projectId)
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    throw new AuthError('Not authenticated')
+  }
+  try {
+    const { data: memberData } = await supabase
+      .from('project_members')
+      .select('id, project:projects(organization_id)')
+      .eq('project_id', projectId)
+      .eq('user_id', user.id)
+      .maybeSingle()
+    if (!memberData) {
+      throw new ApiError('You do not have access to this project', 403, 'FORBIDDEN')
+    }
+    const orgId = (memberData as { id: string; project: { organization_id: string } | null }).project?.organization_id
+    if (!orgId) {
+      throw new ApiError('Forbidden', 403, 'FORBIDDEN')
+    }
+    const { data: orgMember } = await supabase
+      .from('organization_members')
+      .select('id')
+      .eq('organization_id', orgId)
+      .eq('user_id', user.id)
+      .maybeSingle()
+    if (!orgMember) {
+      throw new ApiError('Forbidden', 403, 'FORBIDDEN')
+    }
+  } catch (err) {
+    if (err instanceof ApiError || err instanceof AuthError || err instanceof ValidationError) {
+      throw err
+    }
+    if (err instanceof Error && err.message.includes('permission')) throw new ApiError('Access denied', 403, 'FORBIDDEN')
     throw new ApiError('Unable to verify project access. Please try again.', 503, 'SERVICE_UNAVAILABLE')
   }
 }
