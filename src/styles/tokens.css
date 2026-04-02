@@ -45,6 +45,7 @@
   --color-surfaceSelected: #FEF7F2;
   --color-surfaceFlat: #F6F3F0;
   --color-surfaceDisabled: #EDEDEB;
+  --color-surfaceOverlay: #E5E1DC;
 
   /* ── Borders ──────────────────────────────────────── */
   --color-borderSubtle: #F0EDE9;
@@ -210,6 +211,7 @@
   --color-surfaceSelected: #2A1F16;
   --color-surfaceFlat: #171819;
   --color-surfaceDisabled: #2A2B2E;
+  --color-surfaceOverlay: #252629;
   --color-borderSubtle: rgba(255, 255, 255, 0.06);
   --color-borderDefault: rgba(255, 255, 255, 0.1);
   --color-borderLight: rgba(255, 255, 255, 0.06);

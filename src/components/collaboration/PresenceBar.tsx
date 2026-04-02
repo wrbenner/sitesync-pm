@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { Eye } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme';
@@ -7,6 +7,28 @@ import { useOthers } from '../../lib/liveblocks';
 import type { PresenceUserWithAction } from '../../stores/presenceStore';
 import { useUiStore } from '../../stores';
 // Announcements are delivered through the global LiveRegion rendered in App.tsx
+
+// ── Responsive maxVisible ─────────────────────────────────────────────────────
+
+const MAX_VISIBLE_DEFAULT = 5;
+const MAX_VISIBLE_MOBILE = 3;
+const MOBILE_BREAKPOINT = 640;
+
+function useMaxVisible(): number {
+  const [maxVisible, setMaxVisible] = useState<number>(() =>
+    typeof window !== 'undefined' && window.innerWidth < MOBILE_BREAKPOINT
+      ? MAX_VISIBLE_MOBILE
+      : MAX_VISIBLE_DEFAULT
+  );
+  useEffect(() => {
+    const handler = () => {
+      setMaxVisible(window.innerWidth < MOBILE_BREAKPOINT ? MAX_VISIBLE_MOBILE : MAX_VISIBLE_DEFAULT);
+    };
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
+  return maxVisible;
+}
 
 // ── Presence helpers ──────────────────────────────────────────────────────────
 
@@ -148,6 +170,8 @@ const PresenceAvatar: React.FC<AvatarProps> = ({ user, index, total }) => {
           style={{
             width: AVATAR_SIZE,
             height: AVATAR_SIZE,
+            minWidth: 32,
+            minHeight: 32,
             borderRadius: '50%',
             backgroundColor: user.color,
             border: `2px solid ${colors.white}`,
@@ -195,6 +219,7 @@ interface PresenceBarProps {
 export const PresenceBar: React.FC<PresenceBarProps> = ({ page }) => {
   const users = usePresenceStore(s => s.getUsersOnPage(page));
   const announceStatus = useUiStore(s => s.announceStatus);
+  const maxVisible = useMaxVisible();
   // Stores previous snapshot as a map of userId -> displayName so we can name departing users
   const prevUsersRef = useRef<Map<string, string>>(new Map());
 
@@ -219,8 +244,8 @@ export const PresenceBar: React.FC<PresenceBarProps> = ({ page }) => {
 
   if (users.length === 0) return null;
 
-  const visible = users.slice(0, 5);
-  const overflow = users.length - 5;
+  const visible = users.slice(0, maxVisible);
+  const overflow = users.length - maxVisible;
 
   return (
     <>
@@ -250,8 +275,10 @@ export const PresenceBar: React.FC<PresenceBarProps> = ({ page }) => {
                     style={{
                       width: AVATAR_SIZE,
                       height: AVATAR_SIZE,
+                      minWidth: 32,
+                      minHeight: 32,
                       borderRadius: '50%',
-                      backgroundColor: colors.surfaceInset,
+                      backgroundColor: colors.surfaceOverlay,
                       border: `2px solid ${colors.white}`,
                       display: 'flex',
                       alignItems: 'center',
@@ -277,7 +304,7 @@ export const PresenceBar: React.FC<PresenceBarProps> = ({ page }) => {
                     collisionPadding={12}
                     style={TOOLTIP_CONTENT_STYLE}
                   >
-                    <OverflowTooltipContent users={users.slice(5)} />
+                    <OverflowTooltipContent users={users.slice(maxVisible)} />
                     <Tooltip.Arrow style={{ fill: colors.textPrimary }} />
                   </Tooltip.Content>
                 </Tooltip.Portal>

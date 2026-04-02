@@ -34,6 +34,7 @@ export const colors = {
   surfaceInset: 'var(--color-surfaceInset)',
   surfaceHover: 'var(--color-surfaceHover)',
   surfaceSelected: 'var(--color-surfaceSelected)',
+  surfaceOverlay: 'var(--color-surfaceOverlay)',
 
   // Borders
   borderSubtle: 'var(--color-borderSubtle)',
