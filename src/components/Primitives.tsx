@@ -170,6 +170,7 @@ interface BtnProps {
   iconPosition?: 'left' | 'right';
   'aria-label'?: string;
   type?: 'button' | 'submit' | 'reset';
+  style?: React.CSSProperties;
 }
 
 export const Btn: React.FC<BtnProps> = ({
@@ -183,6 +184,7 @@ export const Btn: React.FC<BtnProps> = ({
   iconPosition = 'left',
   'aria-label': ariaLabel,
   type = 'button',
+  style: styleProp,
 }) => {
   const variants = {
     primary: {

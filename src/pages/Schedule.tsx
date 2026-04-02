@@ -221,16 +221,11 @@ export const Schedule: React.FC = () => {
   if (loading && schedulePhases.length === 0) {
     return (
       <PageContainer title="Schedule" subtitle="Loading...">
-        <style>{`
-          @media (max-width: 1024px) and (min-width: 641px) { .kpi-grid { grid-template-columns: repeat(2, 1fr) !important; } }
-          @media (max-width: 640px) { .kpi-grid { grid-template-columns: 1fr !important; } }
-          @keyframes schedPulse { 0%, 100% { opacity: 0.7; } 50% { opacity: 0.3; } }
-        `}</style>
+        <style>{`@keyframes schedPulse { 0%, 100% { opacity: 0.7; } 50% { opacity: 0.3; } }`}</style>
         <div
-          className="kpi-grid"
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(4, 1fr)',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
             gap: spacing.lg,
             marginBottom: spacing['2xl'],
           }}
@@ -400,17 +395,14 @@ export const Schedule: React.FC = () => {
       )}
 
       <style>{`
-        @media (max-width: 1024px) and (min-width: 641px) { .kpi-grid { grid-template-columns: repeat(2, 1fr) !important; } }
-        @media (max-width: 640px) { .kpi-grid { grid-template-columns: 1fr !important; } }
         @keyframes livePulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.35); } }
       `}</style>
 
       {/* KPI Metric Cards */}
       <div
-        className="kpi-grid"
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
           gap: spacing.lg,
           marginBottom: spacing['2xl'],
         }}
@@ -469,7 +461,7 @@ export const Schedule: React.FC = () => {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
           gap: spacing.lg,
           marginBottom: spacing['2xl'],
         }}
