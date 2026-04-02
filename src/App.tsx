@@ -468,14 +468,14 @@ function AppContent() {
       {!mobileDrawerOpen && (
         <button
           onClick={() => setMobileDrawerOpen(true)}
-          aria-label="Open navigation menu"
-          aria-expanded={false}
+          aria-label="Toggle navigation menu"
+          aria-expanded={mobileDrawerOpen}
           style={{
             position: 'fixed',
             top: spacing['3'],
             left: spacing['3'],
-            width: 40,
-            height: 40,
+            minWidth: 44,
+            minHeight: 44,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
