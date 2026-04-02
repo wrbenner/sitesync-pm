@@ -236,27 +236,17 @@ export const DailyLog: React.FC = () => {
     addToast('info', 'Camera capture would open on mobile device');
   };
 
+  // Show toast when fetch error occurs
+  useEffect(() => {
+    if (logError) {
+      toast.error((logError as Error).message || 'Failed to load daily log data');
+    }
+  }, [logError]);
+
   if (loading) {
     return (
       <PageContainer title="Daily Log" subtitle="Loading...">
         <DailyLogSkeleton />
-      </PageContainer>
-    );
-  }
-
-  if (logError) {
-    return (
-      <PageContainer title="Daily Log" subtitle="Unable to load">
-        <Card padding={spacing['6']}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['4'], padding: spacing['6'], textAlign: 'center' }}>
-            <AlertTriangle size={40} color={colors.statusCritical} />
-            <div>
-              <p style={{ fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>Failed to load daily log</p>
-              <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: 0 }}>{(logError as Error).message || 'Unable to fetch daily log entries'}</p>
-            </div>
-            <Btn variant="primary" size="sm" icon={<RefreshCw size={14} />} onClick={() => refetch()}>Try Again</Btn>
-          </div>
-        </Card>
       </PageContainer>
     );
   }
@@ -285,19 +275,32 @@ export const DailyLog: React.FC = () => {
           ))}
         </div>
 
-        {/* Empty state */}
-        <Card padding={spacing['10']}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: spacing['4'] }}>
-            <HardHat size={64} color={colors.borderDefault} />
-            <div>
-              <p style={{ fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>No daily logs yet</p>
-              <p style={{ fontSize: typography.fontSize.body, color: colors.textTertiary, margin: 0, maxWidth: '400px' }}>
-                Tap the button below to log today's work — weather, crew, equipment, and progress. Done in under 90 seconds.
-              </p>
-            </div>
-            <Btn variant="primary" size="md" onClick={() => setShowCreateModal(true)}>Start Today's Log</Btn>
+        {/* Inline error banner */}
+        {logError && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'], padding: `${spacing['3']} ${spacing['4']}`, backgroundColor: '#FEF2F2', border: `1px solid #FECACA`, borderRadius: borderRadius.lg, marginBottom: spacing['4'] }}>
+            <AlertTriangle size={16} color={colors.statusCritical} style={{ flexShrink: 0 }} />
+            <p style={{ fontSize: typography.fontSize.sm, color: colors.statusCritical, margin: 0, flex: 1 }}>
+              {(logError as Error).message || 'Failed to load daily log data'}
+            </p>
+            <Btn variant="ghost" size="sm" icon={<RefreshCw size={13} />} onClick={() => refetch()}>Retry</Btn>
           </div>
-        </Card>
+        )}
+
+        {/* Empty state */}
+        {!logError && (
+          <Card padding={spacing['10']}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: spacing['4'] }}>
+              <HardHat size={64} color={colors.borderDefault} />
+              <div>
+                <p style={{ fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>No daily logs yet.</p>
+                <p style={{ fontSize: typography.fontSize.body, color: colors.textTertiary, margin: 0, maxWidth: '400px' }}>
+                  The daily log is your project's official record.
+                </p>
+              </div>
+              <Btn variant="primary" size="md" onClick={() => setShowCreateModal(true)}>Start Today's Log</Btn>
+            </div>
+          </Card>
+        )}
 
         {showCreateModal && (
           <CreateDailyLogModal

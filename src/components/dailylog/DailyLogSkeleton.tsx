@@ -78,7 +78,7 @@ const DailyLogSkeleton: React.FC = () => (
             alignItems: 'center',
             gap: spacing['4'],
             padding: `${spacing['4']} ${spacing['5']}`,
-            height: 56,
+            height: 48,
             borderBottom: i < 5 ? `1px solid ${colors.borderSubtle}` : 'none',
           }}
         >
