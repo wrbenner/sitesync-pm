@@ -27,6 +27,12 @@ const routeLabels: Record<string, string> = {
   portal: 'Owner Portal',
   reports: 'Reports',
   integrations: 'Integrations',
+  closeout: 'Closeout',
+  transmittals: 'Transmittals',
+  permits: 'Permits',
+  insurance: 'Insurance',
+  sustainability: 'Sustainability',
+  bim: 'BIM',
 };
 
 // ── FolderBreadcrumbs ──────────────────────────────────
@@ -246,6 +252,8 @@ export const Breadcrumbs: React.FC = () => {
       </button>
 
       {pathSegments.map((segment, i) => {
+        const isUuidOrId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(segment) || /^\d+$/.test(segment);
+        if (isUuidOrId) return null;
         const isLast = i === pathSegments.length - 1;
         const label = routeLabels[segment] || segment.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
         const path = '/' + pathSegments.slice(0, i + 1).join('/');
