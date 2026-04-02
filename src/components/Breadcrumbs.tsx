@@ -37,7 +37,7 @@ const crumbButtonStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   gap: spacing['1'],
-  padding: `${spacing['1']} ${spacing['2']}`,
+  padding: `${spacing['2']} ${spacing['3']}`,
   borderRadius: borderRadius.md,
   fontSize: typography.fontSize.sm,
   fontFamily: typography.fontFamily,
@@ -50,72 +50,114 @@ const crumbButtonStyle: React.CSSProperties = {
 };
 
 export const FolderBreadcrumbs: React.FC<FolderBreadcrumbsProps> = ({ stack, onNavigate }) => {
+  const [isMobile, setIsMobile] = React.useState(() => window.innerWidth < 768);
+  const [expanded, setExpanded] = React.useState(false);
+
+  React.useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    const handler = (e: MediaQueryListEvent) => {
+      setIsMobile(e.matches);
+      if (!e.matches) setExpanded(false);
+    };
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+
   if (stack.length === 0) return null;
 
+  const showEllipsis = isMobile && !expanded && stack.length > 2;
+  const visibleStack = showEllipsis ? stack.slice(-2) : stack;
+
   return (
-    <nav
-      aria-label="Folder navigation"
-      style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], marginBottom: spacing['3'], flexWrap: 'wrap', minWidth: 0 }}
-    >
-      {/* Root */}
-      <button
-        onClick={() => onNavigate(-1)}
-        style={crumbButtonStyle}
-        onMouseEnter={(e) => {
-          (e.currentTarget as HTMLButtonElement).style.color = colors.primaryOrange;
-          (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.orangeSubtle;
-        }}
-        onMouseLeave={(e) => {
-          (e.currentTarget as HTMLButtonElement).style.color = colors.textTertiary;
-          (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
+    <div style={{ overflow: 'hidden', maxWidth: '100%' }}>
+      <nav
+        aria-label="Folder navigation"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: spacing['1'],
+          marginBottom: spacing['3'],
+          flexWrap: 'wrap',
+          minWidth: 0,
+          overflowX: 'auto',
+          WebkitOverflowScrolling: 'touch',
         }}
       >
-        <Home size={13} />
-        <span>All Files</span>
-      </button>
+        {/* Root */}
+        <button
+          onClick={() => onNavigate(-1)}
+          style={crumbButtonStyle}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.color = colors.primaryOrange;
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.orangeSubtle;
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.color = colors.textTertiary;
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
+          }}
+        >
+          <Home size={13} />
+          <span>All Files</span>
+        </button>
 
-      {stack.map((segment, i) => {
-        const isLast = i === stack.length - 1;
-        return (
-          <React.Fragment key={segment.id}>
+        {showEllipsis && (
+          <React.Fragment>
             <ChevronRight size={12} style={{ color: colors.textTertiary, flexShrink: 0 }} />
-            {isLast ? (
-              <span style={{
-                display: 'flex', alignItems: 'center', gap: spacing['1'],
-                padding: `${spacing['1']} ${spacing['2']}`,
-                fontSize: typography.fontSize.sm,
-                fontWeight: typography.fontWeight.medium,
-                color: colors.textPrimary,
-                maxWidth: '160px',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}>
-                <FolderOpen size={13} color={colors.primaryOrange} />
-                {segment.name}
-              </span>
-            ) : (
-              <button
-                onClick={() => onNavigate(i)}
-                style={crumbButtonStyle}
-                title={segment.name}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.color = colors.primaryOrange;
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.orangeSubtle;
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.color = colors.textTertiary;
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
-                }}
-              >
-                <FolderOpen size={13} />
-                {segment.name}
-              </button>
-            )}
+            <button
+              onClick={() => setExpanded(true)}
+              style={crumbButtonStyle}
+              aria-label="Show full path"
+              title="Show full path"
+            >
+              ...
+            </button>
           </React.Fragment>
-        );
-      })}
-    </nav>
+        )}
+
+        {visibleStack.map((segment, i) => {
+          const fullIndex = showEllipsis ? stack.length - 2 + i : i;
+          const isLast = fullIndex === stack.length - 1;
+          return (
+            <React.Fragment key={segment.id}>
+              <ChevronRight size={12} style={{ color: colors.textTertiary, flexShrink: 0 }} />
+              {isLast ? (
+                <span style={{
+                  display: 'flex', alignItems: 'center', gap: spacing['1'],
+                  padding: `${spacing['2']} ${spacing['3']}`,
+                  fontSize: typography.fontSize.sm,
+                  fontWeight: typography.fontWeight.medium,
+                  color: colors.textPrimary,
+                  maxWidth: '160px',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}>
+                  <FolderOpen size={13} color={colors.primaryOrange} />
+                  {segment.name}
+                </span>
+              ) : (
+                <button
+                  onClick={() => onNavigate(fullIndex)}
+                  style={crumbButtonStyle}
+                  title={segment.name}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.color = colors.primaryOrange;
+                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.orangeSubtle;
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.color = colors.textTertiary;
+                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
+                  }}
+                >
+                  <FolderOpen size={13} />
+                  {segment.name}
+                </button>
+              )}
+            </React.Fragment>
+          );
+        })}
+      </nav>
+    </div>
   );
 };
 
