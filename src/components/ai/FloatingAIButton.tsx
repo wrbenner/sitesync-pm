@@ -29,7 +29,7 @@ export const FloatingAIButton: React.FC = () => {
 
   return (
     <button
-      onClick={isError ? async () => { try { await refetch(); openCopilot(); } catch { toast.error('Unable to load AI insights. Please try again.'); } } : openCopilot}
+      onClick={isError ? async () => { const result = await refetch(); if (result.isError) { toast.error('Unable to load AI insights. Please try again.'); } else { openCopilot(); } } : openCopilot}
       title={titleText}
       aria-label={titleText}
       style={{
