@@ -93,6 +93,27 @@ export const getPayApplicationsWithMeta = async (
   return { payApps, hasScheduleOfValues }
 }
 
+/**
+ * Fetches pay applications and whether any schedule of values (budget_items) exist.
+ * The UI uses `hasScheduleOfValues` to show a prerequisite warning before allowing
+ * pay app creation (acceptance criteria item 12).
+ * `isLoading: false` is a discriminant so callers can use this as a loaded-state sentinel.
+ */
+export const getPayApplicationsWithContext = async (
+  projectId: string,
+): Promise<{ payApps: PayApplication[]; hasScheduleOfValues: boolean; isLoading: false }> => {
+  const [payApps, sovResult] = await Promise.all([
+    getPayApplications(projectId),
+    supabase
+      .from('budget_items')
+      .select('id', { count: 'exact', head: true })
+      .eq('project_id', projectId)
+      .is('deleted_at', null),
+  ])
+  const hasScheduleOfValues = (sovResult.count ?? 0) > 0
+  return { payApps, hasScheduleOfValues, isLoading: false }
+}
+
 export const getPayApplicationById = async (
   projectId: string,
   id: string,
