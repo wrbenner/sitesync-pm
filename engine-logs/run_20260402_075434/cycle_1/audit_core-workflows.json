@@ -1,0 +1,70 @@
+{
+  "module": "core-workflows",
+  "scores": {
+    "visual_polish": 62,
+    "domain_depth": 58,
+    "data_richness": 45,
+    "interaction_quality": 52,
+    "ai_integration": 40,
+    "mobile_first": 35,
+    "performance": 55,
+    "typescript_quality": 60,
+    "error_handling": 38,
+    "realtime": 30,
+    "accessibility": 28,
+    "security": 55,
+    "differentiation": 42,
+    "enterprise_readiness": 45
+  },
+  "overall_score": 46,
+  "issues": [
+    {
+      "id": "core-workflows-C1-001",
+      "severity": "critical",
+      "dimension": "error_handling",
+      "title": "RFI list page has no loading, error, or empty states",
+      "file": "src/pages/RFIs.tsx",
+      "description": "PAGE_ACCEPTANCE_CRITERIA §3 RFIs requires skeleton loaders matching final layout, contextual empty states with CTA, and inline retry on fetch failure. The RFI page currently renders raw data or a blank table with no skeleton, no designed empty state ('No RFIs yet — create your first one'), and no error recovery UI. This violates Global criteria #1 (skeleton within 100ms), #2 (contextual empty state), and #3 (network failure toast + retry).",
+      "prompt": "In the file src/pages/RFIs.tsx, in the main RFIs page component: add three conditional renders before the data table. BEFORE: the component renders the table directly without checking loading/error/empty. AFTER: (1) When loading is true, render a skeleton loader with 4 metric card placeholders and 8 table row placeholders using pulsing gray rectangles matching the table column layout (RFI #, Title, Status, Priority, BIC, Days Open, Due Date). (2) When error is truthy, render an inline error banner with the message text and a 'Retry' button that calls refetch. (3) When data is loaded but the array is empty, render an empty state with a FileText icon (from lucide-react), the text 'No RFIs have been created for this project yet', a subtitle 'When questions arise in the field, create an RFI to get a documented answer', and a primary orange 'Create First RFI' button. Wrap the Create button in a PermissionGate requiring rfis.create. Use theme tokens for all colors and spacing. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "core-workflows-C1-002",
+      "severity": "critical",
+      "dimension": "accessibility",
+      "title": "Punch list status pipeline and table rows lack ARIA attributes and keyboard navigation",
+      "file": "src/pages/PunchList.tsx",
+      "description": "PAGE_ACCEPTANCE_CRITERIA §8 requires status colors mapped to semantic meaning, clickable rows to detail, and Global criteria mandate keyboard navigability (Tab order, Enter to open) and aria-live for status changes. The punch list table rows have no role='row', cells have no role='cell', status badges have no aria-label describing the status, and there are no keyboard event handlers for row activation. This fails axe-core audit requirements.",
+      "prompt": "In the file src/pages/PunchList.tsx, in the punch list table/list rendering component: add ARIA attributes and keyboard support to the data table. BEFORE: table rows are plain div or tr elements with no ARIA roles, no tabIndex, no onKeyDown handlers, and status badges are purely visual colored dots/text. AFTER: (1) Add role='table' to the container, role='rowgroup' to header and body, role='row' to each row, role='columnheader' to headers, role='cell' to cells. (2) Add tabIndex={0} to each data row and an onKeyDown handler that calls the row click handler when Enter or Space is pressed. (3) Add aria-label to each status badge describing the status (e.g., aria-label='Status: Open' or 'Status: Verified'). (4) Add an aria-live='polite' region that announces when items change status via real-time updates. (5) Ensure focus rings are visible using outline: '2px solid' + colors.primaryOrange on :focus-visible. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "core-workflows-C1-003",
+      "severity": "critical",
+      "dimension": "domain_depth",
+      "title": "Submittals page missing approval chain stepper and resubmission tracking",
+      "file": "src/pages/Submittals.tsx",
+      "description": "PAGE_ACCEPTANCE_CRITERIA §4 requires an approval chain visualization as a horizontal stepper showing each reviewer with their decision status, revision tracking with Rev 0/1/2 history, and 'Approved as Noted' workflow allowing markup attachment. The current submittals page shows a flat status column but has no multi-reviewer chain visualization, no revision number display, and no link to resubmission history. This is a core construction workflow gap.",
+      "prompt": "In the file src/pages/Submittals.tsx, in the submittals list/detail component: add a revision number column and an approval chain indicator. BEFORE: the table shows only a single status text/badge with no revision tracking or reviewer chain. AFTER: (1) Add a 'Rev' column to the table that displays the revision_number from the submittal data (default 0), formatted as 'Rev 0', 'Rev 1', etc. If revision_number is not in the data type, add it as an optional field defaulting to 0. (2) Add a 'Reviewer' or 'Ball in Court' column showing the current reviewer name from assigned_to. (3) In the status column, use color-coded badges matching the spec: pending=#F5A623 amber, approved=#4EC896 green, rejected=#E74C3C red, approved_as_noted=#3B82F6 blue, resubmit=#F5A623 amber with a circular arrow icon. (4) Add a small revision history indicator: if revision_number > 0, show a small '↻ Rev X' link text in muted color next to the submittal number. Use theme tokens for all colors. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "core-workflows-C1-004",
+      "severity": "critical",
+      "dimension": "interaction_quality",
+      "title": "Change Orders page missing cost breakdown, markup calculation, and three-tier PCO/COR/CO workflow",
+      "file": "src/pages/ChangeOrders.tsx",
+      "description": "PAGE_ACCEPTANCE_CRITERIA §15 requires a three-tier workflow (PCO→COR→CO), itemized cost breakdown by labor/material/equipment/sub with markup percentages, and schedule impact fields. The current page shows a flat list with amount and status but no cost breakdown detail, no markup calculation (10% overhead + 10% profit), no type distinction between PCO/COR/CO, and no schedule impact days field. This is a major financial workflow gap.",
+      "prompt": "In the file src/pages/ChangeOrders.tsx, in the main ChangeOrders component: add type filtering, cost impact formatting, and schedule impact display. BEFORE: the table shows a flat list with generic status and a single amount column, no CO type distinction, no markup detail, no schedule impact. AFTER: (1) Add filter tabs or a dropdown at the top for CO type: 'All', 'PCO (Potential)', 'COR (Request)', 'CO (Approved)' that filters the list by the co_type field. (2) Format the cost_impact/amount column as currency with proper sign: positive amounts show in red as '+$X,XXX' (cost increase), negative in green as '-$X,XXX' (savings). (3) Add a 'Schedule Impact' column that shows the schedule_impact_days value formatted as '+X days' in red if positive, '-X days' in green if negative, or 'No Impact' in gray if zero/null. (4) Add a summary bar above the table showing: 'Approved Total: $X', 'Pending Total: $X', 'Net Contract Change: $X' calculated from the data. Use compact currency formatting ($1.2M for millions). Use theme tokens for all colors. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "core-workflows-C1-005",
+      "severity": "major",
+      "dimension": "mobile_first",
+      "title": "RFI and Punch List tables do not collapse to card layouts on mobile viewports",
+      "file": "src/pages/RFIs.tsx",
+      "description": "PAGE_ACCEPTANCE_CRITERIA §3 and §8 require tables to collapse to card-based layouts on mobile (375px). Global criteria mandate usability at 375px with no horizontal scroll, 44x44px touch targets. The RFI and Punch List pages render desktop-width tables that overflow horizontally on mobile with no responsive card fallback, violating field-first principles for superintendents using phones on site.",
+      "prompt": "In the file src/pages/RFIs.tsx, in the RFI table rendering section: add a responsive breakpoint that switches from table to card layout on mobile. BEFORE: the table renders with all columns at all viewport widths, causing horizontal overflow on screens under 768px. AFTER: (1) Add a useMediaQuery hook or CSS media query check for max-width 768px. (2) When on mobile, replace the table with a vertical card list where each RFI renders as a card showing: RFI number and title on the first line (bold), status badge and priority badge on the second line, 'Ball in Court: [name]' and 'Due: [date]' on the third line, and an overdue indicator if applicable. (3) Each card must have min-height 64px, padding 16px, border-bottom 1px solid borderSubtle, and the entire card is tappable (onClick navigates to detail). (4) Touch targets must be at least 44px tall. Use a CSS class or inline style with '@media (max-width: 768px)' or a window.innerWidth check. After changes, run: npm run build to verify no TypeScript errors."
+    }
+  ],
+  "invented_features": [],
+  "competitive_intel": "Procore's RFI module has robust ball-in-court tracking with email reply capability and cross-module linking to change orders. Fieldwire excels at mobile punch list with two-tap photo capture. SiteSync's core workflows currently lack the approval chain depth of Procore's submittals, the three-tier change order pipeline that CFOs expect, and the mobile-first card layouts that Fieldwire nails. The absence of loading/empty/error states across all four workflow pages means users see blank screens or raw errors, which is unacceptable for a field-first tool competing against polished incumbents.",
+  "summary": "The Core Workflows module (RFIs, Submittals, Change Orders, Punch List) has functional data fetching and basic table rendering but fails multiple PAGE_ACCEPTANCE_CRITERIA requirements. All four pages lack proper loading skeletons, contextual empty states, and error recovery UI, violating Global Standards. Submittals are missing the approval chain stepper and revision tracking that define the construction submittal workflow. Change Orders lack the three-tier PCO/COR/CO pipeline, cost breakdown with markup calculations, and schedule impact tracking required by the spec. Accessibility is below baseline with no ARIA roles, no keyboard navigation on table rows, and no screen reader announcements for status changes. Mobile responsiveness is absent — tables overflow at 375px with no card-based fallback, breaking the field-first promise. The five surgical fixes target: (1) RFI loading/empty/error states, (2) Punch List ARIA and keyboard support, (3) Submittal revision and reviewer chain, (4) Change Order type filtering and financial summary, (5) RFI mobile card layout. These are the highest-impact fixes because they address P0 acceptance criteria violations across all four workflow pages."
+}

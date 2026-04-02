@@ -3082,6 +3082,183 @@ export function AICopilot() {
 
 ---
 
+## 10. Sage Intacct Accounting Integration (PRIORITY: P0)
+
+### Purpose
+Bidirectional sync between SiteSync and Sage Intacct for job costing, AP invoices, cost codes, and vendor management. This is the #1 integration GCs ask for. 70%+ of mid-market GCs ($20M–$200M) use Sage.
+
+### Provider: Sage Intacct
+- **XML API**: `https://api.intacct.com/ia/xml/xmlgw.phtml`
+- **REST API**: Available for newer endpoints (check OpenAPI schema at developer.sage.com)
+- **Auth**: OAuth 2.0 via Sage App Registry (recommended for new integrations)
+- **Legacy Auth**: Session-based with Web Services sender credentials
+- **Rate Limit**: 100 requests/minute, 2 concurrent connections per tenant
+- **Node.js SDK**: Official `@sage-intacct/sdk` available (Apache v2.0 license)
+- **Developer Portal**: https://developer.sage.com/intacct/docs/
+
+### Authentication Flow
+1. Register app at Sage App Registry
+2. OAuth 2.0 authorization code flow
+3. Store access_token, refresh_token, company_id in `sage_intacct_oauth` table
+4. Auto-refresh tokens before expiry
+5. Smart Events webhook for real-time notifications from Sage
+
+### Database Schema
+```sql
+create table sage_intacct_oauth (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references organizations(id) on delete cascade,
+  access_token text not null,
+  refresh_token text not null,
+  expires_at timestamptz not null,
+  company_id text not null,
+  location_id text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create table sage_cost_code_mapping (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references projects(id) on delete cascade,
+  sitesync_cost_code text not null,
+  sage_account_id text not null,
+  sage_account_name text,
+  sync_direction text default 'bidirectional' check (sync_direction in ('to_sage', 'from_sage', 'bidirectional')),
+  last_synced_at timestamptz,
+  created_at timestamptz default now()
+);
+
+create table sage_sync_log (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references projects(id),
+  entity_type text not null,
+  entity_id uuid not null,
+  direction text not null check (direction in ('push', 'pull')),
+  status text not null check (status in ('pending', 'success', 'failed', 'conflict')),
+  sage_doc_id text,
+  error_message text,
+  payload jsonb,
+  created_at timestamptz default now()
+);
+```
+
+### Data Sync Architecture
+| SiteSync Entity | Sage Object | Direction | Trigger |
+|---|---|---|---|
+| Change Order (approved) | AP Invoice | Push | On CO approval |
+| Pay App line item | AR Invoice | Push | On pay app submit |
+| Budget cost code | COSTTYPE / Account | Pull | On connect + daily |
+| Vendor/Subcontractor | Vendor | Bidirectional | On create/update |
+| Committed cost | AP Bill | Pull | Webhook or polling |
+| Actual job cost | GL Journal Entry | Pull | Daily cron |
+
+### Edge Functions
+1. `sage-oauth` — Connect/disconnect/refresh OAuth tokens
+2. `sage-sync-costs` — Push approved COs and pay app items to Sage as AP/AR
+3. `sage-pull-job-costs` — Pull committed and actual costs from Sage project accounting
+4. `sage-sync-vendors` — Bidirectional vendor/sub sync
+5. `sage-webhook` — Receive Smart Events from Sage for real-time updates
+
+### Construction-Specific API Objects
+- **COSTTYPE**: Cost types (labor, material, subcontract, equipment, other)
+- **PROJECT**: Project dimension for job costing
+- **TASK**: Task dimension within project (maps to WBS/cost code)
+- **APBILL**: Accounts payable bills (committed costs)
+- **ARINVOICE**: Accounts receivable invoices (pay apps)
+- **VENDOR**: Vendor/subcontractor master data
+- **GLENTRY**: General ledger entries (actual costs)
+
+### Frontend
+- `src/pages/Integrations.tsx` — Sage Intacct card with Connect/Disconnect
+- `src/services/integrations/sage-intacct.ts` — API client
+- Settings: cost code mapping UI (SiteSync cost codes ↔ Sage accounts)
+- Budget page: "Synced with Sage" indicator + last sync time + manual sync button
+
+---
+
+## 11. Schedule Import (Primavera P6 + MS Project) (PRIORITY: P0)
+
+### Purpose
+Import project schedules from Oracle Primavera P6 (.xer, .xml) and Microsoft Project (.mpp) files. The schedule is the heartbeat of every construction project. Superintendents check it daily.
+
+### Supported Formats
+
+#### XER (Primavera P6 Export)
+- Plain text structured format (not binary)
+- Contains: activities, WBS, resources, calendars, relationships, baselines
+- Supported P6 versions: 15.2 through 24+
+- **Parser**: Python `xerparser` library (pip install xerparser)
+- Alternative: `PyP6Xer` for more comprehensive manipulation
+
+#### P6 XML
+- Standard XML export from P6
+- Includes baselines and layout files (advantage over XER)
+- Parse with standard XML parsers (xml2js in Node, lxml in Python)
+
+#### MPP (Microsoft Project)
+- Binary format, requires specialized parser
+- **Library**: MPXJ (Java, .NET, Python bindings)
+- npm: `mpxj` (Java-based, requires JRE) or convert server-side
+- MPXJ also reads XER and P6 XML (universal schedule parser)
+- Supports MS Project 98 through 2024
+
+### P6 REST API (Phase 2, for live sync)
+- **Base URL**: `https://<server>/p6ws/restapi/v2/`
+- **Auth**: OAuth 2.0 or Basic Auth
+- **Key Endpoints**:
+  - `GET /activities` — Activity list with dates, float, status
+  - `GET /wbs` — Work breakdown structure hierarchy
+  - `GET /activityrelationships` — Dependencies (FS, FF, SS, SF)
+  - `GET /resources` — Resource assignments
+  - `GET /calendars` — Working day calendars
+- **Licensing**: Requires P6 EPPM Cloud + Peripheral Access license for API
+
+### Data Model Mapping
+```
+P6 Activity → schedule_activities
+  activity_id → external_id
+  activity_name → name
+  start_date → planned_start
+  finish_date → planned_finish
+  actual_start → actual_start
+  actual_finish → actual_finish
+  total_float → float_days
+  percent_complete → progress_pct
+  status → status (TK_NotStarted→not_started, TK_Active→in_progress, TK_Complete→complete)
+
+P6 WBS → schedule_phases
+  wbs_id → external_id
+  wbs_name → name
+  parent_wbs_id → parent_id (recursive)
+
+P6 Relationship → schedule_dependencies
+  predecessor_id → predecessor_activity_id
+  successor_id → successor_activity_id
+  relationship_type → type (FS, FF, SS, SF)
+  lag → lag_days
+```
+
+### Critical Path Calculation
+After import, run forward/backward pass algorithm:
+1. Forward pass: calculate Early Start (ES) and Early Finish (EF) for each activity
+2. Backward pass: calculate Late Start (LS) and Late Finish (LF)
+3. Total Float = LS - ES (or LF - EF)
+4. Critical path = activities where Total Float = 0
+5. Store `is_critical` boolean and `float_days` on each activity
+6. Recalculate on any activity date change
+
+### Edge Functions
+1. `schedule-import` — Accept file upload (.xer, .xml, .mpp), detect format, parse, normalize to JSON, return activities + WBS + dependencies
+2. `schedule-sync-p6` — Phase 2: OAuth + REST API live sync with P6 Cloud
+
+### Frontend
+- `src/pages/Schedule.tsx` — "Import Schedule" button (file picker: .xer, .xml, .mpp)
+- Upload flow: file select → progress bar → preview data → confirm import
+- Gantt chart: critical path in red, dependencies as arrows, float on hover
+- Re-import: show diff (added/changed/removed activities)
+
+---
+
 ## Integration Summary Table
 
 | Integration | Purpose | Auth | Data Flow | Rate Limit | Cost |
@@ -3097,6 +3274,9 @@ export function AICopilot() {
 | OpenSeadragon | Drawing zoom | npm package | Frontend only | N/A | Free |
 | Mapbox | Location, geofencing | API key | Edge function + frontend | 50K/mo | Free |
 | QuickBooks | Invoice export, cost codes | OAuth 2 | Edge function on export | 10/sec | Contact |
+| Sage Intacct | Job costing, AP/AR, vendors | OAuth 2 | Bidirectional via webhook | 100/min | Contact |
+| Primavera P6 | Schedule import/sync | OAuth 2 / File | Upload or REST API | N/A | License |
+| MS Project | Schedule import | File upload | Parse via MPXJ | N/A | Free |
 | Anthropic Claude | AI assistant | API key | Edge function on message | Per request | Token based |
 
 ---

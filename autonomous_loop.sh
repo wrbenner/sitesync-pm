@@ -80,6 +80,7 @@ PROJECT_DIR="${1:?Usage: ./autonomous_loop.sh /path/to/project}"
 PROJECT_DIR="$(cd "$PROJECT_DIR" && pwd)"
 
 MAX_CYCLES="${MAX_CYCLES:-20}"
+[ "${MAX_CYCLES:-0}" -lt 1 ] && MAX_CYCLES=1
 MAX_SPEND="${MAX_SPEND:-500}"
 AUDIT_MODEL="${AUDIT_MODEL:-claude-opus-4-6}"
 CODE_MODEL="${CODE_MODEL:-claude-sonnet-4-6}"
@@ -220,6 +221,23 @@ format_bytes() {
 elapsed() {
     local secs=$(( $(date +%s) - START_TIME ))
     printf "%dh %02dm %02ds" $(( secs / 3600 )) $(( secs % 3600 / 60 )) $(( secs % 60 ))
+}
+
+# Run a command with a timeout (seconds). Returns the command's exit code,
+# or 124 on timeout. Usage: run_with_timeout 120 eval "$BUILD_CMD"
+# Prevents any single build/test/deploy from hanging the entire engine.
+BUILD_TIMEOUT="${BUILD_TIMEOUT:-120}"
+TEST_TIMEOUT="${TEST_TIMEOUT:-180}"
+DEPLOY_TIMEOUT="${DEPLOY_TIMEOUT:-300}"
+
+run_build() {
+    # Runs BUILD_CMD with timeout. Args: extra flags to eval (optional)
+    timeout "$BUILD_TIMEOUT" bash -c "cd \"$PROJECT_DIR\" && eval \"$BUILD_CMD\" $*"
+}
+
+run_tests() {
+    # Runs TEST_CMD with timeout.
+    timeout "$TEST_TIMEOUT" bash -c "cd \"$PROJECT_DIR\" && eval \"$TEST_CMD\" $*"
 }
 
 # Extract text from Claude API response (handles mixed content blocks)
@@ -593,6 +611,7 @@ read_founder_context() {
         "LEARNINGS.md:ENGINE LEARNINGS (what worked, what failed, fix rates, score trends from prior runs — use this to avoid repeating mistakes)"
         "PAGE_ACCEPTANCE_CRITERIA.md:PAGE ACCEPTANCE CRITERIA (GOSPEL — explicit definition of done for every page. Each numbered criterion is a test case. Violations are bugs. Score against these BEFORE the 14 dimensions.)"
         "VERIFICATION_TESTS.md:VERIFICATION TESTS (executable test specs for auth flows, RLS security, data integrity, and permission gates. After fixing auth/security/data issues, GENERATE and RUN the relevant test. A fix that compiles but fails verification is NOT fixed. RLS failures are P0 — stop everything.)"
+        "PRODUCTION_ROADMAP.md:PRODUCTION ROADMAP (what to BUILD to reach shippable product. P0 items are dealbreakers — GCs will not sign without them. In ARCHITECT mode, pick the highest-priority unfinished P0 item for this module and implement it. In VISIONARY mode, build P1/P2 items. Each item has exact database schemas, edge function specs, file paths, and acceptance tests. Follow them precisely.)"
     )
 
     for entry in "${brain_files[@]}"; do
@@ -746,18 +765,24 @@ Do NOT add new features. Do NOT redesign anything. Fix and verify."
         thinking_mode="architect"
         mode_instructions="
 ## MODE: ARCHITECT (cycles 4-10)
-You are a world-class product architect. The bugs are fixed. Now make it beautiful.
-Focus on: Google-level visual polish, rich mock data that tells a story, smooth
-interactions (hover states, transitions, micro-animations), data richness that makes
-PMs think this is a real product with real data. Every table row hoverable. Every
-metric card showing trends. Every empty state showing helpful guidance.
-Make this feel like \$100M software."
+You are a world-class product architect. The bugs are fixed. Now BUILD real features.
+TWO PRIORITIES in this mode:
+1. PRODUCTION ROADMAP: Read PRODUCTION_ROADMAP.md. Pick the highest-priority unfinished P0 item
+   relevant to this module and implement it. This means creating new files, installing npm packages,
+   writing new edge functions, and creating database migrations. One P0 feature per cycle per module.
+2. POLISH: After addressing any roadmap item, continue with Google-level visual polish, rich data,
+   smooth interactions, and data richness.
+You ARE allowed to create new files, new components, new services, new edge functions, and new
+database migrations. You ARE allowed to install npm packages. The PRODUCTION_ROADMAP.md file has
+exact specs including database schemas, file paths, and acceptance tests. Follow them precisely.
+Make this feel like \$100M software that a GC would trust with a \$50M project."
     else
         thinking_mode="visionary"
         mode_instructions="
 ## MODE: VISIONARY (cycles 11+)
-You are a visionary founder. The product is polished. Now build the future.
-Study what Procore, Autodesk, Fieldwire, Buildertrend CANNOT do.
+You are a visionary founder. P0 features are built. Now build the future.
+FIRST: Check PRODUCTION_ROADMAP.md for any remaining P0 or P1 items. Build those first.
+THEN: Study what Procore, Autodesk, Fieldwire, Buildertrend CANNOT do.
 Build features that would make a \$500M GC write a check on the spot:
 
 VISIONARY FEATURES TO CONSIDER (pick what fits this module):
@@ -794,9 +819,9 @@ CRITICAL PROMPT RULES (follow exactly or fixes will fail):
 - Each prompt MUST include the exact function/component name to modify.
 - Each prompt MUST describe the BEFORE state (what the code currently does) and AFTER state (what it should do).
 - Each prompt MUST end with: \"After changes, run: npm run build to verify no TypeScript errors.\"
-- Do NOT generate prompts for features that require new backend APIs, databases, or external services.
-- Do NOT generate prompts for \"add real-time collaboration\" or \"add offline sync\" — these are multi-sprint features, not single prompts.
-- Focus on: fixing bugs, improving types, adding error/empty/loading states, improving UI polish, fixing calculations, adding ARIA attributes, improving mobile responsiveness.
+- In SURGEON mode ONLY: Do NOT generate prompts for new features. Focus on fixing bugs, improving types, adding states, improving UI polish, fixing calculations, adding ARIA attributes, improving mobile responsiveness.
+- In ARCHITECT and VISIONARY modes: You ARE allowed to generate prompts that create new files, new components, new services, install npm packages, write edge functions, and create database migrations. Read PRODUCTION_ROADMAP.md for exact specs. Each prompt should still target ONE file, but you can generate multiple prompts that together implement a feature (e.g. prompt 1: create service file, prompt 2: create UI component, prompt 3: create edge function).
+- In ALL modes: Do NOT generate prompts for \"add real-time collaboration\" or \"add offline sync\" — these already exist in the codebase.
 - PAGE_ACCEPTANCE_CRITERIA.md is the source of truth for what 'done' means. It defines criteria per PAGE, not per engine module. When auditing a composite module (e.g. 'core-workflows' covers RFIs + submittals + change orders + punch list), find ALL matching page sections in the criteria doc and validate each one. Module-to-page mapping: core-workflows → RFIs, Submittals, Change Orders, Punch List | financial-engine → Budget, Payment Applications | scheduling → Schedule | field-operations → Daily Log, Field Capture, Safety | project-intelligence → Dashboard, AI Copilot | ui-design-system → Global Standards. Every numbered criterion is a P0 test case. Violations are bugs. Score against acceptance criteria FIRST, then the 14 dimensions.
 
 CONTEXT:
@@ -1018,23 +1043,23 @@ execute_prompts() {
 
     # PRE-MODULE BUILD GATE: Don't waste money executing prompts if build is already broken
     if [ -n "$BUILD_CMD" ]; then
-        if ! (cd "$PROJECT_DIR" && eval "$BUILD_CMD" > /dev/null 2>&1); then
+        if ! (run_build > /dev/null 2>&1); then
             warn "Build is broken BEFORE ${module_name} — fixing build first..."
             local build_errors
-            build_errors=$(cd "$PROJECT_DIR" && eval "$BUILD_CMD" 2>&1 | tail -40)
+            build_errors=$(run_build 2>&1 | tail -40)
             local gate_log="${exec_dir}/build_gate_fix.log"
             run_claude_code "The TypeScript build is broken. Fix ALL errors below. Do not change anything unrelated. Errors:
 ${build_errors}" "$gate_log" 180
             ESTIMATED_SPEND=$(echo "scale=2; $ESTIMATED_SPEND + 0.08" | bc 2>/dev/null || echo "$ESTIMATED_SPEND")
             CYCLE_SPEND=$(echo "scale=2; $CYCLE_SPEND + 0.08" | bc 2>/dev/null || echo "$CYCLE_SPEND")
             (cd "$PROJECT_DIR" && \
-             git add src/ package.json tsconfig.json 2>/dev/null; \
+             git add src/ supabase/ package.json package-lock.json tsconfig.json 2>/dev/null; \
              if ! git diff --cached --quiet 2>/dev/null; then \
                  git commit -m "engine: build gate fix before ${module_name}" 2>/dev/null; \
              fi) || true
 
             # If build still broken after fix, skip this module entirely
-            if ! (cd "$PROJECT_DIR" && eval "$BUILD_CMD" > /dev/null 2>&1); then
+            if ! (run_build > /dev/null 2>&1); then
                 error "Build still broken after repair — skipping ${module_name} to save budget"
                 return 1
             fi
@@ -1092,14 +1117,21 @@ ${build_errors}" "$gate_log" 180
         fi
 
         # Wrap every prompt with project context so Claude Code understands the codebase
+        local mode_rules=""
+        if [ "$CYCLE" -gt 3 ]; then
+            mode_rules="
+8. FEATURE BUILDING (ARCHITECT/VISIONARY MODE): You ARE allowed to create new files, new components, new services, and new directories. You ARE allowed to run 'npm install <package>' to add dependencies. You ARE allowed to create new Supabase edge functions in supabase/functions/ and new migrations in supabase/migrations/. When building a feature from PRODUCTION_ROADMAP.md, follow the exact database schemas, file paths, and acceptance tests specified there.
+9. For new edge functions: Create the function directory and index.ts file. Use Deno/TypeScript. Import from supabase-js. Follow the pattern of existing functions in supabase/functions/.
+10. For new migrations: Create a new .sql file in supabase/migrations/ with the next sequential number. Include RLS policies for any new tables."
+        fi
         local prompt="IMPORTANT RULES:
 1. This is a React 19 + TypeScript + Vite app. Styles use inline styles from src/styles/theme.ts. Do NOT use CSS modules or styled-components.
 2. Read the target file FIRST before making changes. Understand what exists before modifying.
-3. Make the MINIMUM change needed. Do not refactor unrelated code.
+3. Make the MINIMUM change needed. Do not refactor unrelated code. Exception: if building a new feature from PRODUCTION_ROADMAP.md, create all necessary files.
 4. After making changes, run: npm run build — if the build fails, fix the errors before finishing.
 5. Never use hyphens in UI text. Use commas or periods instead.
 6. For Supabase/backend code: Use the client from src/lib/supabase.ts. Type all queries against the Database interface in src/types/database.ts. Use hooks from src/hooks/useSupabase.ts. Follow RLS patterns (all tables filtered by project_id). Add real-time subscriptions for rfis, daily_logs, punch_list_items, notifications. Implement optimistic updates on all mutations. Edge functions go in supabase/functions/.
-7. VERIFICATION: If this fix touches auth (useAuth, Login, Signup, ProtectedRoute), RLS (rls.ts, migrations), permissions (usePermissions, PermissionGate), or data seeding (seed.sql, mockData), you MUST also generate and run the relevant verification test from VERIFICATION_TESTS.md. A fix that compiles but fails verification is NOT fixed. Write the test file, run it with 'npx vitest run' or 'npx playwright test', and include the result. RLS test failures are P0.
+7. VERIFICATION: If this fix touches auth (useAuth, Login, Signup, ProtectedRoute), RLS (rls.ts, migrations), permissions (usePermissions, PermissionGate), or data seeding (seed.sql, mockData), you MUST also generate and run the relevant verification test from VERIFICATION_TESTS.md. A fix that compiles but fails verification is NOT fixed. Write the test file, run it with 'npx vitest run' or 'npx playwright test', and include the result. RLS test failures are P0.${mode_rules}
 
 TASK:
 ${raw_prompt}"
@@ -1146,17 +1178,17 @@ ${raw_prompt}"
 
             # Quick build check after each prompt (catch regressions immediately)
             if [ -n "$BUILD_CMD" ]; then
-                if ! (cd "$PROJECT_DIR" && eval "$BUILD_CMD" > /dev/null 2>&1); then
+                if ! (run_build > /dev/null 2>&1); then
                     warn "  Build broken after ${issue_id} — auto-fixing..."
                     local build_errors
-                    build_errors=$(cd "$PROJECT_DIR" && eval "$BUILD_CMD" 2>&1 | tail -30)
+                    build_errors=$(run_build 2>&1 | tail -30)
                     sleep "$PROMPT_COOLDOWN"
                     run_claude_code "The TypeScript build is broken. Fix these errors. Only fix the errors, do not change anything else. Errors: ${build_errors}" "${exec_log}.buildfix" 180
                     ESTIMATED_SPEND=$(echo "scale=2; $ESTIMATED_SPEND + 0.08" | bc 2>/dev/null || echo "$ESTIMATED_SPEND")
                     CYCLE_SPEND=$(echo "scale=2; $CYCLE_SPEND + 0.08" | bc 2>/dev/null || echo "$CYCLE_SPEND")
 
                     # If build STILL broken after fix, revert ONLY uncommitted changes and move on
-                    if ! (cd "$PROJECT_DIR" && eval "$BUILD_CMD" > /dev/null 2>&1); then
+                    if ! (run_build > /dev/null 2>&1); then
                         warn "  Build still broken — reverting uncommitted changes to last good commit"
                         # Save what we're reverting for debugging
                         (cd "$PROJECT_DIR" && git diff src/ > "${exec_dir}/reverted_${issue_id}.patch" 2>/dev/null) || true
@@ -1171,7 +1203,7 @@ ${raw_prompt}"
             # Atomic commit: save every successful change immediately (never lose work)
             # v6.0: Only commit if there are actual staged changes (no empty commits)
             (cd "$PROJECT_DIR" && \
-             git add src/ package.json tsconfig.json 2>/dev/null; \
+             git add src/ supabase/ package.json package-lock.json tsconfig.json 2>/dev/null; \
              if ! git diff --cached --quiet 2>/dev/null; then \
                  git commit -m "engine: fix ${issue_id} — ${title}" 2>/dev/null; \
              fi) || true
@@ -1208,7 +1240,7 @@ ${raw_prompt}"
                     FEATURES_INVENTED=$(( FEATURES_INVENTED + 1 ))
                     # Atomic commit for invention
                     (cd "$PROJECT_DIR" && \
-                     git add src/ package.json tsconfig.json 2>/dev/null; \
+                     git add src/ supabase/ package.json package-lock.json tsconfig.json 2>/dev/null; \
                      if ! git diff --cached --quiet 2>/dev/null; then \
                          git commit -m "engine: invent ${feat_title}" 2>/dev/null; \
                      fi) || true
@@ -1236,7 +1268,7 @@ verify_build() {
     log "Verifying build..."
     local build_log="${cycle_dir}/build.log"
 
-    if (cd "$PROJECT_DIR" && eval "$BUILD_CMD" > "$build_log" 2>&1); then
+    if (run_build > "$build_log" 2>&1); then
         success "Build passed"
         return 0
     fi
@@ -1263,7 +1295,7 @@ Fix every error. Do not introduce any new errors. After fixing, confirm that \`$
     CYCLE_SPEND=$(echo "scale=2; $CYCLE_SPEND + 0.08" | bc 2>/dev/null || echo "$CYCLE_SPEND")
 
     # Re-verify
-    if (cd "$PROJECT_DIR" && eval "$BUILD_CMD" >> "$build_log" 2>&1); then
+    if (run_build >> "$build_log" 2>&1); then
         success "Build fixed and passing"
         return 0
     fi
@@ -1284,7 +1316,7 @@ verify_tests() {
     log "Running tests..."
     local test_log="${cycle_dir}/test.log"
 
-    if (cd "$PROJECT_DIR" && eval "$TEST_CMD" > "$test_log" 2>&1); then
+    if (run_tests > "$test_log" 2>&1); then
         success "Tests passed"
         return 0
     fi
@@ -1311,7 +1343,7 @@ Fix every failing test. Do not delete or skip tests. If the test expectations ar
     CYCLE_SPEND=$(echo "scale=2; $CYCLE_SPEND + 0.08" | bc 2>/dev/null || echo "$CYCLE_SPEND")
 
     # Re-verify
-    if (cd "$PROJECT_DIR" && eval "$TEST_CMD" >> "$test_log" 2>&1); then
+    if (run_tests >> "$test_log" 2>&1); then
         success "Tests fixed and passing"
         return 0
     fi
@@ -1415,7 +1447,7 @@ verify_quality_gates() {
     # TypeScript strict error count (count unique errors, don't fail)
     local ts_errors=0
     if [ -n "$BUILD_CMD" ]; then
-        ts_errors=$(cd "$PROJECT_DIR" && npx tsc --noEmit 2>&1 | grep -c "error TS" 2>/dev/null || echo 0)
+        ts_errors=$(cd "$PROJECT_DIR" && timeout 60 npx tsc --noEmit 2>&1 | grep -c "error TS" 2>/dev/null || echo 0)
     fi
     ts_errors=$(echo "${ts_errors:-0}" | tr -cd '0-9')
     [ -z "$ts_errors" ] && ts_errors=0
@@ -1864,12 +1896,17 @@ verify_changes() {
     # Check build status
     local build_ok="true"
     if [ -n "$BUILD_CMD" ]; then
-        if ! (cd "$PROJECT_DIR" && eval "$BUILD_CMD" > /dev/null 2>&1); then
+        if ! (run_build > /dev/null 2>&1); then
             build_ok="false"
         fi
     fi
 
-    # For each issue, check if the target file appears in changes
+    # For each issue, check if a commit exists with that issue ID in the message
+    # This is far more accurate than filename matching — the engine tags every
+    # commit with the exact issue ID (e.g. "engine: fix ui-design-system-C1-002")
+    local all_commit_messages
+    all_commit_messages=$(cd "$PROJECT_DIR" && git log --oneline --since="${cycle_start_time}" --grep="engine:" 2>/dev/null || echo "")
+
     local verifications="[]"
     local fixed_count=0
     local partial_count=0
@@ -1885,25 +1922,28 @@ verify_changes() {
         issue_file=$(jq -r --argjson i "$idx" '(.issues // [])[$i].file // ""' "$audit_file" 2>/dev/null)
 
         local status="not_fixed"
-        local note="No file change detected"
+        local note="No matching commit found"
 
-        if [ -n "$issue_file" ] && [ "$issue_file" != "null" ]; then
-            # Check if this file appears in any changes (committed or uncommitted)
-            if echo "$all_changes" | grep -qF "$issue_file" 2>/dev/null; then
-                status="fixed"
-                note="Target file was modified"
-                fixed_count=$(( fixed_count + 1 ))
+        # Primary check: does a commit message contain this issue ID?
+        if echo "$all_commit_messages" | grep -qF "$issue_id" 2>/dev/null; then
+            status="fixed"
+            note="Commit found matching issue ID"
+            fixed_count=$(( fixed_count + 1 ))
+        # Secondary check: was the target file directly modified?
+        elif [ -n "$issue_file" ] && [ "$issue_file" != "null" ] && echo "$all_changes" | grep -qF "$issue_file" 2>/dev/null; then
+            status="fixed"
+            note="Target file was modified"
+            fixed_count=$(( fixed_count + 1 ))
+        # Tertiary: was any file in the same directory modified? (genuine partial)
+        elif [ -n "$issue_file" ] && [ "$issue_file" != "null" ]; then
+            local issue_dir
+            issue_dir=$(dirname "$issue_file")
+            if echo "$all_changes" | grep -qF "$issue_dir/" 2>/dev/null; then
+                status="partial"
+                note="Related file in same directory modified but no direct commit for this issue"
+                partial_count=$(( partial_count + 1 ))
             else
-                # Check if a related file in same directory was changed (partial fix)
-                local issue_dir
-                issue_dir=$(dirname "$issue_file")
-                if echo "$all_changes" | grep -qF "$issue_dir/" 2>/dev/null; then
-                    status="partial"
-                    note="Related file in same directory modified"
-                    partial_count=$(( partial_count + 1 ))
-                else
-                    unfixed_count=$(( unfixed_count + 1 ))
-                fi
+                unfixed_count=$(( unfixed_count + 1 ))
             fi
         else
             unfixed_count=$(( unfixed_count + 1 ))
@@ -1954,7 +1994,7 @@ commit_cycle() {
         fi
 
         # Add source and config files explicitly (avoid git add -A which can stage sensitive files)
-        git add src/ package.json tsconfig.json vite.config.ts 2>/dev/null || true
+        git add src/ supabase/ package.json package-lock.json tsconfig.json vite.config.ts 2>/dev/null || true
         git add supabase/ public/ 2>/dev/null || true
         # Only add known safe markdown files, not all *.md (avoids staging engine logs)
         for md_file in LEARNINGS.md VISION.md FEEDBACK.md README.md; do
@@ -2582,7 +2622,7 @@ Also create playwright.config.ts at the project root with:
     # Run the tests
     log "E2E: Running Playwright tests..."
     local e2e_output
-    e2e_output=$(cd "$PROJECT_DIR" && npx playwright test --reporter=json 2>&1 | tail -100) || true
+    e2e_output=$(cd "$PROJECT_DIR" && timeout 120 npx playwright test --reporter=json 2>&1 | tail -100) || true
 
     # Parse results
     local passed=0
@@ -2661,7 +2701,7 @@ deploy_cycle() {
 
     # Check build passes first
     if [ -n "$BUILD_CMD" ]; then
-        if ! (cd "$PROJECT_DIR" && eval "$BUILD_CMD" > /dev/null 2>&1); then
+        if ! (run_build > /dev/null 2>&1); then
             warn "DEPLOY: Build failing, skipping deploy"
             return 0
         fi
@@ -2674,9 +2714,9 @@ deploy_cycle() {
 
     if [ "$is_final" = "true" ]; then
         log "DEPLOY: PRODUCTION deploy (final cycle)"
-        deploy_output=$(cd "$PROJECT_DIR" && vercel --prod --yes 2>&1) || true
+        deploy_output=$(cd "$PROJECT_DIR" && timeout "$DEPLOY_TIMEOUT" vercel --prod --yes 2>&1) || true
     else
-        deploy_output=$(cd "$PROJECT_DIR" && vercel --yes 2>&1) || true
+        deploy_output=$(cd "$PROJECT_DIR" && timeout "$DEPLOY_TIMEOUT" vercel --yes 2>&1) || true
     fi
 
     # Extract deploy URL

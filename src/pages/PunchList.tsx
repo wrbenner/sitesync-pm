@@ -56,7 +56,11 @@ const TwoStepBadge: React.FC<{ verificationStatus: string }> = ({ verificationSt
   const step2Label = step2Done ? 'Verified' : 'Awaiting';
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+    <div
+      role="img"
+      aria-label={`Status: ${statusLabel[verificationStatus] ?? verificationStatus}`}
+      style={{ display: 'flex', alignItems: 'center', gap: 3 }}
+    >
       {/* Sub node */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
         <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: step1Dot, flexShrink: 0 }} />
@@ -151,6 +155,7 @@ const PunchListPage: React.FC = () => {
   const [rejectNote, setRejectNote] = useState('');
   const [showRejectNote, setShowRejectNote] = useState(false);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+  const [ariaAnnouncement, setAriaAnnouncement] = useState('');
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
@@ -264,6 +269,7 @@ const PunchListPage: React.FC = () => {
         projectId: projectId!,
       });
       toast.success(`${item.itemNumber} marked sub-complete. Superintendent notified for verification.`);
+      setAriaAnnouncement(`${item.itemNumber} marked sub-complete`);
     } catch {
       toast.error('Failed to update status');
     }
@@ -277,6 +283,7 @@ const PunchListPage: React.FC = () => {
         projectId: projectId!,
       });
       toast.success(`${item.itemNumber} verified and closed.`);
+      setAriaAnnouncement(`${item.itemNumber} verified and closed`);
     } catch {
       toast.error('Failed to verify item');
     }
@@ -291,6 +298,7 @@ const PunchListPage: React.FC = () => {
         projectId: projectId!,
       });
       toast.success(`${selected.itemNumber} marked sub-complete. Superintendent notified for verification.`);
+      setAriaAnnouncement(`${selected.itemNumber} marked sub-complete`);
       setSelectedId(null);
     } catch {
       toast.error('Failed to update status');
@@ -306,6 +314,7 @@ const PunchListPage: React.FC = () => {
         projectId: projectId!,
       });
       toast.success(`${selected.itemNumber} verified and closed.`);
+      setAriaAnnouncement(`${selected.itemNumber} verified and closed`);
       setSelectedId(null);
     } catch {
       toast.error('Failed to verify item');
@@ -321,6 +330,7 @@ const PunchListPage: React.FC = () => {
         projectId: projectId!,
       });
       toast.error(`${selected.itemNumber} rejected. Subcontractor notified to rework.`);
+      setAriaAnnouncement(`${selected.itemNumber} rejected`);
       setRejectNote('');
       setShowRejectNote(false);
       setSelectedId(null);
@@ -531,6 +541,15 @@ const PunchListPage: React.FC = () => {
       subtitle={`${openCount} open \u00b7 ${subCompleteCount} pending verification \u00b7 ${verifiedCount} verified`}
       actions={<PermissionGate permission="punch_list.create"><Btn onClick={() => setShowCreateModal(true)}>New Item</Btn></PermissionGate>}
     >
+      {/* Screen reader live region for status change announcements */}
+      <div
+        aria-live="polite"
+        aria-atomic="true"
+        style={{ position: 'absolute', width: 1, height: 1, margin: -1, padding: 0, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}
+      >
+        {ariaAnnouncement}
+      </div>
+
       {/* Predictive Alert Banners */}
       {pageAlerts.map((alert) => (
         <PredictiveAlertBanner key={alert.id} alert={alert} />
@@ -664,9 +683,12 @@ const PunchListPage: React.FC = () => {
                   <div style={{ fontSize: '14px', color: colors.textTertiary }}>{item.area}</div>
                 )}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' as const }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: statusDotColor, flexShrink: 0 }} />
-                    <span style={{ fontSize: '13px', color: statusDotColor, fontWeight: 500 }}>
+                  <div
+                    style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                    aria-label={`Status: ${statusLabel[item.verification_status] ?? item.verification_status}`}
+                  >
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: statusDotColor, flexShrink: 0 }} aria-hidden="true" />
+                    <span style={{ fontSize: '13px', color: statusDotColor, fontWeight: 500 }} aria-hidden="true">
                       {statusLabel[item.verification_status] ?? item.verification_status}
                     </span>
                   </div>
@@ -689,6 +711,7 @@ const PunchListPage: React.FC = () => {
       ) : (
         <Card padding="0">
           <VirtualDataTable
+            aria-label="Punch list items"
             data={filteredList}
             columns={plColumns}
             rowHeight={48}

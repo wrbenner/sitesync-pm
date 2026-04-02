@@ -277,6 +277,11 @@ The daily record of what happened on site — crew counts, work performed, weath
 12. Empty day (no log for today): persistent banner at top of page — "Today's daily log hasn't been started" with "Start Log" button. Visible to superintendent+ only.
 13. Export: PDF export with project header, weather, all sections formatted for printing. Supports date range export (weekly/monthly compilation).
 14. Mobile: optimized for field use. Large touch targets, voice-to-text for narrative sections, camera integration for quick photo capture. Works fully offline.
+15. SPEED BENCHMARK: A superintendent must be able to submit a complete daily log (weather + 3 crew entries + 2 work items + 2 photos) in under 90 seconds from page load. Measure and optimize for this target.
+16. "Same as yesterday" button: one tap pre-fills crew, equipment, and visitors from the previous day's log. Superintendent only needs to update work performed and add photos.
+17. Default toggles: "No incidents today" and "No visitors today" default to ON. Sections expand only when toggled OFF. This eliminates 2 form sections for 90% of days.
+18. Photo multi-select: "Add Photos" opens camera/gallery with multi-select. All photos upload in parallel with progress indicator. Auto-tag with timestamp and GPS.
+19. Voice-to-text: microphone icon next to every text input. Tap to speak, auto-transcribe. Essential for gloved hands in winter.
 
 ---
 
@@ -510,6 +515,33 @@ Tracks every scope change from proposal through approval and budget integration.
 12. Export: individual CO as PDF with cost breakdown and signatures. CO log as Excel/PDF summary report.
 13. Mobile: view and approve COs. Create only from desktop (due to cost breakdown complexity).
 14. Real-time: pending COs show notification badge. Approval/rejection triggers notification to all watchers.
+
+---
+
+## 16. Email Notifications (System-wide)
+
+**Module ID**: `notifications` | **Min Role**: viewer | **Permission**: automatic
+
+### What This Does
+Sends transactional email notifications when important events happen. Without email notifications, RFIs sit unanswered for weeks because nobody knows they were assigned.
+
+### Notification Triggers and Acceptance Criteria
+1. RFI assigned to user → email within 60 seconds with RFI title, due date, and direct link.
+2. RFI response received → email to RFI creator with response preview and link.
+3. RFI overdue (3 days past due) → email to ball-in-court party AND project manager.
+4. Submittal returned for revision → email to submitter with reviewer comments.
+5. Submittal approved → email to submitter and PM with approval status.
+6. Change order pending approval → email to approver with CO summary and amount.
+7. Daily log not submitted by 6 PM local time → reminder email to superintendent.
+8. Payment application ready for review → email to GC PM and owner rep.
+9. Punch item assigned → email to subcontractor with item description, location, and photo.
+10. Meeting scheduled → email to all invitees with date, time, location, agenda.
+11. User preferences: each notification type can be set to instant, daily digest, or off. Settings page at `/settings/notifications`.
+12. Daily digest email: sent at 7 PM local time, summarizes all project activity for the day (new RFIs, status changes, overdue items, upcoming deadlines).
+13. Every email includes: project name in subject line, direct link to entity, unsubscribe link.
+14. Emails render correctly on mobile (responsive HTML, tested on iOS Mail and Gmail).
+15. Notification queue: all emails queued in `notification_queue` table with status tracking (pending/sent/failed).
+16. Failed emails retry 3 times with exponential backoff. After 3 failures, logged as failed with error.
 
 ---
 
