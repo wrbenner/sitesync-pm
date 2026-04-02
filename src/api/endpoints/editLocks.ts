@@ -3,7 +3,9 @@
 
 import { supabase, transformSupabaseError } from '../client'
 
-const LOCK_DURATION_MS = 5 * 60 * 1000 // 5 minutes
+// 2-minute lock duration. The frontend MUST call renewEditLock on a 60-second
+// setInterval while the user is actively editing, otherwise the lock will expire.
+const LOCK_DURATION_MS = 2 * 60 * 1000 // 2 minutes
 
 export interface EditLockAcquired {
   locked: false
@@ -88,24 +90,30 @@ export async function acquireEditLock(
 }
 
 /**
- * Extend the lock expiry by another 5 minutes. Call every 60 seconds
+ * Extend the lock expiry by another LOCK_DURATION_MS. Call every 60 seconds
  * while the user is actively editing to prevent auto-expiry.
+ *
+ * Returns true if the lock was renewed (userId holds it), false if it was
+ * lost (expired or taken by another user).
  */
 export async function renewEditLock(
   entityType: string,
   entityId: string,
   userId: string,
-): Promise<void> {
+): Promise<boolean> {
   const expiresAt = new Date(Date.now() + LOCK_DURATION_MS)
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('edit_locks')
     .update({ expires_at: expiresAt.toISOString() })
     .eq('entity_type', entityType)
     .eq('entity_id', entityId)
     .eq('locked_by_user_id', userId)
+    .select('entity_id')
 
   if (error) throw transformSupabaseError(error)
+
+  return Array.isArray(data) && data.length > 0
 }
 
 /**
