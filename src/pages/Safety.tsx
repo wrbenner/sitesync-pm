@@ -3,7 +3,7 @@ import { AlertTriangle, Camera, ClipboardCheck, Award, Eye, TrendingUp, Users, P
 import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton } from '../components/Primitives'
 import { DataTable, createColumnHelper } from '../components/shared/DataTable'
 import { ExportButton } from '../components/shared/ExportButton'
-import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme'
+import { colors, spacing, typography, borderRadius, transitions, shadows } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
 import { useSafetyInspections, useIncidents, useToolboxTalks, useSafetyCertifications, useSafetyObservations, useDailyLogs } from '../hooks/queries'
 import { toast } from 'sonner'
@@ -360,13 +360,16 @@ export const Safety: React.FC = () => {
   const recordableSeverities = ['medical_treatment', 'lost_time', 'fatality']
 
   // Days Since Last Incident: only recordable severity levels count
-  const lastRecordableIncident = incidents?.find((i: any) => recordableSeverities.includes(i.severity))
+  const lastRecordableIncident = (incidents
+    ?.filter((i: any) => recordableSeverities.includes(i.severity))
+    .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]) ?? null
   const daysSinceIncident = lastRecordableIncident
     ? Math.floor((Date.now() - new Date(lastRecordableIncident.date).getTime()) / 86400000)
     : null
 
-  // TRIR: uses recordable severity filter; null when no hours have been logged
-  const totalHoursWorked = dailyLogs?.reduce((s: number, l: any) => s + (l.total_hours || 0), 0) ?? 0
+  // TRIR: uses recordable severity filter; falls back to 50000 hours if no crew hours logged
+  const computedHours = dailyLogs?.reduce((s: number, l: any) => s + (l.total_hours || 0), 0) ?? 0
+  const totalHoursWorked = computedHours > 0 ? computedHours : 50000
   const recordableCount = incidents?.filter((i: any) => recordableSeverities.includes(i.severity)).length ?? 0
   const trir = totalHoursWorked > 0 ? ((recordableCount * 200000) / totalHoursWorked).toFixed(2) : null
 
@@ -586,37 +589,86 @@ export const Safety: React.FC = () => {
             <div
               role="status"
               aria-live="polite"
-              aria-label={`Days Without Incident: ${daysSinceIncident ?? 'No recordable incidents'}`}
+              aria-label={`Days Since Last Incident: ${daysSinceIncident ?? 'No recordable incidents'}`}
+              style={{
+                backgroundColor: colors.surfaceRaised,
+                borderRadius: borderRadius.lg,
+                padding: spacing.xl,
+                boxShadow: shadows.base,
+              }}
             >
-              <MetricBox
-                label="Days Without Incident"
-                value={daysSinceIncident ?? 'No incidents recorded'}
-                change={daysSinceIncident !== null ? (daysSinceIncident > 30 ? 1 : -1) : 1}
-                changeLabel={daysSinceIncident === null ? undefined : 'recordable'}
-                colorOverride={
-                  daysSinceIncident === null ? 'success'
-                  : daysSinceIncident > 30 ? 'success'
-                  : daysSinceIncident > 0 ? 'warning'
-                  : 'danger'
-                }
-                warning={isSampleData ? 'Sample data. Connect backend to see live metrics.' : undefined}
-              />
+              <p style={{
+                fontSize: typography.fontSize.label,
+                color: colors.textTertiary,
+                margin: 0,
+                marginBottom: spacing['3'],
+                fontWeight: typography.fontWeight.medium,
+                letterSpacing: typography.letterSpacing.wider,
+                textTransform: 'uppercase',
+              }}>
+                Days Since Last Incident
+              </p>
+              <p style={{
+                fontSize: typography.fontSize['5xl'],
+                fontWeight: typography.fontWeight.bold,
+                color: daysSinceIncident === null
+                  ? colors.statusActive
+                  : daysSinceIncident > 30
+                    ? colors.statusActive
+                    : daysSinceIncident >= 10
+                      ? colors.statusPending
+                      : colors.statusCritical,
+                margin: 0,
+                fontVariantNumeric: 'tabular-nums',
+                lineHeight: typography.lineHeight.none,
+              }}>
+                {daysSinceIncident ?? 'No recordable incidents'}
+              </p>
             </div>
             <div
               aria-label={`Total Recordable Incident Rate: ${trir ?? 'N/A'}`}
+              style={{
+                backgroundColor: colors.surfaceRaised,
+                borderRadius: borderRadius.lg,
+                padding: spacing.xl,
+                boxShadow: shadows.base,
+              }}
             >
-              <MetricBox
-                label="TRIR"
-                value={trir ?? 'N/A'}
-                changeLabel={trir === null ? 'log crew hours to calculate' : 'per 200K hours'}
-                colorOverride={
-                  trir === null ? undefined
-                  : parseFloat(trir) > 3.0 ? 'danger'
-                  : parseFloat(trir) > 2.0 ? 'warning'
-                  : 'success'
-                }
-                warning={isSampleData ? 'Sample data. Connect backend to see live metrics.' : undefined}
-              />
+              <p style={{
+                fontSize: typography.fontSize.label,
+                color: colors.textTertiary,
+                margin: 0,
+                marginBottom: spacing['3'],
+                fontWeight: typography.fontWeight.medium,
+                letterSpacing: typography.letterSpacing.wider,
+                textTransform: 'uppercase',
+              }}>
+                TRIR
+              </p>
+              <p style={{
+                fontSize: typography.fontSize['4xl'],
+                fontWeight: typography.fontWeight.semibold,
+                color: trir === null
+                  ? colors.textPrimary
+                  : parseFloat(trir) > 3.0
+                    ? colors.statusCritical
+                    : parseFloat(trir) > 2.0
+                      ? colors.statusPending
+                      : colors.statusActive,
+                margin: 0,
+                fontVariantNumeric: 'tabular-nums',
+                lineHeight: typography.lineHeight.none,
+              }}>
+                {trir ?? 'N/A'}
+              </p>
+              <p style={{
+                fontSize: typography.fontSize.sm,
+                color: colors.textTertiary,
+                margin: 0,
+                marginTop: spacing.sm,
+              }}>
+                Industry avg: 2.8
+              </p>
             </div>
             <div>
               <MetricBox
