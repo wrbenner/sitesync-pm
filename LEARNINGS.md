@@ -15,12 +15,19 @@ The engine reads this before every audit to avoid repeating mistakes and amplify
 - Creating new files without adding proper TypeScript types causes build failures
 - Installing npm packages without importing them correctly leads to wasted prompts on build fixes
 
-## Scoring Trends (across 3 runs as of 2026-04-02)
-- Run 1 average: ~41/100 (11 modules, 136 commits, crashed at quality gates jq error)
-- Run 3 average: ~47/100 (8 modules scored, 35 commits)
-- Run 4 average: ~44/100 (11 modules, still Cycle 1 Surgeon mode)
+## Scoring Trends (across 6 runs as of 2026-04-02 12:00)
+- Run 1 (Apr 1 19:47) average: ~41/100 (11 modules, 136 commits, crashed at quality gates jq error)
+- Run 3 (Apr 2 08:34) average: ~47/100 (8 modules scored, 35 commits)
+- Run 4 (Apr 2 09:51) average: ~44/100 (11 modules, Cycle 1 Surgeon, $4.77 spent, 100% fix rate 60/60)
+- Run 5 (Apr 2 11:55) average: ~33/100 (only document-management scored so far, cycle 1 in progress)
 - Scores plateau in 45 to 55 range during Surgeon mode (fixing bugs does not create new capability)
 - Real score jumps expected in Architect mode when P0 features from PRODUCTION_ROADMAP.md land
+- CRITICAL: Engine keeps resetting to cycle 1 across runs. It has never reached cycle 4 (Architect mode). Runs are restarting fresh instead of resuming. This must be fixed or the engine will polish forever without building P0 features.
+
+## Known Issues (as of 2026-04-02 12:00)
+- document-management module has files: [] in modules.json. Haiku decomposition is not assigning Drawings.tsx, Files.tsx, DrawingViewer.tsx to this module. The audit still works via snapshot but fix prompts may be less targeted.
+- Multiple runs start and complete 0 cycles before a new run begins. Possible causes: script edits triggering hot-reload mid-cycle, tmux session restarts, or unhandled errors causing exit under set -euo pipefail.
+- The "unknown: 0/100" entries in LEARNINGS cycle summaries suggest the score logging has a bug where module names are not being captured correctly for some entries.
 
 ## Rules for Architect Mode (Cycles 4 through 10)
 - Read PRODUCTION_ROADMAP.md to find the highest priority unfinished P0 item
