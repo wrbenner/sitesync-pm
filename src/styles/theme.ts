@@ -490,3 +490,13 @@ export const skeleton = {
 export const keyframes = {
   pulse: '@keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 0.7; } }',
 } as const;
+
+// ── Token Types ──────────────────────────────────────────
+
+export type ColorToken = keyof typeof colors;
+export type SpacingToken = keyof typeof spacing;
+export type ShadowToken = keyof typeof shadows;
+
+export function themeColor(token: ColorToken): string {
+  return colors[token];
+}
