@@ -8,7 +8,7 @@ import { useCopilotStore } from '../../stores/copilotStore';
 export const FloatingAIButton: React.FC = () => {
   const { openCopilot, isOpen } = useCopilotStore();
   const projectId = useProjectId();
-  const { data: insights, isLoading, isError } = useAIInsights(projectId);
+  const { data: insights, isLoading, isError, refetch } = useAIInsights(projectId);
   const insightCount = insights?.length || 0;
 
   useEffect(() => {
@@ -18,15 +18,17 @@ export const FloatingAIButton: React.FC = () => {
     return () => { document.head.removeChild(style); };
   }, []);
 
-  const titleText = isLoading
-    ? 'Loading AI insights...'
-    : insightCount > 0
-      ? `${insightCount} AI insight${insightCount !== 1 ? 's' : ''} available`
-      : 'Open AI Copilot';
+  const titleText = isError
+    ? 'AI insights unavailable. Click to retry.'
+    : isLoading
+      ? 'Loading AI insights...'
+      : insightCount > 0
+        ? `${insightCount} AI insight${insightCount !== 1 ? 's' : ''} available`
+        : 'Open AI Copilot';
 
   return (
     <button
-      onClick={openCopilot}
+      onClick={isError ? () => refetch() : openCopilot}
       title={titleText}
       aria-label={titleText}
       style={{
@@ -70,7 +72,7 @@ export const FloatingAIButton: React.FC = () => {
           alignItems: 'center',
           justifyContent: 'center',
         }}>
-          <AlertTriangle size={10} color={colors.statusPending} />
+          <AlertTriangle size={14} color={colors.statusPending} />
         </span>
       )}
       {!isError && insightCount > 0 && (
