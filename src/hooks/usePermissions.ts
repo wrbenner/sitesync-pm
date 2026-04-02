@@ -41,6 +41,9 @@ export const ROLE_LEVELS: Record<ProjectRole, number> = {
   viewer: 1,
 }
 
+// Alias required by auth spec
+export const ROLE_HIERARCHY = ROLE_LEVELS
+
 // ── Permission Matrix ────────────────────────────────────
 
 export const PERMISSION_MATRIX: Record<Permission, ProjectRole[]> = {
@@ -233,7 +236,7 @@ export function usePermissions(): PermissionsResult {
     }
   }, [projectId, user?.id, queryClient])
 
-  const role = membership ?? null
+  const role: ProjectRole = membership ?? 'viewer'
 
   // BUG #1 FIX: Dev bypass only with explicit opt-in, viewer role, and loud warning
   if (isDevBypassActive()) {
