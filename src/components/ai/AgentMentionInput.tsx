@@ -1,7 +1,10 @@
 import React, { useState, useRef, useCallback, memo, useMemo } from 'react'
+import { toast } from 'sonner'
 import {
   Send, Calendar, DollarSign, ShieldCheck, ClipboardCheck, Scale, FileSearch,
 } from 'lucide-react'
+
+const MAX_MESSAGE_LENGTH = 4000
 import { colors, spacing, typography, borderRadius, transitions, shadows } from '../../styles/theme'
 import type { AgentDomain } from '../../types/agents'
 import { SPECIALIST_AGENTS, AGENT_DOMAINS } from '../../types/agents'
@@ -87,7 +90,12 @@ export const AgentMentionInput = memo<AgentMentionInputProps>(
     const handleSend = useCallback(() => {
       const trimmed = value.trim()
       if (!trimmed || disabled) return
-      onSend(trimmed)
+      if (trimmed.length > MAX_MESSAGE_LENGTH) {
+        toast.error(`Message too long. Maximum ${MAX_MESSAGE_LENGTH} characters.`)
+        return
+      }
+      const sanitized = trimmed.replace(/<[^>]*>/g, '')
+      onSend(sanitized)
       setValue('')
       setShowAgentMenu(false)
     }, [value, disabled, onSend])
