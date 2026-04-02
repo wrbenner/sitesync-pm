@@ -39,7 +39,9 @@ export const Login: React.FC = () => {
       setError(mapAuthError(signInError))
       setLoading(false)
     } else {
-      navigate(searchParams.get('returnTo') || '/dashboard')
+      const returnTo = searchParams.get('returnTo')
+      const destination = returnTo && returnTo.startsWith('/') ? returnTo : '/dashboard'
+      navigate(destination)
     }
   }
 
