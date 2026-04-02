@@ -1,0 +1,59 @@
+{
+  "verifications": [
+    {
+      "id": "infrastructure-C1-001",
+      "status": "partial",
+      "note": "Related file in same directory modified"
+    },
+    {
+      "id": "infrastructure-C1-002",
+      "status": "fixed",
+      "note": "Target file was modified"
+    },
+    {
+      "id": "infrastructure-C1-003",
+      "status": "fixed",
+      "note": "Target file was modified"
+    },
+    {
+      "id": "infrastructure-C1-004",
+      "status": "not_fixed",
+      "note": "No file change detected"
+    },
+    {
+      "id": "infrastructure-C1-005",
+      "status": "fixed",
+      "note": "Target file was modified"
+    },
+    {
+      "id": "infrastructure-C1-006",
+      "status": "fixed",
+      "note": "Target file was modified"
+    },
+    {
+      "id": "infrastructure-C1-007",
+      "status": "not_fixed",
+      "note": "No file change detected"
+    },
+    {
+      "id": "infrastructure-C1-008",
+      "status": "fixed",
+      "note": "Target file was modified"
+    },
+    {
+      "id": "infrastructure-C1-009",
+      "status": "fixed",
+      "note": "Target file was modified"
+    },
+    {
+      "id": "infrastructure-C1-010",
+      "status": "fixed",
+      "note": "Target file was modified"
+    }
+  ],
+  "files_changed": 3,
+  "fixed": 7,
+  "partial": 1,
+  "unfixed": 2,
+  "regression_detected": false
+}

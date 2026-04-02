@@ -1,0 +1,5 @@
+UNRESOLVED FROM CYCLE 1:
+- [partial] database-api-C1-001: Related file in same directory modified
+- [not_fixed] database-api-C1-002: No file change detected
+- [partial] database-api-C1-003: Related file in same directory modified
+- [not_fixed] database-api-C1-004: No file change detected

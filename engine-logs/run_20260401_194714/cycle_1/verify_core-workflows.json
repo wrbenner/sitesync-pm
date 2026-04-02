@@ -1,0 +1,34 @@
+{
+  "verifications": [
+    {
+      "id": "core-workflows-C1-001",
+      "status": "partial",
+      "note": "Related file in same directory modified"
+    },
+    {
+      "id": "core-workflows-C1-002",
+      "status": "partial",
+      "note": "Related file in same directory modified"
+    },
+    {
+      "id": "core-workflows-C1-003",
+      "status": "partial",
+      "note": "Related file in same directory modified"
+    },
+    {
+      "id": "core-workflows-C1-004",
+      "status": "fixed",
+      "note": "Target file was modified"
+    },
+    {
+      "id": "core-workflows-C1-005",
+      "status": "fixed",
+      "note": "Target file was modified"
+    }
+  ],
+  "files_changed": 3,
+  "fixed": 2,
+  "partial": 3,
+  "unfixed": 0,
+  "regression_detected": false
+}

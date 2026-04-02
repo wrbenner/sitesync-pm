@@ -1,0 +1,70 @@
+{
+  "module": "database-api",
+  "scores": {
+    "visual_polish": 15,
+    "domain_depth": 62,
+    "data_richness": 55,
+    "interaction_quality": 45,
+    "ai_integration": 20,
+    "mobile_first": 10,
+    "performance": 58,
+    "typescript_quality": 52,
+    "error_handling": 68,
+    "realtime": 30,
+    "accessibility": 12,
+    "security": 65,
+    "differentiation": 40,
+    "enterprise_readiness": 55
+  },
+  "overall_score": 42,
+  "issues": [
+    {
+      "id": "database-api-C1-001",
+      "severity": "critical",
+      "dimension": "typescript_quality",
+      "title": "createScopedClient Proxy breaks .from() chaining — returns incomplete query builder",
+      "file": "src/api/client.ts",
+      "description": "createScopedClient wraps supabase.from() to auto-append .eq('project_id', projectId), but supabase.from(table) returns a PostgrestQueryBuilder while .eq() returns a PostgrestFilterBuilder. The Proxy returns the filter builder where callers expect a query builder, breaking .select()/.insert()/.update() chains that need to be called before .eq(). This causes runtime failures on every projectScopedQuery call.",
+      "prompt": "In the file src/api/client.ts, in the createScopedClient function: BEFORE: The Proxy's get handler for 'from' calls `target.from(table as TableName).eq('project_id', projectId)` which returns a PostgrestFilterBuilder, breaking subsequent .select()/.insert() chains since callers expect a full PostgrestQueryBuilder. AFTER: Remove the .eq() call from the Proxy. Instead, change projectScopedQuery to pass projectId as a parameter to the query callback, and let the callback apply .eq('project_id', projectId) at the appropriate point in its own chain. Alternatively, keep createScopedClient but return a new Proxy on the QueryBuilder itself that intercepts .select()/.insert()/.update()/.delete() to append .eq('project_id', projectId) after those methods are called. The simplest fix: change the Proxy to not call .eq() and instead document that the callback must filter by project_id, or remove createScopedClient entirely and have projectScopedQuery just pass projectId to the callback. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "database-api-C1-002",
+      "severity": "critical",
+      "dimension": "error_handling",
+      "title": "Duplicate import paths cause runtime ambiguity — client.ts imports supabase from itself and from lib/supabase",
+      "file": "src/api/endpoints/organizations.ts",
+      "description": "The organizations.ts file appears twice in the codebase with identical content. Both import `supabase` from `'../client'`, but client.ts itself imports from `'../lib/supabase'`. The endpoints/projects.ts imports `supabase, transformSupabaseError` from `'../client'` but client.ts only exports `supabaseQuery`, `supabaseMutation`, `projectScopedQuery`, and `createScopedClient` — it does NOT re-export the raw `supabase` client or `transformSupabaseError`. This means every endpoint file that does `import { supabase, transformSupabaseError } from '../client'` will fail at build time with missing exports.",
+      "prompt": "In the file src/api/client.ts, make these specific changes: BEFORE: The file exports only `createScopedClient`, `supabaseQuery`, `supabaseMutation`, and `projectScopedQuery`. It imports `supabase` from `'../lib/supabase'` and `transformSupabaseError` from `'./errors'` but does NOT re-export either of them. Multiple endpoint files (projects.ts, people.ts, organizations.ts, metrics.ts, webhooks.ts) import `{ supabase, transformSupabaseError }` directly from `'../client'`, which are undefined exports. AFTER: Add explicit re-exports at the bottom of client.ts: `export { supabase } from '../lib/supabase'` and `export { transformSupabaseError } from './errors'`. This makes the barrel pattern work correctly so all endpoint files can import from a single `'../client'` path. Also add re-exports for commonly used error classes: `export { ApiError, AuthError, PermissionError, ValidationError, NotFoundError } from './errors'`. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "database-api-C1-003",
+      "severity": "high",
+      "dimension": "realtime",
+      "title": "No real-time subscription hooks exist — all data is stale until manual refresh",
+      "file": "src/api/client.ts",
+      "description": "The backend architecture spec requires real-time subscriptions on rfis, daily_logs, punch_list_items, notifications, and activity_feed tables. The API layer has zero Supabase Realtime channel subscriptions. No `useSupabaseRealtime` hook or equivalent exists in the provided code. The PAGE_ACCEPTANCE_CRITERIA states 'Any entity modified by another user MUST reflect within 2 seconds via Supabase Realtime subscription.' This is completely missing from the data layer.",
+      "prompt": "In the file src/api/client.ts, add a new exported function `subscribeToTable` at the bottom of the file: BEFORE: The file has no real-time subscription capability. All data fetching is request-response only with no live updates. AFTER: Add the following function that creates a typed Supabase Realtime subscription for a given table filtered by project_id, and returns an unsubscribe function. The function signature should be: `export function subscribeToTable(table: string, projectId: string, onInsert?: (row: unknown) => void, onUpdate?: (row: unknown) => void, onDelete?: (row: unknown) => void): () => void`. Implementation: call `supabase.channel(`${table}:${projectId}`).on('postgres_changes', { event: 'INSERT', schema: 'public', table, filter: `project_id=eq.${projectId}` }, payload => onInsert?.(payload.new))` and similarly for UPDATE and DELETE events. Call `.subscribe()` on the channel. Return a cleanup function that calls `supabase.removeChannel(channel)`. This provides the foundation for React hooks to wire real-time into the query cache via invalidation. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "database-api-C1-004",
+      "severity": "high",
+      "dimension": "performance",
+      "title": "buildPaginatedQuery referenced in people.ts but not exported from client.ts",
+      "file": "src/api/endpoints/people.ts",
+      "description": "people.ts imports `buildPaginatedQuery` from `'../client'` but client.ts does not define or export any such function. This is a build-breaking missing export. The function is used for directory contacts and meetings pagination — two core list pages. Without it, the Directory and Meetings pages cannot load data. The PAGE_ACCEPTANCE_CRITERIA requires cursor-based pagination on all list views with 50+ items.",
+      "prompt": "In the file src/api/client.ts, add a new exported function `buildPaginatedQuery` that wraps a Supabase range query with pagination logic: BEFORE: The function `buildPaginatedQuery` is imported by `src/api/endpoints/people.ts` but does not exist in client.ts, causing a build error. AFTER: Add the following generic function. It should accept three parameters: (1) a `queryFn: (from: number, to: number) => PromiseLike<{ data: TRow[] | null; error: any; count: number | null }>`, (2) an optional `pagination: { page?: number; pageSize?: number }` object defaulting to page 1 and pageSize 50, and (3) an optional `transform: (row: TRow) => TResult` mapper function. The function should compute `from = (page - 1) * pageSize` and `to = from + pageSize - 1`, call queryFn(from, to), throw on error via transformSupabaseError, map results through the transform function if provided, and return `{ data: TResult[], total: count ?? 0, page, pageSize, hasMore: (from + pageSize) < (count ?? 0) }`. Type the generics as `<TRow, TResult = TRow>`. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "database-api-C1-005",
+      "severity": "high",
+      "dimension": "security",
+      "title": "assertProjectAccess couples to Zustand store — fails in non-React contexts and tests",
+      "file": "src/api/middleware/projectScope.ts",
+      "description": "assertProjectAccess calls `useOrganizationStore.getState().currentOrg?.id` to get the org context. This creates a hard dependency on the Zustand store from the API middleware layer. In server-side contexts, edge functions, tests, or any non-React environment, the store will be empty and every project access check throws 'No active organization context'. This also means the security check can be bypassed by simply not initializing the store. The org ownership check should derive from the database, not client-side state.",
+      "prompt": "In the file src/api/middleware/projectScope.ts, in the assertProjectAccess function: BEFORE: The function reads `useOrganizationStore.getState().currentOrg?.id` to get the org ID, then calls `assertProjectBelongsToActiveOrg(projectId, orgId)`. If the Zustand store has no currentOrg (common in tests, SSR, or before hydration), it throws a misleading 'No active organization context' error even when the user legitimately has project access. AFTER: Remove the Zustand store dependency entirely. Instead, after confirming the user is a project member via the `project_members` query, fetch the project's `organization_id` directly: `const { data: project } = await supabase.from('projects').select('organization_id').eq('id', projectId).maybeSingle()`. Then verify the user is a member of that organization via `organization_members`. This makes the check self-contained and database-authoritative. Remove the import of `useOrganizationStore`. After changes, run: npm run build to verify no TypeScript errors."
+    }
+  ],
+  "invented_features": [],
+  "competitive_intel": "Procore's API layer uses a proper REST gateway with OpenAPI specs, versioned endpoints, and webhook infrastructure that is production-battle-tested. SiteSync's API layer has the right architectural ideas (scoped clients, query dedup, typed errors, audit trail) but the implementation has critical wiring issues — missing re-exports that break builds, a Proxy pattern that breaks query chaining, zero real-time subscriptions despite the spec requiring them, and a security middleware that depends on client-side state instead of database lookups. Fieldwire's simpler approach of direct Supabase client calls per-component would actually be more reliable than the current broken abstraction layer. The error handling taxonomy (ApiError hierarchy with user-friendly messages) is genuinely good and ahead of most competitors, but it cannot compensate for the build-breaking import issues.",
+  "summary": "The Database & API Layer has strong architectural intentions — typed error hierarchy, request deduplication, project-scoped query isolation, audit trail, pagination helpers, and a versioned API router. However, execution has critical gaps that prevent the layer from functioning: (1) createScopedClient's Proxy pattern breaks Supabase query chaining by returning a filter builder where a query builder is expected, (2) multiple endpoint files import `supabase` and `transformSupabaseError` from client.ts which does not re-export them, causing build failures across the entire endpoint layer, (3) zero real-time subscriptions exist despite the spec requiring live updates on 9+ tables, (4) the pagination helper `buildPaginatedQuery` is imported but never defined, breaking Directory and Meetings pages, and (5) the security middleware assertProjectAccess depends on Zustand store state rather than database lookups, making it fragile and bypassable. These five issues must be resolved before any page can reliably fetch, mutate, or subscribe to data."
+}

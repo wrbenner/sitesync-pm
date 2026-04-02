@@ -1,0 +1,4 @@
+UNRESOLVED FROM CYCLE 1:
+- [partial] infrastructure-C1-001: Related file in same directory modified
+- [not_fixed] infrastructure-C1-004: No file change detected
+- [not_fixed] infrastructure-C1-007: No file change detected

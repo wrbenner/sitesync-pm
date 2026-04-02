@@ -1,0 +1,34 @@
+{
+  "verifications": [
+    {
+      "id": "financial-engine-C1-001",
+      "status": "partial",
+      "note": "Related file in same directory modified"
+    },
+    {
+      "id": "financial-engine-C1-002",
+      "status": "partial",
+      "note": "Related file in same directory modified"
+    },
+    {
+      "id": "financial-engine-C1-003",
+      "status": "partial",
+      "note": "Related file in same directory modified"
+    },
+    {
+      "id": "financial-engine-C1-004",
+      "status": "fixed",
+      "note": "Target file was modified"
+    },
+    {
+      "id": "financial-engine-C1-005",
+      "status": "fixed",
+      "note": "Target file was modified"
+    }
+  ],
+  "files_changed": 4,
+  "fixed": 2,
+  "partial": 3,
+  "unfixed": 0,
+  "regression_detected": false
+}

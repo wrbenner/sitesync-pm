@@ -1,0 +1,6 @@
+UNRESOLVED FROM CYCLE 1:
+- [not_fixed] auth-rbac-C1-001: No file change detected
+- [not_fixed] auth-rbac-C1-002: No file change detected
+- [partial] auth-rbac-C1-003: Related file in same directory modified
+- [partial] auth-rbac-C1-004: Related file in same directory modified
+- [not_fixed] auth-rbac-C1-005: No file change detected

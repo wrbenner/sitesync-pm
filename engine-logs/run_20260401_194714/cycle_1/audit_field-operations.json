@@ -1,0 +1,70 @@
+{
+  "module": "field-operations",
+  "scores": {
+    "visual_polish": 52,
+    "domain_depth": 45,
+    "data_richness": 40,
+    "interaction_quality": 42,
+    "ai_integration": 35,
+    "mobile_first": 38,
+    "performance": 50,
+    "typescript_quality": 55,
+    "error_handling": 35,
+    "realtime": 30,
+    "accessibility": 28,
+    "security": 45,
+    "differentiation": 32,
+    "enterprise_readiness": 38
+  },
+  "overall_score": 39,
+  "issues": [
+    {
+      "id": "field-operations-C1-001",
+      "severity": "critical",
+      "dimension": "error_handling",
+      "title": "Daily Log page lacks loading skeleton, error state, and meaningful empty state",
+      "file": "src/pages/DailyLog.tsx",
+      "description": "The Daily Log page does not show skeleton loaders during data fetch, has no error boundary or inline error display on fetch failure, and shows a generic or missing empty state instead of the required contextual message with CTA per PAGE_ACCEPTANCE_CRITERIA section 7.",
+      "prompt": "In the file src/pages/DailyLog.tsx, in the main DailyLog component: Add a loading state that renders skeleton placeholders matching the calendar view and log entry layout (use pulsing gray rectangles at 48px row height). Add an error state that shows a toast notification plus an inline retry button when the Supabase fetch fails, never a blank page. Add a contextual empty state with an icon, the message 'No daily logs yet. The daily log is your project\\'s official record.' and a primary CTA button 'Start Today\\'s Log'. BEFORE: The page either shows a blank area or a generic spinner during loading, no error handling on fetch failure, and no contextual empty state. AFTER: Loading shows skeleton cards matching final layout geometry, errors show inline retry with toast, empty state shows contextual message with 'Start Today\\'s Log' CTA. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "field-operations-C1-002",
+      "severity": "critical",
+      "dimension": "accessibility",
+      "title": "Field Capture page missing ARIA labels, keyboard navigation, and touch target sizing",
+      "file": "src/pages/FieldCapture.tsx",
+      "description": "The Field Capture page has no aria-labels on the capture button, photo grid items lack alt text, status changes are not announced via aria-live regions, and touch targets for action buttons are below the 44x44px minimum required by Apple HIG and PAGE_ACCEPTANCE_CRITERIA global standards.",
+      "prompt": "In the file src/pages/FieldCapture.tsx, in the FieldCapture component: Add aria-label='Capture photo' to the main capture button. Add alt text to all img elements in the photo feed using the pattern 'Field photo captured at [location] on [date]' or 'Field capture photo' as fallback. Add an aria-live='polite' region that announces when photos are uploaded or sync status changes. Ensure all interactive buttons (capture, delete, link, tag) have minimum dimensions of 44x44px using minWidth and minHeight inline styles. Add role='button' and tabIndex={0} with onKeyDown Enter/Space handlers to any clickable div elements. BEFORE: No aria-labels, no alt text on images, no aria-live announcements, touch targets below 44px. AFTER: All interactive elements have aria-labels, images have descriptive alt text, status changes announced via aria-live, all touch targets are 44x44px minimum. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "field-operations-C1-003",
+      "severity": "critical",
+      "dimension": "mobile_first",
+      "title": "Safety page not responsive below 768px, tables overflow horizontally",
+      "file": "src/pages/Safety.tsx",
+      "description": "The Safety page incident log table does not collapse to card layout on mobile, metric cards do not stack vertically, and inspection checklists have horizontal overflow at 375px width, violating PAGE_ACCEPTANCE_CRITERIA section 11 and global mobile standards.",
+      "prompt": "In the file src/pages/Safety.tsx, in the Safety component: Wrap the metric cards row in a container with CSS 'display: flex; flexWrap: wrap; gap: 16px' and set each card to 'minWidth: 280px; flex: 1'. For the incident log table, add a media query check using a useMediaQuery hook or window.innerWidth check: when width < 768px, render incidents as stacked cards instead of table rows, showing date, type, severity badge, and status on each card. For inspection checklists, add 'overflowX: auto' on the table container and freeze the first column with 'position: sticky; left: 0; background: white; zIndex: 1'. BEFORE: Tables overflow horizontally on mobile, metric cards render in a fixed row that overflows, no card-based fallback for small screens. AFTER: Metric cards wrap and stack on mobile, incident table becomes card layout below 768px, inspection tables have horizontal scroll with frozen first column. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "field-operations-C1-004",
+      "severity": "major",
+      "dimension": "domain_depth",
+      "title": "Daily Log missing legally required fields: weather auto-populate, manpower by trade table, and immutable submission timestamps",
+      "file": "src/pages/DailyLog.tsx",
+      "description": "The Daily Log form does not auto-populate weather from the weather API, lacks a structured manpower table (trade/company/headcount/hours with running totals), and does not enforce immutability after submission. Per PAGE_ACCEPTANCE_CRITERIA section 7 and construction domain knowledge, daily logs are legal documents requiring weather auto-fill, structured crew data, and append-only edits after submission.",
+      "prompt": "In the file src/pages/DailyLog.tsx, in the DailyLog component or its form sub-component: Add a weather section at the top of the log form that calls the useWeather hook (or fetches from weather_cache table) to auto-populate temperature_high, temperature_low, weather_description, and wind_speed for the project location. Show an 'Auto' badge next to auto-populated fields. Add a manpower section rendered as an editable table with columns: Trade, Company, Headcount, Hours Worked, and a running total row at the bottom computing sum of headcount and sum of hours. Add a status check: if the log status is 'submitted' or 'approved', disable all form fields and show a banner 'This log has been submitted and is locked. Amendments create a linked addendum.' BEFORE: No weather auto-populate, no structured manpower table, no immutability enforcement after submission. AFTER: Weather fields auto-populated with 'Auto' badge, manpower table with trade/company/headcount/hours and totals, form locked after submission with informative banner. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "field-operations-C1-005",
+      "severity": "major",
+      "dimension": "interaction_quality",
+      "title": "Field Capture lacks camera-first UX flow and offline queue visibility",
+      "file": "src/pages/FieldCapture.tsx",
+      "description": "The Field Capture page does not open camera immediately on 'Capture' tap, requires form fields before photo, and has no visible offline queue indicator showing pending uploads. Per PAGE_ACCEPTANCE_CRITERIA section 14, the capture button must open camera first with the form appearing only after photo capture, and offline queued photos must show count.",
+      "prompt": "In the file src/pages/FieldCapture.tsx, in the FieldCapture component: Refactor the 'Add Capture' or 'Capture' button click handler to immediately trigger a file input with accept='image/*' and capture='environment' (for mobile camera). Only after a photo is selected/captured, show the metadata form overlay (title, notes, tags, link-to fields) with the photo preview at top. All metadata fields should be optional so the user can tap 'Save' with just the photo. Add an offline queue banner at the top of the page: if navigator.onLine is false or there are items in localStorage pending sync, show a banner 'You are offline. X photos pending upload.' styled with a yellow/amber background, padding 12px, and an icon. BEFORE: Form appears before or instead of camera, no offline queue indicator. AFTER: Camera opens immediately on capture tap, form appears after photo with all fields optional, offline banner shows pending upload count. After changes, run: npm run build to verify no TypeScript errors."
+    }
+  ],
+  "invented_features": [],
+  "competitive_intel": "Fieldwire excels at field-first UX with true offline capability, one-tap capture, and instant sync. PlanGrid (now ACC) has strong drawing-linked photo capture with GPS pins. SiteSync's field operations module currently lacks the camera-first workflow, offline queue visibility, and structured daily log fields that field crews expect. The safety module is weaker than Procore's safety management which includes OSHA 300 form auto-generation and toolbox talk digital sign-in. The daily log does not match construction industry standards for legal defensibility (no immutability after submission, no weather auto-populate).",
+  "summary": "The Field Operations module (Daily Log, Field Capture, Safety) scores 39/100 overall, significantly below the 70 threshold for acceptable quality. The most critical gaps are: Daily Log lacks loading/error/empty states and legally required fields (weather auto-populate, structured manpower table, immutability after submission); Field Capture violates the camera-first design principle and has no offline queue visibility; Safety page breaks on mobile with table overflow and missing card-based fallback; accessibility is severely lacking across all three pages with missing ARIA labels, alt text, and inadequate touch targets. These are foundational issues that must be fixed before any feature additions. The module is not field-ready — a superintendent with muddy gloves cannot effectively use any of these pages, which directly contradicts the product vision's core belief of field-first design."
+}

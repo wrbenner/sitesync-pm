@@ -1,0 +1,34 @@
+{
+  "verifications": [
+    {
+      "id": "field-operations-C1-001",
+      "status": "partial",
+      "note": "Related file in same directory modified"
+    },
+    {
+      "id": "field-operations-C1-002",
+      "status": "fixed",
+      "note": "Target file was modified"
+    },
+    {
+      "id": "field-operations-C1-003",
+      "status": "partial",
+      "note": "Related file in same directory modified"
+    },
+    {
+      "id": "field-operations-C1-004",
+      "status": "partial",
+      "note": "Related file in same directory modified"
+    },
+    {
+      "id": "field-operations-C1-005",
+      "status": "fixed",
+      "note": "Target file was modified"
+    }
+  ],
+  "files_changed": 2,
+  "fixed": 2,
+  "partial": 3,
+  "unfixed": 0,
+  "regression_detected": false
+}

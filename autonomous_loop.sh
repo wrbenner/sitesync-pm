@@ -1408,20 +1408,27 @@ verify_quality_gates() {
     local dist_dir="${PROJECT_DIR}/dist"
     if [ -d "$dist_dir" ]; then
         bundle_size=$(find "$dist_dir" -type f \( -name '*.js' -o -name '*.css' \) -exec wc -c {} + 2>/dev/null | tail -1 | awk '{print $1}')
-        [ -z "$bundle_size" ] && bundle_size=0
     fi
+    bundle_size=$(echo "${bundle_size:-0}" | tr -cd '0-9')
+    [ -z "$bundle_size" ] && bundle_size=0
 
     # TypeScript strict error count (count unique errors, don't fail)
     local ts_errors=0
     if [ -n "$BUILD_CMD" ]; then
         ts_errors=$(cd "$PROJECT_DIR" && npx tsc --noEmit 2>&1 | grep -c "error TS" 2>/dev/null || echo 0)
     fi
+    ts_errors=$(echo "${ts_errors:-0}" | tr -cd '0-9')
+    [ -z "$ts_errors" ] && ts_errors=0
 
     # Source file count and total lines
     local src_files
     src_files=$(find "$PROJECT_DIR/src" -type f \( -name '*.ts' -o -name '*.tsx' \) 2>/dev/null | wc -l | tr -d ' ')
+    src_files=$(echo "${src_files:-0}" | tr -cd '0-9')
+    [ -z "$src_files" ] && src_files=0
     local src_lines
     src_lines=$(find "$PROJECT_DIR/src" -type f \( -name '*.ts' -o -name '*.tsx' \) -exec wc -l {} + 2>/dev/null | tail -1 | awk '{print $1}')
+    src_lines=$(echo "${src_lines:-0}" | tr -cd '0-9')
+    [ -z "$src_lines" ] && src_lines=0
 
     # Track in quality file
     jq -n \
@@ -1524,6 +1531,7 @@ evolve_prompt_strategy() {
                     total_fixed: ([.[].fixed] | add)
                 }) | sort_by(-.avg_fix_rate)
             ' 2>/dev/null || echo "[]")
+            [ -z "$model_stats" ] || ! echo "$model_stats" | jq '.' >/dev/null 2>&1 && model_stats="[]"
 
             # Write strategy recommendations
             local strategy_file="${RUN_DIR}/prompt_strategy.json"
@@ -1597,11 +1605,17 @@ plan_cycle() {
                 fi
             fi
 
+            local safe_score
+            safe_score=$(echo "${latest_score:-0}" | tr -cd '0-9')
+            [ -z "$safe_score" ] && safe_score=0
+            local safe_cycles
+            safe_cycles=$(echo "${score_count:-0}" | tr -cd '0-9')
+            [ -z "$safe_cycles" ] && safe_cycles=0
             score_summary=$(echo "$score_summary" | jq \
                 --arg mod "$mod_name" \
-                --argjson score "${latest_score:-0}" \
+                --argjson score "$safe_score" \
                 --arg trend "$trend" \
-                --argjson cycles "${score_count:-0}" \
+                --argjson cycles "$safe_cycles" \
                 '. + [{"module":$mod,"score":$score,"trend":$trend,"cycles_tracked":$cycles}]')
         done
     fi
@@ -1615,10 +1629,14 @@ plan_cycle() {
     # Identify priority areas
     local weakest_modules
     weakest_modules=$(echo "$score_summary" | jq '[sort_by(.score)[:3] | .[].module] // []' 2>/dev/null || echo "[]")
+    [ -z "$weakest_modules" ] || ! echo "$weakest_modules" | jq '.' >/dev/null 2>&1 && weakest_modules="[]"
     local declining_modules
     declining_modules=$(echo "$score_summary" | jq '[.[] | select(.trend=="declining") | .module] // []' 2>/dev/null || echo "[]")
+    [ -z "$declining_modules" ] || ! echo "$declining_modules" | jq '.' >/dev/null 2>&1 && declining_modules="[]"
     local avg_score
     avg_score=$(echo "$score_summary" | jq '[.[].score] | if length > 0 then add / length | floor else 0 end' 2>/dev/null || echo 0)
+    avg_score=$(echo "${avg_score:-0}" | tr -cd '0-9')
+    [ -z "$avg_score" ] && avg_score=0
 
     # Check prompt strategy from TESLA
     local prompt_recommendation="No data yet"
@@ -1645,6 +1663,9 @@ plan_cycle() {
             fi
         fi
     fi
+
+    # Validate JSON objects before passing to jq
+    [ -z "$score_summary" ] || ! echo "$score_summary" | jq '.' >/dev/null 2>&1 && score_summary="[]"
 
     # Build the plan
     jq -n \

@@ -1,0 +1,115 @@
+{
+  "module": "infrastructure",
+  "scores": {
+    "visual_polish": 62,
+    "domain_depth": 55,
+    "data_richness": 50,
+    "interaction_quality": 58,
+    "ai_integration": 45,
+    "mobile_first": 52,
+    "performance": 60,
+    "typescript_quality": 55,
+    "error_handling": 42,
+    "realtime": 58,
+    "accessibility": 48,
+    "security": 50,
+    "differentiation": 45,
+    "enterprise_readiness": 52
+  },
+  "overall_score": 52,
+  "issues": [
+    {
+      "id": "infrastructure-C1-001",
+      "severity": "critical",
+      "dimension": "error_handling",
+      "title": "No global ErrorBoundary fallback UI with retry capability",
+      "file": "src/components/ErrorBoundary.tsx",
+      "description": "The ErrorBoundary is referenced in App.tsx but if its fallback UI is generic or missing a retry button, any uncaught error renders a blank or unhelpful screen. Per acceptance criteria, network failures need inline retry and never a full-page error for a single failed fetch. The ErrorBoundary must render a branded fallback with a 'Try Again' button that calls resetErrorBoundary.",
+      "prompt": "In the file src/components/ErrorBoundary.tsx, in the ErrorBoundary class component's render method (or the fallback render): BEFORE: The fallback UI either shows a generic 'Something went wrong' message or no retry action, potentially showing raw error details. AFTER: Render a centered card with the SiteSync logo, a heading 'Something went wrong', a muted description 'An unexpected error occurred. Your data is safe.', a primary orange button labeled 'Try Again' that calls `this.setState({ hasError: false })` (or the resetErrorBoundary prop if using react-error-boundary), and a secondary 'Go to Dashboard' link pointing to '/'. Add aria-live='assertive' on the error container. Ensure no raw error.message is shown to users in production (only log to console or Sentry). The card should use theme tokens: background white, border-radius 12px, padding 48px, max-width 480px, centered with margin auto. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "infrastructure-C1-002",
+      "severity": "critical",
+      "dimension": "accessibility",
+      "title": "Missing skip-to-content target and ARIA landmarks in main layout",
+      "file": "src/App.tsx",
+      "description": "SkipToContent is imported but the main content area likely lacks an id='main-content' target and role='main'. Without this, the skip link does nothing. RouteAnnouncer and LiveRegion are imported but may not wrap route changes properly. Per global acceptance standards, all pages must pass axe-core with zero critical violations. Missing landmarks is a serious accessibility failure.",
+      "prompt": "In the file src/App.tsx, in the main JSX return where Routes are rendered: BEFORE: The Suspense/Routes block is not wrapped in a <main> element with id='main-content' and the SkipToContent component has no matching target. AFTER: Wrap the entire route content area (the Suspense containing all Route elements) in `<main id='main-content' role='main' tabIndex={-1}>`. Ensure the SkipToContent component links to '#main-content'. Ensure the Sidebar has `role='navigation'` and `aria-label='Main navigation'`. Ensure the RouteAnnouncer component is placed inside the HashRouter but outside the Routes so it can detect route changes. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "infrastructure-C1-003",
+      "severity": "critical",
+      "dimension": "performance",
+      "title": "Page-level Suspense fallback is a bare Skeleton with no layout matching",
+      "file": "src/App.tsx",
+      "description": "Per acceptance criteria, skeleton loaders must match the final layout geometry. The current Suspense fallback uses a generic Skeleton component that likely renders a plain pulsing rectangle rather than matching each page's card/table structure. This causes layout shift (CLS > 0.1) when the real page loads. At minimum, the global fallback should show the sidebar plus a content area skeleton with metric card placeholders.",
+      "prompt": "In the file src/App.tsx, find the Suspense component that wraps the Routes. BEFORE: The fallback is `<Skeleton />` or a simple loading indicator that does not match any page layout, causing visible layout shift when pages load. AFTER: Replace the fallback with a component that renders: (1) the sidebar at its current width (it should already be rendered outside Suspense, but if not, ensure it is), (2) a content area div with the same padding as pages (32px on desktop, 16px on mobile), containing (3) a row of 4 skeleton rectangles (height 100px, border-radius 12px, width 25% each with 16px gap) simulating metric cards, and (4) below that, a skeleton rectangle (height 400px, border-radius 12px, width 100%) simulating a table/content area. Use CSS animation: `@keyframes pulse { 0%, 100% { opacity: 0.4 } 50% { opacity: 0.7 } }` with 1.5s infinite. Background color #E5E7EB. This ensures CLS stays under 0.1. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "infrastructure-C1-004",
+      "severity": "major",
+      "dimension": "security",
+      "title": "ProtectedRoute may not handle loading state or redirect with returnTo parameter",
+      "file": "src/components/auth/ProtectedRoute.tsx",
+      "description": "Per AUTH-003 acceptance criteria, unauthenticated users must be redirected to /login with a returnTo parameter so they return to their original page after login. The ProtectedRoute must also show a loading skeleton while auth state is being determined (not flash the login page). If the auth check is async and the component renders before it resolves, users see a brief login flash even when authenticated.",
+      "prompt": "In the file src/components/auth/ProtectedRoute.tsx, in the ProtectedRoute component: BEFORE: The component may redirect to '/login' without preserving the current URL as a returnTo parameter, and may not show a loading state while auth is being determined, causing a flash of the login page for authenticated users on hard refresh. AFTER: (1) Import useLocation from react-router-dom. (2) While auth is loading (user is null and loading is true from useAuth), render a full-page skeleton matching the App layout (sidebar placeholder + content area skeleton) instead of redirecting. (3) When auth is determined and user is null, redirect to `/login?returnTo=${encodeURIComponent(location.pathname + location.search)}` using Navigate with replace. (4) When user is authenticated, render children. (5) If a requiredPermission or moduleId prop is provided and the user lacks it, render an access denied component with the message 'You do not have permission to access this page' and a 'Request Access' button, not a redirect. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "infrastructure-C1-005",
+      "severity": "major",
+      "dimension": "mobile_first",
+      "title": "No responsive breakpoint handling for sidebar collapse and mobile bottom navigation",
+      "file": "src/App.tsx",
+      "description": "Per design standards, mobile (<768px) should use bottom navigation instead of a sidebar hamburger menu. Tablet (768-1279px) should auto-collapse the sidebar. The current App.tsx imports MobileLayout but it is unclear if the routing structure actually switches between sidebar and bottom nav based on viewport. Without this, the app is unusable on phones as the sidebar likely overlaps or squishes content.",
+      "prompt": "In the file src/App.tsx, in the main layout JSX: BEFORE: The layout always renders the desktop Sidebar component regardless of viewport width, and MobileLayout is imported but may not be conditionally rendered based on screen size. On mobile devices the sidebar either overlaps content or is inaccessible. AFTER: Add a custom hook call `const isMobile = useMediaQuery('(max-width: 767px)')` (create a simple useMediaQuery hook using window.matchMedia if it does not exist, or use an existing one). When isMobile is true, do NOT render the desktop Sidebar. Instead, render the MobileLayout component which should provide bottom tab navigation. When isMobile is false, render the existing Sidebar. The main content area should have `margin-left: 0` on mobile and the appropriate sidebar width margin on desktop. Add `<meta name='viewport' content='width=device-width, initial-scale=1, viewport-fit=cover'>` to index.html if not present. Ensure touch targets in the bottom nav are minimum 44x44px. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "infrastructure-C1-006",
+      "severity": "major",
+      "dimension": "typescript_quality",
+      "title": "Trailing backslash-n characters in App.tsx import section indicate corrupted source",
+      "file": "src/App.tsx",
+      "description": "The App.tsx source ends with `const EquipmentPage = lazy(() => import('./pages/Equipment'));\\n\\n` — literal backslash-n characters in the source code. This would cause a TypeScript parse error or at minimum indicates the file has corruption. This must be cleaned up for the build to pass cleanly.",
+      "prompt": "In the file src/App.tsx, at the very end of the lazy import declarations near the Equipment page import: BEFORE: The line `const EquipmentPage = lazy(() => import('./pages/Equipment'));` is followed by literal `\\n\\n` characters (escaped newline strings in source code) which may cause parse errors or indicate file corruption. AFTER: Remove the literal `\\n\\n` characters. Ensure the file ends with clean newlines (actual line breaks, not escaped characters). Verify all lazy imports have consistent formatting: each on its own line, proper semicolons, and no trailing garbage characters. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "infrastructure-C1-007",
+      "severity": "major",
+      "dimension": "realtime",
+      "title": "Realtime invalidation hook imported but unclear if subscriptions clean up properly",
+      "file": "src/hooks/useRealtimeInvalidation.ts",
+      "description": "useRealtimeInvalidation and useRealtimeSubscription are imported in App.tsx but if they create Supabase channel subscriptions without proper cleanup on unmount, the app will leak WebSocket connections. Each navigation or re-render could create duplicate subscriptions. Per the backend spec, subscriptions must be cleaned up via supabase.removeChannel on unmount.",
+      "prompt": "In the file src/hooks/useRealtimeInvalidation.ts, in the main hook function: BEFORE: The hook may create Supabase realtime channel subscriptions in a useEffect but either lacks a cleanup function or does not call supabase.removeChannel(channel) in the useEffect return. This causes WebSocket connection leaks on re-renders and navigation. AFTER: Ensure every supabase.channel() call stores the returned channel reference. In the useEffect cleanup function (the return callback), call `supabase.removeChannel(channel)` for every channel created. If the hook subscribes to multiple tables, store all channel references in a ref or array and iterate through them on cleanup. Add a guard: if the project_id changes, unsubscribe from old channels before subscribing to new ones. Log subscription lifecycle in development: `console.log('[Realtime] Subscribed to', channelName)` and `console.log('[Realtime] Unsubscribed from', channelName)`. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "infrastructure-C1-008",
+      "severity": "minor",
+      "dimension": "visual_polish",
+      "title": "No page transition animations between route changes",
+      "file": "src/App.tsx",
+      "description": "The pageTransition variant is imported from transitions/variants and AnimatePresence from framer-motion, but the Routes are not wrapped in AnimatePresence with motion.div per-route. This means page changes are instant with no fade or slide, violating the design standard of 200ms fade-in page transitions.",
+      "prompt": "In the file src/App.tsx, in the Routes section: BEFORE: Route elements render their page components directly without any motion wrapper, so page transitions are instant with no animation despite AnimatePresence being imported. AFTER: Wrap the Suspense fallback content area (not each individual Route, but the area where route content renders) with AnimatePresence mode='wait'. Inside, use a motion.div with key={location.pathname} (get location from useLocation()) with the pageTransition variants: initial={{ opacity: 0 }}, animate={{ opacity: 1 }}, exit={{ opacity: 0 }}, transition={{ duration: 0.15, ease: 'easeOut' }}. This gives a subtle 150ms fade between pages. Do NOT animate the sidebar — only the main content area. Ensure the motion.div has style={{ width: '100%', minHeight: '100vh' }} to prevent layout collapse during animation. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "infrastructure-C1-009",
+      "severity": "minor",
+      "dimension": "enterprise_readiness",
+      "title": "No service worker update notification for users",
+      "file": "src/App.tsx",
+      "description": "useServiceWorkerUpdate is imported but if it does not show a toast or banner when a new version is available, users will run stale code indefinitely. Per enterprise readiness, users should see 'A new version is available — click to update' with an action to reload.",
+      "prompt": "In the file src/App.tsx, where useServiceWorkerUpdate is called: BEFORE: The hook is called but its return value (likely an update-available boolean and an update function) is not used to show any UI notification to the user. AFTER: Destructure the return value from useServiceWorkerUpdate (e.g., `const { updateAvailable, applyUpdate } = useServiceWorkerUpdate()`). Add a useEffect that watches updateAvailable: when it becomes true, call `toast('New version available', { action: { label: 'Update Now', onClick: () => applyUpdate() }, duration: Infinity, id: 'sw-update' })` using the sonner toast imported at the top. If the hook returns different property names, adapt accordingly. The toast should persist (duration Infinity) until the user acts on it. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "infrastructure-C1-010",
+      "severity": "minor",
+      "dimension": "interaction_quality",
+      "title": "Command palette keyboard shortcut may not be wired to actual toggle",
+      "file": "src/App.tsx",
+      "description": "CommandPalette is imported and useKeyboardShortcuts is called, but it is unclear if Cmd+K actually opens the command palette. Per design standards, Cmd+K must open the command palette globally, Cmd+/ must show shortcuts help, and Escape must close modals. If these shortcuts are not registered, power users lose a critical navigation tool.",
+      "prompt": "In the file src/App.tsx, where useKeyboardShortcuts is called: BEFORE: The keyboard shortcuts hook is called but may not register Cmd+K to toggle the CommandPalette component's open state, or the CommandPalette may not have a controlled open/onClose prop wired to state. AFTER: Add a state variable `const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)`. Pass `open={commandPaletteOpen}` and `onClose={() => setCommandPaletteOpen(false)}` to the CommandPalette component. In the useKeyboardShortcuts call, ensure a shortcut is registered: `{ key: 'k', meta: true, handler: () => setCommandPaletteOpen(prev => !prev) }`. Also register `{ key: '/', meta: true, handler: () => setShortcutOverlayOpen(true) }` for the shortcut help overlay if a ShortcutOverlay component is rendered. If useKeyboardShortcuts takes an array of Shortcut objects, define them accordingly. After changes, run: npm run build to verify no TypeScript errors."
+    }
+  ],
+  "invented_features": [],
+  "competitive_intel": "Procore's shell loads instantly with a persistent sidebar and consistent skeleton patterns. Fieldwire's mobile-first architecture detects viewport and swaps to bottom tabs natively. Linear uses AnimatePresence for buttery page transitions and Cmd+K as the primary navigation. SiteSync has all the right pieces imported (ErrorBoundary, SkipToContent, RouteAnnouncer, MobileLayout, CommandPalette, service worker hooks) but several are not properly wired — they are imported decorations rather than functional infrastructure. Fixing these wiring issues would immediately match the perceived quality of Linear/Stripe-class apps.",
+  "summary": "The infrastructure module has all the right architectural pieces imported — ErrorBoundary, SkipToContent, RouteAnnouncer, MobileLayout, CommandPalette, realtime hooks, service worker update detection, keyboard shortcuts, and page transitions — but several are not properly wired to functioning UI. The ErrorBoundary likely lacks a branded retry fallback, the SkipToContent has no matching target element, the Suspense fallback causes layout shift, ProtectedRoute may flash login for authenticated users, mobile layout switching is not viewport-responsive, and realtime subscriptions may leak. The five most impactful fixes are: (1) branded ErrorBoundary fallback with retry, (2) proper ARIA landmarks and skip-to-content targeting, (3) layout-matching Suspense skeleton to prevent CLS, (4) ProtectedRoute with loading state and returnTo redirect, and (5) mobile viewport detection to swap between sidebar and bottom navigation. These are surgical wiring fixes — no new features, just connecting what is already imported."
+}
