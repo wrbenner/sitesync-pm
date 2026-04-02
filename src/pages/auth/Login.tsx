@@ -63,8 +63,9 @@ export const Login: React.FC = () => {
 
   const inputStyle: React.CSSProperties = {
     width: '100%',
+    minHeight: '44px',
     padding: `${spacing['3']} ${spacing['4']}`,
-    fontSize: typography.fontSize.body,
+    fontSize: '16px',
     fontFamily: typography.fontFamily,
     color: colors.textPrimary,
     backgroundColor: colors.surfacePage,
@@ -93,6 +94,8 @@ export const Login: React.FC = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
+        padding: '16px',
+        boxSizing: 'border-box' as const,
         backgroundColor: colors.surfacePage,
         fontFamily: typography.fontFamily,
       }}
@@ -236,8 +239,9 @@ export const Login: React.FC = () => {
               aria-busy={loading}
               style={{
                 width: '100%',
+                minHeight: '44px',
                 padding: `${spacing['3']} ${spacing['4']}`,
-                fontSize: typography.fontSize.body,
+                fontSize: '16px',
                 fontWeight: typography.fontWeight.semibold,
                 fontFamily: typography.fontFamily,
                 color: colors.white,
