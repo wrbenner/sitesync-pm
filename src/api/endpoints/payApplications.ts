@@ -3,8 +3,11 @@ import { assertProjectAccess, validateProjectId } from '../middleware/projectSco
 import type { PayApplication, CreatePayAppPayload, LienWaiverRow } from '../../types/api'
 import { autoGenerateLienWaivers } from './lienWaivers'
 
-// AIA G702 formula for a single SOV line item.
-// Current Payment Due = (SOV Scheduled Value x % Complete) + Stored Materials - Retainage
+/**
+ * AIA G702 formula for a single SOV line item.
+ * Retainage is calculated on work completed only, not on materials presently stored, per AIA Document G702.
+ * Current Payment Due = (Work Completed + Stored Materials) - Retainage on Work - Previous Certificates
+ */
 export function computeCurrentPaymentDue(params: {
   scheduledValue: number
   prevPctComplete: number
@@ -29,9 +32,9 @@ export function computeCurrentPaymentDue(params: {
   const previousWork = scheduledValue * (prevPctComplete / 100)
   const workThisPeriod = scheduledValue * (currentPctComplete / 100) - previousWork
   const totalCompletedAndStored = previousWork + workThisPeriod + storedMaterials
-  const retainageAmount = totalCompletedAndStored * retainageRate
-  const currentPaymentDue = totalCompletedAndStored - retainageAmount - previousCertificates
-  return { workThisPeriod, totalCompletedAndStored, retainageAmount, currentPaymentDue }
+  const retainageOnWork = (previousWork + workThisPeriod) * retainageRate
+  const currentPaymentDue = totalCompletedAndStored - retainageOnWork - previousCertificates
+  return { workThisPeriod, totalCompletedAndStored, retainageAmount: retainageOnWork, currentPaymentDue }
 }
 
 /**
