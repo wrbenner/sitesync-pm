@@ -1,5 +1,5 @@
-import React, { Suspense, lazy, useState, useEffect } from 'react';
-import { HardHat } from 'lucide-react';
+import React, { Suspense, lazy, useState, useEffect, useRef } from 'react';
+import { HardHat, Menu } from 'lucide-react';
 import { HashRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { SidebarContext, ToastProvider, Skeleton } from './components/Primitives';
@@ -16,7 +16,7 @@ import { MobileLayout } from './components/layout/MobileLayout';
 import { OfflineBanner } from './components/ui/OfflineBanner';
 import { useUiStore, useAIAnnotationStore } from './stores';
 import { useCopilotStore } from './stores/copilotStore';
-import { colors, colorVars, layout, spacing, typography, borderRadius, transitions } from './styles/theme';
+import { colors, colorVars, layout, spacing, typography, borderRadius, transitions, zIndex } from './styles/theme';
 import { keyframes as animationKeyframes } from './styles/animations';
 import { pageTransition } from './components/transitions/variants';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
@@ -398,6 +398,22 @@ function AppContent() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+
+  // Remember the desktop sidebar preference so we can restore it when the
+  // viewport grows back above the mobile breakpoint.
+  const prevDesktopCollapsed = useRef(sidebarCollapsed);
+
+  useEffect(() => {
+    if (isMobile) {
+      prevDesktopCollapsed.current = sidebarCollapsed;
+      setSidebarCollapsed(true);
+    } else {
+      setSidebarCollapsed(prevDesktopCollapsed.current);
+      setMobileDrawerOpen(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMobile]);
   const { toggleContextPanel, contextPanelOpen } = useAIAnnotationStore();
   const { openCopilot, closeCopilot, isOpen: copilotOpen } = useCopilotStore();
   const sidebarWidth = sidebarCollapsed ? layout.sidebarCollapsed : layout.sidebarWidth;
@@ -447,18 +463,93 @@ function AppContent() {
 
   // Strictly exclusive layout: mobile uses bottom nav (MobileLayout), desktop uses Sidebar
   return isMobile ? (
-    <MobileLayout>
-      {user && <AuthenticatedProviders activeView={activeView} />}
-      <OfflineBanner />
-      <ChunkLoadErrorBoundary>
-        <ErrorBoundary fallback={<ErrorFallback />}>
-          <AppRoutes />
-        </ErrorBoundary>
-      </ChunkLoadErrorBoundary>
-      <Suspense fallback={null}><FloatingAIButton /></Suspense>
-      {copilotOpen && <Suspense fallback={null}><CopilotPanel /></Suspense>}
-      <ConflictResolutionModal open={conflictModalOpen} onClose={() => setConflictModalOpen(false)} />
-    </MobileLayout>
+    <>
+      {/* Hamburger button — visible only on mobile when drawer is closed */}
+      {!mobileDrawerOpen && (
+        <button
+          onClick={() => setMobileDrawerOpen(true)}
+          aria-label="Open navigation menu"
+          aria-expanded={false}
+          style={{
+            position: 'fixed',
+            top: spacing['3'],
+            left: spacing['3'],
+            width: 40,
+            height: 40,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: colors.white,
+            border: `1px solid ${colors.borderDefault}`,
+            borderRadius: borderRadius.base,
+            cursor: 'pointer',
+            color: colors.textSecondary,
+            zIndex: zIndex.fixed,
+            boxShadow: '0 1px 4px rgba(0,0,0,0.10)',
+          }}
+        >
+          <Menu size={18} />
+        </button>
+      )}
+
+      {/* Mobile sidebar overlay */}
+      {mobileDrawerOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Navigation menu"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: zIndex.modal,
+            display: 'flex',
+          }}
+        >
+          {/* Semi-transparent backdrop */}
+          <div
+            onClick={() => setMobileDrawerOpen(false)}
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              inset: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.45)',
+            }}
+          />
+          {/* Sidebar panel — rendered relative inside the dialog */}
+          <div
+            style={{
+              position: 'relative',
+              width: layout.sidebarWidth,
+              height: '100%',
+              flexShrink: 0,
+              overflowY: 'auto',
+            }}
+          >
+            <SidebarContext.Provider value={{ collapsed: false, setCollapsed: setSidebarCollapsed }}>
+              <Sidebar
+                activeView={activeView}
+                onNavigate={(view) => { handleNavigate(view); setMobileDrawerOpen(false); }}
+                mode="overlay"
+                onClose={() => setMobileDrawerOpen(false)}
+              />
+            </SidebarContext.Provider>
+          </div>
+        </div>
+      )}
+
+      <MobileLayout>
+        {user && <AuthenticatedProviders activeView={activeView} />}
+        <OfflineBanner />
+        <ChunkLoadErrorBoundary>
+          <ErrorBoundary fallback={<ErrorFallback />}>
+            <AppRoutes />
+          </ErrorBoundary>
+        </ChunkLoadErrorBoundary>
+        <Suspense fallback={null}><FloatingAIButton /></Suspense>
+        {copilotOpen && <Suspense fallback={null}><CopilotPanel /></Suspense>}
+        <ConflictResolutionModal open={conflictModalOpen} onClose={() => setConflictModalOpen(false)} />
+      </MobileLayout>
+    </>
   ) : (
     <SidebarContext.Provider value={{ collapsed: sidebarCollapsed, setCollapsed: setSidebarCollapsed }}>
       <div

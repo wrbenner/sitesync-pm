@@ -10,7 +10,7 @@ import {
   Plug, BarChart3, Leaf, ScrollText, Code, Globe, Store,
   TrendingUp, FileDiff, Send, HardHat, Repeat2,
   Receipt, Milestone, ChevronDown, ChevronRight,
-  Bell, Settings, LogOut,
+  Bell, Settings, LogOut, X,
 } from 'lucide-react';
 import { useUiStore } from '../stores';
 import { motion } from 'framer-motion';
@@ -24,6 +24,10 @@ import { AgentStatusBadge } from './ai/agentStream';
 interface SidebarProps {
   activeView: string;
   onNavigate: (view: string) => void;
+  /** When true, renders as a non-fixed overlay panel (position: relative) */
+  mode?: 'overlay';
+  /** If provided, a close button is shown and calls this when clicked */
+  onClose?: () => void;
 }
 
 const sections = [
@@ -108,30 +112,29 @@ const sections = [
   },
 ];
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, mode, onClose }) => {
   const { themeMode, setThemeMode } = useUiStore();
   const toggleTheme = () => setThemeMode(themeMode === 'dark' ? 'light' : 'dark');
   const { canAccessModule, role } = usePermissions();
+  const isOverlay = mode === 'overlay';
 
   return (
     <nav
       aria-label="Main navigation"
       style={{
-        position: 'fixed',
-        left: 0,
-        top: 0,
-        bottom: 0,
+        ...(isOverlay
+          ? { position: 'relative', height: '100%' }
+          : { position: 'fixed', left: 0, top: 0, bottom: 0, zIndex: zIndex.sticky }),
         width: layout.sidebarWidth,
         backgroundColor: colors.surfaceSidebar,
         borderRight: `1px solid ${colors.borderSubtle}`,
         display: 'flex',
         flexDirection: 'column',
-        zIndex: zIndex.sticky,
         overflowY: 'auto',
         overflowX: 'hidden',
       }}
     >
-      {/* Logo */}
+      {/* Logo row — includes close button when in overlay mode */}
       <div style={{ padding: `${spacing['5']} ${spacing['5']}`, display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
         <div
           style={{
@@ -156,6 +159,31 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate }) => {
         <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.orangeText, marginTop: `-${spacing['1.5']}`, marginLeft: `-${spacing['0.5']}` }}>
           AI
         </span>
+        {isOverlay && onClose && (
+          <button
+            onClick={onClose}
+            aria-label="Close navigation menu"
+            style={{
+              marginLeft: 'auto',
+              width: 32,
+              height: 32,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: colors.overlayBlackLight,
+              border: 'none',
+              borderRadius: borderRadius.base,
+              cursor: 'pointer',
+              color: colors.textSecondary,
+              flexShrink: 0,
+              transition: `background-color ${transitions.instant}`,
+            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.overlayBlackMedium; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.overlayBlackLight; }}
+          >
+            <X size={16} />
+          </button>
+        )}
       </div>
 
       {/* Search trigger */}
