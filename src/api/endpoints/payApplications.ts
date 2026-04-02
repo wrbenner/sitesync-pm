@@ -5,8 +5,12 @@ import { autoGenerateLienWaivers } from './lienWaivers'
 
 /**
  * AIA G702 formula for a single SOV line item.
- * Retainage on stored materials defaults to 0% per standard AIA practice but is configurable per contract.
- * Current Payment Due = (Total Completed and Stored to Date) - (Retainage on Completed Work) - (Retainage on Stored Materials) - (Previous Certificates for Payment)
+ * Line 5  = Total Completed and Stored to Date
+ * Line 5a = Retainage on completed work only (% of Line 5 minus stored materials)
+ * Line 5b = Retainage on stored materials (% of stored materials)
+ * Line 6  = Total Earned Less Retainage (Line 5 - Line 5a - Line 5b)
+ * Line 7  = Less Previous Certificates for Payment
+ * Line 8  = Current Payment Due (Line 6 - Line 7)
  */
 export function computeCurrentPaymentDue(params: {
   scheduledValue: number
@@ -19,6 +23,10 @@ export function computeCurrentPaymentDue(params: {
 }): {
   workThisPeriod: number
   totalCompletedAndStored: number
+  line5: number
+  line5a: number
+  line5b: number
+  line6: number
   retainageAmount: number
   retainageOnStored: number
   currentPaymentDue: number
@@ -37,10 +45,13 @@ export function computeCurrentPaymentDue(params: {
   const currentWork = Math.round(scheduledValue * currentPctComplete) / 100
   const workThisPeriod = Math.round((currentWork - previousWork) * 100) / 100
   const totalCompletedAndStored = previousWork + workThisPeriod + storedMaterials
-  const retainageOnWork = Math.round((previousWork + workThisPeriod) * retainageRate * 100) / 100
-  const retainageOnStored = Math.round(storedMaterials * storedMaterialRetainageRate * 100) / 100
-  const currentPaymentDue = Math.round((totalCompletedAndStored - retainageOnWork - retainageOnStored - previousCertificates) * 100) / 100
-  return { workThisPeriod, totalCompletedAndStored, retainageAmount: retainageOnWork, retainageOnStored, currentPaymentDue }
+  // AIA G702 line numbers
+  const line5 = totalCompletedAndStored
+  const line5a = Math.round((line5 - storedMaterials) * retainageRate * 100) / 100
+  const line5b = Math.round(storedMaterials * storedMaterialRetainageRate * 100) / 100
+  const line6 = Math.round((line5 - line5a - line5b) * 100) / 100
+  const currentPaymentDue = Math.round((line6 - previousCertificates) * 100) / 100
+  return { workThisPeriod, totalCompletedAndStored, line5, line5a, line5b, line6, retainageAmount: line5a, retainageOnStored: line5b, currentPaymentDue }
 }
 
 /**
