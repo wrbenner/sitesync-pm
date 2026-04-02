@@ -125,7 +125,7 @@ export const ConflictBanner: React.FC<ConflictBannerProps> = ({ serverUpdatedAt,
     role="alert"
     aria-live="assertive"
     style={{
-      display: 'flex', alignItems: 'flex-start', gap: spacing['3'],
+      display: 'flex', alignItems: 'flex-start', flexWrap: 'wrap', gap: spacing['2'],
       padding: `${spacing['3']} ${spacing['4']}`,
       backgroundColor: colors.statusCriticalSubtle,
       borderRadius: borderRadius.md,
@@ -134,7 +134,7 @@ export const ConflictBanner: React.FC<ConflictBannerProps> = ({ serverUpdatedAt,
     }}
   >
     <AlertTriangle size={16} color={colors.statusCritical} style={{ flexShrink: 0, marginTop: 2 }} />
-    <div style={{ flex: 1 }}>
+    <div style={{ flex: '1 1 auto', minWidth: 200 }}>
       <p style={{
         fontSize: typography.fontSize.sm,
         fontWeight: typography.fontWeight.semibold,
@@ -149,16 +149,17 @@ export const ConflictBanner: React.FC<ConflictBannerProps> = ({ serverUpdatedAt,
           : 'This item was updated by another user. Your unsaved changes may conflict.'}
       </p>
     </div>
-    <div style={{ display: 'flex', gap: spacing['2'], flexShrink: 0 }}>
+    <div style={{ display: 'flex', gap: spacing['2'], flex: '0 0 auto' }}>
       <Btn
         variant="primary"
         size="sm"
         icon={<RefreshCw size={13} />}
         onClick={() => onReload ? onReload() : window.location.reload()}
+        style={{ padding: '10px 16px', minHeight: 44 }}
       >
         Reload Latest
       </Btn>
-      <Btn variant="secondary" size="sm" onClick={onDismiss}>
+      <Btn variant="secondary" size="sm" onClick={onDismiss} style={{ padding: '10px 16px', minHeight: 44 }}>
         Keep My Edits
       </Btn>
     </div>
