@@ -404,7 +404,19 @@ export const Schedule: React.FC = () => {
 
       <style>{`
         @media (max-width: 1024px) and (min-width: 641px) { .kpi-grid { grid-template-columns: repeat(3, 1fr) !important; } }
-        @media (max-width: 640px) { .kpi-grid { grid-template-columns: repeat(2, 1fr) !important; } }
+        @media (max-width: 640px) {
+          .kpi-grid {
+            display: flex !important;
+            flex-wrap: nowrap !important;
+            overflow-x: auto !important;
+            padding-bottom: 4px !important;
+            gap: 10px !important;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+          }
+          .kpi-grid::-webkit-scrollbar { display: none; }
+          .kpi-grid > * { min-width: 152px; flex-shrink: 0; }
+        }
         @keyframes livePulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.35); } }
       `}</style>
 

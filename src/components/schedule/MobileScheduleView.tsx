@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { CheckCircle2, ChevronDown, ChevronUp, Link2, AlertTriangle } from 'lucide-react';
 import type { GanttPhase } from './GanttChart';
 import type { PredictedRisk } from '../../lib/predictions';
-import { colors, spacing, typography, borderRadius } from '../../styles/theme';
+import { colors, spacing, typography, borderRadius, getStatusColor } from '../../styles/theme';
 import { useScheduleStore } from '../../stores/scheduleStore';
 
 // ── Trade color palette ────────────────────────────────────────────────────
@@ -141,6 +141,8 @@ const ActivityCard: React.FC<CardProps> = ({ phase, risk, onMarkInProgress }) =>
     ? colors.statusInfo
     : colors.textTertiary;
 
+  const statusColors = getStatusColor(phase.status ?? '');
+
   const isSwipingRight = translateX > 10;
   const isSwipingLeft = translateX < -10;
 
@@ -250,6 +252,21 @@ const ActivityCard: React.FC<CardProps> = ({ phase, risk, onMarkInProgress }) =>
             }}>
               {phase.name}
             </span>
+            {phase.critical && (
+              <span style={{
+                fontSize: 10,
+                fontWeight: typography.fontWeight.semibold,
+                backgroundColor: `${colors.statusCritical}18`,
+                color: colors.statusCritical,
+                padding: '1px 5px',
+                borderRadius: borderRadius.full,
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
+                letterSpacing: '0.2px',
+              }}>
+                Critical
+              </span>
+            )}
             {risk && (
               <AlertTriangle size={13} color={colors.statusPending} style={{ flexShrink: 0 }} />
             )}
@@ -300,9 +317,27 @@ const ActivityCard: React.FC<CardProps> = ({ phase, risk, onMarkInProgress }) =>
               gap: spacing['1'],
               flexShrink: 0,
             }}>
-              <span style={{ fontSize: 12, color: colors.textTertiary }}>
-                {phase.progress}%
-              </span>
+              {phase.status && (
+                <span style={{ display: 'flex', alignItems: 'center', gap: 3, marginRight: 2 }}>
+                  <span style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: '50%',
+                    backgroundColor: statusColors.fg,
+                    flexShrink: 0,
+                    display: 'inline-block',
+                  }} />
+                  <span style={{
+                    fontSize: 11,
+                    color: statusColors.fg,
+                    fontWeight: typography.fontWeight.medium,
+                    textTransform: 'capitalize',
+                    whiteSpace: 'nowrap',
+                  }}>
+                    {phase.status.replace(/_/g, ' ')}
+                  </span>
+                </span>
+              )}
               {phase.assigned_trade && (
                 <span style={{
                   fontSize: 11,
