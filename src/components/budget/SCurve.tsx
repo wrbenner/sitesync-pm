@@ -35,7 +35,17 @@ export const SCurve: React.FC<SCurveProps> = ({ totalBudget: _totalBudget, spent
 
   return (
     <div>
-      <div style={{ position: 'relative' }}>
+      <div
+        style={{ position: 'relative' }}
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'ArrowRight') {
+            setHovered(prev => prev === null ? 0 : Math.min(prev + 1, actualData.length - 1));
+          } else if (e.key === 'ArrowLeft') {
+            setHovered(prev => prev === null ? actualData.length - 1 : Math.max(prev - 1, 0));
+          }
+        }}
+      >
         <svg
           viewBox={`-8 -8 ${W + 16} ${H + 28}`}
           preserveAspectRatio="xMidYMid meet"
@@ -96,7 +106,7 @@ export const SCurve: React.FC<SCurveProps> = ({ totalBudget: _totalBudget, spent
                 strokeWidth="0.8"
                 tabIndex={0}
                 role="graphics-symbol"
-                aria-label={`Month ${months[i]}: actual $${v}M, planned $${plannedData[i] ?? 'N/A'}M`}
+                aria-label={`Month ${months[i]}: Planned $${plannedData[i]}M, Actual $${actualData[i] ?? 'N/A'}M`}
                 style={{ cursor: 'pointer', opacity: animated ? 1 : 0, transition: `opacity 0.5s ease-out ${i * 0.1}s`, outline: 'none' }}
                 onMouseEnter={() => setHovered(i)}
                 onMouseLeave={() => setHovered(null)}
@@ -138,7 +148,7 @@ export const SCurve: React.FC<SCurveProps> = ({ totalBudget: _totalBudget, spent
 
         {/* Hover tooltip */}
         {hovered !== null && (
-          <div style={{
+          <div role="status" aria-live="polite" style={{
             position: 'absolute',
             left: `${(hovered / (plannedData.length - 1)) * 100}%`,
             top: 0, transform: 'translateX(-50%)',
