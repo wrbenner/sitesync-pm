@@ -688,23 +688,68 @@ const _DrawingsPage: React.FC = () => {
                     </button>
                   </div>
                   <div>
-                    {revisionHistory.map((rev, idx) => {
+                    {revisionHistory.map((rev) => {
                       const isCurrent = !rev.superseded_at;
-                      const isLast = idx === revisionHistory.length - 1;
                       return (
                         <div
                           key={rev.id}
-                          style={{ paddingTop: spacing.sm, paddingBottom: spacing.sm, borderBottom: isLast ? 'none' : `1px solid ${colors.border}`, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing.sm }}
+                          role="button"
+                          tabIndex={0}
+                          aria-label={`View revision ${rev.revision_number}`}
+                          onClick={() => {
+                            if (isCurrent) {
+                              setViewingRevisionNum(null);
+                            } else {
+                              setViewingRevisionNum(rev.revision_number);
+                              setViewerDrawing({ ...selectedDrawing, revision: `Rev ${rev.revision_number}` });
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              if (isCurrent) {
+                                setViewingRevisionNum(null);
+                              } else {
+                                setViewingRevisionNum(rev.revision_number);
+                                setViewerDrawing({ ...selectedDrawing, revision: `Rev ${rev.revision_number}` });
+                              }
+                            }
+                          }}
+                          style={{
+                            borderLeft: '2px solid #E5E7EB',
+                            paddingLeft: 16,
+                            marginBottom: 12,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            gap: spacing.sm,
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.borderLeftColor = isCurrent ? colors.statusActive : '#9CA3AF'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.borderLeftColor = '#E5E7EB'; }}
                         >
+                          {/* Dot indicator */}
+                          <span
+                            aria-hidden="true"
+                            style={{
+                              width: 8,
+                              height: 8,
+                              borderRadius: '50%',
+                              backgroundColor: isCurrent ? colors.statusActive : '#9CA3AF',
+                              flexShrink: 0,
+                              marginTop: 4,
+                            }}
+                          />
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, marginBottom: 2 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, marginBottom: 2, flexWrap: 'wrap' }}>
                               <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
                                 Rev {rev.revision_number}
                               </span>
                               {isCurrent && (
-                                <span style={{ fontSize: typography.fontSize.caption, backgroundColor: `${colors.statusActive}18`, color: colors.statusActive, padding: '1px 7px', borderRadius: borderRadius.full, fontWeight: typography.fontWeight.semibold }}>
-                                  Current
-                                </span>
+                                <Tag
+                                  label="Current"
+                                  color={colors.statusActive}
+                                  backgroundColor={`${colors.statusActive}18`}
+                                />
                               )}
                             </div>
                             <p style={{ margin: 0, fontSize: typography.fontSize.caption, color: colors.gray600 }}>
@@ -716,19 +761,6 @@ const _DrawingsPage: React.FC = () => {
                               </p>
                             )}
                           </div>
-                          {!isCurrent && (
-                            <button
-                              onClick={() => {
-                                setViewingRevisionNum(rev.revision_number);
-                                setViewerDrawing({ ...selectedDrawing, revision: `Rev ${rev.revision_number}` });
-                              }}
-                              style={{ fontSize: typography.fontSize.caption, color: colors.primaryOrange, border: `1px solid ${colors.primaryOrange}40`, borderRadius: borderRadius.base, backgroundColor: 'transparent', cursor: 'pointer', padding: '3px 8px', fontFamily: typography.fontFamily, whiteSpace: 'nowrap', flexShrink: 0 }}
-                              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${colors.primaryOrange}10`; }}
-                              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
-                            >
-                              View
-                            </button>
-                          )}
                         </div>
                       );
                     })}
