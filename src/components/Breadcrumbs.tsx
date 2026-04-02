@@ -91,7 +91,9 @@ export const FolderBreadcrumbs: React.FC<FolderBreadcrumbsProps> = ({ stack, onN
     return (
       <React.Fragment key={segment.id}>
         <li aria-hidden="true">
-          <ChevronRight size={12} style={{ color: colors.textTertiary, flexShrink: 0 }} />
+          <span aria-hidden="true" style={{ display: 'inline-flex', alignItems: 'center', padding: '4px', minWidth: '24px', minHeight: '44px', justifyContent: 'center' }}>
+            <ChevronRight size={12} style={{ color: colors.textTertiary, flexShrink: 0 }} />
+          </span>
         </li>
         <li>
           {isLast ? (
@@ -175,9 +177,10 @@ export const FolderBreadcrumbs: React.FC<FolderBreadcrumbsProps> = ({ stack, onN
 
           {showEllipsis ? (
             <React.Fragment>
-              {renderSegment(stack[0], 0)}
               <li aria-hidden="true">
-                <ChevronRight size={12} style={{ color: colors.textTertiary, flexShrink: 0 }} />
+                <span aria-hidden="true" style={{ display: 'inline-flex', alignItems: 'center', padding: '4px', minWidth: '24px', minHeight: '44px', justifyContent: 'center' }}>
+                  <ChevronRight size={12} style={{ color: colors.textTertiary, flexShrink: 0 }} />
+                </span>
               </li>
               <li>
                 <button
