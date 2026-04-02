@@ -7,7 +7,7 @@ import EmptyState from '../components/ui/EmptyState';
 import { MetricCardSkeleton } from '../components/ui/Skeletons';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 import { useRFIs } from '../hooks/queries';
-import { AlertTriangle, FileQuestion, Plus, Clock, MessageSquare, Paperclip, Calendar, RefreshCw, Send, Sparkles, LayoutGrid, List, UserCheck, Flag, Download, XCircle } from 'lucide-react';
+import { AlertTriangle, FileQuestion, FileText, Plus, Clock, MessageSquare, Paperclip, Calendar, RefreshCw, Send, Sparkles, LayoutGrid, List, UserCheck, Flag, Download, XCircle } from 'lucide-react';
 import { useAppNavigate, getRelatedItemsForRfi } from '../utils/connections';
 import { useCreateRFI, useUpdateRFI } from '../hooks/mutations';
 import { useProjectId } from '../hooks/useProjectId';
@@ -243,22 +243,33 @@ const RFIs: React.FC = () => {
     return (
       <PageContainer title="RFIs" subtitle="Loading...">
         <style>{`@keyframes rfi-skeleton-pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 0.7; } }`}</style>
+        {/* 4 metric card placeholders */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'], marginBottom: spacing['4'] }}>
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} style={{ backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.lg, border: `1px solid ${colors.borderSubtle}`, padding: spacing['4'], display: 'flex', flexDirection: 'column', gap: spacing['2'] }}>
+              <div style={{ width: 32, height: 32, borderRadius: borderRadius.md, backgroundColor: colors.borderSubtle, animation: 'rfi-skeleton-pulse 1.5s ease-in-out infinite', animationDelay: `${i * 0.1}s` }} />
+              <div style={{ width: '60%', height: 28, borderRadius: borderRadius.sm, backgroundColor: colors.borderSubtle, animation: 'rfi-skeleton-pulse 1.5s ease-in-out infinite', animationDelay: `${i * 0.1 + 0.05}s` }} />
+              <div style={{ width: '80%', height: 14, borderRadius: borderRadius.sm, backgroundColor: colors.borderSubtle, animation: 'rfi-skeleton-pulse 1.5s ease-in-out infinite', animationDelay: `${i * 0.1 + 0.1}s` }} />
+            </div>
+          ))}
+        </div>
+        {/* 8 table row placeholders */}
         <Card padding="0">
           <div style={{ padding: `${spacing['3']} ${spacing['4']}`, borderBottom: `1px solid ${colors.borderSubtle}`, display: 'flex', gap: spacing['3'] }}>
-            {[44, 90, 360, 140, 90, 110, 70, 100].map((w, i) => (
+            {[44, 90, 360, 110, 90, 120, 70, 100].map((w, i) => (
               <div key={i} style={{ width: w, height: 14, borderRadius: borderRadius.sm, backgroundColor: colors.borderSubtle, animation: 'rfi-skeleton-pulse 1.5s ease-in-out infinite', flexShrink: 0 }} />
             ))}
           </div>
-          {Array.from({ length: 5 }).map((_, rowIdx) => (
+          {Array.from({ length: 8 }).map((_, rowIdx) => (
             <div key={rowIdx} style={{ display: 'flex', alignItems: 'center', gap: spacing['3'], padding: `${spacing['3']} ${spacing['4']}`, borderBottom: `1px solid ${colors.borderSubtle}` }}>
-              <div style={{ width: 44, height: 16, borderRadius: borderRadius.sm, backgroundColor: colors.borderSubtle, flexShrink: 0, animation: 'rfi-skeleton-pulse 1.5s ease-in-out infinite', animationDelay: `${rowIdx * 0.1}s` }} />
-              <div style={{ width: 90, height: 16, borderRadius: borderRadius.sm, backgroundColor: colors.borderSubtle, flexShrink: 0, animation: 'rfi-skeleton-pulse 1.5s ease-in-out infinite', animationDelay: `${rowIdx * 0.1}s` }} />
-              <div style={{ width: 320, height: 16, borderRadius: borderRadius.sm, backgroundColor: colors.borderSubtle, flexShrink: 0, animation: 'rfi-skeleton-pulse 1.5s ease-in-out infinite', animationDelay: `${rowIdx * 0.1 + 0.05}s` }} />
-              <div style={{ width: 120, height: 16, borderRadius: borderRadius.sm, backgroundColor: colors.borderSubtle, flexShrink: 0, animation: 'rfi-skeleton-pulse 1.5s ease-in-out infinite', animationDelay: `${rowIdx * 0.1 + 0.05}s` }} />
-              <div style={{ width: 72, height: 24, borderRadius: borderRadius.full, backgroundColor: colors.borderSubtle, flexShrink: 0, animation: 'rfi-skeleton-pulse 1.5s ease-in-out infinite', animationDelay: `${rowIdx * 0.1 + 0.1}s` }} />
-              <div style={{ width: 88, height: 24, borderRadius: borderRadius.full, backgroundColor: colors.borderSubtle, flexShrink: 0, animation: 'rfi-skeleton-pulse 1.5s ease-in-out infinite', animationDelay: `${rowIdx * 0.1 + 0.1}s` }} />
-              <div style={{ width: 48, height: 16, borderRadius: borderRadius.sm, backgroundColor: colors.borderSubtle, flexShrink: 0, animation: 'rfi-skeleton-pulse 1.5s ease-in-out infinite', animationDelay: `${rowIdx * 0.1 + 0.15}s` }} />
-              <div style={{ width: 80, height: 16, borderRadius: borderRadius.sm, backgroundColor: colors.borderSubtle, flexShrink: 0, animation: 'rfi-skeleton-pulse 1.5s ease-in-out infinite', animationDelay: `${rowIdx * 0.1 + 0.15}s` }} />
+              <div style={{ width: 44, height: 16, borderRadius: borderRadius.sm, backgroundColor: colors.borderSubtle, flexShrink: 0, animation: 'rfi-skeleton-pulse 1.5s ease-in-out infinite', animationDelay: `${rowIdx * 0.08}s` }} />
+              <div style={{ width: 90, height: 16, borderRadius: borderRadius.sm, backgroundColor: colors.borderSubtle, flexShrink: 0, animation: 'rfi-skeleton-pulse 1.5s ease-in-out infinite', animationDelay: `${rowIdx * 0.08}s` }} />
+              <div style={{ width: 320, height: 16, borderRadius: borderRadius.sm, backgroundColor: colors.borderSubtle, flexShrink: 0, animation: 'rfi-skeleton-pulse 1.5s ease-in-out infinite', animationDelay: `${rowIdx * 0.08 + 0.05}s` }} />
+              <div style={{ width: 88, height: 24, borderRadius: borderRadius.full, backgroundColor: colors.borderSubtle, flexShrink: 0, animation: 'rfi-skeleton-pulse 1.5s ease-in-out infinite', animationDelay: `${rowIdx * 0.08 + 0.05}s` }} />
+              <div style={{ width: 72, height: 24, borderRadius: borderRadius.full, backgroundColor: colors.borderSubtle, flexShrink: 0, animation: 'rfi-skeleton-pulse 1.5s ease-in-out infinite', animationDelay: `${rowIdx * 0.08 + 0.1}s` }} />
+              <div style={{ width: 100, height: 24, borderRadius: borderRadius.full, backgroundColor: colors.borderSubtle, flexShrink: 0, animation: 'rfi-skeleton-pulse 1.5s ease-in-out infinite', animationDelay: `${rowIdx * 0.08 + 0.1}s` }} />
+              <div style={{ width: 48, height: 16, borderRadius: borderRadius.sm, backgroundColor: colors.borderSubtle, flexShrink: 0, animation: 'rfi-skeleton-pulse 1.5s ease-in-out infinite', animationDelay: `${rowIdx * 0.08 + 0.15}s` }} />
+              <div style={{ width: 80, height: 16, borderRadius: borderRadius.sm, backgroundColor: colors.borderSubtle, flexShrink: 0, animation: 'rfi-skeleton-pulse 1.5s ease-in-out infinite', animationDelay: `${rowIdx * 0.08 + 0.15}s` }} />
             </div>
           ))}
         </Card>
@@ -271,7 +282,7 @@ const RFIs: React.FC = () => {
       <PageContainer title="RFIs" subtitle="0 open · 0 overdue">
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'], padding: `${spacing['3']} ${spacing['4']}`, backgroundColor: colors.statusCriticalSubtle, borderRadius: borderRadius.md, border: `1px solid ${colors.statusCritical}30` }}>
           <AlertTriangle size={16} color={colors.statusCritical} style={{ flexShrink: 0 }} />
-          <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, flex: 1 }}>Unable to load RFIs</span>
+          <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, flex: 1 }}>{(rfisError as Error)?.message || 'Unable to load RFIs'}</span>
           <Btn variant="secondary" size="sm" icon={<RefreshCw size={14} />} onClick={() => refetch()}>Retry</Btn>
         </div>
       </PageContainer>
@@ -280,24 +291,25 @@ const RFIs: React.FC = () => {
 
   if (!rfis.length) {
     return (
-      <PageContainer
-        title="RFIs"
-        subtitle="No items"
-        actions={
+      <PageContainer title="RFIs" subtitle="No items">
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: `${spacing['16']} ${spacing['6']}`, textAlign: 'center' }}>
+          <div style={{ width: 64, height: 64, borderRadius: borderRadius.full, backgroundColor: colors.surfaceInset, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: spacing['4'] }}>
+            <FileText size={28} color={colors.textTertiary} />
+          </div>
+          <h3 style={{ fontSize: typography.fontSize.subtitle, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>
+            No RFIs have been created for this project yet
+          </h3>
+          <p style={{ fontSize: typography.fontSize.body, color: colors.textSecondary, margin: 0, marginBottom: spacing['6'], maxWidth: 420, lineHeight: typography.lineHeight.relaxed }}>
+            When questions arise in the field, create an RFI to get a documented answer
+          </p>
           <PermissionGate permission="rfis.create">
-            <Btn onClick={() => setShowCreateModal(true)}>
+            <Btn onClick={() => setShowCreateModal(true)} style={{ backgroundColor: colors.primaryOrange, color: '#fff' }}>
               <Plus size={16} style={{ marginRight: spacing.xs }} />
-              New RFI
+              Create First RFI
             </Btn>
           </PermissionGate>
-        }
-      >
-        <EmptyState
-          icon={FileQuestion}
-          title="No RFIs yet"
-          description="Create your first RFI to track questions and clarifications with the design team."
-          action={{ label: 'Create RFI', onClick: () => setShowCreateModal(true) }}
-        />
+        </div>
+        {showCreateModal && <CreateRFIModal onClose={() => setShowCreateModal(false)} projectId={projectId!} />}
       </PageContainer>
     );
   }
