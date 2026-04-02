@@ -16,27 +16,35 @@ type DbClient = typeof supabase
 type SupabaseProxyTarget = typeof supabase
 type QueryResult<T> = PromiseLike<{ data: T | null; error: { message: string; code?: string; details?: string | null } | null }>
 
+// Tables that do not have a project_id column and must NOT receive the auto-scoped .eq filter.
+const UNSCOPED_TABLES = new Set(['organizations', 'organization_members', 'auth', 'storage'])
+
 /**
  * Wraps the Supabase client so that every terminal operation (select, insert,
  * update, delete, upsert) automatically appends .eq('project_id', projectId).
  * The .eq() is injected after the terminal call so that callers receive a
  * full PostgrestQueryBuilder from .from() and can chain freely before the
- * filter is applied.
+ * filter is applied. Tables in UNSCOPED_TABLES are excluded from scoping.
  */
 export function createScopedClient(client: DbClient, projectId: string): DbClient {
   const TERMINAL_OPS = new Set(['select', 'insert', 'update', 'delete', 'upsert'])
+  // Type for a terminal method after invocation — all return something with .eq()
+  type ScopedResult = { eq(col: string, val: unknown): unknown }
+  type TerminalMethod = (...args: unknown[]) => ScopedResult
+
   return new Proxy(client, {
     get(target: SupabaseProxyTarget, prop: string | symbol, receiver: unknown) {
       if (prop === 'from') {
         return (table: string): ReturnType<typeof supabase.from> => {
           const qb = target.from(table as TableName)
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const skipScoping = UNSCOPED_TABLES.has(table)
           return new Proxy(qb, {
             get(qbTarget, qbProp, qbReceiver) {
-              if (typeof qbProp === 'string' && TERMINAL_OPS.has(qbProp)) {
-                return (...args: unknown[]) =>
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  ((qbTarget as any)[qbProp](...args) as any).eq('project_id', projectId)
+              if (!skipScoping && typeof qbProp === 'string' && TERMINAL_OPS.has(qbProp)) {
+                return (...args: unknown[]) => {
+                  const method = qbTarget[qbProp as keyof typeof qbTarget] as TerminalMethod
+                  return method.call(qbTarget, ...args).eq('project_id', projectId)
+                }
               }
               return Reflect.get(qbTarget, qbProp, qbReceiver)
             },
