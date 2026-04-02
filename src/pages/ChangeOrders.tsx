@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Plus, Search, X, ArrowRight, GitBranch, Clock, AlertTriangle, ChevronRight, FileText } from 'lucide-react';
 import { PageContainer, Card, Btn, MetricBox, SectionHeader, Skeleton, useToast, Modal, TabBar } from '../components/Primitives';
-import { colors, spacing, typography, borderRadius, shadows, transitions, zIndex } from '../styles/theme';
+import { colors, spacing, typography, borderRadius, shadows, transitions, zIndex, touchTarget } from '../styles/theme';
 import { WaterfallChart } from '../components/budget/WaterfallChart';
 import { useQuery } from '../hooks/useQuery';
 import { getCostData } from '../api/endpoints/budget';
@@ -631,19 +631,29 @@ export const ChangeOrders: React.FC = () => {
                   <div key={co.id} onClick={() => setSelectedCO(co)} role="button" tabIndex={0}
                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedCO(co); } }}
                     style={{
-                      padding: spacing['4'], backgroundColor: colors.surfaceRaised,
+                      padding: `${spacing['3']} ${spacing['4']}`, backgroundColor: colors.surfaceRaised,
                       borderRadius: borderRadius.md, cursor: 'pointer',
                       boxShadow: shadows.card, transition: `box-shadow ${transitions.quick}`,
                       border: `1px solid ${colors.borderSubtle}`,
+                      minHeight: touchTarget.min,
                     }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = shadows.cardHover; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = shadows.card; }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['2'] }}>
-                      <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>{co.coNumber} {co.title}</span>
+                    {/* Line 1: CO number and title */}
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: spacing['2'], marginBottom: spacing['1.5'] }}>
+                      <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: typeConfig.color, flexShrink: 0 }}>{co.coNumber}</span>
+                      <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{co.title}</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: statusConfig.color, backgroundColor: statusConfig.bg, padding: `2px ${spacing['2']}`, borderRadius: borderRadius.full }}>{statusConfig.label}</span>
-                      <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: amountColor }}>{amountLabel}</span>
+                    {/* Line 2: Amount and status badge */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['1.5'] }}>
+                      <span style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: amountColor }}>{amountLabel}</span>
+                      <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: statusConfig.color, backgroundColor: statusConfig.bg, padding: `0 ${spacing['3']}`, borderRadius: borderRadius.full, display: 'inline-flex', alignItems: 'center', minHeight: touchTarget.min, minWidth: touchTarget.min }}>{statusConfig.label}</span>
+                    </div>
+                    {/* Line 3: Type badge and date */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
                       <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: typeConfig.color, backgroundColor: typeConfig.bg, padding: `2px ${spacing['2']}`, borderRadius: borderRadius.full }}>{typeConfig.shortLabel}</span>
+                      {co.created_at && <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{new Date(co.created_at).toLocaleDateString()}</span>}
                     </div>
                   </div>
                 );
