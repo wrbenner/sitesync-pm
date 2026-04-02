@@ -25,8 +25,20 @@ export const PermissionGate: React.FC<PermissionGateProps> = ({
 }) => {
   const { hasPermission, hasAnyPermission, isAtLeast, loading } = usePermissions();
 
-  // While loading permissions, hide content to prevent flash
-  if (loading) return null;
+  // Never render children while permissions are loading — prevents unauthorized content flash
+  if (loading) {
+    if (!showDenied) return null;
+    return (
+      <div style={{
+        width: '100%',
+        height: '32px',
+        backgroundColor: colors.surfaceInset,
+        borderRadius: borderRadius.md,
+        opacity: 0.5,
+        animation: 'pulse 1.5s ease-in-out infinite',
+      }} />
+    );
+  }
 
   let allowed = true;
   if (permission) allowed = hasPermission(permission);
