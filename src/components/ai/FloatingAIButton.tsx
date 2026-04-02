@@ -1,5 +1,5 @@
-import React from 'react';
-import { Sparkles } from 'lucide-react';
+import React, { useEffect } from 'react';
+import { Sparkles, AlertTriangle } from 'lucide-react';
 import { colors, borderRadius, shadows, transitions, spacing, typography, zIndex as themeZIndex } from '../../styles/theme';
 import { useProjectId } from '../../hooks/useProjectId';
 import { useAIInsights } from '../../hooks/queries';
@@ -8,12 +8,27 @@ import { useCopilotStore } from '../../stores/copilotStore';
 export const FloatingAIButton: React.FC = () => {
   const { openCopilot, isOpen } = useCopilotStore();
   const projectId = useProjectId();
-  const { data: insights } = useAIInsights(projectId);
+  const { data: insights, isLoading, isError } = useAIInsights(projectId);
   const insightCount = insights?.length || 0;
+
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = '@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }';
+    document.head.appendChild(style);
+    return () => { document.head.removeChild(style); };
+  }, []);
+
+  const titleText = isLoading
+    ? 'Loading AI insights...'
+    : insightCount > 0
+      ? `${insightCount} AI insight${insightCount !== 1 ? 's' : ''} available`
+      : 'Open AI Copilot';
 
   return (
     <button
       onClick={openCopilot}
+      title={titleText}
+      aria-label={titleText}
       style={{
         position: 'fixed',
         bottom: spacing['6'],
@@ -32,6 +47,7 @@ export const FloatingAIButton: React.FC = () => {
         cursor: 'pointer',
         zIndex: themeZIndex.dropdown as number - 1,
         transition: `all ${transitions.quick}`,
+        animation: isLoading ? 'pulse 2s ease-in-out infinite' : undefined,
       }}
       onMouseEnter={(e) => {
         (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.08)';
@@ -41,7 +57,23 @@ export const FloatingAIButton: React.FC = () => {
       }}
     >
       <Sparkles size={20} color={isOpen ? colors.statusReview : colors.white} />
-      {insightCount > 0 && (
+      {isError && (
+        <span style={{
+          position: 'absolute',
+          top: -4,
+          right: -4,
+          backgroundColor: colors.surfaceRaised,
+          borderRadius: '50%',
+          width: 18,
+          height: 18,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+          <AlertTriangle size={10} color={colors.statusPending} />
+        </span>
+      )}
+      {!isError && insightCount > 0 && (
         <span style={{
           position: 'absolute',
           top: -4,
