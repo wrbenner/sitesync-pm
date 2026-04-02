@@ -652,11 +652,14 @@ Use these modules: ui-design-system, core-workflows (RFIs/submittals/change-orde
 {
   "modules": [
     {"name":"ui-design-system","label":"UI Design System","description":"Theme, primitives, shared components","files":[],"priority":1},
-    {"name":"core-workflows","label":"Core Workflows","description":"RFIs, submittals, change orders, punch list","files":[],"priority":1},
-    {"name":"financial-engine","label":"Financial Engine","description":"Budget, financials, pay apps","files":[],"priority":1},
-    {"name":"scheduling","label":"Scheduling","description":"Schedule, lookahead, gantt","files":[],"priority":2},
-    {"name":"field-operations","label":"Field Operations","description":"Daily log, crews, safety","files":[],"priority":2},
-    {"name":"project-intelligence","label":"Project Intelligence","description":"AI copilot, agents, insights","files":[],"priority":2},
+    {"name":"core-workflows","label":"Core Workflows","description":"RFIs, submittals, change orders, punch list. PAGE_ACCEPTANCE_CRITERIA pages: RFIs, Submittals, Change Orders, Punch List","files":[],"priority":1},
+    {"name":"financial-engine","label":"Financial Engine","description":"Budget, financials, pay apps. PAGE_ACCEPTANCE_CRITERIA pages: Budget, Payment Applications","files":[],"priority":1},
+    {"name":"task-management","label":"Task Management","description":"Tasks kanban board. PAGE_ACCEPTANCE_CRITERIA pages: Tasks","files":[],"priority":1},
+    {"name":"scheduling","label":"Scheduling","description":"Schedule, lookahead, gantt. PAGE_ACCEPTANCE_CRITERIA pages: Schedule","files":[],"priority":2},
+    {"name":"field-operations","label":"Field Operations","description":"Daily log, field capture, crews, safety. PAGE_ACCEPTANCE_CRITERIA pages: Daily Log, Field Capture, Safety","files":[],"priority":2},
+    {"name":"documents-drawings","label":"Documents & Drawings","description":"Drawings, files, markup. PAGE_ACCEPTANCE_CRITERIA pages: Drawings","files":[],"priority":2},
+    {"name":"people-collaboration","label":"People & Collaboration","description":"Directory, meetings, crews. PAGE_ACCEPTANCE_CRITERIA pages: Directory, Meetings","files":[],"priority":2},
+    {"name":"project-intelligence","label":"Project Intelligence","description":"Dashboard, AI copilot, agents, insights. PAGE_ACCEPTANCE_CRITERIA pages: Dashboard","files":[],"priority":2},
     {"name":"infrastructure","label":"Infrastructure","description":"Routing, state, API, auth","files":[],"priority":3},
     {"name":"auth-rbac","label":"Authentication & RBAC","description":"Supabase Auth, profiles, roles, RLS, login/signup flows","files":["src/lib/supabase.ts","src/stores/authStore.ts"],"priority":1},
     {"name":"database-api","label":"Database & API Layer","description":"Supabase client, typed hooks, real-time subscriptions, optimistic updates","files":["src/lib/supabase.ts","src/types/database.ts","src/hooks/useSupabase.ts"],"priority":1},
@@ -792,7 +795,7 @@ CRITICAL PROMPT RULES (follow exactly or fixes will fail):
 - Do NOT generate prompts for features that require new backend APIs, databases, or external services.
 - Do NOT generate prompts for \"add real-time collaboration\" or \"add offline sync\" — these are multi-sprint features, not single prompts.
 - Focus on: fixing bugs, improving types, adding error/empty/loading states, improving UI polish, fixing calculations, adding ARIA attributes, improving mobile responsiveness.
-- If PAGE_ACCEPTANCE_CRITERIA.md defines criteria for this module, treat every numbered criterion as a P0 test case. Violations are bugs. Score against acceptance criteria FIRST, then the 14 dimensions.
+- PAGE_ACCEPTANCE_CRITERIA.md is the source of truth for what 'done' means. It defines criteria per PAGE, not per engine module. When auditing a composite module (e.g. 'core-workflows' covers RFIs + submittals + change orders + punch list), find ALL matching page sections in the criteria doc and validate each one. Module-to-page mapping: core-workflows → RFIs, Submittals, Change Orders, Punch List | financial-engine → Budget, Payment Applications | scheduling → Schedule | field-operations → Daily Log, Field Capture, Safety | project-intelligence → Dashboard, AI Copilot | ui-design-system → Global Standards. Every numbered criterion is a P0 test case. Violations are bugs. Score against acceptance criteria FIRST, then the 14 dimensions.
 
 CONTEXT:
 ${founder_context}
