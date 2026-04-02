@@ -456,3 +456,37 @@ export const getPunchList = async (
   }))
   return { data: rows, total: count ?? 0, page, pageSize }
 }
+
+export function applyDailyLogRealtimeChange(
+  current: DailyLogRow[],
+  payload: { eventType: string; new: Partial<DailyLogRow>; old: Partial<DailyLogRow> }
+): DailyLogRow[] {
+  const { eventType, new: next, old: prev } = payload
+  if (eventType === 'INSERT') {
+    return [next as DailyLogRow, ...current]
+  }
+  if (eventType === 'UPDATE') {
+    return current.map(row => row.id === next.id ? { ...row, ...next } as DailyLogRow : row)
+  }
+  if (eventType === 'DELETE') {
+    return current.filter(row => row.id !== prev.id)
+  }
+  return current
+}
+
+export function applyPunchItemRealtimeChange(
+  current: PunchItemRow[],
+  payload: { eventType: string; new: Partial<PunchItemRow>; old: Partial<PunchItemRow> }
+): PunchItemRow[] {
+  const { eventType, new: next, old: prev } = payload
+  if (eventType === 'INSERT') {
+    return [next as PunchItemRow, ...current]
+  }
+  if (eventType === 'UPDATE') {
+    return current.map(row => row.id === next.id ? { ...row, ...next } as PunchItemRow : row)
+  }
+  if (eventType === 'DELETE') {
+    return current.filter(row => row.id !== prev.id)
+  }
+  return current
+}
