@@ -32,12 +32,14 @@ export function computeCurrentPaymentDue(params: {
     previousCertificates = 0,
     storedMaterialRetainageRate = 0,
   } = params
-  const previousWork = scheduledValue * (prevPctComplete / 100)
-  const workThisPeriod = scheduledValue * (currentPctComplete / 100) - previousWork
+  // All monetary inputs are in dollars. Internal calculations use Math.round to avoid floating-point drift on penny amounts.
+  const previousWork = Math.round(scheduledValue * prevPctComplete) / 100
+  const currentWork = Math.round(scheduledValue * currentPctComplete) / 100
+  const workThisPeriod = Math.round((currentWork - previousWork) * 100) / 100
   const totalCompletedAndStored = previousWork + workThisPeriod + storedMaterials
-  const retainageOnWork = (previousWork + workThisPeriod) * retainageRate
-  const retainageOnStored = storedMaterials * storedMaterialRetainageRate
-  const currentPaymentDue = totalCompletedAndStored - retainageOnWork - retainageOnStored - previousCertificates
+  const retainageOnWork = Math.round((previousWork + workThisPeriod) * retainageRate * 100) / 100
+  const retainageOnStored = Math.round(storedMaterials * storedMaterialRetainageRate * 100) / 100
+  const currentPaymentDue = Math.round((totalCompletedAndStored - retainageOnWork - retainageOnStored - previousCertificates) * 100) / 100
   return { workThisPeriod, totalCompletedAndStored, retainageAmount: retainageOnWork, retainageOnStored, currentPaymentDue }
 }
 
