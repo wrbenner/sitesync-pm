@@ -4,7 +4,7 @@ import { Grid, List, Upload as UploadIcon, FolderOpen, FileText, Sparkles, Searc
 import { Card, Btn, useToast, PageContainer } from '../components/Primitives';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { DocumentsEmptyState } from '../components/files/DocumentsEmptyState';
-import { TableRowSkeleton } from '../components/ui/Skeletons';
+import { TableSkeleton } from '../components/ui/Skeletons';
 import { UploadZone } from '../components/files/UploadZone';
 import { DocumentSearch } from '../components/files/DocumentSearch';
 import { FilePreview } from '../components/files/FilePreview';
@@ -330,6 +330,31 @@ const _FilesPage: React.FC = () => {
     }),
   ], []);
 
+  if (loading) {
+    return (
+      <PageContainer title="Files">
+        <div style={{ display: 'flex', gap: spacing['4'], marginBottom: spacing['5'] }}>
+          {[0, 1, 2, 3].map((i) => (
+            <div
+              key={i}
+              style={{
+                flex: '1 1 0',
+                height: 80,
+                borderRadius: 12,
+                backgroundColor: '#E5E7EB',
+                animation: 'pulse 1.5s ease-in-out infinite',
+                opacity: 0.6,
+              }}
+            />
+          ))}
+        </div>
+        <Card padding="0">
+          <TableSkeleton columns={5} rows={8} />
+        </Card>
+      </PageContainer>
+    );
+  }
+
   return (
     <PageContainer
       title="Files"
@@ -408,12 +433,7 @@ const _FilesPage: React.FC = () => {
       )}
 
       {/* Grid View */}
-      {viewMode === 'grid' && loading && (
-        <Card padding="0">
-          <TableRowSkeleton rows={8} />
-        </Card>
-      )}
-      {viewMode === 'grid' && !loading && (
+      {viewMode === 'grid' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: spacing['4'] }}>
           {visibleFiles.map((file: FileItem) => {
             const approval = getApprovalStatus(file);
@@ -541,10 +561,7 @@ const _FilesPage: React.FC = () => {
       {/* List View with keyboard navigation */}
       {viewMode === 'list' && (
         <Card padding="0">
-          {loading ? (
-            <TableRowSkeleton rows={8} />
-          ) : (
-            <>
+          <>
               {visibleFiles.length === 0 && !currentFolderId ? (
                 <DocumentsEmptyState onUpload={() => setShowUpload(true)} />
               ) : (
@@ -566,7 +583,6 @@ const _FilesPage: React.FC = () => {
                 </div>
               )}
             </>
-          )}
         </Card>
       )}
 
