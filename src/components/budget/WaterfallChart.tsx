@@ -28,17 +28,15 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = ({
   ];
 
   const chartHeight = 200;
-  const barWidth = 80;
-  const gap = 40;
-  const totalWidth = bars.length * (barWidth + gap) + gap;
+  const chartGap = 'clamp(8px, 3vw, 40px)';
 
   return (
     <div style={{ overflowX: 'auto' }}>
-      <div style={{ minWidth: totalWidth, padding: `${spacing['4']} 0` }}>
+      <div style={{ width: '100%', padding: `${spacing['4']} 0` }}>
         {/* Value labels row */}
-        <div style={{ display: 'flex', gap, paddingLeft: gap / 2, marginBottom: spacing['2'] }}>
+        <div style={{ display: 'flex', gap: chartGap, marginBottom: spacing['2'] }}>
           {bars.map(bar => (
-            <div key={bar.label} style={{ width: barWidth, textAlign: 'center' }}>
+            <div key={bar.label} style={{ flex: '1 1 0', minWidth: 50, maxWidth: 120, textAlign: 'center' }}>
               <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: bar.isTotal ? colors.textPrimary : bar.color }}>
                 {bar.value >= 0 ? '+' : ''}{fmt(bar.value)}
               </span>
@@ -47,18 +45,18 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = ({
         </div>
 
         {/* Chart area */}
-        <div style={{ position: 'relative', height: chartHeight, display: 'flex', gap, paddingLeft: gap / 2 }}>
+        <div style={{ position: 'relative', height: chartHeight, display: 'flex', gap: chartGap, ['--chart-gap' as string]: chartGap } as React.CSSProperties}>
           {bars.map(bar => {
             const barHeight = maxVal > 0 ? (Math.abs(bar.value) / maxVal) * chartHeight : 0;
             const bottomOffset = maxVal > 0 ? (bar.cumStart / maxVal) * chartHeight : 0;
 
             return (
-              <div key={bar.label} style={{ width: barWidth, position: 'relative', height: '100%' }}>
+              <div key={bar.label} style={{ flex: '1 1 0', minWidth: 50, maxWidth: 120, position: 'relative', height: '100%' }}>
                 {/* Connector line (for non-totals) */}
                 {!bar.isTotal && (
                   <div style={{
                     position: 'absolute', bottom: bottomOffset + barHeight,
-                    left: -gap, width: gap,
+                    left: 'calc(-1 * var(--chart-gap))', width: 'var(--chart-gap)',
                     height: 1, backgroundColor: colors.borderDefault,
                     borderTop: `1px dashed ${colors.textTertiary}`,
                   }} />
@@ -77,9 +75,9 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = ({
         </div>
 
         {/* X-axis labels */}
-        <div style={{ display: 'flex', gap, paddingLeft: gap / 2, marginTop: spacing['2'], borderTop: `1px solid ${colors.borderSubtle}`, paddingTop: spacing['2'] }}>
+        <div style={{ display: 'flex', gap: chartGap, marginTop: spacing['2'], borderTop: `1px solid ${colors.borderSubtle}`, paddingTop: spacing['2'] }}>
           {bars.map(bar => (
-            <div key={bar.label} style={{ width: barWidth, textAlign: 'center' }}>
+            <div key={bar.label} style={{ flex: '1 1 0', minWidth: 50, maxWidth: 120, textAlign: 'center' }}>
               <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, fontWeight: bar.isTotal ? typography.fontWeight.semibold : typography.fontWeight.normal }}>
                 {bar.label}
               </span>
