@@ -31,23 +31,39 @@ export function useOptimisticLock(
   const [conflictDetected, setConflictDetected] = useState(false);
   const [serverUpdatedAt, setServerUpdatedAt] = useState<string | null>(null);
   const [checkFailed, setCheckFailed] = useState(false);
+  const retryCountRef = useRef(0);
 
   const checkConflict = useCallback(async () => {
     if (!entityId || !lastKnownUpdatedAt) return false;
 
-    const { data, error } = await (supabase.from(table as any) as any)
-      .select('updated_at')
-      .eq('id', entityId)
-      .single();
+    // Reset checkFailed on each call to allow manual retry by consuming component
+    setCheckFailed(false);
+    retryCountRef.current = 0;
+
+    const runQuery = () =>
+      (supabase.from(table as any) as any)
+        .select('updated_at')
+        .eq('id', entityId)
+        .single();
+
+    let { data, error } = await runQuery();
 
     if (error || !data) {
-      useUiStore.getState().addToast({
-        type: 'error',
-        title: 'Conflict check failed',
-        message: 'Could not verify if someone else edited this item. Save blocked until verification succeeds. Please retry.',
-      });
-      setCheckFailed(true);
-      return true;
+      if (retryCountRef.current < 1) {
+        retryCountRef.current += 1;
+        await new Promise<void>((resolve) => setTimeout(resolve, 1000));
+        ({ data, error } = await runQuery());
+      }
+
+      if (error || !data) {
+        useUiStore.getState().addToast({
+          type: 'error',
+          title: 'Conflict check failed',
+          message: 'Could not verify edits. Refresh the page and try again.',
+        });
+        setCheckFailed(true);
+        return true;
+      }
     }
 
     setCheckFailed(false);
