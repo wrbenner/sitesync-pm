@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Sparkles, AlertTriangle, ChevronDown, ChevronUp, CheckCircle, RefreshCw, Zap, CalendarClock, TrendingUp, GitBranch, Gauge, CalendarCheck, Calendar, BarChart3, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Sparkles, AlertTriangle, ChevronDown, ChevronUp, CheckCircle, RefreshCw, Zap, CalendarClock, TrendingUp, GitBranch, Gauge, CalendarCheck, Calendar, BarChart3, ToggleLeft, ToggleRight, ClipboardList } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { PageContainer, Card, SectionHeader, MetricBox, Skeleton, Btn, useToast } from '../components/Primitives';
 import { useRealtimeSchedulePhases, useScheduleRealtime } from '../hooks/queries/realtime';
@@ -222,7 +222,7 @@ export const Schedule: React.FC = () => {
   if (loading && schedulePhases.length === 0) {
     return (
       <PageContainer title="Schedule" subtitle="Loading...">
-        <style>{`@keyframes schedPulse { 0%, 100% { opacity: 0.7; } 50% { opacity: 0.3; } }`}</style>
+        <style>{`@keyframes schedPulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 0.7; } }`}</style>
         <div
           style={{
             display: 'grid',
@@ -235,7 +235,7 @@ export const Schedule: React.FC = () => {
             <div
               key={i}
               style={{
-                height: '104px',
+                height: '80px',
                 backgroundColor: '#E5E7EB',
                 borderRadius: '12px',
                 animation: 'schedPulse 1.5s ease-in-out infinite',
@@ -244,28 +244,6 @@ export const Schedule: React.FC = () => {
             />
           ))}
         </div>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: spacing.lg,
-            marginBottom: spacing['2xl'],
-          }}
-        >
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div
-              key={i}
-              style={{
-                height: '80px',
-                backgroundColor: '#E5E7EB',
-                borderRadius: '12px',
-                animation: 'schedPulse 1.5s ease-in-out infinite',
-                animationDelay: `${(i + 5) * 0.1}s`,
-              }}
-            />
-          ))}
-        </div>
-        <SectionHeader title="Project Timeline" />
         <Card padding={spacing.xl}>
           {GANTT_ROW_WIDTHS.map((rowWidth, i) => (
             <div
@@ -277,25 +255,25 @@ export const Schedule: React.FC = () => {
                 marginTop: i === 0 ? 0 : '8px',
               }}
             >
-              <motion.div
-                animate={{ opacity: [0.7, 0.3, 0.7] }}
-                transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut', delay: i * 0.08 }}
+              <div
                 style={{
                   flexShrink: 0,
-                  width: '170px',
-                  height: '32px',
+                  width: '200px',
+                  height: '48px',
                   backgroundColor: '#E5E7EB',
                   borderRadius: '4px',
+                  animation: 'schedPulse 1.5s ease-in-out infinite',
+                  animationDelay: `${i * 0.08}s`,
                 }}
               />
-              <motion.div
-                animate={{ opacity: [0.7, 0.3, 0.7] }}
-                transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut', delay: i * 0.08 + 0.05 }}
+              <div
                 style={{
                   width: rowWidth,
-                  height: '32px',
+                  height: '48px',
                   backgroundColor: '#E5E7EB',
                   borderRadius: '4px',
+                  animation: 'schedPulse 1.5s ease-in-out infinite',
+                  animationDelay: `${i * 0.08 + 0.05}s`,
                 }}
               />
             </div>
@@ -666,28 +644,20 @@ export const Schedule: React.FC = () => {
               textAlign: 'center',
               gap: spacing['4'],
             }}>
-              <div style={{
-                width: '56px',
-                height: '56px',
-                borderRadius: borderRadius.lg,
-                backgroundColor: `${colors.primaryOrange}12`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}>
-                <Calendar size={28} color={colors.primaryOrange} />
-              </div>
+              <ClipboardList size={48} color={colors.textTertiary} />
               <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'] }}>
-                <p style={{ margin: 0, fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
-                  Build your project schedule
-                </p>
-                <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textSecondary, maxWidth: '420px', lineHeight: typography.lineHeight.relaxed }}>
-                  Import your schedule from Primavera P6 or Microsoft Project, or create phases manually to track every milestone from mobilization to closeout.
+                <p style={{ margin: 0, fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+                  Build your schedule to track every phase from mobilization to closeout
                 </p>
               </div>
-              <Btn variant="primary" size="md" onClick={() => addToast('info', 'Phase creation coming soon')}>
-                Create First Phase
-              </Btn>
+              <div style={{ display: 'flex', gap: spacing['3'] }}>
+                <Btn variant="primary" size="md" onClick={() => addToast('info', 'Phase creation coming soon')}>
+                  Create First Phase
+                </Btn>
+                <Btn variant="secondary" size="md" onClick={() => addToast('info', 'P6/MS Project import coming soon')}>
+                  Import from P6/MS Project
+                </Btn>
+              </div>
             </div>
           </Card>
         ) : isMobile ? (
