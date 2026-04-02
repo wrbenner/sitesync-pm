@@ -253,3 +253,84 @@ export const Breadcrumbs: React.FC = () => {
     </nav>
   );
 };
+
+// ── Skeleton ──────────────────────────────────────────
+// Standardized loading placeholder with pulse animation.
+
+const SKELETON_STYLE_ID = 'sitesync-skeleton-keyframes';
+
+function injectSkeletonKeyframes() {
+  if (typeof document === 'undefined') return;
+  if (document.getElementById(SKELETON_STYLE_ID)) return;
+  const style = document.createElement('style');
+  style.id = SKELETON_STYLE_ID;
+  style.textContent = `
+    @keyframes skeleton-pulse {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 0.7; }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+interface SkeletonProps {
+  width?: string | number;
+  height?: string | number;
+  borderRadius?: string | number;
+  variant?: 'text' | 'card' | 'circle' | 'rectangle';
+}
+
+export const Skeleton: React.FC<SkeletonProps> = ({
+  width = '100%',
+  height,
+  borderRadius,
+  variant = 'rectangle',
+}) => {
+  React.useEffect(() => {
+    injectSkeletonKeyframes();
+  }, []);
+
+  let resolvedHeight = height;
+  let resolvedBorderRadius = borderRadius;
+
+  if (resolvedHeight === undefined) {
+    if (variant === 'card') resolvedHeight = 120;
+    else if (variant === 'text') resolvedHeight = 14;
+    else resolvedHeight = 20;
+  }
+
+  if (variant === 'circle') {
+    resolvedBorderRadius = '50%';
+  } else if (resolvedBorderRadius === undefined) {
+    resolvedBorderRadius = variant === 'card' ? 12 : 8;
+  }
+
+  return (
+    <div
+      style={{
+        width,
+        height: resolvedHeight,
+        borderRadius: resolvedBorderRadius,
+        backgroundColor: '#E5E7EB',
+        animation: 'skeleton-pulse 1.5s ease-in-out infinite',
+        flexShrink: 0,
+      }}
+    />
+  );
+};
+
+interface SkeletonGroupProps {
+  count: number;
+  gap?: number;
+  skeletonProps?: SkeletonProps;
+}
+
+export const SkeletonGroup: React.FC<SkeletonGroupProps> = ({ count, gap = 8, skeletonProps }) => {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap }}>
+      {Array.from({ length: count }, (_, i) => (
+        <Skeleton key={i} {...skeletonProps} />
+      ))}
+    </div>
+  );
+};
