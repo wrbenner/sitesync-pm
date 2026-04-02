@@ -251,7 +251,7 @@ const FieldCaptureInner: React.FC = () => {
   };
 
   return (
-    <PageContainer title="Field Capture" subtitle="Capture photos, voice notes, and observations from the field">
+    <PageContainer title="Field Capture" subtitle="Capture photos, voice notes, and observations from the field" aria-label="Field capture management">
       <div aria-live="polite" aria-atomic="true" style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}>{liveAnnouncement}</div>
       <QuickCapture open={quickCaptureOpen} onClose={() => setQuickCaptureOpen(false)} onSave={handleQuickCaptureSave} />
 
@@ -455,7 +455,7 @@ const FieldCaptureInner: React.FC = () => {
 
         <PermissionGate permission="field_capture.create">
           <button
-            aria-label="Add text note"
+            aria-label="Add tags"
             onClick={() => setQuickTextType(quickTextType ? null : 'note')}
             style={{
               flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['2'],
@@ -683,10 +683,11 @@ const FieldCaptureInner: React.FC = () => {
           </Card>
         ) : (
         <Card padding="0">
+          <div role="list" aria-label="Field captures">
           {previousCaptures.map((capture, index) => (
             <div
               key={capture.id}
-              role="button"
+              role="listitem"
               tabIndex={0}
               aria-label={`View ${capture.type} capture: ${capture.title}`}
               onClick={() => addToast('info', `Viewing ${capture.title}`)}
@@ -749,6 +750,7 @@ const FieldCaptureInner: React.FC = () => {
               </div>
             </div>
           ))}
+          </div>
         </Card>
         )}
       </div>
