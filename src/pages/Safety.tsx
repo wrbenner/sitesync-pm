@@ -556,7 +556,7 @@ export const Safety: React.FC = () => {
 
       {/* Loading State */}
       {isLoading && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: spacing['4'], marginBottom: spacing['2xl'] }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(280px, 1fr))', gap: spacing['4'], marginBottom: spacing['2xl'] }}>
           {[1, 2, 3, 4, 5, 6].map((i) => <Skeleton key={i} width="100%" height="100px" />)}
         </div>
       )}
@@ -567,8 +567,8 @@ export const Safety: React.FC = () => {
           {/* KPI Grid */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: isSmallMobile ? 'repeat(1, 1fr)' : isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
-            gap: 16,
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(280px, 1fr))',
+            gap: isMobile ? spacing.md : spacing.lg,
             marginBottom: spacing['2xl'],
           }}>
             <div
@@ -899,6 +899,7 @@ export const Safety: React.FC = () => {
                 style={{
                   background: 'none', border: 'none', cursor: 'pointer',
                   fontSize: 20, color: colors.textSecondary, lineHeight: 1, padding: 4,
+                  minHeight: '44px', minWidth: '44px',
                 }}
               >
                 &times;
@@ -1052,8 +1053,8 @@ export const Safety: React.FC = () => {
 
             {/* Actions */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: spacing['3'] }}>
-              <Btn variant="ghost" onClick={handleCloseModal}>Cancel</Btn>
-              <Btn variant="primary" onClick={handleIncidentSubmit}>Submit Incident</Btn>
+              <Btn variant="ghost" onClick={handleCloseModal} style={{ minHeight: '44px', minWidth: '44px' }}>Cancel</Btn>
+              <Btn variant="primary" onClick={handleIncidentSubmit} style={{ minHeight: '44px', minWidth: '44px' }}>Submit Incident</Btn>
             </div>
           </div>
         </div>
