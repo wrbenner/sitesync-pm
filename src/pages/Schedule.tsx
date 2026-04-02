@@ -672,20 +672,15 @@ export const Schedule: React.FC = () => {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'] }}>
                 <p style={{ margin: 0, fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
-                  No schedule phases yet
+                  Build your project schedule
                 </p>
-                <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textSecondary, maxWidth: '400px', lineHeight: typography.lineHeight.relaxed }}>
-                  Build your schedule to track every phase from mobilization to closeout.
+                <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textSecondary, maxWidth: '420px', lineHeight: typography.lineHeight.relaxed }}>
+                  Import your schedule from Primavera P6 or Microsoft Project, or create phases manually to track every milestone from mobilization to closeout.
                 </p>
               </div>
-              <div style={{ display: 'flex', gap: spacing['3'], flexWrap: 'wrap', justifyContent: 'center' }}>
-                <Btn variant="primary" size="md" onClick={() => addToast('info', 'Phase creation coming soon')}>
-                  Create First Phase
-                </Btn>
-                <Btn variant="secondary" size="md" onClick={() => addToast('info', 'P6/MS Project import coming soon')}>
-                  Import from P6/MS Project
-                </Btn>
-              </div>
+              <Btn variant="primary" size="md" onClick={() => addToast('info', 'Phase creation coming soon')}>
+                Create First Phase
+              </Btn>
             </div>
           </Card>
         ) : isMobile ? (
