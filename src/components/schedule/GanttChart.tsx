@@ -12,7 +12,7 @@ export type TimeScale = 'week' | 'month' | 'quarter';
 
 const ROW_HEIGHT = 40; // 32px bar + 8px margin
 const DAY_MS = 86_400_000;
-const LABEL_WIDTH = 170;
+const LABEL_WIDTH = 200;
 const SLIPPAGE_COL_WIDTH = 72;
 const FLOAT_COL_WIDTH = 84;
 const BASELINE_DATE_COL_WIDTH = 88;
@@ -630,7 +630,8 @@ export const GanttChart: React.FC<GanttChartProps> = ({
         <div style={{ minWidth: '900px' }}>
 
           {/* Time labels header + width probe */}
-          <div style={{ display: 'flex', paddingLeft: `${LABEL_WIDTH}px`, marginBottom: spacing['2'] }}>
+          <div style={{ display: 'flex', marginBottom: spacing['2'] }}>
+            <div aria-hidden="true" style={{ width: LABEL_WIDTH, flexShrink: 0, position: 'sticky', left: 0, backgroundColor: colors.surfaceRaised, zIndex: 7 }} />
             <div ref={probeRef} style={{ flex: 1, position: 'relative', height: 20 }}>
               {timeLabels.map(tl => (
                 <span
@@ -834,7 +835,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                   onKeyDown={e => handleBarKeyDown(e, phase)}
                 >
                   {/* Label */}
-                  <div role="gridcell" style={{ width: `${LABEL_WIDTH}px`, flexShrink: 0, paddingRight: spacing['3'] }}>
+                  <div role="gridcell" style={{ width: `${LABEL_WIDTH}px`, flexShrink: 0, paddingRight: spacing['3'], position: 'sticky', left: 0, backgroundColor: colors.surfaceRaised, zIndex: 6 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                       {phase.is_critical && !phase.completed && (
                         <span style={{
@@ -844,7 +845,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                           lineHeight: '16px', flexShrink: 0,
                         }}>CP</span>
                       )}
-                      <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>
+                      <span style={{ fontSize: typography.fontSize.sm, fontWeight: isCriticalPathRow ? typography.fontWeight.bold : typography.fontWeight.medium, color: colors.textPrimary }}>
                         {phase.name}
                       </span>
                       {getAnnotationsForEntity('schedule_phase', phase.id).map(ann => (
