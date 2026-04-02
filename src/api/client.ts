@@ -134,6 +134,26 @@ export async function buildPaginatedQuery<TRaw, TResult = TRaw>(
   }
 }
 
+/**
+ * Creates a typed Supabase Realtime subscription for a given table filtered by
+ * project_id. Returns an unsubscribe function for cleanup (e.g. in useEffect).
+ */
+export function subscribeToTable(
+  table: string,
+  projectId: string,
+  onInsert?: (row: unknown) => void,
+  onUpdate?: (row: unknown) => void,
+  onDelete?: (row: unknown) => void
+): () => void {
+  const channel = supabase
+    .channel(`${table}:${projectId}`)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table, filter: `project_id=eq.${projectId}` }, payload => onInsert?.(payload.new))
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table, filter: `project_id=eq.${projectId}` }, payload => onUpdate?.(payload.new))
+    .on('postgres_changes', { event: 'DELETE', schema: 'public', table, filter: `project_id=eq.${projectId}` }, payload => onDelete?.(payload.old))
+    .subscribe()
+  return () => { supabase.removeChannel(channel) }
+}
+
 // Re-export for convenience
 export { supabase }
 export { ApiError, AuthError, PermissionError, ValidationError, NotFoundError, transformSupabaseError } from './errors'
