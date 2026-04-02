@@ -43,6 +43,15 @@ export function computeCurrentPaymentDue(params: {
     previousCertificates = 0,
     storedMaterialRetainageRate = 0,
   } = params
+  if (currentPctComplete > 1 || currentPctComplete < 0 || prevPctComplete > 1 || prevPctComplete < 0) {
+    throw new Error('Percent complete values must be between 0 and 1 (0% to 100%).')
+  }
+  if (currentPctComplete < prevPctComplete) {
+    throw new Error('Current percent complete (' + (currentPctComplete * 100).toFixed(1) + '%) cannot be less than previous percent complete (' + (prevPctComplete * 100).toFixed(1) + '%). Percent complete can only increase within a pay period.')
+  }
+  if (retainageRate < 0 || retainageRate > 1) {
+    throw new Error('Retainage rate must be between 0 and 1.')
+  }
   // All monetary inputs are in dollars. Each intermediate value is rounded to cents before
   // further arithmetic to match AIA G702 requirements and avoid floating-point penny drift.
   const previousWork = Math.round(scheduledValue * prevPctComplete * 100) / 100
