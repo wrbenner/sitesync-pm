@@ -73,6 +73,8 @@ export const DailyLog: React.FC = () => {
   const [showAddendumForm, setShowAddendumForm] = useState(false);
   const [addendumText, setAddendumText] = useState('');
   const [addendumSubmitting, setAddendumSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const [historySearch, setHistorySearch] = useState('');
 
@@ -259,6 +261,12 @@ export const DailyLog: React.FC = () => {
     addToast('info', 'Camera capture would open on mobile device');
   };
 
+  // Sync isLoading and error state from the real hook
+  useEffect(() => {
+    setIsLoading(loading);
+    setError(logError ? ((logError as Error).message || 'Failed to load daily log data') : null);
+  }, [loading, logError]);
+
   // Show toast when fetch error occurs
   useEffect(() => {
     if (logError) {
@@ -266,21 +274,21 @@ export const DailyLog: React.FC = () => {
     }
   }, [logError, addToast]);
 
-  if (loading) {
+  if (isLoading) {
     return (
       <PageContainer title="Daily Log" subtitle="Loading...">
         <style>{`@keyframes pulse-dl { 0%,100% { opacity: 0.3; } 50% { opacity: 0.7; } }`}</style>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['6'] }}>
+        <div aria-live="polite" style={{ display: 'flex', flexDirection: 'column', gap: spacing['6'] }}>
           {/* 4 metric card skeletons */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'] }}>
             {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} style={{ backgroundColor: colors.surfaceFlat, borderRadius: '12px', border: `1px solid ${colors.borderSubtle}`, animation: 'pulse-dl 1.5s ease-in-out infinite', height: 96 }} aria-hidden="true" />
             ))}
           </div>
-          {/* 6 table row skeletons */}
+          {/* 5 table row skeletons */}
           <div style={{ backgroundColor: colors.white, borderRadius: borderRadius.xl, border: `1px solid ${colors.borderSubtle}`, overflow: 'hidden' }}>
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} style={{ height: 48, margin: `${spacing['2']} ${spacing['5']}`, backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.md, animation: 'pulse-dl 1.5s ease-in-out infinite', borderBottom: i < 5 ? `1px solid ${colors.borderSubtle}` : 'none' }} aria-hidden="true" />
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} style={{ height: 48, margin: `${spacing['2']} ${spacing['5']}`, backgroundColor: '#E5E7EB', borderRadius: 8, animation: 'pulse-dl 1.5s ease-in-out infinite', borderBottom: i < 4 ? `1px solid ${colors.borderSubtle}` : 'none' }} aria-hidden="true" />
             ))}
           </div>
         </div>
@@ -312,34 +320,38 @@ export const DailyLog: React.FC = () => {
           ))}
         </div>
 
-        {/* Inline error banner */}
-        {logError && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'], padding: `${spacing['3']} ${spacing['4']}`, backgroundColor: '#FEF2F2', border: `1px solid #FECACA`, borderRadius: borderRadius.lg, marginBottom: spacing['4'] }}>
-            <AlertTriangle size={16} color={colors.statusCritical} style={{ flexShrink: 0 }} />
-            <p style={{ fontSize: typography.fontSize.sm, color: colors.statusCritical, margin: 0, flex: 1 }}>
-              {(logError as Error).message || 'Failed to load daily log data'}
-            </p>
-            <Btn variant="ghost" size="sm" icon={<RefreshCw size={13} />} onClick={() => refetch()}>Retry</Btn>
-          </div>
-        )}
-
-        {/* Empty state */}
-        {!logError && (
-          <Card padding={spacing['10']}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: spacing['4'] }}>
-              <Calendar size={48} color={colors.textTertiary} />
-              <p style={{ fontSize: typography.fontSize.body, color: colors.textTertiary, margin: 0, maxWidth: '440px' }}>
-                No daily logs yet. The daily log is your project official record.
+        {/* Inline error banner and empty state */}
+        <div aria-live="polite">
+          {error && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'], padding: `${spacing['3']} ${spacing['4']}`, backgroundColor: '#FEF2F2', border: `1px solid #FECACA`, borderRadius: borderRadius.lg, marginBottom: spacing['4'] }}>
+              <AlertTriangle size={16} color={colors.statusCritical} style={{ flexShrink: 0 }} />
+              <p style={{ fontSize: typography.fontSize.sm, color: colors.statusCritical, margin: 0, flex: 1 }}>
+                {error}
               </p>
-              <button
-                onClick={() => { setSelectedDate(new Date().toISOString().split('T')[0]); setShowCreateModal(true); }}
-                style={{ backgroundColor: colors.primaryOrange, color: '#FFFFFF', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily, cursor: 'pointer' }}
-              >
-                Start Today Log
-              </button>
+              <Btn variant="ghost" size="sm" icon={<RefreshCw size={13} />} onClick={() => refetch()}>Retry</Btn>
             </div>
-          </Card>
-        )}
+          )}
+
+          {!error && (
+            <Card padding={spacing['10']}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: spacing['4'] }}>
+                <Calendar size={48} color="#9CA3AF" />
+                <p style={{ fontSize: typography.fontSize.subtitle, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0 }}>
+                  No daily logs yet
+                </p>
+                <p style={{ fontSize: typography.fontSize.body, color: colors.textTertiary, margin: 0, maxWidth: '440px' }}>
+                  The daily log is your project official record. Start documenting site conditions today.
+                </p>
+                <button
+                  onClick={() => { setSelectedDate(new Date().toISOString().split('T')[0]); setShowCreateModal(true); }}
+                  style={{ backgroundColor: colors.primaryOrange, color: '#FFFFFF', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily, cursor: 'pointer' }}
+                >
+                  Start Today Log
+                </button>
+              </div>
+            </Card>
+          )}
+        </div>
 
         {showCreateModal && (
           <CreateDailyLogModal
