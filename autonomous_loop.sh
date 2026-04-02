@@ -481,7 +481,7 @@ take_snapshot() {
 
     # Compute hash of source files to detect changes
     local current_hash
-    current_hash=$(find "$PROJECT_DIR/src" -type f \( -name '*.ts' -o -name '*.tsx' -o -name '*.js' \) 2>/dev/null | sort | xargs cat 2>/dev/null | md5sum 2>/dev/null | cut -d' ' -f1 || echo "nohash_${CYCLE}")
+    current_hash=$(find "$PROJECT_DIR/src" -type f \( -name '*.ts' -o -name '*.tsx' -o -name '*.js' \) 2>/dev/null | sort | xargs cat 2>/dev/null | (md5sum 2>/dev/null || md5 -q 2>/dev/null || echo "nohash") | head -1 | cut -d' ' -f1)
 
     # Skip if nothing changed since last snapshot
     if [ -n "$LAST_SNAPSHOT_HASH" ] && [ "$current_hash" = "$LAST_SNAPSHOT_HASH" ] && [ -f "${RUN_DIR}/snapshot_cycle$(( CYCLE - 1 )).md" ]; then
@@ -2463,18 +2463,14 @@ provision_infrastructure() {
     fi
 
     # Check if Playwright is available (for E2E tests)
+    # NOTE: npx playwright can hang on first run. Use timeout to prevent blocking.
     local playwright_ok=false
-    if npx playwright --version >/dev/null 2>&1; then
+    if timeout 10 npx playwright --version >/dev/null 2>&1; then
         playwright_ok=true
         success "INFRA: Playwright available for E2E tests"
     else
-        log "INFRA: Playwright not installed. Installing..."
-        if (cd "$PROJECT_DIR" && npm install -D @playwright/test 2>/dev/null && npx playwright install chromium 2>/dev/null); then
-            playwright_ok=true
-            success "INFRA: Playwright installed"
-        else
-            warn "INFRA: Could not install Playwright. E2E tests will be skipped."
-        fi
+        warn "INFRA: Playwright not available or timed out. E2E tests will be skipped."
+        log "INFRA: To install manually: cd ${PROJECT_DIR} && npx playwright install chromium"
     fi
 
     # Write status file
