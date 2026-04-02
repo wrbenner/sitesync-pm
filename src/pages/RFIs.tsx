@@ -209,16 +209,15 @@ const RFIs: React.FC = () => {
       size: 100,
       cell: (info) => {
         const rfi = info.row.original;
-        const overdue = isOverdue(info.getValue()) && rfi.status !== 'closed';
+        const overdue = !!info.getValue() && new Date(info.getValue()) < new Date() && rfi.status !== 'closed';
         return (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ fontSize: typography.fontSize.sm, color: overdue ? colors.statusCritical : colors.textTertiary, fontVariantNumeric: 'tabular-nums' as const }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <span style={{ fontSize: typography.fontSize.sm, color: overdue ? '#E74C3C' : colors.textTertiary, fontVariantNumeric: 'tabular-nums' as const }}>
               {formatDate(info.getValue())}
             </span>
             {overdue && (
-              <span aria-label="Overdue" style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-                <span aria-hidden="true" style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', backgroundColor: colors.statusCritical, flexShrink: 0 }} />
-                <span aria-hidden="true" style={{ fontSize: '0.65rem', fontWeight: typography.fontWeight.semibold, color: colors.statusCritical, textTransform: 'uppercase' as const, letterSpacing: '0.3px' }}>Overdue</span>
+              <span aria-label="Overdue" style={{ display: 'inline-block', backgroundColor: '#FEE2E2', color: '#E74C3C', fontSize: 11, fontWeight: 600, borderRadius: 4, padding: '2px 6px', lineHeight: 1.4 }}>
+                OVERDUE
               </span>
             )}
           </div>
@@ -398,6 +397,24 @@ const RFIs: React.FC = () => {
         {`Showing ${filteredRfis.length} of ${allRfis.length} RFIs`}
       </div>
 
+      {/* KPI metric cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'], marginBottom: spacing['4'] }}>
+        {[
+          { label: 'Total RFIs', value: allRfis.length, color: colors.textPrimary, icon: <FileQuestion size={18} color={colors.textTertiary} /> },
+          { label: 'Open', value: openCount, color: colors.statusActive, icon: <Clock size={18} color={colors.statusActive} /> },
+          { label: 'Pending', value: allRfis.filter((r: any) => r.status === 'pending').length, color: colors.statusPending, icon: <MessageSquare size={18} color={colors.statusPending} /> },
+          { label: 'Overdue', value: overdueCount, color: '#E74C3C', icon: <AlertTriangle size={18} color="#E74C3C" /> },
+        ].map((card) => (
+          <div key={card.label} style={{ backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.lg, border: `1px solid ${card.label === 'Overdue' && overdueCount > 0 ? '#FCA5A530' : colors.borderSubtle}`, padding: spacing['4'], display: 'flex', flexDirection: 'column', gap: spacing['2'] }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              {card.icon}
+            </div>
+            <div style={{ fontSize: 28, fontWeight: typography.fontWeight.bold, color: card.color, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{card.value}</div>
+            <div style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{card.label}</div>
+          </div>
+        ))}
+      </div>
+
       {viewMode === 'table' ? (
         <Card padding="0">
           <div
@@ -457,6 +474,10 @@ const RFIs: React.FC = () => {
             selectedRowId={null}
             getRowId={(row) => String(row.id)}
             getRowAriaLabel={(rfi) => `RFI ${rfi.rfiNumber}: ${rfi.title}, status ${rfi.status}`}
+            getRowStyle={(rfi) => {
+              const overdue = rfi.dueDate && new Date(rfi.dueDate) < new Date() && rfi.status !== 'closed';
+              return overdue ? { borderLeft: '3px solid #E74C3C' } : {};
+            }}
             loading={rfisLoading}
             emptyMessage="No RFIs match your filters"
             onRowToggleSelectByIndex={(i) => {

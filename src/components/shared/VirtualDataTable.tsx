@@ -25,6 +25,7 @@ interface VirtualDataTableProps<T> {
   selectedRowId?: string | number | null;
   getRowId?: (row: T) => string;
   getRowAriaLabel?: (row: T) => string;
+  getRowStyle?: (row: T) => React.CSSProperties;
   emptyMessage?: string;
   rowHeight?: number;
   containerHeight?: number;
@@ -45,6 +46,7 @@ const VirtualRow = React.memo(function VirtualRow<T>({
   index,
   focused,
   ariaLabel,
+  extraStyle,
 }: {
   row: Row<T>;
   onClick?: (row: T) => void;
@@ -53,6 +55,7 @@ const VirtualRow = React.memo(function VirtualRow<T>({
   index: number;
   focused: boolean;
   ariaLabel?: string;
+  extraStyle?: React.CSSProperties;
 }) {
   const baseBg = selected ? colors.surfaceSelected : colors.surfaceRaised;
   return (
@@ -75,6 +78,7 @@ const VirtualRow = React.memo(function VirtualRow<T>({
         transition: `background-color ${transitions.quick}`,
         borderBottom: `1px solid ${colors.borderSubtle}`,
         borderLeft: selected ? `2px solid ${colors.primaryOrange}` : '2px solid transparent',
+        ...extraStyle,
       }}
       onMouseEnter={(e) => {
         if (onClick) (e.currentTarget as HTMLDivElement).style.backgroundColor = selected ? colors.surfaceSelected : colors.surfaceHover;
@@ -112,6 +116,7 @@ const VirtualRow = React.memo(function VirtualRow<T>({
   index: number;
   focused: boolean;
   ariaLabel?: string;
+  extraStyle?: React.CSSProperties;
 }) => React.ReactElement;
 
 export function VirtualDataTable<T>({
@@ -123,6 +128,7 @@ export function VirtualDataTable<T>({
   selectedRowId,
   getRowId,
   getRowAriaLabel,
+  getRowStyle,
   emptyMessage = 'No items found',
   rowHeight = ROW_HEIGHT,
   containerHeight = 600,
@@ -273,6 +279,7 @@ export function VirtualDataTable<T>({
                   index={virtualRow.index}
                   focused={focusedIndex === virtualRow.index}
                   ariaLabel={getRowAriaLabel ? getRowAriaLabel(row.original) : undefined}
+                  extraStyle={getRowStyle ? getRowStyle(row.original) : undefined}
                   style={{
                     position: 'absolute',
                     top: 0,
