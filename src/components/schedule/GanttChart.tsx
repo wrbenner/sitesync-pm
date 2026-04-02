@@ -583,13 +583,11 @@ export const GanttChart: React.FC<GanttChartProps> = ({
 
         {/* Legend */}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: spacing['3'], flexWrap: 'wrap', alignItems: 'center' }}>
-          {/* Baseline — shown only when baseline toggle is on */}
-          {showBaseline && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
-              <div style={{ width: 16, height: 6, borderRadius: 2, backgroundColor: '#D1D5DB' }} />
-              <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Baseline</span>
-            </div>
-          )}
+          {/* Baseline — always visible so ghost bars on the chart are always explained */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
+            <div style={{ width: 16, height: 6, borderRadius: 2, backgroundColor: colors.borderDefault, opacity: 0.7 }} />
+            <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Baseline</span>
+          </div>
           {/* Actual */}
           <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
             <div style={{ width: 16, height: 6, borderRadius: 2, backgroundColor: colors.primaryOrange }} />
@@ -937,8 +935,8 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                     }}
                     onClick={() => { if (!isDraggingThis) onPhaseClick?.(phase); }}
                   >
-                    {/* Baseline bar */}
-                    {showBaseline && (() => {
+                    {/* Baseline ghost bar — always visible when baseline data exists */}
+                    {(() => {
                       const bStart = phase.baselineStartDate ?? (baselinePhases?.find(b => b.id === phase.id)?.baselineStartDate ?? null);
                       const bEnd = phase.baselineEndDate ?? (baselinePhases?.find(b => b.id === phase.id)?.baselineEndDate ?? null);
                       if (!bStart || !bEnd) return null;
@@ -947,11 +945,11 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                       return (
                         <div aria-hidden="true" style={{
                           position: 'absolute', top: '50%', transform: 'translateY(-50%)',
-                          height: 14,
+                          height: 8,
                           left: `${bLeft}%`, width: `${bWidth}%`,
-                          backgroundColor: '#D1D5DB',
+                          backgroundColor: colors.borderDefault,
                           opacity: 0.5,
-                          borderRadius: borderRadius.sm, pointerEvents: 'none',
+                          borderRadius: 4, pointerEvents: 'none',
                           zIndex: 0,
                         }} />
                       );
@@ -1090,9 +1088,23 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                           />
                         )}
 
-                        {/* Slippage badge */}
-                        {(phase.slippageDays ?? 0) > 0 && (
-                          <div style={{
+                        {/* Variance badge: red when late vs baseline, green when ahead */}
+                        {phase.baselineEndDate != null ? (() => {
+                          const varDays = Math.ceil((new Date(phase.endDate).getTime() - new Date(phase.baselineEndDate).getTime()) / 86400000);
+                          if (varDays === 0) return null;
+                          return (
+                            <div aria-hidden="true" style={{
+                              position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
+                              backgroundColor: varDays > 0 ? colors.statusCritical : colors.statusActive, color: '#fff',
+                              fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
+                              padding: `0 ${spacing['1']}`, borderRadius: borderRadius.sm,
+                              lineHeight: '16px', whiteSpace: 'nowrap', pointerEvents: 'none',
+                            }}>
+                              {varDays > 0 ? `+${varDays}d` : `${varDays}d`}
+                            </div>
+                          );
+                        })() : (phase.slippageDays ?? 0) > 0 ? (
+                          <div aria-hidden="true" style={{
                             position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
                             backgroundColor: colors.statusCritical, color: '#fff',
                             fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
@@ -1101,7 +1113,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                           }}>
                             +{phase.slippageDays}d
                           </div>
-                        )}
+                        ) : null}
 
                         {/* Predicted delay warning badge */}
                         {phaseDelay && (
