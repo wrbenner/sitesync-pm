@@ -120,6 +120,11 @@ const FieldCaptureInner: React.FC = () => {
   const [quickCaptureOpen, setQuickCaptureOpen] = useState(false);
   const [showCheckInSheet, setShowCheckInSheet] = useState(false);
   const [liveAnnouncement, setLiveAnnouncement] = useState('');
+  const [captureMetadata, setCaptureMetadata] = useState<{ lat: number | null; lng: number | null; timestamp: string; accuracy: number | null } | null>(null);
+  const [topCaptureObjectUrl, setTopCaptureObjectUrl] = useState<string | null>(null);
+  const [topCaptureTitle, setTopCaptureTitle] = useState('');
+  const [topCaptureNotes, setTopCaptureNotes] = useState('');
+  const [localCaptures, setLocalCaptures] = useState<Array<{ objectUrl: string; title: string; notes: string; metadata: { lat: number | null; lng: number | null; timestamp: string; accuracy: number | null } }>>([]);
 
   // Offline detection
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
@@ -218,6 +223,58 @@ const FieldCaptureInner: React.FC = () => {
     setPhotoNotes('');
     setPhotoTags('');
     setPhotoLinkTo('');
+  };
+
+  const handleTopCapture = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.setAttribute('capture', 'environment');
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      const objectUrl = URL.createObjectURL(file);
+      setTopCaptureObjectUrl(objectUrl);
+      setCaptureMetadata(null);
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setCaptureMetadata({
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+            timestamp: new Date().toISOString(),
+            accuracy: pos.coords.accuracy,
+          });
+        },
+        () => {
+          setCaptureMetadata({
+            lat: null,
+            lng: null,
+            timestamp: new Date().toISOString(),
+            accuracy: null,
+          });
+        }
+      );
+    };
+    input.click();
+  };
+
+  const handleTopCaptureSave = () => {
+    if (!topCaptureObjectUrl) return;
+    const meta = captureMetadata ?? { lat: null, lng: null, timestamp: new Date().toISOString(), accuracy: null };
+    setLocalCaptures(prev => [...prev, { objectUrl: topCaptureObjectUrl, title: topCaptureTitle, notes: topCaptureNotes, metadata: meta }]);
+    addToast('success', 'Capture saved');
+    setTopCaptureObjectUrl(null);
+    setTopCaptureTitle('');
+    setTopCaptureNotes('');
+    setCaptureMetadata(null);
+  };
+
+  const handleTopCaptureCancel = () => {
+    if (topCaptureObjectUrl) URL.revokeObjectURL(topCaptureObjectUrl);
+    setTopCaptureObjectUrl(null);
+    setTopCaptureTitle('');
+    setTopCaptureNotes('');
+    setCaptureMetadata(null);
   };
 
   const handleQuickTextSend = async () => {
@@ -361,6 +418,74 @@ const FieldCaptureInner: React.FC = () => {
           </div>
         </div>
       )}
+      {/* Prominent top Capture button */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: spacing['4'] }}>
+        <button
+          aria-label="Capture photo with GPS tagging"
+          onClick={handleTopCapture}
+          style={{
+            display: 'flex', alignItems: 'center', gap: spacing['3'],
+            backgroundColor: colors.primaryOrange, color: 'white',
+            borderRadius: 12, padding: '16px 32px', fontSize: 16,
+            fontWeight: 600, minHeight: 56, border: 'none',
+            cursor: 'pointer', fontFamily: typography.fontFamily,
+          }}
+        >
+          <Camera size={22} />
+          Capture
+        </button>
+        {topCaptureObjectUrl && (
+          <div style={{ marginTop: spacing['4'], width: '100%', maxWidth: 480, backgroundColor: colors.white, borderRadius: borderRadius.xl, boxShadow: shadows.card, overflow: 'hidden' }}>
+            <img src={topCaptureObjectUrl} alt="Captured photo preview" style={{ width: '100%', aspectRatio: '4/3', objectFit: 'cover', display: 'block' }} />
+            <div style={{ padding: spacing['4'], display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
+                <MapPin size={14} color={colors.primaryOrange} />
+                <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>
+                  {captureMetadata === null
+                    ? 'Locating...'
+                    : captureMetadata.lat !== null
+                      ? `Lat: ${captureMetadata.lat.toFixed(4)}, Lng: ${captureMetadata.lng!.toFixed(4)}`
+                      : 'Location unavailable'}
+                </span>
+              </div>
+              {captureMetadata && (
+                <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
+                  {new Date(captureMetadata.timestamp).toLocaleString()}
+                </span>
+              )}
+              <input
+                type="text"
+                value={topCaptureTitle}
+                onChange={(e) => setTopCaptureTitle(e.target.value)}
+                placeholder="Title (optional)"
+                style={{
+                  width: '100%', padding: `${spacing['2']} ${spacing['3']}`,
+                  border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.md,
+                  fontSize: typography.fontSize.body, fontFamily: typography.fontFamily,
+                  color: colors.textPrimary, outline: 'none', boxSizing: 'border-box',
+                }}
+              />
+              <textarea
+                value={topCaptureNotes}
+                onChange={(e) => setTopCaptureNotes(e.target.value)}
+                placeholder="Notes (optional)"
+                rows={3}
+                style={{
+                  width: '100%', padding: spacing['3'],
+                  border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.md,
+                  fontSize: typography.fontSize.body, fontFamily: typography.fontFamily,
+                  color: colors.textPrimary, resize: 'vertical', outline: 'none', boxSizing: 'border-box',
+                }}
+              />
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: spacing['2'] }}>
+                <Btn variant="ghost" size="sm" onClick={handleTopCaptureCancel}>Cancel</Btn>
+                <Btn variant="primary" size="sm" onClick={handleTopCaptureSave}>Save Capture</Btn>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: spacing['3'], padding: `${spacing['3']} ${spacing['4']}`, marginBottom: spacing['4'], backgroundColor: colors.statusReviewSubtle, borderRadius: borderRadius.base, borderLeft: `3px solid ${colors.statusReview}` }}>
         <Sparkles size={14} color={colors.statusReview} style={{ marginTop: 2, flexShrink: 0 }} />
         <p style={{ fontSize: typography.fontSize.caption, color: colors.textPrimary, margin: 0, lineHeight: 1.5 }}>
