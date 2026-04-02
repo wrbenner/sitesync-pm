@@ -55,7 +55,7 @@ const coordinationConflicts = [
 const _DrawingsPage: React.FC = () => {
   const { addToast } = useToast();
   const projectId = useProjectId();
-  const { data: drawings, loading } = useQuery(`drawings-${projectId}`, () => getDrawings(projectId!), { enabled: !!projectId });
+  const { data: drawings, loading, error, refetch } = useQuery(`drawings-${projectId}`, () => getDrawings(projectId!), { enabled: !!projectId });
   const [filter, setFilter] = useState('All');
   const [selectedDrawing, setSelectedDrawing] = useState<NonNullable<typeof drawings>[0] | null>(null);
   const [viewerDrawing, setViewerDrawing] = useState<NonNullable<typeof drawings>[0] | null>(null);
@@ -233,8 +233,34 @@ const _DrawingsPage: React.FC = () => {
               ))}
             </div>
 
-            {loading && <TableRowSkeleton rows={8} />}
-            {!loading && sortedDrawings.map((drawing, index) => {
+            {loading && (
+              <>
+                <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}`}</style>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: spacing['4'], padding: spacing['4'] }}>
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div
+                      key={i}
+                      style={{
+                        aspectRatio: '4/3',
+                        borderRadius: 12,
+                        backgroundColor: colors.surfaceInset,
+                        border: `1px solid ${colors.borderSubtle}`,
+                        animation: 'pulse 1.5s ease-in-out infinite',
+                        animationDelay: `${i * 0.1}s`,
+                      }}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+            {!loading && error && (
+              <div style={{ margin: spacing['4'], padding: spacing['4'], backgroundColor: '#fff', border: `1px solid ${colors.borderSubtle}`, borderRadius: 12, display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
+                <AlertTriangle size={16} color={colors.statusCritical} style={{ flexShrink: 0 }} />
+                <p style={{ flex: 1, margin: 0, fontSize: typography.fontSize.sm, color: colors.textPrimary }}>{error}</p>
+                <Btn variant="secondary" size="sm" onClick={() => refetch()}>Retry</Btn>
+              </div>
+            )}
+            {!loading && !error && sortedDrawings.map((drawing, index) => {
               const thumbColor = drawing.disciplineColor || getDisciplineColor(drawing.discipline || '');
               const linked = linkedItems[drawing.id];
               const viewed = lastViewed[drawing.id];
@@ -360,9 +386,14 @@ const _DrawingsPage: React.FC = () => {
                 </div>
               );
             })}
-            {!loading && sortedDrawings.length === 0 && (
+            {!loading && !error && sortedDrawings.length === 0 && (
               allDrawings.length === 0 ? (
-                <DrawingsEmptyState onUpload={() => addToast('success', 'Drawing set uploaded successfully')} />
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: `${spacing['10']} ${spacing['4']}`, textAlign: 'center' }}>
+                  <FileText size={40} color={colors.textTertiary} style={{ marginBottom: spacing['4'] }} />
+                  <p style={{ fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>No drawings uploaded yet.</p>
+                  <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0, marginBottom: spacing['5'], maxWidth: 420 }}>Upload your plans to enable digital markup, RFI linking, and AI coordination analysis.</p>
+                  <Btn variant="primary" size="md" icon={<Upload size={16} />} onClick={() => addToast('success', 'Drawing set uploaded successfully')}>Upload Drawings</Btn>
+                </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: `${spacing['6']} ${spacing['4']}`, textAlign: 'center' }}>
                   <FileText size={32} color={colors.textTertiary} style={{ marginBottom: spacing['3'] }} />
