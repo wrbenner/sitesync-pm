@@ -21,6 +21,7 @@ function yPos(val: number): number {
 export const SCurve: React.FC<SCurveProps> = ({ totalBudget: _totalBudget, spent: _spent }) => {
   const [animated, setAnimated] = useState(false);
   const [hovered, setHovered] = useState<number | null>(null);
+  const [focused, setFocused] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => setAnimated(true), 100);
@@ -36,8 +37,14 @@ export const SCurve: React.FC<SCurveProps> = ({ totalBudget: _totalBudget, spent
   return (
     <div>
       <div
-        style={{ position: 'relative' }}
+        style={{
+          position: 'relative',
+          outline: focused ? '2px solid ' + colors.primaryOrange : 'none',
+          outlineOffset: '2px',
+        }}
         tabIndex={0}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
         onKeyDown={(e) => {
           if (e.key === 'ArrowRight') {
             setHovered(prev => prev === null ? 0 : Math.min(prev + 1, actualData.length - 1));
