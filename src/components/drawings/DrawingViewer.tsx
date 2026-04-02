@@ -331,7 +331,7 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({ drawing, onClos
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%', backgroundColor: vizColors.dark, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div style={{ position: 'relative', width: '100%', maxWidth: '100vw', height: '100%', backgroundColor: vizColors.dark, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: `${spacing['3']} ${spacing['4']}`, backgroundColor: colors.toolbarBg, flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['4'] }}>
@@ -564,7 +564,7 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({ drawing, onClos
                   {toolbarCollapsed ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                 </button>
                 {!toolbarCollapsed && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap' as const, padding: '8px', justifyContent: 'center' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap' as const, padding: '8px', justifyContent: 'center', gap: '4px' }}>
                     <MarkupToolbar
                       activeTool={activeTool}
                       onToolChange={setActiveTool}
