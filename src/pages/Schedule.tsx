@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Sparkles, AlertTriangle, ChevronDown, ChevronUp, CheckCircle, RefreshCw, Zap, CalendarClock, TrendingUp, GitBranch, Gauge, CalendarCheck, Calendar } from 'lucide-react';
+import { Sparkles, AlertTriangle, ChevronDown, ChevronUp, CheckCircle, RefreshCw, Zap, CalendarClock, TrendingUp, GitBranch, Gauge, CalendarCheck, Calendar, BarChart3 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { PageContainer, Card, SectionHeader, MetricBox, Skeleton, Btn, useToast } from '../components/Primitives';
 import { useRealtimeSchedulePhases, useScheduleRealtime } from '../hooks/queries/realtime';
@@ -123,62 +123,40 @@ export const Schedule: React.FC = () => {
       return {
         scheduleVarianceDays: 0,
         criticalPathCount: 0,
-        activitiesOnTrackPct: 0,
-        overallPctComplete: 0,
-        projectedCompletion: null as string | null,
+        onTrackPct: 0,
+        completePct: 0,
       }
     }
 
-    const criticalActivities = schedulePhases.filter(p => p.floatDays === 0 || p.critical)
-
-    // Schedule Variance: projected minus baseline for last critical activity (positive = behind)
+    // Schedule Variance: projected finish minus planned finish for the latest activity (positive = behind)
+    const lastActivity = schedulePhases.reduce((latest, p) =>
+      new Date(p.endDate) > new Date(latest.endDate) ? p : latest
+    )
     let scheduleVarianceDays = 0
-    if (criticalActivities.length > 0) {
-      const lastCritical = criticalActivities.reduce((latest, p) =>
-        new Date(p.endDate) > new Date(latest.endDate) ? p : latest
-      )
-      if (lastCritical.baselineEndDate) {
-        const projected = new Date(lastCritical.endDate)
-        const baseline = new Date(lastCritical.baselineEndDate)
-        projected.setHours(0, 0, 0, 0)
-        baseline.setHours(0, 0, 0, 0)
-        scheduleVarianceDays = Math.round((projected.getTime() - baseline.getTime()) / 86400000)
-      }
+    if (lastActivity.baselineEndDate) {
+      const projected = new Date(lastActivity.endDate)
+      const planned = new Date(lastActivity.baselineEndDate)
+      projected.setHours(0, 0, 0, 0)
+      planned.setHours(0, 0, 0, 0)
+      scheduleVarianceDays = Math.round((projected.getTime() - planned.getTime()) / 86400000)
     }
 
-    // Activities On Track: slippageDays <= 0 or completed
-    const onTrackCount = schedulePhases.filter(p => p.slippageDays <= 0 || p.completed).length
-    const activitiesOnTrackPct = Math.round((onTrackCount / schedulePhases.length) * 100)
+    // Critical Path Items: activities where is_critical_path === true
+    const criticalPathCount = schedulePhases.filter(p => p.is_critical_path === true).length
 
-    // Overall % Complete: weighted average by duration
-    let totalDuration = 0
-    let weightedProgress = 0
-    for (const p of schedulePhases) {
-      const start = new Date(p.startDate)
-      const end = new Date(p.endDate)
-      start.setHours(0, 0, 0, 0)
-      end.setHours(0, 0, 0, 0)
-      const duration = Math.max(1, (end.getTime() - start.getTime()) / 86400000)
-      totalDuration += duration
-      weightedProgress += p.progress * duration
-    }
-    const overallPctComplete = totalDuration > 0 ? Math.round(weightedProgress / totalDuration) : 0
+    // On Track: percentage where status !== 'delayed'
+    const onTrackCount = schedulePhases.filter(p => p.status !== 'delayed').length
+    const onTrackPct = Math.round((onTrackCount / schedulePhases.length) * 100)
 
-    // Projected Completion: latest endDate among critical path activities
-    let projectedCompletion: string | null = null
-    if (criticalActivities.length > 0) {
-      const latestCritical = criticalActivities.reduce((latest, p) =>
-        new Date(p.endDate) > new Date(latest.endDate) ? p : latest
-      )
-      projectedCompletion = latestCritical.endDate
-    }
+    // Complete: percentage where status === 'completed'
+    const completeCount = schedulePhases.filter(p => p.status === 'completed').length
+    const completePct = Math.round((completeCount / schedulePhases.length) * 100)
 
     return {
       scheduleVarianceDays,
-      criticalPathCount: criticalActivities.length,
-      activitiesOnTrackPct,
-      overallPctComplete,
-      projectedCompletion,
+      criticalPathCount,
+      onTrackPct,
+      completePct,
     }
   }, [schedulePhases]);
 
@@ -226,19 +204,19 @@ export const Schedule: React.FC = () => {
     return (
       <PageContainer title="Schedule" subtitle="Loading...">
         <style>{`
-          @media (max-width: 1024px) and (min-width: 641px) { .kpi-grid { grid-template-columns: repeat(3, 1fr) !important; } }
-          @media (max-width: 640px) { .kpi-grid { grid-template-columns: repeat(2, 1fr) !important; } }
+          @media (max-width: 1024px) and (min-width: 641px) { .kpi-grid { grid-template-columns: repeat(2, 1fr) !important; } }
+          @media (max-width: 640px) { .kpi-grid { grid-template-columns: 1fr !important; } }
         `}</style>
         <div
           className="kpi-grid"
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(5, 1fr)',
+            gridTemplateColumns: 'repeat(4, 1fr)',
             gap: spacing.lg,
             marginBottom: spacing['2xl'],
           }}
         >
-          {Array.from({ length: 5 }).map((_, i) => (
+          {Array.from({ length: 4 }).map((_, i) => (
             <div
               key={i}
               style={{
@@ -403,74 +381,68 @@ export const Schedule: React.FC = () => {
       )}
 
       <style>{`
-        @media (max-width: 1024px) and (min-width: 641px) { .kpi-grid { grid-template-columns: repeat(3, 1fr) !important; } }
-        @media (max-width: 640px) {
-          .kpi-grid {
-            display: flex !important;
-            flex-wrap: nowrap !important;
-            overflow-x: auto !important;
-            padding-bottom: 4px !important;
-            gap: 10px !important;
-            -webkit-overflow-scrolling: touch;
-            scrollbar-width: none;
-          }
-          .kpi-grid::-webkit-scrollbar { display: none; }
-          .kpi-grid > * { min-width: 152px; flex-shrink: 0; }
-        }
+        @media (max-width: 1024px) and (min-width: 641px) { .kpi-grid { grid-template-columns: repeat(2, 1fr) !important; } }
+        @media (max-width: 640px) { .kpi-grid { grid-template-columns: 1fr !important; } }
         @keyframes livePulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.35); } }
       `}</style>
 
-      {/* Calculated KPI Cards */}
+      {/* KPI Metric Cards */}
       <div
         className="kpi-grid"
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(5, 1fr)',
+          gridTemplateColumns: 'repeat(4, 1fr)',
           gap: spacing.lg,
           marginBottom: spacing['2xl'],
         }}
       >
-        {/* Schedule Variance: positive = behind (red), negative/zero = ahead (green) */}
+        {/* Card 1: Schedule Variance */}
         <ScheduleKPICard
-          icon={<CalendarClock size={24} color={activityMetrics.scheduleVarianceDays > 0 ? colors.statusCritical : colors.statusActive} />}
+          icon={<Calendar size={24} color={
+            activityMetrics.scheduleVarianceDays <= 0 ? colors.statusActive
+            : activityMetrics.scheduleVarianceDays <= 5 ? colors.statusPending
+            : colors.statusCritical
+          } />}
           label="Schedule Variance"
           value={`${activityMetrics.scheduleVarianceDays > 0 ? '+' : ''}${activityMetrics.scheduleVarianceDays}d`}
-          valueColor={activityMetrics.scheduleVarianceDays > 0 ? colors.statusCritical : colors.statusActive}
+          valueColor={
+            activityMetrics.scheduleVarianceDays <= 0 ? colors.statusActive
+            : activityMetrics.scheduleVarianceDays <= 5 ? colors.statusPending
+            : colors.statusCritical
+          }
           trend={activityMetrics.scheduleVarianceDays > 0 ? 'down' : activityMetrics.scheduleVarianceDays < 0 ? 'up' : 'neutral'}
         />
-        {/* Critical Path Activities */}
+        {/* Card 2: Critical Path Items */}
         <ScheduleKPICard
-          icon={<GitBranch size={24} color={colors.primaryOrange} />}
-          label="Critical Path Activities"
+          icon={<AlertTriangle size={24} color={activityMetrics.criticalPathCount > 0 ? colors.statusCritical : colors.statusActive} />}
+          label="Critical Path Items"
           value={String(activityMetrics.criticalPathCount)}
-          valueColor={colors.textPrimary}
+          valueColor={activityMetrics.criticalPathCount > 0 ? colors.statusCritical : colors.textPrimary}
           trend="neutral"
         />
-        {/* Activities On Track */}
+        {/* Card 3: On Track */}
         <ScheduleKPICard
-          icon={<TrendingUp size={24} color={activityMetrics.activitiesOnTrackPct >= 80 ? colors.statusActive : activityMetrics.activitiesOnTrackPct >= 60 ? colors.statusPending : colors.statusCritical} />}
-          label="Activities On Track"
-          value={`${activityMetrics.activitiesOnTrackPct}%`}
-          valueColor={activityMetrics.activitiesOnTrackPct >= 80 ? colors.statusActive : activityMetrics.activitiesOnTrackPct >= 60 ? colors.statusPending : colors.statusCritical}
-          trend={activityMetrics.activitiesOnTrackPct >= 80 ? 'up' : 'down'}
+          icon={<CheckCircle size={24} color={
+            activityMetrics.onTrackPct >= 80 ? colors.statusActive
+            : activityMetrics.onTrackPct >= 60 ? colors.statusPending
+            : colors.statusCritical
+          } />}
+          label="On Track"
+          value={`${activityMetrics.onTrackPct}%`}
+          valueColor={
+            activityMetrics.onTrackPct >= 80 ? colors.statusActive
+            : activityMetrics.onTrackPct >= 60 ? colors.statusPending
+            : colors.statusCritical
+          }
+          trend={activityMetrics.onTrackPct >= 80 ? 'up' : 'down'}
         />
-        {/* Overall % Complete */}
+        {/* Card 4: Complete */}
         <ScheduleKPICard
-          icon={<Gauge size={24} color={colors.primaryOrange} />}
-          label="Overall % Complete"
-          value={`${activityMetrics.overallPctComplete}%`}
+          icon={<BarChart3 size={24} color={colors.primaryOrange} />}
+          label="Complete"
+          value={`${activityMetrics.completePct}%`}
           valueColor={colors.textPrimary}
           trend="neutral"
-        />
-        {/* Projected Completion */}
-        <ScheduleKPICard
-          icon={<CalendarCheck size={24} color={activityMetrics.scheduleVarianceDays <= 0 ? colors.statusActive : colors.statusCritical} />}
-          label="Projected Completion"
-          value={activityMetrics.projectedCompletion
-            ? new Date(activityMetrics.projectedCompletion + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-            : 'N/A'}
-          valueColor={activityMetrics.scheduleVarianceDays <= 0 ? colors.statusActive : colors.statusCritical}
-          trend={activityMetrics.scheduleVarianceDays <= 0 ? 'up' : 'down'}
         />
       </div>
 
