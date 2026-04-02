@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
-import { useAuth } from '../../hooks/useAuth'
+import { supabase } from '../../lib/supabase'
 import { colors, spacing, typography, borderRadius, shadows, transitions, zIndex } from '../../styles/theme'
 
 function mapAuthError(message: string): string {
@@ -18,7 +18,6 @@ function mapAuthError(message: string): string {
 export const Login: React.FC = () => {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const { signIn, resetPassword, loading } = useAuth()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -36,10 +35,10 @@ export const Login: React.FC = () => {
     setError(null)
     setIsSubmitting(true)
     try {
-      const { error: signInError } = await signIn(email, password)
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
       if (signInError) {
-        setError(mapAuthError(signInError))
-      } else {
+        setError(mapAuthError(signInError.message))
+      } else if (data.session) {
         const returnTo = searchParams.get('returnTo')
         const destination = returnTo && returnTo.startsWith('/') ? returnTo : '/dashboard'
         navigate(destination)
@@ -54,10 +53,10 @@ export const Login: React.FC = () => {
     setResetError(null)
     setResetLoading(true)
 
-    const { error: err } = await resetPassword(resetEmail)
+    const { error: err } = await supabase.auth.resetPasswordForEmail(resetEmail)
 
     if (err) {
-      setResetError(err)
+      setResetError(mapAuthError(err.message))
     } else {
       setResetSent(true)
     }
@@ -254,8 +253,8 @@ export const Login: React.FC = () => {
 
             <button
               type="submit"
-              disabled={loading}
-              aria-busy={loading}
+              disabled={isSubmitting}
+              aria-busy={isSubmitting}
               style={{
                 width: '100%',
                 minWidth: '160px',
@@ -265,23 +264,23 @@ export const Login: React.FC = () => {
                 fontWeight: typography.fontWeight.semibold,
                 fontFamily: typography.fontFamily,
                 color: colors.white,
-                backgroundColor: loading ? colors.orangeHover : colors.primaryOrange,
+                backgroundColor: isSubmitting ? colors.orangeHover : colors.primaryOrange,
                 border: 'none',
                 borderRadius: borderRadius.md,
-                cursor: loading ? 'not-allowed' : 'pointer',
+                cursor: isSubmitting ? 'not-allowed' : 'pointer',
                 transition: `background-color ${transitions.quick}`,
                 letterSpacing: typography.letterSpacing.normal,
-                opacity: loading ? 0.7 : 1,
+                opacity: isSubmitting ? 0.7 : 1,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: spacing['2'],
               }}
-              onMouseEnter={(e) => { if (!loading) e.currentTarget.style.backgroundColor = colors.orangeHover }}
-              onMouseLeave={(e) => { if (!loading) e.currentTarget.style.backgroundColor = colors.primaryOrange }}
+              onMouseEnter={(e) => { if (!isSubmitting) e.currentTarget.style.backgroundColor = colors.orangeHover }}
+              onMouseLeave={(e) => { if (!isSubmitting) e.currentTarget.style.backgroundColor = colors.primaryOrange }}
             >
-              {loading && <Loader2 size={16} style={{ animation: 'spin-loader 0.75s linear infinite' }} />}
-              {loading ? 'Signing in...' : 'Sign In'}
+              {isSubmitting && <Loader2 size={16} style={{ animation: 'spin-loader 0.75s linear infinite' }} />}
+              {isSubmitting ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
         </div>
