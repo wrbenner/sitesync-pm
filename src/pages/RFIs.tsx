@@ -185,7 +185,10 @@ const RFIs: React.FC = () => {
               {formatDate(info.getValue())}
             </span>
             {overdue && (
-              <span aria-label="Overdue" style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', backgroundColor: colors.statusCritical, flexShrink: 0 }} />
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                <span aria-hidden="true" style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', backgroundColor: colors.statusCritical, flexShrink: 0 }} />
+                <span style={{ fontSize: '0.65rem', fontWeight: typography.fontWeight.semibold, color: colors.statusCritical, textTransform: 'uppercase' as const, letterSpacing: '0.3px' }}>Overdue</span>
+              </span>
             )}
           </div>
         );
@@ -351,6 +354,10 @@ const RFIs: React.FC = () => {
         <PredictiveAlertBanner key={alert.id} alert={alert} />
       ))}
 
+      <div aria-live="polite" aria-atomic="true" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap' }}>
+        {`Showing ${allRfis.length} RFIs, ${overdueCount} overdue`}
+      </div>
+
       {viewMode === 'table' ? (
         <Card padding="0">
           <VirtualDataTable
@@ -362,6 +369,7 @@ const RFIs: React.FC = () => {
             onRowClick={(rfi) => navigate(`/projects/${projectId}/rfis/${rfi.id}`)}
             selectedRowId={null}
             getRowId={(row) => String(row.id)}
+            getRowAriaLabel={(rfi) => `View ${rfi.rfiNumber}: ${rfi.title}`}
             loading={rfisLoading}
             emptyMessage="No RFIs match your filters"
             onRowToggleSelectByIndex={(i) => {

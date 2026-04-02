@@ -24,6 +24,7 @@ interface VirtualDataTableProps<T> {
   onRowClick?: (row: T) => void;
   selectedRowId?: string | number | null;
   getRowId?: (row: T) => string;
+  getRowAriaLabel?: (row: T) => string;
   emptyMessage?: string;
   rowHeight?: number;
   containerHeight?: number;
@@ -43,6 +44,7 @@ const VirtualRow = React.memo(function VirtualRow<T>({
   style,
   index,
   focused,
+  ariaLabel,
 }: {
   row: Row<T>;
   onClick?: (row: T) => void;
@@ -50,6 +52,7 @@ const VirtualRow = React.memo(function VirtualRow<T>({
   style: React.CSSProperties;
   index: number;
   focused: boolean;
+  ariaLabel?: string;
 }) {
   const baseBg = selected ? colors.surfaceSelected : colors.surfaceRaised;
   return (
@@ -57,6 +60,7 @@ const VirtualRow = React.memo(function VirtualRow<T>({
       role="row"
       aria-rowindex={index + 1}
       aria-selected={selected}
+      aria-label={ariaLabel}
       tabIndex={0}
       data-row-index={index}
       className="sitesync-grid-row"
@@ -107,6 +111,7 @@ const VirtualRow = React.memo(function VirtualRow<T>({
   style: React.CSSProperties;
   index: number;
   focused: boolean;
+  ariaLabel?: string;
 }) => React.ReactElement;
 
 export function VirtualDataTable<T>({
@@ -117,6 +122,7 @@ export function VirtualDataTable<T>({
   onRowClick,
   selectedRowId,
   getRowId,
+  getRowAriaLabel,
   emptyMessage = 'No items found',
   rowHeight = ROW_HEIGHT,
   containerHeight = 600,
@@ -265,6 +271,7 @@ export function VirtualDataTable<T>({
                   selected={selectedRowId != null && getRowId ? getRowId(row.original) === String(selectedRowId) : false}
                   index={virtualRow.index}
                   focused={focusedIndex === virtualRow.index}
+                  ariaLabel={getRowAriaLabel ? getRowAriaLabel(row.original) : undefined}
                   style={{
                     position: 'absolute',
                     top: 0,
