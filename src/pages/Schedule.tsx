@@ -94,6 +94,7 @@ export const Schedule: React.FC = () => {
   }, [activeProject?.id]);
 
   const [whatIfMode, setWhatIfMode] = useState(false);
+  const [showBaseline, setShowBaseline] = useState(false);
   const [recoveryExpanded, setRecoveryExpanded] = useState(false);
   const { addToast } = useToast();
 
@@ -693,14 +694,24 @@ export const Schedule: React.FC = () => {
           <>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['3'] }}>
               <SectionHeader title="Project Timeline" />
-              <Btn
-                variant={whatIfMode ? 'primary' : 'secondary'}
-                size="sm"
-                icon={<Sparkles size={14} />}
-                onClick={() => setWhatIfMode(!whatIfMode)}
-              >
-                {whatIfMode ? 'Exit What If Mode' : 'What If Mode'}
-              </Btn>
+              <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
+                <Btn
+                  variant={showBaseline ? 'primary' : 'secondary'}
+                  size="sm"
+                  icon={<GitBranch size={14} />}
+                  onClick={() => setShowBaseline(!showBaseline)}
+                >
+                  {showBaseline ? 'Hide Baseline' : 'Show Baseline'}
+                </Btn>
+                <Btn
+                  variant={whatIfMode ? 'primary' : 'secondary'}
+                  size="sm"
+                  icon={<Sparkles size={14} />}
+                  onClick={() => setWhatIfMode(!whatIfMode)}
+                >
+                  {whatIfMode ? 'Exit What If Mode' : 'What If Mode'}
+                </Btn>
+              </div>
             </div>
             <div style={{
               backgroundColor: colors.surfaceRaised,
@@ -769,6 +780,7 @@ export const Schedule: React.FC = () => {
                   onAddActivity={() => addToast('info', 'Activity drawer coming soon')}
                   onPhaseClick={(phase) => addToast('info', `${phase.name}: ${phase.progress}% complete`)}
                   baselinePhases={schedulePhases}
+                  showBaseline={showBaseline}
                   risks={risks}
                 />
               </ErrorBoundary>

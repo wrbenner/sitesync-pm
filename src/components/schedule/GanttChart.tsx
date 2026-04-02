@@ -47,6 +47,7 @@ interface GanttChartProps {
   onPhaseUpdate?: (id: string, update: { start_date: string; end_date: string }) => void;
   onActivityDateChange?: (id: string, start: string, finish: string) => void;
   baselinePhases?: GanttPhase[];
+  showBaseline?: boolean;
   risks?: PredictedRisk[];
   delays?: PredictedDelay[];
   dependencies?: GanttDependency[];
@@ -65,6 +66,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   onPhaseUpdate,
   onActivityDateChange,
   baselinePhases,
+  showBaseline: showBaselineProp,
   risks = [],
   delays = [],
   dependencies = [],
@@ -73,7 +75,8 @@ export const GanttChart: React.FC<GanttChartProps> = ({
 
   const [timeScale, setTimeScale] = useState<TimeScale>('quarter');
   const [hoveredPhase, setHoveredPhase] = useState<string | null>(null);
-  const [showBaseline, setShowBaseline] = useState(true);
+  const [showBaselineInternal, setShowBaselineInternal] = useState(true);
+  const showBaseline = showBaselineProp !== undefined ? showBaselineProp : showBaselineInternal;
   const [showCriticalPath, setShowCriticalPath] = useState(false);
   const [riskTooltipPhase, setRiskTooltipPhase] = useState<string | null>(null);
   const [delayTooltipPhase, setDelayTooltipPhase] = useState<string | null>(null);
@@ -521,21 +524,23 @@ export const GanttChart: React.FC<GanttChartProps> = ({
           ))}
         </div>
 
-        <button
-          aria-label={showBaseline ? 'Hide baseline schedule' : 'Show baseline schedule'}
-          aria-pressed={showBaseline}
-          onClick={() => setShowBaseline(!showBaseline)}
-          style={{
-            display: 'flex', alignItems: 'center', gap: spacing['1'],
-            padding: `${spacing['1']} ${spacing['3']}`, border: 'none', borderRadius: borderRadius.full,
-            backgroundColor: showBaseline ? `${colors.statusInfo}14` : 'transparent',
-            color: showBaseline ? colors.statusInfo : colors.textTertiary,
-            fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
-            fontFamily: typography.fontFamily, cursor: 'pointer',
-          }}
-        >
-          <GitBranch size={12} /> {showBaseline ? 'Hide Baseline' : 'Show Baseline'}
-        </button>
+        {showBaselineProp === undefined && (
+          <button
+            aria-label={showBaseline ? 'Hide baseline schedule' : 'Show baseline schedule'}
+            aria-pressed={showBaseline}
+            onClick={() => setShowBaselineInternal(!showBaselineInternal)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: spacing['1'],
+              padding: `${spacing['1']} ${spacing['3']}`, border: 'none', borderRadius: borderRadius.full,
+              backgroundColor: showBaseline ? `${colors.statusInfo}14` : 'transparent',
+              color: showBaseline ? colors.statusInfo : colors.textTertiary,
+              fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
+              fontFamily: typography.fontFamily, cursor: 'pointer',
+            }}
+          >
+            <GitBranch size={12} /> {showBaseline ? 'Hide Baseline' : 'Show Baseline'}
+          </button>
+        )}
 
         <button
           aria-label={showCriticalPath ? 'Show all activities' : 'Highlight critical path only'}
@@ -564,7 +569,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
         <div style={{ marginLeft: 'auto', display: 'flex', gap: spacing['3'], flexWrap: 'wrap', alignItems: 'center' }}>
           {/* Baseline */}
           <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
-            <div style={{ width: 16, height: 6, borderRadius: 2, backgroundColor: '#E5E7EB' }} />
+            <div style={{ width: 16, height: 6, borderRadius: 2, backgroundColor: '#9CA3AF', opacity: 0.3 }} />
             <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Baseline</span>
           </div>
           {/* Actual */}
@@ -861,11 +866,12 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                       const bLeft = ((new Date(bStart).getTime() - timelineStart) / timelineSpan) * 100;
                       const bWidth = ((new Date(bEnd).getTime() - new Date(bStart).getTime()) / timelineSpan) * 100;
                       return (
-                        <div style={{
-                          position: 'absolute', top: '50%', transform: 'translateY(-50%)',
-                          height: 8, left: `${bLeft}%`, width: `${bWidth}%`,
-                          backgroundColor: '#E5E7EB', opacity: 0.85,
+                        <div aria-hidden="true" style={{
+                          position: 'absolute', top: 4, bottom: 4,
+                          left: `${bLeft}%`, width: `${bWidth}%`,
+                          backgroundColor: '#9CA3AF', opacity: 0.3,
                           borderRadius: borderRadius.sm, pointerEvents: 'none',
+                          zIndex: 0,
                         }} />
                       );
                     })()}
