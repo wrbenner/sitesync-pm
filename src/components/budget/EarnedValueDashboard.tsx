@@ -27,13 +27,16 @@ const fmt = (n: number): string => {
   return `$${n.toFixed(0)}`;
 };
 
+const METRIC_COUNT = 6; // CPI, SPI, EAC, ETC, VAC, CV
+const METRIC_GRID = 'repeat(3, 1fr)';
+
 export const EarnedValueDashboard: React.FC = () => {
   const { budgetItems, changeOrders, invoices, scheduleActivities, loading } = useBudgetData();
 
   if (loading) {
     return (
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: spacing['3'] }}>
-        {Array.from({ length: 6 }).map((_, i) => (
+      <div style={{ display: 'grid', gridTemplateColumns: METRIC_GRID, gap: spacing['3'] }}>
+        {Array.from({ length: METRIC_COUNT }).map((_, i) => (
           <Skeleton key={i} height={110} />
         ))}
       </div>
@@ -174,7 +177,7 @@ export const EarnedValueDashboard: React.FC = () => {
       </div>
 
       {/* Metric cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: spacing['3'] }}>
+      <div style={{ display: 'grid', gridTemplateColumns: METRIC_GRID, gap: spacing['3'] }}>
         {metrics.map((m) => {
           const color = statusColors[m.status];
           const TrendIcon =
