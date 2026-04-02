@@ -357,9 +357,9 @@ const _DrawingsPage: React.FC = () => {
                 <React.Fragment key={drawing.id}>
                 {/* Mobile card row */}
                 <div
-                  role="article"
+                  role="listitem"
                   tabIndex={0}
-                  aria-label={`Drawing ${drawing.setNumber} ${drawing.disciplineLabel}`}
+                  aria-label={`Drawing ${drawing.setNumber} ${drawing.disciplineLabel} ${drawing.title || ''}`}
                   className="drawing-row drawing-row-mobile"
                   onClick={() => setSelectedDrawing(drawing)}
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedDrawing(drawing); } }}
@@ -390,9 +390,9 @@ const _DrawingsPage: React.FC = () => {
                 </div>
                 {/* Desktop table row */}
                 <div
-                  role="article"
+                  role="listitem"
                   tabIndex={0}
-                  aria-label={`Drawing ${drawing.setNumber} ${drawing.disciplineLabel}`}
+                  aria-label={`Drawing ${drawing.setNumber} ${drawing.disciplineLabel} ${drawing.title || ''}`}
                   className="drawing-row drawing-row-desktop"
                   onClick={() => setSelectedDrawing(drawing)}
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedDrawing(drawing); } }}
