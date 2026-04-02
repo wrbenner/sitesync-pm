@@ -13,12 +13,177 @@ export const getActivityFeed = async (projectId: string): Promise<ActivityFeedIt
     .order('created_at', { ascending: false })
     .limit(50)
   if (error) throw transformSupabaseError(error)
-  return Promise.all((data || []).map((item) => enrichActivityItem(item as ActivityFeedRowWithProfile, projectId)))
+  const items = (data || []) as ActivityFeedRowWithProfile[]
+  const labelMap = await batchFetchEntityLabels(items, projectId)
+  return Promise.all(items.map((item) => enrichActivityItem(item, projectId, labelMap)))
+}
+
+async function batchFetchEntityLabels(
+  items: ActivityFeedRowWithProfile[],
+  projectId: string,
+): Promise<Map<string, string>> {
+  const labelMap = new Map<string, string>()
+
+  // Group entity IDs by type, skipping anything already cached
+  const grouped: Record<string, string[]> = {}
+  for (const item of items) {
+    const meta = (item.metadata ?? {}) as Record<string, unknown>
+    const entityType = item.type ?? ''
+    const entityId = (meta.entity_id as string) || ''
+    if (!entityId || !entityType) continue
+    const cacheKey = `${projectId}:${entityType}:${entityId}`
+    const cached = getCachedEntityLabel(cacheKey)
+    if (cached !== undefined) {
+      labelMap.set(entityId, cached)
+      continue
+    }
+    if (!grouped[entityType]) grouped[entityType] = []
+    if (!grouped[entityType].includes(entityId)) grouped[entityType].push(entityId)
+  }
+
+  const fetches: Promise<void>[] = []
+
+  if (grouped['rfi']?.length) {
+    fetches.push(
+      supabase
+        .from('rfis')
+        .select('id, rfi_number, subject')
+        .eq('project_id', projectId)
+        .in('id', grouped['rfi'])
+        .then(({ data }) => {
+          for (const row of data ?? []) {
+            const label = `RFI-${String(row.rfi_number).padStart(3, '0')} ${row.subject}`
+            labelMap.set(row.id, label)
+            setCachedEntityLabel(`${projectId}:rfi:${row.id}`, label)
+          }
+        }),
+    )
+  }
+
+  if (grouped['submittal']?.length) {
+    fetches.push(
+      supabase
+        .from('submittals')
+        .select('id, submittal_number, title')
+        .eq('project_id', projectId)
+        .in('id', grouped['submittal'])
+        .then(({ data }) => {
+          for (const row of data ?? []) {
+            const label = `SUB-${String(row.submittal_number).padStart(3, '0')} ${row.title}`
+            labelMap.set(row.id, label)
+            setCachedEntityLabel(`${projectId}:submittal:${row.id}`, label)
+          }
+        }),
+    )
+  }
+
+  if (grouped['change_order']?.length) {
+    fetches.push(
+      supabase
+        .from('change_orders')
+        .select('id, co_number, title')
+        .eq('project_id', projectId)
+        .in('id', grouped['change_order'])
+        .then(({ data }) => {
+          for (const row of data ?? []) {
+            const label = `CO-${String(row.co_number).padStart(3, '0')} ${row.title}`
+            labelMap.set(row.id, label)
+            setCachedEntityLabel(`${projectId}:change_order:${row.id}`, label)
+          }
+        }),
+    )
+  }
+
+  if (grouped['punch_item']?.length) {
+    fetches.push(
+      supabase
+        .from('punch_items')
+        .select('id, title')
+        .eq('project_id', projectId)
+        .in('id', grouped['punch_item'])
+        .then(({ data }) => {
+          for (const row of data ?? []) {
+            labelMap.set(row.id, row.title)
+            setCachedEntityLabel(`${projectId}:punch_item:${row.id}`, row.title)
+          }
+        }),
+    )
+  }
+
+  if (grouped['daily_log']?.length) {
+    fetches.push(
+      supabase
+        .from('daily_logs')
+        .select('id, log_date')
+        .eq('project_id', projectId)
+        .in('id', grouped['daily_log'])
+        .then(({ data }) => {
+          for (const row of data ?? []) {
+            const label = `Daily Log for ${row.log_date}`
+            labelMap.set(row.id, label)
+            setCachedEntityLabel(`${projectId}:daily_log:${row.id}`, label)
+          }
+        }),
+    )
+  }
+
+  if (grouped['drawing']?.length) {
+    fetches.push(
+      supabase
+        .from('drawings')
+        .select('id, sheet_number, title')
+        .eq('project_id', projectId)
+        .in('id', grouped['drawing'])
+        .then(({ data }) => {
+          for (const row of data ?? []) {
+            const label = `${row.sheet_number} ${row.title}`
+            labelMap.set(row.id, label)
+            setCachedEntityLabel(`${projectId}:drawing:${row.id}`, label)
+          }
+        }),
+    )
+  }
+
+  if (grouped['meeting']?.length) {
+    fetches.push(
+      supabase
+        .from('meetings')
+        .select('id, title')
+        .eq('project_id', projectId)
+        .in('id', grouped['meeting'])
+        .then(({ data }) => {
+          for (const row of data ?? []) {
+            labelMap.set(row.id, row.title)
+            setCachedEntityLabel(`${projectId}:meeting:${row.id}`, row.title)
+          }
+        }),
+    )
+  }
+
+  if (grouped['task']?.length) {
+    fetches.push(
+      supabase
+        .from('tasks')
+        .select('id, title')
+        .eq('project_id', projectId)
+        .in('id', grouped['task'])
+        .then(({ data }) => {
+          for (const row of data ?? []) {
+            labelMap.set(row.id, row.title)
+            setCachedEntityLabel(`${projectId}:task:${row.id}`, row.title)
+          }
+        }),
+    )
+  }
+
+  await Promise.all(fetches)
+  return labelMap
 }
 
 export async function enrichActivityItem(
   item: ActivityFeedRowWithProfile,
   projectId: string,
+  prefetchedLabels?: Map<string, string>,
 ): Promise<ActivityFeedItem> {
   const meta = (item.metadata ?? {}) as Record<string, unknown>
   const entityType = item.type ?? ''
@@ -31,14 +196,18 @@ export async function enrichActivityItem(
 
   let entityLabel = item.title || ''
   if (entityId) {
-    const cacheKey = `${projectId}:${entityType}:${entityId}`
-    const cached = getCachedEntityLabel(cacheKey)
-    if (cached !== undefined) {
-      entityLabel = cached
+    if (prefetchedLabels?.has(entityId)) {
+      entityLabel = prefetchedLabels.get(entityId)!
     } else {
-      const fetched = await fetchEntityLabel(entityType, entityId, projectId)
-      entityLabel = fetched || item.title || ''
-      setCachedEntityLabel(cacheKey, entityLabel)
+      const cacheKey = `${projectId}:${entityType}:${entityId}`
+      const cached = getCachedEntityLabel(cacheKey)
+      if (cached !== undefined) {
+        entityLabel = cached
+      } else {
+        const fetched = await fetchEntityLabel(entityType, entityId, projectId)
+        entityLabel = fetched || item.title || ''
+        setCachedEntityLabel(cacheKey, entityLabel)
+      }
     }
   }
 
