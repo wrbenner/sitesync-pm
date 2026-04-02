@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { AlertTriangle, RefreshCw, X, Lock } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Lock } from 'lucide-react';
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
 import { supabase } from '../../lib/supabase';
 import { EntityPresence } from './PresenceBar';
@@ -101,29 +101,67 @@ export function useOptimisticLock(
 
 // ── Conflict Warning Banner ────────────────────────────────
 
+function formatRelativeTime(isoString: string): string {
+  const diffMs = Date.now() - new Date(isoString).getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+  if (diffSec < 60) return 'just now';
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin} minute${diffMin === 1 ? '' : 's'} ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr} hour${diffHr === 1 ? '' : 's'} ago`;
+  const diffDay = Math.floor(diffHr / 24);
+  return `${diffDay} day${diffDay === 1 ? '' : 's'} ago`;
+}
+
 interface ConflictBannerProps {
   entityId: string;
-  onRefresh: () => void;
+  serverUpdatedAt?: string | null;
+  onReload?: () => void;
   onDismiss: () => void;
 }
 
-export const ConflictBanner: React.FC<ConflictBannerProps> = ({ onRefresh, onDismiss }) => (
-  <div style={{
-    display: 'flex', alignItems: 'center', gap: spacing['3'],
-    padding: `${spacing['3']} ${spacing['4']}`,
-    backgroundColor: colors.statusCriticalSubtle ?? '#FEF2F2',
-    borderRadius: borderRadius.md,
-    borderLeft: `3px solid ${colors.statusCritical}`,
-    marginBottom: spacing['3'],
-  }}>
-    <AlertTriangle size={16} color={colors.statusCritical} style={{ flexShrink: 0 }} />
-    <span style={{ flex: 1, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
-      This item was modified by another user
-    </span>
-    <Btn variant="secondary" size="sm" icon={<RefreshCw size={13} />} onClick={onRefresh}>Refresh</Btn>
-    <button onClick={onDismiss} style={{ padding: spacing['1'], backgroundColor: 'transparent', border: 'none', cursor: 'pointer', color: colors.textTertiary }}>
-      <X size={14} />
-    </button>
+export const ConflictBanner: React.FC<ConflictBannerProps> = ({ serverUpdatedAt, onReload, onDismiss }) => (
+  <div
+    role="alert"
+    aria-live="assertive"
+    style={{
+      display: 'flex', alignItems: 'flex-start', gap: spacing['3'],
+      padding: `${spacing['3']} ${spacing['4']}`,
+      backgroundColor: colors.statusCriticalSubtle,
+      borderRadius: borderRadius.md,
+      borderLeft: `3px solid ${colors.statusCritical}`,
+      marginBottom: spacing['3'],
+    }}
+  >
+    <AlertTriangle size={16} color={colors.statusCritical} style={{ flexShrink: 0, marginTop: 2 }} />
+    <div style={{ flex: 1 }}>
+      <p style={{
+        fontSize: typography.fontSize.sm,
+        fontWeight: typography.fontWeight.semibold,
+        color: colors.textPrimary,
+        margin: 0,
+      }}>
+        Conflict detected
+      </p>
+      <p style={{ fontSize: typography.fontSize.caption, color: colors.textSecondary, margin: `${spacing['1']} 0 0` }}>
+        {serverUpdatedAt
+          ? `This item was updated by another user ${formatRelativeTime(serverUpdatedAt)}. Your unsaved changes may conflict.`
+          : 'This item was updated by another user. Your unsaved changes may conflict.'}
+      </p>
+    </div>
+    <div style={{ display: 'flex', gap: spacing['2'], flexShrink: 0 }}>
+      <Btn
+        variant="primary"
+        size="sm"
+        icon={<RefreshCw size={13} />}
+        onClick={() => onReload ? onReload() : window.location.reload()}
+      >
+        Reload Latest
+      </Btn>
+      <Btn variant="secondary" size="sm" onClick={onDismiss}>
+        Keep My Edits
+      </Btn>
+    </div>
   </div>
 );
 
