@@ -32,24 +32,36 @@ const BIC_COLORS: Record<string, string> = {
   Architect: '#8B5CF6',
   Engineer: '#14B8A6',
   Owner: '#F47820',
+  Subcontractor: '#6B7280',
   Sub: '#6B7280',
 };
 
-const BallInCourtBadge: React.FC<{ value: string | null }> = ({ value }) => {
-  if (!value) return null;
-  const color = BIC_COLORS[value] ?? '#6B7280';
+const getBicColor = (party: string): string => {
+  if (BIC_COLORS[party]) return BIC_COLORS[party];
+  const key = Object.keys(BIC_COLORS).find(k => party.toLowerCase().includes(k.toLowerCase()));
+  return key ? BIC_COLORS[key] : '#6B7280';
+};
+
+const deriveBic = (rfi: any): string | null => {
+  const { status, assigned_to, from: originator } = rfi;
+  if (status === 'open' && assigned_to) return assigned_to;
+  if (status === 'under_review') return assigned_to || null;
+  if (status === 'answered') return originator || null;
+  return assigned_to || null;
+};
+
+const BallInCourtCell: React.FC<{ rfi: any }> = ({ rfi }) => {
+  const party = deriveBic(rfi);
+  if (!party) {
+    return (
+      <span style={{ fontSize: 14, color: '#9CA3AF', fontStyle: 'italic' }}>Unassigned</span>
+    );
+  }
+  const color = getBicColor(party);
   return (
-    <span style={{
-      display: 'inline-block',
-      padding: '2px 8px',
-      borderRadius: '9999px',
-      fontSize: '0.75rem',
-      fontWeight: 500,
-      backgroundColor: `${color}1A`,
-      color,
-      whiteSpace: 'nowrap',
-    }}>
-      {value}
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+      <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: color, flexShrink: 0, display: 'inline-block' }} />
+      <span style={{ fontSize: 14, color: '#374151' }}>{party}</span>
     </span>
   );
 };
@@ -165,6 +177,14 @@ const RFIs: React.FC = () => {
         <span aria-label={`Status: ${info.getValue()}`}><StatusTag status={info.getValue() as any} /></span>
       ),
     }),
+    rfiColHelper.display({
+      id: 'ball_in_court',
+      header: () => (
+        <span style={{ fontSize: '0.75rem', textTransform: 'uppercase' as const, letterSpacing: '0.05em', color: colors.textTertiary, fontWeight: typography.fontWeight.medium }}>Ball In Court</span>
+      ),
+      size: 150,
+      cell: (info) => <BallInCourtCell rfi={info.row.original} />,
+    }),
     rfiColHelper.accessor('submitDate', {
       header: 'Days',
       size: 70,
@@ -194,11 +214,6 @@ const RFIs: React.FC = () => {
           </div>
         );
       },
-    }),
-    rfiColHelper.accessor('ball_in_court', {
-      header: 'Ball in Court',
-      size: 120,
-      cell: (info) => <BallInCourtBadge value={info.getValue() as string | null} />,
     }),
   ], []);
 
