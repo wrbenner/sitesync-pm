@@ -406,7 +406,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   };
 
   return (
-    <div role="region" aria-label="Project Schedule Gantt Chart">
+    <div role="region" aria-label="Gantt chart showing project timeline">
       {/* Visually hidden summary for screen readers */}
       {localPhases.length > 0 && (
         <p style={{ position: 'absolute', left: -9999, width: 1, height: 1, overflow: 'hidden', margin: 0 }}>
@@ -689,8 +689,8 @@ export const GanttChart: React.FC<GanttChartProps> = ({
           <div
             ref={ganttGridRef}
             id="gantt-activities"
-            role="grid"
-            aria-label="Project Schedule Gantt Chart"
+            role="table"
+            aria-label="Project schedule activities"
             aria-rowcount={localPhases.length}
             aria-activedescendant={ganttActiveRowId}
             tabIndex={0}
@@ -710,12 +710,12 @@ export const GanttChart: React.FC<GanttChartProps> = ({
 
             {/* Visually hidden header row so screen readers announce column names */}
             <div role="row" style={{ position: 'absolute', left: -9999, width: 1, height: 1, overflow: 'hidden' }}>
-              <div role="columnheader" style={{}}>Activity</div>
-              <div role="columnheader" style={{}}>Schedule</div>
-              <div role="columnheader" style={{}}>Slippage</div>
-              <div role="columnheader" style={{}}>Float</div>
-              {showBaseline && <div role="columnheader" style={{}}>Baseline Start</div>}
-              {showBaseline && <div role="columnheader" style={{}}>Baseline End</div>}
+              <div role="columnheader" aria-sort="none" style={{}}>Activity</div>
+              <div role="columnheader" aria-sort="none" style={{}}>Schedule</div>
+              <div role="columnheader" aria-sort="none" style={{}}>Slippage</div>
+              <div role="columnheader" aria-sort="none" style={{}}>Float</div>
+              {showBaseline && <div role="columnheader" aria-sort="none" style={{}}>Baseline Start</div>}
+              {showBaseline && <div role="columnheader" aria-sort="none" style={{}}>Baseline End</div>}
             </div>
 
             {/* SVG overlay for dependency arrows */}
@@ -820,8 +820,8 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                   role="row"
                   aria-rowindex={index + 1}
                   aria-selected={selectedIds.has(phase.id)}
-                  aria-label={`${phase.name}: ${new Date(phase.startDate).toLocaleDateString()} to ${new Date(phase.endDate).toLocaleDateString()}, ${phase.progress}% complete${phase.floatDays != null ? `, ${phase.floatDays} days float` : ''}${phase.critical ? ', critical path' : ''}`}
-                  tabIndex={ganttFocused === index ? 0 : -1}
+                  aria-label={`${(phase.critical || phase.is_critical) ? 'Critical path activity: ' : ''}${phase.name}: ${new Date(phase.startDate).toLocaleDateString()} to ${new Date(phase.endDate).toLocaleDateString()}, ${phase.progress}% complete${phase.floatDays != null ? `, ${phase.floatDays} days float` : ''}`}
+                  tabIndex={0}
                   className="gantt-phase-row"
                   style={{
                     display: showCriticalPath && !phase.is_critical ? 'none' : 'flex',
@@ -834,10 +834,13 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                   onMouseLeave={() => setHoveredPhase(null)}
                   onFocus={e => { setHoveredPhase(phase.id); e.currentTarget.style.boxShadow = `0 0 0 2px ${colors.primaryOrange}50`; }}
                   onBlur={e => { setHoveredPhase(null); e.currentTarget.style.boxShadow = 'none'; }}
-                  onKeyDown={e => handleBarKeyDown(e, phase)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') { e.preventDefault(); onPhaseClick?.(phase); }
+                    else handleBarKeyDown(e, phase);
+                  }}
                 >
                   {/* Label */}
-                  <div role="gridcell" style={{ width: `${LABEL_WIDTH}px`, flexShrink: 0, paddingRight: spacing['3'], position: 'sticky', left: 0, backgroundColor: colors.surfaceRaised, zIndex: 6 }}>
+                  <div role="cell" style={{ width: `${LABEL_WIDTH}px`, flexShrink: 0, paddingRight: spacing['3'], position: 'sticky', left: 0, backgroundColor: colors.surfaceRaised, zIndex: 6 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                       {phase.is_critical && !phase.completed && (
                         <span style={{
@@ -996,7 +999,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                       return (
                       /* Regular phase bar */
                       <div
-                        role="gridcell"
+                        role="cell"
                         data-gantt-bar="true"
                         aria-label={`${phase.name}, ${fmtDate(phase.startDate)} to ${fmtDate(phase.endDate)}, ${phase.progress}% complete, ${barStatus}`}
                         tabIndex={0}
@@ -1269,7 +1272,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                     const slip = phase.slippage_days;
                     if (slip == null) {
                       return (
-                        <div role="gridcell" style={{ width: SLIPPAGE_COL_WIDTH, flexShrink: 0, textAlign: 'right', paddingRight: spacing['2'] }}>
+                        <div role="cell" style={{ width: SLIPPAGE_COL_WIDTH, flexShrink: 0, textAlign: 'right', paddingRight: spacing['2'] }}>
                           <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>—</span>
                         </div>
                       );
@@ -1277,7 +1280,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                     const slipColor = slip > 0 ? '#E74C3C' : '#4EC896';
                     const slipLabel = slip > 0 ? `+${slip}d` : slip === 0 ? '0d' : `${slip}d`;
                     return (
-                      <div role="gridcell" style={{ width: SLIPPAGE_COL_WIDTH, flexShrink: 0, textAlign: 'right', paddingRight: spacing['2'] }}>
+                      <div role="cell" style={{ width: SLIPPAGE_COL_WIDTH, flexShrink: 0, textAlign: 'right', paddingRight: spacing['2'] }}>
                         <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: slipColor }}>
                           {slipLabel}
                         </span>
@@ -1290,7 +1293,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                     const fd = phase.floatDays;
                     if (fd === 0) {
                       return (
-                        <div role="gridcell" style={{ width: FLOAT_COL_WIDTH, flexShrink: 0, textAlign: 'right', paddingRight: spacing['2'] }}>
+                        <div role="cell" style={{ width: FLOAT_COL_WIDTH, flexShrink: 0, textAlign: 'right', paddingRight: spacing['2'] }}>
                           <span style={{
                             fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
                             backgroundColor: '#E74C3C18', color: '#E74C3C',
@@ -1304,7 +1307,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                     }
                     if (fd <= 2) {
                       return (
-                        <div role="gridcell" style={{ width: FLOAT_COL_WIDTH, flexShrink: 0, textAlign: 'right', paddingRight: spacing['2'] }}>
+                        <div role="cell" style={{ width: FLOAT_COL_WIDTH, flexShrink: 0, textAlign: 'right', paddingRight: spacing['2'] }}>
                           <span style={{
                             fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
                             backgroundColor: `${colors.statusPending}18`, color: colors.statusPending,
@@ -1316,7 +1319,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                       );
                     }
                     return (
-                      <div role="gridcell" style={{ width: FLOAT_COL_WIDTH, flexShrink: 0, textAlign: 'right', paddingRight: spacing['2'] }}>
+                      <div role="cell" style={{ width: FLOAT_COL_WIDTH, flexShrink: 0, textAlign: 'right', paddingRight: spacing['2'] }}>
                         <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
                           {fd}d
                         </span>
@@ -1329,7 +1332,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                     const bStart = phase.baselineStartDate;
                     if (!bStart) {
                       return (
-                        <div role="gridcell" style={{ width: BASELINE_DATE_COL_WIDTH, flexShrink: 0, textAlign: 'right', paddingRight: spacing['2'] }}>
+                        <div role="cell" style={{ width: BASELINE_DATE_COL_WIDTH, flexShrink: 0, textAlign: 'right', paddingRight: spacing['2'] }}>
                           <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>—</span>
                         </div>
                       );
@@ -1337,7 +1340,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                     const variance = Math.ceil((new Date(phase.startDate).getTime() - new Date(bStart).getTime()) / 86400000);
                     const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
                     return (
-                      <div role="gridcell" style={{ width: BASELINE_DATE_COL_WIDTH, flexShrink: 0, textAlign: 'right', paddingRight: spacing['2'] }}>
+                      <div role="cell" style={{ width: BASELINE_DATE_COL_WIDTH, flexShrink: 0, textAlign: 'right', paddingRight: spacing['2'] }}>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
                           <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{fmtDate(bStart)}</span>
                           {variance !== 0 && (
@@ -1360,7 +1363,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                     const bEnd = phase.baselineEndDate;
                     if (!bEnd) {
                       return (
-                        <div role="gridcell" style={{ width: BASELINE_DATE_COL_WIDTH, flexShrink: 0, textAlign: 'right', paddingRight: spacing['2'] }}>
+                        <div role="cell" style={{ width: BASELINE_DATE_COL_WIDTH, flexShrink: 0, textAlign: 'right', paddingRight: spacing['2'] }}>
                           <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>—</span>
                         </div>
                       );
@@ -1368,7 +1371,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                     const variance = Math.ceil((new Date(phase.endDate).getTime() - new Date(bEnd).getTime()) / 86400000);
                     const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
                     return (
-                      <div role="gridcell" style={{ width: BASELINE_DATE_COL_WIDTH, flexShrink: 0, textAlign: 'right', paddingRight: spacing['2'] }}>
+                      <div role="cell" style={{ width: BASELINE_DATE_COL_WIDTH, flexShrink: 0, textAlign: 'right', paddingRight: spacing['2'] }}>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
                           <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{fmtDate(bEnd)}</span>
                           {variance !== 0 && (
