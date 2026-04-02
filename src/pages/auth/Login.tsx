@@ -1,17 +1,18 @@
 import React, { useState } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
+import { Loader2 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { colors, spacing, typography, borderRadius, shadows, transitions, zIndex } from '../../styles/theme'
 
 function mapAuthError(message: string): string {
   const msg = message.toLowerCase()
-  if (msg.includes('invalid login') || msg.includes('invalid_credentials')) return 'Email or password is incorrect'
+  if (msg.includes('invalid') || msg.includes('credentials')) return 'Email or password is incorrect'
   if (msg.includes('email not confirmed')) return 'Please check your email to confirm your account'
-  if (msg.includes('rate limit') || msg.includes('too many')) return 'Too many attempts. Please try again in a few minutes'
-  if (msg.includes('fetch') || msg.includes('network') || msg.includes('failed to fetch')) return 'Unable to connect. Check your internet connection'
+  if (msg.includes('rate limit') || msg.includes('too many')) return 'Too many attempts, try again shortly'
+  if (msg.includes('fetch') || msg.includes('network')) return 'Unable to connect, check your internet'
   if (msg.includes('already registered') || msg.includes('already been registered')) return 'An account with this email already exists'
   if (msg.includes('password') && msg.includes('short')) return 'Password must be at least 6 characters'
-  return 'Something went wrong. Please try again.'
+  return message
 }
 
 export const Login: React.FC = () => {
@@ -22,7 +23,8 @@ export const Login: React.FC = () => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [emailError, setEmailError] = useState<string | null>(null)
   const [showReset, setShowReset] = useState(false)
   const [resetEmail, setResetEmail] = useState('')
   const [resetSent, setResetSent] = useState(false)
@@ -32,17 +34,18 @@ export const Login: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
-    setLoading(true)
-
-    const { error: signInError } = await signIn(email, password)
-
-    if (signInError) {
-      setError(mapAuthError(signInError))
-      setLoading(false)
-    } else {
-      const returnTo = searchParams.get('returnTo')
-      const destination = returnTo && returnTo.startsWith('/') ? returnTo : '/dashboard'
-      navigate(destination)
+    setIsSubmitting(true)
+    try {
+      const { error: signInError } = await signIn(email, password)
+      if (signInError) {
+        setError(mapAuthError(signInError))
+      } else {
+        const returnTo = searchParams.get('returnTo')
+        const destination = returnTo && returnTo.startsWith('/') ? returnTo : '/dashboard'
+        navigate(destination)
+      }
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -156,6 +159,7 @@ export const Login: React.FC = () => {
             boxShadow: shadows.card,
           }}
         >
+          <style>{`@keyframes spin-loader { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
           <form onSubmit={handleSubmit} aria-label="Sign in to SiteSync" aria-describedby="login-error">
             {error && (
               <div
@@ -182,17 +186,32 @@ export const Login: React.FC = () => {
                 type="email"
                 id="login-email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => { setEmail(e.target.value); if (emailError) setEmailError(null) }}
                 placeholder="you@company.com"
                 required
                 aria-required="true"
-                aria-invalid={!!error}
-                aria-describedby="login-error"
+                aria-invalid={!!emailError || !!error}
+                aria-describedby={emailError ? 'email-error' : error ? 'login-error' : undefined}
                 autoComplete="email"
-                style={inputStyle}
-                onFocus={(e) => { e.currentTarget.style.borderColor = colors.borderFocus; e.currentTarget.style.boxShadow = '0 0 0 2px #F47820' }}
-                onBlur={(e) => { e.currentTarget.style.borderColor = colors.borderDefault; e.currentTarget.style.boxShadow = 'none' }}
+                style={{ ...inputStyle, borderColor: emailError ? colors.statusCritical : inputStyle.borderColor }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = emailError ? colors.statusCritical : colors.borderFocus; e.currentTarget.style.boxShadow = emailError ? 'none' : '0 0 0 2px #F47820' }}
+                onBlur={(e) => {
+                  const val = e.currentTarget.value
+                  if (val && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
+                    setEmailError('Please enter a valid email address')
+                    e.currentTarget.style.borderColor = colors.statusCritical
+                  } else {
+                    setEmailError(null)
+                    e.currentTarget.style.borderColor = colors.borderDefault
+                  }
+                  e.currentTarget.style.boxShadow = 'none'
+                }}
               />
+              {emailError && (
+                <p id="email-error" role="alert" style={{ margin: `${spacing['1']} 0 0`, fontSize: typography.fontSize.sm, color: colors.statusCritical }}>
+                  {emailError}
+                </p>
+              )}
             </div>
 
             <div style={{ marginBottom: spacing['5'] }}>
@@ -206,7 +225,7 @@ export const Login: React.FC = () => {
                 required
                 aria-required="true"
                 aria-invalid={!!error}
-                aria-describedby="login-error"
+                aria-describedby={error ? 'login-error' : undefined}
                 autoComplete="current-password"
                 style={inputStyle}
                 onFocus={(e) => { e.currentTarget.style.borderColor = colors.borderFocus; e.currentTarget.style.boxShadow = '0 0 0 2px #F47820' }}
@@ -235,28 +254,34 @@ export const Login: React.FC = () => {
 
             <button
               type="submit"
-              disabled={loading}
-              aria-busy={loading}
+              disabled={isSubmitting}
+              aria-busy={isSubmitting}
               style={{
                 width: '100%',
+                minWidth: '160px',
                 minHeight: '44px',
                 padding: `${spacing['3']} ${spacing['4']}`,
                 fontSize: '16px',
                 fontWeight: typography.fontWeight.semibold,
                 fontFamily: typography.fontFamily,
                 color: colors.white,
-                backgroundColor: loading ? colors.orangeHover : colors.primaryOrange,
+                backgroundColor: isSubmitting ? colors.orangeHover : colors.primaryOrange,
                 border: 'none',
                 borderRadius: borderRadius.md,
-                cursor: loading ? 'not-allowed' : 'pointer',
+                cursor: isSubmitting ? 'not-allowed' : 'pointer',
                 transition: `background-color ${transitions.quick}`,
                 letterSpacing: typography.letterSpacing.normal,
-                opacity: loading ? 0.7 : 1,
+                opacity: isSubmitting ? 0.7 : 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: spacing['2'],
               }}
-              onMouseEnter={(e) => { if (!loading) e.currentTarget.style.backgroundColor = colors.orangeHover }}
-              onMouseLeave={(e) => { if (!loading) e.currentTarget.style.backgroundColor = colors.primaryOrange }}
+              onMouseEnter={(e) => { if (!isSubmitting) e.currentTarget.style.backgroundColor = colors.orangeHover }}
+              onMouseLeave={(e) => { if (!isSubmitting) e.currentTarget.style.backgroundColor = colors.primaryOrange }}
             >
-              {loading ? 'Signing In...' : 'Sign In'}
+              {isSubmitting && <Loader2 size={16} style={{ animation: 'spin-loader 0.75s linear infinite' }} />}
+              {isSubmitting ? 'Signing In...' : 'Sign In'}
             </button>
           </form>
         </div>
