@@ -1,5 +1,5 @@
-import { supabase, transformSupabaseError } from '../client'
-import { ApiError } from '../errors'
+import { supabase } from '../client'
+import { ApiError, transformSupabaseError } from '../errors'
 import type { EnrichedProject } from '../../types/project'
 import type { ProjectMetrics, ProjectMetricsResult } from '../../types/api'
 import { computeProjectFinancials } from '../../lib/financialEngine'
