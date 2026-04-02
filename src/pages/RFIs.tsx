@@ -456,7 +456,7 @@ const RFIs: React.FC = () => {
             onRowClick={(rfi) => navigate(`/projects/${projectId}/rfis/${rfi.id}`)}
             selectedRowId={null}
             getRowId={(row) => String(row.id)}
-            getRowAriaLabel={(rfi) => `RFI ${rfi.rfiNumber} ${rfi.title} ${rfi.status}`}
+            getRowAriaLabel={(rfi) => `RFI ${rfi.rfiNumber}: ${rfi.title}, status ${rfi.status}`}
             loading={rfisLoading}
             emptyMessage="No RFIs match your filters"
             onRowToggleSelectByIndex={(i) => {
