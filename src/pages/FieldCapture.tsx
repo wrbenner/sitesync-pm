@@ -119,6 +119,15 @@ const FieldCaptureInner: React.FC = () => {
   const [quickTextLocation, setQuickTextLocation] = useState('');
   const [quickCaptureOpen, setQuickCaptureOpen] = useState(false);
   const [showCheckInSheet, setShowCheckInSheet] = useState(false);
+  const [liveAnnouncement, setLiveAnnouncement] = useState('');
+
+  React.useEffect(() => {
+    if (pendingCount === 0) {
+      setLiveAnnouncement('All captures synced');
+    } else {
+      setLiveAnnouncement(`${pendingCount} capture${pendingCount !== 1 ? 's' : ''} pending sync`);
+    }
+  }, [pendingCount]);
 
   const handleQuickCaptureSave = async (capture: CaptureData) => {
     try {
@@ -135,8 +144,10 @@ const FieldCaptureInner: React.FC = () => {
         },
       });
       addToast('success', 'Field capture saved');
+      setLiveAnnouncement('Photo uploaded and saved successfully');
     } catch {
       addToast('error', 'Failed to save capture');
+      setLiveAnnouncement('Failed to save capture');
     }
   };
 
@@ -152,12 +163,17 @@ const FieldCaptureInner: React.FC = () => {
   const handleQuickTextSend = async () => {
     if (!quickTextValue.trim()) return;
     try {
+      const label = quickTextType ? issueTypes.find((t) => t.type === quickTextType)?.label : 'Note';
       await createFieldCapture.mutateAsync({ projectId: projectId!, data: { project_id: projectId!, type: quickTextType || 'text', content: quickTextValue, location: quickTextLocation || null } })
-      addToast('success', `${quickTextType ? issueTypes.find((t) => t.type === quickTextType)?.label : 'Note'} captured`)
+      addToast('success', `${label} captured`)
+      setLiveAnnouncement(`${label} saved successfully`);
       setQuickTextValue('')
       setQuickTextType(null)
       setQuickTextLocation('')
-    } catch { addToast('error', 'Failed to save capture') }
+    } catch {
+      addToast('error', 'Failed to save capture');
+      setLiveAnnouncement('Failed to save capture');
+    }
   };
 
   const captureIconMap: Record<string, React.ReactNode> = {
@@ -176,6 +192,7 @@ const FieldCaptureInner: React.FC = () => {
 
   return (
     <PageContainer title="Field Capture" subtitle="Capture photos, voice notes, and observations from the field">
+      <div aria-live="polite" aria-atomic="true" style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}>{liveAnnouncement}</div>
       <QuickCapture open={quickCaptureOpen} onClose={() => setQuickCaptureOpen(false)} onSave={handleQuickCaptureSave} />
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: spacing['3'], padding: `${spacing['3']} ${spacing['4']}`, marginBottom: spacing['4'], backgroundColor: colors.statusReviewSubtle, borderRadius: borderRadius.base, borderLeft: `3px solid ${colors.statusReview}` }}>
         <Sparkles size={14} color={colors.statusReview} style={{ marginTop: 2, flexShrink: 0 }} />
@@ -213,10 +230,11 @@ const FieldCaptureInner: React.FC = () => {
         borderRadius: borderRadius.lg, boxShadow: shadows.card, marginBottom: spacing['6'],
       }}>
         <button
+          aria-label="Check in via QR code"
           onClick={() => setShowCheckInSheet(true)}
           style={{
             flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['2'],
-            padding: `${spacing['4']} ${spacing['3']}`, minHeight: 44,
+            padding: `${spacing['4']} ${spacing['3']}`, minHeight: 44, minWidth: 44,
             backgroundColor: `${colors.statusActive}14`,
             color: colors.statusActive,
             border: 'none', borderRadius: borderRadius.md, cursor: 'pointer',
@@ -232,10 +250,11 @@ const FieldCaptureInner: React.FC = () => {
 
         <PermissionGate permission="field_capture.create">
           <button
+            aria-label="Capture photo"
             onClick={() => setQuickCaptureOpen(true)}
             style={{
               flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['2'],
-              padding: `${spacing['4']} ${spacing['3']}`,
+              padding: `${spacing['4']} ${spacing['3']}`, minHeight: 44, minWidth: 44,
               backgroundColor: colors.primaryOrange, color: colors.white, border: 'none',
               borderRadius: borderRadius.md, cursor: 'pointer',
               transition: `background-color ${transitions.instant}`,
@@ -251,10 +270,11 @@ const FieldCaptureInner: React.FC = () => {
 
         <PermissionGate permission="field_capture.create">
           <button
+            aria-label="Record voice note"
             onClick={() => setShowVoice(true)}
             style={{
               flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['2'],
-              padding: `${spacing['4']} ${spacing['3']}`,
+              padding: `${spacing['4']} ${spacing['3']}`, minHeight: 44, minWidth: 44,
               backgroundColor: colors.statusReview, color: colors.white, border: 'none',
               borderRadius: borderRadius.md, cursor: 'pointer',
               transition: `opacity ${transitions.instant}`,
@@ -268,10 +288,11 @@ const FieldCaptureInner: React.FC = () => {
 
         <PermissionGate permission="field_capture.create">
           <button
+            aria-label="Add text note"
             onClick={() => setQuickTextType(quickTextType ? null : 'note')}
             style={{
               flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['2'],
-              padding: `${spacing['4']} ${spacing['3']}`,
+              padding: `${spacing['4']} ${spacing['3']}`, minHeight: 44, minWidth: 44,
               backgroundColor: quickTextType ? colors.surfaceSelected : `${colors.statusInfo}14`,
               color: quickTextType ? colors.primaryOrange : colors.statusInfo,
               border: 'none', borderRadius: borderRadius.md, cursor: 'pointer',
@@ -285,10 +306,11 @@ const FieldCaptureInner: React.FC = () => {
         </PermissionGate>
 
         <button
+          aria-label="View crew check-in board"
           onClick={() => setCaptureMode(captureMode === 'checkin' ? null : 'checkin')}
           style={{
             flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['2'],
-            padding: `${spacing['4']} ${spacing['3']}`,
+            padding: `${spacing['4']} ${spacing['3']}`, minHeight: 44, minWidth: 44,
             backgroundColor: captureMode === 'checkin' ? colors.surfaceSelected : `${colors.statusActive}14`,
             color: captureMode === 'checkin' ? colors.primaryOrange : colors.statusActive,
             border: 'none', borderRadius: borderRadius.md, cursor: 'pointer',
@@ -356,12 +378,15 @@ const FieldCaptureInner: React.FC = () => {
             {issueTypes.map((t) => (
               <button
                 key={t.type}
+                aria-label={`Set type to ${t.label}`}
+                aria-pressed={quickTextType === t.type}
                 onClick={() => {
                   setQuickTextType(t.type);
                   setQuickTextValue(t.template);
                 }}
                 style={{
                   padding: `${spacing['1']} ${spacing['3']}`,
+                  minHeight: 44, minWidth: 44,
                   backgroundColor: quickTextType === t.type ? `${t.color}14` : 'transparent',
                   color: quickTextType === t.type ? t.color : colors.textTertiary,
                   border: `1px solid ${quickTextType === t.type ? t.color : colors.borderDefault}`,
@@ -462,12 +487,17 @@ const FieldCaptureInner: React.FC = () => {
           {previousCaptures.map((capture, index) => (
             <div
               key={capture.id}
+              role="button"
+              tabIndex={0}
+              aria-label={`View ${capture.type} capture: ${capture.title}`}
               onClick={() => addToast('info', `Viewing ${capture.title}`)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); addToast('info', `Viewing ${capture.title}`); } }}
               style={{
                 display: 'flex', alignItems: 'center', gap: spacing['3'],
                 padding: `${spacing['3']} ${spacing['5']}`,
                 borderBottom: index < previousCaptures.length - 1 ? `1px solid ${colors.borderSubtle}` : 'none',
                 cursor: 'pointer', transition: `background-color ${transitions.instant}`,
+                minHeight: 44,
               }}
               onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = colors.surfaceHover; }}
               onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = 'transparent'; }}
@@ -500,10 +530,12 @@ const FieldCaptureInner: React.FC = () => {
                 {capture.type === 'photo' && (
                   <PermissionGate permission="field_capture.create">
                     <button
+                      aria-label="Pin photo to drawing sheet"
                       onClick={(e) => { e.stopPropagation(); addToast('info', 'Select a drawing sheet to pin this photo'); }}
                       style={{
                         display: 'flex', alignItems: 'center', gap: spacing['1'],
                         padding: `${spacing['1']} ${spacing['2']}`,
+                        minHeight: 44, minWidth: 44,
                         backgroundColor: 'transparent', border: `1px solid ${colors.borderDefault}`,
                         borderRadius: borderRadius.sm, fontSize: typography.fontSize.caption,
                         fontFamily: typography.fontFamily, color: colors.textTertiary,
