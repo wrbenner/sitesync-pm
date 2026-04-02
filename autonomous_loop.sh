@@ -590,6 +590,7 @@ read_founder_context() {
         "API_SPECS.md:API SPECIFICATIONS (query patterns, React hooks, edge function endpoints, error handling)"
         "INTEGRATIONS.md:INTEGRATION SPECIFICATIONS (weather, Procore, calendar, email, SMS, AI providers)"
         "LEARNINGS.md:ENGINE LEARNINGS (what worked, what failed, fix rates, score trends from prior runs — use this to avoid repeating mistakes)"
+        "PAGE_ACCEPTANCE_CRITERIA.md:PAGE ACCEPTANCE CRITERIA (GOSPEL — explicit definition of done for every page. Each numbered criterion is a test case. Violations are bugs. Score against these BEFORE the 14 dimensions.)"
     )
 
     for entry in "${brain_files[@]}"; do
@@ -791,6 +792,7 @@ CRITICAL PROMPT RULES (follow exactly or fixes will fail):
 - Do NOT generate prompts for features that require new backend APIs, databases, or external services.
 - Do NOT generate prompts for \"add real-time collaboration\" or \"add offline sync\" — these are multi-sprint features, not single prompts.
 - Focus on: fixing bugs, improving types, adding error/empty/loading states, improving UI polish, fixing calculations, adding ARIA attributes, improving mobile responsiveness.
+- If PAGE_ACCEPTANCE_CRITERIA.md defines criteria for this module, treat every numbered criterion as a P0 test case. Violations are bugs. Score against acceptance criteria FIRST, then the 14 dimensions.
 
 CONTEXT:
 ${founder_context}
