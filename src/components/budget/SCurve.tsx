@@ -50,8 +50,9 @@ export const SCurve: React.FC<SCurveProps> = ({ totalBudget: _totalBudget, spent
           viewBox={`-8 -8 ${W + 16} ${H + 28}`}
           preserveAspectRatio="xMidYMid meet"
           role="img"
-          aria-roledescription="S-curve cost chart"
+          aria-roledescription="interactive data chart"
           aria-label="S-Curve chart showing planned versus actual project spend over time"
+          tabIndex={0}
           style={{
             width: '100%', height: '220px',
             overflow: 'visible',
@@ -105,8 +106,8 @@ export const SCurve: React.FC<SCurveProps> = ({ totalBudget: _totalBudget, spent
                 stroke={colors.surfaceRaised}
                 strokeWidth="0.8"
                 tabIndex={0}
-                role="graphics-symbol"
-                aria-label={`Month ${months[i]}: Planned $${plannedData[i]}M, Actual $${actualData[i] ?? 'N/A'}M`}
+                role="listitem"
+                aria-label={`${months[i]}: $${actualData[i]}M actual`}
                 style={{ cursor: 'pointer', opacity: animated ? 1 : 0, transition: `opacity 0.5s ease-out ${i * 0.1}s`, outline: 'none' }}
                 onMouseEnter={() => setHovered(i)}
                 onMouseLeave={() => setHovered(null)}
@@ -145,6 +146,19 @@ export const SCurve: React.FC<SCurveProps> = ({ totalBudget: _totalBudget, spent
             Forecast
           </text>
         </svg>
+
+        {/* Visually hidden aria-live region for screen readers */}
+        <div
+          aria-live="polite"
+          aria-atomic="true"
+          style={{
+            position: 'absolute', width: '1px', height: '1px',
+            padding: 0, margin: '-1px', overflow: 'hidden',
+            clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0,
+          }}
+        >
+          {hovered !== null ? `${months[hovered]}: Actual $${actualData[hovered]}M, Planned $${plannedData[hovered]}M` : ''}
+        </div>
 
         {/* Hover tooltip */}
         {hovered !== null && (
