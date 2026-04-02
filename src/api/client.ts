@@ -136,4 +136,4 @@ export async function buildPaginatedQuery<TRaw, TResult = TRaw>(
 
 // Re-export for convenience
 export { supabase }
-export { ApiError, transformSupabaseError } from './errors'
+export { ApiError, AuthError, PermissionError, ValidationError, NotFoundError, transformSupabaseError } from './errors'
