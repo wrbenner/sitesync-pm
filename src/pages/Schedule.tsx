@@ -81,7 +81,7 @@ const MOCK_FORECAST: WeatherDay[] = Array.from({ length: 7 }, (_, i) => {
 });
 
 export const Schedule: React.FC = () => {
-  const isMobile = useMediaQuery('(max-width: 767px)');
+  const isMobile = useMediaQuery('(max-width: 768px)');
   const { activeProject } = useProjectContext();
   const queryClient = useQueryClient();
   const { phases: schedulePhases, metrics, loading, error, loadSchedule } = useScheduleStore();
@@ -392,7 +392,7 @@ export const Schedule: React.FC = () => {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+          gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(160px, 1fr))',
           gap: spacing.lg,
           marginBottom: spacing['2xl'],
         }}
@@ -451,7 +451,7 @@ export const Schedule: React.FC = () => {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+          gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(160px, 1fr))',
           gap: spacing.lg,
           marginBottom: spacing['2xl'],
         }}
