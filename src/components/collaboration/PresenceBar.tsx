@@ -281,7 +281,7 @@ export const PresenceBar: React.FC<PresenceBarProps> = ({ page }) => {
                   <button
                     className="presence-avatar-btn"
                     role="status"
-                    aria-label={`${overflow} more users viewing`}
+                    aria-label={`${overflow} more people viewing`}
                     style={{
                       width: AVATAR_SIZE,
                       height: AVATAR_SIZE,
@@ -468,7 +468,7 @@ export const DrawingPresenceBar: React.FC = () => {
                   <button
                     className="presence-avatar-btn"
                     role="status"
-                    aria-label={`${overflow} more users viewing`}
+                    aria-label={`${overflow} more people viewing`}
                     style={{
                       width: AVATAR_SIZE,
                       height: AVATAR_SIZE,
