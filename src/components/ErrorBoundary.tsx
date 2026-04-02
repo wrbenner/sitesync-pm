@@ -1,6 +1,6 @@
 import React from 'react';
-import { AlertTriangle } from 'lucide-react';
-import { colors, spacing, typography } from '../styles/theme';
+import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { colors, spacing, typography, borderRadius } from '../styles/theme';
 import { captureException, addBreadcrumb } from '../lib/errorTracking';
 
 interface Props {
@@ -44,6 +44,97 @@ export class ErrorBoundary extends React.Component<Props, State> {
       if (this.props.fallback != null) {
         return <>{this.props.fallback}</>;
       }
+
+      const errorMsg = this.state.error?.message ?? '';
+      const isChunkError =
+        errorMsg.includes('Loading chunk') ||
+        errorMsg.includes('dynamically imported module') ||
+        errorMsg.includes('Failed to fetch');
+
+      if (isChunkError) {
+        return (
+          <div
+            role="alert"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minHeight: '100vh',
+              padding: spacing.lg,
+              backgroundColor: colors.bgLight,
+            }}
+          >
+            <div
+              style={{
+                backgroundColor: colors.white,
+                borderRadius: borderRadius.lg,
+                padding: spacing.lg,
+                maxWidth: '480px',
+                width: '100%',
+                textAlign: 'center',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: spacing.lg,
+              }}
+            >
+              <div
+                style={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: '50%',
+                  backgroundColor: colors.surfaceInset,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <RefreshCw size={28} color={colors.primaryOrange} />
+              </div>
+              <div>
+                <h1
+                  style={{
+                    fontSize: typography.fontSize.heading,
+                    fontWeight: typography.fontWeight.semibold,
+                    color: colors.textPrimary,
+                    margin: 0,
+                    marginBottom: spacing['2'],
+                  }}
+                >
+                  Page failed to load
+                </h1>
+                <p
+                  style={{
+                    fontSize: typography.fontSize.body,
+                    color: colors.textSecondary,
+                    margin: 0,
+                  }}
+                >
+                  A new version may be available. Click below to reload.
+                </p>
+              </div>
+              <button
+                onClick={() => window.location.reload()}
+                style={{
+                  width: '100%',
+                  padding: `${spacing['3']} ${spacing['6']}`,
+                  backgroundColor: colors.primaryOrange,
+                  color: colors.white,
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: typography.fontSize.body,
+                  fontWeight: typography.fontWeight.medium,
+                  fontFamily: typography.fontFamily,
+                  cursor: 'pointer',
+                }}
+              >
+                Reload Page
+              </button>
+            </div>
+          </div>
+        );
+      }
+
       return (
         <div
           aria-live="assertive"
