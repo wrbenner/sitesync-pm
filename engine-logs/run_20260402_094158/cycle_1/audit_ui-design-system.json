@@ -1,0 +1,70 @@
+{
+  "module": "ui-design-system",
+  "scores": {
+    "visual_polish": 68,
+    "domain_depth": 55,
+    "data_richness": 50,
+    "interaction_quality": 62,
+    "ai_integration": 30,
+    "mobile_first": 52,
+    "performance": 60,
+    "typescript_quality": 58,
+    "error_handling": 55,
+    "realtime": 40,
+    "accessibility": 42,
+    "security": 50,
+    "differentiation": 45,
+    "enterprise_readiness": 50
+  },
+  "overall_score": 51,
+  "issues": [
+    {
+      "id": "ui-design-system-C1-001",
+      "severity": "critical",
+      "dimension": "accessibility",
+      "title": "Toast notifications missing ARIA live region announcements for screen readers",
+      "file": "src/components/ContextMenu.tsx",
+      "description": "The ToastEntry component sets role='alert' or role='status' and aria-live on each individual toast div, but the toast container itself is not an aria-live region. Toasts are dynamically injected into the DOM and may not be announced by screen readers because the live region must exist before content is added. This violates Global Acceptance Standards for accessibility.",
+      "prompt": "In the file src/components/ContextMenu.tsx, in the ToastProvider component (the component that renders the toast container wrapping all ToastEntry children): BEFORE: The outer container div that holds all toast items has no ARIA attributes, so dynamically added toasts may not be announced by screen readers. AFTER: Add aria-live='polite' and role='region' and aria-label='Notifications' to the outermost toast container div (the one that wraps the map of ToastEntry components). Remove the redundant aria-live from individual ToastEntry divs but keep role='alert' on error toasts and role='status' on others. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "ui-design-system-C1-002",
+      "severity": "critical",
+      "dimension": "mobile_first",
+      "title": "Breadcrumbs truncation logic has syntax error and missing mobile touch targets",
+      "file": "src/components/Breadcrumbs.tsx",
+      "description": "The FolderBreadcrumbs component has a truncated render in the provided code (ends mid-JSX). The crumbButtonStyle sets minHeight/minWidth to 44px for touch targets, but the style uses 'all: unset' which removes the minHeight/minWidth in some browsers. On mobile (< 768px), the ellipsis logic collapses breadcrumbs but there is no tap handler to expand them, making deep folder navigation impossible.",
+      "prompt": "In the file src/components/Breadcrumbs.tsx, in the FolderBreadcrumbs component: BEFORE: The crumbButtonStyle uses 'all: unset' which can strip minHeight/minWidth touch targets in Safari. The ellipsis state for mobile breadcrumbs (showEllipsis) is computed but there is no clickable element to set expanded=true, so users on mobile cannot navigate to collapsed parent folders. AFTER: 1) Remove 'all: unset' from crumbButtonStyle and replace with explicit resets (background: none, border: none, cursor: pointer, textDecoration: none). Keep minHeight: '44px' and minWidth: '44px'. 2) When showEllipsis is true, render a button with text '...' before the visible breadcrumbs that calls setExpanded(true) on click, with aria-label='Show full folder path'. 3) Ensure the nav element has overflow: 'auto' and flexWrap: 'nowrap' so it scrolls horizontally on narrow screens. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "ui-design-system-C1-003",
+      "severity": "major",
+      "dimension": "error_handling",
+      "title": "Toast error severity never auto-dismisses, but has no visible dismiss button in code",
+      "file": "src/components/ContextMenu.tsx",
+      "description": "TOAST_DURATION maps error severity to null (never auto-dismiss), which is correct per design standards. However, the ToastEntry component code is truncated and there is no visible dismiss/close button rendered for error toasts. Users cannot clear persistent error toasts, which will stack infinitely and block the UI. This violates the Global Acceptance Standards requirement for inline retry and toast error handling.",
+      "prompt": "In the file src/components/ContextMenu.tsx, in the ToastEntry component: BEFORE: Error toasts with TOAST_DURATION of null never auto-dismiss but the component does not render a visible close/dismiss button (the code appears truncated). AFTER: Ensure every ToastEntry renders a dismiss button (an X icon or 'Dismiss' text button) in the top-right corner of the toast that calls onClose(toast.id). The button must have aria-label='Dismiss notification', min touch target 44x44px, and be keyboard focusable. Additionally, if toast.action exists, render the action button (toast.action.label) next to the dismiss button that calls toast.action.onClick. Style the dismiss button with color matching the severity text color from TOAST_SEVERITY_STYLES. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "ui-design-system-C1-004",
+      "severity": "major",
+      "dimension": "typescript_quality",
+      "title": "routeLabels missing key routes causing undefined breadcrumb text",
+      "file": "src/components/Breadcrumbs.tsx",
+      "description": "The routeLabels map is missing routes for 'safety', 'change-orders', 'pay-apps', 'settings', and 'portal'. When these routes are navigated, the Breadcrumbs component will render 'undefined' or the raw URL segment (e.g., 'change-orders' with a hyphen) as the breadcrumb label, violating the design standard rule: 'No hyphens in UI text.'",
+      "prompt": "In the file src/components/Breadcrumbs.tsx, in the routeLabels constant: BEFORE: The routeLabels Record is missing entries for 'safety', 'change-orders', 'pay-apps', 'settings', 'portal', 'reports', and 'integrations'. When these routes render in breadcrumbs, they show raw URL slugs with hyphens. AFTER: Add the following entries to routeLabels: 'safety': 'Safety', 'change-orders': 'Change Orders', 'pay-apps': 'Payment Applications', 'settings': 'Settings', 'portal': 'Owner Portal', 'reports': 'Reports', 'integrations': 'Integrations'. Also add a fallback in the breadcrumb rendering logic: if a segment is not found in routeLabels, transform it by replacing hyphens with spaces and capitalizing each word (e.g., 'some-page' becomes 'Some Page'), ensuring no hyphens ever appear in breadcrumb text. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "ui-design-system-C1-005",
+      "severity": "major",
+      "dimension": "interaction_quality",
+      "title": "Toast pause-on-hover timer math can produce negative timeout causing immediate dismiss",
+      "file": "src/components/ContextMenu.tsx",
+      "description": "In ToastEntry, handleMouseLeave restarts the timer with remainingRef.current, but if the mouse enter/leave cycle is very fast or the component re-renders between events, remainingRef.current could be 0 from the Math.max(0, ...) call, causing setTimeout with 0ms delay and immediate dismissal. Also, if multiple rapid enter/leave cycles occur, no clearTimeout is called before setting a new timer, potentially causing double-dismiss.",
+      "prompt": "In the file src/components/ContextMenu.tsx, in the ToastEntry component's handleMouseEnter and handleMouseLeave callbacks: BEFORE: handleMouseLeave creates a new setTimeout without clearing any existing timer first. If remainingRef.current is 0, the toast dismisses immediately on mouse leave. Multiple rapid hover cycles can create orphaned timers. AFTER: 1) In handleMouseLeave, add a guard: if remainingRef.current is not null and remainingRef.current <= 0, set it to 1000 (give at least 1 second after hover). 2) In handleMouseLeave, before setting a new timer, clear timerRef.current if it is not null: if (timerRef.current !== null) { clearTimeout(timerRef.current); }. 3) Ensure timerRef.current is always updated when a new timeout is set. After changes, run: npm run build to verify no TypeScript errors."
+    }
+  ],
+  "invented_features": [],
+  "competitive_intel": "Procore's notification system sends email, push, and in-app with per-user granular controls. Fieldwire's mobile markup tools respond in under 100ms with offline-first architecture. SiteSync's toast system and breadcrumb navigation are functional but have edge-case bugs (timer races, missing dismiss buttons, missing route labels) that would create friction during a demo. The accessibility gaps (missing live regions, inadequate keyboard handling) would fail a SOC 2 or VPAT audit, which enterprise GCs increasingly require.",
+  "summary": "The UI Design System module provides a reasonable foundation with themed tokens, toast notifications, and breadcrumb navigation, but has several surgical-priority bugs. The toast system lacks a dismiss button for persistent error toasts (creating infinite stack risk), has a timer race condition on hover, and misses proper ARIA live region setup for screen reader users. Breadcrumbs are missing route labels for 7+ pages (causing hyphens in UI text) and have broken mobile expand logic. These are all fixable with targeted changes to exactly two files. The module scores 51 overall — the design token system is solid but the components built on top of it have incomplete implementations that would cause visible issues during customer demos and fail accessibility audits."
+}

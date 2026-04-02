@@ -96,6 +96,7 @@ const RFIs: React.FC = () => {
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingDetail, setEditingDetail] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const { addToast } = useToast();
   const appNavigate = useAppNavigate();
   const navigate = useNavigate();
@@ -319,6 +320,20 @@ const RFIs: React.FC = () => {
 
   const allRfis = rfis || [];
 
+  const STATUS_TABS = [
+    { key: 'all', label: 'All' },
+    { key: 'open', label: 'Open' },
+    { key: 'pending', label: 'Pending' },
+    { key: 'under_review', label: 'Under Review' },
+    { key: 'approved', label: 'Approved' },
+    { key: 'closed', label: 'Closed' },
+  ];
+
+  const filteredRfis = useMemo(
+    () => statusFilter === 'all' ? allRfis : allRfis.filter((r: any) => r.status === statusFilter),
+    [allRfis, statusFilter],
+  );
+
   const kanbanColumns: KanbanColumn<any>[] = useMemo(() => [
     { id: 'draft', label: 'In Draft', color: colors.textTertiary, items: [] },
     { id: 'pending', label: 'Submitted', color: colors.statusPending, items: allRfis.filter((r) => r.status === 'pending') },
@@ -355,14 +370,61 @@ const RFIs: React.FC = () => {
       ))}
 
       <div aria-live="polite" aria-atomic="true" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap' }}>
-        {`Showing ${allRfis.length} RFIs, ${overdueCount} overdue`}
+        {`Showing ${filteredRfis.length} of ${allRfis.length} RFIs`}
       </div>
 
       {viewMode === 'table' ? (
         <Card padding="0">
+          <div
+            role="tablist"
+            aria-label="Filter RFIs by status"
+            style={{ display: 'flex', gap: 0, padding: `${spacing['2']} ${spacing['4']}`, borderBottom: `1px solid ${colors.borderSubtle}`, overflowX: 'auto' }}
+          >
+            {STATUS_TABS.map((tab) => {
+              const count = tab.key === 'all' ? allRfis.length : allRfis.filter((r: any) => r.status === tab.key).length;
+              const isSelected = statusFilter === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  role="tab"
+                  aria-selected={isSelected}
+                  onClick={() => setStatusFilter(tab.key)}
+                  style={{
+                    padding: `${spacing['1.5']} ${spacing['3']}`,
+                    border: 'none',
+                    borderRadius: borderRadius.full,
+                    backgroundColor: isSelected ? colors.primaryOrange : 'transparent',
+                    color: isSelected ? '#fff' : colors.textSecondary,
+                    fontSize: typography.fontSize.sm,
+                    fontWeight: isSelected ? typography.fontWeight.semibold : typography.fontWeight.medium,
+                    fontFamily: typography.fontFamily,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap' as const,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: spacing['1.5'],
+                  }}
+                >
+                  {tab.label}
+                  <span style={{
+                    fontSize: typography.fontSize.caption,
+                    fontWeight: typography.fontWeight.medium,
+                    backgroundColor: isSelected ? 'rgba(255,255,255,0.25)' : colors.surfaceInset,
+                    color: isSelected ? '#fff' : colors.textTertiary,
+                    borderRadius: borderRadius.full,
+                    padding: '1px 6px',
+                    minWidth: 18,
+                    textAlign: 'center' as const,
+                  }}>
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
           <VirtualDataTable
             aria-label="RFI Register"
-            data={allRfis}
+            data={filteredRfis}
             columns={allRfiColumns}
             rowHeight={48}
             containerHeight={600}

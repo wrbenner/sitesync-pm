@@ -1874,7 +1874,7 @@ verify_changes() {
     # Get ALL files changed by engine commits today (use run start date, not cycle dir mtime
     # which gets updated as files are written and ends up AFTER the commits it should find)
     local run_start_date
-    run_start_date=$(date -d "@${START_TIME}" "+%Y-%m-%d" 2>/dev/null || date "+%Y-%m-%d")
+    run_start_date=$(date -d "@${START_TIME}" "+%Y-%m-%d 00:00:00" 2>/dev/null || date "+%Y-%m-%d 00:00:00")
 
     local all_engine_changes
     all_engine_changes=$(cd "$PROJECT_DIR" && git log --name-only --since="${run_start_date}" --grep="engine:" --pretty=format:"" 2>/dev/null | sort -u | grep -v '^$' || echo "")

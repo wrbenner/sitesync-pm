@@ -1,0 +1,3 @@
+UNRESOLVED FROM CYCLE 1:
+- [partial] ui-design-system-C1-002: Related file in same directory modified but no direct commit for this issue
+- [partial] ui-design-system-C1-004: Related file in same directory modified but no direct commit for this issue
