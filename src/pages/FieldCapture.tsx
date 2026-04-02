@@ -421,7 +421,7 @@ const FieldCaptureInner: React.FC = () => {
       {/* Prominent top Capture button */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: spacing['4'] }}>
         <button
-          aria-label="Capture photo with GPS tagging"
+          aria-label="Capture new field photo"
           onClick={handleTopCapture}
           style={{
             display: 'flex', alignItems: 'center', gap: spacing['3'],
@@ -692,6 +692,7 @@ const FieldCaptureInner: React.FC = () => {
             ))}
           </div>
           <select
+            aria-label="Filter photos by category"
             value={quickTextLocation}
             onChange={(e) => setQuickTextLocation(e.target.value)}
             style={{
@@ -775,8 +776,9 @@ const FieldCaptureInner: React.FC = () => {
         </div>
       ) : (
         <>
+      <section aria-label="Field capture photos">
       <div style={{ marginTop: quickTextType ? spacing['4'] : 0 }}>
-        <SectionHeader title="Today's Captures" action={<span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{todayCaptures.length} items</span>} />
+        <SectionHeader title="Today's Captures" action={<span aria-live="polite" style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{todayCaptures.length} items</span>} />
         <Card>
           {todayCaptures.length === 0 ? (
             <EmptyState
@@ -814,7 +816,7 @@ const FieldCaptureInner: React.FC = () => {
               key={capture.id}
               role="listitem"
               tabIndex={0}
-              aria-label={`View ${capture.type} capture: ${capture.title}`}
+              aria-label={`View photo: ${capture.title || capture.id}`}
               onClick={() => addToast('info', `Viewing ${capture.title}`)}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); addToast('info', `Viewing ${capture.title}`); } }}
               style={{
@@ -879,6 +881,7 @@ const FieldCaptureInner: React.FC = () => {
         </Card>
         )}
       </div>
+      </section>
       </>
       )}
 
