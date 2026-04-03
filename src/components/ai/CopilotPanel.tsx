@@ -6,6 +6,7 @@ import {
 import { colors, spacing, typography, borderRadius, transitions, shadows } from '../../styles/theme'
 import { useCopilotStore } from '../../stores/copilotStore'
 import { useAgentOrchestrator } from '../../stores/agentOrchestrator'
+import { useProjectContext } from '../../stores/projectContextStore'
 import { useMultiAgentChat } from '../../hooks/useMultiAgentChat'
 import { supabase } from '../../lib/supabase'
 import { AgentMessage, AgentTypingIndicator, AGENT_COLORS } from './AgentMessage'
@@ -109,8 +110,11 @@ PanelMessageRenderer.displayName = 'PanelMessageRenderer'
 
 export const CopilotPanel: React.FC = () => {
   const { isOpen, closeCopilot, currentPageContext } = useCopilotStore()
+  const { activeProjectId } = useProjectContext()
   const { addToast } = useToast()
   const { addCoordinatorMessage } = useAgentOrchestrator()
+  // Best-effort persistence ref — does not drive re-renders
+  const conversationIdRef = useRef<string | null>(null)
 
   const {
     messages,
@@ -189,6 +193,61 @@ export const CopilotPanel: React.FC = () => {
       supabase.removeChannel(channel)
     }
   }, [conversationId, addCoordinatorMessage])
+
+  // Best-effort persistence — errors are logged but never block the UI
+  useEffect(() => {
+    if (messages.length === 0) return
+
+    const persistConversation = async () => {
+      try {
+        // Step (a): ensure a conversation row exists
+        if (!conversationIdRef.current) {
+          const { data: userData } = await supabase.auth.getUser()
+          const userId = userData.user?.id
+          if (!userId || !activeProjectId) return
+
+          const { data, error } = await supabase
+            .from('ai_conversations')
+            .insert({
+              project_id: activeProjectId,
+              user_id: userId,
+              conversation_topic: 'general',
+            })
+            .select('id')
+            .single()
+
+          if (error || !data) {
+            console.error('[CopilotPanel] Failed to create ai_conversations row:', error)
+            return
+          }
+
+          conversationIdRef.current = data.id
+          // Keep the existing useState in sync so the real-time subscription re-fires
+          setConversationId(data.id)
+        }
+
+        // Step (c): persist only the last message
+        const lastMessage = messages[messages.length - 1]
+        const { error: msgError } = await supabase
+          .from('ai_messages')
+          .insert({
+            conversation_id: conversationIdRef.current,
+            role: lastMessage.role,
+            content: lastMessage.content,
+            metadata: { timestamp: new Date().toISOString() },
+          })
+
+        if (msgError) {
+          console.error('[CopilotPanel] Failed to insert ai_messages row:', msgError)
+        }
+      } catch (err) {
+        console.error('[CopilotPanel] Unexpected persistence error:', err)
+      }
+    }
+
+    persistConversation()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages])
 
   const handleSendMessage = useCallback(
     (text: string) => {
