@@ -1140,8 +1140,11 @@ export const InputField: React.FC<InputFieldProps> = ({
 interface EmptyStateProps {
   icon: React.ReactNode;
   title: string;
-  description?: string;
-  action?: React.ReactNode;
+  description: string;
+  actionLabel?: string;
+  onAction?: () => void;
+  secondaryActionLabel?: string;
+  onSecondaryAction?: () => void;
 }
 
 // ─── RelatedItems ───────────────────────────────────────────────────────────
@@ -1737,37 +1740,48 @@ export const Skeleton: React.FC<SkeletonProps> = React.memo(({ width = '100%', h
   );
 });
 
-export const EmptyState: React.FC<EmptyStateProps> = React.memo(({ icon, title, description, action }) => (
+export const EmptyState: React.FC<EmptyStateProps> = ({
+  icon,
+  title,
+  description,
+  actionLabel,
+  onAction,
+  secondaryActionLabel,
+  onSecondaryAction,
+}) => (
   <div
     style={{
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: `${spacing['3xl']} ${spacing.xl}`,
+      maxWidth: '420px',
+      margin: '0 auto',
+      padding: '48px',
       textAlign: 'center',
     }}
   >
-    <div style={{ color: colors.textTertiary, marginBottom: spacing.lg }}>{icon}</div>
-    <h3
-      style={{
-        fontSize: typography.fontSize.lg,
-        fontWeight: typography.fontWeight.medium,
-        color: colors.textSecondary,
-        margin: 0,
-        marginBottom: spacing.sm,
-      }}
-    >
+    <div style={{ color: colors.textTertiary, width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      {icon}
+    </div>
+    <div style={{ marginTop: '16px', fontSize: '18px', fontWeight: 600, color: colors.textPrimary, lineHeight: 1.3 }}>
       {title}
-    </h3>
-    {description && (
-      <p style={{ fontSize: typography.fontSize.base, color: colors.textTertiary, margin: 0, maxWidth: '360px', marginBottom: spacing.xl }}>
-        {description}
-      </p>
+    </div>
+    <div style={{ marginTop: '8px', fontSize: '14px', fontWeight: 400, color: colors.textSecondary, lineHeight: 1.6 }}>
+      {description}
+    </div>
+    {(actionLabel || secondaryActionLabel) && (
+      <div style={{ marginTop: '24px', display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center' }}>
+        {actionLabel && onAction && (
+          <Btn variant="primary" onClick={onAction}>{actionLabel}</Btn>
+        )}
+        {secondaryActionLabel && onSecondaryAction && (
+          <Btn variant="ghost" onClick={onSecondaryAction}>{secondaryActionLabel}</Btn>
+        )}
+      </div>
     )}
-    {action}
   </div>
-));
+);
 
 // ─── Skeleton Loading Primitives ─────────────────────────────────────────────
 
@@ -1936,3 +1950,4 @@ export const SkeletonTable: React.FC<SkeletonTableProps> = ({ rowCount = 5 }) =>
     ))}
   </div>
 );
+
