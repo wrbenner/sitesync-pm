@@ -7,6 +7,7 @@ interface CreateRFIModalProps {
   open: boolean
   onClose: () => void
   onSubmit: (data: Record<string, unknown>) => Promise<void> | void
+  initialValues?: Record<string, unknown>
 }
 
 const fields: FieldConfig[] = [
@@ -24,7 +25,7 @@ const fields: FieldConfig[] = [
   { name: 'due_date', label: 'Due Date', type: 'date' },
 ]
 
-const CreateRFIModal: React.FC<CreateRFIModalProps> = ({ open, onClose, onSubmit }) => (
+const CreateRFIModal: React.FC<CreateRFIModalProps> = ({ open, onClose, onSubmit, initialValues }) => (
   <EntityFormModal
     open={open}
     onClose={onClose}
@@ -32,7 +33,7 @@ const CreateRFIModal: React.FC<CreateRFIModalProps> = ({ open, onClose, onSubmit
     title="Create New RFI"
     schema={rfiSchema}
     fields={fields}
-    defaults={{ priority: 'medium' }}
+    defaults={initialValues ? { priority: 'medium', ...initialValues } : { priority: 'medium' }}
     submitLabel="Create RFI"
     submittingLabel="Creating..."
     draftKey="draft_rfi"

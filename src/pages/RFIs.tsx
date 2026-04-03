@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { supabase } from '../lib/supabase';
 import { VirtualDataTable } from '../components/shared/VirtualDataTable';
 import { BulkActionBar } from '../components/shared/BulkActionBar';
 import { createColumnHelper } from '@tanstack/react-table';
@@ -7,7 +8,7 @@ import EmptyState from '../components/ui/EmptyState';
 import { MetricCardSkeleton } from '../components/ui/Skeletons';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 import { useRFIs } from '../hooks/queries';
-import { AlertTriangle, FileQuestion, FileText, FilterX, Plus, Clock, MessageSquare, Paperclip, Calendar, RefreshCw, Send, Sparkles, LayoutGrid, List, UserCheck, Flag, Download, XCircle } from 'lucide-react';
+import { AlertTriangle, FileQuestion, FileText, FilterX, Plus, Clock, MessageSquare, Paperclip, Calendar, RefreshCw, Send, Sparkles, LayoutGrid, List, UserCheck, Flag, Download, XCircle, Wand2, Loader2, X } from 'lucide-react';
 import { useAppNavigate, getRelatedItemsForRfi } from '../utils/connections';
 import { useCreateRFI, useUpdateRFI } from '../hooks/mutations';
 import { useProjectId } from '../hooks/useProjectId';
@@ -127,6 +128,18 @@ const RFIs: React.FC = () => {
   const announcedLoadRef = useRef(false);
   const { addToast } = useToast();
 
+  // AI Draft modal state
+  const [showAIDraftModal, setShowAIDraftModal] = useState(false);
+  const [aiDraftInput, setAiDraftInput] = useState('');
+  const [aiDraftLoading, setAiDraftLoading] = useState(false);
+  const [aiPrefill, setAiPrefill] = useState<Record<string, unknown> | null>(null);
+  const [aiPrefillKey, setAiPrefillKey] = useState(0);
+
+  // AI Suggest Response state (detail panel)
+  const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
+  const [aiSuggestionLoading, setAiSuggestionLoading] = useState(false);
+  const [aiSuggestionError, setAiSuggestionError] = useState(false);
+
   useEffect(() => {
     if (!rfisLoading && !announcedLoadRef.current) {
       announcedLoadRef.current = true;
@@ -154,6 +167,54 @@ const RFIs: React.FC = () => {
     }
   }, [updateRFI, projectId, addToast]);
 
+  // Reset AI suggestion when detail panel switches to a different RFI
+  useEffect(() => {
+    setAiSuggestion(null);
+    setAiSuggestionLoading(false);
+    setAiSuggestionError(false);
+  }, [selectedRfi?.id]);
+
+  const handleAIDraft = useCallback(async () => {
+    if (!aiDraftInput.trim()) return;
+    setAiDraftLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-rfi-draft', {
+        body: { projectId, description: aiDraftInput },
+      });
+      if (error || !data) throw new Error('AI draft failed');
+      setAiPrefill({ title: data.title ?? '', description: data.description ?? '' });
+      setAiPrefillKey((k) => k + 1);
+      setShowAIDraftModal(false);
+      setAiDraftInput('');
+      setShowCreateModal(true);
+    } catch {
+      toast.error('AI drafting unavailable. You can still create the RFI manually.');
+      setShowAIDraftModal(false);
+      setAiDraftInput('');
+      setShowCreateModal(true);
+    } finally {
+      setAiDraftLoading(false);
+    }
+  }, [aiDraftInput, projectId]);
+
+  const fetchAISuggestion = useCallback(async () => {
+    if (!selectedRfi) return;
+    setAiSuggestionLoading(true);
+    setAiSuggestionError(false);
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-rfi-draft', {
+        body: { projectId, description: selectedRfi.description || selectedRfi.title },
+      });
+      if (error || !data) throw new Error('AI suggestion failed');
+      setAiSuggestion(data.response ?? data.description ?? '');
+    } catch {
+      setAiSuggestionError(true);
+      setAiSuggestion(null);
+    } finally {
+      setAiSuggestionLoading(false);
+    }
+  }, [selectedRfi, projectId]);
+
   const pageAlerts = getPredictiveAlertsForPage('rfis');
 
   const rfiColumns = useMemo(() => [
@@ -173,9 +234,9 @@ const RFIs: React.FC = () => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, fontWeight: typography.fontWeight.medium, lineHeight: typography.lineHeight.snug }}>
               {info.getValue()}
-              {getAnnotationsForEntity('rfi', rfi.id).length > 0 && (
-                <span title={getAnnotationsForEntity('rfi', rfi.id)[0]?.insight || ''} style={{ display: 'inline-flex', alignItems: 'center', gap: 2, marginLeft: spacing['2'], padding: '1px 5px', backgroundColor: `${colors.statusReview}10`, borderRadius: borderRadius.full, verticalAlign: 'middle' }}>
-                  <Sparkles size={10} color={colors.statusReview} />
+              {(rfi.ai_generated || getAnnotationsForEntity('rfi', rfi.id).length > 0) && (
+                <span title={rfi.ai_generated ? 'AI assisted' : (getAnnotationsForEntity('rfi', rfi.id)[0]?.insight || 'AI assisted')} style={{ display: 'inline-flex', alignItems: 'center', gap: 2, marginLeft: spacing['2'], padding: '1px 5px', backgroundColor: `${colors.statusReview}10`, borderRadius: borderRadius.full, verticalAlign: 'middle' }}>
+                  <Sparkles size={10} color="#8B5CF6" />
                 </span>
               )}
             </span>
@@ -410,6 +471,22 @@ const RFIs: React.FC = () => {
             </button>
           </div>
           <PermissionGate permission="rfis.create">
+            <button
+              onClick={() => setShowAIDraftModal(true)}
+              aria-label="Draft an RFI with AI assistance"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: spacing.xs,
+                padding: '7px 14px', border: 'none', borderRadius: borderRadius.md,
+                background: 'linear-gradient(135deg, #EDE9FE 0%, #DBEAFE 100%)',
+                color: '#6D28D9', fontSize: typography.fontSize.sm,
+                fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily,
+                cursor: 'pointer', whiteSpace: 'nowrap' as const,
+                boxShadow: '0 0 0 1px rgba(139,92,246,0.2)',
+              }}
+            >
+              <Wand2 size={14} />
+              AI Draft RFI
+            </button>
             <Btn onClick={() => setShowCreateModal(true)} aria-label="Create new Request for Information">
               <Plus size={16} style={{ marginRight: spacing.xs }} />
               New RFI
@@ -804,16 +881,38 @@ const RFIs: React.FC = () => {
               </div>
             </div>
 
-            {/* AI Suggested Response */}
-            <div style={{ marginTop: spacing['4'], padding: spacing['3'], backgroundColor: `${colors.statusReview}06`, borderRadius: borderRadius.md, borderLeft: `3px solid ${colors.statusReview}` }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['2'] }}>
-                <Sparkles size={12} color={colors.statusReview} />
-                <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.statusReview, textTransform: 'uppercase', letterSpacing: '0.4px' }}>AI Suggested Response</span>
+            {/* AI Suggest Response */}
+            {aiSuggestion !== null ? (
+              <div style={{ marginTop: spacing['4'], padding: spacing['3'], backgroundColor: `${colors.statusReview}06`, borderRadius: borderRadius.md, borderLeft: `3px solid ${colors.statusReview}` }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['2'] }}>
+                  <Sparkles size={12} color="#8B5CF6" />
+                  <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: '#8B5CF6', textTransform: 'uppercase' as const, letterSpacing: '0.4px' }}>AI Suggested Response</span>
+                </div>
+                <textarea
+                  value={aiSuggestion}
+                  onChange={(e) => setAiSuggestion(e.target.value)}
+                  rows={4}
+                  style={{ width: '100%', padding: spacing['2'], border: `1px solid rgba(139,92,246,0.2)`, borderRadius: borderRadius.sm, fontSize: typography.fontSize.sm, color: colors.textSecondary, backgroundColor: 'transparent', resize: 'vertical' as const, fontFamily: typography.fontFamily, lineHeight: 1.5, boxSizing: 'border-box' as const, outline: 'none' }}
+                />
               </div>
-              <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: 0, lineHeight: 1.5 }}>
-                Based on similar RFIs resolved on this project, the recommended response is to reference specification section and provide clarification with marked up drawing detail.
-              </p>
-            </div>
+            ) : aiSuggestionError ? (
+              <div style={{ marginTop: spacing['4'], padding: spacing['3'], backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.md, display: 'flex', alignItems: 'center', gap: spacing['2'], border: `1px solid ${colors.borderSubtle}` }}>
+                <Sparkles size={12} color={colors.textTertiary} />
+                <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>AI suggestions temporarily unavailable</span>
+              </div>
+            ) : (
+              <div style={{ marginTop: spacing['4'] }}>
+                <Btn
+                  variant="secondary"
+                  size="sm"
+                  icon={aiSuggestionLoading ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Wand2 size={14} />}
+                  onClick={fetchAISuggestion}
+                  disabled={aiSuggestionLoading}
+                >
+                  {aiSuggestionLoading ? 'Fetching suggestion...' : 'AI Suggest Response'}
+                </Btn>
+              </div>
+            )}
 
             {/* Action Buttons */}
             <div style={{ display: 'flex', gap: spacing.md, paddingTop: spacing.md, borderTop: `1px solid ${colors.borderLight}` }}>
@@ -853,8 +952,10 @@ const RFIs: React.FC = () => {
       </DetailPanel>
 
       <CreateRFIModal
+        key={aiPrefillKey}
         open={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
+        onClose={() => { setShowCreateModal(false); setAiPrefill(null); }}
+        initialValues={aiPrefill ?? undefined}
         onSubmit={async (data) => {
           try {
             await createRFI.mutateAsync({
@@ -868,6 +969,63 @@ const RFIs: React.FC = () => {
           }
         }}
       />
+
+      {/* AI Draft RFI Modal */}
+      {showAIDraftModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="AI Draft RFI"
+          style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.45)', zIndex: 1045, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: spacing['4'] }}
+          onClick={(e) => { if (e.target === e.currentTarget) { setShowAIDraftModal(false); setAiDraftInput(''); } }}
+        >
+          <div style={{ backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.xl, padding: spacing['6'], width: '100%', maxWidth: 480, boxShadow: '0 16px 48px rgba(0,0,0,0.18)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing['4'] }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
+                <Wand2 size={18} color="#8B5CF6" />
+                <span style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>AI Draft RFI</span>
+              </div>
+              <button
+                onClick={() => { setShowAIDraftModal(false); setAiDraftInput(''); }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: colors.textTertiary, display: 'flex', alignItems: 'center' }}
+                aria-label="Close"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <label style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textSecondary, display: 'block', marginBottom: spacing['2'] }}>
+              Describe the issue in your own words
+            </label>
+            <textarea
+              value={aiDraftInput}
+              onChange={(e) => setAiDraftInput(e.target.value)}
+              placeholder="e.g. The structural drawing conflicts with the architectural plan on grid line C, the beam depth does not match"
+              rows={4}
+              disabled={aiDraftLoading}
+              style={{ width: '100%', padding: spacing['3'], border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.md, fontSize: typography.fontSize.sm, color: colors.textPrimary, backgroundColor: colors.surfacePage, resize: 'none' as const, fontFamily: typography.fontFamily, boxSizing: 'border-box' as const, outline: 'none' }}
+            />
+            {aiDraftLoading && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginTop: spacing['3'], color: '#8B5CF6', fontSize: typography.fontSize.sm }}>
+                <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
+                AI is drafting your RFI...
+              </div>
+            )}
+            <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+            <div style={{ display: 'flex', gap: spacing['3'], marginTop: spacing['4'], justifyContent: 'flex-end' }}>
+              <Btn variant="secondary" onClick={() => { setShowAIDraftModal(false); setAiDraftInput(''); }} disabled={aiDraftLoading}>
+                Cancel
+              </Btn>
+              <Btn
+                onClick={handleAIDraft}
+                disabled={!aiDraftInput.trim() || aiDraftLoading}
+                icon={<Wand2 size={14} />}
+              >
+                Generate RFI
+              </Btn>
+            </div>
+          </div>
+        </div>
+      )}
     </PageContainer>
   );
 };
