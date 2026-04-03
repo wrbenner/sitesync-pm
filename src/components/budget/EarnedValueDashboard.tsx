@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
 import { computeEarnedValue } from '../../lib/financialEngine';
@@ -64,9 +64,30 @@ export const EarnedValueDashboard: React.FC = () => {
         <TrendingUp size={40} color={colors.textTertiary} />
         <p style={{ fontSize: typography.fontSize.body, color: colors.textSecondary, margin: 0, textAlign: 'center' }}>Set up your budget to see earned value metrics</p>
         <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0, textAlign: 'center' }}>Earned value analysis requires budget line items with scheduled values and progress data.</p>
+        <button
+          onClick={() => { window.location.hash = '#budget-setup'; }}
+          style={{
+            background: colors.primary,
+            color: 'white',
+            border: 'none',
+            borderRadius: borderRadius.md,
+            padding: spacing['2'] + ' ' + spacing['4'],
+            cursor: 'pointer',
+            fontSize: typography.fontSize.body,
+            fontWeight: typography.fontWeight.semibold,
+          }}
+        >
+          Set Up Budget
+        </button>
       </div>
     );
   }
+
+  const gridCols = useMemo(() => {
+    if (window.innerWidth < 480) return '1fr';
+    if (window.innerWidth < 768) return 'repeat(2, 1fr)';
+    return 'repeat(3, 1fr)';
+  }, []);
 
   const ev = computeEarnedValue(budgetItems, changeOrders, invoices, scheduleActivities);
   const { bcws, bcwp, acwp, spi, cpi, eac, etc, vac, scheduleVarianceDays, costVariance } = ev;
@@ -202,7 +223,7 @@ export const EarnedValueDashboard: React.FC = () => {
       </div>
 
       {/* Metric cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: METRIC_GRID, gap: spacing['3'] }}>
+      <div style={{ display: 'grid', gridTemplateColumns: gridCols, gap: spacing['3'] }}>
         {metrics.map((m) => {
           const color = statusColors[m.status];
           const TrendIcon =
@@ -269,6 +290,18 @@ export const EarnedValueDashboard: React.FC = () => {
               >
                 {m.description}
               </p>
+              {(m.label === 'CPI' || m.label === 'SPI') && (
+                <p
+                  style={{
+                    fontSize: typography.fontSize.xs,
+                    color: colors.textTertiary,
+                    margin: 0,
+                    marginTop: spacing['1'],
+                  }}
+                >
+                  1.0 = on target
+                </p>
+              )}
             </div>
           );
         })}
