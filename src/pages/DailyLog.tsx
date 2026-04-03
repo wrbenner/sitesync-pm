@@ -4,7 +4,7 @@ import { Users, Clock, ShieldCheck, Cloud, ChevronRight, Camera, Send, BarChart3
 import { PageContainer, Card, Btn, Skeleton, SectionHeader, useToast } from '../components/Primitives';
 import EmptyState from '../components/ui/EmptyState';
 import CreateDailyLogModal from '../components/forms/CreateDailyLogModal';
-import { colors, spacing, typography, borderRadius, transitions, tradeColors } from '../styles/theme';
+import { colors, spacing, typography, borderRadius, transitions, tradeColors, shadows } from '../styles/theme';
 import { ExportButton } from '../components/shared/ExportButton';
 import { DailyLogPDF } from '../components/export/DailyLogPDF';
 import type { DailyLogPDFData } from '../components/export/DailyLogPDF';
@@ -78,6 +78,8 @@ export const DailyLog: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
+  const [issuesDelays, setIssuesDelays] = useState('');
   const [historySearch, setHistorySearch] = useState('');
   const [noIncidentsToday, setNoIncidentsToday] = useState(true);
   const [noVisitorsToday, setNoVisitorsToday] = useState(true);
@@ -425,6 +427,13 @@ export const DailyLog: React.FC = () => {
     }
   }, [logError, addToast]);
 
+  // Track mobile breakpoint for responsive layout
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   if (isLoading) {
     return (
       <PageContainer title="Daily Log" subtitle="Loading...">
@@ -738,7 +747,7 @@ export const DailyLog: React.FC = () => {
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: spacing['6'] }}>
+      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: spacing['6'] }}>
         {/* Main content */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: spacing['6'] }}>
           {/* Today's log not started banner */}
@@ -862,7 +871,7 @@ export const DailyLog: React.FC = () => {
           )}
 
           {/* Today's metrics */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'] }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: spacing['4'] }}>
             {todayMetrics.map((metric) => (
               <Card key={metric.label}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['2'] }}>
@@ -1154,46 +1163,106 @@ export const DailyLog: React.FC = () => {
                 AI is summarizing today...
               </p>
             ) : (
-              <div style={{ position: 'relative' }}>
-                <textarea
-                  value={workSummary}
-                  onChange={e => { setWorkSummary(e.target.value); if (aiSummaryGenerated) setAiSummaryGenerated(false); }}
-                  placeholder="Describe the work performed today, progress made, and any notable site conditions..."
-                  disabled={isLocked}
-                  rows={4}
-                  style={{
-                    width: '100%',
-                    padding: spacing['3'],
-                    paddingRight: spacing['9'],
-                    fontSize: typography.fontSize.sm,
-                    fontFamily: typography.fontFamily,
-                    border: `1px solid ${colors.borderDefault}`,
-                    backgroundColor: isLocked ? colors.surfaceInset : colors.white,
-                    borderRadius: borderRadius.md,
-                    outline: 'none',
-                    resize: 'vertical',
-                    color: colors.textPrimary,
-                    boxSizing: 'border-box',
-                    lineHeight: '1.6',
-                    cursor: isLocked ? 'not-allowed' : 'text',
-                  }}
-                />
-                {!isLocked && (
-                  <button
-                    title="Voice to text"
-                    onClick={() => addToast('info', 'Voice to text available on supported browsers')}
+              <div>
+                <label style={{ display: 'block', fontSize: typography.fontSize.sm, color: colors.textSecondary, marginBottom: spacing['2'], fontWeight: typography.fontWeight.medium }}>
+                  Work performed
+                </label>
+                <div style={{ display: 'flex', gap: spacing['2'], alignItems: 'flex-start' }}>
+                  <textarea
+                    value={workSummary}
+                    onChange={e => { setWorkSummary(e.target.value); if (aiSummaryGenerated) setAiSummaryGenerated(false); }}
+                    placeholder="Describe the work performed today, progress made, and any notable site conditions..."
+                    disabled={isLocked}
+                    rows={4}
                     style={{
-                      position: 'absolute', top: spacing['2'], right: spacing['2'],
-                      backgroundColor: 'transparent', border: 'none', cursor: 'pointer',
-                      color: colors.textTertiary, padding: spacing['1'], borderRadius: borderRadius.sm,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      flex: 1,
+                      padding: spacing['3'],
+                      fontSize: typography.fontSize.sm,
+                      fontFamily: typography.fontFamily,
+                      border: `1px solid ${colors.borderDefault}`,
+                      backgroundColor: isLocked ? colors.surfaceInset : colors.white,
+                      borderRadius: borderRadius.md,
+                      outline: 'none',
+                      resize: 'vertical',
+                      color: colors.textPrimary,
+                      boxSizing: 'border-box',
+                      lineHeight: '1.6',
+                      cursor: isLocked ? 'not-allowed' : 'text',
+                      minHeight: '44px',
                     }}
-                  >
-                    <Mic size={15} />
-                  </button>
-                )}
+                  />
+                  {!isLocked && (
+                    <button
+                      title="Voice input"
+                      aria-label="Voice input for work summary"
+                      onClick={() => toast.success('Voice input coming soon')}
+                      style={{
+                        width: '44px', height: '44px', flexShrink: 0,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        backgroundColor: colors.surfaceInset,
+                        border: `1px solid ${colors.borderDefault}`,
+                        borderRadius: borderRadius.md,
+                        cursor: 'pointer',
+                        color: colors.textTertiary,
+                      }}
+                    >
+                      <Mic size={18} />
+                    </button>
+                  )}
+                </div>
               </div>
             )}
+          </Card>
+
+          {/* Issues and Delays */}
+          <Card>
+            <SectionHeader title="Issues and Delays" />
+            <label style={{ display: 'block', fontSize: typography.fontSize.sm, color: colors.textSecondary, marginBottom: spacing['2'], fontWeight: typography.fontWeight.medium }}>
+              Issues, delays, or blockers
+            </label>
+            <div style={{ display: 'flex', gap: spacing['2'], alignItems: 'flex-start' }}>
+              <textarea
+                value={issuesDelays}
+                onChange={e => setIssuesDelays(e.target.value)}
+                placeholder="Note any issues, delays, or blockers encountered today..."
+                disabled={isLocked}
+                rows={3}
+                style={{
+                  flex: 1,
+                  padding: spacing['3'],
+                  fontSize: typography.fontSize.sm,
+                  fontFamily: typography.fontFamily,
+                  border: `1px solid ${colors.borderDefault}`,
+                  backgroundColor: isLocked ? colors.surfaceInset : colors.white,
+                  borderRadius: borderRadius.md,
+                  outline: 'none',
+                  resize: 'vertical',
+                  color: colors.textPrimary,
+                  boxSizing: 'border-box',
+                  lineHeight: '1.6',
+                  cursor: isLocked ? 'not-allowed' : 'text',
+                  minHeight: '44px',
+                }}
+              />
+              {!isLocked && (
+                <button
+                  title="Voice input"
+                  aria-label="Voice input for issues and delays"
+                  onClick={() => toast.success('Voice input coming soon')}
+                  style={{
+                    width: '44px', height: '44px', flexShrink: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    backgroundColor: colors.surfaceInset,
+                    border: `1px solid ${colors.borderDefault}`,
+                    borderRadius: borderRadius.md,
+                    cursor: 'pointer',
+                    color: colors.textTertiary,
+                  }}
+                >
+                  <Mic size={18} />
+                </button>
+              )}
+            </div>
           </Card>
 
           {/* AI Auto Narrative */}
@@ -1268,7 +1337,7 @@ export const DailyLog: React.FC = () => {
           )}
 
           {/* Aggregate metric cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'] }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: spacing['4'] }}>
             {[
               {
                 icon: <Users size={24} color={colors.primaryOrange} />,
@@ -1323,7 +1392,7 @@ export const DailyLog: React.FC = () => {
                 value={historySearch}
                 onChange={e => setHistorySearch(e.target.value)}
                 placeholder="Search logs..."
-                style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.md, outline: 'none', color: colors.textPrimary, backgroundColor: colors.white, width: 200 }}
+                style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.md, outline: 'none', color: colors.textPrimary, backgroundColor: colors.white, width: 200, minHeight: '44px', boxSizing: 'border-box' }}
               />
             </div>
             {filteredPreviousDays.length === 0 && previousDays.length > 0 ? (
@@ -1398,12 +1467,11 @@ export const DailyLog: React.FC = () => {
           {/* Sticky Submit Log button */}
           {logStatus === 'draft' && !isLocked && (
             <div style={{
-              position: 'sticky', bottom: 0, zIndex: 100,
-              margin: `0 -${spacing['4']}`,
-              padding: `${spacing['4']} ${spacing['4']}`,
-              backgroundColor: 'rgba(247, 248, 250, 0.95)',
-              backdropFilter: 'blur(8px)',
-              borderTop: `1px solid ${colors.borderSubtle}`,
+              position: 'sticky', bottom: 0, zIndex: 10,
+              padding: spacing.md,
+              background: colors.surfaceRaised,
+              borderTop: `1px solid ${colors.border}`,
+              boxShadow: shadows.md,
               display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: spacing['3'],
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
@@ -1424,6 +1492,7 @@ export const DailyLog: React.FC = () => {
                     fontFamily: typography.fontFamily, cursor: 'pointer',
                     boxShadow: '0 4px 24px rgba(244, 120, 32, 0.35)',
                     transition: 'opacity 160ms',
+                    minHeight: '44px',
                   }}
                 >
                   <Send size={15} />
