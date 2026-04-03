@@ -20,6 +20,7 @@ export const PresenceDots: React.FC<PresenceDotsProps> = ({ entityId, maxVisible
   const viewers = usePresenceStore((s) => s.getUsersViewingEntity(entityId))
   const isInitialized = usePresenceStore((s) => s.isInitialized)
   const [overflowOpen, setOverflowOpen] = useState(false)
+  const [focusedAvatarId, setFocusedAvatarId] = useState<string | null>(null)
   const overflowContainerRef = useRef<HTMLDivElement>(null)
   const overflowToggleRef = useRef<HTMLButtonElement>(null)
   const firstDropdownItemRef = useRef<HTMLDivElement>(null)
@@ -64,6 +65,8 @@ export const PresenceDots: React.FC<PresenceDotsProps> = ({ entityId, maxVisible
         <button
           key={user.userId}
           aria-label={`${user.name} is viewing this item`}
+          onFocus={() => setFocusedAvatarId(user.userId)}
+          onBlur={() => setFocusedAvatarId(null)}
           style={{
             minWidth: 44,
             minHeight: 44,
@@ -74,6 +77,9 @@ export const PresenceDots: React.FC<PresenceDotsProps> = ({ entityId, maxVisible
             border: 'none',
             cursor: 'pointer',
             padding: 0,
+            outline: focusedAvatarId === user.userId ? `2px solid ${colors.primaryOrange}` : 'none',
+            outlineOffset: '2px',
+            borderRadius: borderRadius.full,
           }}
         >
           <div
@@ -107,12 +113,25 @@ export const PresenceDots: React.FC<PresenceDotsProps> = ({ entityId, maxVisible
               e.stopPropagation()
               setOverflowOpen(false)
               overflowToggleRef.current?.focus()
+            } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+              e.preventDefault()
+              const items = overflowContainerRef.current?.querySelectorAll('[role="menuitem"]')
+              if (!items || items.length === 0) return
+              const itemsArray = Array.from(items) as HTMLElement[]
+              const currentIdx = itemsArray.findIndex((el) => el === document.activeElement)
+              if (e.key === 'ArrowDown') {
+                const nextIdx = currentIdx === itemsArray.length - 1 ? 0 : currentIdx + 1
+                itemsArray[nextIdx].focus()
+              } else {
+                const prevIdx = currentIdx <= 0 ? itemsArray.length - 1 : currentIdx - 1
+                itemsArray[prevIdx].focus()
+              }
             }
           }}
         >
           <button
             ref={overflowToggleRef}
-            aria-label={`${overflow} more viewers`}
+            aria-label={`${overflow} more viewer${overflow !== 1 ? 's' : ''}`}
             aria-expanded={overflowOpen}
             aria-haspopup="true"
             aria-controls="presence-overflow-list"
@@ -149,7 +168,7 @@ export const PresenceDots: React.FC<PresenceDotsProps> = ({ entityId, maxVisible
           {overflowOpen && (
             <div
               id="presence-overflow-list"
-              role="list"
+              role="menu"
               aria-label="Additional viewers"
               style={{
                 position: 'absolute',
@@ -167,8 +186,8 @@ export const PresenceDots: React.FC<PresenceDotsProps> = ({ entityId, maxVisible
               {overflowViewers.map((user, idx) => (
                 <div
                   key={user.userId}
-                  role="listitem"
-                  tabIndex={idx === 0 ? 0 : -1}
+                  role="menuitem"
+                  tabIndex={0}
                   ref={idx === 0 ? firstDropdownItemRef : undefined}
                   style={{
                     display: 'flex',
