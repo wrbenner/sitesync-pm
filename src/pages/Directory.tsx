@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { Search, LayoutGrid, List, Mail, Phone, Building, ChevronRight, BarChart3 } from 'lucide-react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { Search, LayoutGrid, List, Mail, Phone, Building, ChevronRight, BarChart3, Users } from 'lucide-react';
 import { PageContainer, Card, SectionHeader, Avatar, Tag, Skeleton, Btn } from '../components/Primitives';
 import { ExportButton } from '../components/shared/ExportButton';
 import { toast } from 'sonner';
@@ -8,22 +8,25 @@ import { DataTable, createColumnHelper } from '../components/shared/DataTable';
 import { Drawer } from '../components/Drawer';
 import { colors, spacing, typography, borderRadius, transitions, shadows } from '../styles/theme';
 import { useProjectId } from '../hooks/useProjectId';
-import { useDirectoryContacts } from '../hooks/queries';
+import { supabase } from '../lib/supabase';
 import AddContactModal from '../components/forms/AddContactModal';
 import { PermissionGate } from '../components/auth/PermissionGate';
 
-const GROUP_ORDER = ['Owner', 'Design Team', 'Construction', 'Subcontractors'] as const;
-
-const roleToGroup: Record<string, (typeof GROUP_ORDER)[number]> = {
-  Owner: 'Owner',
-  Architect: 'Design Team',
-  'Structural Engineer': 'Design Team',
-  'MEP Consultant': 'Design Team',
-  'General Contractor': 'Construction',
-};
-
-function getGroup(role: string): (typeof GROUP_ORDER)[number] {
-  return roleToGroup[role] || 'Subcontractors';
+function getRoleBadgeColors(role: string): { color: string; bg: string } {
+  const r = role.toLowerCase().replace(/[\s_]/g, '');
+  if (
+    r.includes('manager') || r === 'pm' || r === 'owner' ||
+    r.includes('architect') || r.includes('engineer') || r.includes('consultant')
+  ) {
+    return { color: colors.statusInfo, bg: colors.statusInfoSubtle };
+  }
+  if (
+    r.includes('super') || r.includes('foreman') ||
+    r.includes('gc') || r.includes('generalcontractor')
+  ) {
+    return { color: colors.statusPending, bg: colors.statusPendingSubtle };
+  }
+  return { color: colors.statusNeutral, bg: colors.statusNeutralSubtle };
 }
 
 function getInitials(name: string): string {
@@ -54,16 +57,18 @@ const ContactLink: React.FC<{ href: string; children: React.ReactNode }> = ({ hr
   );
 };
 
-interface DirectoryEntry {
+interface MemberEntry {
   id: string;
   company: string;
   role: string;
   contactName: string;
   phone: string;
   email: string;
+  trade: string;
+  avatarUrl: string | null;
 }
 
-const directoryColumnHelper = createColumnHelper<DirectoryEntry>();
+const directoryColumnHelper = createColumnHelper<MemberEntry>();
 
 const directoryColumns = [
   directoryColumnHelper.accessor('contactName', {
@@ -87,7 +92,10 @@ const directoryColumns = [
   }),
   directoryColumnHelper.accessor('role', {
     header: 'Role',
-    cell: (info) => <Tag label={info.getValue()} fontSize={typography.fontSize.caption} />,
+    cell: (info) => {
+      const { color, bg } = getRoleBadgeColors(info.getValue());
+      return <Tag label={info.getValue()} color={color} backgroundColor={bg} fontSize={typography.fontSize.caption} />;
+    },
   }),
   directoryColumnHelper.accessor('phone', {
     header: 'Phone',
@@ -206,66 +214,102 @@ const ViewToggle: React.FC<{
 export const Directory: React.FC = () => {
   const projectId = useProjectId();
   const createDirectoryContact = useCreateDirectoryContact();
-  const { data: rawDirectoryResult, isPending: loading } = useDirectoryContacts(projectId);
-  const rawDirectory = rawDirectoryResult?.data;
 
-  const directory = useMemo(() =>
-    (rawDirectory || []).map(c => ({
-      ...c,
-      contactName: c.name,
-      phone: c.phone || '',
-      email: c.email || '',
-      company: c.company || '',
-      role: c.role || '',
-    })),
-    [rawDirectory]
-  );
-
+  const [members, setMembers] = useState<MemberEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [rawSearch, setRawSearch] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
   const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!projectId) return;
+    setLoading(true);
+    supabase
+      .from('project_members')
+      .select('id, role, user_id, company, trade, users(id, first_name, last_name, email, phone, job_title, avatar_url)')
+      .eq('project_id', projectId)
+      .then(({ data, error }) => {
+        if (error) {
+          toast.error('Failed to load team members');
+        } else {
+          const mapped: MemberEntry[] = (data || []).map((m: any) => {
+            const u = m.users || {};
+            const firstName = u.first_name || '';
+            const lastName = u.last_name || '';
+            const fullName = [firstName, lastName].filter(Boolean).join(' ') || u.email || 'Unknown';
+            return {
+              id: m.id,
+              role: m.role || '',
+              company: m.company || u.company || '',
+              trade: m.trade || '',
+              contactName: fullName,
+              email: u.email || '',
+              phone: u.phone || '',
+              avatarUrl: u.avatar_url || null,
+            };
+          });
+          setMembers(mapped);
+        }
+        setLoading(false);
+      });
+  }, [projectId]);
+
+  const handleSearchChange = (val: string) => {
+    setRawSearch(val);
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => setSearchQuery(val), 200);
+  };
 
   const filtered = useMemo(() => {
-    if (!directory) return [];
-    if (!searchQuery.trim()) return directory;
+    if (!searchQuery.trim()) return members;
     const q = searchQuery.toLowerCase();
-    return directory.filter(
-      (entry) =>
-        entry.contactName.toLowerCase().includes(q) ||
-        entry.company.toLowerCase().includes(q) ||
-        entry.role.toLowerCase().includes(q) ||
-        entry.email.toLowerCase().includes(q)
+    return members.filter(
+      (m) =>
+        m.contactName.toLowerCase().includes(q) ||
+        m.email.toLowerCase().includes(q) ||
+        m.phone.toLowerCase().includes(q) ||
+        m.role.toLowerCase().includes(q) ||
+        m.trade.toLowerCase().includes(q)
     );
-  }, [searchQuery, directory]);
+  }, [searchQuery, members]);
 
   const grouped = useMemo(() => {
-    const groups: Record<string, typeof filtered> = {};
-    for (const g of GROUP_ORDER) groups[g] = [];
+    const groups: Record<string, MemberEntry[]> = {};
     for (const entry of filtered) {
-      const g = getGroup(entry.role);
-      groups[g].push(entry);
+      const key = entry.company || 'Project Team';
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(entry);
     }
     return groups;
   }, [filtered]);
 
-  const companyPeople = useMemo(() => {
-    if (!selectedCompany || !directory) return [];
-    return directory.filter((entry) => entry.company === selectedCompany);
-  }, [selectedCompany, directory]);
+  const groupKeys = useMemo(() => Object.keys(grouped).sort(), [grouped]);
 
-  if (loading || !directory) {
+  const companyPeople = useMemo(() => {
+    if (!selectedCompany) return [];
+    return members.filter((m) => (m.company || 'Project Team') === selectedCompany);
+  }, [selectedCompany, members]);
+
+  if (loading) {
     return (
-      <PageContainer title="Directory" subtitle="Loading...">
+      <PageContainer title="Directory" subtitle="Loading team...">
         <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['6'] }}>
           <Skeleton width="100%" height="44px" borderRadius={borderRadius.full} />
-          {[1, 2, 3].map((i) => (
-            <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
-              <Skeleton width="140px" height="20px" />
-              <Skeleton width="100%" height="160px" />
-            </div>
-          ))}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+              gap: spacing['4'],
+            }}
+          >
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <Skeleton key={i} width="100%" height="180px" borderRadius={borderRadius.lg} />
+            ))}
+          </div>
         </div>
       </PageContainer>
     );
@@ -274,7 +318,7 @@ export const Directory: React.FC = () => {
   return (
     <PageContainer
       title="Directory"
-      subtitle={`${directory.length} contacts`}
+      subtitle={`${members.length} team ${members.length === 1 ? 'member' : 'members'}`}
       actions={
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
           <ExportButton
@@ -303,10 +347,10 @@ export const Directory: React.FC = () => {
           <Search size={16} style={{ color: colors.textTertiary, flexShrink: 0 }} />
           <input
             type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            aria-label="Search contacts, companies, or roles"
-            placeholder="Search contacts, companies, or roles..."
+            value={rawSearch}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            aria-label="Search by name, email, phone, role, or trade"
+            placeholder="Search by name, email, phone, role, or trade..."
             style={{
               flex: 1,
               border: 'none',
@@ -320,13 +364,52 @@ export const Directory: React.FC = () => {
           />
         </div>
 
+        {/* Empty state */}
+        {members.length === 0 && (
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: spacing['4'],
+              padding: `${spacing['16']} ${spacing['8']}`,
+              textAlign: 'center',
+            }}
+          >
+            <div
+              style={{
+                width: 56,
+                height: 56,
+                borderRadius: borderRadius.xl,
+                backgroundColor: colors.surfaceInset,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: colors.textTertiary,
+              }}
+            >
+              <Users size={24} />
+            </div>
+            <div>
+              <p style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0 }}>
+                No team members yet
+              </p>
+              <p style={{ fontSize: typography.fontSize.body, color: colors.textSecondary, margin: `${spacing['2']} 0 0` }}>
+                Invite your first team member to get started.
+              </p>
+            </div>
+            <PermissionGate permission="directory.manage">
+              <Btn onClick={() => setCreateOpen(true)}>Invite Member</Btn>
+            </PermissionGate>
+          </div>
+        )}
+
         {/* Table View */}
-        {viewMode === 'table' && (
+        {viewMode === 'table' && members.length > 0 && (
           <>
-            {GROUP_ORDER.map((groupName) => {
+            {groupKeys.map((groupName) => {
               const entries = grouped[groupName];
               if (!entries || entries.length === 0) return null;
-
               return (
                 <div key={groupName}>
                   <SectionHeader title={groupName} />
@@ -346,7 +429,7 @@ export const Directory: React.FC = () => {
         )}
 
         {/* Cards View */}
-        {viewMode === 'cards' && (
+        {viewMode === 'cards' && members.length > 0 && (
           <div
             style={{
               display: 'grid',
@@ -356,6 +439,7 @@ export const Directory: React.FC = () => {
           >
             {filtered.map((entry) => {
               const isHovered = hoveredRow === entry.id;
+              const { color: roleColor, bg: roleBg } = getRoleBadgeColors(entry.role);
               return (
                 <div
                   key={entry.id}
@@ -387,20 +471,19 @@ export const Directory: React.FC = () => {
                     {entry.contactName}
                   </span>
 
-                  <div style={{ textAlign: 'center' }}>
-                    <span
-                      style={{
-                        fontSize: typography.fontSize.sm,
-                        color: colors.textSecondary,
-                        display: 'block',
-                      }}
-                    >
-                      {entry.company}
-                    </span>
-                    <Tag
-                      label={entry.role}
-                      fontSize={typography.fontSize.caption}
-                    />
+                  <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['1'] }}>
+                    {entry.company ? (
+                      <span
+                        style={{
+                          fontSize: typography.fontSize.sm,
+                          color: colors.textSecondary,
+                          display: 'block',
+                        }}
+                      >
+                        {entry.company}
+                      </span>
+                    ) : null}
+                    <Tag label={entry.role} color={roleColor} backgroundColor={roleBg} fontSize={typography.fontSize.caption} />
                   </div>
 
                   <div
@@ -411,24 +494,30 @@ export const Directory: React.FC = () => {
                       paddingTop: spacing['2'],
                     }}
                   >
-                    <IconButton
-                      href={`mailto:${entry.email}`}
-                      icon={<Mail size={14} />}
-                      title={`Email ${entry.contactName}`}
-                    />
-                    <IconButton
-                      href={`tel:${entry.phone}`}
-                      icon={<Phone size={14} />}
-                      title={`Call ${entry.contactName}`}
-                    />
-                    <IconButton
-                      icon={<Building size={14} />}
-                      title={`View ${entry.company} profile`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedCompany(entry.company);
-                      }}
-                    />
+                    {entry.email ? (
+                      <IconButton
+                        href={`mailto:${entry.email}`}
+                        icon={<Mail size={14} />}
+                        title={`Email ${entry.contactName}`}
+                      />
+                    ) : null}
+                    {entry.phone ? (
+                      <IconButton
+                        href={`tel:${entry.phone}`}
+                        icon={<Phone size={14} />}
+                        title={`Call ${entry.contactName}`}
+                      />
+                    ) : null}
+                    {entry.company ? (
+                      <IconButton
+                        icon={<Building size={14} />}
+                        title={`View ${entry.company} team`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedCompany(entry.company);
+                        }}
+                      />
+                    ) : null}
                   </div>
                 </div>
               );
