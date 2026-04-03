@@ -41,10 +41,11 @@ interface ScheduleKPICardProps {
   valueColor: string
   trend: 'up' | 'down' | 'neutral'
   progressPct?: number
+  ariaLabel?: string
 }
 
-const ScheduleKPICard: React.FC<ScheduleKPICardProps> = ({ icon, label, value, valueColor, trend, progressPct }) => (
-  <div style={{
+const ScheduleKPICard: React.FC<ScheduleKPICardProps> = ({ icon, label, value, valueColor, trend, progressPct, ariaLabel }) => (
+  <div aria-label={ariaLabel} style={{
     backgroundColor: '#FFFFFF',
     borderRadius: '12px',
     padding: '24px',
@@ -906,6 +907,8 @@ export const Schedule: React.FC = () => {
 
       {/* KPI Metric Cards */}
       <div
+        role="region"
+        aria-label="Schedule Metrics"
         style={{
           display: 'grid',
           gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)',
@@ -928,6 +931,7 @@ export const Schedule: React.FC = () => {
             : colors.statusCritical
           }
           trend={activityMetrics.scheduleVarianceDays > 0 ? 'down' : activityMetrics.scheduleVarianceDays < 0 ? 'up' : 'neutral'}
+          ariaLabel={`Schedule Variance: ${activityMetrics.scheduleVarianceDays > 0 ? '+' : ''}${activityMetrics.scheduleVarianceDays}d`}
         />
         {/* Card 2: Critical Path Items */}
         <ScheduleKPICard
@@ -936,6 +940,7 @@ export const Schedule: React.FC = () => {
           value={String(activityMetrics.criticalPathCount)}
           valueColor={activityMetrics.criticalPathCount > 0 ? colors.statusCritical : colors.textPrimary}
           trend="neutral"
+          ariaLabel={`Critical Path Items: ${activityMetrics.criticalPathCount}`}
         />
         {/* Card 3: On Track */}
         <ScheduleKPICard
@@ -952,6 +957,7 @@ export const Schedule: React.FC = () => {
             : colors.statusCritical
           }
           trend={activityMetrics.onTrackPct >= 80 ? 'up' : 'down'}
+          ariaLabel={`On Track: ${activityMetrics.onTrackPct}%`}
         />
         {/* Card 4: Complete */}
         <ScheduleKPICard
@@ -961,11 +967,14 @@ export const Schedule: React.FC = () => {
           valueColor={colors.textPrimary}
           trend="neutral"
           progressPct={activityMetrics.completePct}
+          ariaLabel={`Complete: ${activityMetrics.completePct}%`}
         />
       </div>
 
       {/* Metrics */}
       <div
+        role="region"
+        aria-label="Schedule Summary"
         style={{
           display: 'grid',
           gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(160px, 1fr))',
@@ -1221,7 +1230,7 @@ export const Schedule: React.FC = () => {
             </div>
           </Card>
         ) : isMobile ? (
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <div data-schedule-list style={{ display: 'flex', flexDirection: 'column' }}>
             {schedulePhases.map((phase) => {
               const statusColor =
                 phase.status === 'completed' ? '#4EC896'
@@ -1235,7 +1244,19 @@ export const Schedule: React.FC = () => {
                   role="row"
                   tabIndex={0}
                   aria-label={`${phase.name}, ${phase.progress}% complete, ${statusLabel}`}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setScheduleAnnouncement(`Schedule updated: ${phase.name} is now ${statusLabel}`); } }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setScheduleAnnouncement(`Selected: ${phase.name}, ${statusLabel}`);
+                    } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                      e.preventDefault();
+                      const list = e.currentTarget.closest('[data-schedule-list]');
+                      const rows = Array.from(list?.querySelectorAll<HTMLElement>('[role="row"]') ?? []);
+                      const idx = rows.indexOf(e.currentTarget);
+                      const next = e.key === 'ArrowDown' ? rows[idx + 1] : rows[idx - 1];
+                      next?.focus();
+                    }
+                  }}
                   style={{
                     backgroundColor: '#FFFFFF',
                     borderRadius: 12,
@@ -1258,7 +1279,9 @@ export const Schedule: React.FC = () => {
                     <div style={{ height: '100%', width: `${phase.progress}%`, backgroundColor: colors.primaryOrange, borderRadius: 3 }} />
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
-                    <Tag label={statusLabel} color={statusColor} backgroundColor={statusColor + '22'} />
+                    <span aria-label={`Status: ${statusLabel}`} role="img">
+                      <Tag label={statusLabel} color={statusColor} backgroundColor={statusColor + '22'} />
+                    </span>
                     <span style={{ fontSize: 11, color: colors.textTertiary }}>
                       {phase.progress}% complete
                     </span>
