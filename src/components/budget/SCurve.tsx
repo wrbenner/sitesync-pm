@@ -164,55 +164,26 @@ export const SCurve: React.FC<SCurveProps> = ({ totalBudget: _totalBudget, spent
           </text>
         </svg>
 
-        {/* Visually hidden keyboard navigation announcement */}
-        <div
-          aria-live="polite"
-          style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)' }}
-        >
-          {announcement}
-        </div>
-
-        {/* Visually hidden data table for screen readers */}
         <table id="scurve-data-table" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap' }}>
-          <caption>S Curve planned versus actual spend data</caption>
+          <caption>S-Curve planned vs actual spend data</caption>
           <thead>
             <tr>
               <th scope="col">Month</th>
-              <th scope="col">Planned Spend ($M)</th>
-              <th scope="col">Actual Spend ($M)</th>
-              <th scope="col">Variance ($M)</th>
+              <th scope="col">Planned ($M)</th>
+              <th scope="col">Actual ($M)</th>
             </tr>
           </thead>
           <tbody>
-            {months.map((month, i) => {
-              const planned = plannedData[i] ?? 0;
-              const actual = actualData[i];
-              const hasActual = actual !== undefined;
-              const variance = hasActual ? planned - actual : null;
-              return (
-                <tr key={month}>
-                  <td>{month}</td>
-                  <td>{planned}</td>
-                  <td>{hasActual ? actual : 'Not yet reported'}</td>
-                  <td>{variance !== null ? variance.toFixed(1) : 'Not yet reported'}</td>
-                </tr>
-              );
-            })}
+            {months.map((m, i) => (
+              <tr key={m}>
+                <td>{m}</td>
+                <td>{plannedData[i]}</td>
+                <td>{actualData[i] !== undefined ? actualData[i] : 'N/A'}</td>
+              </tr>
+            ))}
           </tbody>
         </table>
-
-        {/* Visually hidden aria-live region for screen readers */}
-        <div
-          aria-live="polite"
-          aria-atomic="true"
-          style={{
-            position: 'absolute', width: '1px', height: '1px',
-            padding: 0, margin: '-1px', overflow: 'hidden',
-            clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0,
-          }}
-        >
-          {hovered !== null ? `${months[hovered]}: Actual $${actualData[hovered]}M, Planned $${plannedData[hovered]}M` : ''}
-        </div>
+        <div aria-live="polite" aria-atomic="true" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)' }}>{announcement}</div>
 
         {/* Hover tooltip */}
         {hovered !== null && (
