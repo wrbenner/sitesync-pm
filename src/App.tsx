@@ -109,6 +109,7 @@ const Reports = lazy(() => import('./pages/Reports'));
 const Sustainability = lazy(() => import('./pages/Sustainability'));
 const Benchmarks = lazy(() => import('./pages/Benchmarks'));
 const WarrantiesPage = lazy(() => import('./pages/Warranties'));
+const LienWaivers = lazy(() => import('./pages/LienWaivers').then((m) => ({ default: m.LienWaivers })));
 const Onboarding = lazy(() => import('./pages/Onboarding').then((m) => ({ default: m.Onboarding })));
 const NotFound = lazy(() => import('./pages/errors/NotFound').then((m) => ({ default: m.NotFound })));
 
@@ -335,6 +336,7 @@ function AppRoutes() {
             <Route path="/sustainability" element={<PageSuspense><ProtectedRoute moduleId="sustainability" moduleName="Sustainability"><Sustainability /></ProtectedRoute></PageSuspense>} />
             <Route path="/benchmarks" element={<PageSuspense><ProtectedRoute moduleId="benchmarks" moduleName="Platform Intelligence"><Benchmarks /></ProtectedRoute></PageSuspense>} />
             <Route path="/warranties" element={<PageSuspense><ProtectedRoute moduleId="warranties" moduleName="Warranties"><WarrantiesPage /></ProtectedRoute></PageSuspense>} />
+            <Route path="/lien-waivers" element={<PageSuspense><ProtectedRoute moduleId="lien-waivers" moduleName="Lien Waivers"><LienWaivers /></ProtectedRoute></PageSuspense>} />
             <Route path="/onboarding" element={<PageSuspense><Onboarding /></PageSuspense>} />
             <Route path="/vision" element={<PageSuspense><ProtectedRoute><Vision /></ProtectedRoute></PageSuspense>} />
             <Route path="*" element={<PageSuspense><NotFound /></PageSuspense>} />
