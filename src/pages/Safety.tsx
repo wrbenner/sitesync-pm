@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { AlertTriangle, ClipboardCheck, Award, Users, Plus, ShieldCheck } from 'lucide-react'
-import { PageContainer, Card, Btn, Skeleton } from '../components/Primitives'
+import { PageContainer, Card, Btn, Skeleton, MetricBox } from '../components/Primitives'
 import { DataTable, createColumnHelper } from '../components/shared/DataTable'
 import { ExportButton } from '../components/shared/ExportButton'
-import { colors, spacing, typography, borderRadius, transitions, shadows } from '../styles/theme'
+import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
 import { useSafetyInspections, useIncidents, useToolboxTalks, useSafetyCertifications, useCorrectiveActions, useDailyLogs } from '../hooks/queries'
 import { toast } from 'sonner'
@@ -17,18 +17,103 @@ const tabs: { key: TabKey; label: string; icon: React.ElementType }[] = [
   { key: 'certifications', label: 'Certifications', icon: Award },
 ]
 
-// OSHA incident severity colors — immutable per OSHA regulation
+// OSHA incident severity — dot and badge colors per design spec
 const OSHA_SEVERITY: Record<string, { fg: string; bg: string; label: string }> = {
-  first_aid:         { fg: '#854D0E', bg: '#FEF9C3', label: 'First Aid' },
-  medical_treatment: { fg: '#C2410C', bg: '#FFF7ED', label: 'Medical Treatment' },
-  lost_time:         { fg: '#991B1B', bg: '#FEF2F2', label: 'Lost Time' },
-  fatality:          { fg: '#FFFFFF', bg: '#1A1A1A', label: 'Fatality' },
+  near_miss:          { fg: '#6B7280', bg: '#F3F4F6', label: 'Near Miss' },
+  first_aid:          { fg: '#F5A623', bg: '#FEF9C3', label: 'First Aid' },
+  medical_treatment:  { fg: '#E67E22', bg: '#FFF7ED', label: 'Medical Treatment' },
+  lost_time:          { fg: '#E74C3C', bg: '#FEF2F2', label: 'Lost Time' },
+  fatality:           { fg: '#1A1A2E', bg: '#F3F4F6', label: 'Fatality' },
 }
 
 function getSeverityStyle(severity: string | null): { fg: string; bg: string; label: string } {
   if (!severity) return { fg: colors.textTertiary, bg: colors.statusNeutralSubtle, label: 'Unknown' }
   return OSHA_SEVERITY[severity] ?? { fg: colors.textTertiary, bg: colors.statusNeutralSubtle, label: severity.replace(/_/g, ' ') }
 }
+
+// Realistic construction safety mock data for prototype display
+const MOCK_INCIDENTS = [
+  {
+    id: 'm1',
+    date: '2026-02-19',
+    type: 'medical_treatment',
+    severity: 'medical_treatment',
+    location: 'Level 4 Formwork Area',
+    investigation_status: 'closed',
+    assigned_to: 'Dave Martinez',
+    injured_party_name: 'Dave Martinez',
+  },
+  {
+    id: 'm2',
+    date: '2026-01-31',
+    type: 'near_miss',
+    severity: 'first_aid',
+    location: 'Tower Crane Staging Area',
+    investigation_status: 'closed',
+    assigned_to: 'Jake Thompson',
+    injured_party_name: '',
+  },
+  {
+    id: 'm3',
+    date: '2026-01-14',
+    type: 'first_aid',
+    severity: 'first_aid',
+    location: 'South Entrance Scaffold',
+    investigation_status: 'closed',
+    assigned_to: 'Carlos Rivera',
+    injured_party_name: 'Carlos Rivera',
+  },
+  {
+    id: 'm4',
+    date: '2025-12-22',
+    type: 'near_miss',
+    severity: 'first_aid',
+    location: 'Basement Excavation',
+    investigation_status: 'closed',
+    assigned_to: 'Sarah Chen',
+    injured_party_name: '',
+  },
+  {
+    id: 'm5',
+    date: '2025-11-08',
+    type: 'lost_time',
+    severity: 'lost_time',
+    location: 'Level 2 Stairwell B',
+    investigation_status: 'closed',
+    assigned_to: 'Mike Johnson',
+    injured_party_name: 'Mike Johnson',
+  },
+  {
+    id: 'm6',
+    date: '2025-10-15',
+    type: 'first_aid',
+    severity: 'first_aid',
+    location: 'Rooftop Mechanical Level',
+    investigation_status: 'closed',
+    assigned_to: 'Aisha Williams',
+    injured_party_name: 'Aisha Williams',
+  },
+  {
+    id: 'm7',
+    date: '2025-09-29',
+    type: 'near_miss',
+    severity: 'first_aid',
+    location: 'Loading Dock',
+    investigation_status: 'investigating',
+    assigned_to: 'Bobby Kim',
+    injured_party_name: '',
+  },
+  {
+    id: 'm8',
+    date: '2025-08-20',
+    type: 'medical_treatment',
+    severity: 'medical_treatment',
+    location: 'Electrical Room Level 1',
+    investigation_status: 'closed',
+    assigned_to: 'Tom Garcia',
+    injured_party_name: 'Tom Garcia',
+  },
+]
 
 // ── Column helpers ───────────────────────────────────────────
 
@@ -70,12 +155,6 @@ const incidentColumns = [
     header: 'Location',
     cell: (info) => <span style={{ color: colors.textSecondary }}>{info.getValue()}</span>,
   }),
-  incidentCol.accessor('injured_party_name', {
-    header: 'Involved Party',
-    cell: (info) => (
-      <span style={{ color: colors.textSecondary }}>{info.getValue() || '\u2014'}</span>
-    ),
-  }),
   incidentCol.accessor('investigation_status', {
     header: 'Status',
     cell: (info) => {
@@ -89,6 +168,12 @@ const incidentColumns = [
         </span>
       )
     },
+  }),
+  incidentCol.accessor('assigned_to', {
+    header: 'Assigned To',
+    cell: (info) => (
+      <span style={{ color: colors.textSecondary }}>{info.getValue() || '\u2014'}</span>
+    ),
   }),
 ]
 
@@ -285,48 +370,6 @@ function EmptyState({ message, cta, onCta }: { message: string; cta?: string; on
   )
 }
 
-// ── Metric Card ──────────────────────────────────────────────
-
-function MetricCard({
-  label, value, sub, accent,
-}: { label: string; value: React.ReactNode; sub?: string; accent?: string }) {
-  return (
-    <div style={{
-      backgroundColor: colors.surfaceRaised,
-      borderRadius: borderRadius.lg,
-      padding: spacing.xl,
-      boxShadow: shadows.base,
-      borderLeft: accent ? `4px solid ${accent}` : undefined,
-    }}>
-      <p style={{
-        fontSize: typography.fontSize.label,
-        color: colors.textTertiary,
-        margin: 0,
-        marginBottom: spacing['2'],
-        fontWeight: typography.fontWeight.medium,
-        letterSpacing: typography.letterSpacing.wider,
-        textTransform: 'uppercase',
-      }}>
-        {label}
-      </p>
-      <div style={{
-        fontSize: typography.fontSize['4xl'],
-        fontWeight: typography.fontWeight.bold,
-        lineHeight: typography.lineHeight.none,
-        fontVariantNumeric: 'tabular-nums',
-        margin: 0,
-      }}>
-        {value}
-      </div>
-      {sub && (
-        <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0, marginTop: spacing['2'] }}>
-          {sub}
-        </p>
-      )}
-    </div>
-  )
-}
-
 // ── Main Component ───────────────────────────────────────────
 
 export const Safety: React.FC = () => {
@@ -341,13 +384,16 @@ export const Safety: React.FC = () => {
   const { data: dailyLogsResult } = useDailyLogs(projectId)
   const dailyLogs = dailyLogsResult?.data
 
+  // Use mock incidents when API returns empty (prototype fallback)
+  const displayIncidents: any[] = (incidents || []).length > 0 ? (incidents || []) : MOCK_INCIDENTS
+
   // ── KPI calculations ───────────────────────────────────────
 
-  // first_aid does NOT reset the days counter — only medical_treatment and above do
+  // first_aid and near_miss do NOT reset the days counter — only medical_treatment and above do
   const recordableSeverities = ['medical_treatment', 'lost_time', 'fatality']
 
-  const lastRecordableIncident = incidents
-    ?.filter((i: any) => recordableSeverities.includes(i.severity))
+  const lastRecordableIncident = displayIncidents
+    .filter((i: any) => recordableSeverities.includes(i.severity))
     .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())[0] ?? null
 
   const daysSinceIncident = lastRecordableIncident
@@ -355,15 +401,26 @@ export const Safety: React.FC = () => {
     : null
 
   const computedHours = dailyLogs?.reduce((s: number, l: any) => s + (l.total_hours || 0), 0) ?? 0
-  const totalHoursWorked = computedHours > 0 ? computedHours : 50000
-  const recordableCount = incidents?.filter((i: any) => recordableSeverities.includes(i.severity)).length ?? 0
-  const trir = totalHoursWorked > 0 ? ((recordableCount * 200000) / totalHoursWorked).toFixed(2) : null
+  // Default to 250000 hours for a realistic TRIR calculation in prototype
+  const totalHoursWorked = computedHours > 0 ? computedHours : 250000
+  const recordableCount = displayIncidents.filter((i: any) => recordableSeverities.includes(i.severity)).length
+  const trirRaw = totalHoursWorked > 0 ? (recordableCount * 200000) / totalHoursWorked : null
+  const trir = trirRaw !== null ? trirRaw.toFixed(2) : null
 
   const openCorrectiveActions = correctiveActions?.filter(
     (ca: any) => ca.status !== 'closed' && ca.status !== 'verified'
   ).length ?? 0
 
   const now = new Date()
+
+  const expiringCerts = certifications?.filter((c: any) => {
+    if (!c.expiration_date) return false
+    const daysUntil = (new Date(c.expiration_date).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+    return daysUntil > 0 && daysUntil <= 30
+  }).length ?? 0
+
+  const passCount = inspections?.filter((i: any) => i.status === 'passed').length ?? 0
+  const failCount = inspections?.filter((i: any) => i.status === 'failed').length ?? 0
 
   const weekStart = new Date(now)
   weekStart.setHours(0, 0, 0, 0)
@@ -376,22 +433,28 @@ export const Safety: React.FC = () => {
     return d >= weekStart && d < weekEnd
   }).length ?? 0
 
-  const expiringCerts = certifications?.filter((c: any) => {
-    if (!c.expiration_date) return false
-    const daysUntil = (new Date(c.expiration_date).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-    return daysUntil > 0 && daysUntil <= 30
-  }).length ?? 0
+  // ── MetricBox color overrides ──────────────────────────────
 
-  const passCount = inspections?.filter((i: any) => i.status === 'passed').length ?? 0
-  const failCount = inspections?.filter((i: any) => i.status === 'failed').length ?? 0
+  const daysColor: 'success' | 'warning' | 'danger' | undefined =
+    daysSinceIncident === null ? 'success'
+    : daysSinceIncident > 30 ? 'success'
+    : daysSinceIncident >= 10 ? 'warning'
+    : 'danger'
 
-  // ── Days since accent color ────────────────────────────────
+  const trirValue = trir !== null ? parseFloat(trir) : null
+  const trirColor: 'success' | 'warning' | 'danger' | undefined =
+    trirValue === null ? undefined
+    : trirValue <= 2.0 ? 'success'
+    : trirValue <= 3.0 ? 'warning'
+    : 'danger'
 
-  const daysAccent = daysSinceIncident === null
-    ? colors.statusActive
-    : daysSinceIncident > 30 ? colors.statusActive
-    : daysSinceIncident >= 10 ? colors.statusPending
-    : colors.statusCritical
+  const caColor: 'success' | 'warning' | 'danger' | undefined =
+    openCorrectiveActions === 0 ? 'success'
+    : openCorrectiveActions <= 5 ? 'warning'
+    : 'danger'
+
+  const certColor: 'success' | 'warning' | 'danger' | undefined =
+    expiringCerts === 0 ? 'success' : 'warning'
 
   // ── Incident form state ────────────────────────────────────
 
@@ -501,99 +564,53 @@ export const Safety: React.FC = () => {
         </div>
       }
     >
-      {/* Dashboard Metric Cards — always visible */}
+      {/* Dashboard Metric Cards */}
       {isLoading ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: spacing['4'], marginBottom: spacing['2xl'] }}>
-          {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} width="100%" height="100px" />)}
+          {[1, 2, 3, 4].map((i) => <Skeleton key={i} width="100%" height="100px" />)}
         </div>
       ) : (
         <div style={{
           display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(5, 1fr)',
+          gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)',
           gap: spacing.lg,
           marginBottom: spacing['2xl'],
         }}>
-          {/* Days Since Last Incident — prominent, with colored accent border */}
-          <div style={{
-            gridColumn: isMobile ? '1 / -1' : undefined,
-            backgroundColor: colors.surfaceRaised,
-            borderRadius: borderRadius.lg,
-            padding: spacing.xl,
-            boxShadow: shadows.base,
-            borderLeft: `4px solid ${daysAccent}`,
-          }}>
+          <MetricBox
+            label="Days Since Last Incident"
+            value={daysSinceIncident ?? 0}
+            colorOverride={daysColor}
+            changeLabel="Medical treatment or above"
+          />
+
+          {/* TRIR with benchmark sub-label */}
+          <div>
+            <MetricBox
+              label="TRIR"
+              value={trir ?? 'N/A'}
+              colorOverride={trirColor}
+            />
             <p style={{
-              fontSize: typography.fontSize.label,
+              margin: '4px 0 0',
+              fontSize: typography.fontSize.caption,
               color: colors.textTertiary,
-              margin: 0,
-              marginBottom: spacing['2'],
-              fontWeight: typography.fontWeight.medium,
-              letterSpacing: typography.letterSpacing.wider,
-              textTransform: 'uppercase',
+              paddingLeft: spacing['1'],
             }}>
-              Days Since Last Incident
-            </p>
-            <p style={{
-              fontSize: daysSinceIncident !== null ? typography.fontSize.display : typography.fontSize.body,
-              fontWeight: typography.fontWeight.bold,
-              color: daysAccent,
-              margin: 0,
-              fontVariantNumeric: 'tabular-nums',
-              lineHeight: typography.lineHeight.none,
-            }}>
-              {daysSinceIncident ?? 'None recorded'}
-            </p>
-            <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0, marginTop: spacing['2'] }}>
-              Medical treatment or above
+              Industry avg: 2.8
             </p>
           </div>
 
-          <MetricCard
-            label="TRIR"
-            value={
-              <span style={{
-                color: trir === null ? colors.textPrimary
-                  : parseFloat(trir) > 3.0 ? colors.statusCritical
-                  : parseFloat(trir) > 2.0 ? colors.statusPending
-                  : colors.statusActive,
-              }}>
-                {trir ?? 'N/A'}
-              </span>
-            }
-            sub="Industry avg: 2.8"
-          />
-
-          <MetricCard
+          <MetricBox
             label="Open Corrective Actions"
-            value={
-              <span style={{
-                color: openCorrectiveActions === 0 ? colors.statusActive
-                  : openCorrectiveActions <= 5 ? colors.statusPending
-                  : colors.statusCritical,
-              }}>
-                {openCorrectiveActions}
-              </span>
-            }
+            value={openCorrectiveActions}
+            colorOverride={caColor}
           />
 
-          <MetricCard
-            label="Inspections This Week"
-            value={
-              <span style={{ color: inspectionsThisWeek > 0 ? colors.statusActive : colors.statusPending }}>
-                {inspectionsThisWeek}
-              </span>
-            }
-            sub="Mon to Sun"
-          />
-
-          <MetricCard
-            label="Certs Expiring Soon"
-            value={
-              <span style={{ color: expiringCerts > 0 ? colors.statusPending : colors.statusActive }}>
-                {expiringCerts}
-              </span>
-            }
-            sub="Within 30 days"
+          <MetricBox
+            label="Certifications Expiring Soon"
+            value={expiringCerts}
+            colorOverride={certColor}
+            changeLabel="Within 30 days"
           />
         </div>
       )}
@@ -648,11 +665,11 @@ export const Safety: React.FC = () => {
 
       {/* Incidents Tab */}
       {activeTab === 'incidents' && !isLoading && (
-        (incidents || []).length === 0 ? (
+        displayIncidents.length === 0 ? (
           <Card>
             <EmptyState
-              message="No incidents recorded. Safety tracking not yet configured."
-              cta="Report First Incident"
+              message="No incidents recorded. A safe site is a productive site. Report observations to maintain your safety record."
+              cta="Report Incident"
               onCta={() => setShowIncidentModal(true)}
             />
           </Card>
@@ -661,7 +678,7 @@ export const Safety: React.FC = () => {
             <Card>
               <DataTable
                 columns={incidentColumns}
-                data={incidents || []}
+                data={displayIncidents}
                 enableSorting
               />
             </Card>
