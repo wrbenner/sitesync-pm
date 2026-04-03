@@ -131,11 +131,34 @@ interface DetailPanelProps {
 const DetailPanel: React.FC<DetailPanelProps> = ({ meetingId, onClose }) => {
   const { data: meeting, isPending: meetingLoading } = useMeeting(meetingId);
   const { data: agendaItems = [] } = useMeetingAgendaItems(meetingId);
-  const { data: actionItems = [] } = useMeetingActionItems(meetingId);
+  const { data: remoteActionItems = [], isError: actionItemsError } = useMeetingActionItems(meetingId);
+
+  // Local state fallback when meeting_action_items table is absent
+  const [localActionItems] = useState<any[]>([]);
+  const actionItems: any[] = actionItemsError ? localActionItems : (remoteActionItems as any[]);
+
+  // Local toggle overrides for action item status
+  const [actionStatusOverrides, setActionStatusOverrides] = useState<Record<string, 'open' | 'completed'>>({});
+
+  // Local 3-state attendance: present | absent | remote
+  const [attendanceStatus, setAttendanceStatus] = useState<Record<string, 'present' | 'absent' | 'remote'>>({});
 
   const tc = typeColors(meeting?.type ?? null);
   const attendees: any[] = (meeting as any)?.attendees ?? [];
-  const attendedCount = attendees.filter((a: any) => a.attended).length;
+
+  // Seed attendance from server data on first load
+  useEffect(() => {
+    if (attendees.length === 0) return;
+    setAttendanceStatus((prev) => {
+      if (Object.keys(prev).length > 0) return prev;
+      const init: Record<string, 'present' | 'absent' | 'remote'> = {};
+      attendees.forEach((a: any) => { init[a.id ?? a.user_id ?? a.company] = a.attended ? 'present' : 'absent'; });
+      return init;
+    });
+  }, [attendees.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const presentCount = Object.values(attendanceStatus).filter((s) => s === 'present').length;
+  const remoteCount = Object.values(attendanceStatus).filter((s) => s === 'remote').length;
 
   return (
     <>
@@ -155,7 +178,7 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ meetingId, onClose }) => {
           position: 'fixed',
           top: 0,
           right: 0,
-          width: 560,
+          width: 480,
           height: '100vh',
           background: colors.surfaceRaised,
           boxShadow: shadows.panel,
@@ -207,21 +230,46 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ meetingId, onClose }) => {
               </>
             )}
           </div>
-          <button
-            onClick={onClose}
-            aria-label="Close meeting detail"
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: spacing.xs,
-              color: colors.textTertiary,
-              flexShrink: 0,
-              marginLeft: spacing.sm,
-            }}
-          >
-            <X size={18} />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, flexShrink: 0, marginLeft: spacing.sm }}>
+            <div title="Coming soon" style={{ display: 'inline-block' }}>
+              <button
+                disabled
+                aria-label="Generate minutes (coming soon)"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: spacing.xs,
+                  padding: `${spacing.xs} ${spacing.md}`,
+                  background: colors.surfaceInset,
+                  border: `1px solid ${colors.borderSubtle}`,
+                  borderRadius: borderRadius.md,
+                  fontSize: typography.fontSize.sm,
+                  fontWeight: typography.fontWeight.medium,
+                  fontFamily: typography.fontFamily,
+                  color: colors.textDisabled,
+                  cursor: 'not-allowed',
+                  opacity: 0.6,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                <Sparkles size={12} />
+                Generate Minutes
+              </button>
+            </div>
+            <button
+              onClick={onClose}
+              aria-label="Close meeting detail"
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: spacing.xs,
+                color: colors.textTertiary,
+              }}
+            >
+              <X size={18} />
+            </button>
+          </div>
         </div>
 
         {/* Scrollable body */}
@@ -277,6 +325,11 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ meetingId, onClose }) => {
                     <p style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, margin: 0 }}>
                       {item.title}
                     </p>
+                    {item.presenter && (
+                      <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: `${spacing.xs} 0 0` }}>
+                        {item.presenter}
+                      </p>
+                    )}
                     {item.notes && (
                       <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: `${spacing.xs} 0 0`, lineHeight: typography.lineHeight.normal }}>
                         {item.notes}
@@ -319,7 +372,9 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ meetingId, onClose }) => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm, marginBottom: spacing.xl }}>
               {actionItems.map((item: any) => {
                 const agingColor = actionItemAgingColor(item.due_date);
-                const isDone = item.status === 'done' || item.status === 'completed';
+                const effectiveStatus = actionStatusOverrides[item.id] ?? ((item.status === 'done' || item.status === 'completed') ? 'completed' : 'open');
+                const isDone = effectiveStatus === 'completed';
+                const toggleStatus = () => setActionStatusOverrides((prev) => ({ ...prev, [item.id]: isDone ? 'open' : 'completed' }));
                 return (
                   <div
                     key={item.id}
@@ -332,11 +387,17 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ meetingId, onClose }) => {
                       opacity: isDone ? 0.6 : 1,
                     }}
                   >
-                    {isDone ? (
-                      <CheckCircle2 size={16} color={colors.statusActive} style={{ flexShrink: 0, marginTop: 2 }} />
-                    ) : (
-                      <Circle size={16} color={colors.textTertiary} style={{ flexShrink: 0, marginTop: 2 }} />
-                    )}
+                    <button
+                      onClick={toggleStatus}
+                      aria-label={isDone ? 'Mark as open' : 'Mark as completed'}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0, marginTop: 2, display: 'flex', alignItems: 'center' }}
+                    >
+                      {isDone ? (
+                        <CheckCircle2 size={16} color={colors.statusActive} />
+                      ) : (
+                        <Circle size={16} color={colors.textTertiary} />
+                      )}
+                    </button>
                     <div style={{ flex: 1 }}>
                       <p
                         style={{
@@ -386,35 +447,74 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ meetingId, onClose }) => {
                   letterSpacing: typography.letterSpacing.wider,
                 }}
               >
-                Attendance ({attendedCount} of {attendees.length})
+                Attendance ({presentCount + remoteCount} of {attendees.length})
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
-                {attendees.map((a: any) => (
-                  <div
-                    key={a.id}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: spacing.md,
-                      padding: `${spacing.sm} ${spacing.md}`,
-                      borderRadius: borderRadius.md,
-                    }}
-                  >
-                    {a.attended ? (
-                      <UserCheck size={14} color={colors.statusActive} />
-                    ) : (
-                      <Circle size={14} color={colors.textTertiary} />
-                    )}
-                    <span style={{ fontSize: typography.fontSize.sm, color: a.attended ? colors.textPrimary : colors.textTertiary, flex: 1 }}>
-                      {a.company || a.user_id || 'Unknown'}
-                    </span>
-                    {a.role && (
-                      <span style={{ fontSize: typography.fontSize.label, color: colors.textTertiary }}>
-                        {a.role}
-                      </span>
-                    )}
-                  </div>
-                ))}
+                {attendees.map((a: any) => {
+                  const aKey = a.id ?? a.user_id ?? a.company;
+                  const status = attendanceStatus[aKey] ?? 'absent';
+                  const cycleStatus = () => setAttendanceStatus((prev) => {
+                    const next: Record<string, 'present' | 'absent' | 'remote'> = { ...prev };
+                    next[aKey] = status === 'absent' ? 'present' : status === 'present' ? 'remote' : 'absent';
+                    return next;
+                  });
+                  const statusColors = {
+                    present: colors.statusActive,
+                    remote: colors.statusInfo,
+                    absent: colors.textTertiary,
+                  };
+                  const statusLabels = { present: 'Present', remote: 'Remote', absent: 'Absent' };
+                  return (
+                    <div
+                      key={aKey}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: spacing.md,
+                        padding: `0 ${spacing.sm}`,
+                        borderRadius: borderRadius.md,
+                        minHeight: '44px',
+                      }}
+                    >
+                      <div style={{ flex: 1 }}>
+                        <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary }}>
+                          {a.company || a.user_id || 'Unknown'}
+                        </span>
+                        {a.role && (
+                          <span style={{ fontSize: typography.fontSize.label, color: colors.textTertiary, marginLeft: spacing.sm }}>
+                            {a.role}
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ display: 'flex', borderRadius: borderRadius.md, overflow: 'hidden', border: `1px solid ${colors.borderSubtle}` }}>
+                        {(['present', 'remote', 'absent'] as const).map((s) => (
+                          <button
+                            key={s}
+                            onClick={cycleStatus}
+                            aria-pressed={status === s}
+                            aria-label={`Mark ${a.company || a.user_id || 'attendee'} as ${s}`}
+                            style={{
+                              minWidth: '44px',
+                              minHeight: '32px',
+                              padding: `0 ${spacing.sm}`,
+                              border: 'none',
+                              borderRight: s !== 'absent' ? `1px solid ${colors.borderSubtle}` : 'none',
+                              cursor: 'pointer',
+                              fontSize: typography.fontSize.caption,
+                              fontWeight: status === s ? typography.fontWeight.semibold : typography.fontWeight.normal,
+                              fontFamily: typography.fontFamily,
+                              background: status === s ? (s === 'present' ? colors.statusActiveSubtle : s === 'remote' ? colors.statusInfoSubtle : colors.statusNeutralSubtle) : colors.surfaceRaised,
+                              color: status === s ? statusColors[s] : colors.textTertiary,
+                              transition: transitions.quick,
+                            }}
+                          >
+                            {statusLabels[s]}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </>
           )}
@@ -497,6 +597,7 @@ export const MeetingsPage: React.FC = () => {
     (m) => m.dateObj && m.dateObj >= weekStart && m.dateObj < weekEnd
   );
   const openActionItemsCount = openActionItemsRaw?.length ?? 0;
+  const overdueActionItemsCount = (openActionItemsRaw ?? []).filter((item: any) => item.due_date && new Date(item.due_date) < now).length;
 
   // Skeleton while loading
   if (loading) {
@@ -627,17 +728,17 @@ export const MeetingsPage: React.FC = () => {
           marginBottom: spacing['2xl'],
         }}
       >
-        <MetricBox label="Upcoming Meetings" value={upcomingMeetings.length} />
+        <MetricBox label="Total Meetings" value={meetings.length} />
+        <MetricBox label="Upcoming This Week" value={thisWeekMeetings.length} />
         <MetricBox
           label="Open Action Items"
           value={openActionItemsCount}
           colorOverride={openActionItemsCount > 0 ? 'warning' : undefined}
         />
-        <MetricBox label="Meetings This Week" value={thisWeekMeetings.length} />
         <MetricBox
-          label="Completed"
-          value={completed.length}
-          changeLabel={`of ${meetings.length} total`}
+          label="Overdue Action Items"
+          value={overdueActionItemsCount}
+          colorOverride={overdueActionItemsCount > 0 ? 'critical' : undefined}
         />
       </div>
 
