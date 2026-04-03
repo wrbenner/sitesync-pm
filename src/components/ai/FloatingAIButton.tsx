@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Sparkles, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
@@ -14,6 +14,13 @@ export const FloatingAIButton: React.FC = () => {
   const queryClient = useQueryClient();
   const { data: insights, isLoading, isError, refetch } = useAIInsights(projectId);
   const insightCount = insights?.length || 0;
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     const style = document.createElement('style');
@@ -59,11 +66,11 @@ export const FloatingAIButton: React.FC = () => {
     <button
       onClick={isError ? async () => { const result = await refetch(); if (result.isError) { toast.error('Unable to load AI insights. Please try again.'); } else { openCopilot(); } } : openCopilot}
       title={titleText}
-      aria-label={titleText}
+      aria-label={`${insightCount} AI insights. Open AI Copilot`}
       style={{
         position: 'fixed',
-        bottom: spacing['6'],
-        right: spacing['6'],
+        bottom: isMobile ? spacing['20'] : spacing['6'],
+        right: isMobile ? spacing['4'] : spacing['6'],
         width: spacing['12'],
         height: spacing['12'],
         borderRadius: borderRadius.full,
