@@ -22,6 +22,7 @@ export const SCurve: React.FC<SCurveProps> = ({ totalBudget: _totalBudget, spent
   const [animated, setAnimated] = useState(false);
   const [hovered, setHovered] = useState<number | null>(null);
   const [focused, setFocused] = useState(false);
+  const [announcement, setAnnouncement] = useState('');
 
   useEffect(() => {
     const timer = setTimeout(() => setAnimated(true), 100);
@@ -47,9 +48,17 @@ export const SCurve: React.FC<SCurveProps> = ({ totalBudget: _totalBudget, spent
         onBlur={() => setFocused(false)}
         onKeyDown={(e) => {
           if (e.key === 'ArrowRight') {
-            setHovered(prev => prev === null ? 0 : Math.min(prev + 1, actualData.length - 1));
+            setHovered(prev => {
+              const next = prev === null ? 0 : Math.min(prev + 1, actualData.length - 1);
+              setAnnouncement(`Month: ${months[next]}, Planned: $${plannedData[next]}M, Actual: $${actualData[next] !== undefined ? actualData[next] : 'N/A'}M`);
+              return next;
+            });
           } else if (e.key === 'ArrowLeft') {
-            setHovered(prev => prev === null ? actualData.length - 1 : Math.max(prev - 1, 0));
+            setHovered(prev => {
+              const next = prev === null ? actualData.length - 1 : Math.max(prev - 1, 0);
+              setAnnouncement(`Month: ${months[next]}, Planned: $${plannedData[next]}M, Actual: $${actualData[next] !== undefined ? actualData[next] : 'N/A'}M`);
+              return next;
+            });
           }
         }}
       >
@@ -114,7 +123,7 @@ export const SCurve: React.FC<SCurveProps> = ({ totalBudget: _totalBudget, spent
                 strokeWidth="0.8"
                 tabIndex={0}
                 role="listitem"
-                aria-label={`${months[i]}: $${actualData[i]}M actual`}
+                aria-label={`${months[i]}: Actual $${actualData[i]}M`}
                 style={{ cursor: 'pointer', opacity: animated ? 1 : 0, transition: `opacity 0.5s ease-out ${i * 0.1}s`, outline: 'none' }}
                 onMouseEnter={() => setHovered(i)}
                 onMouseLeave={() => setHovered(null)}
@@ -153,6 +162,35 @@ export const SCurve: React.FC<SCurveProps> = ({ totalBudget: _totalBudget, spent
             Forecast
           </text>
         </svg>
+
+        {/* Visually hidden keyboard navigation announcement */}
+        <div
+          aria-live="polite"
+          style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)' }}
+        >
+          {announcement}
+        </div>
+
+        {/* Visually hidden data table for screen readers */}
+        <table style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)' }}>
+          <caption>S Curve planned versus actual spend</caption>
+          <thead>
+            <tr>
+              <th scope="col">Month</th>
+              <th scope="col">Planned ($M)</th>
+              <th scope="col">Actual ($M)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {months.map((month, i) => (
+              <tr key={month}>
+                <td>{month}</td>
+                <td>{plannedData[i] !== undefined ? plannedData[i] : ''}</td>
+                <td>{actualData[i] !== undefined ? actualData[i] : ''}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
 
         {/* Visually hidden aria-live region for screen readers */}
         <div
