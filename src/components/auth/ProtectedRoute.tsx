@@ -35,7 +35,7 @@ const DevBanner: React.FC = () => (
 function isDevBypassActive(): boolean {
   if (import.meta.env.PROD === true) return false
   if (!import.meta.env.DEV) return false
-  if (import.meta.env.VITE_SUPABASE_URL) return false
+  if (import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_URL.length > 0) return false
   if (import.meta.env.VITE_DEV_BYPASS !== 'true') return false
   return true
 }
@@ -132,7 +132,7 @@ const ProtectedRoute: React.FC<Props> = ({ children, requiredPermission, moduleI
   const { hasPermission, loading: permissionsLoading } = usePermissions()
   const location = useLocation()
 
-  if (authLoading || permissionsLoading) {
+  if ((authLoading || permissionsLoading) && !isDevBypassActive()) {
     return (
       <div aria-live="polite">
         <SkeletonLoader ariaLabel="Verifying access" />
@@ -140,8 +140,8 @@ const ProtectedRoute: React.FC<Props> = ({ children, requiredPermission, moduleI
     )
   }
 
-  if (!user) {
-    return <Navigate to={`/login?returnTo=${encodeURIComponent(location.pathname)}`} replace />
+  if (!isDevBypassActive() && !user) {
+    return <Navigate to='/login' state={{ returnTo: location.pathname }} replace />
   }
 
   const requiredPerm = requiredPermission ?? MODULE_PERMISSIONS[moduleId ?? '']
