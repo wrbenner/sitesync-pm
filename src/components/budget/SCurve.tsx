@@ -68,6 +68,7 @@ export const SCurve: React.FC<SCurveProps> = ({ totalBudget: _totalBudget, spent
           role="img"
           aria-roledescription="interactive data chart"
           aria-label="S-Curve chart showing planned versus actual project spend over time"
+          aria-describedby="scurve-data-table"
           tabIndex={0}
           style={{
             width: '100%', height: '220px',
@@ -172,23 +173,31 @@ export const SCurve: React.FC<SCurveProps> = ({ totalBudget: _totalBudget, spent
         </div>
 
         {/* Visually hidden data table for screen readers */}
-        <table style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)' }}>
-          <caption>S Curve planned versus actual spend</caption>
+        <table id="scurve-data-table" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap' }}>
+          <caption>S Curve planned versus actual spend data</caption>
           <thead>
             <tr>
               <th scope="col">Month</th>
-              <th scope="col">Planned ($M)</th>
-              <th scope="col">Actual ($M)</th>
+              <th scope="col">Planned Spend ($M)</th>
+              <th scope="col">Actual Spend ($M)</th>
+              <th scope="col">Variance ($M)</th>
             </tr>
           </thead>
           <tbody>
-            {months.map((month, i) => (
-              <tr key={month}>
-                <td>{month}</td>
-                <td>{plannedData[i] !== undefined ? plannedData[i] : ''}</td>
-                <td>{actualData[i] !== undefined ? actualData[i] : ''}</td>
-              </tr>
-            ))}
+            {months.map((month, i) => {
+              const planned = plannedData[i] ?? 0;
+              const actual = actualData[i];
+              const hasActual = actual !== undefined;
+              const variance = hasActual ? planned - actual : null;
+              return (
+                <tr key={month}>
+                  <td>{month}</td>
+                  <td>{planned}</td>
+                  <td>{hasActual ? actual : 'Not yet reported'}</td>
+                  <td>{variance !== null ? variance.toFixed(1) : 'Not yet reported'}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
 
