@@ -52,6 +52,7 @@ function ToastEntry({ toast, onClose, isLast }: { toast: ToastItem; onClose: (id
   const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const fallbackRemainingRef = useRef<number>(60000);
   const fallbackStartedAtRef = useRef<number>(Date.now());
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     requestAnimationFrame(() => setIsVisible(true));
@@ -63,13 +64,14 @@ function ToastEntry({ toast, onClose, isLast }: { toast: ToastItem; onClose: (id
   }, [onClose]);
 
   useEffect(() => {
-    if (!isLast) return;
     const onDocKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') handleClose(toast.id);
+      if (e.key === 'Escape' && containerRef.current?.contains(document.activeElement)) {
+        handleClose(toast.id);
+      }
     };
     document.addEventListener('keydown', onDocKeyDown);
     return () => document.removeEventListener('keydown', onDocKeyDown);
-  }, [isLast, toast.id, handleClose]);
+  }, [toast.id, handleClose]);
 
   useEffect(() => {
     const duration = TOAST_DURATION[toast.severity];
@@ -155,6 +157,7 @@ function ToastEntry({ toast, onClose, isLast }: { toast: ToastItem; onClose: (id
       }}
     >
     <div
+      ref={containerRef}
       tabIndex={0}
       onKeyDown={(e) => { if (e.key === 'Escape') handleClose(toast.id); }}
       onMouseEnter={handleMouseEnter}
@@ -237,6 +240,18 @@ function ToastEntry({ toast, onClose, isLast }: { toast: ToastItem; onClose: (id
           {toast.action.label}
         </button>
       )}
+      {toast.severity === 'error' && countdown !== null && (
+        <span
+          style={{
+            fontSize: '11px',
+            color: style.text,
+            flexShrink: 0,
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {countdown}s
+        </span>
+      )}
       <button
         aria-label="Dismiss notification"
         onClick={() => handleClose(toast.id)}
@@ -275,19 +290,6 @@ function ToastEntry({ toast, onClose, isLast }: { toast: ToastItem; onClose: (id
       >
         &#x2715;
       </button>
-      {toast.severity === 'error' && countdown !== null && (
-        <span
-          style={{
-            fontSize: typography.fontSize.sm,
-            color: style.text,
-            opacity: 0.7,
-            flexShrink: 0,
-            whiteSpace: 'nowrap',
-          }}
-        >
-          Dismisses in {countdown}s
-        </span>
-      )}
     </div>
     </div>
   );
@@ -314,6 +316,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       <div
         role="status"
         aria-live="polite"
+        aria-atomic="false"
         aria-label="Notifications"
         style={{
           position: 'fixed',
