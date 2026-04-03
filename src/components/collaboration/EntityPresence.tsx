@@ -21,6 +21,7 @@ export const PresenceDots: React.FC<PresenceDotsProps> = ({ entityId, maxVisible
   const isInitialized = usePresenceStore((s) => s.isInitialized)
   const [overflowOpen, setOverflowOpen] = useState(false)
   const overflowContainerRef = useRef<HTMLDivElement>(null)
+  const overflowToggleRef = useRef<HTMLButtonElement>(null)
   const firstDropdownItemRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -62,7 +63,7 @@ export const PresenceDots: React.FC<PresenceDotsProps> = ({ entityId, maxVisible
       {visible.map((user) => (
         <button
           key={user.userId}
-          aria-label={`${user.name} is viewing`}
+          aria-label={`${user.name} is viewing this item`}
           style={{
             minWidth: 44,
             minHeight: 44,
@@ -105,13 +106,16 @@ export const PresenceDots: React.FC<PresenceDotsProps> = ({ entityId, maxVisible
             if (e.key === 'Escape') {
               e.stopPropagation()
               setOverflowOpen(false)
+              overflowToggleRef.current?.focus()
             }
           }}
         >
           <button
+            ref={overflowToggleRef}
             aria-label={`${overflow} more viewers`}
             aria-expanded={overflowOpen}
-            aria-haspopup="listbox"
+            aria-haspopup="true"
+            aria-controls="presence-overflow-list"
             onClick={() => setOverflowOpen((o) => !o)}
             onKeyDown={handleOverflowKeyDown}
             style={{
@@ -144,7 +148,8 @@ export const PresenceDots: React.FC<PresenceDotsProps> = ({ entityId, maxVisible
           </button>
           {overflowOpen && (
             <div
-              role="listbox"
+              id="presence-overflow-list"
+              role="list"
               aria-label="Additional viewers"
               style={{
                 position: 'absolute',
@@ -162,8 +167,7 @@ export const PresenceDots: React.FC<PresenceDotsProps> = ({ entityId, maxVisible
               {overflowViewers.map((user, idx) => (
                 <div
                   key={user.userId}
-                  role="option"
-                  aria-selected={false}
+                  role="listitem"
                   tabIndex={idx === 0 ? 0 : -1}
                   ref={idx === 0 ? firstDropdownItemRef : undefined}
                   style={{
@@ -218,6 +222,7 @@ export const EditingWarning: React.FC<EditingWarningProps> = ({ entityId }) => {
   return (
     <div
       role="alert"
+      aria-live="assertive"
       style={{
         display: 'flex',
         alignItems: 'center',
