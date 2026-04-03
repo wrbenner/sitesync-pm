@@ -105,7 +105,18 @@ const RFIs: React.FC = () => {
 
   // Derive metrics from data
   const openCount = useMemo(() => rfis.filter((r: Record<string, unknown>) => r.status === 'open').length, [rfis]);
-  const overdueCount = useMemo(() => rfis.filter((r: Record<string, unknown>) => r.status === 'open' && r.dueDate && isOverdue(r.dueDate as string)).length, [rfis]);
+  const totalOpen = useMemo(() => rfis.filter((r: Record<string, unknown>) => r.status !== 'closed').length, [rfis]);
+  const overdueCount = useMemo(() => rfis.filter((r: Record<string, unknown>) => r.status !== 'closed' && r.dueDate && isOverdue(r.dueDate as string)).length, [rfis]);
+  const avgDaysToClose = useMemo(() => {
+    const closed = rfis.filter((r: any) => r.status === 'closed' && r.closed_at && r.created_at);
+    if (!closed.length) return 0;
+    const total = closed.reduce((sum: number, r: any) => sum + Math.floor((new Date(r.closed_at).getTime() - new Date(r.created_at).getTime()) / 86400000), 0);
+    return Math.round(total / closed.length);
+  }, [rfis]);
+  const closedThisWeek = useMemo(() => {
+    const weekAgo = Date.now() - 7 * 86400000;
+    return rfis.filter((r: any) => r.status === 'closed' && r.closed_at && new Date(r.closed_at).getTime() >= weekAgo).length;
+  }, [rfis]);
   const [selectedRfi, setSelectedRfi] = useState<any>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
@@ -400,12 +411,12 @@ const RFIs: React.FC = () => {
       {/* KPI metric cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'], marginBottom: spacing['4'] }}>
         {[
-          { label: 'Total RFIs', value: allRfis.length, color: colors.textPrimary, icon: <FileQuestion size={18} color={colors.textTertiary} /> },
-          { label: 'Open', value: openCount, color: colors.statusActive, icon: <Clock size={18} color={colors.statusActive} /> },
-          { label: 'Pending', value: allRfis.filter((r: any) => r.status === 'pending').length, color: colors.statusPending, icon: <MessageSquare size={18} color={colors.statusPending} /> },
-          { label: 'Overdue', value: overdueCount, color: '#E74C3C', icon: <AlertTriangle size={18} color="#E74C3C" /> },
+          { label: 'Total Open', value: totalOpen, color: colors.statusActive, icon: <FileQuestion size={18} color={colors.statusActive} />, accent: false },
+          { label: 'Overdue', value: overdueCount, color: '#E74C3C', icon: <AlertTriangle size={18} color="#E74C3C" />, accent: overdueCount > 0 },
+          { label: 'Avg Days to Close', value: avgDaysToClose, color: colors.textPrimary, icon: <Clock size={18} color={colors.textTertiary} />, accent: false },
+          { label: 'Closed This Week', value: closedThisWeek, color: colors.statusActive, icon: <MessageSquare size={18} color={colors.statusActive} />, accent: false },
         ].map((card) => (
-          <div key={card.label} style={{ backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.lg, border: `1px solid ${card.label === 'Overdue' && overdueCount > 0 ? '#FCA5A530' : colors.borderSubtle}`, padding: spacing['4'], display: 'flex', flexDirection: 'column', gap: spacing['2'] }}>
+          <div key={card.label} style={{ backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.lg, border: `1px solid ${card.accent ? '#FCA5A530' : colors.borderSubtle}`, padding: spacing['4'], display: 'flex', flexDirection: 'column', gap: spacing['2'] }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               {card.icon}
             </div>
