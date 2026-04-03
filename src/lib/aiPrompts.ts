@@ -2,7 +2,7 @@ import type { BudgetAnomaly } from './financialEngine'
 import type { CollaborationContext, CollaborationBlockerItem, ProjectAIContext } from '../types/ai'
 import { getProject } from '../api/endpoints/projects'
 import { getRfis } from '../api/endpoints/rfis'
-import { getCostData } from '../api/endpoints/budget'
+import { fetchBudgetDivisions } from '../api/endpoints/budget'
 import { getSchedulePhases } from '../api/endpoints/schedule'
 import { getDailyLogs } from '../api/endpoints/field'
 import { getSubmittals } from '../api/endpoints/submittals'
@@ -126,7 +126,7 @@ export async function fetchAndBuildProjectContext(projectId: string): Promise<st
   const [projectRes, rfisRes, costRes, schedRes, logsRes] = await Promise.allSettled([
     getProject(projectId),
     getRfis(projectId),
-    getCostData(projectId),
+    fetchBudgetDivisions(projectId),
     getSchedulePhases(projectId),
     getDailyLogs(projectId),
   ])

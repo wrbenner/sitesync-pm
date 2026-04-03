@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react'
 import { useQuery } from './useQuery'
 import { useProjectId } from './useProjectId'
-import { getCostData } from '../api/endpoints/budget'
+import { fetchBudgetDivisions } from '../api/endpoints/budget'
 import type { MappedChangeOrder } from '../api/endpoints/budget'
 import { getSchedulePhases } from '../api/endpoints/schedule'
 import type { BudgetItemRow, ScheduleActivity } from '../types/api'
@@ -21,7 +21,7 @@ export function useBudgetData(): BudgetData {
 
   const { data: costData, loading: costLoading, refetch: refetchCost } = useQuery(
     `cost-data-${projectId}`,
-    () => getCostData(projectId!),
+    () => fetchBudgetDivisions(projectId!),
     { enabled: !!projectId },
   )
 

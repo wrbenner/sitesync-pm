@@ -6,7 +6,7 @@ import type { EnrichedProject } from '../../types/project'
 import type { ProjectMetrics, ProjectMetricsResult } from '../../types/api'
 import { computeProjectFinancials } from '../../lib/financialEngine'
 import { computeProjectHealthScore, computeAiConfidenceLevel } from '../../lib/healthScoring'
-import { getCostData } from './budget'
+import { fetchBudgetDivisions } from './budget'
 
 // Queries schedule_phases for a project and derives schedule variance and weighted completion.
 // Returns nulls when no phase data exists — never fake zeros.
@@ -97,7 +97,7 @@ export async function getMetrics(projectId: string): Promise<ProjectMetricsResul
     supabase.from('projects').select('*').eq('id', projectId).single(),
     supabase.from('project_metrics').select('*').eq('project_id', projectId).single(),
     fetchScheduleMetrics(projectId),
-    getCostData(projectId).catch(() => null),
+    fetchBudgetDivisions(projectId).catch(() => null),
   ])
 
   if (projectResult.error) throw transformSupabaseError(projectResult.error)

@@ -4,7 +4,7 @@ import { PageContainer, Card, Btn, MetricBox, SectionHeader, Skeleton, useToast,
 import { colors, spacing, typography, borderRadius, shadows, transitions, zIndex, touchTarget } from '../styles/theme';
 import { WaterfallChart } from '../components/budget/WaterfallChart';
 import { useQuery } from '../hooks/useQuery';
-import { getCostData } from '../api/endpoints/budget';
+import { fetchBudgetDivisions } from '../api/endpoints/budget';
 import { getProject } from '../api/endpoints/projects';
 import { useProjectId } from '../hooks/useProjectId';
 import {
@@ -47,7 +47,7 @@ const REASON_CODES: { value: ReasonCode; label: string }[] = [
 export const ChangeOrders: React.FC = () => {
   const { addToast } = useToast();
   const projectId = useProjectId();
-  const { data: costData, loading: costLoading } = useQuery(`costData-${projectId}`, () => getCostData(projectId!), { enabled: !!projectId });
+  const { data: costData, loading: costLoading } = useQuery(`costData-${projectId}`, () => fetchBudgetDivisions(projectId!), { enabled: !!projectId });
   const { data: projectData, loading: projectLoading } = useQuery(`projectData-${projectId}`, () => getProject(projectId!), { enabled: !!projectId });
 
   const createCO = useCreateChangeOrder();

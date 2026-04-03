@@ -221,7 +221,7 @@ export const updateChangeOrderStatus = async (
   return mapChangeOrderRow(data)
 }
 
-export const getCostData = async (projectId: string) => {
+export const fetchBudgetDivisions = async (projectId: string) => {
   await assertProjectAccess(projectId)
   const [budgetRes, coRes, lineItemsRes] = await Promise.all([
     supabase.from('budget_items').select('*').eq('project_id', projectId).order('division'),
@@ -256,7 +256,7 @@ export async function getProjectFinancials(
   projectId: string,
   contractValue: number
 ): Promise<{ project: ProjectFinancials; byDivision: DivisionFinancials[] }> {
-  const { divisions, changeOrders } = await getCostData(projectId)
+  const { divisions, changeOrders } = await fetchBudgetDivisions(projectId)
   return {
     project: computeProjectFinancials(divisions, changeOrders, contractValue),
     byDivision: computeDivisionFinancials(divisions, changeOrders),
@@ -708,4 +708,79 @@ export async function createBudgetLineItem(
       .single() as unknown as MutationResult<BudgetLineItemRow>
   )
   return mapBudgetLineItemRow(data)
+}
+
+// ── Comprehensive Cost Data ──────────────────────────────────
+
+export async function getCostData(projectId: string): Promise<{
+  originalBudget: number
+  approvedChanges: number
+  revisedBudget: number
+  committedCost: number
+  actualCost: number
+  projectedFinalCost: number
+  varianceDollars: number
+  variancePercent: number
+  contingencyOriginal: number
+  contingencyUsed: number
+  contingencyRemaining: number
+  lineItems: Array<{
+    id: string
+    csiCode: string
+    description: string
+    originalAmount: number
+    revisedAmount: number
+    committed: number
+    actual: number
+    projected: number
+    variance: number
+  }>
+}> {
+  await assertProjectAccess(projectId)
+  const [budgetResult, coResult] = await Promise.all([
+    supabase.from('budget_items').select('*').eq('project_id', projectId).order('csi_code'),
+    supabase.from('change_orders').select('id, cost_impact, status').eq('project_id', projectId),
+  ])
+  if (budgetResult.error) throw transformSupabaseError(budgetResult.error)
+  const items = budgetResult.data ?? []
+  const changeOrders = coResult.data ?? []
+  const approvedChanges = changeOrders
+    .filter((co: any) => co.status === 'approved')
+    .reduce((sum: number, co: any) => sum + (co.cost_impact || 0), 0)
+  const originalBudget = items.reduce((sum: number, i: any) => sum + (i.original_amount || 0), 0)
+  const revisedBudget = originalBudget + approvedChanges
+  const committedCost = items.reduce((sum: number, i: any) => sum + (i.committed || 0), 0)
+  const actualCost = items.reduce((sum: number, i: any) => sum + (i.spent_to_date || 0), 0)
+  const projectedFinalCost = items.reduce((sum: number, i: any) => sum + (i.forecast_final_cost || i.original_amount || 0), 0)
+  const varianceDollars = revisedBudget - projectedFinalCost
+  const variancePercent = revisedBudget > 0 ? (varianceDollars / revisedBudget) * 100 : 0
+  const contingencyItem = items.find((i: any) => (i.csi_code || '').startsWith('01'))
+  const contingencyOriginal = contingencyItem?.original_amount || 0
+  const contingencyUsed = contingencyItem?.spent_to_date || 0
+  const contingencyRemaining = contingencyOriginal - contingencyUsed
+  const lineItems = items.map((i: any) => ({
+    id: i.id,
+    csiCode: i.csi_code || '',
+    description: i.description || '',
+    originalAmount: i.original_amount || 0,
+    revisedAmount: i.original_amount || 0,
+    committed: i.committed || 0,
+    actual: i.spent_to_date || 0,
+    projected: i.forecast_final_cost || i.original_amount || 0,
+    variance: (i.original_amount || 0) - (i.forecast_final_cost || i.original_amount || 0),
+  }))
+  return {
+    originalBudget,
+    approvedChanges,
+    revisedBudget,
+    committedCost,
+    actualCost,
+    projectedFinalCost,
+    varianceDollars,
+    variancePercent,
+    contingencyOriginal,
+    contingencyUsed,
+    contingencyRemaining,
+    lineItems,
+  }
 }

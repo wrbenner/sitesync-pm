@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import type { Database } from '../types/database'
 import { getCrews } from '../api/endpoints/people'
-import { getCostData } from '../api/endpoints/budget'
+import { fetchBudgetDivisions } from '../api/endpoints/budget'
 
 type Tables = Database['public']['Tables']
 type RFI = Tables['rfis']['Row']
@@ -511,7 +511,7 @@ export function useActivityFeed(projectId: string) {
 export function useCostData(projectId: string) {
   return useQuery({
     queryKey: ['cost_data', projectId],
-    queryFn: () => getCostData(projectId),
+    queryFn: () => fetchBudgetDivisions(projectId),
     enabled: !!projectId,
     staleTime: STALE_TIME,
   })

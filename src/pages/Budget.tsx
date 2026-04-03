@@ -5,7 +5,7 @@ import { MetricCardSkeleton, TableRowSkeleton } from '../components/ui/Skeletons
 import { Btn } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 import { useQuery } from '../hooks/useQuery';
-import { getCostData, getCostCodesByDivision } from '../api/endpoints/budget';
+import { fetchBudgetDivisions, getCostCodesByDivision } from '../api/endpoints/budget';
 import { usePayApplications } from '../hooks/queries';
 import { getAiInsights } from '../api/endpoints/ai';
 import { aiService } from '../lib/aiService';
@@ -262,7 +262,7 @@ export const Budget: React.FC = () => {
   useEffect(() => { setPageContext('budget'); }, [setPageContext]);
   const updateCO = useUpdateChangeOrder();
   const { isFlashing } = useBudgetRealtime(projectId);
-  const { data: costData, loading: costLoading } = useQuery(`costData-${projectId}`, () => getCostData(projectId!), { enabled: !!projectId });
+  const { data: costData, loading: costLoading } = useQuery(`costData-${projectId}`, () => fetchBudgetDivisions(projectId!), { enabled: !!projectId });
   const { data: projectData, loading: projectLoading } = useQuery(`projectData-${projectId}`, () => getProject(projectId!), { enabled: !!projectId });
   const { data: payApps } = usePayApplications(projectId);
   const [selectedCO, setSelectedCO] = useState<NonNullable<typeof costData>['changeOrders'][0] | null>(null);
