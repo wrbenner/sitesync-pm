@@ -1,980 +1,364 @@
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import type { Database } from '../types/database'
-import { UserRole } from '../types/database'
+import { getCrews } from '../api/endpoints/people'
+import { getCostData } from '../api/endpoints/budget'
 
 type Tables = Database['public']['Tables']
 type RFI = Tables['rfis']['Row']
-type RFIInsert = Tables['rfis']['Insert']
-type RFIUpdate = Tables['rfis']['Update']
 type Submittal = Tables['submittals']['Row']
-type SubmittalInsert = Tables['submittals']['Insert']
-type SubmittalUpdate = Tables['submittals']['Update']
 type ChangeOrder = Tables['change_orders']['Row']
-type ChangeOrderInsert = Tables['change_orders']['Insert']
-type ChangeOrderUpdate = Tables['change_orders']['Update']
 type DailyLog = Tables['daily_logs']['Row']
-type DailyLogInsert = Tables['daily_logs']['Insert']
-type DailyLogUpdate = Tables['daily_logs']['Update']
-type PunchListItem = Tables['punch_list_items']['Row']
-type PunchListItemInsert = Tables['punch_list_items']['Insert']
-type PunchListItemUpdate = Tables['punch_list_items']['Update']
-type ScheduleActivity = Tables['schedule_activities']['Row']
-type ScheduleActivityInsert = Tables['schedule_activities']['Insert']
-type ScheduleActivityUpdate = Tables['schedule_activities']['Update']
-type BudgetLineItem = Tables['budget_line_items']['Row']
-type BudgetLineItemInsert = Tables['budget_line_items']['Insert']
-type BudgetLineItemUpdate = Tables['budget_line_items']['Update']
+type PunchItem = Tables['punch_items']['Row']
+type SchedulePhase = Tables['schedule_phases']['Row']
+type BudgetItem = Tables['budget_items']['Row']
 type Crew = Tables['crews']['Row']
-type CrewInsert = Tables['crews']['Insert']
-type CrewUpdate = Tables['crews']['Update']
 type Notification = Tables['notifications']['Row']
 type ActivityFeed = Tables['activity_feed']['Row']
 type AIConversation = Tables['ai_conversations']['Row']
 type AIMessage = Tables['ai_messages']['Row']
 
-// Generic state type
-interface UseDataState<T> {
-  data: T[]
-  isLoading: boolean
-  error: Error | null
-  refetch: () => Promise<void>
-}
+const STALE_TIME = 30_000
 
-interface UseDataOptions {
-  limit?: number
-  orderBy?: { column: string; ascending?: boolean }
-  filters?: Record<string, unknown>
-}
+// ── RFIs ──────────────────────────────────────────────────
 
-/**
- * Hook for fetching and managing RFIs for a project
- */
-export function useRFIs(projectId: string, options?: UseDataOptions) {
-  const [state, setState] = useState<UseDataState<RFI>>({
-    data: [],
-    isLoading: true,
-    error: null,
-    refetch: async () => {},
-  })
-  const unsubscribeRef = useRef<(() => void) | null>(null)
-
-  const refetch = useCallback(async () => {
-    try {
-      setState(prev => ({ ...prev, isLoading: true }))
-      let query = supabase.from('rfis').select('*').eq('project_id', projectId)
-
-      if (options?.orderBy) {
-        query = query.order(options.orderBy.column, {
-          ascending: options.orderBy.ascending !== false,
-        })
-      }
-
-      const { data, error } = await query
-
-      if (error) throw error
-      setState(prev => ({
-        ...prev,
-        data: data || [],
-        isLoading: false,
-        error: null,
-      }))
-    } catch (err) {
-      setState(prev => ({
-        ...prev,
-        error: err instanceof Error ? err : new Error(String(err)),
-        isLoading: false,
-      }))
-    }
-  }, [projectId, options])
+export function useRFIs(projectId: string) {
+  const queryClient = useQueryClient()
 
   useEffect(() => {
-    refetch()
-
-    // Set up real-time subscription
-    const subscription = supabase
-      .from('rfis')
-      .on('*', payload => {
-        if (payload.new.project_id === projectId) {
-          refetch()
-        }
-      })
+    if (!projectId) return
+    const channel = supabase
+      .channel(`rfis:${projectId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'rfis', filter: `project_id=eq.${projectId}` },
+        () => queryClient.invalidateQueries({ queryKey: ['rfis', projectId] })
+      )
       .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [projectId, queryClient])
 
-    unsubscribeRef.current = () => {
-      subscription.unsubscribe()
-    }
-
-    return () => {
-      unsubscribeRef.current?.()
-    }
-  }, [projectId, refetch])
-
-  const create = useCallback(
-    async (rfi: RFIInsert) => {
-      const { data, error } = await supabase.from('rfis').insert([rfi]).select()
+  return useQuery({
+    queryKey: ['rfis', projectId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('rfis')
+        .select('*')
+        .eq('project_id', projectId)
       if (error) throw error
-      return data?.[0]
+      return (data ?? []) as RFI[]
     },
-    [],
-  )
-
-  const update = useCallback(async (id: string, updates: RFIUpdate) => {
-    const { data, error } = await supabase
-      .from('rfis')
-      .update(updates)
-      .eq('id', id)
-      .select()
-    if (error) throw error
-    return data?.[0]
-  }, [])
-
-  const remove = useCallback(async (id: string) => {
-    const { error } = await supabase.from('rfis').delete().eq('id', id)
-    if (error) throw error
-  }, [])
-
-  return {
-    ...state,
-    refetch,
-    create,
-    update,
-    remove,
-  }
+    enabled: !!projectId,
+    staleTime: STALE_TIME,
+  })
 }
 
-/**
- * Hook for fetching and managing Submittals for a project
- */
-export function useSubmittals(projectId: string, options?: UseDataOptions) {
-  const [state, setState] = useState<UseDataState<Submittal>>({
-    data: [],
-    isLoading: true,
-    error: null,
-    refetch: async () => {},
-  })
-  const unsubscribeRef = useRef<(() => void) | null>(null)
+// ── Submittals ────────────────────────────────────────────
 
-  const refetch = useCallback(async () => {
-    try {
-      setState(prev => ({ ...prev, isLoading: true }))
-      let query = supabase.from('submittals').select('*').eq('project_id', projectId)
-
-      if (options?.orderBy) {
-        query = query.order(options.orderBy.column, {
-          ascending: options.orderBy.ascending !== false,
-        })
-      }
-
-      const { data, error } = await query
-
-      if (error) throw error
-      setState(prev => ({
-        ...prev,
-        data: data || [],
-        isLoading: false,
-        error: null,
-      }))
-    } catch (err) {
-      setState(prev => ({
-        ...prev,
-        error: err instanceof Error ? err : new Error(String(err)),
-        isLoading: false,
-      }))
-    }
-  }, [projectId, options])
+export function useSubmittals(projectId: string) {
+  const queryClient = useQueryClient()
 
   useEffect(() => {
-    refetch()
-
-    const subscription = supabase
-      .from('submittals')
-      .on('*', payload => {
-        if (payload.new.project_id === projectId) {
-          refetch()
-        }
-      })
+    if (!projectId) return
+    const channel = supabase
+      .channel(`submittals:${projectId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'submittals', filter: `project_id=eq.${projectId}` },
+        () => queryClient.invalidateQueries({ queryKey: ['submittals', projectId] })
+      )
       .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [projectId, queryClient])
 
-    unsubscribeRef.current = () => {
-      subscription.unsubscribe()
-    }
-
-    return () => {
-      unsubscribeRef.current?.()
-    }
-  }, [projectId, refetch])
-
-  const create = useCallback(
-    async (submittal: SubmittalInsert) => {
+  return useQuery({
+    queryKey: ['submittals', projectId],
+    queryFn: async () => {
       const { data, error } = await supabase
         .from('submittals')
-        .insert([submittal])
-        .select()
-      if (error) throw error
-      return data?.[0]
-    },
-    [],
-  )
-
-  const update = useCallback(async (id: string, updates: SubmittalUpdate) => {
-    const { data, error } = await supabase
-      .from('submittals')
-      .update(updates)
-      .eq('id', id)
-      .select()
-    if (error) throw error
-    return data?.[0]
-  }, [])
-
-  const remove = useCallback(async (id: string) => {
-    const { error } = await supabase.from('submittals').delete().eq('id', id)
-    if (error) throw error
-  }, [])
-
-  return {
-    ...state,
-    refetch,
-    create,
-    update,
-    remove,
-  }
-}
-
-/**
- * Hook for fetching and managing Change Orders for a project
- */
-export function useChangeOrders(projectId: string, options?: UseDataOptions) {
-  const [state, setState] = useState<UseDataState<ChangeOrder>>({
-    data: [],
-    isLoading: true,
-    error: null,
-    refetch: async () => {},
-  })
-  const unsubscribeRef = useRef<(() => void) | null>(null)
-
-  const refetch = useCallback(async () => {
-    try {
-      setState(prev => ({ ...prev, isLoading: true }))
-      let query = supabase
-        .from('change_orders')
         .select('*')
         .eq('project_id', projectId)
-
-      if (options?.orderBy) {
-        query = query.order(options.orderBy.column, {
-          ascending: options.orderBy.ascending !== false,
-        })
-      }
-
-      const { data, error } = await query
-
       if (error) throw error
-      setState(prev => ({
-        ...prev,
-        data: data || [],
-        isLoading: false,
-        error: null,
-      }))
-    } catch (err) {
-      setState(prev => ({
-        ...prev,
-        error: err instanceof Error ? err : new Error(String(err)),
-        isLoading: false,
-      }))
-    }
-  }, [projectId, options])
-
-  useEffect(() => {
-    refetch()
-
-    const subscription = supabase
-      .from('change_orders')
-      .on('*', payload => {
-        if (payload.new.project_id === projectId) {
-          refetch()
-        }
-      })
-      .subscribe()
-
-    unsubscribeRef.current = () => {
-      subscription.unsubscribe()
-    }
-
-    return () => {
-      unsubscribeRef.current?.()
-    }
-  }, [projectId, refetch])
-
-  const create = useCallback(
-    async (co: ChangeOrderInsert) => {
-      const { data, error } = await supabase
-        .from('change_orders')
-        .insert([co])
-        .select()
-      if (error) throw error
-      return data?.[0]
+      return (data ?? []) as Submittal[]
     },
-    [],
-  )
-
-  const update = useCallback(async (id: string, updates: ChangeOrderUpdate) => {
-    const { data, error } = await supabase
-      .from('change_orders')
-      .update(updates)
-      .eq('id', id)
-      .select()
-    if (error) throw error
-    return data?.[0]
-  }, [])
-
-  const remove = useCallback(async (id: string) => {
-    const { error } = await supabase.from('change_orders').delete().eq('id', id)
-    if (error) throw error
-  }, [])
-
-  return {
-    ...state,
-    refetch,
-    create,
-    update,
-    remove,
-  }
+    enabled: !!projectId,
+    staleTime: STALE_TIME,
+  })
 }
 
-/**
- * Hook for fetching and managing Daily Logs for a project
- */
-export function useDailyLogs(projectId: string, options?: UseDataOptions) {
-  const [state, setState] = useState<UseDataState<DailyLog>>({
-    data: [],
-    isLoading: true,
-    error: null,
-    refetch: async () => {},
-  })
-  const unsubscribeRef = useRef<(() => void) | null>(null)
+// ── Punch List (punch_items) ───────────────────────────────
 
-  const refetch = useCallback(async () => {
-    try {
-      setState(prev => ({ ...prev, isLoading: true }))
-      let query = supabase
+export function usePunchList(projectId: string) {
+  const queryClient = useQueryClient()
+
+  useEffect(() => {
+    if (!projectId) return
+    const channel = supabase
+      .channel(`punch_items:${projectId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'punch_items', filter: `project_id=eq.${projectId}` },
+        () => queryClient.invalidateQueries({ queryKey: ['punch_items', projectId] })
+      )
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [projectId, queryClient])
+
+  return useQuery({
+    queryKey: ['punch_items', projectId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('punch_items')
+        .select('*')
+        .eq('project_id', projectId)
+      if (error) throw error
+      return (data ?? []) as PunchItem[]
+    },
+    enabled: !!projectId,
+    staleTime: STALE_TIME,
+  })
+}
+
+// ── Daily Logs ────────────────────────────────────────────
+
+export function useDailyLogs(projectId: string) {
+  const queryClient = useQueryClient()
+
+  useEffect(() => {
+    if (!projectId) return
+    const channel = supabase
+      .channel(`daily_logs:${projectId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'daily_logs', filter: `project_id=eq.${projectId}` },
+        () => queryClient.invalidateQueries({ queryKey: ['daily_logs', projectId] })
+      )
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [projectId, queryClient])
+
+  return useQuery({
+    queryKey: ['daily_logs', projectId],
+    queryFn: async () => {
+      const { data, error } = await supabase
         .from('daily_logs')
         .select('*')
         .eq('project_id', projectId)
-
-      if (options?.orderBy) {
-        query = query.order(options.orderBy.column, {
-          ascending: options.orderBy.ascending !== false,
-        })
-      }
-
-      const { data, error } = await query
-
+        .order('log_date', { ascending: false })
       if (error) throw error
-      setState(prev => ({
-        ...prev,
-        data: data || [],
-        isLoading: false,
-        error: null,
-      }))
-    } catch (err) {
-      setState(prev => ({
-        ...prev,
-        error: err instanceof Error ? err : new Error(String(err)),
-        isLoading: false,
-      }))
-    }
-  }, [projectId, options])
-
-  useEffect(() => {
-    refetch()
-
-    const subscription = supabase
-      .from('daily_logs')
-      .on('*', payload => {
-        if (payload.new.project_id === projectId) {
-          refetch()
-        }
-      })
-      .subscribe()
-
-    unsubscribeRef.current = () => {
-      subscription.unsubscribe()
-    }
-
-    return () => {
-      unsubscribeRef.current?.()
-    }
-  }, [projectId, refetch])
-
-  const create = useCallback(
-    async (log: DailyLogInsert) => {
-      const { data, error } = await supabase
-        .from('daily_logs')
-        .insert([log])
-        .select()
-      if (error) throw error
-      return data?.[0]
+      return (data ?? []) as DailyLog[]
     },
-    [],
-  )
-
-  const update = useCallback(async (id: string, updates: DailyLogUpdate) => {
-    const { data, error } = await supabase
-      .from('daily_logs')
-      .update(updates)
-      .eq('id', id)
-      .select()
-    if (error) throw error
-    return data?.[0]
-  }, [])
-
-  const remove = useCallback(async (id: string) => {
-    const { error } = await supabase.from('daily_logs').delete().eq('id', id)
-    if (error) throw error
-  }, [])
-
-  return {
-    ...state,
-    refetch,
-    create,
-    update,
-    remove,
-  }
+    enabled: !!projectId,
+    staleTime: STALE_TIME,
+  })
 }
 
-/**
- * Hook for fetching and managing Punch List Items for a project
- */
-export function usePunchList(projectId: string, options?: UseDataOptions) {
-  const [state, setState] = useState<UseDataState<PunchListItem>>({
-    data: [],
-    isLoading: true,
-    error: null,
-    refetch: async () => {},
-  })
-  const unsubscribeRef = useRef<(() => void) | null>(null)
+// ── Budget Items ──────────────────────────────────────────
 
-  const refetch = useCallback(async () => {
-    try {
-      setState(prev => ({ ...prev, isLoading: true }))
-      let query = supabase
-        .from('punch_list_items')
+export function useBudgetItems(projectId: string) {
+  const queryClient = useQueryClient()
+
+  useEffect(() => {
+    if (!projectId) return
+    const channel = supabase
+      .channel(`budget_items:${projectId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'budget_items', filter: `project_id=eq.${projectId}` },
+        () => queryClient.invalidateQueries({ queryKey: ['budget_items', projectId] })
+      )
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [projectId, queryClient])
+
+  return useQuery({
+    queryKey: ['budget_items', projectId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('budget_items')
         .select('*')
         .eq('project_id', projectId)
-
-      if (options?.orderBy) {
-        query = query.order(options.orderBy.column, {
-          ascending: options.orderBy.ascending !== false,
-        })
-      }
-
-      const { data, error } = await query
-
       if (error) throw error
-      setState(prev => ({
-        ...prev,
-        data: data || [],
-        isLoading: false,
-        error: null,
-      }))
-    } catch (err) {
-      setState(prev => ({
-        ...prev,
-        error: err instanceof Error ? err : new Error(String(err)),
-        isLoading: false,
-      }))
-    }
-  }, [projectId, options])
-
-  useEffect(() => {
-    refetch()
-
-    const subscription = supabase
-      .from('punch_list_items')
-      .on('*', payload => {
-        if (payload.new.project_id === projectId) {
-          refetch()
-        }
-      })
-      .subscribe()
-
-    unsubscribeRef.current = () => {
-      subscription.unsubscribe()
-    }
-
-    return () => {
-      unsubscribeRef.current?.()
-    }
-  }, [projectId, refetch])
-
-  const create = useCallback(
-    async (item: PunchListItemInsert) => {
-      const { data, error } = await supabase
-        .from('punch_list_items')
-        .insert([item])
-        .select()
-      if (error) throw error
-      return data?.[0]
+      return (data ?? []) as BudgetItem[]
     },
-    [],
-  )
-
-  const update = useCallback(async (id: string, updates: PunchListItemUpdate) => {
-    const { data, error } = await supabase
-      .from('punch_list_items')
-      .update(updates)
-      .eq('id', id)
-      .select()
-    if (error) throw error
-    return data?.[0]
-  }, [])
-
-  const remove = useCallback(async (id: string) => {
-    const { error } = await supabase
-      .from('punch_list_items')
-      .delete()
-      .eq('id', id)
-    if (error) throw error
-  }, [])
-
-  return {
-    ...state,
-    refetch,
-    create,
-    update,
-    remove,
-  }
+    enabled: !!projectId,
+    staleTime: STALE_TIME,
+  })
 }
 
-/**
- * Hook for fetching and managing Schedule Activities for a project
- */
-export function useSchedule(projectId: string) {
-  const [state, setState] = useState<UseDataState<ScheduleActivity>>({
-    data: [],
-    isLoading: true,
-    error: null,
-    refetch: async () => {},
-  })
-  const unsubscribeRef = useRef<(() => void) | null>(null)
+// ── Schedule Phases ───────────────────────────────────────
 
-  const refetch = useCallback(async () => {
-    try {
-      setState(prev => ({ ...prev, isLoading: true }))
+export function useSchedulePhases(projectId: string) {
+  const queryClient = useQueryClient()
+
+  useEffect(() => {
+    if (!projectId) return
+    const channel = supabase
+      .channel(`schedule_phases:${projectId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'schedule_phases', filter: `project_id=eq.${projectId}` },
+        () => queryClient.invalidateQueries({ queryKey: ['schedule_phases', projectId] })
+      )
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [projectId, queryClient])
+
+  return useQuery({
+    queryKey: ['schedule_phases', projectId],
+    queryFn: async () => {
       const { data, error } = await supabase
-        .from('schedule_activities')
+        .from('schedule_phases')
         .select('*')
         .eq('project_id', projectId)
         .order('start_date', { ascending: true })
-
       if (error) throw error
-      setState(prev => ({
-        ...prev,
-        data: data || [],
-        isLoading: false,
-        error: null,
-      }))
-    } catch (err) {
-      setState(prev => ({
-        ...prev,
-        error: err instanceof Error ? err : new Error(String(err)),
-        isLoading: false,
-      }))
-    }
-  }, [projectId])
-
-  useEffect(() => {
-    refetch()
-
-    const subscription = supabase
-      .from('schedule_activities')
-      .on('*', payload => {
-        if (payload.new.project_id === projectId) {
-          refetch()
-        }
-      })
-      .subscribe()
-
-    unsubscribeRef.current = () => {
-      subscription.unsubscribe()
-    }
-
-    return () => {
-      unsubscribeRef.current?.()
-    }
-  }, [projectId, refetch])
-
-  const create = useCallback(
-    async (activity: ScheduleActivityInsert) => {
-      const { data, error } = await supabase
-        .from('schedule_activities')
-        .insert([activity])
-        .select()
-      if (error) throw error
-      return data?.[0]
+      return (data ?? []) as SchedulePhase[]
     },
-    [],
-  )
-
-  const update = useCallback(async (id: string, updates: ScheduleActivityUpdate) => {
-    const { data, error } = await supabase
-      .from('schedule_activities')
-      .update(updates)
-      .eq('id', id)
-      .select()
-    if (error) throw error
-    return data?.[0]
-  }, [])
-
-  const remove = useCallback(async (id: string) => {
-    const { error } = await supabase
-      .from('schedule_activities')
-      .delete()
-      .eq('id', id)
-    if (error) throw error
-  }, [])
-
-  return {
-    ...state,
-    refetch,
-    create,
-    update,
-    remove,
-  }
+    enabled: !!projectId,
+    staleTime: STALE_TIME,
+  })
 }
 
-/**
- * Hook for fetching and managing Budget Line Items for a project
- */
-export function useBudget(projectId: string) {
-  const [state, setState] = useState<UseDataState<BudgetLineItem>>({
-    data: [],
-    isLoading: true,
-    error: null,
-    refetch: async () => {},
-  })
-  const unsubscribeRef = useRef<(() => void) | null>(null)
+// ── Change Orders ─────────────────────────────────────────
 
-  const refetch = useCallback(async () => {
-    try {
-      setState(prev => ({ ...prev, isLoading: true }))
+export function useChangeOrders(projectId: string) {
+  const queryClient = useQueryClient()
+
+  useEffect(() => {
+    if (!projectId) return
+    const channel = supabase
+      .channel(`change_orders:${projectId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'change_orders', filter: `project_id=eq.${projectId}` },
+        () => queryClient.invalidateQueries({ queryKey: ['change_orders', projectId] })
+      )
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [projectId, queryClient])
+
+  return useQuery({
+    queryKey: ['change_orders', projectId],
+    queryFn: async () => {
       const { data, error } = await supabase
-        .from('budget_line_items')
+        .from('change_orders')
         .select('*')
         .eq('project_id', projectId)
-        .order('cost_code', { ascending: true })
-
       if (error) throw error
-      setState(prev => ({
-        ...prev,
-        data: data || [],
-        isLoading: false,
-        error: null,
-      }))
-    } catch (err) {
-      setState(prev => ({
-        ...prev,
-        error: err instanceof Error ? err : new Error(String(err)),
-        isLoading: false,
-      }))
-    }
-  }, [projectId])
-
-  useEffect(() => {
-    refetch()
-
-    const subscription = supabase
-      .from('budget_line_items')
-      .on('*', payload => {
-        if (payload.new.project_id === projectId) {
-          refetch()
-        }
-      })
-      .subscribe()
-
-    unsubscribeRef.current = () => {
-      subscription.unsubscribe()
-    }
-
-    return () => {
-      unsubscribeRef.current?.()
-    }
-  }, [projectId, refetch])
-
-  const create = useCallback(
-    async (item: BudgetLineItemInsert) => {
-      const { data, error } = await supabase
-        .from('budget_line_items')
-        .insert([item])
-        .select()
-      if (error) throw error
-      return data?.[0]
+      return (data ?? []) as ChangeOrder[]
     },
-    [],
-  )
-
-  const update = useCallback(async (id: string, updates: BudgetLineItemUpdate) => {
-    const { data, error } = await supabase
-      .from('budget_line_items')
-      .update(updates)
-      .eq('id', id)
-      .select()
-    if (error) throw error
-    return data?.[0]
-  }, [])
-
-  return {
-    ...state,
-    refetch,
-    create,
-    update,
-  }
+    enabled: !!projectId,
+    staleTime: STALE_TIME,
+  })
 }
 
-/**
- * Hook for fetching and managing Crews for a project
- */
+// ── Crews ─────────────────────────────────────────────────
+
 export function useCrews(projectId: string) {
-  const [state, setState] = useState<UseDataState<Crew>>({
-    data: [],
-    isLoading: true,
-    error: null,
-    refetch: async () => {},
-  })
-  const unsubscribeRef = useRef<(() => void) | null>(null)
-
-  const refetch = useCallback(async () => {
-    try {
-      setState(prev => ({ ...prev, isLoading: true }))
-      const { data, error } = await supabase
-        .from('crews')
-        .select('*')
-        .eq('project_id', projectId)
-        .order('trade', { ascending: true })
-
-      if (error) throw error
-      setState(prev => ({
-        ...prev,
-        data: data || [],
-        isLoading: false,
-        error: null,
-      }))
-    } catch (err) {
-      setState(prev => ({
-        ...prev,
-        error: err instanceof Error ? err : new Error(String(err)),
-        isLoading: false,
-      }))
-    }
-  }, [projectId])
+  const queryClient = useQueryClient()
 
   useEffect(() => {
-    refetch()
-
-    const subscription = supabase
-      .from('crews')
-      .on('*', payload => {
-        if (payload.new.project_id === projectId) {
-          refetch()
-        }
-      })
+    if (!projectId) return
+    const channel = supabase
+      .channel(`crews:${projectId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'crews', filter: `project_id=eq.${projectId}` },
+        () => queryClient.invalidateQueries({ queryKey: ['crews', projectId] })
+      )
       .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [projectId, queryClient])
 
-    unsubscribeRef.current = () => {
-      subscription.unsubscribe()
-    }
-
-    return () => {
-      unsubscribeRef.current?.()
-    }
-  }, [projectId, refetch])
-
-  const create = useCallback(
-    async (crew: CrewInsert) => {
-      const { data, error } = await supabase
-        .from('crews')
-        .insert([crew])
-        .select()
-      if (error) throw error
-      return data?.[0]
-    },
-    [],
-  )
-
-  const update = useCallback(async (id: string, updates: CrewUpdate) => {
-    const { data, error } = await supabase
-      .from('crews')
-      .update(updates)
-      .eq('id', id)
-      .select()
-    if (error) throw error
-    return data?.[0]
-  }, [])
-
-  return {
-    ...state,
-    refetch,
-    create,
-    update,
-  }
+  return useQuery({
+    queryKey: ['crews', projectId],
+    queryFn: () => getCrews(projectId),
+    enabled: !!projectId,
+    staleTime: STALE_TIME,
+  })
 }
 
-/**
- * Hook for fetching user notifications
- */
-export function useNotifications() {
-  const [state, setState] = useState<UseDataState<Notification>>({
-    data: [],
-    isLoading: true,
-    error: null,
-    refetch: async () => {},
-  })
-  const [unreadCount, setUnreadCount] = useState(0)
-  const unsubscribeRef = useRef<(() => void) | null>(null)
+// ── Notifications ─────────────────────────────────────────
 
-  const refetch = useCallback(async () => {
-    try {
-      setState(prev => ({ ...prev, isLoading: true }))
+export function useNotifications(userId: string) {
+  const queryClient = useQueryClient()
+
+  useEffect(() => {
+    if (!userId) return
+    const channel = supabase
+      .channel(`notifications:${userId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
+        () => queryClient.invalidateQueries({ queryKey: ['notifications', userId] })
+      )
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [userId, queryClient])
+
+  return useQuery({
+    queryKey: ['notifications', userId],
+    queryFn: async () => {
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
+        .eq('user_id', userId)
+        .eq('is_read', false)
         .order('created_at', { ascending: false })
-        .limit(50)
-
+        .limit(20)
       if (error) throw error
-      setState(prev => ({
-        ...prev,
-        data: data || [],
-        isLoading: false,
-        error: null,
-      }))
-      setUnreadCount((data || []).filter(n => !n.is_read).length)
-    } catch (err) {
-      setState(prev => ({
-        ...prev,
-        error: err instanceof Error ? err : new Error(String(err)),
-        isLoading: false,
-      }))
-    }
-  }, [])
-
-  useEffect(() => {
-    refetch()
-
-    const subscription = supabase
-      .from('notifications')
-      .on('*', () => {
-        refetch()
-      })
-      .subscribe()
-
-    unsubscribeRef.current = () => {
-      subscription.unsubscribe()
-    }
-
-    return () => {
-      unsubscribeRef.current?.()
-    }
-  }, [refetch])
-
-  const markAsRead = useCallback(async (id: string) => {
-    const { error } = await supabase
-      .from('notifications')
-      .update({ is_read: true, read_at: new Date().toISOString() })
-      .eq('id', id)
-
-    if (error) throw error
-    await refetch()
-  }, [refetch])
-
-  const markAllAsRead = useCallback(async () => {
-    const { error } = await supabase
-      .from('notifications')
-      .update({ is_read: true, read_at: new Date().toISOString() })
-      .eq('is_read', false)
-
-    if (error) throw error
-    await refetch()
-  }, [refetch])
-
-  return {
-    ...state,
-    refetch,
-    unreadCount,
-    markAsRead,
-    markAllAsRead,
-  }
-}
-
-/**
- * Hook for fetching project activity feed
- */
-export function useActivityFeed(projectId: string) {
-  const [state, setState] = useState<UseDataState<ActivityFeed>>({
-    data: [],
-    isLoading: true,
-    error: null,
-    refetch: async () => {},
+      return (data ?? []) as Notification[]
+    },
+    enabled: !!userId,
+    staleTime: STALE_TIME,
   })
-  const unsubscribeRef = useRef<(() => void) | null>(null)
-
-  const refetch = useCallback(async () => {
-    try {
-      setState(prev => ({ ...prev, isLoading: true }))
-      const { data, error } = await supabase
-        .from('activity_feed')
-        .select('*')
-        .eq('project_id', projectId)
-        .order('created_at', { ascending: false })
-        .limit(100)
-
-      if (error) throw error
-      setState(prev => ({
-        ...prev,
-        data: data || [],
-        isLoading: false,
-        error: null,
-      }))
-    } catch (err) {
-      setState(prev => ({
-        ...prev,
-        error: err instanceof Error ? err : new Error(String(err)),
-        isLoading: false,
-      }))
-    }
-  }, [projectId])
-
-  useEffect(() => {
-    refetch()
-
-    const subscription = supabase
-      .from('activity_feed')
-      .on('*', payload => {
-        if (payload.new.project_id === projectId) {
-          refetch()
-        }
-      })
-      .subscribe()
-
-    unsubscribeRef.current = () => {
-      subscription.unsubscribe()
-    }
-
-    return () => {
-      unsubscribeRef.current?.()
-    }
-  }, [projectId, refetch])
-
-  return {
-    ...state,
-    refetch,
-  }
 }
 
-/**
- * Hook for AI Copilot conversations
- */
+// ── useCreateMutation — generic optimistic insert + rollback ──
+
+type KnownTable = keyof Tables
+
+export function useCreateMutation<T extends KnownTable>(
+  tableName: T,
+  projectId: string
+) {
+  const queryClient = useQueryClient()
+  const queryKey = [tableName, projectId] as const
+
+  return useMutation({
+    mutationFn: async (record: Tables[T]['Insert']) => {
+      const { data, error } = await supabase
+        .from(tableName as string)
+        .insert([record])
+        .select()
+        .single()
+      if (error) throw error
+      return data as Tables[T]['Row']
+    },
+    onMutate: async (record) => {
+      await queryClient.cancelQueries({ queryKey })
+      const previous = queryClient.getQueryData(queryKey)
+      queryClient.setQueryData(queryKey, (old: Tables[T]['Row'][] | undefined) => [
+        ...(old ?? []),
+        { id: crypto.randomUUID(), created_at: new Date().toISOString(), ...record } as Tables[T]['Row'],
+      ])
+      return { previous }
+    },
+    onError: (_err, _record, context) => {
+      if (context?.previous !== undefined) {
+        queryClient.setQueryData(queryKey, context.previous)
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey })
+    },
+  })
+}
+
+// ── AI Copilot ────────────────────────────────────────────
+
 export function useAICopilot(projectId: string) {
   const [conversations, setConversations] = useState<AIConversation[]>([])
   const [currentConversation, setCurrentConversation] = useState<AIConversation | null>(null)
@@ -1051,13 +435,7 @@ export function useAICopilot(projectId: string) {
         setIsLoading(true)
         const { data, error: err } = await supabase
           .from('ai_messages')
-          .insert([
-            {
-              conversation_id: conversationId,
-              role: 'user',
-              content,
-            },
-          ])
+          .insert([{ conversation_id: conversationId, role: 'user', content }])
           .select()
           .single()
 
@@ -1091,4 +469,50 @@ export function useAICopilot(projectId: string) {
     createConversation,
     sendMessage,
   }
+}
+
+// ── Activity Feed ─────────────────────────────────────────
+
+export function useActivityFeed(projectId: string) {
+  const queryClient = useQueryClient()
+
+  useEffect(() => {
+    if (!projectId) return
+    const channel = supabase
+      .channel(`activity_feed:${projectId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'activity_feed', filter: `project_id=eq.${projectId}` },
+        () => queryClient.invalidateQueries({ queryKey: ['activity_feed', projectId] })
+      )
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [projectId, queryClient])
+
+  return useQuery({
+    queryKey: ['activity_feed', projectId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('activity_feed')
+        .select('*')
+        .eq('project_id', projectId)
+        .order('created_at', { ascending: false })
+        .limit(100)
+      if (error) throw error
+      return (data ?? []) as ActivityFeed[]
+    },
+    enabled: !!projectId,
+    staleTime: STALE_TIME,
+  })
+}
+
+// ── getCostData wrapper ───────────────────────────────────
+
+export function useCostData(projectId: string) {
+  return useQuery({
+    queryKey: ['cost_data', projectId],
+    queryFn: () => getCostData(projectId),
+    enabled: !!projectId,
+    staleTime: STALE_TIME,
+  })
 }
