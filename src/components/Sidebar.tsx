@@ -167,7 +167,7 @@ const PAGE_PREFETCH_MAP: Record<string, () => void> = {
 export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, mode, onClose }) => {
   const { themeMode, setThemeMode } = useUiStore();
   const toggleTheme = () => setThemeMode(themeMode === 'dark' ? 'light' : 'dark');
-  const { canAccessModule, role } = usePermissions();
+  const { canAccessModule, role, loading: permissionsLoading } = usePermissions();
   const isOverlay = mode === 'overlay';
 
   const [isMobile, setIsMobile] = useState(() =>
@@ -465,7 +465,23 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, mode, 
 
       {/* Navigation */}
       <nav style={{ flex: 1, padding: `0 ${spacing['2']}` }}>
-        {sections.map((section, si) => {
+        {permissionsLoading && (
+          <div style={{ padding: `0 ${spacing['3']}` }}>
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div
+                key={i}
+                style={{
+                  height: 32,
+                  marginBottom: spacing['1'],
+                  borderRadius: borderRadius.base,
+                  backgroundColor: colors.overlayBlackLight,
+                  opacity: 1 - i * 0.08,
+                }}
+              />
+            ))}
+          </div>
+        )}
+        {!permissionsLoading && sections.map((section, si) => {
           // Filter items the user has permission to access
           const visibleItems = section.items.filter(item => canAccessModule(item.id));
           if (visibleItems.length === 0) return null;

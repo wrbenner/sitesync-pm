@@ -131,6 +131,7 @@ export const MODULE_PERMISSIONS: Record<string, Permission> = {
   tasks: 'tasks.view',
   schedule: 'schedule.view',
   budget: 'budget.view',
+  'pay-apps': 'budget.view',
   'change-orders': 'change_orders.view',
   financials: 'financials.view',
   drawings: 'drawings.view',
