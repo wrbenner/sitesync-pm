@@ -42,6 +42,7 @@ export const AgentMentionInput = memo<AgentMentionInputProps>(
   ({ onSend, placeholder = 'Ask your AI team... Use @ to route to a specific agent', disabled, textareaAriaLabel }) => {
     const [value, setValue] = useState('')
     const [isSending, setIsSending] = useState(false)
+    const [sendError, setSendError] = useState<string | null>(null)
     const [showAgentMenu, setShowAgentMenu] = useState(false)
     const [agentFilter, setAgentFilter] = useState('')
     const [selectedIndex, setSelectedIndex] = useState(0)
@@ -111,14 +112,19 @@ export const AgentMentionInput = memo<AgentMentionInputProps>(
         toast.error(`Message too long. Maximum ${MAX_MESSAGE_LENGTH} characters.`)
         return
       }
+      const savedMessage = value
       const sanitized = trimmed.replace(/<[^>]*>/g, '')
       setIsSending(true)
       try {
         await onSend(sanitized)
         setValue('')
         setShowAgentMenu(false)
+        setSendError(null)
       } catch {
-        toast.error('Message failed to send. Please try again.')
+        setValue(savedMessage)
+        toast.error('Failed to send message. Please try again.')
+        setSendError('Failed to send message. Please try again.')
+        setIsSending(false)
       } finally {
         setIsSending(false)
       }
@@ -350,6 +356,26 @@ export const AgentMentionInput = memo<AgentMentionInputProps>(
             }}
           >
             {MAX_MESSAGE_LENGTH - value.length} characters remaining
+          </div>
+        )}
+        {sendError && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginTop: spacing['1'] }}>
+            <span style={{ fontSize: 12, color: colors.statusCritical }}>{sendError}</span>
+            <button
+              onClick={handleSend}
+              style={{
+                fontSize: 12,
+                color: colors.statusCritical,
+                background: 'none',
+                border: 'none',
+                padding: 0,
+                cursor: 'pointer',
+                textDecoration: 'underline',
+                fontFamily: typography.fontFamily,
+              }}
+            >
+              Retry
+            </button>
           </div>
         )}
         </div>
