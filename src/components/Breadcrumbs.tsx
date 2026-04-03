@@ -75,17 +75,26 @@ const crumbButtonStyle: React.CSSProperties = {
 };
 
 export const FolderBreadcrumbs: React.FC<FolderBreadcrumbsProps> = ({ stack, onNavigate }) => {
-  const [isMobile, setIsMobile] = React.useState(() => window.innerWidth < 768);
+  const [isMobile, setIsMobile] = React.useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth < 768 : false
+  );
   const [expanded, setExpanded] = React.useState(false);
 
   React.useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout>;
     const handler = () => {
-      const mobile = window.innerWidth < 768;
-      setIsMobile(mobile);
-      if (!mobile) setExpanded(false);
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        const mobile = window.innerWidth < 768;
+        setIsMobile(mobile);
+        if (!mobile) setExpanded(false);
+      }, 150);
     };
     window.addEventListener('resize', handler);
-    return () => window.removeEventListener('resize', handler);
+    return () => {
+      window.removeEventListener('resize', handler);
+      clearTimeout(timeoutId);
+    };
   }, []);
 
   if (stack.length === 0) return null;
@@ -109,12 +118,13 @@ export const FolderBreadcrumbs: React.FC<FolderBreadcrumbsProps> = ({ stack, onN
             <span
               aria-current="page"
               style={{
-                display: 'flex', alignItems: 'center', gap: spacing['1'],
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: spacing['1'],
                 padding: `${spacing['2']} ${spacing['3']}`,
                 fontSize: typography.fontSize.sm,
                 fontWeight: typography.fontWeight.semibold,
                 color: colors.textPrimary,
                 maxWidth,
+                minHeight: '44px',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
@@ -193,13 +203,14 @@ export const FolderBreadcrumbs: React.FC<FolderBreadcrumbsProps> = ({ stack, onN
               <li>
                 <button
                   onClick={() => setExpanded(true)}
-                  style={{ ...dynCrumbStyle, minWidth: '44px', minHeight: '44px' }}
+                  style={{ ...dynCrumbStyle, minWidth: '44px', minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                   aria-label="Show full path"
                   title="Show full path"
                 >
                   ...
                 </button>
               </li>
+              {renderSegment(stack[stack.length - 2], stack.length - 2)}
               {renderSegment(stack[stack.length - 1], stack.length - 1)}
             </React.Fragment>
           ) : (
