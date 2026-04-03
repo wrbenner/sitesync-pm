@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo } from 'react';
-import { Camera, MapPin, Sparkles, RefreshCw, AlertTriangle, LayoutGrid, Map as MapIcon, X, Tag, Flag } from 'lucide-react';
+import { Camera, MapPin, Sparkles, RefreshCw, AlertTriangle, LayoutGrid, Map as MapIcon, X, Tag, Flag, Mic } from 'lucide-react';
 import { PageContainer, Card, Btn, useToast } from '../components/Primitives';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import FieldCaptureSkeleton from '../components/field/FieldCaptureSkeleton';
@@ -201,17 +201,39 @@ const PhotoOverlay: React.FC<PhotoOverlayProps> = ({ dataUrl, location, isSaving
           />
 
           {/* Notes */}
-          <textarea
-            value={notes}
-            onChange={e => setNotes(e.target.value)}
-            placeholder="Notes (optional)"
-            rows={3}
-            style={{
-              ...inputStyle,
-              minHeight: '80px',
-              resize: 'vertical',
-            }}
-          />
+          <div style={{ position: 'relative' }}>
+            <textarea
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              placeholder="Notes (optional)"
+              rows={3}
+              style={{
+                ...inputStyle,
+                minHeight: '80px',
+                resize: 'vertical',
+                paddingRight: spacing['10'],
+              }}
+            />
+            <button
+              type="button"
+              aria-label="Voice to text (coming soon)"
+              title="Voice to text"
+              style={{
+                position: 'absolute',
+                top: spacing['3'],
+                right: spacing['3'],
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '2px',
+                color: colors.textTertiary,
+                display: 'flex',
+                alignItems: 'center',
+              }}
+            >
+              <Mic size={16} />
+            </button>
+          </div>
 
           {/* Tags multi-select */}
           <div>
