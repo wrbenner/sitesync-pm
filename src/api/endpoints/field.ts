@@ -384,6 +384,78 @@ export const getDailyLogs = async (
   return { data: rows, total: count ?? 0, page, pageSize }
 }
 
+export async function getDailyLogsCursor(
+  projectId: string,
+  params: { cursor?: string; pageSize?: number }
+): Promise<{ data: DailyLogRow[]; hasMore: boolean; nextCursor?: string }> {
+  validateProjectId(projectId)
+  await assertProjectAccess(projectId)
+  const pageSize = params.pageSize || 50
+
+  let query = supabase
+    .from('daily_logs')
+    .select('*')
+    .eq('project_id', projectId)
+    .order('log_date', { ascending: false })
+    .order('id', { ascending: false })
+    .limit(pageSize + 1)
+
+  if (params.cursor) {
+    const decoded = atob(params.cursor)
+    const [decodedDate] = decoded.split('|')
+    query = query.lt('log_date', decodedDate)
+  }
+
+  const { data, error } = await query
+  if (error) throw transformSupabaseError(error)
+
+  const rows = data || []
+  const hasMore = rows.length > pageSize
+  const sliced = hasMore ? rows.slice(0, pageSize) : rows
+  const last = sliced[sliced.length - 1]
+  const nextCursor = hasMore && last
+    ? btoa(`${last.log_date}|${last.id}`)
+    : undefined
+
+  return { data: sliced as DailyLogRow[], hasMore, nextCursor }
+}
+
+export async function getPunchItemsCursor(
+  projectId: string,
+  params: { cursor?: string; pageSize?: number }
+): Promise<{ data: PunchItemRow[]; hasMore: boolean; nextCursor?: string }> {
+  validateProjectId(projectId)
+  await assertProjectAccess(projectId)
+  const pageSize = params.pageSize || 50
+
+  let query = supabase
+    .from('punch_items')
+    .select('*')
+    .eq('project_id', projectId)
+    .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
+    .limit(pageSize + 1)
+
+  if (params.cursor) {
+    const decoded = atob(params.cursor)
+    const [decodedCreatedAt] = decoded.split('|')
+    query = query.lt('created_at', decodedCreatedAt)
+  }
+
+  const { data, error } = await query
+  if (error) throw transformSupabaseError(error)
+
+  const rows = data || []
+  const hasMore = rows.length > pageSize
+  const sliced = hasMore ? rows.slice(0, pageSize) : rows
+  const last = sliced[sliced.length - 1]
+  const nextCursor = hasMore && last
+    ? btoa(`${last.created_at}|${last.id}`)
+    : undefined
+
+  return { data: sliced as PunchItemRow[], hasMore, nextCursor }
+}
+
 export const getFieldCaptures = async (projectId: string): Promise<FieldCapture[]> => {
   await assertProjectAccess(projectId)
   const { data, error } = await supabase
