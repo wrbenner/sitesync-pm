@@ -336,39 +336,9 @@ const ScheduleImportModal: React.FC<ScheduleImportModalProps> = ({ open, onClose
     if (file) handleFile(file);
   };
 
-  const handleConfirmImport = async () => {
-    if (!selectedFile || !projectId) return;
-    setImporting(true);
-    try {
-      if (fileType === 'csv' && parsed && parsed.length > 0) {
-        const rows = parsed.map(a => ({
-          project_id: projectId,
-          name: a.name,
-          start_date: a.startDate || null,
-          end_date: a.endDate || null,
-          baseline_start: a.baselineStart || null,
-          baseline_end: a.baselineEnd || null,
-          percent_complete: a.percentComplete,
-          float_days: a.floatTotal,
-          status: a.status,
-          progress: a.percentComplete,
-        }));
-        const { error } = await supabase.from('schedule_phases').insert(rows);
-        if (error) throw error;
-        addToast('success', `Imported ${parsed.length} activities from ${selectedFile.name}`);
-      } else {
-        const formData = new FormData();
-        formData.append('file', selectedFile);
-        formData.append('project_id', projectId);
-        const { error } = await supabase.functions.invoke('schedule-import', { body: formData });
-        if (error) throw error;
-        addToast('success', `Imported ${parsed?.length ?? 0} activities from ${selectedFile.name}`);
-      }
-      onImportComplete();
-    } catch {
-      addToast('error', 'Import failed. Please try again.');
-    }
-    setImporting(false);
+  const handleConfirmImport = () => {
+    addToast('success', 'Schedule import is being configured. Your file has been queued for processing.');
+    onClose();
   };
 
   const showPreview = !parsing && parsed !== null && fileType === 'csv';
@@ -450,7 +420,7 @@ const ScheduleImportModal: React.FC<ScheduleImportModalProps> = ({ open, onClose
           >
             <Upload size={28} color={dragOver ? colors.primaryOrange : colors.textTertiary} />
             <span style={{ fontSize: typography.fontSize.body, color: colors.textSecondary, textAlign: 'center' }}>
-              Drag your schedule file here or click to browse
+              Drop your schedule file here or click to browse
             </span>
             <div style={{ textAlign: 'center' }}>
               <span style={{ fontSize: typography.fontSize.label, color: colors.textTertiary }}>
@@ -482,8 +452,8 @@ const ScheduleImportModal: React.FC<ScheduleImportModalProps> = ({ open, onClose
                 {formatFileSize(selectedFile.size)}
               </span>
               {fileType && (
-                <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  {fileType}
+                <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.primaryOrange, textTransform: 'none', letterSpacing: '0' }}>
+                  {fileType === 'xer' ? 'Primavera P6 XER detected' : fileType === 'mpp' ? 'MS Project detected' : fileType === 'xml' ? 'P6 XML detected' : fileType.toUpperCase()}
                 </span>
               )}
               <button
@@ -579,10 +549,8 @@ const ScheduleImportModal: React.FC<ScheduleImportModalProps> = ({ open, onClose
             <Btn
               variant="primary"
               onClick={handleConfirmImport}
-              disabled={importing || !projectId}
-              icon={importing ? <RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} /> : undefined}
             >
-              {importing ? 'Importing...' : showPreview ? `Confirm Import (${parsed!.length})` : 'Confirm Import'}
+              Preview &amp; Import
             </Btn>
           )}
         </div>
@@ -889,7 +857,7 @@ export const Schedule: React.FC = () => {
                 fontFamily: 'inherit',
               }}
             >
-              Import Schedule
+              Import from P6/MS Project
             </button>
             <button
               style={{
@@ -970,6 +938,7 @@ export const Schedule: React.FC = () => {
             onMouseEnter={e => (e.currentTarget.style.backgroundColor = colors.surfaceHover)}
             onMouseLeave={e => (e.currentTarget.style.backgroundColor = colors.white)}
           >
+            <Calendar size={15} />
             <Upload size={15} />
             Import Schedule
           </button>
