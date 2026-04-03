@@ -3,6 +3,7 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import { X, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Maximize2, Pencil, Plus } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, shadows, vizColors, zIndex, transitions } from '../../styles/theme';
 import { useUiStore } from '../../stores';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 import CreateRFIModal from '../forms/CreateRFIModal';
 
 // Configure PDF.js worker
@@ -30,7 +31,9 @@ function getDistance(touches: React.TouchList): number {
 export function PdfViewer({ file, title, onClose }: PdfViewerProps) {
   const [numPages, setNumPages] = useState<number>(0);
   const [pageNumber, setPageNumber] = useState(1);
-  const [scale, setScale] = useState(1.0);
+  const [pdfPageWidth, setPdfPageWidth] = useState(612); // default letter width in pts
+  const [baseScale, setBaseScale] = useState(1.0);
+  const [zoomLevel, setZoomLevel] = useState(1.0);
   const [translateX, setTranslateX] = useState(0);
   const [translateY, setTranslateY] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -38,17 +41,35 @@ export function PdfViewer({ file, title, onClose }: PdfViewerProps) {
   const [toolbarExpanded, setToolbarExpanded] = useState(false);
   const [showRFIModal, setShowRFIModal] = useState(false);
   const [rfiScreenshot, setRfiScreenshot] = useState<string | null>(null);
-  const isMobile = window.innerWidth < 768;
+
+  const isMobile = useMediaQuery('(max-width: 767px)');
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Touch gesture refs
   const initialPinchDistanceRef = useRef<number | null>(null);
-  const pinchStartScaleRef = useRef<number>(1.0);
+  const pinchStartZoomRef = useRef<number>(1.0);
   const panStartRef = useRef<{ x: number; y: number; tx: number; ty: number } | null>(null);
   const lastTapRef = useRef<number>(0);
-  const currentScaleRef = useRef<number>(scale);
+  const currentZoomRef = useRef<number>(zoomLevel);
 
-  // Keep currentScaleRef in sync
-  useEffect(() => { currentScaleRef.current = scale; }, [scale]);
+  // Keep currentZoomRef in sync with zoomLevel state
+  useEffect(() => { currentZoomRef.current = zoomLevel; }, [zoomLevel]);
+
+  // Recalculate baseScale when container width or pdfPageWidth changes
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const update = () => {
+      const w = el.offsetWidth;
+      if (w > 0 && pdfPageWidth > 0) {
+        setBaseScale(w / pdfPageWidth);
+      }
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [pdfPageWidth]);
 
   const announceStatus = useUiStore((s) => s.announceStatus);
 
@@ -63,12 +84,20 @@ export function PdfViewer({ file, title, onClose }: PdfViewerProps) {
     setLoading(false);
   }, []);
 
+  // Capture natural page width from the loaded PDF page (view[2] is width in pts at scale 1)
+  const onPageLoadSuccess = useCallback((page: unknown) => {
+    const p = page as { view?: number[] };
+    if (p.view && p.view[2] > 0) {
+      setPdfPageWidth(p.view[2]);
+    }
+  }, []);
+
   if (!file) return null;
 
-  const zoomIn = () => setScale((s) => Math.min(s + 0.25, MAX_SCALE));
-  const zoomOut = () => setScale((s) => Math.max(s - 0.25, MIN_SCALE));
+  const zoomIn = () => setZoomLevel((z) => Math.min(z + 0.25, MAX_SCALE));
+  const zoomOut = () => setZoomLevel((z) => Math.max(z - 0.25, MIN_SCALE));
   const resetZoom = () => {
-    setScale(1.0);
+    setZoomLevel(1.0);
     setTranslateX(0);
     setTranslateY(0);
   };
@@ -88,10 +117,10 @@ export function PdfViewer({ file, title, onClose }: PdfViewerProps) {
     if (e.touches.length === 2) {
       // Pinch start
       initialPinchDistanceRef.current = getDistance(e.touches);
-      pinchStartScaleRef.current = currentScaleRef.current;
+      pinchStartZoomRef.current = currentZoomRef.current;
       panStartRef.current = null;
     } else if (e.touches.length === 1) {
-      // Double-tap detection
+      // Double-tap: reset zoom to fit
       const now = Date.now();
       if (now - lastTapRef.current < DOUBLE_TAP_MS) {
         resetZoom();
@@ -112,11 +141,11 @@ export function PdfViewer({ file, title, onClose }: PdfViewerProps) {
   const handleTouchMove = (e: React.TouchEvent) => {
     e.preventDefault();
     if (e.touches.length === 2 && initialPinchDistanceRef.current !== null) {
-      // Pinch zoom
+      // Pinch zoom adjusts zoomLevel
       const newDist = getDistance(e.touches);
       const ratio = newDist / initialPinchDistanceRef.current;
-      const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, pinchStartScaleRef.current * ratio));
-      setScale(newScale);
+      const newZoom = Math.min(MAX_SCALE, Math.max(MIN_SCALE, pinchStartZoomRef.current * ratio));
+      setZoomLevel(newZoom);
     } else if (e.touches.length === 1 && panStartRef.current) {
       // Pan
       const dx = e.touches[0].clientX - panStartRef.current.x;
@@ -149,11 +178,14 @@ export function PdfViewer({ file, title, onClose }: PdfViewerProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [numPages]);
 
+  // 44x44 minimum touch target for all toolbar buttons
   const toolbarBtnStyle: React.CSSProperties = {
     display: 'flex', alignItems: 'center', justifyContent: 'center',
-    width: 36, height: 36, border: 'none',
+    minWidth: 44, minHeight: 44, width: 44, height: 44,
+    border: 'none', padding: 0,
     borderRadius: borderRadius.base, backgroundColor: colors.overlayWhiteThin,
     color: colors.white, cursor: 'pointer', transition: `background-color ${transitions.quick}`,
+    flexShrink: 0,
   };
 
   return (
@@ -162,15 +194,17 @@ export function PdfViewer({ file, title, onClose }: PdfViewerProps) {
       display: 'flex', flexDirection: 'column',
       backgroundColor: vizColors.dark,
     }}>
-      {/* Toolbar */}
+      {/* Top toolbar */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: `${spacing['2']} ${spacing['4']}`,
+        padding: `0 ${spacing['4']}`,
         backgroundColor: colors.overlayDark,
         borderBottom: `1px solid ${colors.darkBorder}`,
         flexShrink: 0,
+        minHeight: 56,
+        height: 56,
       }}>
-        {/* Left: title */}
+        {/* Left: close + title */}
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
           <button onClick={onClose} aria-label="Close document viewer" style={toolbarBtnStyle}>
             <X size={18} />
@@ -180,90 +214,79 @@ export function PdfViewer({ file, title, onClose }: PdfViewerProps) {
           </span>
         </div>
 
-        {/* Center: page controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
-          <button
-            onClick={prevPage}
-            disabled={pageNumber <= 1}
-            aria-label={`Previous page, currently page ${pageNumber} of ${numPages}`}
-            style={{ ...toolbarBtnStyle, opacity: pageNumber <= 1 ? 0.3 : 1 }}
-          >
-            <ChevronLeft size={18} />
-          </button>
+        {/* Desktop: page controls + zoom controls */}
+        {!isMobile && (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
+              <button
+                onClick={prevPage}
+                disabled={pageNumber <= 1}
+                aria-label={`Previous page, currently page ${pageNumber} of ${numPages}`}
+                style={{ ...toolbarBtnStyle, opacity: pageNumber <= 1 ? 0.3 : 1 }}
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <span
+                aria-live="polite"
+                aria-atomic="true"
+                style={{ fontSize: typography.fontSize.sm, color: colors.white, minWidth: '80px', textAlign: 'center' }}
+              >
+                {loading ? '...' : `Page ${pageNumber} of ${numPages}`}
+              </span>
+              <button
+                onClick={nextPage}
+                disabled={pageNumber >= numPages}
+                aria-label={`Next page, currently page ${pageNumber} of ${numPages}`}
+                style={{ ...toolbarBtnStyle, opacity: pageNumber >= numPages ? 0.3 : 1 }}
+              >
+                <ChevronRight size={18} />
+              </button>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
+              <button onClick={zoomOut} aria-label="Zoom out" style={toolbarBtnStyle}>
+                <ZoomOut size={16} />
+              </button>
+              <button
+                onClick={resetZoom}
+                aria-label={`Current zoom ${Math.round(zoomLevel * 100)}%, click to reset`}
+                style={{ ...toolbarBtnStyle, width: 'auto', minWidth: 60, padding: `0 ${spacing['2']}`, fontSize: typography.fontSize.sm }}
+              >
+                {Math.round(zoomLevel * 100)}%
+              </button>
+              <button onClick={zoomIn} aria-label="Zoom in" style={toolbarBtnStyle}>
+                <ZoomIn size={16} />
+              </button>
+              <button onClick={resetZoom} aria-label="Fit to width" title="Fit to width" style={toolbarBtnStyle}>
+                <Maximize2 size={16} />
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* Mobile: compact page indicator */}
+        {isMobile && !loading && numPages > 0 && (
           <span
             aria-live="polite"
             aria-atomic="true"
-            style={{ fontSize: typography.fontSize.sm, color: colors.white, minWidth: '80px', textAlign: 'center' }}
+            style={{ fontSize: typography.fontSize.sm, color: colors.white }}
           >
-            {loading ? '...' : `Page ${pageNumber} of ${numPages}`}
+            {pageNumber} / {numPages}
           </span>
-          <button
-            onClick={nextPage}
-            disabled={pageNumber >= numPages}
-            aria-label={`Next page, currently page ${pageNumber} of ${numPages}`}
-            style={{ ...toolbarBtnStyle, opacity: pageNumber >= numPages ? 0.3 : 1 }}
-          >
-            <ChevronRight size={18} />
-          </button>
-        </div>
-
-        {/* Right: zoom controls (desktop always visible, mobile collapsible) */}
-        {isMobile ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
-            <button
-              onClick={() => setToolbarExpanded((v) => !v)}
-              aria-label={toolbarExpanded ? 'Collapse zoom controls' : 'Expand zoom controls'}
-              style={toolbarBtnStyle}
-            >
-              <Pencil size={16} />
-            </button>
-            {toolbarExpanded && (
-              <div style={{
-                position: 'absolute', top: 56, right: 16,
-                display: 'flex', flexDirection: 'column', gap: spacing['2'],
-                backgroundColor: colors.overlayDark,
-                borderRadius: borderRadius.base,
-                padding: spacing['2'],
-                border: `1px solid ${colors.darkBorder}`,
-                zIndex: 10,
-              }}>
-                <button onClick={zoomOut} aria-label="Zoom out" style={toolbarBtnStyle}><ZoomOut size={16} /></button>
-                <button
-                  onClick={resetZoom}
-                  aria-label={`Current zoom ${Math.round(scale * 100)}%, tap to reset`}
-                  style={{ ...toolbarBtnStyle, width: 'auto', padding: `0 ${spacing['2']}`, fontSize: typography.fontSize.sm }}
-                >
-                  {Math.round(scale * 100)}%
-                </button>
-                <button onClick={zoomIn} aria-label="Zoom in" style={toolbarBtnStyle}><ZoomIn size={16} /></button>
-                <button onClick={resetZoom} aria-label="Fit to width" style={toolbarBtnStyle}><Maximize2 size={16} /></button>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
-            <button onClick={zoomOut} aria-label="Zoom out" style={toolbarBtnStyle}>
-              <ZoomOut size={16} />
-            </button>
-            <button onClick={resetZoom} aria-label={`Current zoom ${Math.round(scale * 100)}%, click to reset`} style={{ ...toolbarBtnStyle, width: 'auto', padding: `0 ${spacing['2']}`, fontSize: typography.fontSize.sm }}>
-              {Math.round(scale * 100)}%
-            </button>
-            <button onClick={zoomIn} aria-label="Zoom in" style={toolbarBtnStyle}>
-              <ZoomIn size={16} />
-            </button>
-            <button onClick={resetZoom} aria-label="Fit to width" title="Fit to width" style={toolbarBtnStyle}>
-              <Maximize2 size={16} />
-            </button>
-          </div>
         )}
       </div>
 
       {/* Document area */}
       <div
         style={{
-          flex: 1, overflow: 'auto',
-          display: 'flex', justifyContent: 'center', alignItems: 'flex-start',
-          padding: spacing['6'],
+          flex: 1,
+          overflow: 'auto',
+          display: 'flex',
+          justifyContent: isMobile ? 'flex-start' : 'center',
+          alignItems: 'flex-start',
+          paddingTop: isMobile ? 0 : spacing['6'],
+          paddingLeft: isMobile ? 0 : spacing['6'],
+          paddingRight: isMobile ? 0 : spacing['6'],
+          paddingBottom: isMobile ? 56 : spacing['6'],
           touchAction: 'none',
         }}
         onTouchStart={handleTouchStart}
@@ -283,68 +306,131 @@ export function PdfViewer({ file, title, onClose }: PdfViewerProps) {
             </p>
           </div>
         ) : (
-          <div style={{
-            boxShadow: shadows.panel,
-            borderRadius: borderRadius.sm,
-            overflow: 'hidden',
-            transform: `translate(${translateX}px, ${translateY}px)`,
-            transformOrigin: 'top center',
-            willChange: 'transform',
-          }}>
-            <Document
-              file={file}
-              onLoadSuccess={onDocumentLoadSuccess}
-              onLoadError={onDocumentLoadError}
-              loading={
-                <div style={{ width: 600, height: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.white }}>
-                  <div style={{ textAlign: 'center', color: colors.textTertiary }}>
-                    <div style={{
-                      width: 32, height: 32, borderRadius: '50%',
-                      border: `3px solid ${colors.borderDefault}`,
-                      borderTopColor: colors.primaryOrange,
-                      animation: 'spin 0.8s linear infinite',
-                      margin: '0 auto 12px',
-                    }} />
-                    <p style={{ fontSize: typography.fontSize.sm }}>Loading document...</p>
-                  </div>
+          /* Measuring container: fills available width, measures offsetWidth for baseScale */
+          <div
+            ref={containerRef}
+            style={{
+              position: 'relative',
+              overflow: 'hidden',
+              width: '100%',
+            }}
+          >
+            <div style={{ transform: `translate(${translateX}px, ${translateY}px)` }}>
+              {/* Canvas wrapper: zoomLevel CSS transform applied here */}
+              <div style={{
+                transform: `scale(${zoomLevel})`,
+                transformOrigin: '0 0',
+                willChange: 'transform',
+                display: 'inline-block',
+              }}>
+                <div style={{ boxShadow: shadows.panel, borderRadius: borderRadius.sm, overflow: 'hidden' }}>
+                  <Document
+                    file={file}
+                    onLoadSuccess={onDocumentLoadSuccess}
+                    onLoadError={onDocumentLoadError}
+                    loading={
+                      <div style={{ width: 600, height: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.white }}>
+                        <div style={{ textAlign: 'center', color: colors.textTertiary }}>
+                          <div style={{
+                            width: 32, height: 32, borderRadius: '50%',
+                            border: `3px solid ${colors.borderDefault}`,
+                            borderTopColor: colors.primaryOrange,
+                            animation: 'spin 0.8s linear infinite',
+                            margin: '0 auto 12px',
+                          }} />
+                          <p style={{ fontSize: typography.fontSize.sm }}>Loading document...</p>
+                        </div>
+                      </div>
+                    }
+                  >
+                    <Page
+                      pageNumber={pageNumber}
+                      scale={baseScale}
+                      renderTextLayer={false}
+                      renderAnnotationLayer={false}
+                      onLoadSuccess={onPageLoadSuccess}
+                    />
+                  </Document>
                 </div>
-              }
-            >
-              <Page
-                pageNumber={pageNumber}
-                scale={scale}
-                renderTextLayer={false}
-                renderAnnotationLayer={false}
-              />
-            </Document>
+              </div>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Mobile: Create RFI floating action button */}
+      {/* Mobile: fixed bottom toolbar, 56px height, horizontally scrollable 44x44 icons */}
       {isMobile && (
-        <button
-          onClick={handleCreateRFI}
-          aria-label="Create RFI from current view"
+        <div
+          role="toolbar"
+          aria-label="Document controls"
           style={{
             position: 'fixed',
-            bottom: 24,
-            right: 24,
-            width: 56,
+            bottom: 0,
+            left: 0,
+            right: 0,
             height: 56,
-            borderRadius: '50%',
-            backgroundColor: colors.primaryOrange,
-            border: 'none',
-            cursor: 'pointer',
+            backgroundColor: colors.overlayDark,
+            borderTop: `1px solid ${colors.darkBorder}`,
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: shadows.panel,
+            overflowX: 'auto',
+            overflowY: 'hidden',
+            gap: spacing['1'],
+            padding: `0 ${spacing['2']}`,
             zIndex: (zIndex.toast as number) + 1,
+            flexShrink: 0,
           }}
         >
-          <Plus size={24} color={colors.white} />
-        </button>
+          <button
+            onClick={prevPage}
+            disabled={pageNumber <= 1}
+            aria-label="Previous page"
+            style={{ ...toolbarBtnStyle, opacity: pageNumber <= 1 ? 0.3 : 1 }}
+          >
+            <ChevronLeft size={20} />
+          </button>
+          <button
+            onClick={nextPage}
+            disabled={pageNumber >= numPages}
+            aria-label="Next page"
+            style={{ ...toolbarBtnStyle, opacity: pageNumber >= numPages ? 0.3 : 1 }}
+          >
+            <ChevronRight size={20} />
+          </button>
+          <div style={{ width: 1, height: 28, backgroundColor: colors.darkBorder, flexShrink: 0, marginLeft: spacing['1'], marginRight: spacing['1'] }} />
+          <button onClick={zoomOut} aria-label="Zoom out" style={toolbarBtnStyle}>
+            <ZoomOut size={18} />
+          </button>
+          <button
+            onClick={resetZoom}
+            aria-label={`Zoom ${Math.round(zoomLevel * 100)}%, tap to reset`}
+            style={{ ...toolbarBtnStyle, width: 'auto', minWidth: 56, padding: `0 ${spacing['2']}`, fontSize: typography.fontSize.sm }}
+          >
+            {Math.round(zoomLevel * 100)}%
+          </button>
+          <button onClick={zoomIn} aria-label="Zoom in" style={toolbarBtnStyle}>
+            <ZoomIn size={18} />
+          </button>
+          <button onClick={resetZoom} aria-label="Fit to width" style={toolbarBtnStyle}>
+            <Maximize2 size={18} />
+          </button>
+          <div style={{ width: 1, height: 28, backgroundColor: colors.darkBorder, flexShrink: 0, marginLeft: spacing['1'], marginRight: spacing['1'] }} />
+          <button
+            onClick={() => setToolbarExpanded((v) => !v)}
+            aria-label={toolbarExpanded ? 'Hide markup tools' : 'Show markup tools'}
+            aria-pressed={toolbarExpanded}
+            style={{ ...toolbarBtnStyle, backgroundColor: toolbarExpanded ? colors.primaryOrange : colors.overlayWhiteThin }}
+          >
+            <Pencil size={18} />
+          </button>
+          <button
+            onClick={handleCreateRFI}
+            aria-label="Create RFI from current view"
+            style={toolbarBtnStyle}
+          >
+            <Plus size={18} />
+          </button>
+        </div>
       )}
 
       {/* RFI Modal */}
@@ -353,7 +439,7 @@ export function PdfViewer({ file, title, onClose }: PdfViewerProps) {
           {rfiScreenshot && (
             <div style={{
               position: 'fixed',
-              bottom: 96,
+              bottom: isMobile ? 80 : 96,
               right: 24,
               width: 120,
               height: 80,
