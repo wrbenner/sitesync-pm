@@ -1,4 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { Canvas as FabricCanvas, PencilBrush, Circle as FabricCircle, Line as FabricLine, IText as FabricIText, Rect as FabricRect } from 'fabric';
 import { ZoomIn, ZoomOut, X, Eye, EyeOff, Maximize2, ChevronUp, ChevronDown } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, shadows, transitions, vizColors } from '../../styles/theme';
 import { useMediaQuery } from '../../hooks/useMediaQuery';

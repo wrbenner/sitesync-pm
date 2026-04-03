@@ -1,8 +1,8 @@
 import React from 'react';
-import { MapPin, Circle, Ruler, Type, Undo2, MousePointer, Save } from 'lucide-react';
+import { MapPin, Circle, Ruler, Type, Undo2, MousePointer, Save, Pen } from 'lucide-react';
 import { colors, spacing, borderRadius, transitions, shadows } from '../../styles/theme';
 
-export type MarkupTool = 'select' | 'pin' | 'highlight' | 'measure' | 'text';
+export type MarkupTool = 'select' | 'pin' | 'highlight' | 'measure' | 'text' | 'draw';
 
 interface MarkupToolbarProps {
   activeTool: MarkupTool;
@@ -19,6 +19,7 @@ const tools: { id: MarkupTool; icon: React.ReactNode; label: string; ariaLabel: 
   { id: 'highlight', icon: <Circle size={16} />, label: 'Highlight', ariaLabel: 'Cloud markup tool' },
   { id: 'measure', icon: <Ruler size={16} />, label: 'Measure', ariaLabel: 'Measure markup tool' },
   { id: 'text', icon: <Type size={16} />, label: 'Text', ariaLabel: 'Text annotation tool' },
+  { id: 'draw', icon: <Pen size={16} />, label: 'Draw', ariaLabel: 'Freehand drawing tool' },
 ];
 
 export const MarkupToolbar: React.FC<MarkupToolbarProps> = ({ activeTool, onToolChange, onUndo, canUndo, onSave, isSaving }) => {
