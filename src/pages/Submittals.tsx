@@ -206,6 +206,34 @@ const BallInCourtBadge: React.FC<{ value: string | null }> = ({ value }) => {
   );
 };
 
+const SUBMITTAL_STATUS_STYLES: Record<string, { bg: string; text: string; label: string }> = {
+  pending:           { bg: '#FEF3C7', text: '#F5A623', label: 'Pending' },
+  under_review:      { bg: '#DBEAFE', text: '#3B82F6', label: 'Under Review' },
+  approved:          { bg: '#D1FAE5', text: '#4EC896', label: 'Approved' },
+  approved_as_noted: { bg: '#DBEAFE', text: '#3B82F6', label: 'Approved as Noted' },
+  rejected:          { bg: '#FEE2E2', text: '#E74C3C', label: 'Rejected' },
+  revise_resubmit:   { bg: '#EDE9FE', text: '#8B5CF6', label: 'Resubmit' },
+  resubmit:          { bg: '#EDE9FE', text: '#8B5CF6', label: 'Resubmit' },
+};
+
+const SubmittalStatusTag: React.FC<{ status: string }> = ({ status }) => {
+  const style = SUBMITTAL_STATUS_STYLES[status] ?? { bg: '#F3F4F6', text: '#6B7280', label: status };
+  return (
+    <span style={{
+      display: 'inline-block',
+      padding: '2px 8px',
+      borderRadius: '9999px',
+      fontSize: '0.75rem',
+      fontWeight: 500,
+      backgroundColor: style.bg,
+      color: style.text,
+      whiteSpace: 'nowrap',
+    }}>
+      {style.label}
+    </span>
+  );
+};
+
 const subColHelper = createColumnHelper<any>();
 
 const Submittals: React.FC = () => {
@@ -364,6 +392,30 @@ const Submittals: React.FC = () => {
   const pageAlerts = getPredictiveAlertsForPage('submittals');
   const openCount = useMemo(() => allSubmittals.filter((s: Record<string, unknown>) => s.status !== 'approved').length, [allSubmittals]);
 
+  const today = useMemo(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }, []);
+  const totalCount = allSubmittals.length;
+  const pendingReviewCount = useMemo(() => allSubmittals.filter((s: any) => s.status === 'pending' || s.status === 'under_review').length, [allSubmittals]);
+  const approvedCount = useMemo(() => allSubmittals.filter((s: any) => s.status === 'approved' || s.status === 'approved_as_noted').length, [allSubmittals]);
+  const overdueCount = useMemo(() => allSubmittals.filter((s: any) => {
+    if (s.status === 'approved' || s.status === 'approved_as_noted') return false;
+    if (!s.dueDate) return false;
+    return new Date(s.dueDate) < today;
+  }).length, [allSubmittals, today]);
+
+  const STATUS_FILTER_TABS: Array<{ label: string; value: string | null }> = [
+    { label: 'All', value: null },
+    { label: 'Pending', value: 'pending' },
+    { label: 'Under Review', value: 'under_review' },
+    { label: 'Approved', value: 'approved' },
+    { label: 'Rejected', value: 'rejected' },
+    { label: 'Resubmit', value: 'revise_resubmit' },
+  ];
+
+  const filteredSubmittals = useMemo(() => {
+    if (!statusFilter) return allSubmittals;
+    return allSubmittals.filter((s: any) => s.status === statusFilter);
+  }, [allSubmittals, statusFilter]);
+
   const subColumns = useMemo(() => [
     subColHelper.accessor('submittalNumber', {
       header: 'Submittal #',
@@ -407,17 +459,52 @@ const Submittals: React.FC = () => {
     }),
     subColHelper.accessor('status', {
       header: 'Status',
-      size: 130,
+      size: 140,
+      cell: (info) => <SubmittalStatusTag status={info.getValue() as string} />,
+    }),
+    subColHelper.accessor('specification_section', {
+      header: 'Spec Section',
+      size: 110,
       cell: (info) => {
-        const sub = info.row.original;
+        const val = info.getValue() as string | null;
+        return val ? (
+          <span style={{ fontSize: typography.fontSize.sm, fontFamily: 'monospace', color: colors.textSecondary }}>{val}</span>
+        ) : (
+          <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>&mdash;</span>
+        );
+      },
+    }),
+    subColHelper.accessor((row: any) => {
+      const revisions = Array.isArray(row.submittal_revisions) ? row.submittal_revisions.length : null;
+      return revisions ?? row.revision_number ?? 0;
+    }, {
+      id: 'rev_number',
+      header: 'Rev #',
+      size: 64,
+      cell: (info) => {
+        const val = info.getValue() as number;
+        return (
+          <span style={{
+            fontSize: typography.fontSize.sm,
+            fontWeight: val > 0 ? typography.fontWeight.semibold : typography.fontWeight.normal,
+            color: val > 0 ? colors.statusCritical : colors.textTertiary,
+            fontVariantNumeric: 'tabular-nums' as const,
+          }}>
+            {val}
+          </span>
+        );
+      },
+    }),
+    subColHelper.accessor('assigned_to', {
+      header: 'Current Reviewer',
+      size: 160,
+      cell: (info) => {
+        const val = info.getValue() as string | null;
+        if (!val) return <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>Unassigned</span>;
         return (
           <span style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
-            <StatusTag status={info.getValue() as any} />
-            {sub.revision_number > 1 && (
-              <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.statusCritical, backgroundColor: `${colors.statusCritical}08`, padding: '1px 5px', borderRadius: borderRadius.full }}>
-                C{sub.revision_number}
-              </span>
-            )}
+            <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#3B82F6', flexShrink: 0, display: 'inline-block' }} />
+            <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary }}>{val}</span>
           </span>
         );
       },
@@ -581,8 +668,57 @@ const Submittals: React.FC = () => {
         <PredictiveAlertBanner key={alert.id} alert={alert} />
       ))}
 
+      {/* KPI Metric Cards */}
+      <div style={{ display: 'flex', gap: spacing['4'], marginBottom: spacing['4'], flexWrap: 'wrap' }}>
+        {[
+          { label: 'Total Submittals', value: totalCount, color: colors.textPrimary, bg: colors.white },
+          { label: 'Pending Review', value: pendingReviewCount, color: '#F5A623', bg: '#FFFBF0' },
+          { label: 'Approved', value: approvedCount, color: '#4EC896', bg: '#F0FDF9' },
+          { label: 'Overdue', value: overdueCount, color: '#E74C3C', bg: '#FFF5F5' },
+        ].map(({ label, value, color, bg }) => (
+          <div key={label} style={{
+            flex: '1 1 140px',
+            padding: `${spacing['4']} ${spacing['5']}`,
+            backgroundColor: bg,
+            border: `1px solid ${colors.borderLight}`,
+            borderRadius: borderRadius.lg,
+          }}>
+            <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: spacing['2'] }}>{label}</div>
+            <div style={{ fontSize: '1.75rem', fontWeight: typography.fontWeight.bold, color, lineHeight: 1 }}>{value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Status Filter Tabs */}
+      <div style={{ display: 'flex', gap: spacing['1'], marginBottom: spacing['4'], borderBottom: `1px solid ${colors.borderLight}`, paddingBottom: 0 }}>
+        {STATUS_FILTER_TABS.map(({ label, value }) => {
+          const active = statusFilter === value;
+          return (
+            <button
+              key={label}
+              onClick={() => setStatusFilter(value)}
+              style={{
+                padding: `${spacing['2']} ${spacing['4']}`,
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: typography.fontSize.sm,
+                fontWeight: active ? typography.fontWeight.semibold : typography.fontWeight.normal,
+                color: active ? colors.primaryOrange : colors.textSecondary,
+                backgroundColor: 'transparent',
+                borderBottom: active ? `2px solid ${colors.primaryOrange}` : '2px solid transparent',
+                marginBottom: -1,
+                transition: 'color 150ms ease',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
       {viewMode === 'table' ? (
-        allSubmittals.length === 0 ? (
+        filteredSubmittals.length === 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '64px 32px', gap: '12px' }}>
             <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: 0 }}>No submittals match your filters</p>
             <Btn variant="secondary" size="sm" onClick={clearFilters}>Clear Filters</Btn>
@@ -590,7 +726,7 @@ const Submittals: React.FC = () => {
         ) : (
           <Card padding="0">
             <VirtualDataTable
-              data={allSubmittals}
+              data={filteredSubmittals}
               columns={allSubColumns}
               rowHeight={48}
               containerHeight={600}
@@ -600,7 +736,7 @@ const Submittals: React.FC = () => {
               loading={loading}
               emptyMessage="No submittals match your filters"
               onRowToggleSelectByIndex={(i) => {
-                const id = String(allSubmittals[i]?.id);
+                const id = String(filteredSubmittals[i]?.id);
                 if (!id) return;
                 setSelectedIds((prev) => {
                   const next = new Set(prev);
