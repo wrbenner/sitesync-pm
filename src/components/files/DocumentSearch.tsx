@@ -17,6 +17,9 @@ interface SearchResult {
 
 interface DocumentSearchProps {
   onSelect?: (result: SearchResult) => void;
+  inputId?: string;
+  ariaLabel?: string;
+  ariaControls?: string;
 }
 
 async function getQueryEmbedding(query: string): Promise<number[] | null> {
@@ -80,7 +83,7 @@ async function semanticSearch(query: string): Promise<SearchResult[]> {
   }))
 }
 
-export const DocumentSearch: React.FC<DocumentSearchProps> = ({ onSelect }) => {
+export const DocumentSearch: React.FC<DocumentSearchProps> = ({ onSelect, inputId, ariaLabel, ariaControls }) => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
@@ -118,9 +121,15 @@ export const DocumentSearch: React.FC<DocumentSearchProps> = ({ onSelect }) => {
       }}>
         <Search size={16} color={colors.textTertiary} />
         <input
+          id={inputId}
           value={query}
           onChange={(e) => handleSearch(e.target.value)}
           placeholder="Search files... try &quot;structural floor 8&quot;"
+          aria-label={ariaLabel || 'Search files'}
+          aria-controls={ariaControls}
+          aria-autocomplete="list"
+          role="combobox"
+          aria-expanded={results.length > 0}
           style={{
             flex: 1, border: 'none', backgroundColor: 'transparent', outline: 'none',
             fontSize: typography.fontSize.body, fontFamily: typography.fontFamily, color: colors.textPrimary,
@@ -137,7 +146,7 @@ export const DocumentSearch: React.FC<DocumentSearchProps> = ({ onSelect }) => {
       </div>
 
       {(results.length > 0 || searching) && (
-        <div style={{ marginTop: spacing['2'], backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.md, border: `1px solid ${colors.borderSubtle}`, overflow: 'hidden' }}>
+        <div id={ariaControls} role="listbox" aria-label="Search results" style={{ marginTop: spacing['2'], backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.md, border: `1px solid ${colors.borderSubtle}`, overflow: 'hidden' }}>
           {searching ? (
             <div style={{ padding: spacing['4'], textAlign: 'center' }}>
               <Sparkles size={16} color={colors.statusReview} style={{ animation: 'pulse 1s infinite' }} />

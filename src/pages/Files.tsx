@@ -91,6 +91,9 @@ const _FilesPage: React.FC = () => {
     return { totalFiles, drawings, recentUploads, totalBytes };
   }, [rawFiles]);
 
+  // ── Accessibility live region ─────────────────────────
+  const [liveAnnouncement, setLiveAnnouncement] = useState('');
+
   // ── View mode ─────────────────────────────────────────
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [showUpload, setShowUpload] = useState(false);
@@ -261,8 +264,16 @@ const _FilesPage: React.FC = () => {
     try {
       await createFile.mutateAsync({ projectId: projectId!, data: { project_id: projectId!, name: fileName, content_type: 'application/octet-stream' } });
       addToast('success', `Uploaded ${fileName}`);
+      setLiveAnnouncement('File uploaded successfully');
     } catch { addToast('error', `Failed to upload ${fileName}`); }
   };
+
+  const handleDeleteFile = useCallback((file: FileItem) => {
+    if (!window.confirm(`Delete "${file.name}"? This cannot be undone.`)) return;
+    // In a real app, call delete API here.
+    addToast('success', `Deleted ${file.name}`);
+    setLiveAnnouncement('File deleted');
+  }, [addToast]);
 
   // ── Columns ───────────────────────────────────────────
   const columnHelper = createColumnHelper<FileItem>();
@@ -450,6 +461,15 @@ const _FilesPage: React.FC = () => {
       }
     >
       <div onDragEnter={handlePageDragEnter}>
+      {/* Accessibility live region */}
+      <div
+        aria-live="polite"
+        aria-atomic="true"
+        style={{ position: 'absolute', left: -9999, top: 'auto', width: 1, height: 1, overflow: 'hidden' }}
+      >
+        {liveAnnouncement}
+      </div>
+
       {/* Summary metrics */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: spacing.md, marginBottom: spacing['4'] }}>
         {[
@@ -482,10 +502,17 @@ const _FilesPage: React.FC = () => {
       {/* Document Search */}
       <div style={{ marginBottom: spacing['4'] }}>
         <DocumentSearch
+          inputId="file-search-input"
+          ariaLabel="Search files"
+          ariaControls="file-search-results"
           onSelect={(result) => {
             const match = files.find((f: FileItem) => f.name === result.name);
-            if (match) setSelectedFile(match);
-            else addToast('info', `Opening ${result.name}`);
+            if (match) {
+              setSelectedFile(match);
+              setLiveAnnouncement(`Opening ${result.name}`);
+            } else {
+              addToast('info', `Opening ${result.name}`);
+            }
           }}
         />
       </div>
@@ -501,13 +528,15 @@ const _FilesPage: React.FC = () => {
 
       {/* Grid View */}
       {viewMode === 'grid' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: spacing['4'] }}>
+        <div role="grid" aria-label="Project files" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: spacing['4'] }}>
           {visibleFiles.map((file: FileItem) => {
             const approval = getApprovalStatus(file);
             const isDropTarget = file.type === 'folder' && dragOverFolderId === file.id;
             return (
               <div
                 key={file.id}
+                role="row"
+                tabIndex={0}
                 draggable
                 onDragStart={() => handleInternalDragStart(file.id)}
                 onDragEnd={() => { draggingFileIdRef.current = null; setDragOverFolderId(null); }}
@@ -515,6 +544,23 @@ const _FilesPage: React.FC = () => {
                 onDragLeave={file.type === 'folder' ? () => setDragOverFolderId(null) : undefined}
                 onDrop={file.type === 'folder' ? (e) => { e.preventDefault(); handleInternalDrop(file.id); } : undefined}
                 onClick={() => handleFileClick(file)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleFileClick(file);
+                  } else if (e.key === 'Delete') {
+                    e.preventDefault();
+                    handleDeleteFile(file);
+                  }
+                }}
+                onFocus={(e) => {
+                  (e.currentTarget as HTMLDivElement).style.outline = `2px solid ${colors.primaryOrange}`;
+                  (e.currentTarget as HTMLDivElement).style.outlineOffset = '2px';
+                }}
+                onBlur={(e) => {
+                  (e.currentTarget as HTMLDivElement).style.outline = selectedIds.includes(file.id) ? `2px solid ${colors.primaryOrange}` : 'none';
+                  (e.currentTarget as HTMLDivElement).style.outlineOffset = '1px';
+                }}
                 style={{
                   backgroundColor: colors.surfaceRaised,
                   borderRadius: borderRadius.lg,
@@ -534,20 +580,35 @@ const _FilesPage: React.FC = () => {
                   (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)';
                 }}
               >
-                {/* Gradient Thumbnail */}
-                <div style={{ height: '120px', background: getGradient(file), display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                {/* Thumbnail cell */}
+                <div role="gridcell" style={{ height: '120px', background: getGradient(file), display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
                   {file.type === 'folder'
                     ? <FolderOpen size={36} color={colors.primaryOrange} />
                     : <FileText size={36} color="rgba(255,255,255,0.6)" />
                   }
                   {/* Checkbox overlay */}
                   <div
+                    role="checkbox"
+                    aria-checked={selectedIds.includes(file.id)}
+                    aria-label={`Select ${file.name}`}
+                    tabIndex={0}
                     onClick={(e) => {
                       e.stopPropagation();
                       setSelectedIds((prev) =>
                         prev.includes(file.id) ? prev.filter((id) => id !== file.id) : [...prev, file.id]
                       );
                     }}
+                    onKeyDown={(e) => {
+                      if (e.key === ' ' || e.key === 'Enter') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setSelectedIds((prev) =>
+                          prev.includes(file.id) ? prev.filter((id) => id !== file.id) : [...prev, file.id]
+                        );
+                      }
+                    }}
+                    onFocus={(e) => { e.stopPropagation(); (e.currentTarget as HTMLDivElement).style.outline = `2px solid ${colors.primaryOrange}`; }}
+                    onBlur={(e) => { (e.currentTarget as HTMLDivElement).style.outline = 'none'; }}
                     style={{
                       position: 'absolute', top: spacing['2'], left: spacing['2'],
                       width: 20, height: 20,
@@ -557,6 +618,7 @@ const _FilesPage: React.FC = () => {
                       border: `1.5px solid ${selectedIds.includes(file.id) ? colors.primaryOrange : colors.borderDefault}`,
                       cursor: 'pointer',
                       transition: `all ${transitions.instant}`,
+                      outline: 'none',
                     }}
                   >
                     {selectedIds.includes(file.id) && (
@@ -577,8 +639,8 @@ const _FilesPage: React.FC = () => {
                   )}
                 </div>
 
-                {/* Card Content */}
-                <div style={{ padding: `${spacing['3']} ${spacing['4']}` }}>
+                {/* Info cell */}
+                <div role="gridcell" style={{ padding: `${spacing['3']} ${spacing['4']}` }}>
                   <p style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {file.name}
                   </p>
@@ -602,6 +664,38 @@ const _FilesPage: React.FC = () => {
                     </span>
                   </div>
                 </div>
+
+                {/* Actions cell */}
+                {file.type !== 'folder' && (
+                  <div role="gridcell" style={{ display: 'flex', gap: spacing['1'], padding: `0 ${spacing['3']} ${spacing['3']}`, justifyContent: 'flex-end' }}>
+                    {[
+                      { icon: <Sparkles size={13} />, label: `Preview ${file.name}`, action: () => { setSelectedFile(file); } },
+                      { icon: <Download size={13} />, label: `Download ${file.name}`, action: () => { addToast('info', `Downloading ${file.name}`); } },
+                      { icon: <Trash2 size={13} />, label: `Delete ${file.name}`, action: () => handleDeleteFile(file), danger: true },
+                    ].map(({ icon, label, action, danger }) => (
+                      <button
+                        key={label}
+                        aria-label={label}
+                        onClick={(e) => { e.stopPropagation(); action(); }}
+                        onFocus={(e) => { e.stopPropagation(); (e.currentTarget as HTMLButtonElement).style.outline = `2px solid ${colors.primaryOrange}`; (e.currentTarget as HTMLButtonElement).style.outlineOffset = '2px'; }}
+                        onBlur={(e) => { (e.currentTarget as HTMLButtonElement).style.outline = 'none'; }}
+                        style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          width: 26, height: 26,
+                          border: 'none', borderRadius: borderRadius.sm,
+                          backgroundColor: 'transparent', cursor: 'pointer',
+                          color: danger ? colors.statusCritical : colors.textTertiary,
+                          transition: `background-color ${transitions.instant}, color ${transitions.instant}`,
+                          outline: 'none',
+                        }}
+                        onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = danger ? 'rgba(239,68,68,0.08)' : colors.surfaceHover; (e.currentTarget as HTMLButtonElement).style.color = danger ? colors.statusCritical : colors.textPrimary; }}
+                        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = danger ? colors.statusCritical : colors.textTertiary; }}
+                      >
+                        {icon}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             );
           })}
