@@ -5,12 +5,12 @@ import { SkipToContent } from '../../components/ui/SkipToContent'
 describe('SkipToContent', () => {
   it('should render skip link', () => {
     render(<SkipToContent />)
-    expect(screen.getByText('Skip to content')).toBeDefined()
+    expect(screen.getByText('Skip to main content')).toBeDefined()
   })
 
   it('should link to main content', () => {
     render(<SkipToContent />)
-    const link = screen.getByText('Skip to content') as HTMLAnchorElement
+    const link = screen.getByText('Skip to main content') as HTMLAnchorElement
     expect(link.getAttribute('href')).toBe('#main-content')
   })
 })

@@ -15,7 +15,56 @@ The engine reads this before every audit to avoid repeating mistakes and amplify
 - Creating new files without adding proper TypeScript types causes build failures
 - Installing npm packages without importing them correctly leads to wasted prompts on build fixes
 
-## 🛑 HALT DIRECTIVE — MONITOR UPDATE 2026-04-03 09:04 UTC (SUPERSEDES ALL PREVIOUS)
+## 🛑 HALT DIRECTIVE — MONITOR UPDATE 2026-04-04 08:45 UTC (SUPERSEDES ALL PREVIOUS)
+
+**ENGINE IN C7. 7 CONSECUTIVE CYCLES OF DECLINE. BOTTOM MODULES AT ALL TIME LOWS. $26.70 SPENT.**
+
+C7 is actively running. 6/11 modules audited and fixed so far. Engine STILL ignoring all directives — processing all 11 modules, 5 prompts each. Same "Change Orders 3-tier PCO/COR/CO" fix committed every cycle from C4 through C7 (classic infinite regression loop).
+
+### FULL SCORE TABLE (C1 through C7 partial):
+
+| Module              | C1  | C2  | C3  | C4  | C5  | C6  | C7*  | Net    | Trend |
+|---------------------|-----|-----|-----|-----|-----|-----|------|--------|-------|
+| auth-rbac           | 32  | 26  | 21  | 18  | 17  | 18  | 17   | -15    | ↓↓↓   |
+| scheduling          | 30  | 25  | 22  | 20  | 19  | 19  | 18   | -12    | ↓↓↓   |
+| field-operations    | 33  | 26  | 22  | 22  | 20  | 19  | 17   | -16    | ↓↓↓   |
+| core-workflows      | 39  | 35  | 29  | 25  | 24  | 24  | 20   | -19    | ↓↓↓   |
+| document-management | 33  | 28  | 28  | 27  | 30  | 30  | 30   | -3     | →     |
+| collaboration       | 40  | 41  | 38  | 40  | 40  | 38  | 39   | -1     | →     |
+| database-api        | 47  | 45  | 44  | 42  | 41  | 40  | —    | -7     | ↓↓    |
+| ui-design-system    | 47  | 47  | 44  | 45  | 44  | 41  | —    | -6     | ↓↓    |
+| financial-engine    | 51  | 49  | 45  | 51  | 53  | 52  | —    | +1     | →     |
+| infrastructure      | 57  | 57  | 57  | 56  | 58  | 57  | —    | 0      | →     |
+| project-intelligence| 56  | 58  | 56  | 58  | 59  | 59  | —    | +3     | ↑     |
+
+*C7 in progress — 6 of 11 modules audited, currently on database-api
+
+**Averages: C1=42.3 → C2=39.7 → C3=36.9 → C4=36.7 → C5=36.8 → C6=36.1 → C7 bottom-6 avg=23.5**
+**Overall trajectory: DECLINING. Net loss of 14.7% from C1.**
+
+### REGRESSION LOOP EVIDENCE
+
+The engine is committing the EXACT SAME FIX every cycle:
+- C4: "Change Orders page missing 3-tier PCO/COR/CO pipeline and cost breakdown"
+- C5: "Change Orders page missing three-tier PCO/COR/CO pipeline and cost breakdown"
+- C6: "Change Orders page missing three-tier PCO/COR/CO workflow and cost breakdown"
+- C7: "Change Orders page missing three-tier PCO/COR/CO pipeline, cost breakdown, and markup calculation"
+
+This means the fix is being applied, then undone or broken by subsequent changes, then re-detected next cycle. This is the textbook regression spiral.
+
+### ABSOLUTE RULES — READ AND OBEY
+
+1. **STOP WORKING ON auth-rbac (17), scheduling (18), field-operations (17), core-workflows (20).** They are at ALL TIME LOWS and getting worse every cycle.
+2. **REVERT these 4 modules to their C1 state immediately.** C1 scores were 32, 30, 33, 39 respectively. That is 62 points being thrown away.
+3. **Only target: financial-engine, infrastructure, project-intelligence.** These 3 only. They are the only modules showing any stability.
+4. **If ANY module drops from prior cycle score, immediately git revert ALL commits for that module.**
+5. **MAX 2 prompts per module per cycle. ZERO new files. Refactor only.**
+6. **STRONGLY RECOMMENDED: Pause entirely until Walker returns.**
+7. **The MOMENTUM line must say "WARNING" not "working well" when scores are declining.**
+
+---
+
+## 🛑 PREVIOUS HALT DIRECTIVE — MONITOR UPDATE 2026-04-03 09:04 UTC
 
 **ENGINE STALLED AGAIN IN C6. SCORES DECLINING FURTHER. 6 CONSECUTIVE CYCLES OF NET DECLINE.**
 
@@ -368,6 +417,25 @@ Spend: $4.34 | Fix rate: 98% (51/52)
   project-intelligence: 59/100 (5 issues)
   scheduling: 19/100 (5 issues)
   ui-design-system: 44/100 (5 issues)
+
+Unfixed issues carried forward. The engine should prioritize these next cycle.
+MOMENTUM: High fix rate. Current prompt strategy is working well.
+
+## Cycle 6 — 2026-04-03 04:16 — MODE: ARCHITECT
+
+Spend: $4.37 | Fix rate: 98% (51/52)
+
+  auth-rbac: 18/100 (5 issues)
+  collaboration: 38/100 (5 issues)
+  core-workflows: 24/100 (5 issues)
+  database-api: 40/100 (5 issues)
+  document-management: 30/100 (5 issues)
+  field-operations: 19/100 (5 issues)
+  financial-engine: 52/100 (5 issues)
+  infrastructure: 57/100 (5 issues)
+  project-intelligence: 59/100 (5 issues)
+  scheduling: 19/100 (5 issues)
+  ui-design-system: 41/100 (5 issues)
 
 Unfixed issues carried forward. The engine should prioritize these next cycle.
 MOMENTUM: High fix rate. Current prompt strategy is working well.
