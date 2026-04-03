@@ -1693,20 +1693,32 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({ open, onClose, title, 
 // ─── Skeleton ───────────────────────────────────────────────────────────────
 // Loading placeholder with shimmer.
 
+// Inject shimmer keyframe for Skeleton component
+if (typeof document !== 'undefined' && !document.getElementById('skeleton-shimmer-keyframes')) {
+  const _skEl = document.createElement('style');
+  _skEl.id = 'skeleton-shimmer-keyframes';
+  _skEl.textContent = '@keyframes skeleton-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }';
+  document.head.appendChild(_skEl);
+}
+
 interface SkeletonProps {
   width?: string;
   height?: string;
   borderRadius?: string;
+  style?: React.CSSProperties;
 }
 
-export const Skeleton: React.FC<SkeletonProps> = React.memo(({ width = '100%', height = '16px', borderRadius: br = borderRadius.md }) => (
+export const Skeleton: React.FC<SkeletonProps> = React.memo(({ width = '100%', height = '16px', borderRadius: br = borderRadius.md, style: styleProp }) => (
   <div
     aria-hidden="true"
     style={{
-      width, height, borderRadius: br,
-      background: `linear-gradient(90deg, ${colors.surfaceFlat} 25%, ${colors.borderLight} 50%, ${colors.surfaceFlat} 75%)`,
-      backgroundSize: '800px 100%',
-      animation: 'shimmer 1.5s linear infinite',
+      width,
+      height,
+      borderRadius: br,
+      background: 'linear-gradient(90deg, #E5E7EB 25%, #F3F4F6 50%, #E5E7EB 75%)',
+      backgroundSize: '200% 100%',
+      animation: 'skeleton-shimmer 1.5s linear infinite',
+      ...styleProp,
     }}
   />
 ));
@@ -1794,16 +1806,16 @@ interface SkeletonCardProps {
 export const SkeletonCard: React.FC<SkeletonCardProps> = ({ style: styleProp }) => (
   <div
     style={{
-      borderRadius: '12px',
-      padding: '24px',
-      border: '1px solid #E5E7EB',
-      backgroundColor: '#FFFFFF',
+      backgroundColor: colors.surfaceRaised,
+      borderRadius: borderRadius.lg,
+      padding: spacing.xl,
+      boxShadow: shadows.base,
       ...styleProp,
     }}
   >
-    <SkeletonText width="60%" style={{ marginBottom: '12px' }} />
-    <SkeletonText width="100%" style={{ marginBottom: '12px' }} />
-    <SkeletonText width="80%" />
+    <Skeleton width="24px" height="24px" borderRadius={borderRadius.md} style={{ marginBottom: spacing['3'] }} />
+    <Skeleton width="100px" height="12px" style={{ marginBottom: spacing['3'] }} />
+    <Skeleton width="160px" height="24px" />
   </div>
 );
 
@@ -1812,14 +1824,22 @@ interface SkeletonRowProps {
 }
 
 export const SkeletonRow: React.FC<SkeletonRowProps> = ({ style: styleProp }) => (
-  <SkeletonPulse
+  <div
     style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: spacing.sm,
       height: '48px',
-      borderRadius: '8px',
-      backgroundColor: '#E5E7EB',
       ...styleProp,
     }}
-  />
+  >
+    <Skeleton width="40px" height="40px" borderRadius="50%" />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
+      <Skeleton width="200px" height="14px" />
+      <Skeleton width="120px" height="12px" />
+    </div>
+    <Skeleton width="80px" height="14px" />
+  </div>
 );
 
 // ─── SkeletonLoader ──────────────────────────────────────────────────────────
@@ -1894,25 +1914,20 @@ export const SkeletonCircle: React.FC<SkeletonCircleProps> = ({ size = '40px' })
 // ─── SkeletonTable ───────────────────────────────────────────────────────────
 
 interface SkeletonTableProps {
-  rows?: number;
-  columns?: number;
+  rowCount?: number;
 }
 
 const HEADER_WIDTHS = ['60%', '80%', '50%', '70%', '40%', '65%', '55%', '75%'];
 
-export const SkeletonTable: React.FC<SkeletonTableProps> = ({ rows = 5, columns = 4 }) => (
+export const SkeletonTable: React.FC<SkeletonTableProps> = ({ rowCount = 5 }) => (
   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
     <div style={{ display: 'flex', gap: '12px', paddingBottom: '8px' }}>
-      {Array.from({ length: columns }, (_, i) => (
-        <SkeletonLoader key={i} width={HEADER_WIDTHS[i % HEADER_WIDTHS.length]} height="16px" />
+      {Array.from({ length: 4 }, (_, i) => (
+        <Skeleton key={i} width={HEADER_WIDTHS[i % HEADER_WIDTHS.length]} height="16px" />
       ))}
     </div>
-    {Array.from({ length: rows }, (_, r) => (
-      <div key={r} style={{ display: 'flex', gap: '12px' }}>
-        {Array.from({ length: columns }, (_, c) => (
-          <SkeletonLoader key={c} width="100%" height="48px" />
-        ))}
-      </div>
+    {Array.from({ length: rowCount }, (_, r) => (
+      <SkeletonRow key={r} />
     ))}
   </div>
 );
