@@ -123,7 +123,7 @@ export const ChangeOrders: React.FC = () => {
     const cors = allCOs.filter(co => co.type === 'cor');
     const cos = allCOs.filter(co => co.type === 'co');
     const approvedTotal = allCOs.filter(co => co.status === 'approved').reduce((s, co) => s + (co.approved_cost || co.amount), 0);
-    const pendingTotal = allCOs.filter(co => co.status !== 'approved' && co.status !== 'rejected' && co.status !== 'void').reduce((s, co) => s + co.estimated_cost, 0);
+    const pendingTotal = allCOs.filter(co => co.status === 'pending').reduce((s, co) => s + co.estimated_cost, 0);
     const rejectedTotal = allCOs.filter(co => co.status === 'rejected').reduce((s, co) => s + co.estimated_cost, 0);
     const scheduleImpact = allCOs.filter(co => co.status === 'approved').reduce((s, co) => s + co.schedule_impact_days, 0);
     const approvedCOsTotal = cos.filter(co => co.status === 'approved').reduce((s, co) => s + (co.approved_cost || co.amount), 0);
@@ -577,14 +577,13 @@ export const ChangeOrders: React.FC = () => {
       )}
 
       {/* Summary Metrics */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: spacing['3'], marginBottom: spacing['4'] }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['3'], marginBottom: spacing['4'] }}>
         <MetricBox label="Total COs" value={String(allCOs.length)} />
-        <MetricBox label="Approved Total" value={fmt(metrics.approvedTotal)} colorOverride="success" />
-        <MetricBox label="Pending Total" value={fmt(metrics.pendingTotal)} colorOverride="warning" />
-        <MetricBox label="Rejected Total" value={fmt(metrics.rejectedTotal)} />
+        <MetricBox label="Approved Total" value={new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(metrics.approvedTotal)} colorOverride="success" />
+        <MetricBox label="Pending Total" value={new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(metrics.pendingTotal)} colorOverride="warning" />
         <MetricBox
           label="Net Contract Change"
-          value={originalContract > 0 ? `${metrics.approvedTotal >= 0 ? '+' : ''}${((metrics.approvedTotal / originalContract) * 100).toFixed(1)}%` : fmt(metrics.approvedTotal)}
+          value={originalContract > 0 ? `${metrics.approvedTotal >= 0 ? '+' : ''}${((metrics.approvedTotal / originalContract) * 100).toFixed(1)}%` : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(metrics.approvedTotal)}
           colorOverride={metrics.approvedTotal >= 0 ? 'warning' : 'success'}
         />
       </div>
@@ -613,7 +612,7 @@ export const ChangeOrders: React.FC = () => {
         <div style={{ display: 'flex', gap: spacing['1'] }}>
           {(['all', 'pco', 'cor', 'co'] as const).map(t => {
             const active = filterType === t;
-            const labelMap = { all: 'All', pco: 'Potential (PCO)', cor: 'Request (COR)', co: 'Approved (CO)' } as const;
+            const labelMap = { all: 'All', pco: 'PCO', cor: 'COR', co: 'CO' } as const;
             const label = labelMap[t];
             return (
               <button key={t} onClick={() => setFilterType(t)}
@@ -762,7 +761,7 @@ export const ChangeOrders: React.FC = () => {
                       onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.backgroundColor = 'transparent'; }}
                     >
                       <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>{co.coNumber}</span>
-                      <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: co.type === 'pco' ? colors.statusPending : co.type === 'cor' ? colors.statusInfo : colors.statusActive, backgroundColor: co.type === 'pco' ? colors.statusPendingSubtle : co.type === 'cor' ? colors.statusInfoSubtle : colors.statusActiveSubtle, padding: `2px ${spacing['2']}`, borderRadius: borderRadius.full, display: 'inline-block' }}>{typeConfig.shortLabel}</span>
+                      <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: co.type === 'pco' ? '#6B7280' : co.type === 'cor' ? '#F5A623' : '#4EC896', backgroundColor: co.type === 'pco' ? '#F3F4F6' : co.type === 'cor' ? '#FFF8EC' : '#F0FBF6', padding: `2px ${spacing['2']}`, borderRadius: borderRadius.full, display: 'inline-block' }}>{typeConfig.shortLabel}</span>
                       <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{co.title}</span>
                       <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: costColor }}>{costLabel}</span>
                       <span style={{ fontSize: typography.fontSize.sm, color: reasonConfig ? reasonConfig.color : colors.textTertiary, display: 'flex', alignItems: 'center', gap: 4 }}>
