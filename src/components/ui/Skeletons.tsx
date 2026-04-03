@@ -13,12 +13,12 @@ const pulseStyle: React.CSSProperties = {
 // ── MetricCardSkeleton ─────────────────────────────────────────────────────
 // 5 side-by-side cards matching Dashboard MetricCard shape (120px tall).
 
-export const MetricCardSkeleton: React.FC = () => (
+export const MetricCardSkeleton: React.FC<{ count?: number }> = ({ count = 5 }) => (
   <div
     aria-hidden="true"
-    style={{ display: 'flex', gap: spacing['4'], marginBottom: spacing['5'] }}
+    style={{ display: 'flex', gap: spacing['4'], marginBottom: spacing['5'], flexWrap: 'wrap' }}
   >
-    {[0, 1, 2, 3, 4].map((i) => (
+    {Array.from({ length: count }).map((_, i) => (
       <div
         key={i}
         style={{

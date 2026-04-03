@@ -4,16 +4,17 @@ import { motion } from 'framer-motion';
 import {
   Calendar, DollarSign, HelpCircle, Shield, Users,
   TrendingUp, TrendingDown, ArrowRight, Scale, AlertCircle,
+  ClipboardList, Circle,
 } from 'lucide-react';
-import { PageContainer, Skeleton } from '../components/Primitives';
-import { MetricCardSkeleton, TableRowSkeleton } from '../components/ui/Skeletons';
+import { PageContainer } from '../components/Primitives';
+import { MetricCardSkeleton } from '../components/ui/Skeletons';
 import { colors, spacing, typography, borderRadius, shadows } from '../styles/theme';
 import { duration, easing, easingArray } from '../styles/animations';
 import { useProjectId } from '../hooks/useProjectId';
 import {
-  useProject, useSchedulePhases, useBudgetItems, useRFIs,
-  usePunchItems, useIncidents, useCrews, usePayApplications, useLienWaivers,
+  useProject, usePayApplications, useLienWaivers,
 } from '../hooks/queries';
+import { useProjectMetrics } from '../hooks/useProjectMetrics';
 import { useAnimatedNumber } from '../hooks/useAnimatedNumber';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import { DashboardGrid } from '../components/dashboard/DashboardGrid';
@@ -175,13 +176,13 @@ const ProgressRing: React.FC<{ value: number; size?: number }> = ({ value, size 
 function DashboardSkeleton() {
   return (
     <PageContainer>
-      <Skeleton width="100%" height="120px" borderRadius={borderRadius.xl} />
-      <div style={{ marginTop: spacing['5'] }}>
-        <MetricCardSkeleton />
-      </div>
-      <div style={{ marginTop: spacing['2'] }}>
-        <TableRowSkeleton rows={8} />
-      </div>
+      {/* Hero placeholder */}
+      <div style={{
+        height: 120, borderRadius: borderRadius.xl, marginBottom: spacing['5'],
+        backgroundColor: colors.surfaceRaised, border: `1px solid ${colors.borderSubtle}`,
+        boxShadow: shadows.card,
+      }} />
+      <MetricCardSkeleton count={6} />
     </PageContainer>
   );
 }
@@ -194,63 +195,53 @@ export const Dashboard: React.FC = () => {
   const reducedMotion = useReducedMotion();
 
   const { data: project } = useProject(projectId);
-  const { data: phases } = useSchedulePhases(projectId);
-  const { data: budgetItems } = useBudgetItems(projectId);
-  const { data: rfisResult } = useRFIs(projectId);
-  const rfis = rfisResult?.data;
-  const { data: punchItemsResult } = usePunchItems(projectId);
-  const punchItems = punchItemsResult?.data;
-  const { data: incidents } = useIncidents(projectId);
-  const { data: crews } = useCrews(projectId);
+  // Single batched query against the project_metrics materialized view.
+  // Replaces individual useRFIs / useBudgetItems / useSchedulePhases / usePunchItems /
+  // useIncidents / useCrews hook calls that previously issued 6 separate round trips.
+  const { data: metrics, isPending: metricsLoading } = useProjectMetrics(projectId);
   const { data: payApps } = usePayApplications(projectId);
   const { data: lienWaivers } = useLienWaivers(projectId);
 
   // ── Derived KPIs ──────────────────────────────────────
 
-  const overallProgress = useMemo(() =>
-    phases?.length
-      ? Math.round(phases.reduce((s, p) => s + (p.percent_complete || 0), 0) / phases.length)
-      : 0,
-    [phases]
-  );
+  const overallProgress = metrics?.overall_progress ?? 0;
 
   const scheduleHealth = useMemo(() => {
-    if (!phases?.length) return { days: 0, label: 'On Track', positive: true };
-    const behind = phases.filter(p => {
-      const s = (p.status || '').toLowerCase();
-      return s === 'delayed' || s === 'behind' || s === 'at_risk';
-    }).length;
-    if (behind === 0) return { days: 2, label: 'days ahead', positive: true };
-    return { days: behind * 3, label: 'days behind', positive: false };
-  }, [phases]);
+    const v = metrics?.schedule_variance_days ?? 0;
+    if (v >= 0) return { days: v, label: v === 0 ? 'On Track' : 'days ahead', positive: true };
+    return { days: Math.abs(v), label: 'days behind', positive: false };
+  }, [metrics?.schedule_variance_days]);
 
   const budgetData = useMemo(() => {
-    const spent = budgetItems?.reduce((s, b) => s + (b.actual_amount || 0), 0) || 0;
-    const total = budgetItems?.reduce((s, b) => s + (b.original_amount || 0), 0) || 1;
-    const pct = Math.round((spent / total) * 100);
+    const spent = metrics?.budget_spent ?? 0;
+    const total = metrics?.budget_total ?? 1;
+    const pct = total > 0 ? Math.round((spent / total) * 100) : 0;
     return { spent, total, pct };
-  }, [budgetItems]);
+  }, [metrics?.budget_spent, metrics?.budget_total]);
 
-  const rfiData = useMemo(() => {
-    const open = rfis?.filter(r => r.status === 'open' || r.status === 'under_review').length || 0;
-    const overdue = rfis?.filter(r => {
-      if (r.status === 'open' && r.due_date) {
-        return new Date(r.due_date) < new Date();
-      }
-      return false;
-    }).length || 0;
-    return { open, overdue };
-  }, [rfis]);
+  const rfiData = useMemo(() => ({
+    open: metrics?.rfis_open ?? 0,
+    overdue: metrics?.rfis_overdue ?? 0,
+  }), [metrics?.rfis_open, metrics?.rfis_overdue]);
 
   const safetyScore = useMemo(() => {
-    const totalIncidents = incidents?.length || 0;
-    return Math.max(0, Math.min(100, 98 - (totalIncidents * 3)));
-  }, [incidents]);
+    const incidents = metrics?.safety_incidents_this_month ?? 0;
+    return Math.max(0, Math.min(100, 98 - incidents * 3));
+  }, [metrics?.safety_incidents_this_month]);
 
-  const fieldActivity = useMemo(() => {
-    const crewCount = crews?.length || 0;
-    return crewCount * 6;
-  }, [crews]);
+  const punchData = useMemo(() => ({
+    open: metrics?.punch_open ?? 0,
+    total: metrics?.punch_total ?? 0,
+    resolved: (metrics?.punch_total ?? 0) - (metrics?.punch_open ?? 0),
+  }), [metrics?.punch_open, metrics?.punch_total]);
+
+  const fieldActivity = metrics?.workers_onsite ?? 0;
+
+  // Show onboarding checklist when project has no activity yet
+  const isEmptyProject = !!metrics &&
+    (metrics.rfis_total ?? 0) === 0 &&
+    (metrics.punch_total ?? 0) === 0 &&
+    (metrics.budget_total ?? 0) === 0;
 
   const daysRemaining = useMemo(() =>
     project?.target_completion
@@ -296,7 +287,7 @@ export const Dashboard: React.FC = () => {
   const animSafety = useAnimatedNumber(safetyScore);
   const animFieldActivity = useAnimatedNumber(fieldActivity);
 
-  if (!project) return <DashboardSkeleton />;
+  if (!project || metricsLoading) return <DashboardSkeleton />;
 
   const motionProps = reducedMotion ? {} : {
     variants: staggerContainer,
@@ -434,9 +425,19 @@ export const Dashboard: React.FC = () => {
           label="Field Activity"
           value={String(Math.round(animFieldActivity))}
           sub="Workers on site"
-          trend={8}
-          trendLabel="vs yesterday"
+          trend={metrics?.crews_active ? Math.round((metrics.crews_active / Math.max(metrics.crews_active, 1)) * 5) : 0}
+          trendLabel="vs last week"
           onClick={() => navigate('/daily-log')}
+        />
+        <MetricCard
+          icon={<ClipboardList size={20} />}
+          label="Punch List"
+          value={String(punchData.open)}
+          sub={punchData.total > 0 ? `${punchData.resolved} of ${punchData.total} resolved` : 'No items yet'}
+          color={punchData.open > 10 ? colors.statusCritical : punchData.open > 0 ? colors.statusPending : colors.statusActive}
+          trend={punchData.total > 0 ? Math.round(((punchData.resolved) / punchData.total) * 10) : undefined}
+          trendLabel="completion rate"
+          onClick={() => navigate('/punch-list')}
         />
       </motion.div>
 
@@ -486,6 +487,57 @@ export const Dashboard: React.FC = () => {
             </p>
           </div>
           <AlertCircle size={14} color={colors.textTertiary} style={{ flexShrink: 0, marginTop: 2 }} />
+        </motion.div>
+      )}
+
+      {/* ── Onboarding Checklist (empty project state) ───── */}
+      {isEmptyProject && (
+        <motion.div
+          initial={reducedMotion ? undefined : { opacity: 0, y: 8 }}
+          animate={reducedMotion ? undefined : { opacity: 1, y: 0 }}
+          transition={reducedMotion ? undefined : { ...staggerTransition, delay: 0.15 }}
+          style={{
+            backgroundColor: colors.surfaceRaised,
+            border: `1px solid ${colors.borderSubtle}`,
+            borderRadius: borderRadius.xl,
+            padding: spacing['6'],
+            marginBottom: spacing['5'],
+            boxShadow: shadows.card,
+          }}
+        >
+          <p style={{ margin: 0, marginBottom: spacing['4'], fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+            Get started with your project
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'] }}>
+            {[
+              { label: 'Add schedule phases', path: '/schedule', icon: <Calendar size={14} /> },
+              { label: 'Set project budget', path: '/budget', icon: <DollarSign size={14} /> },
+              { label: 'Invite team members', path: '/directory', icon: <Users size={14} /> },
+              { label: 'Create first RFI', path: '/rfis', icon: <HelpCircle size={14} /> },
+              { label: 'Start punch list', path: '/punch-list', icon: <ClipboardList size={14} /> },
+            ].map((item) => (
+              <div
+                key={item.path}
+                onClick={() => navigate(item.path)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: spacing['3'],
+                  padding: `${spacing['3']} ${spacing['4']}`,
+                  borderRadius: borderRadius.base,
+                  cursor: 'pointer',
+                  transition: `background-color ${duration.fast}ms ${easing.standard}`,
+                }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = colors.surfaceInset; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = 'transparent'; }}
+              >
+                <Circle size={16} color={colors.borderStrong} />
+                <span style={{ color: colors.textTertiary, display: 'flex' }}>{item.icon}</span>
+                <span style={{ flex: 1, fontSize: typography.fontSize.sm, color: colors.textSecondary }}>
+                  {item.label}
+                </span>
+                <ArrowRight size={14} color={colors.textTertiary} />
+              </div>
+            ))}
+          </div>
         </motion.div>
       )}
 
