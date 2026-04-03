@@ -421,16 +421,53 @@ export const Schedule: React.FC = () => {
   if (!loading && !error && schedulePhases.length === 0) {
     return (
       <PageContainer title="Schedule" subtitle="">
-        <Card style={{ padding: spacing.lg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: spacing.lg, minHeight: '320px', textAlign: 'center' }}>
-          <Calendar size={40} color={colors.textTertiary} />
-          <span style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, maxWidth: '420px', lineHeight: typography.lineHeight.normal }}>
-            Build your schedule to track every phase from mobilization to closeout
-          </span>
-          <div style={{ display: 'flex', gap: spacing.md }}>
-            <Btn variant="primary">Create First Phase</Btn>
-            <Btn variant="secondary">Import from P6 / MS Project</Btn>
+        <ScheduleImportModal
+          open={showImportModal}
+          onClose={() => setShowImportModal(false)}
+          onImportComplete={() => setShowImportModal(false)}
+        />
+        <div style={{ maxWidth: '480px', margin: '80px auto', textAlign: 'center' }}>
+          <Calendar size={64} color={colors.textTertiary} style={{ marginBottom: '24px' }} />
+          <div style={{ fontSize: '20px', fontWeight: 600, color: colors.textPrimary, marginBottom: '12px' }}>
+            Build Your Project Schedule
           </div>
-        </Card>
+          <div style={{ fontSize: '14px', color: colors.textTertiary, marginBottom: '32px', lineHeight: typography.lineHeight.normal }}>
+            Track every phase from mobilization to closeout. Import your existing P6 or MS Project schedule, or build from scratch.
+          </div>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+            <button
+              onClick={() => setShowImportModal(true)}
+              style={{
+                background: colors.primaryOrange,
+                color: '#FFFFFF',
+                border: 'none',
+                borderRadius: borderRadius.md,
+                padding: `${spacing.sm} ${spacing.lg}`,
+                fontSize: typography.fontSize.body,
+                fontWeight: typography.fontWeight.medium,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+              }}
+            >
+              Import Schedule
+            </button>
+            <button
+              style={{
+                background: '#FFFFFF',
+                color: colors.textPrimary,
+                border: `1px solid ${colors.borderDefault}`,
+                borderRadius: borderRadius.md,
+                padding: `${spacing.sm} ${spacing.lg}`,
+                fontSize: typography.fontSize.body,
+                fontWeight: typography.fontWeight.medium,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+              }}
+            >
+              Create First Phase
+            </button>
+          </div>
+        </div>
       </PageContainer>
     );
   }
