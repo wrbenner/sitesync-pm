@@ -19,6 +19,14 @@ type QueryResult<T> = PromiseLike<{ data: T | null; error: { message: string; co
 // Tables that do not have a project_id column and must NOT receive the auto-scoped .eq filter.
 const UNSCOPED_TABLES = new Set(['organizations', 'organization_members', 'auth', 'storage'])
 
+// Tables that have a deleted_at column and should receive the .is('deleted_at', null) soft-delete filter.
+// Tables without this column (e.g. audit_trail, activity_feed, notification_queue) must NOT receive it.
+const SOFT_DELETE_TABLES = new Set([
+  'rfis', 'submittals', 'change_orders', 'daily_logs', 'punch_items', 'tasks',
+  'drawings', 'budget_items', 'meetings', 'crews', 'files', 'schedule_phases',
+  'field_captures', 'directory_contacts',
+])
+
 const SCOPED_CLIENT_CACHE_MAX = 5
 const scopedClientCache = new Map<string, DbClient>()
 
@@ -62,7 +70,7 @@ export function createScopedClient(client: DbClient, projectId: string): DbClien
               if (!skipScoping && typeof qbProp === 'string' && TERMINAL_OPS.has(qbProp)) {
                 return (...args: unknown[]) => {
                   const result = (qbTarget[qbProp as keyof typeof qbTarget] as TerminalMethod).call(qbTarget, ...args).eq('project_id', projectId)
-                  if (qbProp === 'select' || qbProp === 'update' || qbProp === 'delete') {
+                  if ((qbProp === 'select' || qbProp === 'update' || qbProp === 'delete') && SOFT_DELETE_TABLES.has(table)) {
                     return (result as any).is('deleted_at', null)
                   }
                   return result
