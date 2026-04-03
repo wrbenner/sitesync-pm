@@ -113,8 +113,6 @@ export const CopilotPanel: React.FC = () => {
   const { activeProjectId } = useProjectContext()
   const { addToast } = useToast()
   const { addCoordinatorMessage } = useAgentOrchestrator()
-  // Best-effort persistence ref — does not drive re-renders
-  const conversationIdRef = useRef<string | null>(null)
 
   const {
     messages,
@@ -130,12 +128,20 @@ export const CopilotPanel: React.FC = () => {
     approveAllPending,
     rejectAllPending,
     clearMessages,
+    resetConversation,
     error,
+    conversationId,
   } = useMultiAgentChat(currentPageContext)
 
   const [exportOpen, setExportOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768)
-  const [conversationId, setConversationId] = useState<string | null>(null)
+  const [recentConversations, setRecentConversations] = useState<Array<{
+    id: string
+    conversation_topic: string | null
+    started_at: string | null
+    message_count: number | null
+  }>>([])
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
   const hasMessages = messages.length > 0
@@ -162,6 +168,32 @@ export const CopilotPanel: React.FC = () => {
     }
   }, [error])
 
+  // Load recent conversations whenever the panel opens
+  useEffect(() => {
+    if (!isOpen) return
+    const loadHistory = async () => {
+      try {
+        const { data: userData } = await supabase.auth.getUser()
+        const userId = userData.user?.id
+        if (!userId || !activeProjectId) return
+        const { data, error } = await supabase
+          .from('ai_conversations')
+          .select('id, conversation_topic, started_at, message_count')
+          .eq('project_id', activeProjectId)
+          .eq('user_id', userId)
+          .order('started_at', { ascending: false })
+          .limit(10)
+        if (error) throw error
+        setRecentConversations((data ?? []) as typeof recentConversations)
+      } catch {
+        toast.error('Could not load conversation history')
+      }
+    }
+    loadHistory()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, activeProjectId])
+
+  // Real-time subscription for collaborative messages from other users
   useEffect(() => {
     if (!conversationId) return
 
@@ -194,61 +226,6 @@ export const CopilotPanel: React.FC = () => {
     }
   }, [conversationId, addCoordinatorMessage])
 
-  // Best-effort persistence — errors are logged but never block the UI
-  useEffect(() => {
-    if (messages.length === 0) return
-
-    const persistConversation = async () => {
-      try {
-        // Step (a): ensure a conversation row exists
-        if (!conversationIdRef.current) {
-          const { data: userData } = await supabase.auth.getUser()
-          const userId = userData.user?.id
-          if (!userId || !activeProjectId) return
-
-          const { data, error } = await supabase
-            .from('ai_conversations')
-            .insert({
-              project_id: activeProjectId,
-              user_id: userId,
-              conversation_topic: 'general',
-            })
-            .select('id')
-            .single()
-
-          if (error || !data) {
-            console.error('[CopilotPanel] Failed to create ai_conversations row:', error)
-            return
-          }
-
-          conversationIdRef.current = data.id
-          // Keep the existing useState in sync so the real-time subscription re-fires
-          setConversationId(data.id)
-        }
-
-        // Step (c): persist only the last message
-        const lastMessage = messages[messages.length - 1]
-        const { error: msgError } = await supabase
-          .from('ai_messages')
-          .insert({
-            conversation_id: conversationIdRef.current,
-            role: lastMessage.role,
-            content: lastMessage.content,
-            metadata: { timestamp: new Date().toISOString() },
-          })
-
-        if (msgError) {
-          console.error('[CopilotPanel] Failed to insert ai_messages row:', msgError)
-        }
-      } catch (err) {
-        console.error('[CopilotPanel] Unexpected persistence error:', err)
-      }
-    }
-
-    persistConversation()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages])
-
   const handleSendMessage = useCallback(
     (text: string) => {
       setInput(text)
@@ -256,6 +233,23 @@ export const CopilotPanel: React.FC = () => {
     },
     [setInput, sendMessage],
   )
+
+  const handleLoadConversation = useCallback(
+    async (id: string) => {
+      setActiveConversationId(id)
+      try {
+        await resetConversation(id)
+      } catch {
+        toast.error('Could not load conversation')
+      }
+    },
+    [resetConversation],
+  )
+
+  const handleNewConversation = useCallback(() => {
+    resetConversation()
+    setActiveConversationId(null)
+  }, [resetConversation])
 
   const contextPrompts = CONTEXT_PROMPTS[currentPageContext] ?? CONTEXT_PROMPTS.default
 
@@ -474,7 +468,7 @@ export const CopilotPanel: React.FC = () => {
 
           {/* New conversation button */}
           <button
-            onClick={clearMessages}
+            onClick={handleNewConversation}
             style={{
               padding: `${spacing['1']} ${spacing['2']}`,
               backgroundColor: 'transparent',
@@ -533,6 +527,68 @@ export const CopilotPanel: React.FC = () => {
           {/* Empty state with context-aware prompts */}
           {!hasMessages && (
             <div style={{ display: 'flex', flexDirection: 'column', flexWrap: 'wrap', gap: spacing['3'] }}>
+
+              {/* Recent conversations list */}
+              {recentConversations.length > 0 && (
+                <div>
+                  <p
+                    style={{
+                      fontSize: typography.fontSize.caption,
+                      fontWeight: typography.fontWeight.semibold,
+                      color: colors.textTertiary,
+                      textTransform: 'uppercase',
+                      letterSpacing: typography.letterSpacing.wider,
+                      margin: 0,
+                      marginBottom: spacing['2'],
+                      paddingTop: spacing['2'],
+                    }}
+                  >
+                    Recent Conversations
+                  </p>
+                  <div style={{ overflowY: 'auto', maxHeight: '220px', display: 'flex', flexDirection: 'column', gap: spacing['1'] }}>
+                    {recentConversations.map((convo) => (
+                      <button
+                        key={convo.id}
+                        onClick={() => handleLoadConversation(convo.id)}
+                        style={{
+                          width: '100%',
+                          textAlign: 'left',
+                          padding: `${spacing['2']} ${spacing['3']}`,
+                          backgroundColor: activeConversationId === convo.id ? colors.surfaceHover : colors.surfacePage,
+                          border: `1px solid ${activeConversationId === convo.id ? colors.borderFocus : colors.borderSubtle}`,
+                          borderRadius: borderRadius.base,
+                          cursor: 'pointer',
+                          fontFamily: typography.fontFamily,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: spacing['2'],
+                        }}
+                        onMouseEnter={(e) => {
+                          ;(e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.surfaceHover
+                          ;(e.currentTarget as HTMLButtonElement).style.borderColor = colors.borderFocus
+                        }}
+                        onMouseLeave={(e) => {
+                          ;(e.currentTarget as HTMLButtonElement).style.backgroundColor =
+                            activeConversationId === convo.id ? colors.surfaceHover : colors.surfacePage
+                          ;(e.currentTarget as HTMLButtonElement).style.borderColor =
+                            activeConversationId === convo.id ? colors.borderFocus : colors.borderSubtle
+                        }}
+                      >
+                        <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                          {convo.conversation_topic ?? 'Conversation'}
+                        </p>
+                        {convo.message_count != null && convo.message_count > 0 && (
+                          <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, flexShrink: 0 }}>
+                            {convo.message_count} msg{convo.message_count !== 1 ? 's' : ''}
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div style={{ textAlign: 'center', paddingTop: spacing['4'], paddingBottom: spacing['2'] }}>
                 <p
                   style={{
