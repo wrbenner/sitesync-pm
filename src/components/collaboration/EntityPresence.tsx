@@ -2,7 +2,7 @@
 // Shows who is viewing/editing a specific entity.
 // Warning banner when another user is actively editing.
 
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { usePresenceStore } from '../../stores/presenceStore'
 import { colors, spacing, typography, borderRadius, transitions, shadows } from '../../styles/theme'
 
@@ -21,6 +21,13 @@ export const PresenceDots: React.FC<PresenceDotsProps> = ({ entityId, maxVisible
   const isInitialized = usePresenceStore((s) => s.isInitialized)
   const [overflowOpen, setOverflowOpen] = useState(false)
   const overflowContainerRef = useRef<HTMLDivElement>(null)
+  const firstDropdownItemRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (overflowOpen && firstDropdownItemRef.current) {
+      firstDropdownItemRef.current.focus()
+    }
+  }, [overflowOpen])
 
   if (!isInitialized || viewers.length === 0) {
     return null
@@ -46,9 +53,10 @@ export const PresenceDots: React.FC<PresenceDotsProps> = ({ entityId, maxVisible
 
   return (
     <div
+      role="group"
+      aria-label="Active viewers on this item"
       style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}
       title={viewers.map((u) => u.name).join(', ')}
-      aria-label={`Being viewed by ${viewers.map((u) => u.name).join(', ')}`}
       aria-live="polite"
     >
       {visible.map((user) => (
@@ -93,11 +101,17 @@ export const PresenceDots: React.FC<PresenceDotsProps> = ({ entityId, maxVisible
           ref={overflowContainerRef}
           style={{ position: 'relative' }}
           onBlur={handleOverflowBlur}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              e.stopPropagation()
+              setOverflowOpen(false)
+            }
+          }}
         >
           <button
-            aria-label={`${overflow} more people viewing`}
+            aria-label={`${overflow} more viewers`}
             aria-expanded={overflowOpen}
-            aria-haspopup="true"
+            aria-haspopup="listbox"
             onClick={() => setOverflowOpen((o) => !o)}
             onKeyDown={handleOverflowKeyDown}
             style={{
@@ -130,7 +144,8 @@ export const PresenceDots: React.FC<PresenceDotsProps> = ({ entityId, maxVisible
           </button>
           {overflowOpen && (
             <div
-              role="list"
+              role="listbox"
+              aria-label="Additional viewers"
               style={{
                 position: 'absolute',
                 top: '100%',
@@ -144,10 +159,13 @@ export const PresenceDots: React.FC<PresenceDotsProps> = ({ entityId, maxVisible
                 minWidth: 140,
               }}
             >
-              {overflowViewers.map((user) => (
+              {overflowViewers.map((user, idx) => (
                 <div
                   key={user.userId}
-                  role="listitem"
+                  role="option"
+                  aria-selected={false}
+                  tabIndex={idx === 0 ? 0 : -1}
+                  ref={idx === 0 ? firstDropdownItemRef : undefined}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
