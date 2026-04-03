@@ -21,14 +21,15 @@ import { Treemap } from '../components/budget/Treemap';
 import { SCurve } from '../components/budget/SCurve';
 import { EarnedValueDashboard } from '../components/budget/EarnedValueDashboard';
 import { WaterfallChart } from '../components/budget/WaterfallChart';
-import { Download, AlertTriangle, ChevronRight, ArrowRight, DollarSign, Upload, Sparkles, X, RefreshCw } from 'lucide-react';
+import { Download, AlertTriangle, ChevronRight, ArrowRight, DollarSign, Upload, Sparkles, X, RefreshCw, Pencil } from 'lucide-react';
 import { computeDivisionFinancials, computeProjectFinancials, detectBudgetAnomalies } from '../lib/financialEngine';
 import { BudgetUpload } from '../components/budget/BudgetUpload';
 import EmptyState from '../components/ui/EmptyState';
 import { toast } from 'sonner';
 import { useProjectId } from '../hooks/useProjectId';
-import { useUpdateChangeOrder } from '../hooks/mutations';
+import { useUpdateChangeOrder, useUpdateBudgetItem } from '../hooks/mutations';
 import { PermissionGate } from '../components/auth/PermissionGate';
+import { usePermissions } from '../hooks/usePermissions';
 import { getCOTypeConfig, getCOStatusConfig } from '../machines/changeOrderMachine';
 import type { ChangeOrderType, ChangeOrderState } from '../machines/changeOrderMachine';
 import { useNavigate } from 'react-router-dom'
@@ -268,6 +269,11 @@ export const Budget: React.FC = () => {
   const [selectedDivision, setSelectedDivision] = useState<MappedDivision | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'earned-value'>('overview');
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [hoveredDivId, setHoveredDivId] = useState<string | null>(null);
+  const [editingCell, setEditingCell] = useState<{ divId: string; field: 'spent' | 'progress'; value: string } | null>(null);
+  const { hasPermission } = usePermissions();
+  const canEditBudget = hasPermission('budget.edit');
+  const updateBudgetItem = useUpdateBudgetItem();
 
   const divisionRows = costData?.divisions ?? [];
   const divListRef = useRef<HTMLDivElement>(null);
@@ -354,6 +360,19 @@ export const Budget: React.FC = () => {
   // Fix 5: Contingency
   const consumed = approvedTotal;
   const contingencyRemaining = useMemo(() => 3800000 - consumed, [consumed]);
+
+  const handleSaveEdit = () => {
+    if (!editingCell || !projectId) { setEditingCell(null); return; }
+    const division = costData.divisions.find(d => d.id === editingCell.divId);
+    if (!division) { setEditingCell(null); return; }
+    const numVal = parseFloat(editingCell.value);
+    if (isNaN(numVal)) { setEditingCell(null); return; }
+    const updates = editingCell.field === 'spent'
+      ? { actual_amount: numVal }
+      : { percent_complete: Math.max(0, Math.min(100, numVal)) };
+    updateBudgetItem.mutate({ id: division.id, projectId, updates });
+    setEditingCell(null);
+  };
 
   const pillBase: React.CSSProperties = {
     padding: `${spacing['1']} ${spacing['3']}`,
@@ -648,7 +667,13 @@ export const Budget: React.FC = () => {
           {/* Fix 1: Division Health */}
           <div style={{ marginTop: spacing['4'] }}>
             <SectionHeader title="Division Health" action={<span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>J/K to navigate, Enter to open</span>} />
-            <Card padding={spacing['4']}>
+            <Card padding="0">
+              {/* Table header */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(150px, 2fr) 95px 140px 95px 115px 105px 24px', padding: `${spacing['2']} ${spacing['4']}`, borderBottom: `1px solid ${colors.borderSubtle}`, backgroundColor: colors.surfaceInset }}>
+                {['Division', 'Budget', 'Spent to Date', 'Committed', 'Remaining', '% Complete', ''].map((h) => (
+                  <span key={h} style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: colors.textTertiary }}>{h}</span>
+                ))}
+              </div>
               <div
                 ref={divListRef}
                 role="grid"
@@ -668,6 +693,10 @@ export const Budget: React.FC = () => {
                 const pct = Math.round((division.spent / division.budget) * 100);
                 const isAtRisk = pct >= 90;
                 const isFocused = divFocusedIndex === idx;
+                const isHovered = hoveredDivId === division.id;
+                const remaining = division.budget - division.spent - division.committed;
+                const isEditingSpent = editingCell?.divId === division.id && editingCell?.field === 'spent';
+                const isEditingProgress = editingCell?.divId === division.id && editingCell?.field === 'progress';
                 return (
                   <div
                     key={division.id}
@@ -677,37 +706,144 @@ export const Budget: React.FC = () => {
                     data-div-index={idx}
                     aria-selected={selectedDivision?.id === division.id}
                     onClick={() => setSelectedDivision(division)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); setSelectedDivision(division); } }}
-                    onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = isAtRisk ? colors.statusCriticalSubtle : colors.surfaceHover; }}
-                    onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = isAtRisk ? colors.statusCriticalSubtle : 'transparent'; }}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && !isEditingSpent && !isEditingProgress) { e.preventDefault(); setSelectedDivision(division); } }}
+                    onMouseEnter={() => setHoveredDivId(division.id)}
+                    onMouseLeave={() => setHoveredDivId(null)}
                     style={{
-                      display: 'flex', alignItems: 'center', gap: spacing['3'],
-                      padding: `${spacing['3']} ${spacing['3']}`,
-                      borderLeft: isAtRisk ? `4px solid ${colors.chartRed}` : '4px solid transparent',
-                      backgroundColor: isAtRisk ? colors.statusCriticalSubtle : 'transparent',
-                      borderRadius: borderRadius.sm, marginBottom: spacing['2'],
+                      display: 'grid',
+                      gridTemplateColumns: 'minmax(150px, 2fr) 95px 140px 95px 115px 105px 24px',
+                      alignItems: 'center',
+                      padding: `${spacing['3']} ${spacing['4']}`,
+                      borderLeft: isAtRisk ? `3px solid ${colors.chartRed}` : '3px solid transparent',
+                      borderBottom: idx < costData.divisions.length - 1 ? `1px solid ${colors.borderSubtle}` : 'none',
+                      backgroundColor: isAtRisk ? colors.statusCriticalSubtle : isHovered ? colors.surfaceHover : 'transparent',
                       cursor: 'pointer',
                       outline: isFocused ? `2px solid ${colors.primaryOrange}` : 'none',
                       outlineOffset: '-2px',
                       transition: 'background-color 0.1s ease',
                     }}
                   >
-                    {isAtRisk && <AlertTriangle size={16} color={colors.chartRed} />}
-                    <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, flex: 1 }}>
-                      {division.name}
-                      {getAnnotationsForEntity('budget_division', division.id).map((ann) => (
-                        <AIAnnotationIndicator key={ann.id} annotation={ann} inline />
-                      ))}
-                    </span>
-                    <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: isAtRisk ? colors.chartRed : colors.textSecondary }}>
-                      {pct}%
-                    </span>
-                    <div style={{ width: '80px', flexShrink: 0 }}>
-                      <ProgressBar value={pct} height={4} color={isAtRisk ? colors.chartRed : pct >= 70 ? colors.statusPending : colors.statusInfo} />
+                    {/* Division name */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], minWidth: 0 }}>
+                      {isAtRisk && <AlertTriangle size={13} color={colors.chartRed} style={{ flexShrink: 0 }} />}
+                      <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {division.name}
+                        {getAnnotationsForEntity('budget_division', division.id).map((ann) => (
+                          <AIAnnotationIndicator key={ann.id} annotation={ann} inline />
+                        ))}
+                      </span>
                     </div>
-                    {isAtRisk && (
-                      <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.chartRed, backgroundColor: colors.statusCriticalSubtle, padding: '2px 8px', borderRadius: borderRadius.full, whiteSpace: 'nowrap' }}>At Risk</span>
-                    )}
+
+                    {/* Budget (static) */}
+                    <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{fmt(division.budget)}</span>
+
+                    {/* Spent to Date (editable) */}
+                    <div onClick={(e) => e.stopPropagation()} style={{ position: 'relative' }}>
+                      {isEditingSpent ? (
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={editingCell!.value}
+                          onChange={(e) => setEditingCell(prev => prev ? { ...prev, value: e.target.value } : null)}
+                          onBlur={handleSaveEdit}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') { e.preventDefault(); handleSaveEdit(); }
+                            if (e.key === 'Escape') { setEditingCell(null); }
+                          }}
+                          autoFocus
+                          style={{
+                            width: '110px',
+                            fontSize: typography.fontSize.sm,
+                            border: `1px solid ${colors.border}`,
+                            borderRadius: borderRadius.sm,
+                            padding: `2px ${spacing['2']}`,
+                            outline: 'none',
+                            boxShadow: `0 0 0 2px ${colors.primaryOrange}`,
+                            fontFamily: typography.fontFamily,
+                          }}
+                        />
+                      ) : (
+                        <div
+                          onClick={() => { if (canEditBudget) setEditingCell({ divId: division.id, field: 'spent', value: String(division.spent) }); }}
+                          style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], cursor: canEditBudget ? 'text' : 'default', padding: `2px ${spacing['1']}`, borderRadius: borderRadius.sm }}
+                        >
+                          <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: isAtRisk ? colors.chartRed : colors.textPrimary }}>{fmt(division.spent)}</span>
+                          {canEditBudget && isHovered && <Pencil size={11} color={colors.textTertiary} style={{ flexShrink: 0 }} />}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Committed (static) */}
+                    <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{fmt(division.committed)}</span>
+
+                    {/* Remaining (computed, static) */}
+                    <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: remaining < 0 ? colors.statusCritical : colors.statusActive }}>{fmt(remaining)}</span>
+
+                    {/* % Complete (editable) */}
+                    <div onClick={(e) => e.stopPropagation()} style={{ position: 'relative' }}>
+                      {isEditingProgress ? (
+                        <>
+                          <input
+                            type="number"
+                            step="1"
+                            min="0"
+                            max="100"
+                            value={editingCell!.value}
+                            onChange={(e) => setEditingCell(prev => prev ? { ...prev, value: e.target.value } : null)}
+                            onBlur={handleSaveEdit}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') { e.preventDefault(); handleSaveEdit(); }
+                              if (e.key === 'Escape') { setEditingCell(null); }
+                            }}
+                            autoFocus
+                            style={{
+                              width: '70px',
+                              fontSize: typography.fontSize.sm,
+                              border: `1px solid ${colors.border}`,
+                              borderRadius: borderRadius.sm,
+                              padding: `2px ${spacing['2']}`,
+                              outline: 'none',
+                              boxShadow: `0 0 0 2px ${colors.primaryOrange}`,
+                              fontFamily: typography.fontFamily,
+                            }}
+                          />
+                          {(() => {
+                            const newPct = parseFloat(editingCell!.value);
+                            if (isNaN(newPct) || newPct <= 0 || division.spent <= 0) return null;
+                            const oldProjected = division.progress > 0 ? division.spent / (division.progress / 100) : division.budget;
+                            const newProjected = division.spent / (newPct / 100);
+                            const delta = newProjected - oldProjected;
+                            const isOver = newProjected > division.budget;
+                            return (
+                              <div style={{
+                                position: 'absolute', top: '100%', left: 0, zIndex: 20,
+                                backgroundColor: colors.surfaceRaised,
+                                border: `1px solid ${colors.border}`,
+                                borderRadius: borderRadius.sm,
+                                padding: `${spacing['1']} ${spacing['2']}`,
+                                marginTop: spacing['1'],
+                                whiteSpace: 'nowrap',
+                                fontSize: typography.fontSize.xs,
+                                color: isOver ? colors.statusCritical : colors.statusActive,
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                              }}>
+                                {`Projected: ${fmt(oldProjected)} to ${fmt(newProjected)} (${delta >= 0 ? '+' : ''}${fmt(Math.abs(delta))})`}
+                              </div>
+                            );
+                          })()}
+                        </>
+                      ) : (
+                        <div
+                          onClick={() => { if (canEditBudget) setEditingCell({ divId: division.id, field: 'progress', value: String(division.progress) }); }}
+                          style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], cursor: canEditBudget ? 'text' : 'default', padding: `2px ${spacing['1']}`, borderRadius: borderRadius.sm }}
+                        >
+                          <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: isAtRisk ? colors.chartRed : colors.textSecondary }}>{division.progress}%</span>
+                          {canEditBudget && isHovered && <Pencil size={11} color={colors.textTertiary} style={{ flexShrink: 0 }} />}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Chevron */}
                     <ChevronRight size={14} color={colors.textTertiary} aria-hidden="true" />
                   </div>
                 );

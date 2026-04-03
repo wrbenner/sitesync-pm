@@ -1197,3 +1197,33 @@ export function useSyncIntegration() {
     },
   })
 }
+
+export function useUpdateBudgetItem() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      id,
+      projectId,
+      updates,
+    }: {
+      id: string
+      projectId: string
+      updates: { actual_amount?: number; percent_complete?: number }
+    }) => {
+      const { data, error } = await from('budget_items')
+        .update({ ...updates, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .eq('project_id', projectId)
+        .select()
+        .single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: (_data, { projectId }) => {
+      void qc.invalidateQueries({ queryKey: [`costData-${projectId}`] })
+    },
+    onError: () => {
+      toast.error('Failed to save budget update')
+    },
+  })
+}
