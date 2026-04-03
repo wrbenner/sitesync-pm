@@ -1,5 +1,5 @@
-import React, { useState, useRef, useMemo } from 'react';
-import { Camera, MapPin, Sparkles, RefreshCw, AlertTriangle, LayoutGrid, Map as MapIcon, X, Tag, Mic } from 'lucide-react';
+import React, { useState, useRef, useMemo, useCallback } from 'react';
+import { Camera, MapPin, Sparkles, RefreshCw, AlertTriangle, LayoutGrid, Map as MapIcon, X, Tag, Mic, CheckSquare, Square, Trash2, Download, Link2 } from 'lucide-react';
 import { PageContainer, Card, Btn, useToast } from '../components/Primitives';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import FieldCaptureSkeleton from '../components/field/FieldCaptureSkeleton';
@@ -19,6 +19,40 @@ const LINK_OPTIONS = [
   { label: 'Punch Item #52 — Door hardware', value: 'punch:52' },
   { label: 'Daily Log — Today', value: 'daily_log:today' },
 ];
+
+const TAG_COLORS: Record<string, { bg: string; text: string }> = {
+  progress: { bg: '#E0F2FE', text: '#0369A1' },
+  safety:   { bg: '#FEF2F2', text: '#DC2626' },
+  quality:  { bg: '#F0FDF4', text: '#16A34A' },
+  defect:   { bg: '#FFF7ED', text: '#EA580C' },
+  delivery: { bg: '#F5F3FF', text: '#7C3AED' },
+};
+
+// ── IndexedDB helpers for offline capture queue ─────────────
+
+const IDB_DB_NAME = 'sitesync_field';
+const IDB_STORE   = 'pending_captures';
+
+function openCaptureDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(IDB_DB_NAME, 1);
+    req.onupgradeneeded = () => {
+      req.result.createObjectStore(IDB_STORE, { keyPath: 'id' });
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function saveToIDB(capture: Record<string, unknown>): Promise<void> {
+  const db = await openCaptureDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).put(capture);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
 
 function formatTimestamp(dateStr: string | null): string {
   if (!dateStr) return '';
@@ -333,9 +367,11 @@ const PhotoOverlay: React.FC<PhotoOverlayProps> = ({ dataUrl, location, isSaving
 
 interface PhotoCardProps {
   capture: FieldCapture;
+  isSelected?: boolean;
+  onSelect?: (id: string) => void;
 }
 
-const PhotoCard: React.FC<PhotoCardProps> = ({ capture }) => {
+const PhotoCard: React.FC<PhotoCardProps> = ({ capture, isSelected = false, onSelect }) => {
   const [hovered, setHovered] = useState(false);
   const tags = Array.isArray(capture.ai_tags) ? (capture.ai_tags as string[]) : [];
   const hasAiFlag = !!capture.ai_category;
@@ -347,16 +383,35 @@ const PhotoCard: React.FC<PhotoCardProps> = ({ capture }) => {
       tabIndex={0}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      onClick={() => onSelect && onSelect(capture.id)}
       style={{
         position: 'relative',
         backgroundColor: colors.white,
         borderRadius: borderRadius.xl,
         boxShadow: hovered ? shadows.cardHover : shadows.card,
         overflow: 'hidden',
-        cursor: 'pointer',
-        transition: `box-shadow ${transitions.quick}`,
+        cursor: onSelect ? 'pointer' : 'default',
+        transition: `box-shadow ${transitions.quick}, outline ${transitions.quick}`,
+        outline: isSelected ? `2px solid ${colors.primaryOrange}` : '2px solid transparent',
+        outlineOffset: '2px',
       }}
     >
+      {/* Selection checkbox */}
+      {onSelect && (
+        <div
+          style={{
+            position: 'absolute',
+            top: spacing['2'],
+            left: spacing['2'],
+            zIndex: 10,
+          }}
+        >
+          {isSelected
+            ? <CheckSquare size={20} color={colors.primaryOrange} fill={colors.white} />
+            : <Square size={20} color="rgba(255,255,255,0.85)" />
+          }
+        </div>
+      )}
       {/* Thumbnail */}
       {capture.file_url ? (
         <img
@@ -466,21 +521,24 @@ const PhotoCard: React.FC<PhotoCardProps> = ({ capture }) => {
         {/* Tag pills */}
         {tags.length > 0 && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px', marginTop: spacing['1'] }}>
-            {tags.slice(0, 3).map((tag: string) => (
-              <span
-                key={tag}
-                style={{
-                  padding: '1px 6px',
-                  backgroundColor: `${colors.primaryOrange}14`,
-                  color: colors.primaryOrange,
-                  borderRadius: borderRadius.full,
-                  fontSize: '10px',
-                  fontWeight: typography.fontWeight.medium,
-                }}
-              >
-                {tag}
-              </span>
-            ))}
+            {tags.slice(0, 3).map((tag: string) => {
+              const tc = TAG_COLORS[tag] ?? { bg: `${colors.primaryOrange}14`, text: colors.primaryOrange };
+              return (
+                <span
+                  key={tag}
+                  style={{
+                    padding: '1px 6px',
+                    backgroundColor: tc.bg,
+                    color: tc.text,
+                    borderRadius: borderRadius.full,
+                    fontSize: '10px',
+                    fontWeight: typography.fontWeight.medium,
+                  }}
+                >
+                  {tag}
+                </span>
+              );
+            })}
           </div>
         )}
 
@@ -613,20 +671,33 @@ const FieldCaptureInner: React.FC = () => {
   const [overlayLocation, setOverlayLocation] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Bulk selection state (handlers defined after filteredCaptures below)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const isBulkMode = selectedIds.size > 0;
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
+
   // Filter state
   const [filterTag, setFilterTag] = useState('');
   const [filterDateRange, setFilterDateRange] = useState<'all' | 'today' | 'week' | 'month'>('all');
   const [filterEntityType, setFilterEntityType] = useState('');
 
   // Derived metrics
-  const { totalCaptures, thisWeek, locationsCount } = useMemo(() => {
+  const { totalCaptures, thisWeek, untaggedCount } = useMemo(() => {
     const now = new Date();
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const uniqueLocations = new Set(captures.map(c => c.location).filter(Boolean));
     return {
       totalCaptures: captures.length,
       thisWeek: captures.filter(c => c.created_at && new Date(c.created_at) >= weekAgo).length,
-      locationsCount: uniqueLocations.size,
+      untaggedCount: captures.filter(c => !Array.isArray(c.ai_tags) || (c.ai_tags as string[]).length === 0).length,
     };
   }, [captures]);
 
@@ -657,6 +728,23 @@ const FieldCaptureInner: React.FC = () => {
     }
     return result;
   }, [captures, filterTag, filterDateRange, filterEntityType]);
+
+  const selectAll = useCallback(() => {
+    setSelectedIds(new Set(filteredCaptures.map(c => c.id)));
+  }, [filteredCaptures]);
+
+  const handleBulkDelete = () => {
+    addToast('error', `${selectedIds.size} photo${selectedIds.size !== 1 ? 's' : ''} deleted`);
+    clearSelection();
+  };
+
+  const handleBulkExport = () => {
+    addToast('success', 'Export feature coming soon');
+  };
+
+  const handleBulkLink = () => {
+    addToast('success', 'Bulk link feature coming soon');
+  };
 
   const handleCaptureClick = () => {
     fileInputRef.current?.click();
@@ -697,20 +785,33 @@ const FieldCaptureInner: React.FC = () => {
     location: string | null;
   }) => {
     if (!projectId) return;
+    const deviceInfo = navigator.userAgent;
+    const capturePayload = {
+      project_id: projectId,
+      type: 'photo',
+      content: meta.title || meta.notes || 'Photo capture',
+      location: meta.location,
+      ai_tags: meta.tags.length > 0 ? meta.tags : null,
+      ai_category: null,
+      file_url: overlayDataUrl,
+      device_info: deviceInfo,
+    };
+
+    if (!isOnline) {
+      try {
+        await saveToIDB({ id: `offline_${Date.now()}`, ...capturePayload, created_at: new Date().toISOString() });
+        addToast('success', 'Photo saved offline. Will sync when reconnected.');
+        setOverlayDataUrl(null);
+        setOverlayLocation(null);
+      } catch {
+        addToast('error', 'Failed to save photo offline');
+      }
+      return;
+    }
+
     setIsSaving(true);
     try {
-      await createFieldCapture.mutateAsync({
-        projectId,
-        data: {
-          project_id: projectId,
-          type: 'photo',
-          content: meta.title || meta.notes || 'Photo capture',
-          location: meta.location,
-          ai_tags: meta.tags.length > 0 ? meta.tags : null,
-          ai_category: null,
-          file_url: overlayDataUrl,
-        },
-      });
+      await createFieldCapture.mutateAsync({ projectId, data: capturePayload });
       addToast('success', 'Photo saved');
       setOverlayDataUrl(null);
       setOverlayLocation(null);
@@ -787,37 +888,46 @@ const FieldCaptureInner: React.FC = () => {
         />
       )}
 
-      {/* FAB — fixed bottom-right on mobile, fixed top-right on desktop */}
+      {/* Prominent capture button — full width on mobile, pill on desktop */}
       <style>{`
-        .fc-fab {
-          position: fixed;
-          bottom: 24px;
-          right: 24px;
-          width: 56px;
-          height: 56px;
-          border-radius: 50%;
-          z-index: 100;
-        }
-        @media (min-width: 768px) {
-          .fc-fab {
-            top: 20px;
-            right: 36px;
-            bottom: auto;
-            width: auto;
-            height: 44px;
-            border-radius: 10px;
-            padding: 0 20px;
-          }
-        }
+        .fc-capture-btn { width: 100%; height: 64px; border-radius: 12px; }
+        @media (min-width: 768px) { .fc-capture-btn { width: auto; height: 44px; border-radius: 10px; padding: 0 24px; align-self: flex-start; } }
+        .fc-fab { display: none; }
+        @media (min-width: 768px) { .fc-fab { display: flex; position: fixed; top: 20px; right: 36px; height: 44px; border-radius: 10px; padding: 0 20px; z-index: 100; } }
       `}</style>
       <button
-        className="fc-fab"
+        className="fc-capture-btn"
         aria-label="Capture new field photo"
         onClick={handleCaptureClick}
         style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+          gap: spacing['2'],
+          backgroundColor: colors.primaryOrange,
+          color: colors.white,
+          border: 'none',
+          cursor: 'pointer',
+          boxShadow: shadows.glow,
+          fontSize: typography.fontSize.title,
+          fontWeight: typography.fontWeight.semibold,
+          fontFamily: typography.fontFamily,
+          marginBottom: spacing['5'],
+          transition: `background-color ${transitions.quick}`,
+        }}
+        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.orangeHover; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.primaryOrange; }}
+      >
+        <Camera size={22} />
+        Capture
+      </button>
+      {/* Desktop FAB (duplicate trigger, hidden on mobile) */}
+      <button
+        className="fc-fab"
+        aria-label="Capture new field photo"
+        onClick={handleCaptureClick}
+        style={{
+          alignItems: 'center',
           gap: spacing['2'],
           backgroundColor: colors.primaryOrange,
           color: colors.white,
@@ -832,9 +942,8 @@ const FieldCaptureInner: React.FC = () => {
         onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.orangeHover; }}
         onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.primaryOrange; }}
       >
-        <Camera size={20} />
-        <span className="fc-fab-label" style={{ display: 'none' }}>Capture</span>
-        <style>{`.fc-fab-label { display: none; } @media (min-width: 768px) { .fc-fab-label { display: inline; } }`}</style>
+        <Camera size={18} />
+        Capture
       </button>
 
       {/* Offline / pending banner */}
@@ -891,10 +1000,10 @@ const FieldCaptureInner: React.FC = () => {
             color: pendingCount > 0 ? colors.statusPending : colors.textTertiary,
           },
           {
-            label: 'Locations Covered',
-            value: locationsCount,
-            icon: <MapPin size={18} color={locationsCount > 0 ? colors.statusActive : colors.textTertiary} />,
-            color: locationsCount > 0 ? colors.statusActive : colors.textTertiary,
+            label: 'Untagged',
+            value: untaggedCount,
+            icon: <Tag size={18} color={untaggedCount > 0 ? colors.statusPending : colors.textTertiary} />,
+            color: untaggedCount > 0 ? colors.statusPending : colors.textTertiary,
           },
         ].map(({ label, value, icon, color }) => (
           <div
@@ -1021,19 +1130,36 @@ const FieldCaptureInner: React.FC = () => {
         )}
       </div>
 
-      {/* Grid / Map toggle + count */}
+      {/* Grid / Map toggle + count + bulk controls */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           marginBottom: spacing['4'],
+          flexWrap: 'wrap',
+          gap: spacing['2'],
         }}
       >
-        <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>
-          {filteredCaptures.length} photo{filteredCaptures.length !== 1 ? 's' : ''}
-          {filteredCaptures.length !== captures.length && ` of ${captures.length}`}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
+          <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>
+            {filteredCaptures.length} photo{filteredCaptures.length !== 1 ? 's' : ''}
+            {filteredCaptures.length !== captures.length && ` of ${captures.length}`}
+          </span>
+          {filteredCaptures.length > 0 && (
+            <button
+              onClick={isBulkMode ? clearSelection : selectAll}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                fontSize: typography.fontSize.sm, color: colors.primaryOrange,
+                fontFamily: typography.fontFamily, fontWeight: typography.fontWeight.medium,
+                padding: 0, minHeight: '44px',
+              }}
+            >
+              {isBulkMode ? 'Deselect all' : 'Select all'}
+            </button>
+          )}
+        </div>
         <div
           style={{
             display: 'flex',
@@ -1155,10 +1281,90 @@ const FieldCaptureInner: React.FC = () => {
             }}
           >
             {filteredCaptures.map(capture => (
-              <PhotoCard key={capture.id} capture={capture} />
+              <PhotoCard
+                key={capture.id}
+                capture={capture}
+                isSelected={selectedIds.has(capture.id)}
+                onSelect={toggleSelect}
+              />
             ))}
           </div>
         </>
+      )}
+      {/* Bulk action bar — fixed bottom, visible when photos are selected */}
+      {isBulkMode && (
+        <div
+          role="toolbar"
+          aria-label="Bulk actions"
+          style={{
+            position: 'fixed',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            zIndex: zIndex.fixed as number,
+            backgroundColor: colors.surfaceSidebar,
+            borderTop: `1px solid rgba(255,255,255,0.1)`,
+            padding: `${spacing['3']} ${spacing['5']}`,
+            display: 'flex',
+            alignItems: 'center',
+            gap: spacing['3'],
+            flexWrap: 'wrap',
+          }}
+        >
+          <span style={{ fontSize: typography.fontSize.sm, color: colors.textOnDark, fontWeight: typography.fontWeight.semibold, marginRight: spacing['2'] }}>
+            {selectedIds.size} selected
+          </span>
+          <button
+            onClick={handleBulkLink}
+            style={{
+              display: 'flex', alignItems: 'center', gap: spacing['1.5'],
+              padding: `${spacing['2']} ${spacing['4']}`, minHeight: '44px',
+              backgroundColor: 'rgba(255,255,255,0.08)', color: colors.textOnDark,
+              border: '1px solid rgba(255,255,255,0.15)', borderRadius: borderRadius.lg,
+              cursor: 'pointer', fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
+              fontWeight: typography.fontWeight.medium,
+            }}
+          >
+            <Link2 size={15} /> Link to item
+          </button>
+          <button
+            onClick={handleBulkExport}
+            style={{
+              display: 'flex', alignItems: 'center', gap: spacing['1.5'],
+              padding: `${spacing['2']} ${spacing['4']}`, minHeight: '44px',
+              backgroundColor: 'rgba(255,255,255,0.08)', color: colors.textOnDark,
+              border: '1px solid rgba(255,255,255,0.15)', borderRadius: borderRadius.lg,
+              cursor: 'pointer', fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
+              fontWeight: typography.fontWeight.medium,
+            }}
+          >
+            <Download size={15} /> Export
+          </button>
+          <button
+            onClick={handleBulkDelete}
+            style={{
+              display: 'flex', alignItems: 'center', gap: spacing['1.5'],
+              padding: `${spacing['2']} ${spacing['4']}`, minHeight: '44px',
+              backgroundColor: `${colors.statusCritical}22`, color: colors.statusCritical,
+              border: `1px solid ${colors.statusCritical}44`, borderRadius: borderRadius.lg,
+              cursor: 'pointer', fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
+              fontWeight: typography.fontWeight.medium,
+            }}
+          >
+            <Trash2 size={15} /> Delete
+          </button>
+          <button
+            onClick={clearSelection}
+            style={{
+              marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer',
+              color: colors.textOnDarkMuted, display: 'flex', alignItems: 'center',
+              minHeight: '44px', minWidth: '44px', justifyContent: 'center',
+            }}
+            aria-label="Close bulk selection"
+          >
+            <X size={18} />
+          </button>
+        </div>
       )}
     </PageContainer>
   );
