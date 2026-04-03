@@ -83,12 +83,12 @@ async function batchFetchEntityLabels(
     fetches.push(
       supabase
         .from('change_orders')
-        .select('id, co_number, title')
+        .select('id, number, title')
         .eq('project_id', projectId)
         .in('id', grouped['change_order'])
         .then(({ data }) => {
           for (const row of data ?? []) {
-            const label = `CO-${String(row.co_number).padStart(3, '0')} ${row.title}`
+            const label = `CO-${row.number} ${row.title}`
             labelMap.set(row.id, label)
             setCachedEntityLabel(`${projectId}:change_order:${row.id}`, label)
           }
@@ -101,13 +101,14 @@ async function batchFetchEntityLabels(
     fetches.push(
       supabase
         .from('punch_items')
-        .select('id, title')
+        .select('id, title, location')
         .eq('project_id', projectId)
         .in('id', grouped['punch_item'])
         .then(({ data }) => {
           for (const row of data ?? []) {
-            labelMap.set(row.id, row.title)
-            setCachedEntityLabel(`${projectId}:punch_item:${row.id}`, row.title)
+            const label = row.location ? `${row.title} at ${row.location}` : row.title
+            labelMap.set(row.id, label)
+            setCachedEntityLabel(`${projectId}:punch_item:${row.id}`, label)
           }
         })
         .catch((err: unknown) => { console.warn('[ActivityFeed] Failed to fetch entity labels for type:', err instanceof Error ? err.message : String(err)) }),
@@ -123,7 +124,7 @@ async function batchFetchEntityLabels(
         .in('id', grouped['daily_log'])
         .then(({ data }) => {
           for (const row of data ?? []) {
-            const label = `Daily Log for ${row.log_date}`
+            const label = `Daily Log ${row.log_date}`
             labelMap.set(row.id, label)
             setCachedEntityLabel(`${projectId}:daily_log:${row.id}`, label)
           }
@@ -154,13 +155,14 @@ async function batchFetchEntityLabels(
     fetches.push(
       supabase
         .from('meetings')
-        .select('id, title')
+        .select('id, title, date')
         .eq('project_id', projectId)
         .in('id', grouped['meeting'])
         .then(({ data }) => {
           for (const row of data ?? []) {
-            labelMap.set(row.id, row.title)
-            setCachedEntityLabel(`${projectId}:meeting:${row.id}`, row.title)
+            const label = row.date ? `${row.title} (${row.date})` : row.title
+            labelMap.set(row.id, label)
+            setCachedEntityLabel(`${projectId}:meeting:${row.id}`, label)
           }
         })
         .catch((err: unknown) => { console.warn('[ActivityFeed] Failed to fetch entity labels for type:', err instanceof Error ? err.message : String(err)) }),
@@ -184,12 +186,7 @@ async function batchFetchEntityLabels(
     )
   }
 
-  try {
-    await Promise.all(fetches)
-  } catch (err) {
-    console.warn('[ActivityFeed] batchFetchEntityLabels partial failure:', err)
-    return labelMap
-  }
+  await Promise.allSettled(fetches)
   return labelMap
 }
 
