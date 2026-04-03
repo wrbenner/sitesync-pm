@@ -38,7 +38,7 @@ const TOAST_DURATION: Record<ToastSeverity, number | null> = {
   error: null,
 };
 
-function ToastEntry({ toast, onClose }: { toast: ToastItem; onClose: (id: string) => void }) {
+function ToastEntry({ toast, onClose, isLast }: { toast: ToastItem; onClose: (id: string) => void; isLast: boolean }) {
   const style = TOAST_SEVERITY_STYLES[toast.severity];
   const [dismissFocused, setDismissFocused] = useState(false);
   const [actionFocused, setActionFocused] = useState(false);
@@ -61,6 +61,15 @@ function ToastEntry({ toast, onClose }: { toast: ToastItem; onClose: (id: string
     setIsExiting(true);
     setTimeout(() => onClose(id), 150);
   }, [onClose]);
+
+  useEffect(() => {
+    if (!isLast) return;
+    const onDocKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') handleClose(toast.id);
+    };
+    document.addEventListener('keydown', onDocKeyDown);
+    return () => document.removeEventListener('keydown', onDocKeyDown);
+  }, [isLast, toast.id, handleClose]);
 
   useEffect(() => {
     const duration = TOAST_DURATION[toast.severity];
@@ -137,6 +146,8 @@ function ToastEntry({ toast, onClose }: { toast: ToastItem; onClose: (id: string
 
   return (
     <div
+      role={toast.severity === 'error' || toast.severity === 'warning' ? 'alert' : 'status'}
+      aria-live={toast.severity === 'error' ? 'assertive' : 'polite'}
       style={{
         transition: 'opacity 150ms ease-out, transform 150ms ease-out',
         opacity: isVisible && !isExiting ? 1 : 0,
@@ -144,7 +155,6 @@ function ToastEntry({ toast, onClose }: { toast: ToastItem; onClose: (id: string
       }}
     >
     <div
-      role={toast.severity === 'error' ? 'alert' : undefined}
       tabIndex={0}
       onKeyDown={(e) => { if (e.key === 'Escape') handleClose(toast.id); }}
       onMouseEnter={handleMouseEnter}
@@ -316,8 +326,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
           pointerEvents: toasts.length === 0 ? 'none' : 'auto',
         }}
       >
-        {toasts.map(toast => (
-          <ToastEntry key={toast.id} toast={toast} onClose={closeToast} />
+        {toasts.map((toast, index) => (
+          <ToastEntry key={toast.id} toast={toast} onClose={closeToast} isLast={index === toasts.length - 1} />
         ))}
       </div>
     </ToastContext.Provider>
