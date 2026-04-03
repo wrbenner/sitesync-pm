@@ -79,14 +79,14 @@ export const getAiInsights = async (
     let overdueRfiCount = 0
     let openPunchCount = 0
     let overBudgetCount = 0
-    let overdueActivitiesCount = 0
+    let pendingSubmittalCount = 0
 
     try {
       const { count } = await supabase
         .from('rfis')
         .select('id', { count: 'exact', head: true })
         .eq('project_id', projectId)
-        .eq('status', 'open')
+        .neq('status', 'closed')
         .lt('due_date', now)
       overdueRfiCount = count ?? 0
     } catch { /* non-fatal */ }
@@ -96,7 +96,7 @@ export const getAiInsights = async (
         .from('punch_list_items')
         .select('id', { count: 'exact', head: true })
         .eq('project_id', projectId)
-        .eq('status', 'open')
+        .in('status', ['open', 'in_progress'])
       openPunchCount = count ?? 0
     } catch { /* non-fatal */ }
 
@@ -112,19 +112,18 @@ export const getAiInsights = async (
 
     try {
       const { count } = await supabase
-        .from('schedule_activities')
+        .from('submittals')
         .select('id', { count: 'exact', head: true })
         .eq('project_id', projectId)
-        .eq('status', 'in_progress')
-        .lt('planned_finish', now)
-      overdueActivitiesCount = count ?? 0
+        .eq('status', 'pending')
+      pendingSubmittalCount = count ?? 0
     } catch { /* non-fatal */ }
 
     const dynamicInsights: AIInsight[] = []
 
     if (overdueRfiCount > 0) {
       const rfiSeverity: AIInsight['severity'] =
-        overdueRfiCount > 5 ? 'critical' : overdueRfiCount > 2 ? 'warning' : 'info'
+        overdueRfiCount > 10 ? 'critical' : overdueRfiCount > 5 ? 'warning' : 'info'
       dynamicInsights.push({
         id: 'computed-rfi-overdue',
         type: 'risk',
@@ -144,7 +143,7 @@ export const getAiInsights = async (
 
     if (openPunchCount > 0) {
       const punchSeverity: AIInsight['severity'] =
-        openPunchCount > 5 ? 'critical' : openPunchCount > 2 ? 'warning' : 'info'
+        openPunchCount > 10 ? 'critical' : openPunchCount > 5 ? 'warning' : 'info'
       dynamicInsights.push({
         id: 'computed-punch-open',
         type: 'action_needed',
@@ -164,7 +163,7 @@ export const getAiInsights = async (
 
     if (overBudgetCount > 0) {
       const budgetSeverity: AIInsight['severity'] =
-        overBudgetCount > 5 ? 'critical' : overBudgetCount > 2 ? 'warning' : 'info'
+        overBudgetCount > 10 ? 'critical' : overBudgetCount > 5 ? 'warning' : 'info'
       dynamicInsights.push({
         id: 'computed-budget-overrun',
         type: 'risk',
@@ -182,17 +181,17 @@ export const getAiInsights = async (
       })
     }
 
-    if (overdueActivitiesCount > 0) {
-      const schedSeverity: AIInsight['severity'] =
-        overdueActivitiesCount > 5 ? 'critical' : overdueActivitiesCount > 2 ? 'warning' : 'info'
+    if (pendingSubmittalCount > 0) {
+      const submittalSeverity: AIInsight['severity'] =
+        pendingSubmittalCount > 10 ? 'critical' : pendingSubmittalCount > 5 ? 'warning' : 'info'
       dynamicInsights.push({
-        id: 'computed-schedule-overdue',
-        type: 'risk',
-        severity: schedSeverity,
-        title: `${overdueActivitiesCount} in-progress activit${overdueActivitiesCount === 1 ? 'y has' : 'ies have'} passed planned finish`,
-        description: `${overdueActivitiesCount} schedule activit${overdueActivitiesCount === 1 ? 'y is' : 'ies are'} still in progress past their planned finish date. These may be impacting downstream tasks and the critical path.`,
+        id: 'computed-submittals-pending',
+        type: 'action_needed',
+        severity: submittalSeverity,
+        title: `${pendingSubmittalCount} pending submittal${pendingSubmittalCount === 1 ? '' : 's'} need attention`,
+        description: `${pendingSubmittalCount} submittal${pendingSubmittalCount === 1 ? ' is' : 's are'} awaiting review or approval. Delays in submittal review can hold up material procurement and field work.`,
         affectedEntities: [],
-        suggestedAction: 'Navigate to Schedule to review late activities',
+        suggestedAction: 'Navigate to Submittals to review pending items',
         confidence: 0.85,
         source: 'computed' as const,
         createdAt: now,
