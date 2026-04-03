@@ -58,6 +58,16 @@ export const EarnedValueDashboard: React.FC = () => {
     );
   }
 
+  if (budgetItems.length === 0) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: spacing['8'], gap: spacing['3'], background: colors.backgroundCard, borderRadius: borderRadius.lg, border: '1px solid ' + colors.borderLight }}>
+        <TrendingUp size={40} color={colors.textTertiary} />
+        <p style={{ fontSize: typography.fontSize.body, color: colors.textSecondary, margin: 0, textAlign: 'center' }}>Set up your budget to see earned value metrics</p>
+        <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0, textAlign: 'center' }}>Earned value analysis requires budget line items with scheduled values and progress data.</p>
+      </div>
+    );
+  }
+
   const ev = computeEarnedValue(budgetItems, changeOrders, invoices, scheduleActivities);
   const { bcws, bcwp, acwp, spi, cpi, eac, etc, vac, scheduleVarianceDays, costVariance } = ev;
 
@@ -69,7 +79,7 @@ export const EarnedValueDashboard: React.FC = () => {
     {
       label: 'CPI',
       fullName: 'Cost Performance Index',
-      value: cpi.toFixed(2),
+      value: isFinite(cpi) ? cpi.toFixed(2) : 'N/A',
       status: indexStatus(cpi),
       description: cpi >= 1 ? 'Under budget' : 'Over budget',
       tooltip:
@@ -78,7 +88,7 @@ export const EarnedValueDashboard: React.FC = () => {
     {
       label: 'SPI',
       fullName: 'Schedule Performance Index',
-      value: spi.toFixed(2),
+      value: isFinite(spi) ? spi.toFixed(2) : 'N/A',
       status: indexStatus(spi),
       description: spi >= 1 ? 'Ahead of schedule' : 'Behind schedule',
       tooltip:
