@@ -949,6 +949,17 @@ const G702SummaryCard = memo<{
   hasPendingWaivers?: boolean
 }>(({ app, liveG702, liveG703, onApprove, isApproving, hasPendingWaivers }) => {
   const [isPdfExporting, setIsPdfExporting] = useState(false)
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>
+    const handleResize = () => {
+      clearTimeout(timer)
+      timer = setTimeout(() => setIsMobile(window.innerWidth < 768), 150)
+    }
+    window.addEventListener('resize', handleResize)
+    return () => { clearTimeout(timer); window.removeEventListener('resize', handleResize) }
+  }, [])
 
   const handleExportG702G703 = useCallback(async () => {
     setIsPdfExporting(true)
@@ -1033,6 +1044,7 @@ const G702SummaryCard = memo<{
   const periodTo = fmtDate(app.period_to as string)
 
   return (
+    <>
     <Card padding={spacing['5']}>
       <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['4'] }}>
         <FileText size={16} color={colors.primaryOrange} />
@@ -1138,7 +1150,8 @@ const G702SummaryCard = memo<{
 
       {/* Action buttons */}
       <div style={{ display: 'flex', gap: spacing['2'], marginTop: spacing['4'], flexWrap: 'wrap' }}>
-        {(['submitted', 'gc_review', 'owner_review'] as string[]).includes(app.status as string) && onApprove && (
+        {/* Approval buttons — hidden on mobile, shown in sticky bottom bar instead */}
+        {!isMobile && (['submitted', 'gc_review', 'owner_review'] as string[]).includes(app.status as string) && onApprove && (
           <PermissionGate permission="payments.create">
             <Btn
               variant="primary"
@@ -1151,7 +1164,7 @@ const G702SummaryCard = memo<{
             </Btn>
           </PermissionGate>
         )}
-        {(app.status as string) === 'approved' && (
+        {!isMobile && (app.status as string) === 'approved' && (
           <PermissionGate permission="payments.create">
             <Btn
               variant="primary"
@@ -1208,6 +1221,48 @@ const G702SummaryCard = memo<{
         )}
       </div>
     </Card>
+
+    {/* Mobile sticky bottom bar for approval buttons */}
+    {isMobile && (
+      <div style={{
+        position: 'sticky',
+        bottom: 0,
+        padding: spacing['3'],
+        backgroundColor: colors.white,
+        borderTop: '1px solid ' + colors.borderDefault,
+        display: 'flex',
+        gap: spacing['2'],
+        zIndex: 10,
+      }}>
+        {(['submitted', 'gc_review', 'owner_review'] as string[]).includes(app.status as string) && onApprove && (
+          <PermissionGate permission="payments.create">
+            <Btn
+              variant="primary"
+              size="sm"
+              onClick={onApprove}
+              disabled={isApproving || hasPendingWaivers}
+              title={hasPendingWaivers ? 'Collect all lien waivers before approving' : undefined}
+              style={{ minHeight: 44, minWidth: 44 }}
+            >
+              <CheckCircle size={14} /> {isApproving ? 'Approving...' : 'Approve Pay App'}
+            </Btn>
+          </PermissionGate>
+        )}
+        {(app.status as string) === 'approved' && (
+          <PermissionGate permission="payments.create">
+            <Btn
+              variant="primary"
+              size="sm"
+              onClick={() => toast.success('Opening payment flow...')}
+              style={{ minHeight: 44, minWidth: 44 }}
+            >
+              <CreditCard size={14} /> Process Payment
+            </Btn>
+          </PermissionGate>
+        )}
+      </div>
+    )}
+  </>
   )
 })
 G702SummaryCard.displayName = 'G702SummaryCard'
@@ -1223,7 +1278,18 @@ const SOVEditorPanel = memo<{
   // Local edit state: keyed by SOV row id
   const [edits, setEdits] = useState<Record<string, { pct: number; materials: number }>>({})
   const [isDirty, setIsDirty] = useState(false)
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)
   const queryClient = useQueryClient()
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>
+    const handleResize = () => {
+      clearTimeout(timer)
+      timer = setTimeout(() => setIsMobile(window.innerWidth < 768), 150)
+    }
+    window.addEventListener('resize', handleResize)
+    return () => { clearTimeout(timer); window.removeEventListener('resize', handleResize) }
+  }, [])
 
   // Initialize edits from server data
   useEffect(() => {
@@ -1374,11 +1440,11 @@ const SOVEditorPanel = memo<{
       </div>
 
       {/* Table header */}
-      <div style={{ overflowX: 'auto' }}>
+      <div style={{ overflowX: 'auto', ...(isMobile ? { WebkitOverflowScrolling: 'touch' } as React.CSSProperties : {}) }}>
         <div style={{ minWidth: 820 }}>
           <div style={{ display: 'flex', backgroundColor: colors.surfaceInset, borderBottom: `1px solid ${colors.borderSubtle}` }}>
             <span style={colStyle('4%', 'center')}>#</span>
-            <span style={colStyle('22%', 'left')}>Description</span>
+            <span style={{ ...colStyle('22%', 'left'), ...(isMobile ? { position: 'sticky', left: 0, zIndex: 2, backgroundColor: colors.surfaceInset, boxShadow: '2px 0 4px rgba(0,0,0,0.06)' } : {}) }}>Description</span>
             <span style={colStyle('11%')}>Sched. Value</span>
             <span style={colStyle('8%')}>Prev %</span>
             <span style={{ ...colStyle('10%'), color: colors.primaryOrange, fontWeight: typography.fontWeight.semibold }}>This Period %</span>
@@ -1404,7 +1470,7 @@ const SOVEditorPanel = memo<{
                 }}
               >
                 <span style={cellStyle('4%', 'center', { color: colors.textTertiary, fontFamily: typography.fontFamilyMono })}>{item.item_number}</span>
-                <span style={cellStyle('22%', 'left', { color: colors.textPrimary })} title={item.description}>
+                <span style={{ ...cellStyle('22%', 'left', { color: colors.textPrimary }), ...(isMobile ? { position: 'sticky', left: 0, zIndex: 2, backgroundColor: i % 2 === 0 ? colors.white : colors.surfacePage, boxShadow: '2px 0 4px rgba(0,0,0,0.06)' } : {}) }} title={item.description}>
                   {item.description.length > 32 ? `${item.description.slice(0, 32)}...` : item.description}
                 </span>
                 <span style={cellStyle('11%', 'right', { fontFamily: typography.fontFamilyMono, color: colors.textPrimary })}>{fmtCurrency(item.scheduled_value)}</span>
@@ -2212,6 +2278,17 @@ export const PaymentApplications: React.FC = () => {
   const [markingWaiverId, setMarkingWaiverId] = useState<string | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [drawerEditApp, setDrawerEditApp] = useState<Record<string, unknown> | null>(null)
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>
+    const handleResize = () => {
+      clearTimeout(timer)
+      timer = setTimeout(() => setIsMobile(window.innerWidth < 768), 150)
+    }
+    window.addEventListener('resize', handleResize)
+    return () => { clearTimeout(timer); window.removeEventListener('resize', handleResize) }
+  }, [])
 
   const openCreateDrawer = useCallback(() => {
     setDrawerEditApp(null)
@@ -2353,14 +2430,14 @@ export const PaymentApplications: React.FC = () => {
 
       {/* Loading */}
       {isLoading && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'], marginBottom: spacing['2xl'] }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)', gap: spacing['4'], marginBottom: spacing['2xl'] }}>
           {[1, 2, 3, 4].map((i) => <Skeleton key={i} width="100%" height="100px" />)}
         </div>
       )}
 
       {/* KPIs — only shown when there are real pay applications */}
       {!isLoading && apps.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: spacing['4'], marginBottom: spacing['2xl'] }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(180px, 1fr))', gap: spacing['4'], marginBottom: spacing['2xl'] }}>
           <MetricBox label="Total Applications" value={kpis.total} />
           <MetricBox label="Total Billed" value={fmtCurrency(kpis.totalDue)} />
           <MetricBox label="Total Paid" value={fmtCurrency(kpis.totalPaid)} change={1} />
