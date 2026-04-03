@@ -22,17 +22,22 @@ interface UseOptimisticLockReturn {
   dismissConflict: () => void;
   checkFailed: boolean;
   isChecking: boolean;
+  isStatusLocked: boolean;
+  lockedStatus: string | null;
 }
 
 export function useOptimisticLock(
   table: string,
   entityId: string | undefined,
   lastKnownUpdatedAt: string | undefined,
+  lockedStatuses?: string[],
 ): UseOptimisticLockReturn {
   const [conflictDetected, setConflictDetected] = useState(false);
   const [serverUpdatedAt, setServerUpdatedAt] = useState<string | null>(null);
   const [checkFailed, setCheckFailed] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
+  const [isStatusLocked, setIsStatusLocked] = useState(false);
+  const [lockedStatus, setLockedStatus] = useState<string | null>(null);
   const retryCountRef = useRef(0);
 
   // Reset conflict state when the entity changes to avoid stale state from a previous entity
@@ -40,6 +45,8 @@ export function useOptimisticLock(
     setConflictDetected(false);
     setServerUpdatedAt(null);
     setCheckFailed(false);
+    setIsStatusLocked(false);
+    setLockedStatus(null);
   }, [entityId]);
 
   const checkConflict = useCallback(async () => {
@@ -51,9 +58,11 @@ export function useOptimisticLock(
     setIsChecking(true);
 
     try {
+      const selectFields =
+        lockedStatuses && lockedStatuses.length > 0 ? 'updated_at, status' : 'updated_at';
       const runQuery = () =>
         (supabase.from(table as any) as any)
-          .select('updated_at')
+          .select(selectFields)
           .eq('id', entityId)
           .single();
 
@@ -81,10 +90,29 @@ export function useOptimisticLock(
       }
 
       setCheckFailed(false);
-      const serverTime = data.updated_at;
+
+      // Evaluate status lock before checking timestamp conflict
+      if (lockedStatuses && lockedStatuses.length > 0) {
+        const status: string | undefined = data.status;
+        if (status && lockedStatuses.includes(status)) {
+          setIsStatusLocked(true);
+          setLockedStatus(status);
+        } else {
+          setIsStatusLocked(false);
+          setLockedStatus(null);
+        }
+      }
+
+      const serverTime: string | undefined = data.updated_at;
       if (serverTime && serverTime !== lastKnownUpdatedAt) {
         setConflictDetected(true);
         setServerUpdatedAt(serverTime);
+        const timeLabel = formatBannerTime(serverTime);
+        useUiStore.getState().addToast({
+          type: 'warning',
+          title: 'Edit conflict',
+          message: `This item was updated at ${timeLabel}. Your changes may conflict.`,
+        });
         setIsChecking(false);
         return true;
       }
@@ -99,7 +127,7 @@ export function useOptimisticLock(
     setServerUpdatedAt(null);
   }, []);
 
-  return { checkConflict, conflictDetected, serverUpdatedAt, dismissConflict, checkFailed, isChecking };
+  return { checkConflict, conflictDetected, serverUpdatedAt, dismissConflict, checkFailed, isChecking, isStatusLocked, lockedStatus };
 }
 
 // ── Edit Conflict Banner ───────────────────────────────────
