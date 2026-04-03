@@ -39,7 +39,7 @@ function getSnapshot(): SharedAuthState {
 }
 
 // Initialize once: fetch session + listen for changes
-function initAuth() {
+async function initAuth() {
   if (initialized) return
   initialized = true
 
@@ -48,12 +48,15 @@ function initAuth() {
     return
   }
 
-  supabase.auth.getSession().then(({ data: { session: s } }) => {
-    setState({ session: s, user: s?.user ?? null, loading: false })
+  try {
+    const { data: { session: s } } = await supabase.auth.getSession()
+    setState({ session: s, user: s?.user ?? null })
     if (s?.user) {
       setSentryUser(s.user.id, s.user.email ?? '', s.user.user_metadata?.role)
     }
-  })
+  } finally {
+    setState({ loading: false })
+  }
 
   const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
     if (_event === 'SIGNED_IN' || _event === 'TOKEN_REFRESHED') {
