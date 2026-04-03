@@ -67,9 +67,9 @@ function buildFallbackSteps(status: string): ReviewerStep[] {
   }
 
   return [
-    { id: 1, role: 'Submitted', status: s0 },
-    { id: 2, role: 'Review', status: s1 },
-    { id: 3, role: 'Decision', status: s2 },
+    { id: 1, role: 'Subcontractor', status: s0 },
+    { id: 2, role: 'GC Review', status: s1 },
+    { id: 3, role: 'Architect Review', status: s2 },
   ];
 }
 
@@ -392,15 +392,17 @@ const Submittals: React.FC = () => {
   const pageAlerts = getPredictiveAlertsForPage('submittals');
   const openCount = useMemo(() => allSubmittals.filter((s: Record<string, unknown>) => s.status !== 'approved').length, [allSubmittals]);
 
-  const today = useMemo(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }, []);
   const totalCount = allSubmittals.length;
-  const pendingReviewCount = useMemo(() => allSubmittals.filter((s: any) => s.status === 'pending' || s.status === 'under_review').length, [allSubmittals]);
+  const pendingReviewCount = useMemo(() => allSubmittals.filter((s: any) => s.status === 'submitted' || s.status === 'review_in_progress' || s.status === 'pending' || s.status === 'under_review').length, [allSubmittals]);
   const approvedCount = useMemo(() => allSubmittals.filter((s: any) => s.status === 'approved' || s.status === 'approved_as_noted').length, [allSubmittals]);
-  const overdueCount = useMemo(() => allSubmittals.filter((s: any) => {
-    if (s.status === 'approved' || s.status === 'approved_as_noted') return false;
-    if (!s.dueDate) return false;
-    return new Date(s.dueDate) < today;
-  }).length, [allSubmittals, today]);
+  const resubmissionRate = useMemo(() => {
+    if (!allSubmittals.length) return '0%';
+    const withRevision = allSubmittals.filter((s: any) => {
+      const revNum = Array.isArray(s.submittal_revisions) ? s.submittal_revisions.length : (s.revision_number ?? 0);
+      return revNum > 0;
+    }).length;
+    return `${Math.round((withRevision / allSubmittals.length) * 100)}%`;
+  }, [allSubmittals]);
 
   const STATUS_FILTER_TABS: Array<{ label: string; value: string | null }> = [
     { label: 'All', value: null },
@@ -479,8 +481,8 @@ const Submittals: React.FC = () => {
       return revisions ?? row.revision_number ?? 0;
     }, {
       id: 'rev_number',
-      header: 'Rev #',
-      size: 64,
+      header: 'Revision',
+      size: 80,
       cell: (info) => {
         const val = info.getValue() as number;
         return (
@@ -490,7 +492,36 @@ const Submittals: React.FC = () => {
             color: val > 0 ? colors.statusCritical : colors.textTertiary,
             fontVariantNumeric: 'tabular-nums' as const,
           }}>
-            {val}
+            {`Rev ${val}`}
+          </span>
+        );
+      },
+    }),
+    subColHelper.accessor((row: any) => row, {
+      id: 'lead_time',
+      header: 'Lead Time',
+      size: 100,
+      cell: (info) => {
+        const sub = info.getValue() as any;
+        const isPending = sub.status === 'pending' || sub.status === 'submitted' || sub.status === 'under_review' || sub.status === 'review_in_progress';
+        if (!isPending) return <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>&mdash;</span>;
+        const startStr = sub.submitted_at || sub.created_at;
+        if (!startStr) return <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>&mdash;</span>;
+        const start = new Date(startStr);
+        const end = new Date();
+        let bizDays = 0;
+        const cur = new Date(start);
+        cur.setHours(0, 0, 0, 0);
+        end.setHours(0, 0, 0, 0);
+        while (cur < end) {
+          const d = cur.getDay();
+          if (d !== 0 && d !== 6) bizDays++;
+          cur.setDate(cur.getDate() + 1);
+        }
+        const color = bizDays > 21 ? colors.statusCritical : bizDays > 14 ? '#F5A623' : colors.textSecondary;
+        return (
+          <span style={{ fontSize: typography.fontSize.sm, color, fontWeight: bizDays > 14 ? typography.fontWeight.semibold : typography.fontWeight.normal, fontVariantNumeric: 'tabular-nums' as const }}>
+            {bizDays}d
           </span>
         );
       },
@@ -674,7 +705,7 @@ const Submittals: React.FC = () => {
           { label: 'Total Submittals', value: totalCount, color: colors.textPrimary, bg: colors.white },
           { label: 'Pending Review', value: pendingReviewCount, color: '#F5A623', bg: '#FFFBF0' },
           { label: 'Approved', value: approvedCount, color: '#4EC896', bg: '#F0FDF9' },
-          { label: 'Overdue', value: overdueCount, color: '#E74C3C', bg: '#FFF5F5' },
+          { label: 'Resubmission Rate', value: resubmissionRate, color: '#8B5CF6', bg: '#F5F3FF' },
         ].map(({ label, value, color, bg }) => (
           <div key={label} style={{
             flex: '1 1 140px',
