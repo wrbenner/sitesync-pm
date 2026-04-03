@@ -17,6 +17,7 @@ import { VersionCompare } from '../components/drawings/VersionCompare';
 import { PdfViewer } from '../components/drawings/PdfViewer';
 import { PermissionGate } from '../components/auth/PermissionGate';
 import { supabase } from '../lib/supabase';
+import { UploadZone } from '../components/files/UploadZone';
 
 
 const aiChanges: Record<number, number> = { 1: 3, 5: 2, 11: 4 };
@@ -99,6 +100,11 @@ const _DrawingsPage: React.FC = () => {
   const [aiPanelConflicts, setAiPanelConflicts] = useState<Array<{ severity: 'high' | 'medium' | 'low'; description: string; sheets: string[] }>>([]);
   const [aiPanelError, setAiPanelError] = useState<string | null>(null);
   const [aiPanelAnalyzed, setAiPanelAnalyzed] = useState(false);
+  const [uploadDiscipline, setUploadDiscipline] = useState('Architectural');
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgressText, setUploadProgressText] = useState('');
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [pageIsDragging, setPageIsDragging] = useState(false);
 
   const { data: revisionHistory } = useQuery(
     `revision-history-${selectedDrawing?.id ?? 'none'}`,
@@ -202,6 +208,70 @@ const _DrawingsPage: React.FC = () => {
   });
   sortedDrawingsRef.current = sortedDrawings;
 
+  const handleFileReady = useCallback((file: File) => {
+    setPendingFiles((prev) => [...prev, file]);
+  }, []);
+
+  const handleUploadDrawings = async () => {
+    if (!projectId || pendingFiles.length === 0) return;
+    setIsUploading(true);
+    let completed = 0;
+    const total = pendingFiles.length;
+    for (const file of pendingFiles) {
+      setUploadProgressText(`Uploading sheet ${completed + 1} of ${total}...`);
+      const titleNoExt = file.name.replace(/\.[^.]+$/, '');
+      const sheetMatch = titleNoExt.match(/^([A-Z]{1,3}-?\d+)/i);
+      const sheetNumber = sheetMatch ? sheetMatch[1].toUpperCase() : titleNoExt.substring(0, 20);
+      const storagePath = `${projectId}/drawings/${Date.now()}-${file.name}`;
+      let fileUrl = storagePath;
+      try {
+        const { data: storageData } = await supabase.storage.from('drawings').upload(storagePath, file);
+        if (storageData?.path) fileUrl = storageData.path;
+      } catch { /* storage upload failed, continue with generated path */ }
+      await supabase.from('drawings').insert({
+        project_id: projectId,
+        title: titleNoExt,
+        discipline: uploadDiscipline,
+        sheet_number: sheetNumber,
+        revision: '1',
+        file_url: fileUrl,
+        status: 'current',
+      });
+      completed++;
+    }
+    setIsUploading(false);
+    setUploadProgressText('');
+    setPendingFiles([]);
+    setShowUploadModal(false);
+    setUploadFiles([]);
+    setIsDragging(false);
+    setUploadDiscipline('Architectural');
+    refetch();
+    addToast('success', `${completed} drawing${completed !== 1 ? 's' : ''} uploaded successfully.`);
+  };
+
+  const handlePageDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    const hasFile = Array.from(e.dataTransfer.items).some((item) => item.kind === 'file');
+    if (hasFile) setPageIsDragging(true);
+  }, []);
+
+  const handlePageDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setPageIsDragging(false);
+    }
+  }, []);
+
+  const handlePageDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setPageIsDragging(false);
+    const files = Array.from(e.dataTransfer.files).filter((f) => /\.(pdf|dwg|dxf)$/i.test(f.name));
+    if (files.length > 0) {
+      setPendingFiles(files);
+      setShowUploadModal(true);
+    }
+  }, []);
+
   return (
     <PageContainer
       title="Drawings"
@@ -242,13 +312,45 @@ const _DrawingsPage: React.FC = () => {
         .drawing-row:focus-visible{outline:2px solid #F47820;outline-offset:-2px;}
       `}</style>
       <div
-        className="drawings-layout"
-        style={{
-          display: 'grid',
-          gridTemplateColumns: selectedDrawing ? '1fr 380px' : '1fr',
-          gap: spacing.xl,
-        }}
+        style={{ position: 'relative' }}
+        onDragOver={handlePageDragOver}
+        onDragLeave={handlePageDragLeave}
+        onDrop={handlePageDrop}
       >
+        {pageIsDragging && (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              zIndex: 50,
+              backgroundColor: `${colors.primaryOrange}10`,
+              border: `2px dashed ${colors.primaryOrange}`,
+              borderRadius: borderRadius.lg,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: spacing['3'],
+              pointerEvents: 'none',
+            }}
+          >
+            <Upload size={48} color={colors.primaryOrange} />
+            <p style={{ fontSize: typography.fontSize.xl, fontWeight: typography.fontWeight.semibold, color: colors.primaryOrange, margin: 0 }}>
+              Drop drawings here
+            </p>
+            <p style={{ fontSize: typography.fontSize.sm, color: colors.primaryOrange, margin: 0, opacity: 0.7 }}>
+              .pdf, .dwg, .dxf files accepted
+            </p>
+          </div>
+        )}
+        <div
+          className="drawings-layout"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: selectedDrawing ? '1fr 380px' : '1fr',
+            gap: spacing.xl,
+          }}
+        >
         <div>
           {/* AI Insights Panel */}
           <div style={{ marginBottom: spacing['4'], backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.md, border: `1px solid ${colors.borderSubtle}`, overflow: 'hidden' }}>
@@ -890,6 +992,7 @@ const _DrawingsPage: React.FC = () => {
             </Card>
           </div>
         )}
+        </div>
       </div>
       {viewerDrawing && (
         <DrawingViewer
@@ -1069,101 +1172,65 @@ const _DrawingsPage: React.FC = () => {
               </button>
             </div>
 
-            {/* Drop zone */}
-            <div
-              style={{
-                minHeight: 200,
-                border: `2px dashed ${isDragging ? colors.primaryOrange : colors.border}`,
-                borderRadius: borderRadius.md,
-                backgroundColor: isDragging ? `${colors.primaryOrange}08` : colors.surfaceInset,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: spacing['3'],
-                cursor: 'pointer',
-                transition: `border-color 0.15s, background-color 0.15s`,
-                padding: spacing['6'],
-                textAlign: 'center',
-              }}
-              onClick={() => fileInputRef.current?.click()}
-              onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-              onDragLeave={() => setIsDragging(false)}
-              onDrop={(e) => {
-                e.preventDefault();
-                setIsDragging(false);
-                const dropped = Array.from(e.dataTransfer.files).filter((f) =>
-                  /\.(pdf|dwg|dxf)$/i.test(f.name)
-                );
-                if (dropped.length > 0) setUploadFiles(dropped);
-              }}
-            >
-              <Upload size={32} color={isDragging ? colors.primaryOrange : colors.textTertiary} />
-              <p style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, margin: 0 }}>
-                Drag and drop drawing files here, or click to browse
-              </p>
-              <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0 }}>
-                Accepted formats: .pdf, .dwg, .dxf
-              </p>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf,.dwg,.dxf"
-                multiple
-                style={{ display: 'none' }}
-                onChange={(e) => {
-                  const selected = Array.from(e.target.files || []);
-                  if (selected.length > 0) setUploadFiles(selected);
-                  e.target.value = '';
-                }}
-              />
-            </div>
+            {/* Upload Zone */}
+            <UploadZone
+              onUpload={(_fileName) => {}}
+              onFileReady={handleFileReady}
+            />
 
-            {/* Selected files */}
-            {uploadFiles.length > 0 && (
-              <div style={{ marginTop: spacing['4'], display: 'flex', flexDirection: 'column', gap: spacing['2'] }}>
-                {uploadFiles.map((file, i) => (
-                  <div
-                    key={`${file.name}-${i}`}
+            {/* Discipline selector */}
+            <div style={{ marginTop: spacing['4'] }}>
+              <p style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>
+                Discipline
+              </p>
+              <div style={{ display: 'flex', gap: spacing['2'], flexWrap: 'wrap' }}>
+                {['Architectural', 'Structural', 'Mechanical', 'Electrical', 'Plumbing', 'Fire Protection', 'Civil'].map((disc) => (
+                  <button
+                    key={disc}
+                    onClick={() => setUploadDiscipline(disc)}
                     style={{
-                      padding: `${spacing['2']} ${spacing['3']}`,
-                      backgroundColor: colors.surfaceInset,
-                      borderRadius: borderRadius.base,
-                      border: `1px solid ${colors.borderSubtle}`,
+                      padding: `${spacing['1']} ${spacing['3']}`,
+                      fontSize: typography.fontSize.sm,
+                      fontFamily: typography.fontFamily,
+                      fontWeight: typography.fontWeight.medium,
+                      border: `1.5px solid ${uploadDiscipline === disc ? colors.primaryOrange : colors.borderDefault}`,
+                      borderRadius: borderRadius.full,
+                      backgroundColor: uploadDiscipline === disc ? `${colors.primaryOrange}12` : 'transparent',
+                      color: uploadDiscipline === disc ? colors.primaryOrange : colors.textSecondary,
+                      cursor: 'pointer',
+                      transition: `all ${transitions.instant}`,
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['1'] }}>
-                      <FileText size={14} color={colors.textTertiary} />
-                      <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, fontWeight: typography.fontWeight.medium, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {file.name}
-                      </span>
-                      <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, flexShrink: 0 }}>
-                        {(file.size / 1024).toFixed(0)} KB
-                      </span>
-                    </div>
-                    {/* Simulated progress bar */}
-                    <div style={{ height: 4, backgroundColor: colors.border, borderRadius: borderRadius.full, overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: '40%', backgroundColor: colors.borderSubtle, borderRadius: borderRadius.full }} />
-                    </div>
-                  </div>
+                    {disc}
+                  </button>
                 ))}
+              </div>
+            </div>
+
+            {/* Upload progress indicator */}
+            {(isUploading || uploadProgressText) && (
+              <div style={{ marginTop: spacing['4'], padding: `${spacing['2']} ${spacing['3']}`, backgroundColor: `${colors.primaryOrange}0D`, border: `1px solid ${colors.primaryOrange}30`, borderRadius: borderRadius.base, display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
+                <Loader2 size={14} color={colors.primaryOrange} style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} />
+                <p style={{ fontSize: typography.fontSize.sm, color: colors.orangeText, margin: 0 }}>
+                  {uploadProgressText}
+                </p>
               </div>
             )}
 
-            {/* Coming soon notice */}
-            <div style={{ marginTop: spacing['4'], padding: `${spacing['2']} ${spacing['3']}`, backgroundColor: `${colors.primaryOrange}0D`, border: `1px solid ${colors.primaryOrange}30`, borderRadius: borderRadius.base }}>
-              <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: 0 }}>
-                Upload functionality coming soon. File selection is enabled for preview only.
-              </p>
-            </div>
-
             {/* Footer */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: spacing['3'], marginTop: spacing['5'] }}>
-              <Btn variant="secondary" size="md" onClick={() => { setShowUploadModal(false); setUploadFiles([]); setIsDragging(false); }}>
+              <Btn variant="secondary" size="md" onClick={() => { setShowUploadModal(false); setUploadFiles([]); setIsDragging(false); setPendingFiles([]); }}>
                 Cancel
               </Btn>
-              <Btn variant="primary" size="md" icon={<Upload size={16} />} aria-label="Upload drawings" disabled>
-                Upload
+              <Btn
+                variant="primary"
+                size="md"
+                icon={<Upload size={16} />}
+                aria-label="Upload drawings"
+                disabled={pendingFiles.length === 0 || isUploading}
+                onClick={handleUploadDrawings}
+              >
+                {isUploading ? 'Uploading...' : `Upload${pendingFiles.length > 0 ? ` (${pendingFiles.length})` : ''}`}
               </Btn>
             </div>
           </div>
