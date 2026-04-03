@@ -65,7 +65,7 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = ({
               return (
                 <div key={bar.label} style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], minHeight: 44 }}>
                   {/* Label */}
-                  <div style={{ width: isNarrow ? 64 : 90, flexShrink: 0 }}>
+                  <div style={{ width: isNarrow ? 80 : 100, flexShrink: 0 }}>
                     <span style={{
                       fontSize: isNarrow ? typography.fontSize.xs : typography.fontSize.sm,
                       color: bar.isTotal ? colors.textSecondary : colors.textTertiary,
@@ -74,6 +74,7 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = ({
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',
                       display: 'block',
+                      lineHeight: 1.3,
                     }}>
                       {isNarrow
                         ? bar.label === 'Original Contract' ? 'Original'
@@ -85,15 +86,19 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = ({
                     </span>
                   </div>
                   {/* Bar track */}
-                  <div style={{ flex: 1, position: 'relative', height: 44, minHeight: 44, backgroundColor: colors.surfaceInset, borderRadius: borderRadius.sm }}>
+                  <div
+                    style={{ flex: 1, position: 'relative', height: 44, minHeight: 44, backgroundColor: colors.surfaceInset, borderRadius: borderRadius.sm, touchAction: 'manipulation' }}
+                    onMouseEnter={() => setHoveredBar(bar.label)}
+                    onMouseLeave={() => setHoveredBar(null)}
+                    onTouchStart={() => setHoveredBar(bar.label)}
+                    onTouchEnd={() => setHoveredBar(null)}
+                  >
                     <div
                       aria-label={`${bar.label}: ${fmt(bar.value)}`}
-                      onMouseEnter={() => setHoveredBar(bar.label)}
-                      onMouseLeave={() => setHoveredBar(null)}
                       onClick={() => setHoveredBar(hoveredBar === bar.label ? null : bar.label)}
                       style={{
                         position: 'absolute',
-                        left: `${offsetPct}%`,
+                        left: isCO ? 0 : `${offsetPct}%`,
                         width: `${barWidthPct}%`,
                         height: '100%',
                         minHeight: 44,
@@ -130,7 +135,7 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = ({
                   </div>
                   {/* Value label to the right */}
                   <div style={{ width: 56, flexShrink: 0, textAlign: 'right' }}>
-                    <span style={{ fontSize: typography.fontSize.xs, fontWeight: typography.fontWeight.semibold, color: bar.isTotal ? colors.textPrimary : bar.color }}>
+                    <span style={{ fontSize: typography.fontSize.xs, fontWeight: typography.fontWeight.semibold, color: bar.isTotal ? colors.textPrimary : bar.color, whiteSpace: 'nowrap' }}>
                       {bar.value >= 0 ? '+' : ''}{fmt(bar.value)}
                     </span>
                   </div>
