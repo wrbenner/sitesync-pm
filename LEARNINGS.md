@@ -15,23 +15,67 @@ The engine reads this before every audit to avoid repeating mistakes and amplify
 - Creating new files without adding proper TypeScript types causes build failures
 - Installing npm packages without importing them correctly leads to wasted prompts on build fixes
 
-## Scoring Trends (across 8 runs as of 2026-04-02 18:00)
+## ⚠️ EMERGENCY DIRECTIVE — MONITOR UPDATE 2026-04-02 20:55 UTC
+
+**SCORES ARE IN FREEFALL. STOP ADDING CODE. READ THIS FIRST.**
+
+Current status: Cycle 4 in progress. Total spend: $13.60 / $500.
+
+### Score Trend Table (ALL declining modules are getting WORSE every cycle)
+
+| Module              | C1   | C2   | C3   | C4 (latest) | Trend     |
+|---------------------|------|------|------|-------------|-----------|
+| auth-rbac           | 41   | 32   | 26   | 18          | ↓↓↓ CRISIS |
+| scheduling          | 31   | 30   | 25   | 20          | ↓↓↓ CRISIS |
+| field-operations    | 40   | 33   | 26   | 22          | ↓↓↓ CRISIS |
+| core-workflows      | 47   | 39   | 35   | 25          | ↓↓↓ CRISIS |
+| financial-engine    | 51   | 51   | 49   | 45          | ↓ declining |
+| database-api        | 42   | 47   | 45   | 42          | ↓ declining |
+| document-management | 28   | 33   | 28   | 27          | → flat    |
+| collaboration       | 45   | 40   | 41   | 40          | → flat    |
+| ui-design-system    | 47   | 47   | 47   | 45          | → flat    |
+| infrastructure      | 54   | 57   | 57   | 57          | → stable  |
+| project-intelligence| 59   | 56   | 58   | 56          | → stable  |
+
+### Root Cause Analysis
+
+The "100% fix rate" is a LIE. The engine marks fixes as "done" because code was committed, but the code is MAKING THINGS WORSE. Each cycle adds more broken code, more dead imports, more incomplete features, and more surface area for the auditor to penalize.
+
+**File thrashing proves this.** These files have been modified 10+ times in 12 hours:
+  Schedule.tsx: 18 times, ContextMenu.tsx: 14 times, RFIs.tsx: 12 times, Drawings.tsx: 12 times, App.tsx: 12 times
+
+The engine is patching the same files over and over, each time adding more code that creates new issues.
+
+### MANDATORY RULES FOR REMAINING CYCLES
+
+1. **BEFORE fixing any module, check if its score declined last cycle.** If it did, DO NOT apply more patches. Instead, REVERT the last cycle's changes for that module using `git log` and `git revert`, then try a completely different approach.
+
+2. **STOP adding new files.** The codebase has grown massively. New files = new surface area = lower scores. Fix existing files only.
+
+3. **STOP creating stub/placeholder implementations.** An empty function with a TODO comment scores WORSE than no function at all, because the auditor sees incomplete code.
+
+4. **For auth-rbac (18/100):** Stop adding auth UI. The score is tanking because auth middleware, session management, and RLS policies are broken or missing. Fix the BACKEND first: working Supabase auth, working RLS, working session persistence. Then and only then add UI.
+
+5. **For scheduling (20/100):** Stop adding features to Schedule.tsx (modified 18 times!). The file is bloated and broken. Refactor into smaller components first. Get the Gantt chart rendering correctly with mock data before adding any more capabilities.
+
+6. **For field-operations (22/100):** Same problem. Stop adding new sub-pages and features. Make the existing DailyLog.tsx and FieldCapture.tsx WORK correctly first.
+
+7. **For core-workflows (25/100):** RFIs.tsx modified 12 times. The page is getting worse. Stop. Make the basic table view work perfectly, then add one feature at a time.
+
+8. **Quality over quantity.** One well-implemented fix that raises a score by 5 points is worth more than five "fixes" that each lower it by 2.
+
+9. **Test every fix.** Before committing, verify the build passes. If `npm run build` fails after your changes, revert immediately.
+
+10. **The MOMENTUM line in LEARNINGS should NOT say "High fix rate. Current prompt strategy is working well." when scores are declining.** This is delusional. Change the momentum assessment to reflect reality.
+
+## Scoring Trends (across runs as of 2026-04-02 21:00)
 - Run 1 (Apr 1 19:47) average: ~41/100 (11 modules, 136 commits, crashed at quality gates jq error)
 - Run 3 (Apr 2 08:34) average: ~47/100 (8 modules scored, 35 commits)
 - Run 4 (Apr 2 09:51) average: ~44/100 (11 modules, Cycle 1 Surgeon, $4.77 spent, 100% fix rate 60/60)
-- Run 5 (Apr 2 11:55) Cycle 1: avg ~42, Cycle 2: avg ~40, Cycle 3 in progress: avg ~27 (declining!)
-- CRITICAL FINDING: Scores DECLINE within a run across surgeon cycles despite 100% fix rate:
-  - auth-rbac: 32 → 26 → 21 (dropping 5 to 6 per cycle)
-  - scheduling: 30 → 25 → 22 (dropping 3 to 5 per cycle)
-  - field-operations: 33 → 26 → 22 (dropping 4 to 7 per cycle)
-  - core-workflows: 39 → 35 → 29 (dropping 4 to 6 per cycle)
-  - infrastructure: 57 → 57 (stable, highest scorer)
-  - project-intelligence: 56 → 58 (slight up, second highest)
-  - ui-design-system: 47 → 47 (stable)
-- Root cause of decline: The auditor scores the FULL module each cycle, not just fixed issues. As the codebase grows with each fix (more code = more surface area for the auditor to flag), scores can drop even when the fix itself was correct. The audit is also noisy: different LLM calls surface different issues each time.
-- Scores plateau in 20 to 57 range during Surgeon mode. Bug fixes do not create new capability.
-- Real score jumps expected in Architect mode (cycle 4+) when P0 features from PRODUCTION_ROADMAP.md land
-- Resume bug FIXED. Engine has now successfully completed cycles 1 and 2, cycle 3 in progress. Architect mode transition imminent at cycle 4.
+- Run 5 (Apr 2 11:55) Cycle 1: avg ~42, Cycle 2: avg ~38, Cycle 3: avg ~35, Cycle 4 in progress: avg ~33
+- CRITICAL: Average score has dropped from 42 to 33 over 4 cycles. Each cycle makes things WORSE.
+- The only stable modules are infrastructure (57) and project-intelligence (56). These are the modules with the LEAST churn.
+- CONCLUSION: The engine's current strategy of "find 5 issues per module and patch them" is counterproductive. More patches = more code = lower scores.
 
 ## Known Issues (as of 2026-04-02 18:00)
 - document-management module has files: [] in modules.json. Haiku decomposition is not assigning Drawings.tsx, Files.tsx, DrawingViewer.tsx to this module. The audit still works via snapshot but fix prompts may be less targeted.
@@ -92,7 +136,7 @@ Spend: $4.77 | Fix rate: 100% (60/60)
   unknown: 0/100 (0 issues)
   ui-design-system: 47/100 (5 issues)
 
-MOMENTUM: High fix rate. Current prompt strategy is working well.
+MOMENTUM: WARNING — Fix rate is 100% but scores are DECLINING. More code is making things worse. Read EMERGENCY DIRECTIVE above.
 
 ## Cycle 1 — 2026-04-02 14:54 — MODE: SURGEON
 
@@ -121,7 +165,7 @@ Spend: $4.56 | Fix rate: 100% (55/55)
   unknown: 0/100 (0 issues)
   ui-design-system: 47/100 (5 issues)
 
-MOMENTUM: High fix rate. Current prompt strategy is working well.
+MOMENTUM: WARNING — Fix rate is 100% but scores are DECLINING. More code is making things worse. Read EMERGENCY DIRECTIVE above.
 
 ## Cycle 2 — 2026-04-02 17:00 — MODE: SURGEON
 
@@ -150,4 +194,22 @@ Spend: $4.48 | Fix rate: 100% (55/55)
   unknown: 0/100 (0 issues)
   ui-design-system: 47/100 (5 issues)
 
-MOMENTUM: High fix rate. Current prompt strategy is working well.
+MOMENTUM: WARNING — Fix rate is 100% but scores are DECLINING. More code is making things worse. Read EMERGENCY DIRECTIVE above.
+
+## Cycle 3 — 2026-04-02 18:38 — MODE: SURGEON
+
+Spend: $4.48 | Fix rate: 100% (55/55)
+
+  auth-rbac: 21/100 (5 issues)
+  collaboration: 38/100 (5 issues)
+  core-workflows: 29/100 (5 issues)
+  database-api: 44/100 (5 issues)
+  document-management: 28/100 (5 issues)
+  field-operations: 22/100 (5 issues)
+  financial-engine: 45/100 (5 issues)
+  infrastructure: 57/100 (5 issues)
+  project-intelligence: 56/100 (5 issues)
+  scheduling: 22/100 (5 issues)
+  ui-design-system: 44/100 (5 issues)
+
+MOMENTUM: WARNING — Fix rate is 100% but scores are DECLINING. More code is making things worse. Read EMERGENCY DIRECTIVE above.
