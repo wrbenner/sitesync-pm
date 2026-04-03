@@ -63,6 +63,7 @@ export const DailyLog: React.FC = () => {
   const [expandedIncident, setExpandedIncident] = useState<string | null>(null);
   const [showQuickEntry, setShowQuickEntry] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
+  const [activeView, setActiveView] = useState<'calendar' | 'log'>('log');
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [weatherIsAuto, setWeatherIsAuto] = useState(false);
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0]);
@@ -226,45 +227,52 @@ export const DailyLog: React.FC = () => {
 
   const aggMetrics = useMemo(() => {
     const now = new Date();
-    const sevenDaysAgo = new Date(now); sevenDaysAgo.setDate(now.getDate() - 7);
-    const fourteenDaysAgo = new Date(now); fourteenDaysAgo.setDate(now.getDate() - 14);
-    const thirtyDaysAgo = new Date(now); thirtyDaysAgo.setDate(now.getDate() - 30);
-    const sixtyDaysAgo = new Date(now); sixtyDaysAgo.setDate(now.getDate() - 60);
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const startOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const endOfPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0);
 
-    const logsInRange = (start: Date, end?: Date) =>
-      dailyLogHistory.filter((l: any) => {
-        const d = new Date((l.log_date as string) + 'T12:00:00');
-        return d >= start && (!end || d <= end);
-      });
+    const loggedDateSet = new Set(
+      dailyLogHistory.map((l: any) => (l.log_date as string)?.split('T')[0]).filter(Boolean)
+    );
 
-    const thisWeekLogs = logsInRange(sevenDaysAgo);
-    const prevWeekLogs = logsInRange(fourteenDaysAgo, sevenDaysAgo);
-    const last30Logs = logsInRange(thirtyDaysAgo);
-    const prev30Logs = logsInRange(sixtyDaysAgo, thirtyDaysAgo);
-    const thisMonthLogs = logsInRange(startOfMonth);
-    const prevMonthLogs = logsInRange(startOfPrevMonth, endOfPrevMonth);
+    // Total logs all time
+    const totalLogs = dailyLogHistory.length;
 
+    // Days without gaps: consecutive workdays back from today with a log entry
+    let daysWithoutGaps = 0;
+    const cursor = new Date(now);
+    for (let i = 0; i < 90; i++) {
+      const dayOfWeek = cursor.getDay();
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+      const dateStr = cursor.toISOString().split('T')[0];
+      if (!isWeekend) {
+        if (loggedDateSet.has(dateStr)) {
+          daysWithoutGaps++;
+        } else if (dateStr <= now.toISOString().split('T')[0]) {
+          break;
+        }
+      }
+      cursor.setDate(cursor.getDate() - 1);
+    }
+
+    // Avg crew size this month
+    const thisMonthLogs = dailyLogHistory.filter((l: any) => {
+      const d = new Date((l.log_date as string) + 'T12:00:00');
+      return d >= startOfMonth;
+    });
+    const crewTotal = thisMonthLogs.reduce((s: number, l: any) => s + (l.workers_onsite ?? 0), 0);
+    const avgCrewSize = thisMonthLogs.length > 0 ? Math.round(crewTotal / thisMonthLogs.length) : 0;
+
+    // Safety incidents this month (logs with at least one incident)
+    const safetyIncidentsMonth = thisMonthLogs.filter((l: any) => (l.incidents ?? 0) > 0).length;
+
+    // Keep legacy values for inline today metrics strip
     const todayWorkers = (dailyLogHistory[0] as any)?.workers_onsite ?? 0;
-    const yesterdayWorkers = (dailyLogHistory[1] as any)?.workers_onsite ?? 0;
-    const manHoursWeek = thisWeekLogs.reduce((s: number, l: any) => s + (l.total_hours ?? 0), 0);
-    const manHoursPrevWeek = prevWeekLogs.reduce((s: number, l: any) => s + (l.total_hours ?? 0), 0);
-    const openIncidents = last30Logs.filter((l: any) => (l.incidents ?? 0) > 0).length;
-    const prevIncidents = prev30Logs.filter((l: any) => (l.incidents ?? 0) > 0).length;
-    const logsMonth = thisMonthLogs.length;
-    const logsPrevMonth = prevMonthLogs.length;
 
     return {
+      totalLogs,
+      daysWithoutGaps,
+      avgCrewSize,
+      safetyIncidentsMonth,
       todayWorkers,
-      todayWorkersDelta: todayWorkers - yesterdayWorkers,
-      manHoursWeek,
-      manHoursWeekDelta: manHoursWeek - manHoursPrevWeek,
-      openIncidents,
-      openIncidentsDelta: openIncidents - prevIncidents,
-      logsMonth,
-      logsMonthDelta: logsMonth - logsPrevMonth,
     };
   }, [dailyLogHistory]);
 
@@ -311,7 +319,13 @@ export const DailyLog: React.FC = () => {
 
   const handleCalendarSelect = (date: string) => {
     setSelectedDate(date);
-    setShowCalendar(false);
+    // If the clicked date has no log, open the create form
+    const hasLog = dailyLogHistory.some((l: any) => l.log_date?.split('T')[0] === date);
+    if (!hasLog) {
+      setShowCreateModal(true);
+    }
+    // Switch to log view after selecting
+    setActiveView('log');
   };
 
   const handleSameAsYesterday = useCallback(async () => {
@@ -692,7 +706,6 @@ export const DailyLog: React.FC = () => {
             return <DailyLogPDF data={pdfData} />;
           })()}
         />
-        <Btn variant="ghost" size="sm" icon={<CalendarDays size={14} />} onClick={() => setShowCalendar(!showCalendar)}>Calendar</Btn>
         <Btn variant="secondary" size="sm" icon={<Zap size={14} />} onClick={handleOpenQuickEntry}>Quick Entry</Btn>
         <div style={{ position: 'relative' }}>
           <Btn variant="secondary" size="sm" icon={<BarChart3 size={14} />} onClick={() => setCompareDropdownOpen(!compareDropdownOpen)}>
@@ -747,6 +760,63 @@ export const DailyLog: React.FC = () => {
         </div>
       )}
 
+      {/* Top metric cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: spacing['4'], marginBottom: spacing['5'] }}>
+        {[
+          { icon: <CalendarDays size={22} color={colors.primaryOrange} />, label: 'Total Logs', value: aggMetrics.totalLogs, sub: 'all time' },
+          { icon: <BookOpen size={22} color={colors.statusActive} />, label: 'Days Without Gaps', value: aggMetrics.daysWithoutGaps, sub: 'consecutive workdays' },
+          { icon: <Users size={22} color={colors.statusInfo} />, label: 'Avg Crew Size', value: aggMetrics.avgCrewSize, sub: 'this month' },
+          { icon: <ShieldCheck size={22} color={aggMetrics.safetyIncidentsMonth === 0 ? colors.statusActive : colors.statusCritical} />, label: 'Safety Incidents', value: aggMetrics.safetyIncidentsMonth, sub: 'this month' },
+        ].map((m) => (
+          <Card key={m.label} padding={spacing['5']}>
+            <div style={{ marginBottom: spacing['3'] }}>{m.icon}</div>
+            <p style={{ fontSize: typography.fontSize.label, color: colors.textTertiary, margin: 0, marginBottom: spacing['1'], fontWeight: typography.fontWeight.medium }}>{m.label}</p>
+            <p style={{ fontSize: '28px', fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, lineHeight: 1 }}>{m.value}</p>
+            <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: `${spacing['1']} 0 0` }}>{m.sub}</p>
+          </Card>
+        ))}
+      </div>
+
+      {/* View tabs */}
+      <div style={{ display: 'flex', borderBottom: `1px solid ${colors.borderSubtle}`, marginBottom: spacing['5'], gap: 0 }}>
+        {([['log', 'Log Entry'], ['calendar', 'Calendar View']] as const).map(([view, label]) => (
+          <button
+            key={view}
+            onClick={() => setActiveView(view)}
+            style={{
+              padding: `${spacing['3']} ${spacing['5']}`,
+              background: 'none',
+              border: 'none',
+              borderBottom: activeView === view ? `2px solid ${colors.primaryOrange}` : '2px solid transparent',
+              color: activeView === view ? colors.primaryOrange : colors.textSecondary,
+              fontSize: typography.fontSize.body,
+              fontWeight: activeView === view ? typography.fontWeight.semibold : typography.fontWeight.normal,
+              fontFamily: typography.fontFamily,
+              cursor: 'pointer',
+              marginBottom: '-1px',
+              transition: `color ${transitions.quick}, border-color ${transitions.quick}`,
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* Calendar view */}
+      {activeView === 'calendar' && (
+        <Card padding={spacing['6']}>
+          <CalendarNav
+            approvedDates={approvedDates}
+            submittedDates={submittedDates}
+            draftDates={draftDates}
+            selectedDate={selectedDate}
+            onSelectDate={handleCalendarSelect}
+          />
+        </Card>
+      )}
+
+      {/* Log entry view */}
+      {activeView === 'log' && (
       <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: spacing['6'] }}>
         {/* Main content */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: spacing['6'] }}>
@@ -1336,52 +1406,6 @@ export const DailyLog: React.FC = () => {
             />
           )}
 
-          {/* Aggregate metric cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: spacing['4'] }}>
-            {[
-              {
-                icon: <Users size={24} color={colors.primaryOrange} />,
-                label: "Today's Workers",
-                value: aggMetrics.todayWorkers,
-                delta: aggMetrics.todayWorkersDelta,
-                positiveIsGood: true,
-                deltaLabel: 'vs yesterday',
-              },
-              {
-                icon: <Clock size={24} color={colors.statusActive} />,
-                label: 'Man-Hours This Week',
-                value: aggMetrics.manHoursWeek.toLocaleString(),
-                delta: aggMetrics.manHoursWeekDelta,
-                positiveIsGood: true,
-                deltaLabel: 'vs prior week',
-              },
-              {
-                icon: <ShieldCheck size={24} color={aggMetrics.openIncidents === 0 ? colors.statusActive : colors.statusCritical} />,
-                label: 'Open Incidents (30d)',
-                value: aggMetrics.openIncidents,
-                delta: aggMetrics.openIncidentsDelta,
-                positiveIsGood: false,
-                deltaLabel: 'vs prior 30d',
-              },
-              {
-                icon: <CalendarDays size={24} color={colors.statusInfo} />,
-                label: 'Logs This Month',
-                value: aggMetrics.logsMonth,
-                delta: aggMetrics.logsMonthDelta,
-                positiveIsGood: true,
-                deltaLabel: 'vs prior month',
-              },
-            ].map((m) => (
-              <Card key={m.label} padding={spacing['5']}>
-                <div style={{ marginBottom: spacing['3'] }}>{m.icon}</div>
-                <p style={{ fontSize: '12px', color: colors.textTertiary, margin: 0, marginBottom: spacing['2'], fontWeight: typography.fontWeight.medium }}>{m.label}</p>
-                <p style={{ fontSize: '28px', fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, lineHeight: 1 }}>{m.value}</p>
-                <p style={{ fontSize: '11px', margin: 0, marginTop: spacing['2'], color: m.delta === 0 ? colors.textTertiary : (m.positiveIsGood ? (m.delta > 0 ? colors.statusActive : colors.statusCritical) : (m.delta < 0 ? colors.statusActive : colors.statusCritical)) }}>
-                  {m.delta === 0 ? `— ${m.deltaLabel}` : `${m.delta > 0 ? '+' : ''}${m.delta} ${m.deltaLabel}`}
-                </p>
-              </Card>
-            ))}
-          </div>
 
           {/* Previous Days */}
           <div>
@@ -1503,25 +1527,8 @@ export const DailyLog: React.FC = () => {
           )}
         </div>
 
-        {/* Calendar sidebar */}
-        {showCalendar && (
-          <div style={{ width: 280, flexShrink: 0 }}>
-            <Card>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['3'] }}>
-                <span style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>Calendar</span>
-                <button onClick={() => setShowCalendar(false)} aria-label="Close calendar" title="Close calendar" style={{ backgroundColor: 'transparent', border: 'none', cursor: 'pointer', color: colors.textTertiary, padding: spacing['1'] }}><X size={14} /></button>
-              </div>
-              <CalendarNav
-                approvedDates={approvedDates}
-                submittedDates={submittedDates}
-                draftDates={draftDates}
-                selectedDate={selectedDate}
-                onSelectDate={handleCalendarSelect}
-              />
-            </Card>
-          </div>
-        )}
       </div>
+      )}
 
       {/* Quick Entry overlay */}
       {showQuickEntry && (
