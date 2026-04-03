@@ -229,11 +229,29 @@ const incidentColumns = [
       )
     },
   }),
-  incidentCol.accessor('assigned_to', {
-    header: 'Assigned To',
+  incidentCol.accessor('injured_party_name', {
+    header: 'Involved Party',
     cell: (info) => (
-      <span style={{ color: colors.textSecondary }}>{info.getValue() || '\u2014'}</span>
+      <span style={{ color: colors.textSecondary }}>{(info.getValue() as string) || '\u2014'}</span>
     ),
+  }),
+  incidentCol.display({
+    id: 'ca_count',
+    header: 'Corrective Actions',
+    cell: (info) => {
+      const count = (info.row.original as any).corrective_action_count ?? 0
+      if (count === 0) return <span style={{ color: colors.textTertiary }}>None</span>
+      return (
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', gap: spacing.xs,
+          padding: `2px ${spacing.sm}`, borderRadius: borderRadius.full,
+          fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
+          color: colors.primaryOrange, backgroundColor: colors.orangeSubtle,
+        }}>
+          {count}
+        </span>
+      )
+    },
   }),
 ]
 
@@ -381,6 +399,32 @@ const certColumns = [
           </span>
         )
       }
+      if (daysUntil <= 30) {
+        return (
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: spacing.xs,
+            padding: `2px ${spacing.sm}`, borderRadius: borderRadius.full,
+            fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
+            color: colors.statusCritical, backgroundColor: colors.statusCriticalSubtle,
+          }}>
+            <div style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: colors.statusCritical }} />
+            Expires in {Math.ceil(daysUntil)}d
+          </span>
+        )
+      }
+      if (daysUntil <= 60) {
+        return (
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: spacing.xs,
+            padding: `2px ${spacing.sm}`, borderRadius: borderRadius.full,
+            fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
+            color: '#E67E22', backgroundColor: '#FFF7ED',
+          }}>
+            <div style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: '#E67E22' }} />
+            Expires in {Math.ceil(daysUntil)}d
+          </span>
+        )
+      }
       if (daysUntil <= 90) {
         return (
           <span style={{
@@ -390,7 +434,7 @@ const certColumns = [
             color: colors.statusPending, backgroundColor: colors.statusPendingSubtle,
           }}>
             <div style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: colors.statusPending }} />
-            Expires in {Math.ceil(daysUntil)} days
+            Expires in {Math.ceil(daysUntil)}d
           </span>
         )
       }
@@ -521,6 +565,46 @@ function EmptyState({ message, cta, onCta }: { message: string; cta?: string; on
   )
 }
 
+// ── Inspection Checklist Templates ───────────────────────────
+
+const CHECKLIST_TEMPLATES = {
+  daily_walk: {
+    label: 'Daily Safety Walk',
+    items: [
+      'PPE worn correctly by all workers on site',
+      'Housekeeping complete, slip and trip hazards clear',
+      'Fall protection in place at all open edges and floor openings',
+      'Fire extinguishers accessible and inspection tags current',
+      'Emergency exits clear and properly marked',
+      'First aid kit stocked and accessible',
+    ],
+  },
+  weekly_audit: {
+    label: 'Weekly Site Audit',
+    items: [
+      'Scaffold inspection tags current and planks in good condition',
+      'Electrical panels covered, GFCI functional and tagged',
+      'Crane and rigging pre-inspection complete and documented',
+      'Excavation and shoring adequate per soil classification',
+      'Chemical storage proper and SDS binder current',
+      'Site perimeter fencing and security intact',
+    ],
+  },
+  monthly_equipment: {
+    label: 'Monthly Equipment Inspection',
+    items: [
+      'Fire extinguisher hydrostatic test and service tags current',
+      'Emergency eyewash and shower stations flushed and tested',
+      'GFCI outlets and cords tested, tagged, and documented',
+      'Equipment operator certifications current and on file',
+      'Personal fall arrest harnesses and lanyards inspected',
+      'AED pads and battery status current, first aid restocked',
+    ],
+  },
+} as const
+
+type TemplateKey = keyof typeof CHECKLIST_TEMPLATES
+
 // ── Main Component ───────────────────────────────────────────
 
 export const Safety: React.FC = () => {
@@ -639,13 +723,23 @@ export const Safety: React.FC = () => {
   const [showIncidentModal, setShowIncidentModal] = useState(false)
   const [incidentForm, setIncidentForm] = useState({
     date: '',
+    type: '',
     location: '',
     description: '',
     severity: '',
     injured_party_name: '',
+    root_cause: '',
+    ca_description: '',
+    ca_assignee: '',
+    ca_due_date: '',
     photo: null as File | null,
   })
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+
+  // Inspection checklist state
+  const [activeTemplate, setActiveTemplate] = useState<'daily_walk' | 'weekly_audit' | 'monthly_equipment' | null>(null)
+  const [checklistResults, setChecklistResults] = useState<Record<string, 'pass' | 'fail' | 'na' | null>>({})
+  const [checklistNotes, setChecklistNotes] = useState<Record<string, string>>({})
 
   // Toolbox talk modal state
   const [showTalkModal, setShowTalkModal] = useState(false)
@@ -670,6 +764,7 @@ export const Safety: React.FC = () => {
 
   const requiredFields: { key: keyof typeof incidentForm; label: string }[] = [
     { key: 'date', label: 'Date' },
+    { key: 'type', label: 'Incident type' },
     { key: 'location', label: 'Location' },
     { key: 'description', label: 'Description' },
     { key: 'severity', label: 'Severity' },
@@ -714,7 +809,7 @@ export const Safety: React.FC = () => {
 
   const handleCloseModal = () => {
     setShowIncidentModal(false)
-    setIncidentForm({ date: '', location: '', description: '', severity: '', injured_party_name: '', photo: null })
+    setIncidentForm({ date: '', type: '', location: '', description: '', severity: '', injured_party_name: '', root_cause: '', ca_description: '', ca_assignee: '', ca_due_date: '', photo: null })
     setFieldErrors({})
   }
 
@@ -1000,47 +1095,192 @@ export const Safety: React.FC = () => {
 
       {/* Inspections Tab */}
       {activeTab === 'inspections' && !isLoading && !hasError && (
-        (inspections || []).length === 0 ? (
-          <Card>
-            <EmptyState
-              message="No inspections recorded. Safety tracking not yet configured."
-              cta="Schedule First Inspection"
-              onCta={() => toast.info('Form submission requires backend configuration')}
-            />
+        <>
+          {/* Checklist Template Selector */}
+          <Card style={{ marginBottom: spacing['4'] }}>
+            <p style={{ margin: `0 0 ${spacing['3']} 0`, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+              Run Inspection Checklist
+            </p>
+            <div style={{ display: 'flex', gap: spacing['2'], flexWrap: 'wrap', marginBottom: activeTemplate ? spacing['5'] : 0 }}>
+              {(Object.keys(CHECKLIST_TEMPLATES) as TemplateKey[]).map((key) => {
+                const isActive = activeTemplate === key
+                return (
+                  <button
+                    key={key}
+                    onClick={() => {
+                      if (activeTemplate === key) {
+                        setActiveTemplate(null)
+                        setChecklistResults({})
+                        setChecklistNotes({})
+                      } else {
+                        setActiveTemplate(key)
+                        setChecklistResults({})
+                        setChecklistNotes({})
+                      }
+                    }}
+                    style={{
+                      padding: `${spacing['2']} ${spacing['4']}`,
+                      border: isActive ? `1.5px solid ${colors.primaryOrange}` : `1px solid ${colors.borderDefault}`,
+                      borderRadius: borderRadius.base,
+                      cursor: 'pointer',
+                      fontSize: typography.fontSize.sm,
+                      fontFamily: typography.fontFamily,
+                      fontWeight: isActive ? typography.fontWeight.medium : typography.fontWeight.normal,
+                      color: isActive ? colors.orangeText : colors.textPrimary,
+                      backgroundColor: isActive ? colors.orangeSubtle : colors.surfaceRaised,
+                      transition: `all ${transitions.instant}`,
+                    }}
+                  >
+                    {CHECKLIST_TEMPLATES[key].label}
+                  </button>
+                )
+              })}
+            </div>
+
+            {activeTemplate && (
+              <>
+                <div style={{ borderTop: `1px solid ${colors.borderSubtle}`, paddingTop: spacing['4'] }}>
+                  {CHECKLIST_TEMPLATES[activeTemplate].items.map((item, idx) => {
+                    const result = checklistResults[idx] ?? null
+                    const note = checklistNotes[idx] ?? ''
+                    return (
+                      <div
+                        key={idx}
+                        style={{
+                          display: 'flex', flexDirection: 'column', gap: spacing['2'],
+                          padding: `${spacing['3']} 0`,
+                          borderBottom: idx < CHECKLIST_TEMPLATES[activeTemplate].items.length - 1
+                            ? `1px solid ${colors.borderSubtle}` : 'none',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: spacing['3'], justifyContent: 'space-between', flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, flex: 1, minWidth: 200 }}>
+                            {item}
+                          </span>
+                          <div style={{ display: 'flex', gap: spacing['2'], flexShrink: 0 }}>
+                            {(['pass', 'fail', 'na'] as const).map((val) => {
+                              const isSelected = result === val
+                              const btnColor = val === 'pass'
+                                ? { fg: colors.statusActive, bg: colors.statusActiveSubtle, border: colors.statusActive }
+                                : val === 'fail'
+                                ? { fg: colors.statusCritical, bg: colors.statusCriticalSubtle, border: colors.statusCritical }
+                                : { fg: colors.textSecondary, bg: colors.surfaceInset, border: colors.borderDefault }
+                              return (
+                                <button
+                                  key={val}
+                                  onClick={() => setChecklistResults((p) => ({ ...p, [idx]: isSelected ? null : val }))}
+                                  style={{
+                                    padding: `4px 10px`,
+                                    border: isSelected ? `1.5px solid ${btnColor.border}` : `1px solid ${colors.borderDefault}`,
+                                    borderRadius: borderRadius.base,
+                                    cursor: 'pointer',
+                                    fontSize: typography.fontSize.caption,
+                                    fontWeight: isSelected ? typography.fontWeight.semibold : typography.fontWeight.normal,
+                                    fontFamily: typography.fontFamily,
+                                    color: isSelected ? btnColor.fg : colors.textTertiary,
+                                    backgroundColor: isSelected ? btnColor.bg : 'transparent',
+                                    transition: `all ${transitions.instant}`,
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.04em',
+                                    minHeight: 32,
+                                  }}
+                                >
+                                  {val === 'na' ? 'N/A' : val.charAt(0).toUpperCase() + val.slice(1)}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </div>
+                        <input
+                          type="text"
+                          placeholder="Note (optional)"
+                          value={note}
+                          onChange={(e) => setChecklistNotes((p) => ({ ...p, [idx]: e.target.value }))}
+                          style={{
+                            width: '100%', boxSizing: 'border-box',
+                            padding: `${spacing['1']} ${spacing['3']}`,
+                            border: `1px solid ${colors.borderSubtle}`,
+                            borderRadius: borderRadius.base,
+                            fontSize: typography.fontSize.caption,
+                            fontFamily: typography.fontFamily,
+                            color: colors.textPrimary,
+                            outline: 'none',
+                            backgroundColor: colors.surfaceInset,
+                          }}
+                        />
+                      </div>
+                    )
+                  })}
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing['4'] }}>
+                  <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
+                    {Object.values(checklistResults).filter(Boolean).length} of {CHECKLIST_TEMPLATES[activeTemplate].items.length} items reviewed
+                    {Object.values(checklistResults).filter((r) => r === 'fail').length > 0 && (
+                      <span style={{ marginLeft: spacing['2'], color: colors.statusCritical, fontWeight: typography.fontWeight.medium }}>
+                        {Object.values(checklistResults).filter((r) => r === 'fail').length} failed
+                      </span>
+                    )}
+                  </span>
+                  <Btn
+                    variant="primary"
+                    onClick={() => {
+                      toast.info('Inspection saved. Backend required to persist.')
+                      setActiveTemplate(null)
+                      setChecklistResults({})
+                      setChecklistNotes({})
+                    }}
+                    style={{ minHeight: 36 }}
+                  >
+                    Complete Inspection
+                  </Btn>
+                </div>
+              </>
+            )}
           </Card>
-        ) : (
-          <>
-            <div style={{ display: 'flex', gap: spacing['4'], marginBottom: spacing['4'] }}>
-              <div style={{
-                backgroundColor: colors.statusActiveSubtle,
-                borderRadius: borderRadius.md,
-                padding: `${spacing['2']} ${spacing['4']}`,
-              }}>
-                <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.statusActive }}>
-                  {passCount} Passed
-                </span>
+
+          {/* Past Inspection Records */}
+          {(inspections || []).length === 0 ? (
+            <Card>
+              <EmptyState
+                message="No inspections recorded. Safety tracking not yet configured."
+                cta="Schedule First Inspection"
+                onCta={() => toast.info('Form submission requires backend configuration')}
+              />
+            </Card>
+          ) : (
+            <>
+              <div style={{ display: 'flex', gap: spacing['4'], marginBottom: spacing['4'] }}>
+                <div style={{
+                  backgroundColor: colors.statusActiveSubtle,
+                  borderRadius: borderRadius.md,
+                  padding: `${spacing['2']} ${spacing['4']}`,
+                }}>
+                  <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.statusActive }}>
+                    {passCount} Passed
+                  </span>
+                </div>
+                <div style={{
+                  backgroundColor: colors.statusCriticalSubtle,
+                  borderRadius: borderRadius.md,
+                  padding: `${spacing['2']} ${spacing['4']}`,
+                }}>
+                  <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.statusCritical }}>
+                    {failCount} Failed
+                  </span>
+                </div>
               </div>
-              <div style={{
-                backgroundColor: colors.statusCriticalSubtle,
-                borderRadius: borderRadius.md,
-                padding: `${spacing['2']} ${spacing['4']}`,
-              }}>
-                <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.statusCritical }}>
-                  {failCount} Failed
-                </span>
+              <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+                <Card>
+                  <DataTable
+                    columns={inspectionColumns}
+                    data={inspections || []}
+                    enableSorting
+                  />
+                </Card>
               </div>
-            </div>
-            <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-              <Card>
-                <DataTable
-                  columns={inspectionColumns}
-                  data={inspections || []}
-                  enableSorting
-                />
-              </Card>
-            </div>
-          </>
-        )
+            </>
+          )}
+        </>
       )}
 
       {/* Toolbox Talks Tab */}
@@ -1218,6 +1458,32 @@ export const Safety: React.FC = () => {
 
             <div style={{ marginBottom: spacing['4'] }}>
               <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+                Incident Type<span style={{ color: '#E74C3C', marginLeft: 2 }}>*</span>
+              </label>
+              <select
+                value={incidentForm.type}
+                onChange={(e) => setIncidentForm((p) => ({ ...p, type: e.target.value }))}
+                onBlur={(e) => setFieldErrors((p) => ({ ...p, type: e.target.value ? '' : 'Incident type is required' }))}
+                style={{
+                  width: '100%', boxSizing: 'border-box',
+                  padding: `${spacing['2']} ${spacing['3']}`,
+                  border: fieldErrors.type ? '1px solid #E74C3C' : '1px solid #E5E7EB',
+                  borderRadius: borderRadius.base,
+                  fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
+                  color: colors.textPrimary, outline: 'none', backgroundColor: '#fff',
+                }}
+              >
+                <option value="">Select type...</option>
+                <option value="near_miss">Near Miss</option>
+                <option value="injury">Injury</option>
+                <option value="property_damage">Property Damage</option>
+                <option value="environmental">Environmental</option>
+              </select>
+              {fieldErrors.type && <p style={{ color: '#E74C3C', fontSize: 12, margin: '4px 0 0' }}>{fieldErrors.type}</p>}
+            </div>
+
+            <div style={{ marginBottom: spacing['4'] }}>
+              <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
                 Location<span style={{ color: '#E74C3C', marginLeft: 2 }}>*</span>
               </label>
               <input
@@ -1310,6 +1576,98 @@ export const Safety: React.FC = () => {
                 }}
               />
               {fieldErrors.description && <p style={{ color: '#E74C3C', fontSize: 12, margin: '4px 0 0' }}>{fieldErrors.description}</p>}
+            </div>
+
+            <div style={{ marginBottom: spacing['4'] }}>
+              <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+                Root Cause
+                <span style={{ color: colors.textTertiary, fontSize: typography.fontSize.caption, marginLeft: spacing['2'], fontWeight: typography.fontWeight.normal }}>(required for recordable incidents)</span>
+              </label>
+              <textarea
+                rows={3}
+                placeholder="Immediate cause, contributing factors, and root cause analysis"
+                value={incidentForm.root_cause}
+                onChange={(e) => setIncidentForm((p) => ({ ...p, root_cause: e.target.value }))}
+                style={{
+                  width: '100%', boxSizing: 'border-box',
+                  padding: `${spacing['2']} ${spacing['3']}`,
+                  border: '1px solid #E5E7EB',
+                  borderRadius: borderRadius.base,
+                  fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
+                  color: colors.textPrimary, resize: 'vertical', outline: 'none',
+                }}
+              />
+            </div>
+
+            {/* Corrective Action */}
+            <div style={{
+              marginBottom: spacing['5'],
+              border: `1px solid ${colors.borderDefault}`,
+              borderRadius: borderRadius.md,
+              padding: spacing['4'],
+              backgroundColor: colors.surfaceInset,
+            }}>
+              <p style={{ margin: `0 0 ${spacing['3']} 0`, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+                Corrective Action
+              </p>
+              <div style={{ marginBottom: spacing['3'] }}>
+                <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+                  Description
+                </label>
+                <input
+                  type="text"
+                  placeholder="Action to prevent recurrence"
+                  value={incidentForm.ca_description}
+                  onChange={(e) => setIncidentForm((p) => ({ ...p, ca_description: e.target.value }))}
+                  style={{
+                    width: '100%', boxSizing: 'border-box',
+                    padding: `${spacing['2']} ${spacing['3']}`,
+                    border: '1px solid #E5E7EB',
+                    borderRadius: borderRadius.base,
+                    fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
+                    color: colors.textPrimary, outline: 'none', backgroundColor: '#fff',
+                  }}
+                />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['3'] }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+                    Assignee
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Name or role"
+                    value={incidentForm.ca_assignee}
+                    onChange={(e) => setIncidentForm((p) => ({ ...p, ca_assignee: e.target.value }))}
+                    style={{
+                      width: '100%', boxSizing: 'border-box',
+                      padding: `${spacing['2']} ${spacing['3']}`,
+                      border: '1px solid #E5E7EB',
+                      borderRadius: borderRadius.base,
+                      fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
+                      color: colors.textPrimary, outline: 'none', backgroundColor: '#fff',
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+                    Due Date
+                  </label>
+                  <input
+                    type="date"
+                    value={incidentForm.ca_due_date}
+                    onChange={(e) => setIncidentForm((p) => ({ ...p, ca_due_date: e.target.value }))}
+                    style={{
+                      width: '100%', boxSizing: 'border-box',
+                      padding: `${spacing['2']} ${spacing['3']}`,
+                      border: '1px solid #E5E7EB',
+                      borderRadius: borderRadius.base,
+                      fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
+                      color: colors.textPrimary, outline: 'none', backgroundColor: '#fff',
+                    }}
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Photo upload — required when severity >= medical treatment */}
