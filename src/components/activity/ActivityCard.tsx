@@ -94,10 +94,10 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({ item, onComment, onC
   return (
     <div
       onClick={onClick}
-      role={onClick ? 'button' : undefined}
-      tabIndex={onClick ? 0 : undefined}
-      aria-label={onClick ? `Activity: ${item.user} ${item.action} ${item.target}` : undefined}
-      onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } } : undefined}
+      role="article"
+      tabIndex={0}
+      aria-labelledby={`activity-${item.id}-title`}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick?.(); } }}
       onFocus={() => { if (onClick) setFocused(true); }}
       onBlur={() => setFocused(false)}
       style={{
@@ -116,7 +116,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({ item, onComment, onC
       {item.isGrouped ? (
         /* Grouped: no avatar row, indent content to align under previous avatar */
         <div style={{ paddingLeft: groupedPaddingLeft }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], marginBottom: spacing['1'], flexWrap: 'wrap' }}>
+          <div id={`activity-${item.id}-title`} style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], marginBottom: spacing['1'], flexWrap: 'wrap' }}>
             <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{item.action}</span>
             <EntityLabel target={item.target} entityPath={item.entityPath} onEntityClick={onEntityClick} />
           </div>
@@ -131,7 +131,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({ item, onComment, onC
             <Avatar initials={item.userInitials} size={32} />
           )}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], marginBottom: spacing['1'], flexWrap: 'wrap' }}>
+            <div id={`activity-${item.id}-title`} style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], marginBottom: spacing['1'], flexWrap: 'wrap' }}>
               <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>{item.user}</span>
               <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{item.action}</span>
               <EntityLabel target={item.target} entityPath={item.entityPath} onEntityClick={onEntityClick} />
@@ -163,10 +163,10 @@ function GroupedMeta({ type, color, timestamp, preview, photoGradient, commentCo
     <>
       <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['2'] }}>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: spacing['1'], fontSize: typography.fontSize.caption, color, fontWeight: typography.fontWeight.medium }}>
-          {typeIcons[type] || <FileText size={12} />}
+          <span aria-hidden="true">{typeIcons[type] || <FileText size={12} />}</span>
           <span style={{ textTransform: 'capitalize' }}>{type.replace('_', ' ')}</span>
         </div>
-        <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{formatTimeAgo(timestamp)}</span>
+        <time dateTime={timestamp.toISOString()} aria-label={formatTimeAgo(timestamp)} style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{formatTimeAgo(timestamp)}</time>
       </div>
       {preview && (
         <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: 0, marginBottom: spacing['2'], lineHeight: typography.lineHeight.relaxed }}>
@@ -179,18 +179,21 @@ function GroupedMeta({ type, color, timestamp, preview, photoGradient, commentCo
       <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
         <button
           onClick={(e) => { e.stopPropagation(); setLiked(!liked); }}
+          aria-label="Like this activity"
           style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], backgroundColor: 'transparent', border: 'none', cursor: 'pointer', color: liked ? colors.orangeText : colors.textTertiary, fontSize: typography.fontSize.caption, fontFamily: typography.fontFamily }}
         >
           <ThumbsUp size={12} /> {liked ? 'Liked' : 'Like'}
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); onComment?.(); }}
+          aria-label={`${commentCount || 0} comments`}
           style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], backgroundColor: 'transparent', border: 'none', cursor: 'pointer', color: colors.textTertiary, fontSize: typography.fontSize.caption, fontFamily: typography.fontFamily }}
         >
           <MessageSquare size={12} /> {commentCount || 0}
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); setSaved(!saved); }}
+          aria-label="Bookmark this activity"
           style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], backgroundColor: 'transparent', border: 'none', cursor: 'pointer', color: saved ? colors.statusReview : colors.textTertiary, fontSize: typography.fontSize.caption, fontFamily: typography.fontFamily, marginLeft: 'auto' }}
         >
           <Bookmark size={12} fill={saved ? colors.statusReview : 'none'} /> {saved ? 'Saved' : 'Save'}
