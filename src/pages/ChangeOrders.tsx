@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { Plus, Search, X, ArrowRight, GitBranch, Clock, AlertTriangle, ChevronRight, FileText } from 'lucide-react';
+import { Plus, Search, X, ArrowRight, GitBranch, Clock, AlertTriangle, ChevronRight, FileText, User, FileX, TrendingDown } from 'lucide-react';
 import { PageContainer, Card, Btn, MetricBox, SectionHeader, Skeleton, useToast, Modal, TabBar } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, shadows, transitions, zIndex, touchTarget } from '../styles/theme';
 import { WaterfallChart } from '../components/budget/WaterfallChart';
@@ -23,6 +23,16 @@ const fmt = (n: number): string => {
   if (Math.abs(n) >= 1000000) return `$${(n / 1000000).toFixed(1)}M`;
   if (Math.abs(n) >= 1000) return `$${(n / 1000).toFixed(0)}K`;
   return `$${n.toLocaleString()}`;
+};
+
+const fmtCurrency = (n: number): string =>
+  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
+
+const REASON_ICONS: Record<string, React.ReactNode> = {
+  owner_change: <User size={12} />,
+  field_condition: <AlertTriangle size={12} />,
+  design_error: <FileX size={12} />,
+  value_engineering: <TrendingDown size={12} />,
 };
 
 const REASON_CODES: { value: ReasonCode; label: string }[] = [
@@ -534,10 +544,16 @@ export const ChangeOrders: React.FC = () => {
       )}
 
       {/* Summary Metrics */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: spacing['3'], marginBottom: spacing['4'] }}>
-        <MetricBox label="Approved COs" value={fmt(metrics.approvedCOsTotal)} colorOverride="success" />
-        <MetricBox label="Pending CORs" value={fmt(metrics.pendingCORsTotal)} colorOverride="warning" />
-        <MetricBox label="Pending PCOs" value={fmt(metrics.openPCOsTotal)} />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: spacing['3'], marginBottom: spacing['4'] }}>
+        <MetricBox label="Total COs" value={String(allCOs.length)} />
+        <MetricBox label="Approved Total" value={fmt(metrics.approvedTotal)} colorOverride="success" />
+        <MetricBox label="Pending Total" value={fmt(metrics.pendingTotal)} colorOverride="warning" />
+        <MetricBox label="Rejected Total" value={fmt(metrics.rejectedTotal)} />
+        <MetricBox
+          label="Net Contract Change"
+          value={metrics.approvedTotal >= 0 ? `+${fmt(metrics.approvedTotal)}` : fmt(metrics.approvedTotal)}
+          colorOverride={metrics.approvedTotal >= 0 ? 'warning' : 'success'}
+        />
       </div>
 
       {/* Waterfall Chart */}
@@ -679,21 +695,31 @@ export const ChangeOrders: React.FC = () => {
           ) : (
             /* Tablet/Desktop: scrollable table */
             <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-              <div style={{ minWidth: 760 }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '80px 70px 1fr 110px 100px 80px 120px 110px', padding: `${spacing['2']} ${spacing['4']}`, borderBottom: `1px solid ${colors.borderSubtle}` }}>
-                  {['Number', 'Type', 'Title', 'Amount', 'Impact', 'Days', 'Status', ''].map(h => (
+              <div style={{ minWidth: 860 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '80px 70px 1fr 140px 130px 110px 120px 100px', padding: `${spacing['2']} ${spacing['4']}`, borderBottom: `1px solid ${colors.borderSubtle}` }}>
+                  {['Number', 'Type', 'Title', 'Cost Impact', 'Reason', 'Schedule Impact', 'Status', ''].map(h => (
                     <span key={h} style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: typography.letterSpacing.wider }}>{h}</span>
                   ))}
                 </div>
                 {filteredCOs.map((co, i) => {
                   const typeConfig = getCOTypeConfig(co.type);
-                  const statusConfig = getCOStatusConfig(co.status);
+                  const reasonConfig = co.reason_code ? getReasonCodeConfig(co.reason_code) : null;
+                  const reasonIcon = co.reason_code ? REASON_ICONS[co.reason_code] : null;
                   const canPromote = co.type === 'pco' && co.status === 'pending_review';
-                  const amountColor = co.estimated_cost < 0 ? colors.statusCritical : colors.textPrimary;
-                  const amountLabel = co.estimated_cost > 0 ? `+${fmt(co.estimated_cost)}` : fmt(co.estimated_cost);
+                  const costColor = co.estimated_cost > 0 ? colors.statusCritical : co.estimated_cost < 0 ? colors.statusActive : colors.textPrimary;
+                  const costLabel = co.estimated_cost > 0 ? `+${fmtCurrency(co.estimated_cost)}` : fmtCurrency(co.estimated_cost);
+                  const schedColor = co.schedule_impact_days > 0 ? colors.statusCritical : co.schedule_impact_days < 0 ? colors.statusActive : colors.textTertiary;
+                  const schedLabel = co.schedule_impact_days > 0 ? `+${co.schedule_impact_days} days` : co.schedule_impact_days < 0 ? `${co.schedule_impact_days} days` : '0 days';
+                  const statusColors: Record<string, { color: string; bg: string; label: string }> = {
+                    draft:    { color: '#6B7280', bg: '#F3F4F6', label: 'Draft' },
+                    pending:  { color: '#F5A623', bg: '#FFF8EC', label: 'Pending' },
+                    approved: { color: '#4EC896', bg: '#F0FBF6', label: 'Approved' },
+                    rejected: { color: '#E74C3C', bg: '#FEF2F2', label: 'Rejected' },
+                  };
+                  const statusDisplay = statusColors[co.status] ?? { color: '#6B7280', bg: '#F3F4F6', label: co.status };
                   return (
                     <div key={co.id} onClick={() => setSelectedCO(co)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedCO(co); } }} style={{
-                      display: 'grid', gridTemplateColumns: '80px 70px 1fr 110px 100px 80px 120px 110px',
+                      display: 'grid', gridTemplateColumns: '80px 70px 1fr 140px 130px 110px 120px 100px',
                       padding: `${spacing['3']} ${spacing['4']}`,
                       borderBottom: i < filteredCOs.length - 1 ? `1px solid ${colors.borderSubtle}` : 'none',
                       cursor: 'pointer', alignItems: 'center',
@@ -705,10 +731,13 @@ export const ChangeOrders: React.FC = () => {
                       <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>{co.coNumber}</span>
                       <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: typeConfig.color, backgroundColor: typeConfig.bg, padding: `2px ${spacing['2']}`, borderRadius: borderRadius.full, display: 'inline-block' }}>{typeConfig.shortLabel}</span>
                       <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{co.title}</span>
-                      <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: amountColor }}>{amountLabel}</span>
-                      <span style={{ fontSize: typography.fontSize.sm, color: co.reason_code ? getReasonCodeConfig(co.reason_code).color : colors.textTertiary }}>{co.reason_code ? getReasonCodeConfig(co.reason_code).label : 'N/A'}</span>
-                      <span style={{ fontSize: typography.fontSize.sm, color: co.schedule_impact_days > 0 ? colors.statusPending : colors.textTertiary }}>{co.schedule_impact_days > 0 ? `+${co.schedule_impact_days}d` : '0d'}</span>
-                      <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: statusConfig.color, backgroundColor: statusConfig.bg, padding: `2px ${spacing['2']}`, borderRadius: borderRadius.full, textAlign: 'center' }}>{statusConfig.label}</span>
+                      <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: costColor }}>{costLabel}</span>
+                      <span style={{ fontSize: typography.fontSize.sm, color: reasonConfig ? reasonConfig.color : colors.textTertiary, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        {reasonIcon && <span style={{ color: reasonConfig ? reasonConfig.color : colors.textTertiary, display: 'flex', alignItems: 'center', flexShrink: 0 }}>{reasonIcon}</span>}
+                        {reasonConfig ? reasonConfig.label : 'N/A'}
+                      </span>
+                      <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: schedColor }}>{schedLabel}</span>
+                      <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: statusDisplay.color, backgroundColor: statusDisplay.bg, padding: `2px ${spacing['2']}`, borderRadius: borderRadius.full, textAlign: 'center' }}>{statusDisplay.label}</span>
                       <div onClick={e => e.stopPropagation()}>
                         {canPromote && (
                           <PermissionGate permission="change_orders.approve">
