@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   Play, Square, Clock, Plus, ChevronRight, Sparkles, GripVertical,
-  Users as UsersIcon, Calendar, X, CheckCircle2, Circle, UserCheck,
+  Users as UsersIcon, Calendar, X, CheckCircle2, Circle, UserCheck, Loader2,
 } from 'lucide-react';
 import {
   PageContainer, Card, SectionHeader, Tag, Skeleton, useToast, Btn, MetricBox,
@@ -143,6 +143,17 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ meetingId, onClose }) => {
   // Local 3-state attendance: present | absent | remote
   const [attendanceStatus, setAttendanceStatus] = useState<Record<string, 'present' | 'absent' | 'remote'>>({});
 
+  const projectId = useProjectId();
+
+  // AI Summary state
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
+
+  // AI Suggested action items state
+  const [aiSuggestLoading, setAiSuggestLoading] = useState(false);
+  const [aiSuggestedItems, setAiSuggestedItems] = useState<string[]>([]);
+  const [acceptedSuggestedItems, setAcceptedSuggestedItems] = useState<string[]>([]);
+
   const tc = typeColors(meeting?.type ?? null);
   const attendees: any[] = (meeting as any)?.attendees ?? [];
 
@@ -159,6 +170,53 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ meetingId, onClose }) => {
 
   const presentCount = Object.values(attendanceStatus).filter((s) => s === 'present').length;
   const remoteCount = Object.values(attendanceStatus).filter((s) => s === 'remote').length;
+
+  const generateSummary = async () => {
+    if (!meeting) return;
+    setAiSummaryLoading(true);
+    try {
+      const attendeeCount = attendees.length;
+      const agendaTitles = agendaItems.map((a: any) => a.title).join(', ');
+      const { data, error } = await supabase.functions.invoke('ai-copilot', {
+        body: {
+          project_id: projectId,
+          message: `Summarize this meeting. Title: ${meeting.title}. Date: ${meeting.date}. Attendees: ${attendeeCount}. Agenda items: ${agendaTitles}. Notes: ${(meeting as any).minutes || 'No notes recorded'}. Generate a concise 3 to 4 sentence summary and extract any action items.`,
+        },
+      });
+      if (error) throw error;
+      const response = data?.message ?? data?.response ?? data?.content ?? JSON.stringify(data);
+      setAiSummary(response);
+    } catch {
+      toast.error('Could not generate summary. Try again.');
+    } finally {
+      setAiSummaryLoading(false);
+    }
+  };
+
+  const suggestActionItems = async () => {
+    if (!meeting) return;
+    setAiSuggestLoading(true);
+    try {
+      const agendaTitles = agendaItems.map((a: any) => a.title).join(', ');
+      const { data, error } = await supabase.functions.invoke('ai-copilot', {
+        body: {
+          project_id: projectId,
+          message: `Based on this meeting, suggest 3 to 5 specific action items as a numbered list. Title: ${meeting.title}. Agenda: ${agendaTitles}. Notes: ${(meeting as any).minutes || 'No notes recorded'}. Return only the action items, one per line, without numbering or bullet characters.`,
+        },
+      });
+      if (error) throw error;
+      const response = data?.message ?? data?.response ?? data?.content ?? '';
+      const items = String(response)
+        .split('\n')
+        .map((l: string) => l.replace(/^[\d\.\-\*\s]+/, '').trim())
+        .filter((l: string) => l.length > 0);
+      setAiSuggestedItems(items);
+    } catch {
+      toast.error('Could not generate suggestions. Try again.');
+    } finally {
+      setAiSuggestLoading(false);
+    }
+  };
 
   return (
     <>
@@ -231,31 +289,33 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ meetingId, onClose }) => {
             )}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, flexShrink: 0, marginLeft: spacing.sm }}>
-            <div title="Coming soon" style={{ display: 'inline-block' }}>
-              <button
-                disabled
-                aria-label="Generate minutes (coming soon)"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: spacing.xs,
-                  padding: `${spacing.xs} ${spacing.md}`,
-                  background: colors.surfaceInset,
-                  border: `1px solid ${colors.borderSubtle}`,
-                  borderRadius: borderRadius.md,
-                  fontSize: typography.fontSize.sm,
-                  fontWeight: typography.fontWeight.medium,
-                  fontFamily: typography.fontFamily,
-                  color: colors.textDisabled,
-                  cursor: 'not-allowed',
-                  opacity: 0.6,
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                <Sparkles size={12} />
-                Generate Minutes
-              </button>
-            </div>
+            <button
+              onClick={generateSummary}
+              disabled={aiSummaryLoading || meetingLoading}
+              aria-label="Generate AI summary"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: spacing.xs,
+                padding: `${spacing.xs} ${spacing.md}`,
+                background: aiSummaryLoading ? colors.surfaceInset : '#F3EEFF',
+                border: `1px solid #DDD6FE`,
+                borderRadius: borderRadius.md,
+                fontSize: typography.fontSize.sm,
+                fontWeight: typography.fontWeight.medium,
+                fontFamily: typography.fontFamily,
+                color: '#7C3AED',
+                cursor: aiSummaryLoading || meetingLoading ? 'not-allowed' : 'pointer',
+                opacity: meetingLoading ? 0.5 : 1,
+                whiteSpace: 'nowrap',
+                transition: transitions.quick,
+              }}
+            >
+              {aiSummaryLoading
+                ? <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />
+                : <Sparkles size={12} />}
+              {aiSummaryLoading ? 'Generating...' : 'Generate Summary'}
+            </button>
             <button
               onClick={onClose}
               aria-label="Close meeting detail"
@@ -272,8 +332,42 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ meetingId, onClose }) => {
           </div>
         </div>
 
+        {/* Spinner keyframes */}
+        <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+
         {/* Scrollable body */}
         <div style={{ flex: 1, overflowY: 'auto', padding: spacing.xl }}>
+          {/* AI Summary card */}
+          {aiSummary && (
+            <div
+              style={{
+                borderLeft: '3px solid #8B5CF6',
+                background: '#F5F3FF',
+                borderRadius: borderRadius.md,
+                padding: `${spacing.md} ${spacing.lg}`,
+                marginBottom: spacing.xl,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.sm }}>
+                <Sparkles size={13} color="#8B5CF6" />
+                <span
+                  style={{
+                    fontSize: typography.fontSize.label,
+                    fontWeight: typography.fontWeight.semibold,
+                    color: '#7C3AED',
+                    textTransform: 'uppercase',
+                    letterSpacing: typography.letterSpacing.wider,
+                  }}
+                >
+                  AI Summary
+                </span>
+              </div>
+              <p style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, margin: 0, lineHeight: typography.lineHeight.normal }}>
+                {aiSummary}
+              </p>
+            </div>
+          )}
+
           {/* Agenda items */}
           <p
             style={{
@@ -433,6 +527,86 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ meetingId, onClose }) => {
               })}
             </div>
           )}
+
+          {/* AI Suggest Action Items */}
+          <div style={{ marginBottom: spacing.xl }}>
+            <button
+              onClick={suggestActionItems}
+              disabled={aiSuggestLoading || meetingLoading}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: spacing.xs,
+                background: 'none',
+                border: 'none',
+                cursor: aiSuggestLoading || meetingLoading ? 'not-allowed' : 'pointer',
+                padding: 0,
+                fontSize: typography.fontSize.sm,
+                fontWeight: typography.fontWeight.medium,
+                fontFamily: typography.fontFamily,
+                color: '#7C3AED',
+                opacity: meetingLoading ? 0.5 : 1,
+              }}
+            >
+              {aiSuggestLoading
+                ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} />
+                : <Sparkles size={13} />}
+              {aiSuggestLoading ? 'Generating suggestions...' : 'AI Suggest Action Items'}
+            </button>
+
+            {aiSuggestedItems.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs, marginTop: spacing.md }}>
+                {aiSuggestedItems.map((item, i) => {
+                  const isAccepted = acceptedSuggestedItems.includes(item);
+                  return (
+                    <div
+                      key={i}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: spacing.md,
+                        padding: `${spacing.sm} ${spacing.md}`,
+                        background: isAccepted ? '#F5F3FF' : colors.surfaceInset,
+                        borderRadius: borderRadius.md,
+                        border: isAccepted ? '1px solid #DDD6FE' : `1px solid transparent`,
+                        opacity: isAccepted ? 0.7 : 1,
+                      }}
+                    >
+                      <p style={{ flex: 1, fontSize: typography.fontSize.sm, color: colors.textPrimary, margin: 0, lineHeight: typography.lineHeight.normal }}>
+                        {item}
+                      </p>
+                      {!isAccepted && (
+                        <button
+                          onClick={() => setAcceptedSuggestedItems((prev) => [...prev, item])}
+                          aria-label="Accept action item"
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: 24,
+                            height: 24,
+                            borderRadius: borderRadius.full,
+                            background: '#8B5CF6',
+                            border: 'none',
+                            cursor: 'pointer',
+                            color: '#fff',
+                            fontSize: 16,
+                            fontWeight: typography.fontWeight.semibold,
+                            flexShrink: 0,
+                          }}
+                        >
+                          +
+                        </button>
+                      )}
+                      {isAccepted && (
+                        <CheckCircle2 size={16} color="#8B5CF6" style={{ flexShrink: 0 }} />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
 
           {/* Attendance */}
           {attendees.length > 0 && (
