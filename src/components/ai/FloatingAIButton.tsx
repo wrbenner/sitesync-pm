@@ -66,13 +66,19 @@ export const FloatingAIButton: React.FC = () => {
     <button
       onClick={isError ? async () => { const result = await refetch(); if (result.isError) { toast.error('Unable to load AI insights. Please try again.'); } else { openCopilot(); } } : openCopilot}
       title={titleText}
-      aria-label={`${insightCount} AI insights. Open AI Copilot`}
+      aria-label={insightCount > 0 ? `${insightCount} AI insight${insightCount !== 1 ? 's' : ''} available. Open AI Copilot` : 'Open AI Copilot'}
+      onMouseDown={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(0.95)'; }}
+      onMouseUp={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.08)'; }}
+      onTouchStart={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(0.95)'; }}
+      onTouchEnd={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)'; }}
       style={{
         position: 'fixed',
-        bottom: isMobile ? spacing['20'] : spacing['6'],
+        bottom: isMobile ? 'calc(env(safe-area-inset-bottom, 0px) + 72px)' : spacing['6'],
         right: isMobile ? spacing['4'] : spacing['6'],
-        width: spacing['12'],
-        height: spacing['12'],
+        width: isMobile ? '56px' : spacing['12'],
+        height: isMobile ? '56px' : spacing['12'],
+        minWidth: '44px',
+        minHeight: '44px',
         borderRadius: borderRadius.full,
         background: isOpen
           ? colors.surfaceRaised
@@ -83,7 +89,7 @@ export const FloatingAIButton: React.FC = () => {
         alignItems: 'center',
         justifyContent: 'center',
         cursor: 'pointer',
-        zIndex: themeZIndex.dropdown as number - 1,
+        zIndex: 1100,
         transition: `all ${transitions.quick}`,
         animation: isLoading ? 'pulse 2s ease-in-out infinite' : undefined,
       }}
