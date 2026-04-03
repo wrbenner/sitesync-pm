@@ -107,6 +107,9 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({ drawing, onClos
   const [textInput, setTextInput] = useState('');
   const [textPos, setTextPos] = useState<{ x: number; y: number } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const fabricContainerRef = useRef<HTMLDivElement>(null);
+  const fabricInst = useRef<InstanceType<typeof FabricCanvas> | null>(null);
+  const [fabricObjectCount, setFabricObjectCount] = useState(0);
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const canvasOuterRef = useRef<HTMLDivElement>(null);
@@ -137,6 +140,47 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({ drawing, onClos
       setMarkups((prev) => prev.filter((m) => m.id !== event.id));
     }
   });
+
+  // ── Fabric.js annotation canvas ──────────────────────────────────────────
+
+  useEffect(() => {
+    const container = fabricContainerRef.current;
+    const outer = canvasOuterRef.current;
+    if (!container || !outer) return;
+    const w = outer.offsetWidth || 800;
+    const h = outer.offsetHeight || 600;
+    const canvasEl = document.createElement('canvas');
+    canvasEl.width = w;
+    canvasEl.height = h;
+    container.appendChild(canvasEl);
+    const fc = new FabricCanvas(canvasEl, { selection: false });
+    const wrapper = canvasEl.parentElement;
+    if (wrapper) {
+      wrapper.style.position = 'absolute';
+      wrapper.style.inset = '0';
+    }
+    fc.on('path:created', () => setFabricObjectCount((c) => c + 1));
+    fc.on('object:removed', () => setFabricObjectCount((c) => Math.max(0, c - 1)));
+    fabricInst.current = fc;
+    return () => {
+      fc.dispose();
+      fabricInst.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    const fc = fabricInst.current;
+    if (!fc) return;
+    if (activeTool === 'draw') {
+      fc.isDrawingMode = true;
+      const brush = new PencilBrush(fc);
+      brush.width = 3;
+      brush.color = colors.primaryOrange;
+      fc.freeDrawingBrush = brush;
+    } else {
+      fc.isDrawingMode = false;
+    }
+  }, [activeTool]);
 
   // ── Coordinate helpers ────────────────────────────────────────────────────
 
@@ -228,6 +272,15 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({ drawing, onClos
   };
 
   const handleUndo = () => {
+    const fc = fabricInst.current;
+    if (fc) {
+      const objs = fc.getObjects();
+      if (objs.length > 0) {
+        fc.remove(objs[objs.length - 1]);
+        fc.renderAll();
+        return;
+      }
+    }
     setMarkups((prev) => {
       if (prev.length === 0) return prev;
       const removed = prev[prev.length - 1];
@@ -544,6 +597,17 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({ drawing, onClos
                   <input autoFocus value={textInput} onChange={(e) => setTextInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') handleTextSubmit(); if (e.key === 'Escape') setTextPos(null); }} onBlur={handleTextSubmit} placeholder="Add note..." style={{ padding: `${spacing['0.5']} ${spacing['1.5']}`, backgroundColor: colors.primaryOrange, color: colors.white, border: 'none', borderRadius: borderRadius.sm, outline: 'none', fontSize: typography.fontSize.caption, fontFamily: typography.fontFamily, fontWeight: typography.fontWeight.semibold, minWidth: '80px' }} />
                 </div>
               )}
+
+              {/* Fabric.js freehand annotation layer */}
+              <div
+                ref={fabricContainerRef}
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  pointerEvents: activeTool === 'draw' ? 'auto' : 'none',
+                  zIndex: 10,
+                }}
+              />
             </div>
 
             {/* Zoom controls */}
@@ -570,7 +634,7 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({ drawing, onClos
                       activeTool={activeTool}
                       onToolChange={setActiveTool}
                       onUndo={handleUndo}
-                      canUndo={markups.length > 0}
+                      canUndo={markups.length > 0 || fabricObjectCount > 0}
                       onSave={handleSaveMarkups}
                       isSaving={isSaving}
                     />
@@ -583,7 +647,7 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({ drawing, onClos
                   activeTool={activeTool}
                   onToolChange={setActiveTool}
                   onUndo={handleUndo}
-                  canUndo={markups.length > 0}
+                  canUndo={markups.length > 0 || fabricObjectCount > 0}
                   onSave={handleSaveMarkups}
                   isSaving={isSaving}
                 />
