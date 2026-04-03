@@ -60,18 +60,20 @@ export function useOptimisticLock(
       let { data, error } = await runQuery();
 
       if (error || !data) {
-        if (retryCountRef.current < 1) {
+        const retryDelays = [500, 1500];
+        while (retryCountRef.current < 2 && (error || !data)) {
+          const delay = retryDelays[retryCountRef.current];
           retryCountRef.current += 1;
-          await new Promise<void>((resolve) => setTimeout(resolve, 1000));
+          await new Promise<void>((resolve) => setTimeout(resolve, delay));
           ({ data, error } = await runQuery());
         }
 
         if (error || !data) {
           console.warn(`[useOptimisticLock] Conflict check failed for table "${table}":`, error?.message ?? 'No data returned');
           useUiStore.getState().addToast({
-            type: 'error',
+            type: 'warning',
             title: 'Conflict check failed',
-            message: 'Could not verify edits. Refresh the page and try again.',
+            message: 'Could not verify if others have edited this item. Your changes may overwrite recent updates.',
           });
           setCheckFailed(true);
           return true;
@@ -83,6 +85,7 @@ export function useOptimisticLock(
       if (serverTime && serverTime !== lastKnownUpdatedAt) {
         setConflictDetected(true);
         setServerUpdatedAt(serverTime);
+        setIsChecking(false);
         return true;
       }
       return false;
