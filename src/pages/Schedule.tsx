@@ -40,9 +40,10 @@ interface ScheduleKPICardProps {
   value: string
   valueColor: string
   trend: 'up' | 'down' | 'neutral'
+  progressPct?: number
 }
 
-const ScheduleKPICard: React.FC<ScheduleKPICardProps> = ({ icon, label, value, valueColor, trend }) => (
+const ScheduleKPICard: React.FC<ScheduleKPICardProps> = ({ icon, label, value, valueColor, trend, progressPct }) => (
   <div style={{
     backgroundColor: '#FFFFFF',
     borderRadius: '12px',
@@ -59,6 +60,13 @@ const ScheduleKPICard: React.FC<ScheduleKPICardProps> = ({ icon, label, value, v
     <span style={{ fontSize: '28px', fontWeight: typography.fontWeight.semibold, color: valueColor, lineHeight: 1.1 }}>
       {value}
     </span>
+    {progressPct != null && (
+      <div style={{ marginTop: '2px' }}>
+        <div style={{ height: '4px', borderRadius: '2px', backgroundColor: '#E5E7EB', overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${Math.min(100, Math.max(0, progressPct))}%`, borderRadius: '2px', backgroundColor: colors.statusActive, transition: 'width 0.4s ease' }} />
+        </div>
+      </div>
+    )}
     <span style={{ fontSize: '12px', color: trend === 'up' ? colors.statusActive : trend === 'down' ? colors.statusCritical : colors.textTertiary }}>
       <span aria-hidden="true">{trend === 'up' ? '▲' : trend === 'down' ? '▼' : '─'}</span>
       <span style={{ position: 'absolute', width: '1px', height: '1px', overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap' }}>
@@ -324,13 +332,19 @@ export const Schedule: React.FC = () => {
     // Critical Path Items: activities where is_critical_path === true
     const criticalPathCount = schedulePhases.filter(p => p.is_critical_path === true).length
 
-    // On Track: percentage where status !== 'delayed'
-    const onTrackCount = schedulePhases.filter(p => p.status !== 'delayed').length
-    const onTrackPct = Math.round((onTrackCount / schedulePhases.length) * 100)
+    // On Track: of non-completed activities, percentage where end_date <= baseline_end (or no baseline = on track)
+    const nonCompleted = schedulePhases.filter(p => p.status !== 'completed' && (p.progress ?? 0) < 100)
+    const onTrackCount = nonCompleted.length === 0
+      ? schedulePhases.length
+      : nonCompleted.filter(p => !p.baselineEndDate || new Date(p.endDate) <= new Date(p.baselineEndDate)).length
+    const onTrackPct = nonCompleted.length === 0
+      ? 100
+      : Math.round((onTrackCount / nonCompleted.length) * 100)
 
-    // Complete: percentage where status === 'completed'
-    const completeCount = schedulePhases.filter(p => p.status === 'completed').length
-    const completePct = Math.round((completeCount / schedulePhases.length) * 100)
+    // Complete: average percent_complete across all activities
+    const completePct = Math.round(
+      schedulePhases.reduce((sum, p) => sum + (p.progress ?? 0), 0) / schedulePhases.length
+    )
 
     return {
       scheduleVarianceDays,
@@ -629,7 +643,7 @@ export const Schedule: React.FC = () => {
         />
         {/* Card 3: On Track */}
         <ScheduleKPICard
-          icon={<CheckCircle size={24} color={
+          icon={<TrendingUp size={24} color={
             activityMetrics.onTrackPct >= 80 ? colors.statusActive
             : activityMetrics.onTrackPct >= 60 ? colors.statusPending
             : colors.statusCritical
@@ -645,11 +659,12 @@ export const Schedule: React.FC = () => {
         />
         {/* Card 4: Complete */}
         <ScheduleKPICard
-          icon={<BarChart3 size={24} color={colors.primaryOrange} />}
+          icon={<CheckCircle size={24} color={colors.primaryOrange} />}
           label="Complete"
           value={`${activityMetrics.completePct}%`}
           valueColor={colors.textPrimary}
           trend="neutral"
+          progressPct={activityMetrics.completePct}
         />
       </div>
 
