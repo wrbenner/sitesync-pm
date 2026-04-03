@@ -19,6 +19,8 @@ interface SharedAuthState {
 let state: SharedAuthState = { user: null, session: null, loading: true, error: null }
 const listeners = new Set<() => void>()
 let initialized = false
+let subscriberCount = 0
+let authUnsubscribe: (() => void) | null = null
 
 function setState(partial: Partial<SharedAuthState>) {
   state = { ...state, ...partial }
@@ -51,7 +53,7 @@ function initAuth() {
     }
   })
 
-  supabase.auth.onAuthStateChange((_event, s) => {
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
     if (_event === 'SIGNED_IN') {
       setState({ session: s, user: s?.user ?? null, error: null })
       if (s?.user) setSentryUser(s.user.id, s.user.email ?? '', s.user.user_metadata?.role)
@@ -66,6 +68,7 @@ function initAuth() {
       if (s?.user) setSentryUser(s.user.id, s.user.email ?? '', s.user.user_metadata?.role)
     }
   })
+  authUnsubscribe = () => subscription.unsubscribe()
 }
 
 // ── Error mapping ───────────────────────────────────────────
@@ -98,8 +101,19 @@ export interface AuthState {
 export function useAuth(): AuthState {
   const navigate = useNavigate()
 
-  // Start auth initialization on first mount
-  useEffect(() => { initAuth() }, [])
+  // Start auth initialization on first mount; clean up subscription when last consumer unmounts
+  useEffect(() => {
+    subscriberCount++
+    initAuth()
+    return () => {
+      subscriberCount--
+      if (subscriberCount === 0 && authUnsubscribe) {
+        authUnsubscribe()
+        authUnsubscribe = null
+        initialized = false
+      }
+    }
+  }, [])
 
   // All callers share the same snapshot
   const { user, session, loading, error } = useSyncExternalStore(subscribe, getSnapshot)
@@ -142,7 +156,8 @@ export function useAuth(): AuthState {
   const signOut = useCallback(async () => {
     await supabase.auth.signOut()
     queryClient.clear()
-    setState({ user: null, session: null })
+    clearSentryUser()
+    setState({ user: null, session: null, error: null })
     navigate('/login')
   }, [navigate])
 
