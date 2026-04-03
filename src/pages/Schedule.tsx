@@ -592,7 +592,7 @@ export const Schedule: React.FC = () => {
   }, [activeProject?.id, queryClient]);
 
   const [viewMode, setViewMode] = useState<'gantt' | 'list'>('gantt');
-  const [zoomLevel, setZoomLevel] = useState<'day' | 'week' | 'month'>('week');
+  const [zoomLevel, setZoomLevel] = useState<'day' | 'week' | 'month' | 'quarter'>('week');
   const [whatIfMode, setWhatIfMode] = useState(false);
   const [showBaseline, setShowBaseline] = useState(false);
   const [recoveryExpanded, setRecoveryExpanded] = useState(false);
@@ -1712,9 +1712,10 @@ export const Schedule: React.FC = () => {
                 {/* Zoom controls */}
                 <div role="group" aria-label="Zoom level" style={{ display: 'flex', gap: 1, backgroundColor: colors.surfaceInset, borderRadius: borderRadius.full, padding: 2 }}>
                   {([
-                    { value: 'day' as const, label: 'D', ariaLabel: 'Zoom to day view' },
-                    { value: 'week' as const, label: 'W', ariaLabel: 'Zoom to week view' },
-                    { value: 'month' as const, label: 'M', ariaLabel: 'Zoom to month view' },
+                    { value: 'day' as const, label: 'Day', ariaLabel: 'Zoom to day view' },
+                    { value: 'week' as const, label: 'Week', ariaLabel: 'Zoom to week view' },
+                    { value: 'month' as const, label: 'Month', ariaLabel: 'Zoom to month view' },
+                    { value: 'quarter' as const, label: 'Quarter', ariaLabel: 'Zoom to quarter view' },
                   ]).map(z => (
                     <button
                       key={z.value}
@@ -1792,7 +1793,8 @@ export const Schedule: React.FC = () => {
                 padding: spacing['5'],
                 boxShadow: whatIfMode ? `0 0 0 2px ${colors.statusPending}40` : shadows.card,
                 transition: `box-shadow ${transitions.quick}`,
-                overflowX: 'auto',
+                overflow: 'auto',
+                minHeight: '500px',
               }}
             >
               {whatIfMode && (
@@ -1974,6 +1976,7 @@ export const Schedule: React.FC = () => {
                   phases={schedulePhases}
                   whatIfMode={whatIfMode}
                   isLoading={loading}
+                  zoomLevel={zoomLevel}
                   onImportSchedule={() => addToast('info', 'Schedule import coming soon')}
                   onAddActivity={() => addToast('info', 'Activity drawer coming soon')}
                   onPhaseClick={(phase) => {

@@ -9,10 +9,10 @@ import { colors, spacing, typography, borderRadius, shadows, transitions } from 
 import { AIAnnotationIndicator } from '../ai/AIAnnotation';
 import { getAnnotationsForEntity } from '../../data/aiAnnotations';
 
-export type TimeScale = 'day' | 'week' | 'month';
+export type TimeScale = 'day' | 'week' | 'month' | 'quarter';
 
 const ROW_HEIGHT = 36; // 32px bar + 4px gap
-const PX_PER_DAY: Record<TimeScale, number> = { day: 40, week: 12, month: 4 };
+const PX_PER_DAY: Record<TimeScale, number> = { day: 40, week: 12, month: 4, quarter: 2 };
 const DAY_MS = 86_400_000;
 const LABEL_WIDTH = 200;
 const SLIPPAGE_COL_WIDTH = 72;
@@ -51,6 +51,7 @@ interface GanttChartProps {
   onActivityDateChange?: (id: string, start: string, finish: string) => void;
   baselinePhases?: GanttPhase[];
   showBaseline?: boolean;
+  zoomLevel?: TimeScale;
   risks?: PredictedRisk[];
   delays?: PredictedDelay[];
   dependencies?: GanttDependency[];
@@ -70,13 +71,18 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   onActivityDateChange,
   baselinePhases,
   showBaseline: showBaselineProp,
+  zoomLevel: zoomLevelProp,
   risks = [],
   delays = [],
   dependencies = [],
 }) => {
   const uid = useId().replace(/:/g, '');
 
-  const [timeScale, setTimeScale] = useState<TimeScale>('month');
+  const [timeScale, setTimeScale] = useState<TimeScale>(zoomLevelProp ?? 'month');
+
+  useEffect(() => {
+    if (zoomLevelProp !== undefined) setTimeScale(zoomLevelProp);
+  }, [zoomLevelProp]);
   const [hoveredPhase, setHoveredPhase] = useState<string | null>(null);
   const [showBaselineInternal, setShowBaselineInternal] = useState(true);
   const showBaseline = showBaselineProp !== undefined ? showBaselineProp : showBaselineInternal;
@@ -242,6 +248,14 @@ export const GanttChart: React.FC<GanttChartProps> = ({
           });
         }
         d.setDate(d.getDate() + 7);
+      }
+    } else if (timeScale === 'quarter') {
+      const d = new Date(start.getFullYear(), Math.floor(start.getMonth() / 3) * 3, 1);
+      while (d <= end) {
+        const offset = Math.round(((d.getTime() - timelineStart) / DAY_MS) * pxPerDay);
+        const q = Math.floor(d.getMonth() / 3) + 1;
+        labels.push({ label: `Q${q} ${d.getFullYear()}`, offset });
+        d.setMonth(d.getMonth() + 3);
       }
     } else {
       const d = new Date(start.getFullYear(), start.getMonth(), 1);
@@ -532,8 +546,9 @@ export const GanttChart: React.FC<GanttChartProps> = ({
       {/* Controls */}
       {!isLoading && phases.length > 0 && (<>
       <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'], marginBottom: spacing['4'], flexWrap: 'wrap' }}>
+        {zoomLevelProp === undefined && (
         <div style={{ display: 'flex', gap: spacing['1'], backgroundColor: colors.surfaceInset, borderRadius: borderRadius.full, padding: 2 }}>
-          {(['day', 'week', 'month'] as TimeScale[]).map(scale => (
+          {(['day', 'week', 'month', 'quarter'] as TimeScale[]).map(scale => (
             <button
               key={scale}
               aria-label={`View by ${scale}`}
@@ -553,6 +568,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
             </button>
           ))}
         </div>
+        )}
 
         {showBaselineProp === undefined && (
           <button
