@@ -70,6 +70,88 @@ export const getAiInsights = async (
 
   if (cachedInsights.length === 0 && budgetInsights.length === 0) {
     const now = new Date().toISOString()
+
+    // Query real project data before falling back to onboarding placeholders
+    let openRfiCount = 0
+    let overdueRfiCount = 0
+    let openPunchCount = 0
+
+    try {
+      const { count } = await supabase
+        .from('rfis')
+        .select('id', { count: 'exact', head: true })
+        .eq('project_id', projectId)
+        .eq('status', 'open')
+      openRfiCount = count ?? 0
+    } catch { /* non-fatal */ }
+
+    try {
+      const { count } = await supabase
+        .from('rfis')
+        .select('id', { count: 'exact', head: true })
+        .eq('project_id', projectId)
+        .neq('status', 'closed')
+        .lt('due_date', now)
+      overdueRfiCount = count ?? 0
+    } catch { /* non-fatal */ }
+
+    try {
+      const { count } = await supabase
+        .from('punch_list_items')
+        .select('id', { count: 'exact', head: true })
+        .eq('project_id', projectId)
+        .eq('status', 'open')
+      openPunchCount = count ?? 0
+    } catch { /* non-fatal */ }
+
+    const computedInsights: AIInsight[] = []
+
+    if (openRfiCount > 0) {
+      const rfiSeverity: AIInsight['severity'] =
+        overdueRfiCount > 5 ? 'critical' : overdueRfiCount > 0 ? 'warning' : 'info'
+      computedInsights.push({
+        id: 'computed-rfi-status',
+        type: 'risk',
+        severity: rfiSeverity,
+        title: overdueRfiCount > 0
+          ? `${openRfiCount} open RFIs, ${overdueRfiCount} are overdue`
+          : `${openRfiCount} open RFIs require attention`,
+        description: overdueRfiCount > 0
+          ? `${overdueRfiCount} RFI${overdueRfiCount === 1 ? '' : 's'} passed their due date and may be blocking work. Review and respond to keep the project moving.`
+          : `${openRfiCount} open RFI${openRfiCount === 1 ? '' : 's'} awaiting response. Timely replies prevent field delays.`,
+        affectedEntities: [],
+        suggestedAction: 'Navigate to RFIs to review and respond',
+        confidence: 1,
+        source: 'fallback' as const,
+        createdAt: now,
+        generatedAt: now,
+        expiresAt: null,
+        dismissed: false,
+      })
+    }
+
+    if (openPunchCount > 0) {
+      computedInsights.push({
+        id: 'computed-punch-status',
+        type: 'risk',
+        severity: openPunchCount > 20 ? 'warning' : 'info',
+        title: `${openPunchCount} open punch list item${openPunchCount === 1 ? '' : 's'}`,
+        description: `${openPunchCount} punch list item${openPunchCount === 1 ? '' : 's'} remain open. Clearing these is required before closeout.`,
+        affectedEntities: [],
+        suggestedAction: 'Navigate to Punch List to review open items',
+        confidence: 1,
+        source: 'fallback' as const,
+        createdAt: now,
+        generatedAt: now,
+        expiresAt: null,
+        dismissed: false,
+      })
+    }
+
+    if (computedInsights.length > 0) {
+      return { insights: computedInsights, dataSource: 'ai-fallback' as const }
+    }
+
     const starterInsights: AIInsight[] = [
       {
         id: 'fallback-1',
