@@ -375,22 +375,38 @@ export const DailyLog: React.FC = () => {
         body: {
           projectId,
           logDate: log.log_date,
-          fieldNotes: workSummary,
-          temperatureHigh: log.temperature_high ?? null,
-          temperatureLow: log.temperature_low ?? null,
-          crewCount: log.workers_onsite ?? 0,
+          field_notes: workSummary,
+          temperature_high: log.temperature_high ?? null,
+          temperature_low: log.temperature_low ?? null,
+          crew_count: log.workers_onsite ?? 0,
         },
       });
-      if (fnError) throw fnError;
+      if (fnError) {
+        const errMsg = (fnError as any)?.message ?? '';
+        const status = (fnError as any)?.status ?? (fnError as any)?.code;
+        if (status === 404 || errMsg.includes('404') || errMsg.toLowerCase().includes('not found')) {
+          toast.error('AI summary is not available yet');
+        } else {
+          toast.error('Could not generate summary. Try again.');
+        }
+        return;
+      }
       const generated = (data as any)?.summary ?? (data as any)?.text ?? '';
       if (generated) {
         setWorkSummary(generated);
         setAiSummaryGenerated(true);
+        toast.success('AI summary generated');
       } else {
-        throw new Error('Empty response');
+        toast.error('Could not generate summary. Try again.');
       }
-    } catch {
-      toast.error('AI summary unavailable. You can write your summary manually.');
+    } catch (err: unknown) {
+      const errMsg = (err as any)?.message ?? '';
+      const status = (err as any)?.status ?? (err as any)?.code;
+      if (status === 404 || errMsg.includes('404') || errMsg.toLowerCase().includes('not found')) {
+        toast.error('AI summary is not available yet');
+      } else {
+        toast.error('Could not generate summary. Try again.');
+      }
     } finally {
       setAiSummaryLoading(false);
     }
@@ -1121,7 +1137,7 @@ export const DailyLog: React.FC = () => {
                         opacity: (manpowerRows.length === 0 && logEntries.length === 0) ? 0.5 : 1,
                       }}
                     >
-                      <Sparkles size={13} />
+                      <Sparkles size={13} color={colors.primaryOrange} />
                       Generate AI Summary
                     </button>
                   )}
