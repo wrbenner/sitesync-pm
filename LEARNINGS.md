@@ -15,7 +15,49 @@ The engine reads this before every audit to avoid repeating mistakes and amplify
 - Creating new files without adding proper TypeScript types causes build failures
 - Installing npm packages without importing them correctly leads to wasted prompts on build fixes
 
-## 🛑 HALT DIRECTIVE — MONITOR UPDATE 2026-04-03 10:15 UTC (SUPERSEDES ALL PREVIOUS)
+## 🛑 HALT DIRECTIVE — MONITOR UPDATE 2026-04-03 09:04 UTC (SUPERSEDES ALL PREVIOUS)
+
+**ENGINE STALLED AGAIN IN C6. SCORES DECLINING FURTHER. 6 CONSECUTIVE CYCLES OF NET DECLINE.**
+
+Engine completed C5 ($22.25) and ran most of C6 before stalling at 04:02 UTC on project-intelligence audit. 10/11 modules completed fix phases in C6. Estimated total spend: ~$26. Engine ignored all previous directives and worked on all 11 modules again.
+
+### C6 FULL AUDIT SCORES (compared to C5):
+
+| Module              | C1  | C2  | C3  | C4  | C5  | C6   | Trend |
+|---------------------|-----|-----|-----|-----|-----|------|-------|
+| auth-rbac           | 32  | 26  | 21  | 18  | 17  | 18   | ↓↓    |
+| scheduling          | 30  | 25  | 22  | 20  | 19  | 19   | ↓↓    |
+| field-operations    | 33  | 26  | 22  | 22  | 20  | 19   | ↓↓    |
+| core-workflows      | 39  | 35  | 29  | 25  | 24  | 24   | ↓↓    |
+| document-management | 33  | 28  | 28  | 27  | 30  | 30   | →     |
+| collaboration       | 40  | 41  | 38  | 40  | 40  | 38   | ↓     |
+| database-api        | 47  | 45  | 44  | 42  | 41  | 40   | ↓↓    |
+| ui-design-system    | 47  | 47  | 44  | 45  | 44  | 41   | ↓↓    |
+| financial-engine    | 51  | 49  | 45  | 51  | 53  | 52   | ↓(rev)|
+| infrastructure      | 57  | 57  | 57  | 56  | 58  | 57   | →     |
+| project-intelligence| 56  | 58  | 56  | 58  | 59  | ???  | stall |
+
+**Averages: C1=42.3, C2=39.7, C3=36.9, C4=36.7, C5=36.8, C6≈35.8**
+
+### CRITICAL ASSESSMENT
+
+The engine has now spent ~$26 across 6 cycles with a NET DECLINE of 15% from starting scores. Every single module except document-management and infrastructure is lower than where it started. The top 3 modules (financial-engine, infrastructure, project-intelligence) which were the only bright spots have now reversed: financial-engine dropped from 53 to 52, ui-design-system dropped from 44 to 41.
+
+The high "fix rate" (90%+) is misleading: the auditor generates new issues each cycle faster than fixes stick, creating an infinite treadmill.
+
+### ABSOLUTE RULES FOR ANY FUTURE CYCLES
+
+1. **STOP. Do NOT start Cycle 7 unless average score exceeds 37.** Current avg is ~35.8 and declining.
+2. **STOP WORKING ON auth-rbac, scheduling, field-operations, core-workflows.** These need full architectural redesign, not patches. Combined they've lost 47 points since C1.
+3. **If the engine restarts, ONLY work on: financial-engine, infrastructure, project-intelligence, document-management.** These 4 only. Skip the other 7 entirely.
+4. **MAX 2 targeted prompts per module. ZERO new files. Refactor only.**
+5. **If a module's score dropped from the previous cycle, REVERT that module's commits entirely.**
+6. **The engine must read this file at cycle start and obey these rules. If it does not, it is wasting money.**
+7. **RECOMMENDED: Pause engine entirely until Walker returns for manual review.**
+
+---
+
+## 🛑 PREVIOUS HALT DIRECTIVE — MONITOR UPDATE 2026-04-03 10:15 UTC
 
 **ENGINE CRASHED DURING CYCLE 5. DO NOT RESTART WITHOUT READING THIS.**
 
@@ -309,4 +351,23 @@ Spend: $4.31 | Fix rate: 100% (53/53)
   scheduling: 20/100 (5 issues)
   ui-design-system: 45/100 (5 issues)
 
+MOMENTUM: High fix rate. Current prompt strategy is working well.
+
+## Cycle 5 — 2026-04-03 01:15 — MODE: ARCHITECT
+
+Spend: $4.34 | Fix rate: 98% (51/52)
+
+  auth-rbac: 17/100 (5 issues)
+  collaboration: 40/100 (5 issues)
+  core-workflows: 24/100 (5 issues)
+  database-api: 41/100 (5 issues)
+  document-management: 30/100 (5 issues)
+  field-operations: 20/100 (5 issues)
+  financial-engine: 53/100 (5 issues)
+  infrastructure: 58/100 (5 issues)
+  project-intelligence: 59/100 (5 issues)
+  scheduling: 19/100 (5 issues)
+  ui-design-system: 44/100 (5 issues)
+
+Unfixed issues carried forward. The engine should prioritize these next cycle.
 MOMENTUM: High fix rate. Current prompt strategy is working well.
