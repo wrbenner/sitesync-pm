@@ -65,6 +65,40 @@ const StatusDot: React.FC<{ status: string }> = ({ status }) => {
   );
 };
 
+const PhotoThumbnail: React.FC<{ url: string; alt: string }> = ({ url, alt }) => {
+  const [hovered, setHovered] = React.useState(false);
+  return (
+    <div style={{ position: 'relative', display: 'inline-block', flexShrink: 0 }}>
+      <img
+        src={url}
+        alt={alt}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        style={{ width: 32, height: 32, objectFit: 'cover', borderRadius: borderRadius.base, border: `1px solid ${colors.borderDefault}`, cursor: 'zoom-in', display: 'block' }}
+      />
+      {hovered && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '100%',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            marginBottom: 6,
+            zIndex: 50,
+            pointerEvents: 'none',
+          }}
+        >
+          <img
+            src={url}
+            alt={alt}
+            style={{ width: 120, height: 120, objectFit: 'cover', borderRadius: borderRadius.md, border: `1px solid ${colors.borderDefault}`, boxShadow: '0 4px 16px rgba(0,0,0,0.18)', display: 'block' }}
+          />
+        </div>
+      )}
+    </div>
+  );
+};
+
 const responsibleColors: Record<string, { bg: string; text: string }> = {
   subcontractor: { bg: 'rgba(58, 123, 200, 0.10)', text: colors.statusInfo },
   gc: { bg: 'rgba(244, 120, 32, 0.10)', text: colors.primaryOrange },
@@ -428,13 +462,15 @@ const PunchListPage: React.FC = () => {
         const item = info.row.original;
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, fontWeight: typography.fontWeight.medium, lineHeight: typography.lineHeight.snug, display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
-              {info.getValue()}
-              {item.hasPhoto && <Camera size={11} color={colors.textTertiary} />}
-              {getAnnotationsForEntity('punch_item', item.id).map((ann: any) => (
-                <AIAnnotationIndicator key={ann.id} annotation={ann} inline />
-              ))}
-            </span>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: spacing['2'] }}>
+              <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, fontWeight: typography.fontWeight.medium, lineHeight: typography.lineHeight.snug, flex: 1, display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
+                {info.getValue()}
+                {getAnnotationsForEntity('punch_item', item.id).map((ann: any) => (
+                  <AIAnnotationIndicator key={ann.id} annotation={ann} inline />
+                ))}
+              </span>
+              {item.before_photo_url && <PhotoThumbnail url={item.before_photo_url} alt="Before photo" />}
+            </div>
             <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
               {item.reportedBy && <span>{item.reportedBy}</span>}
               {item.createdDate && <span> · {formatDate(item.createdDate)}</span>}
@@ -444,14 +480,25 @@ const PunchListPage: React.FC = () => {
       },
     }),
     plColHelper.accessor('area', {
-      header: 'Area',
-      size: 140,
-      cell: (info) => <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{info.getValue()}</span>,
-    }),
-    plColHelper.accessor('location', {
       header: 'Location',
-      size: 120,
-      cell: (info) => <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{info.getValue() || '\u2014'}</span>,
+      size: 180,
+      cell: (info) => {
+        const item = info.row.original;
+        const parts = [info.getValue(), item.location].filter(Boolean).join(', ').split(',').map((s: string) => s.trim()).filter(Boolean);
+        if (parts.length <= 1) {
+          return <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{parts[0] || '\u2014'}</span>;
+        }
+        return (
+          <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap' as const }}>
+            {parts.map((part, i) => (
+              <React.Fragment key={i}>
+                {i > 0 && <span style={{ color: colors.textTertiary, fontSize: 10 }}>{'>'}</span>}
+                <span>{part}</span>
+              </React.Fragment>
+            ))}
+          </span>
+        );
+      },
     }),
     plColHelper.accessor('assigned', {
       header: 'Assigned',
@@ -533,12 +580,17 @@ const PunchListPage: React.FC = () => {
         let bg = 'transparent';
         let label = item.responsible === 'gc' ? 'GC' : item.responsible === 'owner' ? 'Owner' : trade || 'Sub';
         const isSubTrade = trade.includes('electric') || trade.includes('plumb') || trade.includes('hvac') || trade.includes('drywall') || trade.includes('paint');
+        let textColor = '#F5A623';
         if (item.responsible === 'gc') {
-          bg = 'rgba(59,130,246,0.08)';
+          bg = 'rgba(59,130,246,0.10)';
+          textColor = '#3B82F6';
+        } else if (item.responsible === 'owner') {
+          bg = 'rgba(244,120,32,0.10)';
+          textColor = colors.primaryOrange as string;
         } else if (isSubTrade || item.responsible === 'subcontractor') {
-          bg = 'rgba(244,120,32,0.08)';
+          bg = 'rgba(245,166,35,0.12)';
+          textColor = '#F5A623';
         }
-        const textColor = item.responsible === 'gc' ? '#3B82F6' : colors.primaryOrange;
         return (
           <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: borderRadius.full, backgroundColor: bg, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: textColor, whiteSpace: 'nowrap' as const }}>
             {label}
@@ -655,9 +707,9 @@ const PunchListPage: React.FC = () => {
       >
         <EmptyState
           icon={CheckSquare}
-          title="No punch items yet"
-          description="Punch items are created during site walks and inspections"
-          action={{ label: 'Create First Item', onClick: () => setShowCreateModal(true) }}
+          title="No punch list items. Your project is looking clean!"
+          description="Items will appear here as deficiencies are identified during inspections."
+          action={{ label: 'Add Punch Item', onClick: () => setShowCreateModal(true) }}
         />
       </PageContainer>
     );
@@ -697,10 +749,38 @@ const PunchListPage: React.FC = () => {
         <MetricBox label="Total Items" value={totalCount} />
         <MetricBox label="Open" value={openCount} colorOverride={openCount > 0 ? 'warning' : undefined} />
         <MetricBox label="In Progress" value={inProgressCount} />
-        <MetricBox label="Awaiting Verification" value={subCompleteCount} colorOverride={subCompleteCount > 0 ? 'warning' : undefined} />
+        <MetricBox
+          label="Awaiting Verification"
+          value={subCompleteCount}
+          bgColorOverride={subCompleteCount > 0 ? 'rgba(139, 92, 246, 0.07)' : undefined}
+          valueColorOverride={subCompleteCount > 0 ? '#8B5CF6' : undefined}
+        />
         <MetricBox label="Verified" value={verifiedCount} colorOverride={verifiedCount > 0 ? 'success' : undefined} />
         <MetricBox label="Overdue" value={overdueCount} colorOverride={overdueCount > 0 ? 'danger' : undefined} />
       </div>
+
+      {/* Completion Progress Bar */}
+      {totalCount > 0 && (
+        <div style={{ marginBottom: spacing['4'] }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing['2'] }}>
+            <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, fontWeight: typography.fontWeight.medium }}>
+              {verifiedCount} of {totalCount} items verified ({completionPct}%)
+            </span>
+            <span style={{ fontSize: typography.fontSize.sm, color: colors.statusActive, fontWeight: typography.fontWeight.semibold }}>{completionPct}%</span>
+          </div>
+          <div style={{ height: 6, backgroundColor: colors.surfaceInset, borderRadius: borderRadius.full, overflow: 'hidden' }}>
+            <div
+              style={{
+                height: '100%',
+                width: `${completionPct}%`,
+                backgroundColor: colors.statusActive,
+                borderRadius: borderRadius.full,
+                transition: 'width 0.4s ease',
+              }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Status Filter Tabs */}
       <div style={{ display: 'flex', gap: spacing['2'], marginBottom: spacing['3'], flexWrap: 'wrap' as const }}>

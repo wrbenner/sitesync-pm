@@ -331,6 +331,8 @@ interface MetricBoxProps {
   previousValue?: number;
   colorOverride?: 'success' | 'warning' | 'danger';
   format?: 'currency' | 'percent' | 'number';
+  bgColorOverride?: string;
+  valueColorOverride?: string;
 }
 
 export const MetricBox: React.FC<MetricBoxProps> = React.memo(({
@@ -343,6 +345,8 @@ export const MetricBox: React.FC<MetricBoxProps> = React.memo(({
   previousValue,
   colorOverride,
   format,
+  bgColorOverride,
+  valueColorOverride,
 }) => {
   const trendPercent = (typeof value === 'number' && previousValue)
     ? ((value - previousValue) / Math.abs(previousValue)) * 100
@@ -352,7 +356,7 @@ export const MetricBox: React.FC<MetricBoxProps> = React.memo(({
     ? formatMetricValue(value, format)
     : value;
 
-  const valueColor = colorOverride ? TREND_COLORS[colorOverride] : colors.textPrimary;
+  const valueColor = valueColorOverride ?? (colorOverride ? TREND_COLORS[colorOverride] : colors.textPrimary);
 
   return (
   <div
@@ -360,7 +364,7 @@ export const MetricBox: React.FC<MetricBoxProps> = React.memo(({
     aria-label={`${label}: ${value}${unit ? ` ${unit}` : ''}${warning ? ` (${warning})` : ''}`}
     className="sitesync-metric-box"
     style={{
-      backgroundColor: colors.surfaceRaised,
+      backgroundColor: bgColorOverride ?? colors.surfaceRaised,
       borderRadius: borderRadius.lg,
       padding: spacing.xl,
       boxShadow: shadows.base,
