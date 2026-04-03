@@ -183,7 +183,7 @@ export const SCurve: React.FC<SCurveProps> = ({ totalBudget: _totalBudget, spent
             ))}
           </tbody>
         </table>
-        <div aria-live="polite" aria-atomic="true" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)' }}>{announcement}</div>
+        <div role="status" aria-live="polite" aria-atomic="true" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)' }}>{announcement}</div>
 
         {/* Hover tooltip */}
         {hovered !== null && (
