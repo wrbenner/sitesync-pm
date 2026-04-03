@@ -126,13 +126,30 @@ const ROLE_CATEGORY_COLOR: Record<RoleCategory, string> = {
   unknown: '#9CA3AF',
 };
 
+// ── Entity type display names ─────────────────────────────────────────────────
+
+const ENTITY_TYPE_LABEL: Record<string, string> = {
+  rfi: 'RFI',
+  submittal: 'Submittal',
+  daily_log: 'Daily Log',
+  punch_item: 'Punch Item',
+  change_order: 'Change Order',
+};
+
+function formatActivityLabel(entityType?: string, entityId?: string): string | null {
+  if (!entityType) return null;
+  const label = ENTITY_TYPE_LABEL[entityType] ?? entityType;
+  return entityId ? `Viewing ${label} ${entityId.slice(0, 8)}` : `Viewing ${label}`;
+}
+
 // ── Tooltip content ───────────────────────────────────────────────────────────
 
-const AvatarTooltipContent: React.FC<{ user: { displayName: string; role?: string; company?: string; lastSeen: number } }> = ({ user }) => {
+const AvatarTooltipContent: React.FC<{ user: { displayName: string; role?: string; company?: string; lastSeen: number; action?: 'viewing' | 'editing'; editingEntityType?: string; editingEntityId?: string } }> = ({ user }) => {
   const status = getPresenceStatus(user.lastSeen);
   const roleCategory = getRoleCategory(user.role);
   const roleDotColor = ROLE_CATEGORY_COLOR[roleCategory];
   const roleCompanyLine = [user.role, user.company].filter(Boolean).join(', ');
+  const activityLabel = formatActivityLabel(user.editingEntityType, user.editingEntityId);
   return (
     <div style={{ minWidth: 140 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1.5'] }}>
@@ -161,6 +178,17 @@ const AvatarTooltipContent: React.FC<{ user: { displayName: string; role?: strin
           paddingLeft: 14,
         }}>
           {roleCompanyLine}
+        </div>
+      )}
+      {activityLabel && (
+        <div style={{
+          fontSize: 11,
+          color: colors.textTertiary,
+          marginTop: 2,
+          lineHeight: typography.lineHeight.snug,
+          paddingLeft: 14,
+        }}>
+          {activityLabel}
         </div>
       )}
       <div style={{
@@ -235,8 +263,16 @@ interface AvatarProps {
   total: number;
 }
 
+function getActivityDotColor(user: PresenceUserWithAction): string {
+  const isIdle = (Date.now() - user.lastSeen) / 60_000 > 5;
+  if (isIdle) return '#9CA3AF';
+  if (user.action === 'editing') return '#4EC896';
+  return '#3B82F6';
+}
+
 const PresenceAvatar: React.FC<AvatarProps> = ({ user, index, total }) => {
   const status = getPresenceStatus(user.lastSeen);
+  const activityDotColor = getActivityDotColor(user);
   return (
     <div role="listitem">
     <Tooltip.Root delayDuration={0}>
@@ -279,8 +315,19 @@ const PresenceAvatar: React.FC<AvatarProps> = ({ user, index, total }) => {
             fontWeight: typography.fontWeight.bold,
             color: colors.white,
             pointerEvents: 'none',
+            position: 'relative',
           }}>
             {user.initials}
+            <div style={{
+              position: 'absolute',
+              bottom: 0,
+              right: 0,
+              width: 6,
+              height: 6,
+              borderRadius: '50%',
+              backgroundColor: activityDotColor,
+              border: `1px solid ${colors.white}`,
+            }} />
           </div>
         </button>
       </Tooltip.Trigger>
