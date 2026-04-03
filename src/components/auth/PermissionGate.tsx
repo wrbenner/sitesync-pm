@@ -75,46 +75,61 @@ export const RequestAccessPage: React.FC<{ moduleName?: string }> = ({ moduleNam
   const navigate = useNavigate();
 
   return (
-    <div role="alert" aria-live="polite" style={{ maxWidth: 480, margin: 'auto', padding: 48, textAlign: 'center' }}>
-      <ShieldAlert size={48} color={colors.textTertiary} />
-      <h2 style={{
-        fontSize: typography.fontSize.xl,
-        fontWeight: typography.fontWeight.semibold,
-        color: colors.textPrimary,
-        margin: `${spacing['4']} 0 ${spacing['2']}`,
-      }}>Access Restricted</h2>
-      <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, marginTop: 8 }}>
-        You do not have permission to view {moduleName || 'this page'}. Your current role is {role || 'unassigned'}.
-      </p>
-      <button
-        onClick={() => navigate(-1)}
-        style={{
-          backgroundColor: colors.primary,
-          color: 'white',
-          padding: '10px 24px',
-          borderRadius: borderRadius.md,
-          border: 'none',
-          cursor: 'pointer',
-          marginTop: 24,
-        }}
-      >
-        Go Back
-      </button>
-      <button
-        onClick={() => {}}
-        style={{
-          display: 'block',
-          margin: `${spacing['3']} auto 0`,
-          background: 'none',
-          border: 'none',
-          color: colors.primary,
-          fontSize: typography.fontSize.sm,
-          cursor: 'pointer',
-          textDecoration: 'underline',
-        }}
-      >
-        Request Access
-      </button>
+    <div
+      role="alert"
+      aria-live="polite"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '100%',
+        width: '100%',
+        padding: spacing['8'],
+      }}
+    >
+      <div style={{ maxWidth: 480, textAlign: 'center' }}>
+        <ShieldAlert size={48} color={colors.textTertiary} />
+        <h2 style={{
+          fontSize: 20,
+          fontWeight: typography.fontWeight.semibold,
+          color: colors.textPrimary,
+          margin: `${spacing['4']} 0 ${spacing['2']}`,
+        }}>Access Restricted</h2>
+        <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, marginTop: 8 }}>
+          You don't have permission to access {moduleName || 'this section'}. Your current role is {role || 'unknown'}.
+        </p>
+        <button
+          onClick={() => alert('Access request sent to your project administrator')}
+          style={{
+            backgroundColor: colors.primary,
+            color: 'white',
+            padding: `${spacing['2']} ${spacing['4']}`,
+            borderRadius: borderRadius.md,
+            border: 'none',
+            cursor: 'pointer',
+            marginTop: spacing['6'],
+            fontSize: typography.fontSize.sm,
+            fontWeight: typography.fontWeight.medium,
+          }}
+        >
+          Request Access
+        </button>
+        <button
+          onClick={() => navigate('/dashboard')}
+          style={{
+            display: 'block',
+            margin: `${spacing['3']} auto 0`,
+            background: 'none',
+            border: 'none',
+            color: colors.primary,
+            fontSize: typography.fontSize.sm,
+            cursor: 'pointer',
+            textDecoration: 'underline',
+          }}
+        >
+          Go to Dashboard
+        </button>
+      </div>
     </div>
   );
 };
