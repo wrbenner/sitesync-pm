@@ -21,6 +21,8 @@ const listeners = new Set<() => void>()
 let initialized = false
 let subscriberCount = 0
 let authUnsubscribe: (() => void) | null = null
+// Stored by the hook so the module-level listener can navigate on session expiry
+let navigateFn: ((path: string) => void) | null = null
 
 function setState(partial: Partial<SharedAuthState>) {
   state = { ...state, ...partial }
@@ -54,15 +56,17 @@ function initAuth() {
   })
 
   const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
-    if (_event === 'SIGNED_IN') {
+    if (_event === 'SIGNED_IN' || _event === 'TOKEN_REFRESHED') {
       setState({ session: s, user: s?.user ?? null, error: null })
       if (s?.user) setSentryUser(s.user.id, s.user.email ?? '', s.user.user_metadata?.role)
     } else if (_event === 'SIGNED_OUT') {
       setState({ session: null, user: null, error: null })
       queryClient.clear()
       clearSentryUser()
-    } else if (_event === 'TOKEN_REFRESHED') {
-      setState({ session: s, user: s?.user ?? null })
+      navigateFn?.('/login')
+    } else if (_event === 'INITIAL_SESSION') {
+      setState({ session: s, user: s?.user ?? null, loading: false })
+      if (s?.user) setSentryUser(s.user.id, s.user.email ?? '', s.user.user_metadata?.role)
     } else {
       setState({ session: s, user: s?.user ?? null })
       if (s?.user) setSentryUser(s.user.id, s.user.email ?? '', s.user.user_metadata?.role)
@@ -95,6 +99,7 @@ export interface AuthState {
   signUp: (email: string, password: string, name: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
   resetPassword: (email: string) => Promise<{ error: string | null }>
+  isAuthenticated: boolean
   isSessionValid: boolean
 }
 
@@ -103,6 +108,7 @@ export function useAuth(): AuthState {
 
   // Start auth initialization on first mount; clean up subscription when last consumer unmounts
   useEffect(() => {
+    navigateFn = navigate
     subscriberCount++
     initAuth()
     return () => {
@@ -111,9 +117,10 @@ export function useAuth(): AuthState {
         authUnsubscribe()
         authUnsubscribe = null
         initialized = false
+        navigateFn = null
       }
     }
-  }, [])
+  }, [navigate])
 
   // All callers share the same snapshot
   const { user, session, loading, error } = useSyncExternalStore(subscribe, getSnapshot)
@@ -166,7 +173,8 @@ export function useAuth(): AuthState {
     return { error: error ? mapAuthError(error.message) : null }
   }, [])
 
+  const isAuthenticated = !!session
   const isSessionValid = !!session && !!session.expires_at && session.expires_at > Math.floor(Date.now() / 1000)
 
-  return { user, session, loading, error, signIn, signUp, signOut, resetPassword, isSessionValid }
+  return { user, session, loading, error, signIn, signUp, signOut, resetPassword, isAuthenticated, isSessionValid }
 }
