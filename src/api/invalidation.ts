@@ -4,6 +4,7 @@
 
 import { queryClient } from '../lib/queryClient'
 import { queryKeys } from './queryKeys'
+import { queueNotification } from '../services/notifications/emailNotificationService'
 
 export type EntityType =
   | 'rfi'
@@ -89,11 +90,87 @@ const INVALIDATION_MAP: Record<EntityType, (projectId: string) => Array<readonly
   ],
 }
 
+export async function triggerNotificationsForMutation(
+  entityType: EntityType,
+  projectId: string,
+  action: 'create' | 'update' | 'delete',
+  entityData: Record<string, any>
+): Promise<void> {
+  try {
+    switch (entityType) {
+      case 'rfi':
+        if (action === 'create' && entityData.assigned_to) {
+          await queueNotification(projectId, 'rfi_assigned', entityData.assigned_to, {
+            rfiNumber: entityData.number || '',
+            rfiTitle: entityData.title || '',
+            dueDate: entityData.due_date || 'No due date',
+            projectName: entityData.project_name || 'Project',
+            link: '/rfis/' + (entityData.id || ''),
+          })
+        } else if (action === 'update' && entityData.status === 'answered') {
+          await queueNotification(projectId, 'rfi_response', entityData.created_by, {
+            rfiNumber: entityData.number || '',
+            rfiTitle: entityData.title || '',
+            dueDate: entityData.due_date || 'No due date',
+            projectName: entityData.project_name || 'Project',
+            link: '/rfis/' + (entityData.id || ''),
+          })
+        }
+        break
+      case 'submittal':
+        if (action === 'update' && entityData.status === 'approved') {
+          await queueNotification(projectId, 'submittal_approved', entityData.submitted_by, {
+            submittalNumber: entityData.number || '',
+            submittalTitle: entityData.title || '',
+            projectName: entityData.project_name || 'Project',
+            link: '/submittals/' + (entityData.id || ''),
+          })
+        } else if (action === 'update' && (entityData.status === 'rejected' || entityData.status === 'resubmit')) {
+          await queueNotification(projectId, 'submittal_revision', entityData.submitted_by, {
+            submittalNumber: entityData.number || '',
+            submittalTitle: entityData.title || '',
+            projectName: entityData.project_name || 'Project',
+            link: '/submittals/' + (entityData.id || ''),
+          })
+        }
+        break
+      case 'change_order':
+        if (action === 'update' && entityData.status === 'pending_approval') {
+          await queueNotification(projectId, 'change_order_pending', entityData.approved_by, {
+            changeOrderNumber: entityData.number || '',
+            changeOrderTitle: entityData.title || '',
+            projectName: entityData.project_name || 'Project',
+            link: '/change-orders/' + (entityData.id || ''),
+          })
+        }
+        break
+      case 'punch_item':
+        if (action === 'create' && entityData.assigned_to) {
+          await queueNotification(projectId, 'punch_item_assigned', entityData.assigned_to, {
+            punchItemTitle: entityData.title || '',
+            location: entityData.location || '',
+            projectName: entityData.project_name || 'Project',
+            link: '/punch-list/' + (entityData.id || ''),
+          })
+        }
+        break
+      case 'meeting':
+        // Meeting notifications require iterating attendees, no-op for now
+        break
+      default:
+        return
+    }
+  } catch (err) {
+    console.error('triggerNotificationsForMutation error:', err)
+  }
+}
+
 export function invalidateEntity(entityType: EntityType, projectId: string): void {
   const keys = INVALIDATION_MAP[entityType]?.(projectId) ?? []
   keys.forEach((key) => {
     queryClient.invalidateQueries({ queryKey: key as unknown[] })
   })
+  triggerNotificationsForMutation(entityType, projectId, 'update', {}).catch(() => {})
 }
 
 export function invalidateAll(projectId: string): void {
