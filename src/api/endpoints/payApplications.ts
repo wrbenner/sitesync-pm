@@ -335,3 +335,61 @@ export const validateLienWaiverCompleteness = async (params: {
 
   return { complete: missingWaivers.length === 0, missingWaivers }
 }
+
+/**
+ * Advisory lien waiver validation for pay application submission.
+ *
+ * Queries the lien_waivers table for the given pay application, then checks that
+ * at least one conditional_progress waiver exists for every subcontractor who has
+ * a line item billed in this pay period. Returns a warning-only result so the
+ * frontend can surface missing waivers without blocking submission.
+ *
+ * Returns { valid: true } when all subs are covered.
+ * Returns { valid: false, missingWaivers: [...] } listing each vendor still outstanding.
+ * This is advisory only. Submission is NOT blocked by this function.
+ */
+export const validateLienWaiversForSubmission = async (
+  payApplicationId: string,
+): Promise<{
+  valid: boolean
+  missingWaivers: Array<{ vendor_name: string; waiver_type: LienWaiverType }>
+}> => {
+  const [waiversResult, lineItemsResult] = await Promise.all([
+    supabase
+      .from('lien_waivers')
+      .select('vendor_id, vendor_name, waiver_type')
+      .eq('pay_application_id', payApplicationId),
+    supabase
+      .from('pay_application_line_items')
+      .select('vendor_id, vendor_name, amount_this_period')
+      .eq('pay_application_id', payApplicationId)
+      .gt('amount_this_period', 0),
+  ])
+
+  if (waiversResult.error) throw transformSupabaseError(waiversResult.error)
+  if (lineItemsResult.error) throw transformSupabaseError(lineItemsResult.error)
+
+  // Collect every subcontractor with a billed line item this period, deduplicated by vendor_id.
+  const vendorMap = new Map<string, string>()
+  for (const row of lineItemsResult.data ?? []) {
+    if (row.vendor_id && !vendorMap.has(row.vendor_id)) {
+      vendorMap.set(row.vendor_id, row.vendor_name ?? row.vendor_id)
+    }
+  }
+
+  // Build a set of vendor_ids that already have a conditional_progress waiver.
+  const coveredVendorIds = new Set<string>(
+    (waiversResult.data ?? [])
+      .filter((w) => w.waiver_type === 'conditional_progress')
+      .map((w) => w.vendor_id as string),
+  )
+
+  const missingWaivers: Array<{ vendor_name: string; waiver_type: LienWaiverType }> = []
+  for (const [vendorId, vendorName] of vendorMap.entries()) {
+    if (!coveredVendorIds.has(vendorId)) {
+      missingWaivers.push({ vendor_name: vendorName, waiver_type: 'conditional_progress' })
+    }
+  }
+
+  return { valid: missingWaivers.length === 0, missingWaivers }
+}
