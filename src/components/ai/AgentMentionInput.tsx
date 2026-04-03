@@ -35,10 +35,11 @@ interface AgentMentionInputProps {
   onSend: (text: string) => void
   placeholder?: string
   disabled?: boolean
+  textareaAriaLabel?: string
 }
 
 export const AgentMentionInput = memo<AgentMentionInputProps>(
-  ({ onSend, placeholder = 'Ask your AI team... Use @ to route to a specific agent', disabled }) => {
+  ({ onSend, placeholder = 'Ask your AI team... Use @ to route to a specific agent', disabled, textareaAriaLabel }) => {
     const [value, setValue] = useState('')
     const [showAgentMenu, setShowAgentMenu] = useState(false)
     const [agentFilter, setAgentFilter] = useState('')
@@ -288,7 +289,7 @@ export const AgentMentionInput = memo<AgentMentionInputProps>(
             aria-disabled={disabled}
             rows={1}
             maxLength={MAX_MESSAGE_LENGTH}
-            aria-label="Message AI copilot"
+            aria-label={textareaAriaLabel ?? 'Message AI copilot'}
             aria-activedescendant={showAgentMenu ? `agent-option-${selectedIndex}` : undefined}
             style={{
               flex: 1,

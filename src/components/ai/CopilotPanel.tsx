@@ -226,6 +226,7 @@ export const CopilotPanel: React.FC = () => {
         aria-label="AI Copilot"
         aria-modal="true"
         onKeyDown={(e) => { if (e.key === 'Escape') closeCopilot() }}
+        aria-labelledby="copilot-panel-heading"
         style={{
           position: 'fixed',
           top: 0,
@@ -243,6 +244,24 @@ export const CopilotPanel: React.FC = () => {
           overflow: 'hidden',
         }}
       >
+        {/* Visually hidden landmark heading for screen readers */}
+        <h2
+          id="copilot-panel-heading"
+          style={{
+            position: 'absolute',
+            width: 1,
+            height: 1,
+            padding: 0,
+            margin: -1,
+            overflow: 'hidden',
+            clip: 'rect(0,0,0,0)',
+            whiteSpace: 'nowrap',
+            border: 0,
+          }}
+        >
+          AI Copilot
+        </h2>
+
         {/* Header */}
         <div
           style={{
@@ -427,7 +446,7 @@ export const CopilotPanel: React.FC = () => {
           role="log"
           aria-live="polite"
           aria-relevant="additions"
-          aria-label="AI conversation messages"
+          aria-label="AI Copilot conversation"
           tabIndex={0}
           style={{
             flex: 1,
@@ -552,7 +571,15 @@ export const CopilotPanel: React.FC = () => {
 
           {/* Chat messages */}
           {messages.map((msg) => (
-            <div key={msg.id} role="listitem">
+            <div
+              key={msg.id}
+              role="article"
+              aria-label={
+                msg.role === 'user'
+                  ? 'Message from You'
+                  : `Message from ${msg.agentDomain ? SPECIALIST_AGENTS[msg.agentDomain].shortName : 'AI Copilot'}`
+              }
+            >
               <PanelMessageRenderer message={msg} onSend={handleSendMessage} />
             </div>
           ))}
@@ -662,6 +689,7 @@ export const CopilotPanel: React.FC = () => {
             onSend={handleSendMessage}
             disabled={isProcessing}
             placeholder="Ask your AI team... Use @ to route to a specific agent"
+            textareaAriaLabel="Message to AI Copilot"
           />
         </div>
       </div>
