@@ -133,6 +133,7 @@ export const CopilotPanel: React.FC = () => {
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768)
   const [conversationId, setConversationId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
   const hasMessages = messages.length > 0
 
   useEffect(() => {
@@ -208,6 +209,13 @@ export const CopilotPanel: React.FC = () => {
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [isOpen, closeCopilot])
+
+  // Auto-focus close button when panel opens
+  useEffect(() => {
+    if (isOpen) {
+      closeButtonRef.current?.focus()
+    }
+  }, [isOpen])
 
   return (
     <>
@@ -425,8 +433,9 @@ export const CopilotPanel: React.FC = () => {
 
           {/* Close button */}
           <button
+            ref={closeButtonRef}
             onClick={closeCopilot}
-            aria-label="Close AI copilot panel"
+            aria-label="Close AI Copilot"
             style={{
               display: 'flex',
               alignItems: 'center',
