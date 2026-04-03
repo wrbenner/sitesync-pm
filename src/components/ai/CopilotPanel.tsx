@@ -145,6 +145,10 @@ export const CopilotPanel: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
   const hasMessages = messages.length > 0
+  const swipeStartYRef = useRef<number>(0)
+  const swipeDeltaYRef = useRef<number>(0)
+  const [dragY, setDragY] = useState(0)
+  const [isDragging, setIsDragging] = useState(false)
 
   useEffect(() => {
     const handleResize = () => {
@@ -270,6 +274,42 @@ export const CopilotPanel: React.FC = () => {
     }
   }, [isOpen])
 
+  // Prevent background scrolling when panel is open on mobile
+  useEffect(() => {
+    if (isOpen && isMobile) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [isOpen, isMobile])
+
+  const handleDragHandleTouchStart = useCallback((e: React.TouchEvent) => {
+    swipeStartYRef.current = e.touches[0].clientY
+    swipeDeltaYRef.current = 0
+    setIsDragging(true)
+  }, [])
+
+  const handleDragHandleTouchMove = useCallback((e: React.TouchEvent) => {
+    const deltaY = e.touches[0].clientY - swipeStartYRef.current
+    if (deltaY > 0) {
+      swipeDeltaYRef.current = deltaY
+      setDragY(deltaY)
+    }
+  }, [])
+
+  const handleDragHandleTouchEnd = useCallback(() => {
+    setIsDragging(false)
+    if (swipeDeltaYRef.current > 100) {
+      setDragY(0)
+      closeCopilot()
+    } else {
+      setDragY(0)
+    }
+  }, [closeCopilot])
+
   return (
     <>
       {/* Dark overlay */}
@@ -305,8 +345,10 @@ export const CopilotPanel: React.FC = () => {
           zIndex: 50,
           display: 'flex',
           flexDirection: 'column',
-          transform: isOpen ? 'translateX(0)' : 'translateX(100%)',
-          transition: `transform 150ms ease-out`,
+          transform: isOpen
+            ? (isDragging || dragY > 0 ? `translateX(0) translateY(${dragY}px)` : 'translateX(0)')
+            : 'translateX(100%)',
+          transition: isDragging ? 'none' : `transform 150ms ease-out`,
           overflow: 'hidden',
         }}
       >
@@ -327,6 +369,33 @@ export const CopilotPanel: React.FC = () => {
         >
           AI Copilot
         </h2>
+
+        {/* Drag handle — mobile only */}
+        {isMobile && (
+          <div
+            onTouchStart={handleDragHandleTouchStart}
+            onTouchMove={handleDragHandleTouchMove}
+            onTouchEnd={handleDragHandleTouchEnd}
+            aria-hidden="true"
+            style={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              padding: `${spacing['2']} 0`,
+              cursor: 'grab',
+              flexShrink: 0,
+            }}
+          >
+            <div
+              style={{
+                width: 36,
+                height: 4,
+                borderRadius: borderRadius.full,
+                backgroundColor: colors.borderDefault,
+              }}
+            />
+          </div>
+        )}
 
         {/* Header */}
         <div
@@ -612,7 +681,7 @@ export const CopilotPanel: React.FC = () => {
                     onClick={() => handleSendMessage(prompt.label)}
                     aria-label={prompt.label}
                     style={{
-                      padding: `${spacing['3']} ${spacing['3']}`,
+                      padding: '10px 16px',
                       minHeight: '44px',
                       minWidth: 0,
                       textAlign: 'left',
@@ -810,7 +879,10 @@ export const CopilotPanel: React.FC = () => {
             ...(isMobile
               ? { position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: colors.surfaceRaised, borderTop: `1px solid ${colors.borderSubtle}`, zIndex: 51 }
               : {}),
-            padding: `${spacing['3']} ${spacing['4']} ${isMobile ? 'max(env(safe-area-inset-bottom), 16px)' : spacing['4']}`,
+            paddingTop: spacing['3'],
+            paddingLeft: spacing['4'],
+            paddingRight: spacing['4'],
+            paddingBottom: isMobile ? 'calc(env(safe-area-inset-bottom, 0px) + 16px)' : spacing['4'],
             flexShrink: 0,
           }}
         >
