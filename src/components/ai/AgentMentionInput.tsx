@@ -118,7 +118,7 @@ export const AgentMentionInput = memo<AgentMentionInputProps>(
         setValue('')
         setShowAgentMenu(false)
       } catch {
-        toast.error('Failed to send message. Please try again.')
+        toast.error('Message failed to send. Please try again.')
       } finally {
         setIsSending(false)
       }
