@@ -103,6 +103,7 @@ const _FilesPage: React.FC = () => {
 
   // ── Accessibility live region ─────────────────────────
   const [liveAnnouncement, setLiveAnnouncement] = useState('');
+  const [uploadAnnouncement, setUploadAnnouncement] = useState('');
 
   // ── View mode ─────────────────────────────────────────
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
@@ -273,6 +274,16 @@ const _FilesPage: React.FC = () => {
     }
   }, [focusedIndex, viewMode]);
 
+  // ── Announce search result counts ─────────────────────
+  useEffect(() => {
+    if (!searchQuery.trim()) return;
+    if (displayFiles.length === 0) {
+      setLiveAnnouncement('No files match your search');
+    } else {
+      setLiveAnnouncement(`${displayFiles.length} ${displayFiles.length === 1 ? 'file' : 'files'} found`);
+    }
+  }, [searchQuery, displayFiles.length]);
+
   // ── File click handler ────────────────────────────────
   const handleFileClick = useCallback((file: FileItem) => {
     if (file.type === 'folder') {
@@ -292,8 +303,8 @@ const _FilesPage: React.FC = () => {
     try {
       await createFile.mutateAsync({ projectId: projectId!, data: { project_id: projectId!, name: fileName, content_type: 'application/octet-stream' } });
       addToast('success', `Uploaded ${fileName}`);
-      setLiveAnnouncement('File uploaded successfully');
-    } catch { addToast('error', `Failed to upload ${fileName}`); }
+      setUploadAnnouncement('File uploaded successfully');
+    } catch { addToast('error', `Failed to upload ${fileName}`); setUploadAnnouncement('Upload failed. Please try again.'); }
   };
 
   const handleDeleteFile = useCallback((file: FileItem) => {
@@ -453,6 +464,8 @@ const _FilesPage: React.FC = () => {
             {(['grid', 'list'] as ViewMode[]).map((mode) => (
               <button
                 key={mode}
+                aria-label={mode === 'grid' ? 'Grid view' : 'List view'}
+                aria-pressed={viewMode === mode}
                 onClick={() => setViewMode(mode)}
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -484,14 +497,21 @@ const _FilesPage: React.FC = () => {
         </div>
       }
     >
-      <div onDragEnter={handlePageDragEnter}>
-      {/* Accessibility live region */}
+      <main role="main" aria-label="Document management" onDragEnter={handlePageDragEnter}>
+      {/* Accessibility live regions */}
       <div
         aria-live="polite"
         aria-atomic="true"
         style={{ position: 'absolute', left: -9999, top: 'auto', width: 1, height: 1, overflow: 'hidden' }}
       >
         {liveAnnouncement}
+      </div>
+      <div
+        aria-live="assertive"
+        aria-atomic="true"
+        style={{ position: 'absolute', left: -9999, top: 'auto', width: 1, height: 1, overflow: 'hidden' }}
+      >
+        {uploadAnnouncement}
       </div>
 
       {/* Summary metrics */}
@@ -774,6 +794,8 @@ const _FilesPage: React.FC = () => {
                   ref={listRef}
                   tabIndex={0}
                   onKeyDown={handleKeyDown}
+                  role="list"
+                  aria-label="Project files"
                   style={{ outline: 'none' }}
                 >
                   <DataTable
@@ -813,7 +835,7 @@ const _FilesPage: React.FC = () => {
         }}
         title="Move to Folder"
       />
-      </div>
+      </main>
     </PageContainer>
   );
 };
