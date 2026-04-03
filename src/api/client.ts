@@ -177,6 +177,93 @@ export async function buildPaginatedQuery<TRaw, TResult = TRaw>(
 }
 
 /**
+ * Cursor-based pagination query. Fetches pageSize rows after/before the cursor,
+ * returning a base64-encoded nextCursor pointing to the last fetched row's
+ * orderColumn value so the caller can fetch the next page.
+ *
+ * Cursor encoding: btoa(String(row[orderColumn]))
+ * Direction: ascending uses .gt, descending uses .lt
+ */
+export async function buildCursorPaginatedQuery<TRow, TMapped = TRow>(
+  tableName: string,
+  projectId: string,
+  options: {
+    pageSize?: number
+    cursor?: string
+    orderColumn?: string
+    orderAscending?: boolean
+    filterFn?: (query: any) => any
+    mapFn?: (row: TRow) => TMapped
+  } = {}
+): Promise<{ data: TMapped[]; nextCursor: string | null; hasMore: boolean }> {
+  const {
+    pageSize = 50,
+    cursor,
+    orderColumn = 'created_at',
+    orderAscending = false,
+    filterFn,
+    mapFn,
+  } = options
+
+  let query = supabase
+    .from(tableName as TableName)
+    .select('*')
+    .eq('project_id', projectId)
+
+  if (filterFn) {
+    query = filterFn(query)
+  }
+
+  if (cursor) {
+    const decoded = atob(cursor)
+    query = orderAscending
+      ? (query as any).gt(orderColumn, decoded)
+      : (query as any).lt(orderColumn, decoded)
+  }
+
+  query = (query as any)
+    .order(orderColumn, { ascending: orderAscending })
+    .limit(pageSize + 1)
+
+  const { data, error } = await (query as any)
+  if (error) throw transformSupabaseError(error)
+
+  const rows = (data ?? []) as TRow[]
+  const hasMore = rows.length > pageSize
+  const pageRows = hasMore ? rows.slice(0, pageSize) : rows
+
+  const nextCursor: string | null = hasMore
+    ? btoa(String((pageRows[pageRows.length - 1] as Record<string, unknown>)[orderColumn]))
+    : null
+
+  const mappedData = mapFn ? pageRows.map(mapFn) : (pageRows as unknown as TMapped[])
+
+  return { data: mappedData, nextCursor, hasMore }
+}
+
+/**
+ * Infinite scroll hook backed by buildCursorPaginatedQuery.
+ * Uses TanStack React Query's useInfiniteQuery — call fetchNextPage() to load more.
+ */
+export function useInfiniteEntityQuery<T>(
+  tableName: string,
+  projectId: string,
+  pageSize = 50
+) {
+  const { useInfiniteQuery } = require('@tanstack/react-query') as typeof import('@tanstack/react-query')
+  return useInfiniteQuery<{ data: T[]; nextCursor: string | null; hasMore: boolean }, Error>({
+    queryKey: ['infinite', tableName, projectId, pageSize],
+    queryFn: ({ pageParam }) =>
+      buildCursorPaginatedQuery<T>(tableName, projectId, {
+        pageSize,
+        cursor: pageParam as string | undefined,
+      }),
+    initialPageParam: undefined,
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+  })
+}
+
+/**
  * Creates a typed Supabase Realtime subscription for a given table filtered by
  * project_id. Returns an object with an unsubscribe function for cleanup (e.g. in useEffect).
  */
