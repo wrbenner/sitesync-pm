@@ -76,9 +76,10 @@ export const getAiInsights = async (
     const now = new Date().toISOString()
 
     // Query real project data before falling back to onboarding placeholders
-    let openRfiCount = 0
     let overdueRfiCount = 0
     let openPunchCount = 0
+    let overBudgetCount = 0
+    let overdueActivitiesCount = 0
 
     try {
       const { count } = await supabase
@@ -86,15 +87,6 @@ export const getAiInsights = async (
         .select('id', { count: 'exact', head: true })
         .eq('project_id', projectId)
         .eq('status', 'open')
-      openRfiCount = count ?? 0
-    } catch { /* non-fatal */ }
-
-    try {
-      const { count } = await supabase
-        .from('rfis')
-        .select('id', { count: 'exact', head: true })
-        .eq('project_id', projectId)
-        .neq('status', 'closed')
         .lt('due_date', now)
       overdueRfiCount = count ?? 0
     } catch { /* non-fatal */ }
@@ -108,25 +100,41 @@ export const getAiInsights = async (
       openPunchCount = count ?? 0
     } catch { /* non-fatal */ }
 
-    const computedInsights: AIInsight[] = []
+    try {
+      const { data: budgetRows } = await supabase
+        .from('budget_line_items')
+        .select('spent_to_date, current_budget')
+        .eq('project_id', projectId)
+      overBudgetCount = (budgetRows ?? []).filter(
+        (row) => (row.spent_to_date ?? 0) > (row.current_budget ?? 0)
+      ).length
+    } catch { /* non-fatal */ }
 
-    if (openRfiCount > 0) {
+    try {
+      const { count } = await supabase
+        .from('schedule_activities')
+        .select('id', { count: 'exact', head: true })
+        .eq('project_id', projectId)
+        .eq('status', 'in_progress')
+        .lt('planned_finish', now)
+      overdueActivitiesCount = count ?? 0
+    } catch { /* non-fatal */ }
+
+    const dynamicInsights: AIInsight[] = []
+
+    if (overdueRfiCount > 0) {
       const rfiSeverity: AIInsight['severity'] =
-        overdueRfiCount > 5 ? 'critical' : overdueRfiCount > 0 ? 'warning' : 'info'
-      computedInsights.push({
-        id: 'computed-rfi-status',
+        overdueRfiCount > 5 ? 'critical' : overdueRfiCount > 2 ? 'warning' : 'info'
+      dynamicInsights.push({
+        id: 'computed-rfi-overdue',
         type: 'risk',
         severity: rfiSeverity,
-        title: overdueRfiCount > 0
-          ? `${openRfiCount} open RFIs, ${overdueRfiCount} are overdue`
-          : `${openRfiCount} open RFIs require attention`,
-        description: overdueRfiCount > 0
-          ? `${overdueRfiCount} RFI${overdueRfiCount === 1 ? '' : 's'} passed their due date and may be blocking work. Review and respond to keep the project moving.`
-          : `${openRfiCount} open RFI${openRfiCount === 1 ? '' : 's'} awaiting response. Timely replies prevent field delays.`,
+        title: `${overdueRfiCount} RFI${overdueRfiCount === 1 ? '' : 's'} are overdue and may delay critical path`,
+        description: `${overdueRfiCount} open RFI${overdueRfiCount === 1 ? '' : 's'} passed their due date. Unresolved RFIs can block field work and push the schedule. Review and respond immediately.`,
         affectedEntities: [],
         suggestedAction: 'Navigate to RFIs to review and respond',
-        confidence: 1,
-        source: 'fallback' as const,
+        confidence: 0.85,
+        source: 'computed' as const,
         createdAt: now,
         generatedAt: now,
         expiresAt: null,
@@ -135,16 +143,18 @@ export const getAiInsights = async (
     }
 
     if (openPunchCount > 0) {
-      computedInsights.push({
-        id: 'computed-punch-status',
-        type: 'risk',
-        severity: openPunchCount > 20 ? 'warning' : 'info',
-        title: `${openPunchCount} open punch list item${openPunchCount === 1 ? '' : 's'}`,
+      const punchSeverity: AIInsight['severity'] =
+        openPunchCount > 5 ? 'critical' : openPunchCount > 2 ? 'warning' : 'info'
+      dynamicInsights.push({
+        id: 'computed-punch-open',
+        type: 'action_needed',
+        severity: punchSeverity,
+        title: `${openPunchCount} open punch list item${openPunchCount === 1 ? '' : 's'} require resolution`,
         description: `${openPunchCount} punch list item${openPunchCount === 1 ? '' : 's'} remain open. Clearing these is required before closeout.`,
         affectedEntities: [],
         suggestedAction: 'Navigate to Punch List to review open items',
-        confidence: 1,
-        source: 'fallback' as const,
+        confidence: 0.85,
+        source: 'computed' as const,
         createdAt: now,
         generatedAt: now,
         expiresAt: null,
@@ -152,11 +162,50 @@ export const getAiInsights = async (
       })
     }
 
-    if (computedInsights.length > 0) {
+    if (overBudgetCount > 0) {
+      const budgetSeverity: AIInsight['severity'] =
+        overBudgetCount > 5 ? 'critical' : overBudgetCount > 2 ? 'warning' : 'info'
+      dynamicInsights.push({
+        id: 'computed-budget-overrun',
+        type: 'risk',
+        severity: budgetSeverity,
+        title: `${overBudgetCount} budget line item${overBudgetCount === 1 ? '' : 's'} are over budget`,
+        description: `${overBudgetCount} cost code${overBudgetCount === 1 ? '' : 's'} show spending above the current budget. Review cost exposure and issue change orders if needed.`,
+        affectedEntities: [],
+        suggestedAction: 'Navigate to Budget to review cost variance',
+        confidence: 0.85,
+        source: 'computed' as const,
+        createdAt: now,
+        generatedAt: now,
+        expiresAt: null,
+        dismissed: false,
+      })
+    }
+
+    if (overdueActivitiesCount > 0) {
+      const schedSeverity: AIInsight['severity'] =
+        overdueActivitiesCount > 5 ? 'critical' : overdueActivitiesCount > 2 ? 'warning' : 'info'
+      dynamicInsights.push({
+        id: 'computed-schedule-overdue',
+        type: 'risk',
+        severity: schedSeverity,
+        title: `${overdueActivitiesCount} in-progress activit${overdueActivitiesCount === 1 ? 'y has' : 'ies have'} passed planned finish`,
+        description: `${overdueActivitiesCount} schedule activit${overdueActivitiesCount === 1 ? 'y is' : 'ies are'} still in progress past their planned finish date. These may be impacting downstream tasks and the critical path.`,
+        affectedEntities: [],
+        suggestedAction: 'Navigate to Schedule to review late activities',
+        confidence: 0.85,
+        source: 'computed' as const,
+        createdAt: now,
+        generatedAt: now,
+        expiresAt: null,
+        dismissed: false,
+      })
+    }
+
+    if (dynamicInsights.length > 0) {
       return {
-        insights: computedInsights,
-        dataSource: aiServiceFailed ? 'ai-degraded' as const : 'ai-fallback' as const,
-        ...(aiServiceFailed && { degraded: true, degradedReason: aiErrorType }),
+        insights: dynamicInsights,
+        dataSource: 'computed' as const,
       }
     }
 

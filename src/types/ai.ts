@@ -60,7 +60,7 @@ export interface AIToolCall {
 
 export interface AIInsight {
   id: string
-  type: 'risk' | 'recommendation' | 'anomaly' | 'prediction' | 'budget_risk' | 'schedule_risk' | 'onboarding'
+  type: 'risk' | 'recommendation' | 'anomaly' | 'prediction' | 'budget_risk' | 'schedule_risk' | 'onboarding' | 'action_needed'
   severity: 'info' | 'warning' | 'critical'
   title: string
   description: string
@@ -68,7 +68,7 @@ export interface AIInsight {
   suggestedAction?: string
   confidence: number // 0-1
   isPlaceholder?: boolean // true for onboarding prompts, not real analysis results
-  source?: 'live' | 'cached' | 'supabase' | 'fallback' | 'onboarding' // which analysis generated this
+  source?: 'live' | 'cached' | 'supabase' | 'fallback' | 'onboarding' | 'computed' // which analysis generated this
   createdAt: string
   generatedAt?: string
   expiresAt?: string
@@ -77,8 +77,8 @@ export interface AIInsight {
 
 export interface AiInsightsResponse {
   insights: AIInsight[]
-  /** 'ai-live' when served directly from the AI service; 'ai-cached' when served from Supabase (no failure); 'ai-degraded' when aiService threw an error and we fell back to cache or placeholders; 'ai-fallback' when no data exists and starter insights are shown. */
-  dataSource: 'ai-live' | 'ai-cached' | 'ai-degraded' | 'ai-fallback'
+  /** 'ai-live' when served directly from the AI service; 'ai-cached' when served from Supabase (no failure); 'ai-degraded' when aiService threw an error and we fell back to cache or placeholders; 'ai-fallback' when no data exists and starter insights are shown; 'computed' when generated from live project data queries without AI. */
+  dataSource: 'ai-live' | 'ai-cached' | 'ai-degraded' | 'ai-fallback' | 'computed'
   /** ISO timestamp set when results were served from Supabase cache after aiService failed. */
   lastFallbackAt?: string
   /** True when the AI service threw an error and results are from cache or onboarding placeholders. */
