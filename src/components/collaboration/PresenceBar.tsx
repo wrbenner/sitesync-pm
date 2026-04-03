@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as Tooltip from '@radix-ui/react-tooltip';
-import { Eye, RefreshCw } from 'lucide-react';
+import { Eye, RefreshCw, Sparkles, X } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme';
 import { usePresenceStore } from '../../stores/presenceStore';
 import { useOthers } from '../../lib/liveblocks';
@@ -313,8 +313,26 @@ export const PresenceBar: React.FC<PresenceBarProps> = ({ page }) => {
   const maxVisible = useMaxVisible();
   const [announcement, setAnnouncement] = useState('');
   const [viewerCountText, setViewerCountText] = useState('');
+  const [insightDismissed, setInsightDismissed] = useState(() => {
+    try { return sessionStorage.getItem(`presence-insight-dismissed-${page}`) === 'true'; }
+    catch { return false; }
+  });
   // Stores previous snapshot as a map of userId -> displayName so we can name departing users
   const prevUsersRef = useRef<Map<string, string>>(new Map());
+
+  const handleDismissInsight = () => {
+    try { sessionStorage.setItem(`presence-insight-dismissed-${page}`, 'true'); }
+    catch { /* ignore */ }
+    setInsightDismissed(true);
+  };
+
+  const pageLabel = page.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  const showInsight = users.length >= 2 && !insightDismissed;
+  const insightText = (() => {
+    if (users.length < 2) return '';
+    if (users.length === 2) return `${users[0].displayName} and ${users[1].displayName} are both viewing ${pageLabel}. Coordinate to avoid duplicate edits.`;
+    return `${users[0].displayName}, ${users[1].displayName}, and ${users.length - 2} others are all viewing ${pageLabel}. Coordinate to avoid duplicate edits.`;
+  })();
 
   useEffect(() => {
     setViewerCountText(`${users.length} ${users.length === 1 ? 'person' : 'people'} viewing this page`);
@@ -439,6 +457,40 @@ export const PresenceBar: React.FC<PresenceBarProps> = ({ page }) => {
           </div>
         </div>
       </Tooltip.Provider>
+      {showInsight && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: spacing['2'],
+          marginTop: spacing['2'],
+          padding: spacing['2'],
+          backgroundColor: colors.surfaceRaised,
+          border: `1px solid ${colors.border}`,
+          borderRadius: borderRadius.md,
+        }}>
+          <Sparkles size={13} color={colors.indigo} style={{ flexShrink: 0 }} />
+          <span style={{ flex: 1, fontSize: typography.fontSize.label, color: colors.textSecondary, lineHeight: typography.lineHeight.snug }}>
+            {insightText}
+          </span>
+          <button
+            onClick={handleDismissInsight}
+            aria-label="Dismiss AI insight"
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: spacing['1'],
+              display: 'flex',
+              alignItems: 'center',
+              color: colors.textTertiary,
+              borderRadius: borderRadius.sm,
+              flexShrink: 0,
+            }}
+          >
+            <X size={12} />
+          </button>
+        </div>
+      )}
       <div
         aria-live="polite"
         aria-atomic="true"
