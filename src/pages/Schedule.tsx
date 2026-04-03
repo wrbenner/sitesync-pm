@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Sparkles, AlertTriangle, ChevronDown, ChevronUp, CheckCircle, RefreshCw, Zap, CalendarClock, TrendingUp, GitBranch, Gauge, CalendarCheck, Calendar, BarChart3, ToggleLeft, ToggleRight, ClipboardList, Upload, X } from 'lucide-react';
+import { Sparkles, AlertTriangle, ChevronDown, ChevronUp, CheckCircle, RefreshCw, Zap, CalendarClock, TrendingUp, GitBranch, Gauge, CalendarCheck, Calendar, BarChart3, ToggleLeft, ToggleRight, ClipboardList, Upload, X, Sun, Cloud, CloudRain } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { PageContainer, Card, SectionHeader, MetricBox, Skeleton, Btn, useToast, Tag } from '../components/Primitives';
 import { useRealtimeSchedulePhases, useScheduleRealtime } from '../hooks/queries/realtime';
@@ -557,6 +557,9 @@ export const Schedule: React.FC = () => {
   const [lastAnalyzed, setLastAnalyzed] = useState<Date | null>(null);
   const [minutesAgo, setMinutesAgo] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [aiEdgeText, setAiEdgeText] = useState<string | null>(null);
+  const [aiEdgeLoading, setAiEdgeLoading] = useState(false);
+  const [weatherRecords, setWeatherRecords] = useState<Array<{ date: string; conditions: string | null }>>([]);
 
   const kpis = useMemo(() => computeScheduleKPIs(schedulePhases), [schedulePhases])
 
@@ -641,6 +644,68 @@ export const Schedule: React.FC = () => {
     }, 30000);
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [lastAnalyzed]);
+
+  useEffect(() => {
+    const projectId = activeProject?.id;
+    if (!projectId) return;
+    const today = new Date().toISOString().split('T')[0];
+    const twoWeeksOut = new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0];
+    supabase
+      .from('weather_records')
+      .select('date, conditions')
+      .eq('project_id', projectId)
+      .gte('date', today)
+      .lte('date', twoWeeksOut)
+      .then(({ data }) => {
+        if (data && data.length > 0) setWeatherRecords(data);
+      });
+  }, [activeProject?.id]);
+
+  const overallHealthStatus = useMemo(() => {
+    if (schedulePhases.length === 0) return { status: 'green', label: 'On Track' };
+    const behind = schedulePhases.filter(p => {
+      if (p.status === 'delayed') return true;
+      const planned = (p as unknown as Record<string, unknown>).planned_percent_complete as number | null | undefined;
+      if (planned != null && (p.percent_complete ?? p.progress ?? 0) < planned) return true;
+      return false;
+    });
+    const pct = (behind.length / schedulePhases.length) * 100;
+    if (pct > 20) return { status: 'red', label: `At Risk: ${behind.length} ${behind.length === 1 ? 'activity' : 'activities'} behind` };
+    if (pct > 10) return { status: 'amber', label: `Monitoring: ${behind.length} ${behind.length === 1 ? 'activity' : 'activities'} behind` };
+    return { status: 'green', label: 'On Track' };
+  }, [schedulePhases]);
+
+  const criticalPathAtRisk = useMemo(() => {
+    return schedulePhases
+      .filter(p => p.is_critical_path === true && (p.status === 'delayed' || (p.float_days ?? p.floatDays ?? 99) < 3))
+      .map(p => ({
+        id: p.id,
+        name: p.name,
+        floatDays: p.float_days ?? p.floatDays ?? 0,
+        status: p.status,
+      }));
+  }, [schedulePhases]);
+
+  const outdoorActivityCount = useMemo(() => {
+    return schedulePhases.filter(p => (p as unknown as Record<string, unknown>).outdoor_activity === true).length;
+  }, [schedulePhases]);
+
+  const runAiEdgeAnalysis = useCallback(async () => {
+    const projectId = activeProject?.id;
+    if (!projectId) return;
+    setAiEdgeLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-schedule-risk', {
+        body: { project_id: projectId },
+      });
+      if (error) throw error;
+      const text = (data as Record<string, unknown>)?.analysis ?? (data as Record<string, unknown>)?.text ?? String(data ?? '');
+      setAiEdgeText(String(text));
+    } catch {
+      setAiEdgeText('AI analysis will be available when the AI service is configured.');
+    }
+    setAiEdgeLoading(false);
+  }, [activeProject?.id]);
 
   const openCopilotWithRisk = useCallback(async (risk: PredictedRisk) => {
     const prompt = `Generate a detailed recovery plan for the ${risk.title} phase. Risk assessment: ${risk.reason} Likelihood: ${risk.likelihoodPercent}%, potential impact: +${risk.impactDays} days. Suggested action: ${risk.suggestedAction}`;
@@ -1017,7 +1082,7 @@ export const Schedule: React.FC = () => {
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setRiskPanelOpen((v) => !v); } }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
-            <Zap size={15} color={risks.length > 0 ? colors.primaryOrange : colors.statusActive} fill={risks.length > 0 ? colors.primaryOrange : colors.statusActive} />
+            <Sparkles size={15} color={risks.length > 0 ? colors.primaryOrange : colors.statusActive} />
             <span style={{ fontWeight: typography.fontWeight.semibold, fontSize: typography.fontSize.sm, color: colors.textPrimary }}>
               AI Risk Analysis
             </span>
@@ -1057,7 +1122,87 @@ export const Schedule: React.FC = () => {
 
         {/* Panel body */}
         {riskPanelOpen && (
-          <div style={{ padding: spacing['4'] }}>
+          <div style={{ padding: spacing['4'], display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
+
+            {/* Section A: Overall Health */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
+              <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textSecondary }}>
+                Overall Health
+              </span>
+              <span style={{
+                fontSize: typography.fontSize.sm,
+                fontWeight: typography.fontWeight.semibold,
+                padding: `2px ${spacing['3']}`,
+                borderRadius: borderRadius.full,
+                backgroundColor: overallHealthStatus.status === 'green'
+                  ? `${colors.statusActive}18`
+                  : overallHealthStatus.status === 'amber'
+                  ? `${colors.statusPending}18`
+                  : `${colors.statusCritical}18`,
+                color: overallHealthStatus.status === 'green'
+                  ? colors.statusActive
+                  : overallHealthStatus.status === 'amber'
+                  ? colors.statusPending
+                  : colors.statusCritical,
+              }}>
+                {overallHealthStatus.label}
+              </span>
+            </div>
+
+            {/* Section B: Critical Path Risks */}
+            {criticalPathAtRisk.length > 0 && (
+              <div>
+                <p style={{ margin: `0 0 ${spacing['2']}`, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Critical Path Risks
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'] }}>
+                  {criticalPathAtRisk.map(activity => (
+                    <div key={activity.id} style={{
+                      display: 'flex', alignItems: 'center', gap: spacing['3'],
+                      padding: `${spacing['2']} ${spacing['3']}`,
+                      backgroundColor: `${colors.statusCritical}08`,
+                      borderRadius: borderRadius.md,
+                      border: `1px solid ${colors.statusCritical}20`,
+                    }}>
+                      <AlertTriangle size={13} color={colors.statusCritical} style={{ flexShrink: 0 }} />
+                      <span style={{ flex: 1, fontSize: typography.fontSize.sm, color: colors.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {activity.name}
+                      </span>
+                      <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, whiteSpace: 'nowrap' }}>
+                        {activity.floatDays}d float
+                      </span>
+                      <span style={{
+                        fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
+                        padding: `1px ${spacing['2']}`, borderRadius: borderRadius.full,
+                        backgroundColor: activity.status === 'delayed' ? `${colors.statusCritical}15` : `${colors.statusPending}15`,
+                        color: activity.status === 'delayed' ? colors.statusCritical : colors.statusPending,
+                        whiteSpace: 'nowrap',
+                      }}>
+                        {activity.status === 'delayed' ? 'Delayed' : 'Low Float'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Section C: Weather Impact */}
+            {outdoorActivityCount > 0 && (
+              <div style={{
+                padding: `${spacing['3']} ${spacing['3']}`,
+                backgroundColor: `${colors.statusPending}10`,
+                borderRadius: borderRadius.md,
+                border: `1px solid ${colors.statusPending}25`,
+                display: 'flex', alignItems: 'center', gap: spacing['3'],
+              }}>
+                <Cloud size={15} color={colors.statusPending} style={{ flexShrink: 0 }} />
+                <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>
+                  <strong style={{ color: colors.textPrimary }}>{outdoorActivityCount} outdoor {outdoorActivityCount === 1 ? 'activity' : 'activities'}</strong> scheduled this week. Check weather before committing.
+                </span>
+              </div>
+            )}
+
+            {/* Predictive risk items from local analysis */}
             {analyzing ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
                 {[1, 2].map((i) => (
@@ -1135,6 +1280,49 @@ export const Schedule: React.FC = () => {
                 ))}
               </div>
             )}
+
+            {/* AI Edge Function section */}
+            <div style={{ borderTop: `1px solid ${colors.borderSubtle}`, paddingTop: spacing['3'], display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>
+                  Deep AI analysis via cloud service
+                </span>
+                <button
+                  onClick={runAiEdgeAnalysis}
+                  disabled={aiEdgeLoading}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: spacing['2'],
+                    padding: `${spacing['1']} ${spacing['3']}`,
+                    backgroundColor: colors.primaryOrange, color: '#fff',
+                    border: 'none', borderRadius: borderRadius.base,
+                    fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
+                    fontFamily: typography.fontFamily,
+                    cursor: aiEdgeLoading ? 'default' : 'pointer',
+                    opacity: aiEdgeLoading ? 0.7 : 1,
+                    transition: `opacity ${transitions.quick}`,
+                  }}
+                >
+                  {aiEdgeLoading
+                    ? <RefreshCw size={12} style={{ animation: 'spin 1s linear infinite' }} />
+                    : <Sparkles size={12} />
+                  }
+                  {aiEdgeLoading ? 'Analyzing...' : 'Run AI Analysis'}
+                </button>
+              </div>
+              {aiEdgeText && (
+                <div style={{
+                  padding: spacing['3'],
+                  backgroundColor: `${colors.primaryOrange}06`,
+                  borderRadius: borderRadius.md,
+                  border: `1px solid ${colors.primaryOrange}20`,
+                }}>
+                  <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textSecondary, lineHeight: typography.lineHeight.relaxed }}>
+                    {aiEdgeText}
+                  </p>
+                </div>
+              )}
+            </div>
+
           </div>
         )}
       </div>
@@ -1371,6 +1559,39 @@ export const Schedule: React.FC = () => {
                   </span>
                 </div>
               )}
+
+              {/* Weather overlay strip: DB records take priority, MOCK_FORECAST as fallback */}
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: spacing['3'],
+                padding: `${spacing['2']} ${spacing['3']}`, marginBottom: spacing['3'],
+                backgroundColor: colors.surfaceInset, borderRadius: borderRadius.md,
+                border: `1px solid ${colors.borderSubtle}`, overflowX: 'auto',
+              }}>
+                <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, fontWeight: typography.fontWeight.medium, whiteSpace: 'nowrap' }}>
+                  7-Day Forecast
+                </span>
+                {(weatherRecords.length > 0
+                  ? weatherRecords.slice(0, 7).map(r => ({ date: r.date, conditions: r.conditions ?? 'Clear' }))
+                  : MOCK_FORECAST.map(d => ({ date: d.date, conditions: d.conditions as string }))
+                ).map((day) => {
+                  const label = new Date(day.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'numeric', day: 'numeric' });
+                  const cond = day.conditions.toLowerCase();
+                  const isRain = cond.includes('rain') || cond.includes('storm') || cond.includes('snow');
+                  const isCloudy = cond.includes('cloud') || cond.includes('overcast');
+                  return (
+                    <div key={day.date} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, minWidth: 44 }}>
+                      {isRain
+                        ? <CloudRain size={14} color={colors.statusInfo} />
+                        : isCloudy
+                        ? <Cloud size={14} color={colors.textTertiary} />
+                        : <Sun size={14} color="#F59E0B" />
+                      }
+                      <span style={{ fontSize: 10, color: colors.textTertiary, whiteSpace: 'nowrap' }}>{label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+
               <ErrorBoundary
                 fallback={(err) => (
                   <div style={{
