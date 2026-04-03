@@ -6,7 +6,7 @@ import { Upload, X, Sparkles, FileText, AlertTriangle, AlertCircle, CheckCircle2
 import { aiService } from '../lib/aiService';
 import type { DrawingAnalysis } from '../types/ai';
 import { PageContainer, Card, Btn, Tag, useToast } from '../components/Primitives';
-import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme';
+import { colors, spacing, typography, borderRadius, transitions, shadows, zIndex } from '../styles/theme';
 import { getDrawings, getDisciplineColor, getDrawingRevisionHistory } from '../api/endpoints/documents';
 import { useQuery } from '../hooks/useQuery';
 import { useProjectId } from '../hooks/useProjectId';
@@ -16,6 +16,7 @@ import { DrawingViewer } from '../components/drawings/DrawingViewer';
 import { VersionCompare } from '../components/drawings/VersionCompare';
 import { PdfViewer } from '../components/drawings/PdfViewer';
 import { PermissionGate } from '../components/auth/PermissionGate';
+import { supabase } from '../lib/supabase';
 
 
 const aiChanges: Record<number, number> = { 1: 3, 5: 2, 11: 4 };
@@ -46,6 +47,21 @@ const lastViewed: Record<number, string> = {
 const gridColumns = '60px 80px 1fr 120px 80px 100px 70px 120px 100px 70px 90px';
 
 // Static coordination conflicts for the AI Insights panel
+function parseAiConflicts(text: string): Array<{ severity: 'high' | 'medium' | 'low'; description: string; sheets: string[] }> {
+  try {
+    const parsed = JSON.parse(text);
+    if (Array.isArray(parsed)) return parsed;
+    if (parsed.conflicts && Array.isArray(parsed.conflicts)) return parsed.conflicts;
+  } catch { /* not JSON */ }
+  const lines = text.split(/\n+/).map((l) => l.replace(/^[-•*\d.]\s*/, '').trim()).filter((l) => l.length > 10);
+  const severities: Array<'high' | 'medium' | 'low'> = ['high', 'medium', 'medium', 'low', 'low', 'low'];
+  return lines.slice(0, 6).map((line, i) => ({
+    severity: severities[Math.min(i, severities.length - 1)],
+    description: line,
+    sheets: [],
+  }));
+}
+
 const coordinationConflicts = [
   { id: 'c1', drawing1: 'A-201', rev1: 'Rev 3', drawing2: 'S-101', location: 'Grid Line C4', discipline1: 'Architectural', discipline2: 'Structural', confidence: 0.94 },
   { id: 'c2', drawing1: 'M-301', rev1: 'Rev 2', drawing2: 'S-204', location: 'Level 3 ceiling plenum', discipline1: 'Mechanical', discipline2: 'Structural', confidence: 0.88 },
@@ -78,6 +94,11 @@ const _DrawingsPage: React.FC = () => {
   const [compareRevAIdx, setCompareRevAIdx] = useState(0);
   const [compareRevBIdx, setCompareRevBIdx] = useState(1);
   const [viewRevPdfUrl, setViewRevPdfUrl] = useState<string | null>(null);
+  const [showAiPanel, setShowAiPanel] = useState(false);
+  const [aiPanelLoading, setAiPanelLoading] = useState(false);
+  const [aiPanelConflicts, setAiPanelConflicts] = useState<Array<{ severity: 'high' | 'medium' | 'low'; description: string; sheets: string[] }>>([]);
+  const [aiPanelError, setAiPanelError] = useState<string | null>(null);
+  const [aiPanelAnalyzed, setAiPanelAnalyzed] = useState(false);
 
   const { data: revisionHistory } = useQuery(
     `revision-history-${selectedDrawing?.id ?? 'none'}`,
@@ -142,6 +163,34 @@ const _DrawingsPage: React.FC = () => {
     }
   }, [focusedIndex]);
 
+  const handleAiAnalyze = async () => {
+    if (!selectedDrawing || !projectId) return;
+    setAiPanelLoading(true);
+    setAiPanelError(null);
+    setAiPanelConflicts([]);
+    setAiPanelAnalyzed(false);
+    try {
+      const sheetNumber = selectedDrawing.setNumber || selectedDrawing.title;
+      const { data, error: fnError } = await supabase.functions.invoke('ai-copilot', {
+        body: {
+          project_id: projectId,
+          message: `Analyze drawing ${sheetNumber} for coordination conflicts with other disciplines`,
+          context: { entity_type: 'drawing', entity_id: String(selectedDrawing.id) },
+        },
+      });
+      if (fnError) throw fnError;
+      const responseText: string =
+        data?.response ?? data?.message ?? (typeof data === 'string' ? data : JSON.stringify(data));
+      const parsed = parseAiConflicts(responseText);
+      setAiPanelConflicts(parsed);
+      setAiPanelAnalyzed(true);
+    } catch {
+      setAiPanelError('AI analysis unavailable. Ensure the AI service is configured in project settings.');
+    } finally {
+      setAiPanelLoading(false);
+    }
+  };
+
   const sortedDrawings = [...filteredDrawings].sort((a, b) => {
     const aVal = (a as any)[sortField];
     const bVal = (b as any)[sortField];
@@ -157,11 +206,23 @@ const _DrawingsPage: React.FC = () => {
     <PageContainer
       title="Drawings"
       actions={
-        <PermissionGate permission="drawings.upload">
-          <Btn variant="primary" size="md" icon={<Upload size={16} />} aria-label="Upload new drawing" onClick={() => setShowUploadModal(true)}>
-            Upload Drawings
+        <>
+          <Btn
+            variant="secondary"
+            size="md"
+            icon={<Sparkles size={16} />}
+            aria-label="Toggle AI insights panel"
+            aria-pressed={showAiPanel}
+            onClick={() => setShowAiPanel((v) => !v)}
+          >
+            AI Insights
           </Btn>
-        </PermissionGate>
+          <PermissionGate permission="drawings.upload">
+            <Btn variant="primary" size="md" icon={<Upload size={16} />} aria-label="Upload new drawing" onClick={() => setShowUploadModal(true)}>
+              Upload Drawings
+            </Btn>
+          </PermissionGate>
+        </>
       }
     >
       <style>{`
@@ -176,6 +237,8 @@ const _DrawingsPage: React.FC = () => {
           .drawing-row-mobile{display:none!important;}
         }
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+        @keyframes spin{to{transform:rotate(360deg)}}
+        @keyframes slideInRight{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
         .drawing-row:focus-visible{outline:2px solid #F47820;outline-offset:-2px;}
       `}</style>
       <div
@@ -1103,6 +1166,127 @@ const _DrawingsPage: React.FC = () => {
                 Upload
               </Btn>
             </div>
+          </div>
+        </div>
+      )}
+      {/* AI Insights right sidebar */}
+      {showAiPanel && (
+        <div
+          role="complementary"
+          aria-label="AI coordination insights"
+          style={{
+            position: 'fixed',
+            right: 0,
+            top: 64,
+            bottom: 0,
+            width: 320,
+            backgroundColor: colors.surfaceRaised,
+            borderLeft: `1px solid ${colors.borderSubtle}`,
+            boxShadow: shadows.panel,
+            zIndex: zIndex.sticky,
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            animation: 'slideInRight 0.22s cubic-bezier(0.32,0.72,0,1)',
+          }}
+        >
+          {/* Header */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], padding: `${spacing['4']} ${spacing['4']}`, borderBottom: `1px solid ${colors.borderSubtle}`, flexShrink: 0 }}>
+            <Sparkles size={16} color={colors.statusReview} />
+            <span style={{ flex: 1, fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+              AI Insights
+            </span>
+            <button
+              onClick={() => setShowAiPanel(false)}
+              aria-label="Close AI insights panel"
+              style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', border: 'none', borderRadius: borderRadius.base, cursor: 'pointer', color: colors.textTertiary }}
+              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = colors.surfaceHover; }}
+              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+            >
+              <X size={14} />
+            </button>
+          </div>
+
+          {/* Scrollable content */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: spacing['4'], display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
+            <p style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0 }}>
+              Detected Conflicts
+            </p>
+
+            {aiPanelLoading ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], padding: `${spacing['3']} 0` }}>
+                <Loader2 size={16} color={colors.statusReview} style={{ animation: 'spin 1s linear infinite' }} />
+                <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>Analyzing...</span>
+              </div>
+            ) : aiPanelError ? (
+              <div style={{ padding: spacing['3'], backgroundColor: colors.statusCriticalSubtle, borderRadius: borderRadius.base, border: `1px solid ${colors.statusCritical}30` }}>
+                <p style={{ fontSize: typography.fontSize.sm, color: colors.statusCritical, margin: 0 }}>{aiPanelError}</p>
+              </div>
+            ) : !aiPanelAnalyzed ? (
+              <div style={{ padding: `${spacing['5']} ${spacing['3']}`, textAlign: 'center' }}>
+                <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0, lineHeight: typography.lineHeight.normal }}>
+                  Select a drawing and click Analyze to detect coordination conflicts.
+                </p>
+              </div>
+            ) : aiPanelConflicts.length === 0 ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], padding: `${spacing['3']} 0` }}>
+                <CheckCircle2 size={16} color={colors.statusActive} />
+                <p style={{ fontSize: typography.fontSize.sm, color: colors.statusActive, margin: 0 }}>No conflicts detected.</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'] }}>
+                {aiPanelConflicts.map((conflict, i) => {
+                  const severityColor =
+                    conflict.severity === 'high' ? colors.statusCritical :
+                    conflict.severity === 'medium' ? colors.statusPending :
+                    colors.statusInfo;
+                  const severityBg =
+                    conflict.severity === 'high' ? colors.statusCriticalSubtle :
+                    conflict.severity === 'medium' ? colors.statusPendingSubtle :
+                    colors.statusInfoSubtle;
+                  return (
+                    <div
+                      key={i}
+                      style={{ padding: spacing['3'], backgroundColor: colors.surfaceInset, borderRadius: borderRadius.base, border: `1px solid ${colors.borderSubtle}` }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['2'] }}>
+                        <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: severityColor, backgroundColor: severityBg, padding: '2px 8px', borderRadius: borderRadius.full }}>
+                          {conflict.severity.charAt(0).toUpperCase() + conflict.severity.slice(1)}
+                        </span>
+                        {conflict.sheets.length > 0 && (
+                          <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
+                            {conflict.sheets.join(', ')}
+                          </span>
+                        )}
+                      </div>
+                      <p style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, margin: 0, lineHeight: typography.lineHeight.normal }}>
+                        {conflict.description}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Footer with Analyze button */}
+          <div style={{ padding: spacing['4'], borderTop: `1px solid ${colors.borderSubtle}`, flexShrink: 0 }}>
+            <Btn
+              variant="primary"
+              size="md"
+              fullWidth
+              icon={<Sparkles size={14} />}
+              onClick={handleAiAnalyze}
+              disabled={!selectedDrawing || aiPanelLoading}
+              aria-label="Analyze drawing for coordination conflicts"
+            >
+              {aiPanelLoading ? 'Analyzing...' : 'Analyze Drawing'}
+            </Btn>
+            {!selectedDrawing && (
+              <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0, marginTop: spacing['2'], textAlign: 'center' }}>
+                Select a drawing from the list first.
+              </p>
+            )}
           </div>
         </div>
       )}
