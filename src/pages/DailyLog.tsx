@@ -25,6 +25,7 @@ import { useProjectId } from '../hooks/useProjectId';
 import { useDailyLogs, useDailyLogEntries } from '../hooks/queries';
 import { useUpdateDailyLog, useCreateDailyLog, useSubmitDailyLog, useApproveDailyLog, useRejectDailyLog } from '../hooks/mutations';
 import { fetchWeather, formatWeatherSummary } from '../lib/weather';
+import { supabase } from '../lib/supabase';
 import type { WeatherData } from '../lib/weather';
 import { PermissionGate } from '../components/auth/PermissionGate';
 import { usePermissions } from '../hooks/usePermissions';
@@ -79,6 +80,9 @@ export const DailyLog: React.FC = () => {
   const [historySearch, setHistorySearch] = useState('');
   const [noIncidentsToday, setNoIncidentsToday] = useState(true);
   const [noVisitorsToday, setNoVisitorsToday] = useState(true);
+  const [workSummary, setWorkSummary] = useState('');
+  const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
+  const [aiSummaryGenerated, setAiSummaryGenerated] = useState(false);
 
   const { hasPermission } = usePermissions();
 
@@ -90,6 +94,15 @@ export const DailyLog: React.FC = () => {
   useEffect(() => {
     fetchWeather().then(setWeather);
   }, []);
+
+  // Seed workSummary from today's log on first load
+  useEffect(() => {
+    if (dailyLogHistory.length > 0 && !workSummary) {
+      const summary = (dailyLogHistory[0] as any).summary ?? '';
+      if (summary) setWorkSummary(summary);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dailyLogHistory]);
 
   // Seed manpower rows from today's log crew_entries on first load
   useEffect(() => {
@@ -314,6 +327,36 @@ export const DailyLog: React.FC = () => {
 
   const handlePhotoCapture = () => {
     addToast('info', 'Camera capture would open on mobile device');
+  };
+
+  const handleAiSummary = async () => {
+    const log = dailyLogHistory[0] as any;
+    setAiSummaryLoading(true);
+    setAiSummaryGenerated(false);
+    try {
+      const { data, error: fnError } = await supabase.functions.invoke('ai-daily-summary', {
+        body: {
+          projectId,
+          logDate: log.log_date,
+          fieldNotes: workSummary,
+          temperatureHigh: log.temperature_high ?? null,
+          temperatureLow: log.temperature_low ?? null,
+          crewCount: log.workers_onsite ?? 0,
+        },
+      });
+      if (fnError) throw fnError;
+      const generated = (data as any)?.summary ?? (data as any)?.text ?? '';
+      if (generated) {
+        setWorkSummary(generated);
+        setAiSummaryGenerated(true);
+      } else {
+        throw new Error('Empty response');
+      }
+    } catch {
+      toast.error('AI summary unavailable. You can write your summary manually.');
+    } finally {
+      setAiSummaryLoading(false);
+    }
   };
 
   // Sync isLoading and error state from the real hook
@@ -976,6 +1019,89 @@ export const DailyLog: React.FC = () => {
               <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0, padding: `${spacing['3']} 0` }}>
                 Toggle off "No incidents today" to log an incident.
               </p>
+            )}
+          </Card>
+
+          {/* Work Summary */}
+          <Card>
+            <SectionHeader
+              title="Work Summary"
+              action={
+                <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
+                  {aiSummaryGenerated && (
+                    <span style={{
+                      fontSize: '11px',
+                      fontWeight: typography.fontWeight.semibold,
+                      color: '#7C3AED',
+                      backgroundColor: '#EDE9FE',
+                      padding: `2px ${spacing['2']}`,
+                      borderRadius: borderRadius.full,
+                      letterSpacing: '0.2px',
+                    }}>
+                      AI Generated
+                    </span>
+                  )}
+                  {!isLocked && (
+                    <button
+                      onClick={handleAiSummary}
+                      disabled={aiSummaryLoading || (manpowerRows.length === 0 && logEntries.length === 0)}
+                      title={(manpowerRows.length === 0 && logEntries.length === 0) ? 'Add work entries first for AI to summarize' : undefined}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: spacing['1'],
+                        padding: `5px ${spacing['3']}`,
+                        fontSize: typography.fontSize.sm,
+                        fontWeight: typography.fontWeight.medium,
+                        fontFamily: typography.fontFamily,
+                        color: (aiSummaryLoading || (manpowerRows.length === 0 && logEntries.length === 0)) ? colors.textTertiary : colors.textSecondary,
+                        backgroundColor: 'transparent',
+                        border: `1px solid ${colors.borderDefault}`,
+                        borderRadius: borderRadius.md,
+                        cursor: (aiSummaryLoading || (manpowerRows.length === 0 && logEntries.length === 0)) ? 'not-allowed' : 'pointer',
+                        transition: transitions.default,
+                        opacity: (manpowerRows.length === 0 && logEntries.length === 0) ? 0.5 : 1,
+                      }}
+                    >
+                      <Sparkles size={13} />
+                      Generate AI Summary
+                    </button>
+                  )}
+                </div>
+              }
+            />
+            {aiSummaryLoading ? (
+              <p style={{
+                fontSize: typography.fontSize.sm,
+                color: colors.textTertiary,
+                margin: 0,
+                animation: 'pulse-dl 1.2s ease-in-out infinite',
+              }}>
+                AI is summarizing today...
+              </p>
+            ) : (
+              <textarea
+                value={workSummary}
+                onChange={e => { setWorkSummary(e.target.value); if (aiSummaryGenerated) setAiSummaryGenerated(false); }}
+                placeholder="Describe the work performed today, progress made, and any notable site conditions..."
+                disabled={isLocked}
+                rows={4}
+                style={{
+                  width: '100%',
+                  padding: spacing['3'],
+                  fontSize: typography.fontSize.sm,
+                  fontFamily: typography.fontFamily,
+                  border: `1px solid ${colors.borderDefault}`,
+                  backgroundColor: isLocked ? colors.surfaceInset : colors.white,
+                  borderRadius: borderRadius.md,
+                  outline: 'none',
+                  resize: 'vertical',
+                  color: colors.textPrimary,
+                  boxSizing: 'border-box',
+                  lineHeight: '1.6',
+                  cursor: isLocked ? 'not-allowed' : 'text',
+                }}
+              />
             )}
           </Card>
 
