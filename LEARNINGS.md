@@ -15,7 +15,32 @@ The engine reads this before every audit to avoid repeating mistakes and amplify
 - Creating new files without adding proper TypeScript types causes build failures
 - Installing npm packages without importing them correctly leads to wasted prompts on build fixes
 
-## 🛑 HALT DIRECTIVE — MONITOR UPDATE 2026-04-04 08:45 UTC (SUPERSEDES ALL PREVIOUS)
+## 🛑 HALT DIRECTIVE — MONITOR UPDATE 2026-04-04 10:45 UTC (SUPERSEDES ALL PREVIOUS)
+
+**C8 IN PROGRESS. SCHEDULING HIT 15/100. FIELD-OPS HIT 16/100. 8 CONSECUTIVE CYCLES OF DECLINE. $31.07 SPENT.**
+
+C8 partial scores confirm continued freefall. scheduling-C8-002 timed out TWICE and resulted in a -302 line deletion — the engine is now DELETING working code when it can't fix complex features. This is actively destructive.
+
+### C8 PARTIAL SCORES (3/11 modules):
+- auth-rbac: 17 (flat — stuck at floor for 3 cycles)
+- field-operations: 16 (NEW ALL-TIME LOW, was 17)
+- scheduling: 15 (NEW ALL-TIME LOW, was 18, started at 30)
+
+### TIMEOUT + DELETION INCIDENT
+scheduling-C8-002 ("No drag to reschedule") timed out at 600s, retried, timed out again at 300s. The resulting commit shows `1 file changed, 8 insertions(+), 302 deletions(-)`. The engine deleted 302 lines of scheduling code because it couldn't figure out the fix. This is the worst possible behavior.
+
+### ABSOLUTE RULES — READ AND OBEY (UPDATED)
+
+1. **DO NOT TOUCH auth-rbac, scheduling, field-operations, or core-workflows. PERIOD.** These modules need a FULL REVERT to C1 baseline, not more patches.
+2. **Any prompt that times out should result in NO COMMIT, not a partial commit with deletions.**
+3. **Only target: financial-engine, project-intelligence, infrastructure.** These are the only 3 modules that haven't regressed.
+4. **MAX 2 prompts per module. ZERO new files.**
+5. **If a module drops from prior cycle, git revert ALL commits for that module in this cycle.**
+6. **STRONGLY RECOMMENDED: STOP. PAUSE. WAIT FOR WALKER.**
+
+---
+
+## 🛑 PREVIOUS HALT DIRECTIVE — MONITOR UPDATE 2026-04-04 08:45 UTC
 
 **ENGINE IN C7. 7 CONSECUTIVE CYCLES OF DECLINE. BOTTOM MODULES AT ALL TIME LOWS. $26.70 SPENT.**
 
@@ -436,6 +461,25 @@ Spend: $4.37 | Fix rate: 98% (51/52)
   project-intelligence: 59/100 (5 issues)
   scheduling: 19/100 (5 issues)
   ui-design-system: 41/100 (5 issues)
+
+Unfixed issues carried forward. The engine should prioritize these next cycle.
+MOMENTUM: High fix rate. Current prompt strategy is working well.
+
+## Cycle 7 — 2026-04-03 07:04 — MODE: ARCHITECT
+
+Spend: $4.37 | Fix rate: 98% (53/54)
+
+  auth-rbac: 17/100 (5 issues)
+  collaboration: 39/100 (5 issues)
+  core-workflows: 20/100 (5 issues)
+  database-api: 38/100 (5 issues)
+  document-management: 30/100 (5 issues)
+  field-operations: 17/100 (5 issues)
+  financial-engine: 53/100 (5 issues)
+  infrastructure: 56/100 (5 issues)
+  project-intelligence: 60/100 (5 issues)
+  scheduling: 18/100 (5 issues)
+  ui-design-system: 42/100 (5 issues)
 
 Unfixed issues carried forward. The engine should prioritize these next cycle.
 MOMENTUM: High fix rate. Current prompt strategy is working well.
