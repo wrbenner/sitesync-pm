@@ -173,6 +173,7 @@ interface BtnProps {
   'aria-label'?: string;
   type?: 'button' | 'submit' | 'reset';
   style?: React.CSSProperties;
+  loading?: boolean;
 }
 
 export const Btn: React.FC<BtnProps> = ({
@@ -187,6 +188,7 @@ export const Btn: React.FC<BtnProps> = ({
   'aria-label': ariaLabel,
   type = 'button',
   style: styleProp,
+  loading = false,
 }) => {
   const variants = {
     primary: {
@@ -235,8 +237,9 @@ export const Btn: React.FC<BtnProps> = ({
     <button
       type={type}
       onClick={onClick}
-      disabled={disabled}
+      disabled={disabled || loading}
       aria-label={ariaLabel}
+      aria-busy={loading || undefined}
       aria-disabled={disabled || undefined}
       style={{
         display: 'inline-flex',
@@ -353,7 +356,7 @@ export const MetricBox: React.FC<MetricBoxProps> = React.memo(({
 
   return (
   <div
-    role="group"
+    role="region"
     aria-label={`${label}: ${value}${unit ? ` ${unit}` : ''}${warning ? ` (${warning})` : ''}`}
     className="sitesync-metric-box"
     style={{
@@ -465,6 +468,8 @@ export const Tag: React.FC<TagProps> = React.memo(({
   fontSize = typography.fontSize.caption,
 }) => (
   <span
+    role="status"
+    aria-label={label}
     style={{
       display: 'inline-block',
       padding: `${spacing['0.5']} ${spacing['2']}`,
@@ -964,19 +969,36 @@ interface DotProps {
   color?: string;
   pulse?: boolean;
   size?: number;
+  statusText?: string;
 }
 
-export const Dot: React.FC<DotProps> = React.memo(({ color = colors.green, pulse = false, size = 8 }) => (
-  <div
-    style={{
-      width: `${size}px`,
-      height: `${size}px`,
-      borderRadius: '50%',
-      backgroundColor: color,
-      animation: pulse ? 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' : 'none',
-      flexShrink: 0,
-    }}
-  />
+const srOnly: React.CSSProperties = {
+  position: 'absolute',
+  width: '1px',
+  height: '1px',
+  padding: 0,
+  margin: '-1px',
+  overflow: 'hidden',
+  clip: 'rect(0,0,0,0)',
+  whiteSpace: 'nowrap',
+  borderWidth: 0,
+};
+
+export const Dot: React.FC<DotProps> = React.memo(({ color = colors.green, pulse = false, size = 8, statusText }) => (
+  <div style={{ display: 'inline-flex', alignItems: 'center', position: 'relative' }}>
+    <div
+      aria-hidden="true"
+      style={{
+        width: `${size}px`,
+        height: `${size}px`,
+        borderRadius: '50%',
+        backgroundColor: color,
+        animation: pulse ? 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' : 'none',
+        flexShrink: 0,
+      }}
+    />
+    {statusText && <span style={srOnly}>{statusText}</span>}
+  </div>
 ));
 
 // ─── AIRing ─────────────────────────────────────────────────────────────────
