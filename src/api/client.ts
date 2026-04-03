@@ -17,7 +17,14 @@ type SupabaseProxyTarget = typeof supabase
 type QueryResult<T> = PromiseLike<{ data: T | null; error: { message: string; code?: string; details?: string | null } | null }>
 
 // Tables that do not have a project_id column and must NOT receive the auto-scoped .eq filter.
-const UNSCOPED_TABLES = new Set(['organizations', 'organization_members', 'auth', 'storage'])
+const UNSCOPED_TABLES = new Set([
+  'organizations', 'organization_members', 'auth', 'storage',
+  'audit_trail', 'notification_queue', 'notification_preferences', 'user_phone',
+  'push_subscriptions', 'email_log', 'email_replies', 'email_templates',
+  'ai_conversations', 'ai_messages', 'calendar_oauth', 'procore_oauth',
+  'quickbooks_oauth', 'sage_intacct_oauth', 'weather_cache', 'profiles',
+  'project_members', 'portfolio_projects', 'portfolios',
+])
 
 // Tables that have a deleted_at column and should receive the .is('deleted_at', null) soft-delete filter.
 // Tables without this column (e.g. audit_trail, activity_feed, notification_queue) must NOT receive it.
