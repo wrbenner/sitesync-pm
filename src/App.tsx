@@ -352,7 +352,7 @@ function AppContent() {
   const { sidebarCollapsed, setSidebarCollapsed, setActiveView } = useUiStore();
   const navigate = useNavigate();
   const location = useLocation();
-  const isMobile = useMediaQuery('(max-width: 767px)');
+  const isMobile = useMediaQuery('(max-width: 768px)');
   const isTablet = useMediaQuery('(min-width: 768px) and (max-width: 1024px)');
   useTheme();
 

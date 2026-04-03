@@ -271,6 +271,8 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
 
       {/* ── Content Area ────────────────────────────── */}
       <div
+        id="main-content"
+        role="main"
         ref={contentRef}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
