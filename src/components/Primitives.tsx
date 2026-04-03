@@ -1709,23 +1709,33 @@ interface SkeletonProps {
   width?: string;
   height?: string;
   borderRadius?: string;
+  variant?: 'text' | 'rect' | 'circle';
   style?: React.CSSProperties;
 }
 
-export const Skeleton: React.FC<SkeletonProps> = React.memo(({ width = '100%', height = '16px', borderRadius: br = borderRadius.md, style: styleProp }) => (
-  <div
-    aria-hidden="true"
-    style={{
-      width,
-      height,
-      borderRadius: br,
-      background: 'linear-gradient(90deg, #E5E7EB 25%, #F3F4F6 50%, #E5E7EB 75%)',
-      backgroundSize: '200% 100%',
-      animation: 'skeleton-shimmer 1.5s linear infinite',
-      ...styleProp,
-    }}
-  />
-));
+export const Skeleton: React.FC<SkeletonProps> = React.memo(({ width = '100%', height = '20px', borderRadius: br, variant = 'rect', style: styleProp }) => {
+  let resolvedHeight = height;
+  let resolvedBorderRadius = br ?? '8px';
+  if (variant === 'text') {
+    resolvedHeight = '14px';
+    resolvedBorderRadius = br ?? '4px';
+  } else if (variant === 'circle') {
+    resolvedBorderRadius = '50%';
+  }
+  return (
+    <div
+      aria-hidden="true"
+      style={{
+        width,
+        height: resolvedHeight,
+        borderRadius: resolvedBorderRadius,
+        backgroundColor: '#E5E7EB',
+        animation: 'skeletonPulse 1.5s ease-in-out infinite',
+        ...styleProp,
+      }}
+    />
+  );
+});
 
 export const EmptyState: React.FC<EmptyStateProps> = React.memo(({ icon, title, description, action }) => (
   <div
@@ -1808,19 +1818,13 @@ interface SkeletonCardProps {
 }
 
 export const SkeletonCard: React.FC<SkeletonCardProps> = ({ style: styleProp }) => (
-  <div
-    style={{
-      backgroundColor: colors.surfaceRaised,
-      borderRadius: borderRadius.lg,
-      padding: spacing.xl,
-      boxShadow: shadows.base,
-      ...styleProp,
-    }}
-  >
-    <Skeleton width="24px" height="24px" borderRadius={borderRadius.md} style={{ marginBottom: spacing['3'] }} />
-    <Skeleton width="100px" height="12px" style={{ marginBottom: spacing['3'] }} />
-    <Skeleton width="160px" height="24px" />
-  </div>
+  <Card padding="24px">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', ...styleProp }}>
+      <Skeleton variant="rect" height="28px" width="60%" />
+      <Skeleton variant="text" width="80%" />
+      <Skeleton variant="text" width="40%" />
+    </div>
+  </Card>
 );
 
 interface SkeletonRowProps {
@@ -1831,18 +1835,15 @@ export const SkeletonRow: React.FC<SkeletonRowProps> = ({ style: styleProp }) =>
   <div
     style={{
       display: 'flex',
-      alignItems: 'center',
-      gap: spacing.sm,
-      height: '48px',
+      flexDirection: 'column',
+      gap: '8px',
       ...styleProp,
     }}
   >
-    <Skeleton width="40px" height="40px" borderRadius="50%" />
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
-      <Skeleton width="200px" height="14px" />
-      <Skeleton width="120px" height="12px" />
-    </div>
-    <Skeleton width="80px" height="14px" />
+    <Skeleton variant="text" />
+    <Skeleton variant="text" />
+    <Skeleton variant="text" />
+    <Skeleton variant="text" />
   </div>
 );
 
