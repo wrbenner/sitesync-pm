@@ -2,9 +2,10 @@ import React, { useState, useRef, useCallback } from 'react';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { DrawingsEmptyState } from '../components/drawings/DrawingsEmptyState';
 import { TableRowSkeleton } from '../components/ui/Skeletons';
-import { Upload, X, Sparkles, FileText, AlertTriangle, AlertCircle, CheckCircle2, Loader2, ChevronRight } from 'lucide-react';
+import { Upload, X, Sparkles, FileText, AlertTriangle, AlertCircle, CheckCircle2, Loader2, ChevronRight, ChevronDown } from 'lucide-react';
 import { aiService } from '../lib/aiService';
 import type { DrawingAnalysis } from '../types/ai';
+import type { DrawingRevision } from '../types/api';
 import { PageContainer, Card, Btn, Tag, useToast } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, transitions, shadows, zIndex } from '../styles/theme';
 import { getDrawings, getDisciplineColor, getDrawingRevisionHistory } from '../api/endpoints/documents';
@@ -105,6 +106,13 @@ const _DrawingsPage: React.FC = () => {
   const [uploadProgressText, setUploadProgressText] = useState('');
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [pageIsDragging, setPageIsDragging] = useState(false);
+  const [openRevDropdownId, setOpenRevDropdownId] = useState<string | null>(null);
+  const [rowRevHistory, setRowRevHistory] = useState<Record<string, DrawingRevision[]>>({});
+  const [rowRevHistoryLoading, setRowRevHistoryLoading] = useState<string | null>(null);
+  const [selectedRevisions, setSelectedRevisions] = useState<DrawingRevision[]>([]);
+  const [comparisonMode, setComparisonMode] = useState(false);
+  const [compareOpacity, setCompareOpacity] = useState(100);
+  const [compareDrawingTitle, setCompareDrawingTitle] = useState('');
 
   const { data: revisionHistory } = useQuery(
     `revision-history-${selectedDrawing?.id ?? 'none'}`,
@@ -271,6 +279,31 @@ const _DrawingsPage: React.FC = () => {
       setShowUploadModal(true);
     }
   }, []);
+
+  const handleRevDropdown = useCallback(async (e: React.MouseEvent, drawingId: string, drawingTitle: string, fallbackRevisions: DrawingRevision[]) => {
+    e.stopPropagation();
+    if (openRevDropdownId === drawingId) {
+      setOpenRevDropdownId(null);
+      return;
+    }
+    setOpenRevDropdownId(drawingId);
+    if (!rowRevHistory[drawingId]) {
+      if (fallbackRevisions.length > 0) {
+        setRowRevHistory((prev) => ({ ...prev, [drawingId]: fallbackRevisions }));
+      } else {
+        setRowRevHistoryLoading(drawingId);
+        try {
+          const history = await getDrawingRevisionHistory(drawingId);
+          setRowRevHistory((prev) => ({ ...prev, [drawingId]: history }));
+        } catch {
+          // keep dropdown open with empty state
+        } finally {
+          setRowRevHistoryLoading(null);
+        }
+      }
+    }
+    setCompareDrawingTitle(drawingTitle);
+  }, [openRevDropdownId, rowRevHistory]);
 
   return (
     <PageContainer
@@ -666,14 +699,141 @@ const _DrawingsPage: React.FC = () => {
                   <Tag label={drawing.discipline} />
 
                   {/* Revision */}
-                  <div>
-                    <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, display: 'block' }}>
+                  <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
+                    <button
+                      aria-label={`Revision history for ${drawing.setNumber}`}
+                      aria-expanded={openRevDropdownId === String(drawing.id)}
+                      aria-haspopup="listbox"
+                      onClick={(e) => handleRevDropdown(e, String(drawing.id), drawing.title, drawing.revisions)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 3,
+                        fontSize: typography.fontSize.sm,
+                        color: colors.textSecondary,
+                        background: 'none',
+                        border: `1px solid ${colors.borderSubtle}`,
+                        borderRadius: borderRadius.base,
+                        cursor: 'pointer',
+                        padding: '2px 6px',
+                        fontFamily: typography.fontFamily,
+                        whiteSpace: 'nowrap',
+                        transition: `border-color ${transitions.quick}, color ${transitions.quick}`,
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.borderColor = colors.primaryOrange; e.currentTarget.style.color = colors.primaryOrange; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.borderColor = colors.borderSubtle; e.currentTarget.style.color = colors.textSecondary; }}
+                    >
                       Rev {drawing.currentRevision?.revision_number ?? drawing.revision}
-                    </span>
-                    {drawing.revisions.length > 1 && (
-                      <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
-                        {drawing.revisions.length} revisions
-                      </span>
+                      <ChevronDown size={10} />
+                    </button>
+                    {openRevDropdownId === String(drawing.id) && (
+                      <div
+                        role="listbox"
+                        aria-label={`Revision history for ${drawing.setNumber}`}
+                        style={{
+                          position: 'absolute',
+                          top: 'calc(100% + 4px)',
+                          left: 0,
+                          zIndex: 200,
+                          backgroundColor: colors.surfaceRaised,
+                          border: `1px solid ${colors.borderSubtle}`,
+                          borderRadius: borderRadius.md,
+                          boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                          minWidth: 300,
+                          maxHeight: 320,
+                          overflowY: 'auto',
+                        }}
+                      >
+                        <div style={{ padding: `${spacing['2']} ${spacing['3']}`, borderBottom: `1px solid ${colors.borderSubtle}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+                          <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+                            Revision History
+                          </span>
+                          {(rowRevHistory[String(drawing.id)]?.length ?? 0) >= 2 && (
+                            <button
+                              onClick={() => {
+                                const history = rowRevHistory[String(drawing.id)];
+                                const current = history.find((r) => !r.superseded_at) ?? history[0];
+                                const older = history.find((r) => r.id !== current.id) ?? history[1];
+                                setSelectedRevisions([older, current]);
+                                setCompareOpacity(100);
+                                setComparisonMode(true);
+                                setOpenRevDropdownId(null);
+                              }}
+                              style={{
+                                fontSize: typography.fontSize.caption,
+                                color: colors.primaryOrange,
+                                border: `1px solid ${colors.primaryOrange}40`,
+                                borderRadius: borderRadius.base,
+                                backgroundColor: 'transparent',
+                                cursor: 'pointer',
+                                padding: '2px 8px',
+                                fontFamily: typography.fontFamily,
+                                fontWeight: typography.fontWeight.medium,
+                              }}
+                              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${colors.primaryOrange}10`; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                            >
+                              Compare
+                            </button>
+                          )}
+                        </div>
+                        {rowRevHistoryLoading === String(drawing.id) ? (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: spacing['4'], gap: spacing['2'] }}>
+                            <Loader2 size={14} color={colors.textTertiary} style={{ animation: 'spin 1s linear infinite' }} />
+                            <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>Loading revisions...</span>
+                          </div>
+                        ) : (rowRevHistory[String(drawing.id)] ?? drawing.revisions).map((rev) => {
+                          const isCurrent = !rev.superseded_at;
+                          return (
+                            <button
+                              key={rev.id}
+                              role="option"
+                              aria-selected={isCurrent}
+                              onClick={() => {
+                                if (rev.file_url) {
+                                  setViewRevPdfUrl(rev.file_url);
+                                } else {
+                                  setViewingRevisionNum(isCurrent ? null : rev.revision_number);
+                                  if (!isCurrent) setViewerDrawing({ ...drawing, revision: `Rev ${rev.revision_number}` });
+                                }
+                                setOpenRevDropdownId(null);
+                              }}
+                              style={{
+                                display: 'block',
+                                width: '100%',
+                                textAlign: 'left',
+                                padding: `${spacing['2']} ${spacing['3']}`,
+                                backgroundColor: 'transparent',
+                                border: 'none',
+                                borderBottom: `1px solid ${colors.borderSubtle}`,
+                                cursor: 'pointer',
+                                fontFamily: typography.fontFamily,
+                              }}
+                              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = colors.surfaceHover; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: 2 }}>
+                                <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+                                  Rev {rev.revision_number}
+                                </span>
+                                {isCurrent && (
+                                  <span style={{ fontSize: typography.fontSize.caption, color: colors.statusActive, backgroundColor: `${colors.statusActive}18`, padding: '1px 6px', borderRadius: borderRadius.full }}>
+                                    Current
+                                  </span>
+                                )}
+                              </div>
+                              <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
+                                {formatRevDate(rev.issued_date)}{rev.issued_by ? ` · ${rev.issued_by}` : ''}
+                              </div>
+                              {rev.change_description && (
+                                <div style={{ fontSize: typography.fontSize.caption, color: colors.gray600, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {rev.change_description}
+                                </div>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
                     )}
                   </div>
 
@@ -1122,6 +1282,98 @@ const _DrawingsPage: React.FC = () => {
                   />
                 );
               })()}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Backdrop to close revision dropdown on outside click */}
+      {openRevDropdownId !== null && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 199 }}
+          onClick={() => setOpenRevDropdownId(null)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Row-level comparison modal */}
+      {comparisonMode && selectedRevisions.length === 2 && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Compare revisions: ${compareDrawingTitle}`}
+          style={{ position: 'fixed', inset: 0, zIndex: 1002, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(15, 22, 41, 0.55)' }}
+          onClick={(e) => { if (e.target === e.currentTarget) setComparisonMode(false); }}
+        >
+          <div
+            style={{ backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.lg, border: `1px solid ${colors.borderSubtle}`, padding: spacing['5'], width: '92vw', maxWidth: 1200, height: '82vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.18)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['3'], flexShrink: 0 }}>
+              <h2 style={{ fontSize: typography.fontSize.xl, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0 }}>
+                Compare Revisions: {compareDrawingTitle}
+              </h2>
+              <button
+                onClick={() => setComparisonMode(false)}
+                aria-label="Close revision comparison"
+                style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', border: 'none', borderRadius: borderRadius.md, cursor: 'pointer', color: colors.textTertiary }}
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = colors.surfaceInset; }}
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+            {/* Opacity slider */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'], marginBottom: spacing['3'], flexShrink: 0, padding: `${spacing['2']} ${spacing['3']}`, backgroundColor: colors.surfaceInset, borderRadius: borderRadius.base }}>
+              <label htmlFor="compare-opacity-slider" style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, whiteSpace: 'nowrap', fontWeight: typography.fontWeight.medium }}>
+                Right panel opacity
+              </label>
+              <input
+                id="compare-opacity-slider"
+                type="range"
+                min={0}
+                max={100}
+                value={compareOpacity}
+                onChange={(e) => setCompareOpacity(Number(e.target.value))}
+                style={{ flex: 1, accentColor: colors.primaryOrange }}
+                aria-label="Right panel opacity for overlay comparison"
+              />
+              <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, minWidth: 36, textAlign: 'right' }}>
+                {compareOpacity}%
+              </span>
+            </div>
+            {/* Side-by-side viewers */}
+            <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['3'] }}>
+              {[
+                { rev: selectedRevisions[0], label: 'Older Revision', badge: 'A', badgeColor: colors.statusInfo, opacity: 1 },
+                { rev: selectedRevisions[1], label: 'Current Revision', badge: 'B', badgeColor: colors.primaryOrange, opacity: compareOpacity / 100 },
+              ].map(({ rev, label, badge, badgeColor, opacity }) => (
+                <div key={rev.id} style={{ display: 'flex', flexDirection: 'column', minHeight: 0, opacity }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['2'], flexShrink: 0 }}>
+                    <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.white, backgroundColor: badgeColor, padding: '2px 8px', borderRadius: borderRadius.full }}>
+                      {badge}
+                    </span>
+                    <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>
+                      Rev {rev.revision_number} — {label}
+                    </span>
+                    {rev.issued_by && (
+                      <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{rev.issued_by}</span>
+                    )}
+                  </div>
+                  {rev.file_url ? (
+                    <iframe
+                      src={rev.file_url}
+                      title={`Rev ${rev.revision_number} — ${compareDrawingTitle}`}
+                      style={{ flex: 1, border: `1px solid ${colors.borderSubtle}`, borderRadius: borderRadius.md, width: '100%' }}
+                    />
+                  ) : (
+                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceInset, borderRadius: borderRadius.md, border: `1px solid ${colors.borderSubtle}` }}>
+                      <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0 }}>No PDF available for this revision</p>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
         </div>
