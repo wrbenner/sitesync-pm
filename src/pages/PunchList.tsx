@@ -7,7 +7,7 @@ import PunchListSkeleton from '../components/field/PunchListSkeleton';
 import EmptyState from '../components/ui/EmptyState';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 import { usePunchItems, useDirectoryContacts } from '../hooks/queries';
-import { AlertTriangle, Camera, CheckCircle, CheckSquare, Clock, Inbox, MessageSquare, RefreshCw, Search, Sparkles, XCircle } from 'lucide-react';
+import { AlertTriangle, Camera, CheckCircle, CheckSquare, Inbox, MessageSquare, RefreshCw, Search, Sparkles, XCircle } from 'lucide-react';
 import { usePermissions } from '../hooks/usePermissions';
 import { useAppNavigate, getRelatedItemsForPunchItem } from '../utils/connections';
 import { AIAnnotationIndicator } from '../components/ai/AIAnnotation';
@@ -50,45 +50,17 @@ const STATUS_COLORS: Record<string, string> = {
 
 const plColHelper = createColumnHelper<PunchItem>();
 
-// Two-step verification badge: [Sub Status] → [GC Status]
-const TwoStepBadge: React.FC<{ verificationStatus: string }> = ({ verificationStatus }) => {
-  const step1Done = verificationStatus === 'sub_complete' || verificationStatus === 'verified';
-  const step2Done = verificationStatus === 'verified';
-  const isRejected = verificationStatus === 'rejected';
-  const isInProgress = verificationStatus === 'in_progress';
-
-  const statusColor = STATUS_COLORS[verificationStatus] ?? colors.textTertiary;
-  const step1Dot = isRejected ? STATUS_COLORS.rejected : step1Done ? STATUS_COLORS.sub_complete : isInProgress ? STATUS_COLORS.in_progress : colors.borderDefault;
-  const step2Dot = step2Done ? STATUS_COLORS.verified : colors.borderDefault;
-
-  const step1Text = isRejected ? STATUS_COLORS.rejected : step1Done ? STATUS_COLORS.sub_complete : isInProgress ? STATUS_COLORS.in_progress : colors.textTertiary;
-  const step2Text = step2Done ? STATUS_COLORS.verified : colors.textTertiary;
-
+const StatusDot: React.FC<{ status: string }> = ({ status }) => {
+  const color = STATUS_COLORS[status] ?? STATUS_COLORS.open;
+  const label = statusLabel[status] ?? status;
   return (
     <div
       role="img"
-      aria-label={`Status: ${statusLabel[verificationStatus] ?? verificationStatus}`}
-      style={{ display: 'flex', alignItems: 'center', gap: 3 }}
+      aria-label={`Status: ${label}`}
+      style={{ display: 'flex', alignItems: 'center', gap: 6 }}
     >
-      {/* Sub node */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
-        <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: step1Dot, flexShrink: 0 }} />
-        <span style={{ fontSize: 9, fontWeight: 600, color: step1Text, lineHeight: 1, whiteSpace: 'nowrap' as const }}>Sub</span>
-      </div>
-      {/* Connector */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
-        <div style={{ width: 14, height: 1, backgroundColor: colors.borderDefault }} />
-        <span style={{ fontSize: 9, color: 'transparent', lineHeight: 1 }}>·</span>
-      </div>
-      {/* GC node */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
-        <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: step2Dot, flexShrink: 0 }} />
-        <span style={{ fontSize: 9, fontWeight: 600, color: step2Text, lineHeight: 1, whiteSpace: 'nowrap' as const }}>GC</span>
-      </div>
-      {/* Status label */}
-      <span style={{ fontSize: 11, fontWeight: 500, marginLeft: 5, color: statusColor }}>
-        {statusLabel[verificationStatus] ?? verificationStatus}
-      </span>
+      <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: color, flexShrink: 0 }} />
+      <span style={{ fontSize: 12, fontWeight: 500, color }}>{label}</span>
     </div>
   );
 };
@@ -164,6 +136,8 @@ const PunchListPage: React.FC = () => {
   const [editingDetail, setEditingDetail] = useState(false);
   const [rejectNote, setRejectNote] = useState('');
   const [showRejectNote, setShowRejectNote] = useState(false);
+  const [inlineRejectId, setInlineRejectId] = useState<number | null>(null);
+  const [inlineRejectNote, setInlineRejectNote] = useState('');
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
   const [ariaAnnouncement, setAriaAnnouncement] = useState('');
   useEffect(() => {
@@ -329,6 +303,22 @@ const PunchListPage: React.FC = () => {
     }
   }, [updatePunchItem, projectId]);
 
+  const handleRejectById = useCallback(async (item: PunchItem, reason: string) => {
+    try {
+      await updatePunchItem.mutateAsync({
+        id: String(item.id),
+        updates: { verification_status: 'open', rejection_reason: reason || undefined },
+        projectId: projectId!,
+      });
+      toast.success(`${item.itemNumber} rejected. Returned to open.`);
+      setAriaAnnouncement(`${item.itemNumber} rejected and returned to open`);
+      setInlineRejectId(null);
+      setInlineRejectNote('');
+    } catch {
+      toast.error('Failed to reject item');
+    }
+  }, [updatePunchItem, projectId]);
+
   const handleMarkInProgress = useCallback(async () => {
     if (!selected) return;
     try {
@@ -382,7 +372,7 @@ const PunchListPage: React.FC = () => {
     try {
       await updatePunchItem.mutateAsync({
         id: String(selected.id),
-        updates: { verification_status: 'rejected', rejection_reason: rejectNote || undefined },
+        updates: { verification_status: 'open', rejection_reason: rejectNote || undefined },
         projectId: projectId!,
       });
       toast.error(`${selected.itemNumber} rejected. Subcontractor notified to rework.`);
@@ -497,7 +487,7 @@ const PunchListPage: React.FC = () => {
                 await updatePunchItem.mutateAsync({ id: String(item.id), updates: { verification_status: val }, projectId: projectId! });
                 toast.success(`${item.itemNumber} status updated`);
               }}
-              displayComponent={<TwoStepBadge verificationStatus={info.getValue()} />}
+              displayComponent={<StatusDot status={info.getValue()} />}
             />
           </div>
         );
@@ -582,19 +572,48 @@ const PunchListPage: React.FC = () => {
                 >
                   Verify
                 </button>
-                <button
-                  onClick={() => { setSelectedId(item.id); setShowRejectNote(true); }}
-                  style={{ padding: '3px 8px', fontSize: 11, fontWeight: 600, fontFamily: 'inherit', backgroundColor: colors.statusCriticalSubtle, color: colors.statusCritical, border: `1px solid ${colors.statusCritical}40`, borderRadius: borderRadius.base, cursor: 'pointer', whiteSpace: 'nowrap' as const }}
-                >
-                  Reject
-                </button>
+                {inlineRejectId === item.id ? (
+                  <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                    <input
+                      type="text"
+                      placeholder="Reason..."
+                      value={inlineRejectNote}
+                      autoFocus
+                      onChange={(e) => setInlineRejectNote(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleRejectById(item, inlineRejectNote);
+                        if (e.key === 'Escape') { setInlineRejectId(null); setInlineRejectNote(''); }
+                      }}
+                      style={{ padding: '2px 6px', fontSize: 11, fontFamily: 'inherit', border: `1px solid ${colors.statusCritical}80`, borderRadius: borderRadius.base, width: 110, outline: 'none', color: colors.textPrimary }}
+                    />
+                    <button
+                      onClick={() => handleRejectById(item, inlineRejectNote)}
+                      style={{ padding: '3px 8px', fontSize: 11, fontWeight: 600, fontFamily: 'inherit', backgroundColor: colors.statusCriticalSubtle, color: colors.statusCritical, border: `1px solid ${colors.statusCritical}40`, borderRadius: borderRadius.base, cursor: 'pointer' }}
+                    >
+                      Send
+                    </button>
+                    <button
+                      onClick={() => { setInlineRejectId(null); setInlineRejectNote(''); }}
+                      style={{ padding: '3px 6px', fontSize: 11, fontFamily: 'inherit', backgroundColor: 'transparent', color: colors.textTertiary, border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base, cursor: 'pointer' }}
+                    >
+                      x
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => { setInlineRejectId(item.id); setInlineRejectNote(''); }}
+                    style={{ padding: '3px 8px', fontSize: 11, fontWeight: 600, fontFamily: 'inherit', backgroundColor: colors.statusCriticalSubtle, color: colors.statusCritical, border: `1px solid ${colors.statusCritical}40`, borderRadius: borderRadius.base, cursor: 'pointer', whiteSpace: 'nowrap' as const }}
+                  >
+                    Reject
+                  </button>
+                )}
               </>
             )}
           </div>
         );
       },
     }),
-  ], [bulkSelected, setBulkSelected, updatePunchItem, projectId, hasPermission, handleMarkInProgressById, handleMarkSubCompleteById, handleVerifyById]);
+  ], [bulkSelected, setBulkSelected, updatePunchItem, projectId, hasPermission, handleMarkInProgressById, handleMarkSubCompleteById, handleVerifyById, handleRejectById, inlineRejectId, inlineRejectNote]);
 
   if (loading) {
     return (
@@ -668,7 +687,7 @@ const PunchListPage: React.FC = () => {
       </div>
 
       {/* Metric Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(6, 1fr)', gap: isMobile ? '8px' : spacing['3'], marginBottom: spacing['4'] }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)', gap: isMobile ? '8px' : spacing['3'], marginBottom: spacing['4'] }}>
         <Card padding={spacing['4']}>
           <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['2'] }}>
             <CheckSquare size={14} color={colors.textTertiary} />
@@ -682,13 +701,6 @@ const PunchListPage: React.FC = () => {
             <span style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, fontWeight: typography.fontWeight.medium }}>Open</span>
           </div>
           <div style={{ fontSize: typography.fontSize['2xl'], fontWeight: typography.fontWeight.semibold, color: '#F5A623' }}>{openCount}</div>
-        </Card>
-        <Card padding={spacing['4']}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['2'] }}>
-            <Clock size={14} color='#3B82F6' />
-            <span style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, fontWeight: typography.fontWeight.medium }}>In Progress</span>
-          </div>
-          <div style={{ fontSize: typography.fontSize['2xl'], fontWeight: typography.fontWeight.semibold, color: '#3B82F6' }}>{inProgressCount}</div>
         </Card>
         <Card padding={spacing['4']} style={{ border: subCompleteCount > 0 ? `2px solid #8B5CF6` : undefined, backgroundColor: subCompleteCount > 0 ? 'rgba(139,92,246,0.06)' : undefined }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['2'] }}>
@@ -934,7 +946,7 @@ const PunchListPage: React.FC = () => {
               <div style={{ display: 'flex', gap: spacing.sm, flexWrap: 'wrap', alignItems: 'center' }}>
                 <PriorityTag priority={selected.priority as any} />
                 <StatusTag status={statusMap[selected.verification_status]} label={statusLabel[selected.verification_status] ?? selected.verification_status} />
-                <TwoStepBadge verificationStatus={selected.verification_status} />
+                <StatusDot status={selected.verification_status} />
               </div>
             </div>
 
@@ -999,7 +1011,7 @@ const PunchListPage: React.FC = () => {
                   await updatePunchItem.mutateAsync({ id: String(selected.id), updates: { verification_status: val }, projectId: projectId! });
                   toast.success('Status updated');
                 }}
-                displayContent={<TwoStepBadge verificationStatus={selected.verification_status} />}
+                displayContent={<StatusDot status={selected.verification_status} />}
               />
               <EditableDetailField
                 label="Due Date"
