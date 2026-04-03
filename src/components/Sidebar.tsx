@@ -122,6 +122,48 @@ const BOTTOM_NAV_ITEMS = [
 
 const BOTTOM_NAV_IDS = new Set(BOTTOM_NAV_ITEMS.map(i => i.id));
 
+const PAGE_PREFETCH_MAP: Record<string, () => void> = {
+  portfolio:      () => import('../pages/Portfolio').catch(() => {}),
+  dashboard:      () => import('../pages/Dashboard').catch(() => {}),
+  'project-health': () => import('../pages/ProjectHealth').catch(() => {}),
+  copilot:        () => import('../pages/AICopilot').catch(() => {}),
+  'ai-agents':    () => import('../pages/AIAgents').catch(() => {}),
+  'time-machine': () => import('../pages/TimeMachine').catch(() => {}),
+  lookahead:      () => import('../pages/Lookahead').catch(() => {}),
+  tasks:          () => import('../pages/Tasks').catch(() => {}),
+  schedule:       () => import('../pages/Schedule').catch(() => {}),
+  budget:         () => import('../pages/Budget').catch(() => {}),
+  'change-orders': () => import('../pages/ChangeOrders').catch(() => {}),
+  financials:     () => import('../pages/Financials').catch(() => {}),
+  'pay-apps':     () => import('../pages/PaymentApplications').catch(() => {}),
+  drawings:       () => import('../pages/Drawings').catch(() => {}),
+  rfis:           () => import('../pages/RFIs').catch(() => {}),
+  submittals:     () => import('../pages/Submittals').catch(() => {}),
+  estimating:     () => import('../pages/Estimating').catch(() => {}),
+  procurement:    () => import('../pages/Procurement').catch(() => {}),
+  equipment:      () => import('../pages/Equipment').catch(() => {}),
+  permits:        () => import('../pages/Permits').catch(() => {}),
+  'field-capture': () => import('../pages/FieldCapture').catch(() => {}),
+  'daily-log':    () => import('../pages/DailyLog').catch(() => {}),
+  'punch-list':   () => import('../pages/PunchList').catch(() => {}),
+  crews:          () => import('../pages/Crews').catch(() => {}),
+  workforce:      () => import('../pages/Workforce').catch(() => {}),
+  safety:         () => import('../pages/Safety').catch(() => {}),
+  insurance:      () => import('../pages/Insurance').catch(() => {}),
+  activity:       () => import('../pages/Activity').catch(() => {}),
+  meetings:       () => import('../pages/Meetings').catch(() => {}),
+  directory:      () => import('../pages/Directory').catch(() => {}),
+  files:          () => import('../pages/Files').catch(() => {}),
+  'audit-trail':  () => import('../pages/AuditTrail').catch(() => {}),
+  integrations:   () => import('../pages/Integrations').catch(() => {}),
+  marketplace:    () => import('../pages/Marketplace').catch(() => {}),
+  developers:     () => import('../pages/Developers').catch(() => {}),
+  reports:        () => import('../pages/Reports').catch(() => {}),
+  benchmarks:     () => import('../pages/Benchmarks').catch(() => {}),
+  sustainability: () => import('../pages/Sustainability').catch(() => {}),
+  warranties:     () => import('../pages/Warranties').catch(() => {}),
+};
+
 export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, mode, onClose }) => {
   const { themeMode, setThemeMode } = useUiStore();
   const toggleTheme = () => setThemeMode(themeMode === 'dark' ? 'light' : 'dark');
@@ -169,6 +211,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, mode, 
                 key={item.id}
                 onClick={() => onNavigate(item.id)}
                 aria-current={isActive ? 'page' : undefined}
+                onMouseEnter={() => PAGE_PREFETCH_MAP[item.id]?.()}
+                onFocus={() => PAGE_PREFETCH_MAP[item.id]?.()}
                 style={{
                   flex: 1,
                   display: 'flex',
@@ -289,6 +333,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, mode, 
                     <button
                       key={item.id}
                       onClick={() => { onNavigate(item.id); setShowMoreSheet(false); }}
+                      onMouseEnter={() => PAGE_PREFETCH_MAP[item.id]?.()}
+                      onFocus={() => PAGE_PREFETCH_MAP[item.id]?.()}
                       style={{
                         display: 'flex',
                         flexDirection: 'column',
@@ -468,12 +514,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, mode, 
                     textAlign: 'left',
                   }}
                   onMouseEnter={(e) => {
+                    PAGE_PREFETCH_MAP[item.id]?.();
                     if (!isActive) {
                       const el = e.currentTarget as HTMLButtonElement;
                       el.style.backgroundColor = colors.overlayBlackLight;
                       el.style.color = colors.textPrimary;
                     }
                   }}
+                  onFocus={() => PAGE_PREFETCH_MAP[item.id]?.()}
                   onMouseLeave={(e) => {
                     if (!isActive) {
                       const el = e.currentTarget as HTMLButtonElement;
