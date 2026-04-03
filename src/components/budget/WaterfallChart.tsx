@@ -18,13 +18,17 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = ({
   originalContract, approvedCOs, pendingCOs,
 }) => {
   const [hoveredBar, setHoveredBar] = useState<string | null>(null);
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 640);
+  const [isNarrow, setIsNarrow] = useState(() => window.innerWidth < 400);
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
     const handleResize = () => {
       clearTimeout(timer);
-      timer = setTimeout(() => setIsMobile(window.innerWidth < 768), 150);
+      timer = setTimeout(() => {
+        setIsMobile(window.innerWidth < 640);
+        setIsNarrow(window.innerWidth < 400);
+      }, 150);
     };
     window.addEventListener('resize', handleResize);
     return () => { clearTimeout(timer); window.removeEventListener('resize', handleResize); };
@@ -59,19 +63,29 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = ({
               const isCO = bar.label === 'Approved COs' || bar.label === 'Pending COs';
               const isHovered = hoveredBar === bar.label;
               return (
-                <div key={bar.label} style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], minHeight: 56 }}>
+                <div key={bar.label} style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], minHeight: 44 }}>
                   {/* Label */}
-                  <div style={{ width: 90, flexShrink: 0 }}>
+                  <div style={{ width: isNarrow ? 64 : 90, flexShrink: 0 }}>
                     <span style={{
-                      fontSize: typography.fontSize.sm,
+                      fontSize: isNarrow ? typography.fontSize.xs : typography.fontSize.sm,
                       color: bar.isTotal ? colors.textSecondary : colors.textTertiary,
                       fontWeight: bar.isTotal ? typography.fontWeight.semibold : typography.fontWeight.normal,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      display: 'block',
                     }}>
-                      {bar.label}
+                      {isNarrow
+                        ? bar.label === 'Original Contract' ? 'Original'
+                          : bar.label === 'Approved COs' ? 'Approved'
+                          : bar.label === 'Pending COs' ? 'Pending'
+                          : bar.label === 'Revised Contract' ? 'Revised'
+                          : bar.label
+                        : bar.label}
                     </span>
                   </div>
                   {/* Bar track */}
-                  <div style={{ flex: 1, position: 'relative', height: 44, backgroundColor: colors.surfaceInset, borderRadius: borderRadius.sm }}>
+                  <div style={{ flex: 1, position: 'relative', height: 44, minHeight: 44, backgroundColor: colors.surfaceInset, borderRadius: borderRadius.sm }}>
                     <div
                       aria-label={`${bar.label}: ${fmt(bar.value)}`}
                       onMouseEnter={() => setHoveredBar(bar.label)}
@@ -82,6 +96,7 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = ({
                         left: `${offsetPct}%`,
                         width: `${barWidthPct}%`,
                         height: '100%',
+                        minHeight: 44,
                         backgroundColor: bar.isTotal ? bar.color : `${bar.color}CC`,
                         borderRadius: borderRadius.sm,
                         transition: 'width 0.3s ease',
