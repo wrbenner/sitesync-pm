@@ -10,17 +10,14 @@ import { useCreateFieldCapture } from '../hooks/mutations';
 import { useSyncStatus } from '../hooks/useSyncStatus';
 import type { FieldCapture } from '../types/database';
 
-const CONSTRUCTION_TAGS = ['progress', 'safety', 'defect', 'delivery', 'weather', 'rfi', 'punch', 'inspection'] as const;
+const CONSTRUCTION_TAGS = ['progress', 'safety', 'defect', 'delivery', 'concrete', 'steel', 'MEP'] as const;
 
 const LINK_OPTIONS = [
-  { label: 'Drawing A-101', value: 'drawing:A-101' },
-  { label: 'Drawing A-201', value: 'drawing:A-201' },
   { label: 'RFI #12 — Beam pocket depth', value: 'rfi:12' },
   { label: 'RFI #14 — Slab thickness', value: 'rfi:14' },
-  { label: 'Punch #45 — Paint defect', value: 'punch:45' },
-  { label: 'Punch #52 — Door hardware', value: 'punch:52' },
-  { label: "Daily Log — Today", value: 'daily_log:today' },
-  { label: 'Task — Concrete pour', value: 'task:concrete' },
+  { label: 'Punch Item #45 — Paint defect', value: 'punch:45' },
+  { label: 'Punch Item #52 — Door hardware', value: 'punch:52' },
+  { label: 'Daily Log — Today', value: 'daily_log:today' },
 ];
 
 function formatTimestamp(dateStr: string | null): string {
@@ -344,6 +341,25 @@ const PhotoCard: React.FC<PhotoCardProps> = ({ capture }) => {
         </div>
       )}
 
+      {/* Weather tag badge */}
+      {tags.includes('weather') && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: spacing['2'],
+            left: spacing['2'],
+            backgroundColor: 'rgba(0,0,0,0.55)',
+            borderRadius: borderRadius.full,
+            padding: `${spacing['1']} ${spacing['2']}`,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '3px',
+          }}
+        >
+          <span style={{ fontSize: '10px', color: '#fff', fontWeight: typography.fontWeight.medium }}>weather</span>
+        </div>
+      )}
+
       {/* AI sparkle badge */}
       {hasAiFlag && (
         <div
@@ -584,7 +600,7 @@ const FieldCaptureInner: React.FC = () => {
     navigator.geolocation?.getCurrentPosition(
       pos => {
         setOverlayLocation(
-          `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`
+          `${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`
         );
       },
       () => {
@@ -694,8 +710,46 @@ const FieldCaptureInner: React.FC = () => {
         />
       )}
 
-      {/* Offline banner */}
-      {!isOnline && (
+      {/* Capture button — prominent, full-width on mobile */}
+      <style>{`
+        @media (max-width: 640px) {
+          .fc-capture-btn { width: 100% !important; }
+        }
+      `}</style>
+      <div style={{ marginBottom: spacing['5'] }}>
+        <button
+          className="fc-capture-btn"
+          aria-label="Capture new field photo"
+          onClick={handleCaptureClick}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: spacing['3'],
+            backgroundColor: colors.primaryOrange,
+            color: colors.white,
+            border: 'none',
+            borderRadius: borderRadius.xl,
+            padding: `0 ${spacing['8']}`,
+            fontSize: typography.fontSize.title,
+            fontWeight: typography.fontWeight.semibold,
+            fontFamily: typography.fontFamily,
+            height: '80px',
+            minWidth: '200px',
+            cursor: 'pointer',
+            boxShadow: shadows.glow,
+            transition: `background-color ${transitions.quick}`,
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.orangeHover; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.primaryOrange; }}
+        >
+          <Camera size={26} />
+          Capture
+        </button>
+      </div>
+
+      {/* Offline / pending banner */}
+      {(!isOnline || pendingCount > 0) && (
         <div
           aria-live="assertive"
           role="status"
@@ -712,7 +766,9 @@ const FieldCaptureInner: React.FC = () => {
         >
           <AlertTriangle size={16} color="#B45309" style={{ flexShrink: 0 }} />
           <span style={{ fontSize: typography.fontSize.sm, color: '#92400E', fontWeight: typography.fontWeight.medium }}>
-            You are offline. Photos will sync when you reconnect.
+            {pendingCount > 0
+              ? `${pendingCount} photo${pendingCount !== 1 ? 's' : ''} pending upload`
+              : 'You are offline. Photos will sync when you reconnect.'}
           </span>
         </div>
       )}
@@ -775,37 +831,6 @@ const FieldCaptureInner: React.FC = () => {
             </span>
           </div>
         ))}
-      </div>
-
-      {/* Capture button (prominent, centered) */}
-      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: spacing['6'] }}>
-        <button
-          aria-label="Capture new field photo"
-          onClick={handleCaptureClick}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: spacing['3'],
-            backgroundColor: colors.primaryOrange,
-            color: colors.white,
-            border: 'none',
-            borderRadius: borderRadius.xl,
-            padding: `${spacing['4']} ${spacing['8']}`,
-            fontSize: typography.fontSize.title,
-            fontWeight: typography.fontWeight.semibold,
-            fontFamily: typography.fontFamily,
-            minHeight: '56px',
-            minWidth: '160px',
-            cursor: 'pointer',
-            boxShadow: shadows.glow,
-            transition: `background-color ${transitions.quick}`,
-          }}
-          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.orangeHover; }}
-          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.primaryOrange; }}
-        >
-          <Camera size={22} />
-          Capture
-        </button>
       </div>
 
       {/* Grid / Map toggle + count */}
