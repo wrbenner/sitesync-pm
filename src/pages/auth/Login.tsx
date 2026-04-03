@@ -29,6 +29,7 @@ export const Login: React.FC = () => {
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [emailError, setEmailError] = useState<string | null>(null)
+  const [passwordError, setPasswordError] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
   const [showReset, setShowReset] = useState(false)
   const [resetEmail, setResetEmail] = useState('')
@@ -282,25 +283,6 @@ export const Login: React.FC = () => {
         >
           <style>{`@keyframes spin-loader { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
           <form onSubmit={handleSubmit} aria-label="Sign in to SiteSync" aria-describedby="login-error" style={{ display: tab === 'signin' ? 'block' : 'none' }}>
-            {error && (
-              <div
-                id="login-error"
-                role="alert"
-                aria-live="assertive"
-                style={{
-                  padding: `${spacing['3']} ${spacing['4']}`,
-                  borderRadius: borderRadius.md,
-                  backgroundColor: colors.statusCriticalSubtle,
-                  color: colors.statusCritical,
-                  fontSize: typography.fontSize.sm,
-                  marginBottom: spacing['5'],
-                  lineHeight: typography.lineHeight.normal,
-                }}
-              >
-                {error}
-              </div>
-            )}
-
             <div style={{ marginBottom: spacing['4'] }}>
               <label style={labelStyle} htmlFor="login-email">Email address</label>
               <input
@@ -319,7 +301,7 @@ export const Login: React.FC = () => {
                 onBlur={(e) => {
                   const val = e.currentTarget.value
                   if (val && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
-                    setEmailError('Please enter a valid email address')
+                    setEmailError('Enter a valid email address')
                     e.currentTarget.style.borderColor = colors.statusCritical
                   } else {
                     setEmailError(null)
@@ -351,7 +333,12 @@ export const Login: React.FC = () => {
                   autoComplete="current-password"
                   style={{ ...inputStyle, paddingRight: '44px' }}
                   onFocus={(e) => { e.currentTarget.style.borderColor = colors.borderFocus; e.currentTarget.style.boxShadow = '0 0 0 2px #F47820' }}
-                  onBlur={(e) => { e.currentTarget.style.borderColor = colors.borderDefault; e.currentTarget.style.boxShadow = 'none' }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = colors.borderDefault
+                    e.currentTarget.style.boxShadow = 'none'
+                    if (!e.currentTarget.value) setPasswordError('Password is required')
+                    else setPasswordError(null)
+                  }}
                 />
                 <button
                   type="button"
@@ -374,7 +361,18 @@ export const Login: React.FC = () => {
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
+              {passwordError && (
+                <p role="alert" style={{ margin: `${spacing['1']} 0 0`, fontSize: typography.fontSize.sm, color: colors.statusCritical }}>
+                  {passwordError}
+                </p>
+              )}
             </div>
+
+            {error && (
+              <div role="alert" aria-live="polite" style={{ color: '#E74C3C', fontSize: '14px', padding: '8px 12px', backgroundColor: '#FEF2F2', borderRadius: '8px', marginTop: '8px', border: '1px solid #FECACA' }}>
+                {error}
+              </div>
+            )}
 
             <div style={{ textAlign: 'right', marginBottom: spacing['4'] }}>
               <button
