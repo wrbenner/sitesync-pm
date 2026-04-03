@@ -1,12 +1,11 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import JSZip from 'jszip';
-import { Grid, List, Upload as UploadIcon, FolderOpen, FileText, Sparkles, Search, Download, FolderInput, Trash2, Link2, Files as FilesIcon, FileImage, HardDrive } from 'lucide-react';
+import { Grid, List, Upload as UploadIcon, FolderOpen, FileText, Image, Table, File as FileIcon, Sparkles, Search, Download, FolderInput, Trash2, Link2, Files as FilesIcon, FileImage, HardDrive } from 'lucide-react';
 import { Card, Btn, useToast, PageContainer } from '../components/Primitives';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import EmptyState from '../components/ui/EmptyState';
 import { TableSkeleton } from '../components/ui/Skeletons';
 import { UploadZone } from '../components/files/UploadZone';
-import { DocumentSearch } from '../components/files/DocumentSearch';
 import { FilePreview } from '../components/files/FilePreview';
 import { DataTable, createColumnHelper } from '../components/shared/DataTable';
 import { BulkActionBar, FolderPickerModal } from '../components/shared/BulkActionBar';
@@ -30,6 +29,8 @@ interface FileItem {
   lastModified?: string;
   modifiedDate: string;
   parent_id?: string | null;
+  parent_folder_id?: string | null;
+  content_type?: string | null;
 }
 
 const formatBytes = (bytes: number): string => {
@@ -61,6 +62,15 @@ const getApprovalStatus = (file: FileItem): { label: string; color: string } | n
   if (file.name.includes('MEP') || file.name.includes('Spec'))
     return { label: 'Pending Review', color: colors.statusPending };
   return { label: 'Draft', color: colors.textTertiary };
+};
+
+const getFileTypeIcon = (file: FileItem, size = 16): React.ReactElement => {
+  if (file.type === 'folder') return <FolderOpen size={size} color={colors.primaryOrange} />;
+  const ct = (file.content_type ?? '').toLowerCase();
+  if (ct.includes('pdf')) return <FileText size={size} color="#DC2626" />;
+  if (ct.includes('image')) return <Image size={size} color={colors.statusInfo} />;
+  if (ct.includes('spreadsheet') || ct.includes('excel') || ct.includes('csv')) return <Table size={size} color={colors.statusActive} />;
+  return <FileIcon size={size} color={colors.textTertiary} />;
 };
 
 const _FilesPage: React.FC = () => {
@@ -98,6 +108,7 @@ const _FilesPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [showUpload, setShowUpload] = useState(false);
   const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // ── Folder navigation ─────────────────────────────────
   // Stack of { id, name } for the current folder path. Empty = root.
@@ -105,8 +116,25 @@ const _FilesPage: React.FC = () => {
   const currentFolderId = folderStack.length > 0 ? folderStack[folderStack.length - 1].id : null;
 
   const visibleFiles = useMemo(() => {
-    return files.filter((f: FileItem) => (f.parent_id ?? null) === currentFolderId);
+    const filtered = files.filter((f: FileItem) => (f.parent_folder_id ?? null) === currentFolderId);
+    return [...filtered].sort((a, b) => {
+      if (a.type === 'folder' && b.type !== 'folder') return -1;
+      if (a.type !== 'folder' && b.type === 'folder') return 1;
+      return 0;
+    });
   }, [files, currentFolderId]);
+
+  const displayFiles = useMemo(() => {
+    if (!searchQuery.trim()) return visibleFiles;
+    const q = searchQuery.toLowerCase();
+    return files
+      .filter((f: FileItem) => f.name.toLowerCase().includes(q))
+      .sort((a, b) => {
+        if (a.type === 'folder' && b.type !== 'folder') return -1;
+        if (a.type !== 'folder' && b.type === 'folder') return 1;
+        return 0;
+      });
+  }, [files, visibleFiles, searchQuery]);
 
   const navigateToFolder = useCallback((id: string, name: string) => {
     setFolderStack((prev) => [...prev, { id, name }]);
@@ -218,7 +246,7 @@ const _FilesPage: React.FC = () => {
 
   // ── Keyboard navigation for list view ────────────────
   const listRef = useRef<HTMLDivElement>(null);
-  const listRows = viewMode === 'list' ? visibleFiles : [];
+  const listRows = viewMode === 'list' ? displayFiles : [];
   const { focusedIndex, handleKeyDown } = useTableKeyboardNavigation({
     rowCount: listRows.length,
     onActivate: (i) => {
@@ -285,11 +313,7 @@ const _FilesPage: React.FC = () => {
         const file = info.row.original;
         return (
           <div style={{ display: 'flex', alignItems: 'center', gap: spacing.md }}>
-            {file.type === 'folder' ? (
-              <FolderOpen size={16} color={colors.primaryOrange} />
-            ) : (
-              <FileText size={16} color={colors.textTertiary} />
-            )}
+            {getFileTypeIcon(file, 16)}
             <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>
               {file.name}
             </span>
@@ -499,26 +523,29 @@ const _FilesPage: React.FC = () => {
       {/* Folder breadcrumbs */}
       <FolderBreadcrumbs stack={folderStack} onNavigate={navigateToBreadcrumb} />
 
-      {/* Document Search */}
-      <div style={{ marginBottom: spacing['4'] }}>
-        <DocumentSearch
-          inputId="file-search-input"
-          ariaLabel="Search files"
-          ariaControls="file-search-results"
-          onSelect={(result) => {
-            const match = files.find((f: FileItem) => f.name === result.name);
-            if (match) {
-              setSelectedFile(match);
-              setLiveAnnouncement(`Opening ${result.name}`);
-            } else {
-              addToast('info', `Opening ${result.name}`);
-            }
-          }}
+      {/* Search */}
+      <div style={{ marginBottom: spacing['4'], display: 'flex', alignItems: 'center', gap: spacing['2'], padding: `${spacing['2']} ${spacing['3']}`, backgroundColor: colors.surfaceInset, borderRadius: borderRadius.full, border: `1px solid ${searchQuery ? colors.borderFocus : 'transparent'}`, transition: `border-color 120ms ease` }}>
+        <Search size={16} color={colors.textTertiary} />
+        <input
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search files across all folders..."
+          aria-label="Search files"
+          style={{ flex: 1, border: 'none', backgroundColor: 'transparent', outline: 'none', fontSize: typography.fontSize.body, fontFamily: typography.fontFamily, color: colors.textPrimary }}
         />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery('')}
+            aria-label="Clear search"
+            style={{ display: 'flex', alignItems: 'center', border: 'none', background: 'transparent', cursor: 'pointer', color: colors.textTertiary, padding: 2, lineHeight: 1 }}
+          >
+            &#x2715;
+          </button>
+        )}
       </div>
 
-      {/* Collapsible Upload Zone */}
-      {showUpload && (
+      {/* Collapsible Upload Zone — shown when toggled or when current folder is empty */}
+      {(showUpload || (visibleFiles.length === 0 && !searchQuery)) && (
         <div style={{ marginBottom: spacing['5'] }}>
           <Card>
             <UploadZone onUpload={handleUpload} />
@@ -529,7 +556,7 @@ const _FilesPage: React.FC = () => {
       {/* Grid View */}
       {viewMode === 'grid' && (
         <div role="grid" aria-label="Project files" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: spacing['4'] }}>
-          {visibleFiles.map((file: FileItem) => {
+          {displayFiles.map((file: FileItem) => {
             const approval = getApprovalStatus(file);
             const isDropTarget = file.type === 'folder' && dragOverFolderId === file.id;
             return (
@@ -582,10 +609,7 @@ const _FilesPage: React.FC = () => {
               >
                 {/* Thumbnail cell */}
                 <div role="gridcell" style={{ height: '120px', background: getGradient(file), display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-                  {file.type === 'folder'
-                    ? <FolderOpen size={36} color={colors.primaryOrange} />
-                    : <FileText size={36} color="rgba(255,255,255,0.6)" />
-                  }
+                  {getFileTypeIcon(file, 36)}
                   {/* Checkbox overlay */}
                   <div
                     role="checkbox"
@@ -699,9 +723,19 @@ const _FilesPage: React.FC = () => {
               </div>
             );
           })}
-          {visibleFiles.length === 0 && (
+          {displayFiles.length === 0 && (
             <div style={{ gridColumn: '1 / -1' }}>
-              {currentFolderId ? (
+              {searchQuery ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: `${spacing['6']} ${spacing['4']}`, textAlign: 'center' }}>
+                  <Search size={32} color={colors.textTertiary} style={{ marginBottom: spacing['3'] }} />
+                  <p style={{ fontSize: typography.fontSize.body, fontWeight: 500, color: colors.textPrimary, margin: 0, marginBottom: spacing['1'] }}>
+                    No files match your search
+                  </p>
+                  <p style={{ fontSize: typography.fontSize.sm, color: colors.gray600, margin: 0 }}>
+                    Try a different name or clear the search
+                  </p>
+                </div>
+              ) : currentFolderId ? (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: `${spacing['6']} ${spacing['4']}`, textAlign: 'center' }}>
                   <Search size={32} color={colors.textTertiary} style={{ marginBottom: spacing['3'] }} />
                   <p style={{ fontSize: typography.fontSize.body, fontWeight: 500, color: colors.textPrimary, margin: 0, marginBottom: spacing['1'] }}>
@@ -728,7 +762,7 @@ const _FilesPage: React.FC = () => {
       {viewMode === 'list' && (
         <Card padding="0">
           <>
-              {visibleFiles.length === 0 && !currentFolderId ? (
+              {displayFiles.length === 0 && !currentFolderId && !searchQuery ? (
                 <EmptyState
                   icon={FileText}
                   title="No files uploaded yet"
@@ -743,13 +777,13 @@ const _FilesPage: React.FC = () => {
                   style={{ outline: 'none' }}
                 >
                   <DataTable
-                    data={visibleFiles}
+                    data={displayFiles}
                     columns={fileTableColumns}
                     enableSorting
                     selectable
                     onSelectionChange={setSelectedIds}
                     onRowClick={handleFileClick}
-                    emptyMessage="This folder is empty"
+                    emptyMessage={searchQuery ? 'No files match your search' : 'This folder is empty'}
                   />
                 </div>
               )}
