@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { AlertTriangle, RefreshCw, Lock } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Lock, X } from 'lucide-react';
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
 import { supabase } from '../../lib/supabase';
 import { EntityPresence } from './PresenceBar';
@@ -101,6 +101,160 @@ export function useOptimisticLock(
 
   return { checkConflict, conflictDetected, serverUpdatedAt, dismissConflict, checkFailed, isChecking };
 }
+
+// ── Edit Conflict Banner ───────────────────────────────────
+// Inject entrance animation keyframes once at module load
+if (typeof document !== 'undefined' && !document.getElementById('edit-conflict-banner-anim')) {
+  const s = document.createElement('style');
+  s.id = 'edit-conflict-banner-anim';
+  s.textContent = `
+    @keyframes editConflictBannerIn {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: translateY(0);    }
+    }
+  `;
+  document.head.appendChild(s);
+}
+
+function formatBannerTime(isoString: string): string {
+  const date = new Date(isoString);
+  const today = new Date();
+  const isToday =
+    date.getFullYear() === today.getFullYear() &&
+    date.getMonth() === today.getMonth() &&
+    date.getDate() === today.getDate();
+  const timePart = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  if (isToday) return timePart;
+  return `${date.toLocaleDateString([], { month: 'short', day: 'numeric' })} at ${timePart}`;
+}
+
+export interface EditConflictBannerProps {
+  conflictDetected: boolean;
+  serverUpdatedAt: string | null;
+  onReload: () => void;
+  onOverwrite: () => void;
+  onDismiss: () => void;
+}
+
+export const EditConflictBanner: React.FC<EditConflictBannerProps> = ({
+  conflictDetected,
+  serverUpdatedAt,
+  onReload,
+  onOverwrite,
+  onDismiss,
+}) => {
+  if (!conflictDetected) return null;
+
+  const timeLabel = serverUpdatedAt ? formatBannerTime(serverUpdatedAt) : null;
+
+  return (
+    <div
+      role="alert"
+      aria-live="assertive"
+      style={{
+        width: '100%',
+        boxSizing: 'border-box',
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: spacing['3'],
+        padding: `${spacing['3']} ${spacing['4']}`,
+        backgroundColor: colors.warningBannerBg,
+        border: `1px solid ${colors.statusWarning}`,
+        borderRadius: borderRadius.md,
+        marginBottom: spacing['3'],
+        position: 'relative',
+        animation: 'editConflictBannerIn 200ms ease-out',
+      }}
+    >
+      <AlertTriangle
+        size={20}
+        color={colors.statusWarning}
+        style={{ flexShrink: 0, marginTop: 1 }}
+        aria-hidden="true"
+      />
+
+      <div style={{ flex: '1 1 auto', minWidth: 0 }}>
+        <p style={{
+          margin: 0,
+          fontSize: typography.fontSize.sm,
+          fontWeight: typography.fontWeight.medium,
+          color: colors.textPrimary,
+          lineHeight: typography.lineHeight.snug,
+        }}>
+          {timeLabel
+            ? `This item was updated by another user at ${timeLabel}.`
+            : 'This item was updated by another user.'}
+        </p>
+
+        <div style={{ display: 'flex', gap: spacing['2'], marginTop: spacing['2'], flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={onReload}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: spacing['1'],
+              padding: `${spacing['1.5']} ${spacing['3']}`,
+              fontSize: typography.fontSize.sm,
+              fontWeight: typography.fontWeight.medium,
+              color: colors.textPrimary,
+              backgroundColor: colors.surfaceRaised,
+              border: `1px solid ${colors.borderDefault}`,
+              borderRadius: borderRadius.base,
+              cursor: 'pointer',
+              minHeight: '32px',
+            }}
+          >
+            <RefreshCw size={13} aria-hidden="true" />
+            Reload Latest
+          </button>
+
+          <button
+            type="button"
+            onClick={onOverwrite}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              padding: `${spacing['1.5']} ${spacing['3']}`,
+              fontSize: typography.fontSize.sm,
+              fontWeight: typography.fontWeight.normal,
+              color: colors.textSecondary,
+              backgroundColor: 'transparent',
+              border: 'none',
+              borderRadius: borderRadius.base,
+              cursor: 'pointer',
+              minHeight: '32px',
+            }}
+          >
+            Keep My Changes
+          </button>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={onDismiss}
+        aria-label="Dismiss conflict warning"
+        style={{
+          flexShrink: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: '28px',
+          height: '28px',
+          padding: 0,
+          backgroundColor: 'transparent',
+          border: 'none',
+          borderRadius: borderRadius.base,
+          cursor: 'pointer',
+          color: colors.textTertiary,
+        }}
+      >
+        <X size={16} aria-hidden="true" />
+      </button>
+    </div>
+  );
+};
 
 // ── Conflict Warning Banner ────────────────────────────────
 
