@@ -91,7 +91,7 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = ({
                     onMouseEnter={() => setHoveredBar(bar.label)}
                     onMouseLeave={() => setHoveredBar(null)}
                     onTouchStart={() => setHoveredBar(bar.label)}
-                    onTouchEnd={() => setHoveredBar(null)}
+                    onTouchEnd={() => { setTimeout(() => setHoveredBar(null), 2000); }}
                   >
                     <div
                       aria-label={`${bar.label}: ${fmt(bar.value)}`}
@@ -134,11 +134,9 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = ({
                     )}
                   </div>
                   {/* Value label to the right */}
-                  <div style={{ width: 56, flexShrink: 0, textAlign: 'right' }}>
-                    <span style={{ fontSize: typography.fontSize.xs, fontWeight: typography.fontWeight.semibold, color: bar.isTotal ? colors.textPrimary : bar.color, whiteSpace: 'nowrap' }}>
-                      {bar.value >= 0 ? '+' : ''}{fmt(bar.value)}
-                    </span>
-                  </div>
+                  <span style={{ fontSize: typography.fontSize.xs, color: colors.textSecondary, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                    {fmt(bar.value)}
+                  </span>
                 </div>
               );
             })}
@@ -206,6 +204,8 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = ({
                       aria-label={`${bar.label}: ${fmt(bar.value)}`}
                       onMouseEnter={() => setHoveredBar(bar.label)}
                       onMouseLeave={() => setHoveredBar(null)}
+                      onTouchStart={() => setHoveredBar(bar.label)}
+                      onTouchEnd={() => { setTimeout(() => setHoveredBar(null), 2000); }}
                       style={{
                         position: 'absolute', bottom: bottomOffset,
                         width: '100%', height: barHeight,
