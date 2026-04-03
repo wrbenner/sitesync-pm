@@ -12,7 +12,7 @@ import { ExportButton } from '../components/shared/ExportButton';
 import { toast } from 'sonner';
 import { useCreateMeeting } from '../hooks/mutations';
 import { useProjectId } from '../hooks/useProjectId';
-import { useMeetings, useMeeting, useMeetingAgendaItems, useMeetingActionItems, useOpenActionItems } from '../hooks/queries';
+import { useMeetings, useMeeting, useMeetingAgendaItems, useMeetingActionItems, useOpenActionItems, useDirectoryContacts } from '../hooks/queries';
 import CreateMeetingModal from '../components/forms/CreateMeetingModal';
 import { PermissionGate } from '../components/auth/PermissionGate';
 import { supabase } from '../lib/supabase';
@@ -132,6 +132,7 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ meetingId, onClose }) => {
   const { data: meeting, isPending: meetingLoading } = useMeeting(meetingId);
   const { data: agendaItems = [] } = useMeetingAgendaItems(meetingId);
   const { data: remoteActionItems = [], isError: actionItemsError } = useMeetingActionItems(meetingId);
+  const queryClient = useQueryClient();
 
   // Local state fallback when meeting_action_items table is absent
   const [localActionItems] = useState<any[]>([]);
@@ -143,7 +144,24 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ meetingId, onClose }) => {
   // Local 3-state attendance: present | absent | remote
   const [attendanceStatus, setAttendanceStatus] = useState<Record<string, 'present' | 'absent' | 'remote'>>({});
 
+  // Meeting notes auto-save state
+  const [notesText, setNotesText] = useState<string>('');
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Add action item form state
+  const [showAddItem, setShowAddItem] = useState(false);
+  const [newItemDesc, setNewItemDesc] = useState('');
+  const [newItemAssignee, setNewItemAssignee] = useState('');
+  const [newItemDueDate, setNewItemDueDate] = useState('');
+  const [addingItem, setAddingItem] = useState(false);
+
+  // Per-attendee sign-in timestamps
+  const [signInTimes, setSignInTimes] = useState<Record<string, string>>({});
+  const [checkingIn, setCheckingIn] = useState<Record<string, boolean>>({});
+
   const projectId = useProjectId();
+  const { data: directoryResult } = useDirectoryContacts(projectId);
 
   // AI Summary state
   const [aiSummary, setAiSummary] = useState<string | null>(null);
@@ -166,7 +184,76 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ meetingId, onClose }) => {
       attendees.forEach((a: any) => { init[a.id ?? a.user_id ?? a.company] = a.attended ? 'present' : 'absent'; });
       return init;
     });
+    setSignInTimes((prev) => {
+      if (Object.keys(prev).length > 0) return prev;
+      const init: Record<string, string> = {};
+      attendees.forEach((a: any) => { if (a.sign_in_time) init[a.id] = a.sign_in_time; });
+      return init;
+    });
   }, [attendees.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Sync notes from meeting record on load
+  useEffect(() => {
+    if (meeting) setNotesText((meeting as any).notes ?? '');
+  }, [meeting?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Cleanup save timeout on unmount
+  useEffect(() => () => { if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); }, []);
+
+  const handleNotesChange = (value: string) => {
+    setNotesText(value);
+    setSaveStatus('saving');
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(async () => {
+      try {
+        await supabase.from('meetings').update({ notes: value }).eq('id', meetingId);
+        setSaveStatus('saved');
+      } catch {
+        setSaveStatus('idle');
+      }
+    }, 3000);
+  };
+
+  const handleAddActionItem = async () => {
+    if (!newItemDesc.trim()) return;
+    setAddingItem(true);
+    try {
+      const { error } = await supabase.from('meeting_action_items').insert({
+        meeting_id: meetingId,
+        description: newItemDesc.trim(),
+        assigned_to: newItemAssignee || null,
+        due_date: newItemDueDate || null,
+        status: 'open',
+      });
+      if (error) throw error;
+      setNewItemDesc('');
+      setNewItemAssignee('');
+      setNewItemDueDate('');
+      setShowAddItem(false);
+      queryClient.invalidateQueries({ queryKey: ['meeting_action_items', meetingId] });
+      queryClient.invalidateQueries({ queryKey: ['meetings', 'detail', meetingId] });
+    } catch {
+      toast.error('Failed to add action item.');
+    } finally {
+      setAddingItem(false);
+    }
+  };
+
+  const handleCheckIn = async (attendeeId: string) => {
+    const now = new Date().toISOString();
+    setCheckingIn((prev) => ({ ...prev, [attendeeId]: true }));
+    try {
+      await supabase.from('meeting_attendees').update({ attended: true, sign_in_time: now }).eq('id', attendeeId);
+      setSignInTimes((prev) => ({ ...prev, [attendeeId]: now }));
+      setAttendanceStatus((prev) => ({ ...prev, [attendeeId]: 'present' }));
+    } catch {
+      toast.error('Failed to record check-in.');
+    } finally {
+      setCheckingIn((prev) => ({ ...prev, [attendeeId]: false }));
+    }
+  };
+
+  const directoryContacts: any[] = (directoryResult as any)?.data ?? [];
 
   const presentCount = Object.values(attendanceStatus).filter((s) => s === 'present').length;
   const remoteCount = Object.values(attendanceStatus).filter((s) => s === 'remote').length;
@@ -368,6 +455,56 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ meetingId, onClose }) => {
             </div>
           )}
 
+          {/* Meeting Minutes */}
+          <div style={{ marginBottom: spacing.xl }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md }}>
+              <p
+                style={{
+                  fontSize: typography.fontSize.label,
+                  fontWeight: typography.fontWeight.semibold,
+                  color: colors.textSecondary,
+                  margin: 0,
+                  textTransform: 'uppercase',
+                  letterSpacing: typography.letterSpacing.wider,
+                }}
+              >
+                Meeting Minutes
+              </p>
+              {saveStatus === 'saving' && (
+                <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, display: 'flex', alignItems: 'center', gap: spacing.xs }}>
+                  <Loader2 size={11} style={{ animation: 'spin 1s linear infinite' }} />
+                  Saving...
+                </span>
+              )}
+              {saveStatus === 'saved' && (
+                <span style={{ fontSize: typography.fontSize.caption, color: colors.statusActive, display: 'flex', alignItems: 'center', gap: spacing.xs }}>
+                  <CheckCircle2 size={11} />
+                  Saved
+                </span>
+              )}
+            </div>
+            <textarea
+              value={notesText}
+              onChange={(e) => handleNotesChange(e.target.value)}
+              placeholder="Type meeting notes here. Auto-saves every 3 seconds."
+              rows={5}
+              style={{
+                width: '100%',
+                padding: `${spacing.md} ${spacing.lg}`,
+                border: `1px solid ${colors.borderDefault}`,
+                borderRadius: borderRadius.md,
+                fontSize: typography.fontSize.body,
+                fontFamily: typography.fontFamily,
+                color: colors.textPrimary,
+                background: colors.surfaceRaised,
+                resize: 'vertical',
+                outline: 'none',
+                lineHeight: typography.lineHeight.normal,
+                boxSizing: 'border-box',
+              }}
+            />
+          </div>
+
           {/* Agenda items */}
           <p
             style={{
@@ -528,6 +665,135 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ meetingId, onClose }) => {
             </div>
           )}
 
+          {/* Add Action Item form */}
+          <div style={{ marginBottom: spacing.lg }}>
+            {!showAddItem ? (
+              <button
+                onClick={() => setShowAddItem(true)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: spacing.xs,
+                  background: 'none',
+                  border: `1px dashed ${colors.borderDefault}`,
+                  borderRadius: borderRadius.md,
+                  padding: `${spacing.sm} ${spacing.md}`,
+                  cursor: 'pointer',
+                  fontSize: typography.fontSize.sm,
+                  fontWeight: typography.fontWeight.medium,
+                  fontFamily: typography.fontFamily,
+                  color: colors.textSecondary,
+                  width: '100%',
+                  justifyContent: 'center',
+                }}
+              >
+                <Plus size={14} />
+                Add Action Item
+              </button>
+            ) : (
+              <div
+                style={{
+                  background: colors.surfaceInset,
+                  borderRadius: borderRadius.md,
+                  padding: spacing.lg,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: spacing.sm,
+                }}
+              >
+                <input
+                  autoFocus
+                  value={newItemDesc}
+                  onChange={(e) => setNewItemDesc(e.target.value)}
+                  placeholder="Describe the action item..."
+                  style={{
+                    padding: `${spacing.sm} ${spacing.md}`,
+                    border: `1px solid ${colors.borderDefault}`,
+                    borderRadius: borderRadius.md,
+                    fontSize: typography.fontSize.body,
+                    fontFamily: typography.fontFamily,
+                    color: colors.textPrimary,
+                    background: colors.surfaceRaised,
+                    outline: 'none',
+                  }}
+                />
+                <div style={{ display: 'flex', gap: spacing.sm }}>
+                  <select
+                    value={newItemAssignee}
+                    onChange={(e) => setNewItemAssignee(e.target.value)}
+                    style={{
+                      flex: 1,
+                      padding: `${spacing.sm} ${spacing.md}`,
+                      border: `1px solid ${colors.borderDefault}`,
+                      borderRadius: borderRadius.md,
+                      fontSize: typography.fontSize.sm,
+                      fontFamily: typography.fontFamily,
+                      color: newItemAssignee ? colors.textPrimary : colors.textTertiary,
+                      background: colors.surfaceRaised,
+                      outline: 'none',
+                    }}
+                  >
+                    <option value="">Assignee (optional)</option>
+                    {directoryContacts.map((c: any) => (
+                      <option key={c.id} value={c.contact_name ?? c.id}>
+                        {c.contact_name}{c.company_name ? ` — ${c.company_name}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="date"
+                    value={newItemDueDate}
+                    onChange={(e) => setNewItemDueDate(e.target.value)}
+                    style={{
+                      padding: `${spacing.sm} ${spacing.md}`,
+                      border: `1px solid ${colors.borderDefault}`,
+                      borderRadius: borderRadius.md,
+                      fontSize: typography.fontSize.sm,
+                      fontFamily: typography.fontFamily,
+                      color: colors.textPrimary,
+                      background: colors.surfaceRaised,
+                      outline: 'none',
+                    }}
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: spacing.sm, justifyContent: 'flex-end' }}>
+                  <button
+                    onClick={() => { setShowAddItem(false); setNewItemDesc(''); setNewItemAssignee(''); setNewItemDueDate(''); }}
+                    style={{
+                      padding: `${spacing.xs} ${spacing.md}`,
+                      border: `1px solid ${colors.borderDefault}`,
+                      borderRadius: borderRadius.md,
+                      background: 'none',
+                      cursor: 'pointer',
+                      fontSize: typography.fontSize.sm,
+                      fontFamily: typography.fontFamily,
+                      color: colors.textSecondary,
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleAddActionItem}
+                    disabled={!newItemDesc.trim() || addingItem}
+                    style={{
+                      padding: `${spacing.xs} ${spacing.md}`,
+                      border: 'none',
+                      borderRadius: borderRadius.md,
+                      background: newItemDesc.trim() ? colors.primaryOrange : colors.borderDefault,
+                      cursor: newItemDesc.trim() && !addingItem ? 'pointer' : 'not-allowed',
+                      fontSize: typography.fontSize.sm,
+                      fontWeight: typography.fontWeight.medium,
+                      fontFamily: typography.fontFamily,
+                      color: newItemDesc.trim() ? colors.white : colors.textTertiary,
+                    }}
+                  >
+                    {addingItem ? 'Adding...' : 'Add'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* AI Suggest Action Items */}
           <div style={{ marginBottom: spacing.xl }}>
             <button
@@ -627,6 +893,8 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ meetingId, onClose }) => {
                 {attendees.map((a: any) => {
                   const aKey = a.id ?? a.user_id ?? a.company;
                   const status = attendanceStatus[aKey] ?? 'absent';
+                  const checkedInAt = signInTimes[a.id];
+                  const isCheckedIn = !!checkedInAt || status === 'present';
                   const cycleStatus = () => setAttendanceStatus((prev) => {
                     const next: Record<string, 'present' | 'absent' | 'remote'> = { ...prev };
                     next[aKey] = status === 'absent' ? 'present' : status === 'present' ? 'remote' : 'absent';
@@ -645,12 +913,18 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ meetingId, onClose }) => {
                         display: 'flex',
                         alignItems: 'center',
                         gap: spacing.md,
-                        padding: `0 ${spacing.sm}`,
+                        padding: `${spacing.sm} ${spacing.sm}`,
                         borderRadius: borderRadius.md,
+                        background: isCheckedIn ? colors.statusActiveSubtle : 'transparent',
                         minHeight: '44px',
                       }}
                     >
-                      <div style={{ flex: 1 }}>
+                      <div style={{ flexShrink: 0 }}>
+                        {isCheckedIn
+                          ? <CheckCircle2 size={16} color={colors.statusActive} />
+                          : <Circle size={16} color={colors.textTertiary} />}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
                         <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary }}>
                           {a.company || a.user_id || 'Unknown'}
                         </span>
@@ -659,8 +933,39 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ meetingId, onClose }) => {
                             {a.role}
                           </span>
                         )}
+                        {checkedInAt && (
+                          <p style={{ fontSize: typography.fontSize.caption, color: colors.statusActive, margin: `2px 0 0`, lineHeight: 1 }}>
+                            Checked in {new Date(checkedInAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                          </p>
+                        )}
                       </div>
-                      <div style={{ display: 'flex', borderRadius: borderRadius.md, overflow: 'hidden', border: `1px solid ${colors.borderSubtle}` }}>
+                      {!checkedInAt && (
+                        <button
+                          onClick={() => handleCheckIn(a.id)}
+                          disabled={checkingIn[a.id]}
+                          aria-label={`Check in ${a.company || a.user_id || 'attendee'}`}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: spacing.xs,
+                            padding: `${spacing.xs} ${spacing.md}`,
+                            border: `1px solid ${colors.statusActive}`,
+                            borderRadius: borderRadius.md,
+                            background: 'none',
+                            cursor: checkingIn[a.id] ? 'not-allowed' : 'pointer',
+                            fontSize: typography.fontSize.caption,
+                            fontWeight: typography.fontWeight.medium,
+                            fontFamily: typography.fontFamily,
+                            color: colors.statusActive,
+                            flexShrink: 0,
+                            opacity: checkingIn[a.id] ? 0.5 : 1,
+                          }}
+                        >
+                          <UserCheck size={12} />
+                          {checkingIn[a.id] ? 'Saving...' : 'Check In'}
+                        </button>
+                      )}
+                      <div style={{ display: 'flex', borderRadius: borderRadius.md, overflow: 'hidden', border: `1px solid ${colors.borderSubtle}`, flexShrink: 0 }}>
                         {(['present', 'remote', 'absent'] as const).map((s) => (
                           <button
                             key={s}
