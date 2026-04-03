@@ -159,13 +159,13 @@ const _DrawingsPage: React.FC = () => {
       e.preventDefault();
       const next = Math.min(focusedIndex + 1, total - 1);
       setFocusedIndex(next);
-      const rows = gridRef.current?.querySelectorAll<HTMLElement>('[role="row"]');
+      const rows = gridRef.current?.querySelectorAll<HTMLElement>('[role="listitem"]');
       rows?.[next]?.focus();
     } else if (e.key === 'ArrowUp' || e.key === 'k') {
       e.preventDefault();
       const prev = Math.max(focusedIndex - 1, 0);
       setFocusedIndex(prev);
-      const rows = gridRef.current?.querySelectorAll<HTMLElement>('[role="row"]');
+      const rows = gridRef.current?.querySelectorAll<HTMLElement>('[role="listitem"]');
       rows?.[prev]?.focus();
     } else if (e.key === 'Enter') {
       e.preventDefault();
@@ -328,6 +328,7 @@ const _DrawingsPage: React.FC = () => {
         </>
       }
     >
+      <h1 style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}>Drawings</h1>
       <style>{`
         @media(max-width:768px){
           .drawings-layout{grid-template-columns:1fr!important;}
@@ -441,7 +442,7 @@ const _DrawingsPage: React.FC = () => {
 
           {/* Discipline filter pills */}
           <div style={{ position: 'sticky', top: 0, zIndex: 10, backgroundColor: '#ffffff', paddingTop: spacing['2'], paddingBottom: spacing['2'], marginBottom: spacing.xl }}>
-          <div style={{ display: 'flex', gap: spacing.sm, flexWrap: 'wrap', alignItems: 'center' }}>
+          <div role="group" aria-label="Filter by discipline" style={{ display: 'flex', gap: spacing.sm, flexWrap: 'wrap', alignItems: 'center' }}>
             {uniqueDisciplines.map((discipline) => {
               const isActive = activeFilters.has(discipline);
               const pillColor = getDisciplineColor(discipline);
@@ -526,16 +527,20 @@ const _DrawingsPage: React.FC = () => {
           </div>
           </div>
 
-          {/* Results count — aria-live announces filter changes to screen readers */}
-          <p
-            aria-live="polite"
-            aria-atomic="true"
-            style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0, marginBottom: spacing.md }}
-          >
+          {/* Results count — visible label */}
+          <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0, marginBottom: spacing.md }}>
             {activeFilters.size > 0
-              ? `Showing ${sortedDrawings.length} drawing${sortedDrawings.length !== 1 ? 's' : ''} filtered by ${Array.from(activeFilters).join(', ')}`
+              ? `Showing ${sortedDrawings.length} of ${allDrawings.length} drawing${allDrawings.length !== 1 ? 's' : ''}`
               : `${sortedDrawings.length} drawing${sortedDrawings.length !== 1 ? 's' : ''}`}
           </p>
+          {/* sr-only live region announces filter result counts to screen readers */}
+          <span
+            aria-live="polite"
+            aria-atomic="true"
+            style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}
+          >
+            {`Showing ${sortedDrawings.length} of ${allDrawings.length} drawings`}
+          </span>
 
           {/* Drawings Table */}
           <div style={{ overflowX: 'auto' }}>
@@ -601,7 +606,7 @@ const _DrawingsPage: React.FC = () => {
             )}
             {!loading && !error && (
               <div
-                role="grid"
+                role="list"
                 aria-label="Project drawings"
                 ref={gridRef}
                 onKeyDown={handleGridKeyDown}
@@ -612,12 +617,13 @@ const _DrawingsPage: React.FC = () => {
               const linked = linkedItems[drawing.id];
               const viewed = lastViewed[drawing.id];
               const rowBorder = index < sortedDrawings.length - 1 ? `1px solid ${colors.border}` : 'none';
-              const ariaLabel = `${(drawing as any).sheetNumber || drawing.setNumber || ''} ${drawing.title}`.trim();
+              const rev = drawing.currentRevision?.revision_number ?? drawing.revision ?? '';
+              const ariaLabel = `${drawing.title}, ${drawing.discipline}, Revision ${rev}`;
               return (
                 <React.Fragment key={drawing.id}>
                 {/* Mobile card row */}
                 <div
-                  role="row"
+                  role="listitem"
                   tabIndex={index === focusedIndex ? 0 : -1}
                   aria-label={ariaLabel}
                   className="drawing-row drawing-row-mobile"
@@ -651,7 +657,7 @@ const _DrawingsPage: React.FC = () => {
                 </div>
                 {/* Desktop table row */}
                 <div
-                  role="row"
+                  role="listitem"
                   tabIndex={index === focusedIndex ? 0 : -1}
                   aria-label={ariaLabel}
                   className="drawing-row drawing-row-desktop"
@@ -1024,6 +1030,7 @@ const _DrawingsPage: React.FC = () => {
                   </h3>
                 </div>
                 <button
+                  aria-label="Close drawing detail panel"
                   onClick={() => setSelectedDrawing(null)}
                   style={{
                     width: 32,
