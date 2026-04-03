@@ -64,16 +64,6 @@ function ToastEntry({ toast, onClose, isLast }: { toast: ToastItem; onClose: (id
   }, [onClose]);
 
   useEffect(() => {
-    const onDocKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && containerRef.current?.contains(document.activeElement)) {
-        handleClose(toast.id);
-      }
-    };
-    document.addEventListener('keydown', onDocKeyDown);
-    return () => document.removeEventListener('keydown', onDocKeyDown);
-  }, [toast.id, handleClose]);
-
-  useEffect(() => {
     const duration = TOAST_DURATION[toast.severity];
     if (duration === null) return;
     remainingRef.current = duration;
@@ -148,8 +138,9 @@ function ToastEntry({ toast, onClose, isLast }: { toast: ToastItem; onClose: (id
 
   return (
     <div
-      role={toast.severity === 'error' || toast.severity === 'warning' ? 'alert' : 'status'}
+      role={toast.severity === 'error' ? 'alert' : 'status'}
       aria-live={toast.severity === 'error' ? 'assertive' : 'polite'}
+      aria-atomic="true"
       style={{
         transition: 'opacity 150ms ease-out, transform 150ms ease-out',
         opacity: isVisible && !isExiting ? 1 : 0,
@@ -308,6 +299,19 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
   const closeToast = useCallback((id: string) => {
     setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
+
+  useEffect(() => {
+    const onEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setToasts(prev => {
+          if (prev.length === 0) return prev;
+          return prev.slice(0, prev.length - 1);
+        });
+      }
+    };
+    document.addEventListener('keydown', onEscape);
+    return () => document.removeEventListener('keydown', onEscape);
   }, []);
 
   return (
