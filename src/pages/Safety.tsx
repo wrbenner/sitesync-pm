@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { AlertTriangle, ClipboardCheck, Award, Users, Plus, ShieldCheck, Shield } from 'lucide-react'
+import { AlertTriangle, ClipboardCheck, Award, Users, Plus, ShieldCheck, Shield, Wrench } from 'lucide-react'
 import { PageContainer, Card, Btn, Skeleton, MetricBox } from '../components/Primitives'
 import { DataTable, createColumnHelper } from '../components/shared/DataTable'
 import { ExportButton } from '../components/shared/ExportButton'
@@ -7,14 +7,16 @@ import { colors, spacing, typography, borderRadius, transitions } from '../style
 import { useProjectId } from '../hooks/useProjectId'
 import { useSafetyInspections, useIncidents, useToolboxTalks, useSafetyCertifications, useCorrectiveActions, useDailyLogs } from '../hooks/queries'
 import { toast } from 'sonner'
+import { supabase } from '../lib/supabase'
 
-type TabKey = 'incidents' | 'inspections' | 'toolbox' | 'certifications'
+type TabKey = 'incidents' | 'inspections' | 'toolbox' | 'certifications' | 'corrective_actions'
 
 const tabs: { key: TabKey; label: string; icon: React.ElementType }[] = [
   { key: 'incidents', label: 'Incidents', icon: AlertTriangle },
   { key: 'inspections', label: 'Inspections', icon: ClipboardCheck },
   { key: 'toolbox', label: 'Toolbox Talks', icon: Users },
   { key: 'certifications', label: 'Certifications', icon: Award },
+  { key: 'corrective_actions', label: 'Corrective Actions', icon: Wrench },
 ]
 
 // OSHA incident severity — dot and badge colors per design spec
@@ -112,6 +114,64 @@ const MOCK_INCIDENTS = [
     investigation_status: 'closed',
     assigned_to: 'Tom Garcia',
     injured_party_name: 'Tom Garcia',
+  },
+]
+
+// Realistic corrective action mock data for prototype display
+const MOCK_CORRECTIVE_ACTIONS = [
+  {
+    id: 'ca1',
+    description: 'Install fall protection netting on Level 5 perimeter',
+    assigned_to: 'Dave Martinez',
+    due_date: '2026-04-05',
+    status: 'open',
+    severity: 'critical',
+    created_at: '2026-03-20',
+  },
+  {
+    id: 'ca2',
+    description: 'Replace damaged scaffold planks at Section B',
+    assigned_to: 'Jake Thompson',
+    due_date: '2026-04-01',
+    status: 'open',
+    severity: 'high',
+    created_at: '2026-03-25',
+  },
+  {
+    id: 'ca3',
+    description: 'Repair ground fault circuit interrupter on Level 1 panel',
+    assigned_to: 'Carlos Rivera',
+    due_date: '2026-04-10',
+    status: 'in_progress',
+    severity: 'high',
+    created_at: '2026-03-28',
+  },
+  {
+    id: 'ca4',
+    description: 'Restock first aid supplies in job trailer and Level 3 box',
+    assigned_to: 'Sarah Chen',
+    due_date: '2026-04-07',
+    status: 'in_progress',
+    severity: 'medium',
+    created_at: '2026-03-30',
+  },
+  {
+    id: 'ca5',
+    description: 'Clean up oil spill near loading dock entrance',
+    assigned_to: 'Bobby Kim',
+    due_date: '2026-03-28',
+    status: 'closed',
+    severity: 'medium',
+    created_at: '2026-03-22',
+  },
+  {
+    id: 'ca6',
+    description: 'Post updated emergency evacuation route signage on all levels',
+    assigned_to: 'Aisha Williams',
+    due_date: '2026-04-15',
+    status: 'open',
+    severity: 'low',
+    created_at: '2026-04-01',
   },
 ]
 
@@ -349,6 +409,97 @@ const certColumns = [
   }),
 ]
 
+const caCol = createColumnHelper<any>()
+const caColumns = [
+  caCol.accessor('description', {
+    header: 'Description',
+    cell: (info) => (
+      <span style={{ fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>
+        {info.getValue()}
+      </span>
+    ),
+  }),
+  caCol.accessor('assigned_to', {
+    header: 'Assigned To',
+    cell: (info) => (
+      <span style={{ color: colors.textSecondary }}>{info.getValue() || '\u2014'}</span>
+    ),
+  }),
+  caCol.accessor('due_date', {
+    header: 'Due Date',
+    cell: (info) => {
+      const val = info.getValue() as string | null
+      if (!val) return <span style={{ color: colors.textTertiary }}>\u2014</span>
+      const isOverdue = new Date(val) < new Date() && info.row.original.status !== 'closed' && info.row.original.status !== 'verified'
+      return (
+        <span style={{
+          color: isOverdue ? colors.statusCritical : colors.textSecondary,
+          fontWeight: isOverdue ? typography.fontWeight.semibold : typography.fontWeight.normal,
+        }}>
+          {new Date(val).toLocaleDateString()}
+          {isOverdue && (
+            <span style={{
+              marginLeft: spacing.xs,
+              fontSize: typography.fontSize.caption,
+              color: colors.statusCritical,
+              fontWeight: typography.fontWeight.medium,
+            }}>
+              {' '}OVERDUE
+            </span>
+          )}
+        </span>
+      )
+    },
+  }),
+  caCol.accessor('severity', {
+    header: 'Severity',
+    cell: (info) => {
+      const v = (info.getValue() as string) || 'medium'
+      const colorMap: Record<string, { fg: string; bg: string }> = {
+        critical: { fg: colors.statusCritical, bg: colors.statusCriticalSubtle },
+        high:     { fg: '#E67E22', bg: '#FFF7ED' },
+        medium:   { fg: colors.statusPending, bg: colors.statusPendingSubtle },
+        low:      { fg: colors.statusInfo, bg: colors.statusInfoSubtle },
+      }
+      const c = colorMap[v] ?? colorMap.medium
+      return (
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', gap: spacing.xs,
+          padding: `2px ${spacing.sm}`, borderRadius: borderRadius.full,
+          fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
+          color: c.fg, backgroundColor: c.bg,
+        }}>
+          <div style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: c.fg }} />
+          {v.charAt(0).toUpperCase() + v.slice(1)}
+        </span>
+      )
+    },
+  }),
+  caCol.accessor('status', {
+    header: 'Status',
+    cell: (info) => {
+      const v = (info.getValue() as string) || 'open'
+      const c = v === 'closed' || v === 'verified' ? colors.statusActive
+        : v === 'in_progress' ? colors.statusInfo
+        : colors.statusPending
+      const bg = v === 'closed' || v === 'verified' ? colors.statusActiveSubtle
+        : v === 'in_progress' ? colors.statusInfoSubtle
+        : colors.statusPendingSubtle
+      return (
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', gap: spacing.xs,
+          padding: `2px ${spacing.sm}`, borderRadius: borderRadius.full,
+          fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
+          color: c, backgroundColor: bg,
+        }}>
+          <div style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: c }} />
+          {v === 'in_progress' ? 'In Progress' : v.charAt(0).toUpperCase() + v.slice(1)}
+        </span>
+      )
+    },
+  }),
+]
+
 // ── Empty State ──────────────────────────────────────────────
 
 function EmptyState({ message, cta, onCta }: { message: string; cta?: string; onCta?: () => void }) {
@@ -386,6 +537,33 @@ export const Safety: React.FC = () => {
 
   // Use mock incidents when API returns empty (prototype fallback)
   const displayIncidents: any[] = (incidents || []).length > 0 ? (incidents || []) : MOCK_INCIDENTS
+
+  // Use mock corrective actions when API returns empty (prototype fallback)
+  const displayCAs: any[] = (correctiveActions || []).length > 0 ? (correctiveActions || []) : MOCK_CORRECTIVE_ACTIONS
+
+  // ── Real-time subscriptions ────────────────────────────────
+
+  useEffect(() => {
+    if (!projectId) return
+    const ch1 = supabase
+      .channel(`safety-incidents-rt-${projectId}`)
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'incidents',
+        filter: `project_id=eq.${projectId}`,
+      }, () => { refetchIncidents() })
+      .subscribe()
+    const ch2 = supabase
+      .channel(`safety-corrective-rt-${projectId}`)
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'corrective_actions',
+        filter: `project_id=eq.${projectId}`,
+      }, () => { refetchCAs() })
+      .subscribe()
+    return () => {
+      supabase.removeChannel(ch1)
+      supabase.removeChannel(ch2)
+    }
+  }, [projectId])
 
   // ── KPI calculations ───────────────────────────────────────
 
@@ -569,6 +747,11 @@ export const Safety: React.FC = () => {
               Add Certification
             </Btn>
           )}
+          {activeTab === 'corrective_actions' && (
+            <Btn variant="primary" icon={<Plus size={16} />} onClick={() => toast.info('Form submission requires backend configuration')} style={{ minHeight: 44 }}>
+              Log Corrective Action
+            </Btn>
+          )}
         </div>
       }
     >
@@ -589,7 +772,7 @@ export const Safety: React.FC = () => {
       ) : (
         <div style={{
           display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)',
+          gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(5, 1fr)',
           gap: spacing.lg,
           marginBottom: spacing['2xl'],
         }}>
@@ -628,6 +811,12 @@ export const Safety: React.FC = () => {
             value={expiringCerts}
             colorOverride={certColor}
             changeLabel="Within 30 days"
+          />
+
+          <MetricBox
+            label="Inspections This Week"
+            value={inspectionsThisWeek}
+            colorOverride={inspectionsThisWeek > 0 ? 'success' : undefined}
           />
         </div>
       )}
@@ -840,6 +1029,71 @@ export const Safety: React.FC = () => {
               />
             </Card>
           </div>
+        )
+      )}
+
+      {/* Corrective Actions Tab */}
+      {activeTab === 'corrective_actions' && !isLoading && !hasError && (
+        displayCAs.length === 0 ? (
+          <Card>
+            <EmptyState
+              message="No corrective actions on record. Corrective actions are created from safety inspections and incident investigations."
+              cta="Log Corrective Action"
+              onCta={() => toast.info('Form submission requires backend configuration')}
+            />
+          </Card>
+        ) : (
+          <>
+            <div style={{ display: 'flex', gap: spacing['4'], marginBottom: spacing['4'], flexWrap: 'wrap' }}>
+              {(['open', 'in_progress', 'closed'] as const).map((s) => {
+                const count = displayCAs.filter((ca) => ca.status === s || (s === 'closed' && ca.status === 'verified')).length
+                const colorMap = {
+                  open: { fg: colors.statusPending, bg: colors.statusPendingSubtle },
+                  in_progress: { fg: colors.statusInfo, bg: colors.statusInfoSubtle },
+                  closed: { fg: colors.statusActive, bg: colors.statusActiveSubtle },
+                }
+                const c = colorMap[s]
+                const label = s === 'in_progress' ? 'In Progress' : s.charAt(0).toUpperCase() + s.slice(1)
+                return (
+                  <div key={s} style={{
+                    backgroundColor: c.bg, borderRadius: borderRadius.md,
+                    padding: `${spacing['2']} ${spacing['4']}`,
+                  }}>
+                    <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: c.fg }}>
+                      {count} {label}
+                    </span>
+                  </div>
+                )
+              })}
+              {(() => {
+                const overdueCount = displayCAs.filter((ca) => {
+                  if (!ca.due_date) return false
+                  if (ca.status === 'closed' || ca.status === 'verified') return false
+                  return new Date(ca.due_date) < new Date()
+                }).length
+                if (overdueCount === 0) return null
+                return (
+                  <div style={{
+                    backgroundColor: colors.statusCriticalSubtle, borderRadius: borderRadius.md,
+                    padding: `${spacing['2']} ${spacing['4']}`,
+                  }}>
+                    <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.statusCritical }}>
+                      {overdueCount} Overdue
+                    </span>
+                  </div>
+                )
+              })()}
+            </div>
+            <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+              <Card>
+                <DataTable
+                  columns={caColumns}
+                  data={displayCAs}
+                  enableSorting
+                />
+              </Card>
+            </div>
+          </>
         )
       )}
 
