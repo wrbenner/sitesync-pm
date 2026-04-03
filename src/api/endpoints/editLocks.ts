@@ -22,6 +22,123 @@ export interface EditLockBlocked {
 export type AcquireEditLockResult = EditLockAcquired | EditLockBlocked
 
 /**
+ * Delete all lock rows where expires_at < now(). Returns the number of rows deleted.
+ * Called opportunistically on every acquireEditLock and from a 5-minute cron edge function.
+ */
+export async function cleanupExpiredLocks(): Promise<number> {
+  const { data, error } = await supabase
+    .from('edit_locks')
+    .delete()
+    .lt('expires_at', new Date().toISOString())
+    .select('entity_id')
+
+  if (error) throw transformSupabaseError(error)
+
+  return Array.isArray(data) ? data.length : 0
+}
+
+// Role hierarchy: higher index = more permissions.
+const ROLE_HIERARCHY = ['viewer', 'collaborator', 'foreman', 'project_manager', 'admin', 'owner']
+
+/**
+ * Force-release a lock regardless of who holds it. Only allowed for users with
+ * project_manager or higher role on the entity's project. Returns true on success.
+ *
+ * entityType must match one of the mapped table names used for project lookup.
+ */
+export async function forceReleaseLock(
+  entityType: string,
+  entityId: string,
+  requestingUserId: string,
+): Promise<boolean> {
+  // Resolve project_id from the entity row. Map entityType to its table name.
+  const entityTableMap: Record<string, string> = {
+    rfi: 'rfis',
+    submittal: 'submittals',
+    daily_log: 'daily_logs',
+    punch_list_item: 'punch_list_items',
+    meeting: 'meetings',
+    file: 'files',
+    drawing: 'drawings',
+    budget_item: 'budget_items',
+    schedule_task: 'schedule_tasks',
+  }
+  const tableName = entityTableMap[entityType]
+  if (!tableName) throw new Error(`Unknown entityType for lock release: ${entityType}`)
+
+  const { data: entity, error: entityError } = await supabase
+    .from(tableName)
+    .select('project_id')
+    .eq('id', entityId)
+    .maybeSingle()
+
+  if (entityError) throw transformSupabaseError(entityError)
+  if (!entity) throw new Error(`Entity not found: ${entityType}/${entityId}`)
+
+  // Verify requesting user has project_manager or higher role.
+  const { data: membership, error: memberError } = await supabase
+    .from('project_members')
+    .select('role')
+    .eq('project_id', entity.project_id)
+    .eq('user_id', requestingUserId)
+    .maybeSingle()
+
+  if (memberError) throw transformSupabaseError(memberError)
+
+  const userRoleIndex = membership ? ROLE_HIERARCHY.indexOf(membership.role) : -1
+  const minRoleIndex = ROLE_HIERARCHY.indexOf('project_manager')
+  if (userRoleIndex < minRoleIndex) {
+    throw new Error('Insufficient permissions: project_manager or higher required to force release a lock')
+  }
+
+  const { error: deleteError } = await supabase
+    .from('edit_locks')
+    .delete()
+    .eq('entity_type', entityType)
+    .eq('entity_id', entityId)
+
+  if (deleteError) throw transformSupabaseError(deleteError)
+
+  return true
+}
+
+/**
+ * Return all active (non-expired) locks for a project, joined with the lock holder's
+ * profile name. Powers the admin "Current Locks" panel.
+ */
+export async function getActiveLocks(
+  projectId: string,
+): Promise<Array<{
+  entityType: string
+  entityId: string
+  lockedBy: string
+  lockedByName: string | null
+  expiresAt: string
+}>> {
+  const { data, error } = await supabase
+    .from('edit_locks')
+    .select(`
+      entity_type,
+      entity_id,
+      locked_by_user_id,
+      expires_at,
+      profiles!edit_locks_locked_by_user_id_fkey (full_name)
+    `)
+    .eq('project_id', projectId)
+    .gt('expires_at', new Date().toISOString())
+
+  if (error) throw transformSupabaseError(error)
+
+  return (data ?? []).map((row) => ({
+    entityType: row.entity_type,
+    entityId: row.entity_id,
+    lockedBy: row.locked_by_user_id,
+    lockedByName: (row.profiles as { full_name: string | null } | null)?.full_name ?? null,
+    expiresAt: row.expires_at,
+  }))
+}
+
+/**
  * Attempt to acquire an exclusive edit lock for (entityType, entityId).
  *
  * - If no lock exists, or the existing lock is expired, or it belongs to userId:
@@ -36,6 +153,9 @@ export async function acquireEditLock(
 ): Promise<AcquireEditLockResult> {
   const now = new Date()
   const expiresAt = new Date(now.getTime() + LOCK_DURATION_MS)
+
+  // Opportunistically remove stale locks before checking for conflicts.
+  await cleanupExpiredLocks()
 
   // Check for an existing lock on this entity
   const { data: existing, error: fetchError } = await supabase
