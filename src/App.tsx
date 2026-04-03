@@ -561,7 +561,7 @@ function AppContent() {
           </ErrorBoundary>
         </ChunkLoadErrorBoundary>
         <Suspense fallback={null}><FloatingAIButton /></Suspense>
-        {copilotOpen && <Suspense fallback={null}><CopilotPanel /></Suspense>}
+        {copilotOpen && <aside role="complementary" aria-label="AI Assistant"><Suspense fallback={null}><CopilotPanel /></Suspense></aside>}
         <ConflictResolutionModal open={conflictModalOpen} onClose={() => setConflictModalOpen(false)} />
       </MobileLayout>
     </>
@@ -611,7 +611,7 @@ function AppContent() {
         {exportOpen && <Suspense fallback={null}><ExportCenter open={exportOpen} onClose={() => setExportOpen(false)} /></Suspense>}
         {contextPanelOpen && <Suspense fallback={null}><AIContextPanel currentPage={activeView} /></Suspense>}
         <Suspense fallback={null}><FloatingAIButton /></Suspense>
-        {copilotOpen && <Suspense fallback={null}><CopilotPanel /></Suspense>}
+        {copilotOpen && <aside role="complementary" aria-label="AI Assistant"><Suspense fallback={null}><CopilotPanel /></Suspense></aside>}
         <ConflictResolutionModal open={conflictModalOpen} onClose={() => setConflictModalOpen(false)} />
       </div>
     </SidebarContext.Provider>
