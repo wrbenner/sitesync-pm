@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Plus, Search, X, ArrowRight, GitBranch, Clock, AlertTriangle, ChevronRight, FileText, User, FileX, TrendingDown } from 'lucide-react';
-import { PageContainer, Card, Btn, MetricBox, SectionHeader, Skeleton, useToast, Modal, TabBar } from '../components/Primitives';
+import { PageContainer, Card, Btn, MetricBox, SectionHeader, Skeleton, useToast, Modal, TabBar, Tag } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, shadows, transitions, zIndex, touchTarget } from '../styles/theme';
 import { WaterfallChart } from '../components/budget/WaterfallChart';
 import { useQuery } from '../hooks/useQuery';
@@ -59,7 +59,7 @@ export const ChangeOrders: React.FC = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<ChangeOrderType | 'all'>('all');
-  const [filterStatus] = useState<ChangeOrderState | 'all'>('all');
+  const [filterStatus, setFilterStatus] = useState<ChangeOrderState | 'all'>('all');
   const [selectedCO, setSelectedCO] = useState<MappedChangeOrder | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
@@ -100,7 +100,7 @@ export const ChangeOrders: React.FC = () => {
 
   const allCOs: MappedChangeOrder[] = costData?.changeOrders || [];
   const originalContract = projectData?.totalValue || 0;
-  const hasActiveFilters = searchQuery !== '' || filterType !== 'all';
+  const hasActiveFilters = searchQuery !== '' || filterType !== 'all' || filterStatus !== 'all';
 
   const filteredCOs = useMemo(() => {
     return allCOs.filter(co => {
@@ -577,10 +577,11 @@ export const ChangeOrders: React.FC = () => {
       )}
 
       {/* Summary Metrics */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['3'], marginBottom: spacing['4'] }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: spacing['3'], marginBottom: spacing['4'] }}>
         <MetricBox label="Total COs" value={String(allCOs.length)} />
         <MetricBox label="Approved Total" value={new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(metrics.approvedTotal)} colorOverride="success" />
         <MetricBox label="Pending Total" value={new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(metrics.pendingTotal)} colorOverride="warning" />
+        <MetricBox label="Rejected Total" value={new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(metrics.rejectedTotal)} colorOverride="danger" />
         <MetricBox
           label="Net Contract Change"
           value={originalContract > 0 ? `${metrics.approvedTotal >= 0 ? '+' : ''}${((metrics.approvedTotal / originalContract) * 100).toFixed(1)}%` : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(metrics.approvedTotal)}
@@ -639,11 +640,37 @@ export const ChangeOrders: React.FC = () => {
         />
       </div>
 
+      {/* Status filter tabs */}
+      <div style={{ display: 'flex', gap: spacing['1'], marginBottom: spacing['4'] }}>
+        {([
+          { id: 'all', label: 'All' },
+          { id: 'draft', label: 'Draft' },
+          { id: 'pending', label: 'Pending Approval' },
+          { id: 'approved', label: 'Approved' },
+          { id: 'rejected', label: 'Rejected' },
+        ] as const).map(({ id, label }) => {
+          const active = filterStatus === id;
+          return (
+            <button key={id} onClick={() => setFilterStatus(id as ChangeOrderState | 'all')}
+              style={{
+                padding: `${spacing['1']} ${spacing['3']}`, fontSize: typography.fontSize.sm,
+                fontFamily: typography.fontFamily, fontWeight: active ? typography.fontWeight.semibold : typography.fontWeight.medium,
+                backgroundColor: active ? colors.surfaceRaised : 'transparent',
+                color: active ? colors.textPrimary : colors.textTertiary,
+                border: 'none', borderRadius: borderRadius.full, cursor: 'pointer',
+                boxShadow: active ? shadows.sm : 'none',
+              }}>
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
       {/* Empty state — no change orders at all */}
       {allCOs.length === 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: `${spacing['16']} ${spacing['8']}`, textAlign: 'center' }}>
           <FileText size={48} color="#9CA3AF" style={{ marginBottom: spacing['4'] }} />
-          <h3 style={{ fontSize: 18, fontWeight: 600, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>No Change Orders Yet</h3>
+          <h3 style={{ fontSize: 18, fontWeight: 600, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>No change orders</h3>
           <p style={{ fontSize: 14, color: '#6B7280', margin: 0, marginBottom: spacing['5'], maxWidth: 360 }}>Scope is holding steady. When changes arise, document them here to keep the budget accurate.</p>
           <PermissionGate permission="change_orders.create">
             <button onClick={() => setShowCreateModal(true)} style={{ height: 40, padding: `0 ${spacing['5']}`, backgroundColor: '#F47820', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, fontFamily: typography.fontFamily, cursor: 'pointer' }}>
@@ -717,7 +744,7 @@ export const ChangeOrders: React.FC = () => {
                   <h3 style={{ fontSize: 18, fontWeight: 600, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>No change orders match your filters</h3>
                   <p style={{ fontSize: 14, color: '#6B7280', margin: 0, marginBottom: spacing['5'] }}>Try adjusting your search or filter criteria.</p>
                   {hasActiveFilters && (
-                    <button onClick={() => { setSearchQuery(''); setFilterType('all'); }} style={{ height: 40, padding: `0 ${spacing['5']}`, backgroundColor: '#F47820', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, fontFamily: typography.fontFamily, cursor: 'pointer' }}>
+                    <button onClick={() => { setSearchQuery(''); setFilterType('all'); setFilterStatus('all'); }} style={{ height: 40, padding: `0 ${spacing['5']}`, backgroundColor: '#F47820', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, fontFamily: typography.fontFamily, cursor: 'pointer' }}>
                       Clear Filters
                     </button>
                   )}
@@ -727,31 +754,40 @@ export const ChangeOrders: React.FC = () => {
           ) : (
             /* Tablet/Desktop: scrollable table */
             <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-              <div style={{ minWidth: 860 }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '80px 70px 1fr 140px 130px 110px 120px 100px', padding: `${spacing['2']} ${spacing['4']}`, borderBottom: `1px solid ${colors.borderSubtle}` }}>
-                  {['Number', 'Type', 'Title', 'Cost Impact', 'Reason', 'Schedule Impact', 'Status', ''].map(h => (
+              <div style={{ minWidth: 920 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr 130px 130px 120px 110px 130px 90px', padding: `${spacing['2']} ${spacing['4']}`, borderBottom: `1px solid ${colors.borderSubtle}` }}>
+                  {['CO #', 'Title', 'Type', 'Status', 'Amount', 'Schedule Impact', 'Requested By', 'Date'].map(h => (
                     <span key={h} style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: typography.letterSpacing.wider }}>{h}</span>
                   ))}
                 </div>
                 {filteredCOs.map((co, i) => {
-                  const typeConfig = getCOTypeConfig(co.type);
-                  const reasonConfig = co.reason_code ? getReasonCodeConfig(co.reason_code) : null;
-                  const reasonIcon = co.reason_code ? REASON_ICONS[co.reason_code] : null;
-                  const canPromote = co.type === 'pco' && co.status === 'pending_review';
-                  const costColor = co.estimated_cost > 0 ? colors.statusCritical : co.estimated_cost < 0 ? colors.statusActive : colors.textPrimary;
-                  const costLabel = co.estimated_cost > 0 ? `+${fmtCurrency(co.estimated_cost)}` : fmtCurrency(co.estimated_cost);
+                  const typeColorMap: Record<string, { color: string; bg: string; label: string }> = {
+                    owner_change:      { color: '#F47820', bg: '#FEF5ED', label: 'Owner Change' },
+                    field_condition:   { color: '#14B8A6', bg: '#F0FDFA', label: 'Field Condition' },
+                    design_error:      { color: '#E74C3C', bg: '#FEF2F2', label: 'Design Error' },
+                    value_engineering: { color: '#4EC896', bg: '#F0FBF6', label: 'Value Engineering' },
+                    regulatory:        { color: '#3B82F6', bg: '#EFF6FF', label: 'Regulatory' },
+                    unforeseen:        { color: '#8B5CF6', bg: '#F5F3FF', label: 'Unforeseen' },
+                  };
+                  const typeDisplay = co.reason_code
+                    ? (typeColorMap[co.reason_code] ?? { color: colors.textTertiary, bg: colors.surfaceInset, label: co.reason_code })
+                    : { color: colors.textTertiary, bg: colors.surfaceInset, label: 'N/A' };
+                  const amountVal = co.status === 'approved' ? (co.approved_cost || co.amount) : co.estimated_cost;
+                  const amountColor = amountVal < 0 ? colors.statusCritical : amountVal > 0 ? colors.statusActive : colors.textPrimary;
+                  const amountLabel = amountVal > 0 ? `+${fmtCurrency(amountVal)}` : fmtCurrency(amountVal);
                   const schedColor = co.schedule_impact_days > 0 ? colors.statusCritical : co.schedule_impact_days < 0 ? colors.statusActive : colors.textTertiary;
                   const schedLabel = co.schedule_impact_days > 0 ? `+${co.schedule_impact_days} days` : co.schedule_impact_days < 0 ? `${co.schedule_impact_days} days` : 'No impact';
-                  const statusColors: Record<string, { color: string; bg: string; label: string }> = {
-                    draft:    { color: '#6B7280', bg: '#F3F4F6', label: 'Draft' },
-                    pending:  { color: '#F5A623', bg: '#FFF8EC', label: 'Pending' },
-                    approved: { color: '#4EC896', bg: '#F0FBF6', label: 'Approved' },
-                    rejected: { color: '#E74C3C', bg: '#FEF2F2', label: 'Rejected' },
+                  const statusDotMap: Record<string, { dot: string; label: string }> = {
+                    draft:        { dot: '#9CA3AF', label: 'Draft' },
+                    pending:      { dot: '#F5A623', label: 'Pending Approval' },
+                    approved:     { dot: '#4EC896', label: 'Approved' },
+                    rejected:     { dot: '#E74C3C', label: 'Rejected' },
+                    implemented:  { dot: '#3B82F6', label: 'Implemented' },
                   };
-                  const statusDisplay = statusColors[co.status] ?? { color: '#6B7280', bg: '#F3F4F6', label: co.status };
+                  const statusDisplay = statusDotMap[co.status] ?? { dot: '#9CA3AF', label: co.status };
                   return (
                     <div key={co.id} onClick={() => setSelectedCO(co)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedCO(co); } }} style={{
-                      display: 'grid', gridTemplateColumns: '80px 70px 1fr 140px 130px 110px 120px 100px',
+                      display: 'grid', gridTemplateColumns: '80px 1fr 130px 130px 120px 110px 130px 90px',
                       padding: `${spacing['3']} ${spacing['4']}`,
                       borderBottom: i < filteredCOs.length - 1 ? `1px solid ${colors.borderSubtle}` : 'none',
                       cursor: 'pointer', alignItems: 'center',
@@ -761,22 +797,16 @@ export const ChangeOrders: React.FC = () => {
                       onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.backgroundColor = 'transparent'; }}
                     >
                       <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>{co.coNumber}</span>
-                      <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: co.type === 'pco' ? '#6B7280' : co.type === 'cor' ? '#F5A623' : '#4EC896', backgroundColor: co.type === 'pco' ? '#F3F4F6' : co.type === 'cor' ? '#FFF8EC' : '#F0FBF6', padding: `2px ${spacing['2']}`, borderRadius: borderRadius.full, display: 'inline-block' }}>{typeConfig.shortLabel}</span>
-                      <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{co.title}</span>
-                      <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: costColor }}>{costLabel}</span>
-                      <span style={{ fontSize: typography.fontSize.sm, color: reasonConfig ? reasonConfig.color : colors.textTertiary, display: 'flex', alignItems: 'center', gap: 4 }}>
-                        {reasonIcon && <span style={{ color: reasonConfig ? reasonConfig.color : colors.textTertiary, display: 'flex', alignItems: 'center', flexShrink: 0 }}>{reasonIcon}</span>}
-                        {reasonConfig ? reasonConfig.label : 'N/A'}
-                      </span>
-                      <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: schedColor }}>{schedLabel}</span>
-                      <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: statusDisplay.color, backgroundColor: statusDisplay.bg, padding: `2px ${spacing['2']}`, borderRadius: borderRadius.full, textAlign: 'center' }}>{statusDisplay.label}</span>
-                      <div onClick={e => e.stopPropagation()}>
-                        {canPromote && (
-                          <PermissionGate permission="change_orders.approve">
-                            <Btn variant="secondary" size="sm" icon={<ArrowRight size={12} />} iconPosition="right" onClick={() => handleAction(co, 'Promote to COR')}>Promote</Btn>
-                          </PermissionGate>
-                        )}
+                      <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: spacing['3'] }}>{co.title}</span>
+                      <Tag label={typeDisplay.label} color={typeDisplay.color} backgroundColor={typeDisplay.bg} />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
+                        <div style={{ width: 8, height: 8, borderRadius: borderRadius.full, backgroundColor: statusDisplay.dot, flexShrink: 0 }} />
+                        <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{statusDisplay.label}</span>
                       </div>
+                      <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: amountColor }}>{amountLabel}</span>
+                      <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: schedColor }}>{schedLabel}</span>
+                      <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{co.requested_by || 'N/A'}</span>
+                      <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>{co.requested_date ? new Date(co.requested_date).toLocaleDateString() : 'N/A'}</span>
                     </div>
                   );
                 })}
@@ -786,7 +816,7 @@ export const ChangeOrders: React.FC = () => {
                     <h3 style={{ fontSize: 18, fontWeight: 600, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>No change orders match your filters</h3>
                     <p style={{ fontSize: 14, color: '#6B7280', margin: 0, marginBottom: spacing['5'] }}>Try adjusting your search or filter criteria.</p>
                     {hasActiveFilters && (
-                      <button onClick={() => { setSearchQuery(''); setFilterType('all'); }} style={{ height: 40, padding: `0 ${spacing['5']}`, backgroundColor: '#F47820', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, fontFamily: typography.fontFamily, cursor: 'pointer' }}>
+                      <button onClick={() => { setSearchQuery(''); setFilterType('all'); setFilterStatus('all'); }} style={{ height: 40, padding: `0 ${spacing['5']}`, backgroundColor: '#F47820', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, fontFamily: typography.fontFamily, cursor: 'pointer' }}>
                         Clear Filters
                       </button>
                     )}
