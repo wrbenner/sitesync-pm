@@ -3,9 +3,13 @@ import { ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme';
 
 interface CalendarNavProps {
-  /** Dates that have a submitted/approved log */
-  loggedDates: Set<string>;
-  /** Dates that have a draft log */
+  /** Dates with fully approved logs (green) */
+  approvedDates?: Set<string>;
+  /** Dates with submitted but not yet approved logs (yellow) */
+  submittedDates?: Set<string>;
+  /** @deprecated Use approvedDates + submittedDates. Kept for backward compat. */
+  loggedDates?: Set<string>;
+  /** Dates that have a draft log (orange) */
   draftDates: Set<string>;
   selectedDate: string;
   onSelectDate: (date: string) => void;
@@ -31,7 +35,10 @@ function isWeekday(year: number, month: number, day: number): boolean {
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-export const CalendarNav: React.FC<CalendarNavProps> = ({ loggedDates, draftDates, selectedDate, onSelectDate }) => {
+export const CalendarNav: React.FC<CalendarNavProps> = ({ approvedDates, submittedDates, loggedDates, draftDates, selectedDate, onSelectDate }) => {
+  // Merge legacy loggedDates into approvedDates/submittedDates sets for display
+  const effectiveApproved = approvedDates ?? loggedDates ?? new Set<string>();
+  const effectiveSubmitted = submittedDates ?? new Set<string>();
   const today = new Date();
   const todayStr = formatDate(today.getFullYear(), today.getMonth(), today.getDate());
   const [viewYear, setViewYear] = useState(today.getFullYear());
@@ -55,12 +62,17 @@ export const CalendarNav: React.FC<CalendarNavProps> = ({ loggedDates, draftDate
     for (let d = 1; d <= daysInMonth; d++) {
       const dateStr = formatDate(viewYear, viewMonth, d);
       if (dateStr > todayStr) break;
-      if (isWeekday(viewYear, viewMonth, d) && !loggedDates.has(dateStr) && !draftDates.has(dateStr)) {
+      if (
+        isWeekday(viewYear, viewMonth, d) &&
+        !effectiveApproved.has(dateStr) &&
+        !effectiveSubmitted.has(dateStr) &&
+        !draftDates.has(dateStr)
+      ) {
         count++;
       }
     }
     return count;
-  }, [viewYear, viewMonth, daysInMonth, loggedDates, draftDates, todayStr]);
+  }, [viewYear, viewMonth, daysInMonth, effectiveApproved, effectiveSubmitted, draftDates, todayStr]);
 
   const cells: React.ReactNode[] = [];
   // Empty cells before first day
@@ -74,9 +86,17 @@ export const CalendarNav: React.FC<CalendarNavProps> = ({ loggedDates, draftDate
     const isSelected = dateStr === selectedDate;
     const isWeekdayDate = isWeekday(viewYear, viewMonth, d);
     const isFuture = dateStr > todayStr;
-    const hasLog = loggedDates.has(dateStr);
+    const isApproved = effectiveApproved.has(dateStr);
+    const isSubmitted = effectiveSubmitted.has(dateStr);
     const hasDraft = draftDates.has(dateStr);
-    const isMissing = isWeekdayDate && !isFuture && !hasLog && !hasDraft;
+    const isMissing = isWeekdayDate && !isFuture && !isApproved && !isSubmitted && !hasDraft;
+    const dotColor = isApproved
+      ? colors.statusActive      // green
+      : isSubmitted
+      ? colors.statusPending     // yellow/amber
+      : hasDraft
+      ? colors.primaryOrange     // orange
+      : colors.statusCritical;  // red (missing)
 
     cells.push(
       <button
@@ -99,11 +119,11 @@ export const CalendarNav: React.FC<CalendarNavProps> = ({ loggedDates, draftDate
       >
         {d}
         {/* Status dot */}
-        {!isSelected && (hasLog || hasDraft || isMissing) && (
+        {!isSelected && (isApproved || isSubmitted || hasDraft || isMissing) && (
           <div style={{
             position: 'absolute', bottom: 3, left: '50%', transform: 'translateX(-50%)',
             width: 5, height: 5, borderRadius: borderRadius.full,
-            backgroundColor: hasLog ? colors.statusActive : hasDraft ? colors.statusInfo : colors.statusCritical,
+            backgroundColor: dotColor,
           }} />
         )}
       </button>
@@ -153,10 +173,11 @@ export const CalendarNav: React.FC<CalendarNavProps> = ({ loggedDates, draftDate
       </div>
 
       {/* Legend */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: spacing['4'], marginTop: spacing['3'], justifyContent: 'center' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: `${spacing['2']} ${spacing['3']}`, marginTop: spacing['3'], justifyContent: 'center' }}>
         {[
-          { color: colors.statusActive, label: 'Submitted' },
-          { color: colors.statusInfo, label: 'Draft' },
+          { color: colors.statusActive, label: 'Approved' },
+          { color: colors.statusPending, label: 'Submitted' },
+          { color: colors.primaryOrange, label: 'Draft' },
           { color: colors.statusCritical, label: 'Missing' },
         ].map(item => (
           <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>

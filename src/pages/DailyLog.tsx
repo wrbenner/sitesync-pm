@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useCopilotStore } from '../stores/copilotStore';
-import { Users, Clock, ShieldCheck, Cloud, ChevronRight, Camera, Send, BarChart3, Sparkles, Zap, CalendarDays, Calendar, X, Lock, AlertTriangle, BookOpen, RefreshCw, Truck, UserPlus, FileEdit, HardHat } from 'lucide-react';
+import { Users, Clock, ShieldCheck, Cloud, ChevronRight, Camera, Send, BarChart3, Sparkles, Zap, CalendarDays, Calendar, X, Lock, AlertTriangle, BookOpen, RefreshCw, Truck, UserPlus, FileEdit, HardHat, Mic } from 'lucide-react';
 import { PageContainer, Card, Btn, Skeleton, SectionHeader, useToast } from '../components/Primitives';
 import EmptyState from '../components/ui/EmptyState';
 import CreateDailyLogModal from '../components/forms/CreateDailyLogModal';
@@ -64,6 +64,7 @@ export const DailyLog: React.FC = () => {
   const [showQuickEntry, setShowQuickEntry] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   const [weather, setWeather] = useState<WeatherData | null>(null);
+  const [weatherIsAuto, setWeatherIsAuto] = useState(false);
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [rejectReason, setRejectReason] = useState('');
   const [showRejectModal, setShowRejectModal] = useState(false);
@@ -90,10 +91,41 @@ export const DailyLog: React.FC = () => {
   const [manpowerRows, setManpowerRows] = useState<ManpowerRow[]>([]);
   const [hoveredManpowerRow, setHoveredManpowerRow] = useState<string | null>(null);
 
-  // Auto-fetch weather on mount
+  // Auto-fetch weather on mount: try weather_records table first, fall back to API
   useEffect(() => {
-    fetchWeather().then(setWeather);
-  }, []);
+    const loadWeather = async () => {
+      if (projectId) {
+        try {
+          const todayDate = new Date().toISOString().split('T')[0];
+          const { data: dbWeather } = await supabase
+            .from('weather_records')
+            .select('conditions, temperature_high, temperature_low, wind_speed, precipitation, humidity')
+            .eq('project_id', projectId)
+            .eq('date', todayDate)
+            .maybeSingle();
+          if (dbWeather) {
+            setWeather({
+              temp_high: dbWeather.temperature_high ?? 75,
+              temp_low: dbWeather.temperature_low ?? 55,
+              conditions: dbWeather.conditions ?? 'Clear',
+              precipitation: dbWeather.precipitation ?? '0mm',
+              wind_speed: dbWeather.wind_speed ?? '0 mph',
+              icon: '☀️',
+              humidity: dbWeather.humidity ?? 50,
+              fetched_at: new Date().toISOString(),
+              source: 'default',
+            });
+            setWeatherIsAuto(true);
+            return;
+          }
+        } catch { /* fall through to API */ }
+      }
+      const apiWeather = await fetchWeather();
+      setWeather(apiWeather);
+      setWeatherIsAuto(false);
+    };
+    loadWeather();
+  }, [projectId]);
 
   // Seed workSummary from today's log on first load
   useEffect(() => {
@@ -177,13 +209,18 @@ export const DailyLog: React.FC = () => {
     return result;
   }, [logEntries]);
 
-  // Calendar data
-  const loggedDates = useMemo(() => new Set(
-    dailyLogHistory.filter((l: any) => l.status === 'submitted' || l.status === 'approved' || l.approved).map((l: any) => l.log_date?.split('T')[0])
+  // Calendar data — 4 distinct status sets for color-coded dots
+  const approvedDates = useMemo(() => new Set(
+    dailyLogHistory.filter((l: any) => l.status === 'approved' || (l.approved && l.status !== 'submitted')).map((l: any) => l.log_date?.split('T')[0])
+  ), [dailyLogHistory]);
+  const submittedDates = useMemo(() => new Set(
+    dailyLogHistory.filter((l: any) => l.status === 'submitted' && !l.approved).map((l: any) => l.log_date?.split('T')[0])
   ), [dailyLogHistory]);
   const draftDates = useMemo(() => new Set(
     dailyLogHistory.filter((l: any) => l.status === 'draft' || (!l.status && !l.approved)).map((l: any) => l.log_date?.split('T')[0])
   ), [dailyLogHistory]);
+  // Legacy: combined set for any code still referencing loggedDates
+  const loggedDates = useMemo(() => new Set([...approvedDates, ...submittedDates]), [approvedDates, submittedDates]);
 
   const aggMetrics = useMemo(() => {
     const now = new Date();
@@ -784,7 +821,28 @@ export const DailyLog: React.FC = () => {
 
           {/* Weather card */}
           {weather && (
-            <WeatherCard weather={weather} onUpdate={!isLocked ? handleWeatherUpdate : undefined} locked={isLocked} />
+            <div>
+              {weatherIsAuto && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], marginBottom: spacing['2'] }}>
+                  <Cloud size={12} color={colors.statusInfo} />
+                  <span style={{
+                    fontSize: typography.fontSize.caption,
+                    fontWeight: typography.fontWeight.semibold,
+                    color: colors.statusInfo,
+                    backgroundColor: colors.statusInfoSubtle,
+                    padding: `1px ${spacing['2']}`,
+                    borderRadius: borderRadius.full,
+                    letterSpacing: '0.2px',
+                  }}>
+                    Auto
+                  </span>
+                  <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
+                    Weather populated from project records
+                  </span>
+                </div>
+              )}
+              <WeatherCard weather={weather} onUpdate={!isLocked ? handleWeatherUpdate : undefined} locked={isLocked} />
+            </div>
           )}
 
           {/* Today's metrics */}
@@ -1080,28 +1138,45 @@ export const DailyLog: React.FC = () => {
                 AI is summarizing today...
               </p>
             ) : (
-              <textarea
-                value={workSummary}
-                onChange={e => { setWorkSummary(e.target.value); if (aiSummaryGenerated) setAiSummaryGenerated(false); }}
-                placeholder="Describe the work performed today, progress made, and any notable site conditions..."
-                disabled={isLocked}
-                rows={4}
-                style={{
-                  width: '100%',
-                  padding: spacing['3'],
-                  fontSize: typography.fontSize.sm,
-                  fontFamily: typography.fontFamily,
-                  border: `1px solid ${colors.borderDefault}`,
-                  backgroundColor: isLocked ? colors.surfaceInset : colors.white,
-                  borderRadius: borderRadius.md,
-                  outline: 'none',
-                  resize: 'vertical',
-                  color: colors.textPrimary,
-                  boxSizing: 'border-box',
-                  lineHeight: '1.6',
-                  cursor: isLocked ? 'not-allowed' : 'text',
-                }}
-              />
+              <div style={{ position: 'relative' }}>
+                <textarea
+                  value={workSummary}
+                  onChange={e => { setWorkSummary(e.target.value); if (aiSummaryGenerated) setAiSummaryGenerated(false); }}
+                  placeholder="Describe the work performed today, progress made, and any notable site conditions..."
+                  disabled={isLocked}
+                  rows={4}
+                  style={{
+                    width: '100%',
+                    padding: spacing['3'],
+                    paddingRight: spacing['9'],
+                    fontSize: typography.fontSize.sm,
+                    fontFamily: typography.fontFamily,
+                    border: `1px solid ${colors.borderDefault}`,
+                    backgroundColor: isLocked ? colors.surfaceInset : colors.white,
+                    borderRadius: borderRadius.md,
+                    outline: 'none',
+                    resize: 'vertical',
+                    color: colors.textPrimary,
+                    boxSizing: 'border-box',
+                    lineHeight: '1.6',
+                    cursor: isLocked ? 'not-allowed' : 'text',
+                  }}
+                />
+                {!isLocked && (
+                  <button
+                    title="Voice to text"
+                    onClick={() => addToast('info', 'Voice to text available on supported browsers')}
+                    style={{
+                      position: 'absolute', top: spacing['2'], right: spacing['2'],
+                      backgroundColor: 'transparent', border: 'none', cursor: 'pointer',
+                      color: colors.textTertiary, padding: spacing['1'], borderRadius: borderRadius.sm,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}
+                  >
+                    <Mic size={15} />
+                  </button>
+                )}
+              </div>
             )}
           </Card>
 
@@ -1352,7 +1427,8 @@ export const DailyLog: React.FC = () => {
                 <button onClick={() => setShowCalendar(false)} aria-label="Close calendar" title="Close calendar" style={{ backgroundColor: 'transparent', border: 'none', cursor: 'pointer', color: colors.textTertiary, padding: spacing['1'] }}><X size={14} /></button>
               </div>
               <CalendarNav
-                loggedDates={loggedDates}
+                approvedDates={approvedDates}
+                submittedDates={submittedDates}
                 draftDates={draftDates}
                 selectedDate={selectedDate}
                 onSelectDate={handleCalendarSelect}
