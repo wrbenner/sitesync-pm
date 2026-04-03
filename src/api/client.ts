@@ -61,6 +61,8 @@ export function createScopedClient(client: DbClient, projectId: string): DbClien
 
   const proxy = new Proxy(client, {
     get(target: SupabaseProxyTarget, prop: string | symbol, receiver: unknown) {
+      // Only intercept .from() for project scoping. All other Supabase client methods (auth, storage, functions, realtime) pass through unmodified.
+      if (prop !== 'from') { return Reflect.get(target, prop, receiver) }
       if (prop === 'from') {
         return (table: string): ReturnType<typeof supabase.from> => {
           const qb = target.from(table as TableName)
