@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect, useId, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useTableKeyboardNavigation } from '../../hooks/useTableKeyboardNavigation';
-import { CalendarDays, GitBranch, Sparkles, Zap } from 'lucide-react';
+import { CalendarDays, GitBranch, Zap } from 'lucide-react';
 import EmptyState from '../ui/EmptyState';
 import type { PredictedRisk, PredictedDelay } from '../../lib/predictions';
 import type { MappedSchedulePhase } from '../../types/entities';
@@ -25,56 +25,32 @@ function toISO(ms: number): string {
 
 export type GanttPhase = MappedSchedulePhase;
 
-interface DragState {
-  phaseId: string;
-  side: 'start' | 'end' | 'both';
-  startX: number;
-  origStart: number;
-  origEnd: number;
-}
-
-export interface GanttDependency {
-  fromId: string;
-  toId: string;
-  type: 'FS' | 'SS' | 'FF' | 'SF';
-}
-
 interface GanttChartProps {
   phases: GanttPhase[];
-  whatIfMode: boolean;
   isLoading?: boolean;
   onImportSchedule?: () => void;
   onAddActivity?: () => void;
   onPhaseClick?: (phase: GanttPhase) => void;
-  onPhaseDrag?: (phaseId: string, newEndDate: string) => void;
-  onPhaseUpdate?: (id: string, update: { start_date: string; end_date: string }) => void;
-  onActivityDateChange?: (id: string, start: string, finish: string) => void;
   baselinePhases?: GanttPhase[];
   showBaseline?: boolean;
   zoomLevel?: TimeScale;
   risks?: PredictedRisk[];
   delays?: PredictedDelay[];
-  dependencies?: GanttDependency[];
 }
 
 const SKELETON_ROW_WIDTHS = ['70%', '55%', '85%', '40%', '90%', '60%', '75%', '45%'];
 
 export const GanttChart: React.FC<GanttChartProps> = ({
   phases,
-  whatIfMode,
   isLoading = false,
   onImportSchedule,
   onAddActivity,
   onPhaseClick,
-  onPhaseDrag: _onPhaseDrag,
-  onPhaseUpdate,
-  onActivityDateChange,
   baselinePhases,
   showBaseline: showBaselineProp,
   zoomLevel: zoomLevelProp,
   risks = [],
   delays = [],
-  dependencies = [],
 }) => {
   const uid = useId().replace(/:/g, '');
 
@@ -90,17 +66,13 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   const [riskTooltipPhase, setRiskTooltipPhase] = useState<string | null>(null);
   const [delayTooltipPhase, setDelayTooltipPhase] = useState<string | null>(null);
   const [localPhases, setLocalPhases] = useState<GanttPhase[]>(phases);
-  const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
-  const [activeDrag, setActiveDrag] = useState<DragState | null>(null);
   const [announcement, setAnnouncement] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [trackWidth, setTrackWidth] = useState(0);
 
   const probeRef = useRef<HTMLDivElement>(null);
   const trackWidthRef = useRef(0);
-  const pxPerDayRef = useRef<number>(PX_PER_DAY['month']);
   const ganttGridRef = useRef<HTMLDivElement>(null);
-  const activityChangeDebouncerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { focusedIndex: ganttFocused, handleKeyDown: ganttHandleKeyDown, activeRowId: ganttActiveRowId } = useTableKeyboardNavigation({
     rowCount: localPhases.length,
@@ -136,86 +108,17 @@ export const GanttChart: React.FC<GanttChartProps> = ({
     return () => ro.disconnect();
   }, []);
 
-  // Sync localPhases from props, preserving pending edits
   useEffect(() => {
-    setLocalPhases(prev =>
-      phases.map(p => {
-        const local = prev.find(lp => lp.id === p.id);
-        return local && pendingIds.has(p.id) ? local : p;
-      }),
-    );
-  // pendingIds intentionally omitted: we only want to re-sync when phases changes
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    setLocalPhases(phases);
   }, [phases]);
 
-  // Timeline anchors always from original props so the ruler stays fixed during drag
+  // Timeline anchors
   const allStarts = phases.map(p => new Date(p.startDate).getTime());
   const allEnds = phases.map(p => new Date(p.endDate).getTime());
   const timelineStart = Math.min(...allStarts);
   const timelineEnd = Math.max(...allEnds);
   const timelineSpan = timelineEnd - timelineStart;
 
-  const timelineSpanRef = useRef(timelineSpan);
-  useEffect(() => { timelineSpanRef.current = timelineSpan; }, [timelineSpan]);
-
-  // Global drag listeners — recreated whenever activeDrag changes
-  useEffect(() => {
-    if (!activeDrag) return;
-
-    const onMove = (e: MouseEvent | TouchEvent) => {
-      const clientX = 'touches' in e
-        ? (e as TouchEvent).touches[0].clientX
-        : (e as MouseEvent).clientX;
-      const dx = clientX - activeDrag.startX;
-      const ppd = pxPerDayRef.current;
-      if (!ppd) return;
-      const deltaMs = Math.round(dx / ppd) * DAY_MS;
-      setLocalPhases(prev => prev.map(p => {
-        if (p.id !== activeDrag.phaseId) return p;
-        let newStart = activeDrag.origStart;
-        let newEnd = activeDrag.origEnd;
-        if (activeDrag.side === 'start') {
-          newStart = Math.min(activeDrag.origStart + deltaMs, activeDrag.origEnd - DAY_MS);
-        } else if (activeDrag.side === 'end') {
-          newEnd = Math.max(activeDrag.origEnd + deltaMs, activeDrag.origStart + DAY_MS);
-        } else {
-          newStart = activeDrag.origStart + deltaMs;
-          newEnd = activeDrag.origEnd + deltaMs;
-        }
-        return { ...p, startDate: toISO(newStart), endDate: toISO(newEnd) };
-      }));
-    };
-
-    const onUp = (e: MouseEvent | TouchEvent) => {
-      setPendingIds(s => new Set([...s, activeDrag.phaseId]));
-      if (activeDrag.side === 'both' && onActivityDateChange) {
-        const clientX = 'changedTouches' in e
-          ? (e as TouchEvent).changedTouches[0]?.clientX ?? activeDrag.startX
-          : (e as MouseEvent).clientX;
-        const dx = clientX - activeDrag.startX;
-        const ppd = pxPerDayRef.current;
-        const deltaMs = ppd ? Math.round(dx / ppd) * DAY_MS : 0;
-        const newStart = toISO(activeDrag.origStart + deltaMs);
-        const newFinish = toISO(activeDrag.origEnd + deltaMs);
-        if (activityChangeDebouncerRef.current) clearTimeout(activityChangeDebouncerRef.current);
-        activityChangeDebouncerRef.current = setTimeout(() => {
-          onActivityDateChange(activeDrag.phaseId, newStart, newFinish);
-        }, 300);
-      }
-      setActiveDrag(null);
-    };
-
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
-    window.addEventListener('touchmove', onMove, { passive: false });
-    window.addEventListener('touchend', onUp);
-    return () => {
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onUp);
-      window.removeEventListener('touchmove', onMove);
-      window.removeEventListener('touchend', onUp);
-    };
-  }, [activeDrag]);
 
   const hasBaselineData = phases.some(p => p.baselineStartDate != null && p.baselineEndDate != null);
   const today = new Date();
@@ -290,9 +193,6 @@ export const GanttChart: React.FC<GanttChartProps> = ({
 
   const pxPerDay = PX_PER_DAY[timeScale];
 
-  // Keep ref in sync for drag callbacks
-  useEffect(() => { pxPerDayRef.current = pxPerDay; }, [pxPerDay]);
-
   const totalDays = Math.max(1, Math.ceil(timelineSpan / DAY_MS));
   const totalTrackWidth = totalDays * pxPerDay;
 
@@ -307,7 +207,6 @@ export const GanttChart: React.FC<GanttChartProps> = ({
 
   const getBarColor = (phase: GanttPhase) => {
     if (phase.completed || phase.status === 'completed') return '#4EC896';
-    if (whatIfMode && activeDrag?.phaseId === phase.id) return colors.statusReview;
     if (phase.status === 'delayed') return '#E74C3C';
     if (phase.status === 'in_progress') return '#3B82F6';
     if (phase.is_critical || phase.critical || phase.floatDays === 0) return '#E74C3C';
@@ -315,123 +214,6 @@ export const GanttChart: React.FC<GanttChartProps> = ({
     return '#3B82F6';
   };
 
-  // Dependency arrows: cubic bezier paths in pixel space
-  const dependencyArrows = useMemo(() => {
-    if (trackWidth === 0) return [];
-    const arrows: { key: string; d: string; isCritical: boolean }[] = [];
-    localPhases.forEach((succPhase, succIdx) => {
-      const predIds = succPhase.predecessor_ids ?? succPhase.dependencies ?? [];
-      predIds.forEach(predId => {
-        const predIdx = localPhases.findIndex(p => p.id === predId);
-        if (predIdx === -1) return;
-        const predPhase = localPhases[predIdx];
-        const predPos = getPhasePos(predPhase);
-        const succPos = getPhasePos(succPhase);
-        const x1 = predPos.left + predPos.width;
-        const x2 = succPos.left;
-        const y1 = predIdx * ROW_HEIGHT + ROW_HEIGHT / 2;
-        const y2 = succIdx * ROW_HEIGHT + ROW_HEIGHT / 2;
-        const midX = (x1 + x2) / 2;
-        arrows.push({
-          key: `${predId}-${succPhase.id}`,
-          d: `M ${x1} ${y1} C ${midX} ${y1} ${midX} ${y2} ${x2} ${y2}`,
-          isCritical: predPhase.critical && succPhase.critical,
-        });
-      });
-    });
-    return arrows;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [localPhases, pxPerDay, timelineStart]);
-
-  // Typed dependency arrows from the `dependencies` prop (FS, SS, FF, SF)
-  const typedDependencyArrows = useMemo(() => {
-    if (dependencies.length === 0) return [];
-    return dependencies.map(dep => {
-      const fromIdx = localPhases.findIndex(p => p.id === dep.fromId);
-      const toIdx = localPhases.findIndex(p => p.id === dep.toId);
-      if (fromIdx === -1 || toIdx === -1) return null;
-      const fromPos = getPhasePos(localPhases[fromIdx]);
-      const toPos = getPhasePos(localPhases[toIdx]);
-      const y1 = fromIdx * ROW_HEIGHT + ROW_HEIGHT / 2;
-      const y2 = toIdx * ROW_HEIGHT + ROW_HEIGHT / 2;
-      let x1: number;
-      let x2: number;
-      if (dep.type === 'FS') {
-        x1 = fromPos.left + fromPos.width;
-        x2 = toPos.left;
-      } else if (dep.type === 'SS') {
-        x1 = fromPos.left;
-        x2 = toPos.left;
-      } else if (dep.type === 'FF') {
-        x1 = fromPos.left + fromPos.width;
-        x2 = toPos.left + toPos.width;
-      } else {
-        // SF
-        x1 = fromPos.left;
-        x2 = toPos.left + toPos.width;
-      }
-      const midX = (x1 + x2) / 2;
-      return {
-        key: `typed-${dep.fromId}-${dep.toId}-${dep.type}`,
-        d: `M ${x1} ${y1} C ${midX} ${y1} ${midX} ${y2} ${x2} ${y2}`,
-        type: dep.type,
-      };
-    }).filter(Boolean) as { key: string; d: string; type: string }[];
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dependencies, localPhases, pxPerDay, timelineStart]);
-
-
-  const startDrag = (
-    e: React.MouseEvent | React.TouchEvent,
-    phaseId: string,
-    side: 'start' | 'end' | 'both',
-  ) => {
-    e.stopPropagation();
-    e.preventDefault();
-    const phase = localPhases.find(p => p.id === phaseId);
-    if (!phase) return;
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    setActiveDrag({
-      phaseId,
-      side,
-      startX: clientX,
-      origStart: new Date(phase.startDate).getTime(),
-      origEnd: new Date(phase.endDate).getTime(),
-    });
-  };
-
-  const handleBarKeyDown = (e: React.KeyboardEvent, phase: GanttPhase) => {
-    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
-    e.preventDefault();
-    const days = e.shiftKey ? 7 : 1;
-    const delta = (e.key === 'ArrowLeft' ? -1 : 1) * days * DAY_MS;
-    setLocalPhases(prev => prev.map(p => {
-      if (p.id !== phase.id) return p;
-      return {
-        ...p,
-        startDate: toISO(new Date(p.startDate).getTime() + delta),
-        endDate: toISO(new Date(p.endDate).getTime() + delta),
-      };
-    }));
-    setPendingIds(s => new Set([...s, phase.id]));
-    const dir = e.key === 'ArrowLeft' ? 'back' : 'forward';
-    setAnnouncement(`${phase.name} shifted ${dir} ${days} ${days === 1 ? 'day' : 'days'}`);
-  };
-
-  const handleSave = () => {
-    pendingIds.forEach(id => {
-      const phase = localPhases.find(p => p.id === id);
-      if (phase) {
-        onPhaseUpdate?.(id, { start_date: phase.startDate, end_date: phase.endDate });
-      }
-    });
-    setPendingIds(new Set());
-  };
-
-  const handleDiscard = () => {
-    setLocalPhases(phases);
-    setPendingIds(new Set());
-  };
 
   return (
     <div role="region" aria-label="Gantt chart showing project timeline">
@@ -448,45 +230,6 @@ export const GanttChart: React.FC<GanttChartProps> = ({
           .gantt-phase-track { min-height: 44px !important; }
         }
       `}</style>
-      {/* Unsaved changes banner */}
-      {pendingIds.size > 0 && (
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: `${spacing['2']} ${spacing['4']}`, marginBottom: spacing['3'],
-          backgroundColor: '#FFFBEB', border: '1px solid #FCD34D',
-          borderRadius: borderRadius.md,
-        }}>
-          <span style={{ fontSize: typography.fontSize.sm, color: '#92400E', fontWeight: typography.fontWeight.medium }}>
-            Unsaved changes
-          </span>
-          <div style={{ display: 'flex', gap: spacing['2'] }}>
-            <button
-              onClick={handleDiscard}
-              style={{
-                padding: `${spacing['1']} ${spacing['3']}`, border: '1px solid #FCD34D',
-                borderRadius: borderRadius.sm, backgroundColor: 'transparent',
-                color: '#92400E', fontSize: typography.fontSize.sm,
-                fontFamily: typography.fontFamily, cursor: 'pointer',
-              }}
-            >
-              Discard
-            </button>
-            <button
-              onClick={handleSave}
-              style={{
-                padding: `${spacing['1']} ${spacing['3']}`, border: 'none',
-                borderRadius: borderRadius.sm, backgroundColor: '#F59E0B',
-                color: '#fff', fontSize: typography.fontSize.sm,
-                fontFamily: typography.fontFamily, cursor: 'pointer',
-                fontWeight: typography.fontWeight.medium,
-              }}
-            >
-              Save
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* aria-live region for keyboard announcements */}
       <div
         role="status"
@@ -604,12 +347,6 @@ export const GanttChart: React.FC<GanttChartProps> = ({
         >
           Critical Path Only
         </button>
-
-        {whatIfMode && (
-          <span style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], fontSize: typography.fontSize.caption, color: colors.statusReview, fontWeight: typography.fontWeight.semibold }}>
-            <Sparkles size={12} /> What If Mode: Drag tasks to see cascade effects
-          </span>
-        )}
 
         {/* Legend */}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: spacing['3'], flexWrap: 'wrap', alignItems: 'center' }}>
@@ -852,22 +589,11 @@ export const GanttChart: React.FC<GanttChartProps> = ({
               const pos = getPhasePos(phase);
               const barColor = getBarColor(phase);
               const isHovered = hoveredPhase === phase.id;
-              const predIds = phase.predecessor_ids ?? phase.dependencies ?? [];
-              const isCascadeAffected = whatIfMode && activeDrag && predIds.includes(activeDrag.phaseId);
               const isCriticalPathRow = phase.is_critical_path === true || phase.is_critical || phase.floatDays === 0;
               const phaseRisk = risks.find(r => r.phaseId === phase.id);
               const phaseDelay = delays.find(d => d.activityId === phase.id && d.predictedSlippageDays > 0);
-              const isDraggingThis = activeDrag?.phaseId === phase.id;
-              const isDraggingBoth = isDraggingThis && activeDrag?.side === 'both';
               const durationDays = Math.round((new Date(phase.endDate).getTime() - new Date(phase.startDate).getTime()) / DAY_MS);
               const isMilestoneBar = phase.is_milestone === true || durationDays === 0;
-              const canDrag = !phase.completed && !isMilestoneBar;
-              const ghostLeft = isDraggingBoth
-                ? Math.round(((activeDrag!.origStart - timelineStart) / DAY_MS) * pxPerDay)
-                : null;
-              const ghostWidth = isDraggingBoth
-                ? Math.max(Math.round(((activeDrag!.origEnd - activeDrag!.origStart) / DAY_MS) * pxPerDay), 2)
-                : null;
 
               return (
                 <motion.div
@@ -894,7 +620,6 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                   onBlur={e => { setHoveredPhase(null); e.currentTarget.style.boxShadow = 'none'; }}
                   onKeyDown={e => {
                     if (e.key === 'Enter') { e.preventDefault(); onPhaseClick?.(phase); }
-                    else handleBarKeyDown(e, phase);
                   }}
                 >
                   {/* Label */}
@@ -968,10 +693,10 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                     style={{
                       width: totalTrackWidth, flexShrink: 0, height: 32, position: 'relative',
                       backgroundColor: colors.surfaceInset, borderRadius: borderRadius.sm,
-                      cursor: isDraggingBoth ? 'grabbing' : isDraggingThis ? 'col-resize' : 'pointer',
+                      cursor: 'pointer',
                       userSelect: 'none',
                     }}
-                    onClick={() => { if (!isDraggingThis) onPhaseClick?.(phase); }}
+                    onClick={() => onPhaseClick?.(phase)}
                   >
                     {/* Baseline ghost bar — visible when showBaseline is true and baseline data exists */}
                     {showBaseline && (() => {
@@ -991,22 +716,6 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                         }} />
                       );
                     })()}
-
-                    {/* Ghost bar shown at original position during whole-bar drag */}
-                    {isDraggingBoth && ghostLeft !== null && ghostWidth !== null && (
-                      <div
-                        aria-hidden="true"
-                        style={{
-                          position: 'absolute', top: 4, bottom: 4,
-                          left: `${ghostLeft}px`, width: `${ghostWidth}px`,
-                          borderRadius: borderRadius.sm,
-                          border: `2px dashed ${colors.textTertiary}`,
-                          backgroundColor: `${colors.textTertiary}18`,
-                          pointerEvents: 'none',
-                          zIndex: 1,
-                        }}
-                      />
-                    )}
 
                     {/* Milestone diamond */}
                     {isMilestoneBar ? (
@@ -1061,8 +770,6 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                         data-gantt-bar="true"
                         aria-label={`${phase.name}, ${fmtDate(phase.startDate)} to ${fmtDate(phase.endDate)}, ${phase.progress}% complete, ${barStatus}`}
                         tabIndex={0}
-                        onMouseDown={canDrag ? e => startDrag(e, phase.id, 'both') : undefined}
-                        onTouchStart={canDrag ? e => startDrag(e, phase.id, 'both') : undefined}
                         title={isCriticalPathRow
                           ? 'Critical Path \u2014 0 days float'
                           : phase.floatDays != null
@@ -1072,14 +779,13 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                           position: 'absolute', top: 4, bottom: 4,
                           left: `${pos.left}px`, width: `${pos.width}px`,
                           borderRadius: borderRadius.sm, overflow: 'visible',
-                          border: isCascadeAffected ? `2px dashed ${colors.statusReview}` : 'none',
+                          border: 'none',
                           boxShadow: isCriticalPathRow
                             ? '0 0 8px rgba(239, 68, 68, 0.3)'
                             : isHovered ? `0 0 0 2px ${barColor}30` : 'none',
-                          opacity: isDraggingBoth ? 0.75 : 1,
-                          transition: isDraggingThis ? 'none' : `box-shadow ${transitions.instant}`,
+                          transition: `box-shadow ${transitions.instant}`,
                           outline: 'none',
-                          cursor: isDraggingBoth ? 'grabbing' : canDrag ? 'grab' : 'pointer',
+                          cursor: 'pointer',
                         }}
                         onFocus={e => { e.currentTarget.style.boxShadow = `0 0 0 2px ${barColor}60`; }}
                         onBlur={e => { e.currentTarget.style.boxShadow = isHovered ? `0 0 0 2px ${barColor}30` : 'none'; }}
