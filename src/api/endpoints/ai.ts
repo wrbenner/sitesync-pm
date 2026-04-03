@@ -20,6 +20,9 @@ export const getAiInsights = async (
           .catch(() => [])
       : []
 
+  let aiServiceFailed = false
+  let aiErrorType: string | undefined
+
   // Use AIService when configured; fall back to Supabase
   if (aiService.isConfigured()) {
     try {
@@ -27,11 +30,12 @@ export const getAiInsights = async (
       const liveInsights = insights.map((i) => ({ ...i, source: 'live' as const }))
       return { insights: [...liveInsights, ...budgetInsights], dataSource: 'ai-live' as const }
     } catch (aiError) {
+      aiServiceFailed = true
+      aiErrorType = aiError instanceof Error ? aiError.name : 'UnknownError'
       captureException(
         aiError instanceof Error ? aiError : new Error(String(aiError)),
         { projectId, extra: { context: 'getAiInsights_aiService' } }
       )
-      console.warn('[AI] aiService.generateInsights failed, falling back to Supabase:', aiError)
     }
   }
 
@@ -149,7 +153,11 @@ export const getAiInsights = async (
     }
 
     if (computedInsights.length > 0) {
-      return { insights: computedInsights, dataSource: 'ai-fallback' as const }
+      return {
+        insights: computedInsights,
+        dataSource: aiServiceFailed ? 'ai-degraded' as const : 'ai-fallback' as const,
+        ...(aiServiceFailed && { degraded: true, degradedReason: aiErrorType }),
+      }
     }
 
     const starterInsights: AIInsight[] = [
@@ -163,7 +171,7 @@ export const getAiInsights = async (
         suggestedAction: 'Navigate to Schedule to add project phases',
         confidence: 0,
         isPlaceholder: true,
-        source: 'fallback' as const,
+        source: 'onboarding' as const,
         createdAt: now,
         generatedAt: now,
         expiresAt: null,
@@ -179,7 +187,7 @@ export const getAiInsights = async (
         suggestedAction: 'Navigate to Budget to set up cost divisions',
         confidence: 0,
         isPlaceholder: true,
-        source: 'fallback' as const,
+        source: 'onboarding' as const,
         createdAt: now,
         generatedAt: now,
         expiresAt: null,
@@ -195,20 +203,25 @@ export const getAiInsights = async (
         suggestedAction: 'Navigate to Daily Log to add your first entry',
         confidence: 0,
         isPlaceholder: true,
-        source: 'fallback' as const,
+        source: 'onboarding' as const,
         createdAt: now,
         generatedAt: now,
         expiresAt: null,
         dismissed: false,
       },
     ]
-    return { insights: starterInsights, dataSource: 'ai-fallback' as const }
+    return {
+      insights: starterInsights,
+      dataSource: aiServiceFailed ? 'ai-degraded' as const : 'ai-fallback' as const,
+      ...(aiServiceFailed && { degraded: true, degradedReason: aiErrorType }),
+    }
   }
 
   return {
     insights: [...cachedInsights, ...budgetInsights],
-    dataSource: 'ai-cached' as const,
+    dataSource: aiServiceFailed ? 'ai-degraded' as const : 'ai-cached' as const,
     lastFallbackAt: new Date().toISOString(),
+    ...(aiServiceFailed && { degraded: true, degradedReason: aiErrorType }),
   }
 }
 

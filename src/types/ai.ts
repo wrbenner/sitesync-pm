@@ -68,7 +68,7 @@ export interface AIInsight {
   suggestedAction?: string
   confidence: number // 0-1
   isPlaceholder?: boolean // true for onboarding prompts, not real analysis results
-  source?: 'live' | 'cached' | 'supabase' | 'fallback' // which analysis generated this
+  source?: 'live' | 'cached' | 'supabase' | 'fallback' | 'onboarding' // which analysis generated this
   createdAt: string
   generatedAt?: string
   expiresAt?: string
@@ -77,10 +77,14 @@ export interface AIInsight {
 
 export interface AiInsightsResponse {
   insights: AIInsight[]
-  /** 'ai-live' when served directly from the AI service; 'ai-cached' when served from Supabase after aiService failed; 'ai-fallback' when no data exists and starter insights are shown. */
-  dataSource: 'ai-live' | 'ai-cached' | 'ai-fallback'
+  /** 'ai-live' when served directly from the AI service; 'ai-cached' when served from Supabase (no failure); 'ai-degraded' when aiService threw an error and we fell back to cache or placeholders; 'ai-fallback' when no data exists and starter insights are shown. */
+  dataSource: 'ai-live' | 'ai-cached' | 'ai-degraded' | 'ai-fallback'
   /** ISO timestamp set when results were served from Supabase cache after aiService failed. */
   lastFallbackAt?: string
+  /** True when the AI service threw an error and results are from cache or onboarding placeholders. */
+  degraded?: boolean
+  /** The error type (Error.name) from the AI service failure, for frontend banner messaging. */
+  degradedReason?: string
 }
 
 export interface CoordinationConflict {
