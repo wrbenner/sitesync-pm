@@ -283,6 +283,7 @@ function AppRoutes() {
   return (
     <>
       <RouteAnnouncer />
+      <LiveRegion />
       <AnimatePresence mode="wait">
         <motion.div
           key={location.pathname}
@@ -578,14 +579,14 @@ function AppContent() {
       >
         <SkipToContent />
         {user && <AuthenticatedProviders activeView={activeView} />}
-        <nav role="navigation" aria-label="Primary navigation">
+        <nav role="navigation" aria-label="Main navigation">
           <Sidebar activeView={activeView} onNavigate={handleNavigate} />
         </nav>
 
         <main
           id="main-content"
           role="main"
-          aria-label="Main content"
+          aria-label="Page content"
           tabIndex={-1}
           style={{
             flex: 1,
