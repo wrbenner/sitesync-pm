@@ -3,6 +3,9 @@ import { assertProjectAccess, validateProjectId } from '../middleware/projectSco
 import type { PayApplication, CreatePayAppPayload, LienWaiverRow } from '../../types/api'
 import { autoGenerateLienWaivers } from './lienWaivers'
 
+const LIEN_WAIVER_TYPES = ['conditional_progress', 'unconditional_progress', 'conditional_final', 'unconditional_final'] as const
+type LienWaiverType = typeof LIEN_WAIVER_TYPES[number]
+
 /**
  * AIA G702 formula for a single SOV line item.
  * Line 5  = Total Completed and Stored to Date
@@ -249,4 +252,86 @@ export const approvePayApplication = async (
   if (error) throw transformSupabaseError(error)
   const waivers = await autoGenerateLienWaivers(projectId, payAppId)
   return { payApp: data as PayApplication, waivers }
+}
+
+/**
+ * Validates that all active subcontractors and vendors paid in a given pay period
+ * have submitted at least a conditional_progress lien waiver linked to the pay application.
+ *
+ * Returns { complete: true } when every active sub has a matching waiver.
+ * Returns { complete: false, missingWaivers: [...] } listing every vendor still outstanding.
+ *
+ * Call this before allowing submitPayApplication so the UI can block submission
+ * and surface a waiver warning per subcontractor.
+ */
+export const validateLienWaiverCompleteness = async (params: {
+  projectId: string
+  payAppId: string
+  periodNumber: number
+}): Promise<{
+  complete: boolean
+  missingWaivers: Array<{
+    vendorName: string
+    vendorId: string
+    requiredType: LienWaiverType
+  }>
+}> => {
+  const { projectId, payAppId } = params
+  await assertProjectAccess(projectId)
+
+  const [waiversResult, invoicesResult, purchaseOrdersResult] = await Promise.all([
+    supabase
+      .from('lien_waivers')
+      .select('vendor_id, waiver_type')
+      .eq('pay_application_id', payAppId),
+    supabase
+      .from('subcontractor_invoices')
+      .select('vendor_id, vendor_name, amount')
+      .eq('project_id', projectId)
+      .eq('pay_application_id', payAppId)
+      .gt('amount', 0),
+    supabase
+      .from('purchase_orders')
+      .select('vendor_id, vendor_name, period_amount')
+      .eq('project_id', projectId)
+      .eq('pay_application_id', payAppId)
+      .gt('period_amount', 0),
+  ])
+
+  if (waiversResult.error) throw transformSupabaseError(waiversResult.error)
+
+  // Merge vendors from both invoices and purchase orders, deduplicating by vendor_id.
+  const vendorMap = new Map<string, string>()
+
+  for (const row of invoicesResult.data ?? []) {
+    if (row.vendor_id && !vendorMap.has(row.vendor_id)) {
+      vendorMap.set(row.vendor_id, row.vendor_name ?? row.vendor_id)
+    }
+  }
+  for (const row of purchaseOrdersResult.data ?? []) {
+    if (row.vendor_id && !vendorMap.has(row.vendor_id)) {
+      vendorMap.set(row.vendor_id, row.vendor_name ?? row.vendor_id)
+    }
+  }
+
+  // Build a set of vendor_ids that already have a conditional_progress waiver.
+  const coveredVendorIds = new Set<string>(
+    (waiversResult.data ?? [])
+      .filter((w) => w.waiver_type === 'conditional_progress')
+      .map((w) => w.vendor_id as string),
+  )
+
+  const missingWaivers: Array<{
+    vendorName: string
+    vendorId: string
+    requiredType: LienWaiverType
+  }> = []
+
+  for (const [vendorId, vendorName] of vendorMap.entries()) {
+    if (!coveredVendorIds.has(vendorId)) {
+      missingWaivers.push({ vendorId, vendorName, requiredType: 'conditional_progress' })
+    }
+  }
+
+  return { complete: missingWaivers.length === 0, missingWaivers }
 }
