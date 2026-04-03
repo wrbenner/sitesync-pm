@@ -115,6 +115,28 @@ const NotFound = lazy(() => import('./pages/errors/NotFound').then((m) => ({ def
 
 const typographyConfig = { fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' };
 
+// Prefetch strategy: once the user is authenticated, kick off background downloads
+// of the three most visited pages so their chunks are already in the browser cache
+// by the time the user navigates to them. We defer to requestIdleCallback (or a
+// 1000ms setTimeout fallback) so this never competes with the initial render.
+function usePrefetchRoutes(isAuthenticated: boolean) {
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const prefetch = () => {
+      import('./pages/Dashboard');
+      import('./pages/RFIs');
+      import('./pages/DailyLog');
+    };
+    if (typeof requestIdleCallback !== 'undefined') {
+      const id = requestIdleCallback(prefetch);
+      return () => cancelIdleCallback(id);
+    } else {
+      const id = setTimeout(prefetch, 1000);
+      return () => clearTimeout(id);
+    }
+  }, [isAuthenticated]);
+}
+
 
 function PageSkeleton() {
   const skeletonStyle: React.CSSProperties = {
@@ -358,6 +380,7 @@ function AppContent() {
 
   const projectId = useProjectId();
   const { user } = useAuth();
+  usePrefetchRoutes(!!user);
   const { conflictCount } = useOfflineStatus();
   const { needRefresh, offlineReady, updateServiceWorker } = useServiceWorkerUpdate();
   const [conflictModalOpen, setConflictModalOpen] = useState(false);
