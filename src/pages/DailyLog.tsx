@@ -77,16 +77,37 @@ export const DailyLog: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const [historySearch, setHistorySearch] = useState('');
+  const [noIncidentsToday, setNoIncidentsToday] = useState(true);
+  const [noVisitorsToday, setNoVisitorsToday] = useState(true);
 
   const { hasPermission } = usePermissions();
 
   const manpowerSeeded = React.useRef(false);
   const [manpowerRows, setManpowerRows] = useState<ManpowerRow[]>([]);
+  const [hoveredManpowerRow, setHoveredManpowerRow] = useState<string | null>(null);
 
   // Auto-fetch weather on mount
   useEffect(() => {
     fetchWeather().then(setWeather);
   }, []);
+
+  // Seed manpower rows from today's log crew_entries on first load
+  useEffect(() => {
+    if (manpowerSeeded.current || dailyLogHistory.length === 0) return;
+    const todayLog = dailyLogHistory[0];
+    const crewEntries: Array<{ trade?: string; company?: string; headcount?: number; hours?: number }> =
+      (todayLog as any).crew_entries ?? [];
+    if (crewEntries.length > 0) {
+      setManpowerRows(crewEntries.map((c) => ({
+        id: crypto.randomUUID(),
+        trade: c.trade ?? '',
+        company: c.company ?? '',
+        headcount: c.headcount ?? 0,
+        hours: c.hours ?? 0,
+      })));
+      manpowerSeeded.current = true;
+    }
+  }, [dailyLogHistory]);
 
   // Fetch entries for the current daily log
   const todayLogId = dailyLogHistory.length > 0 ? dailyLogHistory[0]?.id : undefined;
@@ -240,6 +261,40 @@ export const DailyLog: React.FC = () => {
     setSelectedDate(date);
     setShowCalendar(false);
   };
+
+  const handleSameAsYesterday = useCallback(async () => {
+    if (!yesterday) return;
+    const yesterdayCrewEntries = (yesterday as any).crew_entries ?? [];
+    const yesterdayEquipment = (yesterday as any).equipment_entries ?? [];
+    const seededRows: ManpowerRow[] = yesterdayCrewEntries.map((c: any) => ({
+      id: crypto.randomUUID(),
+      trade: c.trade ?? '',
+      company: c.company ?? '',
+      headcount: c.headcount ?? 0,
+      hours: c.hours ?? 0,
+    }));
+    if (seededRows.length === 0 && yesterdayEquipment.length === 0) {
+      addToast('info', 'No crew or equipment found on yesterday\'s log');
+      return;
+    }
+    setManpowerRows(seededRows);
+    try {
+      if (dailyLogHistory[0]) {
+        await updateDailyLog.mutateAsync({
+          id: dailyLogHistory[0].id,
+          updates: {
+            crew_entries: yesterdayCrewEntries,
+            equipment_entries: yesterdayEquipment,
+            workers_onsite: yesterdayCrewEntries.reduce((s: number, c: any) => s + (c.headcount ?? 0), 0),
+          },
+          projectId: projectId!,
+        });
+      }
+      addToast('success', 'Crew and equipment copied from yesterday');
+    } catch {
+      addToast('error', 'Failed to copy from yesterday');
+    }
+  }, [yesterday, dailyLogHistory, updateDailyLog, projectId, addToast]);
 
   const handleWeatherUpdate = async (updated: WeatherData) => {
     setWeather(updated);
@@ -611,6 +666,26 @@ export const DailyLog: React.FC = () => {
             </div>
           )}
 
+          {/* Same as yesterday */}
+          {!isLocked && yesterday && (
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: `${spacing['3']} ${spacing['4']}`,
+              backgroundColor: colors.surfaceInset, borderRadius: borderRadius.md,
+              border: `1px solid ${colors.borderSubtle}`,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
+                <RefreshCw size={13} color={colors.textTertiary} />
+                <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>
+                  Pre-fill crew and equipment from yesterday
+                </span>
+              </div>
+              <Btn size="sm" variant="secondary" icon={<RefreshCw size={12} />} onClick={handleSameAsYesterday}>
+                Same as yesterday
+              </Btn>
+            </div>
+          )}
+
           {/* Status banner */}
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -682,12 +757,60 @@ export const DailyLog: React.FC = () => {
             ))}
           </div>
 
-          {/* Crew Hours Summary */}
+          {/* Manpower */}
           <Card>
-            <SectionHeader title="Crew Hours Summary" action={
-              <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Actual vs Planned</span>
+            <SectionHeader title="Manpower" action={
+              <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
+                {manpowerRows.reduce((s, r) => s + r.headcount, 0)} workers,{' '}
+                {manpowerRows.reduce((s, r) => s + r.headcount * r.hours, 0).toLocaleString()} total hrs
+              </span>
             } />
-            <CrewHoursSummary crews={crewHours} />
+            {manpowerRows.length === 0 ? (
+              <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0, padding: `${spacing['3']} 0` }}>
+                No crew entries. Use Quick Entry or "Same as yesterday" to add manpower.
+              </p>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: typography.fontSize.sm }}>
+                  <thead>
+                    <tr style={{ backgroundColor: colors.surfaceInset }}>
+                      {['Trade', 'Company', 'Headcount', 'Hours Worked', 'Total Hrs'].map(h => (
+                        <th key={h} style={{ padding: `${spacing['2']} ${spacing['3']}`, textAlign: 'left', fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.4px', whiteSpace: 'nowrap' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {manpowerRows.map((row) => (
+                      <tr
+                        key={row.id}
+                        onMouseEnter={() => setHoveredManpowerRow(row.id)}
+                        onMouseLeave={() => setHoveredManpowerRow(null)}
+                        style={{ backgroundColor: hoveredManpowerRow === row.id ? colors.surfaceHover : 'transparent', transition: `background-color 160ms`, borderBottom: `1px solid ${colors.borderSubtle}` }}
+                      >
+                        <td style={{ padding: `${spacing['3']} ${spacing['3']}`, color: colors.textPrimary, fontWeight: typography.fontWeight.medium }}>{row.trade || '—'}</td>
+                        <td style={{ padding: `${spacing['3']} ${spacing['3']}`, color: colors.textSecondary }}>{row.company || '—'}</td>
+                        <td style={{ padding: `${spacing['3']} ${spacing['3']}`, color: colors.textPrimary, textAlign: 'right' }}>{row.headcount}</td>
+                        <td style={{ padding: `${spacing['3']} ${spacing['3']}`, color: colors.textPrimary, textAlign: 'right' }}>{row.hours}h</td>
+                        <td style={{ padding: `${spacing['3']} ${spacing['3']}`, color: colors.primaryOrange, fontWeight: typography.fontWeight.semibold, textAlign: 'right' }}>{(row.headcount * row.hours).toLocaleString()}h</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr style={{ backgroundColor: colors.surfaceInset, borderTop: `2px solid ${colors.borderDefault}` }}>
+                      <td colSpan={2} style={{ padding: `${spacing['3']} ${spacing['3']}`, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.4px' }}>Total</td>
+                      <td style={{ padding: `${spacing['3']} ${spacing['3']}`, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, textAlign: 'right' }}>{manpowerRows.reduce((s, r) => s + r.headcount, 0)}</td>
+                      <td style={{ padding: `${spacing['3']} ${spacing['3']}`, color: colors.textTertiary, textAlign: 'right' }}></td>
+                      <td style={{ padding: `${spacing['3']} ${spacing['3']}`, fontWeight: typography.fontWeight.semibold, color: colors.primaryOrange, textAlign: 'right' }}>{manpowerRows.reduce((s, r) => s + r.headcount * r.hours, 0).toLocaleString()}h</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            )}
+            {crewHours.length > 0 && manpowerRows.length === 0 && (
+              <div style={{ marginTop: spacing['4'] }}>
+                <CrewHoursSummary crews={crewHours} />
+              </div>
+            )}
           </Card>
 
           {/* Equipment on Site */}
@@ -759,11 +882,37 @@ export const DailyLog: React.FC = () => {
           {/* Site Visitors */}
           <Card>
             <SectionHeader title="Site Visitors" action={
-              <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
-                <UserPlus size={12} /> {((today as any).visitors ?? []).length}
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
+                {!isLocked && (
+                  <button
+                    onClick={() => setNoVisitorsToday(v => !v)}
+                    style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], backgroundColor: 'transparent', border: 'none', cursor: 'pointer', padding: 0, fontFamily: typography.fontFamily }}
+                  >
+                    <div style={{
+                      width: 32, height: 18, borderRadius: 9, position: 'relative', transition: 'background 160ms',
+                      backgroundColor: noVisitorsToday ? colors.statusActive : colors.borderDefault,
+                    }}>
+                      <div style={{
+                        position: 'absolute', top: 2, left: noVisitorsToday ? 16 : 2, width: 14, height: 14,
+                        borderRadius: '50%', backgroundColor: colors.white, transition: 'left 160ms',
+                      }} />
+                    </div>
+                    <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>
+                      No visitors today
+                    </span>
+                  </button>
+                )}
+                <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
+                  <UserPlus size={12} /> {((today as any).visitors ?? []).length}
+                </span>
+              </div>
             } />
-            {((today as any).visitors ?? []).length > 0 ? (
+            {noVisitorsToday && ((today as any).visitors ?? []).length === 0 ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], padding: `${spacing['2']} 0` }}>
+                <ShieldCheck size={14} color={colors.statusActive} />
+                <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>No visitors on site today</span>
+              </div>
+            ) : ((today as any).visitors ?? []).length > 0 ? (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 80px 80px', gap: 1 }}>
                 {['Name', 'Company', 'Purpose', 'Time In', 'Time Out'].map(h => (
                   <span key={h} style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.4px', backgroundColor: colors.surfaceInset }}>{h}</span>
@@ -784,9 +933,34 @@ export const DailyLog: React.FC = () => {
           </Card>
 
           {/* Incident Details */}
-          {((today as any).incident_details ?? []).length > 0 && (
-            <Card>
-              <SectionHeader title="Incident Details" />
+          <Card>
+            <SectionHeader title="Safety Incidents" action={
+              !isLocked && (
+                <button
+                  onClick={() => setNoIncidentsToday(v => !v)}
+                  style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], backgroundColor: 'transparent', border: 'none', cursor: 'pointer', padding: 0, fontFamily: typography.fontFamily }}
+                >
+                  <div style={{
+                    width: 32, height: 18, borderRadius: 9, position: 'relative', transition: 'background 160ms',
+                    backgroundColor: noIncidentsToday ? colors.statusActive : colors.statusCritical,
+                  }}>
+                    <div style={{
+                      position: 'absolute', top: 2, left: noIncidentsToday ? 16 : 2, width: 14, height: 14,
+                      borderRadius: '50%', backgroundColor: colors.white, transition: 'left 160ms',
+                    }} />
+                  </div>
+                  <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>
+                    No incidents today
+                  </span>
+                </button>
+              )
+            } />
+            {noIncidentsToday && ((today as any).incident_details ?? []).length === 0 ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], padding: `${spacing['2']} 0` }}>
+                <ShieldCheck size={14} color={colors.statusActive} />
+                <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>No incidents reported today</span>
+              </div>
+            ) : ((today as any).incident_details ?? []).length > 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
                 {((today as any).incident_details as Array<{ description: string; type: string; corrective_action: string }>).map((inc, i) => (
                   <div key={i} style={{ padding: spacing['3'], backgroundColor: colors.statusCriticalSubtle, borderRadius: borderRadius.md, borderLeft: `3px solid ${colors.statusCritical}` }}>
@@ -798,8 +972,12 @@ export const DailyLog: React.FC = () => {
                   </div>
                 ))}
               </div>
-            </Card>
-          )}
+            ) : (
+              <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0, padding: `${spacing['3']} 0` }}>
+                Toggle off "No incidents today" to log an incident.
+              </p>
+            )}
+          </Card>
 
           {/* AI Auto Narrative */}
           <AutoNarrative logData={today as unknown as Record<string, unknown>} />
@@ -999,6 +1177,44 @@ export const DailyLog: React.FC = () => {
             </Card>
             )}
           </div>
+
+          {/* Sticky Submit Log button */}
+          {logStatus === 'draft' && !isLocked && (
+            <div style={{
+              position: 'sticky', bottom: 0, zIndex: 100,
+              margin: `0 -${spacing['4']}`,
+              padding: `${spacing['4']} ${spacing['4']}`,
+              backgroundColor: 'rgba(247, 248, 250, 0.95)',
+              backdropFilter: 'blur(8px)',
+              borderTop: `1px solid ${colors.borderSubtle}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: spacing['3'],
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
+                <ShieldCheck size={14} color={colors.statusActive} />
+                <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>
+                  {noIncidentsToday ? 'No incidents' : 'Incidents logged'} · {noVisitorsToday ? 'No visitors' : 'Visitors logged'} · {manpowerRows.reduce((s, r) => s + r.headcount, 0)} workers on site
+                </span>
+              </div>
+              <PermissionGate permission="daily_log.submit">
+                <button
+                  onClick={handleSubmit}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: spacing['2'],
+                    backgroundColor: colors.primaryOrange, color: colors.white,
+                    border: 'none', borderRadius: borderRadius.md,
+                    padding: `${spacing['3']} ${spacing['5']}`,
+                    fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold,
+                    fontFamily: typography.fontFamily, cursor: 'pointer',
+                    boxShadow: '0 4px 24px rgba(244, 120, 32, 0.35)',
+                    transition: 'opacity 160ms',
+                  }}
+                >
+                  <Send size={15} />
+                  Submit Log for Approval
+                </button>
+              </PermissionGate>
+            </div>
+          )}
         </div>
 
         {/* Calendar sidebar */}
