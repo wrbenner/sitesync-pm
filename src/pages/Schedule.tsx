@@ -592,6 +592,7 @@ export const Schedule: React.FC = () => {
   }, [activeProject?.id, queryClient]);
 
   const [viewMode, setViewMode] = useState<'gantt' | 'list'>('gantt');
+  const [zoomLevel, setZoomLevel] = useState<'day' | 'week' | 'month'>('week');
   const [whatIfMode, setWhatIfMode] = useState(false);
   const [showBaseline, setShowBaseline] = useState(false);
   const [recoveryExpanded, setRecoveryExpanded] = useState(false);
@@ -720,6 +721,14 @@ export const Schedule: React.FC = () => {
         if (data && data.length > 0) setWeatherRecords(data);
       });
   }, [activeProject?.id]);
+
+  // Announce schedule load completion to screen readers
+  useEffect(() => {
+    if (!loading && schedulePhases.length > 0) {
+      const criticalCount = schedulePhases.filter(p => p.is_critical_path === true).length;
+      setScheduleAnnouncement(`Schedule loaded with ${schedulePhases.length} ${schedulePhases.length === 1 ? 'activity' : 'activities'}, ${criticalCount} on critical path`);
+    }
+  }, [loading, schedulePhases]);
 
   const overallHealthStatus = useMemo(() => {
     if (schedulePhases.length === 0) return { status: 'green', label: 'On Track' };
@@ -918,6 +927,7 @@ export const Schedule: React.FC = () => {
       actions={
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing.md }}>
           <button
+            aria-label="Import schedule from Primavera P6 or Microsoft Project"
             onClick={() => setShowImportModal(true)}
             style={{
               display: 'flex',
@@ -948,6 +958,11 @@ export const Schedule: React.FC = () => {
       aria-label="Project Schedule"
       role="main"
     >
+      {/* Visually hidden h1 for screen reader landmark navigation */}
+      <h1 style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', margin: 0, padding: 0 }}>
+        Schedule
+      </h1>
+
       {/* Global aria-live region: announces filter changes and status updates */}
       <div
         role="status"
@@ -1688,6 +1703,36 @@ export const Schedule: React.FC = () => {
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
+                {/* Zoom controls */}
+                <div role="group" aria-label="Zoom level" style={{ display: 'flex', gap: 1, backgroundColor: colors.surfaceInset, borderRadius: borderRadius.full, padding: 2 }}>
+                  {([
+                    { value: 'day' as const, label: 'D', ariaLabel: 'Zoom to day view' },
+                    { value: 'week' as const, label: 'W', ariaLabel: 'Zoom to week view' },
+                    { value: 'month' as const, label: 'M', ariaLabel: 'Zoom to month view' },
+                  ]).map(z => (
+                    <button
+                      key={z.value}
+                      aria-label={z.ariaLabel}
+                      aria-pressed={zoomLevel === z.value}
+                      onClick={() => setZoomLevel(z.value)}
+                      style={{
+                        padding: `${spacing['1']} ${spacing['3']}`,
+                        border: 'none',
+                        borderRadius: borderRadius.full,
+                        backgroundColor: zoomLevel === z.value ? colors.surfaceRaised : 'transparent',
+                        color: zoomLevel === z.value ? colors.textPrimary : colors.textTertiary,
+                        fontSize: typography.fontSize.caption,
+                        fontWeight: typography.fontWeight.medium,
+                        fontFamily: typography.fontFamily,
+                        cursor: 'pointer',
+                        boxShadow: zoomLevel === z.value ? shadows.sm : 'none',
+                        transition: transitions.quick,
+                      }}
+                    >
+                      {z.label}
+                    </button>
+                  ))}
+                </div>
                 {hasBaselineData && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                     <div
@@ -1732,8 +1777,9 @@ export const Schedule: React.FC = () => {
               </div>
             </div>
             <div
-              role="table"
-              aria-label="Project schedule"
+              role="region"
+              aria-label={viewMode === 'gantt' ? 'Schedule Gantt Chart' : 'Schedule Activities List'}
+              id="gantt-activities"
               style={{
                 backgroundColor: colors.surfaceRaised,
                 borderRadius: borderRadius.lg,
