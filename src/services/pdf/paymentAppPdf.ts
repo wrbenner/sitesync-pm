@@ -3,6 +3,30 @@ import type { PayApplication } from '../../types/api'
 import { computeCurrentPaymentDue } from '../../api/endpoints/payApplications'
 
 // ---------------------------------------------------------------------------
+// PaymentLineItem — public interface for generatePayAppPdf
+// ---------------------------------------------------------------------------
+
+export interface PaymentLineItem {
+  /** Display item number, e.g. "1", "2A" */
+  itemNumber: string
+  description: string
+  /** Scheduled value in dollars */
+  scheduledValue: number
+  /** Previous percent complete as a decimal (0.0 to 1.0) */
+  prevPctComplete: number
+  /** Current period percent complete as a decimal (0.0 to 1.0) */
+  currentPctComplete: number
+  /** Stored materials in dollars */
+  storedMaterials: number
+  /** Retainage rate on work as a decimal (e.g. 0.10 for 10%) */
+  retainageRate: number
+  /** Retainage rate on stored materials as a decimal (defaults to 0) */
+  storedMaterialRetainageRate?: number
+  /** Previous certificates for payment in dollars (defaults to 0) */
+  previousCertificates?: number
+}
+
+// ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
@@ -400,7 +424,7 @@ export interface PayAppPdfData {
  * G702 summary is page 1; G703 continuation sheet follows on subsequent pages.
  * Returns a Blob suitable for browser download via URL.createObjectURL.
  */
-export async function generatePayAppPdf(data: PayAppPdfData): Promise<Blob> {
+export async function generatePayAppPdfFromData(data: PayAppPdfData): Promise<Blob> {
   const pdfDoc = await PDFDocument.create()
   const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
   const fontReg = await pdfDoc.embedFont(StandardFonts.Helvetica)
@@ -886,4 +910,100 @@ export async function generateG703Pdf(sovLines: PayAppLineItem[]): Promise<Uint8
   }
 
   return pdfDoc.save()
+}
+
+// ---------------------------------------------------------------------------
+// Public convenience API: generatePayAppPdf
+// ---------------------------------------------------------------------------
+
+/**
+ * Generates a combined AIA G702 + G703 PDF for a pay application.
+ *
+ * Accepts raw PayApplication and PaymentLineItem[] records and derives all
+ * G702 summary figures by summing per-line computations via
+ * computeCurrentPaymentDue. Returns a Blob suitable for browser download.
+ *
+ * All monetary arithmetic uses integer cents internally to avoid
+ * floating-point drift (inputs are dollars; outputs are formatted dollars).
+ */
+export async function generatePayAppPdf(
+  payApp: PayApplication,
+  lineItems: PaymentLineItem[],
+  projectName: string,
+): Promise<Blob> {
+  // Compute per-line values and aggregate G702 totals
+  let totalCompletedAndStoredCents = 0
+  let totalRetainageCents = 0
+  let totalEarnedLessRetainageCents = 0
+  let totalPrevCertCents = 0
+  let totalCurrentDueCents = 0
+
+  const sovLines: PayAppPdfData['sovLines'] = lineItems.map((item) => {
+    const result = computeCurrentPaymentDue({
+      scheduledValue: item.scheduledValue,
+      prevPctComplete: item.prevPctComplete,
+      currentPctComplete: item.currentPctComplete,
+      storedMaterials: item.storedMaterials,
+      retainageRate: item.retainageRate,
+      previousCertificates: item.previousCertificates ?? 0,
+      storedMaterialRetainageRate: item.storedMaterialRetainageRate ?? 0,
+    })
+
+    const scheduledCents = toCents(item.scheduledValue)
+    const prevCents = toCents(item.scheduledValue * item.prevPctComplete)
+    const totalCents = toCents(result.totalCompletedAndStored)
+    const retainageCents = toCents(result.retainageAmount + result.retainageOnStored)
+    const balanceCents = scheduledCents - totalCents
+    const pctComplete = item.scheduledValue > 0
+      ? result.totalCompletedAndStored / item.scheduledValue
+      : item.currentPctComplete
+
+    totalCompletedAndStoredCents += totalCents
+    totalRetainageCents += retainageCents
+    totalEarnedLessRetainageCents += toCents(result.line6)
+    totalPrevCertCents += toCents(item.previousCertificates ?? 0)
+    totalCurrentDueCents += toCents(result.currentPaymentDue)
+
+    return {
+      itemNumber: item.itemNumber,
+      description: item.description,
+      scheduledValue: item.scheduledValue,
+      previousCompleted: prevCents / 100,
+      thisPeroid: result.workThisPeriod,
+      materialsStored: item.storedMaterials,
+      totalCompletedAndStored: result.totalCompletedAndStored,
+      percentComplete: pctComplete,
+      balanceToFinish: balanceCents / 100,
+      retainage: result.retainageAmount + result.retainageOnStored,
+    }
+  })
+
+  const originalContractCents = toCents(payApp.original_contract_sum ?? 0)
+  const netChangeCents = toCents(payApp.net_change_orders ?? 0)
+  const contractSumToDateCents = originalContractCents + netChangeCents
+  const retainagePct = lineItems.length > 0
+    ? (lineItems.reduce((s, l) => s + l.retainageRate, 0) / lineItems.length) * 100
+    : 0
+  const balanceToFinishCents = contractSumToDateCents - totalEarnedLessRetainageCents
+
+  const data: PayAppPdfData = {
+    applicationNumber: payApp.application_number,
+    periodTo: payApp.period_to,
+    periodFrom: payApp.period_from,
+    status: payApp.status,
+    projectName,
+    originalContractSum: originalContractCents / 100,
+    netChangeOrders: netChangeCents / 100,
+    contractSumToDate: contractSumToDateCents / 100,
+    totalCompletedAndStored: totalCompletedAndStoredCents / 100,
+    retainagePercent: retainagePct,
+    retainageAmount: totalRetainageCents / 100,
+    totalEarnedLessRetainage: totalEarnedLessRetainageCents / 100,
+    lessPreviousCertificates: totalPrevCertCents / 100,
+    currentPaymentDue: totalCurrentDueCents / 100,
+    balanceToFinish: balanceToFinishCents / 100,
+    sovLines: sovLines.length > 0 ? sovLines : undefined,
+  }
+
+  return generatePayAppPdfFromData(data)
 }

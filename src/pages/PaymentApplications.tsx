@@ -25,7 +25,7 @@ import type { PayApplicationData } from '../api/endpoints/budget'
 import { upsertPayApplication, approvePayApplication } from '../api/endpoints/payApplications'
 import type { UpsertPayAppPayload } from '../api/endpoints/payApplications'
 import { updateLienWaiverStatus, generateWaiversFromPayApp } from '../api/endpoints/lienWaivers'
-import { generatePayAppPdf, type PayAppPdfData } from '../services/pdf/paymentAppPdf'
+import { generatePayAppPdfFromData, type PayAppPdfData } from '../services/pdf/paymentAppPdf'
 import { LienWaiverPDF, lienWaiverDataFromRow } from '../components/export/LienWaiverPDF'
 import type { LienWaiverRowContext, WaiverState } from '../components/export/LienWaiverPDF'
 import { G702ApplicationPDF } from '../components/export/G702ApplicationPDF'
@@ -1002,7 +1002,7 @@ const G702SummaryCard = memo<{
             currentPaymentDue: (app.current_payment_due as number) ?? 0,
             balanceToFinish: (app.balance_to_finish as number) ?? 0,
           }
-      const blob = await generatePayAppPdf(pdfData)
+      const blob = await generatePayAppPdfFromData(pdfData)
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
