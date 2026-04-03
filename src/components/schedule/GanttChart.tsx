@@ -8,9 +8,10 @@ import { colors, spacing, typography, borderRadius, shadows, transitions } from 
 import { AIAnnotationIndicator } from '../ai/AIAnnotation';
 import { getAnnotationsForEntity } from '../../data/aiAnnotations';
 
-export type TimeScale = 'week' | 'month' | 'quarter';
+export type TimeScale = 'day' | 'week' | 'month';
 
-const ROW_HEIGHT = 40; // 32px bar + 8px margin
+const ROW_HEIGHT = 36; // 32px bar + 4px gap
+const PX_PER_DAY: Record<TimeScale, number> = { day: 40, week: 12, month: 4 };
 const DAY_MS = 86_400_000;
 const LABEL_WIDTH = 200;
 const SLIPPAGE_COL_WIDTH = 72;
@@ -74,7 +75,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
 }) => {
   const uid = useId().replace(/:/g, '');
 
-  const [timeScale, setTimeScale] = useState<TimeScale>('quarter');
+  const [timeScale, setTimeScale] = useState<TimeScale>('month');
   const [hoveredPhase, setHoveredPhase] = useState<string | null>(null);
   const [showBaselineInternal, setShowBaselineInternal] = useState(true);
   const showBaseline = showBaselineProp !== undefined ? showBaselineProp : showBaselineInternal;
@@ -90,6 +91,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
 
   const probeRef = useRef<HTMLDivElement>(null);
   const trackWidthRef = useRef(0);
+  const pxPerDayRef = useRef<number>(PX_PER_DAY['month']);
   const ganttGridRef = useRef<HTMLDivElement>(null);
   const activityChangeDebouncerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -158,9 +160,9 @@ export const GanttChart: React.FC<GanttChartProps> = ({
         ? (e as TouchEvent).touches[0].clientX
         : (e as MouseEvent).clientX;
       const dx = clientX - activeDrag.startX;
-      const pxPerMs = trackWidthRef.current / timelineSpanRef.current;
-      if (!pxPerMs) return;
-      const deltaMs = Math.round(dx / pxPerMs / DAY_MS) * DAY_MS;
+      const ppd = pxPerDayRef.current;
+      if (!ppd) return;
+      const deltaMs = Math.round(dx / ppd) * DAY_MS;
       setLocalPhases(prev => prev.map(p => {
         if (p.id !== activeDrag.phaseId) return p;
         let newStart = activeDrag.origStart;
@@ -184,8 +186,8 @@ export const GanttChart: React.FC<GanttChartProps> = ({
           ? (e as TouchEvent).changedTouches[0]?.clientX ?? activeDrag.startX
           : (e as MouseEvent).clientX;
         const dx = clientX - activeDrag.startX;
-        const pxPerMs = trackWidthRef.current / timelineSpanRef.current;
-        const deltaMs = pxPerMs ? Math.round(dx / pxPerMs / DAY_MS) * DAY_MS : 0;
+        const ppd = pxPerDayRef.current;
+        const deltaMs = ppd ? Math.round(dx / ppd) * DAY_MS : 0;
         const newStart = toISO(activeDrag.origStart + deltaMs);
         const newFinish = toISO(activeDrag.origEnd + deltaMs);
         if (activityChangeDebouncerRef.current) clearTimeout(activityChangeDebouncerRef.current);
@@ -210,43 +212,46 @@ export const GanttChart: React.FC<GanttChartProps> = ({
 
   const hasBaselineData = phases.some(p => p.baselineStartDate != null && p.baselineEndDate != null);
   const today = new Date();
-  const todayOffset = ((today.getTime() - timelineStart) / timelineSpan) * 100;
+  const todayPx = Math.round(((today.getTime() - timelineStart) / DAY_MS) * pxPerDay);
 
   const timeLabels = useMemo(() => {
     const labels: { label: string; offset: number }[] = [];
     const start = new Date(timelineStart);
     const end = new Date(timelineEnd);
-    if (timeScale === 'week') {
+    if (timeScale === 'day') {
+      // Show every 3 days to avoid overlap
+      const d = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+      while (d.getTime() <= timelineEnd) {
+        const offset = Math.round(((d.getTime() - timelineStart) / DAY_MS) * pxPerDay);
+        labels.push({
+          label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          offset,
+        });
+        d.setDate(d.getDate() + 3);
+      }
+    } else if (timeScale === 'week') {
       const d = new Date(start.getFullYear(), start.getMonth(), start.getDate());
       d.setDate(d.getDate() - d.getDay()); // rewind to Sunday
       while (d.getTime() <= timelineEnd) {
-        const offset = ((d.getTime() - timelineStart) / timelineSpan) * 100;
-        if (offset <= 100) {
+        const offset = Math.round(((d.getTime() - timelineStart) / DAY_MS) * pxPerDay);
+        if (offset >= 0) {
           labels.push({
             label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-            offset: Math.max(0, offset),
+            offset,
           });
         }
         d.setDate(d.getDate() + 7);
       }
-    } else if (timeScale === 'month') {
+    } else {
       const d = new Date(start.getFullYear(), start.getMonth(), 1);
       while (d <= end) {
-        const offset = ((d.getTime() - timelineStart) / timelineSpan) * 100;
+        const offset = Math.round(((d.getTime() - timelineStart) / DAY_MS) * pxPerDay);
         labels.push({ label: d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }), offset });
         d.setMonth(d.getMonth() + 1);
       }
-    } else {
-      const d = new Date(start.getFullYear(), Math.floor(start.getMonth() / 3) * 3, 1);
-      while (d <= end) {
-        const q = Math.floor(d.getMonth() / 3) + 1;
-        const offset = ((d.getTime() - timelineStart) / timelineSpan) * 100;
-        labels.push({ label: `Q${q} ${d.getFullYear()}`, offset });
-        d.setMonth(d.getMonth() + 3);
-      }
     }
     return labels;
-  }, [timelineStart, timelineEnd, timelineSpan, timeScale]);
+  }, [timelineStart, timelineEnd, timelineSpan, timeScale, pxPerDay]);
 
   const resourceData = useMemo(() => {
     const buckets = 20;
@@ -268,23 +273,31 @@ export const GanttChart: React.FC<GanttChartProps> = ({
 
   const maxResource = Math.max(...resourceData, 1);
 
+  const pxPerDay = PX_PER_DAY[timeScale];
+
+  // Keep ref in sync for drag callbacks
+  useEffect(() => { pxPerDayRef.current = pxPerDay; }, [pxPerDay]);
+
+  const totalDays = Math.max(1, Math.ceil(timelineSpan / DAY_MS));
+  const totalTrackWidth = totalDays * pxPerDay;
+
   const getPhasePos = (phase: GanttPhase) => {
     const s = new Date(phase.startDate).getTime();
     const e = new Date(phase.endDate).getTime();
     return {
-      left: ((s - timelineStart) / timelineSpan) * 100,
-      width: ((e - s) / timelineSpan) * 100,
+      left: Math.round(((s - timelineStart) / DAY_MS) * pxPerDay),
+      width: Math.max(Math.round(((e - s) / DAY_MS) * pxPerDay), 2),
     };
   };
 
   const getBarColor = (phase: GanttPhase) => {
-    if (phase.completed || phase.status === 'completed' || phase.status === 'on_track') return colors.statusActive;
+    if (phase.completed || phase.status === 'completed') return '#4EC896';
     if (whatIfMode && activeDrag?.phaseId === phase.id) return colors.statusReview;
-    if (phase.status === 'delayed') return colors.statusCritical;
-    if (phase.status === 'in_progress') return colors.statusPending;
-    if (phase.is_critical || phase.critical || phase.floatDays === 0) return '#EF4444';
-    if (phase.progress === 0) return colors.textTertiary;
-    return colors.statusInfo;
+    if (phase.status === 'delayed') return '#E74C3C';
+    if (phase.status === 'in_progress') return '#3B82F6';
+    if (phase.is_critical || phase.critical || phase.floatDays === 0) return '#E74C3C';
+    if (phase.status === 'not_started' || phase.progress === 0) return '#9CA3AF';
+    return '#3B82F6';
   };
 
   // Dependency arrows: cubic bezier paths in pixel space
@@ -299,8 +312,8 @@ export const GanttChart: React.FC<GanttChartProps> = ({
         const predPhase = localPhases[predIdx];
         const predPos = getPhasePos(predPhase);
         const succPos = getPhasePos(succPhase);
-        const x1 = ((predPos.left + predPos.width) / 100) * trackWidth;
-        const x2 = (succPos.left / 100) * trackWidth;
+        const x1 = predPos.left + predPos.width;
+        const x2 = succPos.left;
         const y1 = predIdx * ROW_HEIGHT + ROW_HEIGHT / 2;
         const y2 = succIdx * ROW_HEIGHT + ROW_HEIGHT / 2;
         const midX = (x1 + x2) / 2;
@@ -313,11 +326,11 @@ export const GanttChart: React.FC<GanttChartProps> = ({
     });
     return arrows;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [localPhases, trackWidth, timelineStart, timelineSpan]);
+  }, [localPhases, pxPerDay, timelineStart]);
 
   // Typed dependency arrows from the `dependencies` prop (FS, SS, FF, SF)
   const typedDependencyArrows = useMemo(() => {
-    if (trackWidth === 0 || dependencies.length === 0) return [];
+    if (dependencies.length === 0) return [];
     return dependencies.map(dep => {
       const fromIdx = localPhases.findIndex(p => p.id === dep.fromId);
       const toIdx = localPhases.findIndex(p => p.id === dep.toId);
@@ -329,18 +342,18 @@ export const GanttChart: React.FC<GanttChartProps> = ({
       let x1: number;
       let x2: number;
       if (dep.type === 'FS') {
-        x1 = ((fromPos.left + fromPos.width) / 100) * trackWidth;
-        x2 = (toPos.left / 100) * trackWidth;
+        x1 = fromPos.left + fromPos.width;
+        x2 = toPos.left;
       } else if (dep.type === 'SS') {
-        x1 = (fromPos.left / 100) * trackWidth;
-        x2 = (toPos.left / 100) * trackWidth;
+        x1 = fromPos.left;
+        x2 = toPos.left;
       } else if (dep.type === 'FF') {
-        x1 = ((fromPos.left + fromPos.width) / 100) * trackWidth;
-        x2 = ((toPos.left + toPos.width) / 100) * trackWidth;
+        x1 = fromPos.left + fromPos.width;
+        x2 = toPos.left + toPos.width;
       } else {
         // SF
-        x1 = (fromPos.left / 100) * trackWidth;
-        x2 = ((toPos.left + toPos.width) / 100) * trackWidth;
+        x1 = fromPos.left;
+        x2 = toPos.left + toPos.width;
       }
       const midX = (x1 + x2) / 2;
       return {
@@ -350,7 +363,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
       };
     }).filter(Boolean) as { key: string; d: string; type: string }[];
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dependencies, localPhases, trackWidth, timelineStart, timelineSpan]);
+  }, [dependencies, localPhases, pxPerDay, timelineStart]);
 
 
   const startDrag = (
@@ -519,7 +532,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
       {!isLoading && phases.length > 0 && (<>
       <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'], marginBottom: spacing['4'], flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', gap: spacing['1'], backgroundColor: colors.surfaceInset, borderRadius: borderRadius.full, padding: 2 }}>
-          {(['week', 'month', 'quarter'] as TimeScale[]).map(scale => (
+          {(['day', 'week', 'month'] as TimeScale[]).map(scale => (
             <button
               key={scale}
               aria-label={`View by ${scale}`}
@@ -535,7 +548,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                 textTransform: 'capitalize',
               }}
             >
-              {scale}
+              {scale.charAt(0).toUpperCase() + scale.slice(1)}
             </button>
           ))}
         </div>
@@ -627,17 +640,17 @@ export const GanttChart: React.FC<GanttChartProps> = ({
 
       {/* Timeline */}
       <div style={{ overflowX: 'auto', minHeight: '400px' }}>
-        <div style={{ minWidth: '900px' }}>
+        <div style={{ minWidth: `${LABEL_WIDTH + totalTrackWidth}px`, position: 'relative' }}>
 
-          {/* Time labels header + width probe */}
+          {/* Time labels header */}
           <div role="row" style={{ display: 'flex', marginBottom: spacing['2'] }}>
             <div role="columnheader" scope="col" aria-label="Activity" style={{ width: LABEL_WIDTH, flexShrink: 0, position: 'sticky', left: 0, backgroundColor: colors.surfaceRaised, zIndex: 7 }} />
-            <div role="columnheader" scope="col" aria-label="Timeline" ref={probeRef} style={{ flex: 1, position: 'relative', height: 20 }}>
+            <div role="columnheader" scope="col" aria-label="Timeline" ref={probeRef} style={{ width: totalTrackWidth, flexShrink: 0, position: 'relative', height: 20 }}>
               {timeLabels.map(tl => (
                 <span
                   key={tl.label + tl.offset}
                   style={{
-                    position: 'absolute', left: `${tl.offset}%`, transform: 'translateX(-50%)',
+                    position: 'absolute', left: `${tl.offset}px`, transform: 'translateX(-50%)',
                     fontSize: typography.fontSize.caption, color: colors.textTertiary, whiteSpace: 'nowrap',
                   }}
                 >
@@ -746,7 +759,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                   position: 'absolute',
                   left: LABEL_WIDTH,
                   top: 0,
-                  width: `calc(100% - ${LABEL_WIDTH}px)`,
+                  width: totalTrackWidth,
                   height: localPhases.length * ROW_HEIGHT,
                   pointerEvents: 'none',
                   overflow: 'visible',
@@ -826,10 +839,10 @@ export const GanttChart: React.FC<GanttChartProps> = ({
               const isDraggingBoth = isDraggingThis && activeDrag?.side === 'both';
               const canDrag = !phase.completed && !phase.is_milestone;
               const ghostLeft = isDraggingBoth
-                ? ((activeDrag!.origStart - timelineStart) / timelineSpan) * 100
+                ? Math.round(((activeDrag!.origStart - timelineStart) / DAY_MS) * pxPerDay)
                 : null;
               const ghostWidth = isDraggingBoth
-                ? (((activeDrag!.origEnd - activeDrag!.origStart) / timelineSpan) * 100)
+                ? Math.max(Math.round(((activeDrag!.origEnd - activeDrag!.origStart) / DAY_MS) * pxPerDay), 2)
                 : null;
 
               return (
@@ -845,7 +858,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                   className="gantt-phase-row"
                   style={{
                     display: showCriticalOnly && !phase.is_critical && phase.floatDays !== 0 ? 'none' : 'flex',
-                    alignItems: 'center', marginBottom: spacing['2'], position: 'relative',
+                    alignItems: 'center', marginBottom: spacing['1'], position: 'relative',
                     borderLeft: isCriticalPathRow ? '3px solid #EF4444' : '3px solid transparent',
                     paddingLeft: isCriticalPathRow ? spacing['2'] : 0,
                     outline: 'none',
@@ -928,7 +941,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                   <div
                     className="gantt-phase-track"
                     style={{
-                      flex: 1, height: 32, position: 'relative',
+                      width: totalTrackWidth, flexShrink: 0, height: 32, position: 'relative',
                       backgroundColor: colors.surfaceInset, borderRadius: borderRadius.sm,
                       cursor: isDraggingBoth ? 'grabbing' : isDraggingThis ? 'col-resize' : 'pointer',
                       userSelect: 'none',
@@ -940,13 +953,13 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                       const bStart = phase.baselineStartDate ?? (baselinePhases?.find(b => b.id === phase.id)?.baselineStartDate ?? null);
                       const bEnd = phase.baselineEndDate ?? (baselinePhases?.find(b => b.id === phase.id)?.baselineEndDate ?? null);
                       if (!bStart || !bEnd) return null;
-                      const bLeft = ((new Date(bStart).getTime() - timelineStart) / timelineSpan) * 100;
-                      const bWidth = ((new Date(bEnd).getTime() - new Date(bStart).getTime()) / timelineSpan) * 100;
+                      const bLeft = Math.round(((new Date(bStart).getTime() - timelineStart) / DAY_MS) * pxPerDay);
+                      const bWidth = Math.max(Math.round(((new Date(bEnd).getTime() - new Date(bStart).getTime()) / DAY_MS) * pxPerDay), 2);
                       return (
                         <div aria-hidden="true" style={{
                           position: 'absolute', top: '50%', transform: 'translateY(-50%)',
                           height: 8,
-                          left: `${bLeft}%`, width: `${bWidth}%`,
+                          left: `${bLeft}px`, width: `${bWidth}px`,
                           background: 'rgba(156, 163, 175, 0.3)',
                           border: '1px dashed #9CA3AF',
                           borderRadius: 4, pointerEvents: 'none',
@@ -961,7 +974,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                         aria-hidden="true"
                         style={{
                           position: 'absolute', top: 4, bottom: 4,
-                          left: `${ghostLeft}%`, width: `${ghostWidth}%`,
+                          left: `${ghostLeft}px`, width: `${ghostWidth}px`,
                           borderRadius: borderRadius.sm,
                           border: `2px dashed ${colors.textTertiary}`,
                           backgroundColor: `${colors.textTertiary}18`,
@@ -978,7 +991,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                         aria-label={`${phase.name}: ${phase.startDate} to ${phase.endDate}, milestone${phase.critical || phase.is_critical ? ', CRITICAL PATH' : ''}`}
                         style={{
                           position: 'absolute',
-                          left: `${pos.left}%`,
+                          left: `${pos.left}px`,
                           top: '50%',
                           transform: 'translate(-50%, -50%) rotate(45deg)',
                           width: 14, height: 14,
@@ -993,7 +1006,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                         aria-hidden="true"
                         style={{
                           position: 'absolute',
-                          left: `calc(${pos.left}% + 12px)`,
+                          left: `${pos.left + 12}px`,
                           top: '50%',
                           transform: 'translateY(-50%)',
                           fontSize: typography.fontSize.caption,
@@ -1033,7 +1046,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                             : undefined}
                         style={{
                           position: 'absolute', top: 4, bottom: 4,
-                          left: `${pos.left}%`, width: `${pos.width}%`,
+                          left: `${pos.left}px`, width: `${pos.width}px`,
                           borderRadius: borderRadius.sm, overflow: 'visible',
                           border: isCascadeAffected ? `2px dashed ${colors.statusReview}` : 'none',
                           boxShadow: isCriticalPathRow
@@ -1084,7 +1097,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                             style={{
                               position: 'absolute', top: 0, bottom: 0,
                               left: '100%',
-                              width: `${(phase.floatDays * DAY_MS / timelineSpan) * 100}%`,
+                              width: `${phase.floatDays * pxPerDay}px`,
                               backgroundColor: barColor,
                               opacity: 0.12,
                               borderRadius: `0 ${borderRadius.sm} ${borderRadius.sm} 0`,
@@ -1218,7 +1231,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                     {/* Cascade highlight */}
                     {isCascadeAffected && (
                       <div style={{
-                        position: 'absolute', top: 0, bottom: 0, left: `${pos.left}%`, width: `${pos.width}%`,
+                        position: 'absolute', top: 0, bottom: 0, left: `${pos.left}px`, width: `${pos.width}px`,
                         backgroundColor: `${colors.statusReview}08`,
                         borderRadius: borderRadius.sm, pointerEvents: 'none',
                       }}>
@@ -1242,7 +1255,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                       return (
                         <div aria-hidden="true" style={{
                           position: 'absolute',
-                          left: `calc(${pos.left + pos.width}% + 4px)`,
+                          left: `${pos.left + pos.width + 4}px`,
                           top: '50%',
                           transform: 'translateY(-50%)',
                           fontSize: '10px',
@@ -1258,8 +1271,8 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                     })()}
 
                     {/* Today marker */}
-                    {todayOffset > 0 && todayOffset < 100 && (
-                      <div style={{ position: 'absolute', top: 0, bottom: 0, left: `${todayOffset}%`, width: 1, borderLeft: `1px dashed ${colors.statusCritical}`, opacity: 0.4, pointerEvents: 'none' }} />
+                    {todayPx > 0 && todayPx < totalTrackWidth && (
+                      <div style={{ position: 'absolute', top: 0, bottom: 0, left: `${todayPx}px`, width: 1, borderLeft: '2px dashed #F47820', opacity: 0.8, pointerEvents: 'none' }} />
                     )}
 
                     {/* Float pill below bar */}
@@ -1269,7 +1282,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                         style={{
                           position: 'absolute',
                           top: 30,
-                          left: `${pos.left}%`,
+                          left: `${pos.left}px`,
                           fontSize: '12px',
                           color: phase.floatDays === 0 ? '#E74C3C' : '#6B7280',
                           backgroundColor: phase.floatDays === 0 ? '#FEE2E2' : '#F3F4F6',
@@ -1288,7 +1301,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                     {/* Hover popover */}
                     {isHovered && !activeDrag && (
                       <div style={{
-                        position: 'absolute', bottom: '100%', left: `${pos.left + pos.width / 2}%`,
+                        position: 'absolute', bottom: '100%', left: `${pos.left + pos.width / 2}px`,
                         transform: 'translateX(-50%)', marginBottom: 4,
                         padding: `${spacing['2']} ${spacing['3']}`, backgroundColor: colors.surfaceRaised,
                         borderRadius: borderRadius.md, boxShadow: shadows.dropdown,
@@ -1437,10 +1450,10 @@ export const GanttChart: React.FC<GanttChartProps> = ({
           </div>
 
           {/* Today line label */}
-          {todayOffset > 0 && todayOffset < 100 && (
+          {todayPx > 0 && todayPx < totalTrackWidth && (
             <div style={{ paddingLeft: `${LABEL_WIDTH}px`, position: 'relative', height: 16, marginTop: spacing['1'] }}>
-              <div style={{ position: 'absolute', left: `calc(${LABEL_WIDTH}px + ${todayOffset}% * (100% - ${LABEL_WIDTH}px) / 100)`, transform: 'translateX(-50%)' }}>
-                <span style={{ fontSize: typography.fontSize.caption, color: colors.statusCritical, fontWeight: typography.fontWeight.semibold, backgroundColor: `${colors.statusCritical}12`, padding: `0 ${spacing['1']}`, borderRadius: borderRadius.sm }}>Today</span>
+              <div style={{ position: 'absolute', left: `${todayPx}px`, transform: 'translateX(-50%)' }}>
+                <span style={{ fontSize: typography.fontSize.caption, color: '#F47820', fontWeight: typography.fontWeight.semibold, backgroundColor: '#F4782012', padding: `0 ${spacing['1']}`, borderRadius: borderRadius.sm }}>Today</span>
               </div>
             </div>
           )}
