@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { VirtualDataTable } from '../components/shared/VirtualDataTable';
 import { BulkActionBar } from '../components/shared/BulkActionBar';
 import { createColumnHelper } from '@tanstack/react-table';
-import { PageContainer, Card, Btn, StatusTag, PriorityTag, DetailPanel, Avatar, Tag, RelatedItems, Skeleton, useToast } from '../components/Primitives';
+import { PageContainer, Card, Btn, StatusTag, PriorityTag, DetailPanel, Avatar, Tag, RelatedItems, Skeleton, useToast, MetricBox } from '../components/Primitives';
 import EmptyState from '../components/ui/EmptyState';
 import { MetricCardSkeleton } from '../components/ui/Skeletons';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
@@ -200,12 +200,23 @@ const RFIs: React.FC = () => {
     }),
     rfiColHelper.accessor('status', {
       header: 'Status',
-      size: 110,
-      cell: (info) => info.getValue() === 'pending' ? (
-        <span role="status" aria-label={`Status: ${info.getValue()}`} style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.statusInfoBright, backgroundColor: colors.statusInfoSubtle, padding: '2px 8px', borderRadius: borderRadius.full }}>Pending</span>
-      ) : (
-        <span role="status" aria-label={`Status: ${info.getValue()}`}><StatusTag status={info.getValue() as any} /></span>
-      ),
+      size: 160,
+      cell: (info) => {
+        const rfi = info.row.original;
+        const overdue = rfi.dueDate && new Date(rfi.dueDate) < new Date() && rfi.status !== 'closed';
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            {info.getValue() === 'pending' ? (
+              <span role="status" aria-label={`Status: ${info.getValue()}`} style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.statusInfoBright, backgroundColor: colors.statusInfoSubtle, padding: '2px 8px', borderRadius: borderRadius.full, display: 'inline-block' }}>Pending</span>
+            ) : (
+              <span role="status" aria-label={`Status: ${info.getValue()}`}><StatusTag status={info.getValue() as any} /></span>
+            )}
+            {overdue && (
+              <Tag label="OVERDUE" color="#E74C3C" backgroundColor="#FEE2E2" />
+            )}
+          </div>
+        );
+      },
     }),
     rfiColHelper.display({
       id: 'ball_in_court',
@@ -223,9 +234,9 @@ const RFIs: React.FC = () => {
         const rfi = info.row.original;
         let days: number;
         if (rfi.status === 'closed') {
-          days = Math.ceil((new Date(rfi.closed_at || rfi.updated_at).getTime() - new Date(rfi.created_at).getTime()) / 86400000);
+          days = Math.floor((new Date(rfi.closed_at || rfi.updated_at).getTime() - new Date(rfi.created_at).getTime()) / 86400000);
         } else {
-          days = Math.ceil((Date.now() - new Date(rfi.created_at).getTime()) / 86400000);
+          days = Math.floor((Date.now() - new Date(rfi.created_at).getTime()) / 86400000);
         }
         const dColor = days > 10 ? colors.statusCritical : days > 5 ? colors.statusPending : colors.statusActive;
         return <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: dColor, fontVariantNumeric: 'tabular-nums' as const }}>{days}</span>;
@@ -242,11 +253,6 @@ const RFIs: React.FC = () => {
             <span style={{ fontSize: typography.fontSize.sm, color: overdue ? '#E74C3C' : colors.textTertiary, fontVariantNumeric: 'tabular-nums' as const }}>
               {formatDate(info.getValue())}
             </span>
-            {overdue && (
-              <span aria-label="Overdue" style={{ display: 'inline-block', backgroundColor: '#FEE2E2', color: '#E74C3C', fontSize: 11, fontWeight: 600, borderRadius: 4, padding: '2px 6px', lineHeight: 1.4 }}>
-                OVERDUE
-              </span>
-            )}
           </div>
         );
       },
@@ -369,16 +375,17 @@ const RFIs: React.FC = () => {
   const STATUS_TABS = [
     { key: 'all', label: 'All' },
     { key: 'open', label: 'Open' },
-    { key: 'pending', label: 'Pending' },
-    { key: 'under_review', label: 'Under Review' },
-    { key: 'approved', label: 'Approved' },
+    { key: 'pending_response', label: 'Pending Response' },
+    { key: 'overdue', label: 'Overdue' },
     { key: 'closed', label: 'Closed' },
   ];
 
-  const filteredRfis = useMemo(
-    () => statusFilter === 'all' ? allRfis : allRfis.filter((r: any) => r.status === statusFilter),
-    [allRfis, statusFilter],
-  );
+  const filteredRfis = useMemo(() => {
+    if (statusFilter === 'all') return allRfis;
+    if (statusFilter === 'overdue') return allRfis.filter((r: any) => r.status !== 'closed' && r.dueDate && new Date(r.dueDate) < new Date());
+    if (statusFilter === 'pending_response') return allRfis.filter((r: any) => r.status === 'pending' || r.status === 'under_review');
+    return allRfis.filter((r: any) => r.status === statusFilter);
+  }, [allRfis, statusFilter]);
 
   const kanbanColumns: KanbanColumn<any>[] = useMemo(() => [
     { id: 'draft', label: 'In Draft', color: colors.textTertiary, items: [] },
@@ -421,21 +428,11 @@ const RFIs: React.FC = () => {
       </div>
 
       {/* KPI metric cards */}
-      <div aria-live="polite" aria-atomic="true" aria-label="RFI metrics" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'], marginBottom: spacing['4'] }}>
-        {[
-          { label: 'Total Open', value: totalOpen, color: colors.statusActive, icon: <FileQuestion size={18} color={colors.statusActive} />, accent: false },
-          { label: 'Overdue', value: overdueCount, color: '#E74C3C', icon: <AlertTriangle size={18} color="#E74C3C" />, accent: overdueCount > 0 },
-          { label: 'Avg Days to Close', value: avgDaysToClose, color: colors.textPrimary, icon: <Clock size={18} color={colors.textTertiary} />, accent: false },
-          { label: 'Closed This Week', value: closedThisWeek, color: colors.statusActive, icon: <MessageSquare size={18} color={colors.statusActive} />, accent: false },
-        ].map((card) => (
-          <div key={card.label} style={{ backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.lg, border: `1px solid ${card.accent ? '#FCA5A530' : colors.borderSubtle}`, padding: spacing['4'], display: 'flex', flexDirection: 'column', gap: spacing['2'] }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              {card.icon}
-            </div>
-            <div style={{ fontSize: 28, fontWeight: typography.fontWeight.bold, color: card.color, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{card.value}</div>
-            <div style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{card.label}</div>
-          </div>
-        ))}
+      <div aria-label="RFI metrics" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'], marginBottom: spacing['4'] }}>
+        <MetricBox label="Total Open" value={totalOpen} />
+        <MetricBox label="Overdue" value={overdueCount} colorOverride={overdueCount > 0 ? 'danger' : undefined} />
+        <MetricBox label="Avg Days to Close" value={avgDaysToClose} unit="days" />
+        <MetricBox label="Closed This Week" value={closedThisWeek} />
       </div>
 
       {viewMode === 'table' ? (
@@ -446,7 +443,10 @@ const RFIs: React.FC = () => {
             style={{ display: 'flex', gap: 0, padding: `${spacing['2']} ${spacing['4']}`, borderBottom: `1px solid ${colors.borderSubtle}`, overflowX: 'auto' }}
           >
             {STATUS_TABS.map((tab) => {
-              const count = tab.key === 'all' ? allRfis.length : allRfis.filter((r: any) => r.status === tab.key).length;
+              const count = tab.key === 'all' ? allRfis.length
+                : tab.key === 'overdue' ? allRfis.filter((r: any) => r.status !== 'closed' && r.dueDate && new Date(r.dueDate) < new Date()).length
+                : tab.key === 'pending_response' ? allRfis.filter((r: any) => r.status === 'pending' || r.status === 'under_review').length
+                : allRfis.filter((r: any) => r.status === tab.key).length;
               const isSelected = statusFilter === tab.key;
               return (
                 <button
