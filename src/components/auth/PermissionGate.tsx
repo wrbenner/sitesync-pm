@@ -61,7 +61,7 @@ const PermissionDenied: React.FC = () => (
     borderRadius: borderRadius.md,
     border: `1px solid ${colors.borderSubtle}`,
   }}>
-    <Lock size={14} color={colors.textTertiary} />
+    <Lock size={14} color={colors.textTertiary} aria-label="Access denied" />
     <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>
       You do not have permission to access this feature
     </span>
@@ -83,21 +83,37 @@ export const RequestAccessPage: React.FC<{ moduleName?: string }> = ({ moduleNam
         color: colors.textPrimary,
         margin: `${spacing['4']} 0 ${spacing['2']}`,
       }}>Access Restricted</h2>
-      <p style={{ color: colors.textSecondary }}>
-        You do not have permission to view {moduleName || 'this page'}. Your current role is {role || 'unknown'}.
+      <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, marginTop: 8 }}>
+        You do not have permission to view {moduleName || 'this page'}. Your current role is {role || 'unassigned'}.
       </p>
       <button
-        onClick={() => navigate('/dashboard')}
+        onClick={() => navigate(-1)}
         style={{
           backgroundColor: colors.primary,
           color: 'white',
-          padding: `${spacing['2']} ${spacing['4']}`,
+          padding: '10px 24px',
           borderRadius: borderRadius.md,
           border: 'none',
           cursor: 'pointer',
+          marginTop: 24,
         }}
       >
-        Go to Dashboard
+        Go Back
+      </button>
+      <button
+        onClick={() => {}}
+        style={{
+          display: 'block',
+          margin: `${spacing['3']} auto 0`,
+          background: 'none',
+          border: 'none',
+          color: colors.primary,
+          fontSize: typography.fontSize.sm,
+          cursor: 'pointer',
+          textDecoration: 'underline',
+        }}
+      >
+        Request Access
       </button>
     </div>
   );
