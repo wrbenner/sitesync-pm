@@ -122,6 +122,45 @@ function formatP6Date(raw: string): string {
   return raw.split(' ')[0];
 }
 
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function parseCSV(content: string): ParsedActivity[] {
+  const lines = content.split(/\r?\n/).filter(l => l.trim());
+  if (lines.length < 2) return [];
+  const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
+  const findCol = (...names: string[]) => {
+    for (const n of names) {
+      const idx = headers.findIndex(h => h.includes(n));
+      if (idx >= 0) return idx;
+    }
+    return -1;
+  };
+  const nameIdx = findCol('name', 'activity', 'task', 'description');
+  const startIdx = findCol('start', 'begin');
+  const endIdx = findCol('end', 'finish', 'complete date');
+  const durationIdx = findCol('duration', 'dur');
+  const statusIdx = findCol('status', 'state');
+  return lines.slice(1).map((line, i) => {
+    const cols = line.split(',').map(c => c.trim().replace(/"/g, ''));
+    const get = (idx: number) => (idx >= 0 ? cols[idx] ?? '' : '');
+    const rawDur = parseFloat(get(durationIdx));
+    return {
+      activityId: `CSV-${i + 1}`,
+      name: get(nameIdx) || `Activity ${i + 1}`,
+      startDate: formatP6Date(get(startIdx)),
+      endDate: formatP6Date(get(endIdx)),
+      duration: isNaN(rawDur) ? 0 : Math.round(rawDur),
+      percentComplete: 0,
+      floatTotal: 0,
+      status: get(statusIdx) || 'not_started',
+    };
+  }).filter(a => a.name);
+}
+
 function parseXmlSchedule(content: string): ParsedActivity[] {
   const parser = new DOMParser();
   const doc = parser.parseFromString(content, 'application/xml');
@@ -210,10 +249,11 @@ interface ScheduleImportModalProps {
 const ScheduleImportModal: React.FC<ScheduleImportModalProps> = ({ open, onClose, onImportComplete, projectId }) => {
   const [dragOver, setDragOver] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [fileType, setFileType] = useState<'xml' | 'xer' | 'mpp' | null>(null);
+  const [fileType, setFileType] = useState<'xml' | 'xer' | 'mpp' | 'csv' | null>(null);
   const [parsing, setParsing] = useState(false);
   const [parsed, setParsed] = useState<ParsedActivity[] | null>(null);
   const [importing, setImporting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const { addToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const titleId = 'schedule-import-modal-title';
@@ -226,38 +266,66 @@ const ScheduleImportModal: React.FC<ScheduleImportModalProps> = ({ open, onClose
       setParsing(false);
       setParsed(null);
       setImporting(false);
+      setUploadProgress(0);
     }
   }, [open]);
 
   if (!open) return null;
 
-  const detectType = (file: File): 'xml' | 'xer' | 'mpp' | null => {
+  const detectType = (file: File): 'xml' | 'xer' | 'mpp' | 'csv' | null => {
     const ext = file.name.split('.').pop()?.toLowerCase();
     if (ext === 'xml') return 'xml';
     if (ext === 'xer') return 'xer';
     if (ext === 'mpp') return 'mpp';
+    if (ext === 'csv') return 'csv';
     return null;
   };
 
   const handleFile = (file: File) => {
     const type = detectType(file);
+    if (type === null) {
+      addToast('error', 'Unsupported file format. Please use .xer, .xml, .mpp, or .csv');
+      return;
+    }
     setSelectedFile(file);
     setFileType(type);
     setParsed(null);
-    if (type === 'xml' || type === 'xer') {
+    setUploadProgress(0);
+    if (type === 'csv') {
       setParsing(true);
+      setUploadProgress(30);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const content = e.target?.result as string;
+        try {
+          const acts = parseCSV(content);
+          setParsed(acts);
+          setUploadProgress(100);
+        } catch {
+          addToast('error', 'Failed to parse CSV. Check the format and try again.');
+        }
+        setParsing(false);
+      };
+      reader.readAsText(file);
+    } else if (type === 'xml' || type === 'xer') {
+      setParsing(true);
+      setUploadProgress(30);
       const reader = new FileReader();
       reader.onload = (e) => {
         const content = e.target?.result as string;
         try {
           const acts = type === 'xml' ? parseXmlSchedule(content) : parseXerSchedule(content);
           setParsed(acts);
+          setUploadProgress(100);
         } catch {
           addToast('error', 'Failed to parse file. Check the format and try again.');
         }
         setParsing(false);
       };
       reader.readAsText(file);
+    } else {
+      // MPP: no client-side parsing
+      setUploadProgress(100);
     }
   };
 
@@ -269,24 +337,33 @@ const ScheduleImportModal: React.FC<ScheduleImportModalProps> = ({ open, onClose
   };
 
   const handleConfirmImport = async () => {
-    if (!parsed || parsed.length === 0 || !projectId) return;
+    if (!selectedFile || !projectId) return;
     setImporting(true);
     try {
-      const rows = parsed.map(a => ({
-        project_id: projectId,
-        name: a.name,
-        start_date: a.startDate || null,
-        end_date: a.endDate || null,
-        baseline_start: a.baselineStart || null,
-        baseline_end: a.baselineEnd || null,
-        percent_complete: a.percentComplete,
-        float_days: a.floatTotal,
-        status: a.status,
-        progress: a.percentComplete,
-      }));
-      const { error } = await supabase.from('schedule_phases').insert(rows);
-      if (error) throw error;
-      addToast('success', `Imported ${parsed.length} activities`);
+      if (fileType === 'csv' && parsed && parsed.length > 0) {
+        const rows = parsed.map(a => ({
+          project_id: projectId,
+          name: a.name,
+          start_date: a.startDate || null,
+          end_date: a.endDate || null,
+          baseline_start: a.baselineStart || null,
+          baseline_end: a.baselineEnd || null,
+          percent_complete: a.percentComplete,
+          float_days: a.floatTotal,
+          status: a.status,
+          progress: a.percentComplete,
+        }));
+        const { error } = await supabase.from('schedule_phases').insert(rows);
+        if (error) throw error;
+        addToast('success', `Imported ${parsed.length} activities from ${selectedFile.name}`);
+      } else {
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+        formData.append('project_id', projectId);
+        const { error } = await supabase.functions.invoke('schedule-import', { body: formData });
+        if (error) throw error;
+        addToast('success', `Imported ${parsed?.length ?? 0} activities from ${selectedFile.name}`);
+      }
       onImportComplete();
     } catch {
       addToast('error', 'Import failed. Please try again.');
@@ -294,8 +371,8 @@ const ScheduleImportModal: React.FC<ScheduleImportModalProps> = ({ open, onClose
     setImporting(false);
   };
 
-  const showPreview = !parsing && parsed !== null && fileType !== 'mpp';
-  const preview = parsed?.slice(0, 50) ?? [];
+  const showPreview = !parsing && parsed !== null && fileType === 'csv';
+  const preview = parsed?.slice(0, 10) ?? [];
 
   return (
     <div
@@ -373,19 +450,20 @@ const ScheduleImportModal: React.FC<ScheduleImportModalProps> = ({ open, onClose
           >
             <Upload size={28} color={dragOver ? colors.primaryOrange : colors.textTertiary} />
             <span style={{ fontSize: typography.fontSize.body, color: colors.textSecondary, textAlign: 'center' }}>
-              Drop your P6 or MS Project file here
+              Drag your schedule file here or click to browse
             </span>
-            <span style={{ fontSize: typography.fontSize.label, color: colors.textTertiary }}>
-              or{' '}
-              <span style={{ color: colors.primaryOrange, textDecoration: 'underline', cursor: 'pointer' }}>
-                Browse Files
+            <div style={{ textAlign: 'center' }}>
+              <span style={{ fontSize: typography.fontSize.label, color: colors.textTertiary }}>
+                Primavera P6 (.xer, .xml)
               </span>
-              {' '}(.xer, .xml, .mpp)
-            </span>
+              <span style={{ fontSize: typography.fontSize.label, color: colors.textTertiary, display: 'block' }}>
+                Microsoft Project (.mpp), CSV (.csv)
+              </span>
+            </div>
             <input
               ref={fileInputRef}
               type="file"
-              accept=".xer,.xml,.mpp"
+              accept=".xer,.xml,.mpp,.csv"
               style={{ display: 'none' }}
               onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
             />
@@ -394,23 +472,33 @@ const ScheduleImportModal: React.FC<ScheduleImportModalProps> = ({ open, onClose
 
         {/* Selected file chip */}
         {selectedFile && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: spacing.md, padding: `${spacing.md} ${spacing.lg}`, backgroundColor: colors.surfaceInset, borderRadius: borderRadius.md, border: `1px solid ${colors.borderSubtle}` }}>
-            <Upload size={15} color={colors.primaryOrange} />
-            <span style={{ fontSize: typography.fontSize.body, color: colors.textPrimary, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {selectedFile.name}
-            </span>
-            {fileType && (
-              <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                {fileType}
+          <div style={{ backgroundColor: colors.surfaceInset, borderRadius: borderRadius.md, border: `1px solid ${colors.borderSubtle}`, overflow: 'hidden' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: spacing.md, padding: `${spacing.md} ${spacing.lg}` }}>
+              <Upload size={15} color={colors.primaryOrange} />
+              <span style={{ fontSize: typography.fontSize.body, color: colors.textPrimary, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {selectedFile.name}
               </span>
+              <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, whiteSpace: 'nowrap' }}>
+                {formatFileSize(selectedFile.size)}
+              </span>
+              {fileType && (
+                <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  {fileType}
+                </span>
+              )}
+              <button
+                aria-label="Remove file"
+                onClick={() => { setSelectedFile(null); setFileType(null); setParsed(null); setUploadProgress(0); }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', color: colors.textTertiary }}
+              >
+                <X size={14} />
+              </button>
+            </div>
+            {uploadProgress > 0 && (
+              <div style={{ height: '3px', backgroundColor: colors.borderSubtle }}>
+                <div style={{ height: '100%', width: `${uploadProgress}%`, backgroundColor: colors.primaryOrange, transition: 'width 0.3s ease', borderRadius: '0 2px 2px 0' }} />
+              </div>
             )}
-            <button
-              aria-label="Remove file"
-              onClick={() => { setSelectedFile(null); setFileType(null); setParsed(null); }}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', color: colors.textTertiary }}
-            >
-              <X size={14} />
-            </button>
           </div>
         )}
 
@@ -422,14 +510,14 @@ const ScheduleImportModal: React.FC<ScheduleImportModalProps> = ({ open, onClose
           </div>
         )}
 
-        {/* MPP message */}
-        {fileType === 'mpp' && selectedFile && !parsing && (
+        {/* Processing message for XER/XML/MPP */}
+        {selectedFile && fileType && fileType !== 'csv' && !parsing && (
           <div style={{ padding: spacing.lg, backgroundColor: colors.statusInfoSubtle, borderRadius: borderRadius.md, border: `1px solid ${colors.statusInfo}30` }}>
             <p style={{ margin: 0, fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.statusInfo }}>
-              MPP import requires server processing
+              Processing... This file will be sent to our import service
             </p>
             <p style={{ margin: `${spacing.sm} 0 0`, fontSize: typography.fontSize.sm, color: colors.textSecondary }}>
-              MS Project .mpp files are queued for server-side conversion. This feature is coming soon. Use the .xml export from MS Project in the meantime.
+              Click Confirm Import to upload and process your schedule. Activities will appear in your schedule once complete.
             </p>
           </div>
         )}
@@ -441,9 +529,9 @@ const ScheduleImportModal: React.FC<ScheduleImportModalProps> = ({ open, onClose
               <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
                 {parsed!.length} activities found
               </span>
-              {parsed!.length > 50 && (
+              {parsed!.length > 10 && (
                 <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
-                  Showing first 50
+                  Showing first 10
                 </span>
               )}
             </div>
@@ -451,7 +539,7 @@ const ScheduleImportModal: React.FC<ScheduleImportModalProps> = ({ open, onClose
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: typography.fontSize.sm }}>
                 <thead>
                   <tr style={{ backgroundColor: colors.surfaceInset }}>
-                    {['Name', 'Start', 'Finish', 'Duration', '% Complete'].map(h => (
+                    {['Name', 'Start', 'End', 'Duration', 'Status'].map(h => (
                       <th key={h} style={{ padding: `${spacing.sm} ${spacing.md}`, textAlign: 'left', fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, fontSize: typography.fontSize.caption, textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: `1px solid ${colors.borderSubtle}`, whiteSpace: 'nowrap' }}>
                         {h}
                       </th>
@@ -473,8 +561,8 @@ const ScheduleImportModal: React.FC<ScheduleImportModalProps> = ({ open, onClose
                       <td style={{ padding: `${spacing.sm} ${spacing.md}`, color: colors.textSecondary }}>
                         {a.duration}d
                       </td>
-                      <td style={{ padding: `${spacing.sm} ${spacing.md}`, color: a.percentComplete > 0 ? colors.statusActive : colors.textTertiary }}>
-                        {a.percentComplete}%
+                      <td style={{ padding: `${spacing.sm} ${spacing.md}`, color: colors.textSecondary }}>
+                        {a.status || 'not_started'}
                       </td>
                     </tr>
                   ))}
@@ -487,14 +575,14 @@ const ScheduleImportModal: React.FC<ScheduleImportModalProps> = ({ open, onClose
         {/* Actions */}
         <div style={{ display: 'flex', gap: spacing.md, justifyContent: 'flex-end' }}>
           <Btn variant="secondary" onClick={onClose}>Cancel</Btn>
-          {showPreview && (
+          {selectedFile && fileType && !parsing && (
             <Btn
               variant="primary"
               onClick={handleConfirmImport}
               disabled={importing || !projectId}
               icon={importing ? <RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} /> : undefined}
             >
-              {importing ? 'Importing...' : `Confirm Import (${parsed!.length})`}
+              {importing ? 'Importing...' : showPreview ? `Confirm Import (${parsed!.length})` : 'Confirm Import'}
             </Btn>
           )}
         </div>
@@ -843,10 +931,11 @@ export const Schedule: React.FC = () => {
               display: 'flex',
               alignItems: 'center',
               gap: spacing.sm,
-              padding: `${spacing.sm} ${spacing.lg}`,
+              padding: `0 ${spacing.lg}`,
+              height: '40px',
               border: `1px solid ${colors.borderDefault}`,
               borderRadius: borderRadius.md,
-              background: 'none',
+              backgroundColor: colors.white,
               cursor: 'pointer',
               fontSize: typography.fontSize.body,
               fontWeight: typography.fontWeight.medium,
@@ -855,7 +944,7 @@ export const Schedule: React.FC = () => {
               transition: transitions.quick,
             }}
             onMouseEnter={e => (e.currentTarget.style.backgroundColor = colors.surfaceHover)}
-            onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+            onMouseLeave={e => (e.currentTarget.style.backgroundColor = colors.white)}
           >
             <Upload size={15} />
             Import Schedule
