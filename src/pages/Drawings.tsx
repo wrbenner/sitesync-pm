@@ -14,6 +14,7 @@ import { AIAnnotationIndicator } from '../components/ai/AIAnnotation';
 import { getAnnotationsForEntity } from '../data/aiAnnotations';
 import { DrawingViewer } from '../components/drawings/DrawingViewer';
 import { VersionCompare } from '../components/drawings/VersionCompare';
+import { PdfViewer } from '../components/drawings/PdfViewer';
 import { PermissionGate } from '../components/auth/PermissionGate';
 
 
@@ -71,6 +72,9 @@ const _DrawingsPage: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [viewingRevisionNum, setViewingRevisionNum] = useState<number | null>(null);
   const [showVersionCompare, setShowVersionCompare] = useState(false);
+  const [compareRevAIdx, setCompareRevAIdx] = useState(0);
+  const [compareRevBIdx, setCompareRevBIdx] = useState(1);
+  const [viewRevPdfUrl, setViewRevPdfUrl] = useState<string | null>(null);
 
   const { data: revisionHistory } = useQuery(
     `revision-history-${selectedDrawing?.id ?? 'none'}`,
@@ -78,7 +82,7 @@ const _DrawingsPage: React.FC = () => {
     { enabled: !!selectedDrawing?.id },
   );
 
-  React.useEffect(() => { setViewingRevisionNum(null); setShowVersionCompare(false); }, [selectedDrawing?.id]);
+  React.useEffect(() => { setViewingRevisionNum(null); setShowVersionCompare(false); setCompareRevAIdx(0); setCompareRevBIdx(1); setViewRevPdfUrl(null); }, [selectedDrawing?.id]);
 
   const formatRevDate = (dateStr: string | null): string => {
     if (!dateStr) return '—';
@@ -699,45 +703,22 @@ const _DrawingsPage: React.FC = () => {
                       Compare Versions
                     </button>
                   </div>
-                  <div>
+                  <div aria-label="Revision history" role="list">
                     {revisionHistory.map((rev) => {
                       const isCurrent = !rev.superseded_at;
                       return (
                         <div
                           key={rev.id}
-                          role="button"
-                          tabIndex={0}
-                          aria-label={`View revision ${rev.revision_number}`}
-                          onClick={() => {
-                            if (isCurrent) {
-                              setViewingRevisionNum(null);
-                            } else {
-                              setViewingRevisionNum(rev.revision_number);
-                              setViewerDrawing({ ...selectedDrawing, revision: `Rev ${rev.revision_number}` });
-                            }
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              e.preventDefault();
-                              if (isCurrent) {
-                                setViewingRevisionNum(null);
-                              } else {
-                                setViewingRevisionNum(rev.revision_number);
-                                setViewerDrawing({ ...selectedDrawing, revision: `Rev ${rev.revision_number}` });
-                              }
-                            }
-                          }}
+                          role="listitem"
+                          aria-label={`Revision ${rev.revision_number}`}
                           style={{
-                            borderLeft: '2px solid #E5E7EB',
+                            borderLeft: `2px solid ${isCurrent ? colors.statusActive : '#E5E7EB'}`,
                             paddingLeft: 16,
                             marginBottom: 12,
-                            cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'flex-start',
                             gap: spacing.sm,
                           }}
-                          onMouseEnter={(e) => { e.currentTarget.style.borderLeftColor = isCurrent ? colors.statusActive : '#9CA3AF'; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.borderLeftColor = '#E5E7EB'; }}
                         >
                           {/* Dot indicator */}
                           <span
@@ -772,6 +753,31 @@ const _DrawingsPage: React.FC = () => {
                                 {rev.change_description}
                               </p>
                             )}
+                            <button
+                              aria-label={`View revision ${rev.revision_number} of ${selectedDrawing.title}`}
+                              onClick={() => {
+                                if (rev.file_url) {
+                                  setViewRevPdfUrl(rev.file_url);
+                                } else {
+                                  setViewingRevisionNum(isCurrent ? null : rev.revision_number);
+                                  if (!isCurrent) setViewerDrawing({ ...selectedDrawing, revision: `Rev ${rev.revision_number}` });
+                                }
+                              }}
+                              style={{
+                                marginTop: spacing['1'],
+                                fontSize: typography.fontSize.caption,
+                                color: colors.primaryOrange,
+                                background: 'none',
+                                border: 'none',
+                                padding: 0,
+                                cursor: 'pointer',
+                                fontFamily: typography.fontFamily,
+                                fontWeight: typography.fontWeight.medium,
+                                textAlign: 'left',
+                              }}
+                            >
+                              View This Revision
+                            </button>
                           </div>
                         </div>
                       );
@@ -787,6 +793,14 @@ const _DrawingsPage: React.FC = () => {
         <DrawingViewer
           drawing={viewerDrawing}
           onClose={() => setViewerDrawing(null)}
+        />
+      )}
+
+      {viewRevPdfUrl && (
+        <PdfViewer
+          file={viewRevPdfUrl}
+          title={`${selectedDrawing?.title ?? 'Drawing'} — Rev ${viewingRevisionNum ?? 'Current'}`}
+          onClose={() => setViewRevPdfUrl(null)}
         />
       )}
 
@@ -817,13 +831,13 @@ const _DrawingsPage: React.FC = () => {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['4'], flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['3'], flexShrink: 0 }}>
               <h2 style={{ fontSize: typography.fontSize.xl, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0 }}>
-                Compare Versions: {selectedDrawing.title}
+                Compare Revisions: {selectedDrawing.title}
               </h2>
               <button
                 onClick={() => setShowVersionCompare(false)}
-                aria-label="Close version compare"
+                aria-label="Close revision compare"
                 style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', border: 'none', borderRadius: borderRadius.md, cursor: 'pointer', color: colors.textTertiary }}
                 onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = colors.surfaceInset; }}
                 onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
@@ -831,15 +845,78 @@ const _DrawingsPage: React.FC = () => {
                 <X size={16} />
               </button>
             </div>
+            {/* Revision selectors */}
+            <div style={{ display: 'flex', gap: spacing['4'], marginBottom: spacing['4'], flexShrink: 0 }}>
+              {([
+                { label: 'Revision A', idx: compareRevAIdx, setIdx: setCompareRevAIdx },
+                { label: 'Revision B', idx: compareRevBIdx, setIdx: setCompareRevBIdx },
+              ] as const).map(({ label, idx, setIdx }) => (
+                <div key={label} style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: colors.textTertiary, marginBottom: spacing['1'] }}>
+                    {label}
+                  </label>
+                  <select
+                    value={idx}
+                    onChange={(e) => setIdx(Number(e.target.value))}
+                    aria-label={`Select ${label}`}
+                    style={{ width: '100%', padding: `${spacing['1']} ${spacing['2']}`, border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, color: colors.textPrimary, backgroundColor: colors.surfaceRaised, cursor: 'pointer' }}
+                  >
+                    {revisionHistory.map((rev, i) => (
+                      <option key={rev.id} value={i}>
+                        Rev {rev.revision_number}{rev.issued_date ? ` — ${formatRevDate(rev.issued_date)}` : ''}{!rev.superseded_at ? ' (Current)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+            </div>
+            {/* Compare viewport: iframes when file_urls exist, else VersionCompare */}
             <div style={{ flex: 1, minHeight: 0 }}>
-              <VersionCompare
-                currentRev={String(revisionHistory[0].revision_number)}
-                previousRev={String(revisionHistory[1].revision_number)}
-                drawingTitle={selectedDrawing.title}
-                currentRevision={revisionHistory[0]}
-                previousRevision={revisionHistory[1]}
-                revisionHistory={revisionHistory}
-              />
+              {(() => {
+                const revA = revisionHistory[compareRevAIdx];
+                const revB = revisionHistory[compareRevBIdx];
+                if (revA?.file_url && revB?.file_url) {
+                  return (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['3'], height: '100%' }}>
+                      {([{ rev: revA, side: 'A' }, { rev: revB, side: 'B' }] as const).map(({ rev, side }) => (
+                        <div key={side} style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['2'], flexShrink: 0 }}>
+                            <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.white, backgroundColor: side === 'A' ? colors.statusInfo : colors.primaryOrange, padding: '2px 8px', borderRadius: borderRadius.full }}>
+                              {side}
+                            </span>
+                            <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, fontWeight: typography.fontWeight.medium }}>
+                              Rev {rev.revision_number}
+                            </span>
+                            {rev.issued_by && (
+                              <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
+                                {rev.issued_by}
+                              </span>
+                            )}
+                            {!rev.superseded_at && (
+                              <Tag label="Current" color={colors.statusActive} backgroundColor={`${colors.statusActive}18`} />
+                            )}
+                          </div>
+                          <iframe
+                            src={rev.file_url}
+                            title={`Revision ${rev.revision_number} — ${selectedDrawing.title}`}
+                            style={{ flex: 1, border: `1px solid ${colors.borderSubtle}`, borderRadius: borderRadius.md, width: '100%' }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  );
+                }
+                return (
+                  <VersionCompare
+                    currentRev={String(revA?.revision_number ?? revisionHistory[0].revision_number)}
+                    previousRev={String(revB?.revision_number ?? revisionHistory[1].revision_number)}
+                    drawingTitle={selectedDrawing.title}
+                    currentRevision={revA ?? revisionHistory[0]}
+                    previousRevision={revB ?? revisionHistory[1]}
+                    revisionHistory={revisionHistory}
+                  />
+                );
+              })()}
             </div>
           </div>
         </div>
