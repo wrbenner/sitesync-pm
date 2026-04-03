@@ -26,25 +26,13 @@ class PresenceBarErrorBoundary extends React.Component<
   }
 
   componentDidCatch(error: Error) {
-    console.warn('[PresenceBar] Error boundary caught:', error);
+    console.debug('[PresenceBar] Liveblocks context unavailable:', error);
+    usePresenceStore.getState().setInitialized(true);
   }
 
   render() {
     if (this.state.hasError) {
-      return (
-        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
-          <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
-            Presence unavailable
-          </span>
-          <button
-            onClick={() => window.location.reload()}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}
-            aria-label="Reload page"
-          >
-            <RefreshCw size={12} color={colors.textTertiary} />
-          </button>
-        </div>
-      );
+      return null;
     }
     return this.props.children;
   }
@@ -472,9 +460,10 @@ export const SidebarPresenceDot: React.FC<SidebarPresenceDotProps> = ({ page }) 
 };
 
 // ── DrawingPresenceBar ────────────────────────────────────────────────────────
-// Must be rendered inside a Liveblocks RoomProvider.
+// DrawingPresenceBarContent calls useOthers and must be inside a RoomProvider.
+// SafePresenceBar wraps it so that a missing provider fails silently.
 
-export const DrawingPresenceBar: React.FC = () => {
+const DrawingPresenceBarContent: React.FC = () => {
   const others = useOthers() ?? [];
   const prevLengthRef = useRef<number>(0);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -696,6 +685,21 @@ export const DrawingPresenceBar: React.FC = () => {
     </>
   );
 };
+
+// SafePresenceBar: if Liveblocks RoomProvider is absent, useOthers throws during
+// render. The error boundary catches it silently (returns null) and marks
+// presence as initialized so downstream PresenceDots show their empty state.
+const SafePresenceBar: React.FC = () => {
+  const failedRef = useRef(false);
+  if (failedRef.current) return null;
+  return (
+    <PresenceBarErrorBoundary>
+      <DrawingPresenceBarContent />
+    </PresenceBarErrorBoundary>
+  );
+};
+
+export const DrawingPresenceBar: React.FC = () => <SafePresenceBar />;
 
 // ── Default export (PresenceBar wrapped in error boundary) ────────────────────
 

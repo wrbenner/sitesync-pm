@@ -13,6 +13,7 @@ interface PresenceState {
   onlineUsers: PresenceUserWithAction[]
   isInitialized: boolean
   setOnlineUsers: (users: PresenceUserWithAction[]) => void
+  setInitialized: (initialized: boolean) => void
   getUsersOnPage: (page: string) => PresenceUserWithAction[]
   getUsersViewingEntity: (entityId: string) => PresenceUserWithAction[]
   getUsersEditingEntity: (entityId: string) => PresenceUserWithAction[]
@@ -25,6 +26,7 @@ export const usePresenceStore = create<PresenceState>((set, get) => ({
   isInitialized: false,
 
   setOnlineUsers: (users) => set({ onlineUsers: users, isInitialized: true }),
+  setInitialized: (initialized) => set({ isInitialized: initialized }),
 
   getUsersOnPage: (page) => {
     return get().onlineUsers.filter(u => u.page === page)
