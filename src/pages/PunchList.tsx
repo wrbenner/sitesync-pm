@@ -126,6 +126,7 @@ interface PunchItem {
   createdDate: string;
   reportedBy: string;
   responsible: string;
+  trade: string;
 }
 
 interface Comment {
@@ -135,12 +136,14 @@ interface Comment {
   text: string;
 }
 
+function getDaysRemaining(dueDate: string): number {
+  return Math.floor((new Date(dueDate).getTime() - Date.now()) / 86400000);
+}
+
 function getDueDateColor(dueDate: string): string {
-  const now = new Date();
-  const due = new Date(dueDate);
-  const diffDays = Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-  if (diffDays < 0) return colors.statusCritical;
-  if (diffDays <= 4) return colors.statusPending;
+  const days = getDaysRemaining(dueDate);
+  if (days <= 0) return '#E74C3C';
+  if (days <= 4) return '#F5A623';
   return colors.statusActive;
 }
 
@@ -211,6 +214,7 @@ const PunchListPage: React.FC = () => {
         createdDate: p.created_at ? p.created_at.slice(0, 10) : '',
         reportedBy: p.reported_by || '',
         responsible: p.trade === 'general' ? 'gc' : p.trade === 'owner' ? 'owner' : 'subcontractor',
+        trade: p.trade || '',
       };
     });
   }, [punchListRaw]);
@@ -257,7 +261,10 @@ const PunchListPage: React.FC = () => {
   // Filter logic
   const filteredList = useMemo(() => {
     let list = punchListItems;
-    if (statusFilter !== 'all') {
+    if (statusFilter === 'overdue') {
+      const now = Date.now();
+      list = list.filter(p => p.dueDate && getDaysRemaining(p.dueDate) <= 0 && p.verification_status !== 'verified');
+    } else if (statusFilter !== 'all') {
       list = list.filter(p => p.verification_status === statusFilter);
     }
     if (atRiskFilter) {
@@ -498,12 +505,50 @@ const PunchListPage: React.FC = () => {
     }),
     plColHelper.accessor('dueDate', {
       header: 'Due',
-      size: 90,
-      cell: (info) => (
-        <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: getDueDateColor(info.getValue()), fontVariantNumeric: 'tabular-nums' as const }}>
-          {formatDate(info.getValue())}
-        </span>
-      ),
+      size: 110,
+      cell: (info) => {
+        const val = info.getValue();
+        if (!val) return null;
+        const days = getDaysRemaining(val);
+        const color = getDueDateColor(val);
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color, fontVariantNumeric: 'tabular-nums' as const }}>
+              {formatDate(val)}
+            </span>
+            {days <= 0 ? (
+              <span style={{ fontSize: 10, fontWeight: 600, color: '#E74C3C' }}>{Math.abs(days)}d overdue</span>
+            ) : days <= 4 ? (
+              <span style={{ fontSize: 10, color: '#F5A623' }}>{days}d left</span>
+            ) : (
+              <span style={{ fontSize: 10, color: colors.textTertiary }}>{days}d left</span>
+            )}
+          </div>
+        );
+      },
+    }),
+    plColHelper.accessor('trade', {
+      header: 'Party',
+      size: 110,
+      cell: (info) => {
+        const trade = info.getValue()?.toLowerCase() ?? '';
+        const item = info.row.original;
+        let bg = 'transparent';
+        let label = item.responsible === 'gc' ? 'GC' : item.responsible === 'owner' ? 'Owner' : trade || 'Sub';
+        if (item.responsible === 'gc') {
+          bg = 'rgba(59,130,246,0.08)';
+        } else if (trade.includes('electric') || trade.includes('plumb') || trade.includes('hvac')) {
+          bg = 'rgba(244,120,32,0.08)';
+        } else if (item.responsible === 'subcontractor') {
+          bg = 'rgba(244,120,32,0.08)';
+        }
+        const textColor = item.responsible === 'gc' ? '#3B82F6' : colors.primaryOrange;
+        return (
+          <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: borderRadius.full, backgroundColor: bg, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: textColor, whiteSpace: 'nowrap' as const }}>
+            {label}
+          </span>
+        );
+      },
     }),
     plColHelper.display({
       id: 'inline_actions',
@@ -623,41 +668,48 @@ const PunchListPage: React.FC = () => {
       </div>
 
       {/* Metric Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(5, 1fr)', gap: isMobile ? '8px' : spacing['3'], marginBottom: spacing['4'] }}>
-        <Card padding={spacing['6']}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(6, 1fr)', gap: isMobile ? '8px' : spacing['3'], marginBottom: spacing['4'] }}>
+        <Card padding={spacing['4']}>
           <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['2'] }}>
-            <CheckSquare size={16} color={colors.textTertiary} />
-            <span style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, fontWeight: typography.fontWeight.medium }}>Total Items</span>
+            <CheckSquare size={14} color={colors.textTertiary} />
+            <span style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, fontWeight: typography.fontWeight.medium }}>Total</span>
           </div>
-          <div style={{ fontSize: typography.fontSize['3xl'], fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>{totalCount}</div>
+          <div style={{ fontSize: typography.fontSize['2xl'], fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>{totalCount}</div>
         </Card>
-        <Card padding={spacing['6']}>
+        <Card padding={spacing['4']}>
           <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['2'] }}>
-            <Inbox size={16} color={colors.statusCritical} />
+            <Inbox size={14} color='#F5A623' />
             <span style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, fontWeight: typography.fontWeight.medium }}>Open</span>
           </div>
-          <div style={{ fontSize: typography.fontSize['3xl'], fontWeight: typography.fontWeight.semibold, color: colors.statusCritical }}>{openCount}</div>
+          <div style={{ fontSize: typography.fontSize['2xl'], fontWeight: typography.fontWeight.semibold, color: '#F5A623' }}>{openCount}</div>
         </Card>
-        <Card padding={spacing['6']} style={{ border: subCompleteCount > 0 ? `2px solid ${colors.statusPending}` : undefined, backgroundColor: subCompleteCount > 0 ? colors.statusPendingSubtle : undefined }}>
+        <Card padding={spacing['4']}>
           <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['2'] }}>
-            <Clock size={16} color={colors.statusPending} />
-            <span style={{ fontSize: typography.fontSize.xs, color: colors.statusPending, fontWeight: typography.fontWeight.medium }}>Awaiting Verification</span>
+            <Clock size={14} color='#3B82F6' />
+            <span style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, fontWeight: typography.fontWeight.medium }}>In Progress</span>
           </div>
-          <div style={{ fontSize: typography.fontSize['3xl'], fontWeight: typography.fontWeight.semibold, color: colors.statusPending }}>{subCompleteCount}</div>
+          <div style={{ fontSize: typography.fontSize['2xl'], fontWeight: typography.fontWeight.semibold, color: '#3B82F6' }}>{inProgressCount}</div>
         </Card>
-        <Card padding={spacing['6']}>
+        <Card padding={spacing['4']} style={{ border: subCompleteCount > 0 ? `2px solid #8B5CF6` : undefined, backgroundColor: subCompleteCount > 0 ? 'rgba(139,92,246,0.06)' : undefined }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['2'] }}>
-            <CheckCircle size={16} color={colors.statusActive} />
+            <UserCheck size={14} color='#8B5CF6' />
+            <span style={{ fontSize: typography.fontSize.xs, color: subCompleteCount > 0 ? '#8B5CF6' : colors.textTertiary, fontWeight: typography.fontWeight.medium }}>Awaiting Verify</span>
+          </div>
+          <div style={{ fontSize: typography.fontSize['2xl'], fontWeight: typography.fontWeight.semibold, color: '#8B5CF6' }}>{subCompleteCount}</div>
+        </Card>
+        <Card padding={spacing['4']}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['2'] }}>
+            <CheckCircle size={14} color='#4EC896' />
             <span style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, fontWeight: typography.fontWeight.medium }}>Verified</span>
           </div>
-          <div style={{ fontSize: typography.fontSize['3xl'], fontWeight: typography.fontWeight.semibold, color: colors.statusActive }}>{verifiedCount}</div>
+          <div style={{ fontSize: typography.fontSize['2xl'], fontWeight: typography.fontWeight.semibold, color: '#4EC896' }}>{verifiedCount}</div>
         </Card>
-        <Card padding={spacing['6']}>
+        <Card padding={spacing['4']}>
           <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['2'] }}>
-            <AlertTriangle size={16} color={overdueCount > 0 ? colors.statusCritical : colors.textTertiary} />
+            <AlertTriangle size={14} color={overdueCount > 0 ? '#E74C3C' : colors.textTertiary} />
             <span style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, fontWeight: typography.fontWeight.medium }}>Overdue</span>
           </div>
-          <div style={{ fontSize: typography.fontSize['3xl'], fontWeight: typography.fontWeight.semibold, color: overdueCount > 0 ? colors.statusCritical : colors.textTertiary }}>{overdueCount}</div>
+          <div style={{ fontSize: typography.fontSize['2xl'], fontWeight: typography.fontWeight.semibold, color: overdueCount > 0 ? '#E74C3C' : colors.textTertiary }}>{overdueCount}</div>
         </Card>
       </div>
 
@@ -669,7 +721,7 @@ const PunchListPage: React.FC = () => {
           { value: 'in_progress', label: 'In Progress', count: inProgressCount, color: STATUS_COLORS.in_progress, activeBg: '#EFF6FF', activeColor: STATUS_COLORS.in_progress },
           { value: 'sub_complete', label: 'Awaiting Verification', count: subCompleteCount, color: STATUS_COLORS.sub_complete, activeBg: '#F5F3FF', activeColor: STATUS_COLORS.sub_complete },
           { value: 'verified', label: 'Verified', count: verifiedCount, color: STATUS_COLORS.verified, activeBg: `${STATUS_COLORS.verified}20`, activeColor: STATUS_COLORS.verified },
-          { value: 'rejected', label: 'Rejected', count: rejectedCount, color: STATUS_COLORS.rejected, activeBg: `${STATUS_COLORS.rejected}15`, activeColor: STATUS_COLORS.rejected },
+          { value: 'overdue', label: 'Overdue', count: overdueCount, color: STATUS_COLORS.rejected, activeBg: `${STATUS_COLORS.rejected}15`, activeColor: STATUS_COLORS.rejected },
         ].map(tab => {
           const isActive = statusFilter === tab.value;
           return (
