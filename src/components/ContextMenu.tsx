@@ -89,13 +89,28 @@ function ToastEntry({ toast, onClose, isLast }: { toast: ToastItem; onClose: (id
     let countdownSecs = 60;
     countdownIntervalRef.current = setInterval(() => {
       countdownSecs -= 1;
-      setCountdown(Math.max(0, countdownSecs));
+      const clamped = Math.max(0, countdownSecs);
+      setCountdown(clamped);
+      if (clamped <= 0) {
+        if (countdownIntervalRef.current !== null) clearInterval(countdownIntervalRef.current);
+        if (fallbackTimerRef.current !== null) clearTimeout(fallbackTimerRef.current);
+        handleClose(toast.id);
+      }
     }, 1000);
     return () => {
       if (fallbackTimerRef.current !== null) clearTimeout(fallbackTimerRef.current);
       if (countdownIntervalRef.current !== null) clearInterval(countdownIntervalRef.current);
     };
-  }, [toast.id, toast.severity, onClose]);
+  }, [toast.id, toast.severity, handleClose]);
+
+  // Clear all timers on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current !== null) clearTimeout(timerRef.current);
+      if (fallbackTimerRef.current !== null) clearTimeout(fallbackTimerRef.current);
+      if (countdownIntervalRef.current !== null) clearInterval(countdownIntervalRef.current);
+    };
+  }, []);
 
   const handleMouseEnter = useCallback(() => {
     const duration = TOAST_DURATION[toast.severity];
@@ -263,7 +278,7 @@ function ToastEntry({ toast, onClose, isLast }: { toast: ToastItem; onClose: (id
             whiteSpace: 'nowrap',
           }}
         >
-          {countdown}s
+          ({countdown}s)
         </span>
       )}
       <button
