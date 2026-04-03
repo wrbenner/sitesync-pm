@@ -1,34 +1,96 @@
-import React, { useState, useEffect, useRef, lazy, Suspense } from 'react'
-import { AlertTriangle, Camera, ClipboardCheck, Award, Eye, TrendingUp, Users, Plus } from 'lucide-react'
-import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton } from '../components/Primitives'
+import React, { useState, useEffect, useRef } from 'react'
+import { AlertTriangle, ClipboardCheck, Award, Users, Plus, ShieldCheck } from 'lucide-react'
+import { PageContainer, Card, Btn, Skeleton } from '../components/Primitives'
 import { DataTable, createColumnHelper } from '../components/shared/DataTable'
 import { ExportButton } from '../components/shared/ExportButton'
 import { colors, spacing, typography, borderRadius, transitions, shadows } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
-import { useSafetyInspections, useIncidents, useToolboxTalks, useSafetyCertifications, useSafetyObservations, useDailyLogs } from '../hooks/queries'
+import { useSafetyInspections, useIncidents, useToolboxTalks, useSafetyCertifications, useCorrectiveActions, useDailyLogs } from '../hooks/queries'
 import { toast } from 'sonner'
 
-const AIPhotoAnalysis = lazy(() => import('../components/safety/AIPhotoAnalysis').then(m => ({ default: m.AIPhotoAnalysis })))
-
-type TabKey = 'overview' | 'inspections' | 'incidents' | 'toolbox' | 'certifications' | 'observations' | 'ai_analysis'
+type TabKey = 'incidents' | 'inspections' | 'toolbox' | 'certifications'
 
 const tabs: { key: TabKey; label: string; icon: React.ElementType }[] = [
-  { key: 'overview', label: 'Overview', icon: TrendingUp },
-  { key: 'inspections', label: 'Inspections', icon: ClipboardCheck },
   { key: 'incidents', label: 'Incidents', icon: AlertTriangle },
+  { key: 'inspections', label: 'Inspections', icon: ClipboardCheck },
   { key: 'toolbox', label: 'Toolbox Talks', icon: Users },
   { key: 'certifications', label: 'Certifications', icon: Award },
-  { key: 'observations', label: 'Observations', icon: Eye },
-  { key: 'ai_analysis', label: 'AI Photo Analysis', icon: Camera },
 ]
 
-// Visually hidden helper for screen readers
-const srOnly: React.CSSProperties = {
-  position: 'absolute', width: 1, height: 1, padding: 0, margin: -1,
-  overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0,
+// OSHA incident severity colors — immutable per OSHA regulation
+const OSHA_SEVERITY: Record<string, { fg: string; bg: string; label: string }> = {
+  first_aid:         { fg: '#854D0E', bg: '#FEF9C3', label: 'First Aid' },
+  medical_treatment: { fg: '#C2410C', bg: '#FFF7ED', label: 'Medical Treatment' },
+  lost_time:         { fg: '#991B1B', bg: '#FEF2F2', label: 'Lost Time' },
+  fatality:          { fg: '#FFFFFF', bg: '#1A1A1A', label: 'Fatality' },
+}
+
+function getSeverityStyle(severity: string | null): { fg: string; bg: string; label: string } {
+  if (!severity) return { fg: colors.textTertiary, bg: colors.statusNeutralSubtle, label: 'Unknown' }
+  return OSHA_SEVERITY[severity] ?? { fg: colors.textTertiary, bg: colors.statusNeutralSubtle, label: severity.replace(/_/g, ' ') }
 }
 
 // ── Column helpers ───────────────────────────────────────────
+
+const incidentCol = createColumnHelper<any>()
+const incidentColumns = [
+  incidentCol.accessor('date', {
+    header: 'Date',
+    cell: (info) => (
+      <span style={{ color: colors.textSecondary }}>
+        {info.getValue() ? new Date(info.getValue()).toLocaleDateString() : ''}
+      </span>
+    ),
+  }),
+  incidentCol.accessor('type', {
+    header: 'Type',
+    cell: (info) => {
+      const v = info.getValue() as string
+      return <span style={{ color: colors.textPrimary }}>{v ? v.replace(/_/g, ' ') : ''}</span>
+    },
+  }),
+  incidentCol.accessor('severity', {
+    header: 'Severity',
+    cell: (info) => {
+      const { fg, bg, label } = getSeverityStyle(info.getValue() as string | null)
+      return (
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', gap: spacing.xs,
+          padding: `2px ${spacing.sm}`, borderRadius: borderRadius.full,
+          fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
+          color: fg, backgroundColor: bg,
+        }}>
+          <div style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: fg }} />
+          {label}
+        </span>
+      )
+    },
+  }),
+  incidentCol.accessor('location', {
+    header: 'Location',
+    cell: (info) => <span style={{ color: colors.textSecondary }}>{info.getValue()}</span>,
+  }),
+  incidentCol.accessor('injured_party_name', {
+    header: 'Involved Party',
+    cell: (info) => (
+      <span style={{ color: colors.textSecondary }}>{info.getValue() || '\u2014'}</span>
+    ),
+  }),
+  incidentCol.accessor('investigation_status', {
+    header: 'Status',
+    cell: (info) => {
+      const v = (info.getValue() as string) || 'open'
+      const c = v === 'closed' ? colors.statusActive
+        : v === 'investigating' ? colors.statusPending
+        : colors.statusInfo
+      return (
+        <span style={{ color: c, fontWeight: typography.fontWeight.medium }}>
+          {v.charAt(0).toUpperCase() + v.slice(1)}
+        </span>
+      )
+    },
+  }),
+]
 
 const inspectionCol = createColumnHelper<any>()
 const inspectionColumns = [
@@ -92,82 +154,6 @@ const inspectionColumns = [
   }),
 ]
 
-const incidentCol = createColumnHelper<any>()
-const incidentColumns = [
-  incidentCol.accessor('date', {
-    header: 'Date',
-    cell: (info) => (
-      <span style={{ color: colors.textSecondary }}>
-        {info.getValue() ? new Date(info.getValue()).toLocaleDateString() : ''}
-      </span>
-    ),
-  }),
-  incidentCol.accessor('incident_number', {
-    header: '#',
-    cell: (info) => (
-      <span style={{ fontWeight: typography.fontWeight.medium, color: colors.orangeText }}>
-        {info.getValue()}
-      </span>
-    ),
-  }),
-  incidentCol.accessor('type', {
-    header: 'Type',
-    cell: (info) => {
-      const v = info.getValue() as string
-      return <span style={{ color: colors.textPrimary }}>{v ? v.replace(/_/g, ' ') : ''}</span>
-    },
-  }),
-  incidentCol.accessor('severity', {
-    header: 'Severity',
-    cell: (info) => {
-      const v = info.getValue() as string
-      const severityColor = v === 'serious' || v === 'fatality' ? colors.statusCritical
-        : v === 'moderate' ? colors.statusPending
-        : colors.statusActive
-      const severityBg = v === 'serious' || v === 'fatality' ? colors.statusCriticalSubtle
-        : v === 'moderate' ? colors.statusPendingSubtle
-        : colors.statusActiveSubtle
-      const severityLabel = v ? v.charAt(0).toUpperCase() + v.slice(1).replace(/_/g, ' ') : ''
-      return (
-        <span
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: spacing.xs,
-            padding: `2px ${spacing.sm}`, borderRadius: borderRadius.full,
-            fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
-            color: severityColor, backgroundColor: severityBg,
-          }}
-          aria-label={`Severity: ${severityLabel}`}
-        >
-          <div style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: severityColor }} aria-hidden="true" />
-          <span aria-hidden="true">{severityLabel}</span>
-          <span style={srOnly}>{severityLabel}</span>
-        </span>
-      )
-    },
-  }),
-  incidentCol.accessor('location', {
-    header: 'Location',
-    cell: (info) => <span style={{ color: colors.textSecondary }}>{info.getValue()}</span>,
-  }),
-  incidentCol.accessor('status', {
-    header: 'Status',
-    cell: (info) => {
-      const v = info.getValue() as string
-      const c = v === 'closed' ? colors.statusActive : v === 'investigating' ? colors.statusPending : colors.statusInfo
-      return <span style={{ color: c, fontWeight: typography.fontWeight.medium }}>{v ? v.charAt(0).toUpperCase() + v.slice(1) : ''}</span>
-    },
-  }),
-  incidentCol.accessor('osha_recordable', {
-    header: 'OSHA',
-    cell: (info) => {
-      const v = info.getValue()
-      return v
-        ? <span style={{ color: colors.statusCritical, fontWeight: typography.fontWeight.medium }}>Yes</span>
-        : <span style={{ color: colors.textTertiary }}>No</span>
-    },
-  }),
-]
-
 const talkCol = createColumnHelper<any>()
 const talkColumns = [
   talkCol.accessor('date', {
@@ -194,16 +180,13 @@ const talkColumns = [
     header: 'Presenter',
     cell: (info) => <span style={{ color: colors.textSecondary }}>{info.getValue()}</span>,
   }),
-  talkCol.accessor('attendee_count', {
+  talkCol.accessor('attendance_count', {
     header: 'Attendees',
-    cell: (info) => <span style={{ color: colors.textPrimary, fontWeight: typography.fontWeight.medium }}>{info.getValue()}</span>,
-  }),
-  talkCol.accessor('duration_minutes', {
-    header: 'Duration',
-    cell: (info) => {
-      const v = info.getValue() as number | null
-      return <span style={{ color: colors.textSecondary }}>{v ? `${v} min` : ''}</span>
-    },
+    cell: (info) => (
+      <span style={{ color: colors.textPrimary, fontWeight: typography.fontWeight.medium }}>
+        {info.getValue() ?? 0}
+      </span>
+    ),
   }),
 ]
 
@@ -225,23 +208,11 @@ const certColumns = [
     header: 'Type',
     cell: (info) => <span style={{ color: colors.textSecondary }}>{info.getValue()}</span>,
   }),
-  certCol.accessor('certification_number', {
-    header: 'Cert #',
-    cell: (info) => <span style={{ color: colors.textTertiary, fontFamily: 'monospace', fontSize: typography.fontSize.caption }}>{info.getValue()}</span>,
-  }),
-  certCol.accessor('issue_date', {
-    header: 'Issued',
-    cell: (info) => (
-      <span style={{ color: colors.textSecondary }}>
-        {info.getValue() ? new Date(info.getValue()).toLocaleDateString() : ''}
-      </span>
-    ),
-  }),
   certCol.accessor('expiration_date', {
     header: 'Expires',
     cell: (info) => (
       <span style={{ color: colors.textSecondary }}>
-        {info.getValue() ? new Date(info.getValue()).toLocaleDateString() : 'N/A'}
+        {info.getValue() ? new Date(info.getValue()).toLocaleDateString() : 'No expiry'}
       </span>
     ),
   }),
@@ -250,163 +221,177 @@ const certColumns = [
     header: 'Status',
     cell: (info) => {
       const expDate = info.row.original.expiration_date
-      if (!expDate) return <span style={{ color: colors.textTertiary }}>N/A</span>
-      const now = new Date()
-      const exp = new Date(expDate)
-      const daysUntil = (exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-      let label: string
-      let color: string
-      let bg: string
+      if (!expDate) return <span style={{ color: colors.textTertiary }}>No expiry</span>
+      const daysUntil = (new Date(expDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
       if (daysUntil < 0) {
-        label = 'Expired'
-        color = colors.statusCritical
-        bg = colors.statusCriticalSubtle
-      } else if (daysUntil <= 60) {
-        label = 'Expiring Soon'
-        color = colors.statusPending
-        bg = colors.statusPendingSubtle
-      } else {
-        label = 'Valid'
-        color = colors.statusActive
-        bg = colors.statusActiveSubtle
+        return (
+          <span style={{
+            display: 'inline-flex', alignItems: 'center',
+            padding: `2px ${spacing.sm}`, borderRadius: borderRadius.full,
+            fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.bold,
+            color: '#FFFFFF', backgroundColor: colors.statusCritical,
+            letterSpacing: '0.05em',
+          }}>
+            EXPIRED
+          </span>
+        )
+      }
+      if (daysUntil <= 30) {
+        return (
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: spacing.xs,
+            padding: `2px ${spacing.sm}`, borderRadius: borderRadius.full,
+            fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
+            color: colors.statusPending, backgroundColor: colors.statusPendingSubtle,
+          }}>
+            <div style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: colors.statusPending }} />
+            Expires in {Math.ceil(daysUntil)} days
+          </span>
+        )
       }
       return (
         <span style={{
           display: 'inline-flex', alignItems: 'center', gap: spacing.xs,
           padding: `2px ${spacing.sm}`, borderRadius: borderRadius.full,
           fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
-          color, backgroundColor: bg,
+          color: colors.statusActive, backgroundColor: colors.statusActiveSubtle,
         }}>
-          <div style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: color }} />
-          {label}
+          <div style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: colors.statusActive }} />
+          Valid
         </span>
       )
     },
   }),
 ]
 
-const obsCol = createColumnHelper<any>()
-const obsColumns = [
-  obsCol.accessor('date', {
-    header: 'Date',
-    cell: (info) => (
-      <span style={{ color: colors.textSecondary }}>
-        {info.getValue() ? new Date(info.getValue()).toLocaleDateString() : ''}
-      </span>
-    ),
-  }),
-  obsCol.accessor('type', {
-    header: 'Type',
-    cell: (info) => {
-      const v = info.getValue() as string
-      const isPositive = v === 'safe'
-      return (
-        <span style={{
-          display: 'inline-flex', alignItems: 'center', gap: spacing.xs,
-          padding: `2px ${spacing.sm}`, borderRadius: borderRadius.full,
-          fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
-          color: isPositive ? colors.statusActive : colors.statusCritical,
-          backgroundColor: isPositive ? colors.statusActiveSubtle : colors.statusCriticalSubtle,
-        }}>
-          <div style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: isPositive ? colors.statusActive : colors.statusCritical }} />
-          {v ? v.charAt(0).toUpperCase() + v.slice(1) : ''}
-        </span>
-      )
-    },
-  }),
-  obsCol.accessor('category', {
-    header: 'Category',
-    cell: (info) => <span style={{ color: colors.textPrimary }}>{info.getValue()}</span>,
-  }),
-  obsCol.accessor('description', {
-    header: 'Description',
-    cell: (info) => (
-      <span style={{ color: colors.textSecondary, maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
-        {info.getValue()}
-      </span>
-    ),
-  }),
-  obsCol.accessor('location', {
-    header: 'Location',
-    cell: (info) => <span style={{ color: colors.textSecondary }}>{info.getValue()}</span>,
-  }),
-  obsCol.accessor('follow_up_required', {
-    header: 'Follow Up',
-    cell: (info) => {
-      const v = info.getValue()
-      return v
-        ? <span style={{ color: colors.statusPending, fontWeight: typography.fontWeight.medium }}>Required</span>
-        : <span style={{ color: colors.textTertiary }}>None</span>
-    },
-  }),
-]
+// ── Empty State ──────────────────────────────────────────────
+
+function EmptyState({ message, cta, onCta }: { message: string; cta?: string; onCta?: () => void }) {
+  return (
+    <div style={{
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      padding: `${spacing['10']} ${spacing['6']}`, gap: spacing['4'], textAlign: 'center',
+    }}>
+      <ShieldCheck size={40} style={{ color: colors.textTertiary }} />
+      <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textTertiary, maxWidth: 360 }}>
+        {message}
+      </p>
+      {cta && onCta && (
+        <Btn variant="primary" onClick={onCta} style={{ minHeight: '44px' }}>
+          {cta}
+        </Btn>
+      )}
+    </div>
+  )
+}
+
+// ── Metric Card ──────────────────────────────────────────────
+
+function MetricCard({
+  label, value, sub, accent,
+}: { label: string; value: React.ReactNode; sub?: string; accent?: string }) {
+  return (
+    <div style={{
+      backgroundColor: colors.surfaceRaised,
+      borderRadius: borderRadius.lg,
+      padding: spacing.xl,
+      boxShadow: shadows.base,
+      borderLeft: accent ? `4px solid ${accent}` : undefined,
+    }}>
+      <p style={{
+        fontSize: typography.fontSize.label,
+        color: colors.textTertiary,
+        margin: 0,
+        marginBottom: spacing['2'],
+        fontWeight: typography.fontWeight.medium,
+        letterSpacing: typography.letterSpacing.wider,
+        textTransform: 'uppercase',
+      }}>
+        {label}
+      </p>
+      <div style={{
+        fontSize: typography.fontSize['4xl'],
+        fontWeight: typography.fontWeight.bold,
+        lineHeight: typography.lineHeight.none,
+        fontVariantNumeric: 'tabular-nums',
+        margin: 0,
+      }}>
+        {value}
+      </div>
+      {sub && (
+        <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0, marginTop: spacing['2'] }}>
+          {sub}
+        </p>
+      )}
+    </div>
+  )
+}
 
 // ── Main Component ───────────────────────────────────────────
 
 export const Safety: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<TabKey>('overview')
+  const [activeTab, setActiveTab] = useState<TabKey>('incidents')
   const projectId = useProjectId()
+
   const { data: inspections, isLoading: loadingInspections } = useSafetyInspections(projectId)
   const { data: incidents, isLoading: loadingIncidents } = useIncidents(projectId)
   const { data: talks, isLoading: loadingTalks } = useToolboxTalks(projectId)
   const { data: certifications, isLoading: loadingCerts } = useSafetyCertifications(projectId)
-  const { data: observations, isLoading: loadingObs } = useSafetyObservations(projectId)
+  const { data: correctiveActions, isLoading: loadingCAs } = useCorrectiveActions(projectId)
   const { data: dailyLogsResult } = useDailyLogs(projectId)
   const dailyLogs = dailyLogsResult?.data
 
+  // ── KPI calculations ───────────────────────────────────────
 
-  // ── KPIs ───────────────────────────────────────────────────
-
+  // first_aid does NOT reset the days counter — only medical_treatment and above do
   const recordableSeverities = ['medical_treatment', 'lost_time', 'fatality']
 
-  // Days Since Last Incident: only recordable severity levels count
-  const lastRecordableIncident = (incidents
+  const lastRecordableIncident = incidents
     ?.filter((i: any) => recordableSeverities.includes(i.severity))
-    .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]) ?? null
+    .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())[0] ?? null
+
   const daysSinceIncident = lastRecordableIncident
     ? Math.floor((Date.now() - new Date(lastRecordableIncident.date).getTime()) / 86400000)
     : null
 
-  // TRIR: uses recordable severity filter; falls back to 50000 hours if no crew hours logged
   const computedHours = dailyLogs?.reduce((s: number, l: any) => s + (l.total_hours || 0), 0) ?? 0
   const totalHoursWorked = computedHours > 0 ? computedHours : 50000
   const recordableCount = incidents?.filter((i: any) => recordableSeverities.includes(i.severity)).length ?? 0
   const trir = totalHoursWorked > 0 ? ((recordableCount * 200000) / totalHoursWorked).toFixed(2) : null
 
-  const nearMisses = incidents?.filter((i: any) => i.type === 'near_miss').length || 0
-  const totalIncidents = incidents?.length || 1
-  const nearMissRatio = `${nearMisses}:${totalIncidents - nearMisses}`
-
-  const totalCerts = certifications?.length || 0
-  const validCerts = certifications?.filter((c: any) => c.expiration_date && new Date(c.expiration_date) > new Date()).length || 0
-  const certCompliance = totalCerts > 0 ? Math.round((validCerts / totalCerts) * 100) : 100
+  const openCorrectiveActions = correctiveActions?.filter(
+    (ca: any) => ca.status !== 'closed' && ca.status !== 'verified'
+  ).length ?? 0
 
   const now = new Date()
-  // Expiring within 30 days
-  const expiringCerts = certifications?.filter((c: any) => {
-    if (!c.expiration_date) return false
-    const exp = new Date(c.expiration_date)
-    const daysUntil = (exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-    return daysUntil > 0 && daysUntil <= 30
-  }).length ?? 0
 
-  // Open corrective actions: any incident not yet closed
-  const openCorrectiveActions = incidents?.filter((i: any) => i.status !== 'closed').length ?? 0
-
-  // Inspections This Week: Monday through Sunday of the current week
   const weekStart = new Date(now)
   weekStart.setHours(0, 0, 0, 0)
-  weekStart.setDate(now.getDate() - ((now.getDay() + 6) % 7)) // Monday
+  weekStart.setDate(now.getDate() - ((now.getDay() + 6) % 7))
   const weekEnd = new Date(weekStart)
-  weekEnd.setDate(weekStart.getDate() + 7) // next Monday (exclusive)
+  weekEnd.setDate(weekStart.getDate() + 7)
   const inspectionsThisWeek = inspections?.filter((insp: any) => {
     if (!insp.date) return false
     const d = new Date(insp.date)
     return d >= weekStart && d < weekEnd
   }).length ?? 0
 
-  // Detect when queries have settled but returned no data (tables not yet seeded)
-  const isSampleData = !loadingIncidents && incidents === null
+  const expiringCerts = certifications?.filter((c: any) => {
+    if (!c.expiration_date) return false
+    const daysUntil = (new Date(c.expiration_date).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+    return daysUntil > 0 && daysUntil <= 30
+  }).length ?? 0
+
+  const passCount = inspections?.filter((i: any) => i.status === 'passed').length ?? 0
+  const failCount = inspections?.filter((i: any) => i.status === 'failed').length ?? 0
+
+  // ── Days since accent color ────────────────────────────────
+
+  const daysAccent = daysSinceIncident === null
+    ? colors.statusActive
+    : daysSinceIncident > 30 ? colors.statusActive
+    : daysSinceIncident >= 10 ? colors.statusPending
+    : colors.statusCritical
 
   // ── Incident form state ────────────────────────────────────
 
@@ -416,7 +401,7 @@ export const Safety: React.FC = () => {
     location: '',
     description: '',
     severity: '',
-    involved_persons: '',
+    injured_party_name: '',
   })
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
@@ -424,14 +409,14 @@ export const Safety: React.FC = () => {
   const locationRef = useRef<HTMLInputElement>(null)
   const descriptionRef = useRef<HTMLTextAreaElement>(null)
   const severityRef = useRef<HTMLSelectElement>(null)
-  const involvedPersonsRef = useRef<HTMLInputElement>(null)
+  const injuredPartyRef = useRef<HTMLInputElement>(null)
 
   const requiredFields: { key: keyof typeof incidentForm; label: string }[] = [
     { key: 'date', label: 'Date' },
     { key: 'location', label: 'Location' },
     { key: 'description', label: 'Description' },
     { key: 'severity', label: 'Severity' },
-    { key: 'involved_persons', label: 'Involved persons' },
+    { key: 'injured_party_name', label: 'Involved party' },
   ]
 
   const validateField = (key: string, value: string): string => {
@@ -443,8 +428,7 @@ export const Safety: React.FC = () => {
   }
 
   const handleFieldBlur = (key: string, value: string) => {
-    const error = validateField(key, value)
-    setFieldErrors((prev) => ({ ...prev, [key]: error }))
+    setFieldErrors((prev) => ({ ...prev, [key]: validateField(key, value) }))
   }
 
   const handleIncidentSubmit = () => {
@@ -454,53 +438,26 @@ export const Safety: React.FC = () => {
       if (err) errors[key] = err
     })
     setFieldErrors(errors)
-
     if (Object.keys(errors).length > 0) {
       toast.error('Please complete all required fields')
-      // Focus first invalid field
       if (errors.date) dateRef.current?.focus()
       else if (errors.location) locationRef.current?.focus()
       else if (errors.description) descriptionRef.current?.focus()
       else if (errors.severity) severityRef.current?.focus()
-      else if (errors.involved_persons) involvedPersonsRef.current?.focus()
+      else if (errors.injured_party_name) injuredPartyRef.current?.focus()
       return
     }
-
     toast.info('Form submission requires backend configuration')
-    setShowIncidentModal(false)
-    setIncidentForm({ date: '', location: '', description: '', severity: '', involved_persons: '' })
-    setFieldErrors({})
+    handleCloseModal()
   }
 
   const handleCloseModal = () => {
     setShowIncidentModal(false)
-    setIncidentForm({ date: '', location: '', description: '', severity: '', involved_persons: '' })
+    setIncidentForm({ date: '', location: '', description: '', severity: '', injured_party_name: '' })
     setFieldErrors({})
   }
 
-  // ── Tab actions ────────────────────────────────────────────
-
-  const addButtonLabel: Record<TabKey, string> = {
-    overview: '',
-    inspections: 'New Inspection',
-    incidents: 'Report Incident',
-    toolbox: 'New Talk',
-    certifications: 'Add Certification',
-    observations: 'Add Observation',
-    ai_analysis: '',
-  }
-
-  const handleAdd = () => {
-    if (activeTab === 'incidents') {
-      setShowIncidentModal(true)
-    } else {
-      toast.info('Form submission requires backend configuration')
-    }
-  }
-
-  // ── Render ─────────────────────────────────────────────────
-
-  const isLoading = loadingInspections || loadingIncidents || loadingTalks || loadingCerts || loadingObs
+  // ── Window width ───────────────────────────────────────────
 
   const [windowWidth, setWindowWidth] = useState(() => window.innerWidth)
   useEffect(() => {
@@ -509,7 +466,10 @@ export const Safety: React.FC = () => {
     return () => window.removeEventListener('resize', onResize)
   }, [])
   const isMobile = windowWidth < 768
-  const isSmallMobile = windowWidth < 480
+
+  const isLoading = loadingInspections || loadingIncidents || loadingTalks || loadingCerts || loadingCAs
+
+  // ── Render ─────────────────────────────────────────────────
 
   return (
     <PageContainer
@@ -518,15 +478,125 @@ export const Safety: React.FC = () => {
       actions={
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
           <ExportButton pdfFilename="SiteSync_Safety_Report" />
-          {activeTab !== 'overview' && (
-            <Btn variant="primary" icon={<Plus size={16} />} onClick={handleAdd} style={{ minHeight: 44, minWidth: 44 }}>
-              {addButtonLabel[activeTab]}
+          {activeTab === 'incidents' && (
+            <Btn variant="primary" icon={<Plus size={16} />} onClick={() => setShowIncidentModal(true)} style={{ minHeight: 44 }}>
+              Report Incident
+            </Btn>
+          )}
+          {activeTab === 'inspections' && (
+            <Btn variant="primary" icon={<Plus size={16} />} onClick={() => toast.info('Form submission requires backend configuration')} style={{ minHeight: 44 }}>
+              New Inspection
+            </Btn>
+          )}
+          {activeTab === 'toolbox' && (
+            <Btn variant="primary" icon={<Plus size={16} />} onClick={() => toast.info('Form submission requires backend configuration')} style={{ minHeight: 44 }}>
+              New Talk
+            </Btn>
+          )}
+          {activeTab === 'certifications' && (
+            <Btn variant="primary" icon={<Plus size={16} />} onClick={() => toast.info('Form submission requires backend configuration')} style={{ minHeight: 44 }}>
+              Add Certification
             </Btn>
           )}
         </div>
       }
     >
-      {/* AI insights come from Supabase ai_insights table via PageInsightBanners */}
+      {/* Dashboard Metric Cards — always visible */}
+      {isLoading ? (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: spacing['4'], marginBottom: spacing['2xl'] }}>
+          {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} width="100%" height="100px" />)}
+        </div>
+      ) : (
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(5, 1fr)',
+          gap: spacing.lg,
+          marginBottom: spacing['2xl'],
+        }}>
+          {/* Days Since Last Incident — prominent, with colored accent border */}
+          <div style={{
+            gridColumn: isMobile ? '1 / -1' : undefined,
+            backgroundColor: colors.surfaceRaised,
+            borderRadius: borderRadius.lg,
+            padding: spacing.xl,
+            boxShadow: shadows.base,
+            borderLeft: `4px solid ${daysAccent}`,
+          }}>
+            <p style={{
+              fontSize: typography.fontSize.label,
+              color: colors.textTertiary,
+              margin: 0,
+              marginBottom: spacing['2'],
+              fontWeight: typography.fontWeight.medium,
+              letterSpacing: typography.letterSpacing.wider,
+              textTransform: 'uppercase',
+            }}>
+              Days Since Last Incident
+            </p>
+            <p style={{
+              fontSize: daysSinceIncident !== null ? typography.fontSize.display : typography.fontSize.body,
+              fontWeight: typography.fontWeight.bold,
+              color: daysAccent,
+              margin: 0,
+              fontVariantNumeric: 'tabular-nums',
+              lineHeight: typography.lineHeight.none,
+            }}>
+              {daysSinceIncident ?? 'None recorded'}
+            </p>
+            <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0, marginTop: spacing['2'] }}>
+              Medical treatment or above
+            </p>
+          </div>
+
+          <MetricCard
+            label="TRIR"
+            value={
+              <span style={{
+                color: trir === null ? colors.textPrimary
+                  : parseFloat(trir) > 3.0 ? colors.statusCritical
+                  : parseFloat(trir) > 2.0 ? colors.statusPending
+                  : colors.statusActive,
+              }}>
+                {trir ?? 'N/A'}
+              </span>
+            }
+            sub="Industry avg: 2.8"
+          />
+
+          <MetricCard
+            label="Open Corrective Actions"
+            value={
+              <span style={{
+                color: openCorrectiveActions === 0 ? colors.statusActive
+                  : openCorrectiveActions <= 5 ? colors.statusPending
+                  : colors.statusCritical,
+              }}>
+                {openCorrectiveActions}
+              </span>
+            }
+          />
+
+          <MetricCard
+            label="Inspections This Week"
+            value={
+              <span style={{ color: inspectionsThisWeek > 0 ? colors.statusActive : colors.statusPending }}>
+                {inspectionsThisWeek}
+              </span>
+            }
+            sub="Mon to Sun"
+          />
+
+          <MetricCard
+            label="Certs Expiring Soon"
+            value={
+              <span style={{ color: expiringCerts > 0 ? colors.statusPending : colors.statusActive }}>
+                {expiringCerts}
+              </span>
+            }
+            sub="Within 30 days"
+          />
+        </div>
+      )}
 
       {/* Tab Switcher */}
       <div style={{
@@ -569,342 +639,23 @@ export const Safety: React.FC = () => {
         })}
       </div>
 
-      {/* Loading State */}
+      {/* Skeleton loaders while fetching */}
       {isLoading && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: spacing['4'], marginBottom: spacing['2xl'] }}>
-          {[1, 2, 3, 4, 5, 6].map((i) => <Skeleton key={i} width="100%" height="100px" />)}
-        </div>
-      )}
-
-      {/* Overview Tab */}
-      {activeTab === 'overview' && !isLoading && (
-        <>
-          {/* KPI Grid */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-            gap: spacing.lg,
-            marginBottom: spacing['2xl'],
-          }}>
-            <div
-              role="status"
-              aria-live="polite"
-              aria-label={`Days Since Last Incident: ${daysSinceIncident ?? 'No recordable incidents'}`}
-              style={{
-                backgroundColor: colors.surfaceRaised,
-                borderRadius: borderRadius.lg,
-                padding: spacing.xl,
-                boxShadow: shadows.base,
-              }}
-            >
-              <p style={{
-                fontSize: typography.fontSize.label,
-                color: colors.textTertiary,
-                margin: 0,
-                marginBottom: spacing['3'],
-                fontWeight: typography.fontWeight.medium,
-                letterSpacing: typography.letterSpacing.wider,
-                textTransform: 'uppercase',
-              }}>
-                Days Since Last Incident
-              </p>
-              <p style={{
-                fontSize: typography.fontSize['5xl'],
-                fontWeight: typography.fontWeight.bold,
-                color: daysSinceIncident === null
-                  ? colors.statusActive
-                  : daysSinceIncident > 30
-                    ? colors.statusActive
-                    : daysSinceIncident >= 10
-                      ? colors.statusPending
-                      : colors.statusCritical,
-                margin: 0,
-                fontVariantNumeric: 'tabular-nums',
-                lineHeight: typography.lineHeight.none,
-              }}>
-                {daysSinceIncident ?? 'No recordable incidents'}
-              </p>
-            </div>
-            <div
-              aria-label={`Total Recordable Incident Rate: ${trir ?? 'N/A'}`}
-              style={{
-                backgroundColor: colors.surfaceRaised,
-                borderRadius: borderRadius.lg,
-                padding: spacing.xl,
-                boxShadow: shadows.base,
-              }}
-            >
-              <p style={{
-                fontSize: typography.fontSize.label,
-                color: colors.textTertiary,
-                margin: 0,
-                marginBottom: spacing['3'],
-                fontWeight: typography.fontWeight.medium,
-                letterSpacing: typography.letterSpacing.wider,
-                textTransform: 'uppercase',
-              }}>
-                TRIR
-              </p>
-              <p style={{
-                fontSize: typography.fontSize['4xl'],
-                fontWeight: typography.fontWeight.semibold,
-                color: trir === null
-                  ? colors.textPrimary
-                  : parseFloat(trir) > 3.0
-                    ? colors.statusCritical
-                    : parseFloat(trir) > 2.0
-                      ? colors.statusPending
-                      : colors.statusActive,
-                margin: 0,
-                fontVariantNumeric: 'tabular-nums',
-                lineHeight: typography.lineHeight.none,
-              }}>
-                {trir ?? 'N/A'}
-              </p>
-              <p style={{
-                fontSize: typography.fontSize.sm,
-                color: colors.textTertiary,
-                margin: 0,
-                marginTop: spacing.sm,
-              }}>
-                Industry avg: 2.8
-              </p>
-            </div>
-            <div>
-              <MetricBox
-                label="Open Corrective Actions"
-                value={openCorrectiveActions}
-                colorOverride={
-                  openCorrectiveActions === 0 ? 'success'
-                  : openCorrectiveActions <= 5 ? 'warning'
-                  : 'danger'
-                }
-                warning={isSampleData ? 'Sample data. Connect backend to see live metrics.' : undefined}
-              />
-            </div>
-            <div>
-              <MetricBox
-                label="Inspections This Week"
-                value={inspectionsThisWeek}
-                changeLabel="Mon to Sun"
-                colorOverride={inspectionsThisWeek > 0 ? 'success' : 'warning'}
-                warning={isSampleData ? 'Sample data. Connect backend to see live metrics.' : undefined}
-              />
-            </div>
-            <div>
-              <MetricBox
-                label="Near Miss Ratio"
-                value={nearMissRatio}
-                changeLabel="near misses to incidents"
-              />
-            </div>
-            <div>
-              <MetricBox
-                label="Cert Compliance"
-                value={`${certCompliance}%`}
-                change={certCompliance >= 90 ? 1 : -1}
-              />
-            </div>
-            <div>
-              <MetricBox
-                label="Expiring Certs"
-                value={expiringCerts}
-                changeLabel="within 30 days"
-                warning={isSampleData ? 'Sample data. Connect backend to see live metrics.' : undefined}
-              />
-            </div>
-          </div>
-
-          {/* Recent Inspections */}
-          <Card padding={spacing['4']}>
-            <SectionHeader title="Recent Inspections" />
-            {inspections && inspections.length > 0 ? (
-              <div style={{ marginTop: spacing['3'] }}>
-                {inspections.slice(0, 5).map((insp: any, idx: number) => (
-                  <div
-                    key={insp.id || idx}
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      padding: `${spacing['3']} 0`,
-                      borderBottom: idx < Math.min(inspections.length, 5) - 1 ? `1px solid ${colors.borderSubtle}` : 'none',
-                    }}
-                  >
-                    <div>
-                      <p style={{ margin: 0, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>
-                        {insp.type} {insp.area ? `\u2014 ${insp.area}` : ''}
-                      </p>
-                      <p style={{ margin: 0, fontSize: typography.fontSize.caption, color: colors.textTertiary, marginTop: 2 }}>
-                        {insp.inspector} &middot; {new Date(insp.date).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <span style={{
-                      fontSize: typography.fontSize.caption,
-                      fontWeight: typography.fontWeight.medium,
-                      color: insp.status === 'passed' ? colors.statusActive : insp.status === 'failed' ? colors.statusCritical : colors.statusPending,
-                    }}>
-                      {insp.status ? insp.status.charAt(0).toUpperCase() + insp.status.slice(1) : ''}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p style={{ color: colors.textTertiary, fontSize: typography.fontSize.sm, margin: `${spacing['3']} 0 0` }}>
-                No inspections recorded yet.
-              </p>
-            )}
-          </Card>
-
-          {/* Recent Incidents */}
-          <Card padding={spacing['4']}>
-            <SectionHeader title="Recent Incidents" />
-            {incidents && incidents.length > 0 ? (
-              <div style={{ marginTop: spacing['3'] }}>
-                {incidents.slice(0, 5).map((inc: any, idx: number) => (
-                  <div
-                    key={inc.id || idx}
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      padding: `${spacing['3']} 0`,
-                      borderBottom: idx < Math.min(incidents.length, 5) - 1 ? `1px solid ${colors.borderSubtle}` : 'none',
-                    }}
-                  >
-                    <div>
-                      <p style={{ margin: 0, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>
-                        #{inc.incident_number} {inc.type ? inc.type.replace(/_/g, ' ') : ''}
-                      </p>
-                      <p style={{ margin: 0, fontSize: typography.fontSize.caption, color: colors.textTertiary, marginTop: 2 }}>
-                        {inc.location} &middot; {new Date(inc.date).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <span style={{
-                      fontSize: typography.fontSize.caption,
-                      fontWeight: typography.fontWeight.medium,
-                      color: inc.severity === 'serious' ? colors.statusCritical : inc.severity === 'moderate' ? colors.statusPending : colors.statusActive,
-                    }}>
-                      {inc.severity ? inc.severity.charAt(0).toUpperCase() + inc.severity.slice(1) : ''}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p style={{ color: colors.textTertiary, fontSize: typography.fontSize.sm, margin: `${spacing['3']} 0 0` }}>
-                No incidents recorded. Great job keeping the site safe!
-              </p>
-            )}
-          </Card>
-
-          {/* Certification Expirations */}
-          {expiringCerts > 0 && (
-            <Card>
-              <SectionHeader title="Upcoming Certification Expirations" />
-              <div style={{ marginTop: spacing['3'] }}>
-                {certifications
-                  ?.filter((c: any) => {
-                    if (!c.expiration_date) return false
-                    const exp = new Date(c.expiration_date)
-                    const daysUntil = (exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-                    return daysUntil > 0 && daysUntil <= 30
-                  })
-                  .map((cert: any, idx: number) => (
-                    <div
-                      key={cert.id || idx}
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        padding: `${spacing['3']} 0`,
-                        borderBottom: `1px solid ${colors.borderSubtle}`,
-                      }}
-                    >
-                      <div>
-                        <p style={{ margin: 0, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>
-                          {cert.worker_name}
-                        </p>
-                        <p style={{ margin: 0, fontSize: typography.fontSize.caption, color: colors.textTertiary, marginTop: 2 }}>
-                          {cert.certification_type} &middot; {cert.company}
-                        </p>
-                      </div>
-                      <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: colors.statusPending }}>
-                        Expires {new Date(cert.expiration_date).toLocaleDateString()}
-                      </span>
-                    </div>
-                  ))}
-              </div>
-            </Card>
-          )}
-        </>
-      )}
-
-      {/* Inspections Tab */}
-      {activeTab === 'inspections' && !isLoading && (
-        <div style={{ overflowX: 'auto' }}>
-          <style>{`.insp-table-wrap td:first-child,.insp-table-wrap th:first-child{position:sticky;left:0;background:white;z-index:1}`}</style>
-          <div className="insp-table-wrap">
-            <Card>
-              <DataTable
-                columns={inspectionColumns}
-                data={inspections || []}
-                enableSorting
-              />
-            </Card>
-          </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
+          {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} width="100%" height="52px" />)}
         </div>
       )}
 
       {/* Incidents Tab */}
       {activeTab === 'incidents' && !isLoading && (
-        isMobile ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
-            {(incidents || []).length === 0 && (
-              <p style={{ color: colors.textTertiary, fontSize: typography.fontSize.sm }}>No incidents recorded.</p>
-            )}
-            {(incidents || []).map((inc: any, idx: number) => {
-              const severityColor = inc.severity === 'serious' || inc.severity === 'fatality' ? colors.statusCritical
-                : inc.severity === 'moderate' ? colors.statusPending
-                : colors.statusActive
-              const severityBg = inc.severity === 'serious' || inc.severity === 'fatality' ? colors.statusCriticalSubtle
-                : inc.severity === 'moderate' ? colors.statusPendingSubtle
-                : colors.statusActiveSubtle
-              const statusColor = inc.status === 'closed' ? colors.statusActive : inc.status === 'investigating' ? colors.statusPending : colors.statusInfo
-              return (
-                <Card key={inc.id || idx} padding={spacing['4']}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing['2'] }}>
-                    <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.orangeText }}>
-                      {inc.incident_number}
-                    </span>
-                    <span
-                      style={{
-                        display: 'inline-flex', alignItems: 'center', gap: spacing.xs,
-                        padding: `2px ${spacing.sm}`, borderRadius: borderRadius.full,
-                        fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
-                        color: severityColor, backgroundColor: severityBg,
-                      }}
-                      aria-label={`Severity: ${inc.severity ? inc.severity.charAt(0).toUpperCase() + inc.severity.slice(1) : 'Unknown'}`}
-                    >
-                      <div style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: severityColor }} aria-hidden="true" />
-                      <span aria-hidden="true">{inc.severity ? inc.severity.charAt(0).toUpperCase() + inc.severity.slice(1) : ''}</span>
-                      <span style={srOnly}>{inc.severity ? inc.severity.charAt(0).toUpperCase() + inc.severity.slice(1) : ''}</span>
-                    </span>
-                  </div>
-                  <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textPrimary, marginBottom: spacing['1'] }}>
-                    {inc.type ? inc.type.replace(/_/g, ' ') : ''}
-                  </p>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing['2'] }}>
-                    <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
-                      {inc.date ? new Date(inc.date).toLocaleDateString() : ''}
-                    </span>
-                    <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: statusColor }}>
-                      {inc.status ? inc.status.charAt(0).toUpperCase() + inc.status.slice(1) : ''}
-                    </span>
-                  </div>
-                </Card>
-              )
-            })}
-          </div>
+        (incidents || []).length === 0 ? (
+          <Card>
+            <EmptyState
+              message="No incidents recorded. Safety tracking not yet configured."
+              cta="Report First Incident"
+              onCta={() => setShowIncidentModal(true)}
+            />
+          </Card>
         ) : (
           <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
             <Card>
@@ -918,49 +669,95 @@ export const Safety: React.FC = () => {
         )
       )}
 
-      {/* Toolbox Talks Tab */}
-      {activeTab === 'toolbox' && !isLoading && (
-        <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+      {/* Inspections Tab */}
+      {activeTab === 'inspections' && !isLoading && (
+        (inspections || []).length === 0 ? (
           <Card>
-            <DataTable
-              columns={talkColumns}
-              data={talks || []}
-              enableSorting
+            <EmptyState
+              message="No inspections recorded. Safety tracking not yet configured."
+              cta="Schedule First Inspection"
+              onCta={() => toast.info('Form submission requires backend configuration')}
             />
           </Card>
-        </div>
+        ) : (
+          <>
+            <div style={{ display: 'flex', gap: spacing['4'], marginBottom: spacing['4'] }}>
+              <div style={{
+                backgroundColor: colors.statusActiveSubtle,
+                borderRadius: borderRadius.md,
+                padding: `${spacing['2']} ${spacing['4']}`,
+              }}>
+                <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.statusActive }}>
+                  {passCount} Passed
+                </span>
+              </div>
+              <div style={{
+                backgroundColor: colors.statusCriticalSubtle,
+                borderRadius: borderRadius.md,
+                padding: `${spacing['2']} ${spacing['4']}`,
+              }}>
+                <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.statusCritical }}>
+                  {failCount} Failed
+                </span>
+              </div>
+            </div>
+            <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+              <Card>
+                <DataTable
+                  columns={inspectionColumns}
+                  data={inspections || []}
+                  enableSorting
+                />
+              </Card>
+            </div>
+          </>
+        )
+      )}
+
+      {/* Toolbox Talks Tab */}
+      {activeTab === 'toolbox' && !isLoading && (
+        (talks || []).length === 0 ? (
+          <Card>
+            <EmptyState
+              message="No toolbox talks recorded. Safety tracking not yet configured."
+              cta="Log First Toolbox Talk"
+              onCta={() => toast.info('Form submission requires backend configuration')}
+            />
+          </Card>
+        ) : (
+          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+            <Card>
+              <DataTable
+                columns={talkColumns}
+                data={talks || []}
+                enableSorting
+              />
+            </Card>
+          </div>
+        )
       )}
 
       {/* Certifications Tab */}
       {activeTab === 'certifications' && !isLoading && (
-        <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        (certifications || []).length === 0 ? (
           <Card>
-            <DataTable
-              columns={certColumns}
-              data={certifications || []}
-              enableSorting
+            <EmptyState
+              message="No certifications on file. Safety tracking not yet configured."
+              cta="Add First Certification"
+              onCta={() => toast.info('Form submission requires backend configuration')}
             />
           </Card>
-        </div>
-      )}
-
-      {/* Observations Tab */}
-      {activeTab === 'observations' && !isLoading && (
-        <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-          <Card>
-            <DataTable
-              columns={obsColumns}
-              data={observations || []}
-              enableSorting
-            />
-          </Card>
-        </div>
-      )}
-
-      {activeTab === 'ai_analysis' && (
-        <Suspense fallback={<Skeleton height="300px" />}>
-          <AIPhotoAnalysis />
-        </Suspense>
+        ) : (
+          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+            <Card>
+              <DataTable
+                columns={certColumns}
+                data={certifications || []}
+                enableSorting
+              />
+            </Card>
+          </div>
+        )
       )}
 
       {/* Incident Creation Modal */}
@@ -1003,7 +800,6 @@ export const Safety: React.FC = () => {
               </button>
             </div>
 
-            {/* Date */}
             <div style={{ marginBottom: spacing['4'] }}>
               <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
                 Date<span style={{ color: '#E74C3C', marginLeft: 2 }}>*</span>
@@ -1019,18 +815,13 @@ export const Safety: React.FC = () => {
                   padding: `${spacing['2']} ${spacing['3']}`,
                   border: fieldErrors.date ? '1px solid #E74C3C' : '1px solid #E5E7EB',
                   borderRadius: borderRadius.base,
-                  fontSize: typography.fontSize.sm,
-                  fontFamily: typography.fontFamily,
-                  color: colors.textPrimary,
-                  outline: 'none',
+                  fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
+                  color: colors.textPrimary, outline: 'none',
                 }}
               />
-              {fieldErrors.date && (
-                <p style={{ color: '#E74C3C', fontSize: 12, marginTop: 4, margin: '4px 0 0' }}>{fieldErrors.date}</p>
-              )}
+              {fieldErrors.date && <p style={{ color: '#E74C3C', fontSize: 12, margin: '4px 0 0' }}>{fieldErrors.date}</p>}
             </div>
 
-            {/* Location */}
             <div style={{ marginBottom: spacing['4'] }}>
               <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
                 Location<span style={{ color: '#E74C3C', marginLeft: 2 }}>*</span>
@@ -1047,18 +838,13 @@ export const Safety: React.FC = () => {
                   padding: `${spacing['2']} ${spacing['3']}`,
                   border: fieldErrors.location ? '1px solid #E74C3C' : '1px solid #E5E7EB',
                   borderRadius: borderRadius.base,
-                  fontSize: typography.fontSize.sm,
-                  fontFamily: typography.fontFamily,
-                  color: colors.textPrimary,
-                  outline: 'none',
+                  fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
+                  color: colors.textPrimary, outline: 'none',
                 }}
               />
-              {fieldErrors.location && (
-                <p style={{ color: '#E74C3C', fontSize: 12, marginTop: 4, margin: '4px 0 0' }}>{fieldErrors.location}</p>
-              )}
+              {fieldErrors.location && <p style={{ color: '#E74C3C', fontSize: 12, margin: '4px 0 0' }}>{fieldErrors.location}</p>}
             </div>
 
-            {/* Severity */}
             <div style={{ marginBottom: spacing['4'] }}>
               <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
                 Severity<span style={{ color: '#E74C3C', marginLeft: 2 }}>*</span>
@@ -1073,53 +859,42 @@ export const Safety: React.FC = () => {
                   padding: `${spacing['2']} ${spacing['3']}`,
                   border: fieldErrors.severity ? '1px solid #E74C3C' : '1px solid #E5E7EB',
                   borderRadius: borderRadius.base,
-                  fontSize: typography.fontSize.sm,
-                  fontFamily: typography.fontFamily,
-                  color: incidentForm.severity ? colors.textPrimary : colors.textTertiary,
-                  backgroundColor: '#fff',
-                  outline: 'none',
+                  fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
+                  color: colors.textPrimary, outline: 'none', backgroundColor: '#fff',
                 }}
               >
-                <option value="" disabled>Select severity</option>
-                <option value="minor">Minor</option>
-                <option value="moderate">Moderate</option>
-                <option value="serious">Serious</option>
+                <option value="">Select severity...</option>
+                <option value="first_aid">First Aid</option>
+                <option value="medical_treatment">Medical Treatment</option>
+                <option value="lost_time">Lost Time</option>
                 <option value="fatality">Fatality</option>
               </select>
-              {fieldErrors.severity && (
-                <p style={{ color: '#E74C3C', fontSize: 12, marginTop: 4, margin: '4px 0 0' }}>{fieldErrors.severity}</p>
-              )}
+              {fieldErrors.severity && <p style={{ color: '#E74C3C', fontSize: 12, margin: '4px 0 0' }}>{fieldErrors.severity}</p>}
             </div>
 
-            {/* Involved Persons */}
             <div style={{ marginBottom: spacing['4'] }}>
               <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
-                Involved Persons<span style={{ color: '#E74C3C', marginLeft: 2 }}>*</span>
+                Involved Party<span style={{ color: '#E74C3C', marginLeft: 2 }}>*</span>
               </label>
               <input
-                ref={involvedPersonsRef}
+                ref={injuredPartyRef}
                 type="text"
-                placeholder="Names or crew"
-                value={incidentForm.involved_persons}
-                onChange={(e) => setIncidentForm((p) => ({ ...p, involved_persons: e.target.value }))}
-                onBlur={(e) => handleFieldBlur('involved_persons', e.target.value)}
+                placeholder="Name or crew"
+                value={incidentForm.injured_party_name}
+                onChange={(e) => setIncidentForm((p) => ({ ...p, injured_party_name: e.target.value }))}
+                onBlur={(e) => handleFieldBlur('injured_party_name', e.target.value)}
                 style={{
                   width: '100%', boxSizing: 'border-box',
                   padding: `${spacing['2']} ${spacing['3']}`,
-                  border: fieldErrors.involved_persons ? '1px solid #E74C3C' : '1px solid #E5E7EB',
+                  border: fieldErrors.injured_party_name ? '1px solid #E74C3C' : '1px solid #E5E7EB',
                   borderRadius: borderRadius.base,
-                  fontSize: typography.fontSize.sm,
-                  fontFamily: typography.fontFamily,
-                  color: colors.textPrimary,
-                  outline: 'none',
+                  fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
+                  color: colors.textPrimary, outline: 'none',
                 }}
               />
-              {fieldErrors.involved_persons && (
-                <p style={{ color: '#E74C3C', fontSize: 12, marginTop: 4, margin: '4px 0 0' }}>{fieldErrors.involved_persons}</p>
-              )}
+              {fieldErrors.injured_party_name && <p style={{ color: '#E74C3C', fontSize: 12, margin: '4px 0 0' }}>{fieldErrors.injured_party_name}</p>}
             </div>
 
-            {/* Description */}
             <div style={{ marginBottom: spacing['5'] }}>
               <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
                 Description<span style={{ color: '#E74C3C', marginLeft: 2 }}>*</span>
@@ -1136,19 +911,13 @@ export const Safety: React.FC = () => {
                   padding: `${spacing['2']} ${spacing['3']}`,
                   border: fieldErrors.description ? '1px solid #E74C3C' : '1px solid #E5E7EB',
                   borderRadius: borderRadius.base,
-                  fontSize: typography.fontSize.sm,
-                  fontFamily: typography.fontFamily,
-                  color: colors.textPrimary,
-                  resize: 'vertical',
-                  outline: 'none',
+                  fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
+                  color: colors.textPrimary, resize: 'vertical', outline: 'none',
                 }}
               />
-              {fieldErrors.description && (
-                <p style={{ color: '#E74C3C', fontSize: 12, marginTop: 4, margin: '4px 0 0' }}>{fieldErrors.description}</p>
-              )}
+              {fieldErrors.description && <p style={{ color: '#E74C3C', fontSize: 12, margin: '4px 0 0' }}>{fieldErrors.description}</p>}
             </div>
 
-            {/* Actions */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: spacing['3'] }}>
               <Btn variant="ghost" onClick={handleCloseModal} style={{ minHeight: '44px', minWidth: '44px' }}>Cancel</Btn>
               <Btn variant="primary" onClick={handleIncidentSubmit} style={{ minHeight: '44px', minWidth: '44px' }}>Submit Incident</Btn>
