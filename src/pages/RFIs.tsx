@@ -206,10 +206,10 @@ const RFIs: React.FC = () => {
       cell: (info) => {
         const rfi = info.row.original;
         let days: number;
-        if (rfi.status === 'closed' && rfi.closed_at) {
-          days = Math.floor((new Date(rfi.closed_at).getTime() - new Date(rfi.created_at).getTime()) / 86400000);
+        if (rfi.status === 'closed') {
+          days = Math.ceil((new Date(rfi.closed_at || rfi.updated_at).getTime() - new Date(rfi.created_at).getTime()) / 86400000);
         } else {
-          days = Math.floor((Date.now() - new Date(rfi.created_at).getTime()) / 86400000);
+          days = Math.ceil((Date.now() - new Date(rfi.created_at).getTime()) / 86400000);
         }
         const dColor = days > 10 ? colors.statusCritical : days > 5 ? colors.statusPending : colors.statusActive;
         return <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: dColor, fontVariantNumeric: 'tabular-nums' as const }}>{days}</span>;
@@ -496,7 +496,7 @@ const RFIs: React.FC = () => {
               getRowAriaLabel={(rfi) => `RFI ${rfi.rfiNumber}: ${rfi.title}, status ${rfi.status}`}
               getRowStyle={(rfi) => {
                 const overdue = rfi.dueDate && new Date(rfi.dueDate) < new Date() && rfi.status !== 'closed';
-                return overdue ? { borderLeft: '3px solid #E74C3C' } : {};
+                return overdue ? { backgroundColor: 'rgba(231,76,60,0.06)' } : {};
               }}
               loading={rfisLoading}
               emptyMessage="No RFIs match your filters"
