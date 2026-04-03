@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Sparkles, AlertTriangle, ChevronDown, ChevronUp, CheckCircle, RefreshCw, Zap, CalendarClock, TrendingUp, GitBranch, Gauge, CalendarCheck, Calendar, BarChart3, ToggleLeft, ToggleRight, ClipboardList, Upload, X, Sun, Cloud, CloudRain } from 'lucide-react';
+import { Sparkles, AlertTriangle, ChevronDown, ChevronUp, CheckCircle, RefreshCw, Zap, CalendarClock, TrendingUp, GitBranch, Gauge, CalendarCheck, Calendar, CalendarDays, BarChart3, ToggleLeft, ToggleRight, ClipboardList, Upload, X, Sun, Cloud, CloudRain } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { PageContainer, Card, SectionHeader, MetricBox, Skeleton, Btn, useToast, Tag } from '../components/Primitives';
 import { useRealtimeSchedulePhases, useScheduleRealtime } from '../hooks/queries/realtime';
@@ -811,25 +811,48 @@ export const Schedule: React.FC = () => {
   const GANTT_ROW_WIDTHS = ['70%', '55%', '85%', '40%', '90%', '60%', '75%', '45%'];
 
   if (loading) {
+    const SKEL_ROW_WIDTHS = ['70%', '55%', '85%', '40%', '90%', '60%', '75%', '45%'];
     return (
       <PageContainer title="Schedule" subtitle="Loading...">
-        <style>{`@keyframes schedPulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 0.7; } }`}</style>
-        <Card role="status" aria-label="Loading schedule data" style={{ padding: spacing.lg }}>
-          {([{ width: '60%' }, { width: '45%' }, { width: '75%' }, { width: '30%' }]).map((bar, i) => (
+        <style>{`
+          @keyframes schedShimmer {
+            0% { background-position: -600px 0; }
+            100% { background-position: 600px 0; }
+          }
+        `}</style>
+        {/* 4 skeleton metric cards */}
+        <div role="status" aria-label="Loading schedule data" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing.lg, marginBottom: spacing.xl }}>
+          {[0, 1, 2, 3].map(i => (
             <div
               key={i}
               style={{
-                height: '32px',
-                width: bar.width,
-                backgroundColor: '#E5E7EB',
-                borderRadius: borderRadius.md,
-                animation: 'schedPulse 1.5s ease-in-out infinite',
-                animationDelay: `${i * 0.15}s`,
-                marginBottom: i < 3 ? spacing.md : 0,
+                height: '120px',
+                borderRadius: '12px',
+                background: 'linear-gradient(90deg, #E5E7EB 25%, #F3F4F6 50%, #E5E7EB 75%)',
+                backgroundSize: '600px 100%',
+                animation: 'schedShimmer 1.5s infinite linear',
+                animationDelay: `${i * 0.1}s`,
               }}
             />
           ))}
-        </Card>
+        </div>
+        {/* 8 skeleton Gantt activity rows */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {SKEL_ROW_WIDTHS.map((w, i) => (
+            <div
+              key={i}
+              style={{
+                height: '48px',
+                width: w,
+                borderRadius: '8px',
+                background: 'linear-gradient(90deg, #E5E7EB 25%, #F3F4F6 50%, #E5E7EB 75%)',
+                backgroundSize: '600px 100%',
+                animation: 'schedShimmer 1.5s infinite linear',
+                animationDelay: `${i * 0.1}s`,
+              }}
+            />
+          ))}
+        </div>
       </PageContainer>
     );
   }
@@ -844,12 +867,12 @@ export const Schedule: React.FC = () => {
           projectId={activeProject?.id}
         />
         <div role="status" aria-label="Build Your Project Schedule" style={{ maxWidth: '480px', margin: '80px auto', textAlign: 'center' }}>
-          <Calendar size={64} color={colors.textTertiary} style={{ marginBottom: '24px' }} />
-          <div style={{ fontSize: '20px', fontWeight: 600, color: colors.textPrimary, marginBottom: '12px' }}>
-            Build Your Project Schedule
+          <CalendarDays size={48} color='#9CA3AF' style={{ marginBottom: '24px' }} />
+          <div style={{ fontSize: '18px', fontWeight: 600, color: '#1A1A2E', marginBottom: '12px' }}>
+            Build your schedule to track every phase from mobilization to closeout
           </div>
-          <div style={{ fontSize: '14px', color: colors.textTertiary, marginBottom: '32px', lineHeight: typography.lineHeight.normal }}>
-            Track every phase from mobilization to closeout. Import your existing P6 or MS Project schedule, or build from scratch.
+          <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '32px', lineHeight: typography.lineHeight.normal }}>
+            Import your P6 or MS Project schedule, or create phases manually
           </div>
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
             <button
@@ -1006,7 +1029,7 @@ export const Schedule: React.FC = () => {
           }}
         >
           <span style={{ fontSize: typography.fontSize.body, color: colors.statusCritical }}>
-            {(error as Error)?.message ?? String(error)}
+            Unable to load schedule
           </span>
           <button
             onClick={refetch}
