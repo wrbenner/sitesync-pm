@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo } from 'react';
-import { Camera, MapPin, Sparkles, RefreshCw, AlertTriangle, LayoutGrid, Map as MapIcon, X, Tag, Flag, Mic } from 'lucide-react';
+import { Camera, MapPin, Sparkles, RefreshCw, AlertTriangle, LayoutGrid, Map as MapIcon, X, Tag, Mic } from 'lucide-react';
 import { PageContainer, Card, Btn, useToast } from '../components/Primitives';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import FieldCaptureSkeleton from '../components/field/FieldCaptureSkeleton';
@@ -10,7 +10,7 @@ import { useCreateFieldCapture } from '../hooks/mutations';
 import { useSyncStatus } from '../hooks/useSyncStatus';
 import type { FieldCapture } from '../types/database';
 
-const CONSTRUCTION_TAGS = ['progress', 'safety', 'defect', 'delivery', 'concrete', 'steel', 'MEP'] as const;
+const CONSTRUCTION_TAGS = ['progress', 'safety', 'quality', 'defect', 'delivery'] as const;
 
 const LINK_OPTIONS = [
   { label: 'RFI #12 — Beam pocket depth', value: 'rfi:12' },
@@ -171,6 +171,23 @@ const PhotoOverlay: React.FC<PhotoOverlayProps> = ({ dataUrl, location, isSaving
 
         {/* Form fields */}
         <div style={{ padding: spacing['5'], display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
+          {/* Timestamp + GPS row */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], flexWrap: 'wrap' }}>
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: spacing['1'],
+                padding: `${spacing['1']} ${spacing['3']}`,
+                backgroundColor: colors.surfaceInset,
+                borderRadius: borderRadius.full,
+              }}
+            >
+              <span style={{ fontSize: typography.fontSize.caption, color: colors.textSecondary, fontWeight: typography.fontWeight.medium }}>
+                {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} at {new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+              </span>
+            </div>
+          </div>
           {/* GPS badge */}
           {location && (
             <div
@@ -596,12 +613,50 @@ const FieldCaptureInner: React.FC = () => {
   const [overlayLocation, setOverlayLocation] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Filter state
+  const [filterTag, setFilterTag] = useState('');
+  const [filterDateRange, setFilterDateRange] = useState<'all' | 'today' | 'week' | 'month'>('all');
+  const [filterEntityType, setFilterEntityType] = useState('');
+
   // Derived metrics
-  const { totalCaptures, capturesToday, aiFlags } = useMemo(() => ({
-    totalCaptures: captures.length,
-    capturesToday: captures.filter(c => isToday(c.created_at)).length,
-    aiFlags: captures.filter(c => !!c.ai_category).length,
-  }), [captures]);
+  const { totalCaptures, thisWeek, locationsCount } = useMemo(() => {
+    const now = new Date();
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const uniqueLocations = new Set(captures.map(c => c.location).filter(Boolean));
+    return {
+      totalCaptures: captures.length,
+      thisWeek: captures.filter(c => c.created_at && new Date(c.created_at) >= weekAgo).length,
+      locationsCount: uniqueLocations.size,
+    };
+  }, [captures]);
+
+  // Filtered captures for display
+  const filteredCaptures = useMemo(() => {
+    let result = captures;
+    if (filterTag) {
+      result = result.filter(c => Array.isArray(c.ai_tags) && (c.ai_tags as string[]).includes(filterTag));
+    }
+    if (filterDateRange !== 'all') {
+      const now = new Date();
+      const cutoff = new Date(now);
+      if (filterDateRange === 'today') {
+        cutoff.setHours(0, 0, 0, 0);
+      } else if (filterDateRange === 'week') {
+        cutoff.setDate(now.getDate() - 7);
+      } else if (filterDateRange === 'month') {
+        cutoff.setMonth(now.getMonth() - 1);
+      }
+      result = result.filter(c => c.created_at && new Date(c.created_at) >= cutoff);
+    }
+    if (filterEntityType) {
+      if (filterEntityType === 'drawing') {
+        result = result.filter(c => !!c.linked_drawing_id);
+      } else if (filterEntityType === 'rfi') {
+        result = result.filter(c => typeof c.content === 'string' && c.content.toLowerCase().includes('rfi'));
+      }
+    }
+    return result;
+  }, [captures, filterTag, filterDateRange, filterEntityType]);
 
   const handleCaptureClick = () => {
     fileInputRef.current?.click();
@@ -732,43 +787,55 @@ const FieldCaptureInner: React.FC = () => {
         />
       )}
 
-      {/* Capture button — prominent, full-width on mobile */}
+      {/* FAB — fixed bottom-right on mobile, fixed top-right on desktop */}
       <style>{`
-        @media (max-width: 640px) {
-          .fc-capture-btn { width: 100% !important; }
+        .fc-fab {
+          position: fixed;
+          bottom: 24px;
+          right: 24px;
+          width: 56px;
+          height: 56px;
+          border-radius: 50%;
+          z-index: 100;
+        }
+        @media (min-width: 768px) {
+          .fc-fab {
+            top: 20px;
+            right: 36px;
+            bottom: auto;
+            width: auto;
+            height: 44px;
+            border-radius: 10px;
+            padding: 0 20px;
+          }
         }
       `}</style>
-      <div style={{ marginBottom: spacing['5'] }}>
-        <button
-          className="fc-capture-btn"
-          aria-label="Capture new field photo"
-          onClick={handleCaptureClick}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: spacing['3'],
-            backgroundColor: colors.primaryOrange,
-            color: colors.white,
-            border: 'none',
-            borderRadius: borderRadius.xl,
-            padding: `0 ${spacing['8']}`,
-            fontSize: typography.fontSize.title,
-            fontWeight: typography.fontWeight.semibold,
-            fontFamily: typography.fontFamily,
-            height: '80px',
-            minWidth: '200px',
-            cursor: 'pointer',
-            boxShadow: shadows.glow,
-            transition: `background-color ${transitions.quick}`,
-          }}
-          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.orangeHover; }}
-          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.primaryOrange; }}
-        >
-          <Camera size={26} />
-          Capture
-        </button>
-      </div>
+      <button
+        className="fc-fab"
+        aria-label="Capture new field photo"
+        onClick={handleCaptureClick}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: spacing['2'],
+          backgroundColor: colors.primaryOrange,
+          color: colors.white,
+          border: 'none',
+          cursor: 'pointer',
+          boxShadow: shadows.glow,
+          fontSize: typography.fontSize.body,
+          fontWeight: typography.fontWeight.semibold,
+          fontFamily: typography.fontFamily,
+          transition: `background-color ${transitions.quick}`,
+        }}
+        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.orangeHover; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.primaryOrange; }}
+      >
+        <Camera size={20} />
+        <span className="fc-fab-label" style={{ display: 'none' }}>Capture</span>
+        <style>{`.fc-fab-label { display: none; } @media (min-width: 768px) { .fc-fab-label { display: inline; } }`}</style>
+      </button>
 
       {/* Offline / pending banner */}
       {(!isOnline || pendingCount > 0) && (
@@ -804,7 +871,7 @@ const FieldCaptureInner: React.FC = () => {
           marginBottom: spacing['6'],
         }}
       >
-        {([
+        {[
           {
             label: 'Total Captures',
             value: totalCaptures,
@@ -812,24 +879,24 @@ const FieldCaptureInner: React.FC = () => {
             color: colors.statusInfo,
           },
           {
-            label: 'Captures Today',
-            value: capturesToday,
+            label: 'This Week',
+            value: thisWeek,
             icon: <Camera size={18} color={colors.primaryOrange} />,
             color: colors.primaryOrange,
           },
           {
-            label: 'Pending Upload',
+            label: 'Pending Sync',
             value: pendingCount,
             icon: <RefreshCw size={18} color={pendingCount > 0 ? colors.statusPending : colors.textTertiary} />,
             color: pendingCount > 0 ? colors.statusPending : colors.textTertiary,
           },
           {
-            label: 'AI Flags',
-            value: aiFlags,
-            icon: <Sparkles size={18} color={aiFlags > 0 ? colors.statusReview : colors.textTertiary} />,
-            color: aiFlags > 0 ? colors.statusReview : colors.textTertiary,
+            label: 'Locations Covered',
+            value: locationsCount,
+            icon: <MapPin size={18} color={locationsCount > 0 ? colors.statusActive : colors.textTertiary} />,
+            color: locationsCount > 0 ? colors.statusActive : colors.textTertiary,
           },
-        ] as const).map(({ label, value, icon, color }) => (
+        ].map(({ label, value, icon, color }) => (
           <div
             key={label}
             style={{
@@ -855,6 +922,105 @@ const FieldCaptureInner: React.FC = () => {
         ))}
       </div>
 
+      {/* Filter bar */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: spacing['2'],
+          marginBottom: spacing['4'],
+          flexWrap: 'wrap',
+        }}
+      >
+        <select
+          value={filterTag}
+          onChange={e => setFilterTag(e.target.value)}
+          aria-label="Filter by tag"
+          style={{
+            padding: `${spacing['2']} ${spacing['3']}`,
+            border: `1px solid ${colors.borderDefault}`,
+            borderRadius: borderRadius.lg,
+            fontSize: typography.fontSize.sm,
+            fontFamily: typography.fontFamily,
+            color: filterTag ? colors.textPrimary : colors.textTertiary,
+            backgroundColor: filterTag ? colors.orangeSubtle : colors.white,
+            cursor: 'pointer',
+            outline: 'none',
+            minHeight: '36px',
+          }}
+        >
+          <option value="">All tags</option>
+          {CONSTRUCTION_TAGS.map(t => (
+            <option key={t} value={t}>{t}</option>
+          ))}
+        </select>
+        <select
+          value={filterDateRange}
+          onChange={e => setFilterDateRange(e.target.value as typeof filterDateRange)}
+          aria-label="Filter by date range"
+          style={{
+            padding: `${spacing['2']} ${spacing['3']}`,
+            border: `1px solid ${colors.borderDefault}`,
+            borderRadius: borderRadius.lg,
+            fontSize: typography.fontSize.sm,
+            fontFamily: typography.fontFamily,
+            color: filterDateRange !== 'all' ? colors.textPrimary : colors.textTertiary,
+            backgroundColor: filterDateRange !== 'all' ? colors.orangeSubtle : colors.white,
+            cursor: 'pointer',
+            outline: 'none',
+            minHeight: '36px',
+          }}
+        >
+          <option value="all">All dates</option>
+          <option value="today">Today</option>
+          <option value="week">This week</option>
+          <option value="month">This month</option>
+        </select>
+        <select
+          value={filterEntityType}
+          onChange={e => setFilterEntityType(e.target.value)}
+          aria-label="Filter by linked entity type"
+          style={{
+            padding: `${spacing['2']} ${spacing['3']}`,
+            border: `1px solid ${colors.borderDefault}`,
+            borderRadius: borderRadius.lg,
+            fontSize: typography.fontSize.sm,
+            fontFamily: typography.fontFamily,
+            color: filterEntityType ? colors.textPrimary : colors.textTertiary,
+            backgroundColor: filterEntityType ? colors.orangeSubtle : colors.white,
+            cursor: 'pointer',
+            outline: 'none',
+            minHeight: '36px',
+          }}
+        >
+          <option value="">All linked types</option>
+          <option value="drawing">Drawing</option>
+          <option value="rfi">RFI</option>
+        </select>
+        {(filterTag || filterDateRange !== 'all' || filterEntityType) && (
+          <button
+            onClick={() => { setFilterTag(''); setFilterDateRange('all'); setFilterEntityType(''); }}
+            style={{
+              padding: `${spacing['2']} ${spacing['3']}`,
+              border: `1px solid ${colors.borderDefault}`,
+              borderRadius: borderRadius.lg,
+              fontSize: typography.fontSize.sm,
+              fontFamily: typography.fontFamily,
+              color: colors.textSecondary,
+              backgroundColor: colors.white,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: spacing['1'],
+              minHeight: '36px',
+            }}
+          >
+            <X size={12} />
+            Clear
+          </button>
+        )}
+      </div>
+
       {/* Grid / Map toggle + count */}
       <div
         style={{
@@ -865,7 +1031,8 @@ const FieldCaptureInner: React.FC = () => {
         }}
       >
         <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>
-          {captures.length} photo{captures.length !== 1 ? 's' : ''}
+          {filteredCaptures.length} photo{filteredCaptures.length !== 1 ? 's' : ''}
+          {filteredCaptures.length !== captures.length && ` of ${captures.length}`}
         </span>
         <div
           style={{
@@ -968,7 +1135,7 @@ const FieldCaptureInner: React.FC = () => {
           </div>
         </Card>
       ) : viewMode === 'map' ? (
-        <MapView captures={captures} />
+        <MapView captures={filteredCaptures} />
       ) : (
         <>
           <style>{`
@@ -987,7 +1154,7 @@ const FieldCaptureInner: React.FC = () => {
               gap: spacing['3'],
             }}
           >
-            {captures.map(capture => (
+            {filteredCaptures.map(capture => (
               <PhotoCard key={capture.id} capture={capture} />
             ))}
           </div>
