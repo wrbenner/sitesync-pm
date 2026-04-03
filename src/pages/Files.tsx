@@ -251,6 +251,12 @@ const _FilesPage: React.FC = () => {
     }
   }, [navigateToFolder]);
 
+  const handlePageDragEnter = useCallback((e: React.DragEvent) => {
+    if (Array.from(e.dataTransfer.types).includes('Files')) {
+      setShowUpload(true);
+    }
+  }, []);
+
   const handleUpload = async (fileName: string) => {
     try {
       await createFile.mutateAsync({ projectId: projectId!, data: { project_id: projectId!, name: fileName, content_type: 'application/octet-stream' } });
@@ -443,6 +449,7 @@ const _FilesPage: React.FC = () => {
         </div>
       }
     >
+      <div onDragEnter={handlePageDragEnter}>
       {/* Summary metrics */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: spacing.md, marginBottom: spacing['4'] }}>
         {[
@@ -678,6 +685,7 @@ const _FilesPage: React.FC = () => {
         }}
         title="Move to Folder"
       />
+      </div>
     </PageContainer>
   );
 };

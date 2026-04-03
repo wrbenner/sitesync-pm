@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Upload, File, CheckCircle, Sparkles, Folder, Tag, AlertCircle, RefreshCw } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme';
 import { aiService } from '../../lib/aiService';
@@ -7,9 +7,10 @@ interface UploadZoneProps {
   onUpload: (fileName: string) => void;
   onTagsSuggested?: (fileName: string, tags: string[]) => void;
   onFileReady?: (file: File) => void;
+  onUploadsChange?: (uploads: UploadItem[]) => void;
 }
 
-interface UploadItem {
+export interface UploadItem {
   id: number;
   name: string;
   progress: number;
@@ -50,7 +51,7 @@ async function collectEntries(entry: FileSystemEntry): Promise<File[]> {
   return [];
 }
 
-export const UploadZone: React.FC<UploadZoneProps> = ({ onUpload, onTagsSuggested, onFileReady }) => {
+export const UploadZone: React.FC<UploadZoneProps> = ({ onUpload, onTagsSuggested, onFileReady, onUploadsChange }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isDraggingFolder, setIsDraggingFolder] = useState(false);
   const [uploads, setUploads] = useState<UploadItem[]>([]);
@@ -58,6 +59,10 @@ export const UploadZone: React.FC<UploadZoneProps> = ({ onUpload, onTagsSuggeste
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const retryFilesRef = useRef<File[]>([]);
+
+  useEffect(() => {
+    onUploadsChange?.(uploads);
+  }, [uploads, onUploadsChange]);
 
   const simulateUpload = useCallback((name: string, opts?: { isFolder?: boolean; fileCount?: number }) => {
     const id = Date.now() + Math.random();
@@ -206,7 +211,7 @@ export const UploadZone: React.FC<UploadZoneProps> = ({ onUpload, onTagsSuggeste
   const dropZoneBg = isDragging
     ? isDraggingFolder
       ? 'rgba(244, 120, 32, 0.08)'
-      : colors.orangeSubtle
+      : 'rgba(59, 130, 246, 0.1)'
     : 'transparent';
 
   return (
