@@ -267,6 +267,65 @@ const SubmittalStatusTag: React.FC<{ status: string }> = ({ status }) => {
   );
 };
 
+function calcDaysInReview(sub: any): number | null {
+  const startStr = sub.submission_date || sub.submitted_at || sub.created_at;
+  if (!startStr) return null;
+  const start = new Date(startStr);
+  start.setHours(0, 0, 0, 0);
+  const isResolved = sub.status === 'approved' || sub.status === 'approved_as_noted' || sub.status === 'rejected' || sub.status === 'revise_resubmit';
+  const endStr = isResolved ? (sub.updated_at || sub.approval_date) : undefined;
+  const end = endStr ? new Date(endStr) : new Date();
+  end.setHours(0, 0, 0, 0);
+  let bizDays = 0;
+  const cur = new Date(start);
+  while (cur < end) {
+    const d = cur.getDay();
+    if (d !== 0 && d !== 6) bizDays++;
+    cur.setDate(cur.getDate() + 1);
+  }
+  return bizDays;
+}
+
+const CHAIN_COLORS = { green: '#4EC896', amber: '#F5A623', gray: '#D1D5DB', red: '#E74C3C' };
+
+type ChainColor = keyof typeof CHAIN_COLORS;
+
+function getChainColors(status: string): [ChainColor, ChainColor, ChainColor] {
+  if (status === 'pending') return ['amber', 'gray', 'gray'];
+  if (status === 'submitted' || status === 'review_in_progress' || status === 'under_review') return ['green', 'amber', 'gray'];
+  if (status === 'approved' || status === 'approved_as_noted') return ['green', 'green', 'green'];
+  if (status === 'rejected' || status === 'revise_resubmit' || status === 'resubmit') return ['green', 'green', 'red'];
+  return ['amber', 'gray', 'gray'];
+}
+
+const MiniApprovalChain: React.FC<{ status: string }> = ({ status }) => {
+  const [c0, c1, c2] = getChainColors(status);
+  const steps: Array<{ label: string; color: ChainColor }> = [
+    { label: 'Sub', color: c0 },
+    { label: 'GC', color: c1 },
+    { label: 'Arch', color: c2 },
+  ];
+  return (
+    <div aria-label="Approval chain" style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+      {steps.map((step, i) => (
+        <React.Fragment key={step.label}>
+          {i > 0 && <div style={{ width: 8, height: 1, backgroundColor: '#E5E7EB', flexShrink: 0 }} />}
+          <div
+            title={step.label}
+            style={{
+              width: 10,
+              height: 10,
+              borderRadius: '50%',
+              backgroundColor: CHAIN_COLORS[step.color],
+              flexShrink: 0,
+            }}
+          />
+        </React.Fragment>
+      ))}
+    </div>
+  );
+};
+
 const subColHelper = createColumnHelper<any>();
 
 const Submittals: React.FC = () => {
@@ -426,21 +485,18 @@ const Submittals: React.FC = () => {
   const openCount = useMemo(() => allSubmittals.filter((s: Record<string, unknown>) => s.status !== 'approved').length, [allSubmittals]);
 
   const totalCount = allSubmittals.length;
-  const pendingReviewCount = useMemo(() => allSubmittals.filter((s: any) => s.status === 'submitted' || s.status === 'review_in_progress' || s.status === 'pending' || s.status === 'under_review').length, [allSubmittals]);
+  const pendingReviewCount = useMemo(() => allSubmittals.filter((s: any) => s.status === 'submitted' || s.status === 'review_in_progress').length, [allSubmittals]);
   const approvedCount = useMemo(() => allSubmittals.filter((s: any) => s.status === 'approved' || s.status === 'approved_as_noted').length, [allSubmittals]);
-  const resubmissionRate = useMemo(() => {
-    if (!allSubmittals.length) return '0%';
-    const withRevision = allSubmittals.filter((s: any) => {
-      const revNum = Array.isArray(s.submittal_revisions) ? s.submittal_revisions.length : (s.revision_number ?? 0);
-      return revNum > 0;
-    }).length;
-    return `${Math.round((withRevision / allSubmittals.length) * 100)}%`;
-  }, [allSubmittals]);
+  const overdueCount = useMemo(() => allSubmittals.filter((s: any) => {
+    const due = s.due_date || s.dueDate;
+    if (!due) return false;
+    return s.status !== 'approved' && s.status !== 'approved_as_noted' && new Date(due) < new Date();
+  }).length, [allSubmittals]);
 
   const STATUS_FILTER_TABS: Array<{ label: string; value: string | null }> = [
     { label: 'All', value: null },
     { label: 'Pending', value: 'pending' },
-    { label: 'Under Review', value: 'under_review' },
+    { label: 'In Review', value: 'in_review' },
     { label: 'Approved', value: 'approved' },
     { label: 'Rejected', value: 'rejected' },
     { label: 'Resubmit', value: 'revise_resubmit' },
@@ -448,6 +504,7 @@ const Submittals: React.FC = () => {
 
   const filteredSubmittals = useMemo(() => {
     if (!statusFilter) return allSubmittals;
+    if (statusFilter === 'in_review') return allSubmittals.filter((s: any) => s.status === 'submitted' || s.status === 'review_in_progress' || s.status === 'under_review');
     return allSubmittals.filter((s: any) => s.status === statusFilter);
   }, [allSubmittals, statusFilter]);
 
@@ -582,6 +639,28 @@ const Submittals: React.FC = () => {
       header: 'Ball in Court',
       size: 120,
       cell: (info) => <BallInCourtBadge value={info.getValue() as string | null} />,
+    }),
+    subColHelper.accessor((row: any) => row, {
+      id: 'days_in_review',
+      header: 'Days in Review',
+      size: 120,
+      cell: (info) => {
+        const sub = info.getValue() as any;
+        const days = calcDaysInReview(sub);
+        if (days === null) return <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>&mdash;</span>;
+        const color = days > 14 ? '#E74C3C' : days > 7 ? '#F5A623' : colors.textSecondary;
+        return (
+          <span style={{ fontSize: typography.fontSize.sm, color, fontWeight: days > 14 ? typography.fontWeight.semibold : typography.fontWeight.normal, fontVariantNumeric: 'tabular-nums' as const, whiteSpace: 'nowrap' }}>
+            {days}d
+          </span>
+        );
+      },
+    }),
+    subColHelper.accessor('status', {
+      id: 'approval_chain',
+      header: 'Chain',
+      size: 80,
+      cell: (info) => <MiniApprovalChain status={info.getValue() as string} />,
     }),
   ], []);
 
@@ -731,7 +810,7 @@ const Submittals: React.FC = () => {
           { label: 'Total Submittals', value: totalCount, color: colors.textPrimary, bg: colors.white },
           { label: 'Pending Review', value: pendingReviewCount, color: '#F5A623', bg: '#FFFBF0' },
           { label: 'Approved', value: approvedCount, color: '#4EC896', bg: '#F0FDF9' },
-          { label: 'Resubmission Rate', value: resubmissionRate, color: '#8B5CF6', bg: '#F5F3FF' },
+          { label: 'Overdue', value: overdueCount, color: '#E74C3C', bg: '#FEF2F2' },
         ].map(({ label, value, color, bg }) => (
           <div key={label} style={{
             flex: '1 1 140px',
