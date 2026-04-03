@@ -55,22 +55,269 @@ const ToggleSwitch: React.FC<{ id: string; checked: boolean; onChange: (v: boole
   </button>
 )
 
-// ── Section Header ────────────────────────────────────────
+// ── Collapsible Section ────────────────────────────────────
 
-const SectionHeader: React.FC<{ label: string }> = ({ label }) => (
-  <div style={{
-    fontSize: '17px',
-    fontWeight: 700,
-    color: colors.textPrimary,
-    fontFamily: typography.fontFamily,
-    padding: `${spacing['3']} 0 ${spacing['2']}`,
-    borderBottom: `2px solid ${colors.borderSubtle}`,
-    marginTop: spacing['2'],
-    letterSpacing: '-0.01em',
-  }}>
-    {label}
+interface CollapsibleSectionProps {
+  label: string
+  open: boolean
+  onToggle: () => void
+  children: React.ReactNode
+  badge?: React.ReactNode
+}
+
+const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({ label, open, onToggle, children, badge }) => (
+  <div>
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={open}
+      aria-controls={`section-${label.toLowerCase().replace(/\s+/g, '-')}`}
+      style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        width: '100%', background: 'none', border: 'none', cursor: 'pointer',
+        padding: `${spacing['3']} 0 ${spacing['2']}`,
+        borderBottom: `2px solid ${colors.borderSubtle}`,
+        marginTop: spacing['2'],
+      }}
+    >
+      <span style={{
+        fontSize: '17px', fontWeight: 700, color: colors.textPrimary,
+        fontFamily: typography.fontFamily, letterSpacing: '-0.01em',
+        display: 'flex', alignItems: 'center', gap: spacing['2'],
+      }}>
+        {label}
+        {badge}
+      </span>
+      <span style={{
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+        width: 24, height: 24, borderRadius: borderRadius.sm,
+        color: colors.textTertiary,
+        transform: open ? 'rotate(90deg)' : 'rotate(0deg)',
+        transition: 'transform 0.18s ease',
+      }}>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </span>
+    </button>
+    <div
+      id={`section-${label.toLowerCase().replace(/\s+/g, '-')}`}
+      style={{
+        display: open ? 'flex' : 'none',
+        flexDirection: 'column',
+        gap: spacing['3'],
+        paddingTop: spacing['3'],
+      }}
+    >
+      {children}
+    </div>
   </div>
 )
+
+// ── Crew Row ───────────────────────────────────────────────
+
+export interface CrewRow {
+  id: string
+  trade: string
+  company: string
+  headcount: number | ''
+  hours: number | ''
+}
+
+const COMMON_TRADES = [
+  'Concrete', 'Carpentry', 'Electrical', 'Mechanical', 'Plumbing',
+  'Steel', 'Roofing', 'Glazing', 'Painting', 'Fire Protection',
+  'Excavation', 'General Labor', 'Other',
+]
+
+// ── Manpower Table ─────────────────────────────────────────
+
+interface ManpowerTableProps {
+  rows: CrewRow[]
+  onChange: (rows: CrewRow[]) => void
+  disabled?: boolean
+}
+
+const ManpowerTable: React.FC<ManpowerTableProps> = ({ rows, onChange, disabled }) => {
+  const totalHeadcount = rows.reduce((s, r) => s + (Number(r.headcount) || 0), 0)
+  const totalHours = rows.reduce((s, r) => s + (Number(r.hours) || 0), 0)
+
+  const updateRow = (id: string, field: keyof CrewRow, value: string | number) => {
+    onChange(rows.map(r => r.id === id ? { ...r, [field]: value } : r))
+  }
+  const removeRow = (id: string) => onChange(rows.filter(r => r.id !== id))
+  const addRow = () => onChange([...rows, { id: crypto.randomUUID(), trade: '', company: '', headcount: '', hours: '' }])
+
+  const colStyle = (flex: number): React.CSSProperties => ({
+    flex,
+    padding: `${spacing['2']} ${spacing['2']}`,
+    fontSize: typography.fontSize.sm,
+    fontFamily: typography.fontFamily,
+  })
+
+  const cellInputStyle: React.CSSProperties = {
+    width: '100%',
+    border: `1px solid ${colors.borderDefault}`,
+    borderRadius: borderRadius.sm,
+    padding: `${spacing['1']} ${spacing['2']}`,
+    fontSize: typography.fontSize.sm,
+    fontFamily: typography.fontFamily,
+    color: colors.textPrimary,
+    background: disabled ? colors.surfaceInset : colors.white,
+    outline: 'none',
+    boxSizing: 'border-box',
+  }
+
+  const headerCellStyle: React.CSSProperties = {
+    padding: `${spacing['2']} ${spacing['2']}`,
+    fontSize: typography.fontSize.label,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.textTertiary,
+    textTransform: 'uppercase',
+    letterSpacing: typography.letterSpacing.wider,
+    fontFamily: typography.fontFamily,
+  }
+
+  return (
+    <div style={{ border: `1px solid ${colors.borderSubtle}`, borderRadius: borderRadius.md, overflow: 'hidden' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', backgroundColor: colors.surfaceInset, borderBottom: `1px solid ${colors.borderSubtle}` }}>
+        <div style={{ ...headerCellStyle, flex: 3 }}>Trade</div>
+        <div style={{ ...headerCellStyle, flex: 3 }}>Company</div>
+        <div style={{ ...headerCellStyle, flex: 1.5, textAlign: 'center' as const }}>Workers</div>
+        <div style={{ ...headerCellStyle, flex: 1.5, textAlign: 'center' as const }}>Hours</div>
+        <div style={{ width: 32 }} />
+      </div>
+
+      {/* Rows */}
+      {rows.map((row, idx) => (
+        <div
+          key={row.id}
+          style={{
+            display: 'flex', alignItems: 'center',
+            borderBottom: idx < rows.length - 1 ? `1px solid ${colors.borderSubtle}` : 'none',
+            backgroundColor: colors.white,
+          }}
+        >
+          <div style={{ ...colStyle(3) }}>
+            {disabled ? (
+              <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary }}>{row.trade}</span>
+            ) : (
+              <select
+                value={row.trade}
+                onChange={e => updateRow(row.id, 'trade', e.target.value)}
+                aria-label={`Trade for row ${idx + 1}`}
+                style={{ ...cellInputStyle, cursor: 'pointer' }}
+              >
+                <option value="">Select trade</option>
+                {COMMON_TRADES.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            )}
+          </div>
+          <div style={{ ...colStyle(3) }}>
+            {disabled ? (
+              <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary }}>{row.company}</span>
+            ) : (
+              <input
+                type="text"
+                value={row.company}
+                onChange={e => updateRow(row.id, 'company', e.target.value)}
+                placeholder="Company name"
+                aria-label={`Company for row ${idx + 1}`}
+                style={cellInputStyle}
+              />
+            )}
+          </div>
+          <div style={{ ...colStyle(1.5) }}>
+            {disabled ? (
+              <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, display: 'block', textAlign: 'center' }}>{row.headcount}</span>
+            ) : (
+              <input
+                type="number"
+                value={row.headcount}
+                onChange={e => updateRow(row.id, 'headcount', e.target.value === '' ? '' : Number(e.target.value))}
+                placeholder="0"
+                min={0}
+                aria-label={`Worker count for row ${idx + 1}`}
+                style={{ ...cellInputStyle, textAlign: 'center' }}
+              />
+            )}
+          </div>
+          <div style={{ ...colStyle(1.5) }}>
+            {disabled ? (
+              <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, display: 'block', textAlign: 'center' }}>{row.hours}</span>
+            ) : (
+              <input
+                type="number"
+                value={row.hours}
+                onChange={e => updateRow(row.id, 'hours', e.target.value === '' ? '' : Number(e.target.value))}
+                placeholder="0"
+                min={0}
+                step={0.5}
+                aria-label={`Hours for row ${idx + 1}`}
+                style={{ ...cellInputStyle, textAlign: 'center' }}
+              />
+            )}
+          </div>
+          <div style={{ width: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {!disabled && (
+              <button
+                type="button"
+                onClick={() => removeRow(row.id)}
+                aria-label={`Remove row ${idx + 1}`}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: colors.textTertiary, padding: 4, display: 'flex', borderRadius: borderRadius.sm }}
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+              </button>
+            )}
+          </div>
+        </div>
+      ))}
+
+      {/* Add Crew row */}
+      {!disabled && (
+        <div style={{ borderTop: rows.length > 0 ? `1px solid ${colors.borderSubtle}` : 'none' }}>
+          <button
+            type="button"
+            onClick={addRow}
+            aria-label="Add crew row"
+            style={{
+              display: 'flex', alignItems: 'center', gap: spacing['2'],
+              width: '100%', background: 'none', border: 'none', cursor: 'pointer',
+              padding: `${spacing['2']} ${spacing['3']}`,
+              fontSize: typography.fontSize.sm,
+              color: colors.primaryOrange,
+              fontFamily: typography.fontFamily,
+              fontWeight: typography.fontWeight.medium,
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+            Add Crew
+          </button>
+        </div>
+      )}
+
+      {/* Totals */}
+      {rows.length > 0 && (
+        <div style={{
+          display: 'flex',
+          backgroundColor: colors.surfaceInset,
+          borderTop: `2px solid ${colors.borderSubtle}`,
+        }}>
+          <div style={{ ...colStyle(3), fontWeight: typography.fontWeight.semibold, fontSize: typography.fontSize.sm, color: colors.textSecondary }}>Total</div>
+          <div style={{ ...colStyle(3) }} />
+          <div style={{ ...colStyle(1.5), textAlign: 'center' as const, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, fontSize: typography.fontSize.sm }}>{totalHeadcount}</div>
+          <div style={{ ...colStyle(1.5), textAlign: 'center' as const, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, fontSize: typography.fontSize.sm }}>{totalHours}</div>
+          <div style={{ width: 32 }} />
+        </div>
+      )}
+    </div>
+  )
+}
 
 // ── Incident Form ─────────────────────────────────────────
 
@@ -208,6 +455,7 @@ export interface CreateDailyLogFormData {
   incident: IncidentData
   visitors?: string
   superintendent_signature_url?: string
+  crew_entries?: CrewRow[]
 }
 
 interface CreateDailyLogModalProps {
@@ -240,6 +488,7 @@ const EMPTY_FORM: CreateDailyLogFormData = {
   has_incident: false,
   incident: EMPTY_INCIDENT,
   visitors: '',
+  crew_entries: [],
 }
 
 const CreateDailyLogModal: React.FC<CreateDailyLogModalProps> = ({
@@ -265,6 +514,7 @@ const CreateDailyLogModal: React.FC<CreateDailyLogModalProps> = ({
     offlineMessage: 'Draft saved offline',
     onSuccess: () => {
       setForm(EMPTY_FORM)
+      setCrewRows([])
       setSignatureBlob(null)
       onClose()
     },
@@ -278,6 +528,15 @@ const CreateDailyLogModal: React.FC<CreateDailyLogModalProps> = ({
   const [noIncidentsToday, setNoIncidentsToday] = useState<boolean>(true)
   const [noVisitorsToday, setNoVisitorsToday] = useState<boolean>(true)
   const [signatureBlob, setSignatureBlob] = useState<Blob | null>(null)
+  const [crewRows, setCrewRows] = useState<CrewRow[]>([])
+  const [openSections, setOpenSections] = useState({
+    weather: true,
+    manpower: true,
+    narrative: true,
+    photos: false,
+  })
+  const toggleSection = (key: keyof typeof openSections) =>
+    setOpenSections(prev => ({ ...prev, [key]: !prev[key] }))
   const [isMobile, setIsMobile] = useState(() =>
     typeof window !== 'undefined' && window.innerWidth < 768
   )
@@ -422,7 +681,14 @@ const CreateDailyLogModal: React.FC<CreateDailyLogModalProps> = ({
           signatureUrl = urlData.publicUrl
         }
       }
-      const result = await onSubmit({ ...form, superintendent_signature_url: signatureUrl })
+      const totalWorkers = crewRows.reduce((s, r) => s + (Number(r.headcount) || 0), 0)
+      const submitForm: CreateDailyLogFormData = {
+        ...form,
+        superintendent_signature_url: signatureUrl,
+        crew_count: totalWorkers > 0 ? totalWorkers : form.crew_count,
+        crew_entries: crewRows,
+      }
+      const result = await onSubmit(submitForm)
       const createdId = result && typeof result === 'object' && 'id' in result ? result.id : undefined
       if (createdId) {
         const logData: Record<string, unknown> = { ...form as unknown as Record<string, unknown>, id: createdId }
@@ -433,6 +699,7 @@ const CreateDailyLogModal: React.FC<CreateDailyLogModalProps> = ({
         }).catch(() => {})
       }
       setForm(EMPTY_FORM)
+      setCrewRows([])
       setSignatureBlob(null)
       onClose()
     } finally {
@@ -466,18 +733,31 @@ const CreateDailyLogModal: React.FC<CreateDailyLogModalProps> = ({
     try {
       const { data: rows } = await supabase
         .from('daily_logs')
-        .select('workers_onsite, visitors')
+        .select('workers_onsite, visitors, crew_entries, equipment_entries')
         .eq('project_id', projectId)
         .order('log_date', { ascending: false })
         .limit(1)
       if (rows && rows.length > 0) {
-        const prev = rows[0] as { workers_onsite?: number; visitors?: string }
+        const prev = rows[0] as {
+          workers_onsite?: number
+          visitors?: string
+          crew_entries?: Array<{ trade?: string; company?: string; headcount?: number; hours?: number }>
+          equipment_entries?: unknown[]
+        }
+        const seeded: CrewRow[] = (prev.crew_entries ?? []).map(c => ({
+          id: crypto.randomUUID(),
+          trade: c.trade ?? '',
+          company: c.company ?? '',
+          headcount: c.headcount ?? '',
+          hours: c.hours ?? '',
+        }))
+        if (seeded.length > 0) setCrewRows(seeded)
         setForm(f => ({
           ...f,
           crew_count: prev.workers_onsite ?? f.crew_count,
           visitors: prev.visitors ?? f.visitors,
         }))
-        toast.success('Copied from previous log')
+        toast.success('Copied crew and entries from previous log')
       }
     } catch {
       // silent
@@ -561,13 +841,21 @@ const CreateDailyLogModal: React.FC<CreateDailyLogModalProps> = ({
         />
       </FormField>
 
-      {/* Weather section */}
-      <SectionHeader label="Weather" />
-      <div>
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
-          marginBottom: spacing['2'],
-        }}>
+      {/* Weather section — collapsible */}
+      <CollapsibleSection
+        label="Weather"
+        open={openSections.weather}
+        onToggle={() => toggleSection('weather')}
+        badge={
+          !openSections.weather && form.weather_source === 'auto' ? (
+            <span style={{
+              fontSize: '10px', fontWeight: 600, color: '#2E7D32',
+              backgroundColor: '#E8F5E9', borderRadius: '4px', padding: '1px 6px',
+            }}>Auto</span>
+          ) : undefined
+        }
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
           {weatherLoading && (
             <span style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
               <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />
@@ -598,6 +886,7 @@ const CreateDailyLogModal: React.FC<CreateDailyLogModalProps> = ({
         <FormRow columns={2}>
           <FormField label="Conditions">
             <FormSelect
+              aria-label="Weather conditions"
               value={form.weather_condition}
               onChange={e => { markManual('weather_condition'); set('weather_condition', e.target.value); set('weather_source', 'manual') }}
             >
@@ -614,6 +903,7 @@ const CreateDailyLogModal: React.FC<CreateDailyLogModalProps> = ({
           <FormField label="Wind Speed (mph)">
             <FormInput
               type="number"
+              aria-label="Wind speed in mph"
               value={form.wind_speed}
               onChange={e => { markManual('wind_speed'); set('wind_speed', e.target.value === '' ? '' : Number(e.target.value)); set('weather_source', 'manual') }}
               placeholder="12"
@@ -626,6 +916,7 @@ const CreateDailyLogModal: React.FC<CreateDailyLogModalProps> = ({
           <FormField label="Temp High (F)">
             <FormInput
               type="number"
+              aria-label="High temperature in Fahrenheit"
               value={form.temperature_high}
               onChange={e => { markManual('temperature_high'); set('temperature_high', e.target.value === '' ? '' : Number(e.target.value)); set('weather_source', 'manual') }}
               placeholder="85"
@@ -635,6 +926,7 @@ const CreateDailyLogModal: React.FC<CreateDailyLogModalProps> = ({
           <FormField label="Temp Low (F)">
             <FormInput
               type="number"
+              aria-label="Low temperature in Fahrenheit"
               value={form.temperature_low}
               onChange={e => { markManual('temperature_low'); set('temperature_low', e.target.value === '' ? '' : Number(e.target.value)); set('weather_source', 'manual') }}
               placeholder="62"
@@ -644,6 +936,7 @@ const CreateDailyLogModal: React.FC<CreateDailyLogModalProps> = ({
           <FormField label="Precipitation (in)">
             <FormInput
               type="number"
+              aria-label="Precipitation in inches"
               value={form.precipitation_inches}
               onChange={e => { markManual('precipitation_inches'); set('precipitation_inches', e.target.value === '' ? '' : Number(e.target.value)); set('weather_source', 'manual') }}
               placeholder="0.00"
@@ -653,48 +946,52 @@ const CreateDailyLogModal: React.FC<CreateDailyLogModalProps> = ({
             {weatherFieldBadge('precipitation_inches')}
           </FormField>
         </FormRow>
-      </div>
+      </CollapsibleSection>
 
-      {/* Crew section */}
-      <SectionHeader label="Crew" />
-      <FormField label="Crew Count">
-        <FormInput
-          type="number"
-          value={form.crew_count}
-          onChange={e => set('crew_count', e.target.value === '' ? '' : Number(e.target.value))}
-          placeholder="Total crew on site"
-          min={0}
-        />
-      </FormField>
+      {/* Manpower section — collapsible table */}
+      <CollapsibleSection
+        label="Manpower"
+        open={openSections.manpower}
+        onToggle={() => toggleSection('manpower')}
+        badge={
+          !openSections.manpower && crewRows.length > 0 ? (
+            <span style={{
+              fontSize: '11px', fontWeight: 600, color: colors.primaryOrange,
+              backgroundColor: colors.orangeSubtle, borderRadius: '4px', padding: '1px 6px',
+            }}>{crewRows.reduce((s, r) => s + (Number(r.headcount) || 0), 0)} workers</span>
+          ) : undefined
+        }
+      >
+        <ManpowerTable rows={crewRows} onChange={setCrewRows} disabled={isSubmittedView} />
+      </CollapsibleSection>
 
-      {/* Narrative section */}
-      <SectionHeader label="Narrative" />
-      <FormField label="Activities">
-        <FormTextarea
-          value={form.activities}
-          onChange={e => set('activities', e.target.value)}
-          placeholder="Describe work performed today"
-          rows={3}
-        />
-      </FormField>
-      <FormField label="Safety Notes">
-        <FormTextarea
-          value={form.safety_notes}
-          onChange={e => set('safety_notes', e.target.value)}
-          placeholder="Safety observations, incidents, or toolbox talks"
-          rows={2}
-        />
-      </FormField>
-      <FormField label="Delays">
-        <FormTextarea
-          value={form.delays}
-          onChange={e => set('delays', e.target.value)}
-          placeholder="Note any weather, material, or coordination delays"
-          rows={2}
-        />
-      </FormField>
+      {/* Work Performed section — collapsible */}
+      <CollapsibleSection
+        label="Work Performed"
+        open={openSections.narrative}
+        onToggle={() => toggleSection('narrative')}
+      >
+        <FormField label="Work Performed">
+          <FormTextarea
+            aria-label="Work performed today"
+            value={form.activities}
+            onChange={e => set('activities', e.target.value)}
+            placeholder="Describe work performed today. Tap the microphone on your keyboard for voice input."
+            rows={4}
+          />
+        </FormField>
+        <FormField label="Delays">
+          <FormTextarea
+            aria-label="Delays encountered today"
+            value={form.delays}
+            onChange={e => set('delays', e.target.value)}
+            placeholder="Note any weather, material, or coordination delays"
+            rows={2}
+          />
+        </FormField>
+      </CollapsibleSection>
 
-      {/* Incident section */}
+      {/* Safety / Incidents section */}
       <div>
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -706,7 +1003,7 @@ const CreateDailyLogModal: React.FC<CreateDailyLogModalProps> = ({
             fontSize: '17px', fontWeight: 700, color: colors.textPrimary,
             fontFamily: typography.fontFamily, letterSpacing: '-0.01em',
           }}>
-            Incidents
+            Safety
           </span>
           <label htmlFor="no-incidents-toggle" style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], cursor: 'pointer' }}>
             <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>No incidents today</span>
@@ -754,6 +1051,7 @@ const CreateDailyLogModal: React.FC<CreateDailyLogModalProps> = ({
           <div style={{ marginTop: spacing['3'] }}>
             <FormField label="Visitor Names">
               <FormTextarea
+                aria-label="Visitor names and affiliations"
                 value={form.visitors ?? ''}
                 onChange={e => set('visitors', e.target.value)}
                 placeholder="List visitor names and company affiliations"
@@ -763,6 +1061,70 @@ const CreateDailyLogModal: React.FC<CreateDailyLogModalProps> = ({
           </div>
         )}
       </div>
+
+      {/* Photos section — collapsible */}
+      <CollapsibleSection
+        label="Photos"
+        open={openSections.photos}
+        onToggle={() => toggleSection('photos')}
+      >
+        <div
+          aria-label="Photo upload area"
+          style={{
+            border: `2px dashed ${colors.borderDefault}`,
+            borderRadius: borderRadius.lg,
+            padding: spacing['8'],
+            textAlign: 'center',
+            cursor: isSubmittedView ? 'default' : 'pointer',
+            backgroundColor: colors.surfaceInset,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['3'],
+          }}
+        >
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none" style={{ color: colors.textTertiary }}>
+            <rect x="3" y="7" width="26" height="20" rx="3" stroke="currentColor" strokeWidth="1.5"/>
+            <circle cx="16" cy="17" r="5" stroke="currentColor" strokeWidth="1.5"/>
+            <path d="M12 7l2-4h4l2 4" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+          </svg>
+          <div>
+            <p style={{ margin: 0, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>
+              Drag photos here or tap to select
+            </p>
+            <p style={{ margin: `${spacing['1']} 0 0`, fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
+              JPEG, PNG up to 20MB each. Multiple files supported.
+            </p>
+          </div>
+          {!isSubmittedView && (
+            <label
+              aria-label="Select photos to upload"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: spacing['2'],
+                padding: `${spacing['2']} ${spacing['4']}`,
+                backgroundColor: colors.white,
+                border: `1px solid ${colors.borderDefault}`,
+                borderRadius: borderRadius.md,
+                fontSize: typography.fontSize.sm,
+                fontFamily: typography.fontFamily,
+                fontWeight: typography.fontWeight.medium,
+                color: colors.textPrimary,
+                cursor: 'pointer',
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+              Select Photos
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                aria-label="Photo file input"
+                style={{ display: 'none' }}
+                onChange={() => {}}
+              />
+            </label>
+          )}
+        </div>
+      </CollapsibleSection>
 
       {/* Superintendent signature */}
       {!isSubmittedView && (
@@ -790,10 +1152,56 @@ const CreateDailyLogModal: React.FC<CreateDailyLogModalProps> = ({
         </div>
       )}
 
-      <FormFooter
-        onCancel={onClose}
-        submitLabel={isSubmittedView ? 'Close' : submitting ? 'Creating...' : 'Create Log'}
-      />
+      {/* Sticky Submit Log button */}
+      <div style={{
+        position: 'sticky',
+        bottom: 0,
+        backgroundColor: colors.white,
+        borderTop: `1px solid ${colors.borderSubtle}`,
+        padding: `${spacing['4']} 0 ${spacing['2']}`,
+        display: 'flex',
+        gap: spacing['3'],
+        justifyContent: 'flex-end',
+        marginTop: spacing['2'],
+      }}>
+        <button
+          type="button"
+          onClick={onClose}
+          style={{
+            padding: `${spacing['2']} ${spacing['5']}`,
+            fontSize: typography.fontSize.body,
+            fontFamily: typography.fontFamily,
+            fontWeight: typography.fontWeight.medium,
+            border: `1px solid ${colors.borderDefault}`,
+            borderRadius: borderRadius.md,
+            backgroundColor: colors.white,
+            color: colors.textSecondary,
+            cursor: 'pointer',
+          }}
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={submitting}
+          aria-label={isSubmittedView ? 'Close log' : 'Submit daily log'}
+          style={{
+            padding: `${spacing['2']} ${spacing['6']}`,
+            fontSize: typography.fontSize.body,
+            fontFamily: typography.fontFamily,
+            fontWeight: typography.fontWeight.semibold,
+            border: 'none',
+            borderRadius: borderRadius.md,
+            backgroundColor: submitting ? colors.surfaceDisabled : colors.primaryOrange,
+            color: colors.white,
+            cursor: submitting ? 'not-allowed' : 'pointer',
+            opacity: submitting ? 0.7 : 1,
+            minWidth: 120,
+          }}
+        >
+          {isSubmittedView ? 'Close' : submitting ? 'Submitting...' : 'Submit Log'}
+        </button>
+      </div>
     </FormBody>
   )
 
