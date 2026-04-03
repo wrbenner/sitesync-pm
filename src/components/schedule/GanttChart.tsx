@@ -292,12 +292,12 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   };
 
   const getBarColor = (phase: GanttPhase) => {
-    if (phase.completed || phase.status === 'completed') return '#9CA3AF';
+    if (phase.completed || phase.status === 'completed') return '#4EC896';
     if (whatIfMode && activeDrag?.phaseId === phase.id) return colors.statusReview;
-    if (phase.status === 'delayed') return '#F5A623';
+    if (phase.status === 'delayed') return '#E74C3C';
     if (phase.status === 'in_progress') return '#3B82F6';
     if (phase.is_critical || phase.critical || phase.floatDays === 0) return '#E74C3C';
-    if (phase.status === 'not_started' || phase.progress === 0) return '#E5E7EB';
+    if (phase.status === 'not_started' || phase.progress === 0) return '#9CA3AF';
     return '#3B82F6';
   };
 
@@ -838,12 +838,14 @@ export const GanttChart: React.FC<GanttChartProps> = ({
               const isHovered = hoveredPhase === phase.id;
               const predIds = phase.predecessor_ids ?? phase.dependencies ?? [];
               const isCascadeAffected = whatIfMode && activeDrag && predIds.includes(activeDrag.phaseId);
-              const isCriticalPathRow = phase.is_critical || phase.floatDays === 0;
+              const isCriticalPathRow = phase.is_critical_path === true || phase.is_critical || phase.floatDays === 0;
               const phaseRisk = risks.find(r => r.phaseId === phase.id);
               const phaseDelay = delays.find(d => d.activityId === phase.id && d.predictedSlippageDays > 0);
               const isDraggingThis = activeDrag?.phaseId === phase.id;
               const isDraggingBoth = isDraggingThis && activeDrag?.side === 'both';
-              const canDrag = !phase.completed && !phase.is_milestone;
+              const durationDays = Math.round((new Date(phase.endDate).getTime() - new Date(phase.startDate).getTime()) / DAY_MS);
+              const isMilestoneBar = phase.is_milestone === true || durationDays === 0;
+              const canDrag = !phase.completed && !isMilestoneBar;
               const ghostLeft = isDraggingBoth
                 ? Math.round(((activeDrag!.origStart - timelineStart) / DAY_MS) * pxPerDay)
                 : null;
@@ -864,7 +866,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                   className="gantt-phase-row"
                   variants={{ hidden: { opacity: 0, x: -8 }, visible: { opacity: 1, x: 0, transition: { duration: 0.2 } } }}
                   style={{
-                    display: showCriticalOnly && !phase.is_critical && phase.floatDays !== 0 ? 'none' : 'flex',
+                    display: showCriticalOnly && !isCriticalPathRow ? 'none' : 'flex',
                     alignItems: 'center', marginBottom: spacing['1'], position: 'relative',
                     borderLeft: isCriticalPathRow ? '3px solid #E74C3C' : '3px solid transparent',
                     paddingLeft: isCriticalPathRow ? spacing['2'] : 0,
@@ -928,7 +930,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                       )}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], marginTop: 2 }}>
-                      {!phase.is_milestone && (
+                      {!isMilestoneBar && (
                         <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{phase.progress}%</span>
                       )}
                       {phase.floatDays != null && (
@@ -967,7 +969,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                           position: 'absolute', top: 2,
                           height: 4,
                           left: `${bLeft}px`, width: `${bWidth}px`,
-                          background: 'rgba(156, 163, 175, 0.4)',
+                          background: 'rgba(156, 163, 175, 0.5)',
                           borderRadius: 2, pointerEvents: 'none',
                           zIndex: 0,
                         }} />
@@ -991,7 +993,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                     )}
 
                     {/* Milestone diamond */}
-                    {phase.is_milestone ? (
+                    {isMilestoneBar ? (
                       <div
                         role="img"
                         aria-label={`${phase.name}: ${phase.startDate} to ${phase.endDate}, milestone${phase.critical || phase.is_critical ? ', CRITICAL PATH' : ''}`}
@@ -1007,7 +1009,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                       />
                     ) : null}
                     {/* Milestone label to the right of the diamond */}
-                    {phase.is_milestone && (
+                    {isMilestoneBar && (
                       <span
                         aria-hidden="true"
                         style={{
@@ -1026,7 +1028,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                         {phase.name}
                       </span>
                     )}
-                    {!phase.is_milestone && (() => {
+                    {!isMilestoneBar && (() => {
                       const barStatus = phase.completed
                         ? 'complete'
                         : (phase.slippageDays ?? 0) > 0
@@ -1253,7 +1255,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                     )}
 
                     {/* Baseline variance text next to bar */}
-                    {showBaseline && !phase.is_milestone && (() => {
+                    {showBaseline && !isMilestoneBar && (() => {
                       const bEnd = phase.baselineEndDate ?? (baselinePhases?.find(b => b.id === phase.id)?.baselineEndDate ?? null);
                       if (!bEnd) return null;
                       const variance = Math.round((new Date(phase.endDate).getTime() - new Date(bEnd).getTime()) / DAY_MS);
@@ -1312,18 +1314,29 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                         padding: `${spacing['2']} ${spacing['3']}`, backgroundColor: colors.surfaceRaised,
                         borderRadius: borderRadius.md, boxShadow: shadows.dropdown,
                         whiteSpace: 'nowrap', zIndex: 10, fontSize: typography.fontSize.caption,
+                        border: `1px solid ${colors.borderSubtle}`,
                       }}>
                         <p style={{ fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0 }}>{phase.name}</p>
-                        {phase.is_milestone
-                          ? <p style={{ color: colors.primaryOrange, fontWeight: typography.fontWeight.semibold, margin: 0, marginTop: 2 }}>Milestone</p>
-                          : <p style={{ color: barColor, fontWeight: typography.fontWeight.semibold, margin: 0, marginTop: 2 }}>{phase.progress}% complete</p>
-                        }
-                        <p style={{ color: colors.textTertiary, margin: 0, marginTop: 2 }}>
-                          {new Date(phase.startDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })} to {new Date(phase.endDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                        <p style={{ color: colors.textSecondary, margin: 0, marginTop: 3 }}>
+                          {new Date(phase.startDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          {' \u2013 '}
+                          {new Date(phase.endDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                         </p>
-                        {phase.critical && <p style={{ color: colors.statusCritical, margin: 0, marginTop: 2 }}>Critical Path</p>}
-                        {phase.floatDays != null && <p style={{ color: colors.textTertiary, margin: 0, marginTop: 2 }}>Float: {phase.floatDays}d</p>}
-                        {(phase.slippageDays ?? 0) > 0 && <p style={{ color: colors.statusCritical, margin: 0, marginTop: 2 }}>Slippage: +{phase.slippageDays}d</p>}
+                        {!isMilestoneBar && (
+                          <p style={{ color: barColor, fontWeight: typography.fontWeight.semibold, margin: 0, marginTop: 3 }}>{phase.progress}% complete</p>
+                        )}
+                        {isMilestoneBar && (
+                          <p style={{ color: colors.primaryOrange, fontWeight: typography.fontWeight.semibold, margin: 0, marginTop: 3 }}>Milestone</p>
+                        )}
+                        {phase.floatDays != null && (
+                          <p style={{ color: phase.floatDays === 0 ? colors.statusCritical : colors.textTertiary, margin: 0, marginTop: 3 }}>
+                            {phase.floatDays} {phase.floatDays === 1 ? 'day' : 'days'} float
+                          </p>
+                        )}
+                        {(phase.critical || phase.is_critical) && (
+                          <p style={{ color: colors.statusCritical, fontWeight: typography.fontWeight.semibold, margin: 0, marginTop: 3 }}>Critical Path</p>
+                        )}
+                        {(phase.slippageDays ?? 0) > 0 && <p style={{ color: colors.statusCritical, margin: 0, marginTop: 3 }}>Slippage: +{phase.slippageDays}d</p>}
                       </div>
                     )}
                   </div>
