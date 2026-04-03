@@ -171,14 +171,49 @@ export const EditConflictBanner: React.FC<EditConflictBannerProps> = ({
   onOverwrite,
   onDismiss,
 }) => {
+  const primaryBtnRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (conflictDetected) {
+      primaryBtnRef.current?.focus();
+    }
+  }, [conflictDetected]);
+
   if (!conflictDetected) return null;
 
   const timeLabel = serverUpdatedAt ? formatBannerTime(serverUpdatedAt) : null;
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Escape') {
+      onDismiss();
+      return;
+    }
+    if (e.key !== 'Tab') return;
+    const focusable = Array.from(e.currentTarget.querySelectorAll<HTMLElement>('button'));
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    const active = document.activeElement;
+    if (e.shiftKey) {
+      if (active === first) {
+        e.preventDefault();
+        last.focus();
+      }
+    } else {
+      if (active === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+  };
+
   return (
     <div
-      role="alert"
-      aria-live="assertive"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="conflict-title"
+      aria-describedby="conflict-desc"
+      onKeyDown={handleKeyDown}
       style={{
         width: '100%',
         boxSizing: 'border-box',
@@ -202,20 +237,36 @@ export const EditConflictBanner: React.FC<EditConflictBannerProps> = ({
       />
 
       <div style={{ flex: '1 1 auto', minWidth: 0 }}>
-        <p style={{
-          margin: 0,
-          fontSize: typography.fontSize.sm,
-          fontWeight: typography.fontWeight.medium,
-          color: colors.textPrimary,
-          lineHeight: typography.lineHeight.snug,
-        }}>
+        <p
+          id="conflict-title"
+          aria-live="assertive"
+          style={{
+            margin: 0,
+            fontSize: typography.fontSize.sm,
+            fontWeight: typography.fontWeight.medium,
+            color: colors.textPrimary,
+            lineHeight: typography.lineHeight.snug,
+          }}
+        >
           {timeLabel
             ? `This item was updated by another user at ${timeLabel}.`
             : 'This item was updated by another user.'}
         </p>
 
+        <p
+          id="conflict-desc"
+          style={{
+            margin: `${spacing['1']} 0 0`,
+            fontSize: typography.fontSize.caption,
+            color: colors.textSecondary,
+          }}
+        >
+          Choose to reload the latest version or keep your current changes.
+        </p>
+
         <div style={{ display: 'flex', gap: spacing['2'], marginTop: spacing['2'], flexWrap: 'wrap' }}>
           <button
+            ref={primaryBtnRef}
             type="button"
             onClick={onReload}
             style={{
