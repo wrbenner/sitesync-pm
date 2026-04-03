@@ -73,12 +73,14 @@ export const FloatingAIButton: React.FC = () => {
       onTouchEnd={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)'; }}
       style={{
         position: 'fixed',
-        bottom: isMobile ? 'calc(env(safe-area-inset-bottom, 0px) + 72px)' : spacing['6'],
+        bottom: isMobile ? 'calc(env(safe-area-inset-bottom, 0px) + 80px)' : spacing['6'],
         right: isMobile ? spacing['4'] : spacing['6'],
-        width: isMobile ? '56px' : spacing['12'],
-        height: isMobile ? '56px' : spacing['12'],
+        width: isMobile ? '64px' : spacing['12'],
+        height: isMobile ? '64px' : spacing['12'],
         minWidth: '44px',
         minHeight: '44px',
+        touchAction: 'manipulation',
+        WebkitTapHighlightColor: 'transparent',
         borderRadius: borderRadius.full,
         background: isOpen
           ? colors.surfaceRaised
@@ -100,7 +102,7 @@ export const FloatingAIButton: React.FC = () => {
         (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)';
       }}
     >
-      <Sparkles size={20} color={isOpen ? colors.statusReview : colors.white} />
+      <Sparkles size={isMobile ? 28 : 20} color={isOpen ? colors.statusReview : colors.white} />
       {isError && (
         <span aria-label="AI insights failed to load" aria-live="polite" style={{
           position: 'absolute',
