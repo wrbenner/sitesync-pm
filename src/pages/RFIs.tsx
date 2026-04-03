@@ -7,7 +7,7 @@ import EmptyState from '../components/ui/EmptyState';
 import { MetricCardSkeleton } from '../components/ui/Skeletons';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 import { useRFIs } from '../hooks/queries';
-import { AlertTriangle, FileQuestion, FileText, Plus, Clock, MessageSquare, Paperclip, Calendar, RefreshCw, Send, Sparkles, LayoutGrid, List, UserCheck, Flag, Download, XCircle } from 'lucide-react';
+import { AlertTriangle, FileQuestion, FileText, FilterX, Plus, Clock, MessageSquare, Paperclip, Calendar, RefreshCw, Send, Sparkles, LayoutGrid, List, UserCheck, Flag, Download, XCircle } from 'lucide-react';
 import { useAppNavigate, getRelatedItemsForRfi } from '../utils/connections';
 import { useCreateRFI, useUpdateRFI } from '../hooks/mutations';
 import { useProjectId } from '../hooks/useProjectId';
@@ -331,22 +331,17 @@ const RFIs: React.FC = () => {
   if (!rfis.length) {
     return (
       <PageContainer title="RFIs" subtitle="No items">
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: `${spacing['16']} ${spacing['6']}`, textAlign: 'center' }}>
-          <div style={{ width: 64, height: 64, borderRadius: borderRadius.full, backgroundColor: colors.surfaceInset, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: spacing['4'] }}>
-            <FileText size={28} color={colors.textTertiary} />
-          </div>
-          <h3 style={{ fontSize: typography.fontSize.subtitle, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>
-            No RFIs have been created for this project yet
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 24px', gap: '16px', textAlign: 'center' }}>
+          <FileQuestion size={48} color="#9CA3AF" />
+          <h3 style={{ fontSize: 18, fontWeight: 600, color: '#1A1A2E', margin: 0 }}>
+            No RFIs Yet
           </h3>
-          <p style={{ fontSize: typography.fontSize.body, color: colors.textSecondary, margin: 0, marginBottom: spacing['6'], maxWidth: 420, lineHeight: typography.lineHeight.relaxed }}>
-            When questions arise in the field, create an RFI to get a documented answer
+          <p style={{ fontSize: 14, color: '#6B7280', margin: 0, maxWidth: 440, lineHeight: 1.6 }}>
+            When questions arise in the field about drawings or specs, create an RFI to get a documented answer from the design team.
           </p>
-          <PermissionGate permission="rfis.create">
-            <Btn onClick={() => setShowCreateModal(true)} style={{ backgroundColor: colors.primaryOrange, color: '#fff' }}>
-              <Plus size={16} style={{ marginRight: spacing.xs }} />
-              Create First RFI
-            </Btn>
-          </PermissionGate>
+          <Btn onClick={() => setShowCreateModal(true)}>
+            Create First RFI
+          </Btn>
         </div>
         {showCreateModal && <CreateRFIModal onClose={() => setShowCreateModal(false)} projectId={projectId!} />}
       </PageContainer>
@@ -475,33 +470,48 @@ const RFIs: React.FC = () => {
               );
             })}
           </div>
-          <VirtualDataTable
-            aria-label="RFI list"
-            data={filteredRfis}
-            columns={allRfiColumns}
-            rowHeight={48}
-            containerHeight={600}
-            onRowClick={(rfi) => navigate(`/projects/${projectId}/rfis/${rfi.id}`)}
-            selectedRowId={null}
-            getRowId={(row) => String(row.id)}
-            getRowAriaLabel={(rfi) => `RFI ${rfi.rfiNumber}: ${rfi.title}, status ${rfi.status}`}
-            getRowStyle={(rfi) => {
-              const overdue = rfi.dueDate && new Date(rfi.dueDate) < new Date() && rfi.status !== 'closed';
-              return overdue ? { borderLeft: '3px solid #E74C3C' } : {};
-            }}
-            loading={rfisLoading}
-            emptyMessage="No RFIs match your filters"
-            onRowToggleSelectByIndex={(i) => {
-              const id = String(allRfis[i]?.id);
-              if (!id) return;
-              setSelectedIds((prev) => {
-                const next = new Set(prev);
-                if (next.has(id)) next.delete(id);
-                else next.add(id);
-                return next;
-              });
-            }}
-          />
+          {filteredRfis.length === 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 24px', gap: '16px', textAlign: 'center' }}>
+              <FilterX size={48} color="#9CA3AF" />
+              <h3 style={{ fontSize: 18, fontWeight: 600, color: '#1A1A2E', margin: 0 }}>
+                No RFIs Match Your Filters
+              </h3>
+              <p style={{ fontSize: 14, color: '#6B7280', margin: 0 }}>
+                Try adjusting your search or filter criteria.
+              </p>
+              <Btn variant="secondary" onClick={() => setStatusFilter('all')}>
+                Clear All Filters
+              </Btn>
+            </div>
+          ) : (
+            <VirtualDataTable
+              aria-label="RFI list"
+              data={filteredRfis}
+              columns={allRfiColumns}
+              rowHeight={48}
+              containerHeight={600}
+              onRowClick={(rfi) => navigate(`/projects/${projectId}/rfis/${rfi.id}`)}
+              selectedRowId={null}
+              getRowId={(row) => String(row.id)}
+              getRowAriaLabel={(rfi) => `RFI ${rfi.rfiNumber}: ${rfi.title}, status ${rfi.status}`}
+              getRowStyle={(rfi) => {
+                const overdue = rfi.dueDate && new Date(rfi.dueDate) < new Date() && rfi.status !== 'closed';
+                return overdue ? { borderLeft: '3px solid #E74C3C' } : {};
+              }}
+              loading={rfisLoading}
+              emptyMessage="No RFIs match your filters"
+              onRowToggleSelectByIndex={(i) => {
+                const id = String(allRfis[i]?.id);
+                if (!id) return;
+                setSelectedIds((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(id)) next.delete(id);
+                  else next.add(id);
+                  return next;
+                });
+              }}
+            />
+          )}
         </Card>
       ) : (
         <KanbanBoard
