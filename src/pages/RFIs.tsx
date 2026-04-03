@@ -334,10 +334,10 @@ const RFIs: React.FC = () => {
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 24px', gap: '16px', textAlign: 'center' }}>
           <FileQuestion size={48} color="#9CA3AF" />
           <h3 style={{ fontSize: 18, fontWeight: 600, color: '#1A1A2E', margin: 0 }}>
-            No RFIs Yet
+            No RFIs have been created for this project yet
           </h3>
           <p style={{ fontSize: 14, color: '#6B7280', margin: 0, maxWidth: 440, lineHeight: 1.6 }}>
-            When questions arise in the field about drawings or specs, create an RFI to get a documented answer from the design team.
+            When questions arise in the field, create an RFI to get a documented answer
           </p>
           <Btn onClick={() => setShowCreateModal(true)}>
             Create First RFI
@@ -404,7 +404,7 @@ const RFIs: React.FC = () => {
       </div>
 
       {/* KPI metric cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'], marginBottom: spacing['4'] }}>
+      <div aria-live="polite" aria-atomic="true" aria-label="RFI metrics" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'], marginBottom: spacing['4'] }}>
         {[
           { label: 'Total Open', value: totalOpen, color: colors.statusActive, icon: <FileQuestion size={18} color={colors.statusActive} />, accent: false },
           { label: 'Overdue', value: overdueCount, color: '#E74C3C', icon: <AlertTriangle size={18} color="#E74C3C" />, accent: overdueCount > 0 },
@@ -474,13 +474,13 @@ const RFIs: React.FC = () => {
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 24px', gap: '16px', textAlign: 'center' }}>
               <FilterX size={48} color="#9CA3AF" />
               <h3 style={{ fontSize: 18, fontWeight: 600, color: '#1A1A2E', margin: 0 }}>
-                No RFIs Match Your Filters
+                No RFIs match your current filters
               </h3>
               <p style={{ fontSize: 14, color: '#6B7280', margin: 0 }}>
                 Try adjusting your search or filter criteria.
               </p>
               <Btn variant="secondary" onClick={() => setStatusFilter('all')}>
-                Clear All Filters
+                Clear Filters
               </Btn>
             </div>
           ) : (
