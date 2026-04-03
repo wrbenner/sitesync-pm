@@ -813,7 +813,7 @@ export const Schedule: React.FC = () => {
     return (
       <PageContainer title="Schedule" subtitle="Loading...">
         <style>{`@keyframes schedPulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 0.7; } }`}</style>
-        <Card style={{ padding: spacing.lg }}>
+        <Card role="status" aria-label="Loading schedule data" style={{ padding: spacing.lg }}>
           {([{ width: '60%' }, { width: '45%' }, { width: '75%' }, { width: '30%' }]).map((bar, i) => (
             <div
               key={i}
@@ -842,7 +842,7 @@ export const Schedule: React.FC = () => {
           onImportComplete={() => setShowImportModal(false)}
           projectId={activeProject?.id}
         />
-        <div style={{ maxWidth: '480px', margin: '80px auto', textAlign: 'center' }}>
+        <div role="status" aria-label="Build Your Project Schedule" style={{ maxWidth: '480px', margin: '80px auto', textAlign: 'center' }}>
           <Calendar size={64} color={colors.textTertiary} style={{ marginBottom: '24px' }} />
           <div style={{ fontSize: '20px', fontWeight: 600, color: colors.textPrimary, marginBottom: '12px' }}>
             Build Your Project Schedule
@@ -953,6 +953,7 @@ export const Schedule: React.FC = () => {
         </div>
       }
       aria-label="Project Schedule"
+      role="main"
     >
       {/* Global aria-live region: announces filter changes and status updates */}
       <div
@@ -1457,16 +1458,19 @@ export const Schedule: React.FC = () => {
               justifyContent: 'center',
               minHeight: '320px',
             }}>
-              <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '48px',
-                maxWidth: '480px',
-                textAlign: 'center',
-                gap: spacing['4'],
-              }}>
+              <div
+                role="status"
+                aria-label="No schedule activities. Build your project schedule to get started."
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '48px',
+                  maxWidth: '480px',
+                  textAlign: 'center',
+                  gap: spacing['4'],
+                }}>
                 <Calendar size={48} color="#9CA3AF" />
                 <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'] }}>
                   <p style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: colors.textPrimary }}>
@@ -1516,13 +1520,15 @@ export const Schedule: React.FC = () => {
         ) : isMobile ? (
           <div>
             {/* Filter tabs — horizontally scrollable */}
-            <div style={{ overflowX: 'auto', whiteSpace: 'nowrap', marginBottom: 12, WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
+            <div role="tablist" aria-label="Filter activities by status" style={{ overflowX: 'auto', whiteSpace: 'nowrap', marginBottom: 12, WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
               {(['all', 'in_progress', 'completed', 'delayed', 'not_started'] as const).map((f) => {
                 const labels: Record<string, string> = { all: 'All', in_progress: 'In Progress', completed: 'Completed', delayed: 'Delayed', not_started: 'Not Started' };
                 const active = mobileFilter === f;
                 return (
                   <button
                     key={f}
+                    role="tab"
+                    aria-selected={active}
                     onClick={() => setMobileFilter(f)}
                     style={{
                       display: 'inline-flex',
@@ -1752,7 +1758,7 @@ export const Schedule: React.FC = () => {
 
               {viewMode === 'list' ? (
                 <div style={{ overflowX: 'auto' }}>
-                  <table role="table" aria-label="Schedule activities list" style={{ width: '100%', borderCollapse: 'collapse', fontSize: typography.fontSize.sm }}>
+                  <table role="grid" aria-label="Schedule activities" style={{ width: '100%', borderCollapse: 'collapse', fontSize: typography.fontSize.sm }}>
                     <thead>
                       <tr style={{ backgroundColor: colors.surfaceInset }}>
                         {['Activity', 'Start', 'Finish', 'Duration', 'Status', '% Complete', 'Float'].map(h => (
@@ -1762,7 +1768,7 @@ export const Schedule: React.FC = () => {
                         ))}
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody data-schedule-list>
                       {schedulePhases.map((phase, i) => {
                         const statusLabel = (phase.status ?? 'not started').replace(/_/g, ' ');
                         const durationDays = Math.round((new Date(phase.endDate).getTime() - new Date(phase.startDate).getTime()) / 86400000);
@@ -1776,35 +1782,53 @@ export const Schedule: React.FC = () => {
                         return (
                           <tr
                             key={phase.id}
+                            role="row"
+                            tabIndex={0}
+                            aria-label={`${phase.name}, ${statusLabel}, ${phase.progress ?? 0}% complete, starts ${phase.startDate}`}
                             style={{
                               borderBottom: `1px solid ${colors.borderSubtle}`,
                               borderLeft: isCP ? '3px solid #E74C3C' : '3px solid transparent',
                               cursor: 'pointer',
                               transition: transitions.quick,
+                              outline: 'none',
                             }}
                             onMouseEnter={e => (e.currentTarget.style.backgroundColor = colors.surfaceHover)}
                             onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
                             onClick={() => addToast('info', `${phase.name}: ${phase.progress}% complete`)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                addToast('info', `${phase.name}: ${phase.progress}% complete`);
+                                setScheduleAnnouncement(`Selected: ${phase.name}, ${statusLabel}`);
+                              } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                                e.preventDefault();
+                                const tbody = e.currentTarget.closest('[data-schedule-list]');
+                                const rows = Array.from(tbody?.querySelectorAll<HTMLElement>('[role="row"]') ?? []);
+                                const idx = rows.indexOf(e.currentTarget);
+                                const next = e.key === 'ArrowDown' ? rows[idx + 1] : rows[idx - 1];
+                                next?.focus();
+                              }
+                            }}
                           >
-                            <td style={{ padding: `${spacing.sm} ${spacing.md}`, color: colors.textPrimary, fontWeight: isCP ? typography.fontWeight.semibold : typography.fontWeight.normal, maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            <td role="gridcell" style={{ padding: `${spacing.sm} ${spacing.md}`, color: colors.textPrimary, fontWeight: isCP ? typography.fontWeight.semibold : typography.fontWeight.normal, maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               {isCP && <span style={{ fontSize: '10px', fontWeight: 700, backgroundColor: '#E74C3C', color: '#fff', padding: '0 4px', borderRadius: 3, lineHeight: '16px', marginRight: 6 }}>CP</span>}
                               {phase.name}
                             </td>
-                            <td style={{ padding: `${spacing.sm} ${spacing.md}`, color: colors.textSecondary, whiteSpace: 'nowrap' }}>
+                            <td role="gridcell" style={{ padding: `${spacing.sm} ${spacing.md}`, color: colors.textSecondary, whiteSpace: 'nowrap' }}>
                               {new Date(phase.startDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}
                             </td>
-                            <td style={{ padding: `${spacing.sm} ${spacing.md}`, color: colors.textSecondary, whiteSpace: 'nowrap' }}>
+                            <td role="gridcell" style={{ padding: `${spacing.sm} ${spacing.md}`, color: colors.textSecondary, whiteSpace: 'nowrap' }}>
                               {new Date(phase.endDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}
                             </td>
-                            <td style={{ padding: `${spacing.sm} ${spacing.md}`, color: colors.textTertiary }}>
+                            <td role="gridcell" style={{ padding: `${spacing.sm} ${spacing.md}`, color: colors.textTertiary }}>
                               {durationDays}d
                             </td>
-                            <td style={{ padding: `${spacing.sm} ${spacing.md}` }}>
+                            <td role="gridcell" style={{ padding: `${spacing.sm} ${spacing.md}` }}>
                               <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: statusColor, backgroundColor: statusColor + '18', padding: '2px 8px', borderRadius: borderRadius.full }}>
                                 {statusLabel}
                               </span>
                             </td>
-                            <td style={{ padding: `${spacing.sm} ${spacing.md}` }}>
+                            <td role="gridcell" style={{ padding: `${spacing.sm} ${spacing.md}` }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
                                 <div style={{ width: 64, height: 6, borderRadius: 3, backgroundColor: colors.borderSubtle, overflow: 'hidden', flexShrink: 0 }}>
                                   <div style={{ height: '100%', width: `${phase.progress ?? 0}%`, backgroundColor: statusColor, borderRadius: 3 }} />
@@ -1812,7 +1836,7 @@ export const Schedule: React.FC = () => {
                                 <span style={{ fontSize: typography.fontSize.caption, color: colors.textSecondary, minWidth: 28 }}>{phase.progress ?? 0}%</span>
                               </div>
                             </td>
-                            <td style={{ padding: `${spacing.sm} ${spacing.md}`, color: Number(floatDays) === 0 ? '#E74C3C' : colors.textTertiary, fontWeight: Number(floatDays) === 0 ? typography.fontWeight.semibold : typography.fontWeight.normal }}>
+                            <td role="gridcell" style={{ padding: `${spacing.sm} ${spacing.md}`, color: Number(floatDays) === 0 ? '#E74C3C' : colors.textTertiary, fontWeight: Number(floatDays) === 0 ? typography.fontWeight.semibold : typography.fontWeight.normal }}>
                               {floatDays}d
                             </td>
                           </tr>
