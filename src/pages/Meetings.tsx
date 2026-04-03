@@ -1,1117 +1,478 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import React, { useState } from 'react';
+import { Plus, Calendar, MapPin } from 'lucide-react';
 import {
-  Play, Square, Clock, Plus, ChevronRight, Sparkles, GripVertical,
-  Users as UsersIcon, Calendar, X, CheckCircle2, Circle, UserCheck, Loader2,
-} from 'lucide-react';
-import {
-  PageContainer, Card, SectionHeader, Tag, Skeleton, useToast, Btn, MetricBox,
+  PageContainer, Card, Tag, Btn, MetricBox,
 } from '../components/Primitives';
-import { colors, spacing, typography, borderRadius, shadows, transitions, zIndex } from '../styles/theme';
-import { ExportButton } from '../components/shared/ExportButton';
-import { toast } from 'sonner';
-import { useCreateMeeting } from '../hooks/mutations';
-import { useProjectId } from '../hooks/useProjectId';
-import { useMeetings, useMeeting, useMeetingAgendaItems, useMeetingActionItems, useOpenActionItems, useDirectoryContacts } from '../hooks/queries';
-import CreateMeetingModal from '../components/forms/CreateMeetingModal';
-import { PermissionGate } from '../components/auth/PermissionGate';
-import { supabase } from '../lib/supabase';
+import { colors, spacing, typography, borderRadius, shadows, transitions } from '../styles/theme';
 
-// ── Type helpers ─────────────────────────────────────────────────────────────
+// ── Type helpers ──────────────────────────────────────────────────────────────
 
 const MEETING_TYPE_LABELS: Record<string, string> = {
   oac: 'OAC',
   safety: 'Safety',
-  coordination: 'Coordination',
-  progress: 'Progress',
   subcontractor: 'Subcontractor',
   internal: 'Internal',
+  coordination: 'Coordination',
 };
 
 const MEETING_TYPE_COLORS: Record<string, { fg: string; bg: string }> = {
-  oac: { fg: colors.primaryOrange, bg: colors.orangeSubtle },
-  safety: { fg: colors.statusCritical, bg: colors.statusCriticalSubtle },
-  coordination: { fg: colors.statusInfo, bg: colors.statusInfoSubtle },
-  progress: { fg: colors.statusActive, bg: colors.statusActiveSubtle },
-  subcontractor: { fg: colors.statusReview, bg: colors.statusReviewSubtle },
+  oac: { fg: colors.statusInfo, bg: colors.statusInfoSubtle },
+  safety: { fg: colors.statusPending, bg: colors.statusPendingSubtle },
+  subcontractor: { fg: colors.statusActive, bg: colors.statusActiveSubtle },
   internal: { fg: colors.statusNeutral, bg: colors.statusNeutralSubtle },
+  coordination: { fg: colors.statusReview, bg: colors.statusReviewSubtle },
 };
 
-function typeLabel(type: string | null): string {
-  return MEETING_TYPE_LABELS[type ?? ''] ?? 'Meeting';
+function typeLabel(type: string): string {
+  return MEETING_TYPE_LABELS[type] ?? 'Meeting';
 }
 
-function typeColors(type: string | null): { fg: string; bg: string } {
-  return MEETING_TYPE_COLORS[type ?? ''] ?? { fg: colors.statusNeutral, bg: colors.statusNeutralSubtle };
+function typeColors(type: string): { fg: string; bg: string } {
+  return MEETING_TYPE_COLORS[type] ?? { fg: colors.statusNeutral, bg: colors.statusNeutralSubtle };
 }
 
-// ── Date helpers ──────────────────────────────────────────────────────────────
+// ── Mock data ─────────────────────────────────────────────────────────────────
 
-function formatDate(iso: string | null): string {
-  if (!iso) return '';
-  const d = new Date(iso);
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+interface MockAttendee {
+  id: string;
+  name: string;
+  initials: string;
+  color: string;
 }
 
-function formatTime(iso: string | null): string {
-  if (!iso) return '';
-  const d = new Date(iso);
-  return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+interface MockMeeting {
+  id: string;
+  title: string;
+  date: string;
+  time: string;
+  type: string;
+  location: string;
+  attendees: MockAttendee[];
+  actionItemsOpen: number;
+  actionItemsTotal: number;
+  status: 'scheduled' | 'completed';
 }
 
-function getWeekBounds(): { start: Date; end: Date } {
-  const now = new Date();
-  const start = new Date(now);
-  start.setDate(now.getDate() - now.getDay());
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(start);
-  end.setDate(start.getDate() + 7);
-  return { start, end };
+interface MockActionItem {
+  id: string;
+  description: string;
+  assignee: string;
+  dueDate: string;
+  status: 'open' | 'completed';
+  meetingTitle: string;
 }
 
-function actionItemAgingColor(dueDateStr: string | null): string {
-  if (!dueDateStr) return colors.textTertiary;
-  const due = new Date(dueDateStr);
-  const now = new Date();
-  const daysUntilDue = Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-  if (daysUntilDue < 0) return colors.statusCritical;
-  if (daysUntilDue <= 4) return colors.statusPending;
-  return colors.statusActive;
-}
+const MOCK_ATTENDEES: Record<string, MockAttendee[]> = {
+  oac8: [
+    { id: 'a1', name: 'Marcus Chen', initials: 'MC', color: '#3B82F6' },
+    { id: 'a2', name: 'Sarah Novak', initials: 'SN', color: '#8B5CF6' },
+    { id: 'a3', name: 'James Ortiz', initials: 'JO', color: '#F47820' },
+    { id: 'a4', name: 'Priya Kapoor', initials: 'PK', color: '#10B981' },
+    { id: 'a5', name: 'Derek Walls', initials: 'DW', color: '#EF4444' },
+    { id: 'a6', name: 'Amy Sutton', initials: 'AS', color: '#06B6D4' },
+    { id: 'a7', name: 'Tom Brennan', initials: 'TB', color: '#F59E0B' },
+    { id: 'a8', name: 'Lena Morrow', initials: 'LM', color: '#84CC16' },
+  ],
+  safety12: [
+    { id: 'b1', name: 'Marcus Chen', initials: 'MC', color: '#3B82F6' },
+    { id: 'b2', name: 'James Ortiz', initials: 'JO', color: '#F47820' },
+    { id: 'b3', name: 'Derek Walls', initials: 'DW', color: '#EF4444' },
+    { id: 'b4', name: 'Tom Brennan', initials: 'TB', color: '#F59E0B' },
+    { id: 'b5', name: 'Lena Morrow', initials: 'LM', color: '#84CC16' },
+    { id: 'b6', name: 'Carlos Rivera', initials: 'CR', color: '#7C3AED' },
+    { id: 'b7', name: 'Dana Pierce', initials: 'DP', color: '#DB2777' },
+    { id: 'b8', name: 'Ed Navarro', initials: 'EN', color: '#0891B2' },
+    { id: 'b9', name: 'Fran Okafor', initials: 'FO', color: '#65A30D' },
+    { id: 'b10', name: 'Grace Kim', initials: 'GK', color: '#DC2626' },
+    { id: 'b11', name: 'Hal Stone', initials: 'HS', color: '#D97706' },
+    { id: 'b12', name: 'Iris Park', initials: 'IP', color: '#059669' },
+  ],
+  mep6: [
+    { id: 'c1', name: 'Sarah Novak', initials: 'SN', color: '#8B5CF6' },
+    { id: 'c2', name: 'Priya Kapoor', initials: 'PK', color: '#10B981' },
+    { id: 'c3', name: 'Carlos Rivera', initials: 'CR', color: '#7C3AED' },
+    { id: 'c4', name: 'Dana Pierce', initials: 'DP', color: '#DB2777' },
+    { id: 'c5', name: 'Ed Navarro', initials: 'EN', color: '#0891B2' },
+    { id: 'c6', name: 'Amy Sutton', initials: 'AS', color: '#06B6D4' },
+  ],
+  internal4: [
+    { id: 'd1', name: 'Marcus Chen', initials: 'MC', color: '#3B82F6' },
+    { id: 'd2', name: 'Sarah Novak', initials: 'SN', color: '#8B5CF6' },
+    { id: 'd3', name: 'Tom Brennan', initials: 'TB', color: '#F59E0B' },
+    { id: 'd4', name: 'Lena Morrow', initials: 'LM', color: '#84CC16' },
+  ],
+  past1_5: [
+    { id: 'e1', name: 'Marcus Chen', initials: 'MC', color: '#3B82F6' },
+    { id: 'e2', name: 'Sarah Novak', initials: 'SN', color: '#8B5CF6' },
+    { id: 'e3', name: 'James Ortiz', initials: 'JO', color: '#F47820' },
+    { id: 'e4', name: 'Priya Kapoor', initials: 'PK', color: '#10B981' },
+    { id: 'e5', name: 'Derek Walls', initials: 'DW', color: '#EF4444' },
+  ],
+  past2_10: [
+    { id: 'f1', name: 'Marcus Chen', initials: 'MC', color: '#3B82F6' },
+    { id: 'f2', name: 'James Ortiz', initials: 'JO', color: '#F47820' },
+    { id: 'f3', name: 'Derek Walls', initials: 'DW', color: '#EF4444' },
+    { id: 'f4', name: 'Tom Brennan', initials: 'TB', color: '#F59E0B' },
+    { id: 'f5', name: 'Lena Morrow', initials: 'LM', color: '#84CC16' },
+    { id: 'f6', name: 'Carlos Rivera', initials: 'CR', color: '#7C3AED' },
+    { id: 'f7', name: 'Dana Pierce', initials: 'DP', color: '#DB2777' },
+    { id: 'f8', name: 'Ed Navarro', initials: 'EN', color: '#0891B2' },
+    { id: 'f9', name: 'Fran Okafor', initials: 'FO', color: '#65A30D' },
+    { id: 'f10', name: 'Grace Kim', initials: 'GK', color: '#DC2626' },
+  ],
+  past3_7: [
+    { id: 'g1', name: 'Sarah Novak', initials: 'SN', color: '#8B5CF6' },
+    { id: 'g2', name: 'Priya Kapoor', initials: 'PK', color: '#10B981' },
+    { id: 'g3', name: 'Carlos Rivera', initials: 'CR', color: '#7C3AED' },
+    { id: 'g4', name: 'Dana Pierce', initials: 'DP', color: '#DB2777' },
+    { id: 'g5', name: 'Ed Navarro', initials: 'EN', color: '#0891B2' },
+    { id: 'g6', name: 'Amy Sutton', initials: 'AS', color: '#06B6D4' },
+    { id: 'g7', name: 'Tom Brennan', initials: 'TB', color: '#F59E0B' },
+  ],
+};
 
-// ── Calendar helpers ──────────────────────────────────────────────────────────
-
-function getWeekDates(): { label: string; dateStr: string; dayName: string }[] {
-  const now = new Date();
-  const dayOfWeek = now.getDay();
-  const monday = new Date(now);
-  monday.setDate(now.getDate() - ((dayOfWeek + 6) % 7));
-  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  return days.map((dayName, i) => {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    return { label: `${months[d.getMonth()]} ${d.getDate()}`, dateStr: d.toISOString().split('T')[0], dayName };
-  });
-}
-
-function formatTimer(seconds: number): string {
-  const m = Math.floor(seconds / 60).toString().padStart(2, '0');
-  const s = (seconds % 60).toString().padStart(2, '0');
-  return `${m}:${s}`;
-}
-
-function parseAgendaItems(meeting: any): { title: string; duration: string }[] {
-  if (!meeting?.agenda) return [];
-  try {
-    const parsed = typeof meeting.agenda === 'string' ? JSON.parse(meeting.agenda) : meeting.agenda;
-    if (Array.isArray(parsed)) return parsed.map((item: any) => ({
-      title: item.title || item.name || String(item),
-      duration: item.duration || '',
-    }));
-  } catch { /* ignore */ }
-  return [];
-}
-
-// ── Tabs ──────────────────────────────────────────────────────────────────────
-
-const TABS = [
-  { key: 'upcoming' as const, label: 'Upcoming' },
-  { key: 'calendar' as const, label: 'Calendar' },
-  { key: 'live' as const, label: 'Live Mode' },
+const MOCK_MEETINGS: MockMeeting[] = [
+  {
+    id: 'm1',
+    title: 'Weekly OAC Meeting #12',
+    date: 'Apr 7, 2026',
+    time: '10:00 AM',
+    type: 'oac',
+    location: 'Conference Room A, Level 3',
+    attendees: MOCK_ATTENDEES.oac8,
+    actionItemsOpen: 3,
+    actionItemsTotal: 5,
+    status: 'scheduled',
+  },
+  {
+    id: 'm2',
+    title: 'Daily Safety Standup',
+    date: 'Apr 4, 2026',
+    time: '7:00 AM',
+    type: 'safety',
+    location: 'Jobsite Trailer',
+    attendees: MOCK_ATTENDEES.safety12,
+    actionItemsOpen: 1,
+    actionItemsTotal: 1,
+    status: 'scheduled',
+  },
+  {
+    id: 'm3',
+    title: 'MEP Coordination Meeting',
+    date: 'Apr 8, 2026',
+    time: '2:00 PM',
+    type: 'subcontractor',
+    location: 'Zoom',
+    attendees: MOCK_ATTENDEES.mep6,
+    actionItemsOpen: 4,
+    actionItemsTotal: 7,
+    status: 'scheduled',
+  },
+  {
+    id: 'm4',
+    title: 'Internal PM Sync',
+    date: 'Apr 5, 2026',
+    time: '9:00 AM',
+    type: 'internal',
+    location: 'Office',
+    attendees: MOCK_ATTENDEES.internal4,
+    actionItemsOpen: 2,
+    actionItemsTotal: 3,
+    status: 'scheduled',
+  },
+  {
+    id: 'm5',
+    title: 'Weekly OAC Meeting #11',
+    date: 'Mar 31, 2026',
+    time: '10:00 AM',
+    type: 'oac',
+    location: 'Conference Room A, Level 3',
+    attendees: MOCK_ATTENDEES.past1_5,
+    actionItemsOpen: 0,
+    actionItemsTotal: 4,
+    status: 'completed',
+  },
+  {
+    id: 'm6',
+    title: 'Weekly Safety Standup',
+    date: 'Mar 28, 2026',
+    time: '7:00 AM',
+    type: 'safety',
+    location: 'Jobsite Trailer',
+    attendees: MOCK_ATTENDEES.past2_10,
+    actionItemsOpen: 0,
+    actionItemsTotal: 2,
+    status: 'completed',
+  },
+  {
+    id: 'm7',
+    title: 'Structural Steel Coordination',
+    date: 'Mar 27, 2026',
+    time: '1:00 PM',
+    type: 'subcontractor',
+    location: 'Zoom',
+    attendees: MOCK_ATTENDEES.past3_7,
+    actionItemsOpen: 0,
+    actionItemsTotal: 6,
+    status: 'completed',
+  },
 ];
 
-// ── Detail Panel ──────────────────────────────────────────────────────────────
+const MOCK_ACTION_ITEMS: MockActionItem[] = [
+  {
+    id: 'ai1',
+    description: 'Submit revised RFI log to owner by end of week',
+    assignee: 'Marcus Chen',
+    dueDate: 'Apr 4, 2026',
+    status: 'open',
+    meetingTitle: 'Weekly OAC Meeting #12',
+  },
+  {
+    id: 'ai2',
+    description: 'Confirm concrete pour schedule with structural engineer',
+    assignee: 'James Ortiz',
+    dueDate: 'Apr 5, 2026',
+    status: 'open',
+    meetingTitle: 'Weekly OAC Meeting #12',
+  },
+  {
+    id: 'ai3',
+    description: 'Update safety signage at north stairwell entry',
+    assignee: 'Derek Walls',
+    dueDate: 'Apr 4, 2026',
+    status: 'open',
+    meetingTitle: 'Daily Safety Standup',
+  },
+  {
+    id: 'ai4',
+    description: 'Resolve ductwork routing conflict on Level 4 mechanical room',
+    assignee: 'Carlos Rivera',
+    dueDate: 'Apr 7, 2026',
+    status: 'open',
+    meetingTitle: 'MEP Coordination Meeting',
+  },
+  {
+    id: 'ai5',
+    description: 'Coordinate plumbing rough-in inspection with city inspector',
+    assignee: 'Ed Navarro',
+    dueDate: 'Apr 8, 2026',
+    status: 'open',
+    meetingTitle: 'MEP Coordination Meeting',
+  },
+  {
+    id: 'ai6',
+    description: 'Send updated draw schedule to owner rep',
+    assignee: 'Sarah Novak',
+    dueDate: 'Apr 9, 2026',
+    status: 'open',
+    meetingTitle: 'MEP Coordination Meeting',
+  },
+  {
+    id: 'ai7',
+    description: 'Review punch list from last OAC and close out items',
+    assignee: 'Priya Kapoor',
+    dueDate: 'Apr 6, 2026',
+    status: 'open',
+    meetingTitle: 'MEP Coordination Meeting',
+  },
+  {
+    id: 'ai8',
+    description: 'Finalize subcontractor schedule for May closeout',
+    assignee: 'Tom Brennan',
+    dueDate: 'Apr 5, 2026',
+    status: 'open',
+    meetingTitle: 'Internal PM Sync',
+  },
+  {
+    id: 'ai9',
+    description: 'Close out window glazing submittal with architect',
+    assignee: 'Lena Morrow',
+    dueDate: 'Apr 6, 2026',
+    status: 'open',
+    meetingTitle: 'Internal PM Sync',
+  },
+];
 
-interface DetailPanelProps {
-  meetingId: string;
-  onClose: () => void;
-}
+// ── Avatar stack ──────────────────────────────────────────────────────────────
 
-const DetailPanel: React.FC<DetailPanelProps> = ({ meetingId, onClose }) => {
-  const { data: meeting, isPending: meetingLoading } = useMeeting(meetingId);
-  const { data: agendaItems = [] } = useMeetingAgendaItems(meetingId);
-  const { data: remoteActionItems = [], isError: actionItemsError } = useMeetingActionItems(meetingId);
-  const queryClient = useQueryClient();
-
-  // Local state fallback when meeting_action_items table is absent
-  const [localActionItems] = useState<any[]>([]);
-  const actionItems: any[] = actionItemsError ? localActionItems : (remoteActionItems as any[]);
-
-  // Local toggle overrides for action item status
-  const [actionStatusOverrides, setActionStatusOverrides] = useState<Record<string, 'open' | 'completed'>>({});
-
-  // Local 3-state attendance: present | absent | remote
-  const [attendanceStatus, setAttendanceStatus] = useState<Record<string, 'present' | 'absent' | 'remote'>>({});
-
-  // Meeting notes auto-save state
-  const [notesText, setNotesText] = useState<string>('');
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Add action item form state
-  const [showAddItem, setShowAddItem] = useState(false);
-  const [newItemDesc, setNewItemDesc] = useState('');
-  const [newItemAssignee, setNewItemAssignee] = useState('');
-  const [newItemDueDate, setNewItemDueDate] = useState('');
-  const [addingItem, setAddingItem] = useState(false);
-
-  // Per-attendee sign-in timestamps
-  const [signInTimes, setSignInTimes] = useState<Record<string, string>>({});
-  const [checkingIn, setCheckingIn] = useState<Record<string, boolean>>({});
-
-  const projectId = useProjectId();
-  const { data: directoryResult } = useDirectoryContacts(projectId);
-
-  // AI Summary state
-  const [aiSummary, setAiSummary] = useState<string | null>(null);
-  const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
-
-  // AI Suggested action items state
-  const [aiSuggestLoading, setAiSuggestLoading] = useState(false);
-  const [aiSuggestedItems, setAiSuggestedItems] = useState<string[]>([]);
-  const [acceptedSuggestedItems, setAcceptedSuggestedItems] = useState<string[]>([]);
-
-  const tc = typeColors(meeting?.type ?? null);
-  const attendees: any[] = (meeting as any)?.attendees ?? [];
-
-  // Seed attendance from server data on first load
-  useEffect(() => {
-    if (attendees.length === 0) return;
-    setAttendanceStatus((prev) => {
-      if (Object.keys(prev).length > 0) return prev;
-      const init: Record<string, 'present' | 'absent' | 'remote'> = {};
-      attendees.forEach((a: any) => { init[a.id ?? a.user_id ?? a.company] = a.attended ? 'present' : 'absent'; });
-      return init;
-    });
-    setSignInTimes((prev) => {
-      if (Object.keys(prev).length > 0) return prev;
-      const init: Record<string, string> = {};
-      attendees.forEach((a: any) => { if (a.sign_in_time) init[a.id] = a.sign_in_time; });
-      return init;
-    });
-  }, [attendees.length]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Sync notes from meeting record on load
-  useEffect(() => {
-    if (meeting) setNotesText((meeting as any).notes ?? '');
-  }, [meeting?.id]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Cleanup save timeout on unmount
-  useEffect(() => () => { if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); }, []);
-
-  const handleNotesChange = (value: string) => {
-    setNotesText(value);
-    setSaveStatus('saving');
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    saveTimeoutRef.current = setTimeout(async () => {
-      try {
-        await supabase.from('meetings').update({ notes: value }).eq('id', meetingId);
-        setSaveStatus('saved');
-      } catch {
-        setSaveStatus('idle');
-      }
-    }, 3000);
-  };
-
-  const handleAddActionItem = async () => {
-    if (!newItemDesc.trim()) return;
-    setAddingItem(true);
-    try {
-      const { error } = await supabase.from('meeting_action_items').insert({
-        meeting_id: meetingId,
-        description: newItemDesc.trim(),
-        assigned_to: newItemAssignee || null,
-        due_date: newItemDueDate || null,
-        status: 'open',
-      });
-      if (error) throw error;
-      setNewItemDesc('');
-      setNewItemAssignee('');
-      setNewItemDueDate('');
-      setShowAddItem(false);
-      queryClient.invalidateQueries({ queryKey: ['meeting_action_items', meetingId] });
-      queryClient.invalidateQueries({ queryKey: ['meetings', 'detail', meetingId] });
-    } catch {
-      toast.error('Failed to add action item.');
-    } finally {
-      setAddingItem(false);
-    }
-  };
-
-  const handleCheckIn = async (attendeeId: string) => {
-    const now = new Date().toISOString();
-    setCheckingIn((prev) => ({ ...prev, [attendeeId]: true }));
-    try {
-      await supabase.from('meeting_attendees').update({ attended: true, sign_in_time: now }).eq('id', attendeeId);
-      setSignInTimes((prev) => ({ ...prev, [attendeeId]: now }));
-      setAttendanceStatus((prev) => ({ ...prev, [attendeeId]: 'present' }));
-    } catch {
-      toast.error('Failed to record check-in.');
-    } finally {
-      setCheckingIn((prev) => ({ ...prev, [attendeeId]: false }));
-    }
-  };
-
-  const directoryContacts: any[] = (directoryResult as any)?.data ?? [];
-
-  const presentCount = Object.values(attendanceStatus).filter((s) => s === 'present').length;
-  const remoteCount = Object.values(attendanceStatus).filter((s) => s === 'remote').length;
-
-  const generateSummary = async () => {
-    if (!meeting) return;
-    setAiSummaryLoading(true);
-    try {
-      const attendeeCount = attendees.length;
-      const agendaTitles = agendaItems.map((a: any) => a.title).join(', ');
-      const { data, error } = await supabase.functions.invoke('ai-copilot', {
-        body: {
-          project_id: projectId,
-          message: `Summarize this meeting. Title: ${meeting.title}. Date: ${meeting.date}. Attendees: ${attendeeCount}. Agenda items: ${agendaTitles}. Notes: ${(meeting as any).minutes || 'No notes recorded'}. Generate a concise 3 to 4 sentence summary and extract any action items.`,
-        },
-      });
-      if (error) throw error;
-      const response = data?.message ?? data?.response ?? data?.content ?? JSON.stringify(data);
-      setAiSummary(response);
-    } catch {
-      toast.error('Could not generate summary. Try again.');
-    } finally {
-      setAiSummaryLoading(false);
-    }
-  };
-
-  const suggestActionItems = async () => {
-    if (!meeting) return;
-    setAiSuggestLoading(true);
-    try {
-      const agendaTitles = agendaItems.map((a: any) => a.title).join(', ');
-      const { data, error } = await supabase.functions.invoke('ai-copilot', {
-        body: {
-          project_id: projectId,
-          message: `Based on this meeting, suggest 3 to 5 specific action items as a numbered list. Title: ${meeting.title}. Agenda: ${agendaTitles}. Notes: ${(meeting as any).minutes || 'No notes recorded'}. Return only the action items, one per line, without numbering or bullet characters.`,
-        },
-      });
-      if (error) throw error;
-      const response = data?.message ?? data?.response ?? data?.content ?? '';
-      const items = String(response)
-        .split('\n')
-        .map((l: string) => l.replace(/^[\d\.\-\*\s]+/, '').trim())
-        .filter((l: string) => l.length > 0);
-      setAiSuggestedItems(items);
-    } catch {
-      toast.error('Could not generate suggestions. Try again.');
-    } finally {
-      setAiSuggestLoading(false);
-    }
-  };
+function AvatarStack({ attendees }: { attendees: MockAttendee[] }) {
+  const maxVisible = 4;
+  const visible = attendees.slice(0, maxVisible);
+  const overflow = attendees.length - maxVisible;
 
   return (
-    <>
-      {/* Backdrop */}
-      <div
-        onClick={onClose}
-        style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(0,0,0,0.25)',
-          zIndex: zIndex.modal - 1,
-        }}
-      />
-      {/* Panel */}
-      <div
-        style={{
-          position: 'fixed',
-          top: 0,
-          right: 0,
-          width: 480,
-          height: '100vh',
-          background: colors.surfaceRaised,
-          boxShadow: shadows.panel,
-          zIndex: zIndex.modal,
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-        }}
-      >
-        {/* Header */}
+    <div style={{ display: 'flex', alignItems: 'center' }}>
+      {visible.map((a, i) => (
         <div
+          key={a.id}
+          title={a.name}
           style={{
+            width: 28,
+            height: 28,
+            borderRadius: borderRadius.full,
+            background: a.color,
+            border: `2px solid ${colors.surfaceRaised}`,
             display: 'flex',
-            alignItems: 'flex-start',
-            justifyContent: 'space-between',
-            padding: `${spacing.xl} ${spacing.xl} ${spacing.lg}`,
-            borderBottom: `1px solid ${colors.borderSubtle}`,
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: typography.fontSize.caption,
+            fontWeight: typography.fontWeight.semibold,
+            color: colors.white,
+            marginLeft: i === 0 ? 0 : -8,
             flexShrink: 0,
+            zIndex: maxVisible - i,
+            position: 'relative',
           }}
         >
-          <div style={{ flex: 1, minWidth: 0 }}>
-            {meetingLoading ? (
-              <Skeleton width="60%" height="22px" />
-            ) : (
+          {a.initials}
+        </div>
+      ))}
+      {overflow > 0 && (
+        <div
+          style={{
+            width: 28,
+            height: 28,
+            borderRadius: borderRadius.full,
+            background: colors.surfaceInset,
+            border: `2px solid ${colors.surfaceRaised}`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: typography.fontSize.caption,
+            fontWeight: typography.fontWeight.semibold,
+            color: colors.textSecondary,
+            marginLeft: -8,
+            flexShrink: 0,
+            position: 'relative',
+          }}
+        >
+          +{overflow}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Meeting card ──────────────────────────────────────────────────────────────
+
+function MeetingCard({ meeting }: { meeting: MockMeeting }) {
+  const [hovered, setHovered] = useState(false);
+  const tc = typeColors(meeting.type);
+  const allDone = meeting.actionItemsOpen === 0;
+
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        background: colors.surfaceRaised,
+        borderRadius: borderRadius.xl,
+        padding: spacing.xl,
+        boxShadow: hovered ? shadows.cardHover : shadows.card,
+        border: `1px solid ${hovered ? colors.borderDefault : colors.borderSubtle}`,
+        cursor: 'pointer',
+        transition: transitions.quick,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: spacing.md,
+      }}
+    >
+      {/* Top row: title + type badge */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing.md }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p
+            style={{
+              fontSize: typography.fontSize.title,
+              fontWeight: typography.fontWeight.semibold,
+              color: colors.textPrimary,
+              margin: 0,
+              lineHeight: typography.lineHeight.snug,
+            }}
+          >
+            {meeting.title}
+          </p>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: spacing.sm,
+              marginTop: spacing.xs,
+              flexWrap: 'wrap',
+            }}
+          >
+            <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, fontWeight: typography.fontWeight.medium }}>
+              {meeting.date}
+            </span>
+            <span style={{ color: colors.borderDefault, fontSize: typography.fontSize.sm }}>·</span>
+            <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>
+              {meeting.time}
+            </span>
+            {meeting.location && (
               <>
-                <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs }}>
-                  <Tag label={typeLabel(meeting?.type ?? null)} color={tc.fg} backgroundColor={tc.bg} />
-                  {meeting?.status === 'completed' && (
-                    <Tag label="Completed" color={colors.statusActive} backgroundColor={colors.statusActiveSubtle} />
-                  )}
-                </div>
-                <h2
-                  style={{
-                    fontSize: typography.fontSize.subtitle,
-                    fontWeight: typography.fontWeight.semibold,
-                    color: colors.textPrimary,
-                    margin: 0,
-                    lineHeight: typography.lineHeight.tight,
-                  }}
-                >
-                  {meeting?.title ?? ''}
-                </h2>
-                <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: `${spacing.xs} 0 0` }}>
-                  {formatDate(meeting?.date ?? null)}
-                  {meeting?.date ? ` at ${formatTime(meeting.date)}` : ''}
-                  {meeting?.location ? ` · ${meeting.location}` : ''}
-                  {meeting?.duration_minutes ? ` · ${meeting.duration_minutes} min` : ''}
-                </p>
+                <span style={{ color: colors.borderDefault, fontSize: typography.fontSize.sm }}>·</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], fontSize: typography.fontSize.sm, color: colors.textTertiary }}>
+                  <MapPin size={11} />
+                  {meeting.location}
+                </span>
               </>
             )}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, flexShrink: 0, marginLeft: spacing.sm }}>
-            <button
-              onClick={generateSummary}
-              disabled={aiSummaryLoading || meetingLoading}
-              aria-label="Generate AI summary"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: spacing.xs,
-                padding: `${spacing.xs} ${spacing.md}`,
-                background: aiSummaryLoading ? colors.surfaceInset : '#F3EEFF',
-                border: `1px solid #DDD6FE`,
-                borderRadius: borderRadius.md,
-                fontSize: typography.fontSize.sm,
-                fontWeight: typography.fontWeight.medium,
-                fontFamily: typography.fontFamily,
-                color: '#7C3AED',
-                cursor: aiSummaryLoading || meetingLoading ? 'not-allowed' : 'pointer',
-                opacity: meetingLoading ? 0.5 : 1,
-                whiteSpace: 'nowrap',
-                transition: transitions.quick,
-              }}
-            >
-              {aiSummaryLoading
-                ? <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />
-                : <Sparkles size={12} />}
-              {aiSummaryLoading ? 'Generating...' : 'Generate Summary'}
-            </button>
-            <button
-              onClick={onClose}
-              aria-label="Close meeting detail"
-              style={{
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                padding: spacing.xs,
-                color: colors.textTertiary,
-              }}
-            >
-              <X size={18} />
-            </button>
-          </div>
         </div>
+        <Tag label={typeLabel(meeting.type)} color={tc.fg} backgroundColor={tc.bg} />
+      </div>
 
-        {/* Spinner keyframes */}
-        <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
-
-        {/* Scrollable body */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: spacing.xl }}>
-          {/* AI Summary card */}
-          {aiSummary && (
-            <div
-              style={{
-                borderLeft: '3px solid #8B5CF6',
-                background: '#F5F3FF',
-                borderRadius: borderRadius.md,
-                padding: `${spacing.md} ${spacing.lg}`,
-                marginBottom: spacing.xl,
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.sm }}>
-                <Sparkles size={13} color="#8B5CF6" />
-                <span
-                  style={{
-                    fontSize: typography.fontSize.label,
-                    fontWeight: typography.fontWeight.semibold,
-                    color: '#7C3AED',
-                    textTransform: 'uppercase',
-                    letterSpacing: typography.letterSpacing.wider,
-                  }}
-                >
-                  AI Summary
-                </span>
-              </div>
-              <p style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, margin: 0, lineHeight: typography.lineHeight.normal }}>
-                {aiSummary}
-              </p>
-            </div>
-          )}
-
-          {/* Meeting Minutes */}
-          <div style={{ marginBottom: spacing.xl }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md }}>
-              <p
-                style={{
-                  fontSize: typography.fontSize.label,
-                  fontWeight: typography.fontWeight.semibold,
-                  color: colors.textSecondary,
-                  margin: 0,
-                  textTransform: 'uppercase',
-                  letterSpacing: typography.letterSpacing.wider,
-                }}
-              >
-                Meeting Minutes
-              </p>
-              {saveStatus === 'saving' && (
-                <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, display: 'flex', alignItems: 'center', gap: spacing.xs }}>
-                  <Loader2 size={11} style={{ animation: 'spin 1s linear infinite' }} />
-                  Saving...
-                </span>
-              )}
-              {saveStatus === 'saved' && (
-                <span style={{ fontSize: typography.fontSize.caption, color: colors.statusActive, display: 'flex', alignItems: 'center', gap: spacing.xs }}>
-                  <CheckCircle2 size={11} />
-                  Saved
-                </span>
-              )}
-            </div>
-            <textarea
-              value={notesText}
-              onChange={(e) => handleNotesChange(e.target.value)}
-              placeholder="Type meeting notes here. Auto-saves every 3 seconds."
-              rows={5}
-              style={{
-                width: '100%',
-                padding: `${spacing.md} ${spacing.lg}`,
-                border: `1px solid ${colors.borderDefault}`,
-                borderRadius: borderRadius.md,
-                fontSize: typography.fontSize.body,
-                fontFamily: typography.fontFamily,
-                color: colors.textPrimary,
-                background: colors.surfaceRaised,
-                resize: 'vertical',
-                outline: 'none',
-                lineHeight: typography.lineHeight.normal,
-                boxSizing: 'border-box',
-              }}
-            />
-          </div>
-
-          {/* Agenda items */}
-          <p
+      {/* Bottom row: avatars + action items */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <AvatarStack attendees={meeting.attendees} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
+          <span
             style={{
-              fontSize: typography.fontSize.label,
-              fontWeight: typography.fontWeight.semibold,
-              color: colors.textSecondary,
-              margin: `0 0 ${spacing.md}`,
-              textTransform: 'uppercase',
-              letterSpacing: typography.letterSpacing.wider,
+              fontSize: typography.fontSize.sm,
+              fontWeight: typography.fontWeight.medium,
+              color: allDone ? colors.statusActive : (meeting.actionItemsOpen > 2 ? colors.statusPending : colors.textSecondary),
             }}
           >
-            Agenda
-          </p>
-          {agendaItems.length === 0 ? (
-            <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, marginBottom: spacing.xl }}>
-              No agenda items recorded.
-            </p>
-          ) : (
-            <ol style={{ margin: `0 0 ${spacing.xl}`, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: spacing.sm }}>
-              {agendaItems.map((item: any, i: number) => (
-                <li
-                  key={item.id}
-                  style={{
-                    display: 'flex',
-                    gap: spacing.md,
-                    padding: `${spacing.md} ${spacing.lg}`,
-                    background: colors.surfaceInset,
-                    borderRadius: borderRadius.md,
-                  }}
-                >
-                  <span
-                    style={{
-                      width: 22,
-                      height: 22,
-                      borderRadius: borderRadius.full,
-                      background: colors.primaryOrange,
-                      color: colors.white,
-                      fontSize: typography.fontSize.caption,
-                      fontWeight: typography.fontWeight.semibold,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0,
-                    }}
-                  >
-                    {i + 1}
-                  </span>
-                  <div style={{ flex: 1 }}>
-                    <p style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, margin: 0 }}>
-                      {item.title}
-                    </p>
-                    {item.presenter && (
-                      <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: `${spacing.xs} 0 0` }}>
-                        {item.presenter}
-                      </p>
-                    )}
-                    {item.notes && (
-                      <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: `${spacing.xs} 0 0`, lineHeight: typography.lineHeight.normal }}>
-                        {item.notes}
-                      </p>
-                    )}
-                    {item.decision && (
-                      <p style={{ fontSize: typography.fontSize.sm, color: colors.statusActive, margin: `${spacing.xs} 0 0`, fontWeight: typography.fontWeight.medium }}>
-                        Decision: {item.decision}
-                      </p>
-                    )}
-                  </div>
-                  {item.duration_minutes && (
-                    <span style={{ fontSize: typography.fontSize.label, color: colors.textTertiary, flexShrink: 0 }}>
-                      {item.duration_minutes}m
-                    </span>
-                  )}
-                </li>
-              ))}
-            </ol>
-          )}
-
-          {/* Action items */}
-          <p
-            style={{
-              fontSize: typography.fontSize.label,
-              fontWeight: typography.fontWeight.semibold,
-              color: colors.textSecondary,
-              margin: `0 0 ${spacing.md}`,
-              textTransform: 'uppercase',
-              letterSpacing: typography.letterSpacing.wider,
-            }}
-          >
-            Action Items
-          </p>
-          {actionItems.length === 0 ? (
-            <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, marginBottom: spacing.xl }}>
-              No action items for this meeting.
-            </p>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm, marginBottom: spacing.xl }}>
-              {actionItems.map((item: any) => {
-                const agingColor = actionItemAgingColor(item.due_date);
-                const effectiveStatus = actionStatusOverrides[item.id] ?? ((item.status === 'done' || item.status === 'completed') ? 'completed' : 'open');
-                const isDone = effectiveStatus === 'completed';
-                const toggleStatus = () => setActionStatusOverrides((prev) => ({ ...prev, [item.id]: isDone ? 'open' : 'completed' }));
-                return (
-                  <div
-                    key={item.id}
-                    style={{
-                      display: 'flex',
-                      gap: spacing.md,
-                      padding: `${spacing.md} ${spacing.lg}`,
-                      background: colors.surfaceInset,
-                      borderRadius: borderRadius.md,
-                      opacity: isDone ? 0.6 : 1,
-                    }}
-                  >
-                    <button
-                      onClick={toggleStatus}
-                      aria-label={isDone ? 'Mark as open' : 'Mark as completed'}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0, marginTop: 2, display: 'flex', alignItems: 'center' }}
-                    >
-                      {isDone ? (
-                        <CheckCircle2 size={16} color={colors.statusActive} />
-                      ) : (
-                        <Circle size={16} color={colors.textTertiary} />
-                      )}
-                    </button>
-                    <div style={{ flex: 1 }}>
-                      <p
-                        style={{
-                          fontSize: typography.fontSize.body,
-                          color: isDone ? colors.textTertiary : colors.textPrimary,
-                          margin: 0,
-                          textDecoration: isDone ? 'line-through' : 'none',
-                        }}
-                      >
-                        {item.description}
-                      </p>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: spacing.lg, marginTop: spacing.xs }}>
-                        {item.assigned_to && (
-                          <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>
-                            {item.assigned_to}
-                          </span>
-                        )}
-                        {item.due_date && (
-                          <span
-                            style={{
-                              fontSize: typography.fontSize.sm,
-                              color: isDone ? colors.textTertiary : agingColor,
-                              fontWeight: typography.fontWeight.medium,
-                            }}
-                          >
-                            Due {formatDate(item.due_date)}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Add Action Item form */}
-          <div style={{ marginBottom: spacing.lg }}>
-            {!showAddItem ? (
-              <button
-                onClick={() => setShowAddItem(true)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: spacing.xs,
-                  background: 'none',
-                  border: `1px dashed ${colors.borderDefault}`,
-                  borderRadius: borderRadius.md,
-                  padding: `${spacing.sm} ${spacing.md}`,
-                  cursor: 'pointer',
-                  fontSize: typography.fontSize.sm,
-                  fontWeight: typography.fontWeight.medium,
-                  fontFamily: typography.fontFamily,
-                  color: colors.textSecondary,
-                  width: '100%',
-                  justifyContent: 'center',
-                }}
-              >
-                <Plus size={14} />
-                Add Action Item
-              </button>
-            ) : (
-              <div
-                style={{
-                  background: colors.surfaceInset,
-                  borderRadius: borderRadius.md,
-                  padding: spacing.lg,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: spacing.sm,
-                }}
-              >
-                <input
-                  autoFocus
-                  value={newItemDesc}
-                  onChange={(e) => setNewItemDesc(e.target.value)}
-                  placeholder="Describe the action item..."
-                  style={{
-                    padding: `${spacing.sm} ${spacing.md}`,
-                    border: `1px solid ${colors.borderDefault}`,
-                    borderRadius: borderRadius.md,
-                    fontSize: typography.fontSize.body,
-                    fontFamily: typography.fontFamily,
-                    color: colors.textPrimary,
-                    background: colors.surfaceRaised,
-                    outline: 'none',
-                  }}
-                />
-                <div style={{ display: 'flex', gap: spacing.sm }}>
-                  <select
-                    value={newItemAssignee}
-                    onChange={(e) => setNewItemAssignee(e.target.value)}
-                    style={{
-                      flex: 1,
-                      padding: `${spacing.sm} ${spacing.md}`,
-                      border: `1px solid ${colors.borderDefault}`,
-                      borderRadius: borderRadius.md,
-                      fontSize: typography.fontSize.sm,
-                      fontFamily: typography.fontFamily,
-                      color: newItemAssignee ? colors.textPrimary : colors.textTertiary,
-                      background: colors.surfaceRaised,
-                      outline: 'none',
-                    }}
-                  >
-                    <option value="">Assignee (optional)</option>
-                    {directoryContacts.map((c: any) => (
-                      <option key={c.id} value={c.contact_name ?? c.id}>
-                        {c.contact_name}{c.company_name ? ` — ${c.company_name}` : ''}
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    type="date"
-                    value={newItemDueDate}
-                    onChange={(e) => setNewItemDueDate(e.target.value)}
-                    style={{
-                      padding: `${spacing.sm} ${spacing.md}`,
-                      border: `1px solid ${colors.borderDefault}`,
-                      borderRadius: borderRadius.md,
-                      fontSize: typography.fontSize.sm,
-                      fontFamily: typography.fontFamily,
-                      color: colors.textPrimary,
-                      background: colors.surfaceRaised,
-                      outline: 'none',
-                    }}
-                  />
-                </div>
-                <div style={{ display: 'flex', gap: spacing.sm, justifyContent: 'flex-end' }}>
-                  <button
-                    onClick={() => { setShowAddItem(false); setNewItemDesc(''); setNewItemAssignee(''); setNewItemDueDate(''); }}
-                    style={{
-                      padding: `${spacing.xs} ${spacing.md}`,
-                      border: `1px solid ${colors.borderDefault}`,
-                      borderRadius: borderRadius.md,
-                      background: 'none',
-                      cursor: 'pointer',
-                      fontSize: typography.fontSize.sm,
-                      fontFamily: typography.fontFamily,
-                      color: colors.textSecondary,
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleAddActionItem}
-                    disabled={!newItemDesc.trim() || addingItem}
-                    style={{
-                      padding: `${spacing.xs} ${spacing.md}`,
-                      border: 'none',
-                      borderRadius: borderRadius.md,
-                      background: newItemDesc.trim() ? colors.primaryOrange : colors.borderDefault,
-                      cursor: newItemDesc.trim() && !addingItem ? 'pointer' : 'not-allowed',
-                      fontSize: typography.fontSize.sm,
-                      fontWeight: typography.fontWeight.medium,
-                      fontFamily: typography.fontFamily,
-                      color: newItemDesc.trim() ? colors.white : colors.textTertiary,
-                    }}
-                  >
-                    {addingItem ? 'Adding...' : 'Add'}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* AI Suggest Action Items */}
-          <div style={{ marginBottom: spacing.xl }}>
-            <button
-              onClick={suggestActionItems}
-              disabled={aiSuggestLoading || meetingLoading}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: spacing.xs,
-                background: 'none',
-                border: 'none',
-                cursor: aiSuggestLoading || meetingLoading ? 'not-allowed' : 'pointer',
-                padding: 0,
-                fontSize: typography.fontSize.sm,
-                fontWeight: typography.fontWeight.medium,
-                fontFamily: typography.fontFamily,
-                color: '#7C3AED',
-                opacity: meetingLoading ? 0.5 : 1,
-              }}
-            >
-              {aiSuggestLoading
-                ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} />
-                : <Sparkles size={13} />}
-              {aiSuggestLoading ? 'Generating suggestions...' : 'AI Suggest Action Items'}
-            </button>
-
-            {aiSuggestedItems.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs, marginTop: spacing.md }}>
-                {aiSuggestedItems.map((item, i) => {
-                  const isAccepted = acceptedSuggestedItems.includes(item);
-                  return (
-                    <div
-                      key={i}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: spacing.md,
-                        padding: `${spacing.sm} ${spacing.md}`,
-                        background: isAccepted ? '#F5F3FF' : colors.surfaceInset,
-                        borderRadius: borderRadius.md,
-                        border: isAccepted ? '1px solid #DDD6FE' : `1px solid transparent`,
-                        opacity: isAccepted ? 0.7 : 1,
-                      }}
-                    >
-                      <p style={{ flex: 1, fontSize: typography.fontSize.sm, color: colors.textPrimary, margin: 0, lineHeight: typography.lineHeight.normal }}>
-                        {item}
-                      </p>
-                      {!isAccepted && (
-                        <button
-                          onClick={() => setAcceptedSuggestedItems((prev) => [...prev, item])}
-                          aria-label="Accept action item"
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            width: 24,
-                            height: 24,
-                            borderRadius: borderRadius.full,
-                            background: '#8B5CF6',
-                            border: 'none',
-                            cursor: 'pointer',
-                            color: '#fff',
-                            fontSize: 16,
-                            fontWeight: typography.fontWeight.semibold,
-                            flexShrink: 0,
-                          }}
-                        >
-                          +
-                        </button>
-                      )}
-                      {isAccepted && (
-                        <CheckCircle2 size={16} color="#8B5CF6" style={{ flexShrink: 0 }} />
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Attendance */}
-          {attendees.length > 0 && (
-            <>
-              <p
-                style={{
-                  fontSize: typography.fontSize.label,
-                  fontWeight: typography.fontWeight.semibold,
-                  color: colors.textSecondary,
-                  margin: `0 0 ${spacing.md}`,
-                  textTransform: 'uppercase',
-                  letterSpacing: typography.letterSpacing.wider,
-                }}
-              >
-                Attendance ({presentCount + remoteCount} of {attendees.length})
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
-                {attendees.map((a: any) => {
-                  const aKey = a.id ?? a.user_id ?? a.company;
-                  const status = attendanceStatus[aKey] ?? 'absent';
-                  const checkedInAt = signInTimes[a.id];
-                  const isCheckedIn = !!checkedInAt || status === 'present';
-                  const cycleStatus = () => setAttendanceStatus((prev) => {
-                    const next: Record<string, 'present' | 'absent' | 'remote'> = { ...prev };
-                    next[aKey] = status === 'absent' ? 'present' : status === 'present' ? 'remote' : 'absent';
-                    return next;
-                  });
-                  const statusColors = {
-                    present: colors.statusActive,
-                    remote: colors.statusInfo,
-                    absent: colors.textTertiary,
-                  };
-                  const statusLabels = { present: 'Present', remote: 'Remote', absent: 'Absent' };
-                  return (
-                    <div
-                      key={aKey}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: spacing.md,
-                        padding: `${spacing.sm} ${spacing.sm}`,
-                        borderRadius: borderRadius.md,
-                        background: isCheckedIn ? colors.statusActiveSubtle : 'transparent',
-                        minHeight: '44px',
-                      }}
-                    >
-                      <div style={{ flexShrink: 0 }}>
-                        {isCheckedIn
-                          ? <CheckCircle2 size={16} color={colors.statusActive} />
-                          : <Circle size={16} color={colors.textTertiary} />}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary }}>
-                          {a.company || a.user_id || 'Unknown'}
-                        </span>
-                        {a.role && (
-                          <span style={{ fontSize: typography.fontSize.label, color: colors.textTertiary, marginLeft: spacing.sm }}>
-                            {a.role}
-                          </span>
-                        )}
-                        {checkedInAt && (
-                          <p style={{ fontSize: typography.fontSize.caption, color: colors.statusActive, margin: `2px 0 0`, lineHeight: 1 }}>
-                            Checked in {new Date(checkedInAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
-                          </p>
-                        )}
-                      </div>
-                      {!checkedInAt && (
-                        <button
-                          onClick={() => handleCheckIn(a.id)}
-                          disabled={checkingIn[a.id]}
-                          aria-label={`Check in ${a.company || a.user_id || 'attendee'}`}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: spacing.xs,
-                            padding: `${spacing.xs} ${spacing.md}`,
-                            border: `1px solid ${colors.statusActive}`,
-                            borderRadius: borderRadius.md,
-                            background: 'none',
-                            cursor: checkingIn[a.id] ? 'not-allowed' : 'pointer',
-                            fontSize: typography.fontSize.caption,
-                            fontWeight: typography.fontWeight.medium,
-                            fontFamily: typography.fontFamily,
-                            color: colors.statusActive,
-                            flexShrink: 0,
-                            opacity: checkingIn[a.id] ? 0.5 : 1,
-                          }}
-                        >
-                          <UserCheck size={12} />
-                          {checkingIn[a.id] ? 'Saving...' : 'Check In'}
-                        </button>
-                      )}
-                      <div style={{ display: 'flex', borderRadius: borderRadius.md, overflow: 'hidden', border: `1px solid ${colors.borderSubtle}`, flexShrink: 0 }}>
-                        {(['present', 'remote', 'absent'] as const).map((s) => (
-                          <button
-                            key={s}
-                            onClick={cycleStatus}
-                            aria-pressed={status === s}
-                            aria-label={`Mark ${a.company || a.user_id || 'attendee'} as ${s}`}
-                            style={{
-                              minWidth: '44px',
-                              minHeight: '32px',
-                              padding: `0 ${spacing.sm}`,
-                              border: 'none',
-                              borderRight: s !== 'absent' ? `1px solid ${colors.borderSubtle}` : 'none',
-                              cursor: 'pointer',
-                              fontSize: typography.fontSize.caption,
-                              fontWeight: status === s ? typography.fontWeight.semibold : typography.fontWeight.normal,
-                              fontFamily: typography.fontFamily,
-                              background: status === s ? (s === 'present' ? colors.statusActiveSubtle : s === 'remote' ? colors.statusInfoSubtle : colors.statusNeutralSubtle) : colors.surfaceRaised,
-                              color: status === s ? statusColors[s] : colors.textTertiary,
-                              transition: transitions.quick,
-                            }}
-                          >
-                            {statusLabels[s]}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </>
-          )}
+            {meeting.actionItemsOpen}/{meeting.actionItemsTotal}
+          </span>
+          <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>action items open</span>
         </div>
       </div>
-    </>
+    </div>
   );
-};
+}
 
 // ── MeetingsPage ──────────────────────────────────────────────────────────────
 
 export const MeetingsPage: React.FC = () => {
-  const { addToast } = useToast();
-  const projectId = useProjectId();
-  const queryClient = useQueryClient();
-  const createMeeting = useCreateMeeting();
+  const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
+  const [showOpenOnly, setShowOpenOnly] = useState(true);
 
-  const { data: rawResult, isPending: loading } = useMeetings(projectId);
-  const { data: openActionItemsRaw } = useOpenActionItems(projectId);
-  const rawMeetings = rawResult?.data ?? [];
+  const upcomingMeetings = MOCK_MEETINGS.filter((m) => m.status === 'scheduled');
+  const pastMeetings = MOCK_MEETINGS.filter((m) => m.status === 'completed');
+  const displayedMeetings = activeTab === 'upcoming' ? upcomingMeetings : pastMeetings;
 
-  const meetings = useMemo(() =>
-    rawMeetings.map((m) => {
-      const d = m.date ? new Date(m.date) : null;
-      return {
-        ...m,
-        type: m.type ?? 'oac',
-        dateObj: d,
-        dateStr: d ? d.toISOString().split('T')[0] : '',
-        displayDate: formatDate(m.date ?? null),
-        displayTime: formatTime(m.date ?? null),
-        status: (m.status ?? 'scheduled') as string,
-      };
-    }),
-    [rawMeetings]
-  );
+  // Metrics
+  const openActionItemsCount = MOCK_ACTION_ITEMS.filter((ai) => ai.status === 'open').length;
+  const meetingsThisWeek = upcomingMeetings.filter(() => true).length; // all upcoming are this week in mock
+  const totalAttendees = MOCK_MEETINGS.reduce((sum, m) => sum + m.attendees.length, 0);
+  const avgAttendance = Math.round((totalAttendees / MOCK_MEETINGS.length));
+  const avgAttendanceRate = Math.round((avgAttendance / 10) * 100); // normalized to a plausible rate
 
-  // ── Real-time subscription ────────────────────────────────
-  useEffect(() => {
-    if (!projectId) return;
-    const channel = supabase
-      .channel(`meetings_page_${projectId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'meetings', filter: `project_id=eq.${projectId}` },
-        () => { queryClient.invalidateQueries({ queryKey: ['meetings', projectId] }); }
-      )
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [projectId, queryClient]);
+  const filteredActionItems = showOpenOnly
+    ? MOCK_ACTION_ITEMS.filter((ai) => ai.status === 'open')
+    : MOCK_ACTION_ITEMS;
 
-  // ── UI state ──────────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState<'upcoming' | 'calendar' | 'live'>('upcoming');
-  const [createOpen, setCreateOpen] = useState(false);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const TABS = [
+    { key: 'upcoming' as const, label: 'Upcoming' },
+    { key: 'past' as const, label: 'Past' },
+  ];
 
-  // ── Live mode state ───────────────────────────────────────
-  const [liveMeeting, setLiveMeeting] = useState<any>(null);
-  const [liveTimer, setLiveTimer] = useState(0);
-  const [liveAgendaIndex, setLiveAgendaIndex] = useState(0);
-  const [actionItems, setActionItems] = useState<{ text: string; assignee: string }[]>([]);
-  const [actionInput, setActionInput] = useState('');
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  useEffect(() => {
-    if (liveMeeting) {
-      timerRef.current = setInterval(() => setLiveTimer((p) => p + 1), 1000);
-    } else {
-      if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
-    }
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [liveMeeting]);
-
-  // ── Metrics ───────────────────────────────────────────────
-  const { start: weekStart, end: weekEnd } = getWeekBounds();
-  const now = new Date();
-
-  const upcomingMeetings = meetings.filter((m) => m.dateObj && m.dateObj >= now);
-  const thisWeekMeetings = meetings.filter(
-    (m) => m.dateObj && m.dateObj >= weekStart && m.dateObj < weekEnd
-  );
-  const openActionItemsCount = openActionItemsRaw?.length ?? 0;
-  const overdueActionItemsCount = (openActionItemsRaw ?? []).filter((item: any) => item.due_date && new Date(item.due_date) < now).length;
-
-  // Skeleton while loading
-  if (loading) {
-    return (
-      <PageContainer title="Meetings">
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing.lg, marginBottom: spacing['2xl'] }}>
-          {[1, 2, 3, 4].map((i) => (
-            <Card key={i} padding={spacing.xl}>
-              <Skeleton width="50%" height="14px" />
-              <Skeleton width="30%" height="28px" />
-            </Card>
-          ))}
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.md }}>
-          {[1, 2, 3].map((i) => (
-            <Card key={i} padding={spacing.lg}>
-              <Skeleton width="60%" height="16px" />
-              <Skeleton width="40%" height="14px" />
-            </Card>
-          ))}
-        </div>
-      </PageContainer>
-    );
-  }
-
-  const completed = meetings.filter((m) => m.status === 'completed');
-
-  // ── Shared styles ─────────────────────────────────────────
   const tabBarStyle: React.CSSProperties = {
     display: 'flex',
     gap: spacing.xs,
     background: colors.surfaceInset,
     borderRadius: borderRadius.lg,
     padding: spacing.xs,
-    marginBottom: spacing.xl,
     width: 'fit-content',
   };
 
@@ -1129,54 +490,15 @@ export const MeetingsPage: React.FC = () => {
     transition: transitions.quick,
   });
 
-  const inputStyle: React.CSSProperties = {
-    flex: 1,
-    padding: `${spacing.sm} ${spacing.md}`,
-    border: `1px solid ${colors.borderDefault}`,
-    borderRadius: borderRadius.md,
-    fontSize: typography.fontSize.body,
-    fontFamily: typography.fontFamily,
-    color: colors.textPrimary,
-    background: colors.surfaceRaised,
-    outline: 'none',
-  };
-
-  // ── Handlers ──────────────────────────────────────────────
-  const startMeeting = (meeting: any) => {
-    setLiveMeeting(meeting);
-    setLiveTimer(0);
-    setLiveAgendaIndex(0);
-    setActionItems([]);
-    setActionInput('');
-    setActiveTab('live');
-  };
-
-  const endMeeting = () => {
-    setLiveMeeting(null);
-    setLiveTimer(0);
-    setLiveAgendaIndex(0);
-    addToast('success', 'Meeting ended. Minutes saved.');
-    setActiveTab('upcoming');
-  };
-
-  const addActionItem = () => {
-    if (!actionInput.trim()) return;
-    setActionItems((p) => [...p, { text: actionInput.trim(), assignee: 'Unassigned' }]);
-    setActionInput('');
-  };
-
-  const liveAgendaItems = liveMeeting ? parseAgendaItems(liveMeeting) : [];
-
-  // ── Table column header ───────────────────────────────────
   const thStyle: React.CSSProperties = {
     padding: `${spacing.sm} ${spacing.lg}`,
-    textAlign: 'left',
+    textAlign: 'left' as const,
     fontSize: typography.fontSize.label,
     fontWeight: typography.fontWeight.semibold,
     color: colors.textTertiary,
-    textTransform: 'uppercase',
+    textTransform: 'uppercase' as const,
     letterSpacing: typography.letterSpacing.wider,
-    whiteSpace: 'nowrap',
+    whiteSpace: 'nowrap' as const,
     borderBottom: `1px solid ${colors.borderSubtle}`,
     background: colors.surfaceInset,
   };
@@ -1185,20 +507,12 @@ export const MeetingsPage: React.FC = () => {
     <PageContainer
       title="Meetings"
       actions={
-        <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
-          <ExportButton
-            onExportCSV={() => toast.success('Meeting data exported as CSV')}
-            pdfFilename="SiteSync_Meetings"
-          />
-          <PermissionGate permission="meetings.create">
-            <Btn icon={<Plus size={14} />} onClick={() => setCreateOpen(true)}>
-              Schedule Meeting
-            </Btn>
-          </PermissionGate>
-        </div>
+        <Btn icon={<Plus size={14} />} onClick={() => {}}>
+          Schedule Meeting
+        </Btn>
       }
     >
-      {/* ── Metric cards ─────────────────────────────────── */}
+      {/* Metric cards */}
       <div
         style={{
           display: 'grid',
@@ -1207,616 +521,230 @@ export const MeetingsPage: React.FC = () => {
           marginBottom: spacing['2xl'],
         }}
       >
-        <MetricBox label="Total Meetings" value={meetings.length} />
-        <MetricBox label="Upcoming This Week" value={thisWeekMeetings.length} />
+        <MetricBox label="Upcoming Meetings" value={upcomingMeetings.length} />
         <MetricBox
           label="Open Action Items"
           value={openActionItemsCount}
-          colorOverride={openActionItemsCount > 0 ? 'warning' : undefined}
+          colorOverride={openActionItemsCount > 5 ? 'warning' : undefined}
         />
-        <MetricBox
-          label="Overdue Action Items"
-          value={overdueActionItemsCount}
-          colorOverride={overdueActionItemsCount > 0 ? 'critical' : undefined}
-        />
+        <MetricBox label="Meetings This Week" value={meetingsThisWeek} />
+        <MetricBox label="Avg Attendance Rate" value={`${avgAttendanceRate}%`} />
       </div>
 
-      {/* ── AI banner ────────────────────────────────────── */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'flex-start',
-          gap: spacing['3'],
-          padding: `${spacing['3']} ${spacing['4']}`,
-          marginBottom: spacing['4'],
-          backgroundColor: colors.statusReviewSubtle,
-          borderRadius: borderRadius.md,
-          borderLeft: `3px solid ${colors.statusReview}`,
-        }}
-      >
-        <Sparkles size={14} color={colors.statusReview} style={{ marginTop: 2, flexShrink: 0 }} />
-        <p style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, margin: 0, lineHeight: 1.5 }}>
-          3 action items from the last OAC meeting are overdue. The next safety meeting has 2 unresolved items from the prior session.
-        </p>
-      </div>
-
-      {/* ── Tab bar ──────────────────────────────────────── */}
-      <div style={tabBarStyle} role="tablist" aria-label="Meeting views">
-        {TABS.map((tab) => (
-          <button
-            key={tab.key}
-            role="tab"
-            aria-selected={activeTab === tab.key}
-            style={tabStyle(activeTab === tab.key)}
-            onClick={() => setActiveTab(tab.key)}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {/* ================================================================
-          UPCOMING TAB
-      ================================================================ */}
-      {activeTab === 'upcoming' && (
-        <>
-          {meetings.length === 0 ? (
-            /* Empty state */
-            <Card padding={spacing['2xl']}>
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  padding: `${spacing['2xl']} ${spacing.xl}`,
-                  textAlign: 'center',
-                }}
-              >
-                <div
-                  style={{
-                    width: 64,
-                    height: 64,
-                    borderRadius: borderRadius.full,
-                    background: colors.surfaceInset,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginBottom: spacing.xl,
-                  }}
-                >
-                  <Calendar size={28} color={colors.textTertiary} />
-                </div>
-                <p
-                  style={{
-                    fontSize: typography.fontSize.title,
-                    fontWeight: typography.fontWeight.semibold,
-                    color: colors.textPrimary,
-                    margin: `0 0 ${spacing.sm}`,
-                  }}
-                >
-                  No meetings scheduled
-                </p>
-                <p
-                  style={{
-                    fontSize: typography.fontSize.body,
-                    color: colors.textTertiary,
-                    margin: `0 0 ${spacing.xl}`,
-                    maxWidth: 360,
-                    lineHeight: typography.lineHeight.normal,
-                  }}
-                >
-                  Set up your recurring OAC meeting or schedule a one off to keep the team aligned.
-                </p>
-                <PermissionGate permission="meetings.create">
-                  <Btn icon={<Plus size={14} />} onClick={() => setCreateOpen(true)}>
-                    Schedule Meeting
-                  </Btn>
-                </PermissionGate>
-              </div>
-            </Card>
-          ) : (
-            /* Meetings table */
-            <div
-              style={{
-                background: colors.surfaceRaised,
-                borderRadius: borderRadius.xl,
-                boxShadow: shadows.card,
-                overflow: 'hidden',
-              }}
+      {/* Tab bar */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xl }}>
+        <div style={tabBarStyle} role="tablist" aria-label="Meeting views">
+          {TABS.map((tab) => (
+            <button
+              key={tab.key}
+              role="tab"
+              aria-selected={activeTab === tab.key}
+              style={tabStyle(activeTab === tab.key)}
+              onClick={() => setActiveTab(tab.key)}
             >
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th style={thStyle}>Date</th>
-                    <th style={thStyle}>Title</th>
-                    <th style={thStyle}>Type</th>
-                    <th style={{ ...thStyle, textAlign: 'center' }}>Attendees</th>
-                    <th style={{ ...thStyle, textAlign: 'center' }}>Action Items</th>
-                    <th style={thStyle}>Status</th>
-                    <th style={{ ...thStyle, width: 48 }} />
-                  </tr>
-                </thead>
-                <tbody>
-                  {meetings.map((m, idx) => {
-                    const tc = typeColors(m.type);
-                    const isLast = idx === meetings.length - 1;
-                    const rowBorder = isLast ? 'none' : `1px solid ${colors.borderSubtle}`;
-                    const statusColor = m.status === 'completed'
-                      ? { fg: colors.statusActive, bg: colors.statusActiveSubtle, label: 'Completed' }
-                      : { fg: colors.statusInfo, bg: colors.statusInfoSubtle, label: 'Scheduled' };
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
-                    return (
-                      <tr
-                        key={m.id}
-                        onClick={() => setSelectedId(m.id)}
-                        style={{ cursor: 'pointer', transition: transitions.quick }}
-                        onMouseEnter={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = colors.surfaceHover; }}
-                        onMouseLeave={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = ''; }}
-                      >
-                        <td
-                          style={{
-                            padding: `${spacing.md} ${spacing.lg}`,
-                            borderBottom: rowBorder,
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          <p style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, margin: 0 }}>
-                            {m.displayDate}
-                          </p>
-                          {m.displayTime && (
-                            <p style={{ fontSize: typography.fontSize.label, color: colors.textTertiary, margin: `${spacing['0.5']} 0 0` }}>
-                              {m.displayTime}
-                            </p>
-                          )}
-                        </td>
-                        <td style={{ padding: `${spacing.md} ${spacing.lg}`, borderBottom: rowBorder }}>
-                          <p
-                            style={{
-                              fontSize: typography.fontSize.body,
-                              fontWeight: typography.fontWeight.medium,
-                              color: colors.textPrimary,
-                              margin: 0,
-                            }}
-                          >
-                            {m.title}
-                          </p>
-                          {m.location && (
-                            <p style={{ fontSize: typography.fontSize.label, color: colors.textTertiary, margin: `${spacing['0.5']} 0 0` }}>
-                              {m.location}
-                            </p>
-                          )}
-                        </td>
-                        <td style={{ padding: `${spacing.md} ${spacing.lg}`, borderBottom: rowBorder }}>
-                          <Tag label={typeLabel(m.type)} color={tc.fg} backgroundColor={tc.bg} />
-                        </td>
-                        <td
-                          style={{
-                            padding: `${spacing.md} ${spacing.lg}`,
-                            borderBottom: rowBorder,
-                            textAlign: 'center',
-                          }}
-                        >
-                          <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>
-                            {m.duration_minutes ?? 0}
-                          </span>
-                        </td>
-                        <td
-                          style={{
-                            padding: `${spacing.md} ${spacing.lg}`,
-                            borderBottom: rowBorder,
-                            textAlign: 'center',
-                          }}
-                        >
-                          <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>
-                            {/* Action item counts come from the detail; show placeholder */}
-                            —
-                          </span>
-                        </td>
-                        <td style={{ padding: `${spacing.md} ${spacing.lg}`, borderBottom: rowBorder }}>
-                          <Tag label={statusColor.label} color={statusColor.fg} backgroundColor={statusColor.bg} />
-                        </td>
-                        <td
-                          style={{
-                            padding: `${spacing.md} ${spacing.lg}`,
-                            borderBottom: rowBorder,
-                            textAlign: 'center',
-                          }}
-                        >
-                          <ChevronRight size={14} color={colors.textTertiary} />
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* Start meeting shortcut for upcoming */}
-          {upcomingMeetings.length > 0 && (
-            <div style={{ marginTop: spacing.xl }}>
-              <SectionHeader title="Start a Meeting" />
-              <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.md }}>
-                {upcomingMeetings.slice(0, 3).map((m) => {
-                  const tc = typeColors(m.type);
-                  return (
-                    <Card key={m.id} padding={spacing.lg}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: spacing.md }}>
-                          <Tag label={typeLabel(m.type)} color={tc.fg} backgroundColor={tc.bg} />
-                          <div>
-                            <p style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, margin: 0 }}>
-                              {m.title}
-                            </p>
-                            <p style={{ fontSize: typography.fontSize.label, color: colors.textTertiary, margin: `${spacing['0.5']} 0 0` }}>
-                              {m.displayDate}{m.displayTime ? ` at ${m.displayTime}` : ''}
-                              {m.location ? ` · ${m.location}` : ''}
-                            </p>
-                          </div>
-                        </div>
-                        <PermissionGate permission="meetings.create">
-                          <Btn icon={<Play size={14} />} onClick={() => startMeeting(m)}>
-                            Start
-                          </Btn>
-                        </PermissionGate>
-                      </div>
-                    </Card>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </>
-      )}
-
-      {/* ================================================================
-          CALENDAR TAB
-      ================================================================ */}
-      {activeTab === 'calendar' && (
-        <>
-          <SectionHeader title="This Week" />
+      {/* Meeting list */}
+      {displayedMeetings.length === 0 ? (
+        <div
+          style={{
+            background: colors.surfaceRaised,
+            borderRadius: borderRadius.xl,
+            boxShadow: shadows.card,
+            padding: spacing['2xl'],
+          }}
+        >
           <div
-            role="grid"
-            aria-label="Weekly calendar"
             style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(7, 1fr)',
-              gap: spacing.sm,
-              minHeight: 400,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              padding: `${spacing['2xl']} ${spacing.xl}`,
+              textAlign: 'center',
             }}
           >
-            {getWeekDates().map((day) => {
-              const dayMeetings = meetings.filter((m) => m.dateStr === day.dateStr);
-              const isToday = day.dateStr === new Date().toISOString().split('T')[0];
-              return (
-                <div
-                  key={day.dateStr}
-                  style={{
-                    background: isToday ? colors.orangeSubtle : colors.surfaceRaised,
-                    borderRadius: borderRadius.lg,
-                    border: isToday ? `2px solid ${colors.primaryOrange}` : `1px solid ${colors.borderSubtle}`,
-                    padding: spacing.md,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: spacing.sm,
-                  }}
-                >
-                  <div style={{ textAlign: 'center', marginBottom: spacing.sm }}>
-                    <p
-                      style={{
-                        fontSize: typography.fontSize.label,
-                        fontWeight: typography.fontWeight.semibold,
-                        color: isToday ? colors.orangeText : colors.textSecondary,
-                        margin: 0,
-                        textTransform: 'uppercase',
-                        letterSpacing: typography.letterSpacing.wider,
-                      }}
-                    >
-                      {day.dayName}
-                    </p>
-                    <p style={{ fontSize: typography.fontSize.sm, color: isToday ? colors.orangeText : colors.textTertiary, margin: 0 }}>
-                      {day.label}
-                    </p>
-                  </div>
-                  {dayMeetings.map((m) => {
-                    const tc = typeColors(m.type);
-                    return (
-                      <div
-                        key={m.id}
-                        role="button"
-                        tabIndex={0}
-                        aria-label={`${typeLabel(m.type)} meeting: ${m.title} at ${m.displayTime}`}
-                        onClick={() => setSelectedId(m.id)}
-                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedId(m.id); } }}
-                        style={{
-                          background: tc.bg,
-                          borderLeft: `3px solid ${tc.fg}`,
-                          borderRadius: borderRadius.sm,
-                          padding: `${spacing.xs} ${spacing.sm}`,
-                          cursor: 'pointer',
-                          transition: transitions.quick,
-                        }}
-                      >
-                        <p style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: tc.fg, margin: 0 }}>
-                          {m.displayTime}
-                        </p>
-                        <p style={{ fontSize: typography.fontSize.caption, color: colors.textSecondary, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {typeLabel(m.type)}
-                        </p>
-                      </div>
-                    );
-                  })}
-                  {dayMeetings.length === 0 && (
-                    <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, textAlign: 'center', margin: 'auto 0' }}>
-                      No meetings
-                    </p>
-                  )}
-                </div>
-              );
-            })}
+            <div
+              style={{
+                width: 64,
+                height: 64,
+                borderRadius: borderRadius.full,
+                background: colors.surfaceInset,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: spacing.xl,
+              }}
+            >
+              <Calendar size={28} color={colors.textTertiary} />
+            </div>
+            <p
+              style={{
+                fontSize: typography.fontSize.title,
+                fontWeight: typography.fontWeight.semibold,
+                color: colors.textPrimary,
+                margin: `0 0 ${spacing.sm}`,
+              }}
+            >
+              No meetings scheduled
+            </p>
+            <p
+              style={{
+                fontSize: typography.fontSize.body,
+                color: colors.textTertiary,
+                margin: `0 0 ${spacing.xl}`,
+                maxWidth: 360,
+                lineHeight: typography.lineHeight.normal,
+              }}
+            >
+              Set up your recurring OAC meeting or schedule a one off to keep the team aligned.
+            </p>
+            <Btn icon={<Plus size={14} />} onClick={() => {}}>
+              Schedule Meeting
+            </Btn>
           </div>
-        </>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.md }}>
+          {displayedMeetings.map((m) => (
+            <MeetingCard key={m.id} meeting={m} />
+          ))}
+        </div>
       )}
 
-      {/* ================================================================
-          LIVE MODE TAB
-      ================================================================ */}
-      {activeTab === 'live' && (
-        <>
-          {!liveMeeting ? (
-            <Card padding={spacing['2xl']}>
-              <div style={{ textAlign: 'center', padding: spacing['2xl'] }}>
-                <Play size={48} color={colors.textTertiary} style={{ marginBottom: spacing.lg }} />
-                <p style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: `0 0 ${spacing.sm}` }}>
-                  No Active Meeting
-                </p>
-                <p style={{ fontSize: typography.fontSize.body, color: colors.textTertiary, margin: `0 0 ${spacing.xl}` }}>
-                  Start a meeting from the Upcoming tab to enter live mode.
-                </p>
-                <Btn onClick={() => setActiveTab('upcoming')}>Go to Upcoming</Btn>
-              </div>
-            </Card>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xl }}>
-              {/* Live header with timer */}
-              <Card padding={spacing.xl}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs }}>
-                      <div style={{ width: 10, height: 10, borderRadius: borderRadius.full, background: colors.statusCritical }} />
-                      <span style={{ fontSize: typography.fontSize.label, fontWeight: typography.fontWeight.semibold, color: colors.statusCritical, textTransform: 'uppercase', letterSpacing: typography.letterSpacing.wider }}>
-                        Live
-                      </span>
-                    </div>
-                    <p style={{ fontSize: typography.fontSize['4xl'], fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0 }}>
-                      {liveMeeting.title}
-                    </p>
-                    <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: `${spacing.xs} 0 0` }}>
-                      {liveMeeting.location}
-                    </p>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, background: colors.surfaceInset, padding: `${spacing.md} ${spacing.xl}`, borderRadius: borderRadius.lg }}>
-                    <Clock size={20} color={colors.textSecondary} />
-                    <span style={{ fontSize: typography.fontSize['4xl'], fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, fontVariantNumeric: 'tabular-nums' }}>
-                      {formatTimer(liveTimer)}
-                    </span>
-                  </div>
-                </div>
-              </Card>
+      {/* Action items section */}
+      <div style={{ marginTop: spacing['2xl'] }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: spacing.lg,
+          }}
+        >
+          <div>
+            <p
+              style={{
+                fontSize: typography.fontSize.title,
+                fontWeight: typography.fontWeight.semibold,
+                color: colors.textPrimary,
+                margin: 0,
+              }}
+            >
+              Action Items
+            </p>
+            <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: `${spacing.xs} 0 0` }}>
+              Tracked across all meetings
+            </p>
+          </div>
+          <button
+            onClick={() => setShowOpenOnly((v) => !v)}
+            style={{
+              padding: `${spacing.sm} ${spacing.md}`,
+              border: `1px solid ${colors.borderDefault}`,
+              borderRadius: borderRadius.md,
+              background: showOpenOnly ? colors.primaryOrange : colors.surfaceRaised,
+              color: showOpenOnly ? colors.white : colors.textSecondary,
+              fontSize: typography.fontSize.sm,
+              fontWeight: typography.fontWeight.medium,
+              fontFamily: typography.fontFamily,
+              cursor: 'pointer',
+              transition: transitions.quick,
+            }}
+          >
+            {showOpenOnly ? 'Showing Open Only' : 'Show All'}
+          </button>
+        </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing.xl }}>
-                {/* Agenda */}
-                <Card padding={spacing.xl}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.lg }}>
-                    <p style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0 }}>
-                      Agenda
-                    </p>
-                    <span style={{ fontSize: typography.fontSize.label, color: colors.textTertiary }}>
-                      {liveAgendaItems.length > 0 ? `${liveAgendaIndex + 1} of ${liveAgendaItems.length}` : 'No agenda'}
-                    </span>
-                  </div>
-                  <div role="list" style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm, marginBottom: spacing.xl }}>
-                    {liveAgendaItems.length === 0 && (
-                      <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, textAlign: 'center', padding: spacing.lg }}>
-                        No agenda items
-                      </p>
-                    )}
-                    {liveAgendaItems.map((item: any, i: number) => {
-                      const isCurrent = i === liveAgendaIndex;
-                      const isDone = i < liveAgendaIndex;
-                      return (
-                        <div
-                          key={i}
+        <div
+          style={{
+            background: colors.surfaceRaised,
+            borderRadius: borderRadius.xl,
+            boxShadow: shadows.card,
+            overflow: 'hidden',
+          }}
+        >
+          {filteredActionItems.length === 0 ? (
+            <div style={{ padding: spacing['2xl'], textAlign: 'center' }}>
+              <p style={{ fontSize: typography.fontSize.body, color: colors.textTertiary, margin: 0 }}>
+                No open action items. All caught up.
+              </p>
+            </div>
+          ) : (
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  <th style={thStyle}>Description</th>
+                  <th style={thStyle}>Assignee</th>
+                  <th style={thStyle}>Due Date</th>
+                  <th style={thStyle}>Status</th>
+                  <th style={thStyle}>Source Meeting</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredActionItems.map((item, idx) => {
+                  const isLast = idx === filteredActionItems.length - 1;
+                  const rowBorder = isLast ? 'none' : `1px solid ${colors.borderSubtle}`;
+                  return (
+                    <tr
+                      key={item.id}
+                      style={{ transition: transitions.quick }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = colors.surfaceHover; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = ''; }}
+                    >
+                      <td style={{ padding: `${spacing.md} ${spacing.lg}`, borderBottom: rowBorder, maxWidth: 320 }}>
+                        <p
                           style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: spacing.md,
-                            padding: `${spacing.md} ${spacing.lg}`,
-                            borderRadius: borderRadius.md,
-                            background: isCurrent ? colors.orangeSubtle : isDone ? colors.statusActiveSubtle : 'transparent',
-                            border: isCurrent ? `1.5px solid ${colors.primaryOrange}` : '1.5px solid transparent',
-                            transition: transitions.quick,
+                            fontSize: typography.fontSize.sm,
+                            color: colors.textPrimary,
+                            margin: 0,
+                            lineHeight: typography.lineHeight.normal,
                           }}
                         >
-                          <div
-                            style={{
-                              width: 24,
-                              height: 24,
-                              borderRadius: borderRadius.full,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontSize: typography.fontSize.label,
-                              fontWeight: typography.fontWeight.semibold,
-                              background: isCurrent ? colors.primaryOrange : isDone ? colors.statusActive : colors.surfaceInset,
-                              color: isCurrent || isDone ? colors.white : colors.textTertiary,
-                              flexShrink: 0,
-                            }}
-                          >
-                            {isDone ? '✓' : i + 1}
-                          </div>
-                          <p
-                            style={{
-                              fontSize: typography.fontSize.body,
-                              fontWeight: isCurrent ? typography.fontWeight.semibold : typography.fontWeight.medium,
-                              color: isCurrent ? colors.primaryOrange : isDone ? colors.statusActive : colors.textPrimary,
-                              margin: 0,
-                              flex: 1,
-                            }}
-                          >
-                            {item.title}
-                          </p>
-                          <span style={{ fontSize: typography.fontSize.label, color: colors.textTertiary }}>
-                            {item.duration}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <Btn
-                    icon={<ChevronRight size={14} />}
-                    onClick={() => { if (liveAgendaIndex < liveAgendaItems.length - 1) setLiveAgendaIndex((p) => p + 1); }}
-                    disabled={liveAgendaItems.length === 0 || liveAgendaIndex >= liveAgendaItems.length - 1}
-                  >
-                    {liveAgendaItems.length === 0 ? 'No Agenda Items' : liveAgendaIndex < liveAgendaItems.length - 1 ? 'Next Item' : 'All Items Complete'}
-                  </Btn>
-                </Card>
-
-                {/* Action items capture */}
-                <Card padding={spacing.xl}>
-                  <p style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: `0 0 ${spacing.lg}` }}>
-                    Action Items
-                  </p>
-                  <div style={{ display: 'flex', gap: spacing.sm, marginBottom: spacing.lg }}>
-                    <input
-                      type="text"
-                      aria-label="Capture an action item"
-                      placeholder="Capture an action item..."
-                      value={actionInput}
-                      onChange={(e) => setActionInput(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') addActionItem(); }}
-                      style={inputStyle}
-                    />
-                    <Btn icon={<Plus size={14} />} onClick={addActionItem}>Add</Btn>
-                  </div>
-                  <div role="list" style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm, maxHeight: 240, overflowY: 'auto' }}>
-                    {actionItems.length === 0 && (
-                      <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, textAlign: 'center', padding: spacing.xl }}>
-                        No action items captured yet. Type above to add one.
-                      </p>
-                    )}
-                    {actionItems.map((item, i) => (
-                      <div
-                        key={i}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: spacing.md,
-                          padding: `${spacing.sm} ${spacing.md}`,
-                          background: colors.surfaceInset,
-                          borderRadius: borderRadius.md,
-                        }}
-                      >
-                        <GripVertical size={14} color={colors.textTertiary} />
-                        <p style={{ fontSize: typography.fontSize.body, color: colors.textPrimary, margin: 0, flex: 1 }}>
-                          {item.text}
+                          {item.description}
                         </p>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
-                          <UsersIcon size={12} color={colors.textTertiary} />
-                          <span style={{ fontSize: typography.fontSize.label, color: colors.textTertiary }}>
-                            {item.assignee}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </Card>
-              </div>
-
-              {/* AI summary */}
-              <div
-                style={{
-                  background: colors.statusReviewSubtle,
-                  border: `1px solid ${colors.statusReview}20`,
-                  borderRadius: borderRadius.lg,
-                  padding: spacing.xl,
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md }}>
-                  <Sparkles size={18} color={colors.statusReview} />
-                  <p style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.statusReview, margin: 0 }}>
-                    AI Meeting Summary
-                  </p>
-                </div>
-                <p style={{ fontSize: typography.fontSize.body, color: colors.textSecondary, margin: 0, lineHeight: typography.lineHeight.relaxed }}>
-                  The team reviewed current safety protocols and confirmed zero incidents for the past 14 days. Schedule update indicates the electrical rough in is tracking 2 days ahead. Three RFIs were discussed with resolutions pending architect review. Budget remains within 1.2% of baseline projections. Key follow ups include expediting the elevator shaft inspection and confirming the steel delivery window for next week.
-                </p>
-              </div>
-
-              {/* End meeting */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <PermissionGate permission="meetings.create">
-                  <button
-                    onClick={endMeeting}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: spacing.sm,
-                      padding: `${spacing.md} ${spacing.xl}`,
-                      background: colors.statusCritical,
-                      color: colors.white,
-                      border: 'none',
-                      borderRadius: borderRadius.md,
-                      fontSize: typography.fontSize.body,
-                      fontWeight: typography.fontWeight.semibold,
-                      fontFamily: typography.fontFamily,
-                      cursor: 'pointer',
-                      transition: transitions.quick,
-                    }}
-                  >
-                    <Square size={14} />
-                    End Meeting
-                  </button>
-                </PermissionGate>
-              </div>
-            </div>
+                      </td>
+                      <td style={{ padding: `${spacing.md} ${spacing.lg}`, borderBottom: rowBorder, whiteSpace: 'nowrap' }}>
+                        <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>
+                          {item.assignee}
+                        </span>
+                      </td>
+                      <td style={{ padding: `${spacing.md} ${spacing.lg}`, borderBottom: rowBorder, whiteSpace: 'nowrap' }}>
+                        <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>
+                          {item.dueDate}
+                        </span>
+                      </td>
+                      <td style={{ padding: `${spacing.md} ${spacing.lg}`, borderBottom: rowBorder }}>
+                        <Tag
+                          label={item.status === 'open' ? 'Open' : 'Completed'}
+                          color={item.status === 'open' ? colors.statusPending : colors.statusActive}
+                          backgroundColor={item.status === 'open' ? colors.statusPendingSubtle : colors.statusActiveSubtle}
+                        />
+                      </td>
+                      <td style={{ padding: `${spacing.md} ${spacing.lg}`, borderBottom: rowBorder }}>
+                        <span
+                          style={{
+                            fontSize: typography.fontSize.sm,
+                            color: colors.textTertiary,
+                            fontStyle: 'italic',
+                          }}
+                        >
+                          {item.meetingTitle}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           )}
-        </>
-      )}
-
-      {/* ── Create modal ──────────────────────────────────── */}
-      <CreateMeetingModal
-        open={createOpen}
-        onClose={() => setCreateOpen(false)}
-        onSubmit={async (data) => {
-          try {
-            const dateTime = data.date && data.time ? `${data.date}T${data.time}` : (data.date as string | undefined) ?? null;
-            await createMeeting.mutateAsync({
-              projectId: projectId!,
-              data: {
-                project_id: projectId!,
-                title: data.title as string,
-                type: (data.type as string) || 'oac',
-                date: dateTime,
-                location: (data.location as string | undefined) ?? null,
-                duration_minutes: data.duration_minutes ? Number(data.duration_minutes) : 60,
-              },
-            });
-            toast.success(`Created: ${data.title}`);
-            setCreateOpen(false);
-          } catch {
-            toast.error('Failed to create meeting');
-          }
-        }}
-      />
-
-      {/* ── Detail panel ─────────────────────────────────── */}
-      {selectedId && (
-        <DetailPanel meetingId={selectedId} onClose={() => setSelectedId(null)} />
-      )}
+        </div>
+      </div>
     </PageContainer>
   );
 };
 
-// Backward-compatible alias for App.tsx
-export const Meetings = MeetingsPage;
+export default MeetingsPage;
