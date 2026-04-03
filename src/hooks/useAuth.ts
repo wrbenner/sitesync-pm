@@ -126,12 +126,17 @@ export function useAuth(): AuthState {
   const { user, session, loading, error } = useSyncExternalStore(subscribe, getSnapshot)
 
   const signIn = useCallback(async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-    if (!error && data.session) {
-      // Immediately update shared state so ProtectedRoute sees the user
-      setState({ session: data.session, user: data.session.user })
+    setState({ loading: true, error: null })
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+      if (!error && data.session) {
+        // Immediately update shared state so ProtectedRoute sees the user
+        setState({ session: data.session, user: data.session.user })
+      }
+      return { error: error ? mapAuthError(error.message) : null }
+    } finally {
+      setState({ loading: false })
     }
-    return { error: error ? mapAuthError(error.message) : null }
   }, [])
 
   const signUp = useCallback(async (email: string, password: string, name: string) => {
