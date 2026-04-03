@@ -32,7 +32,18 @@ class PresenceBarErrorBoundary extends React.Component<
 
   render() {
     if (this.state.hasError) {
-      return null;
+      return (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: colors.textTertiary }}>
+          Presence unavailable
+          <button
+            onClick={() => this.setState({ hasError: false })}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', color: colors.textTertiary }}
+            aria-label="Retry presence connection"
+          >
+            <RefreshCw size={12} />
+          </button>
+        </span>
+      );
     }
     return this.props.children;
   }
@@ -93,28 +104,63 @@ const STATUS_BORDER: Record<PresenceStatus, string> = {
   away: '#C0C4CC',
 };
 
+// ── Role category ─────────────────────────────────────────────────────────────
+
+type RoleCategory = 'gc' | 'architect' | 'owner' | 'subcontractor' | 'unknown';
+
+function getRoleCategory(role?: string): RoleCategory {
+  if (!role) return 'unknown';
+  const r = role.toLowerCase();
+  if (r.includes('project manager') || r.includes('superintendent') || r.includes('gc') || r.includes('general contractor') || r.includes('field engineer') || r.includes('coordinator')) return 'gc';
+  if (r.includes('architect') || r.includes('engineer') || r.includes('designer') || r.includes('structural') || r.includes('mep')) return 'architect';
+  if (r.includes('owner') || r.includes('developer') || r.includes('client')) return 'owner';
+  if (r.includes('sub') || r.includes('electrician') || r.includes('plumber') || r.includes('mechanic') || r.includes('iron') || r.includes('concrete') || r.includes('framing') || r.includes('hvac')) return 'subcontractor';
+  return 'unknown';
+}
+
+const ROLE_CATEGORY_COLOR: Record<RoleCategory, string> = {
+  gc: '#3B82F6',
+  architect: '#8B5CF6',
+  owner: '#F47820',
+  subcontractor: '#9CA3AF',
+  unknown: '#9CA3AF',
+};
+
 // ── Tooltip content ───────────────────────────────────────────────────────────
 
-const AvatarTooltipContent: React.FC<{ user: { displayName: string; role?: string; lastSeen: number } }> = ({ user }) => {
+const AvatarTooltipContent: React.FC<{ user: { displayName: string; role?: string; company?: string; lastSeen: number } }> = ({ user }) => {
   const status = getPresenceStatus(user.lastSeen);
+  const roleCategory = getRoleCategory(user.role);
+  const roleDotColor = ROLE_CATEGORY_COLOR[roleCategory];
+  const roleCompanyLine = [user.role, user.company].filter(Boolean).join(', ');
   return (
     <div style={{ minWidth: 140 }}>
-      <div style={{
-        fontSize: 14,
-        fontWeight: typography.fontWeight.bold,
-        color: colors.white,
-        lineHeight: typography.lineHeight.snug,
-      }}>
-        {user.displayName}
+      <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1.5'] }}>
+        <div style={{
+          width: 8,
+          height: 8,
+          borderRadius: '50%',
+          backgroundColor: roleDotColor,
+          flexShrink: 0,
+        }} />
+        <div style={{
+          fontSize: 14,
+          fontWeight: typography.fontWeight.bold,
+          color: colors.white,
+          lineHeight: typography.lineHeight.snug,
+        }}>
+          {user.displayName}
+        </div>
       </div>
-      {user.role && (
+      {roleCompanyLine && (
         <div style={{
           fontSize: 12,
           color: 'rgba(255,255,255,0.65)',
           marginTop: 2,
           lineHeight: typography.lineHeight.snug,
+          paddingLeft: 14,
         }}>
-          {user.role}
+          {roleCompanyLine}
         </div>
       )}
       <div style={{
@@ -283,7 +329,10 @@ export const PresenceBar: React.FC<PresenceBarProps> = ({ page }) => {
     // Joined: in curr but not in prev
     users
       .filter(u => !prev.has(u.userId))
-      .forEach(u => messages.push(`${u.displayName} started viewing this page`));
+      .forEach(u => {
+        const roleText = u.role ? ` as ${u.role}` : '';
+        messages.push(`${u.displayName} joined${roleText}`);
+      });
 
     // Left: in prev but not in curr
     prev.forEach((name, id) => {
@@ -519,7 +568,7 @@ const DrawingPresenceBarContent: React.FC = () => {
   const visible = others.slice(0, 5);
   const overflow = others.length - 5;
 
-  type SafeOther = { connectionId: number; lastSeen: number; status: ReturnType<typeof getPresenceStatus>; displayName: string; role: string | undefined; color: string; initials: string };
+  type SafeOther = { connectionId: number; lastSeen: number; status: ReturnType<typeof getPresenceStatus>; displayName: string; role: string | undefined; company: string | undefined; color: string; initials: string };
   const safeVisible: SafeOther[] = [];
   for (const other of visible) {
     try {
@@ -529,6 +578,7 @@ const DrawingPresenceBarContent: React.FC = () => {
         status: getPresenceStatus((other.presence as any).lastSeen ?? Date.now()),
         displayName: (other.presence as any).displayName || (other.presence as any).name || 'Someone',
         role: (other.presence as any).role,
+        company: (other.presence as any).company,
         color: (other.presence as any).color || colors.statusInfo,
         initials: (other.presence as any).initials || '?',
       });
@@ -553,7 +603,7 @@ const DrawingPresenceBarContent: React.FC = () => {
           </span>
           <div role="group" aria-label="Users currently viewing this page" style={{ display: 'flex', alignItems: 'center' }}>
             {safeVisible.map((sv, i) => {
-              const { lastSeen, status, displayName, role } = sv;
+              const { lastSeen, status, displayName, role, company } = sv;
               return (
                 <Tooltip.Root key={sv.connectionId}>
                   <Tooltip.Trigger asChild>
@@ -609,7 +659,7 @@ const DrawingPresenceBarContent: React.FC = () => {
                       collisionPadding={12}
                       style={TOOLTIP_CONTENT_STYLE}
                     >
-                      <AvatarTooltipContent user={{ displayName, role, lastSeen }} />
+                      <AvatarTooltipContent user={{ displayName, role, company, lastSeen }} />
                       <Tooltip.Arrow style={{ fill: colors.textPrimary }} />
                     </Tooltip.Content>
                   </Tooltip.Portal>
