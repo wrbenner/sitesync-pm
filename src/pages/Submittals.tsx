@@ -207,14 +207,47 @@ const BallInCourtBadge: React.FC<{ value: string | null }> = ({ value }) => {
 };
 
 const SUBMITTAL_STATUS_STYLES: Record<string, { bg: string; text: string; label: string }> = {
-  pending:           { bg: '#FEF3C7', text: '#F5A623', label: 'Pending' },
+  pending:           { bg: '#F3F4F6', text: '#6B7280', label: 'Pending' },
   under_review:      { bg: '#DBEAFE', text: '#3B82F6', label: 'Under Review' },
   approved:          { bg: '#D1FAE5', text: '#4EC896', label: 'Approved' },
-  approved_as_noted: { bg: '#DBEAFE', text: '#3B82F6', label: 'Approved as Noted' },
+  approved_as_noted: { bg: '#D1FAE5', text: '#4EC896', label: 'Approved as Noted' },
   rejected:          { bg: '#FEE2E2', text: '#E74C3C', label: 'Rejected' },
-  revise_resubmit:   { bg: '#EDE9FE', text: '#8B5CF6', label: 'Resubmit' },
-  resubmit:          { bg: '#EDE9FE', text: '#8B5CF6', label: 'Resubmit' },
+  revise_resubmit:   { bg: '#FEF3C7', text: '#F5A623', label: 'Resubmit' },
+  resubmit:          { bg: '#FEF3C7', text: '#F5A623', label: 'Resubmit' },
 };
+
+function formatCSICode(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const digits = raw.replace(/\s+/g, '');
+  if (digits.length === 6 && /^\d{6}$/.test(digits)) {
+    return `${digits.slice(0, 2)} ${digits.slice(2, 4)} ${digits.slice(4, 6)}`;
+  }
+  return raw;
+}
+
+function calcBusinessDaysRemaining(dueDateStr: string | null | undefined): number | null {
+  if (!dueDateStr) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const due = new Date(dueDateStr);
+  due.setHours(0, 0, 0, 0);
+  let bizDays = 0;
+  const cur = new Date(today);
+  if (due < today) {
+    while (cur > due) {
+      cur.setDate(cur.getDate() - 1);
+      const d = cur.getDay();
+      if (d !== 0 && d !== 6) bizDays--;
+    }
+  } else {
+    while (cur < due) {
+      const d = cur.getDay();
+      if (d !== 0 && d !== 6) bizDays++;
+      cur.setDate(cur.getDate() + 1);
+    }
+  }
+  return bizDays;
+}
 
 const SubmittalStatusTag: React.FC<{ status: string }> = ({ status }) => {
   const style = SUBMITTAL_STATUS_STYLES[status] ?? { bg: '#F3F4F6', text: '#6B7280', label: status };
@@ -468,7 +501,9 @@ const Submittals: React.FC = () => {
       header: 'Spec Section',
       size: 110,
       cell: (info) => {
-        const val = info.getValue() as string | null;
+        const raw = info.getValue() as string | null;
+        const sub = info.row.original as any;
+        const val = formatCSICode(raw) || formatCSICode(sub.submittal_type as string | null);
         return val ? (
           <span style={{ fontSize: typography.fontSize.sm, fontFamily: 'monospace', color: colors.textSecondary }}>{val}</span>
         ) : (
@@ -500,28 +535,19 @@ const Submittals: React.FC = () => {
     subColHelper.accessor((row: any) => row, {
       id: 'lead_time',
       header: 'Lead Time',
-      size: 100,
+      size: 130,
       cell: (info) => {
         const sub = info.getValue() as any;
-        const isPending = sub.status === 'pending' || sub.status === 'submitted' || sub.status === 'under_review' || sub.status === 'review_in_progress';
-        if (!isPending) return <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>&mdash;</span>;
-        const startStr = sub.submitted_at || sub.created_at;
-        if (!startStr) return <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>&mdash;</span>;
-        const start = new Date(startStr);
-        const end = new Date();
-        let bizDays = 0;
-        const cur = new Date(start);
-        cur.setHours(0, 0, 0, 0);
-        end.setHours(0, 0, 0, 0);
-        while (cur < end) {
-          const d = cur.getDay();
-          if (d !== 0 && d !== 6) bizDays++;
-          cur.setDate(cur.getDate() + 1);
-        }
-        const color = bizDays > 21 ? colors.statusCritical : bizDays > 14 ? '#F5A623' : colors.textSecondary;
+        const daysRemaining = calcBusinessDaysRemaining(sub.due_date || sub.dueDate);
+        if (daysRemaining === null) return <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>&mdash;</span>;
+        const overdue = daysRemaining < 0;
+        const color = overdue ? '#E74C3C' : daysRemaining <= 7 ? '#F5A623' : '#4EC896';
+        const label = overdue
+          ? `${Math.abs(daysRemaining)} days overdue`
+          : `${daysRemaining} days remaining`;
         return (
-          <span style={{ fontSize: typography.fontSize.sm, color, fontWeight: bizDays > 14 ? typography.fontWeight.semibold : typography.fontWeight.normal, fontVariantNumeric: 'tabular-nums' as const }}>
-            {bizDays}d
+          <span style={{ fontSize: typography.fontSize.sm, color, fontWeight: typography.fontWeight.medium, fontVariantNumeric: 'tabular-nums' as const, whiteSpace: 'nowrap' }}>
+            {label}
           </span>
         );
       },
