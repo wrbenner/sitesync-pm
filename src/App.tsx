@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, useState, useEffect, useRef } from 'react';
-import { HardHat, Menu } from 'lucide-react';
+import { HardHat } from 'lucide-react';
 import { HashRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { SidebarContext, ToastProvider, Skeleton } from './components/Primitives';
@@ -410,8 +410,6 @@ function AppContent() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
-  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
-
   // Remember the desktop sidebar preference so we can restore it when the
   // viewport grows back above the mobile breakpoint.
   const prevDesktopCollapsed = useRef(sidebarCollapsed);
@@ -425,7 +423,6 @@ function AppContent() {
       setSidebarCollapsed(true);
     } else {
       setSidebarCollapsed(prevDesktopCollapsed.current);
-      setMobileDrawerOpen(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMobile, isTablet]);
@@ -478,93 +475,18 @@ function AppContent() {
 
   // Strictly exclusive layout: mobile uses bottom nav (MobileLayout), desktop uses Sidebar
   return isMobile ? (
-    <>
-      {/* Hamburger button — visible only on mobile when drawer is closed */}
-      {!mobileDrawerOpen && (
-        <button
-          onClick={() => setMobileDrawerOpen(true)}
-          aria-label="Toggle navigation menu"
-          aria-expanded={mobileDrawerOpen}
-          style={{
-            position: 'fixed',
-            top: spacing['3'],
-            left: spacing['3'],
-            minWidth: 44,
-            minHeight: 44,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: colors.white,
-            border: `1px solid ${colors.borderDefault}`,
-            borderRadius: borderRadius.base,
-            cursor: 'pointer',
-            color: colors.textSecondary,
-            zIndex: zIndex.fixed,
-            boxShadow: '0 1px 4px rgba(0,0,0,0.10)',
-          }}
-        >
-          <Menu size={18} />
-        </button>
-      )}
-
-      {/* Mobile sidebar overlay */}
-      {mobileDrawerOpen && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Navigation menu"
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: zIndex.modal,
-            display: 'flex',
-          }}
-        >
-          {/* Semi-transparent backdrop */}
-          <div
-            onClick={() => setMobileDrawerOpen(false)}
-            aria-hidden="true"
-            style={{
-              position: 'absolute',
-              inset: 0,
-              backgroundColor: 'rgba(0, 0, 0, 0.45)',
-            }}
-          />
-          {/* Sidebar panel — rendered relative inside the dialog */}
-          <div
-            style={{
-              position: 'relative',
-              width: layout.sidebarWidth,
-              height: '100%',
-              flexShrink: 0,
-              overflowY: 'auto',
-            }}
-          >
-            <SidebarContext.Provider value={{ collapsed: false, setCollapsed: setSidebarCollapsed }}>
-              <Sidebar
-                activeView={activeView}
-                onNavigate={(view) => { handleNavigate(view); setMobileDrawerOpen(false); }}
-                mode="overlay"
-                onClose={() => setMobileDrawerOpen(false)}
-              />
-            </SidebarContext.Provider>
-          </div>
-        </div>
-      )}
-
-      <MobileLayout>
-        {user && <AuthenticatedProviders activeView={activeView} />}
-        <OfflineBanner />
-        <ChunkLoadErrorBoundary>
-          <ErrorBoundary fallback={<ErrorFallback />}>
-            <AppRoutes />
-          </ErrorBoundary>
-        </ChunkLoadErrorBoundary>
-        <Suspense fallback={null}><FloatingAIButton /></Suspense>
-        {copilotOpen && <aside role="complementary" aria-label="AI Assistant"><Suspense fallback={null}><CopilotPanel /></Suspense></aside>}
-        <ConflictResolutionModal open={conflictModalOpen} onClose={() => setConflictModalOpen(false)} />
-      </MobileLayout>
-    </>
+    <MobileLayout>
+      {user && <AuthenticatedProviders activeView={activeView} />}
+      <OfflineBanner />
+      <ChunkLoadErrorBoundary>
+        <ErrorBoundary fallback={<ErrorFallback />}>
+          <AppRoutes />
+        </ErrorBoundary>
+      </ChunkLoadErrorBoundary>
+      <Suspense fallback={null}><FloatingAIButton /></Suspense>
+      {copilotOpen && <aside role="complementary" aria-label="AI Assistant"><Suspense fallback={null}><CopilotPanel /></Suspense></aside>}
+      <ConflictResolutionModal open={conflictModalOpen} onClose={() => setConflictModalOpen(false)} />
+    </MobileLayout>
   ) : (
     <SidebarContext.Provider value={{ collapsed: sidebarCollapsed, setCollapsed: setSidebarCollapsed }}>
       <div
