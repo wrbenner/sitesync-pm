@@ -42,6 +42,8 @@ export const EarnedValueDashboard: React.FC = () => {
       .channel('ev-dashboard-' + activeProjectId)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'budget_items', filter: 'project_id=eq.' + activeProjectId }, () => { refetch(); })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'change_orders', filter: 'project_id=eq.' + activeProjectId }, () => { refetch(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'payment_applications', filter: 'project_id=eq.' + activeProjectId }, () => { refetch(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'subcontractor_invoices', filter: 'project_id=eq.' + activeProjectId }, () => { refetch(); })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [activeProjectId, refetch]);
