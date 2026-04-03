@@ -419,6 +419,39 @@ export const ChangeOrders: React.FC = () => {
               );
             })()}
 
+            {/* Line Items */}
+            {(() => {
+              const lineItems = [
+                { description: 'Labor', quantity: 1, unitPrice: parseFloat(detailLabor) || 0 },
+                { description: 'Material', quantity: 1, unitPrice: parseFloat(detailMaterial) || 0 },
+                { description: 'Equipment', quantity: 1, unitPrice: parseFloat(detailEquipment) || 0 },
+                { description: 'Subcontractor', quantity: 1, unitPrice: parseFloat(detailSubcontractor) || 0 },
+              ].filter(item => item.unitPrice > 0);
+              if (lineItems.length === 0) return null;
+              const headerCellStyle: React.CSSProperties = { fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: typography.letterSpacing.wider };
+              return (
+                <div style={{ marginBottom: spacing['5'] }}>
+                  <h3 style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['3'] }}>Line Items</h3>
+                  <div style={{ border: `1px solid ${colors.borderSubtle}`, borderRadius: borderRadius.md, overflow: 'hidden' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 50px 110px 110px', padding: `${spacing['2']} ${spacing['3']}`, backgroundColor: colors.surfaceInset, borderBottom: `1px solid ${colors.borderSubtle}` }}>
+                      <span style={headerCellStyle}>Description</span>
+                      <span style={{ ...headerCellStyle, textAlign: 'right' }}>Qty</span>
+                      <span style={{ ...headerCellStyle, textAlign: 'right' }}>Unit Price</span>
+                      <span style={{ ...headerCellStyle, textAlign: 'right' }}>Total</span>
+                    </div>
+                    {lineItems.map((item, i) => (
+                      <div key={item.description} style={{ display: 'grid', gridTemplateColumns: '1fr 50px 110px 110px', padding: `${spacing['2']} ${spacing['3']}`, borderBottom: i < lineItems.length - 1 ? `1px solid ${colors.borderSubtle}` : 'none', backgroundColor: i % 2 === 0 ? colors.white : colors.surfaceInset }}>
+                        <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary }}>{item.description}</span>
+                        <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, textAlign: 'right' }}>{item.quantity}</span>
+                        <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, textAlign: 'right' }}>{fmtCurrency(item.unitPrice)}</span>
+                        <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, textAlign: 'right' }}>{fmtCurrency(item.quantity * item.unitPrice)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Details */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'], marginBottom: spacing['5'] }}>
               {co.description && (
@@ -551,7 +584,7 @@ export const ChangeOrders: React.FC = () => {
         <MetricBox label="Rejected Total" value={fmt(metrics.rejectedTotal)} />
         <MetricBox
           label="Net Contract Change"
-          value={metrics.approvedTotal >= 0 ? `+${fmt(metrics.approvedTotal)}` : fmt(metrics.approvedTotal)}
+          value={originalContract > 0 ? `${metrics.approvedTotal >= 0 ? '+' : ''}${((metrics.approvedTotal / originalContract) * 100).toFixed(1)}%` : fmt(metrics.approvedTotal)}
           colorOverride={metrics.approvedTotal >= 0 ? 'warning' : 'success'}
         />
       </div>
@@ -709,7 +742,7 @@ export const ChangeOrders: React.FC = () => {
                   const costColor = co.estimated_cost > 0 ? colors.statusCritical : co.estimated_cost < 0 ? colors.statusActive : colors.textPrimary;
                   const costLabel = co.estimated_cost > 0 ? `+${fmtCurrency(co.estimated_cost)}` : fmtCurrency(co.estimated_cost);
                   const schedColor = co.schedule_impact_days > 0 ? colors.statusCritical : co.schedule_impact_days < 0 ? colors.statusActive : colors.textTertiary;
-                  const schedLabel = co.schedule_impact_days > 0 ? `+${co.schedule_impact_days} days` : co.schedule_impact_days < 0 ? `${co.schedule_impact_days} days` : '0 days';
+                  const schedLabel = co.schedule_impact_days > 0 ? `+${co.schedule_impact_days} days` : co.schedule_impact_days < 0 ? `${co.schedule_impact_days} days` : 'No impact';
                   const statusColors: Record<string, { color: string; bg: string; label: string }> = {
                     draft:    { color: '#6B7280', bg: '#F3F4F6', label: 'Draft' },
                     pending:  { color: '#F5A623', bg: '#FFF8EC', label: 'Pending' },
@@ -729,7 +762,7 @@ export const ChangeOrders: React.FC = () => {
                       onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.backgroundColor = 'transparent'; }}
                     >
                       <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>{co.coNumber}</span>
-                      <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: typeConfig.color, backgroundColor: typeConfig.bg, padding: `2px ${spacing['2']}`, borderRadius: borderRadius.full, display: 'inline-block' }}>{typeConfig.shortLabel}</span>
+                      <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: co.type === 'pco' ? colors.statusPending : co.type === 'cor' ? colors.statusInfo : colors.statusActive, backgroundColor: co.type === 'pco' ? colors.statusPendingSubtle : co.type === 'cor' ? colors.statusInfoSubtle : colors.statusActiveSubtle, padding: `2px ${spacing['2']}`, borderRadius: borderRadius.full, display: 'inline-block' }}>{typeConfig.shortLabel}</span>
                       <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{co.title}</span>
                       <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: costColor }}>{costLabel}</span>
                       <span style={{ fontSize: typography.fontSize.sm, color: reasonConfig ? reasonConfig.color : colors.textTertiary, display: 'flex', alignItems: 'center', gap: 4 }}>
