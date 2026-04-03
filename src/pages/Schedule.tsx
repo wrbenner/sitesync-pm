@@ -730,6 +730,34 @@ export const Schedule: React.FC = () => {
     }
   }, [loading, schedulePhases]);
 
+  // Global keyboard shortcuts: +/= zoom in, - zoom out, b toggle baseline, Escape exit what-if
+  useEffect(() => {
+    const ZOOM_ORDER = ['day', 'week', 'month', 'quarter'] as const;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
+      if (e.key === '+' || e.key === '=') {
+        e.preventDefault();
+        setZoomLevel(prev => {
+          const idx = ZOOM_ORDER.indexOf(prev);
+          return idx > 0 ? ZOOM_ORDER[idx - 1] : prev;
+        });
+      } else if (e.key === '-') {
+        e.preventDefault();
+        setZoomLevel(prev => {
+          const idx = ZOOM_ORDER.indexOf(prev);
+          return idx < ZOOM_ORDER.length - 1 ? ZOOM_ORDER[idx + 1] : prev;
+        });
+      } else if (e.key === 'b' || e.key === 'B') {
+        setShowBaseline(prev => !prev);
+      } else if (e.key === 'Escape') {
+        setWhatIfMode(false);
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   const overallHealthStatus = useMemo(() => {
     if (schedulePhases.length === 0) return { status: 'green', label: 'On Track' };
     const behind = schedulePhases.filter(p => {
@@ -995,7 +1023,7 @@ export const Schedule: React.FC = () => {
         onFocus={e => Object.assign(e.currentTarget.style, { left: '16px', top: '16px', width: 'auto', height: 'auto', overflow: 'visible' })}
         onBlur={e => Object.assign(e.currentTarget.style, { left: '-9999px', top: 'auto', width: '1px', height: '1px', overflow: 'hidden' })}
       >
-        Skip to schedule activities
+        Skip to schedule chart
       </a>
       {error && (
         <div
@@ -1073,8 +1101,8 @@ export const Schedule: React.FC = () => {
 
       {/* KPI Metric Cards */}
       <div
-        role="region"
-        aria-label="Schedule Metrics"
+        role="group"
+        aria-label="Schedule metrics"
         style={{
           display: 'grid',
           gridTemplateColumns: isNarrow ? '1fr' : isMobile ? '1fr 1fr' : 'repeat(4, 1fr)',
@@ -1785,7 +1813,7 @@ export const Schedule: React.FC = () => {
             </div>
             <div
               role="region"
-              aria-label={viewMode === 'gantt' ? 'Schedule Gantt Chart' : 'Schedule Activities List'}
+              aria-label={viewMode === 'gantt' ? 'Project Schedule Gantt Chart' : 'Schedule Activities List'}
               id="gantt-activities"
               style={{
                 backgroundColor: colors.surfaceRaised,
