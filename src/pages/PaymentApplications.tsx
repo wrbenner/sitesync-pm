@@ -25,6 +25,7 @@ import type { PayApplicationData } from '../api/endpoints/budget'
 import { upsertPayApplication, approvePayApplication } from '../api/endpoints/payApplications'
 import type { UpsertPayAppPayload } from '../api/endpoints/payApplications'
 import { updateLienWaiverStatus, generateWaiversFromPayApp } from '../api/endpoints/lienWaivers'
+import { generatePayAppPdf, type PayAppPdfData } from '../services/pdf/paymentAppPdf'
 import { LienWaiverPDF, lienWaiverDataFromRow } from '../components/export/LienWaiverPDF'
 import type { LienWaiverRowContext, WaiverState } from '../components/export/LienWaiverPDF'
 import { G702ApplicationPDF } from '../components/export/G702ApplicationPDF'
@@ -947,6 +948,74 @@ const G702SummaryCard = memo<{
   isApproving?: boolean
   hasPendingWaivers?: boolean
 }>(({ app, liveG702, liveG703, onApprove, isApproving, hasPendingWaivers }) => {
+  const [isPdfExporting, setIsPdfExporting] = useState(false)
+
+  const handleExportG702G703 = useCallback(async () => {
+    setIsPdfExporting(true)
+    try {
+      const appNum = app.application_number as number
+      const pdfData: PayAppPdfData = liveG702
+        ? {
+            applicationNumber: liveG702.applicationNumber,
+            periodTo: liveG702.periodTo,
+            periodFrom: app.period_from as string | null,
+            status: app.status as string,
+            projectName: liveG702.projectName,
+            contractorName: liveG702.contractorName,
+            originalContractSum: liveG702.originalContractSum,
+            netChangeOrders: liveG702.netChangeOrders,
+            contractSumToDate: liveG702.contractSumToDate,
+            totalCompletedAndStored: liveG702.totalCompletedAndStored,
+            retainagePercent: liveG702.retainagePercent,
+            retainageAmount: liveG702.retainageAmount,
+            totalEarnedLessRetainage: liveG702.totalEarnedLessRetainage,
+            lessPreviousCertificates: liveG702.lessPreviousCertificates,
+            currentPaymentDue: liveG702.currentPaymentDue,
+            balanceToFinish: liveG702.balanceToFinish,
+            sovLines: liveG703?.map((l) => ({
+              itemNumber: l.itemNumber,
+              description: l.description,
+              scheduledValue: l.scheduledValue,
+              previousCompleted: l.previousCompleted,
+              thisPeroid: l.thisPeroid,
+              materialsStored: l.materialsStored,
+              totalCompletedAndStored: l.totalCompletedAndStored,
+              percentComplete: l.percentComplete,
+              balanceToFinish: l.balanceToFinish,
+              retainage: l.retainage,
+            })),
+          }
+        : {
+            applicationNumber: appNum,
+            periodTo: app.period_to as string,
+            periodFrom: app.period_from as string | null,
+            status: app.status as string,
+            projectName: 'Project',
+            originalContractSum: (app.original_contract_sum as number) ?? 0,
+            netChangeOrders: (app.net_change_orders as number) ?? 0,
+            contractSumToDate: (app.contract_sum_to_date as number) ?? 0,
+            totalCompletedAndStored: (app.total_completed_and_stored as number) ?? 0,
+            retainagePercent: 10,
+            retainageAmount: (app.retainage as number) ?? 0,
+            totalEarnedLessRetainage: (app.total_earned_less_retainage as number) ?? 0,
+            lessPreviousCertificates: (app.less_previous_certificates as number) ?? 0,
+            currentPaymentDue: (app.current_payment_due as number) ?? 0,
+            balanceToFinish: (app.balance_to_finish as number) ?? 0,
+          }
+      const blob = await generatePayAppPdf(pdfData)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `G702_G703_App${appNum}_${new Date().toISOString().slice(0, 10)}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      toast.error('Failed to generate PDF')
+    } finally {
+      setIsPdfExporting(false)
+    }
+  }, [app, liveG702, liveG703])
+
   const g = liveG702
   const rows = [
     { label: '1. Original Contract Sum', value: fmtCurrency(g ? g.originalContractSum : (app.original_contract_sum as number)) },
@@ -978,6 +1047,58 @@ const G702SummaryCard = memo<{
         <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, marginLeft: 'auto' }}>
           Application #{appNum} · Period to {periodTo}
         </span>
+        <button
+          onClick={handleExportG702G703}
+          disabled={isPdfExporting || (app.status as string) === 'draft'}
+          title={(app.status as string) === 'draft' ? 'Submit pay app before exporting' : undefined}
+          aria-label="Export AIA G702 G703 payment application as PDF"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: spacing['1.5'],
+            height: '40px',
+            padding: `0 ${spacing['4']}`,
+            backgroundColor:
+              isPdfExporting || (app.status as string) === 'draft'
+                ? colors.textTertiary
+                : colors.primaryOrange,
+            color: colors.white,
+            border: 'none',
+            borderRadius: borderRadius.md,
+            fontSize: typography.fontSize.sm,
+            fontWeight: typography.fontWeight.semibold,
+            fontFamily: typography.fontFamily,
+            cursor:
+              isPdfExporting || (app.status as string) === 'draft' ? 'not-allowed' : 'pointer',
+            opacity: (app.status as string) === 'draft' ? 0.5 : 1,
+            transition: transitions.base,
+            flexShrink: 0,
+          }}
+        >
+          {isPdfExporting ? (
+            <>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{ animation: 'spin 1s linear infinite' }}
+              >
+                <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+              </svg>
+              Generating...
+            </>
+          ) : (
+            <>
+              <Download size={14} />
+              Export G702/G703
+            </>
+          )}
+        </button>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column' }}>

@@ -354,6 +354,294 @@ export async function generateG702Pdf(
 }
 
 // ---------------------------------------------------------------------------
+// Combined G702 + G703 export
+// ---------------------------------------------------------------------------
+
+/**
+ * Pre-computed data shape accepted by generatePayAppPdf.
+ * Designed to be constructed directly from G702Data and G703LineItem[]
+ * already computed by the payment machine, avoiding re-computation drift.
+ */
+export interface PayAppPdfData {
+  applicationNumber: number
+  periodTo: string
+  periodFrom?: string | null
+  status: string
+  projectName: string
+  contractorName?: string
+  ownerName?: string
+  architectName?: string
+  originalContractSum: number
+  netChangeOrders: number
+  contractSumToDate: number
+  totalCompletedAndStored: number
+  retainagePercent: number
+  retainageAmount: number
+  totalEarnedLessRetainage: number
+  lessPreviousCertificates: number
+  currentPaymentDue: number
+  balanceToFinish: number
+  sovLines?: Array<{
+    itemNumber: string
+    description: string
+    scheduledValue: number
+    previousCompleted: number
+    thisPeroid: number
+    materialsStored: number
+    totalCompletedAndStored: number
+    percentComplete: number
+    balanceToFinish: number
+    retainage: number
+  }>
+}
+
+/**
+ * Generates a combined AIA G702 + G703 PDF from pre-computed pay application data.
+ * G702 summary is page 1; G703 continuation sheet follows on subsequent pages.
+ * Returns a Blob suitable for browser download via URL.createObjectURL.
+ */
+export async function generatePayAppPdf(data: PayAppPdfData): Promise<Blob> {
+  const pdfDoc = await PDFDocument.create()
+  const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
+  const fontReg = await pdfDoc.embedFont(StandardFonts.Helvetica)
+
+  // ── G702 Summary Page (US Letter portrait 612x792) ──────────────────────
+  const g702Page = pdfDoc.addPage([612, 792])
+  const L = 40
+  const R = 572
+  const W = R - L
+  let y = 750
+
+  await drawText(g702Page, 'AIA DOCUMENT G702', L, y, fontBold, 11)
+  await drawText(g702Page, 'APPLICATION AND CERTIFICATE FOR PAYMENT', L + 170, y, fontReg, 11)
+  y -= 14
+  drawHRule(g702Page, L, y, W, 1)
+  y -= 16
+
+  const lbSz = 7
+  const valSz = 9
+  const col2 = L + 240
+
+  const infoRows: Array<[string, string]> = [
+    ['PROJECT:', data.projectName],
+    ['OWNER:', data.ownerName ?? ''],
+    ['ARCHITECT:', data.architectName ?? ''],
+    ['CONTRACTOR:', data.contractorName ?? ''],
+  ]
+  for (const [lbl, val] of infoRows) {
+    await drawText(g702Page, lbl, L, y, fontBold, lbSz)
+    await drawText(g702Page, val, L + 70, y, fontReg, valSz, 160)
+    y -= 13
+  }
+
+  let ry = 750 - 14 - 16
+  const appRows: Array<[string, string]> = [
+    ['APPLICATION NO:', String(data.applicationNumber)],
+    ['PERIOD FROM:', data.periodFrom ?? ''],
+    ['PERIOD TO:', data.periodTo],
+    ['STATUS:', data.status.toUpperCase()],
+  ]
+  for (const [lbl, val] of appRows) {
+    await drawText(g702Page, lbl, col2, ry, fontBold, lbSz)
+    await drawText(g702Page, val, col2 + 100, ry, fontReg, valSz, 130)
+    ry -= 13
+  }
+
+  y -= 8
+  drawHRule(g702Page, L, y, W, 0.75)
+  y -= 16
+  await drawText(g702Page, "CONTRACTOR'S APPLICATION FOR PAYMENT", L, y, fontBold, 10)
+  y -= 14
+
+  interface SummaryRowDef { lineNum: string; label: string; value: number; bold?: boolean; indent?: boolean }
+  const summaryRows: SummaryRowDef[] = [
+    { lineNum: '1.', label: 'ORIGINAL CONTRACT SUM', value: toCents(data.originalContractSum) },
+    { lineNum: '2.', label: 'NET CHANGE BY CHANGE ORDERS', value: toCents(data.netChangeOrders) },
+    { lineNum: '3.', label: 'CONTRACT SUM TO DATE (Line 1 + or - 2)', value: toCents(data.contractSumToDate), bold: true },
+    { lineNum: '4.', label: 'TOTAL COMPLETED AND STORED TO DATE', value: toCents(data.totalCompletedAndStored) },
+    { lineNum: '5.', label: `RETAINAGE HELD (${data.retainagePercent.toFixed(0)}%)`, value: toCents(data.retainageAmount), indent: true },
+    { lineNum: '6.', label: 'TOTAL EARNED LESS RETAINAGE (Line 4 - Line 5)', value: toCents(data.totalEarnedLessRetainage) },
+    { lineNum: '7.', label: 'LESS PREVIOUS CERTIFICATES FOR PAYMENT', value: toCents(data.lessPreviousCertificates) },
+    { lineNum: '8.', label: 'CURRENT PAYMENT DUE (Line 6 - Line 7)', value: toCents(data.currentPaymentDue), bold: true },
+    { lineNum: '9.', label: 'BALANCE TO FINISH (Line 3 - Line 6)', value: toCents(data.balanceToFinish) },
+  ]
+
+  const numX = L
+  const labelX = L + 22
+  const valueX = R - 110
+  const valueWidth = 105
+
+  drawHRule(g702Page, L, y, W, 0.5)
+  y -= 2
+  for (const row of summaryRows) {
+    y -= 16
+    const font = row.bold ? fontBold : fontReg
+    const indX = labelX + (row.indent ? 12 : 0)
+    await drawText(g702Page, row.lineNum, numX, y, fontBold, 8)
+    await drawText(g702Page, row.label, indX, y, font, 8, valueX - indX - 8)
+    const valStr = fmtDollars(row.value)
+    const valW = fontReg.widthOfTextAtSize(valStr, 9)
+    await drawText(g702Page, valStr, valueX + valueWidth - valW, y, font, 9)
+    if (row.bold) drawHRule(g702Page, valueX, y - 2, valueWidth, 0.75)
+  }
+
+  y -= 8
+  drawHRule(g702Page, L, y, W, 1)
+  y -= 24
+
+  await drawText(g702Page, 'CONTRACTOR CERTIFICATION', L, y, fontBold, 9)
+  await drawText(g702Page, "ARCHITECT'S CERTIFICATE FOR PAYMENT", col2, y, fontBold, 9)
+  y -= 40
+  drawHRule(g702Page, L, y, 180, 0.5)
+  await drawText(g702Page, 'Contractor Signature', L, y - 10, fontReg, 7)
+  drawHRule(g702Page, col2, y, 180, 0.5)
+  await drawText(g702Page, 'Architect Signature', col2, y - 10, fontReg, 7)
+
+  const footerY = 28
+  drawHRule(g702Page, L, footerY + 10, W, 0.5)
+  await drawText(
+    g702Page,
+    'AIA Document G702 - Application and Certificate for Payment. Generated by SiteSync AI.',
+    L, footerY, fontReg, 7, W,
+  )
+
+  // ── G703 Continuation Pages (landscape 792x612) ──────────────────────────
+  const sovLines = data.sovLines ?? []
+  if (sovLines.length > 0) {
+    const PW = 792
+    const PH = 612
+    const MG = 28
+    const TW = PW - MG * 2
+
+    interface G703ColDef { label1: string; label2: string; width: number; align: 'left' | 'right' }
+    const cols: G703ColDef[] = [
+      { label1: 'ITEM', label2: '#', width: 30, align: 'left' },
+      { label1: 'DESCRIPTION', label2: 'OF WORK', width: 140, align: 'left' },
+      { label1: 'SCHEDULED', label2: 'VALUE', width: 72, align: 'right' },
+      { label1: 'WORK COMPLETED', label2: 'PREVIOUS', width: 72, align: 'right' },
+      { label1: 'WORK COMPLETED', label2: 'THIS PERIOD', width: 72, align: 'right' },
+      { label1: 'MATERIALS', label2: 'STORED', width: 68, align: 'right' },
+      { label1: 'TOTAL COMPLETED', label2: '& STORED', width: 72, align: 'right' },
+      { label1: '%', label2: 'COMPLETE', width: 50, align: 'right' },
+      { label1: 'BALANCE TO', label2: 'FINISH', width: 70, align: 'right' },
+      { label1: 'RETAINAGE', label2: '', width: 70, align: 'right' },
+    ]
+    const sumW = cols.reduce((s, c) => s + c.width, 0)
+    cols[cols.length - 1].width += TW - sumW
+
+    const HEADER_H = 32
+    const ROW_H = 16
+    const ROWS_PER_PAGE = Math.floor((PH - MG * 2 - HEADER_H - 30) / ROW_H)
+    const totalPages = Math.max(1, Math.ceil((sovLines.length + 1) / ROWS_PER_PAGE))
+
+    const totSV = sovLines.reduce((s, l) => s + l.scheduledValue, 0)
+    const totPrev = sovLines.reduce((s, l) => s + l.previousCompleted, 0)
+    const totThis = sovLines.reduce((s, l) => s + l.thisPeroid, 0)
+    const totStored = sovLines.reduce((s, l) => s + l.materialsStored, 0)
+    const totTotal = sovLines.reduce((s, l) => s + l.totalCompletedAndStored, 0)
+    const totBal = sovLines.reduce((s, l) => s + l.balanceToFinish, 0)
+    const totRet = sovLines.reduce((s, l) => s + l.retainage, 0)
+    const totPct = totSV > 0 ? totTotal / totSV : 0
+
+    for (let pi = 0; pi < totalPages; pi++) {
+      const pg = pdfDoc.addPage([PW, PH])
+      let py = PH - MG
+
+      await drawText(pg, 'AIA DOCUMENT G703 - CONTINUATION SHEET', MG, py, fontBold, 11)
+      const pgLabel = 'Page ' + (pi + 1) + ' of ' + totalPages
+      const pgLW = fontReg.widthOfTextAtSize(pgLabel, 9)
+      await drawText(pg, pgLabel, PW - MG - pgLW, py, fontReg, 9)
+      py -= 14
+
+      let cx = MG
+      drawHRule(pg, MG, py, TW, 0.75)
+      py -= 1
+      for (const col of cols) {
+        const l1W = fontBold.widthOfTextAtSize(col.label1, 7)
+        const l2W = fontBold.widthOfTextAtSize(col.label2, 7)
+        const x1 = col.align === 'right' ? cx + col.width - l1W - 2 : cx + 2
+        const x2 = col.align === 'right' ? cx + col.width - l2W - 2 : cx + 2
+        await drawText(pg, col.label1, x1, py - 10, fontBold, 7)
+        await drawText(pg, col.label2, x2, py - 20, fontBold, 7)
+        cx += col.width
+      }
+      py -= HEADER_H
+      drawHRule(pg, MG, py, TW, 0.75)
+
+      const startIdx = pi * ROWS_PER_PAGE
+      const endIdx = Math.min(startIdx + ROWS_PER_PAGE, sovLines.length)
+
+      for (let i = startIdx; i < endIdx; i++) {
+        const sl = sovLines[i]
+        py -= ROW_H
+        const cells: string[] = [
+          sl.itemNumber,
+          sl.description,
+          fmtDollars(toCents(sl.scheduledValue)),
+          fmtDollars(toCents(sl.previousCompleted)),
+          fmtDollars(toCents(sl.thisPeroid)),
+          fmtDollars(toCents(sl.materialsStored)),
+          fmtDollars(toCents(sl.totalCompletedAndStored)),
+          fmtPct(sl.percentComplete),
+          fmtDollars(toCents(sl.balanceToFinish)),
+          fmtDollars(toCents(sl.retainage)),
+        ]
+        let cellX = MG
+        for (let c = 0; c < cols.length; c++) {
+          const col = cols[c]
+          const s = cells[c] ?? ''
+          const mxW = col.width - 4
+          if (col.align === 'right') {
+            const tw = fontReg.widthOfTextAtSize(s, 8)
+            await drawText(pg, s, cellX + col.width - tw - 2, py, fontReg, 8, mxW)
+          } else {
+            await drawText(pg, s, cellX + 2, py, fontReg, 8, mxW)
+          }
+          cellX += col.width
+        }
+        if (i < endIdx - 1) drawHRule(pg, MG, py - 3, TW, 0.25)
+      }
+
+      if (endIdx === sovLines.length) {
+        py -= ROW_H
+        drawHRule(pg, MG, py + ROW_H - 2, TW, 1)
+        const totCells: string[] = [
+          '', 'TOTALS',
+          fmtDollars(toCents(totSV)),
+          fmtDollars(toCents(totPrev)),
+          fmtDollars(toCents(totThis)),
+          fmtDollars(toCents(totStored)),
+          fmtDollars(toCents(totTotal)),
+          fmtPct(totPct),
+          fmtDollars(toCents(totBal)),
+          fmtDollars(toCents(totRet)),
+        ]
+        let totX = MG
+        for (let c = 0; c < cols.length; c++) {
+          const col = cols[c]
+          const s = totCells[c] ?? ''
+          const mxW = col.width - 4
+          if (col.align === 'right') {
+            const tw = fontBold.widthOfTextAtSize(s, 8)
+            await drawText(pg, s, totX + col.width - tw - 2, py, fontBold, 8, mxW)
+          } else {
+            await drawText(pg, s, totX + 2, py, fontBold, 8, mxW)
+          }
+          totX += col.width
+        }
+        drawHRule(pg, MG, py - 4, TW, 1)
+      }
+
+      const fY = MG - 10
+      await drawText(pg, 'AIA Document G703 - Continuation Sheet. Generated by SiteSync AI.', MG, fY, fontReg, 7, TW)
+    }
+  }
+
+  const bytes = await pdfDoc.save()
+  return new Blob([bytes], { type: 'application/pdf' })
+}
+
+// ---------------------------------------------------------------------------
 // G703 Continuation Sheet
 // ---------------------------------------------------------------------------
 
