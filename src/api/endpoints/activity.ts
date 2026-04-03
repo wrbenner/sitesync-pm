@@ -79,6 +79,24 @@ async function batchFetchEntityLabels(
     )
   }
 
+  if (grouped['punch_list_item']?.length) {
+    fetches.push(
+      supabase
+        .from('punch_list_items')
+        .select('id, title')
+        .eq('project_id', projectId)
+        .in('id', grouped['punch_list_item'])
+        .then(({ data }) => {
+          for (const row of data ?? []) {
+            const label = row.title
+            labelMap.set(row.id, label)
+            setCachedEntityLabel(`${projectId}:punch_list_item:${row.id}`, label)
+          }
+        })
+        .catch((err: unknown) => { console.warn('[ActivityFeed] punch_list_item label fetch failed:', err instanceof Error ? err.message : String(err)) }),
+    )
+  }
+
   if (grouped['change_order']?.length) {
     fetches.push(
       supabase
