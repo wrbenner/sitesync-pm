@@ -160,8 +160,13 @@ export const CopilotPanel: React.FC = () => {
   useEffect(() => {
     if (!conversationId) return
 
+    let currentUserId: string | null = null
+    supabase.auth.getUser().then(({ data }) => {
+      currentUserId = data.user?.id ?? null
+    })
+
     const channel = supabase
-      .channel(`copilot:${conversationId}`)
+      .channel(`copilot-messages-${conversationId}`)
       .on(
         'postgres_changes',
         {
@@ -171,9 +176,9 @@ export const CopilotPanel: React.FC = () => {
           filter: `conversation_id=eq.${conversationId}`,
         },
         (payload) => {
-          const row = payload.new as { role?: string; content?: string }
-          if (row.role === 'assistant' && row.content) {
-            addCoordinatorMessage(row.content)
+          const message = payload.new as { content?: string; user_id?: string }
+          if (message.user_id !== currentUserId && message.content) {
+            addCoordinatorMessage(message.content)
           }
         },
       )
