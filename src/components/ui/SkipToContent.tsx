@@ -21,6 +21,6 @@ export const SkipToContent: React.FC = () => (
     onFocus={(e) => { (e.currentTarget as HTMLAnchorElement).style.top = spacing['4'] }}
     onBlur={(e) => { (e.currentTarget as HTMLAnchorElement).style.top = '-100px' }}
   >
-    Skip to content
+    Skip to main content
   </a>
 )

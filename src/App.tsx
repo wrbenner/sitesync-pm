@@ -395,6 +395,14 @@ function AppContent() {
     if (conflictCount > 0) setConflictModalOpen(true);
   }, [conflictCount]);
 
+  // Move focus to main content on route change for keyboard and screen reader users
+  useEffect(() => {
+    const id = setTimeout(() => {
+      document.getElementById('main-content')?.focus();
+    }, 100);
+    return () => clearTimeout(id);
+  }, [location.pathname]);
+
   const activeView = location.pathname.replace('/', '') || 'dashboard';
 
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
@@ -568,8 +576,8 @@ function AppContent() {
           touchAction: 'manipulation',
         }}
       >
-        {user && <AuthenticatedProviders activeView={activeView} />}
         <SkipToContent />
+        {user && <AuthenticatedProviders activeView={activeView} />}
         <nav role="navigation" aria-label="Primary navigation">
           <Sidebar activeView={activeView} onNavigate={handleNavigate} />
         </nav>
