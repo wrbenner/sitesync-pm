@@ -593,6 +593,7 @@ const ScheduleImportModal: React.FC<ScheduleImportModalProps> = ({ open, onClose
 
 export const Schedule: React.FC = () => {
   const isMobile = useMediaQuery('(max-width: 768px)');
+  const isNarrow = useMediaQuery('(max-width: 480px)');
   const { activeProject } = useProjectContext();
   const queryClient = useQueryClient();
   const { phases: schedulePhases, metrics, loading, error, loadSchedule } = useScheduleStore();
@@ -1069,7 +1070,7 @@ export const Schedule: React.FC = () => {
         aria-label="Schedule Metrics"
         style={{
           display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)',
+          gridTemplateColumns: isNarrow ? '1fr' : isMobile ? '1fr 1fr' : 'repeat(4, 1fr)',
           gap: spacing.lg,
           marginBottom: spacing['2xl'],
         }}
@@ -1519,6 +1520,42 @@ export const Schedule: React.FC = () => {
           </Card>
         ) : isMobile ? (
           <div>
+            {/* Sticky mobile header */}
+            <div style={{
+              position: 'sticky',
+              top: 0,
+              zIndex: 10,
+              backgroundColor: '#F7F8FA',
+              padding: '12px 0 8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: 4,
+            }}>
+              <span style={{ fontSize: 18, fontWeight: 700, color: colors.textPrimary }}>Schedule</span>
+              <button
+                onClick={() => setShowImportModal(true)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  minHeight: 44,
+                  minWidth: 44,
+                  padding: '0 16px',
+                  border: `1px solid ${colors.borderDefault}`,
+                  borderRadius: 8,
+                  backgroundColor: colors.white,
+                  cursor: 'pointer',
+                  fontSize: 14,
+                  fontWeight: 500,
+                  color: colors.textPrimary,
+                  fontFamily: 'inherit',
+                }}
+              >
+                <Upload size={14} />
+                Import
+              </button>
+            </div>
             {/* Filter tabs — horizontally scrollable */}
             <div role="tablist" aria-label="Filter activities by status" style={{ overflowX: 'auto', whiteSpace: 'nowrap', marginBottom: 12, WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
               {(['all', 'in_progress', 'completed', 'delayed', 'not_started'] as const).map((f) => {
@@ -1586,24 +1623,28 @@ export const Schedule: React.FC = () => {
                     style={{
                       backgroundColor: '#FFFFFF',
                       borderRadius: 12,
-                      border: `1px solid ${colors.borderDefault}`,
+                      border: '1px solid #E5E7EB',
+                      borderLeft: phase.is_critical_path === true ? '3px solid #E74C3C' : '1px solid #E5E7EB',
                       padding: 16,
-                      minHeight: 80,
+                      minHeight: 64,
                       cursor: 'pointer',
                       outline: 'none',
+                      marginBottom: 12,
                     }}
                   >
                     <span style={{ fontWeight: 600, fontSize: 16, color: colors.textPrimary, display: 'block', marginBottom: 6 }}>
-                      {phase.name}
+                      {phase.is_milestone ? '◆ ' : ''}{phase.name}
                     </span>
-                    <span style={{ fontSize: 12, color: colors.textTertiary, display: 'block', marginBottom: 8 }}>
+                    <span style={{ fontSize: 14, color: '#6B7280', display: 'block', marginBottom: 8 }}>
                       {new Date(phase.startDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: '2-digit' })}
                       {' \u2014 '}
                       {new Date(phase.endDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: '2-digit' })}
                     </span>
-                    <div style={{ height: 8, backgroundColor: '#E5E7EB', borderRadius: 4, overflow: 'hidden', marginBottom: 8 }}>
-                      <div style={{ height: '100%', width: `${phase.progress ?? 0}%`, backgroundColor: statusColor, borderRadius: 4 }} />
-                    </div>
+                    {!phase.is_milestone && (
+                      <div style={{ height: 8, backgroundColor: '#E5E7EB', borderRadius: 4, overflow: 'hidden', marginBottom: 8 }}>
+                        <div style={{ height: '100%', width: `${phase.progress ?? 0}%`, backgroundColor: statusColor, borderRadius: 4 }} />
+                      </div>
+                    )}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <span aria-label={`Status: ${statusLabel}`} role="img">
                         <Tag label={statusLabel} color={statusColor} backgroundColor={statusColor + '22'} />
