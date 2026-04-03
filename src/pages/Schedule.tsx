@@ -42,9 +42,10 @@ interface ScheduleKPICardProps {
   trend: 'up' | 'down' | 'neutral'
   progressPct?: number
   ariaLabel?: string
+  isMobile?: boolean
 }
 
-const ScheduleKPICard: React.FC<ScheduleKPICardProps> = ({ icon, label, value, valueColor, trend, progressPct, ariaLabel }) => (
+const ScheduleKPICard: React.FC<ScheduleKPICardProps> = ({ icon, label, value, valueColor, trend, progressPct, ariaLabel, isMobile }) => (
   <div aria-label={ariaLabel} style={{
     backgroundColor: '#FFFFFF',
     borderRadius: '12px',
@@ -58,7 +59,7 @@ const ScheduleKPICard: React.FC<ScheduleKPICardProps> = ({ icon, label, value, v
     <span style={{ fontSize: '12px', color: colors.textTertiary, fontWeight: typography.fontWeight.medium, lineHeight: typography.lineHeight.normal }}>
       {label}
     </span>
-    <span style={{ fontSize: '28px', fontWeight: typography.fontWeight.semibold, color: valueColor, lineHeight: 1.1 }}>
+    <span style={{ fontSize: isMobile ? '24px' : '28px', fontWeight: typography.fontWeight.semibold, color: valueColor, lineHeight: 1.1 }}>
       {value}
     </span>
     {progressPct != null && (
@@ -538,6 +539,7 @@ export const Schedule: React.FC = () => {
   const [recoveryExpanded, setRecoveryExpanded] = useState(false);
   const [scheduleAnnouncement, setScheduleAnnouncement] = useState('');
   const [showImportModal, setShowImportModal] = useState(false);
+  const [mobileFilter, setMobileFilter] = useState<'all' | 'in_progress' | 'completed' | 'delayed' | 'not_started'>('all');
   const { addToast } = useToast();
 
   // dirtyPhaseIds: pass phase IDs currently being edited to get conflict toasts.
@@ -976,7 +978,7 @@ export const Schedule: React.FC = () => {
         aria-label="Schedule Metrics"
         style={{
           display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)',
+          gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)',
           gap: spacing.lg,
           marginBottom: spacing['2xl'],
         }}
@@ -997,6 +999,7 @@ export const Schedule: React.FC = () => {
           }
           trend={activityMetrics.scheduleVarianceDays > 0 ? 'down' : activityMetrics.scheduleVarianceDays < 0 ? 'up' : 'neutral'}
           ariaLabel={`Schedule Variance: ${activityMetrics.scheduleVarianceDays > 0 ? '+' : ''}${activityMetrics.scheduleVarianceDays}d`}
+          isMobile={isMobile}
         />
         {/* Card 2: Critical Path Items */}
         <ScheduleKPICard
@@ -1006,6 +1009,7 @@ export const Schedule: React.FC = () => {
           valueColor={activityMetrics.criticalPathCount > 0 ? colors.statusCritical : colors.textPrimary}
           trend="neutral"
           ariaLabel={`Critical Path Items: ${activityMetrics.criticalPathCount}`}
+          isMobile={isMobile}
         />
         {/* Card 3: On Track */}
         <ScheduleKPICard
@@ -1023,6 +1027,7 @@ export const Schedule: React.FC = () => {
           }
           trend={activityMetrics.onTrackPct >= 80 ? 'up' : 'down'}
           ariaLabel={`On Track: ${activityMetrics.onTrackPct}%`}
+          isMobile={isMobile}
         />
         {/* Card 4: Complete */}
         <ScheduleKPICard
@@ -1033,6 +1038,7 @@ export const Schedule: React.FC = () => {
           trend="neutral"
           progressPct={activityMetrics.completePct}
           ariaLabel={`Complete: ${activityMetrics.completePct}%`}
+          isMobile={isMobile}
         />
       </div>
 
@@ -1418,65 +1424,105 @@ export const Schedule: React.FC = () => {
             </div>
           </Card>
         ) : isMobile ? (
-          <div data-schedule-list style={{ display: 'flex', flexDirection: 'column' }}>
-            {schedulePhases.map((phase) => {
-              const statusColor =
-                phase.status === 'completed' ? '#4EC896'
-                : phase.status === 'in_progress' ? '#3B82F6'
-                : phase.status === 'delayed' ? '#E74C3C'
-                : '#F59E0B';
-              const statusLabel = (phase.status ?? 'not started').replace(/_/g, ' ');
-              return (
-                <div
-                  key={phase.id}
-                  role="row"
-                  tabIndex={0}
-                  aria-label={`${phase.name}, ${phase.progress}% complete, ${statusLabel}`}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      setScheduleAnnouncement(`Selected: ${phase.name}, ${statusLabel}`);
-                    } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-                      e.preventDefault();
-                      const list = e.currentTarget.closest('[data-schedule-list]');
-                      const rows = Array.from(list?.querySelectorAll<HTMLElement>('[role="row"]') ?? []);
-                      const idx = rows.indexOf(e.currentTarget);
-                      const next = e.key === 'ArrowDown' ? rows[idx + 1] : rows[idx - 1];
-                      next?.focus();
-                    }
-                  }}
-                  style={{
-                    backgroundColor: '#FFFFFF',
-                    borderRadius: 12,
-                    border: `1px solid ${colors.borderDefault}`,
-                    padding: 16,
-                    marginBottom: 12,
-                    cursor: 'pointer',
-                    outline: 'none',
-                  }}
-                >
-                  <span style={{ fontWeight: 600, fontSize: 16, color: colors.textPrimary, display: 'block', marginBottom: 6 }}>
-                    {phase.name}
-                  </span>
-                  <span style={{ fontSize: 12, color: colors.textTertiary, display: 'block', marginBottom: 8 }}>
-                    {new Date(phase.startDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: '2-digit' })}
-                    {' \u2013 '}
-                    {new Date(phase.endDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: '2-digit' })}
-                  </span>
-                  <div style={{ height: 6, backgroundColor: colors.borderDefault, borderRadius: 3, overflow: 'hidden', marginBottom: 6 }}>
-                    <div style={{ height: '100%', width: `${phase.progress}%`, backgroundColor: colors.primaryOrange, borderRadius: 3 }} />
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
-                    <span aria-label={`Status: ${statusLabel}`} role="img">
-                      <Tag label={statusLabel} color={statusColor} backgroundColor={statusColor + '22'} />
+          <div>
+            {/* Filter tabs — horizontally scrollable */}
+            <div style={{ overflowX: 'auto', whiteSpace: 'nowrap', marginBottom: 12, WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
+              {(['all', 'in_progress', 'completed', 'delayed', 'not_started'] as const).map((f) => {
+                const labels: Record<string, string> = { all: 'All', in_progress: 'In Progress', completed: 'Completed', delayed: 'Delayed', not_started: 'Not Started' };
+                const active = mobileFilter === f;
+                return (
+                  <button
+                    key={f}
+                    onClick={() => setMobileFilter(f)}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      minHeight: 44,
+                      padding: '0 16px',
+                      marginRight: 8,
+                      border: active ? 'none' : `1px solid ${colors.borderDefault}`,
+                      borderRadius: 22,
+                      backgroundColor: active ? colors.primaryOrange : '#FFFFFF',
+                      color: active ? '#FFFFFF' : colors.textSecondary,
+                      fontSize: 14,
+                      fontWeight: active ? 600 : 400,
+                      fontFamily: typography.fontFamily,
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {labels[f]}
+                  </button>
+                );
+              })}
+            </div>
+            <div data-schedule-list style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {schedulePhases
+                .filter((p) => mobileFilter === 'all' || p.status === mobileFilter)
+                .map((phase) => {
+                const statusColor =
+                  phase.status === 'completed' ? '#4EC896'
+                  : phase.status === 'in_progress' ? '#3B82F6'
+                  : phase.status === 'delayed' ? '#E74C3C'
+                  : '#F59E0B';
+                const statusLabel = (phase.status ?? 'not started').replace(/_/g, ' ');
+                const floatDays = phase.float_days ?? (phase as unknown as Record<string, unknown>).floatDays ?? 0;
+                return (
+                  <div
+                    key={phase.id}
+                    role="row"
+                    tabIndex={0}
+                    aria-label={`${phase.name}, ${phase.progress}% complete, ${statusLabel}`}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setScheduleAnnouncement(`Selected: ${phase.name}, ${statusLabel}`);
+                      } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        const list = e.currentTarget.closest('[data-schedule-list]');
+                        const rows = Array.from(list?.querySelectorAll<HTMLElement>('[role="row"]') ?? []);
+                        const idx = rows.indexOf(e.currentTarget);
+                        const next = e.key === 'ArrowDown' ? rows[idx + 1] : rows[idx - 1];
+                        next?.focus();
+                      }
+                    }}
+                    style={{
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: 12,
+                      border: `1px solid ${colors.borderDefault}`,
+                      padding: 16,
+                      minHeight: 80,
+                      cursor: 'pointer',
+                      outline: 'none',
+                    }}
+                  >
+                    <span style={{ fontWeight: 600, fontSize: 16, color: colors.textPrimary, display: 'block', marginBottom: 6 }}>
+                      {phase.name}
                     </span>
-                    <span style={{ fontSize: 11, color: colors.textTertiary }}>
-                      {phase.progress}% complete
+                    <span style={{ fontSize: 12, color: colors.textTertiary, display: 'block', marginBottom: 8 }}>
+                      {new Date(phase.startDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: '2-digit' })}
+                      {' \u2014 '}
+                      {new Date(phase.endDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: '2-digit' })}
                     </span>
+                    <div style={{ height: 8, backgroundColor: '#E5E7EB', borderRadius: 4, overflow: 'hidden', marginBottom: 8 }}>
+                      <div style={{ height: '100%', width: `${phase.progress ?? 0}%`, backgroundColor: statusColor, borderRadius: 4 }} />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span aria-label={`Status: ${statusLabel}`} role="img">
+                        <Tag label={statusLabel} color={statusColor} backgroundColor={statusColor + '22'} />
+                      </span>
+                      <span style={{ fontSize: 12, color: colors.textTertiary }}>
+                        {floatDays}d float
+                      </span>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
+            <p style={{ margin: '16px 0 0', fontSize: 12, color: colors.textTertiary, textAlign: 'center' }}>
+              Switch to desktop for Gantt chart view.
+            </p>
           </div>
         ) : (
           <>
