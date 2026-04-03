@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect, useId, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import { useTableKeyboardNavigation } from '../../hooks/useTableKeyboardNavigation';
 import { CalendarDays, GitBranch, Sparkles, Zap } from 'lucide-react';
 import EmptyState from '../ui/EmptyState';
@@ -291,12 +292,12 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   };
 
   const getBarColor = (phase: GanttPhase) => {
-    if (phase.completed || phase.status === 'completed') return '#4EC896';
+    if (phase.completed || phase.status === 'completed') return '#9CA3AF';
     if (whatIfMode && activeDrag?.phaseId === phase.id) return colors.statusReview;
-    if (phase.status === 'delayed') return '#E74C3C';
+    if (phase.status === 'delayed') return '#F5A623';
     if (phase.status === 'in_progress') return '#3B82F6';
     if (phase.is_critical || phase.critical || phase.floatDays === 0) return '#E74C3C';
-    if (phase.status === 'not_started' || phase.progress === 0) return '#9CA3AF';
+    if (phase.status === 'not_started' || phase.progress === 0) return '#E5E7EB';
     return '#3B82F6';
   };
 
@@ -521,10 +522,10 @@ export const GanttChart: React.FC<GanttChartProps> = ({
       {!isLoading && phases.length === 0 && (
         <EmptyState
           icon={CalendarDays}
-          title="No schedule activities yet"
-          description="Import a schedule from Primavera P6 or MS Project, or create your first activity to start tracking progress against your baseline."
-          action={{ label: 'Import Schedule', onClick: onImportSchedule ?? (() => {}) }}
-          secondaryAction={{ label: 'Add Activity', onClick: onAddActivity ?? (() => {}) }}
+          title="Build your schedule to track every phase from mobilization to closeout"
+          description="Import your Primavera P6 or MS Project schedule, or create your first phase manually to get started."
+          action={{ label: 'Import from P6/MS Project', onClick: onImportSchedule ?? (() => {}) }}
+          secondaryAction={{ label: 'Create First Phase', onClick: onAddActivity ?? (() => {}) }}
         />
       )}
 
@@ -825,7 +826,12 @@ export const GanttChart: React.FC<GanttChartProps> = ({
             )}
 
             {/* Phase rows */}
-            <div role="rowgroup">
+            <motion.div
+              role="rowgroup"
+              initial="hidden"
+              animate="visible"
+              variants={{ visible: { transition: { staggerChildren: 0.03 } } }}
+            >
             {localPhases.map((phase, index) => {
               const pos = getPhasePos(phase);
               const barColor = getBarColor(phase);
@@ -846,7 +852,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                 : null;
 
               return (
-                <div
+                <motion.div
                   key={phase.id}
                   id={`${uid}-gantt-row-${index}`}
                   data-gantt-index={index}
@@ -856,10 +862,11 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                   aria-label={`${(phase.critical || phase.is_critical) ? 'Critical path activity: ' : ''}${phase.name}: ${new Date(phase.startDate).toLocaleDateString()} to ${new Date(phase.endDate).toLocaleDateString()}, ${phase.progress}% complete${phase.floatDays != null ? `, ${phase.floatDays} days float` : ''}`}
                   tabIndex={0}
                   className="gantt-phase-row"
+                  variants={{ hidden: { opacity: 0, x: -8 }, visible: { opacity: 1, x: 0, transition: { duration: 0.2 } } }}
                   style={{
                     display: showCriticalOnly && !phase.is_critical && phase.floatDays !== 0 ? 'none' : 'flex',
                     alignItems: 'center', marginBottom: spacing['1'], position: 'relative',
-                    borderLeft: isCriticalPathRow ? '3px solid #EF4444' : '3px solid transparent',
+                    borderLeft: isCriticalPathRow ? '3px solid #E74C3C' : '3px solid transparent',
                     paddingLeft: isCriticalPathRow ? spacing['2'] : 0,
                     outline: 'none',
                   }}
@@ -957,12 +964,11 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                       const bWidth = Math.max(Math.round(((new Date(bEnd).getTime() - new Date(bStart).getTime()) / DAY_MS) * pxPerDay), 2);
                       return (
                         <div aria-hidden="true" style={{
-                          position: 'absolute', top: '50%', transform: 'translateY(-50%)',
-                          height: 8,
+                          position: 'absolute', top: 2,
+                          height: 4,
                           left: `${bLeft}px`, width: `${bWidth}px`,
-                          background: 'rgba(156, 163, 175, 0.3)',
-                          border: '1px dashed #9CA3AF',
-                          borderRadius: 4, pointerEvents: 'none',
+                          background: 'rgba(156, 163, 175, 0.4)',
+                          borderRadius: 2, pointerEvents: 'none',
                           zIndex: 0,
                         }} />
                       );
@@ -1443,10 +1449,10 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                       </div>
                     );
                   })()}
-                </div>
+                </motion.div>
               );
             })}
-            </div>{/* end rowgroup */}
+            </motion.div>{/* end rowgroup */}
           </div>
 
           {/* Today line label */}

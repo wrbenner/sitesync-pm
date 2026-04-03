@@ -534,6 +534,7 @@ export const Schedule: React.FC = () => {
     return () => { supabase.removeChannel(channel); };
   }, [activeProject?.id, queryClient]);
 
+  const [viewMode, setViewMode] = useState<'gantt' | 'list'>('gantt');
   const [whatIfMode, setWhatIfMode] = useState(false);
   const [showBaseline, setShowBaseline] = useState(false);
   const [recoveryExpanded, setRecoveryExpanded] = useState(false);
@@ -1535,6 +1536,28 @@ export const Schedule: React.FC = () => {
                 >
                   {schedulePhases.length > 0 ? `${schedulePhases.length} ${schedulePhases.length === 1 ? 'activity' : 'activities'}` : ''}
                 </span>
+                {/* Gantt / List view toggle */}
+                <div role="group" aria-label="View mode" style={{ display: 'flex', gap: 2, backgroundColor: colors.surfaceInset, borderRadius: borderRadius.full, padding: 2 }}>
+                  {(['gantt', 'list'] as const).map(mode => (
+                    <button
+                      key={mode}
+                      aria-pressed={viewMode === mode}
+                      onClick={() => setViewMode(mode)}
+                      style={{
+                        padding: `${spacing['1']} ${spacing['3']}`, border: 'none', borderRadius: borderRadius.full,
+                        backgroundColor: viewMode === mode ? colors.surfaceRaised : 'transparent',
+                        color: viewMode === mode ? colors.textPrimary : colors.textTertiary,
+                        fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
+                        fontFamily: typography.fontFamily, cursor: 'pointer',
+                        boxShadow: viewMode === mode ? shadows.sm : 'none',
+                        textTransform: 'capitalize',
+                        transition: transitions.quick,
+                      }}
+                    >
+                      {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                    </button>
+                  ))}
+                </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
                 {hasBaselineData && (
@@ -1638,6 +1661,78 @@ export const Schedule: React.FC = () => {
                 })}
               </div>
 
+              {viewMode === 'list' ? (
+                <div style={{ overflowX: 'auto' }}>
+                  <table role="table" aria-label="Schedule activities list" style={{ width: '100%', borderCollapse: 'collapse', fontSize: typography.fontSize.sm }}>
+                    <thead>
+                      <tr style={{ backgroundColor: colors.surfaceInset }}>
+                        {['Activity', 'Start', 'Finish', 'Duration', 'Status', '% Complete', 'Float'].map(h => (
+                          <th key={h} style={{ padding: `${spacing.sm} ${spacing.md}`, textAlign: 'left', fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, fontSize: typography.fontSize.caption, textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: `1px solid ${colors.borderSubtle}`, whiteSpace: 'nowrap' }}>
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {schedulePhases.map((phase, i) => {
+                        const statusLabel = (phase.status ?? 'not started').replace(/_/g, ' ');
+                        const durationDays = Math.round((new Date(phase.endDate).getTime() - new Date(phase.startDate).getTime()) / 86400000);
+                        const floatDays = phase.float_days ?? (phase as unknown as Record<string, unknown>).floatDays ?? 0;
+                        const statusColor =
+                          phase.status === 'completed' ? '#9CA3AF'
+                          : phase.status === 'in_progress' ? '#3B82F6'
+                          : phase.status === 'delayed' ? '#F5A623'
+                          : '#9CA3AF';
+                        const isCP = phase.is_critical_path === true;
+                        return (
+                          <tr
+                            key={phase.id}
+                            style={{
+                              borderBottom: `1px solid ${colors.borderSubtle}`,
+                              borderLeft: isCP ? '3px solid #E74C3C' : '3px solid transparent',
+                              cursor: 'pointer',
+                              transition: transitions.quick,
+                            }}
+                            onMouseEnter={e => (e.currentTarget.style.backgroundColor = colors.surfaceHover)}
+                            onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                            onClick={() => addToast('info', `${phase.name}: ${phase.progress}% complete`)}
+                          >
+                            <td style={{ padding: `${spacing.sm} ${spacing.md}`, color: colors.textPrimary, fontWeight: isCP ? typography.fontWeight.semibold : typography.fontWeight.normal, maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {isCP && <span style={{ fontSize: '10px', fontWeight: 700, backgroundColor: '#E74C3C', color: '#fff', padding: '0 4px', borderRadius: 3, lineHeight: '16px', marginRight: 6 }}>CP</span>}
+                              {phase.name}
+                            </td>
+                            <td style={{ padding: `${spacing.sm} ${spacing.md}`, color: colors.textSecondary, whiteSpace: 'nowrap' }}>
+                              {new Date(phase.startDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}
+                            </td>
+                            <td style={{ padding: `${spacing.sm} ${spacing.md}`, color: colors.textSecondary, whiteSpace: 'nowrap' }}>
+                              {new Date(phase.endDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}
+                            </td>
+                            <td style={{ padding: `${spacing.sm} ${spacing.md}`, color: colors.textTertiary }}>
+                              {durationDays}d
+                            </td>
+                            <td style={{ padding: `${spacing.sm} ${spacing.md}` }}>
+                              <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: statusColor, backgroundColor: statusColor + '18', padding: '2px 8px', borderRadius: borderRadius.full }}>
+                                {statusLabel}
+                              </span>
+                            </td>
+                            <td style={{ padding: `${spacing.sm} ${spacing.md}` }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
+                                <div style={{ width: 64, height: 6, borderRadius: 3, backgroundColor: colors.borderSubtle, overflow: 'hidden', flexShrink: 0 }}>
+                                  <div style={{ height: '100%', width: `${phase.progress ?? 0}%`, backgroundColor: statusColor, borderRadius: 3 }} />
+                                </div>
+                                <span style={{ fontSize: typography.fontSize.caption, color: colors.textSecondary, minWidth: 28 }}>{phase.progress ?? 0}%</span>
+                              </div>
+                            </td>
+                            <td style={{ padding: `${spacing.sm} ${spacing.md}`, color: Number(floatDays) === 0 ? '#E74C3C' : colors.textTertiary, fontWeight: Number(floatDays) === 0 ? typography.fontWeight.semibold : typography.fontWeight.normal }}>
+                              {floatDays}d
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
               <ErrorBoundary
                 fallback={(err) => (
                   <div style={{
@@ -1692,6 +1787,7 @@ export const Schedule: React.FC = () => {
                   risks={risks}
                 />
               </ErrorBoundary>
+              )}
             </div>
           </>
         )}
