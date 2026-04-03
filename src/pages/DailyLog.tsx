@@ -84,6 +84,9 @@ export const DailyLog: React.FC = () => {
   const [historySearch, setHistorySearch] = useState('');
   const [noIncidentsToday, setNoIncidentsToday] = useState(true);
   const [noVisitorsToday, setNoVisitorsToday] = useState(true);
+  const [incidentForm, setIncidentForm] = useState({ type: 'near_miss', description: '', corrective_action: '' });
+  const [newManpowerRow, setNewManpowerRow] = useState({ trade: '', company: '', headcount: 0, hours: 0 });
+  const [showAddManpowerRow, setShowAddManpowerRow] = useState(false);
   const [workSummary, setWorkSummary] = useState('');
   const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
   const [aiSummaryGenerated, setAiSummaryGenerated] = useState(false);
@@ -228,30 +231,21 @@ export const DailyLog: React.FC = () => {
   const aggMetrics = useMemo(() => {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
-    const loggedDateSet = new Set(
-      dailyLogHistory.map((l: any) => (l.log_date as string)?.split('T')[0]).filter(Boolean)
-    );
+    // Start of current week (Monday)
+    const dayOfWeekNow = now.getDay();
+    const diffToMonday = dayOfWeekNow === 0 ? 6 : dayOfWeekNow - 1;
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - diffToMonday);
+    startOfWeek.setHours(0, 0, 0, 0);
 
     // Total logs all time
     const totalLogs = dailyLogHistory.length;
 
-    // Days without gaps: consecutive workdays back from today with a log entry
-    let daysWithoutGaps = 0;
-    const cursor = new Date(now);
-    for (let i = 0; i < 90; i++) {
-      const dayOfWeek = cursor.getDay();
-      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-      const dateStr = cursor.toISOString().split('T')[0];
-      if (!isWeekend) {
-        if (loggedDateSet.has(dateStr)) {
-          daysWithoutGaps++;
-        } else if (dateStr <= now.toISOString().split('T')[0]) {
-          break;
-        }
-      }
-      cursor.setDate(cursor.getDate() - 1);
-    }
+    // Logs this week
+    const thisWeekLogs = dailyLogHistory.filter((l: any) => {
+      const d = new Date((l.log_date as string) + 'T12:00:00');
+      return d >= startOfWeek;
+    }).length;
 
     // Avg crew size this month
     const thisMonthLogs = dailyLogHistory.filter((l: any) => {
@@ -261,17 +255,21 @@ export const DailyLog: React.FC = () => {
     const crewTotal = thisMonthLogs.reduce((s: number, l: any) => s + (l.workers_onsite ?? 0), 0);
     const avgCrewSize = thisMonthLogs.length > 0 ? Math.round(crewTotal / thisMonthLogs.length) : 0;
 
-    // Safety incidents this month (logs with at least one incident)
-    const safetyIncidentsMonth = thisMonthLogs.filter((l: any) => (l.incidents ?? 0) > 0).length;
+    // Consecutive days without an incident (counting back from most recent log)
+    let daysWithoutIncident = 0;
+    for (const log of [...dailyLogHistory].sort((a: any, b: any) => b.log_date.localeCompare(a.log_date))) {
+      if ((log as any).incidents ?? 0 > 0) break;
+      daysWithoutIncident++;
+    }
 
     // Keep legacy values for inline today metrics strip
     const todayWorkers = (dailyLogHistory[0] as any)?.workers_onsite ?? 0;
 
     return {
       totalLogs,
-      daysWithoutGaps,
+      thisWeekLogs,
       avgCrewSize,
-      safetyIncidentsMonth,
+      daysWithoutIncident,
       todayWorkers,
     };
   }, [dailyLogHistory]);
@@ -764,9 +762,9 @@ export const DailyLog: React.FC = () => {
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: spacing['4'], marginBottom: spacing['5'] }}>
         {[
           { icon: <CalendarDays size={22} color={colors.primaryOrange} />, label: 'Total Logs', value: aggMetrics.totalLogs, sub: 'all time' },
-          { icon: <BookOpen size={22} color={colors.statusActive} />, label: 'Days Without Gaps', value: aggMetrics.daysWithoutGaps, sub: 'consecutive workdays' },
+          { icon: <BookOpen size={22} color={colors.statusInfo} />, label: 'This Week', value: aggMetrics.thisWeekLogs, sub: 'logs this week' },
           { icon: <Users size={22} color={colors.statusInfo} />, label: 'Avg Crew Size', value: aggMetrics.avgCrewSize, sub: 'this month' },
-          { icon: <ShieldCheck size={22} color={aggMetrics.safetyIncidentsMonth === 0 ? colors.statusActive : colors.statusCritical} />, label: 'Safety Incidents', value: aggMetrics.safetyIncidentsMonth, sub: 'this month' },
+          { icon: <ShieldCheck size={22} color={aggMetrics.daysWithoutIncident > 0 ? colors.statusActive : colors.statusCritical} />, label: 'Days Without Incident', value: aggMetrics.daysWithoutIncident, sub: 'consecutive days' },
         ].map((m) => (
           <Card key={m.label} padding={spacing['5']}>
             <div style={{ marginBottom: spacing['3'] }}>{m.icon}</div>
@@ -956,52 +954,139 @@ export const DailyLog: React.FC = () => {
           {/* Manpower */}
           <Card>
             <SectionHeader title="Manpower" action={
-              <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
-                {manpowerRows.reduce((s, r) => s + r.headcount, 0)} workers,{' '}
-                {manpowerRows.reduce((s, r) => s + r.headcount * r.hours, 0).toLocaleString()} total hrs
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
+                <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
+                  {manpowerRows.reduce((s, r) => s + r.headcount, 0)} workers,{' '}
+                  {manpowerRows.reduce((s, r) => s + r.headcount * r.hours, 0).toLocaleString()} total hrs
+                </span>
+                {!isLocked && (
+                  <button
+                    onClick={() => setShowAddManpowerRow(true)}
+                    style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], padding: `${spacing['1']} ${spacing['3']}`, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily, color: colors.primaryOrange, backgroundColor: colors.orangeSubtle, border: `1px solid ${colors.primaryOrange}`, borderRadius: borderRadius.md, cursor: 'pointer' }}
+                  >
+                    + Add Row
+                  </button>
+                )}
+              </div>
             } />
-            {manpowerRows.length === 0 ? (
-              <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0, padding: `${spacing['3']} 0` }}>
-                No crew entries. Use Quick Entry or "Same as yesterday" to add manpower.
-              </p>
-            ) : (
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: typography.fontSize.sm }}>
-                  <thead>
-                    <tr style={{ backgroundColor: colors.surfaceInset }}>
-                      {['Trade', 'Company', 'Headcount', 'Hours Worked', 'Total Hrs'].map(h => (
-                        <th key={h} style={{ padding: `${spacing['2']} ${spacing['3']}`, textAlign: 'left', fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.4px', whiteSpace: 'nowrap' }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {manpowerRows.map((row) => (
-                      <tr
-                        key={row.id}
-                        onMouseEnter={() => setHoveredManpowerRow(row.id)}
-                        onMouseLeave={() => setHoveredManpowerRow(null)}
-                        style={{ backgroundColor: hoveredManpowerRow === row.id ? colors.surfaceHover : 'transparent', transition: `background-color 160ms`, borderBottom: `1px solid ${colors.borderSubtle}` }}
-                      >
-                        <td style={{ padding: `${spacing['3']} ${spacing['3']}`, color: colors.textPrimary, fontWeight: typography.fontWeight.medium }}>{row.trade || '—'}</td>
-                        <td style={{ padding: `${spacing['3']} ${spacing['3']}`, color: colors.textSecondary }}>{row.company || '—'}</td>
-                        <td style={{ padding: `${spacing['3']} ${spacing['3']}`, color: colors.textPrimary, textAlign: 'right' }}>{row.headcount}</td>
-                        <td style={{ padding: `${spacing['3']} ${spacing['3']}`, color: colors.textPrimary, textAlign: 'right' }}>{row.hours}h</td>
-                        <td style={{ padding: `${spacing['3']} ${spacing['3']}`, color: colors.primaryOrange, fontWeight: typography.fontWeight.semibold, textAlign: 'right' }}>{(row.headcount * row.hours).toLocaleString()}h</td>
-                      </tr>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: typography.fontSize.sm }}>
+                <thead>
+                  <tr style={{ backgroundColor: colors.surfaceInset }}>
+                    {['Trade', 'Company', 'Headcount', 'Hours Worked', 'Total Hrs', ...(isLocked ? [] : [''])].map(h => (
+                      <th key={h} style={{ padding: `${spacing['2']} ${spacing['3']}`, textAlign: 'left', fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.4px', whiteSpace: 'nowrap' }}>{h}</th>
                     ))}
-                  </tbody>
+                  </tr>
+                </thead>
+                <tbody>
+                  {manpowerRows.length === 0 && !showAddManpowerRow && (
+                    <tr>
+                      <td colSpan={isLocked ? 5 : 6} style={{ padding: `${spacing['4']} ${spacing['3']}`, color: colors.textTertiary, fontSize: typography.fontSize.sm, textAlign: 'center' }}>
+                        No crew entries. Use "Add Row" or "Same as yesterday" to add manpower.
+                      </td>
+                    </tr>
+                  )}
+                  {manpowerRows.map((row) => (
+                    <tr
+                      key={row.id}
+                      onMouseEnter={() => setHoveredManpowerRow(row.id)}
+                      onMouseLeave={() => setHoveredManpowerRow(null)}
+                      style={{ backgroundColor: hoveredManpowerRow === row.id ? colors.surfaceHover : 'transparent', transition: `background-color 160ms`, borderBottom: `1px solid ${colors.borderSubtle}` }}
+                    >
+                      <td style={{ padding: `${spacing['2']} ${spacing['3']}`, color: colors.textPrimary, fontWeight: typography.fontWeight.medium }}>{row.trade || '—'}</td>
+                      <td style={{ padding: `${spacing['2']} ${spacing['3']}`, color: colors.textSecondary }}>{row.company || '—'}</td>
+                      <td style={{ padding: `${spacing['2']} ${spacing['3']}`, color: colors.textPrimary, textAlign: 'right' }}>{row.headcount}</td>
+                      <td style={{ padding: `${spacing['2']} ${spacing['3']}`, color: colors.textPrimary, textAlign: 'right' }}>{row.hours}h</td>
+                      <td style={{ padding: `${spacing['2']} ${spacing['3']}`, color: colors.primaryOrange, fontWeight: typography.fontWeight.semibold, textAlign: 'right' }}>{(row.headcount * row.hours).toLocaleString()}h</td>
+                      {!isLocked && (
+                        <td style={{ padding: `${spacing['2']} ${spacing['3']}`, textAlign: 'right' }}>
+                          <button onClick={() => setManpowerRows(prev => prev.filter(r => r.id !== row.id))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: colors.textTertiary, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, padding: 0 }}>Remove</button>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                  {/* Inline add row */}
+                  {showAddManpowerRow && !isLocked && (
+                    <tr style={{ backgroundColor: colors.orangeSubtle, borderBottom: `1px solid ${colors.borderSubtle}` }}>
+                      <td style={{ padding: `${spacing['2']} ${spacing['2']}` }}>
+                        <input
+                          type="text"
+                          placeholder="Trade"
+                          value={newManpowerRow.trade}
+                          onChange={e => setNewManpowerRow(p => ({ ...p, trade: e.target.value }))}
+                          style={{ width: '100%', padding: `${spacing['1']} ${spacing['2']}`, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.sm, outline: 'none', boxSizing: 'border-box' }}
+                        />
+                      </td>
+                      <td style={{ padding: `${spacing['2']} ${spacing['2']}` }}>
+                        <input
+                          type="text"
+                          placeholder="Company"
+                          value={newManpowerRow.company}
+                          onChange={e => setNewManpowerRow(p => ({ ...p, company: e.target.value }))}
+                          style={{ width: '100%', padding: `${spacing['1']} ${spacing['2']}`, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.sm, outline: 'none', boxSizing: 'border-box' }}
+                        />
+                      </td>
+                      <td style={{ padding: `${spacing['2']} ${spacing['2']}` }}>
+                        <input
+                          type="number"
+                          placeholder="0"
+                          min={0}
+                          value={newManpowerRow.headcount || ''}
+                          onChange={e => setNewManpowerRow(p => ({ ...p, headcount: parseInt(e.target.value) || 0 }))}
+                          style={{ width: '72px', padding: `${spacing['1']} ${spacing['2']}`, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.sm, outline: 'none', textAlign: 'right' }}
+                        />
+                      </td>
+                      <td style={{ padding: `${spacing['2']} ${spacing['2']}` }}>
+                        <input
+                          type="number"
+                          placeholder="0"
+                          min={0}
+                          step={0.5}
+                          value={newManpowerRow.hours || ''}
+                          onChange={e => setNewManpowerRow(p => ({ ...p, hours: parseFloat(e.target.value) || 0 }))}
+                          style={{ width: '72px', padding: `${spacing['1']} ${spacing['2']}`, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.sm, outline: 'none', textAlign: 'right' }}
+                        />
+                      </td>
+                      <td style={{ padding: `${spacing['2']} ${spacing['3']}`, color: colors.primaryOrange, fontWeight: typography.fontWeight.semibold, textAlign: 'right', fontSize: typography.fontSize.sm }}>
+                        {(newManpowerRow.headcount * newManpowerRow.hours).toLocaleString()}h
+                      </td>
+                      <td style={{ padding: `${spacing['2']} ${spacing['2']}` }}>
+                        <div style={{ display: 'flex', gap: spacing['1'] }}>
+                          <button
+                            onClick={() => {
+                              if (!newManpowerRow.trade) return;
+                              setManpowerRows(prev => [...prev, { id: crypto.randomUUID(), ...newManpowerRow }]);
+                              setNewManpowerRow({ trade: '', company: '', headcount: 0, hours: 0 });
+                              setShowAddManpowerRow(false);
+                            }}
+                            style={{ padding: `${spacing['1']} ${spacing['2']}`, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, backgroundColor: colors.primaryOrange, color: colors.white, border: 'none', borderRadius: borderRadius.sm, cursor: 'pointer', fontWeight: typography.fontWeight.medium }}
+                          >
+                            Add
+                          </button>
+                          <button
+                            onClick={() => { setShowAddManpowerRow(false); setNewManpowerRow({ trade: '', company: '', headcount: 0, hours: 0 }); }}
+                            style={{ padding: `${spacing['1']} ${spacing['2']}`, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, backgroundColor: 'transparent', color: colors.textSecondary, border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.sm, cursor: 'pointer' }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+                {manpowerRows.length > 0 && (
                   <tfoot>
                     <tr style={{ backgroundColor: colors.surfaceInset, borderTop: `2px solid ${colors.borderDefault}` }}>
                       <td colSpan={2} style={{ padding: `${spacing['3']} ${spacing['3']}`, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.4px' }}>Total</td>
                       <td style={{ padding: `${spacing['3']} ${spacing['3']}`, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, textAlign: 'right' }}>{manpowerRows.reduce((s, r) => s + r.headcount, 0)}</td>
                       <td style={{ padding: `${spacing['3']} ${spacing['3']}`, color: colors.textTertiary, textAlign: 'right' }}></td>
                       <td style={{ padding: `${spacing['3']} ${spacing['3']}`, fontWeight: typography.fontWeight.semibold, color: colors.primaryOrange, textAlign: 'right' }}>{manpowerRows.reduce((s, r) => s + r.headcount * r.hours, 0).toLocaleString()}h</td>
+                      {!isLocked && <td />}
                     </tr>
                   </tfoot>
-                </table>
-              </div>
-            )}
+                )}
+              </table>
+            </div>
             {crewHours.length > 0 && manpowerRows.length === 0 && (
               <div style={{ marginTop: spacing['4'] }}>
                 <CrewHoursSummary crews={crewHours} />
@@ -1151,13 +1236,9 @@ export const DailyLog: React.FC = () => {
                 </button>
               )
             } />
-            {noIncidentsToday && ((today as any).incident_details ?? []).length === 0 ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], padding: `${spacing['2']} 0` }}>
-                <ShieldCheck size={14} color={colors.statusActive} />
-                <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>No incidents reported today</span>
-              </div>
-            ) : ((today as any).incident_details ?? []).length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
+            {/* Existing incidents from DB */}
+            {((today as any).incident_details ?? []).length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'], marginBottom: spacing['3'] }}>
                 {((today as any).incident_details as Array<{ description: string; type: string; corrective_action: string }>).map((inc, i) => (
                   <div key={i} style={{ padding: spacing['3'], backgroundColor: colors.statusCriticalSubtle, borderRadius: borderRadius.md, borderLeft: `3px solid ${colors.statusCritical}` }}>
                     <p style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.statusCritical, textTransform: 'uppercase', margin: 0, marginBottom: spacing['1'] }}>{inc.type.replace(/_/g, ' ')}</p>
@@ -1168,10 +1249,71 @@ export const DailyLog: React.FC = () => {
                   </div>
                 ))}
               </div>
-            ) : (
-              <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0, padding: `${spacing['3']} 0` }}>
-                Toggle off "No incidents today" to log an incident.
-              </p>
+            )}
+            {/* No incidents confirmed */}
+            {noIncidentsToday && ((today as any).incident_details ?? []).length === 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], padding: `${spacing['2']} 0` }}>
+                <ShieldCheck size={14} color={colors.statusActive} />
+                <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>No incidents reported today</span>
+              </div>
+            )}
+            {/* Incident entry form — expanded when toggle is OFF */}
+            {!noIncidentsToday && !isLocked && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'], padding: spacing['4'], backgroundColor: colors.statusCriticalSubtle, borderRadius: borderRadius.md, borderLeft: `3px solid ${colors.statusCritical}` }}>
+                <p style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.statusCritical, margin: 0 }}>Log Incident</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'] }}>
+                  <label style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, fontWeight: typography.fontWeight.medium }}>Incident Type</label>
+                  <select
+                    value={incidentForm.type}
+                    onChange={e => setIncidentForm(p => ({ ...p, type: e.target.value }))}
+                    style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.md, outline: 'none', backgroundColor: colors.white, color: colors.textPrimary }}
+                  >
+                    <option value="near_miss">Near Miss</option>
+                    <option value="first_aid">First Aid</option>
+                    <option value="recordable">Recordable Injury</option>
+                    <option value="property_damage">Property Damage</option>
+                    <option value="environmental">Environmental</option>
+                  </select>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'] }}>
+                  <label style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, fontWeight: typography.fontWeight.medium }}>Description</label>
+                  <textarea
+                    value={incidentForm.description}
+                    onChange={e => setIncidentForm(p => ({ ...p, description: e.target.value }))}
+                    placeholder="Describe what happened, where, and who was involved..."
+                    rows={3}
+                    style={{ padding: spacing['3'], fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.md, outline: 'none', resize: 'vertical', color: colors.textPrimary, backgroundColor: colors.white, boxSizing: 'border-box', lineHeight: '1.6' }}
+                  />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'] }}>
+                  <label style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, fontWeight: typography.fontWeight.medium }}>Corrective Action Taken</label>
+                  <textarea
+                    value={incidentForm.corrective_action}
+                    onChange={e => setIncidentForm(p => ({ ...p, corrective_action: e.target.value }))}
+                    placeholder="Describe the immediate corrective action taken..."
+                    rows={2}
+                    style={{ padding: spacing['3'], fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.md, outline: 'none', resize: 'vertical', color: colors.textPrimary, backgroundColor: colors.white, boxSizing: 'border-box', lineHeight: '1.6' }}
+                  />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: spacing['2'] }}>
+                  <button
+                    onClick={() => { setNoIncidentsToday(true); setIncidentForm({ type: 'near_miss', description: '', corrective_action: '' }); }}
+                    style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, backgroundColor: 'transparent', border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.md, cursor: 'pointer', color: colors.textSecondary }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (!incidentForm.description.trim()) return;
+                      addToast('success', 'Incident logged. Save with Submit Log.');
+                      setIncidentForm({ type: 'near_miss', description: '', corrective_action: '' });
+                    }}
+                    style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, backgroundColor: colors.statusCritical, color: colors.white, border: 'none', borderRadius: borderRadius.md, cursor: 'pointer', fontWeight: typography.fontWeight.medium }}
+                  >
+                    Log Incident
+                  </button>
+                </div>
+              </div>
             )}
           </Card>
 
@@ -1234,9 +1376,33 @@ export const DailyLog: React.FC = () => {
               </p>
             ) : (
               <div>
-                <label style={{ display: 'block', fontSize: typography.fontSize.sm, color: colors.textSecondary, marginBottom: spacing['2'], fontWeight: typography.fontWeight.medium }}>
-                  Work performed
-                </label>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['2'] }}>
+                  <label style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, fontWeight: typography.fontWeight.medium }}>
+                    Work performed
+                  </label>
+                  {!isLocked && (
+                    <select
+                      defaultValue=""
+                      onChange={e => {
+                        if (!e.target.value) return;
+                        setWorkSummary(prev => prev ? `${prev}\n[Phase: ${e.target.value}] ` : `[Phase: ${e.target.value}] `);
+                        e.target.value = '';
+                      }}
+                      style={{ padding: `${spacing['1']} ${spacing['2']}`, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.md, outline: 'none', color: colors.textSecondary, backgroundColor: colors.white, cursor: 'pointer' }}
+                    >
+                      <option value="">+ Link schedule phase</option>
+                      <option value="Site Work">Site Work</option>
+                      <option value="Foundation">Foundation</option>
+                      <option value="Structural Steel">Structural Steel</option>
+                      <option value="Framing">Framing</option>
+                      <option value="MEP Rough-In">MEP Rough-In</option>
+                      <option value="Exterior Envelope">Exterior Envelope</option>
+                      <option value="Interior Finishes">Interior Finishes</option>
+                      <option value="Commissioning">Commissioning</option>
+                      <option value="Punch List">Punch List</option>
+                    </select>
+                  )}
+                </div>
                 <div style={{ display: 'flex', gap: spacing['2'], alignItems: 'flex-start' }}>
                   <textarea
                     value={workSummary}
