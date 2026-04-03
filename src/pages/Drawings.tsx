@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { DrawingsEmptyState } from '../components/drawings/DrawingsEmptyState';
 import { TableRowSkeleton } from '../components/ui/Skeletons';
-import { Upload, X, Sparkles, FileText, AlertTriangle, AlertCircle, CheckCircle2, Loader2, ChevronRight, ChevronDown } from 'lucide-react';
+import { Upload, X, Sparkles, FileText, AlertTriangle, AlertCircle, CheckCircle2, Loader2, ChevronRight, ChevronDown, Layers, Columns, SlidersHorizontal } from 'lucide-react';
 import { aiService } from '../lib/aiService';
 import type { DrawingAnalysis } from '../types/ai';
 import type { DrawingRevision } from '../types/api';
@@ -11,10 +11,11 @@ import { colors, spacing, typography, borderRadius, transitions, shadows, zIndex
 import { getDrawings, getDisciplineColor, getDrawingRevisionHistory } from '../api/endpoints/documents';
 import { useQuery } from '../hooks/useQuery';
 import { useProjectId } from '../hooks/useProjectId';
+import { usePermissions } from '../hooks/usePermissions';
 import { AIAnnotationIndicator } from '../components/ai/AIAnnotation';
 import { getAnnotationsForEntity } from '../data/aiAnnotations';
 import { DrawingViewer } from '../components/drawings/DrawingViewer';
-import { VersionCompare } from '../components/drawings/VersionCompare';
+import { VersionCompare, type CompareMode } from '../components/drawings/VersionCompare';
 import { PdfViewer } from '../components/drawings/PdfViewer';
 import { PermissionGate } from '../components/auth/PermissionGate';
 import { supabase } from '../lib/supabase';
@@ -74,6 +75,7 @@ const coordinationConflicts = [
 
 const _DrawingsPage: React.FC = () => {
   const { addToast } = useToast();
+  const { hasPermission } = usePermissions();
   const projectId = useProjectId();
   const { data: drawings, loading, error, refetch } = useQuery(`drawings-${projectId}`, () => getDrawings(projectId!), { enabled: !!projectId });
   const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set());
@@ -113,6 +115,11 @@ const _DrawingsPage: React.FC = () => {
   const [comparisonMode, setComparisonMode] = useState(false);
   const [compareOpacity, setCompareOpacity] = useState(100);
   const [compareDrawingTitle, setCompareDrawingTitle] = useState('');
+  const [showRevUploadModal, setShowRevUploadModal] = useState(false);
+  const [revUploadFile, setRevUploadFile] = useState<File | null>(null);
+  const [revUploadNum, setRevUploadNum] = useState('');
+  const [revUploadDesc, setRevUploadDesc] = useState('');
+  const [isRevUploading, setIsRevUploading] = useState(false);
 
   const { data: revisionHistory } = useQuery(
     `revision-history-${selectedDrawing?.id ?? 'none'}`,
@@ -279,6 +286,39 @@ const _DrawingsPage: React.FC = () => {
       setShowUploadModal(true);
     }
   }, []);
+
+  const handleUploadRevision = async () => {
+    if (!projectId || !selectedDrawing || !revUploadNum) return;
+    setIsRevUploading(true);
+    let fileUrl: string | null = null;
+    if (revUploadFile) {
+      const path = `${projectId}/drawings/rev-${Date.now()}-${revUploadFile.name}`;
+      try {
+        const { data: storageData } = await supabase.storage.from('drawings').upload(path, revUploadFile);
+        if (storageData?.path) fileUrl = storageData.path;
+      } catch { /* storage upload failed, proceed without file url */ }
+    }
+    // Supersede existing current revisions
+    await supabase
+      .from('drawing_revisions')
+      .update({ superseded_at: new Date().toISOString() })
+      .eq('drawing_id', String(selectedDrawing.id))
+      .is('superseded_at', null);
+    await supabase.from('drawing_revisions').insert({
+      drawing_id: String(selectedDrawing.id),
+      revision_number: Number(revUploadNum),
+      issued_date: new Date().toISOString().slice(0, 10),
+      change_description: revUploadDesc || null,
+      file_url: fileUrl,
+    });
+    setIsRevUploading(false);
+    setShowRevUploadModal(false);
+    setRevUploadFile(null);
+    setRevUploadNum('');
+    setRevUploadDesc('');
+    refetch();
+    addToast('success', `Revision ${revUploadNum} uploaded for ${selectedDrawing.title}.`);
+  };
 
   const handleRevDropdown = useCallback(async (e: React.MouseEvent, drawingId: string, drawingTitle: string, fallbackRevisions: DrawingRevision[]) => {
     e.stopPropagation();
@@ -1099,6 +1139,25 @@ const _DrawingsPage: React.FC = () => {
                 <Btn variant="secondary" size="md" fullWidth onClick={() => addToast('info', 'AI Scan initiated for ' + selectedDrawing.setNumber)}>
                   AI Scan
                 </Btn>
+                <PermissionGate permission="drawings.upload">
+                  <Btn
+                    variant="secondary"
+                    size="md"
+                    fullWidth
+                    icon={<Upload size={16} />}
+                    onClick={() => {
+                      const nextRev = revisionHistory && revisionHistory.length > 0
+                        ? String(revisionHistory[0].revision_number + 1)
+                        : '1';
+                      setRevUploadNum(nextRev);
+                      setRevUploadFile(null);
+                      setRevUploadDesc('');
+                      setShowRevUploadModal(true);
+                    }}
+                  >
+                    Upload Revision
+                  </Btn>
+                </PermissionGate>
               </div>
 
               {revisionHistory && revisionHistory.length > 0 && (
@@ -1538,6 +1597,127 @@ const _DrawingsPage: React.FC = () => {
           </div>
         </div>
       )}
+      {/* Upload New Revision Modal */}
+      {showRevUploadModal && selectedDrawing && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Upload revision for ${selectedDrawing.title}`}
+          style={{ position: 'fixed', inset: 0, zIndex: 1001, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(15, 22, 41, 0.55)' }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowRevUploadModal(false); }}
+        >
+          <div
+            style={{ backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.lg, border: `1px solid ${colors.borderSubtle}`, padding: spacing['6'], width: '100%', maxWidth: 480, boxShadow: '0 20px 60px rgba(0,0,0,0.18)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['5'] }}>
+              <div>
+                <h2 style={{ fontSize: typography.fontSize.xl, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0 }}>
+                  Upload New Revision
+                </h2>
+                <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0, marginTop: 2 }}>
+                  {selectedDrawing.setNumber} — {selectedDrawing.title}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowRevUploadModal(false)}
+                aria-label="Close upload revision modal"
+                style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', border: 'none', borderRadius: borderRadius.md, cursor: 'pointer', color: colors.textTertiary }}
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = colors.surfaceInset; }}
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
+              {/* Revision number */}
+              <div>
+                <label htmlFor="rev-upload-num" style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+                  Revision Number
+                </label>
+                <input
+                  id="rev-upload-num"
+                  type="number"
+                  min={1}
+                  value={revUploadNum}
+                  onChange={(e) => setRevUploadNum(e.target.value)}
+                  style={{ width: '100%', padding: `${spacing['2']} ${spacing['3']}`, border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, color: colors.textPrimary, backgroundColor: colors.surfaceRaised, boxSizing: 'border-box' }}
+                />
+              </div>
+
+              {/* Description */}
+              <div>
+                <label htmlFor="rev-upload-desc" style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+                  Change Description
+                </label>
+                <textarea
+                  id="rev-upload-desc"
+                  value={revUploadDesc}
+                  onChange={(e) => setRevUploadDesc(e.target.value)}
+                  placeholder="What changed in this revision?"
+                  rows={3}
+                  style={{ width: '100%', padding: `${spacing['2']} ${spacing['3']}`, border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, color: colors.textPrimary, backgroundColor: colors.surfaceRaised, resize: 'vertical', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              {/* File input */}
+              <div>
+                <label htmlFor="rev-upload-file" style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+                  Drawing File
+                  <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, fontWeight: typography.fontWeight.normal, marginLeft: spacing['2'] }}>
+                    .pdf, .dwg, .dxf
+                  </span>
+                </label>
+                <label
+                  htmlFor="rev-upload-file"
+                  style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    gap: spacing['2'], padding: `${spacing['4']} ${spacing['3']}`,
+                    border: `1.5px dashed ${revUploadFile ? colors.primaryOrange : colors.borderDefault}`,
+                    borderRadius: borderRadius.md, cursor: 'pointer',
+                    backgroundColor: revUploadFile ? `${colors.primaryOrange}06` : colors.surfaceInset,
+                    transition: `all ${transitions.quick}`,
+                  }}
+                >
+                  <Upload size={20} color={revUploadFile ? colors.primaryOrange : colors.textTertiary} />
+                  <span style={{ fontSize: typography.fontSize.sm, color: revUploadFile ? colors.primaryOrange : colors.textTertiary, fontWeight: typography.fontWeight.medium, textAlign: 'center' }}>
+                    {revUploadFile ? revUploadFile.name : 'Click to select or drag a file'}
+                  </span>
+                  {revUploadFile && (
+                    <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
+                      {(revUploadFile.size / 1024 / 1024).toFixed(1)} MB
+                    </span>
+                  )}
+                </label>
+                <input
+                  id="rev-upload-file"
+                  type="file"
+                  accept=".pdf,.dwg,.dxf"
+                  style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }}
+                  onChange={(e) => { if (e.target.files?.[0]) setRevUploadFile(e.target.files[0]); }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: spacing['3'], marginTop: spacing['5'] }}>
+              <Btn variant="secondary" size="md" onClick={() => setShowRevUploadModal(false)}>
+                Cancel
+              </Btn>
+              <Btn
+                variant="primary"
+                size="md"
+                icon={isRevUploading ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <Upload size={16} />}
+                disabled={!revUploadNum || isRevUploading}
+                onClick={handleUploadRevision}
+              >
+                {isRevUploading ? 'Uploading...' : `Upload Rev ${revUploadNum}`}
+              </Btn>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* AI Insights right sidebar */}
       {showAiPanel && (
         <div

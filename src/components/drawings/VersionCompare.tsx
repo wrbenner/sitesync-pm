@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Columns, Layers, Sparkles, Clock, AlertTriangle, ChevronDown, ChevronRight } from 'lucide-react';
+import { Columns, Layers, Sparkles, Clock, AlertTriangle, ChevronDown, ChevronRight, SlidersHorizontal } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
 import type { DrawingRevision } from '../../types/api';
 
@@ -125,6 +125,8 @@ function useDiffDataUrl(prevUrl: string | null, currUrl: string | null) {
   return { diffDataUrl, changePixels };
 }
 
+export type CompareMode = 'side-by-side' | 'overlay' | 'slider';
+
 interface VersionCompareProps {
   currentRev: string;
   previousRev: string;
@@ -132,9 +134,9 @@ interface VersionCompareProps {
   currentRevision?: DrawingRevision | null;
   previousRevision?: DrawingRevision | null;
   revisionHistory?: DrawingRevision[];
+  mode?: CompareMode;
+  onModeChange?: (mode: CompareMode) => void;
 }
-
-type CompareMode = 'side-by-side' | 'overlay';
 
 export const VersionCompare: React.FC<VersionCompareProps> = ({
   currentRev,
@@ -143,8 +145,16 @@ export const VersionCompare: React.FC<VersionCompareProps> = ({
   currentRevision = null,
   previousRevision = null,
   revisionHistory = [],
+  mode: controlledMode,
+  onModeChange,
 }) => {
-  const [mode, setMode] = useState<CompareMode>('overlay');
+  const [internalMode, setInternalMode] = useState<CompareMode>(controlledMode ?? 'overlay');
+  const mode = controlledMode ?? internalMode;
+  const setMode = (m: CompareMode) => {
+    if (onModeChange) onModeChange(m);
+    else setInternalMode(m);
+  };
+  const [sliderPos, setSliderPos] = useState(50);
   const [opacity, setOpacity] = useState(50);
   const [showDiff, setShowDiff] = useState(true);
   const [showHistory, setShowHistory] = useState(false);
@@ -174,33 +184,35 @@ export const VersionCompare: React.FC<VersionCompareProps> = ({
           display: 'flex', alignItems: 'center', gap: spacing['3'],
           padding: `${spacing['3']} 0`, flexShrink: 0, flexWrap: 'wrap',
         }}>
-          <div style={{
-            display: 'flex', gap: spacing['1'],
-            backgroundColor: colors.surfaceInset,
-            borderRadius: borderRadius.full, padding: 2,
-          }}>
-            {(['overlay', 'side-by-side'] as CompareMode[]).map((m) => (
-              <button
-                key={m}
-                onClick={() => setMode(m)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: spacing['1'],
-                  padding: `${spacing['1']} ${spacing['3']}`, border: 'none',
-                  borderRadius: borderRadius.full,
-                  backgroundColor: mode === m ? colors.surfaceRaised : 'transparent',
-                  color: mode === m ? colors.textPrimary : colors.textTertiary,
-                  fontSize: typography.fontSize.caption,
-                  fontWeight: typography.fontWeight.medium,
-                  fontFamily: typography.fontFamily, cursor: 'pointer',
-                  boxShadow: mode === m ? shadows.sm : 'none',
-                  transition: `all ${transitions.instant}`,
-                }}
-              >
-                {m === 'overlay' ? <Layers size={12} /> : <Columns size={12} />}
-                {m === 'overlay' ? 'Overlay' : 'Side by Side'}
-              </button>
-            ))}
-          </div>
+          {!controlledMode && (
+            <div style={{
+              display: 'flex', gap: spacing['1'],
+              backgroundColor: colors.surfaceInset,
+              borderRadius: borderRadius.full, padding: 2,
+            }}>
+              {(['overlay', 'side-by-side', 'slider'] as CompareMode[]).map((m) => (
+                <button
+                  key={m}
+                  onClick={() => setMode(m)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: spacing['1'],
+                    padding: `${spacing['1']} ${spacing['3']}`, border: 'none',
+                    borderRadius: borderRadius.full,
+                    backgroundColor: mode === m ? colors.surfaceRaised : 'transparent',
+                    color: mode === m ? colors.textPrimary : colors.textTertiary,
+                    fontSize: typography.fontSize.caption,
+                    fontWeight: typography.fontWeight.medium,
+                    fontFamily: typography.fontFamily, cursor: 'pointer',
+                    boxShadow: mode === m ? shadows.sm : 'none',
+                    transition: `all ${transitions.instant}`,
+                  }}
+                >
+                  {m === 'overlay' ? <Layers size={12} /> : m === 'side-by-side' ? <Columns size={12} /> : <SlidersHorizontal size={12} />}
+                  {m === 'overlay' ? 'Overlay' : m === 'side-by-side' ? 'Side by Side' : 'Slider'}
+                </button>
+              ))}
+            </div>
+          )}
 
           {mode === 'overlay' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], flex: 1, minWidth: 160 }}>
@@ -295,7 +307,7 @@ export const VersionCompare: React.FC<VersionCompareProps> = ({
               />
             )}
           </div>
-        ) : (
+        ) : mode === 'side-by-side' ? (
           <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['2'] }}>
             {/* Previous panel */}
             <div style={{
@@ -363,6 +375,77 @@ export const VersionCompare: React.FC<VersionCompareProps> = ({
               }}>
                 Current: Rev {currentRev}
               </div>
+            </div>
+          </div>
+        ) : (
+          <div style={{
+            flex: 1, position: 'relative', borderRadius: borderRadius.md,
+            overflow: 'hidden', border: `1px solid ${colors.borderSubtle}`,
+            userSelect: 'none',
+          }}>
+            {hasImages ? (
+              <img src={prevUrl!} alt={`Rev ${previousRev}`}
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain' }} />
+            ) : renderPlaceholder(`Rev ${previousRev}`, {
+              background: `linear-gradient(135deg, ${colors.surfaceHover} 0%, ${colors.borderDefault} 100%)`,
+            })}
+            <div style={{ position: 'absolute', inset: 0, clipPath: `inset(0 ${100 - sliderPos}% 0 0)` }}>
+              {hasImages ? (
+                <img src={currUrl!} alt={`Rev ${currentRev}`}
+                  style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+              ) : renderPlaceholder(`Rev ${currentRev}`, {
+                background: `linear-gradient(135deg, ${colors.surfaceInset} 0%, ${colors.surfaceHover} 100%)`,
+              })}
+            </div>
+            {showDiff && diffDataUrl && (
+              <img src={diffDataUrl} alt="Pixel diff overlay"
+                style={{
+                  position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain',
+                  pointerEvents: 'none', clipPath: `inset(0 ${100 - sliderPos}% 0 0)`,
+                }} />
+            )}
+            <div style={{
+              position: 'absolute', top: 0, bottom: 0, left: `${sliderPos}%`,
+              width: 2, backgroundColor: colors.primaryOrange,
+              transform: 'translateX(-50%)', pointerEvents: 'none',
+            }}>
+              <div style={{
+                position: 'absolute', top: '50%', left: '50%',
+                transform: 'translate(-50%, -50%)',
+                width: 28, height: 28, borderRadius: '50%',
+                backgroundColor: colors.primaryOrange,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
+              }}>
+                <SlidersHorizontal size={14} color="white" />
+              </div>
+            </div>
+            <input
+              type="range" min={0} max={100} value={sliderPos}
+              onChange={(e) => setSliderPos(Number(e.target.value))}
+              aria-label="Comparison slider position"
+              style={{
+                position: 'absolute', inset: 0, width: '100%', height: '100%',
+                opacity: 0, cursor: 'ew-resize', margin: 0, padding: 0,
+              }}
+            />
+            <div style={{
+              position: 'absolute', top: spacing['2'], left: spacing['2'],
+              padding: `${spacing['1']} ${spacing['2']}`,
+              backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.sm,
+              fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
+              color: colors.textSecondary, pointerEvents: 'none',
+            }}>
+              Rev {previousRev}
+            </div>
+            <div style={{
+              position: 'absolute', top: spacing['2'], right: spacing['2'],
+              padding: `${spacing['1']} ${spacing['2']}`,
+              backgroundColor: colors.primaryOrange, borderRadius: borderRadius.sm,
+              fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
+              color: colors.white, pointerEvents: 'none',
+            }}>
+              Rev {currentRev}
             </div>
           </div>
         )}
