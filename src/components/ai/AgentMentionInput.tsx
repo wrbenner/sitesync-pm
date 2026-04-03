@@ -41,6 +41,7 @@ interface AgentMentionInputProps {
 export const AgentMentionInput = memo<AgentMentionInputProps>(
   ({ onSend, placeholder = 'Ask your AI team... Use @ to route to a specific agent', disabled, textareaAriaLabel }) => {
     const [value, setValue] = useState('')
+    const [isSending, setIsSending] = useState(false)
     const [showAgentMenu, setShowAgentMenu] = useState(false)
     const [agentFilter, setAgentFilter] = useState('')
     const [selectedIndex, setSelectedIndex] = useState(0)
@@ -103,18 +104,25 @@ export const AgentMentionInput = memo<AgentMentionInputProps>(
       [value],
     )
 
-    const handleSend = useCallback(() => {
+    const handleSend = useCallback(async () => {
       const trimmed = value.trim()
-      if (!trimmed || disabled) return
+      if (!trimmed || disabled || isSending) return
       if (value.length > MAX_MESSAGE_LENGTH) {
         toast.error(`Message too long. Maximum ${MAX_MESSAGE_LENGTH} characters.`)
         return
       }
       const sanitized = trimmed.replace(/<[^>]*>/g, '')
-      onSend(sanitized)
-      setValue('')
-      setShowAgentMenu(false)
-    }, [value, disabled, onSend])
+      setIsSending(true)
+      try {
+        await onSend(sanitized)
+        setValue('')
+        setShowAgentMenu(false)
+      } catch {
+        toast.error('Failed to send message. Please try again.')
+      } finally {
+        setIsSending(false)
+      }
+    }, [value, disabled, isSending, onSend])
 
     const handleKeyDown = useCallback(
       (e: React.KeyboardEvent) => {
@@ -285,8 +293,8 @@ export const AgentMentionInput = memo<AgentMentionInputProps>(
             onChange={handleChange}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
-            disabled={disabled}
-            aria-disabled={disabled}
+            disabled={disabled || isSending}
+            aria-disabled={disabled || isSending}
             rows={1}
             maxLength={MAX_MESSAGE_LENGTH}
             aria-label={textareaAriaLabel ?? 'Message AI copilot'}
@@ -303,15 +311,15 @@ export const AgentMentionInput = memo<AgentMentionInputProps>(
               lineHeight: typography.lineHeight.normal,
               maxHeight: '160px',
               overflow: 'auto',
-              opacity: disabled ? 0.5 : 1,
-              cursor: disabled ? 'not-allowed' : 'text',
+              opacity: disabled || isSending ? 0.5 : 1,
+              cursor: disabled || isSending ? 'not-allowed' : 'text',
             }}
           />
           <button
             onClick={handleSend}
-            disabled={!value.trim() || disabled}
+            disabled={!value.trim() || disabled || isSending}
             aria-label="Send message"
-            aria-disabled={disabled}
+            aria-disabled={disabled || isSending}
             style={{
               width: 36,
               height: 36,
@@ -319,12 +327,12 @@ export const AgentMentionInput = memo<AgentMentionInputProps>(
               alignItems: 'center',
               justifyContent: 'center',
               backgroundColor:
-                value.trim() && !disabled ? colors.primaryOrange : colors.surfaceInset,
-              color: value.trim() && !disabled ? colors.white : colors.textTertiary,
+                value.trim() && !disabled && !isSending ? colors.primaryOrange : colors.surfaceInset,
+              color: value.trim() && !disabled && !isSending ? colors.white : colors.textTertiary,
               border: 'none',
               borderRadius: borderRadius.base,
-              cursor: disabled ? 'not-allowed' : value.trim() ? 'pointer' : 'default',
-              opacity: disabled ? 0.5 : 1,
+              cursor: disabled || isSending ? 'not-allowed' : value.trim() ? 'pointer' : 'default',
+              opacity: disabled || isSending ? 0.5 : 1,
               transition: `all ${transitions.quick}`,
               flexShrink: 0,
             }}
