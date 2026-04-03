@@ -19,9 +19,15 @@ import { DrawingPresenceBar } from '../collaboration/PresenceBar';
 import { supabase } from '../../api/client';
 import { useUiStore } from '../../stores';
 
+// Fabric tool type for annotation canvas
+type FabricTool = 'pen' | 'highlighter' | 'text' | 'rectangle' | 'circle' | 'arrow' | 'cloud' | null;
+
 interface DrawingViewerProps {
   drawing: { id?: string; setNumber: string; title: string; discipline: string; revision: string };
   onClose: () => void;
+  onSave?: (json: object) => void;
+  annotations?: object;
+  isEditable?: boolean;
 }
 
 interface MarkupItem {
@@ -92,13 +98,22 @@ interface DrawingViewerInnerProps extends DrawingViewerProps {
   demoUser: { name: string; initials: string; color: string };
 }
 
-const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({ drawing, onClose, demoUser }) => {
+const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
+  drawing,
+  onClose,
+  demoUser,
+  onSave,
+  annotations,
+  isEditable = false,
+}) => {
   const isMobile = useMediaQuery('(max-width: 768px)');
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const [toolbarCollapsed, setToolbarCollapsed] = useState(false);
   const [activeTool, setActiveTool] = useState<MarkupTool>('select');
+  const [activeColor, setActiveColor] = useState('#E74C3C');
+  const [strokeWidth, setStrokeWidth] = useState(2);
   const [markups, setMarkups] = useState<MarkupItem[]>([]);
   const [isDrawing, setIsDrawing] = useState(false);
   const [showCompare, setShowCompare] = useState(false);
@@ -110,6 +125,14 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({ drawing, onClos
   const fabricContainerRef = useRef<HTMLDivElement>(null);
   const fabricInst = useRef<InstanceType<typeof FabricCanvas> | null>(null);
   const [fabricObjectCount, setFabricObjectCount] = useState(0);
+
+  // Undo/redo stacks hold canvas JSON snapshots (max 20 levels each)
+  const undoStack = useRef<string[]>([]);
+  const redoStack = useRef<string[]>([]);
+
+  // Track whether a fabric shape is being drawn interactively
+  const shapeInProgress = useRef<InstanceType<typeof FabricRect> | InstanceType<typeof FabricCircle> | InstanceType<typeof FabricLine> | null>(null);
+  const shapeOrigin = useRef<{ x: number; y: number } | null>(null);
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const canvasOuterRef = useRef<HTMLDivElement>(null);
@@ -159,28 +182,268 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({ drawing, onClos
       wrapper.style.position = 'absolute';
       wrapper.style.inset = '0';
     }
-    fc.on('path:created', () => setFabricObjectCount((c) => c + 1));
+
+    // Push a JSON snapshot to the undo stack on every annotation change
+    const pushUndo = () => {
+      const json = JSON.stringify(fc.toJSON());
+      undoStack.current = [...undoStack.current.slice(-19), json];
+      redoStack.current = [];
+      setFabricObjectCount(fc.getObjects().length);
+    };
+
+    fc.on('path:created', pushUndo);
+    fc.on('object:modified', pushUndo);
     fc.on('object:removed', () => setFabricObjectCount((c) => Math.max(0, c - 1)));
+
     fabricInst.current = fc;
+
+    // Load persisted annotations if provided
+    if (annotations) {
+      fc.loadFromJSON(annotations).then(() => {
+        fc.renderAll();
+        setFabricObjectCount(fc.getObjects().length);
+        // Lock all objects when not editable
+        if (!isEditable) {
+          fc.forEachObject((obj) => {
+            obj.selectable = false;
+            obj.evented = false;
+          });
+        }
+      });
+    }
+
     return () => {
       fc.dispose();
       fabricInst.current = null;
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ── ResizeObserver: keep fabric canvas sized to its container ────────────
+
+  useEffect(() => {
+    const outer = canvasOuterRef.current;
+    if (!outer) return;
+    const ro = new ResizeObserver(() => {
+      const fc = fabricInst.current;
+      if (!fc) return;
+      fc.setDimensions({ width: outer.offsetWidth, height: outer.offsetHeight });
+      fc.renderAll();
+    });
+    ro.observe(outer);
+    return () => ro.disconnect();
+  }, []);
+
+  // ── Map MarkupTool to FabricTool ─────────────────────────────────────────
+
+  const toFabricTool = (tool: MarkupTool): FabricTool => {
+    switch (tool) {
+      case 'draw': return 'pen';
+      case 'highlight': return 'highlighter';
+      case 'text': return 'text';
+      default: return null;
+    }
+  };
+
+  // ── Configure fabric canvas when tool, color, or strokeWidth changes ──────
 
   useEffect(() => {
     const fc = fabricInst.current;
     if (!fc) return;
-    if (activeTool === 'draw') {
+
+    // Remove all previously registered per-tool mouse handlers
+    fc.off('mouse:down');
+    fc.off('mouse:move');
+    fc.off('mouse:up');
+    shapeInProgress.current = null;
+    shapeOrigin.current = null;
+
+    const fabricTool = toFabricTool(activeTool);
+
+    if (!isEditable || fabricTool === null) {
+      fc.isDrawingMode = false;
+      return;
+    }
+
+    if (fabricTool === 'pen') {
       fc.isDrawingMode = true;
       const brush = new PencilBrush(fc);
-      brush.width = 3;
-      brush.color = colors.primaryOrange;
+      brush.width = strokeWidth;
+      brush.color = activeColor;
       fc.freeDrawingBrush = brush;
-    } else {
+    } else if (fabricTool === 'highlighter') {
+      fc.isDrawingMode = true;
+      const brush = new PencilBrush(fc);
+      brush.width = strokeWidth * 8;
+      // Semi-transparent highlighter stroke
+      brush.color = activeColor + '55';
+      fc.freeDrawingBrush = brush;
+    } else if (fabricTool === 'text') {
       fc.isDrawingMode = false;
+      fc.on('mouse:down', (opt) => {
+        const pointer = fc.getPointer(opt.e as MouseEvent);
+        const itext = new FabricIText('Type here', {
+          left: pointer.x,
+          top: pointer.y,
+          fill: activeColor,
+          fontSize: 16,
+          fontFamily: 'sans-serif',
+        });
+        fc.add(itext);
+        fc.setActiveObject(itext);
+        itext.enterEditing();
+        fc.renderAll();
+      });
+    } else if (fabricTool === 'rectangle') {
+      fc.isDrawingMode = false;
+      fc.on('mouse:down', (opt) => {
+        const pointer = fc.getPointer(opt.e as MouseEvent);
+        shapeOrigin.current = { x: pointer.x, y: pointer.y };
+        const rect = new FabricRect({
+          left: pointer.x, top: pointer.y,
+          width: 0, height: 0,
+          fill: 'transparent',
+          stroke: activeColor,
+          strokeWidth,
+          selectable: false,
+        });
+        fc.add(rect);
+        shapeInProgress.current = rect;
+      });
+      fc.on('mouse:move', (opt) => {
+        if (!shapeInProgress.current || !shapeOrigin.current) return;
+        const pointer = fc.getPointer(opt.e as MouseEvent);
+        const rect = shapeInProgress.current as InstanceType<typeof FabricRect>;
+        const x = Math.min(pointer.x, shapeOrigin.current.x);
+        const y = Math.min(pointer.y, shapeOrigin.current.y);
+        rect.set({ left: x, top: y, width: Math.abs(pointer.x - shapeOrigin.current.x), height: Math.abs(pointer.y - shapeOrigin.current.y) });
+        fc.renderAll();
+      });
+      fc.on('mouse:up', () => {
+        if (shapeInProgress.current) {
+          shapeInProgress.current.selectable = true;
+          fc.renderAll();
+          shapeInProgress.current = null;
+          shapeOrigin.current = null;
+          const json = JSON.stringify(fc.toJSON());
+          undoStack.current = [...undoStack.current.slice(-19), json];
+          redoStack.current = [];
+          setFabricObjectCount(fc.getObjects().length);
+        }
+      });
+    } else if (fabricTool === 'circle') {
+      fc.isDrawingMode = false;
+      fc.on('mouse:down', (opt) => {
+        const pointer = fc.getPointer(opt.e as MouseEvent);
+        shapeOrigin.current = { x: pointer.x, y: pointer.y };
+        const circle = new FabricCircle({
+          left: pointer.x, top: pointer.y,
+          radius: 0,
+          fill: 'transparent',
+          stroke: activeColor,
+          strokeWidth,
+          selectable: false,
+        });
+        fc.add(circle);
+        shapeInProgress.current = circle;
+      });
+      fc.on('mouse:move', (opt) => {
+        if (!shapeInProgress.current || !shapeOrigin.current) return;
+        const pointer = fc.getPointer(opt.e as MouseEvent);
+        const dx = pointer.x - shapeOrigin.current.x;
+        const dy = pointer.y - shapeOrigin.current.y;
+        const radius = Math.sqrt(dx * dx + dy * dy) / 2;
+        const circle = shapeInProgress.current as InstanceType<typeof FabricCircle>;
+        circle.set({ radius, left: shapeOrigin.current.x - radius, top: shapeOrigin.current.y - radius });
+        fc.renderAll();
+      });
+      fc.on('mouse:up', () => {
+        if (shapeInProgress.current) {
+          shapeInProgress.current.selectable = true;
+          fc.renderAll();
+          shapeInProgress.current = null;
+          shapeOrigin.current = null;
+          const json = JSON.stringify(fc.toJSON());
+          undoStack.current = [...undoStack.current.slice(-19), json];
+          redoStack.current = [];
+          setFabricObjectCount(fc.getObjects().length);
+        }
+      });
+    } else if (fabricTool === 'arrow') {
+      fc.isDrawingMode = false;
+      fc.on('mouse:down', (opt) => {
+        const pointer = fc.getPointer(opt.e as MouseEvent);
+        shapeOrigin.current = { x: pointer.x, y: pointer.y };
+        const line = new FabricLine([pointer.x, pointer.y, pointer.x, pointer.y], {
+          stroke: activeColor,
+          strokeWidth,
+          selectable: false,
+        });
+        fc.add(line);
+        shapeInProgress.current = line;
+      });
+      fc.on('mouse:move', (opt) => {
+        if (!shapeInProgress.current || !shapeOrigin.current) return;
+        const pointer = fc.getPointer(opt.e as MouseEvent);
+        const line = shapeInProgress.current as InstanceType<typeof FabricLine>;
+        line.set({ x2: pointer.x, y2: pointer.y });
+        fc.renderAll();
+      });
+      fc.on('mouse:up', () => {
+        if (shapeInProgress.current) {
+          shapeInProgress.current.selectable = true;
+          fc.renderAll();
+          shapeInProgress.current = null;
+          shapeOrigin.current = null;
+          const json = JSON.stringify(fc.toJSON());
+          undoStack.current = [...undoStack.current.slice(-19), json];
+          redoStack.current = [];
+          setFabricObjectCount(fc.getObjects().length);
+        }
+      });
+    } else if (fabricTool === 'cloud') {
+      // Cloud renders as a rounded rectangle with dashed stroke
+      fc.isDrawingMode = false;
+      fc.on('mouse:down', (opt) => {
+        const pointer = fc.getPointer(opt.e as MouseEvent);
+        shapeOrigin.current = { x: pointer.x, y: pointer.y };
+        const rect = new FabricRect({
+          left: pointer.x, top: pointer.y,
+          width: 0, height: 0,
+          fill: 'transparent',
+          stroke: activeColor,
+          strokeWidth,
+          rx: 20, ry: 20,
+          strokeDashArray: [8, 4],
+          selectable: false,
+        });
+        fc.add(rect);
+        shapeInProgress.current = rect;
+      });
+      fc.on('mouse:move', (opt) => {
+        if (!shapeInProgress.current || !shapeOrigin.current) return;
+        const pointer = fc.getPointer(opt.e as MouseEvent);
+        const rect = shapeInProgress.current as InstanceType<typeof FabricRect>;
+        const x = Math.min(pointer.x, shapeOrigin.current.x);
+        const y = Math.min(pointer.y, shapeOrigin.current.y);
+        rect.set({ left: x, top: y, width: Math.abs(pointer.x - shapeOrigin.current.x), height: Math.abs(pointer.y - shapeOrigin.current.y) });
+        fc.renderAll();
+      });
+      fc.on('mouse:up', () => {
+        if (shapeInProgress.current) {
+          shapeInProgress.current.selectable = true;
+          fc.renderAll();
+          shapeInProgress.current = null;
+          shapeOrigin.current = null;
+          const json = JSON.stringify(fc.toJSON());
+          undoStack.current = [...undoStack.current.slice(-19), json];
+          redoStack.current = [];
+          setFabricObjectCount(fc.getObjects().length);
+        }
+      });
     }
-  }, [activeTool]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTool, activeColor, strokeWidth, isEditable]);
 
   // ── Coordinate helpers ────────────────────────────────────────────────────
 
@@ -213,7 +476,8 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({ drawing, onClos
       return;
     }
     const pos = getRelPos(e);
-    if (activeTool === 'text') {
+    // Text annotation via React overlay only when fabric is not handling it
+    if (activeTool === 'text' && !isEditable) {
       setTextPos(pos);
       return;
     }
@@ -273,13 +537,16 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({ drawing, onClos
 
   const handleUndo = () => {
     const fc = fabricInst.current;
-    if (fc) {
-      const objs = fc.getObjects();
-      if (objs.length > 0) {
-        fc.remove(objs[objs.length - 1]);
+    if (fc && undoStack.current.length > 0) {
+      const currentJson = JSON.stringify(fc.toJSON());
+      redoStack.current = [...redoStack.current.slice(-19), currentJson];
+      const prevJson = undoStack.current[undoStack.current.length - 1];
+      undoStack.current = undoStack.current.slice(0, -1);
+      fc.loadFromJSON(JSON.parse(prevJson)).then(() => {
         fc.renderAll();
-        return;
-      }
+        setFabricObjectCount(fc.getObjects().length);
+      });
+      return;
     }
     setMarkups((prev) => {
       if (prev.length === 0) return prev;
@@ -358,9 +625,15 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({ drawing, onClos
     });
   };
 
-  // ── Supabase persistence ──────────────────────────────────────────────────
+  // ── Persistence ───────────────────────────────────────────────────────────
 
   const handleSaveMarkups = async () => {
+    const fc = fabricInst.current;
+    // Prefer serializing the fabric canvas to JSON for the parent to persist
+    if (fc && onSave) {
+      onSave(fc.toJSON() as object);
+      return;
+    }
     if (markups.length === 0) return;
     setIsSaving(true);
     try {
@@ -381,6 +654,10 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({ drawing, onClos
       setIsSaving(false);
     }
   };
+
+  // ── Determine whether fabric canvas should capture pointer events ─────────
+
+  const fabricToolActive = isEditable && ['draw', 'highlight', 'text'].includes(activeTool);
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -591,20 +868,21 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({ drawing, onClos
                 return null;
               })}
 
-              {/* Text input */}
+              {/* Text input overlay (non-fabric fallback when isEditable is false) */}
               {textPos && (
                 <div style={{ position: 'absolute', left: `${textPos.x}%`, top: `${textPos.y}%`, zIndex: 20 }}>
                   <input autoFocus value={textInput} onChange={(e) => setTextInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') handleTextSubmit(); if (e.key === 'Escape') setTextPos(null); }} onBlur={handleTextSubmit} placeholder="Add note..." style={{ padding: `${spacing['0.5']} ${spacing['1.5']}`, backgroundColor: colors.primaryOrange, color: colors.white, border: 'none', borderRadius: borderRadius.sm, outline: 'none', fontSize: typography.fontSize.caption, fontFamily: typography.fontFamily, fontWeight: typography.fontWeight.semibold, minWidth: '80px' }} />
                 </div>
               )}
 
-              {/* Fabric.js freehand annotation layer */}
+              {/* Fabric.js annotation canvas — layered over the drawing */}
               <div
                 ref={fabricContainerRef}
+                aria-label="Drawing markup canvas"
                 style={{
                   position: 'absolute',
                   inset: 0,
-                  pointerEvents: activeTool === 'draw' ? 'auto' : 'none',
+                  pointerEvents: fabricToolActive ? 'auto' : 'none',
                   zIndex: 10,
                 }}
               />
