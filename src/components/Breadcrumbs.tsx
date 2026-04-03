@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ChevronRight, Home, FolderOpen } from 'lucide-react'; // Home used by route Breadcrumbs below
+import { ChevronRight, ChevronLeft, Home, FolderOpen } from 'lucide-react'; // Home used by route Breadcrumbs below
 import { colors, spacing, typography, transitions, borderRadius } from '../styles/theme';
 
 const routeLabels: Record<string, string> = {
@@ -90,7 +90,7 @@ export const FolderBreadcrumbs: React.FC<FolderBreadcrumbsProps> = ({ stack, onN
         const mobile = window.innerWidth < 768;
         setIsMobile(mobile);
         if (!mobile) setDropdownOpen(false);
-      }, 150);
+      }, 200);
     };
     window.addEventListener('resize', handler);
     return () => {
@@ -115,10 +115,61 @@ export const FolderBreadcrumbs: React.FC<FolderBreadcrumbsProps> = ({ stack, onN
 
   if (stack.length === 0) return null;
 
-  const maxWidth = isMobile ? '120px' : '160px';
+  // Mobile: show only a back arrow + the current (last) segment
+  if (isMobile) {
+    const current = stack[stack.length - 1];
+    const prevIndex = stack.length >= 2 ? stack.length - 2 : -1;
+    return (
+      <div style={{ overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', maxWidth: '375px' }}>
+        <nav aria-label="Breadcrumb">
+          <ol style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], margin: 0, padding: 0, listStyle: 'none', flexWrap: 'nowrap', minWidth: 0 }}>
+            <li>
+              <button
+                onClick={() => onNavigate(prevIndex)}
+                style={{ ...crumbButtonStyle, minWidth: '44px', minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.textSecondary }}
+                aria-label="Go back"
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.color = colors.primaryOrange;
+                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.orangeSubtle;
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.color = colors.textSecondary;
+                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
+                }}
+              >
+                <ChevronLeft size={16} />
+              </button>
+            </li>
+            <li>
+              <span
+                aria-current="page"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: spacing['1'],
+                  padding: `${spacing['2']} ${spacing['3']}`,
+                  fontSize: typography.fontSize.sm,
+                  fontWeight: typography.fontWeight.semibold,
+                  color: colors.textPrimary,
+                  maxWidth: '240px',
+                  minHeight: '44px',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                <FolderOpen size={13} color={colors.primaryOrange} />
+                {current.name}
+              </span>
+            </li>
+          </ol>
+        </nav>
+      </div>
+    );
+  }
+
+  const maxWidth = '160px';
   const dynCrumbStyle: React.CSSProperties = { ...crumbButtonStyle, maxWidth };
 
-  const showEllipsis = isMobile && stack.length > 2;
+  const showEllipsis = false;
 
   const renderSegment = (segment: { id: string; name: string }, fullIndex: number) => {
     const isLast = fullIndex === stack.length - 1;
