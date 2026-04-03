@@ -1619,8 +1619,34 @@ const PayAppDetail = memo<{
     unconditional_final: 'Unconditional Final',
   }
 
+  const appStatus = app.status as string
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
+      {/* Detail header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+          Pay Application #{appNumber}
+        </span>
+        {(appStatus === 'submitted' || appStatus === 'approved') && (
+          <PermissionGate permission="financials.edit">
+            <button
+              onClick={() => toast.info('PDF generation coming soon')}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: spacing['2'],
+                padding: `${spacing['2']} ${spacing['4']}`,
+                border: 'none', borderRadius: borderRadius.md,
+                backgroundColor: colors.primaryOrange, color: colors.white,
+                fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold,
+                cursor: 'pointer', fontFamily: typography.fontFamily,
+              }}
+            >
+              <FileText size={14} /> Generate AIA G702/G703
+            </button>
+          </PermissionGate>
+        )}
+      </div>
+
       {showMissingWarning && (
         <div style={{
           display: 'flex', alignItems: 'flex-start', gap: spacing['3'],

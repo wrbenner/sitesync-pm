@@ -28,7 +28,7 @@ export type Permission =
   | 'project.settings' | 'project.members' | 'project.delete'
   | 'org.settings' | 'org.billing' | 'org.members'
   | 'ai.use' | 'export.data' | 'reports.view'
-  | 'financials.view' | 'estimating.view' | 'procurement.view'
+  | 'financials.view' | 'financials.edit' | 'estimating.view' | 'procurement.view'
 
 // ── Role Hierarchy ───────────────────────────────────────
 
@@ -74,6 +74,7 @@ export const PERMISSION_MATRIX: Record<Permission, ProjectRole[]> = {
   'change_orders.delete': ['owner', 'admin'],
   'change_orders.promote': ['owner', 'admin', 'project_manager'],
   'financials.view': ['owner', 'admin', 'project_manager'],
+  'financials.edit': ['owner', 'admin', 'project_manager'],
   'estimating.view': ['owner', 'admin', 'project_manager'],
   'procurement.view': ['owner', 'admin', 'project_manager', 'superintendent'],
   'schedule.view': ['owner', 'admin', 'project_manager', 'superintendent', 'subcontractor', 'viewer'],
