@@ -562,3 +562,45 @@ export function applyPunchItemRealtimeChange(
   }
   return current
 }
+
+export function subscribeToDailyLogChanges(
+  projectId: string,
+  onInsert: (log: DailyLogRow) => void,
+  onUpdate: (log: DailyLogRow) => void,
+  onDelete: (oldLog: { id: string }) => void
+): () => void {
+  const channel = supabase
+    .channel(`daily_logs_${projectId}`)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'daily_logs', filter: `project_id=eq.${projectId}` }, (payload) => {
+      onInsert(payload.new as DailyLogRow)
+    })
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'daily_logs', filter: `project_id=eq.${projectId}` }, (payload) => {
+      onUpdate(payload.new as DailyLogRow)
+    })
+    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'daily_logs', filter: `project_id=eq.${projectId}` }, (payload) => {
+      onDelete({ id: (payload.old as { id: string }).id })
+    })
+    .subscribe()
+  return () => { supabase.removeChannel(channel) }
+}
+
+export function subscribeToPunchListChanges(
+  projectId: string,
+  onInsert: (item: PunchItemRow) => void,
+  onUpdate: (item: PunchItemRow) => void,
+  onDelete: (oldItem: { id: string }) => void
+): () => void {
+  const channel = supabase
+    .channel(`punch_list_items_${projectId}`)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'punch_items', filter: `project_id=eq.${projectId}` }, (payload) => {
+      onInsert(payload.new as PunchItemRow)
+    })
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'punch_items', filter: `project_id=eq.${projectId}` }, (payload) => {
+      onUpdate(payload.new as PunchItemRow)
+    })
+    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'punch_items', filter: `project_id=eq.${projectId}` }, (payload) => {
+      onDelete({ id: (payload.old as { id: string }).id })
+    })
+    .subscribe()
+  return () => { supabase.removeChannel(channel) }
+}
