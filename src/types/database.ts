@@ -176,6 +176,41 @@ export type Database = {
           },
         ]
       }
+      ai_conversations: {
+        Row: {
+          id: string
+          project_id: string
+          user_id: string | null
+          conversation_topic: string | null
+          started_at: string
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          user_id?: string | null
+          conversation_topic?: string | null
+          started_at?: string
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          project_id?: string
+          user_id?: string | null
+          conversation_topic?: string | null
+          started_at?: string
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_conversations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_insights: {
         Row: {
           action_label: string | null
@@ -219,6 +254,41 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_messages: {
+        Row: {
+          id: string
+          conversation_id: string
+          role: string
+          content: string
+          metadata: Json | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          conversation_id: string
+          role: string
+          content: string
+          metadata?: Json | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          conversation_id?: string
+          role?: string
+          content?: string
+          metadata?: Json | null
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "ai_conversations"
             referencedColumns: ["id"]
           },
         ]

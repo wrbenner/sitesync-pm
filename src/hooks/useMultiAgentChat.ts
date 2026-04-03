@@ -16,6 +16,81 @@ import type {
   AgentSuggestedAction,
 } from '../types/agents'
 
+// ── Conversation persistence helpers ─────────────────────────
+
+async function createConversation(
+  projectId: string,
+  userId: string | undefined,
+  topic: string,
+): Promise<string | null> {
+  try {
+    const { data, error } = await supabase
+      .from('ai_conversations')
+      .insert({
+        project_id: projectId,
+        user_id: userId ?? null,
+        conversation_topic: topic.slice(0, 50),
+        started_at: new Date().toISOString(),
+      })
+      .select('id')
+      .single()
+    if (error) { console.warn('[AI] Failed to create conversation:', error); return null }
+    return data.id
+  } catch (err) {
+    console.warn('[AI] Error creating conversation:', err)
+    return null
+  }
+}
+
+async function persistMessage(
+  conversationId: string,
+  msg: AgentConversationMessage,
+): Promise<void> {
+  try {
+    const metadata: Record<string, unknown> = {}
+    if (msg.agentDomain) metadata.agent_domain = msg.agentDomain
+    if (msg.toolCalls?.length) metadata.tool_calls = msg.toolCalls.length
+
+    const { error } = await supabase
+      .from('ai_messages')
+      .insert({
+        conversation_id: conversationId,
+        role: msg.role,
+        content: msg.content,
+        metadata: Object.keys(metadata).length > 0 ? metadata : null,
+      })
+    if (error) console.warn('[AI] Failed to persist message:', error)
+  } catch (err) {
+    console.warn('[AI] Error persisting message:', err)
+  }
+}
+
+// ── useConversationHistory ────────────────────────────────────
+// Fetches the 20 most recent conversations for the current project.
+
+export function useConversationHistory() {
+  const projectId = useProjectId()
+
+  const load = useCallback(async () => {
+    if (!isSupabaseConfigured || !projectId) return []
+    try {
+      const { data, error } = await supabase
+        .from('ai_conversations')
+        .select('id, conversation_topic, started_at, created_at')
+        .eq('project_id', projectId)
+        .order('started_at', { ascending: false })
+        .limit(20)
+      if (error) { console.warn('[AI] Failed to load conversation history:', error); return [] }
+      return data ?? []
+    } catch (err) {
+      console.warn('[AI] Error loading conversation history:', err)
+      return []
+    }
+  }, [projectId])
+
+  return { load }
+}
+
 // ── useMultiAgentChat ─────────────────────────────────────────
 // Replaces useProjectAI with multi-agent orchestration.
 // Routes messages through the agent-orchestrator edge function,
@@ -37,20 +112,106 @@ interface UseMultiAgentChatReturn {
   rejectAllPending: () => void
   clearMessages: () => void
   error: string | null
+  conversationId: string | null
 }
 
 export function useMultiAgentChat(
   pageContext?: string,
   entityContext?: string,
+  initialConversationId?: string,
 ): UseMultiAgentChatReturn {
   const projectId = useProjectId()
   const store = useAgentOrchestrator()
   const conversationRef = useRef<AgentConversationMessage[]>([])
 
+  // Persistence state
+  const conversationIdRef = useRef<string | null>(initialConversationId ?? null)
+  const persistedMsgIdsRef = useRef<Set<string>>(new Set())
+  const isLoadingHistoryRef = useRef(false)
+
   // Keep ref in sync with store
   useEffect(() => {
     conversationRef.current = store.messages
   }, [store.messages])
+
+  // Load existing messages when an initialConversationId is provided
+  useEffect(() => {
+    if (!initialConversationId || !isSupabaseConfigured) return
+
+    conversationIdRef.current = initialConversationId
+    isLoadingHistoryRef.current = true
+
+    ;(async () => {
+      try {
+        const { data, error } = await supabase
+          .from('ai_messages')
+          .select('id, role, content, metadata, created_at')
+          .eq('conversation_id', initialConversationId)
+          .order('created_at', { ascending: true })
+
+        if (error) { console.warn('[AI] Failed to load messages:', error); return }
+        if (!data?.length) return
+
+        const loaded: AgentConversationMessage[] = data.map((row) => {
+          const meta = (row.metadata ?? {}) as Record<string, unknown>
+          return {
+            id: row.id,
+            role: row.role as AgentConversationMessage['role'],
+            content: row.content,
+            timestamp: new Date(row.created_at ?? Date.now()),
+            agentDomain: (meta.agent_domain as AgentDomain) ?? undefined,
+            agentName: meta.agent_domain
+              ? SPECIALIST_AGENTS[meta.agent_domain as AgentDomain]?.name
+              : undefined,
+          }
+        })
+
+        // Mark all loaded IDs as already persisted so we don't re-insert them
+        for (const m of loaded) persistedMsgIdsRef.current.add(m.id)
+
+        useAgentOrchestrator.setState({ messages: loaded })
+      } catch (err) {
+        console.warn('[AI] Error loading conversation history:', err)
+      } finally {
+        isLoadingHistoryRef.current = false
+      }
+    })()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialConversationId])
+
+  // Persist new messages to Supabase as they are added to the store
+  useEffect(() => {
+    if (!isSupabaseConfigured || isLoadingHistoryRef.current) return
+
+    const newMsgs = store.messages.filter((m) => !persistedMsgIdsRef.current.has(m.id))
+    if (!newMsgs.length) return
+
+    // Mark immediately to prevent double-processing on rapid re-renders
+    for (const m of newMsgs) persistedMsgIdsRef.current.add(m.id)
+
+    ;(async () => {
+      // Coordinator messages are routing indicators only, skip persisting them
+      const persistable = newMsgs.filter((m) => m.role !== 'coordinator')
+      if (!persistable.length) return
+
+      // Resolve the session once for this batch
+      let userId: string | undefined
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        userId = session?.user?.id
+      } catch { /* non-blocking */ }
+
+      for (const msg of persistable) {
+        // Create the conversation row on the first real message
+        if (!conversationIdRef.current && msg.role === 'user' && projectId) {
+          conversationIdRef.current = await createConversation(projectId, userId, msg.content)
+        }
+
+        if (!conversationIdRef.current) continue
+        await persistMessage(conversationIdRef.current, msg)
+      }
+    })()
+  }, [store.messages, projectId])
 
   const sendMessage = useCallback(
     async (overrideText?: string) => {
@@ -213,6 +374,7 @@ export function useMultiAgentChat(
     rejectAllPending,
     clearMessages: store.clearMessages,
     error: store.error,
+    conversationId: conversationIdRef.current,
   }
 }
 
