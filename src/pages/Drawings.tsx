@@ -6,7 +6,7 @@ import { Upload, X, Sparkles, FileText, AlertTriangle, AlertCircle, CheckCircle2
 import { aiService } from '../lib/aiService';
 import type { DrawingAnalysis } from '../types/ai';
 import type { DrawingRevision } from '../types/api';
-import { PageContainer, Card, Btn, Tag, useToast } from '../components/Primitives';
+import { PageContainer, Card, Btn, Tag, MetricBox, useToast } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, transitions, shadows, zIndex } from '../styles/theme';
 import { getDrawings, getDisciplineColor, getDrawingRevisionHistory } from '../api/endpoints/documents';
 import { useQuery } from '../hooks/useQuery';
@@ -46,7 +46,7 @@ const lastViewed: Record<number, string> = {
   12: '1d ago',
 };
 
-const gridColumns = '60px 80px 1fr 120px 80px 100px 70px 120px 100px 70px 90px';
+const gridColumns = '60px 80px 1fr 120px 80px 100px 80px 70px 120px 100px 70px 90px';
 
 // Static coordination conflicts for the AI Insights panel
 function parseAiConflicts(text: string): Array<{ severity: 'high' | 'medium' | 'low'; description: string; sheets: string[] }> {
@@ -385,6 +385,14 @@ const _DrawingsPage: React.FC = () => {
           }}
         >
         <div>
+          {/* Metric Cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing.lg, marginBottom: spacing.xl }}>
+            <MetricBox label="Total Drawings" value={allDrawings.length} />
+            <MetricBox label="Current Revisions" value={allDrawings.filter((d) => d.currentRevision !== null).length} />
+            <MetricBox label="Pending Markups" value={Object.values(aiChanges).reduce((a, b) => a + b, 0)} />
+            <MetricBox label="Disciplines" value={uniqueDisciplines.length} />
+          </div>
+
           {/* AI Insights Panel */}
           <div style={{ marginBottom: spacing['4'], backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.md, border: `1px solid ${colors.borderSubtle}`, overflow: 'hidden' }}>
             <div
@@ -541,7 +549,8 @@ const _DrawingsPage: React.FC = () => {
                 { field: 'title', label: 'Title' },
                 { field: 'discipline', label: 'Discipline' },
                 { field: 'revision', label: 'Rev' },
-                { field: 'date', label: 'Date' },
+                { field: 'date', label: 'Date Issued' },
+                { field: 'status', label: 'Status' },
                 { field: 'sheetCount', label: 'Sheets' },
                 { field: '', label: 'Linked' },
                 { field: '', label: 'Last Viewed' },
@@ -696,7 +705,10 @@ const _DrawingsPage: React.FC = () => {
                   </span>
 
                   {/* Discipline */}
-                  <Tag label={drawing.discipline} />
+                  <span style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
+                    <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: thumbColor, flexShrink: 0, display: 'inline-block' }} />
+                    <Tag label={drawing.discipline} />
+                  </span>
 
                   {/* Revision */}
                   <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
@@ -837,10 +849,28 @@ const _DrawingsPage: React.FC = () => {
                     )}
                   </div>
 
-                  {/* Date */}
+                  {/* Date Issued */}
                   <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>
-                    {drawing.date}
+                    {formatRevDate(drawing.currentRevision?.issued_date ?? null) !== '—'
+                      ? formatRevDate(drawing.currentRevision?.issued_date ?? null)
+                      : drawing.date}
                   </span>
+
+                  {/* Status */}
+                  {(() => {
+                    const st = drawing.status ?? 'current';
+                    const cfg: Record<string, { bg: string; color: string; label: string }> = {
+                      current:    { bg: `${colors.statusActive}18`,   color: colors.statusActive,   label: 'Current' },
+                      superseded: { bg: `${colors.statusPending}18`,  color: colors.statusPending,  label: 'Superseded' },
+                      draft:      { bg: `${colors.statusReview}18`,   color: colors.statusReview,   label: 'Draft' },
+                    };
+                    const c = cfg[st] ?? cfg['current'];
+                    return (
+                      <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, padding: '2px 8px', borderRadius: borderRadius.full, backgroundColor: c.bg, color: c.color, whiteSpace: 'nowrap' }}>
+                        {c.label}
+                      </span>
+                    );
+                  })()}
 
                   {/* Sheets */}
                   <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>
@@ -848,14 +878,27 @@ const _DrawingsPage: React.FC = () => {
                   </span>
 
                   {/* Linked */}
-                  <span style={{ fontSize: typography.fontSize.sm }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], flexWrap: 'wrap' }}>
                     {linked ? (
-                      <span
-                        style={{ color: colors.orangeText, cursor: 'pointer', fontSize: typography.fontSize.sm }}
-                        onClick={(e) => { e.stopPropagation(); addToast('info', 'Opening linked items for ' + drawing.setNumber); }}
-                      >
-                        {linked.rfis} RFIs · {linked.submittals} Sub
-                      </span>
+                      <>
+                        {linked.rfis > 0 && (
+                          <span
+                            style={{ display: 'inline-flex', alignItems: 'center', padding: '1px 7px', borderRadius: borderRadius.full, backgroundColor: `${colors.statusInfo}18`, color: colors.statusInfo, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                            onClick={(e) => { e.stopPropagation(); addToast('info', `${linked.rfis} RFI${linked.rfis !== 1 ? 's' : ''} linked to ${drawing.setNumber}`); }}
+                          >
+                            {linked.rfis} RFI{linked.rfis !== 1 ? 's' : ''}
+                          </span>
+                        )}
+                        {linked.submittals > 0 && (
+                          <span
+                            style={{ display: 'inline-flex', alignItems: 'center', padding: '1px 7px', borderRadius: borderRadius.full, backgroundColor: `${colors.statusPending}18`, color: colors.statusPending, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                            onClick={(e) => { e.stopPropagation(); addToast('info', `${linked.submittals} submittal${linked.submittals !== 1 ? 's' : ''} linked to ${drawing.setNumber}`); }}
+                          >
+                            {linked.submittals} Sub
+                          </span>
+                        )}
+                        {linked.rfis === 0 && linked.submittals === 0 && <span style={{ color: colors.textTertiary }}>—</span>}
+                      </>
                     ) : (
                       <span style={{ color: colors.textTertiary }}>—</span>
                     )}
