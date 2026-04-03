@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { AlertTriangle, ClipboardCheck, Award, Users, Plus, ShieldCheck } from 'lucide-react'
+import { AlertTriangle, ClipboardCheck, Award, Users, Plus, ShieldCheck, Shield } from 'lucide-react'
 import { PageContainer, Card, Btn, Skeleton, MetricBox } from '../components/Primitives'
 import { DataTable, createColumnHelper } from '../components/shared/DataTable'
 import { ExportButton } from '../components/shared/ExportButton'
@@ -376,11 +376,11 @@ export const Safety: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('incidents')
   const projectId = useProjectId()
 
-  const { data: inspections, isLoading: loadingInspections } = useSafetyInspections(projectId)
-  const { data: incidents, isLoading: loadingIncidents } = useIncidents(projectId)
-  const { data: talks, isLoading: loadingTalks } = useToolboxTalks(projectId)
-  const { data: certifications, isLoading: loadingCerts } = useSafetyCertifications(projectId)
-  const { data: correctiveActions, isLoading: loadingCAs } = useCorrectiveActions(projectId)
+  const { data: inspections, isLoading: loadingInspections, isError: errorInspections } = useSafetyInspections(projectId)
+  const { data: incidents, isLoading: loadingIncidents, isError: errorIncidents, refetch: refetchIncidents } = useIncidents(projectId)
+  const { data: talks, isLoading: loadingTalks, isError: errorTalks, refetch: refetchTalks } = useToolboxTalks(projectId)
+  const { data: certifications, isLoading: loadingCerts, isError: errorCerts, refetch: refetchCerts } = useSafetyCertifications(projectId)
+  const { data: correctiveActions, isLoading: loadingCAs, isError: errorCAs, refetch: refetchCAs } = useCorrectiveActions(projectId)
   const { data: dailyLogsResult } = useDailyLogs(projectId)
   const dailyLogs = dailyLogsResult?.data
 
@@ -531,6 +531,14 @@ export const Safety: React.FC = () => {
   const isMobile = windowWidth < 768
 
   const isLoading = loadingInspections || loadingIncidents || loadingTalks || loadingCerts || loadingCAs
+  const hasError = errorInspections || errorIncidents || errorTalks || errorCerts || errorCAs
+
+  const handleRetry = () => {
+    refetchIncidents()
+    refetchTalks()
+    refetchCerts()
+    refetchCAs()
+  }
 
   // ── Render ─────────────────────────────────────────────────
 
@@ -564,10 +572,19 @@ export const Safety: React.FC = () => {
         </div>
       }
     >
+      <style>{`@keyframes safety-pulse { 0% { opacity: 0.3; } 50% { opacity: 0.7; } 100% { opacity: 0.3; } }`}</style>
+
       {/* Dashboard Metric Cards */}
       {isLoading ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: spacing['4'], marginBottom: spacing['2xl'] }}>
-          {[1, 2, 3, 4].map((i) => <Skeleton key={i} width="100%" height="100px" />)}
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} style={{
+              width: '100%', minWidth: 180, height: 100,
+              backgroundColor: '#E5E7EB',
+              borderRadius: borderRadius.md,
+              animation: 'safety-pulse 1.5s ease-in-out infinite',
+            }} />
+          ))}
         </div>
       ) : (
         <div style={{
@@ -658,20 +675,69 @@ export const Safety: React.FC = () => {
 
       {/* Skeleton loaders while fetching */}
       {isLoading && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
-          {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} width="100%" height="52px" />)}
+        <Card>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} style={{ display: 'flex', gap: spacing['3'] }}>
+                <div style={{ flex: '0 0 100px', height: 20, backgroundColor: '#E5E7EB', borderRadius: borderRadius.sm, animation: 'safety-pulse 1.5s ease-in-out infinite' }} />
+                <div style={{ flex: '0 0 140px', height: 20, backgroundColor: '#E5E7EB', borderRadius: borderRadius.sm, animation: 'safety-pulse 1.5s ease-in-out infinite', animationDelay: `${i * 0.1}s` }} />
+                <div style={{ flex: '0 0 120px', height: 20, backgroundColor: '#E5E7EB', borderRadius: borderRadius.sm, animation: 'safety-pulse 1.5s ease-in-out infinite', animationDelay: `${i * 0.15}s` }} />
+                <div style={{ flex: '1', height: 20, backgroundColor: '#E5E7EB', borderRadius: borderRadius.sm, animation: 'safety-pulse 1.5s ease-in-out infinite', animationDelay: `${i * 0.2}s` }} />
+                <div style={{ flex: '0 0 90px', height: 20, backgroundColor: '#E5E7EB', borderRadius: borderRadius.sm, animation: 'safety-pulse 1.5s ease-in-out infinite', animationDelay: `${i * 0.25}s` }} />
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Error state */}
+      {!isLoading && hasError && (
+        <div style={{
+          backgroundColor: '#FEF2F2',
+          border: `1px solid #FECACA`,
+          borderRadius: borderRadius.md,
+          padding: `${spacing['4']} ${spacing['5']}`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: spacing['4'],
+          marginBottom: spacing['4'],
+        }}>
+          <div>
+            <p style={{ margin: 0, fontWeight: typography.fontWeight.medium, color: '#991B1B', fontSize: typography.fontSize.sm }}>
+              Unable to load safety data
+            </p>
+            <p style={{ margin: '2px 0 0', color: '#B91C1C', fontSize: typography.fontSize.caption }}>
+              Check your connection and try again.
+            </p>
+          </div>
+          <Btn variant="secondary" onClick={handleRetry} style={{ flexShrink: 0 }}>
+            Retry
+          </Btn>
         </div>
       )}
 
       {/* Incidents Tab */}
-      {activeTab === 'incidents' && !isLoading && (
+      {activeTab === 'incidents' && !isLoading && !hasError && (
         displayIncidents.length === 0 ? (
           <Card>
-            <EmptyState
-              message="No incidents recorded. A safe site is a productive site. Report observations to maintain your safety record."
-              cta="Report Incident"
-              onCta={() => setShowIncidentModal(true)}
-            />
+            <div style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              padding: `${spacing['10']} ${spacing['6']}`, gap: spacing['4'], textAlign: 'center',
+            }}>
+              <Shield size={48} style={{ color: colors.textTertiary }} />
+              <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textTertiary, maxWidth: 420 }}>
+                Safety tracking not yet configured. Set up your safety program to track incidents, inspections, and certifications.
+              </p>
+              <div style={{ display: 'flex', gap: spacing['3'], flexWrap: 'wrap', justifyContent: 'center' }}>
+                <Btn variant="primary" onClick={() => setShowIncidentModal(true)} style={{ minHeight: 44 }}>
+                  Report First Incident
+                </Btn>
+                <Btn variant="secondary" onClick={() => toast.info('Form submission requires backend configuration')} style={{ minHeight: 44 }}>
+                  Set Up Inspection Template
+                </Btn>
+              </div>
+            </div>
           </Card>
         ) : (
           <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
@@ -687,7 +753,7 @@ export const Safety: React.FC = () => {
       )}
 
       {/* Inspections Tab */}
-      {activeTab === 'inspections' && !isLoading && (
+      {activeTab === 'inspections' && !isLoading && !hasError && (
         (inspections || []).length === 0 ? (
           <Card>
             <EmptyState
@@ -732,7 +798,7 @@ export const Safety: React.FC = () => {
       )}
 
       {/* Toolbox Talks Tab */}
-      {activeTab === 'toolbox' && !isLoading && (
+      {activeTab === 'toolbox' && !isLoading && !hasError && (
         (talks || []).length === 0 ? (
           <Card>
             <EmptyState
@@ -755,7 +821,7 @@ export const Safety: React.FC = () => {
       )}
 
       {/* Certifications Tab */}
-      {activeTab === 'certifications' && !isLoading && (
+      {activeTab === 'certifications' && !isLoading && !hasError && (
         (certifications || []).length === 0 ? (
           <Card>
             <EmptyState
