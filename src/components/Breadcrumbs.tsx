@@ -78,7 +78,9 @@ export const FolderBreadcrumbs: React.FC<FolderBreadcrumbsProps> = ({ stack, onN
   const [isMobile, setIsMobile] = React.useState(() =>
     typeof window !== 'undefined' ? window.innerWidth < 768 : false
   );
-  const [expanded, setExpanded] = React.useState(false);
+  const [dropdownOpen, setDropdownOpen] = React.useState(false);
+  const ellipsisRef = React.useRef<HTMLButtonElement>(null);
+  const dropdownRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
     let timeoutId: ReturnType<typeof setTimeout>;
@@ -87,7 +89,7 @@ export const FolderBreadcrumbs: React.FC<FolderBreadcrumbsProps> = ({ stack, onN
       timeoutId = setTimeout(() => {
         const mobile = window.innerWidth < 768;
         setIsMobile(mobile);
-        if (!mobile) setExpanded(false);
+        if (!mobile) setDropdownOpen(false);
       }, 150);
     };
     window.addEventListener('resize', handler);
@@ -97,19 +99,33 @@ export const FolderBreadcrumbs: React.FC<FolderBreadcrumbsProps> = ({ stack, onN
     };
   }, []);
 
+  React.useEffect(() => {
+    if (!dropdownOpen) return;
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (
+        ellipsisRef.current && !ellipsisRef.current.contains(e.target as Node) &&
+        dropdownRef.current && !dropdownRef.current.contains(e.target as Node)
+      ) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [dropdownOpen]);
+
   if (stack.length === 0) return null;
 
   const maxWidth = isMobile ? '120px' : '160px';
   const dynCrumbStyle: React.CSSProperties = { ...crumbButtonStyle, maxWidth };
 
-  const showEllipsis = isMobile && !expanded && stack.length > 2;
+  const showEllipsis = isMobile && stack.length > 2;
 
   const renderSegment = (segment: { id: string; name: string }, fullIndex: number) => {
     const isLast = fullIndex === stack.length - 1;
     return (
       <React.Fragment key={segment.id}>
         <li aria-hidden="true">
-          <span aria-hidden="true" style={{ display: 'inline-flex', alignItems: 'center', padding: '4px', minWidth: '24px', minHeight: '44px', justifyContent: 'center' }}>
+          <span aria-hidden="true" style={{ display: 'flex', alignItems: 'center', minWidth: '24px', minHeight: '44px', justifyContent: 'center' }}>
             <ChevronRight size={12} style={{ color: colors.textTertiary, flexShrink: 0 }} />
           </span>
         </li>
@@ -138,6 +154,7 @@ export const FolderBreadcrumbs: React.FC<FolderBreadcrumbsProps> = ({ stack, onN
               onClick={() => onNavigate(fullIndex)}
               style={dynCrumbStyle}
               title={segment.name}
+              aria-label={`Navigate to ${segment.name}`}
               onMouseEnter={(e) => {
                 (e.currentTarget as HTMLButtonElement).style.color = colors.primaryOrange;
                 (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.orangeSubtle;
@@ -157,10 +174,8 @@ export const FolderBreadcrumbs: React.FC<FolderBreadcrumbsProps> = ({ stack, onN
   };
 
   return (
-    <div style={{ overflowX: 'auto', flexWrap: 'nowrap', display: 'flex', alignItems: 'center', WebkitOverflowScrolling: 'touch' }}>
-      <nav
-        aria-label="Breadcrumb"
-      >
+    <div style={{ overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+      <nav aria-label="Breadcrumb">
         <ol
           style={{
             display: 'flex',
@@ -178,7 +193,7 @@ export const FolderBreadcrumbs: React.FC<FolderBreadcrumbsProps> = ({ stack, onN
             <button
               onClick={() => onNavigate(-1)}
               style={{ ...dynCrumbStyle, color: colors.textSecondary }}
-              aria-label="Go to root folder"
+              aria-label="Navigate to All Files"
               onMouseEnter={(e) => {
                 (e.currentTarget as HTMLButtonElement).style.color = colors.primaryOrange;
                 (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.surfaceHover;
@@ -196,21 +211,75 @@ export const FolderBreadcrumbs: React.FC<FolderBreadcrumbsProps> = ({ stack, onN
           {showEllipsis ? (
             <React.Fragment>
               <li aria-hidden="true">
-                <span aria-hidden="true" style={{ display: 'inline-flex', alignItems: 'center', padding: '4px', minWidth: '24px', minHeight: '44px', justifyContent: 'center' }}>
+                <span aria-hidden="true" style={{ display: 'flex', alignItems: 'center', minWidth: '24px', minHeight: '44px', justifyContent: 'center' }}>
                   <ChevronRight size={12} style={{ color: colors.textTertiary, flexShrink: 0 }} />
                 </span>
               </li>
-              <li>
+              <li style={{ position: 'relative' }}>
                 <button
-                  onClick={() => setExpanded(true)}
+                  ref={ellipsisRef}
+                  onClick={() => setDropdownOpen(o => !o)}
                   style={{ ...dynCrumbStyle, minWidth: '44px', minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                   aria-label="Show full path"
+                  aria-expanded={dropdownOpen}
                   title="Show full path"
                 >
                   ...
                 </button>
+                {dropdownOpen && (
+                  <div
+                    ref={dropdownRef}
+                    style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: 0,
+                      zIndex: 100,
+                      backgroundColor: colors.surfaceRaised,
+                      border: `1px solid ${colors.borderSubtle}`,
+                      borderRadius: borderRadius.md,
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                      minWidth: '160px',
+                      padding: '4px 0',
+                    }}
+                  >
+                    {stack.slice(0, -1).map((seg, i) => (
+                      <button
+                        key={seg.id}
+                        onClick={() => { onNavigate(i); setDropdownOpen(false); }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: spacing['1'],
+                          width: '100%',
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          padding: `${spacing['2']} ${spacing['3']}`,
+                          fontSize: typography.fontSize.sm,
+                          fontFamily: typography.fontFamily,
+                          color: colors.textSecondary,
+                          textAlign: 'left',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}
+                        aria-label={`Navigate to ${seg.name}`}
+                        onMouseEnter={(e) => {
+                          (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.surfaceHover;
+                          (e.currentTarget as HTMLButtonElement).style.color = colors.primaryOrange;
+                        }}
+                        onMouseLeave={(e) => {
+                          (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
+                          (e.currentTarget as HTMLButtonElement).style.color = colors.textSecondary;
+                        }}
+                      >
+                        <FolderOpen size={13} />
+                        {seg.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </li>
-              {renderSegment(stack[stack.length - 2], stack.length - 2)}
               {renderSegment(stack[stack.length - 1], stack.length - 1)}
             </React.Fragment>
           ) : (
