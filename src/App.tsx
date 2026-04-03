@@ -351,7 +351,8 @@ function AppContent() {
   const { sidebarCollapsed, setSidebarCollapsed, setActiveView } = useUiStore();
   const navigate = useNavigate();
   const location = useLocation();
-  const isMobile = useMediaQuery('(max-width: 768px)');
+  const isMobile = useMediaQuery('(max-width: 767px)');
+  const isTablet = useMediaQuery('(min-width: 768px) and (max-width: 1024px)');
   useTheme();
 
   const projectId = useProjectId();
@@ -410,12 +411,15 @@ function AppContent() {
     if (isMobile) {
       prevDesktopCollapsed.current = sidebarCollapsed;
       setSidebarCollapsed(true);
+    } else if (isTablet) {
+      prevDesktopCollapsed.current = sidebarCollapsed;
+      setSidebarCollapsed(true);
     } else {
       setSidebarCollapsed(prevDesktopCollapsed.current);
       setMobileDrawerOpen(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isMobile]);
+  }, [isMobile, isTablet]);
   const { toggleContextPanel, contextPanelOpen } = useAIAnnotationStore();
   const { openCopilot, closeCopilot, isOpen: copilotOpen } = useCopilotStore();
   const sidebarWidth = sidebarCollapsed ? layout.sidebarCollapsed : layout.sidebarWidth;
@@ -561,6 +565,7 @@ function AppContent() {
           height: '100vh',
           backgroundColor: colorVars.surfacePage,
           fontFamily: typographyConfig.fontFamily,
+          touchAction: 'manipulation',
         }}
       >
         {user && <AuthenticatedProviders activeView={activeView} />}
