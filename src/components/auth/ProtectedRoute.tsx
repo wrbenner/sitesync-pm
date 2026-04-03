@@ -31,13 +31,14 @@ const DevBanner: React.FC = () => (
   </div>
 )
 
-// BUG #1 FIX: Dev bypass requires EXPLICIT opt-in. Matches usePermissions logic.
+// Dev bypass requires ALL conditions to be explicitly true.
 function isDevBypassActive(): boolean {
-  if (import.meta.env.PROD === true) return false
-  if (!import.meta.env.DEV) return false
-  if (import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_URL.length > 0) return false
-  if (import.meta.env.VITE_SUPABASE_ANON_KEY && import.meta.env.VITE_SUPABASE_ANON_KEY.length > 0) return false
+  if (import.meta.env.PROD !== false) return false
+  if (import.meta.env.DEV !== true) return false
   if (import.meta.env.VITE_DEV_BYPASS !== 'true') return false
+  if (import.meta.env.VITE_SUPABASE_URL) return false
+  if (import.meta.env.VITE_SUPABASE_ANON_KEY) return false
+  console.warn('Auth bypass active — do not use in production')
   return true
 }
 
@@ -142,7 +143,7 @@ const ProtectedRoute: React.FC<Props> = ({ children, requiredPermission, moduleI
   }
 
   if (!isDevBypassActive() && !user) {
-    return <Navigate to={`/login?returnTo=${encodeURIComponent(location.pathname + location.search)}`} replace />
+    return <Navigate to="/login" state={{ from: location.pathname }} replace />
   }
 
   const requiredPerm = requiredPermission ?? MODULE_PERMISSIONS[moduleId ?? '']
