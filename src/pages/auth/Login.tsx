@@ -21,7 +21,7 @@ export const Login: React.FC = () => {
   const [searchParams] = useSearchParams()
 
   // Tab state
-  const [tab, setTab] = useState<'signin' | 'signup'>('signin')
+  const [tab, setTab] = useState<'signin' | 'signup' | 'magic'>('signin')
 
   // Sign in state
   const [email, setEmail] = useState('')
@@ -35,6 +35,12 @@ export const Login: React.FC = () => {
   const [resetSent, setResetSent] = useState(false)
   const [resetError, setResetError] = useState<string | null>(null)
   const [resetLoading, setResetLoading] = useState(false)
+
+  // Magic link state
+  const [magicEmail, setMagicEmail] = useState('')
+  const [magicLoading, setMagicLoading] = useState(false)
+  const [magicSuccess, setMagicSuccess] = useState(false)
+  const [magicError, setMagicError] = useState<string | null>(null)
 
   // Sign up state
   const [signupFirstName, setSignupFirstName] = useState('')
@@ -111,6 +117,22 @@ export const Login: React.FC = () => {
       }
     } finally {
       setSignupSubmitting(false)
+    }
+  }
+
+  const handleMagicLink = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setMagicError(null)
+    setMagicLoading(true)
+    try {
+      const { error: otpError } = await supabase.auth.signInWithOtp({ email: magicEmail })
+      if (otpError) {
+        setMagicError(mapAuthError(otpError.message))
+      } else {
+        setMagicSuccess(true)
+      }
+    } finally {
+      setMagicLoading(false)
     }
   }
 
@@ -211,7 +233,7 @@ export const Login: React.FC = () => {
               letterSpacing: typography.letterSpacing.normal,
             }}
           >
-            {tab === 'signin' ? 'Sign in to your account' : 'Create a new account'}
+            {tab === 'signin' ? 'Sign in to your account' : tab === 'magic' ? 'Sign in without a password' : 'Create a new account'}
           </p>
         </div>
 
@@ -223,11 +245,11 @@ export const Login: React.FC = () => {
             marginBottom: spacing['5'],
           }}
         >
-          {(['signin', 'signup'] as const).map((t) => (
+          {(['signin', 'magic', 'signup'] as const).map((t) => (
             <button
               key={t}
               type="button"
-              onClick={() => { setTab(t); setError(null); setSignupError(null) }}
+              onClick={() => { setTab(t); setError(null); setSignupError(null); setMagicError(null); setMagicSuccess(false) }}
               style={{
                 flex: 1,
                 padding: `${spacing['3']} ${spacing['2']}`,
@@ -244,7 +266,7 @@ export const Login: React.FC = () => {
                 letterSpacing: typography.letterSpacing.normal,
               }}
             >
-              {t === 'signin' ? 'Sign In' : 'Create Account'}
+              {t === 'signin' ? 'Sign In' : t === 'magic' ? 'Magic Link' : 'Create Account'}
             </button>
           ))}
         </div>
@@ -405,6 +427,92 @@ export const Login: React.FC = () => {
               {isSubmitting ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
+
+          {/* Magic Link Form */}
+          {tab === 'magic' && (
+            <form onSubmit={handleMagicLink} aria-label="Sign in with magic link">
+              {magicSuccess ? (
+                <div
+                  role="status"
+                  style={{
+                    padding: `${spacing['4']} ${spacing['5']}`,
+                    borderRadius: borderRadius.md,
+                    backgroundColor: colors.statusActiveSubtle,
+                    color: colors.statusActive,
+                    fontSize: typography.fontSize.sm,
+                    lineHeight: typography.lineHeight.normal,
+                    textAlign: 'center',
+                  }}
+                >
+                  Check your email for a sign in link.
+                </div>
+              ) : (
+                <>
+                  {magicError && (
+                    <div
+                      role="alert"
+                      aria-live="assertive"
+                      style={{
+                        padding: `${spacing['3']} ${spacing['4']}`,
+                        borderRadius: borderRadius.md,
+                        backgroundColor: colors.statusCriticalSubtle,
+                        color: colors.statusCritical,
+                        fontSize: typography.fontSize.sm,
+                        marginBottom: spacing['5'],
+                        lineHeight: typography.lineHeight.normal,
+                      }}
+                    >
+                      {magicError}
+                    </div>
+                  )}
+                  <div style={{ marginBottom: spacing['6'] }}>
+                    <label style={labelStyle} htmlFor="magic-email">Email address</label>
+                    <input
+                      type="email"
+                      id="magic-email"
+                      value={magicEmail}
+                      onChange={(e) => setMagicEmail(e.target.value)}
+                      placeholder="you@company.com"
+                      required
+                      autoComplete="email"
+                      style={inputStyle}
+                      onFocus={(e) => { e.currentTarget.style.borderColor = colors.borderFocus; e.currentTarget.style.boxShadow = '0 0 0 2px #F47820' }}
+                      onBlur={(e) => { e.currentTarget.style.borderColor = colors.borderDefault; e.currentTarget.style.boxShadow = 'none' }}
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={magicLoading}
+                    aria-busy={magicLoading}
+                    style={{
+                      width: '100%',
+                      height: '48px',
+                      padding: `${spacing['3']} ${spacing['4']}`,
+                      fontSize: '16px',
+                      fontWeight: typography.fontWeight.semibold,
+                      fontFamily: typography.fontFamily,
+                      color: colors.white,
+                      backgroundColor: magicLoading ? colors.orangeHover : colors.primaryOrange,
+                      border: 'none',
+                      borderRadius: borderRadius.md,
+                      cursor: magicLoading ? 'not-allowed' : 'pointer',
+                      transition: `background-color ${transitions.quick}`,
+                      opacity: magicLoading ? 0.7 : 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: spacing['2'],
+                    }}
+                    onMouseEnter={(e) => { if (!magicLoading) e.currentTarget.style.backgroundColor = colors.orangeHover }}
+                    onMouseLeave={(e) => { if (!magicLoading) e.currentTarget.style.backgroundColor = colors.primaryOrange }}
+                  >
+                    {magicLoading && <Loader2 size={16} style={{ animation: 'spin-loader 0.75s linear infinite' }} />}
+                    {magicLoading ? 'Sending link...' : 'Send Magic Link'}
+                  </button>
+                </>
+              )}
+            </form>
+          )}
 
           {/* Sign Up Form */}
           {tab === 'signup' && (
