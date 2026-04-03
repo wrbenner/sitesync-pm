@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { VirtualDataTable } from '../components/shared/VirtualDataTable';
 import { BulkActionBar } from '../components/shared/BulkActionBar';
 import { createColumnHelper } from '@tanstack/react-table';
@@ -123,7 +123,23 @@ const RFIs: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingDetail, setEditingDetail] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [announcement, setAnnouncement] = useState('');
+  const announcedLoadRef = useRef(false);
   const { addToast } = useToast();
+
+  useEffect(() => {
+    if (!rfisLoading && !announcedLoadRef.current) {
+      announcedLoadRef.current = true;
+      setAnnouncement(`${rfisRaw.length} RFIs loaded`);
+    }
+  }, [rfisLoading, rfisRaw.length]);
+
+  useEffect(() => {
+    if (!announcedLoadRef.current) return;
+    const count = statusFilter === 'all' ? rfis.length : rfis.filter((r: any) => r.status === statusFilter).length;
+    setAnnouncement(`Showing ${count} of ${rfis.length} RFIs`);
+  }, [statusFilter, rfis]);
+
   const appNavigate = useAppNavigate();
   const navigate = useNavigate();
   const createRFI = useCreateRFI();
@@ -186,9 +202,9 @@ const RFIs: React.FC = () => {
       header: 'Status',
       size: 110,
       cell: (info) => info.getValue() === 'pending' ? (
-        <span aria-label={`Status: ${info.getValue()}`} style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.statusInfoBright, backgroundColor: colors.statusInfoSubtle, padding: '2px 8px', borderRadius: borderRadius.full }}>Pending</span>
+        <span role="status" aria-label={`Status: ${info.getValue()}`} style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.statusInfoBright, backgroundColor: colors.statusInfoSubtle, padding: '2px 8px', borderRadius: borderRadius.full }}>Pending</span>
       ) : (
-        <span aria-label={`Status: ${info.getValue()}`}><StatusTag status={info.getValue() as any} /></span>
+        <span role="status" aria-label={`Status: ${info.getValue()}`}><StatusTag status={info.getValue() as any} /></span>
       ),
     }),
     rfiColHelper.display({
@@ -379,15 +395,15 @@ const RFIs: React.FC = () => {
       actions={
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
           <div style={{ display: 'flex', gap: spacing['1'], backgroundColor: colors.surfaceInset, borderRadius: borderRadius.full, padding: 2 }}>
-            <button onClick={() => setViewMode('table')} style={{ display: 'flex', alignItems: 'center', padding: '6px 12px', border: 'none', borderRadius: borderRadius.full, backgroundColor: viewMode === 'table' ? colors.surfaceRaised : 'transparent', color: viewMode === 'table' ? colors.textPrimary : colors.textTertiary, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily, cursor: 'pointer', boxShadow: viewMode === 'table' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none' }}>
+            <button className="rfi-interactive" aria-pressed={viewMode === 'table'} onClick={() => setViewMode('table')} style={{ display: 'flex', alignItems: 'center', padding: '6px 12px', border: 'none', borderRadius: borderRadius.full, backgroundColor: viewMode === 'table' ? colors.surfaceRaised : 'transparent', color: viewMode === 'table' ? colors.textPrimary : colors.textTertiary, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily, cursor: 'pointer', boxShadow: viewMode === 'table' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none' }}>
               <List size={14} style={{ marginRight: 4 }} /> Table
             </button>
-            <button onClick={() => setViewMode('kanban')} style={{ display: 'flex', alignItems: 'center', padding: '6px 12px', border: 'none', borderRadius: borderRadius.full, backgroundColor: viewMode === 'kanban' ? colors.surfaceRaised : 'transparent', color: viewMode === 'kanban' ? colors.textPrimary : colors.textTertiary, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily, cursor: 'pointer', boxShadow: viewMode === 'kanban' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none' }}>
+            <button className="rfi-interactive" aria-pressed={viewMode === 'kanban'} onClick={() => setViewMode('kanban')} style={{ display: 'flex', alignItems: 'center', padding: '6px 12px', border: 'none', borderRadius: borderRadius.full, backgroundColor: viewMode === 'kanban' ? colors.surfaceRaised : 'transparent', color: viewMode === 'kanban' ? colors.textPrimary : colors.textTertiary, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily, cursor: 'pointer', boxShadow: viewMode === 'kanban' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none' }}>
               <LayoutGrid size={14} style={{ marginRight: 4 }} /> Kanban
             </button>
           </div>
           <PermissionGate permission="rfis.create">
-            <Btn onClick={() => setShowCreateModal(true)}>
+            <Btn onClick={() => setShowCreateModal(true)} aria-label="Create new Request for Information">
               <Plus size={16} style={{ marginRight: spacing.xs }} />
               New RFI
             </Btn>
@@ -395,12 +411,13 @@ const RFIs: React.FC = () => {
         </div>
       }
     >
+      <style>{`.rfi-interactive:focus-visible { outline: 2px solid #F47820; outline-offset: 2px; }`}</style>
       {pageAlerts.map((alert) => (
         <PredictiveAlertBanner key={alert.id} alert={alert} />
       ))}
 
       <div aria-live="polite" aria-atomic="true" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap' }}>
-        {`Showing ${filteredRfis.length} of ${allRfis.length} RFIs`}
+        {announcement}
       </div>
 
       {/* KPI metric cards */}
@@ -435,6 +452,7 @@ const RFIs: React.FC = () => {
                 <button
                   key={tab.key}
                   role="tab"
+                  className="rfi-interactive"
                   aria-selected={isSelected}
                   onClick={() => setStatusFilter(tab.key)}
                   style={{
@@ -485,7 +503,7 @@ const RFIs: React.FC = () => {
             </div>
           ) : (
             <VirtualDataTable
-              aria-label="RFI list"
+              aria-label="RFI Register"
               data={filteredRfis}
               columns={allRfiColumns}
               rowHeight={48}
