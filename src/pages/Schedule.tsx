@@ -598,7 +598,7 @@ export const Schedule: React.FC = () => {
   const [recoveryExpanded, setRecoveryExpanded] = useState(false);
   const [scheduleAnnouncement, setScheduleAnnouncement] = useState('');
   const [showImportModal, setShowImportModal] = useState(false);
-  const [mobileFilter, setMobileFilter] = useState<'all' | 'in_progress' | 'completed' | 'delayed' | 'not_started'>('all');
+  const [mobileFilter, setMobileFilter] = useState<'all' | 'in_progress' | 'delayed' | 'critical_path'>('all');
   const { addToast } = useToast();
 
   // dirtyPhaseIds: pass phase IDs currently being edited to get conflict toasts.
@@ -1565,8 +1565,8 @@ export const Schedule: React.FC = () => {
             </div>
             {/* Filter tabs — horizontally scrollable */}
             <div role="tablist" aria-label="Filter activities by status" style={{ overflowX: 'auto', whiteSpace: 'nowrap', marginBottom: 12, WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
-              {(['all', 'in_progress', 'completed', 'delayed', 'not_started'] as const).map((f) => {
-                const labels: Record<string, string> = { all: 'All', in_progress: 'In Progress', completed: 'Completed', delayed: 'Delayed', not_started: 'Not Started' };
+              {(['all', 'in_progress', 'delayed', 'critical_path'] as const).map((f) => {
+                const labels: Record<string, string> = { all: 'All', in_progress: 'In Progress', delayed: 'Delayed', critical_path: 'Critical Path' };
                 const active = mobileFilter === f;
                 return (
                   <button
@@ -1599,7 +1599,11 @@ export const Schedule: React.FC = () => {
             </div>
             <div data-schedule-list style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {schedulePhases
-                .filter((p) => mobileFilter === 'all' || p.status === mobileFilter)
+                .filter((p) => {
+                  if (mobileFilter === 'all') return true;
+                  if (mobileFilter === 'critical_path') return p.is_critical_path === true;
+                  return p.status === mobileFilter;
+                })
                 .map((phase) => {
                 const statusColor =
                   phase.status === 'completed' ? '#4EC896'
@@ -1614,9 +1618,11 @@ export const Schedule: React.FC = () => {
                     role="row"
                     tabIndex={0}
                     aria-label={`${phase.name}, ${phase.progress}% complete, ${statusLabel}`}
+                    onClick={() => addToast('info', phase.name)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
+                        addToast('info', phase.name);
                         setScheduleAnnouncement(`Selected: ${phase.name}, ${statusLabel}`);
                       } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
                         e.preventDefault();
@@ -1629,17 +1635,17 @@ export const Schedule: React.FC = () => {
                     }}
                     style={{
                       backgroundColor: '#FFFFFF',
-                      borderRadius: 12,
+                      borderRadius: 8,
                       border: '1px solid #E5E7EB',
                       borderLeft: phase.is_critical_path === true ? '3px solid #E74C3C' : '1px solid #E5E7EB',
                       padding: 16,
                       minHeight: 64,
                       cursor: 'pointer',
                       outline: 'none',
-                      marginBottom: 12,
+                      marginBottom: 8,
                     }}
                   >
-                    <span style={{ fontWeight: 600, fontSize: 16, color: colors.textPrimary, display: 'block', marginBottom: 6 }}>
+                    <span style={{ fontWeight: 600, fontSize: 14, color: colors.textPrimary, display: 'block', marginBottom: 6 }}>
                       {phase.is_milestone ? '◆ ' : ''}{phase.name}
                     </span>
                     <span style={{ fontSize: 14, color: '#6B7280', display: 'block', marginBottom: 8 }}>
@@ -1648,8 +1654,8 @@ export const Schedule: React.FC = () => {
                       {new Date(phase.endDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: '2-digit' })}
                     </span>
                     {!phase.is_milestone && (
-                      <div style={{ height: 8, backgroundColor: '#E5E7EB', borderRadius: 4, overflow: 'hidden', marginBottom: 8 }}>
-                        <div style={{ height: '100%', width: `${phase.progress ?? 0}%`, backgroundColor: statusColor, borderRadius: 4 }} />
+                      <div style={{ height: 6, backgroundColor: '#E5E7EB', borderRadius: 3, overflow: 'hidden', marginBottom: 8 }}>
+                        <div style={{ height: '100%', width: `${phase.progress ?? 0}%`, backgroundColor: statusColor, borderRadius: 3 }} />
                       </div>
                     )}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
