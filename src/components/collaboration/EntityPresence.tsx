@@ -31,6 +31,21 @@ export const PresenceDots: React.FC<PresenceDotsProps> = ({ entityId, maxVisible
     }
   }, [overflowOpen])
 
+  useEffect(() => {
+    if (!overflowOpen) return
+    const handleOutside = (e: MouseEvent | TouchEvent) => {
+      if (overflowContainerRef.current && !overflowContainerRef.current.contains(e.target as Node)) {
+        setOverflowOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleOutside)
+    document.addEventListener('touchstart', handleOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleOutside)
+      document.removeEventListener('touchstart', handleOutside)
+    }
+  }, [overflowOpen])
+
   if (!isInitialized || viewers.length === 0) {
     return null
   }
@@ -176,11 +191,13 @@ export const PresenceDots: React.FC<PresenceDotsProps> = ({ entityId, maxVisible
                 left: 0,
                 background: colors.surfaceRaised,
                 border: '1px solid ' + colors.border,
-                borderRadius: borderRadius.md,
+                borderRadius: borderRadius.lg,
                 padding: spacing.sm,
-                boxShadow: shadows.md,
+                boxShadow: shadows.lg,
                 zIndex: 50,
                 minWidth: 140,
+                maxHeight: 220,
+                overflowY: 'auto',
               }}
             >
               {overflowViewers.map((user, idx) => (
@@ -192,11 +209,14 @@ export const PresenceDots: React.FC<PresenceDotsProps> = ({ entityId, maxVisible
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: spacing['2'],
-                    padding: `${spacing['1']} 0`,
+                    gap: 8,
+                    minHeight: 44,
+                    minWidth: '100%',
+                    padding: '8px 12px',
                     fontSize: typography.fontSize.sm,
                     color: colors.textPrimary,
                     whiteSpace: 'nowrap',
+                    boxSizing: 'border-box',
                   }}
                 >
                   <div style={{
