@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { VirtualDataTable } from '../components/shared/VirtualDataTable';
 import { createColumnHelper } from '@tanstack/react-table';
-import { PageContainer, Card, Btn, StatusTag, PriorityTag, DetailPanel, Avatar, RelatedItems, useToast, Skeleton } from '../components/Primitives';
+import { PageContainer, Card, Btn, StatusTag, PriorityTag, DetailPanel, Avatar, RelatedItems, useToast, Skeleton, MetricBox } from '../components/Primitives';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import PunchListSkeleton from '../components/field/PunchListSkeleton';
 import EmptyState from '../components/ui/EmptyState';
@@ -99,6 +99,7 @@ interface PunchItem {
   reportedBy: string;
   responsible: string;
   trade: string;
+  location: string;
 }
 
 interface Comment {
@@ -109,7 +110,7 @@ interface Comment {
 }
 
 function getDaysRemaining(dueDate: string): number {
-  return Math.floor((new Date(dueDate).getTime() - Date.now()) / 86400000);
+  return Math.ceil((new Date(dueDate).getTime() - Date.now()) / 86400000);
 }
 
 function getDueDateColor(dueDate: string): string {
@@ -189,6 +190,7 @@ const PunchListPage: React.FC = () => {
         reportedBy: p.reported_by || '',
         responsible: p.trade === 'general' ? 'gc' : p.trade === 'owner' ? 'owner' : 'subcontractor',
         trade: p.trade || '',
+        location: p.location || '',
       };
     });
   }, [punchListRaw]);
@@ -446,6 +448,11 @@ const PunchListPage: React.FC = () => {
       size: 140,
       cell: (info) => <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{info.getValue()}</span>,
     }),
+    plColHelper.accessor('location', {
+      header: 'Location',
+      size: 120,
+      cell: (info) => <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{info.getValue() || '\u2014'}</span>,
+    }),
     plColHelper.accessor('assigned', {
       header: 'Assigned',
       size: 120,
@@ -507,7 +514,7 @@ const PunchListPage: React.FC = () => {
               {formatDate(val)}
             </span>
             {days <= 0 ? (
-              <span style={{ fontSize: 10, fontWeight: 600, color: '#E74C3C' }}>{Math.abs(days)}d overdue</span>
+              <span style={{ fontSize: 10, fontWeight: 600, color: '#E74C3C' }}>{Math.abs(days)} days overdue</span>
             ) : days <= 4 ? (
               <span style={{ fontSize: 10, color: '#F5A623' }}>{days}d left</span>
             ) : (
@@ -518,18 +525,17 @@ const PunchListPage: React.FC = () => {
       },
     }),
     plColHelper.accessor('trade', {
-      header: 'Party',
+      header: 'Responsible',
       size: 110,
       cell: (info) => {
         const trade = info.getValue()?.toLowerCase() ?? '';
         const item = info.row.original;
         let bg = 'transparent';
         let label = item.responsible === 'gc' ? 'GC' : item.responsible === 'owner' ? 'Owner' : trade || 'Sub';
+        const isSubTrade = trade.includes('electric') || trade.includes('plumb') || trade.includes('hvac') || trade.includes('drywall') || trade.includes('paint');
         if (item.responsible === 'gc') {
           bg = 'rgba(59,130,246,0.08)';
-        } else if (trade.includes('electric') || trade.includes('plumb') || trade.includes('hvac')) {
-          bg = 'rgba(244,120,32,0.08)';
-        } else if (item.responsible === 'subcontractor') {
+        } else if (isSubTrade || item.responsible === 'subcontractor') {
           bg = 'rgba(244,120,32,0.08)';
         }
         const textColor = item.responsible === 'gc' ? '#3B82F6' : colors.primaryOrange;
@@ -553,7 +559,7 @@ const PunchListPage: React.FC = () => {
                 onClick={() => handleMarkInProgressById(item)}
                 style={{ padding: '3px 8px', fontSize: 11, fontWeight: 600, fontFamily: 'inherit', backgroundColor: '#EFF6FF', color: STATUS_COLORS.in_progress, border: `1px solid ${STATUS_COLORS.in_progress}40`, borderRadius: borderRadius.base, cursor: 'pointer', whiteSpace: 'nowrap' as const }}
               >
-                Start Work
+                Start
               </button>
             )}
             {item.verification_status === 'in_progress' && hasPermission('punch_list.edit') && (
@@ -687,42 +693,13 @@ const PunchListPage: React.FC = () => {
       </div>
 
       {/* Metric Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)', gap: isMobile ? '8px' : spacing['3'], marginBottom: spacing['4'] }}>
-        <Card padding={spacing['4']}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['2'] }}>
-            <CheckSquare size={14} color={colors.textTertiary} />
-            <span style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, fontWeight: typography.fontWeight.medium }}>Total</span>
-          </div>
-          <div style={{ fontSize: typography.fontSize['2xl'], fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>{totalCount}</div>
-        </Card>
-        <Card padding={spacing['4']}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['2'] }}>
-            <Inbox size={14} color='#F5A623' />
-            <span style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, fontWeight: typography.fontWeight.medium }}>Open</span>
-          </div>
-          <div style={{ fontSize: typography.fontSize['2xl'], fontWeight: typography.fontWeight.semibold, color: '#F5A623' }}>{openCount}</div>
-        </Card>
-        <Card padding={spacing['4']} style={{ border: subCompleteCount > 0 ? `2px solid #8B5CF6` : undefined, backgroundColor: subCompleteCount > 0 ? 'rgba(139,92,246,0.06)' : undefined }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['2'] }}>
-            <UserCheck size={14} color='#8B5CF6' />
-            <span style={{ fontSize: typography.fontSize.xs, color: subCompleteCount > 0 ? '#8B5CF6' : colors.textTertiary, fontWeight: typography.fontWeight.medium }}>Awaiting Verify</span>
-          </div>
-          <div style={{ fontSize: typography.fontSize['2xl'], fontWeight: typography.fontWeight.semibold, color: '#8B5CF6' }}>{subCompleteCount}</div>
-        </Card>
-        <Card padding={spacing['4']}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['2'] }}>
-            <CheckCircle size={14} color='#4EC896' />
-            <span style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, fontWeight: typography.fontWeight.medium }}>Verified</span>
-          </div>
-          <div style={{ fontSize: typography.fontSize['2xl'], fontWeight: typography.fontWeight.semibold, color: '#4EC896' }}>{verifiedCount}</div>
-        </Card>
-        <Card padding={spacing['4']}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['2'] }}>
-            <AlertTriangle size={14} color={overdueCount > 0 ? '#E74C3C' : colors.textTertiary} />
-            <span style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, fontWeight: typography.fontWeight.medium }}>Overdue</span>
-          </div>
-          <div style={{ fontSize: typography.fontSize['2xl'], fontWeight: typography.fontWeight.semibold, color: overdueCount > 0 ? '#E74C3C' : colors.textTertiary }}>{overdueCount}</div>
-        </Card>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(6, 1fr)', gap: isMobile ? '8px' : spacing['3'], marginBottom: spacing['4'] }}>
+        <MetricBox label="Total Items" value={totalCount} />
+        <MetricBox label="Open" value={openCount} colorOverride={openCount > 0 ? 'warning' : undefined} />
+        <MetricBox label="In Progress" value={inProgressCount} />
+        <MetricBox label="Awaiting Verification" value={subCompleteCount} colorOverride={subCompleteCount > 0 ? 'warning' : undefined} />
+        <MetricBox label="Verified" value={verifiedCount} colorOverride={verifiedCount > 0 ? 'success' : undefined} />
+        <MetricBox label="Overdue" value={overdueCount} colorOverride={overdueCount > 0 ? 'danger' : undefined} />
       </div>
 
       {/* Status Filter Tabs */}
