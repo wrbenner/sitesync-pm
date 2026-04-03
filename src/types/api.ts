@@ -14,6 +14,7 @@ export type AiInsightRow = TableRow<'ai_insights'>
 // Minimal shape returned by the ai_insights meta query (created_at only)
 export interface AiInsightMetaRow { created_at: string }
 export type BudgetItemRow = TableRow<'budget_items'>
+export type BudgetLineItemRow = TableRow<'budget_line_items'>
 export type ChangeOrderRow = TableRow<'change_orders'>
 export type CrewRow = TableRow<'crews'>
 export type DailyLogRow = TableRow<'daily_logs'>

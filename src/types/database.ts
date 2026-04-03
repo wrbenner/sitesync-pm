@@ -636,6 +636,68 @@ export type Database = {
           },
         ]
       }
+      budget_line_items: {
+        Row: {
+          id: string
+          project_id: string
+          csi_code: string | null
+          description: string | null
+          original_amount: number | null
+          approved_changes: number | null
+          revised_budget: number | null
+          committed_cost: number | null
+          actual_cost: number | null
+          projected_final: number | null
+          variance: number | null
+          contingency_original: number | null
+          contingency_used: number | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          csi_code?: string | null
+          description?: string | null
+          original_amount?: number | null
+          approved_changes?: number | null
+          revised_budget?: number | null
+          committed_cost?: number | null
+          actual_cost?: number | null
+          projected_final?: number | null
+          variance?: number | null
+          contingency_original?: number | null
+          contingency_used?: number | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          project_id?: string
+          csi_code?: string | null
+          description?: string | null
+          original_amount?: number | null
+          approved_changes?: number | null
+          revised_budget?: number | null
+          committed_cost?: number | null
+          actual_cost?: number | null
+          projected_final?: number | null
+          variance?: number | null
+          contingency_original?: number | null
+          contingency_used?: number | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budget_line_items_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       change_orders: {
         Row: {
           amount: number | null

@@ -2,7 +2,7 @@
 import { supabase, transformSupabaseError, supabaseMutation } from '../client'
 import type { ChangeOrderType, ChangeOrderState, ReasonCode } from '../../machines/changeOrderMachine'
 import { assertProjectAccess, validateProjectId } from '../middleware/projectScope'
-import type { BudgetItemRow, ChangeOrderRow, CreateChangeOrderPayload } from '../../types/api'
+import type { BudgetItemRow, BudgetLineItemRow, ChangeOrderRow, CreateChangeOrderPayload } from '../../types/api'
 import { isReasonCode } from '../../types/api'
 import { computeProjectFinancials, computeDivisionFinancials } from '../../lib/financialEngine'
 import type { ProjectFinancials, DivisionFinancials } from '../../types/financial'
@@ -95,6 +95,61 @@ export interface MappedChangeOrder {
   number: number
 }
 
+export interface BudgetLineItem {
+  id: string
+  project_id: string
+  csi_code: string | null
+  description: string | null
+  original_amount: number
+  approved_changes: number
+  revised_budget: number
+  committed_cost: number
+  actual_cost: number
+  projected_final: number
+  variance: number
+}
+
+export interface BudgetSummary {
+  total_original_budget: number
+  total_approved_changes: number
+  total_revised_budget: number
+  total_committed: number
+  total_actual: number
+  total_projected: number
+  total_variance: number
+  contingency_original: number
+  contingency_used: number
+  contingency_remaining: number
+}
+
+export interface BudgetLineItemInput {
+  csi_code?: string | null
+  description?: string | null
+  original_amount?: number | null
+  approved_changes?: number | null
+  revised_budget?: number | null
+  committed_cost?: number | null
+  actual_cost?: number | null
+  projected_final?: number | null
+  variance?: number | null
+}
+
+function mapBudgetLineItemRow(row: BudgetLineItemRow): BudgetLineItem {
+  return {
+    id: row.id,
+    project_id: row.project_id,
+    csi_code: row.csi_code,
+    description: row.description,
+    original_amount: row.original_amount ?? 0,
+    approved_changes: row.approved_changes ?? 0,
+    revised_budget: row.revised_budget ?? ((row.original_amount ?? 0) + (row.approved_changes ?? 0)),
+    committed_cost: row.committed_cost ?? 0,
+    actual_cost: row.actual_cost ?? 0,
+    projected_final: row.projected_final ?? 0,
+    variance: row.variance ?? 0,
+  }
+}
+
 function mapChangeOrderRow(co: ChangeOrderRow): MappedChangeOrder {
   const type: ChangeOrderType = isChangeOrderType(co.type) ? co.type : 'co'
   const prefix = type.toUpperCase()
@@ -168,12 +223,14 @@ export const updateChangeOrderStatus = async (
 
 export const getCostData = async (projectId: string) => {
   await assertProjectAccess(projectId)
-  const [budgetRes, coRes] = await Promise.all([
+  const [budgetRes, coRes, lineItemsRes] = await Promise.all([
     supabase.from('budget_items').select('*').eq('project_id', projectId).order('division'),
     supabase.from('change_orders').select('*').eq('project_id', projectId).order('number', { ascending: false }),
+    supabase.from('budget_line_items').select('*').eq('project_id', projectId).order('csi_code'),
   ])
   if (budgetRes.error) throw transformSupabaseError(budgetRes.error)
   if (coRes.error) throw transformSupabaseError(coRes.error)
+  if (lineItemsRes.error) throw transformSupabaseError(lineItemsRes.error)
 
   const rawBudgetItems: BudgetItemRow[] = budgetRes.data || []
 
@@ -190,7 +247,9 @@ export const getCostData = async (projectId: string) => {
 
   const changeOrders: MappedChangeOrder[] = (coRes.data || []).map(mapChangeOrderRow)
 
-  return { divisions, changeOrders, budgetItems: rawBudgetItems }
+  const lineItems: BudgetLineItem[] = (lineItemsRes.data || []).map(mapBudgetLineItemRow)
+
+  return { divisions, changeOrders, budgetItems: rawBudgetItems, lineItems }
 }
 
 export async function getProjectFinancials(
@@ -551,4 +610,102 @@ export async function getCostCodesByDivision(
   const changeOrders: MappedChangeOrder[] = (coRes.data || []).map(mapChangeOrderRow)
 
   return { division, costCodes, invoices, changeOrders }
+}
+
+// ── Budget Line Items CRUD ───────────────────────────────────
+
+export async function getBudgetSummary(projectId: string): Promise<BudgetSummary> {
+  await assertProjectAccess(projectId)
+  const { data, error } = await supabase
+    .from('budget_line_items')
+    .select('*')
+    .eq('project_id', projectId)
+    .order('csi_code')
+  if (error) throw transformSupabaseError(error)
+
+  const rows = data || []
+
+  let total_original_budget = 0
+  let total_approved_changes = 0
+  let total_revised_budget = 0
+  let total_committed = 0
+  let total_actual = 0
+  let total_projected = 0
+  let total_variance = 0
+  let contingency_original = 0
+  let contingency_used = 0
+
+  for (const row of rows) {
+    total_original_budget += row.original_amount ?? 0
+    total_approved_changes += row.approved_changes ?? 0
+    total_revised_budget += row.revised_budget ?? ((row.original_amount ?? 0) + (row.approved_changes ?? 0))
+    total_committed += row.committed_cost ?? 0
+    total_actual += row.actual_cost ?? 0
+    total_projected += row.projected_final ?? 0
+    total_variance += row.variance ?? 0
+    if (row.csi_code?.startsWith('01')) {
+      contingency_original += row.original_amount ?? 0
+      contingency_used += row.actual_cost ?? 0
+    }
+  }
+
+  return {
+    total_original_budget,
+    total_approved_changes,
+    total_revised_budget,
+    total_committed,
+    total_actual,
+    total_projected,
+    total_variance,
+    contingency_original,
+    contingency_used,
+    contingency_remaining: contingency_original - contingency_used,
+  }
+}
+
+export async function updateBudgetLineItem(
+  projectId: string,
+  itemId: string,
+  updates: BudgetLineItemInput & { updated_at?: string | null },
+): Promise<BudgetLineItem> {
+  await assertProjectAccess(projectId)
+  const { updated_at: expectedUpdatedAt, ...fields } = updates
+
+  if (expectedUpdatedAt) {
+    const { data: current, error: fetchError } = await supabase
+      .from('budget_line_items')
+      .select('updated_at')
+      .eq('id', itemId)
+      .eq('project_id', projectId)
+      .single()
+    if (fetchError) throw transformSupabaseError(fetchError)
+    if (current?.updated_at !== expectedUpdatedAt) {
+      throw new Error('Conflict: this item was modified by another user. Please refresh and try again.')
+    }
+  }
+
+  const { data, error } = await supabase
+    .from('budget_line_items')
+    .update({ ...fields, updated_at: new Date().toISOString() })
+    .eq('id', itemId)
+    .eq('project_id', projectId)
+    .select()
+    .single()
+  if (error) throw transformSupabaseError(error)
+  return mapBudgetLineItemRow(data as BudgetLineItemRow)
+}
+
+export async function createBudgetLineItem(
+  projectId: string,
+  input: BudgetLineItemInput,
+): Promise<BudgetLineItem> {
+  await assertProjectAccess(projectId)
+  const now = new Date().toISOString()
+  const data = await supabaseMutation<BudgetLineItemRow>(client =>
+    client.from('budget_line_items')
+      .insert({ ...input, project_id: projectId, created_at: now, updated_at: now })
+      .select()
+      .single() as unknown as MutationResult<BudgetLineItemRow>
+  )
+  return mapBudgetLineItemRow(data)
 }
