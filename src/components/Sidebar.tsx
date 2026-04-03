@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Home, LayoutGrid, Calendar, DollarSign,
   HelpCircle, FileText,
@@ -10,7 +10,7 @@ import {
   Plug, BarChart3, Leaf, ScrollText, Code, Globe, Store,
   TrendingUp, FileDiff, Send, HardHat, Repeat2,
   Receipt, Milestone, ChevronDown, ChevronRight,
-  Bell, Settings, LogOut, X,
+  Bell, Settings, LogOut, X, MoreHorizontal,
 } from 'lucide-react';
 import { useUiStore } from '../stores';
 import { motion } from 'framer-motion';
@@ -112,11 +112,211 @@ const sections = [
   },
 ];
 
+const BOTTOM_NAV_ITEMS = [
+  { id: 'dashboard', label: 'Dashboard', icon: Home },
+  { id: 'rfis', label: 'RFIs', icon: HelpCircle },
+  { id: 'daily-log', label: 'Daily Log', icon: BookOpen },
+  { id: 'punch-list', label: 'Punch List', icon: CheckSquare },
+  { id: 'schedule', label: 'Schedule', icon: Calendar },
+];
+
+const BOTTOM_NAV_IDS = new Set(BOTTOM_NAV_ITEMS.map(i => i.id));
+
 export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, mode, onClose }) => {
   const { themeMode, setThemeMode } = useUiStore();
   const toggleTheme = () => setThemeMode(themeMode === 'dark' ? 'light' : 'dark');
   const { canAccessModule, role } = usePermissions();
   const isOverlay = mode === 'overlay';
+
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches
+  );
+  const [showMoreSheet, setShowMoreSheet] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)');
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+
+  if (isMobile) {
+    const allMoreItems = sections.flatMap(s => s.items).filter(item => !BOTTOM_NAV_IDS.has(item.id) && canAccessModule(item.id));
+
+    return (
+      <>
+        {/* Bottom tab bar */}
+        <nav
+          aria-label="Main navigation"
+          style={{
+            position: 'fixed',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: 64,
+            zIndex: 1000,
+            backgroundColor: colors.surfaceSidebar,
+            borderTop: `1px solid ${colors.borderSubtle}`,
+            display: 'flex',
+            alignItems: 'stretch',
+          }}
+        >
+          {BOTTOM_NAV_ITEMS.map(item => {
+            const Icon = item.icon;
+            const isActive = activeView === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => onNavigate(item.id)}
+                aria-current={isActive ? 'page' : undefined}
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  minHeight: '44px',
+                  minWidth: '44px',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: isActive ? colors.primaryOrange : colors.textOnDarkMuted,
+                  gap: 3,
+                  padding: 0,
+                  transition: `color ${transitions.instant}`,
+                }}
+              >
+                <Icon size={16} />
+                <span style={{ fontSize: '10px', fontFamily: typography.fontFamily, fontWeight: isActive ? typography.fontWeight.semibold : typography.fontWeight.normal, lineHeight: 1 }}>
+                  {item.label}
+                </span>
+              </button>
+            );
+          })}
+          {/* More button */}
+          <button
+            onClick={() => setShowMoreSheet(true)}
+            aria-label="More navigation items"
+            style={{
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minHeight: '44px',
+              minWidth: '44px',
+              backgroundColor: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              color: colors.textOnDarkMuted,
+              gap: 3,
+              padding: 0,
+            }}
+          >
+            <MoreHorizontal size={16} />
+            <span style={{ fontSize: '10px', fontFamily: typography.fontFamily, fontWeight: typography.fontWeight.normal, lineHeight: 1 }}>More</span>
+          </button>
+        </nav>
+
+        {/* Slide-up sheet overlay */}
+        {showMoreSheet && (
+          <div
+            role="dialog"
+            aria-label="More navigation"
+            aria-modal="true"
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 1001,
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'flex-end',
+            }}
+          >
+            {/* Scrim */}
+            <div
+              onClick={() => setShowMoreSheet(false)}
+              style={{
+                position: 'absolute',
+                inset: 0,
+                backgroundColor: colors.overlayScrim,
+              }}
+            />
+            {/* Sheet panel */}
+            <div
+              style={{
+                position: 'relative',
+                backgroundColor: colors.surfaceSidebar,
+                borderRadius: `${borderRadius['2xl']} ${borderRadius['2xl']} 0 0`,
+                paddingBottom: 80,
+                paddingTop: spacing['4'],
+                maxHeight: '75vh',
+                overflowY: 'auto',
+              }}
+            >
+              {/* Handle */}
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: spacing['4'] }}>
+                <div style={{ width: 36, height: 4, borderRadius: borderRadius.full, backgroundColor: colors.borderDefault }} />
+              </div>
+              {/* Close */}
+              <button
+                onClick={() => setShowMoreSheet(false)}
+                aria-label="Close menu"
+                style={{
+                  position: 'absolute',
+                  top: spacing['4'],
+                  right: spacing['4'],
+                  width: 32,
+                  height: 32,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: colors.overlayBlackLight,
+                  border: 'none',
+                  borderRadius: borderRadius.base,
+                  cursor: 'pointer',
+                  color: colors.textSecondary,
+                }}
+              >
+                <X size={16} />
+              </button>
+              {/* Items grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['2'], padding: `0 ${spacing['4']}` }}>
+                {allMoreItems.map(item => {
+                  const Icon = item.icon;
+                  const isActive = activeView === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => { onNavigate(item.id); setShowMoreSheet(false); }}
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        minHeight: '44px',
+                        minWidth: '44px',
+                        gap: spacing['1.5'],
+                        padding: `${spacing['3']} ${spacing['2']}`,
+                        backgroundColor: isActive ? colors.orangeSubtle : colors.overlayBlackLight,
+                        border: isActive ? `1px solid ${colors.primaryOrange}` : '1px solid transparent',
+                        borderRadius: borderRadius.md,
+                        cursor: 'pointer',
+                        color: isActive ? colors.primaryOrange : colors.textSecondary,
+                      }}
+                    >
+                      <Icon size={16} />
+                      <span style={{ fontSize: '10px', fontFamily: typography.fontFamily, textAlign: 'center', lineHeight: 1.2 }}>{item.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+      </>
+    );
+  }
 
   return (
     <nav
