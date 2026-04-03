@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Send } from 'lucide-react';
 import { Avatar } from '../Primitives';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
@@ -29,10 +29,14 @@ export const MentionInput: React.FC<MentionInputProps> = ({
   const [mentionFilter, setMentionFilter] = useState('');
   const [mentionedUserIds, setMentionedUserIds] = useState<string[]>([]);
   const [dbMembers, setDbMembers] = useState<MentionPerson[]>([]);
+  const [membersLoading, setMembersLoading] = useState(false);
+  const [memberLoadError, setMemberLoadError] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
+  const fetchMembers = useCallback(() => {
     if (!projectId) return;
+    setMembersLoading(true);
+    setMemberLoadError(false);
     getProjectMembersForMention(projectId)
       .then((members) => {
         setDbMembers(
@@ -43,11 +47,18 @@ export const MentionInput: React.FC<MentionInputProps> = ({
             role: m.role,
           })),
         );
+        setMembersLoading(false);
       })
-      .catch(() => {
-        // Fall back to people prop if fetch fails
+      .catch((err) => {
+        console.error('Failed to load project members for mention:', err);
+        setMemberLoadError(true);
+        setMembersLoading(false);
       });
   }, [projectId]);
+
+  useEffect(() => {
+    fetchMembers();
+  }, [fetchMembers]);
 
   const activePeople = projectId && dbMembers.length > 0 ? dbMembers : people;
 
@@ -87,34 +98,80 @@ export const MentionInput: React.FC<MentionInputProps> = ({
     setMentionedUserIds([]);
   };
 
+  const isSendDisabled = !value.trim();
+
   return (
     <div style={{ position: 'relative' }}>
-      {showMentions && filtered.length > 0 && (
-        <div style={{
-          position: 'absolute', bottom: '100%', left: 0, right: 0, marginBottom: 4,
-          backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.md,
-          boxShadow: shadows.dropdown, maxHeight: '200px', overflowY: 'auto', zIndex: 10,
-        }}>
-          {filtered.map((person) => (
-            <button
-              key={person.userId}
-              onClick={() => handleMention(person)}
-              style={{
-                width: '100%', display: 'flex', alignItems: 'center', gap: spacing['2'],
-                padding: `${spacing['2']} ${spacing['3']}`, border: 'none', backgroundColor: 'transparent',
-                cursor: 'pointer', textAlign: 'left', fontFamily: typography.fontFamily,
-                transition: `background-color ${transitions.instant}`,
-              }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.surfaceHover; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'; }}
-            >
-              <Avatar initials={person.initials} size={24} />
-              <div>
-                <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>{person.name}</span>
-                <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, marginLeft: spacing['2'] }}>{person.role}</span>
-              </div>
-            </button>
-          ))}
+      <style>{`@keyframes sitesync-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }`}</style>
+      {showMentions && (
+        <div
+          role="listbox"
+          style={{
+            position: 'absolute', bottom: '100%', left: 0, right: 0, marginBottom: 4,
+            backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.md,
+            boxShadow: shadows.dropdown, maxHeight: '200px', overflowY: 'auto', zIndex: 10,
+          }}
+        >
+          {membersLoading ? (
+            <div style={{
+              padding: `${spacing['2']} ${spacing['3']}`,
+              fontSize: typography.fontSize.sm,
+              color: colors.textTertiary,
+              fontFamily: typography.fontFamily,
+              animation: 'sitesync-pulse 1.5s ease-in-out infinite',
+            }}>
+              Loading team...
+            </div>
+          ) : memberLoadError ? (
+            <div style={{
+              padding: `${spacing['2']} ${spacing['3']}`,
+              display: 'flex', alignItems: 'center', gap: spacing['2'],
+            }}>
+              <span style={{
+                fontSize: typography.fontSize.sm,
+                color: '#EF4444',
+                fontFamily: typography.fontFamily,
+              }}>
+                Could not load team members
+              </span>
+              <button
+                onClick={fetchMembers}
+                style={{
+                  fontSize: typography.fontSize.sm,
+                  color: colors.primaryOrange,
+                  border: 'none',
+                  background: 'none',
+                  cursor: 'pointer',
+                  padding: 0,
+                  fontFamily: typography.fontFamily,
+                }}
+              >
+                Retry
+              </button>
+            </div>
+          ) : (
+            filtered.map((person) => (
+              <button
+                key={person.userId}
+                role="option"
+                onClick={() => handleMention(person)}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: spacing['2'],
+                  padding: `${spacing['2']} ${spacing['3']}`, border: 'none', backgroundColor: 'transparent',
+                  cursor: 'pointer', textAlign: 'left', fontFamily: typography.fontFamily,
+                  transition: `background-color ${transitions.instant}`,
+                }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.surfaceHover; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'; }}
+              >
+                <Avatar initials={person.initials} size={24} />
+                <div>
+                  <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>{person.name}</span>
+                  <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, marginLeft: spacing['2'] }}>{person.role}</span>
+                </div>
+              </button>
+            ))
+          )}
         </div>
       )}
       <div style={{
@@ -131,6 +188,8 @@ export const MentionInput: React.FC<MentionInputProps> = ({
             if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); handleSend(); }
           }}
           placeholder={placeholder}
+          aria-expanded={showMentions}
+          aria-haspopup="listbox"
           style={{
             flex: 1, border: 'none', backgroundColor: 'transparent', outline: 'none',
             fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, color: colors.textPrimary,
@@ -138,12 +197,16 @@ export const MentionInput: React.FC<MentionInputProps> = ({
         />
         <button
           onClick={handleSend}
-          disabled={!value.trim()}
+          aria-disabled={isSendDisabled}
+          aria-label="Send comment"
           style={{
             width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            backgroundColor: value.trim() ? colors.primaryOrange : 'transparent',
-            color: value.trim() ? 'white' : colors.textTertiary,
-            border: 'none', borderRadius: borderRadius.full, cursor: value.trim() ? 'pointer' : 'default',
+            backgroundColor: !isSendDisabled ? colors.primaryOrange : 'transparent',
+            color: !isSendDisabled ? 'white' : colors.textTertiary,
+            border: 'none', borderRadius: borderRadius.full,
+            cursor: !isSendDisabled ? 'pointer' : 'default',
+            opacity: isSendDisabled ? 0.5 : 1,
+            pointerEvents: isSendDisabled ? 'none' : 'auto',
           }}
         >
           <Send size={12} />
