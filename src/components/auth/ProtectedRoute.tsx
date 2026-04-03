@@ -141,7 +141,7 @@ const ProtectedRoute: React.FC<Props> = ({ children, requiredPermission, moduleI
   }
 
   if (!isDevBypassActive() && !user) {
-    return <Navigate to='/login' state={{ returnTo: location.pathname }} replace />
+    return <Navigate to={'/login?returnTo=' + encodeURIComponent(location.pathname)} replace />
   }
 
   const requiredPerm = requiredPermission ?? MODULE_PERMISSIONS[moduleId ?? '']
