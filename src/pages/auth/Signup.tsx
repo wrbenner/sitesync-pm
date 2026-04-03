@@ -32,6 +32,7 @@ export const Signup: React.FC = () => {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [company, setCompany] = useState('')
+  const [jobTitle, setJobTitle] = useState('')
 
   const [firstNameError, setFirstNameError] = useState<string | null>(null)
   const [lastNameError, setLastNameError] = useState<string | null>(null)
@@ -42,6 +43,7 @@ export const Signup: React.FC = () => {
 
   const [submitError, setSubmitError] = useState<{ text: string; linkToLogin?: boolean } | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [success, setSuccess] = useState(false)
 
   const validateFirstName = (val: string) => {
     if (!val.trim()) { setFirstNameError('First name is required'); return false }
@@ -121,10 +123,11 @@ export const Signup: React.FC = () => {
         email,
         first_name: firstName.trim(),
         last_name: lastName.trim(),
+        job_title: jobTitle.trim() || null,
         organization_id: organizationId,
       })
 
-      navigate('/dashboard')
+      setSuccess(true)
     } finally {
       setIsSubmitting(false)
     }
@@ -245,6 +248,67 @@ export const Signup: React.FC = () => {
           }}
         >
           <style>{`@keyframes spin-loader { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+
+          {success ? (
+            <div
+              role="status"
+              aria-live="polite"
+              style={{
+                textAlign: 'center',
+                padding: `${spacing['6']} ${spacing['4']}`,
+              }}
+            >
+              <div
+                style={{
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '50%',
+                  backgroundColor: '#E6F9F1',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto',
+                  marginBottom: spacing['4'],
+                }}
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M5 13l4 4L19 7" stroke="#4EC896" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <p
+                style={{
+                  fontSize: typography.fontSize.body,
+                  fontWeight: typography.fontWeight.medium,
+                  color: colors.textPrimary,
+                  margin: 0,
+                  marginBottom: spacing['2'],
+                }}
+              >
+                Account created.
+              </p>
+              <p
+                style={{
+                  fontSize: typography.fontSize.sm,
+                  color: colors.textSecondary,
+                  margin: 0,
+                  marginBottom: spacing['5'],
+                }}
+              >
+                Check your email to verify your account before signing in.
+              </p>
+              <Link
+                to="/login"
+                style={{
+                  color: colors.orangeText,
+                  fontWeight: typography.fontWeight.medium,
+                  textDecoration: 'none',
+                  fontSize: typography.fontSize.body,
+                }}
+              >
+                Go to sign in
+              </Link>
+            </div>
+          ) : (
           <form onSubmit={handleSubmit} noValidate aria-label="Create SiteSync account">
 
             {submitError && (
@@ -401,7 +465,7 @@ export const Signup: React.FC = () => {
             </div>
 
             {/* Company */}
-            <div style={{ marginBottom: spacing['6'] }}>
+            <div style={{ marginBottom: spacing['4'] }}>
               <label style={labelStyle} htmlFor="signup-company">
                 Company / Organization{requiredMark}
               </label>
@@ -422,6 +486,24 @@ export const Signup: React.FC = () => {
               {companyError && (
                 <p id="signup-company-error" role="alert" style={fieldErrorStyle}>{companyError}</p>
               )}
+            </div>
+
+            {/* Job Title */}
+            <div style={{ marginBottom: spacing['6'] }}>
+              <label style={labelStyle} htmlFor="signup-job-title">
+                Job Title
+              </label>
+              <input
+                type="text"
+                id="signup-job-title"
+                value={jobTitle}
+                onChange={(e) => setJobTitle(e.target.value)}
+                onFocus={(e) => { e.currentTarget.style.borderColor = colors.borderFocus; e.currentTarget.style.boxShadow = '0 0 0 2px #F47820' }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = colors.borderDefault; e.currentTarget.style.boxShadow = 'none' }}
+                autoComplete="organization-title"
+                placeholder="e.g. Project Manager, Superintendent"
+                style={inputBase}
+              />
             </div>
 
             {/* Submit */}
@@ -456,6 +538,7 @@ export const Signup: React.FC = () => {
               {isSubmitting ? 'Creating Account...' : 'Create Account'}
             </button>
           </form>
+          )}
         </div>
 
         {/* Sign in link */}
