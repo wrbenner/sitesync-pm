@@ -53,6 +53,8 @@ function ToastEntry({ toast, onClose, isLast }: { toast: ToastItem; onClose: (id
   const fallbackRemainingRef = useRef<number>(60000);
   const fallbackStartedAtRef = useRef<number>(Date.now());
   const containerRef = useRef<HTMLDivElement>(null);
+  const [progressPct, setProgressPct] = useState(100);
+  const [progressTransitionDuration, setProgressTransitionDuration] = useState(0);
 
   useEffect(() => {
     requestAnimationFrame(() => setIsVisible(true));
@@ -69,6 +71,10 @@ function ToastEntry({ toast, onClose, isLast }: { toast: ToastItem; onClose: (id
     remainingRef.current = duration;
     startedAtRef.current = Date.now();
     timerRef.current = setTimeout(() => handleClose(toast.id), duration);
+    requestAnimationFrame(() => {
+      setProgressTransitionDuration(duration);
+      setProgressPct(0);
+    });
     return () => {
       if (timerRef.current !== null) clearTimeout(timerRef.current);
     };
@@ -92,12 +98,15 @@ function ToastEntry({ toast, onClose, isLast }: { toast: ToastItem; onClose: (id
   }, [toast.id, toast.severity, onClose]);
 
   const handleMouseEnter = useCallback(() => {
-    if (remainingRef.current !== null) {
+    const duration = TOAST_DURATION[toast.severity];
+    if (duration !== null) {
       if (timerRef.current !== null) {
         clearTimeout(timerRef.current);
         timerRef.current = null;
+        remainingRef.current = Math.max(0, (remainingRef.current ?? duration) - (Date.now() - startedAtRef.current));
+        setProgressTransitionDuration(0);
+        setProgressPct((remainingRef.current / duration) * 100);
       }
-      remainingRef.current = Math.max(0, remainingRef.current - (Date.now() - startedAtRef.current));
     }
     if (toast.severity === 'error') {
       if (fallbackTimerRef.current !== null) {
@@ -113,14 +122,18 @@ function ToastEntry({ toast, onClose, isLast }: { toast: ToastItem; onClose: (id
   }, [toast.severity]);
 
   const handleMouseLeave = useCallback(() => {
-    if (remainingRef.current !== null) {
-      if (remainingRef.current <= 0) remainingRef.current = 1000;
+    const duration = TOAST_DURATION[toast.severity];
+    if (duration !== null) {
+      const rem = Math.max(1000, remainingRef.current ?? 1000);
+      remainingRef.current = rem;
       if (timerRef.current !== null) {
         clearTimeout(timerRef.current);
         timerRef.current = null;
       }
       startedAtRef.current = Date.now();
-      timerRef.current = setTimeout(() => handleClose(toast.id), remainingRef.current);
+      timerRef.current = setTimeout(() => handleClose(toast.id), rem);
+      setProgressTransitionDuration(rem);
+      setProgressPct(0);
     }
     if (toast.severity === 'error') {
       if (fallbackRemainingRef.current <= 0) fallbackRemainingRef.current = 1000;
@@ -135,6 +148,12 @@ function ToastEntry({ toast, onClose, isLast }: { toast: ToastItem; onClose: (id
       }, 1000);
     }
   }, [toast.id, handleClose, toast.severity]);
+
+  const handleBlur = useCallback((e: React.FocusEvent<HTMLDivElement>) => {
+    if (!containerRef.current?.contains(e.relatedTarget as Node)) {
+      handleMouseLeave();
+    }
+  }, [handleMouseLeave]);
 
   return (
     <div
@@ -153,6 +172,8 @@ function ToastEntry({ toast, onClose, isLast }: { toast: ToastItem; onClose: (id
       onKeyDown={(e) => { if (e.key === 'Escape') handleClose(toast.id); }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      onFocus={handleMouseEnter}
+      onBlur={handleBlur}
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -165,6 +186,8 @@ function ToastEntry({ toast, onClose, isLast }: { toast: ToastItem; onClose: (id
         minWidth: '280px',
         maxWidth: '380px',
         fontFamily: typography.fontFamily,
+        position: 'relative',
+        overflow: 'hidden',
       }}
     >
       <span
@@ -281,6 +304,20 @@ function ToastEntry({ toast, onClose, isLast }: { toast: ToastItem; onClose: (id
       >
         &#x2715;
       </button>
+      {TOAST_DURATION[toast.severity] !== null && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            height: '3px',
+            width: `${progressPct}%`,
+            backgroundColor: style.border,
+            transition: `width ${progressTransitionDuration}ms linear`,
+            borderRadius: `0 0 ${borderRadius.md} ${borderRadius.md}`,
+          }}
+        />
+      )}
     </div>
     </div>
   );
