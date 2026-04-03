@@ -381,7 +381,7 @@ const certColumns = [
           </span>
         )
       }
-      if (daysUntil <= 30) {
+      if (daysUntil <= 90) {
         return (
           <span style={{
             display: 'inline-flex', alignItems: 'center', gap: spacing.xs,
@@ -643,14 +643,30 @@ export const Safety: React.FC = () => {
     description: '',
     severity: '',
     injured_party_name: '',
+    photo: null as File | null,
   })
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+
+  // Toolbox talk modal state
+  const [showTalkModal, setShowTalkModal] = useState(false)
+  const [talkForm, setTalkForm] = useState({
+    topic: '',
+    date: '',
+    presenter: '',
+    attendees: [] as string[],
+    newAttendee: '',
+  })
+  const [talkErrors, setTalkErrors] = useState<Record<string, string>>({})
 
   const dateRef = useRef<HTMLInputElement>(null)
   const locationRef = useRef<HTMLInputElement>(null)
   const descriptionRef = useRef<HTMLTextAreaElement>(null)
   const severityRef = useRef<HTMLSelectElement>(null)
   const injuredPartyRef = useRef<HTMLInputElement>(null)
+  const photoRef = useRef<HTMLInputElement>(null)
+
+  const photoRequiredSeverities = ['medical_treatment', 'lost_time', 'fatality']
+  const isPhotoRequired = photoRequiredSeverities.includes(incidentForm.severity)
 
   const requiredFields: { key: keyof typeof incidentForm; label: string }[] = [
     { key: 'date', label: 'Date' },
@@ -675,9 +691,12 @@ export const Safety: React.FC = () => {
   const handleIncidentSubmit = () => {
     const errors: Record<string, string> = {}
     requiredFields.forEach(({ key }) => {
-      const err = validateField(key, incidentForm[key])
+      const err = validateField(key, String(incidentForm[key] ?? ''))
       if (err) errors[key] = err
     })
+    if (isPhotoRequired && !incidentForm.photo) {
+      errors.photo = 'Photo documentation is required for this severity level'
+    }
     setFieldErrors(errors)
     if (Object.keys(errors).length > 0) {
       toast.error('Please complete all required fields')
@@ -686,6 +705,7 @@ export const Safety: React.FC = () => {
       else if (errors.description) descriptionRef.current?.focus()
       else if (errors.severity) severityRef.current?.focus()
       else if (errors.injured_party_name) injuredPartyRef.current?.focus()
+      else if (errors.photo) photoRef.current?.focus()
       return
     }
     toast.info('Form submission requires backend configuration')
@@ -694,8 +714,45 @@ export const Safety: React.FC = () => {
 
   const handleCloseModal = () => {
     setShowIncidentModal(false)
-    setIncidentForm({ date: '', location: '', description: '', severity: '', injured_party_name: '' })
+    setIncidentForm({ date: '', location: '', description: '', severity: '', injured_party_name: '', photo: null })
     setFieldErrors({})
+  }
+
+  // ── Toolbox talk handlers ──────────────────────────────────
+
+  const handleAddAttendee = () => {
+    const name = talkForm.newAttendee.trim()
+    if (!name) return
+    if (talkForm.attendees.includes(name)) {
+      setTalkErrors((p) => ({ ...p, newAttendee: 'Already on the list' }))
+      return
+    }
+    setTalkForm((p) => ({ ...p, attendees: [...p.attendees, name], newAttendee: '' }))
+    setTalkErrors((p) => ({ ...p, newAttendee: '' }))
+  }
+
+  const handleRemoveAttendee = (name: string) => {
+    setTalkForm((p) => ({ ...p, attendees: p.attendees.filter((a) => a !== name) }))
+  }
+
+  const handleTalkSubmit = () => {
+    const errs: Record<string, string> = {}
+    if (!talkForm.topic.trim()) errs.topic = 'Topic is required'
+    if (!talkForm.date.trim()) errs.date = 'Date is required'
+    if (!talkForm.presenter.trim()) errs.presenter = 'Presenter is required'
+    setTalkErrors(errs)
+    if (Object.keys(errs).length > 0) {
+      toast.error('Please complete all required fields')
+      return
+    }
+    toast.info('Form submission requires backend configuration')
+    handleCloseTalkModal()
+  }
+
+  const handleCloseTalkModal = () => {
+    setShowTalkModal(false)
+    setTalkForm({ topic: '', date: '', presenter: '', attendees: [], newAttendee: '' })
+    setTalkErrors({})
   }
 
   // ── Window width ───────────────────────────────────────────
@@ -738,7 +795,7 @@ export const Safety: React.FC = () => {
             </Btn>
           )}
           {activeTab === 'toolbox' && (
-            <Btn variant="primary" icon={<Plus size={16} />} onClick={() => toast.info('Form submission requires backend configuration')} style={{ minHeight: 44 }}>
+            <Btn variant="primary" icon={<Plus size={16} />} onClick={() => setShowTalkModal(true)} style={{ minHeight: 44 }}>
               New Talk
             </Btn>
           )}
@@ -1255,9 +1312,239 @@ export const Safety: React.FC = () => {
               {fieldErrors.description && <p style={{ color: '#E74C3C', fontSize: 12, margin: '4px 0 0' }}>{fieldErrors.description}</p>}
             </div>
 
+            {/* Photo upload — required when severity >= medical treatment */}
+            <div style={{ marginBottom: spacing['5'] }}>
+              <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+                Photo Documentation
+                {isPhotoRequired && <span style={{ color: '#E74C3C', marginLeft: 2 }}>*</span>}
+                {!isPhotoRequired && <span style={{ color: colors.textTertiary, fontSize: typography.fontSize.caption, marginLeft: spacing['2'] }}>(required for medical treatment and above)</span>}
+              </label>
+              {isPhotoRequired && (
+                <p style={{ margin: `0 0 ${spacing['2']} 0`, fontSize: typography.fontSize.caption, color: '#E67E22' }}>
+                  Photo documentation is required for this severity level per OSHA recordkeeping standards.
+                </p>
+              )}
+              <input
+                ref={photoRef}
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0] ?? null
+                  setIncidentForm((p) => ({ ...p, photo: file }))
+                  if (file) setFieldErrors((p) => ({ ...p, photo: '' }))
+                }}
+                style={{
+                  width: '100%', boxSizing: 'border-box',
+                  padding: `${spacing['2']} ${spacing['3']}`,
+                  border: fieldErrors.photo ? '1px solid #E74C3C' : '1px solid #E5E7EB',
+                  borderRadius: borderRadius.base,
+                  fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
+                  color: colors.textPrimary, outline: 'none', cursor: 'pointer',
+                  backgroundColor: '#fff',
+                }}
+              />
+              {incidentForm.photo && (
+                <p style={{ margin: '4px 0 0', fontSize: typography.fontSize.caption, color: colors.statusActive }}>
+                  {incidentForm.photo.name} selected
+                </p>
+              )}
+              {fieldErrors.photo && <p style={{ color: '#E74C3C', fontSize: 12, margin: '4px 0 0' }}>{fieldErrors.photo}</p>}
+            </div>
+
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: spacing['3'] }}>
               <Btn variant="ghost" onClick={handleCloseModal} style={{ minHeight: '44px', minWidth: '44px' }}>Cancel</Btn>
               <Btn variant="primary" onClick={handleIncidentSubmit} style={{ minHeight: '44px', minWidth: '44px' }}>Submit Incident</Btn>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Toolbox Talk Creation Modal */}
+      {showTalkModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="New Toolbox Talk"
+          style={{
+            position: 'fixed', inset: 0, zIndex: 1000,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            backgroundColor: 'rgba(0,0,0,0.45)',
+          }}
+          onClick={(e) => { if (e.target === e.currentTarget) handleCloseTalkModal() }}
+        >
+          <div style={{
+            backgroundColor: '#fff',
+            borderRadius: borderRadius.lg,
+            padding: spacing['6'],
+            width: '100%',
+            maxWidth: 560,
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing['5'] }}>
+              <h2 style={{ margin: 0, fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+                New Toolbox Talk
+              </h2>
+              <button
+                onClick={handleCloseTalkModal}
+                aria-label="Close"
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  fontSize: 20, color: colors.textSecondary, lineHeight: 1, padding: 4,
+                  minHeight: '44px', minWidth: '44px',
+                }}
+              >
+                &times;
+              </button>
+            </div>
+
+            <div style={{ marginBottom: spacing['4'] }}>
+              <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+                Topic<span style={{ color: '#E74C3C', marginLeft: 2 }}>*</span>
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Fall protection, Lockout tagout"
+                value={talkForm.topic}
+                onChange={(e) => setTalkForm((p) => ({ ...p, topic: e.target.value }))}
+                style={{
+                  width: '100%', boxSizing: 'border-box',
+                  padding: `${spacing['2']} ${spacing['3']}`,
+                  border: talkErrors.topic ? '1px solid #E74C3C' : '1px solid #E5E7EB',
+                  borderRadius: borderRadius.base,
+                  fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
+                  color: colors.textPrimary, outline: 'none',
+                }}
+              />
+              {talkErrors.topic && <p style={{ color: '#E74C3C', fontSize: 12, margin: '4px 0 0' }}>{talkErrors.topic}</p>}
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['4'], marginBottom: spacing['4'] }}>
+              <div>
+                <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+                  Date<span style={{ color: '#E74C3C', marginLeft: 2 }}>*</span>
+                </label>
+                <input
+                  type="date"
+                  value={talkForm.date}
+                  onChange={(e) => setTalkForm((p) => ({ ...p, date: e.target.value }))}
+                  style={{
+                    width: '100%', boxSizing: 'border-box',
+                    padding: `${spacing['2']} ${spacing['3']}`,
+                    border: talkErrors.date ? '1px solid #E74C3C' : '1px solid #E5E7EB',
+                    borderRadius: borderRadius.base,
+                    fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
+                    color: colors.textPrimary, outline: 'none',
+                  }}
+                />
+                {talkErrors.date && <p style={{ color: '#E74C3C', fontSize: 12, margin: '4px 0 0' }}>{talkErrors.date}</p>}
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+                  Presenter<span style={{ color: '#E74C3C', marginLeft: 2 }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="Name or title"
+                  value={talkForm.presenter}
+                  onChange={(e) => setTalkForm((p) => ({ ...p, presenter: e.target.value }))}
+                  style={{
+                    width: '100%', boxSizing: 'border-box',
+                    padding: `${spacing['2']} ${spacing['3']}`,
+                    border: talkErrors.presenter ? '1px solid #E74C3C' : '1px solid #E5E7EB',
+                    borderRadius: borderRadius.base,
+                    fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
+                    color: colors.textPrimary, outline: 'none',
+                  }}
+                />
+                {talkErrors.presenter && <p style={{ color: '#E74C3C', fontSize: 12, margin: '4px 0 0' }}>{talkErrors.presenter}</p>}
+              </div>
+            </div>
+
+            {/* Digital attendance sign-in */}
+            <div style={{ marginBottom: spacing['5'] }}>
+              <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+                Attendance Sign-in
+                <span style={{ color: colors.textTertiary, fontSize: typography.fontSize.caption, marginLeft: spacing['2'], fontWeight: typography.fontWeight.normal }}>
+                  {talkForm.attendees.length} signed in
+                </span>
+              </label>
+              <div style={{ display: 'flex', gap: spacing['2'], marginBottom: spacing['2'] }}>
+                <input
+                  type="text"
+                  placeholder="Enter name and press Add"
+                  value={talkForm.newAttendee}
+                  onChange={(e) => setTalkForm((p) => ({ ...p, newAttendee: e.target.value }))}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddAttendee() } }}
+                  style={{
+                    flex: 1, boxSizing: 'border-box',
+                    padding: `${spacing['2']} ${spacing['3']}`,
+                    border: talkErrors.newAttendee ? '1px solid #E74C3C' : '1px solid #E5E7EB',
+                    borderRadius: borderRadius.base,
+                    fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
+                    color: colors.textPrimary, outline: 'none',
+                  }}
+                />
+                <Btn variant="secondary" onClick={handleAddAttendee} style={{ minHeight: '44px', flexShrink: 0 }}>
+                  Add
+                </Btn>
+              </div>
+              {talkErrors.newAttendee && <p style={{ color: '#E74C3C', fontSize: 12, margin: '0 0 4px' }}>{talkErrors.newAttendee}</p>}
+              {talkForm.attendees.length > 0 && (
+                <div style={{
+                  border: '1px solid #E5E7EB',
+                  borderRadius: borderRadius.base,
+                  maxHeight: 180,
+                  overflowY: 'auto',
+                }}>
+                  {talkForm.attendees.map((name, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: `${spacing['2']} ${spacing['3']}`,
+                        borderBottom: idx < talkForm.attendees.length - 1 ? '1px solid #F3F4F6' : 'none',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
+                        <div style={{
+                          width: 28, height: 28, borderRadius: '50%',
+                          backgroundColor: colors.orangeSubtle,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: typography.fontSize.caption,
+                          fontWeight: typography.fontWeight.semibold,
+                          color: colors.primaryOrange,
+                          flexShrink: 0,
+                        }}>
+                          {name.charAt(0).toUpperCase()}
+                        </div>
+                        <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary }}>{name}</span>
+                      </div>
+                      <button
+                        onClick={() => handleRemoveAttendee(name)}
+                        aria-label={`Remove ${name}`}
+                        style={{
+                          background: 'none', border: 'none', cursor: 'pointer',
+                          color: colors.textTertiary, fontSize: 16, padding: '2px 4px',
+                          lineHeight: 1,
+                        }}
+                      >
+                        &times;
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {talkForm.attendees.length === 0 && (
+                <p style={{ margin: 0, fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
+                  No attendees signed in yet. Add names above.
+                </p>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: spacing['3'] }}>
+              <Btn variant="ghost" onClick={handleCloseTalkModal} style={{ minHeight: '44px' }}>Cancel</Btn>
+              <Btn variant="primary" onClick={handleTalkSubmit} style={{ minHeight: '44px' }}>Save Talk</Btn>
             </div>
           </div>
         </div>
