@@ -1799,3 +1799,98 @@ export const SkeletonRow: React.FC<SkeletonRowProps> = ({ style: styleProp }) =>
     }}
   />
 );
+
+// ─── SkeletonLoader ──────────────────────────────────────────────────────────
+
+interface SkeletonLoaderProps {
+  width?: string;
+  height?: string;
+  borderRadius?: string;
+  style?: React.CSSProperties;
+}
+
+export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
+  width = '100%',
+  height = '20px',
+  borderRadius = '8px',
+  style: styleProp,
+}) => {
+  React.useEffect(() => {
+    if (typeof document !== 'undefined' && !document.getElementById('skeleton-keyframes')) {
+      const styleEl = document.createElement('style');
+      styleEl.id = 'skeleton-keyframes';
+      styleEl.textContent = `@keyframes skeleton-pulse { 0% { background-position: 200% 0 } 100% { background-position: -200% 0 } }`;
+      document.head.appendChild(styleEl);
+    }
+  }, []);
+
+  return (
+    <div
+      aria-hidden="true"
+      role="presentation"
+      style={{
+        width,
+        height,
+        borderRadius,
+        background: 'linear-gradient(90deg, #E5E7EB 25%, #F3F4F6 50%, #E5E7EB 75%)',
+        backgroundSize: '200% 100%',
+        animation: 'skeleton-pulse 1.5s ease-in-out infinite',
+        ...styleProp,
+      }}
+    />
+  );
+};
+
+// ─── SkeletonText (multi-line) ───────────────────────────────────────────────
+
+interface SkeletonTextMultiProps {
+  lines?: number;
+  gap?: string;
+}
+
+export const SkeletonTextMulti: React.FC<SkeletonTextMultiProps> = ({ lines = 3, gap = '12px' }) => {
+  const widths = Array.from({ length: lines }, (_, i) => (i === lines - 1 ? '75%' : '100%'));
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap }}>
+      {widths.map((w, i) => (
+        <SkeletonLoader key={i} width={w} height="20px" />
+      ))}
+    </div>
+  );
+};
+
+// ─── SkeletonCircle ──────────────────────────────────────────────────────────
+
+interface SkeletonCircleProps {
+  size?: string;
+}
+
+export const SkeletonCircle: React.FC<SkeletonCircleProps> = ({ size = '40px' }) => (
+  <SkeletonLoader width={size} height={size} borderRadius="50%" />
+);
+
+// ─── SkeletonTable ───────────────────────────────────────────────────────────
+
+interface SkeletonTableProps {
+  rows?: number;
+  columns?: number;
+}
+
+const HEADER_WIDTHS = ['60%', '80%', '50%', '70%', '40%', '65%', '55%', '75%'];
+
+export const SkeletonTable: React.FC<SkeletonTableProps> = ({ rows = 5, columns = 4 }) => (
+  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+    <div style={{ display: 'flex', gap: '12px', paddingBottom: '8px' }}>
+      {Array.from({ length: columns }, (_, i) => (
+        <SkeletonLoader key={i} width={HEADER_WIDTHS[i % HEADER_WIDTHS.length]} height="16px" />
+      ))}
+    </div>
+    {Array.from({ length: rows }, (_, r) => (
+      <div key={r} style={{ display: 'flex', gap: '12px' }}>
+        {Array.from({ length: columns }, (_, c) => (
+          <SkeletonLoader key={c} width="100%" height="48px" />
+        ))}
+      </div>
+    ))}
+  </div>
+);
