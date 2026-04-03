@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { DrawingsEmptyState } from '../components/drawings/DrawingsEmptyState';
 import { TableRowSkeleton } from '../components/ui/Skeletons';
@@ -70,6 +70,9 @@ const _DrawingsPage: React.FC = () => {
   const [uploadFiles, setUploadFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const [focusedIndex, setFocusedIndex] = useState(0);
+  const sortedDrawingsRef = useRef<typeof sortedDrawings>([]);
   const [viewingRevisionNum, setViewingRevisionNum] = useState<number | null>(null);
   const [showVersionCompare, setShowVersionCompare] = useState(false);
   const [compareRevAIdx, setCompareRevAIdx] = useState(0);
@@ -114,6 +117,31 @@ const _DrawingsPage: React.FC = () => {
     }
   };
 
+  const handleGridKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    const total = sortedDrawingsRef.current.length;
+    if (total === 0) return;
+    if (e.key === 'ArrowDown' || e.key === 'j') {
+      e.preventDefault();
+      const next = Math.min(focusedIndex + 1, total - 1);
+      setFocusedIndex(next);
+      const rows = gridRef.current?.querySelectorAll<HTMLElement>('[role="row"]');
+      rows?.[next]?.focus();
+    } else if (e.key === 'ArrowUp' || e.key === 'k') {
+      e.preventDefault();
+      const prev = Math.max(focusedIndex - 1, 0);
+      setFocusedIndex(prev);
+      const rows = gridRef.current?.querySelectorAll<HTMLElement>('[role="row"]');
+      rows?.[prev]?.focus();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      const drawing = sortedDrawingsRef.current[focusedIndex];
+      if (drawing) setSelectedDrawing(drawing);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setSelectedDrawing(null);
+    }
+  }, [focusedIndex]);
+
   const sortedDrawings = [...filteredDrawings].sort((a, b) => {
     const aVal = (a as any)[sortField];
     const bVal = (b as any)[sortField];
@@ -123,6 +151,7 @@ const _DrawingsPage: React.FC = () => {
     if (typeof aVal === 'string') return sortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
     return sortDir === 'asc' ? aVal - bVal : bVal - aVal;
   });
+  sortedDrawingsRef.current = sortedDrawings;
 
   return (
     <PageContainer
@@ -294,10 +323,12 @@ const _DrawingsPage: React.FC = () => {
           {/* Results count — aria-live announces filter changes to screen readers */}
           <p
             aria-live="polite"
+            aria-atomic="true"
             style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0, marginBottom: spacing.md }}
           >
-            {sortedDrawings.length} drawing{sortedDrawings.length !== 1 ? 's' : ''}
-            {activeFilters.size > 0 ? ` matching selected filters` : ''}
+            {activeFilters.size > 0
+              ? `Showing ${sortedDrawings.length} drawing${sortedDrawings.length !== 1 ? 's' : ''} filtered by ${Array.from(activeFilters).join(', ')}`
+              : `${sortedDrawings.length} drawing${sortedDrawings.length !== 1 ? 's' : ''}`}
           </p>
 
           {/* Drawings Table */}
@@ -362,21 +393,28 @@ const _DrawingsPage: React.FC = () => {
               </div>
             )}
             {!loading && !error && (
-              <div role="list" aria-label="Project drawings">
+              <div
+                role="grid"
+                aria-label="Project drawings"
+                ref={gridRef}
+                onKeyDown={handleGridKeyDown}
+              >
               <style>{`.drawing-row:focus-visible{outline:2px solid #F47820;outline-offset:-2px;}`}</style>
               {sortedDrawings.map((drawing, index) => {
               const thumbColor = drawing.disciplineColor || getDisciplineColor(drawing.discipline || '');
               const linked = linkedItems[drawing.id];
               const viewed = lastViewed[drawing.id];
               const rowBorder = index < sortedDrawings.length - 1 ? `1px solid ${colors.border}` : 'none';
+              const ariaLabel = `${(drawing as any).sheetNumber || drawing.setNumber || ''} ${drawing.title}`.trim();
               return (
                 <React.Fragment key={drawing.id}>
                 {/* Mobile card row */}
                 <div
-                  role="article"
-                  tabIndex={0}
-                  aria-label={`Drawing ${(drawing as any).sheetNumber || drawing.title}, ${drawing.disciplineLabel}, Revision ${drawing.currentRevision?.revision_number || 0}`}
+                  role="row"
+                  tabIndex={index === focusedIndex ? 0 : -1}
+                  aria-label={ariaLabel}
                   className="drawing-row drawing-row-mobile"
+                  onFocus={() => setFocusedIndex(index)}
                   onClick={() => setSelectedDrawing(drawing)}
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedDrawing(drawing); } }}
                   style={{
@@ -406,11 +444,12 @@ const _DrawingsPage: React.FC = () => {
                 </div>
                 {/* Desktop table row */}
                 <div
-                  role="article"
-                  tabIndex={0}
-                  aria-label={`Drawing ${(drawing as any).sheetNumber || drawing.title}, ${drawing.disciplineLabel}, Revision ${drawing.currentRevision?.revision_number || 0}`}
+                  role="row"
+                  tabIndex={index === focusedIndex ? 0 : -1}
+                  aria-label={ariaLabel}
                   className="drawing-row drawing-row-desktop"
-                  onClick={() => setSelectedDrawing(drawing)}
+                  onClick={() => { setFocusedIndex(index); setSelectedDrawing(drawing); }}
+                  onFocus={() => setFocusedIndex(index)}
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedDrawing(drawing); } }}
                   style={{
                     display: 'grid',
