@@ -175,6 +175,9 @@ export interface MappedDrawing extends DrawingRow {
   sheetCount: number
   revisions: DrawingRevision[]
   currentRevision: DrawingRevision | null
+  linkedRfiCount: number
+  linkedSubmittalCount: number
+  linkedPunchCount: number
 }
 
 // Computed/mapped file returned by getFiles

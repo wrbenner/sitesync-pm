@@ -59,6 +59,18 @@ export const getDrawings = async (projectId: string): Promise<MappedDrawing[]> =
     revisionsByDrawing.set(rev.drawing_id, list)
   }
 
+  // TODO: linked RFI counts require a migration to add drawing_id FK to rfis table.
+  // Once added: SELECT drawing_id, count(*) FROM rfis WHERE drawing_id = ANY($1) GROUP BY drawing_id
+  const rfiCountByDrawing = new Map<string, number>()
+
+  // TODO: linked submittal counts require a migration to add drawing_id FK to submittals table.
+  // Once added: SELECT drawing_id, count(*) FROM submittals WHERE drawing_id = ANY($1) GROUP BY drawing_id
+  const submittalCountByDrawing = new Map<string, number>()
+
+  // TODO: linked punch counts require a migration to add location_drawing_id FK to punch_items table.
+  // Once added: SELECT location_drawing_id, count(*) FROM punch_items WHERE location_drawing_id = ANY($1) GROUP BY location_drawing_id
+  const punchCountByDrawing = new Map<string, number>()
+
   return drawings.map((d: DrawingRow): MappedDrawing => {
     const revisions = revisionsByDrawing.get(d.id) ?? []
     // Latest non-superseded entry is current; list is already sorted desc
@@ -73,6 +85,9 @@ export const getDrawings = async (projectId: string): Promise<MappedDrawing[]> =
       sheetCount: 1,
       revisions,
       currentRevision,
+      linkedRfiCount: rfiCountByDrawing.get(d.id) ?? 0,
+      linkedSubmittalCount: submittalCountByDrawing.get(d.id) ?? 0,
+      linkedPunchCount: punchCountByDrawing.get(d.id) ?? 0,
     }
     return mapped
   })
