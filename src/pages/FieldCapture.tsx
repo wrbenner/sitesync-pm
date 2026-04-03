@@ -1,66 +1,639 @@
-import React, { useState, useMemo, useRef } from 'react';
-import { Camera, Mic, FileText, AlertTriangle, MapPin, ChevronRight, Sparkles, Users, RefreshCw, QrCode } from 'lucide-react';
-import { PageContainer, Card, Btn, SectionHeader, useToast } from '../components/Primitives';
+import React, { useState, useRef, useMemo } from 'react';
+import { Camera, MapPin, Sparkles, RefreshCw, AlertTriangle, LayoutGrid, Map as MapIcon, X, Tag, Flag } from 'lucide-react';
+import { PageContainer, Card, Btn, useToast } from '../components/Primitives';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import FieldCaptureSkeleton from '../components/field/FieldCaptureSkeleton';
 import { colors, spacing, typography, borderRadius, shadows, transitions, zIndex } from '../styles/theme';
-import { PhotoAnnotator } from '../components/field/PhotoAnnotator';
-import { VoiceCapture } from '../components/field/VoiceCapture';
-import { CaptureTimeline } from '../components/field/CaptureTimeline';
-import { QuickCapture, type CaptureData } from '../components/field/QuickCapture';
-import { QRCheckIn, QRScannerSheet } from '../components/workforce/QRCheckIn';
 import { useProjectId } from '../hooks/useProjectId';
 import { useFieldCaptures } from '../hooks/queries';
 import { useCreateFieldCapture } from '../hooks/mutations';
-import { useSyncOfflineCheckIns } from '../hooks/useCheckIn';
 import { useSyncStatus } from '../hooks/useSyncStatus';
-import { PermissionGate } from '../components/auth/PermissionGate';
-import EmptyState from '../components/ui/EmptyState';
-import type { ExtractedEntity } from '../hooks/useVoiceCapture';
+import type { FieldCapture } from '../types/database';
 
-type CaptureMode = null | 'photo' | 'voice' | 'text' | 'checkin';
-type IssueType = 'issue' | 'progress' | 'safety' | 'note';
+const CONSTRUCTION_TAGS = ['progress', 'safety', 'defect', 'delivery', 'weather', 'rfi', 'punch', 'inspection'] as const;
 
-const issueTypes: { type: IssueType; label: string; color: string; template: string }[] = [
-  { type: 'issue', label: 'Issue', color: colors.statusCritical, template: 'Describe the issue found at...' },
-  { type: 'progress', label: 'Progress Update', color: colors.statusActive, template: 'Work completed today on...' },
-  { type: 'safety', label: 'Safety Concern', color: colors.statusPending, template: 'Safety observation at...' },
-  { type: 'note', label: 'General Note', color: colors.statusInfo, template: 'Note for the team regarding...' },
+const LINK_OPTIONS = [
+  { label: 'Drawing A-101', value: 'drawing:A-101' },
+  { label: 'Drawing A-201', value: 'drawing:A-201' },
+  { label: 'RFI #12 — Beam pocket depth', value: 'rfi:12' },
+  { label: 'RFI #14 — Slab thickness', value: 'rfi:14' },
+  { label: 'Punch #45 — Paint defect', value: 'punch:45' },
+  { label: 'Punch #52 — Door hardware', value: 'punch:52' },
+  { label: "Daily Log — Today", value: 'daily_log:today' },
+  { label: 'Task — Concrete pour', value: 'task:concrete' },
 ];
 
-const locations = ['Floor 1', 'Floor 2', 'Floor 3', 'Floor 4', 'Floor 5', 'Floor 6', 'Floor 7', 'Floor 8', 'Floor 9', 'Floor 10', 'Floor 11', 'Floor 12', 'Lobby', 'Basement', 'Roof', 'Exterior'];
-
-function formatCaptureTime(dateStr: string | null): string {
+function formatTimestamp(dateStr: string | null): string {
   if (!dateStr) return '';
   const d = new Date(dateStr);
-  return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-}
-
-function formatCaptureDatetime(dateStr: string | null): string {
-  if (!dateStr) return '';
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ', ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  return (
+    d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) +
+    ' at ' +
+    d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  );
 }
 
 function isToday(dateStr: string | null): boolean {
   if (!dateStr) return false;
   const d = new Date(dateStr);
   const now = new Date();
-  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+  return (
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate()
+  );
 }
+
+// ── Skeleton grid for loading state ────────────────────────
+
+const SkeletonGrid: React.FC = () => (
+  <>
+    <style>{`@keyframes fieldCapturePulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.8; } }`}</style>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: spacing['3'] }}>
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div
+          key={i}
+          style={{
+            backgroundColor: colors.surfaceInset,
+            borderRadius: borderRadius.xl,
+            aspectRatio: '4/3',
+            animation: 'fieldCapturePulse 1.5s ease-in-out infinite',
+            animationDelay: `${i * 0.1}s`,
+          }}
+        />
+      ))}
+    </div>
+  </>
+);
+
+// ── Post-capture overlay form ───────────────────────────────
+
+interface OverlayMeta {
+  title: string;
+  notes: string;
+  tags: string[];
+  linkTo: string;
+  location: string | null;
+}
+
+interface PhotoOverlayProps {
+  dataUrl: string;
+  location: string | null;
+  isSaving: boolean;
+  onSave: (meta: OverlayMeta) => void;
+  onCancel: () => void;
+}
+
+const PhotoOverlay: React.FC<PhotoOverlayProps> = ({ dataUrl, location, isSaving, onSave, onCancel }) => {
+  const [title, setTitle] = useState('');
+  const [notes, setNotes] = useState('');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [linkTo, setLinkTo] = useState('');
+
+  const toggleTag = (tag: string) => {
+    setSelectedTags(prev =>
+      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+    );
+  };
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: `${spacing['3']} ${spacing['3']}`,
+    border: `1px solid ${colors.borderDefault}`,
+    borderRadius: borderRadius.md,
+    fontSize: typography.fontSize.body,
+    fontFamily: typography.fontFamily,
+    color: colors.textPrimary,
+    outline: 'none',
+    boxSizing: 'border-box',
+    backgroundColor: colors.surfacePage,
+    minHeight: '44px',
+  };
+
+  return (
+    <div
+      role="dialog"
+      aria-label="Add photo details"
+      aria-modal="true"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: zIndex.modal as number,
+        backgroundColor: 'rgba(0,0,0,0.72)',
+        display: 'flex',
+        alignItems: 'flex-end',
+        justifyContent: 'center',
+      }}
+    >
+      <div
+        style={{
+          backgroundColor: colors.white,
+          borderRadius: `${borderRadius['2xl']} ${borderRadius['2xl']} 0 0`,
+          width: '100%',
+          maxWidth: '560px',
+          maxHeight: '92vh',
+          overflowY: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        {/* Preview image */}
+        <div style={{ position: 'relative' }}>
+          <img
+            src={dataUrl}
+            alt="Captured photo preview"
+            style={{
+              width: '100%',
+              maxHeight: '220px',
+              objectFit: 'cover',
+              borderRadius: `${borderRadius['2xl']} ${borderRadius['2xl']} 0 0`,
+              display: 'block',
+            }}
+          />
+          <button
+            aria-label="Close"
+            onClick={onCancel}
+            style={{
+              position: 'absolute',
+              top: spacing['3'],
+              right: spacing['3'],
+              width: '32px',
+              height: '32px',
+              borderRadius: borderRadius.full,
+              backgroundColor: 'rgba(0,0,0,0.55)',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <X size={16} color="#fff" />
+          </button>
+        </div>
+
+        {/* Form fields */}
+        <div style={{ padding: spacing['5'], display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
+          {/* GPS badge */}
+          {location && (
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: spacing['1'],
+                padding: `${spacing['1']} ${spacing['3']}`,
+                backgroundColor: `${colors.primaryOrange}12`,
+                borderRadius: borderRadius.full,
+                alignSelf: 'flex-start',
+              }}
+            >
+              <MapPin size={12} color={colors.primaryOrange} />
+              <span style={{ fontSize: typography.fontSize.caption, color: colors.primaryOrange, fontWeight: typography.fontWeight.medium }}>
+                {location}
+              </span>
+            </div>
+          )}
+
+          {/* Title */}
+          <input
+            type="text"
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            placeholder="Title (optional)"
+            style={inputStyle}
+          />
+
+          {/* Notes */}
+          <textarea
+            value={notes}
+            onChange={e => setNotes(e.target.value)}
+            placeholder="Notes (optional)"
+            rows={3}
+            style={{
+              ...inputStyle,
+              minHeight: '80px',
+              resize: 'vertical',
+            }}
+          />
+
+          {/* Tags multi-select */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['2'] }}>
+              <Tag size={13} color={colors.textTertiary} />
+              <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textSecondary }}>
+                Tags
+              </span>
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: spacing['2'] }}>
+              {CONSTRUCTION_TAGS.map(tag => {
+                const active = selectedTags.includes(tag);
+                return (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => toggleTag(tag)}
+                    style={{
+                      padding: `${spacing['1.5']} ${spacing['3']}`,
+                      minHeight: '32px',
+                      backgroundColor: active ? colors.primaryOrange : 'transparent',
+                      color: active ? colors.white : colors.textSecondary,
+                      border: `1px solid ${active ? colors.primaryOrange : colors.borderDefault}`,
+                      borderRadius: borderRadius.full,
+                      cursor: 'pointer',
+                      fontSize: typography.fontSize.caption,
+                      fontWeight: typography.fontWeight.medium,
+                      fontFamily: typography.fontFamily,
+                      transition: `all ${transitions.quick}`,
+                    }}
+                  >
+                    {tag}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Link to */}
+          <select
+            value={linkTo}
+            onChange={e => setLinkTo(e.target.value)}
+            aria-label="Link photo to an item"
+            style={{
+              ...inputStyle,
+              appearance: 'auto',
+              color: linkTo ? colors.textPrimary : colors.textTertiary,
+            }}
+          >
+            <option value="">Link to drawing, task, punch, RFI, or daily log (optional)</option>
+            {LINK_OPTIONS.map(opt => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+
+          {/* Actions */}
+          <div style={{ display: 'flex', gap: spacing['3'], paddingBottom: spacing['2'] }}>
+            <Btn variant="ghost" size="md" onClick={onCancel} style={{ flex: 1, minHeight: '44px' } as React.CSSProperties}>
+              Cancel
+            </Btn>
+            <Btn
+              variant="primary"
+              size="md"
+              onClick={() => onSave({ title, notes, tags: selectedTags, linkTo, location })}
+              disabled={isSaving}
+              style={{ flex: 1, minHeight: '44px' } as React.CSSProperties}
+            >
+              {isSaving ? 'Saving...' : 'Save Photo'}
+            </Btn>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ── Photo card (grid tile) ─────────────────────────────────
+
+interface PhotoCardProps {
+  capture: FieldCapture;
+}
+
+const PhotoCard: React.FC<PhotoCardProps> = ({ capture }) => {
+  const [hovered, setHovered] = useState(false);
+  const tags = Array.isArray(capture.ai_tags) ? (capture.ai_tags as string[]) : [];
+  const hasAiFlag = !!capture.ai_category;
+
+  return (
+    <div
+      role="article"
+      aria-label={`Field capture: ${capture.content || 'Photo'}`}
+      tabIndex={0}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        position: 'relative',
+        backgroundColor: colors.white,
+        borderRadius: borderRadius.xl,
+        boxShadow: hovered ? shadows.cardHover : shadows.card,
+        overflow: 'hidden',
+        cursor: 'pointer',
+        transition: `box-shadow ${transitions.quick}`,
+      }}
+    >
+      {/* Thumbnail */}
+      {capture.file_url ? (
+        <img
+          src={capture.file_url}
+          alt={capture.content || 'Field capture'}
+          style={{ width: '100%', aspectRatio: '4/3', objectFit: 'cover', display: 'block' }}
+          loading="lazy"
+        />
+      ) : (
+        <div
+          style={{
+            width: '100%',
+            aspectRatio: '4/3',
+            backgroundColor: colors.surfaceInset,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Camera size={28} color={colors.textTertiary} />
+        </div>
+      )}
+
+      {/* AI sparkle badge */}
+      {hasAiFlag && (
+        <div
+          style={{
+            position: 'absolute',
+            top: spacing['2'],
+            right: spacing['2'],
+            backgroundColor: 'rgba(0,0,0,0.6)',
+            borderRadius: borderRadius.full,
+            padding: `${spacing['1']} ${spacing['2']}`,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+          }}
+        >
+          <Sparkles size={11} color="#fff" />
+          <span style={{ fontSize: '10px', color: '#fff', fontWeight: typography.fontWeight.semibold }}>
+            {capture.ai_category}
+          </span>
+        </div>
+      )}
+
+      {/* GPS badge */}
+      {capture.location && (
+        <div
+          style={{
+            position: 'absolute',
+            top: spacing['2'],
+            left: spacing['2'],
+            backgroundColor: 'rgba(0,0,0,0.55)',
+            borderRadius: borderRadius.full,
+            padding: `${spacing['1']} ${spacing['2']}`,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '3px',
+          }}
+        >
+          <MapPin size={10} color="#fff" />
+          <span style={{ fontSize: '10px', color: '#fff' }}>{capture.location}</span>
+        </div>
+      )}
+
+      {/* Info footer */}
+      <div style={{ padding: `${spacing['2']} ${spacing['3']} ${spacing['3']}` }}>
+        {capture.content && (
+          <p
+            style={{
+              fontSize: typography.fontSize.sm,
+              fontWeight: typography.fontWeight.medium,
+              color: colors.textPrimary,
+              margin: 0,
+              marginBottom: '2px',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
+            {capture.content}
+          </p>
+        )}
+        <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0 }}>
+          {formatTimestamp(capture.created_at)}
+        </p>
+
+        {/* Tag pills */}
+        {tags.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px', marginTop: spacing['1'] }}>
+            {tags.slice(0, 3).map((tag: string) => (
+              <span
+                key={tag}
+                style={{
+                  padding: '1px 6px',
+                  backgroundColor: `${colors.primaryOrange}14`,
+                  color: colors.primaryOrange,
+                  borderRadius: borderRadius.full,
+                  fontSize: '10px',
+                  fontWeight: typography.fontWeight.medium,
+                }}
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Linked item badge */}
+        {capture.linked_drawing_id && (
+          <div style={{ marginTop: spacing['1'] }}>
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '3px',
+                padding: '1px 6px',
+                backgroundColor: `${colors.statusInfo}14`,
+                color: colors.statusInfo,
+                borderRadius: borderRadius.full,
+                fontSize: '10px',
+                fontWeight: typography.fontWeight.medium,
+              }}
+            >
+              Drawing linked
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ── Map view placeholder ────────────────────────────────────
+
+const MapView: React.FC<{ captures: FieldCapture[] }> = ({ captures }) => {
+  const withLocation = captures.filter(c => c.location);
+  return (
+    <div
+      style={{
+        backgroundColor: colors.surfaceInset,
+        borderRadius: borderRadius.xl,
+        border: `1px dashed ${colors.borderDefault}`,
+        padding: spacing['10'],
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '320px',
+        gap: spacing['4'],
+        textAlign: 'center',
+      }}
+    >
+      <div
+        style={{
+          width: '56px',
+          height: '56px',
+          borderRadius: '50%',
+          backgroundColor: `${colors.statusInfo}14`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <MapIcon size={28} color={colors.statusInfo} />
+      </div>
+      <div>
+        <p style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['1'] }}>
+          Map view
+        </p>
+        <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: 0 }}>
+          Mapbox is not configured. {withLocation.length} capture{withLocation.length !== 1 ? 's' : ''} have location data.
+        </p>
+      </div>
+      {withLocation.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: spacing['2'], justifyContent: 'center', maxWidth: '400px' }}>
+          {withLocation.slice(0, 8).map(c => (
+            <div
+              key={c.id}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: spacing['1'],
+                padding: `${spacing['1.5']} ${spacing['3']}`,
+                backgroundColor: colors.white,
+                borderRadius: borderRadius.full,
+                boxShadow: shadows.card,
+                fontSize: typography.fontSize.caption,
+                color: colors.textSecondary,
+              }}
+            >
+              <MapPin size={10} color={colors.primaryOrange} />
+              {c.location}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ── Main inner component ────────────────────────────────────
 
 const FieldCaptureInner: React.FC = () => {
   const projectId = useProjectId();
   const { data: capturesData, isLoading, isError, error, refetch } = useFieldCaptures(projectId);
   const captures = capturesData ?? [];
-
   const { pendingCount } = useSyncStatus();
-  const { photosToday, voiceNotesToday, itemsCreatedToday } = useMemo(() => ({
-    photosToday: captures.filter(c => c.type === 'photo' && isToday(c.created_at)).length,
-    voiceNotesToday: captures.filter(c => c.type === 'voice' && isToday(c.created_at)).length,
-    itemsCreatedToday: captures.filter(c => isToday(c.created_at) && (c.ai_category === 'rfi_draft' || c.ai_category === 'punch_item')).length,
+  const createFieldCapture = useCreateFieldCapture();
+  const { addToast } = useToast();
+
+  // Offline detection
+  const [isOnline, setIsOnline] = useState(() =>
+    typeof navigator !== 'undefined' ? navigator.onLine : true
+  );
+  React.useEffect(() => {
+    const on = () => setIsOnline(true);
+    const off = () => setIsOnline(false);
+    window.addEventListener('online', on);
+    window.addEventListener('offline', off);
+    return () => {
+      window.removeEventListener('online', on);
+      window.removeEventListener('offline', off);
+    };
+  }, []);
+
+  // View toggle: grid vs map
+  const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
+
+  // Hidden file input ref
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Post-capture overlay state
+  const [overlayDataUrl, setOverlayDataUrl] = useState<string | null>(null);
+  const [overlayLocation, setOverlayLocation] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Derived metrics
+  const { totalCaptures, capturesToday, aiFlags } = useMemo(() => ({
+    totalCaptures: captures.length,
+    capturesToday: captures.filter(c => isToday(c.created_at)).length,
+    aiFlags: captures.filter(c => !!c.ai_category).length,
   }), [captures]);
 
+  const handleCaptureClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = ev => {
+      setOverlayDataUrl(ev.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+
+    // Attempt GPS
+    setOverlayLocation(null);
+    navigator.geolocation?.getCurrentPosition(
+      pos => {
+        setOverlayLocation(
+          `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`
+        );
+      },
+      () => {
+        setOverlayLocation(null);
+      },
+      { timeout: 5000 }
+    );
+
+    e.target.value = '';
+  };
+
+  const handleOverlaySave = async (meta: {
+    title: string;
+    notes: string;
+    tags: string[];
+    linkTo: string;
+    location: string | null;
+  }) => {
+    if (!projectId) return;
+    setIsSaving(true);
+    try {
+      await createFieldCapture.mutateAsync({
+        projectId,
+        data: {
+          project_id: projectId,
+          type: 'photo',
+          content: meta.title || meta.notes || 'Photo capture',
+          location: meta.location,
+          ai_tags: meta.tags.length > 0 ? meta.tags : null,
+          ai_category: null,
+          file_url: overlayDataUrl,
+        },
+      });
+      addToast('success', 'Photo saved');
+      setOverlayDataUrl(null);
+      setOverlayLocation(null);
+    } catch {
+      addToast('error', 'Failed to save photo');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleOverlayCancel = () => {
+    setOverlayDataUrl(null);
+    setOverlayLocation(null);
+  };
+
+  // Loading
   if (isLoading) {
     return (
       <PageContainer title="Field Capture" subtitle="Loading...">
@@ -69,6 +642,7 @@ const FieldCaptureInner: React.FC = () => {
     );
   }
 
+  // Error
   if (isError) {
     return (
       <PageContainer title="Field Capture" subtitle="Unable to load">
@@ -76,252 +650,49 @@ const FieldCaptureInner: React.FC = () => {
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['4'], padding: spacing['6'], textAlign: 'center' }}>
             <AlertTriangle size={40} color={colors.statusCritical} />
             <div>
-              <p style={{ fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>Failed to load field captures</p>
-              <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: 0 }}>{(error as Error)?.message || 'Unable to fetch captures from the field'}</p>
+              <p style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>
+                Failed to load field captures
+              </p>
+              <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: 0 }}>
+                {(error as Error)?.message || 'Unable to fetch captures from the field'}
+              </p>
             </div>
-            <Btn variant="primary" size="sm" icon={<RefreshCw size={14} />} onClick={() => refetch()}>Retry</Btn>
+            <Btn variant="primary" size="sm" icon={<RefreshCw size={14} />} onClick={() => refetch()}>
+              Retry
+            </Btn>
           </div>
         </Card>
       </PageContainer>
     );
   }
 
-  const { todayCaptures, previousCaptures } = useMemo(() => {
-    const today: typeof mapped = [];
-    const previous: typeof mapped = [];
-    const mapped = captures.map(c => ({
-      id: c.id,
-      type: (c.type as 'photo' | 'voice' | 'text' | 'issue') ?? 'text',
-      title: c.content ?? 'Untitled capture',
-      time: isToday(c.created_at) ? formatCaptureTime(c.created_at) : formatCaptureDatetime(c.created_at),
-      capturedBy: c.created_by ?? 'Unknown',
-      location: c.location ?? '',
-      aiCategory: c.ai_category ?? undefined,
-      preview: undefined as string | undefined,
-    }));
-    for (const item of mapped) {
-      if (captures.find(c => c.id === item.id && isToday(c.created_at))) {
-        today.push(item);
-      } else {
-        previous.push(item);
-      }
-    }
-    return { todayCaptures: today, previousCaptures: previous };
-  }, [captures]);
-  const { addToast } = useToast();
-  const createFieldCapture = useCreateFieldCapture();
-  useSyncOfflineCheckIns();
-  const [captureMode, setCaptureMode] = useState<CaptureMode>(null);
-  const [showAnnotator, setShowAnnotator] = useState(false);
-  const [showVoice, setShowVoice] = useState(false);
-  const [quickTextType, setQuickTextType] = useState<IssueType | null>(null);
-  const [quickTextValue, setQuickTextValue] = useState('');
-  const [quickTextLocation, setQuickTextLocation] = useState('');
-  const [quickCaptureOpen, setQuickCaptureOpen] = useState(false);
-  const [showCheckInSheet, setShowCheckInSheet] = useState(false);
-  const [liveAnnouncement, setLiveAnnouncement] = useState('');
-  const [captureMetadata, setCaptureMetadata] = useState<{ lat: number | null; lng: number | null; timestamp: string; accuracy: number | null } | null>(null);
-  const [topCaptureObjectUrl, setTopCaptureObjectUrl] = useState<string | null>(null);
-  const [topCaptureTitle, setTopCaptureTitle] = useState('');
-  const [topCaptureNotes, setTopCaptureNotes] = useState('');
-  const [localCaptures, setLocalCaptures] = useState<Array<{ objectUrl: string; title: string; notes: string; metadata: { lat: number | null; lng: number | null; timestamp: string; accuracy: number | null } }>>([]);
-
-  // Offline detection
-  const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
-  React.useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
-
-  // Photo capture via file input
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
-  const [photoTitle, setPhotoTitle] = useState('');
-  const [photoNotes, setPhotoNotes] = useState('');
-  const [photoTags, setPhotoTags] = useState('');
-  const [photoLinkTo, setPhotoLinkTo] = useState('');
-
-  React.useEffect(() => {
-    if (pendingCount === 0) {
-      setLiveAnnouncement('All captures synced');
-    } else {
-      setLiveAnnouncement(`${pendingCount} capture${pendingCount !== 1 ? 's' : ''} pending sync`);
-    }
-  }, [pendingCount]);
-
-  const handleQuickCaptureSave = async (capture: CaptureData) => {
-    try {
-      await createFieldCapture.mutateAsync({
-        projectId: projectId!,
-        data: {
-          project_id: projectId!,
-          type: capture.type,
-          content: capture.notes || capture.transcript || capture.qrData || '',
-          location: capture.location || null,
-          ai_category: capture.category || null,
-          gps_latitude: capture.gpsLat || null,
-          gps_longitude: capture.gpsLng || null,
-        },
-      });
-      addToast('success', 'Field capture saved');
-      setLiveAnnouncement('Photo uploaded and saved successfully');
-    } catch {
-      addToast('error', 'Failed to save capture');
-      setLiveAnnouncement('Failed to save capture');
-    }
-  };
-
-  const handlePhotoButtonClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      setPhotoDataUrl(ev.target?.result as string);
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
-  };
-
-  const handlePhotoMetaSave = async () => {
-    try {
-      await createFieldCapture.mutateAsync({
-        projectId: projectId!,
-        data: {
-          project_id: projectId!,
-          type: 'photo',
-          content: photoTitle || photoNotes || 'Photo capture',
-          location: null,
-          ai_category: null,
-        },
-      });
-      addToast('success', 'Photo saved');
-      setLiveAnnouncement('Photo saved successfully');
-      setPhotoDataUrl(null);
-      setPhotoTitle('');
-      setPhotoNotes('');
-      setPhotoTags('');
-      setPhotoLinkTo('');
-    } catch {
-      addToast('error', 'Failed to save photo');
-      setLiveAnnouncement('Failed to save photo');
-    }
-  };
-
-  const handlePhotoMetaCancel = () => {
-    setPhotoDataUrl(null);
-    setPhotoTitle('');
-    setPhotoNotes('');
-    setPhotoTags('');
-    setPhotoLinkTo('');
-  };
-
-  const handleTopCapture = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.setAttribute('capture', 'environment');
-    input.onchange = (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-      const objectUrl = URL.createObjectURL(file);
-      setTopCaptureObjectUrl(objectUrl);
-      setCaptureMetadata(null);
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          setCaptureMetadata({
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-            timestamp: new Date().toISOString(),
-            accuracy: pos.coords.accuracy,
-          });
-        },
-        () => {
-          setCaptureMetadata({
-            lat: null,
-            lng: null,
-            timestamp: new Date().toISOString(),
-            accuracy: null,
-          });
-        }
-      );
-    };
-    input.click();
-  };
-
-  const handleTopCaptureSave = () => {
-    if (!topCaptureObjectUrl) return;
-    const meta = captureMetadata ?? { lat: null, lng: null, timestamp: new Date().toISOString(), accuracy: null };
-    setLocalCaptures(prev => [...prev, { objectUrl: topCaptureObjectUrl, title: topCaptureTitle, notes: topCaptureNotes, metadata: meta }]);
-    addToast('success', 'Capture saved');
-    setTopCaptureObjectUrl(null);
-    setTopCaptureTitle('');
-    setTopCaptureNotes('');
-    setCaptureMetadata(null);
-  };
-
-  const handleTopCaptureCancel = () => {
-    if (topCaptureObjectUrl) URL.revokeObjectURL(topCaptureObjectUrl);
-    setTopCaptureObjectUrl(null);
-    setTopCaptureTitle('');
-    setTopCaptureNotes('');
-    setCaptureMetadata(null);
-  };
-
-  const handleQuickTextSend = async () => {
-    if (!quickTextValue.trim()) return;
-    try {
-      const label = quickTextType ? issueTypes.find((t) => t.type === quickTextType)?.label : 'Note';
-      await createFieldCapture.mutateAsync({ projectId: projectId!, data: { project_id: projectId!, type: quickTextType || 'text', content: quickTextValue, location: quickTextLocation || null } })
-      addToast('success', `${label} captured`)
-      setLiveAnnouncement(`${label} saved successfully`);
-      setQuickTextValue('')
-      setQuickTextType(null)
-      setQuickTextLocation('')
-    } catch {
-      addToast('error', 'Failed to save capture');
-      setLiveAnnouncement('Failed to save capture');
-    }
-  };
-
-  const captureIconMap: Record<string, React.ReactNode> = {
-    photo: <Camera size={14} color={colors.statusInfo} />,
-    voice: <Mic size={14} color={colors.statusReview} />,
-    issue: <AlertTriangle size={14} color={colors.statusCritical} />,
-    text: <FileText size={14} color={colors.statusInfo} />,
-  };
-
-  const captureBgMap: Record<string, string> = {
-    photo: `${colors.statusInfo}14`,
-    voice: `${colors.statusReview}14`,
-    issue: `${colors.statusCritical}14`,
-    text: `${colors.statusInfo}14`,
-  };
-
   return (
-    <PageContainer title="Field Capture" subtitle="Capture photos, voice notes, and observations from the field" aria-label="Field capture management">
-      <div aria-live="polite" aria-atomic="true" style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}>{liveAnnouncement}</div>
-      <QuickCapture open={quickCaptureOpen} onClose={() => setQuickCaptureOpen(false)} onSave={handleQuickCaptureSave} />
-
-      {/* Hidden file input for camera capture */}
+    <PageContainer
+      title="Field Capture"
+      subtitle="Document site conditions with photos, GPS, and AI analysis"
+      aria-label="Field capture management"
+    >
+      {/* Hidden file input */}
       <input
         ref={fileInputRef}
         type="file"
         accept="image/*"
         capture="environment"
-        onChange={handleFileInputChange}
+        onChange={handleFileChange}
         style={{ display: 'none' }}
         aria-hidden="true"
       />
+
+      {/* Post-capture overlay */}
+      {overlayDataUrl && (
+        <PhotoOverlay
+          dataUrl={overlayDataUrl}
+          location={overlayLocation}
+          isSaving={isSaving}
+          onSave={handleOverlaySave}
+          onCancel={handleOverlayCancel}
+        />
+      )}
 
       {/* Offline banner */}
       {!isOnline && (
@@ -329,11 +700,14 @@ const FieldCaptureInner: React.FC = () => {
           aria-live="assertive"
           role="status"
           style={{
-            display: 'flex', alignItems: 'center', gap: spacing['2'],
-            padding: '12px', marginBottom: spacing['4'],
+            display: 'flex',
+            alignItems: 'center',
+            gap: spacing['2'],
+            padding: spacing['3'],
+            marginBottom: spacing['4'],
             backgroundColor: '#FEF3C7',
-            border: '1px solid #F59E0B',
-            borderRadius: borderRadius.base,
+            border: `1px solid #F59E0B`,
+            borderRadius: borderRadius.md,
           }}
         >
           <AlertTriangle size={16} color="#B45309" style={{ flexShrink: 0 }} />
@@ -343,686 +717,245 @@ const FieldCaptureInner: React.FC = () => {
         </div>
       )}
 
-      {/* Photo metadata overlay */}
-      {photoDataUrl && (
-        <div style={{
-          position: 'fixed', inset: 0, zIndex: zIndex.tooltip as number,
-          backgroundColor: 'rgba(0,0,0,0.65)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          padding: spacing['4'],
-        }}>
-          <div style={{
-            backgroundColor: colors.white, borderRadius: borderRadius.xl,
-            width: '100%', maxWidth: '480px', maxHeight: '90vh', overflowY: 'auto',
-            display: 'flex', flexDirection: 'column',
-          }}>
-            <img
-              src={photoDataUrl}
-              alt="Captured photo preview"
-              style={{ width: '100%', aspectRatio: '4/3', objectFit: 'cover', borderRadius: `${borderRadius.xl} ${borderRadius.xl} 0 0`, display: 'block' }}
-            />
-            <div style={{ padding: spacing['4'], display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
-              <input
-                type="text"
-                value={photoTitle}
-                onChange={(e) => setPhotoTitle(e.target.value)}
-                placeholder="Title (optional)"
-                style={{
-                  width: '100%', padding: `${spacing['2']} ${spacing['3']}`,
-                  border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.md,
-                  fontSize: typography.fontSize.body, fontFamily: typography.fontFamily,
-                  color: colors.textPrimary, outline: 'none', boxSizing: 'border-box',
-                }}
-              />
-              <textarea
-                value={photoNotes}
-                onChange={(e) => setPhotoNotes(e.target.value)}
-                placeholder="Notes (optional)"
-                rows={3}
-                style={{
-                  width: '100%', padding: spacing['3'],
-                  border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.md,
-                  fontSize: typography.fontSize.body, fontFamily: typography.fontFamily,
-                  color: colors.textPrimary, resize: 'vertical', outline: 'none', boxSizing: 'border-box',
-                }}
-              />
-              <input
-                type="text"
-                value={photoTags}
-                onChange={(e) => setPhotoTags(e.target.value)}
-                placeholder="Tags, comma separated (optional)"
-                style={{
-                  width: '100%', padding: `${spacing['2']} ${spacing['3']}`,
-                  border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.md,
-                  fontSize: typography.fontSize.body, fontFamily: typography.fontFamily,
-                  color: colors.textPrimary, outline: 'none', boxSizing: 'border-box',
-                }}
-              />
-              <input
-                type="text"
-                value={photoLinkTo}
-                onChange={(e) => setPhotoLinkTo(e.target.value)}
-                placeholder="Link to RFI, punch item, or drawing (optional)"
-                style={{
-                  width: '100%', padding: `${spacing['2']} ${spacing['3']}`,
-                  border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.md,
-                  fontSize: typography.fontSize.body, fontFamily: typography.fontFamily,
-                  color: colors.textPrimary, outline: 'none', boxSizing: 'border-box',
-                }}
-              />
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: spacing['2'] }}>
-                <Btn variant="ghost" size="sm" onClick={handlePhotoMetaCancel}>Cancel</Btn>
-                <Btn variant="primary" size="sm" onClick={handlePhotoMetaSave}>Save</Btn>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-      {/* Prominent top Capture button */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: spacing['4'] }}>
-        <button
-          aria-label="Capture new field photo"
-          onClick={handleTopCapture}
-          style={{
-            display: 'flex', alignItems: 'center', gap: spacing['3'],
-            backgroundColor: colors.primaryOrange, color: 'white',
-            borderRadius: 12, padding: '16px 32px', fontSize: 16,
-            fontWeight: 600, minHeight: 56, border: 'none',
-            cursor: 'pointer', fontFamily: typography.fontFamily,
-          }}
-        >
-          <Camera size={22} />
-          Capture
-        </button>
-        {topCaptureObjectUrl && (
-          <div style={{ marginTop: spacing['4'], width: '100%', maxWidth: 480, backgroundColor: colors.white, borderRadius: borderRadius.xl, boxShadow: shadows.card, overflow: 'hidden' }}>
-            <img src={topCaptureObjectUrl} alt="Captured photo preview" style={{ width: '100%', aspectRatio: '4/3', objectFit: 'cover', display: 'block' }} />
-            <div style={{ padding: spacing['4'], display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
-                <MapPin size={14} color={colors.primaryOrange} />
-                <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>
-                  {captureMetadata === null
-                    ? 'Locating...'
-                    : captureMetadata.lat !== null
-                      ? `Lat: ${captureMetadata.lat.toFixed(4)}, Lng: ${captureMetadata.lng!.toFixed(4)}`
-                      : 'Location unavailable'}
-                </span>
-              </div>
-              {captureMetadata && (
-                <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
-                  {new Date(captureMetadata.timestamp).toLocaleString()}
-                </span>
-              )}
-              <input
-                type="text"
-                value={topCaptureTitle}
-                onChange={(e) => setTopCaptureTitle(e.target.value)}
-                placeholder="Title (optional)"
-                style={{
-                  width: '100%', padding: `${spacing['2']} ${spacing['3']}`,
-                  border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.md,
-                  fontSize: typography.fontSize.body, fontFamily: typography.fontFamily,
-                  color: colors.textPrimary, outline: 'none', boxSizing: 'border-box',
-                }}
-              />
-              <textarea
-                value={topCaptureNotes}
-                onChange={(e) => setTopCaptureNotes(e.target.value)}
-                placeholder="Notes (optional)"
-                rows={3}
-                style={{
-                  width: '100%', padding: spacing['3'],
-                  border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.md,
-                  fontSize: typography.fontSize.body, fontFamily: typography.fontFamily,
-                  color: colors.textPrimary, resize: 'vertical', outline: 'none', boxSizing: 'border-box',
-                }}
-              />
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: spacing['2'] }}>
-                <Btn variant="ghost" size="sm" onClick={handleTopCaptureCancel}>Cancel</Btn>
-                <Btn variant="primary" size="sm" onClick={handleTopCaptureSave}>Save Capture</Btn>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: spacing['3'], padding: `${spacing['3']} ${spacing['4']}`, marginBottom: spacing['4'], backgroundColor: colors.statusReviewSubtle, borderRadius: borderRadius.base, borderLeft: `3px solid ${colors.statusReview}` }}>
-        <Sparkles size={14} color={colors.statusReview} style={{ marginTop: 2, flexShrink: 0 }} />
-        <p style={{ fontSize: typography.fontSize.caption, color: colors.textPrimary, margin: 0, lineHeight: 1.5 }}>
-          AI Analysis: 85% of today's captures were auto categorized. 2 potential safety concerns flagged for review.
-        </p>
-      </div>
-      {/* Metric Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['3'], marginBottom: spacing['4'] }}>
+      {/* Metric cards */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, 1fr)',
+          gap: spacing['3'],
+          marginBottom: spacing['6'],
+        }}
+      >
         {([
-          { icon: <Camera size={18} color={colors.statusInfo} />, label: 'Photos Today', value: photosToday, color: colors.statusInfo },
-          { icon: <Mic size={18} color={colors.statusReview} />, label: 'Voice Notes', value: voiceNotesToday, color: colors.statusReview },
-          { icon: <FileText size={18} color={colors.statusActive} />, label: 'Items Created', value: itemsCreatedToday, color: colors.statusActive },
-          { icon: <RefreshCw size={18} color={pendingCount > 0 ? colors.statusPending : colors.textTertiary} />, label: 'Pending Sync', value: pendingCount, color: pendingCount > 0 ? colors.statusPending : colors.textTertiary },
-        ] as const).map(({ icon, label, value, color }) => (
-          <div key={label} style={{ backgroundColor: colors.white, borderRadius: borderRadius.xl, padding: spacing['6'], display: 'flex', flexDirection: 'column', gap: spacing['2'], boxShadow: shadows.card }}>
+          {
+            label: 'Total Captures',
+            value: totalCaptures,
+            icon: <Camera size={18} color={colors.statusInfo} />,
+            color: colors.statusInfo,
+          },
+          {
+            label: 'Captures Today',
+            value: capturesToday,
+            icon: <Camera size={18} color={colors.primaryOrange} />,
+            color: colors.primaryOrange,
+          },
+          {
+            label: 'Pending Upload',
+            value: pendingCount,
+            icon: <RefreshCw size={18} color={pendingCount > 0 ? colors.statusPending : colors.textTertiary} />,
+            color: pendingCount > 0 ? colors.statusPending : colors.textTertiary,
+          },
+          {
+            label: 'AI Flags',
+            value: aiFlags,
+            icon: <Sparkles size={18} color={aiFlags > 0 ? colors.statusReview : colors.textTertiary} />,
+            color: aiFlags > 0 ? colors.statusReview : colors.textTertiary,
+          },
+        ] as const).map(({ label, value, icon, color }) => (
+          <div
+            key={label}
+            style={{
+              backgroundColor: colors.white,
+              borderRadius: borderRadius.xl,
+              padding: spacing['5'],
+              display: 'flex',
+              flexDirection: 'column',
+              gap: spacing['2'],
+              boxShadow: shadows.card,
+            }}
+          >
             <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
               {icon}
-              <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, fontWeight: typography.fontWeight.medium }}>{label}</span>
+              <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, fontWeight: typography.fontWeight.medium }}>
+                {label}
+              </span>
             </div>
-            <span style={{ fontSize: typography.fontSize['3xl'], fontWeight: typography.fontWeight.semibold, color }}>{value}</span>
+            <span style={{ fontSize: typography.fontSize['3xl'], fontWeight: typography.fontWeight.semibold, color }}>
+              {value}
+            </span>
           </div>
         ))}
       </div>
 
-      {/* QR Check-In Sheet */}
-      {showCheckInSheet && (
-        <QRScannerSheet onClose={() => setShowCheckInSheet(false)} />
-      )}
-
-      {/* Quick Capture Bar */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: spacing['3'],
-        padding: spacing['4'], backgroundColor: colors.surfaceRaised,
-        borderRadius: borderRadius.lg, boxShadow: shadows.card, marginBottom: spacing['6'],
-      }}>
+      {/* Capture button (prominent, centered) */}
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: spacing['6'] }}>
         <button
-          aria-label="Check in via QR code"
-          onClick={() => setShowCheckInSheet(true)}
+          aria-label="Capture new field photo"
+          onClick={handleCaptureClick}
           style={{
-            flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['2'],
-            padding: `${spacing['4']} ${spacing['3']}`, minHeight: 44, minWidth: 44,
-            backgroundColor: `${colors.statusActive}14`,
-            color: colors.statusActive,
-            border: 'none', borderRadius: borderRadius.md, cursor: 'pointer',
-            transition: `all ${transitions.instant}`,
+            display: 'flex',
+            alignItems: 'center',
+            gap: spacing['3'],
+            backgroundColor: colors.primaryOrange,
+            color: colors.white,
+            border: 'none',
+            borderRadius: borderRadius.xl,
+            padding: `${spacing['4']} ${spacing['8']}`,
+            fontSize: typography.fontSize.title,
+            fontWeight: typography.fontWeight.semibold,
+            fontFamily: typography.fontFamily,
+            minHeight: '56px',
+            minWidth: '160px',
+            cursor: 'pointer',
+            boxShadow: shadows.glow,
+            transition: `background-color ${transitions.quick}`,
           }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = `${colors.statusActive}22`; }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = `${colors.statusActive}14`; }}
+          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.orangeHover; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.primaryOrange; }}
         >
-          <QrCode size={24} />
-          <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold }}>Check In</span>
-          <span style={{ fontSize: typography.fontSize.caption, opacity: 0.8, fontWeight: typography.fontWeight.normal }}>Scan QR code</span>
-        </button>
-
-        <PermissionGate permission="field_capture.create">
-          <button
-            aria-label="Capture photo"
-            onClick={handlePhotoButtonClick}
-            style={{
-              flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['2'],
-              padding: `${spacing['4']} ${spacing['3']}`, minHeight: 44, minWidth: 44,
-              backgroundColor: colors.primaryOrange, color: colors.white, border: 'none',
-              borderRadius: borderRadius.md, cursor: 'pointer',
-              transition: `background-color ${transitions.instant}`,
-            }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.orangeHover; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.primaryOrange; }}
-          >
-            <Camera size={24} />
-            <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold }}>Photo</span>
-            <span style={{ fontSize: typography.fontSize.caption, opacity: 0.8, fontWeight: typography.fontWeight.normal }}>Take a photo</span>
-          </button>
-        </PermissionGate>
-
-        <PermissionGate permission="field_capture.create">
-          <button
-            aria-label="Record voice note"
-            onClick={() => setShowVoice(true)}
-            style={{
-              flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['2'],
-              padding: `${spacing['4']} ${spacing['3']}`, minHeight: 44, minWidth: 44,
-              backgroundColor: colors.statusReview, color: colors.white, border: 'none',
-              borderRadius: borderRadius.md, cursor: 'pointer',
-              transition: `opacity ${transitions.instant}`,
-            }}
-          >
-            <Mic size={24} />
-            <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold }}>Voice</span>
-            <span style={{ fontSize: typography.fontSize.caption, opacity: 0.8, fontWeight: typography.fontWeight.normal }}>Record and transcribe</span>
-          </button>
-        </PermissionGate>
-
-        <PermissionGate permission="field_capture.create">
-          <button
-            aria-label="Add tags"
-            onClick={() => setQuickTextType(quickTextType ? null : 'note')}
-            style={{
-              flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['2'],
-              padding: `${spacing['4']} ${spacing['3']}`, minHeight: 44, minWidth: 44,
-              backgroundColor: quickTextType ? colors.surfaceSelected : `${colors.statusInfo}14`,
-              color: quickTextType ? colors.primaryOrange : colors.statusInfo,
-              border: 'none', borderRadius: borderRadius.md, cursor: 'pointer',
-              transition: `all ${transitions.instant}`,
-            }}
-          >
-            <FileText size={24} />
-            <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold }}>Text</span>
-            <span style={{ fontSize: typography.fontSize.caption, opacity: 0.8, fontWeight: typography.fontWeight.normal }}>Quick note</span>
-          </button>
-        </PermissionGate>
-
-        <button
-          aria-label="View crew check-in board"
-          onClick={() => setCaptureMode(captureMode === 'checkin' ? null : 'checkin')}
-          style={{
-            flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['2'],
-            padding: `${spacing['4']} ${spacing['3']}`, minHeight: 44, minWidth: 44,
-            backgroundColor: captureMode === 'checkin' ? colors.surfaceSelected : `${colors.statusActive}14`,
-            color: captureMode === 'checkin' ? colors.primaryOrange : colors.statusActive,
-            border: 'none', borderRadius: borderRadius.md, cursor: 'pointer',
-            transition: `all ${transitions.instant}`,
-          }}
-          onMouseEnter={(e) => { if (captureMode !== 'checkin') (e.currentTarget as HTMLButtonElement).style.backgroundColor = `${colors.statusActive}22`; }}
-          onMouseLeave={(e) => { if (captureMode !== 'checkin') (e.currentTarget as HTMLButtonElement).style.backgroundColor = `${colors.statusActive}14`; }}
-        >
-          <Users size={24} />
-          <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold }}>Crew</span>
-          <span style={{ fontSize: typography.fontSize.caption, opacity: 0.8, fontWeight: typography.fontWeight.normal }}>Check-in board</span>
+          <Camera size={22} />
+          Capture
         </button>
       </div>
 
-      {/* Camera simulation overlay */}
-      {captureMode === 'photo' && (
-        <div style={{
-          position: 'fixed', inset: 0, zIndex: zIndex.tooltip as number, backgroundColor: colors.black, /* camera overlay */
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <div style={{ width: '100%', maxWidth: '640px', aspectRatio: '4/3', position: 'relative', backgroundColor: colors.darkNavy }}>
-            {/* Viewfinder guides */}
-            <div style={{ position: 'absolute', top: '10%', left: '10%', width: '80%', height: '80%', border: `1px solid ${colors.overlayWhiteThin}`, borderRadius: borderRadius.md }}>
-              {/* Corner marks */}
-              {['top-left', 'top-right', 'bottom-left', 'bottom-right'].map((pos) => (
-                <div key={pos} style={{
-                  position: 'absolute',
-                  [pos.includes('top') ? 'top' : 'bottom']: -1,
-                  [pos.includes('left') ? 'left' : 'right']: -1,
-                  width: 20, height: 20,
-                  borderTop: pos.includes('top') ? `2px solid ${colors.white}` : 'none',
-                  borderBottom: pos.includes('bottom') ? `2px solid ${colors.white}` : 'none',
-                  borderLeft: pos.includes('left') ? `2px solid ${colors.white}` : 'none',
-                  borderRight: pos.includes('right') ? `2px solid ${colors.white}` : 'none',
-                }} />
-              ))}
-            </div>
-            {/* Center crosshair */}
-            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-              <div style={{ width: 20, height: 1, backgroundColor: colors.darkMutedText }} />
-              <div style={{ width: 1, height: 20, backgroundColor: colors.darkMutedText, position: 'absolute', top: -10, left: 10 }} />
-            </div>
-            {/* Metadata overlay */}
-            <div style={{ position: 'absolute', bottom: 16, left: 16, right: 16, display: 'flex', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
-                <MapPin size={12} color={colors.overlayWhiteMedium} />
-                <span style={{ fontSize: '10px', color: colors.overlayWhiteMedium }}>Floor 7, Grid B4</span>
-              </div>
-              <span style={{ fontSize: '10px', color: colors.overlayWhiteMedium }}>Capturing...</span>
-            </div>
-            {/* Flash animation */}
-            <div style={{
-              position: 'absolute', inset: 0, backgroundColor: colors.white,
-              animation: 'fadeIn 100ms ease-out reverse',
-              opacity: 0, pointerEvents: 'none',
-            }} />
-          </div>
+      {/* Grid / Map toggle + count */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: spacing['4'],
+        }}
+      >
+        <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>
+          {captures.length} photo{captures.length !== 1 ? 's' : ''}
+        </span>
+        <div
+          style={{
+            display: 'flex',
+            backgroundColor: colors.surfaceInset,
+            borderRadius: borderRadius.lg,
+            padding: '3px',
+            gap: '2px',
+          }}
+        >
+          {([
+            { mode: 'grid' as const, icon: <LayoutGrid size={15} />, label: 'Grid view' },
+            { mode: 'map' as const, icon: <MapIcon size={15} />, label: 'Map view' },
+          ]).map(({ mode, icon, label }) => (
+            <button
+              key={mode}
+              aria-label={label}
+              aria-pressed={viewMode === mode}
+              onClick={() => setViewMode(mode)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: spacing['1'],
+                padding: `${spacing['2']} ${spacing['3']}`,
+                minHeight: '32px',
+                border: 'none',
+                borderRadius: borderRadius.md,
+                cursor: 'pointer',
+                backgroundColor: viewMode === mode ? colors.white : 'transparent',
+                color: viewMode === mode ? colors.textPrimary : colors.textTertiary,
+                fontFamily: typography.fontFamily,
+                fontSize: typography.fontSize.caption,
+                fontWeight: typography.fontWeight.medium,
+                boxShadow: viewMode === mode ? shadows.card : 'none',
+                transition: `all ${transitions.quick}`,
+              }}
+            >
+              {icon}
+              <span style={{ textTransform: 'capitalize' }}>{mode}</span>
+            </button>
+          ))}
         </div>
-      )}
+      </div>
 
-      {/* Quick Text Panel */}
-      {quickTextType && (
-        <Card padding={spacing['4']}>
-          <div style={{ display: 'flex', gap: spacing['2'], marginBottom: spacing['3'] }}>
-            {issueTypes.map((t) => (
-              <button
-                key={t.type}
-                aria-label={`Set type to ${t.label}`}
-                aria-pressed={quickTextType === t.type}
-                onClick={() => {
-                  setQuickTextType(t.type);
-                  setQuickTextValue(t.template);
-                }}
-                style={{
-                  padding: `${spacing['1']} ${spacing['3']}`,
-                  minHeight: 44, minWidth: 44,
-                  backgroundColor: quickTextType === t.type ? `${t.color}14` : 'transparent',
-                  color: quickTextType === t.type ? t.color : colors.textTertiary,
-                  border: `1px solid ${quickTextType === t.type ? t.color : colors.borderDefault}`,
-                  borderRadius: borderRadius.full, cursor: 'pointer',
-                  fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
-                  fontFamily: typography.fontFamily, transition: `all ${transitions.instant}`,
-                }}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-          <select
-            aria-label="Filter photos by category"
-            value={quickTextLocation}
-            onChange={(e) => setQuickTextLocation(e.target.value)}
+      {/* Content: empty state OR grid/map */}
+      {captures.length === 0 ? (
+        <Card padding={spacing['10']}>
+          <div
             style={{
-              width: '100%', padding: `${spacing['2']} ${spacing['3']}`,
-              border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.md,
-              fontSize: typography.fontSize.body, fontFamily: typography.fontFamily,
-              color: quickTextLocation ? colors.textPrimary : colors.textTertiary,
-              backgroundColor: colors.surfaceRaised, marginBottom: spacing['2'], outline: 'none',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: spacing['4'],
+              textAlign: 'center',
             }}
           >
-            <option value="">Select location...</option>
-            {locations.map(loc => <option key={loc} value={loc}>{loc}</option>)}
-          </select>
-          <textarea
-            value={quickTextValue}
-            onChange={(e) => setQuickTextValue(e.target.value)}
-            placeholder="Describe what you see..."
-            style={{
-              width: '100%', height: '80px', padding: spacing['3'],
-              border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.md,
-              fontSize: typography.fontSize.body, fontFamily: typography.fontFamily,
-              color: colors.textPrimary, resize: 'vertical', outline: 'none',
-            }}
-          />
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: spacing['2'], marginTop: spacing['2'] }}>
-            <Btn variant="ghost" size="sm" onClick={() => { setQuickTextType(null); setQuickTextLocation(''); }}>Cancel</Btn>
-            <PermissionGate permission="field_capture.create">
-              <Btn size="sm" onClick={handleQuickTextSend} disabled={!quickTextValue.trim()}>Save Capture</Btn>
-            </PermissionGate>
+            <div
+              style={{
+                width: '72px',
+                height: '72px',
+                borderRadius: '50%',
+                backgroundColor: `${colors.primaryOrange}12`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Camera size={36} color={colors.primaryOrange} />
+            </div>
+            <div>
+              <p style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>
+                No field captures yet
+              </p>
+              <p style={{ fontSize: typography.fontSize.body, color: colors.textSecondary, margin: 0, lineHeight: typography.lineHeight.normal }}>
+                Start documenting site conditions with photos.
+              </p>
+            </div>
+            <button
+              aria-label="Open camera to capture"
+              onClick={handleCaptureClick}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: spacing['2'],
+                padding: `${spacing['3']} ${spacing['6']}`,
+                backgroundColor: colors.primaryOrange,
+                color: colors.white,
+                border: 'none',
+                borderRadius: borderRadius.lg,
+                fontSize: typography.fontSize.body,
+                fontWeight: typography.fontWeight.semibold,
+                fontFamily: typography.fontFamily,
+                cursor: 'pointer',
+                minHeight: '44px',
+              }}
+            >
+              <Camera size={18} />
+              Open Camera
+            </button>
           </div>
         </Card>
-      )}
-
-      {/* Crew Check-In Board */}
-      {captureMode === 'checkin' && (
-        <div style={{ marginBottom: spacing['6'] }}>
-          <SectionHeader
-            title="Crew Check-In"
-            action={
-              <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
-                Live · updates in real time
-              </span>
-            }
-          />
-          <div style={{ marginTop: spacing['3'] }}>
-            <QRCheckIn showLiveBoard />
-          </div>
-        </div>
-      )}
-
-      {/* Today's Timeline */}
-      {captures.length === 0 ? (
-        <div style={{ marginTop: quickTextType ? spacing['4'] : 0 }}>
-          <Card padding={spacing['10']}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['4'], textAlign: 'center' }}>
-              <div style={{ width: 64, height: 64, borderRadius: '50%', backgroundColor: `${colors.primaryOrange}14`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Camera size={32} color={colors.primaryOrange} />
-              </div>
-              <div>
-                <p style={{ fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>No field captures yet</p>
-                <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: 0 }}>Start documenting site conditions with photos.</p>
-              </div>
-              <button
-                aria-label="Capture photo"
-                onClick={handlePhotoButtonClick}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: spacing['2'],
-                  padding: `${spacing['3']} ${spacing['6']}`,
-                  backgroundColor: colors.primaryOrange, color: colors.white,
-                  border: 'none', borderRadius: borderRadius.lg,
-                  fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold,
-                  fontFamily: typography.fontFamily, cursor: 'pointer',
-                  minHeight: 44,
-                }}
-              >
-                <Camera size={18} />
-                Capture
-              </button>
-            </div>
-          </Card>
-        </div>
+      ) : viewMode === 'map' ? (
+        <MapView captures={captures} />
       ) : (
         <>
-      <section aria-label="Field capture photos">
-      <div style={{ marginTop: quickTextType ? spacing['4'] : 0 }}>
-        <SectionHeader title="Today's Captures" action={<span aria-live="polite" style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{todayCaptures.length} items</span>} />
-        <Card>
-          {todayCaptures.length === 0 ? (
-            <EmptyState
-              icon={Camera}
-              title="No captures today"
-              description="Use the buttons below to log a photo, voice note, or check in"
-              action={{ label: 'Start Capturing', onClick: () => setQuickCaptureOpen(true) }}
-            />
-          ) : (
-            <CaptureTimeline
-              events={todayCaptures}
-              onSelect={(event) => addToast('info', `Viewing: ${event.title}`)}
-            />
-          )}
-        </Card>
-      </div>
-
-      {/* Previous Captures */}
-      <div style={{ marginTop: spacing['6'] }}>
-        <SectionHeader title="Previous Captures" />
-        {previousCaptures.length === 0 ? (
-          <Card>
-            <EmptyState
-              icon={Camera}
-              title="No captures today"
-              description="Use the buttons below to log a photo, voice note, or check in"
-              action={{ label: 'Start Capturing', onClick: () => setQuickCaptureOpen(true) }}
-            />
-          </Card>
-        ) : (
-        <Card padding="0">
-          <div role="list" aria-label="Field captures">
-          {previousCaptures.map((capture, index) => (
-            <div
-              key={capture.id}
-              role="listitem"
-              tabIndex={0}
-              aria-label={`View photo: ${capture.title || capture.id}`}
-              onClick={() => addToast('info', `Viewing ${capture.title}`)}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); addToast('info', `Viewing ${capture.title}`); } }}
-              style={{
-                display: 'flex', alignItems: 'center', gap: spacing['3'],
-                padding: `${spacing['3']} ${spacing['5']}`,
-                borderBottom: index < previousCaptures.length - 1 ? `1px solid ${colors.borderSubtle}` : 'none',
-                cursor: 'pointer', transition: `background-color ${transitions.instant}`,
-                minHeight: 44,
-              }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = colors.surfaceHover; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = 'transparent'; }}
-            >
-              <div style={{
-                width: 32, height: 32, borderRadius: '50%',
-                backgroundColor: captureBgMap[capture.type] || `${colors.statusInfo}14`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                {captureIconMap[capture.type] || <FileText size={14} color={colors.statusInfo} />}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], flexWrap: 'wrap' }}>
-                  <p style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, margin: 0 }}>{capture.title}</p>
-                  {capture.aiCategory && (
-                    <span title="Categorized by AI" style={{ display: 'inline-flex', alignItems: 'center', gap: 2, padding: '1px 6px', backgroundColor: `${colors.statusReview}12`, borderRadius: borderRadius.full, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.statusReview }}>
-                      <Sparkles size={10} /> {capture.aiCategory}
-                    </span>
-                  )}
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
-                  <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0 }}>{capture.capturedBy} · {capture.time}</p>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], marginTop: 2 }}>
-                  <MapPin size={10} color={colors.textTertiary} />
-                  <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{capture.location}</span>
-                </div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
-                {capture.type === 'photo' && (
-                  <PermissionGate permission="field_capture.create">
-                    <button
-                      aria-label="Pin photo to drawing sheet"
-                      onClick={(e) => { e.stopPropagation(); addToast('info', 'Select a drawing sheet to pin this photo'); }}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: spacing['1'],
-                        padding: `${spacing['1']} ${spacing['2']}`,
-                        minHeight: 44, minWidth: 44,
-                        backgroundColor: 'transparent', border: `1px solid ${colors.borderDefault}`,
-                        borderRadius: borderRadius.sm, fontSize: typography.fontSize.caption,
-                        fontFamily: typography.fontFamily, color: colors.textTertiary,
-                        cursor: 'pointer', whiteSpace: 'nowrap',
-                      }}
-                    >
-                      <FileText size={10} /> Pin to Drawing
-                    </button>
-                  </PermissionGate>
-                )}
-                <ChevronRight size={14} color={colors.textTertiary} />
-              </div>
-            </div>
-          ))}
-          </div>
-        </Card>
-        )}
-      </div>
-      </section>
-      </>
-      )}
-
-      {/* Fixed bottom Capture button */}
-      <PermissionGate permission="field_capture.create">
-        <div style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: zIndex.modal as number, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['2'] }}>
-          {pendingCount > 0 && (
-            <div style={{
-              backgroundColor: '#F59E0B', color: '#fff',
-              borderRadius: borderRadius.full,
-              padding: `2px ${spacing['3']}`,
-              fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
-              whiteSpace: 'nowrap', boxShadow: shadows.card,
-            }}>
-              {pendingCount} photo{pendingCount !== 1 ? 's' : ''} pending upload
-            </div>
-          )}
-          <button
-            aria-label="Capture photo"
-            onClick={handlePhotoButtonClick}
+          <style>{`
+            @media (max-width: 640px) {
+              .fc-grid { grid-template-columns: repeat(1, 1fr) !important; }
+            }
+            @media (min-width: 641px) and (max-width: 1023px) {
+              .fc-grid { grid-template-columns: repeat(2, 1fr) !important; }
+            }
+          `}</style>
+          <div
+            className="fc-grid"
             style={{
-              width: 64, height: 64,
-              borderRadius: '50%',
-              backgroundColor: colors.primaryOrange,
-              color: colors.white,
-              border: 'none',
-              cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 4px 16px rgba(244,120,32,0.45)',
-              transition: `background-color ${transitions.instant}`,
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: spacing['3'],
             }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.orangeHover; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.primaryOrange; }}
           >
-            <Camera size={28} />
-          </button>
-          <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, backgroundColor: colors.white, borderRadius: borderRadius.full, padding: `2px ${spacing['3']}`, boxShadow: shadows.card }}>Capture</span>
-        </div>
-      </PermissionGate>
-
-      {/* Overlays */}
-      {showAnnotator && (
-        <PhotoAnnotator
-          onClose={() => setShowAnnotator(false)}
-          onSave={async () => {
-            try {
-              await createFieldCapture.mutateAsync({ projectId: projectId!, data: { project_id: projectId!, type: 'photo', content: 'Photo capture with annotations' } })
-              addToast('success', 'Photo saved with annotations')
-            } catch { addToast('error', 'Failed to save photo') }
-          }}
-        />
-      )}
-      {showVoice && (
-        <VoiceCapture
-          onClose={() => setShowVoice(false)}
-          onConfirm={async (entities: ExtractedEntity[], transcript: string, _audioBlob: Blob | null) => {
-            let savedCount = 0;
-            for (const entity of entities) {
-              try {
-                const data = entity.data as Record<string, unknown>;
-                if (entity.type === 'daily_log') {
-                  const activities = data.activities as Array<Record<string, unknown>> | undefined;
-                  const location = activities?.[0]?.location as string || '';
-                  await createFieldCapture.mutateAsync({
-                    projectId: projectId!,
-                    data: {
-                      project_id: projectId!,
-                      type: 'voice',
-                      content: transcript,
-                      location: location || null,
-                      ai_category: 'daily_log',
-                    },
-                  });
-                  savedCount++;
-                } else if (entity.type === 'rfi_draft') {
-                  await createFieldCapture.mutateAsync({
-                    projectId: projectId!,
-                    data: {
-                      project_id: projectId!,
-                      type: 'voice',
-                      content: `RFI: ${data.subject || ''} — ${data.question || ''}`,
-                      location: (data.location as string) || null,
-                      ai_category: 'rfi_draft',
-                    },
-                  });
-                  savedCount++;
-                } else if (entity.type === 'punch_item') {
-                  await createFieldCapture.mutateAsync({
-                    projectId: projectId!,
-                    data: {
-                      project_id: projectId!,
-                      type: 'voice',
-                      content: `Punch: ${data.title || ''} — ${data.description || ''}`,
-                      location: (data.location as string) || null,
-                      ai_category: 'punch_item',
-                    },
-                  });
-                  savedCount++;
-                } else if (entity.type === 'safety_observation') {
-                  await createFieldCapture.mutateAsync({
-                    projectId: projectId!,
-                    data: {
-                      project_id: projectId!,
-                      type: 'voice',
-                      content: `Safety: ${data.description || ''}`,
-                      location: (data.location as string) || null,
-                      ai_category: 'safety_observation',
-                    },
-                  });
-                  savedCount++;
-                } else {
-                  await createFieldCapture.mutateAsync({
-                    projectId: projectId!,
-                    data: {
-                      project_id: projectId!,
-                      type: 'voice',
-                      content: transcript,
-                      ai_category: 'general_note',
-                    },
-                  });
-                  savedCount++;
-                }
-              } catch {
-                addToast('error', `Failed to save ${entity.type}`);
-              }
-            }
-            if (savedCount > 0) {
-              addToast('success', `${savedCount} item${savedCount !== 1 ? 's' : ''} created from voice capture`);
-            }
-            setShowVoice(false);
-          }}
-        />
+            {captures.map(capture => (
+              <PhotoCard key={capture.id} capture={capture} />
+            ))}
+          </div>
+        </>
       )}
     </PageContainer>
   );
 };
 
-export const FieldCapture: React.FC = () => (
-  <ErrorBoundary message="Field capture could not be displayed. Check your connection and try again.">
+// ── Exported page ───────────────────────────────────────────
+
+const FieldCapturePage: React.FC = () => (
+  <ErrorBoundary>
     <FieldCaptureInner />
   </ErrorBoundary>
 );
 
-export default FieldCapture;
+export default FieldCapturePage;
