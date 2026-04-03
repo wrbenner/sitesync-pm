@@ -36,6 +36,7 @@ function isDevBypassActive(): boolean {
   if (import.meta.env.PROD === true) return false
   if (!import.meta.env.DEV) return false
   if (import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_URL.length > 0) return false
+  if (import.meta.env.VITE_SUPABASE_ANON_KEY && import.meta.env.VITE_SUPABASE_ANON_KEY.length > 0) return false
   if (import.meta.env.VITE_DEV_BYPASS !== 'true') return false
   return true
 }
@@ -141,7 +142,7 @@ const ProtectedRoute: React.FC<Props> = ({ children, requiredPermission, moduleI
   }
 
   if (!isDevBypassActive() && !user) {
-    return <Navigate to={'/login?returnTo=' + encodeURIComponent(location.pathname)} replace />
+    return <Navigate to={`/login?returnTo=${encodeURIComponent(location.pathname + location.search)}`} replace />
   }
 
   const requiredPerm = requiredPermission ?? MODULE_PERMISSIONS[moduleId ?? '']
