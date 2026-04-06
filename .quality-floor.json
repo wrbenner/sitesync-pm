@@ -1,7 +1,7 @@
 {
   "_comment": "Quality floors \u2014 these values can only improve, never regress. CI and immune-gate.sh enforce this. Updated automatically when metrics improve.",
   "_version": 2,
-  "_updated": "2026-04-06T13:42:00Z",
+  "_updated": "2026-04-06T13:51:00Z",
   "_updatedBy": "immune-gate.sh",
   "bundleSizeKB": 287,
   "coveragePercent": 43.2,
@@ -35,5 +35,5 @@
     "bundleSizeKB": 250,
     "longestResponseMs": 200
   },
-  "_note": "eslintWarnings reset to 9999 \u2014 CI auto-updates on each passing run"
+  "_note": "CI fixed: uses npm install for Vite 8 rolldown native bindings"
 }
