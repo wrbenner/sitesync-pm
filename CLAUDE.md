@@ -221,3 +221,43 @@ Understand these terms before writing construction software:
 - **Substantial Completion** — When the project is sufficiently complete for the owner to occupy/use it. Triggers retainage release and warranty period.
 - **Section 42 / LIHTC** — Low Income Housing Tax Credit. Federal tax incentive for affordable housing. Requires specific compliance documentation.
 - **HUD** — Department of Housing and Urban Development. Oversees affordable housing programs with strict reporting requirements.
+
+## Tonight's Mission (ALWAYS READ FIRST)
+
+10. **TONIGHT.md** — Your exact mission for tonight. Read this BEFORE SPEC.md. It overrides general priorities with the specific nightly mission (V5/V6/V7 prompt to execute).
+
+## V7 Rules (for any UI work)
+
+These rules are **non-negotiable** when executing V7 prompts:
+
+- **No hyphens in UI text** — Use em dash (—) or rephrase. "In-Progress" becomes "In Progress". "Ball-In-Court" becomes "Ball in Court"
+- **Inline styles only** — All styles come from `src/styles/theme.ts` tokens. Zero CSS modules, zero Tailwind classes
+- **No hardcoded hex values** — Use `theme.colors.primary` not `#F47820`
+- **React.memo on every widget** — Every dashboard widget and list item must be memoized
+- **Read V7-00 first** — Before executing ANY V7 prompt: `cat v7-prompts/V7-00_SYSTEM_CONTEXT.md`
+- **V7 dependency order** — V7-01 and V7-02 must complete before any V7-03+ work
+
+## Escape Valve
+
+Check **PAUSE.md** at session start — if Status is PAUSED, stop immediately.
+
+## Do Not Touch
+
+- `supabase/migrations/` — Never edit existing. Only add new idempotent ones. Always: `CREATE TABLE IF NOT EXISTS`, `DO $$ BEGIN...EXCEPTION WHEN duplicate_object THEN NULL; END $$`
+- `src/types/database.ts` — Auto-generated. Never edit manually.
+- `.quality-floor.json` — Only update when a metric IMPROVES. Never lower a floor.
+
+## Construction Domain Glossary
+
+- **RFI**: Request for Information — formal question, has "ball in court" showing responsible party
+- **Submittal**: Material or shop drawing submitted for approval before installation
+- **Change Order (CO)**: Signed contract modification. PCO = Potential (unsigned)
+- **Punch List**: Deficiency list created at substantial completion
+- **Daily Log**: Required daily record of weather, labor, equipment, work performed
+- **SOV**: Schedule of Values — line-item breakdown used for AIA billing
+- **AIA G702/G703**: Standard Application for Payment plus Continuation Sheet
+- **Retainage**: Percentage withheld from payments until substantial completion (typically 10%)
+- **Davis-Bacon**: Federal law requiring prevailing wages on government construction
+- **GC**: General Contractor. Sub: Subcontractor. AHJ: Authority Having Jurisdiction
+- **CPM**: Critical Path Method — standard for construction scheduling
+- **44px minimum**: All interactive elements must meet minimum touch target for field workers
