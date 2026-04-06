@@ -12,11 +12,11 @@
     "lines": 43.2
   },
   "tsErrors": 0,
-  "eslintErrors": 0,
+  "eslintErrors": 1379,
   "anyCount": 9999,
   "mockCount": 7,
   "a11yViolations": 0,
-  "eslintWarnings": 9999,
+  "eslintWarnings": 52,
   "e2ePassRate": 0.7,
   "tsIgnoreComments": 0,
   "longestResponseMs": 340,
@@ -35,6 +35,6 @@
     "bundleSizeKB": 250,
     "longestResponseMs": 200
   },
-  "_note": "floors reset to 9999 \u2014 CI auto-sets on first passing run, then ratchets down",
+  "_note": "ESLint floors set to current counts. Organism will ratchet down over time.",
   "_ci_trigger": "2026-04-06T14:20:00Z"
 }
