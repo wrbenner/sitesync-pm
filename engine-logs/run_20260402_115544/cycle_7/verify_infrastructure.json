@@ -1,0 +1,34 @@
+{
+  "verifications": [
+    {
+      "id": "infrastructure-C7-001",
+      "status": "not_fixed",
+      "note": "No matching commit found"
+    },
+    {
+      "id": "infrastructure-C7-002",
+      "status": "fixed",
+      "note": "Commit found matching issue ID"
+    },
+    {
+      "id": "infrastructure-C7-003",
+      "status": "fixed",
+      "note": "Commit found matching issue ID"
+    },
+    {
+      "id": "infrastructure-C7-004",
+      "status": "fixed",
+      "note": "Commit found matching issue ID"
+    },
+    {
+      "id": "infrastructure-C7-005",
+      "status": "fixed",
+      "note": "Commit found matching issue ID"
+    }
+  ],
+  "files_changed": 90,
+  "fixed": 4,
+  "partial": 0,
+  "unfixed": 1,
+  "regression_detected": false
+}

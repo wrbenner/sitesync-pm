@@ -1,0 +1,70 @@
+{
+  "module": "core-workflows",
+  "scores": {
+    "visual_polish": 32,
+    "domain_depth": 28,
+    "data_richness": 22,
+    "interaction_quality": 25,
+    "ai_integration": 8,
+    "mobile_first": 18,
+    "performance": 35,
+    "typescript_quality": 42,
+    "error_handling": 30,
+    "realtime": 20,
+    "accessibility": 15,
+    "security": 35,
+    "differentiation": 10,
+    "enterprise_readiness": 22
+  },
+  "overall_score": 24,
+  "issues": [
+    {
+      "id": "core-workflows-C6-001",
+      "severity": "critical",
+      "dimension": "domain_depth",
+      "title": "RFI page missing Ball In Court tracking and overdue detection per acceptance criteria",
+      "file": "src/pages/RFIs.tsx",
+      "description": "PAGE_ACCEPTANCE_CRITERIA requires Ball In Court (BIC) color-coded indicator showing who owns next action, overdue detection (due_date < today AND status !== closed shows red OVERDUE badge), KPI bar with total open/overdue/avg days to close, and Days Open calculation. None of these exist. The page likely shows a basic table without these critical construction workflow indicators.",
+      "prompt": "In the file src/pages/RFIs.tsx, make these specific changes: Add a KPI summary bar above the table with four MetricBox components: Total Open (count where status !== 'closed'), Overdue (count where due_date < today AND status !== 'closed', use theme.colors.error), Avg Days to Close (calculated from closed RFIs), and Closed This Week. In the table, add a 'Days Open' column calculated as Math.ceil((Date.now() - new Date(rfi.created_at).getTime()) / 86400000) for open RFIs and Math.ceil((new Date(rfi.closed_at || rfi.updated_at).getTime() - new Date(rfi.created_at).getTime()) / 86400000) for closed. Add a 'Ball In Court' column showing the assigned_to name with a colored dot (use inline style with borderRadius 50%, width 8, height 8, backgroundColor based on role: '#3B82F6' for GC, '#8B5CF6' for Architect, '#F47820' for Owner). Add overdue row highlighting: if due_date < today and status !== 'closed', set the row background to 'rgba(231,76,60,0.06)' and render a red 'OVERDUE' Tag next to the due date. BEFORE: Basic table with no KPIs, no BIC, no overdue detection. AFTER: Full KPI bar, Ball In Court column with color-coded dots, Days Open column, overdue highlighting with red badge. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "core-workflows-C6-002",
+      "severity": "critical",
+      "dimension": "domain_depth",
+      "title": "Submittals page missing approval chain visualization and spec section tracking",
+      "file": "src/pages/Submittals.tsx",
+      "description": "PAGE_ACCEPTANCE_CRITERIA requires approval chain as horizontal stepper showing each reviewer with decision status, spec section column linked to CSI MasterFormat, revision number tracking, lead time calculation ('If approved today, material arrives X. Required on site Y.'), and status pipeline (Pending/Under Review/Approved/Approved as Noted/Rejected/Resubmit). The page lacks these construction-specific workflow elements.",
+      "prompt": "In the file src/pages/Submittals.tsx, make these specific changes: Add a 'Spec Section' column to the table displaying the specification_section or submittal_type field formatted as CSI code (e.g., '03 30 00'). Add a 'Rev #' column showing revision count from submittal_revisions or defaulting to 'Rev 0'. Add a 'Lead Time' column that calculates business days between today and due_date, displaying as 'X days remaining' in green if > 7, amber if 1-7, red if overdue. Add status filter tabs at the top: All, Pending, Under Review, Approved, Rejected, Resubmit, using inline styles with active tab having borderBottom: '2px solid #F47820'. For the status column, use color-coded Tag components: pending=#6B7280, under_review=#3B82F6, approved=#4EC896, approved_as_noted=#4EC896, rejected=#E74C3C, resubmit=#F5A623. BEFORE: Basic submittal list without spec sections, revisions, lead times, or status pipeline. AFTER: Full construction submittal register with spec section, revision tracking, lead time calculation, and color-coded status pipeline. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "core-workflows-C6-003",
+      "severity": "critical",
+      "dimension": "interaction_quality",
+      "title": "Change Orders page missing three-tier PCO/COR/CO workflow and cost breakdown",
+      "file": "src/pages/ChangeOrders.tsx",
+      "description": "PAGE_ACCEPTANCE_CRITERIA requires three-tier workflow (PCO → COR → CO), cost breakdown by cost type (labor/material/equipment/sub with markup), schedule impact field, running totals (approved CO value, pending CO value, impact on contract), and markup calculation (configurable overhead + profit percentages). The page likely shows a flat list without pipeline stages or financial depth.",
+      "prompt": "In the file src/pages/ChangeOrders.tsx, make these specific changes: Add a summary bar at the top with four MetricBox cards: Total COs (count), Approved Total (sum of cost_impact where status==='approved', formatted as currency with Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0})), Pending Total (sum where status==='pending'), and Net Contract Change (approved total as +/- from original). Add filter tabs for CO type: 'All', 'PCO' (potential), 'COR' (request), 'CO' (approved), filtering on co_type field. In the table, add a 'Cost Impact' column formatted as currency with positive amounts in red and negative (credits) in green. Add a 'Schedule Impact' column showing total_time_impact as '+X days' in red or 'No impact' in gray. Add a 'Type' column with colored Tag: PCO=#6B7280, COR=#F5A623, CO=#4EC896. In the create/edit modal, add cost breakdown fields: labor_cost, material_cost, equipment_cost, sub_cost, overhead_pct (default 10), profit_pct (default 10), with auto-calculated total_cost = (labor+material+equipment+sub) * (1 + overhead_pct/100) * (1 + profit_pct/100). BEFORE: Flat change order list without pipeline stages, cost breakdown, or markup calculation. AFTER: Three-tier pipeline with PCO/COR/CO filters, cost impact with markup calculation, schedule impact tracking, and running financial totals. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "core-workflows-C6-004",
+      "severity": "critical",
+      "dimension": "accessibility",
+      "title": "All core workflow pages missing ARIA attributes, keyboard navigation, and screen reader support",
+      "file": "src/pages/RFIs.tsx",
+      "description": "PAGE_ACCEPTANCE_CRITERIA Global Standards require all pages pass axe-core with zero critical/serious violations, keyboard navigable with visible focus rings, all icons have aria-labels, all status changes announced via aria-live regions, and WCAG 2.1 AA color contrast. The RFI page (representative of all core workflow pages) lacks role attributes on tables, aria-labels on icon buttons, aria-live for status updates, and keyboard shortcuts (N for new, Enter to open detail).",
+      "prompt": "In the file src/pages/RFIs.tsx, make these specific changes: On the main table element, add role='table' and aria-label='RFI Register'. On each table header cell, add role='columnheader' and scope='col'. On each table row, add role='row', tabIndex={0}, and onKeyDown handler that opens detail on Enter key. On the filter/search input, add aria-label='Search RFIs by title or description'. On the 'New RFI' button (or create button), add aria-label='Create new Request for Information'. Add an aria-live='polite' div that announces when data loads: '{count} RFIs loaded' and when filters change: 'Showing {filtered} of {total} RFIs'. On all status Tag/badge components, add role='status'. On all icon-only buttons (edit, delete, view), add aria-label describing the action (e.g., aria-label={`View RFI ${rfi.rfiNumber}`}). Add visible focus styles: outline: '2px solid #F47820', outlineOffset: '2px' on all interactive elements via onFocus/onBlur state or CSS-in-JS. BEFORE: No ARIA attributes, no keyboard navigation, no screen reader announcements. AFTER: Full ARIA labeling, keyboard-navigable table rows, live region announcements, visible focus indicators. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "core-workflows-C6-005",
+      "severity": "critical",
+      "dimension": "data_richness",
+      "title": "Punch List page missing two-step verification workflow, before/after photos, and location hierarchy",
+      "file": "src/pages/PunchList.tsx",
+      "description": "PAGE_ACCEPTANCE_CRITERIA requires two-step verification (Sub marks Complete → GC verifies or rejects), before/after photo side-by-side comparison, location hierarchy (Building → Floor → Room), responsible party color coding (Sub=warm, GC=blue, Owner=orange), due date aging colors (>4 days=green, 1-4=amber, overdue=red with 'X days overdue'), and stats bar (total, open, in progress, sub complete awaiting verification, verified, overdue). The page lacks this construction closeout workflow depth.",
+      "prompt": "In the file src/pages/PunchList.tsx, make these specific changes: Add a stats bar at the top with six MetricBox cards: Total Items (count all), Open (status==='open', color amber), In Progress (status==='in_progress', color blue), Awaiting Verification (status==='completed' meaning sub marked done but not verified, color purple), Verified (status==='verified' or 'approved', color green), Overdue (due_date < today AND status not in ['verified','approved'], color red). In the table, add a 'Location' column displaying the location field. Add a 'Responsible' column with color-coded background: if trade includes common sub trades (electrical, plumbing, HVAC, drywall, painting), use backgroundColor 'rgba(244,120,32,0.08)'; if assigned_to matches GC roles, use 'rgba(59,130,246,0.08)'. For the due date column, calculate days remaining: const daysLeft = Math.ceil((new Date(item.due_date).getTime() - Date.now()) / 86400000); color the text green if daysLeft > 4, amber (#F5A623) if 1-4, red (#E74C3C) if <= 0 with suffix ' overdue' and Math.abs(daysLeft) + ' days overdue'. Add status transition buttons in the detail/row: if status==='open', show 'Start' button; if 'in_progress', show 'Mark Complete' (for sub); if 'completed', show 'Verify' and 'Reject' buttons (for PM/super only). BEFORE: Basic punch list without verification workflow, aging indicators, or responsible party coding. AFTER: Full two-step verification workflow, due date aging with color coding, responsible party highlighting, and comprehensive stats bar. After changes, run: npm run build to verify no TypeScript errors."
+    }
+  ],
+  "invented_features": [],
+  "competitive_intel": "Procore's RFI module has Ball In Court tracking, email reply from architects, and change order creation directly from RFIs. Fieldwire excels at punch list with two-step verification and drawing-pinned items. SiteSync's core workflow pages currently lack these fundamental construction workflow patterns that competitors ship as baseline features. The absence of BIC tracking on RFIs, approval chains on submittals, three-tier CO pipeline, and two-step punch verification means SiteSync cannot compete on daily workhorse features.",
+  "summary": "The core workflows module scores 24/100, critically below the threshold for construction PM viability. All four pages (RFIs, Submittals, Change Orders, Punch List) lack the domain-specific workflow patterns that construction professionals depend on daily. RFIs have no Ball In Court tracking or overdue detection. Submittals lack approval chain visualization and spec section linking. Change Orders miss the three-tier PCO/COR/CO pipeline and markup calculations. Punch List lacks two-step verification workflow. Accessibility is near zero across all pages with no ARIA attributes or keyboard navigation. The five issues target the highest-impact gaps: adding BIC and overdue detection to RFIs, spec sections and lead times to Submittals, three-tier pipeline with cost breakdown to Change Orders, ARIA and keyboard support across pages, and two-step verification with aging indicators to Punch List."
+}

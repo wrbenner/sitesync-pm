@@ -1,0 +1,69 @@
+{
+  "module": "infrastructure",
+  "scores": {
+    "visual_polish": 62,
+    "domain_depth": 55,
+    "data_richness": 50,
+    "interaction_quality": 58,
+    "ai_integration": 45,
+    "mobile_first": 48,
+    "performance": 65,
+    "typescript_quality": 68,
+    "error_handling": 62,
+    "realtime": 60,
+    "security": 58,
+    "differentiation": 52,
+    "enterprise_readiness": 60
+  },
+  "overall_score": 57,
+  "issues": [
+    {
+      "id": "infrastructure-C3-001",
+      "severity": "critical",
+      "dimension": "accessibility",
+      "title": "App shell lacks skip navigation and landmark roles for screen readers",
+      "file": "src/App.tsx",
+      "description": "The main content area wrapping all routes has no `role='main'` or `id='main-content'` attribute, so the SkipToContent component (imported but targeting an unknown anchor) cannot function. Screen reader users cannot skip past the sidebar navigation. The SkipToContent link targets no matching element.",
+      "prompt": "In the file src/App.tsx, in the component that wraps the Routes (the main content div inside the layout): BEFORE: The main content wrapper div has no `id` or `role` attribute, making the SkipToContent component non-functional since it links to an anchor that does not exist. AFTER: Add `id='main-content'` and `role='main'` to the div that wraps the Routes/page content area. Ensure the SkipToContent component's target href matches `#main-content`. Also add `aria-label='Main navigation'` to the Sidebar's nav wrapper and `role='navigation'` if not already present. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "infrastructure-C3-002",
+      "severity": "critical",
+      "dimension": "error_handling",
+      "title": "createScopedClient proxy silently applies deleted_at filter only on select, misses soft-delete on update/delete",
+      "file": "src/api/client.ts",
+      "description": "The createScopedClient Proxy only appends `.is('deleted_at', null)` for `select` operations. Update and delete operations on soft-deleted rows can still modify them since no deleted_at guard is applied. This allows mutations on logically deleted records, violating data integrity.",
+      "prompt": "In the file src/api/client.ts, in the createScopedClient function, inside the inner Proxy get handler for terminal operations: BEFORE: Only `select` operations get `.is('deleted_at', null)` appended. `update` and `delete` operations only get `.eq('project_id', projectId)` but can target soft-deleted rows. AFTER: For `update` and `delete` operations (not `insert` or `upsert`), also chain `.is('deleted_at', null)` after the `.eq('project_id', projectId)` call, so mutations cannot affect soft-deleted records. Keep the `insert` and `upsert` paths unchanged since new records should not have a deleted_at filter. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "infrastructure-C3-003",
+      "severity": "major",
+      "dimension": "mobile_first",
+      "title": "Mobile hamburger menu button lacks aria attributes and touch target is too small",
+      "file": "src/App.tsx",
+      "description": "The mobile Menu (hamburger) icon button imported from lucide-react has no `aria-label`, no `aria-expanded` state reflecting sidebar open/closed, and the default icon size of 24px with no padding yields a touch target well below the 44x44px minimum required by Apple HIG and the design standards.",
+      "prompt": "In the file src/App.tsx, find the mobile hamburger Menu button (the component that toggles sidebar visibility on mobile using the Menu icon from lucide-react): BEFORE: The button renders a bare `<Menu />` icon with no aria-label, no aria-expanded attribute, and the touch target is smaller than 44x44px. AFTER: Wrap the Menu icon in a `<button>` (if not already) with `aria-label='Toggle navigation menu'`, `aria-expanded={sidebarOpen}` (where sidebarOpen is the current sidebar state boolean), and set `style={{ minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}` to meet the 44x44px touch target minimum. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "infrastructure-C3-004",
+      "severity": "major",
+      "dimension": "performance",
+      "title": "Scoped client cache has no eviction — grows unbounded across project switches",
+      "file": "src/api/client.ts",
+      "description": "The scopedClientCache Map has SCOPED_CLIENT_CACHE_MAX=5 defined but no eviction logic. The cache only grows via `.set()` with an LRU refresh on hit, but when a 6th project is added, the oldest entry is never removed. Over many project switches this leaks Proxy objects in memory.",
+      "prompt": "In the file src/api/client.ts, in the createScopedClient function, after the line `scopedClientCache.set(projectId, proxy)` near the end of the function: BEFORE: The cache adds entries without checking size against SCOPED_CLIENT_CACHE_MAX, so it grows unbounded. AFTER: After `scopedClientCache.set(projectId, proxy)`, add eviction logic: `if (scopedClientCache.size > SCOPED_CLIENT_CACHE_MAX) { const firstKey = scopedClientCache.keys().next().value; if (firstKey !== undefined) scopedClientCache.delete(firstKey); }`. This evicts the least-recently-used entry when the cache exceeds 5 entries. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "infrastructure-C3-005",
+      "severity": "major",
+      "dimension": "typescript_quality",
+      "title": "resolveRequiredScope calls undefined pathMatches and normalize helper",
+      "file": "src/api/v1/router.ts",
+      "description": "The resolveRequiredScope function calls `pathMatches(r.path, normalize(path))` but `pathMatches` is never defined or imported in the file. The `normalize` function is defined but `pathMatches` is missing, which means the route resolution would throw at runtime. This is a broken function that blocks API key scope validation.",
+      "prompt": "In the file src/api/v1/router.ts, after the `normalize` function definition: BEFORE: `resolveRequiredScope` calls `pathMatches(r.path, normalize(path))` but `pathMatches` is not defined anywhere in the file, causing a ReferenceError at runtime. AFTER: Add the missing `pathMatches` function before `resolveRequiredScope`. Implement it as: `function pathMatches(pattern: string, actual: string): boolean { const patternParts = pattern.split('/'); const actualParts = actual.split('/'); if (patternParts.length !== actualParts.length) return false; return patternParts.every((p, i) => p.startsWith(':') || p === actualParts[i]); }`. This supports parameterized route segments (`:id`, `:projectId`) by treating any segment starting with `:` as a wildcard match. After changes, run: npm run build to verify no TypeScript errors."
+    }
+  ],
+  "invented_features": [],
+  "competitive_intel": "Procore's API layer has a mature versioned REST API with comprehensive scope-based API key auth and rate limiting. SiteSync's v1 router is a good start but has a broken pathMatches function that would prevent scope resolution from working. The scoped client proxy pattern is a clever approach to enforce project isolation at the query layer, which Procore handles server-side. The soft-delete gap on update/delete is a real data integrity risk that Procore avoids with server-side middleware. Fieldwire and Buildertrend lack public APIs entirely, so having a versioned API surface is a differentiator once it works correctly.",
+  "summary": "The Infrastructure & Routing module at 57/100 shows solid architectural foundations — versioned API routing, project-scoped query proxies, typed error hierarchy, centralized cache invalidation, and real-time subscription hooks. However, five concrete issues prevent production readiness: a broken `pathMatches` function in the API router that prevents scope validation from working at all, a soft-delete bypass on update/delete operations in the scoped client proxy, an unbounded cache that leaks memory across project switches, missing accessibility landmarks that break screen reader navigation, and an undersized mobile hamburger button that fails touch target requirements. All five are surgical fixes to existing code — no new features needed."
+}

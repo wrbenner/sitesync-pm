@@ -2,7 +2,7 @@
   "env_configured": false,
   "supabase_cli": true,
   "migrations_pushed": true,
-  "functions_deployed": true,
+  "functions_deployed": false,
   "vercel_available": true,
   "playwright_available": true
 }

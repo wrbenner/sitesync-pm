@@ -1,0 +1,34 @@
+{
+  "verifications": [
+    {
+      "id": "financial-engine-C4-001",
+      "status": "fixed",
+      "note": "Commit found matching issue ID"
+    },
+    {
+      "id": "financial-engine-C4-002",
+      "status": "fixed",
+      "note": "Commit found matching issue ID"
+    },
+    {
+      "id": "financial-engine-C4-003",
+      "status": "fixed",
+      "note": "Commit found matching issue ID"
+    },
+    {
+      "id": "financial-engine-C4-004",
+      "status": "fixed",
+      "note": "Commit found matching issue ID"
+    },
+    {
+      "id": "financial-engine-C4-005",
+      "status": "fixed",
+      "note": "Commit found matching issue ID"
+    }
+  ],
+  "files_changed": 393,
+  "fixed": 5,
+  "partial": 0,
+  "unfixed": 0,
+  "regression_detected": false
+}

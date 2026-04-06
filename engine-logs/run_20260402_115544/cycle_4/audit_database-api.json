@@ -1,0 +1,76 @@
+{
+  "module": "database-api",
+  "scores": {
+    "visual_polish": 35,
+    "domain_depth": 52,
+    "data_richness": 40,
+    "interaction_quality": 38,
+    "ai_integration": 25,
+    "mobile_first": 20,
+    "performance": 55,
+    "typescript_quality": 62,
+    "error_handling": 58,
+    "realtime": 45,
+    "accessibility": 15,
+    "security": 60,
+    "differentiation": 30,
+    "enterprise_readiness": 48
+  },
+  "overall_score": 42,
+  "issues": [
+    {
+      "id": "database-api-C4-001",
+      "severity": "critical",
+      "dimension": "data_richness",
+      "title": "No seed data SQL file exists — all pages show empty states",
+      "file": "supabase/seed.sql",
+      "description": "The supabase/seed/ directory is empty per founder priorities. Without seed data, every list page renders empty states. GCs evaluating SiteSync see a hollow app. This is the single highest-impact item: 2 orgs, 3 projects, 10 users, 25 RFIs, 15 submittals, 50 punch items, 30 daily logs, budget lines, 5 change orders, and notifications must be seeded.",
+      "prompt": "Create the file supabase/seed.sql with the following content: A comprehensive seed script that inserts realistic construction data. Include: 2 organizations (Turner Construction, Hensel Phelps), 3 projects (Riverside Commercial Tower $42M, Metro Health Center $28M, Parkview Mixed Use $65M) with addresses and coordinates. 10 users across roles (owner, admin, project_manager, superintendent, foreman, subcontractor, architect_engineer, inspector, read_only) with realistic construction names and emails. Project_members linking users to projects with appropriate roles. 25 RFIs across statuses (open, in_review, answered, closed) with realistic titles like 'Structural steel connection detail at grid B4', due dates spanning past and future, priorities distributed across low/medium/high/critical. 15 submittals with spec sections (03 30 00, 05 12 00, etc) in various statuses. 50 punch_list_items with locations (3rd Floor Room 302), trades (Electrical, Drywall, Paint), and mixed statuses. 30 daily_logs with weather data, crew counts 15 to 85, temperature ranges, work summaries describing concrete pours, steel erection, MEP rough in. Budget_line_items by CSI division (03 Concrete, 05 Metals, 09 Finishes, 23 HVAC, 26 Electrical) with original_budget, committed, spent_to_date values that tell a realistic financial story. 5 change_orders in draft/pending/approved statuses with cost_impact values. Activity_feed entries and notifications for each user. Use gen_random_uuid() for IDs. All monetary values in integer cents. No hyphens in any text content. After creating, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "database-api-C4-002",
+      "severity": "critical",
+      "dimension": "enterprise_readiness",
+      "title": "No notification_queue table or dispatch edge function for email notifications",
+      "file": "supabase/migrations/20240402200000_notification_queue.sql",
+      "description": "P0-5 from PRODUCTION_ROADMAP requires email notifications. No notification_queue table exists. Without it, RFI assignments sit unnoticed for weeks. The migration must create the queue table with RLS, and the edge function must process it. This migration is step one.",
+      "prompt": "Create the file supabase/migrations/20240402200000_notification_queue.sql with the following content: A migration that creates the notification_queue table with columns: id uuid primary key default gen_random_uuid(), project_id uuid not null references projects(id) on delete cascade, recipient_user_id uuid not null references auth.users(id), recipient_email text not null, template_name text not null, template_data jsonb not null default '{}', entity_type text, entity_id uuid, status text not null default 'pending' check (status in ('pending', 'sent', 'failed', 'skipped')), sent_at timestamptz, error text, retry_count integer not null default 0, created_at timestamptz default now(). Add indexes on (status, created_at) for queue processing and (project_id) for project scoping. Enable row level security. Create RLS policy allowing project members to select their own notifications (recipient_user_id = auth.uid()). Create insert policy allowing any authenticated project member to enqueue. Add a trigger for notification_preferences table if it does not exist: create table if not exists notification_preferences with user_id uuid primary key references auth.users(id), rfi_assigned boolean default true, rfi_overdue boolean default true, submittal_returned boolean default true, submittal_approved boolean default true, change_order_pending boolean default true, daily_log_reminder boolean default true, punch_item_assigned boolean default true, meeting_scheduled boolean default true, digest_enabled boolean default true, digest_time time default '19:00:00', created_at timestamptz default now(), updated_at timestamptz default now(). Enable RLS on notification_preferences with policy users can read and update their own row. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "database-api-C4-003",
+      "severity": "critical",
+      "dimension": "performance",
+      "title": "No cursor-based pagination in any list endpoint — all use offset or no pagination",
+      "file": "src/api/endpoints/field.ts",
+      "description": "The API spec mandates cursor-based pagination for large datasets. Current buildPaginatedQuery uses offset-based range queries which degrade at scale. The field.ts endpoints for daily logs and punch items are the most data-heavy and need cursor pagination first. A project with 500+ daily logs will have visible lag with offset pagination.",
+      "prompt": "In the file src/api/endpoints/field.ts, add a new exported function getDailyLogsCursor that implements cursor-based pagination. BEFORE: getDailyLogs uses buildPaginatedQuery with offset-based .range() calls. AFTER: Add this new function alongside the existing one: export async function getDailyLogsCursor(projectId: string, params: { cursor?: string; pageSize?: number }) that validates projectId via validateProjectId, calls assertProjectAccess, then builds a query on daily_logs table selecting all columns, filtered by project_id, ordered by log_date descending then id descending. If params.cursor is provided, decode it from base64 to get a pipe-delimited string of log_date|id, then add .lt('log_date', decodedDate) filter. Limit to (params.pageSize || 50) + 1 rows. After fetching, check if data length exceeds pageSize to determine hasMore. Slice data to pageSize. Build nextCursor by base64-encoding the last item's log_date + '|' + id. Return { data: slicedData, hasMore, nextCursor: nextCursor or undefined }. Also add getPunchItemsCursor with the same pattern but ordered by created_at descending. Type the return as { data: DailyLogRow[]; hasMore: boolean; nextCursor?: string }. Import Buffer is not available in browser, so use btoa/atob for base64 encoding. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "database-api-C4-004",
+      "severity": "major",
+      "dimension": "error_handling",
+      "title": "activity.ts silently swallows entity label fetch errors with empty catch blocks",
+      "file": "src/api/endpoints/activity.ts",
+      "description": "In batchFetchEntityLabels, all .catch(() => {}) blocks silently swallow errors. If the rfis or submittals table query fails (network issue, RLS policy change), the activity feed renders with missing labels and no indication of failure. Per the error handling spec, failures should show user-friendly messages, not silent swallows.",
+      "prompt": "In the file src/api/endpoints/activity.ts, in the batchFetchEntityLabels function: Find all instances of .catch(() => {}) on the Supabase query promises (there are at least 2: one for rfis fetch and one for submittals fetch). BEFORE: Each fetch ends with .catch(() => {}) which silently swallows all errors including network failures and permission errors. AFTER: Replace each .catch(() => {}) with .catch((err: unknown) => { console.warn('[ActivityFeed] Failed to fetch entity labels for type:', err instanceof Error ? err.message : String(err)) }). This ensures errors are logged to the console for debugging while still being non-blocking (the activity feed should still render even if label enrichment fails). Additionally, at the top of the function, add a try/catch around the entire await Promise.all(fetches) call. In the catch block, log: console.warn('[ActivityFeed] batchFetchEntityLabels partial failure:', err). Return the labelMap as-is (partial results are better than no results). After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "database-api-C4-005",
+      "severity": "major",
+      "dimension": "realtime",
+      "title": "No real-time subscription on notifications table for instant alert delivery",
+      "file": "src/api/endpoints/notifications.ts",
+      "description": "The backend architecture spec requires real-time subscriptions on the notifications table with channel user:{id}:notifications. Currently no endpoint file exists for notifications with subscription support. When another user assigns an RFI or approves a change order, the recipient should see the notification badge update within 2 seconds without manual refresh.",
+      "prompt": "Create the file src/api/endpoints/notifications.ts with the following content: Import supabase from '../client' and transformSupabaseError from '../errors'. Define a NotificationRow interface with id string, user_id string, project_id string or null, notification_type string, title string, message string or null, related_entity_type string or null, related_entity_id string or null, is_read boolean, read_at string or null, created_at string. Export async function getUnreadNotifications(userId: string) that queries the notifications table selecting all columns where user_id equals userId and is_read is false, ordered by created_at descending, limited to 50. Return typed array. Export async function markNotificationRead(notificationId: string) that updates notifications set is_read to true and read_at to new Date().toISOString() where id equals notificationId. Export async function markAllRead(userId: string) that updates notifications set is_read true and read_at to now where user_id equals userId and is_read is false. Export function subscribeToNotifications(userId: string, onNew: (notification: NotificationRow) => void) that creates a Supabase channel named 'user_notifications_' + userId, subscribes to postgres_changes on public.notifications table with event INSERT and filter user_id=eq.userId, calls onNew with payload.new cast as NotificationRow. Return a cleanup function that calls supabase.removeChannel on the subscription. Export async function getUnreadCount(userId: string): Promise<number> that queries notifications with count exact, filtered by user_id and is_read false, returns count or 0. After changes, run: npm run build to verify no TypeScript errors."
+    }
+  ],
+  "invented_features": [
+    {
+      "title": "Smart Notification Batching with Urgency Scoring",
+      "description": "Instead of sending every notification immediately, score each by urgency (overdue RFI = 95, meeting reminder = 40, daily digest item = 10). Notifications above threshold 80 send instantly. Below 80, batch into 15 minute windows. Below 30, hold for daily digest. This reduces notification fatigue while ensuring critical items like overdue RFIs and rejected submittals get immediate attention. No competitor does urgency-aware batching.",
+      "effort": "medium"
+    }
+  ],
+  "competitive_intel": "Procore's API layer is a custom REST API with separate auth, requiring multi-day integration training. SiteSync's direct Supabase client with RLS gives instant type-safe queries with zero API boilerplate. However, Procore has mature webhook infrastructure and real-time notification delivery that SiteSync currently lacks. The notification_queue implementation closes this gap. Fieldwire has no API at all. ACC's API requires enterprise licensing.",
+  "summary": "The Database & API Layer has solid foundations: typed Supabase client, project-scoped middleware with dedup caching, structured error hierarchy, and real-time subscription patterns in place. However, three critical gaps prevent production readiness. First, there is zero seed data — every page renders empty states, making the app feel hollow during demos. Second, no notification infrastructure exists (no queue table, no dispatch function), meaning RFI assignments and approvals go unnoticed. Third, pagination is exclusively offset-based, which will degrade visibly at scale. The error handling is mostly good but has silent swallow patterns in activity feed enrichment. Security posture is reasonable with project access assertions and org isolation checks, though the 1-second TTL on membership cache could allow brief stale-access windows. TypeScript quality is above average with proper generics and discriminated unions, but the notification and seed data gaps are the primary blockers to shipping."
+}

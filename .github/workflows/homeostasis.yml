@@ -1,0 +1,319 @@
+name: Homeostasis — Quality Ratchet CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+permissions:
+  contents: write
+  pages: write
+  security-events: write
+  pull-requests: write
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  # ═══════════════════════════════════════════════
+  # Gate 1: Type Safety (the skeleton)
+  # ═══════════════════════════════════════════════
+  typecheck:
+    name: "Gate 1: TypeScript Strict"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - run: npm ci
+      - name: TypeScript strict mode
+        run: npx tsc --noEmit
+
+  # ═══════════════════════════════════════════════
+  # Gate 2: Lint + Quality Ratchet
+  # ═══════════════════════════════════════════════
+  lint:
+    name: "Gate 2: ESLint + Ratchet"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - run: npm ci
+      - name: Run ESLint
+        run: npx eslint . --format json -o /tmp/eslint-report.json || true
+      - name: Check lint ratchet
+        run: |
+          ERRORS=$(jq '[.[].errorCount] | add // 0' /tmp/eslint-report.json)
+          WARNINGS=$(jq '[.[].warningCount] | add // 0' /tmp/eslint-report.json)
+          FLOOR=$(jq '.eslintWarnings' .quality-floor.json 2>/dev/null || echo "999999")
+
+          echo "Errors: $ERRORS | Warnings: $WARNINGS | Floor: $FLOOR"
+
+          if [ "$ERRORS" -gt 0 ]; then
+            echo "::error::ESLint has $ERRORS errors"
+            exit 1
+          fi
+
+          if [ "$WARNINGS" -gt "$FLOOR" ]; then
+            echo "::error::ESLint warnings ($WARNINGS) exceed quality floor ($FLOOR)"
+            exit 1
+          fi
+
+          echo "ESLint passed: $WARNINGS warnings (floor: $FLOOR)"
+
+  # ═══════════════════════════════════════════════
+  # Gate 3: Unit Tests + Coverage
+  # ═══════════════════════════════════════════════
+  test:
+    name: "Gate 3: Tests + Coverage"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - run: npm ci
+      - name: Run Vitest with coverage
+        run: npx vitest run --coverage --reporter=verbose
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+          retention-days: 7
+
+  # ═══════════════════════════════════════════════
+  # Gate 4: Build + Bundle Ratchet
+  # ═══════════════════════════════════════════════
+  build:
+    name: "Gate 4: Build + Bundle Ratchet"
+    runs-on: ubuntu-latest
+    needs: [typecheck]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - run: npm ci
+      - name: Build
+        run: npx vite build
+        env:
+          VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
+      - name: Bundle size ratchet
+        run: |
+          CURRENT=$(du -sk dist/assets/*.js 2>/dev/null | awk '{sum += $1} END {print sum+0}')
+          FLOOR=$(jq '.bundleSizeKB' .quality-floor.json 2>/dev/null || echo "999999")
+
+          echo "Bundle: ${CURRENT}KB | Floor: ${FLOOR}KB"
+
+          if [ "$CURRENT" -gt "$FLOOR" ]; then
+            echo "::error::Bundle size ${CURRENT}KB exceeds floor ${FLOOR}KB"
+            exit 1
+          fi
+
+          echo "Bundle passed: ${CURRENT}KB (floor: ${FLOOR}KB)"
+      - name: Custom bundle check
+        run: node scripts/check-bundle-size.js
+      - name: Upload build
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 3
+
+  # ═══════════════════════════════════════════════
+  # Gate 5: Code Hygiene (Mock Data + Type Safety)
+  # ═══════════════════════════════════════════════
+  hygiene:
+    name: "Gate 5: Code Hygiene"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Mock data scan
+        run: |
+          COUNT=$(grep -rn "mock\|Mock\|MOCK\|fake\|Fake\|placeholder\|Lorem\|dummy" src/ \
+            --include="*.ts" --include="*.tsx" \
+            2>/dev/null \
+            | grep -v "test\|spec\|__test__\|\.test\.\|\.spec\.\|setup\.ts\|factories\.ts" \
+            | grep -v "// immune-ok\|// mock-ok" \
+            | wc -l | tr -d ' ')
+          FLOOR=$(jq '.mockDataInstances' .quality-floor.json 2>/dev/null || echo "999999")
+          echo "Mock instances: $COUNT | Floor: $FLOOR"
+          if [ "$COUNT" -gt "$FLOOR" ]; then
+            echo "::error::Mock data instances ($COUNT) exceed floor ($FLOOR)"
+            grep -rn "mock\|Mock\|fake\|Fake\|placeholder\|Lorem\|dummy" src/ \
+              --include="*.ts" --include="*.tsx" \
+              | grep -v "test\|spec\|__test__\|\.test\.\|\.spec\.\|setup\.ts\|factories\.ts" \
+              | grep -v "// immune-ok\|// mock-ok" \
+              | head -20
+            exit 1
+          fi
+      - name: Type safety scan
+        run: |
+          COUNT=$(grep -rn "as any\|@ts-ignore\|@ts-expect-error" src/ \
+            --include="*.ts" --include="*.tsx" \
+            2>/dev/null \
+            | grep -v "test\|spec\|__test__" \
+            | grep -v "// type-safe-ok" \
+            | wc -l | tr -d ' ')
+          FLOOR=$(jq '.anyTypeCasts' .quality-floor.json 2>/dev/null || echo "999999")
+          echo "Unsafe casts: $COUNT | Floor: $FLOOR"
+          if [ "$COUNT" -gt "$FLOOR" ]; then
+            echo "::error::Unsafe type casts ($COUNT) exceed floor ($FLOOR)"
+            exit 1
+          fi
+
+  # ═══════════════════════════════════════════════
+  # Gate 6: Security
+  # ═══════════════════════════════════════════════
+  security:
+    name: "Gate 6: Security"
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - run: npm ci
+      - name: npm audit
+        run: npm audit --audit-level=moderate || true
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+      - name: CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+
+  # ═══════════════════════════════════════════════
+  # Gate 7: E2E Tests
+  # ═══════════════════════════════════════════════
+  e2e:
+    name: "Gate 7: E2E Tests"
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - run: npm ci
+      - name: Install Playwright
+        run: npx playwright install --with-deps chromium
+      - name: Download build
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - name: Run E2E
+        run: npx playwright test
+        env:
+          CI: true
+      - name: Upload report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+  # ═══════════════════════════════════════════════
+  # Gate 8: Accessibility
+  # ═══════════════════════════════════════════════
+  accessibility:
+    name: "Gate 8: Accessibility"
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - run: npm ci
+      - name: Download build
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - name: Serve and audit
+        run: |
+          npx serve dist -l 3000 &
+          sleep 3
+          npx @axe-core/cli http://localhost:3000 --exit || true
+
+  # ═══════════════════════════════════════════════
+  # Self-Healing: Auto-fix agent commits that fail
+  # ═══════════════════════════════════════════════
+  self-heal:
+    name: "Self-Healing Repair"
+    needs: [typecheck, lint, test, build, hygiene]
+    if: failure() && contains(github.event.head_commit.message, '[auto]')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - run: npm ci
+      - name: Capture failure context
+        run: |
+          echo "COMMIT: $(git log -1 --format='%h %s')" > /tmp/failure-context.txt
+          echo "---" >> /tmp/failure-context.txt
+          npx tsc --noEmit 2>&1 | tail -50 >> /tmp/failure-context.txt || true
+          echo "---" >> /tmp/failure-context.txt
+          npx vitest run 2>&1 | tail -50 >> /tmp/failure-context.txt || true
+      - name: Create repair issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const context = fs.readFileSync('/tmp/failure-context.txt', 'utf8');
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[auto-repair] CI failure on ${context.sha.substring(0, 7)}`,
+              body: `## CI Failure — Self-Healing Required\n\nCommit: ${context.sha}\nMessage: ${context.payload.head_commit?.message}\n\n\`\`\`\n${context}\n\`\`\`\n\nThis issue was auto-created by the self-healing CI pipeline. An AI agent should pick this up and fix it.`,
+              labels: ['auto-repair', 'ci-failure']
+            });
+
+  # ═══════════════════════════════════════════════
+  # Deploy
+  # ═══════════════════════════════════════════════
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: [typecheck, lint, test, build, hygiene, e2e, accessibility]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download build
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist

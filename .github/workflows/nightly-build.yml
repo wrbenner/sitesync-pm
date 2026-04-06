@@ -1,0 +1,160 @@
+name: Nightly Organism — Autonomous Build
+
+# Runs at 2:00 AM CDT (7:00 AM UTC) every night
+# The organism wakes, reads SPEC.md, implements the next feature, and goes back to sleep
+on:
+  schedule:
+    - cron: '0 7 * * *'      # 2:00 AM CDT / 7:00 AM UTC
+  workflow_dispatch:          # Manual trigger for daytime test runs
+    inputs:
+      max_spend:
+        description: 'Max API spend in USD (default: 50)'
+        required: false
+        default: '50'
+      dry_run:
+        description: 'Dry run (audit only, no code changes)'
+        required: false
+        default: 'false'
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  organism:
+    name: "The Organism — Nightly Build"
+    runs-on: ubuntu-latest
+    timeout-minutes: 240   # 4 hours max
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Configure git identity for agent commits
+        run: |
+          git config user.name "SiteSync Organism"
+          git config user.email "organism@sitesync.ai"
+
+      - name: Read current SPEC.md status
+        id: spec_status
+        run: |
+          TOTAL=$(grep -c "^\- \[" SPEC.md || echo "0")
+          DONE=$(grep -c "^\- \[x\]" SPEC.md || echo "0")
+          PENDING=$(grep -c "^\- \[ \]" SPEC.md || echo "0")
+          echo "total=$TOTAL" >> $GITHUB_OUTPUT
+          echo "done=$DONE" >> $GITHUB_OUTPUT
+          echo "pending=$PENDING" >> $GITHUB_OUTPUT
+          echo "Spec status: $DONE/$TOTAL criteria complete ($PENDING pending)"
+
+      - name: Run the organism
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          MAX_SPEND: ${{ github.event.inputs.max_spend || '50' }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+        run: |
+          # Build the master prompt from SPEC.md + FEEDBACK.md
+          FEEDBACK=$(cat FEEDBACK.md 2>/dev/null || echo "No FEEDBACK.md found")
+          SPEC_SUMMARY=$(head -100 SPEC.md)
+
+          cat > /tmp/nightly-prompt.txt << 'PROMPT_EOF'
+          You are the autonomous build agent for SiteSync PM — a construction project management platform.
+
+          CONTEXT FILES (read these in this order):
+          1. FEEDBACK.md — Founder priorities (P0, inject into everything)
+          2. SPEC.md — The product genome (all acceptance criteria)
+          3. AGENTS.md — Your operating instructions
+          4. LEARNINGS.md — What has worked before
+          5. DECISIONS.md — Architectural constraints
+
+          YOUR MISSION FOR THIS SESSION:
+          1. Read FEEDBACK.md — these are tonight's P0 priorities. Do them first.
+          2. Read SPEC.md — identify the next highest-priority unchecked P1 criterion
+          3. Implement it fully: migration (if needed), types, API hook, tests, E2E, a11y
+          4. Run all quality gates: `npx tsc --noEmit && npm run lint && npx vitest run && npm run build`
+          5. If gates pass, commit with message: `feat(scope): description [auto]`
+          6. Check off the criterion in SPEC.md
+          7. Update LEARNINGS.md with anything you discovered
+          8. Repeat until you've used 80% of the session budget or completed 3 features
+
+          QUALITY GATES THAT MUST PASS BEFORE ANY COMMIT:
+          - TypeScript: zero errors
+          - ESLint: no new warnings beyond .quality-floor.json floor
+          - Tests: all pass
+          - Build: succeeds
+          - Bundle: not larger than .quality-floor.json bundleSizeKB
+
+          COMMIT FORMAT:
+          feat(rfi): connect RFI list to Supabase with React Query [auto]
+          fix(permissions): wrap action buttons in PermissionGate [auto]
+
+          The [auto] tag marks autonomous commits for self-healing CI to recognize.
+
+          DO NOT:
+          - Use as any type casts
+          - Add mock/fake/placeholder data
+          - Hardcode hex colors or magic numbers
+          - Commit without running quality gates
+          - Force push
+
+          Output <promise>DONE</promise> when you have completed your work for this session.
+          PROMPT_EOF
+
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "DRY RUN MODE — auditing only, no code changes"
+            claude --print "Read SPEC.md and FEEDBACK.md. Create a detailed audit report of what needs to be done, in priority order, without making any changes. Save the report to AUDIT_$(date +%Y%m%d).md"
+          else
+            # Run the organism with Claude Code
+            claude \
+              --dangerously-skip-permissions \
+              --model claude-opus-4-6 \
+              --max-turns 50 \
+              "$(cat /tmp/nightly-prompt.txt)"
+          fi
+
+      - name: Capture results
+        if: always()
+        run: |
+          TOTAL=$(grep -c "^\- \[" SPEC.md || echo "0")
+          DONE=$(grep -c "^\- \[x\]" SPEC.md || echo "0")
+          COMMITS=$(git log --since="8 hours ago" --oneline --author="SiteSync Organism" | wc -l | tr -d ' ')
+          echo "=== ORGANISM REPORT ===" >> $GITHUB_STEP_SUMMARY
+          echo "**Run:** $(date)" >> $GITHUB_STEP_SUMMARY
+          echo "**SPEC Progress:** $DONE/$TOTAL criteria complete" >> $GITHUB_STEP_SUMMARY
+          echo "**Commits Made:** $COMMITS" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Recent Commits" >> $GITHUB_STEP_SUMMARY
+          git log --since="8 hours ago" --oneline --author="SiteSync Organism" >> $GITHUB_STEP_SUMMARY || echo "None" >> $GITHUB_STEP_SUMMARY
+
+      - name: Push changes
+        if: success()
+        run: |
+          git push origin main || echo "Nothing to push"
+
+      - name: Notify on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[organism] Nightly build failed — ${new Date().toISOString().split('T')[0]}`,
+              body: `The nightly autonomous build failed. Check the [workflow run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}) for details.`,
+              labels: ['organism-failure', 'needs-attention']
+            });

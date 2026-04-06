@@ -1,0 +1,77 @@
+{
+  "module": "financial-engine",
+  "scores": {
+    "visual_polish": 62,
+    "domain_depth": 68,
+    "data_richness": 55,
+    "interaction_quality": 52,
+    "ai_integration": 35,
+    "mobile_first": 40,
+    "performance": 58,
+    "typescript_quality": 65,
+    "error_handling": 60,
+    "realtime": 55,
+    "accessibility": 38,
+    "security": 50,
+    "differentiation": 45,
+    "enterprise_readiness": 42
+  },
+  "overall_score": 52,
+  "issues": [
+    {
+      "id": "financial-engine-C6-001",
+      "severity": "critical",
+      "dimension": "enterprise_readiness",
+      "title": "Pay Application page missing AIA G702/G703 PDF generation",
+      "file": "src/api/endpoints/payApplications.ts",
+      "description": "The computeCurrentPaymentDue function exists with correct AIA G702 math, but there is no PDF generation service. GCs cannot submit pay apps without G702/G703 PDFs. This is a P0-1 item from PRODUCTION_ROADMAP. The acceptance criteria require pixel-perfect AIA G702 form generation with signature blocks, G703 continuation sheet, and export functionality.",
+      "prompt": "Create the new file src/services/pdf/paymentAppPdf.ts. This file should export two functions: generateG702Pdf and generateG703Pdf. Use the pdf-lib npm package (install it: npm install pdf-lib). generateG702Pdf accepts parameters: { projectName: string, contractorName: string, architectName: string, applicationNumber: number, periodFrom: string, periodTo: string, originalContractSum: number, netChangeByChangeOrders: number, contractSumToDate: number, totalCompletedAndStored: number, retainagePercent: number, retainageAmount: number, totalEarnedLessRetainage: number, lessPreviousCertificates: number, currentPaymentDue: number, balanceToFinish: number }. It should create a letter-size PDF with AIA G702 layout: project info header, owner/contractor/architect fields, the 9-line payment calculation (Original Contract Sum, Net Change by Change Orders, Contract Sum to Date, Total Completed and Stored to Date, Retainage, Total Earned Less Retainage, Less Previous Certificates for Payment, Current Payment Due, Balance to Finish including retainage), and signature blocks at the bottom. generateG703Pdf accepts { applicationNumber: number, lineItems: Array<{ itemNumber: string, description: string, scheduledValue: number, workCompletedPrevious: number, workCompletedThisPeriod: number, materialsStored: number, totalCompletedAndStored: number, percentComplete: number, balanceToFinish: number, retainage: number }> } and generates a multi-page continuation sheet with a table of SOV line items and running totals at the bottom of each page. BEFORE: No PDF generation exists; pay apps are data-only. AFTER: Both functions return Uint8Array PDF bytes that can be downloaded. All monetary values formatted with $ prefix, thousand separators, and two decimal places. Use integer cents internally and convert to dollars for display. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "financial-engine-C6-002",
+      "severity": "critical",
+      "dimension": "accessibility",
+      "title": "SCurve chart lacks screen reader data table and ARIA live region for keyboard nav",
+      "file": "src/components/budget/SCurve.tsx",
+      "description": "The SCurve SVG chart references aria-describedby='scurve-data-table' but no element with that ID exists in the component. Keyboard navigation updates state but the announcement string is set without an aria-live region rendering it. Screen reader users get no data access. This violates Global Acceptance Standards requiring axe-core zero critical violations.",
+      "prompt": "In the file src/components/budget/SCurve.tsx, make these specific changes: 1) After the closing </svg> tag but still inside the outer <div>, add a visually hidden data table: <table id='scurve-data-table' style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap' }}><caption>S-Curve planned vs actual spend data</caption><thead><tr><th scope='col'>Month</th><th scope='col'>Planned ($M)</th><th scope='col'>Actual ($M)</th></tr></thead><tbody>{months.map((m, i) => (<tr key={m}><td>{m}</td><td>{plannedData[i]}</td><td>{actualData[i] !== undefined ? actualData[i] : 'N/A'}</td></tr>))}</tbody></table>. 2) Add an aria-live region right after the table: <div aria-live='polite' aria-atomic='true' style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)' }}>{announcement}</div>. BEFORE: aria-describedby references a nonexistent element; keyboard announcements are set in state but never rendered to the DOM. AFTER: Screen readers can access the full data table and hear announcements when navigating with arrow keys. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "financial-engine-C6-003",
+      "severity": "major",
+      "dimension": "mobile_first",
+      "title": "WaterfallChart has broken layout on narrow screens under 400px",
+      "file": "src/components/budget/WaterfallChart.tsx",
+      "description": "The WaterfallChart component handles mobile layout but the isNarrow branch for labels at 64px width causes text truncation and the bar rendering logic uses cumStart offset which creates invisible bars when the CO value is small relative to original contract. On iPhone SE (375px), the chart is unreadable. Touch targets for hover interaction are not 44px minimum.",
+      "prompt": "In the file src/components/budget/WaterfallChart.tsx, in the mobile horizontal bars section (the isMobile branch), make these changes: 1) Change the label width from `isNarrow ? 64 : 90` to `isNarrow ? 80 : 100` and add lineHeight: 1.3 to the label span style. 2) For CO bars (where isCO is true), change the bar rendering so that instead of positioning from cumStart offset, the bar always starts from left 0 and shows only the bar width proportional to its value. Remove the offsetPct positioning for CO bars entirely. 3) Set the bar container minHeight to 44 (already done) but also add a touchAction: 'manipulation' style and change onMouseEnter/onMouseLeave to also include onTouchStart={() => setHoveredBar(bar.label)} and onTouchEnd={() => setHoveredBar(null)}. 4) For the value label inside or next to each bar, ensure fontSize is at minimum typography.fontSize.xs (never smaller) and add a whiteSpace: 'nowrap' style. BEFORE: On 375px screens, labels are truncated at 64px, CO bars may be invisible due to cumStart offset, touch interactions don't trigger hover tooltips. AFTER: Labels readable at 80px min, all bars visible starting from left edge, touch targets meet 44px minimum, value labels never wrap. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "financial-engine-C6-004",
+      "severity": "major",
+      "dimension": "data_richness",
+      "title": "EarnedValueDashboard shows skeleton forever when no budget data exists",
+      "file": "src/components/budget/EarnedValueDashboard.tsx",
+      "description": "When budgetItems array is empty (new project with no budget set up), the component passes empty arrays to computeEarnedValue which returns all zeros. The metrics render as 0.00 for CPI/SPI which is misleading (division by zero gives NaN or 0). No empty state guides the user to set up their budget first. PAGE_ACCEPTANCE_CRITERIA requires helpful empty states on every page.",
+      "prompt": "In the file src/components/budget/EarnedValueDashboard.tsx, in the EarnedValueDashboard component, add an empty state check after the loading check. BEFORE: After the loading skeleton block, the component immediately calls computeEarnedValue and renders metric cards even when budgetItems is empty, showing misleading 0.00 values for CPI and SPI. AFTER: Add this block right after the `if (loading)` return: `if (budgetItems.length === 0) { return (<div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: spacing['8'], gap: spacing['3'], background: colors.backgroundCard, borderRadius: borderRadius.lg, border: '1px solid ' + colors.borderLight }}><TrendingUp size={40} color={colors.textTertiary} /><p style={{ fontSize: typography.fontSize.body, color: colors.textSecondary, margin: 0, textAlign: 'center' }}>Set up your budget to see earned value metrics</p><p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0, textAlign: 'center' }}>Earned value analysis requires budget line items with scheduled values and progress data.</p></div>); }`. Also, in the metrics array construction, guard against NaN by changing the CPI and SPI value displays: for CPI value, use `isFinite(cpi) ? cpi.toFixed(2) : 'N/A'` and same for SPI. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "financial-engine-C6-005",
+      "severity": "major",
+      "dimension": "domain_depth",
+      "title": "Lien waiver tracking missing waiver type enforcement and pay period linkage",
+      "file": "src/api/endpoints/payApplications.ts",
+      "description": "The autoGenerateLienWaivers function is imported but the pay application submission flow does not enforce that all required lien waivers are collected before submitting. Per PAGE_ACCEPTANCE_CRITERIA for Pay Apps (criterion 10): 'Cannot submit pay app until all required lien waivers are attached. Warning: Missing lien waivers for: [list of subcontractors].' The four waiver types (conditional/unconditional progress/final) are not tracked per the INDUSTRY_REFERENCE spec.",
+      "prompt": "In the file src/api/endpoints/payApplications.ts, add a new exported function validateLienWaiverCompleteness. This function should accept parameters: { projectId: string, payAppId: string, periodNumber: number }. It should: 1) Query the lien_waivers table for all waivers linked to this pay_application_id. 2) Query purchase_orders or subcontractor_invoices for the project to get a list of all active subcontractors/vendors who were paid in this period. 3) For each active sub, check that at least a conditional waiver on progress payment exists (waiver_type = 'conditional_progress'). 4) Return { complete: boolean, missingWaivers: Array<{ vendorName: string, vendorId: string, requiredType: 'conditional_progress' | 'unconditional_progress' | 'conditional_final' | 'unconditional_final' }> }. Also add a type guard at the top of the file: `const LIEN_WAIVER_TYPES = ['conditional_progress', 'unconditional_progress', 'conditional_final', 'unconditional_final'] as const; type LienWaiverType = typeof LIEN_WAIVER_TYPES[number];`. BEFORE: Pay apps can be submitted without any lien waiver validation; the four AIA waiver types are not enforced. AFTER: Calling validateLienWaiverCompleteness before submission returns a clear list of missing waivers per subcontractor, enabling the UI to block submission and show the missing waiver warning. After changes, run: npm run build to verify no TypeScript errors."
+    }
+  ],
+  "invented_features": [
+    {
+      "title": "Cash Flow Forecasting Engine",
+      "description": "A 13-week cash flow projection that combines approved pay app billing schedule, committed subcontractor payment terms (typically net 30 from GC receipt), pending change order exposure, and retainage release schedule. Renders as a stacked area chart with inflow (billings) vs outflow (sub payments + payroll + equipment) lines, highlighting weeks where net position goes negative. CFO sees projected cash gaps 2 months before they happen.",
+      "rationale": "Procore has zero native cash flow forecasting. This is the #1 request from construction CFOs per competitive intel. The financial engine already has committed cost, pay app, and change order data — the projection is pure computation on existing data. This alone could close enterprise deals.",
+      "complexity": "medium"
+    }
+  ],
+  "competitive_intel": "Procore's financial module lacks AIA G702/G703 PDF generation (requires third party integration with Textura or manual export). No native earned value analysis, no cash flow forecasting, and lien waiver tracking is a bolted-on module that costs extra. SiteSync's computeCurrentPaymentDue with proper AIA line-by-line math is already ahead of Procore's basic billing flow. The missing piece is PDF output and lien waiver enforcement — once those ship, SiteSync has deeper financial intelligence than any competitor at any price point. Fieldwire and Buildertrend have zero financial capabilities. ACC has basic budget tracking but no pay app workflow.",
+  "summary": "The financial engine scores 52/100 with strong domain depth in AIA G702 calculations and earned value metrics, but critical gaps in PDF generation (the #1 dealbreaker for GCs), accessibility (SCurve chart fails screen reader testing), and mobile responsiveness (WaterfallChart unreadable on phones). The five issues target: (1) creating the G702/G703 PDF generation service that is the highest-priority P0 item for this module, (2) fixing the SCurve accessibility failure with a proper data table and aria-live region, (3) making WaterfallChart usable on field devices under 400px, (4) adding a meaningful empty state to EarnedValueDashboard instead of showing misleading zeros, and (5) implementing lien waiver completeness validation before pay app submission per AIA industry requirements. Once PDF generation and lien waiver enforcement ship, this module jumps from 'promising demo' to 'production-ready billing system' that competes directly with Procore's weakest area."
+}

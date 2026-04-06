@@ -1,0 +1,367 @@
+# SiteSync PM — Product Genome v1.0
+<!-- GENOME-VERSION: 1 -->
+<!-- LAST-EVOLVED: 2026-04-05 -->
+<!-- COMPLETION: 34% -->
+
+## Strand 1: Product Vision
+
+SiteSync PM is the first construction project management platform built as a learning organism.
+Target user: Superintendent managing 2 to 5 active job sites simultaneously.
+Win condition: A super on a job site can handle an RFI from their phone in under 60 seconds.
+
+Core Identity: AI native, field first, beautifully simple.
+Brand promise: The construction OS that builds itself smarter every night.
+
+## Strand 2: Architecture Laws
+
+**Law 1:** React 19 + TypeScript + Vite. No framework changes without ADR in DECISIONS.md.
+**Law 2:** HashRouter for routing. All routes defined in App.tsx.
+**Law 3:** Inline styles using design tokens from `src/styles/theme.ts`. No CSS modules, no Tailwind.
+**Law 4:** Primary Orange #F47820 for all CTAs, active states, brand accent.
+**Law 5:** Dark Navy #0F1629 for sidebar background. Always.
+**Law 6:** Teal #4EC896 for success states and positive indicators.
+**Law 7:** Every page has metric cards at the top with icon, value, and trend.
+**Law 8:** Every table row is hoverable and clickable.
+**Law 9:** Skeleton loaders within 100ms of navigation. Never a blank screen.
+**Law 10:** Empty states are designed and contextual. Never "No data found."
+**Law 11:** Error states use toast + inline retry. Never a full page error for a single fetch.
+**Law 12:** All pages must be usable at 375px width (iPhone SE).
+**Law 13:** Touch targets minimum 44x44px per Apple HIG.
+**Law 14:** First Contentful Paint under 1.5s on 4G. Time to Interactive under 3s.
+**Law 15:** Zero critical/serious axe core accessibility violations.
+**Law 16:** Supabase for backend. RLS policies enforce permissions server side.
+**Law 17:** Every feature must have a measurable acceptance criterion before implementation begins.
+**Law 18:** The spec is always read before code is written. The spec is always updated after code is verified.
+**Law 19:** No feature ships with mock data. No exceptions.
+**Law 20:** NEVER use hyphens in UI copy, text content, or comments.
+
+## Strand 3: Feature Genome
+
+### Gene: Dashboard / Command Center
+- **Expression Status:** 60% expressed (partial phenotype)
+- **Completion Target:** 100% — all metrics live from Supabase, zero mocks
+- **Acceptance Criteria:**
+  - [ ] Weather widget: OpenWeatherMap API, schedule impact calculation
+  - [ ] AI Insights: Claude API calls, not mock responses
+  - [x] Project cards render from database
+  - [ ] Sub 100ms response on all widget loads
+  - [ ] Real time updates via Supabase subscriptions
+  - [ ] Skeleton loaders match final layout geometry
+  - [ ] Empty state designed for zero projects
+- **Formal Properties:**
+  - PROP-001: Dashboard renders with empty database without throwing
+  - PROP-002: All data shown matches live Supabase query results
+  - PROP-003: No component unmounts with pending network requests
+- **Tests Required:**
+  - Unit: `dashboard.test.tsx` — renders with no data
+  - E2E: `dashboard.spec.ts` — all widgets visible, no errors
+  - A11y: axe core zero violations
+- **Shadow Mode:** AI pre generates dashboard insights before user opens page
+
+### Gene: RFI Management
+- **Expression Status:** 45% expressed
+- **Completion Target:** 100% — full CRUD, ball in court tracking, 14 day SLA surfacing
+- **Acceptance Criteria:**
+  - [ ] Create, read, update RFIs from Supabase
+  - [ ] Ball in court indicator (GC vs Architect vs Supplier)
+  - [ ] 14 day response SLA countdown visible on every RFI
+  - [ ] Filter by status, priority, assignee, due date
+  - [ ] Mobile: 3 tap RFI creation from field
+  - [ ] Offline draft support with sync on reconnect
+  - [ ] Photo attachment from device camera
+- **Formal Properties:**
+  - PROP-010: RFI status transitions follow valid state machine (Open > Under Review > Answered > Closed)
+  - PROP-011: SLA calculation is always (created_date + 14 days) minus current_date
+  - PROP-012: Ball in court assignment changes only on status transition
+- **Tests Required:**
+  - Unit: `rfi.test.tsx` — CRUD operations, state machine validation
+  - Property: `rfi.property.test.ts` — SLA calculation for all valid date ranges
+  - E2E: `rfi.spec.ts` — full creation to closure flow
+
+### Gene: Submittals
+- **Expression Status:** 40% expressed
+- **Completion Target:** 100% — full tracking with ball in court, revision history
+- **Acceptance Criteria:**
+  - [ ] Submittal log with ball in court tracking
+  - [ ] Revision history with diff view
+  - [ ] Status workflow: Draft > Submitted > Under Review > Approved/Rejected/Revise and Resubmit
+  - [ ] Due date tracking with overdue indicators
+  - [ ] Linked to spec sections
+  - [ ] Bulk operations (approve multiple, reassign)
+- **Formal Properties:**
+  - PROP-020: Submittal revision numbers are monotonically increasing
+  - PROP-021: Approval status cannot skip states
+- **Tests Required:**
+  - Unit: `submittals.test.tsx` — CRUD, revision tracking, approval workflow
+  - Property: `submittals.property.test.ts` — revision monotonicity, state skip prevention
+  - E2E: `submittals.spec.ts` — create submittal, upload revision, approve flow
+
+### Gene: Schedule
+- **Expression Status:** 25% expressed
+- **Completion Target:** 80% — Critical path summary, lookahead, no Gantt (see KILLED_FEATURES.md)
+- **Acceptance Criteria:**
+  - [ ] Critical path summary card showing late and at risk activities
+  - [ ] 3 week lookahead view
+  - [ ] Activity status: Not Started, In Progress, Complete, Late
+  - [ ] Predecessor/successor relationships visible
+  - [ ] Integration with daily log (auto mark progress)
+  - [ ] Mobile friendly list view (not Gantt)
+- **Formal Properties:**
+  - PROP-030: Critical path calculation uses longest path algorithm
+  - PROP-031: Activity completion percentage is bounded [0, 100]
+- **Tests Required:**
+  - Unit: `schedule.test.tsx` — critical path calc, activity CRUD, status transitions
+  - Property: `schedule.property.test.ts` — completion bounds [0,100], critical path correctness
+  - E2E: `schedule.spec.ts` — view lookahead, update activity, verify critical path card
+
+### Gene: Budget and Cost Tracking
+- **Expression Status:** 50% expressed
+- **Completion Target:** 100% — live budget vs actual, change order tracking, variance alerts
+- **Acceptance Criteria:**
+  - [ ] Budget summary with original, revised, committed, actual columns
+  - [ ] Change order log with approval workflow
+  - [ ] Variance alerts at configurable thresholds (default 5%)
+  - [ ] Cost code breakdown with drill down
+  - [ ] Payment application tracking (AIA G702/G703 format)
+  - [ ] Forecast to complete calculations
+- **Formal Properties:**
+  - PROP-040: Budget total = sum of all line items (no floating point drift)
+  - PROP-041: Variance = (actual minus budget) / budget * 100
+  - PROP-042: Change order amounts flow through to revised budget automatically
+- **Tests Required:**
+  - Property: `budget.property.test.ts` — financial calculation invariants
+  - Formal: budget calculations formally specified and verified
+
+### Gene: Daily Log
+- **Expression Status:** 35% expressed
+- **Completion Target:** 100% — voice to text, weather auto fill, crew hours auto import
+- **Acceptance Criteria:**
+  - [ ] Voice to text entry from mobile
+  - [ ] Auto populate weather from OpenWeatherMap
+  - [ ] Crew hours integration (auto import from crew management)
+  - [ ] Photo attachment with GPS tagging
+  - [ ] Visitor log, deliveries, equipment sections
+  - [ ] Superintendent signature capture
+  - [ ] PDF export matching industry standard format
+- **Formal Properties:**
+  - PROP-070: Daily log entries are immutable after superintendent signature
+  - PROP-071: Weather data auto fill matches GPS coordinates of project site
+  - PROP-072: Crew hours imported never exceed 24 per person per day
+  - PROP-073: Photo GPS tags are within project geofence boundary
+- **Tests Required:**
+  - Unit: `daily-log.test.tsx` — CRUD, weather population, signature lock
+  - Property: `daily-log.property.test.ts` — crew hours validation for all boundary values
+  - E2E: `daily-log.spec.ts` — full entry creation with photo and signature flow
+
+### Gene: Field Capture
+- **Expression Status:** 30% expressed
+- **Completion Target:** 100% — photo, voice, progress capture from mobile
+- **Acceptance Criteria:**
+  - [ ] Camera capture with auto upload to Supabase storage
+  - [ ] Voice memo with transcription (Whisper API)
+  - [ ] Progress photo with before/after comparison
+  - [ ] GPS location auto tag
+  - [ ] Offline queue with background sync
+  - [ ] Link captures to RFIs, punch items, daily log entries
+- **Formal Properties:**
+  - PROP-080: Offline queue preserves capture order (FIFO sync)
+  - PROP-081: Photo upload never exceeds Supabase storage bucket limits
+  - PROP-082: GPS coordinates resolve to valid lat/long ranges
+  - PROP-083: Voice transcription result is always stored alongside original audio
+- **Tests Required:**
+  - Unit: `field-capture.test.tsx` — camera mock, upload queue, GPS tag
+  - Property: `field-capture.property.test.ts` — offline queue ordering preserved across random sync timing
+  - E2E: `field-capture.spec.ts` — capture photo, link to RFI, verify in gallery
+
+### Gene: Punch List
+- **Expression Status:** 40% expressed
+- **Completion Target:** 100% — photo based, location tagged, assignable
+- **Acceptance Criteria:**
+  - [ ] Create punch items with photo from camera
+  - [ ] Floor plan location tagging
+  - [ ] Assign to subcontractor with notification
+  - [ ] Status: Open, In Progress, Ready for Inspection, Closed
+  - [ ] Batch close with photo verification
+  - [ ] Export to PDF for owner turnover
+- **Formal Properties:**
+  - PROP-090: Punch item status transitions follow valid state machine (Open > In Progress > Ready for Inspection > Closed)
+  - PROP-091: Closed punch items require at least one verification photo
+  - PROP-092: Batch close operation is atomic (all succeed or all roll back)
+  - PROP-093: Floor plan location tags reference valid drawing revision
+- **Tests Required:**
+  - Unit: `punch-list.test.tsx` — CRUD, status transitions, batch close
+  - Property: `punch-list.property.test.ts` — state machine reachability for all valid paths
+  - E2E: `punch-list.spec.ts` — create from photo, assign, inspect, close flow
+
+### Gene: Crews and Workforce
+- **Expression Status:** 25% expressed
+- **Completion Target:** 90% — headcount tracking, certification management
+- **Acceptance Criteria:**
+  - [ ] Crew roster with role, company, certifications
+  - [ ] Daily headcount tracking
+  - [ ] Certification expiry alerts
+  - [ ] Time tracking integration
+  - [ ] Safety training compliance dashboard
+- **Formal Properties:**
+  - PROP-100: Certification expiry alerts fire exactly 30, 14, and 7 days before expiration
+  - PROP-101: Daily headcount total equals sum of all crew members marked present
+  - PROP-102: No crew member appears on two active crews simultaneously
+- **Tests Required:**
+  - Unit: `crews.test.tsx` — roster CRUD, headcount aggregation, cert alerts
+  - Property: `crews.property.test.ts` — expiry alert timing for all valid date ranges
+  - E2E: `crews.spec.ts` — add crew, track headcount, verify cert alert
+
+### Gene: Directory
+- **Expression Status:** 50% expressed
+- **Completion Target:** 90% — companies and contacts with role based visibility
+- **Acceptance Criteria:**
+  - [ ] Company and contact CRUD from Supabase
+  - [ ] Role based visibility (subs see only their company)
+  - [ ] Search and filter by trade, role, company
+  - [ ] Contact card with email, phone, one tap call/text
+- **Formal Properties:**
+  - PROP-110: Subcontractor role users see only their own company contacts
+  - PROP-111: Search results always respect current user RLS policies
+  - PROP-112: Directory export excludes contacts the user cannot view
+- **Tests Required:**
+  - Unit: `directory.test.tsx` — CRUD, search, role visibility filtering
+  - Property: `directory.property.test.ts` — RLS filtering holds for all role combinations
+  - E2E: `directory.spec.ts` — create contact, verify sub visibility restriction
+
+### Gene: Meetings
+- **Expression Status:** 30% expressed
+- **Completion Target:** 90% — agenda, minutes, action items with tracking
+- **Acceptance Criteria:**
+  - [ ] Meeting creation with agenda template
+  - [ ] Live minutes capture during meeting
+  - [ ] Action item extraction and assignment
+  - [ ] Follow up tracking with due dates
+  - [ ] Calendar integration
+- **Formal Properties:**
+  - PROP-120: Action items extracted from minutes always have an assignee and due date
+  - PROP-121: Meeting minutes are immutable after distribution
+  - PROP-122: Follow up status transitions: Open > In Progress > Complete
+- **Tests Required:**
+  - Unit: `meetings.test.tsx` — agenda CRUD, action item extraction, follow up tracking
+  - Property: `meetings.property.test.ts` — action item completeness for all extraction paths
+  - E2E: `meetings.spec.ts` — create meeting, capture minutes, verify action items
+
+### Gene: Files and Documents
+- **Expression Status:** 35% expressed
+- **Completion Target:** 90% — organized file management with version control
+- **Acceptance Criteria:**
+  - [ ] Upload to Supabase storage with folder organization
+  - [ ] Version history on all documents
+  - [ ] Preview for PDF, images, common formats
+  - [ ] Permission based access (respect RBAC)
+  - [ ] Bulk download and share
+- **Formal Properties:**
+  - PROP-130: File version numbers are monotonically increasing per document
+  - PROP-131: Deleting a version never removes the latest version
+  - PROP-132: Permission based access respects RBAC roles at download time, not upload time
+  - PROP-133: Bulk download total size is validated before initiating
+- **Tests Required:**
+  - Unit: `files.test.tsx` — upload, version history, permission filtering
+  - Property: `files.property.test.ts` — version ordering holds across concurrent uploads
+  - E2E: `files.spec.ts` — upload file, create new version, verify history and download
+
+### Gene: AI Copilot
+- **Expression Status:** 40% expressed
+- **Completion Target:** 100% — real Claude integration, context aware, construction domain trained
+- **Acceptance Criteria:**
+  - [ ] Real Claude API integration (not mock)
+  - [ ] Project context injected into every query
+  - [ ] Construction domain knowledge (RFI workflows, submittal processes, AIA forms)
+  - [ ] Suggested actions based on project state
+  - [ ] Voice input from mobile
+  - [ ] Shadow mode: AI generates suggestions before showing to user
+- **Formal Properties:**
+  - PROP-140: AI responses never expose data from projects the user cannot access
+  - PROP-141: Shadow mode prediction is always generated before user sees AI suggestion
+  - PROP-142: Claude API timeout (30s) never blocks the main UI thread
+  - PROP-143: Project context injection includes only current project data
+- **Tests Required:**
+  - Unit: `ai-copilot.test.tsx` — API integration mock, context injection, shadow mode
+  - Property: `ai-copilot.property.test.ts` — context isolation holds for all project/role combinations
+  - E2E: `ai-copilot.spec.ts` — ask question, verify context aware response, check shadow log
+
+### Gene: Drawings
+- **Expression Status:** 30% expressed
+- **Completion Target:** 80% — drawing set management, basic viewer
+- **Acceptance Criteria:**
+  - [ ] Drawing set upload and organization by discipline
+  - [ ] Revision tracking with current set indicator
+  - [ ] Basic viewer with zoom and pan
+  - [ ] Link drawings to RFIs and submittals
+  - [ ] Mobile pinch to zoom
+- **Formal Properties:**
+  - PROP-150: Current set indicator points to exactly one revision per drawing
+  - PROP-151: Revision numbers are monotonically increasing per drawing
+  - PROP-152: Drawing links to RFIs/submittals reference valid existing records
+- **Tests Required:**
+  - Unit: `drawings.test.tsx` — upload, revision tracking, current set logic
+  - Property: `drawings.property.test.ts` — revision ordering invariant across concurrent uploads
+  - E2E: `drawings.spec.ts` — upload set, add revision, link to RFI, verify viewer
+
+### Gene: Safety
+- **Expression Status:** 20% expressed
+- **Completion Target:** 80% — incident tracking, toolbox talks, compliance
+- **Acceptance Criteria:**
+  - [ ] Incident report creation with photo evidence
+  - [ ] Toolbox talk log with attendance
+  - [ ] Safety inspection checklists
+  - [ ] OSHA compliance tracking
+  - [ ] Near miss reporting
+- **Formal Properties:**
+  - PROP-160: Incident reports are immutable after submission (append only corrections)
+  - PROP-161: OSHA compliance status updates within 24 hours of incident creation
+  - PROP-162: Toolbox talk attendance requires at least one attendee signature
+  - PROP-163: Near miss reports are always anonymous unless reporter opts in
+- **Tests Required:**
+  - Unit: `safety.test.tsx` — incident CRUD, toolbox talks, compliance tracking
+  - Property: `safety.property.test.ts` — immutability invariant for all edit paths
+  - E2E: `safety.spec.ts` — create incident, log toolbox talk, verify compliance dashboard
+
+### Gene: Authentication and RBAC
+- **Expression Status:** 20% expressed
+- **Completion Target:** 100% — Supabase Auth, role based access, RLS policies
+- **Acceptance Criteria:**
+  - [ ] Supabase Auth with email/password and magic link
+  - [ ] Roles: Owner, Project Executive, Project Manager, Superintendent, Subcontractor, Viewer
+  - [ ] RLS policies on every table
+  - [ ] UI permission gating with PermissionGate component
+  - [ ] Session persistence across page reloads
+  - [ ] Invite flow for team members
+- **Formal Properties:**
+  - PROP-060: No API call returns data the user's role cannot access
+  - PROP-061: Permission checks are idempotent
+  - PROP-062: Session token refresh happens before expiry, never after
+- **Tests Required:**
+  - Unit: `auth.test.tsx` — login, role assignment, permission gating
+  - Property: `auth.property.test.ts` — RLS policy holds for all role/table combinations
+  - E2E: `auth.spec.ts` — login, verify role restrictions, test invite flow
+
+## Strand 4: Quality Invariants (Never Regress)
+
+| Metric | Floor | Current | Trend |
+|--------|-------|---------|-------|
+| Build passes | 100% | ✓ | → |
+| TypeScript errors | 0 | 0 | → |
+| Test coverage | >70% | 43% | ↑ |
+| Bundle size (initial JS) | <300KB | 287KB | → |
+| Accessibility violations | 0 | 4 | ↓ |
+| `as any` casts | 0 | 12 | ↓ |
+| Mock data in production | 0 | 7 | ↓ |
+| Longest response time | <500ms | 340ms | → |
+
+## Strand 5: Competitive Intelligence
+
+| Feature | Procore | Autodesk | SiteSync Target |
+|---------|---------|----------|-----------------|
+| Mobile RFI creation | 12 taps | 8 taps | 3 taps |
+| AI insights | None | Basic summaries | Predictive, Claude powered |
+| Offline mode | Partial | No | Full (Capacitor + local cache) |
+| Daily log voice entry | No | No | Yes (Whisper transcription) |
+| Shadow mode learning | No | No | Yes (Tesla Data Engine model) |
+| Setup time for new project | 2 hours | 1.5 hours | 15 minutes (AI assisted) |
+| Ball in court tracking | Manual | Manual | Automatic on status change |

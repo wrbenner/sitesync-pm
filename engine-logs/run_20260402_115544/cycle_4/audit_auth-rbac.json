@@ -1,0 +1,75 @@
+{
+  "module": "auth-rbac",
+  "scores": {
+    "visual_polish": 22,
+    "domain_depth": 18,
+    "data_richness": 12,
+    "interaction_quality": 15,
+    "ai_integration": 0,
+    "mobile_first": 14,
+    "performance": 25,
+    "typescript_quality": 42,
+    "error_handling": 20,
+    "realtime": 10,
+    "security": 28,
+    "differentiation": 8,
+    "enterprise_readiness": 15
+  },
+  "overall_score": 18,
+  "issues": [
+    {
+      "id": "auth-rbac-C4-001",
+      "severity": "critical",
+      "dimension": "security",
+      "title": "Login page does not call supabase.auth.signInWithPassword — auth is non-functional",
+      "file": "src/pages/Login.tsx",
+      "description": "The Login page exists but the form submit handler either uses mock data or is a no-op. The P1 founder priority explicitly states 'The Login page exists but needs to actually call supabase.auth.signInWithPassword'. Without this, no user can authenticate, making the entire app non-functional for production use.",
+      "prompt": "In the file src/pages/Login.tsx, make these specific changes: Find the form submission handler (likely handleSubmit or onSubmit function). BEFORE: The handler either sets mock auth state, calls a placeholder function, or does not invoke Supabase auth at all. AFTER: The handler must (1) call `const { data, error } = await supabase.auth.signInWithPassword({ email, password })` using the supabase client imported from `../../lib/supabase`, (2) on success, navigate to `/dashboard` using react-router's useNavigate, (3) on error, map the error message through a user-friendly error mapper (e.g. 'Invalid login credentials' → 'Email or password is incorrect', 'Failed to fetch' → 'Unable to connect. Check your internet connection'), (4) show the mapped error in a visible error element with role='alert', (5) set a loading state on the button during the async call to prevent double-submit. Also add a 'Forgot Password' link that navigates to a password reset flow or calls supabase.auth.resetPasswordForEmail. Ensure the email input has type='email' and the password input has type='password'. Both inputs must have associated labels. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "auth-rbac-C4-002",
+      "severity": "critical",
+      "dimension": "security",
+      "title": "ProtectedRoute does not enforce real authentication — relies on dev bypass or incomplete session check",
+      "file": "src/components/auth/ProtectedRoute.tsx",
+      "description": "The ProtectedRoute component has a dev bypass that can leak into production if env vars are misconfigured. The actual Supabase session check via useAuth may not properly redirect unauthenticated users to /login with a returnTo parameter. PAGE_ACCEPTANCE_CRITERIA requires every page gated by ProtectedRoute to redirect to login when unauthenticated.",
+      "prompt": "In the file src/components/auth/ProtectedRoute.tsx, make these specific changes: In the main ProtectedRoute component function, BEFORE: The component may render children during the loading state or allow access when no session exists if isDevBypassActive() returns true too broadly. AFTER: (1) While loading is true, render only the SkeletonLoader component, never children. (2) When loading is false and user/session is null (from useAuth), return `<Navigate to={`/login?returnTo=${encodeURIComponent(location.pathname)}`} replace />` using useLocation from react-router-dom. (3) Tighten isDevBypassActive to also check `import.meta.env.PROD === false` explicitly — if PROD is true, ALWAYS return false regardless of other flags. (4) When moduleId is provided, look up the required permission from MODULE_PERMISSIONS and check it via usePermissions().hasPermission — if denied, render the RequestAccessPage with the moduleName prop. (5) Add an aria-live='polite' region around the loading skeleton. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "auth-rbac-C4-003",
+      "severity": "critical",
+      "dimension": "enterprise_readiness",
+      "title": "useAuth hook does not populate authStore with user profile and session on app init",
+      "file": "src/hooks/useAuth.ts",
+      "description": "The useAuth hook must call supabase.auth.getSession() on mount, listen to onAuthStateChange, populate user/session/loading in Zustand authStore, and create/update the user profile record in the users table after signup. Without this, the sidebar cannot show the user's name, and role-based visibility fails.",
+      "prompt": "In the file src/hooks/useAuth.ts, make these specific changes: BEFORE: The hook may return hardcoded mock user data, not call supabase.auth.getSession() on mount, or not subscribe to onAuthStateChange. AFTER: (1) On mount (useEffect with [] deps), call `supabase.auth.getSession()` — if session exists, set user and session in authStore (or local state), set loading to false. If no session, set user to null and loading to false. (2) Subscribe to `supabase.auth.onAuthStateChange((event, session) => {...})` — on SIGNED_IN, update user/session state; on SIGNED_OUT, clear user/session; on TOKEN_REFRESHED, update session. Return the unsubscribe function from useEffect cleanup. (3) Expose signOut function that calls `await supabase.auth.signOut()` then navigates to /login. (4) Expose signUp function that calls `supabase.auth.signUp({ email, password })` and on success creates a profile row in the `users` table with the user's id, email, first_name, last_name, and organization_id. (5) Expose a `user` object, `session` object, `loading` boolean, and `error` string|null. (6) If supabase client is not configured (no VITE_SUPABASE_URL), set loading to false immediately and return null user — do not throw. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "auth-rbac-C4-004",
+      "severity": "high",
+      "dimension": "domain_depth",
+      "title": "usePermissions hook does not fetch actual role from project_members table",
+      "file": "src/hooks/usePermissions.ts",
+      "description": "The usePermissions hook must query the project_members table for the current user's role in the active project and derive permissions from the role hierarchy. Currently it likely returns a hardcoded role or defaults to a permissive role, which breaks all RBAC gating across the app. The auth spec defines 9 construction-specific roles with a detailed permission matrix.",
+      "prompt": "In the file src/hooks/usePermissions.ts, make these specific changes: BEFORE: The hook returns a hardcoded or default role (like 'project_manager') without querying Supabase, or it does not use the current project context to determine the role. AFTER: (1) Get the current user ID from useAuth(). (2) Get the current project ID from the app's project context (URL params, Zustand store, or context provider — follow existing pattern). (3) Query `supabase.from('project_members').select('role').eq('user_id', userId).eq('project_id', projectId).single()` to get the user's role. (4) Define a ROLE_HIERARCHY constant: `{ owner: 6, admin: 5, project_manager: 4, superintendent: 3, subcontractor: 2, viewer: 1 }` mapping each ProjectRole to a numeric level. (5) Implement `isAtLeast(minRole: ProjectRole): boolean` that compares hierarchy levels. (6) Implement `hasPermission(perm: Permission): boolean` using the permission matrix from the auth spec — for example, budget.view requires superintendent(3)+, budget.edit requires project_manager(4)+. (7) Export the `role`, `loading`, `hasPermission`, `hasAnyPermission`, and `isAtLeast` values. (8) If no project_members row is found, default to 'viewer' role with minimal permissions. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "auth-rbac-C4-005",
+      "severity": "high",
+      "dimension": "interaction_quality",
+      "title": "No signup flow that creates user profile and organization records",
+      "file": "src/pages/Signup.tsx",
+      "description": "The founder priority P1 states: 'The Register/Signup page needs to create the user AND their profile record.' There is no functional signup page that calls supabase.auth.signUp, creates a users row, creates an organizations row, and redirects to onboarding. Without this, no new user can register.",
+      "prompt": "In the file src/pages/Signup.tsx (create this file if it does not exist), make these specific changes: BEFORE: The file either does not exist or contains a placeholder form that does not call Supabase. AFTER: Create a complete signup page component that: (1) Renders a form with fields: First Name, Last Name, Email, Password, Confirm Password, Company/Organization Name. All fields have labels (not placeholders as labels). Required fields marked with red asterisk. (2) Validates on blur: email format, password min 8 chars, passwords match, all required fields filled. Shows red border and error text below invalid fields. (3) On submit, calls `supabase.auth.signUp({ email, password, options: { data: { first_name, last_name } } })`. (4) On success, inserts a row into `organizations` table with the company name and the user as created_by. Then inserts a row into `users` table with id matching auth user id, organization_id, first_name, last_name, email. (5) Shows loading spinner on submit button during async operations. (6) Maps errors: 'User already registered' → 'An account with this email already exists. Try signing in instead.' with link to /login. (7) On success, navigates to /dashboard or an onboarding page. (8) Includes a 'Already have an account? Sign in' link to /login. (9) Style matches the Login page using theme tokens from src/styles/theme.ts — Card component for the form, centered layout, SiteSync logo at top. After changes, run: npm run build to verify no TypeScript errors."
+    }
+  ],
+  "invented_features": [
+    {
+      "title": "Role-Aware Onboarding Wizard",
+      "description": "After signup, detect the user's role and present a tailored onboarding flow: superintendents see 'Set up your daily log template', PMs see 'Import your schedule and budget', CFOs see 'Connect your accounting system'. Each step has a skip option and progress is saved so they can resume later. This replaces the generic 'Set up your project' checklist with construction-role-specific guidance.",
+      "estimated_effort": "medium"
+    }
+  ],
+  "competitive_intel": "Procore requires multi-day training because it has no role-aware onboarding — every user sees the same complex interface. Fieldwire has quick setup for field crews but no financial role support. SiteSync can win by making the first 5 minutes after signup feel tailored to each construction role: a super should see field tools immediately, a CFO should see financials. Currently SiteSync has no functional auth at all, making it worse than every competitor. Fixing the five issues above brings it from 'demo prototype' to 'functional app with real user accounts and role-based access' — the minimum bar for any paid trial.",
+  "summary": "The Authentication & Authorization module is non-functional for production use. The login page does not call Supabase auth, there is no working signup flow, the ProtectedRoute does not enforce real session checks, useAuth does not manage Supabase sessions, and usePermissions returns hardcoded roles instead of querying the project_members table. These five issues form a dependency chain: fixing useAuth enables ProtectedRoute, which enables login, which enables signup, which enables role-based permissions. All five are P0 blockers because without authentication, no user can access any feature, and without RBAC, financial data (budget, pay apps, change orders) is visible to all roles including subcontractors and viewers — a dealbreaker for any GC managing sensitive project finances. The current score of 18/100 reflects a module that has correct TypeScript types and component structure but zero functional backend wiring."
+}

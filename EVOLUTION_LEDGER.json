@@ -1,0 +1,26 @@
+{
+  "_comment": "Cross-problem evolution memory. Every time the metabolism evolves a function, the winning pattern is stored here. The memory layer reads this before generating new implementations to avoid 2-3 generations of rediscovery.",
+  "_version": "1.0",
+  "_schema_version": 1,
+  "_updated": "2026-04-05T00:00:00Z",
+  "evolutions": [],
+  "killed_approaches": [],
+  "patterns": [
+    {
+      "id": "PAT-001",
+      "name": "Cursor-based pagination",
+      "description": "Always use cursor-based pagination for lists. Never offset-based. Cursor: use the last item's created_at + id as the cursor. This avoids the 'page drift' problem when items are added while paginating.",
+      "applies_to": "any list query with more than 50 items",
+      "discovered": "2026-04-05",
+      "source": "initial-seed"
+    },
+    {
+      "id": "PAT-002",
+      "name": "Optimistic update with rollback",
+      "description": "For mutations: 1) save previousData with queryClient.getQueryData, 2) optimistically update with queryClient.setQueryData, 3) onError: restore previousData and show toast, 4) onSettled: invalidate to get server truth. Never skip the rollback.",
+      "applies_to": "all useMutation hooks",
+      "discovered": "2026-04-05",
+      "source": "initial-seed"
+    }
+  ]
+}

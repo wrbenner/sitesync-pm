@@ -1,0 +1,75 @@
+{
+  "module": "document-management",
+  "scores": {
+    "visual_polish": 32,
+    "domain_depth": 35,
+    "data_richness": 28,
+    "interaction_quality": 30,
+    "ai_integration": 22,
+    "mobile_first": 18,
+    "performance": 35,
+    "typescript_quality": 45,
+    "error_handling": 38,
+    "realtime": 25,
+    "accessibility": 15,
+    "security": 40,
+    "differentiation": 20,
+    "enterprise_readiness": 30
+  },
+  "overall_score": 30,
+  "issues": [
+    {
+      "id": "document-management-C5-001",
+      "severity": "critical",
+      "dimension": "domain_depth",
+      "title": "Drawing viewer lacks fabric.js markup annotation layer — P0-3 dealbreaker",
+      "file": "src/components/drawings/DrawingViewer.tsx",
+      "description": "The DrawingViewer component renders a basic PDF view but has no interactive markup tools (pen, highlighter, text, shapes, cloud, arrow). P0-3 in PRODUCTION_ROADMAP requires all 7 markup tools with fabric.js overlay, annotation persistence to drawing_annotations table, shared vs personal markup toggle, and undo/redo stack. Without this, superintendents cannot mark up drawings on iPads, which is the #1 demo question.",
+      "prompt": "In the file src/components/drawings/DrawingViewer.tsx, make these specific changes: BEFORE: The component renders a PDF using PdfViewer or a basic image/canvas without any annotation layer. There are no drawing tools, no fabric.js canvas overlay, no annotation CRUD operations. AFTER: Add a fabric.js canvas overlay on top of the PDF render. Import fabric from 'fabric' (install if needed: npm install fabric @types/fabric). Create a transparent fabric.Canvas that sits absolutely positioned over the PDF page. Implement a toolbar state with tools: 'pen', 'highlighter', 'text', 'rectangle', 'circle', 'arrow', 'cloud', 'select'. When pen is active, enable freeDrawingMode with configurable color (default red) and width (2px). When highlighter is active, enable freeDrawingMode with semi-transparent yellow stroke (opacity 0.3, width 20px). When text is active, clicking the canvas creates an IText object at click position. When rectangle/circle is active, mousedown starts shape, mousemove resizes, mouseup finalizes. Add an undo/redo stack (array of canvas JSON states, max 20). Add a color picker with 8 presets: red, blue, green, orange, yellow, black, white, purple. Add a 'Save Markups' button that serializes canvas.toJSON() and calls supabase.from('drawing_annotations').upsert() with drawing_id, page_number, user_id, annotation_data (the JSON), and is_shared boolean. On mount, load existing annotations from drawing_annotations table for the current drawing_id and page_number, and call canvas.loadFromJSON() to restore them. Add a toggle for 'Personal' vs 'Shared' markups. Export the component as DrawingViewer. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "document-management-C5-002",
+      "severity": "critical",
+      "dimension": "interaction_quality",
+      "title": "Drawings page has no file upload flow for PDF/DWG drawings",
+      "file": "src/pages/Drawings.tsx",
+      "description": "The Drawings page shows a list/grid of drawings but lacks a drag-and-drop upload zone for adding new drawings. PAGE_ACCEPTANCE_CRITERIA criterion 9 requires drag-and-drop or file picker supporting PDF and DWG with processing indicator. Without upload, the page is read-only and useless for new projects.",
+      "prompt": "In the file src/pages/Drawings.tsx, make these specific changes: BEFORE: The page displays drawings from the database but has no upload mechanism. There is no drag-and-drop zone, no file picker button, and no upload progress indicator. Users cannot add new drawings. AFTER: Add an 'Upload Drawings' button in the page header (orange primary button with Upload icon from lucide-react). When clicked, open a modal containing the UploadZone component from src/components/files/UploadZone.tsx configured to accept '.pdf,.dwg,.dxf' file types. After file selection, show a processing indicator ('Uploading sheet 1 of N...'). On upload completion, insert a record into the drawings table via supabase with fields: project_id (from useProjectId), title (filename without extension), discipline (default 'Architectural', user can change), sheet_number (extracted from filename or auto-incremented), current_revision (1), file_url (storage path from upload). After successful insert, refetch the drawings list. Also add drag-and-drop support: wrap the main content area in a div with onDragOver/onDrop handlers that trigger the same upload flow. Show a visual drop overlay ('Drop drawings here') when dragging files over the page. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "document-management-C5-003",
+      "severity": "critical",
+      "dimension": "accessibility",
+      "title": "Drawing viewer and file list have zero ARIA attributes and no keyboard navigation",
+      "file": "src/pages/Files.tsx",
+      "description": "The Files page renders a file list/grid with no role attributes, no aria-labels on interactive elements, no keyboard navigation between file items, and no screen reader announcements for file operations. PAGE_ACCEPTANCE_CRITERIA Global Standards require axe-core zero critical violations, keyboard navigable tab order, and aria-live regions for status changes.",
+      "prompt": "In the file src/pages/Files.tsx, make these specific changes: BEFORE: File list items are plain divs with onClick handlers. No role='listbox' or role='grid' on the container. No role='option' or role='row' on items. No aria-label on action buttons (download, delete, preview). No keyboard navigation (arrow keys, Enter to open). No aria-live region announcing upload completion or deletion. AFTER: Add role='grid' and aria-label='Project files' to the file list container. Add role='row' and tabIndex={0} to each file item. Add role='gridcell' to each cell within a row. Add aria-label to all icon buttons: 'Download [filename]', 'Delete [filename]', 'Preview [filename]'. Add onKeyDown handler to file items: Enter/Space opens preview, Delete key triggers delete confirmation. Add an aria-live='polite' region at the top of the page that announces: 'File uploaded successfully', 'File deleted', 'N files found' after search. Ensure the search input has aria-label='Search files' and is linked to results via aria-controls. Ensure focus is visible on all interactive elements with a 2px orange outline. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "document-management-C5-004",
+      "severity": "major",
+      "dimension": "data_richness",
+      "title": "Drawing revision history not displayed — no version comparison or timeline",
+      "file": "src/pages/Drawings.tsx",
+      "description": "PAGE_ACCEPTANCE_CRITERIA criterion 2 requires revision management with auto-increment, previous revisions accessible, and 'View Previous Revisions' dropdown. Criterion 12 requires side-by-side comparison with opacity slider. The Drawings page currently shows only the latest version with no revision dropdown, no history timeline, and no comparison view. The API endpoint getDrawingRevisionHistory exists in documents.ts but is never called from the UI.",
+      "prompt": "In the file src/pages/Drawings.tsx, make these specific changes: BEFORE: Each drawing card/row shows only the current revision number as static text. There is no dropdown to view previous revisions, no revision timeline, and no way to compare revisions. The getDrawingRevisionHistory function from src/api/endpoints/documents.ts is never imported or called. AFTER: Add a 'Rev' dropdown button next to each drawing's revision number. When clicked, call getDrawingRevisionHistory(drawingId) and display a dropdown list of all revisions with: revision number, issued date, issued by name, and change description. Each revision row is clickable to load that version in the viewer. Add a 'Compare' button that appears when 2+ revisions exist. Clicking 'Compare' opens a modal with two side-by-side PdfViewer instances: left shows the selected older revision, right shows the current revision. Add an opacity slider (range input 0-100) at the top that controls the opacity of the right panel for overlay comparison mode. Import getDrawingRevisionHistory from '../../api/endpoints/documents'. Use useState to track selectedRevisions and comparisonMode. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "document-management-C5-005",
+      "severity": "major",
+      "dimension": "mobile_first",
+      "title": "Drawing viewer has no mobile touch gestures — pinch-to-zoom and swipe not implemented",
+      "file": "src/components/drawings/PdfViewer.tsx",
+      "description": "PAGE_ACCEPTANCE_CRITERIA criterion 13 requires pinch-to-zoom on mobile, collapsible bottom toolbar for markup tools, and quick-link to create RFI from markup. The PdfViewer component uses mouse-only zoom controls (buttons) with no touch event handlers. On mobile, drawings are static and unzoomable, making field use impossible.",
+      "prompt": "In the file src/components/drawings/PdfViewer.tsx, make these specific changes: BEFORE: The component has zoom in/out buttons that modify a scale state variable. There are no touch event handlers (onTouchStart, onTouchMove, onTouchEnd). Pinch-to-zoom does not work. The toolbar is a fixed horizontal bar that takes up too much space on mobile screens. AFTER: Add touch gesture handling for pinch-to-zoom. Track two-finger touch points using onTouchStart (store initial finger distance), onTouchMove (calculate new distance, update scale proportionally), and onTouchEnd (cleanup). Use a ref to track initialPinchDistance and currentScale. Clamp scale between 0.5 and 5.0. Add single-finger pan: when one finger touches and moves, translate the canvas view (track translateX/translateY in state). Add double-tap to reset zoom to fit-to-width. Wrap the zoom toolbar in a collapsible container that starts collapsed on mobile (detect via window.innerWidth < 768). Show a small floating button with a Pencil icon that expands the toolbar when tapped. Add a 'Create RFI' floating action button (bottom-right, 56px diameter, orange) visible only on mobile that captures a screenshot of the current view area and opens CreateRFIModal with the screenshot pre-attached. Use CSS touch-action: none on the canvas container to prevent browser default gestures from interfering. After changes, run: npm run build to verify no TypeScript errors."
+    }
+  ],
+  "invented_features": [
+    {
+      "title": "AI Drawing Conflict Scanner",
+      "description": "When a new drawing revision is uploaded, automatically compare it against the previous revision using AI image analysis. Highlight areas that changed and cross-reference those areas against open RFIs, punch items, and submittals. Surface conflicts like 'Structural beam moved 6 inches in Rev 3 — this affects RFI-042 which references this location.' This is P2-1 from the roadmap and no competitor ships this."
+    }
+  ],
+  "competitive_intel": "Procore's drawing viewer supports basic markup (pen, text, shapes) but has no AI conflict detection, no offline drawing cache, and no revision overlay comparison. PlanGrid (now part of Autodesk) has best-in-class mobile drawing markup with pinch-to-zoom and Apple Pencil support but lacks RFI/submittal linking directly from markups. Fieldwire excels at task-to-plan linking with QR codes. SiteSync must match PlanGrid's mobile markup quality while adding the AI conflict detection layer that nobody has.",
+  "summary": "The Document Management module scores 30/100, well below production readiness. The most critical gap is the complete absence of interactive drawing markup tools (P0-3 dealbreaker from PRODUCTION_ROADMAP). Without fabric.js annotation support, superintendents cannot mark up drawings on iPads, which kills every field demo. Secondary issues include missing file upload flow (making the page read-only for new projects), zero accessibility support (no ARIA, no keyboard nav), missing revision comparison UI despite the API existing, and no mobile touch gestures on the PDF viewer. The API layer (documents.ts) is reasonably well-typed with proper error handling and revision history support, but the frontend never leverages these capabilities. Priority order: implement markup tools (issue 001), add upload flow (002), fix accessibility (003), wire up revision comparison (004), then add mobile touch gestures (005)."
+}

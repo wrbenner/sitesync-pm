@@ -1,0 +1,75 @@
+{
+  "module": "financial-engine",
+  "scores": {
+    "visual_polish": 62,
+    "domain_depth": 72,
+    "data_richness": 55,
+    "interaction_quality": 52,
+    "ai_integration": 35,
+    "mobile_first": 38,
+    "performance": 58,
+    "typescript_quality": 68,
+    "error_handling": 55,
+    "realtime": 60,
+    "accessibility": 40,
+    "security": 52,
+    "differentiation": 48,
+    "enterprise_readiness": 42
+  },
+  "overall_score": 53,
+  "issues": [
+    {
+      "id": "financial-engine-C5-001",
+      "severity": "critical",
+      "dimension": "enterprise_readiness",
+      "title": "Pay Applications page missing AIA G702/G703 PDF generation",
+      "file": "src/pages/PayApplications.tsx",
+      "description": "PAGE_ACCEPTANCE_CRITERIA requires pixel-perfect AIA G702/G703 PDF export from the pay apps page. Currently no PDF generation exists. This is a P0 dealbreaker per PRODUCTION_ROADMAP P1-1. The page needs a 'Generate G702/G703' button that calls a service to produce the PDF using pdf-lib.",
+      "prompt": "In the file src/pages/PayApplications.tsx, make these specific changes: Add a 'Generate G702/G703 PDF' button in the pay application detail view header area. BEFORE: The page displays pay application data but has no PDF export capability. The acceptance criteria states 'G702 PDF: generates pixel-perfect AIA G702 form' and 'G703 PDF: continuation sheet with all SOV line items.' AFTER: Add an import for a new generatePayAppPdf function from '../../services/pdf/paymentAppPdf'. Add a button with icon Download labeled 'Export G702/G703' that calls this function with the current pay application data. The button should show a loading spinner state while generating, then trigger a browser download of the resulting PDF blob. Use theme tokens for styling: background colors.primaryOrange, color white, borderRadius borderRadius.md, height 40px. Disable the button when status is 'draft' with a tooltip 'Submit pay app before exporting'. Add aria-label='Export AIA G702 G703 payment application as PDF'. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "financial-engine-C5-002",
+      "severity": "critical",
+      "dimension": "domain_depth",
+      "title": "Create paymentAppPdf service for AIA G702/G703 generation",
+      "file": "src/services/pdf/paymentAppPdf.ts",
+      "description": "No PDF generation service exists for AIA G702/G703 forms. This is a P0/P1 requirement per PRODUCTION_ROADMAP. Need to create a new service file that uses pdf-lib to generate both G702 summary and G703 continuation sheets with correct AIA field layout, retainage calculations, and SOV line items.",
+      "prompt": "In the file src/services/pdf/paymentAppPdf.ts, create this new file with these specific changes: Create a new service module that exports an async function generatePayAppPdf(payApp: PayApplication, lineItems: PaymentLineItem[], projectName: string): Promise<Blob>. BEFORE: This file does not exist. There is no PDF generation for payment applications anywhere in the codebase. AFTER: The file imports PDFDocument, rgb, StandardFonts from 'pdf-lib'. It creates a two-section PDF: (1) G702 summary page with fields: Project Name, Application Number, Period To date, Original Contract Sum, Net Change By Change Orders, Contract Sum To Date, Total Completed and Stored To Date (from summing line items), Retainage (computed as total * retainageRate using computeCurrentPaymentDue from src/api/endpoints/payApplications.ts), Total Earned Less Retainage, Less Previous Certificates For Payment, Current Payment Due, Balance To Finish. (2) G703 continuation pages with a table: columns Item Number, Description of Work, Scheduled Value, Work Completed From Previous Application, Work Completed This Period, Materials Presently Stored, Total Completed and Stored to Date, Percentage Complete, Balance to Finish, Retainage. Use Helvetica font, 10pt for body, 12pt bold for headers. Page size letter (612x792). All monetary values formatted with dollar sign and two decimals using integer cent math internally then dividing by 100 for display. Add running totals row at bottom of each G703 page. Return the PDF as a Blob via pdfDoc.save(). After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "financial-engine-C5-003",
+      "severity": "major",
+      "dimension": "interaction_quality",
+      "title": "Budget page missing SOV line item inline editing for percent complete",
+      "file": "src/pages/Budget.tsx",
+      "description": "PAGE_ACCEPTANCE_CRITERIA #5 states 'Editing a line item shows the delta inline before saving' and pay app criteria #5 states 'This-period completion shown as both dollar amount and percentage. Editing either updates the other.' Currently budget line items display read-only values with no inline edit capability for percent complete or cost adjustments.",
+      "prompt": "In the file src/pages/Budget.tsx, make these specific changes in the budget line items table rendering section: BEFORE: Budget line item rows display original_amount, spent, committed, and remaining as static text with no edit affordance. The table cells are purely display-only divs or spans. AFTER: For the 'spent_to_date' and 'percent_complete' columns, wrap the display value in a clickable container that on click reveals an inline input (type number, step 0.01 for dollars, step 1 for percent). When the user edits the percent complete field, auto-calculate and display the corresponding dollar amount below the input as a preview: 'This changes projected from $X to $Y (+$Z)' in green if under budget or red if over budget. On blur or Enter key, call the budget update mutation. On Escape, revert to display mode. Add a small pencil icon (from lucide-react) that appears on row hover to indicate editability. Use theme spacing and colors: input border 1px solid colors.border, focus ring 2px colors.primaryOrange, preview text fontSize typography.fontSize.xs. Gate edit visibility behind a permission check: only show edit affordance if user role is project_manager or higher. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "financial-engine-C5-004",
+      "severity": "major",
+      "dimension": "accessibility",
+      "title": "SCurve and WaterfallChart missing screen reader data tables",
+      "file": "src/components/budget/SCurve.tsx",
+      "description": "Both financial charts use SVG rendering with role='img' but provide no accessible data table fallback. WCAG 2.1 requires that data visualizations provide equivalent text or table alternatives. Screen reader users cannot access any of the planned vs actual spend data points. The keyboard navigation exists but announces no values without the visually-hidden table.",
+      "prompt": "In the file src/components/budget/SCurve.tsx, make these specific changes in the SCurve component: BEFORE: The component renders an SVG chart with role='img' and a basic aria-label, plus keyboard navigation that updates an announcement state. However there is no visually-hidden data table that screen readers can browse. The desc element only shows the final values, not the full time series. AFTER: After the closing </svg> tag and before the closing container div, add a visually-hidden HTML table (style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap' }}) with caption 'S Curve planned versus actual spend data'. The table has columns: Month, Planned Spend ($M), Actual Spend ($M), Variance ($M). Populate rows from the plannedData and actualData arrays, with variance calculated as planned minus actual for each month index. For months beyond actualData length, show 'Not yet reported' in the Actual column. Add aria-describedby on the SVG pointing to this table's id. This ensures WCAG 2.1 AA compliance for data visualizations. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "financial-engine-C5-005",
+      "severity": "major",
+      "dimension": "mobile_first",
+      "title": "Pay Applications page not usable at 375px mobile width",
+      "file": "src/pages/PayApplications.tsx",
+      "description": "PAGE_ACCEPTANCE_CRITERIA states 'Mobile: view-only for pay app detail. Approval buttons accessible. SOV table scrolls horizontally with frozen description column.' Currently the pay app page uses a wide table layout that overflows on mobile without a frozen column, approval buttons are not prominently accessible, and metric cards do not stack vertically.",
+      "prompt": "In the file src/pages/PayApplications.tsx, make these specific changes: BEFORE: The page renders metric summary cards in a horizontal grid and the SOV table in a standard HTML table that overflows horizontally on screens under 768px. No column is frozen. Approval buttons are positioned in the header area and may be truncated or hidden on mobile. There is no responsive breakpoint handling. AFTER: Add a state hook for isMobile using window.innerWidth < 768 with a debounced resize listener (same pattern as WaterfallChart.tsx). When isMobile is true: (1) Metric cards use gridTemplateColumns '1fr' instead of 'repeat(4, 1fr)' so they stack vertically. (2) The SOV table wrapper gets overflowX 'auto' and WebkitOverflowScrolling 'touch'. (3) The first column (Description of Work) gets position 'sticky', left 0, zIndex 2, background colors.surface, boxShadow '2px 0 4px rgba(0,0,0,0.06)' to create a frozen first column effect. (4) Approval buttons (Approve, Reject) are rendered in a sticky bottom bar (position 'sticky', bottom 0, padding spacing['3'], background colors.surface, borderTop '1px solid ' + colors.border, display 'flex', gap spacing['2'], zIndex 10) instead of in the header. Each button has minHeight 44 and minWidth 44 for touch targets per Apple HIG. After changes, run: npm run build to verify no TypeScript errors."
+    }
+  ],
+  "invented_features": [
+    {
+      "title": "Cash Flow Forecast from Pay App History",
+      "description": "Build a 13-week cash flow projection chart on the Budget page using approved pay app data, committed subcontractor costs, and retainage schedules. Projects weekly inflows (billings to owner based on SOV progression rate) vs outflows (sub payments on 30-day lag). Highlights weeks with negative cash position in red. Uses the same computeCurrentPaymentDue engine to extrapolate future billing amounts based on schedule percent complete trajectory."
+    }
+  ],
+  "competitive_intel": "Procore's financial module lacks native AIA G702/G703 PDF generation and requires manual export to Excel for formatting. Procore also has no earned value dashboard or S-curve visualization. Sage integration is available only through third-party connectors at additional cost. SiteSync's computeCurrentPaymentDue function with line-by-line AIA formula accuracy, the EarnedValueDashboard with real CPI/SPI/EAC metrics, and the AI-powered budget upload with CSI code auto-mapping are genuine differentiators. The WaterfallChart for contract value visualization and Treemap for budget allocation are visual capabilities Procore does not offer. However, the lack of actual PDF export and the absence of lien waiver enforcement before pay app submission are gaps that prevent GCs from using this in production billing workflows.",
+  "summary": "The financial engine has strong foundational domain depth with proper AIA G702 formulas in computeCurrentPaymentDue, earned value calculations, and construction-specific visualizations (S-curve, waterfall, treemap). TypeScript quality is solid with proper type guards and cent-based monetary arithmetic. However, the module falls short on enterprise readiness: no AIA G702/G703 PDF generation exists (P0 dealbreaker), the SOV table lacks inline editing for percent complete adjustments, mobile responsiveness is poor on the pay applications page, and accessibility gaps in the chart components would fail WCAG audit. The five prompts target: (1) adding the PDF export button to the pay app page, (2) creating the pdf-lib based G702/G703 generator service, (3) enabling inline budget editing with delta preview, (4) adding screen reader data tables to financial charts, and (5) making the pay application page fully functional at 375px mobile width with frozen columns and sticky approval buttons."
+}

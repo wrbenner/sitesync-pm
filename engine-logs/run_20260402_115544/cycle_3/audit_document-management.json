@@ -1,0 +1,70 @@
+{
+  "module": "document-management",
+  "scores": {
+    "visual_polish": 32,
+    "domain_depth": 30,
+    "data_richness": 25,
+    "interaction_quality": 28,
+    "ai_integration": 20,
+    "mobile_first": 18,
+    "performance": 35,
+    "typescript_quality": 45,
+    "error_handling": 30,
+    "realtime": 25,
+    "accessibility": 15,
+    "security": 40,
+    "differentiation": 20,
+    "enterprise_readiness": 25
+  },
+  "overall_score": 28,
+  "issues": [
+    {
+      "id": "document-management-C3-001",
+      "severity": "critical",
+      "dimension": "accessibility",
+      "title": "Drawings page missing ARIA labels on interactive drawing cards and filter controls",
+      "file": "src/pages/Drawings.tsx",
+      "description": "The Drawings page renders clickable drawing cards and discipline filter pills without any aria-label, role, or keyboard interaction attributes. Screen readers cannot identify the purpose of these controls, and Tab navigation does not work on the filter pills. This violates PAGE_ACCEPTANCE_CRITERIA Global Standards for accessibility.",
+      "prompt": "In the file src/pages/Drawings.tsx, in the main Drawings component: Find all clickable discipline filter elements (pills/buttons) and add role=\"button\", tabIndex={0}, aria-pressed={isActive}, and onKeyDown handler that triggers click on Enter/Space. Find all drawing card containers that have onClick handlers and add role=\"article\", aria-label={`Drawing ${drawing.sheetNumber || drawing.title}, ${drawing.disciplineLabel}, Revision ${drawing.currentRevision?.revision_number || 0}`}, and tabIndex={0} with onKeyDown for Enter. BEFORE: Filter pills and drawing cards have onClick but no ARIA attributes or keyboard handlers. AFTER: All interactive elements have proper ARIA roles, labels, and keyboard navigation. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "document-management-C3-002",
+      "severity": "critical",
+      "dimension": "error_handling",
+      "title": "Files page has no loading skeleton or error state for file fetch failures",
+      "file": "src/pages/Files.tsx",
+      "description": "The Files page does not show a skeleton loader while files are being fetched. If the Supabase query fails, there is no error UI shown to the user — the page stays blank. PAGE_ACCEPTANCE_CRITERIA requires skeleton loaders matching final layout geometry and inline retry on fetch failure.",
+      "prompt": "In the file src/pages/Files.tsx, in the main Files component: Find where the file list data is fetched (useEffect or hook call). BEFORE: While isLoading is true, the page renders nothing or a generic spinner. When error occurs, the page shows nothing. AFTER: When isLoading is true, render a skeleton with 8 rows of file-shaped placeholders (icon placeholder 24px, filename bar 200px wide, size bar 60px, date bar 80px) using the existing Skeletons component from src/components/ui/Skeletons.tsx or inline pulsing divs with background '#E5E7EB' and animation. When error is truthy, render an error card with the message, a retry button that calls refetch(), and aria-live='polite' on the error region. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "document-management-C3-003",
+      "severity": "major",
+      "dimension": "mobile_first",
+      "title": "Drawing viewer has no responsive layout for mobile viewports",
+      "file": "src/components/drawings/DrawingViewer.tsx",
+      "description": "The DrawingViewer component uses fixed widths and does not adapt to mobile screens below 768px. The markup toolbar overlaps the drawing canvas on small screens. Touch targets for zoom controls are smaller than 44x44px. PAGE_ACCEPTANCE_CRITERIA requires all pages to be usable at 375px width with 44x44px minimum touch targets.",
+      "prompt": "In the file src/components/drawings/DrawingViewer.tsx, in the DrawingViewer component: Find the main container div and any fixed-width style declarations. BEFORE: Container has fixed width or no max-width constraint, toolbar buttons are small (likely 32px or less), and layout does not respond to viewport width. AFTER: Set the container to width:'100%', maxWidth:'100vw', overflow:'hidden'. Add a media query check (use window.innerWidth < 768 or the existing useMediaQuery hook) to: (1) stack the toolbar below the canvas instead of beside it, (2) set all toolbar button minWidth and minHeight to 44px, (3) add padding of 4px between toolbar buttons for touch spacing. Ensure the canvas element uses width:'100%' and maintains aspect ratio. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "document-management-C3-004",
+      "severity": "major",
+      "dimension": "interaction_quality",
+      "title": "Drawings page empty state is generic and missing contextual CTA",
+      "file": "src/components/drawings/DrawingsEmptyState.tsx",
+      "description": "The DrawingsEmptyState component shows a generic message without construction-specific context. PAGE_ACCEPTANCE_CRITERIA for Drawings (Section 9, criterion 10) requires: 'No drawings uploaded yet. Upload your plans to enable digital markup, RFI linking, and AI coordination analysis.' with a CTA 'Upload Drawings'. Current implementation likely shows a generic 'No data found' or minimal text.",
+      "prompt": "In the file src/components/drawings/DrawingsEmptyState.tsx, in the DrawingsEmptyState component: BEFORE: The component renders a generic empty state message without specific construction context or does not match the acceptance criteria text. AFTER: Render an empty state with: (1) A FileText or Building2 icon from lucide-react at 48px size with color '#9CA3AF', (2) Heading text 'No drawings uploaded yet' in 18px font weight 600, (3) Description text 'Upload your plans to enable digital markup, RFI linking, and AI coordination analysis.' in 14px color '#6B7280', (4) A primary CTA button labeled 'Upload Drawings' with background '#F47820', color white, borderRadius 8px, height 40px, that triggers the upload flow (onClick prop or navigation). Add aria-label='Empty drawings state' on the container. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "document-management-C3-005",
+      "severity": "major",
+      "dimension": "visual_polish",
+      "title": "Files page missing metric cards at the top per design standards",
+      "file": "src/pages/Files.tsx",
+      "description": "The Files page does not display metric cards at the top showing key document stats (total files, drawings count, recent uploads, storage used). The design standards require every page to start with 3-5 metric cards in a horizontal row. PAGE_ACCEPTANCE_CRITERIA global standards and design standards both mandate metric cards on every page.",
+      "prompt": "In the file src/pages/Files.tsx, in the main Files component: Find the top of the page content (after the page title/header area). BEFORE: The page renders the file list or table immediately without any summary metrics at the top. AFTER: Add a metrics row at the top with 4 MetricBox or Card components in a CSS grid (gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: theme.spacing.md or '16px'). Compute from the files data: (1) 'Total Files' showing files.length, (2) 'Drawings' showing files.filter(f => f.category === 'drawing' || f.file_type?.includes('pdf')).length, (3) 'Recent Uploads' showing files.filter(f => new Date(f.uploaded_at || f.created_at) > new Date(Date.now() - 7*86400000)).length with label 'This Week', (4) 'Total Size' showing a human-readable sum of file_size_bytes (format as KB/MB/GB). Each card should have a label (12px, muted), value (28px, bold), and an icon from lucide-react (Files, FileImage, Upload, HardDrive). Use background '#FFFFFF', border '1px solid #E5E7EB', borderRadius 12px, padding 24px. After changes, run: npm run build to verify no TypeScript errors."
+    }
+  ],
+  "invented_features": [],
+  "competitive_intel": "Procore's document management has robust version control, markup tools, and discipline-based filtering with a polished PDF viewer. PlanGrid (Autodesk) offers best-in-class mobile drawing markup with offline support and Apple Pencil integration. SiteSync's document management currently lacks a functional markup layer, has no offline drawing cache, no revision comparison (VersionCompare component exists but is not wired), and no discipline-based filtering UX. The empty states and loading states are missing, making the module feel incomplete compared to any competitor.",
+  "summary": "The Document Management module scores 28/100, reflecting a partially built but non-functional experience. The Drawings and Files pages exist as shells but lack the loading skeletons, error states, empty states, and metric cards required by the design standards and acceptance criteria. The DrawingViewer component has no mobile responsiveness — a critical gap for a field-first app where superintendents need to view plans on iPads. Accessibility is severely deficient with no ARIA attributes on interactive elements. The five surgical fixes target: ARIA compliance on drawing cards and filters, loading/error states on the Files page, mobile responsive layout for the DrawingViewer, contextual empty state for Drawings matching acceptance criteria, and metric cards on Files. These fixes address the most impactful gaps without adding new features."
+}

@@ -1,0 +1,6 @@
+Build passes cleanly. The changes add revision upload to the Drawings page:
+
+- **State**: 5 new state vars for the revision upload flow (`showRevUploadModal`, `revUploadFile`, `revUploadNum`, `revUploadDesc`, `isRevUploading`)
+- **Handler** (`handleUploadRevision`): supersedes existing current revisions in `drawing_revisions`, inserts the new revision, uploads file to Supabase storage if provided, then calls `refetch()`
+- **Button**: "Upload Revision" appears in the detail panel (gated by `drawings.upload` permission), pre-fills the next revision number based on history
+- **Modal**: Revision number input, change description textarea, file picker (`.pdf/.dwg/.dxf`), with loading state during upload

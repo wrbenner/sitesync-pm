@@ -12,3 +12,52 @@
   "source_files": 443,
   "source_lines": 119660
 }
+{
+  "cycle": 3,
+  "bundle_size_bytes": 5480184,
+  "typescript_errors": 0,
+  "source_files": 443,
+  "source_lines": 120401
+}
+{
+  "cycle": 4,
+  "bundle_size_bytes": 6819892,
+  "typescript_errors": 0,
+  "source_files": 451,
+  "source_lines": 125279
+}
+{
+  "cycle": 5,
+  "bundle_size_bytes": 10072419,
+  "typescript_errors": 0,
+  "source_files": 452,
+  "source_lines": 129253
+}
+{
+  "cycle": 6,
+  "bundle_size_bytes": 16671705,
+  "typescript_errors": 0,
+  "source_files": 452,
+  "source_lines": 131760
+}
+{
+  "cycle": 7,
+  "bundle_size_bytes": 7652663,
+  "typescript_errors": 0,
+  "source_files": 452,
+  "source_lines": 132925
+}
+{
+  "cycle": 8,
+  "bundle_size_bytes": 7671112,
+  "typescript_errors": 0,
+  "source_files": 454,
+  "source_lines": 134182
+}
+{
+  "cycle": 9,
+  "bundle_size_bytes": 7671112,
+  "typescript_errors": 0,
+  "source_files": 454,
+  "source_lines": 134182
+}

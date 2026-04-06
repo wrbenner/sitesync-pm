@@ -1,0 +1,34 @@
+{
+  "verifications": [
+    {
+      "id": "database-api-C7-001",
+      "status": "partial",
+      "note": "Related file in same directory modified but no direct commit for this issue"
+    },
+    {
+      "id": "database-api-C7-002",
+      "status": "fixed",
+      "note": "Commit found matching issue ID"
+    },
+    {
+      "id": "database-api-C7-003",
+      "status": "fixed",
+      "note": "Commit found matching issue ID"
+    },
+    {
+      "id": "database-api-C7-004",
+      "status": "fixed",
+      "note": "Commit found matching issue ID"
+    },
+    {
+      "id": "database-api-C7-005",
+      "status": "fixed",
+      "note": "Commit found matching issue ID"
+    }
+  ],
+  "files_changed": 90,
+  "fixed": 4,
+  "partial": 1,
+  "unfixed": 0,
+  "regression_detected": false
+}

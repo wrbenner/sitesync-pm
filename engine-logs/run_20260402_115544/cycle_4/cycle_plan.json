@@ -1,0 +1,87 @@
+{
+  "cycle": 4,
+  "thinking_mode": "architect",
+  "average_score": 36,
+  "focus_modules": [
+    "auth-rbac",
+    "field-operations",
+    "scheduling"
+  ],
+  "declining_modules": [
+    "auth-rbac",
+    "core-workflows",
+    "field-operations",
+    "financial-engine"
+  ],
+  "quality_trend": "stable",
+  "prompt_strategy": "Best performing model: sonnet at 100% fix rate",
+  "plan": "TRIAGE: Focus exclusively on critical bugs and build failures. Skip cosmetic issues.",
+  "module_scores": [
+    {
+      "module": "auth-rbac",
+      "score": 21,
+      "trend": "declining",
+      "cycles_tracked": 3
+    },
+    {
+      "module": "collaboration",
+      "score": 38,
+      "trend": "stable",
+      "cycles_tracked": 3
+    },
+    {
+      "module": "core-workflows",
+      "score": 29,
+      "trend": "declining",
+      "cycles_tracked": 3
+    },
+    {
+      "module": "database-api",
+      "score": 44,
+      "trend": "stable",
+      "cycles_tracked": 3
+    },
+    {
+      "module": "document-management",
+      "score": 28,
+      "trend": "stable",
+      "cycles_tracked": 3
+    },
+    {
+      "module": "field-operations",
+      "score": 22,
+      "trend": "declining",
+      "cycles_tracked": 3
+    },
+    {
+      "module": "financial-engine",
+      "score": 45,
+      "trend": "declining",
+      "cycles_tracked": 3
+    },
+    {
+      "module": "infrastructure",
+      "score": 57,
+      "trend": "stable",
+      "cycles_tracked": 3
+    },
+    {
+      "module": "project-intelligence",
+      "score": 56,
+      "trend": "stable",
+      "cycles_tracked": 3
+    },
+    {
+      "module": "scheduling",
+      "score": 22,
+      "trend": "stable",
+      "cycles_tracked": 3
+    },
+    {
+      "module": "ui-design-system",
+      "score": 44,
+      "trend": "stable",
+      "cycles_tracked": 3
+    }
+  ]
+}

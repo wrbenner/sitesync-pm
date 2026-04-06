@@ -1,0 +1,77 @@
+{
+  "module": "field-operations",
+  "scores": {
+    "visual_polish": 28,
+    "domain_depth": 22,
+    "data_richness": 18,
+    "interaction_quality": 24,
+    "ai_integration": 10,
+    "mobile_first": 15,
+    "performance": 30,
+    "typescript_quality": 35,
+    "error_handling": 18,
+    "realtime": 20,
+    "accessibility": 15,
+    "security": 22,
+    "differentiation": 12,
+    "enterprise_readiness": 16
+  },
+  "overall_score": 20,
+  "issues": [
+    {
+      "id": "field-operations-C5-001",
+      "severity": "critical",
+      "dimension": "domain_depth",
+      "title": "Daily Log page missing legally defensible form sections per acceptance criteria",
+      "file": "src/pages/DailyLog.tsx",
+      "description": "PAGE_ACCEPTANCE_CRITERIA §7 requires weather auto-population from API, manpower by trade table, equipment section, materials received, visitors toggle, safety toggle, voice-to-text, 'Same as yesterday' button, and submission in under 90 seconds. Current page lacks most of these structured sections, using only basic mock data cards instead of a real entry form with the required one-tap defaults and auto-population.",
+      "prompt": "In the file src/pages/DailyLog.tsx, make these specific changes: BEFORE: The DailyLog page renders a list/calendar view of past log entries with mock data and basic metric cards, but has no structured daily log ENTRY form with the required sections (weather auto-populate, manpower table by trade, equipment, materials, visitors toggle, safety toggle, work performed with voice-to-text, photo batch upload, 'Same as yesterday' button). AFTER: Add a comprehensive daily log creation/edit form component inline or as a modal. The form must include: (1) Date field auto-set to today, (2) Weather section that auto-populates temperature and conditions from the weather_cache table via useWeather hook (show 'Auto' badge on auto-populated fields), (3) Manpower section as a table with columns: Trade, Company, Headcount, Hours with running totals and an 'Add Crew' row, (4) 'No incidents today' toggle defaulting to ON that expands a safety incident form only when toggled OFF, (5) 'No visitors today' toggle defaulting to ON, (6) Work Performed rich text area, (7) A 'Same as Yesterday' button at the top that clones crew/equipment entries from the previous day's log by querying the daily_logs table for the most recent entry, (8) A sticky 'Submit Log' button at the bottom. Use inline styles with theme tokens from src/styles/theme.ts. Use the existing Supabase client from src/lib/supabase.ts for queries. Wrap the form in a Card component from src/components/Primitives.tsx. Each section should be collapsible. Add aria-labels to all form inputs. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "field-operations-C5-002",
+      "severity": "critical",
+      "dimension": "data_richness",
+      "title": "Safety page missing incident tracking, TRIR calculation, and OSHA compliance per acceptance criteria",
+      "file": "src/pages/Safety.tsx",
+      "description": "PAGE_ACCEPTANCE_CRITERIA §11 requires: Days Since Last Incident counter, TRIR calculation from actual incident and manpower data, incident log with severity color coding (First Aid=yellow, Medical Treatment=orange, Lost Time=red, Fatality=black), corrective action tracking, toolbox talk attendance with digital sign-in, certification expiration alerts at 90/60/30 days. Current page shows minimal mock content without these calculated KPIs or structured incident/inspection workflows.",
+      "prompt": "In the file src/pages/Safety.tsx, make these specific changes: BEFORE: The Safety page shows basic placeholder content or minimal mock data without the required KPI calculations (Days Since Last Incident, TRIR), incident severity color coding, corrective action tracking, or certification expiration alerts. AFTER: Rebuild the Safety page to include: (1) Four MetricBox cards at top using the MetricBox component from Primitives: 'Days Since Last Incident' (green if >30, amber 10-30, red <10), 'TRIR' calculated as (recordable incidents x 200000 / total hours worked) with industry benchmark comparison text, 'Open Corrective Actions' count, 'Certifications Expiring Soon' count. (2) An incident log table with columns: Date, Type (near_miss/first_aid/medical_treatment/lost_time/fatality), Severity with color-coded dots (first_aid=#F5A623, medical_treatment=#E67E22, lost_time=#E74C3C, fatality=#1A1A2E), Location, Status (open/investigating/closed), Assigned To. Each row must be hoverable and clickable. (3) A 'Report Incident' button (orange primary CTA) that opens a creation form. (4) A contextual empty state: 'No incidents recorded. A safe site is a productive site. Report observations to maintain your safety record.' with a CTA button. Use realistic construction safety mock data (at least 8 incidents across different severities). Calculate Days Since Last Incident from the most recent incident with severity >= medical_treatment. Use inline styles with theme tokens. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "field-operations-C5-003",
+      "severity": "critical",
+      "dimension": "mobile_first",
+      "title": "Field Capture page missing camera-first UX, GPS auto-tagging, and offline queue per acceptance criteria",
+      "file": "src/pages/FieldCapture.tsx",
+      "description": "PAGE_ACCEPTANCE_CRITERIA §14 requires: camera-first UX where 'Capture' button opens camera immediately, auto-metadata with GPS and timestamp that user cannot modify, post-capture form with optional title/notes/tags/link-to-entity, drawing pin linking, AI photo analysis suggestions, offline queue with 'X photos pending upload' indicator, and one-handed mobile use design. Current page lacks the capture workflow, GPS tagging, offline queue, and mobile-optimized layout.",
+      "prompt": "In the file src/pages/FieldCapture.tsx, make these specific changes: BEFORE: The Field Capture page shows a basic photo grid or placeholder content without a camera-first capture workflow, GPS auto-tagging, offline queue indicator, or mobile-optimized one-handed design. AFTER: Rebuild the Field Capture page with: (1) A large, prominent 'Capture' button (80px tall, full-width on mobile, orange background) at the top that triggers a hidden file input with accept='image/*' and capture='environment' attributes for native camera on mobile. (2) A photo feed grid below showing captured photos as cards with metadata overlays (timestamp, GPS coordinates formatted as lat/lon to 4 decimal places, auto-detected weather tag). (3) After photo selection, show a post-capture overlay form with: optional Title input, optional Notes textarea, Tags multi-select chips (progress, safety, defect, delivery, concrete, steel, MEP), Link To searchable dropdown (RFI, Punch Item, Daily Log). All fields optional so user can 'Save' with just the photo. (4) An offline queue banner at the top: 'X photos pending upload' with a yellow background when offline (detect with navigator.onLine). (5) GPS capture using navigator.geolocation.getCurrentPosition on each photo capture, stored as metadata. (6) Photo cards in a responsive CSS grid: 3 columns on desktop, 2 on tablet, 1 on mobile. Each card shows thumbnail, timestamp, GPS pin icon, and tag pills. (7) Empty state: camera icon illustration, 'No field captures yet. Start documenting site conditions with photos.' with 'Open Camera' CTA. Use 44px minimum touch targets per Apple HIG. Use inline styles with theme tokens. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "field-operations-C5-004",
+      "severity": "major",
+      "dimension": "ai_integration",
+      "title": "No AI daily summary generation or AI photo analysis anywhere in field operations",
+      "file": "src/pages/DailyLog.tsx",
+      "description": "The product vision states AI should be woven into every workflow. Daily Log needs an 'AI Summary' button that generates a one-paragraph narrative from crew data, weather, and work entries. Field Capture needs AI photo analysis for safety violations and progress detection. Neither exists. The ai-daily-summary edge function is specified in BACKEND_ARCHITECTURE but not wired to the frontend.",
+      "prompt": "In the file src/pages/DailyLog.tsx, make these specific changes: BEFORE: The Daily Log page has no AI integration. There is no button to generate an AI summary of the day's activities, and no connection to the ai-daily-summary edge function specified in the backend architecture. AFTER: Add an 'AI Summary' button in the daily log detail/edit view (positioned near the work summary section). The button should: (1) Have a sparkle icon (use the Sparkles icon from lucide-react) with text 'Generate AI Summary'. (2) On click, call the Supabase edge function via `supabase.functions.invoke('ai-daily-summary', { body: { projectId, logDate, fieldNotes: workSummary, temperatureHigh, temperatureLow, crewCount } })`. (3) Show a loading state with pulsing text 'AI is summarizing today...' while waiting. (4) On success, populate the work summary textarea with the returned summary text, prefixed with a subtle 'AI Generated' badge (small purple pill). (5) On error, show a toast: 'AI summary unavailable. You can write your summary manually.' (6) The button should be disabled if no work entries exist yet (tooltip: 'Add work entries first for AI to summarize'). Import supabase from src/lib/supabase.ts. Use the existing edge function invocation pattern. Style the button as a secondary/ghost button with the sparkle icon. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "field-operations-C5-005",
+      "severity": "major",
+      "dimension": "error_handling",
+      "title": "No loading skeletons, error boundaries, or empty states matching acceptance criteria across field operations pages",
+      "file": "src/pages/Safety.tsx",
+      "description": "Global acceptance standards require skeleton loaders matching final layout geometry within 100ms, contextual empty states with specific CTAs, and network failure handling with toast + inline retry. Safety, Daily Log, and Field Capture pages show either blank content, generic spinners, or no loading/error states at all. Each page needs skeleton loaders that match its specific card/table layout.",
+      "prompt": "In the file src/pages/Safety.tsx, make these specific changes: BEFORE: The Safety page either shows a blank screen during data loading, uses a generic spinner, or has no loading state at all. Error states show raw error messages or nothing. Empty state is generic 'No data found' or missing entirely. AFTER: Add three distinct UI states: (1) LOADING STATE: Create a skeleton loader that matches the Safety page layout. Render 4 skeleton MetricBox cards (gray pulsing rectangles matching MetricBox dimensions: 180px wide, 100px tall) in a grid row, followed by a skeleton table with 6 rows of pulsing gray bars (matching table column widths). Use CSS keyframe animation: `@keyframes pulse { 0% { opacity: 0.3 } 50% { opacity: 0.7 } 100% { opacity: 0.3 } }` with 1.5s cycle. Show skeleton immediately on mount, replace with real content when data arrives. (2) ERROR STATE: If the data fetch fails, show an inline error card (not a full page error) with a red-tinted background, the error message in plain language ('Unable to load safety data'), and a 'Retry' button that re-triggers the fetch. Never show raw Supabase error codes. (3) EMPTY STATE: When data loads successfully but there are zero incidents, show: a Shield icon (from lucide-react, 48px, muted color), the text 'Safety tracking not yet configured. Set up your safety program to track incidents, inspections, and certifications.', and two CTA buttons: 'Report First Incident' (primary orange) and 'Set Up Inspection Template' (secondary outlined). Use inline styles with theme tokens throughout. After changes, run: npm run build to verify no TypeScript errors."
+    }
+  ],
+  "invented_features": [
+    {
+      "title": "Automatic PPE Compliance Photo Scanning",
+      "description": "When field photos are captured, AI edge function scans for missing hard hats, safety vests, and eye protection. Non-compliant photos are flagged with 'PPE Issue Detected' badges and auto-linked to safety observations. Superintendent gets a push notification. This is what Buildots charges $50K/year for.",
+      "priority": "P2",
+      "effort": "Large (new edge function with vision API, new UI components, notification triggers)"
+    }
+  ],
+  "competitive_intel": "Procore's Quick Capture feature allows video-to-punch-item with automatic transcription. Fieldwire dominates field capture with true offline functionality and two-step punch verification. SiteSync's field operations module currently lacks the camera-first UX, GPS auto-tagging, offline queue, and AI photo analysis that would match Fieldwire's field experience. The daily log is not optimized for the 90-second submission target that would beat paper logs. Safety tracking is minimal compared to iAuditor (SafetyCulture) which offers templated inspections with photo evidence. The module needs the structured daily log form, camera-first field capture, and OSHA-compliant safety tracking to be competitive.",
+  "summary": "Field Operations scores 20/100, critically below the threshold for construction adoption. The module fails multiple PAGE_ACCEPTANCE_CRITERIA requirements: Daily Log (§7) lacks the structured entry form with weather auto-population, manpower tables, one-tap defaults, and 90-second submission target. Safety (§11) is missing TRIR calculations, incident severity color coding, corrective actions, and OSHA compliance features. Field Capture (§14) has no camera-first workflow, GPS auto-tagging, offline queue, or AI photo analysis. Zero AI integration exists despite the product vision requiring AI in every workflow. The five fixes target the highest-impact gaps: building the real daily log form, adding safety KPIs and incident tracking, creating the camera-first field capture workflow, wiring the AI daily summary edge function, and adding proper loading/error/empty states. These changes directly address the superintendent's daily workflow and are prerequisites for field adoption."
+}

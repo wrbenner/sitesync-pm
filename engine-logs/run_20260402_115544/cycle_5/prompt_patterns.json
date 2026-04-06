@@ -1,0 +1,101 @@
+[
+  {
+    "module": "auth-rbac",
+    "fix_rate": 80,
+    "fixed": 4,
+    "total": 5,
+    "model": "sonnet",
+    "mode": "architect",
+    "cycle": 5
+  },
+  {
+    "module": "collaboration",
+    "fix_rate": 100,
+    "fixed": 5,
+    "total": 5,
+    "model": "sonnet",
+    "mode": "architect",
+    "cycle": 5
+  },
+  {
+    "module": "core-workflows",
+    "fix_rate": 100,
+    "fixed": 5,
+    "total": 5,
+    "model": "sonnet",
+    "mode": "architect",
+    "cycle": 5
+  },
+  {
+    "module": "database-api",
+    "fix_rate": 80,
+    "fixed": 4,
+    "total": 5,
+    "model": "sonnet",
+    "mode": "architect",
+    "cycle": 5
+  },
+  {
+    "module": "document-management",
+    "fix_rate": 100,
+    "fixed": 5,
+    "total": 5,
+    "model": "sonnet",
+    "mode": "architect",
+    "cycle": 5
+  },
+  {
+    "module": "field-operations",
+    "fix_rate": 100,
+    "fixed": 5,
+    "total": 5,
+    "model": "sonnet",
+    "mode": "architect",
+    "cycle": 5
+  },
+  {
+    "module": "financial-engine",
+    "fix_rate": 100,
+    "fixed": 5,
+    "total": 5,
+    "model": "sonnet",
+    "mode": "architect",
+    "cycle": 5
+  },
+  {
+    "module": "infrastructure",
+    "fix_rate": 80,
+    "fixed": 4,
+    "total": 5,
+    "model": "sonnet",
+    "mode": "architect",
+    "cycle": 5
+  },
+  {
+    "module": "project-intelligence",
+    "fix_rate": 100,
+    "fixed": 5,
+    "total": 5,
+    "model": "sonnet",
+    "mode": "architect",
+    "cycle": 5
+  },
+  {
+    "module": "scheduling",
+    "fix_rate": 100,
+    "fixed": 5,
+    "total": 5,
+    "model": "sonnet",
+    "mode": "architect",
+    "cycle": 5
+  },
+  {
+    "module": "ui-design-system",
+    "fix_rate": 80,
+    "fixed": 4,
+    "total": 5,
+    "model": "sonnet",
+    "mode": "architect",
+    "cycle": 5
+  }
+]

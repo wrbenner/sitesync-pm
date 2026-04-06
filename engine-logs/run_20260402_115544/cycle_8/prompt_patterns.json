@@ -1,0 +1,29 @@
+[
+  {
+    "module": "auth-rbac",
+    "fix_rate": 100,
+    "fixed": 5,
+    "total": 5,
+    "model": "sonnet",
+    "mode": "architect",
+    "cycle": 8
+  },
+  {
+    "module": "field-operations",
+    "fix_rate": 100,
+    "fixed": 5,
+    "total": 5,
+    "model": "sonnet",
+    "mode": "architect",
+    "cycle": 8
+  },
+  {
+    "module": "scheduling",
+    "fix_rate": 100,
+    "fixed": 5,
+    "total": 5,
+    "model": "sonnet",
+    "mode": "architect",
+    "cycle": 8
+  }
+]

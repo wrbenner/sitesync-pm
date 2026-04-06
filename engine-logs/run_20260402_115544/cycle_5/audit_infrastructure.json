@@ -1,0 +1,75 @@
+{
+  "module": "infrastructure",
+  "scores": {
+    "visual_polish": 62,
+    "domain_depth": 55,
+    "data_richness": 52,
+    "interaction_quality": 60,
+    "ai_integration": 45,
+    "mobile_first": 48,
+    "performance": 68,
+    "typescript_quality": 72,
+    "error_handling": 70,
+    "realtime": 65,
+    "accessibility": 40,
+    "security": 65,
+    "differentiation": 50,
+    "enterprise_readiness": 58
+  },
+  "overall_score": 58,
+  "issues": [
+    {
+      "id": "infrastructure-C5-001",
+      "severity": "critical",
+      "dimension": "accessibility",
+      "title": "App shell missing landmark roles and skip navigation aria attributes",
+      "file": "src/App.tsx",
+      "description": "The main content area lacks role='main' and aria-label. The SkipToContent component is imported but the target anchor id='main-content' is not applied to the main content wrapper, making skip navigation non-functional. Screen readers cannot identify the primary content region.",
+      "prompt": "In the file src/App.tsx, in the main layout wrapper that contains the <Routes> component: BEFORE: The div wrapping the route content has no role, no aria-label, and no id attribute for skip-to-content targeting. AFTER: Add id='main-content', role='main', and aria-label='Main content' to the primary content wrapper div that contains the Routes/Suspense block. Ensure the SkipToContent component's href targets '#main-content'. Also add role='navigation' and aria-label='Primary navigation' to the Sidebar wrapper. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "infrastructure-C5-002",
+      "severity": "high",
+      "dimension": "mobile_first",
+      "title": "No responsive meta viewport or touch-action CSS on app shell",
+      "file": "src/App.tsx",
+      "description": "The App component does not ensure viewport meta tag or apply touch-action CSS for mobile gesture handling. The sidebar collapse logic exists but mobile bottom navigation from MobileLayout is conditionally rendered without proper breakpoint detection fallback, causing desktop sidebar to render on tablets.",
+      "prompt": "In the file src/App.tsx, in the root layout section where Sidebar and MobileLayout are conditionally rendered: BEFORE: The isMobile check uses useMediaQuery but there is no explicit handling for tablet breakpoints (768px to 1024px), and no touch-action: manipulation CSS is applied to the app container to prevent 300ms tap delay. AFTER: Add style={{ touchAction: 'manipulation' }} to the outermost app container div. Ensure the sidebar is hidden below 768px width (not just on isMobile which may use a different breakpoint). Add a tabletBreakpoint check: between 768px and 1024px, show collapsed sidebar by default. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "infrastructure-C5-003",
+      "severity": "high",
+      "dimension": "enterprise_readiness",
+      "title": "API v1 router pathMatches function is referenced but not defined in router.ts",
+      "file": "src/api/v1/router.ts",
+      "description": "The resolveRequiredScope function calls pathMatches() and normalize() but the pathMatches function is not shown as defined in the provided code. If this function is missing, the entire API routing layer silently fails to match any routes, making the webhook and API key infrastructure non-functional.",
+      "prompt": "In the file src/api/v1/router.ts, in the resolveRequiredScope function: BEFORE: The function references pathMatches(r.path, normalize(path)) but pathMatches may not be defined in this file, causing a runtime ReferenceError or build error. AFTER: Add the pathMatches helper function at the bottom of the file: function pathMatches(pattern: string, actual: string): boolean { const patternParts = pattern.split('/'); const actualParts = actual.split('/'); if (patternParts.length !== actualParts.length) return false; return patternParts.every((part, i) => part.startsWith(':') || part === actualParts[i]); }. Also ensure the normalize function is fully defined (it appears truncated in the code). After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "infrastructure-C5-004",
+      "severity": "high",
+      "dimension": "performance",
+      "title": "Lazy loaded pages missing prefetch on sidebar hover for instant navigation",
+      "file": "src/components/Sidebar.tsx",
+      "description": "All page components use lazy() but no route prefetching occurs on sidebar link hover. Users experience a loading flash on every first navigation. Procore and Linear both prefetch routes on hover for perceived instant navigation. The lazyWithRetry wrapper exists but is only used on Dashboard, RFIs, and Schedule, not consistently on all routes.",
+      "prompt": "In the file src/components/Sidebar.tsx, in each navigation link item's onMouseEnter handler (or add one if missing): BEFORE: Sidebar nav links do not trigger any prefetch on hover, so the first click on any page shows a loading skeleton while the chunk downloads. AFTER: Add onMouseEnter and onFocus handlers to each sidebar NavLink that call the corresponding lazy import function to trigger chunk prefetch. For example, for the RFIs link: onMouseEnter={() => import('../pages/RFIs')} and similarly for each route. This triggers Vite's code splitting to fetch the chunk on hover so it is cached by the time the user clicks. Wrap each import call in a try-catch to silently handle prefetch failures. After changes, run: npm run build to verify no TypeScript errors."
+    },
+    {
+      "id": "infrastructure-C5-005",
+      "severity": "medium",
+      "dimension": "error_handling",
+      "title": "createScopedClient proxy silently applies deleted_at filter on select but not on insert operations that reference deleted rows",
+      "file": "src/api/client.ts",
+      "description": "The scoped client proxy auto-appends .is('deleted_at', null) on select, update, and delete operations but not on insert. This is correct for filtering but the comment and logic imply soft-delete awareness. However, foreign key references in inserts could reference soft-deleted rows causing silent data integrity issues. The proxy also lacks error handling if the table does not have a deleted_at column.",
+      "prompt": "In the file src/api/client.ts, in the createScopedClient function's Proxy handler for terminal operations: BEFORE: The proxy blindly appends .is('deleted_at', null) on select, update, and delete for all tables except UNSCOPED_TABLES, but some project-scoped tables (like audit_trail, activity_feed, notification_queue) may not have a deleted_at column, causing Postgres errors. AFTER: Create a const SOFT_DELETE_TABLES set listing tables that actually have deleted_at columns (rfis, submittals, change_orders, daily_logs, punch_items, tasks, drawings, budget_items, meetings, crews, files, schedule_phases, field_captures, directory_contacts). Only append .is('deleted_at', null) when the table name is in SOFT_DELETE_TABLES. Keep the existing project_id scoping for all non-UNSCOPED tables. After changes, run: npm run build to verify no TypeScript errors."
+    }
+  ],
+  "invented_features": [
+    {
+      "title": "Route Prefetch Heatmap",
+      "description": "Track which sidebar links users hover over most frequently and prefetch those routes proactively on app load, not just on hover. After 5 sessions, the top 3 most-visited routes load in the background immediately after login, making the entire app feel instant. No competitor does predictive route loading based on user behavior."
+    }
+  ],
+  "competitive_intel": "Procore's infrastructure uses a traditional server-rendered React app with slower initial loads but aggressive CDN caching. Their API versioning is mature (v1.0 through v1.1) with stable webhook infrastructure. SiteSync's client-side routing with lazy loading is faster on subsequent navigations but the lack of route prefetching creates a perceptible delay on first visits to each page. The API v1 router pattern is forward-thinking but incomplete — the pathMatches utility gap means the webhook/API key infrastructure cannot function. Fieldwire uses a simpler SPA with no API versioning, which limits their integration ecosystem. SiteSync's scoped client proxy pattern for multi-tenant isolation is more sophisticated than both competitors but needs the soft-delete table awareness fix to avoid silent query failures.",
+  "summary": "The infrastructure module scores 58/100 with strong TypeScript quality (72) and error handling (70) but weak accessibility (40), AI integration (45), and mobile-first design (48). The API v1 router has a critical missing function (pathMatches) that blocks the entire webhook and integration infrastructure. The scoped Supabase client proxy is architecturally excellent but applies soft-delete filters to tables that may not have the column, risking runtime errors. Accessibility is the biggest gap: the app shell lacks landmark roles, making screen reader navigation impossible. Mobile performance suffers from missing touch-action CSS and inconsistent breakpoint handling. Route prefetching on sidebar hover would eliminate the loading flash that occurs on every first page visit. The five issues target: (1) landmark roles for accessibility compliance, (2) mobile touch optimization, (3) the broken API router function, (4) route prefetching for perceived performance, and (5) scoped client soft-delete awareness. Fixing these would push the module to 68+ and unblock the P0 webhook/integration roadmap items."
+}

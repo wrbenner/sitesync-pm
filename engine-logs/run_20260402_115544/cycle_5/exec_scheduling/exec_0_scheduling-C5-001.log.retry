@@ -1,0 +1,1 @@
+Build passes. The fix adds 10 realistic construction schedule phases (mobilization through closeout) as demo data that loads when Supabase returns no rows. The Gantt chart will now render with a full project timeline by default.

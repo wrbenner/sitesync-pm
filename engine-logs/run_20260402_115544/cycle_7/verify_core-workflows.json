@@ -1,0 +1,34 @@
+{
+  "verifications": [
+    {
+      "id": "core-workflows-C7-001",
+      "status": "fixed",
+      "note": "Commit found matching issue ID"
+    },
+    {
+      "id": "core-workflows-C7-002",
+      "status": "fixed",
+      "note": "Commit found matching issue ID"
+    },
+    {
+      "id": "core-workflows-C7-003",
+      "status": "fixed",
+      "note": "Commit found matching issue ID"
+    },
+    {
+      "id": "core-workflows-C7-004",
+      "status": "fixed",
+      "note": "Commit found matching issue ID"
+    },
+    {
+      "id": "core-workflows-C7-005",
+      "status": "fixed",
+      "note": "Commit found matching issue ID"
+    }
+  ],
+  "files_changed": 81,
+  "fixed": 5,
+  "partial": 0,
+  "unfixed": 0,
+  "regression_detected": false
+}
