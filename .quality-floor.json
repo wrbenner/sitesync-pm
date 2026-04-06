@@ -36,5 +36,5 @@
     "longestResponseMs": 200
   },
   "_note": "ESLint floors set to current counts. Organism will ratchet down over time.",
-  "_ci_trigger": "final"
+  "_ci_trigger": "final-v2"
 }
