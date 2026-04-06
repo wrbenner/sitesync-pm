@@ -1,28 +1,26 @@
 name: Nightly Organism — Autonomous Build
 
-# 3x daily: 2am implement, 8am test, 2pm polish
+# Runs once nightly at 2am CDT (7am UTC)
+# Pushes DIRECTLY to main. No PRs. No manual merging.
 on:
   schedule:
-    - cron: '0 7 * * *'    # 2:00 AM CDT — implementation
-    - cron: '0 13 * * *'   # 8:00 AM CDT — testing
-    - cron: '0 19 * * *'   # 2:00 PM CDT — polish
+    - cron: '0 7 * * *'   # 2:00 AM CDT daily
   workflow_dispatch:
     inputs:
       mode:
-        description: 'Mode: implement, test, polish, or verify'
+        description: 'implement | test | polish | verify'
         default: 'implement'
       use_opus:
-        description: 'Use Opus instead of Sonnet (slower, better for complex work)'
-        default: 'false'
+        description: 'Use Opus (true) or Sonnet (false)'
+        default: 'true'
 
 permissions:
   contents: write
-  pull-requests: write
   issues: write
 
 jobs:
   organism:
-    name: "Organism — ${{ github.event.inputs.mode || 'scheduled' }}"
+    name: "Organism — Nightly Build"
     runs-on: ubuntu-latest
     timeout-minutes: 180
 
@@ -31,6 +29,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
+          ref: main
 
       - uses: actions/setup-node@v4
         with:
@@ -38,12 +37,15 @@ jobs:
           cache: 'npm'
 
       - run: npm ci
-      - run: npm install -g @anthropic-ai/claude-code
 
-      - name: Configure git
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Configure git for direct main push
         run: |
           git config user.name "SiteSync Organism"
           git config user.email "organism@sitesync.ai"
+          git config pull.rebase true
 
       - name: Determine wave and model
         id: config
@@ -52,57 +54,43 @@ jobs:
           MODE="${{ github.event.inputs.mode }}"
           USE_OPUS="${{ github.event.inputs.use_opus }}"
 
-          if [ -n "$MODE" ]; then
-            WAVE="$MODE"
-          elif [ "$HOUR" -eq "7" ]; then
-            WAVE="implement"
-          elif [ "$HOUR" -eq "13" ]; then
-            WAVE="test"
-          else
-            WAVE="polish"
-          fi
+          WAVE="${MODE:-implement}"
+          MODEL="claude-opus-4-6"
+          MAX_TURNS="60"
 
-          # Use Sonnet for test/polish waves (cheaper), Opus for implement
-          if [ "$WAVE" = "implement" ] || [ "$USE_OPUS" = "true" ]; then
-            MODEL="claude-opus-4-6"
-            MAX_TURNS="50"
-          else
-            MODEL="claude-sonnet-4-6"
-            MAX_TURNS="40"
+          if [ "$WAVE" = "test" ] || [ "$WAVE" = "polish" ]; then
+            if [ "$USE_OPUS" != "true" ]; then
+              MODEL="claude-sonnet-4-6"
+              MAX_TURNS="40"
+            fi
           fi
 
           echo "wave=$WAVE" >> $GITHUB_OUTPUT
           echo "model=$MODEL" >> $GITHUB_OUTPUT
           echo "max_turns=$MAX_TURNS" >> $GITHUB_OUTPUT
-          echo "Wave: $WAVE | Model: $MODEL | Max turns: $MAX_TURNS"
+          echo "Running: wave=$WAVE model=$MODEL turns=$MAX_TURNS"
 
-      - name: Create branch
-        run: |
-          BRANCH="auto/organism-$(date +%Y%m%d-%H%M)"
-          git checkout -b "$BRANCH"
-          echo "BRANCH=$BRANCH" >> $GITHUB_ENV
-
-      - name: Run organism
+      - name: Run organism — commits directly to main
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         run: |
           WAVE="${{ steps.config.outputs.wave }}"
-          FEEDBACK=$(cat FEEDBACK.md 2>/dev/null | head -25 || echo "No FEEDBACK.md")
+          FEEDBACK=$(cat FEEDBACK.md 2>/dev/null | head -40 || echo "No FEEDBACK.md")
 
           case "$WAVE" in
             "implement")
-              INSTRUCTION="Read SPEC.md. Read FEEDBACK.md — do founder priorities first. Implement the next highest-priority unchecked acceptance criterion. Include: code + unit tests + E2E test + SPEC.md checkbox update."
+              INSTRUCTION="Read SPEC.md. Read FEEDBACK.md — execute P0 priorities first, then next unchecked P1 criterion. Deliver: working code + unit tests + SPEC.md checkbox updated. Focus on mock data elimination and real Supabase connections."
               ;;
             "test")
-              INSTRUCTION="Coverage mission: find 3 components or hooks with zero test coverage. Write thorough unit tests. Do NOT change implementation. Run coverage after to verify improvement."
+              INSTRUCTION="Coverage mission: find 5 source files with zero test coverage. Write thorough unit tests using Vitest. Do NOT change implementation code. Commit tests only."
               ;;
             "polish")
-              INSTRUCTION="Quality mission: run axe-core on 5 pages, fix every violation. Then find 2 performance issues (missing memo, N+1 query, large bundle). Fix them. Update .quality-floor.json if metrics improved."
+              INSTRUCTION="Quality mission: run axe-core on every page route, fix every violation. Find performance bottlenecks (missing React.memo, N+1 queries, large chunks). Fix them. Update .quality-floor.json when metrics improve."
               ;;
             "verify")
-              INSTRUCTION="Verification mission: pick 3 recently-added features. Try to break each one. Edge cases, empty inputs, concurrent edits. Uncheck any SPEC.md criteria that fail adversarial testing."
+              INSTRUCTION="Adversarial verification: attempt to break 5 recently modified features with edge cases, empty inputs, concurrent operations. Uncheck SPEC.md criteria that fail. Add findings to LEARNINGS.md."
               ;;
           esac
 
@@ -110,40 +98,74 @@ jobs:
             --dangerously-skip-permissions \
             --model "${{ steps.config.outputs.model }}" \
             --max-turns "${{ steps.config.outputs.max_turns }}" \
-            "Context files to read first: FEEDBACK.md, SPEC.md, AGENTS.md, LEARNINGS.md, DECISIONS.md, .quality-floor.json
+            "You are the SiteSync PM autonomous build agent. You commit directly to the main branch.
 
-            FOUNDER PRIORITIES (from FEEDBACK.md):
-            $FEEDBACK
+          READ THESE FILES FIRST (in order):
+          1. FEEDBACK.md — founder priorities (execute these first, always)
+          2. SPEC.md — product genome with acceptance criteria
+          3. AGENTS.md — your operating instructions
+          4. LEARNINGS.md — what has worked before
+          5. DECISIONS.md — architectural constraints
+          6. .quality-floor.json — quality floors that must never be breached
 
-            YOUR MISSION: $INSTRUCTION
+          FOUNDER PRIORITIES FROM FEEDBACK.md:
+          $FEEDBACK
 
-            Quality gates before every commit: npx tsc --noEmit && npm run lint && npx vitest run --passWithNoTests && npm run build
-            Commit format: feat(scope): description [auto]
-            Output <promise>DONE</promise> when finished." || true
+          YOUR MISSION: $INSTRUCTION
 
-      - name: Push and create PR
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          QUALITY GATES — run before EVERY commit:
+            npx tsc --noEmit            (must pass — zero errors)
+            npm run lint                (must pass — no new warnings)
+            npx vitest run --passWithNoTests  (must pass)
+            npm run build               (must pass)
+
+          If any gate fails, fix the issue before committing. Never commit broken code.
+
+          COMMIT DIRECTLY TO MAIN:
+            git add -A
+            git commit -m 'feat(scope): description [auto]'
+            (do NOT push — the workflow handles that)
+
+          After completing work:
+          1. Check off completed criteria in SPEC.md with [x]
+          2. Update LEARNINGS.md with any new patterns discovered
+          3. Update .quality-floor.json if any metric improved
+          4. Output <promise>DONE</promise>
+
+          NEVER: use as any, add mock data to src/, hardcode colors, force push, commit broken code." || true
+
+      - name: Push to main
         run: |
           COMMITS=$(git log origin/main..HEAD --oneline 2>/dev/null | wc -l | tr -d ' ')
+          echo "Commits to push: $COMMITS"
+
           if [ "$COMMITS" -gt "0" ]; then
-            git push origin "$BRANCH"
-            gh pr create \
-              --title "[auto] ${{ steps.config.outputs.wave }} — $(date +%Y-%m-%d %H:%M UTC)" \
-              --body "$(git log origin/main..HEAD --oneline)" \
-              --base main \
-              --head "$BRANCH" \
-              --label "auto-generated" || true
+            # Pull any remote changes first
+            git pull --rebase origin main 2>/dev/null || true
+            git push origin main
+            echo "Pushed $COMMITS commit(s) directly to main"
+
+            # Summary
+            echo "## Organism Run — $(date '+%Y-%m-%d %H:%M UTC')" >> $GITHUB_STEP_SUMMARY
+            echo "**Wave:** ${{ steps.config.outputs.wave }}" >> $GITHUB_STEP_SUMMARY
+            echo "**Model:** ${{ steps.config.outputs.model }}" >> $GITHUB_STEP_SUMMARY
+            echo "**Commits pushed to main:** $COMMITS" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            git log origin/main~${COMMITS}..origin/main --oneline >> $GITHUB_STEP_SUMMARY 2>/dev/null || true
+          else
+            echo "No changes produced in this session"
+            echo "## Organism Run — $(date '+%Y-%m-%d %H:%M UTC')" >> $GITHUB_STEP_SUMMARY
+            echo "No commits produced." >> $GITHUB_STEP_SUMMARY
           fi
 
-      - name: Auto-merge if CI passes
+      - name: Self-heal if CI fails on main
+        if: failure()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Wait 3 minutes for CI to start
-          sleep 180
-          # Get the PR number we just created
-          PR=$(gh pr list --head "$BRANCH" --json number --jq '.[0].number' 2>/dev/null || echo "")
-          if [ -n "$PR" ]; then
-            gh pr merge "$PR" --auto --squash --delete-branch || true
-          fi
+          # If this step runs, the push failed or CI broke main
+          # Create an issue so the next organism run knows to prioritize fixing it
+          gh issue create \
+            --title "[auto-heal] Organism push failed — $(date +%Y-%m-%d)" \
+            --body "The nightly organism run failed to push to main. Check the workflow logs and fix the blocking issue before the next run." \
+            --label "bug" 2>/dev/null || true
