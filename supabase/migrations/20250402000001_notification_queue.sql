@@ -1,4 +1,5 @@
-CREATE TABLE notification_queue (
+-- idempotent: table created in 20240402200000, this migration adds columns/indexes/policies safely
+CREATE TABLE IF NOT EXISTS notification_queue (
   id                uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   project_id        uuid        NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   recipient_user_id uuid        NOT NULL REFERENCES auth.users(id),
@@ -17,35 +18,39 @@ CREATE TABLE notification_queue (
   updated_at        timestamptz DEFAULT now()
 );
 
-CREATE INDEX idx_notification_queue_status
+CREATE INDEX IF NOT EXISTS idx_notification_queue_status
   ON notification_queue(status, created_at)
   WHERE status = 'pending';
 
-CREATE INDEX idx_notification_queue_recipient
+CREATE INDEX IF NOT EXISTS idx_notification_queue_recipient
   ON notification_queue(recipient_user_id, created_at DESC);
 
-CREATE INDEX idx_notification_queue_project
+CREATE INDEX IF NOT EXISTS idx_notification_queue_project
   ON notification_queue(project_id);
 
 ALTER TABLE notification_queue ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Project members can view own notifications"
-  ON notification_queue
-  FOR SELECT
-  USING (recipient_user_id = auth.uid());
+DO $$ BEGIN
+  CREATE POLICY "Project members can view own notifications"
+    ON notification_queue FOR SELECT
+    USING (recipient_user_id = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
-CREATE POLICY "Authenticated users can insert"
-  ON notification_queue
-  FOR INSERT
-  WITH CHECK (
-    project_id IN (
-      SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
-    )
-  );
+DO $$ BEGIN
+  CREATE POLICY "Authenticated users can insert"
+    ON notification_queue FOR INSERT
+    WITH CHECK (
+      project_id IN (
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+      )
+    );
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
-CREATE TRIGGER set_notification_queue_updated_at
-  BEFORE UPDATE ON notification_queue
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+DO $$ BEGIN
+  CREATE TRIGGER set_notification_queue_updated_at
+    BEFORE UPDATE ON notification_queue
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 CREATE TABLE IF NOT EXISTS notification_preferences (
   id                    uuid    PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -66,11 +71,14 @@ CREATE TABLE IF NOT EXISTS notification_preferences (
 
 ALTER TABLE notification_preferences ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users manage own preferences"
-  ON notification_preferences
-  FOR ALL
-  USING (user_id = auth.uid());
+DO $$ BEGIN
+  CREATE POLICY "Users manage own preferences"
+    ON notification_preferences FOR ALL
+    USING (user_id = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
-CREATE TRIGGER set_notification_preferences_updated_at
-  BEFORE UPDATE ON notification_preferences
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+DO $$ BEGIN
+  CREATE TRIGGER set_notification_preferences_updated_at
+    BEFORE UPDATE ON notification_preferences
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
