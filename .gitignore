@@ -30,7 +30,6 @@ dist-ssr
 kill-session
 
 # Session context files (generated, not source)
-SESSION_BRIEF.md
 
 # Engine logs (historical records, not source)
 engine-logs/*.log
@@ -41,4 +40,3 @@ test-results/
 
 # Coverage reports
 coverage/
-
