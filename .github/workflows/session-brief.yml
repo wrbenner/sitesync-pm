@@ -1,0 +1,100 @@
+name: Session Brief Generator
+
+# Runs 30 minutes before the nightly organism (1:30am CDT = 6:30am UTC)
+on:
+  schedule:
+    - cron: '30 6 * * *'   # 1:30 AM CDT daily
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  generate-brief:
+    name: "Build Tonight's Session Brief"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 20
+
+      - name: Generate SESSION_BRIEF.md
+        run: |
+          git config user.name "SiteSync Brief Generator"
+          git config user.email "brief@sitesync.ai"
+
+          # Tonight's mission
+          TONIGHT_MISSION=$(grep -A 20 "^## TONIGHT:" TONIGHT.md 2>/dev/null | head -20 || echo "No active mission — read SPEC.md for next priority")
+
+          # Recent commits (what was done)
+          RECENT_COMMITS=$(git log --since="48 hours ago" --oneline --author="SiteSync" | head -10 || echo "No recent organism commits")
+
+          # Quality metrics
+          MOCK_COUNT=$(jq '.mockCount // "unknown"' .quality-floor.json 2>/dev/null)
+          ANY_COUNT=$(jq '.anyCount // "unknown"' .quality-floor.json 2>/dev/null)
+          LINT_ERRORS=$(jq '.eslintErrors // "unknown"' .quality-floor.json 2>/dev/null)
+          BUNDLE=$(jq '.bundleSizeKB // "unknown"' .quality-floor.json 2>/dev/null)
+
+          # SPEC progress
+          CHECKED=$(grep -c "^\- \[x\]" SPEC.md 2>/dev/null || echo "0")
+          TOTAL=$(grep -c "^\- \[" SPEC.md 2>/dev/null || echo "431")
+
+          # Key learnings relevant to tonight
+          KEY_LEARNINGS=$(grep -A 3 "Migration Safety\|Vite 8\|V7 Rules" LEARNINGS.md 2>/dev/null | head -20 || echo "Read LEARNINGS.md directly for full context")
+
+          cat > SESSION_BRIEF.md << BRIEF_EOF
+          # SESSION_BRIEF — $(date '+%A, %B %d at 2am CDT')
+          *Pre-computed context for tonight's organism session. Read this instead of 6 separate files.*
+          *Generated at $(date -u '+%H:%M UTC'). Expires after tonight's session.*
+
+          ---
+
+          ## TONIGHT'S MISSION
+          $TONIGHT_MISSION
+
+          ---
+
+          ## RECENT PROGRESS (last 48 hours)
+          $RECENT_COMMITS
+
+          ---
+
+          ## QUALITY FLOOR (current state)
+          | Metric | Current | Goal |
+          |--------|---------|------|
+          | Mock data instances | $MOCK_COUNT | 0 |
+          | Unsafe casts (as any) | $ANY_COUNT | 0 |
+          | ESLint errors | $LINT_ERRORS | 0 |
+          | Bundle size | ${BUNDLE}KB | <300KB |
+          | SPEC completion | $CHECKED / $TOTAL | 431/431 |
+
+          ---
+
+          ## KEY RULES FOR TONIGHT
+          1. Check PAUSE.md first — if PAUSED, stop immediately
+          2. V7 rule: NO hyphens in UI text. "In-Progress" → "In Progress"
+          3. V7 rule: Read v7-prompts/V7-00_SYSTEM_CONTEXT.md before any V7 work
+          4. Migration rule: ALWAYS use CREATE TABLE IF NOT EXISTS and DO/EXCEPTION blocks
+          5. Never run supabase CLI — no access in CI
+          6. Quality gates before EVERY commit: npx tsc --noEmit && npm run lint && npx vitest run --passWithNoTests && npm run build
+
+          ---
+
+          ## CRITICAL LEARNINGS (relevant tonight)
+          $KEY_LEARNINGS
+
+          ---
+
+          ## ARCHITECTURE CONSTANTS
+          - Inline styles only, from src/styles/theme.ts
+          - Primary orange: #F47820 (theme.colors.primary)
+          - HashRouter (not BrowserRouter) — deployed on GitHub Pages
+          - Supabase anon key: already in src/lib/supabase.ts fallback
+          - Never hardcode credentials in source files
+          BRIEF_EOF
+
+          echo "SESSION_BRIEF.md generated ($(wc -l < SESSION_BRIEF.md) lines)"
+          git add SESSION_BRIEF.md
+          git commit -m "chore: generate session brief for $(date '+%B %d') [skip ci]" || echo "No changes"
+          git push origin main || echo "Push failed"
