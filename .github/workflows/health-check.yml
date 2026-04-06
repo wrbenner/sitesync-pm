@@ -1,0 +1,72 @@
+name: Site Health Monitor
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'   # Every 30 minutes
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  actions: write
+
+jobs:
+  health:
+    name: "Check sitesync-pm.vercel.app"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check site health
+        id: check
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "https://sitesync-pm.vercel.app" 2>/dev/null || echo "000")
+          echo "status=$STATUS" >> $GITHUB_OUTPUT
+          echo "Site status: $STATUS"
+
+          if [ "$STATUS" != "200" ]; then
+            echo "healthy=false" >> $GITHUB_OUTPUT
+          else
+            echo "healthy=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create incident issue if down
+        if: steps.check.outputs.healthy == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Check if there's already an open incident issue
+          EXISTING=$(gh api repos/wrbenner/sitesync-pm/issues \
+            --jq '[.[] | select(.title | contains("[INCIDENT]")) | select(.state == "open")] | length' \
+            -H "Authorization: token $GH_TOKEN" 2>/dev/null || echo "0")
+
+          if [ "$EXISTING" -eq "0" ]; then
+            gh issue create \
+              --title "[INCIDENT] Site down — HTTP ${{ steps.check.outputs.status }} at $(date -u '+%Y-%m-%d %H:%M UTC')" \
+              --body "## Site Health Alert
+
+            **URL:** https://sitesync-pm.vercel.app
+            **Status:** HTTP ${{ steps.check.outputs.status }}
+            **Time:** $(date -u '+%Y-%m-%d %H:%M UTC')
+
+            The site returned a non-200 status code. This may indicate:
+            - A failed deployment from a recent organism commit
+            - Vercel infrastructure issue
+            - Build error
+
+            **Auto-actions taken:** None (manual review required)
+
+            Check [Vercel dashboard](https://vercel.com) and recent [GitHub deployments](https://github.com/wrbenner/sitesync-pm/deployments)." \
+              --label "incident" 2>/dev/null || true
+          fi
+
+      - name: Close incident if recovered
+        if: steps.check.outputs.healthy == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Close any open incident issues
+          gh api repos/wrbenner/sitesync-pm/issues \
+            --jq '.[] | select(.title | contains("[INCIDENT]")) | select(.state == "open") | .number' \
+            -H "Authorization: token $GH_TOKEN" 2>/dev/null \
+          | while read ISSUE; do
+            gh issue close "$ISSUE" \
+              --comment "Site recovered — HTTP 200 at $(date -u '+%Y-%m-%d %H:%M UTC')" 2>/dev/null || true
+          done
