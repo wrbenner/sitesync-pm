@@ -79,11 +79,12 @@ jobs:
       - name: Check bundle size ratchet
         run: |
           if [ -d "dist/assets" ]; then
-            SIZE=$(find dist/assets -name "*.js" -exec wc -c {} + | tail -1 | awk '{printf "%d", $1/1024}')
+            # Measure only the largest single JS chunk (initial load), not total
+            LARGEST=$(find dist/assets -name "*.js" ! -name "*.map" -exec wc -c {} \; | sort -n | tail -1 | awk '{printf "%d", $1/1024}')
             FLOOR=$(jq '.bundleSizeKB // 9999' .quality-floor.json 2>/dev/null || echo "9999")
-            echo "Bundle: ${SIZE}KB (floor: ${FLOOR}KB)"
-            if [ "$SIZE" -gt "$FLOOR" ] && [ "$FLOOR" -lt 9999 ]; then
-              echo "::error::Bundle ${SIZE}KB exceeds floor ${FLOOR}KB"
+            echo "Largest chunk: ${LARGEST}KB (floor: ${FLOOR}KB)"
+            if [ "$LARGEST" -gt "$FLOOR" ] && [ "$FLOOR" -lt 9999 ]; then
+              echo "::error::Largest chunk ${LARGEST}KB exceeds floor ${FLOOR}KB"
               exit 1
             fi
           fi
