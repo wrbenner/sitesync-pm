@@ -41,7 +41,6 @@ interface UiState {
 
 let toastCounter = 0;
 
-let toastCounter = 0;
 
 export const useUiStore = create<UiState>((set) => ({
   sidebarCollapsed: false,
