@@ -110,3 +110,24 @@ Key finding: The previous automation engine (non-organism) had a 98-100% fix rat
 Root cause: The engine measured task completion, not quality outcomes. Each cycle added code that created new surface area for failures.
 Resolution: The organism architecture (ADR-008) replaces the previous engine with adversarial verification, quality ratchets, and spec driven development.
 Final module scores (Cycle 9): All modules at 50/100 baseline after reset.
+## Migration Safety (CRITICAL — learned 2026-04-06)
+- **ALWAYS use `CREATE TABLE IF NOT EXISTS`** in every migration — never `CREATE TABLE` without it
+- **ALWAYS use `CREATE INDEX IF NOT EXISTS`** — never `CREATE INDEX` without it
+- **ALWAYS wrap triggers in DO/EXCEPTION blocks:**
+  ```sql
+  DO $$ BEGIN
+    CREATE TRIGGER my_trigger BEFORE UPDATE ON my_table
+      FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+  EXCEPTION WHEN duplicate_object THEN NULL;
+  END $$;
+  ```
+- **ALWAYS wrap policies in DO/EXCEPTION blocks** — same pattern as triggers
+- **BEFORE creating any migration**: run `grep -r 'CREATE TABLE.*table_name' supabase/migrations/` to check if it already exists
+- **NEVER create a migration with the same timestamp prefix as an existing file** — check the last migration number first
+- Root cause of 2026-04-06 incident: 4 separate AI sessions created 4 migrations for notification_queue without checking history
+
+## Vite 8 / Rolldown (CRITICAL — learned 2026-04-06)
+- **The CI runner uses Linux. `npm ci` with a Mac-generated lockfile will FAIL** on Vite 8+ because rolldown needs platform-specific native bindings not included in a Mac lockfile
+- **Always use `rm -f package-lock.json && npm install`** in all CI steps (never `npm ci`)
+- This is already fixed in homeostasis.yml and all other workflow files
+
