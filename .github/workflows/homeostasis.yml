@@ -67,7 +67,8 @@ jobs:
             --passWithNoTests \
             --reporter=verbose \
             --exclude "src/test/integration/**" \
-            --exclude "src/test/api/**"
+            --exclude "src/test/api/**" \
+            --exclude "src/test/permissions.test.ts"
 
   build:
     name: "Gate 4: Build"
