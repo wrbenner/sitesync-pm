@@ -338,11 +338,13 @@ function ToastEntry({ toast, onClose, isLast }: { toast: ToastItem; onClose: (id
   );
 }
 
+let _ctxToastSeq = 0;
+
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   const showToast = useCallback((message: string, severity: ToastSeverity, action?: { label: string; onClick: () => void }) => {
-    const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const id = `toast-${Date.now()}-${(++_ctxToastSeq).toString(36)}`;
     setToasts(prev => {
       const next = [...prev, { id, message, severity, action }];
       return next.length > 5 ? next.slice(next.length - 5) : next;

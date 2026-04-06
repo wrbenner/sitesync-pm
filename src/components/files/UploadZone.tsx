@@ -3,6 +3,8 @@ import { Upload, File, CheckCircle, Sparkles, Folder, Tag, AlertCircle, RefreshC
 import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme';
 import { aiService } from '../../lib/aiService';
 
+let _uploadSeq = 0;
+
 interface UploadZoneProps {
   onUpload: (fileName: string) => void;
   onTagsSuggested?: (fileName: string, tags: string[]) => void;
@@ -65,7 +67,7 @@ export const UploadZone: React.FC<UploadZoneProps> = ({ onUpload, onTagsSuggeste
   }, [uploads, onUploadsChange]);
 
   const simulateUpload = useCallback((name: string, opts?: { isFolder?: boolean; fileCount?: number }) => {
-    const id = Date.now() + Math.random();
+    const id = Date.now() + (++_uploadSeq);
     const item: UploadItem = {
       id,
       name,
@@ -78,13 +80,13 @@ export const UploadZone: React.FC<UploadZoneProps> = ({ onUpload, onTagsSuggeste
 
     let progress = 0;
     const interval = setInterval(() => {
-      progress += 8 + Math.random() * 12;
+      progress += 15;
       if (progress >= 100) {
         progress = 100;
         clearInterval(interval);
         setUploads((prev) => prev.map((u) => u.id === id ? { ...u, progress: 100, status: 'categorizing' } : u));
         setTimeout(async () => {
-          const cat = aiCategories[Math.floor(Math.random() * aiCategories.length)];
+          const cat = aiCategories[id % aiCategories.length];
           const suggestedTags = await aiService.tagDocumentOnUpload(String(id), name, '');
           setUploads((prev) => prev.map((u) => u.id === id ? { ...u, status: 'done', aiCategory: cat, aiTags: suggestedTags } : u));
           onUpload(name);

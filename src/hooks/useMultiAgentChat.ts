@@ -471,7 +471,7 @@ async function simulateMultiAgentResponse(
   }
 
   // Simulate processing delay
-  await new Promise((r) => setTimeout(r, 800 + Math.random() * 600))
+  await new Promise((r) => setTimeout(r, 1100))
 
   // Generate responses from each agent
   for (const domain of targetAgents) {
@@ -484,7 +484,7 @@ async function simulateMultiAgentResponse(
 
     // Small stagger between agent responses for visual effect
     if (targetAgents.length > 1) {
-      await new Promise((r) => setTimeout(r, 300 + Math.random() * 400))
+      await new Promise((r) => setTimeout(r, 500))
     }
   }
 

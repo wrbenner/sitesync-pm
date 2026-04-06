@@ -37,7 +37,7 @@ export function UppyUploader({ onFilesSelected, onUploadComplete, accept, maxFil
     if (files.length === 0) return;
 
     const newEntries: UploadedFile[] = files.map((f) => ({
-      id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      id: `${Date.now()}-${crypto.randomUUID().slice(0, 9)}`,
       name: f.name,
       size: f.size,
       type: f.type,
@@ -53,7 +53,7 @@ export function UppyUploader({ onFilesSelected, onUploadComplete, accept, maxFil
     newEntries.forEach((entry) => {
       let progress = 0;
       const interval = setInterval(() => {
-        progress += Math.random() * 30 + 10;
+        progress += 25;
         if (progress >= 100) {
           progress = 100;
           clearInterval(interval);
@@ -65,7 +65,7 @@ export function UppyUploader({ onFilesSelected, onUploadComplete, accept, maxFil
             prev.map((f) => f.id === entry.id ? { ...f, progress: Math.min(progress, 99) } : f)
           );
         }
-      }, 200 + Math.random() * 300);
+      }, 350);
     });
 
     onUploadComplete?.(files);

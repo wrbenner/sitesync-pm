@@ -33,92 +33,8 @@ function getSeverityStyle(severity: string | null): { fg: string; bg: string; la
   return OSHA_SEVERITY[severity] ?? { fg: colors.textTertiary, bg: colors.statusNeutralSubtle, label: severity.replace(/_/g, ' ') }
 }
 
-// Realistic construction safety mock data for prototype display
-const MOCK_INCIDENTS = [
-  {
-    id: 'm1',
-    date: '2026-02-19',
-    type: 'medical_treatment',
-    severity: 'medical_treatment',
-    location: 'Level 4 Formwork Area',
-    investigation_status: 'closed',
-    assigned_to: 'Dave Martinez',
-    injured_party_name: 'Dave Martinez',
-  },
-  {
-    id: 'm2',
-    date: '2026-01-31',
-    type: 'near_miss',
-    severity: 'first_aid',
-    location: 'Tower Crane Staging Area',
-    investigation_status: 'closed',
-    assigned_to: 'Jake Thompson',
-    injured_party_name: '',
-  },
-  {
-    id: 'm3',
-    date: '2026-01-14',
-    type: 'first_aid',
-    severity: 'first_aid',
-    location: 'South Entrance Scaffold',
-    investigation_status: 'closed',
-    assigned_to: 'Carlos Rivera',
-    injured_party_name: 'Carlos Rivera',
-  },
-  {
-    id: 'm4',
-    date: '2025-12-22',
-    type: 'near_miss',
-    severity: 'first_aid',
-    location: 'Basement Excavation',
-    investigation_status: 'closed',
-    assigned_to: 'Sarah Chen',
-    injured_party_name: '',
-  },
-  {
-    id: 'm5',
-    date: '2025-11-08',
-    type: 'lost_time',
-    severity: 'lost_time',
-    location: 'Level 2 Stairwell B',
-    investigation_status: 'closed',
-    assigned_to: 'Mike Johnson',
-    injured_party_name: 'Mike Johnson',
-  },
-  {
-    id: 'm6',
-    date: '2025-10-15',
-    type: 'first_aid',
-    severity: 'first_aid',
-    location: 'Rooftop Mechanical Level',
-    investigation_status: 'closed',
-    assigned_to: 'Aisha Williams',
-    injured_party_name: 'Aisha Williams',
-  },
-  {
-    id: 'm7',
-    date: '2025-09-29',
-    type: 'near_miss',
-    severity: 'first_aid',
-    location: 'Loading Dock',
-    investigation_status: 'investigating',
-    assigned_to: 'Bobby Kim',
-    injured_party_name: '',
-  },
-  {
-    id: 'm8',
-    date: '2025-08-20',
-    type: 'medical_treatment',
-    severity: 'medical_treatment',
-    location: 'Electrical Room Level 1',
-    investigation_status: 'closed',
-    assigned_to: 'Tom Garcia',
-    injured_party_name: 'Tom Garcia',
-  },
-]
 
-// Realistic corrective action mock data for prototype display
-const MOCK_CORRECTIVE_ACTIONS = [
+const [] = [
   {
     id: 'ca1',
     description: 'Install fall protection netting on Level 5 perimeter',
@@ -620,10 +536,10 @@ export const Safety: React.FC = () => {
   const dailyLogs = dailyLogsResult?.data
 
   // Use mock incidents when API returns empty (prototype fallback)
-  const displayIncidents: any[] = (incidents || []).length > 0 ? (incidents || []) : MOCK_INCIDENTS
+  const displayIncidents: any[] = (incidents || []).length > 0 ? (incidents || []) : []
 
   // Use mock corrective actions when API returns empty (prototype fallback)
-  const displayCAs: any[] = (correctiveActions || []).length > 0 ? (correctiveActions || []) : MOCK_CORRECTIVE_ACTIONS
+  const displayCAs: any[] = (correctiveActions || []).length > 0 ? (correctiveActions || []) : []
 
   // ── Real-time subscriptions ────────────────────────────────
 

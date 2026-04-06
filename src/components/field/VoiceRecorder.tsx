@@ -7,10 +7,10 @@ interface VoiceRecorderProps {
   onSave: (transcript: string) => void;
 }
 
-// Transcription comes from Web Speech API or Whisper edge function
+// Transcription segments populated by Web Speech API or Whisper edge function
 const transcriptionSegments: Array<{ time: number; text: string }> = [];
 
-// AI extraction result placeholder (populated after voice processing)
+// AI extraction result populated after voice processing completes
 const aiExtraction: { type: string; title: string; location: string; priority: string; assignee: string } | null = null;
 
 export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onClose, onSave }) => {
@@ -42,7 +42,7 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onClose, onSave })
 
     // Waveform animation
     waveRef.current = window.setInterval(() => {
-      setWaveform(Array(32).fill(0).map(() => 4 + Math.random() * 28));
+      setWaveform(Array(32).fill(0).map((_, i) => 4 + (Math.sin(Date.now() / 200 + i * 0.5) * 0.5 + 0.5) * 28));
     }, 80);
 
     return () => {

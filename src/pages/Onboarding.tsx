@@ -32,12 +32,12 @@ const Step2Project: React.FC<StepProps> = ({ onNext, onBack, onSkip }) => (
     <h2 style={{ fontSize: typography.fontSize.heading, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>Project Details</h2>
     <p style={{ fontSize: typography.fontSize.body, color: colors.textSecondary, margin: 0, marginBottom: spacing['6'] }}>Tell us about your project.</p>
     {[
-      { label: 'Project Name', placeholder: 'Meridian Tower', value: 'Meridian Tower' },
-      { label: 'Type', placeholder: 'Mixed Use Building', value: 'Mixed Use Building' },
-      { label: 'Total Value', placeholder: '$47,500,000', value: '$47,500,000' },
-      { label: 'Location', placeholder: 'Dallas, TX', value: 'Dallas, TX' },
-      { label: 'Start Date', placeholder: '2023-06-15', value: '2023-06-15' },
-      { label: 'End Date', placeholder: '2026-12-31', value: '2026-12-31' },
+      { label: 'Project Name', placeholder: 'e.g. Riverside Tower', value: '' },
+      { label: 'Type', placeholder: 'e.g. Multifamily, Commercial', value: '' },
+      { label: 'Total Value', placeholder: 'e.g. $12,000,000', value: '' },
+      { label: 'Location', placeholder: 'e.g. Dallas, TX', value: '' },
+      { label: 'Start Date', placeholder: 'YYYY-MM-DD', value: '' },
+      { label: 'End Date', placeholder: 'YYYY-MM-DD', value: '' },
     ].map((field) => (
       <div key={field.label} style={{ marginBottom: spacing['4'] }}>
         <label style={{ display: 'block', fontSize: typography.fontSize.label, fontWeight: typography.fontWeight.medium, color: colors.textSecondary, marginBottom: spacing['1'], textTransform: 'uppercase', letterSpacing: typography.letterSpacing.wider }}>{field.label}</label>
@@ -57,7 +57,7 @@ const Step3Team: React.FC<StepProps> = ({ onNext, onBack, onSkip }) => (
   <div style={{ maxWidth: '500px', margin: '0 auto' }}>
     <h2 style={{ fontSize: typography.fontSize.heading, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>Invite Your Team</h2>
     <p style={{ fontSize: typography.fontSize.body, color: colors.textSecondary, margin: 0, marginBottom: spacing['6'] }}>Add team members by email. You can always add more later.</p>
-    <textarea defaultValue={'mpatterson@turnerconstruction.com\njlee@morrisarchitects.com\ndkumar@structuralsystems.com'} placeholder="Enter email addresses, one per line" style={{ width: '100%', height: '120px', padding: spacing['4'], border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.md, fontSize: typography.fontSize.body, fontFamily: typography.fontFamily, color: colors.textPrimary, resize: 'vertical', outline: 'none', backgroundColor: colors.surfaceRaised }} />
+    <textarea defaultValue={''} placeholder="Enter email addresses, one per line" style={{ width: '100%', height: '120px', padding: spacing['4'], border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.md, fontSize: typography.fontSize.body, fontFamily: typography.fontFamily, color: colors.textPrimary, resize: 'vertical', outline: 'none', backgroundColor: colors.surfaceRaised }} />
     <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginTop: spacing['3'], padding: spacing['3'], backgroundColor: colors.surfaceInset, borderRadius: borderRadius.md }}>
       <Users size={16} color={colors.textTertiary} />
       <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>3 team members will be invited</span>
@@ -144,12 +144,12 @@ const Step6Complete: React.FC<StepProps> = ({ onNext }) => {
       {confetti && Array.from({ length: 30 }).map((_, i) => (
         <div key={i} style={{
           position: 'absolute',
-          left: `${10 + Math.random() * 80}%`,
-          top: `${Math.random() * 60}%`,
+          left: `${10 + ((i * 37 + 13) % 80)}%`,
+          top: `${((i * 29 + 7) % 60)}%`,
           width: 8, height: 8,
           backgroundColor: [colors.primaryOrange, colors.statusActive, colors.statusInfo, colors.statusReview, colors.statusPending][i % 5],
           borderRadius: i % 2 === 0 ? '50%' : '2px',
-          transform: `rotate(${Math.random() * 360}deg)`,
+          transform: `rotate(${(i * 47) % 360}deg)`,
           opacity: 0.7,
           animation: `fadeIn 0.3s ease-out ${i * 0.05}s both`,
         }} />

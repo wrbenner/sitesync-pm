@@ -36,7 +36,7 @@ function SkeletonLoader(): React.ReactElement {
             key={i}
             style={{
               flex: 1,
-              height: `${30 + Math.random() * 60}%`,
+              height: `${30 + ((i * 37 + 13) % 60)}%`,
               borderRadius: 2,
               backgroundColor: colors.borderSubtle,
               opacity: 0.6 + (i % 3) * 0.1,

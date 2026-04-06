@@ -348,8 +348,11 @@ function locationTo3DPosition(location: string | null): { x: number; y: number; 
   return { x, y, z }
 }
 
+// Deterministic pseudo-position based on seed for consistent 3D placement
+let _dtSeed = 42;
 function randomRange(min: number, max: number): number {
-  return min + Math.random() * (max - min)
+  _dtSeed = (_dtSeed * 16807 + 0) % 2147483647;
+  return min + (_dtSeed / 2147483647) * (max - min);
 }
 
 // Distribute crew positions evenly across the building footprint

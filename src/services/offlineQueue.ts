@@ -64,7 +64,7 @@ export const useOfflineStore = create<OfflineState>((set, get) => {
           ...s.queue,
           {
             ...mutation,
-            id: `q-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            id: `q-${Date.now()}-${crypto.randomUUID().slice(0, 4)}`,
             timestamp: new Date(),
             retryCount: 0,
           },

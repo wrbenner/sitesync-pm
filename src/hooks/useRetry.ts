@@ -66,7 +66,7 @@ export function useRetry<T>(
 
           // Exponential backoff with jitter
           const delay = Math.min(
-            baseDelay * Math.pow(backoffMultiplier, attempt) + Math.random() * 500,
+            baseDelay * Math.pow(backoffMultiplier, attempt) + (crypto.getRandomValues(new Uint16Array(1))[0] % 500),
             maxDelay
           );
 

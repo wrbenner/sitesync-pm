@@ -39,6 +39,10 @@ interface UiState {
   dismissToast: (id: string) => void;
 }
 
+let toastCounter = 0;
+
+let toastCounter = 0;
+
 export const useUiStore = create<UiState>((set) => ({
   sidebarCollapsed: false,
   activeView: 'dashboard',
@@ -67,7 +71,7 @@ export const useUiStore = create<UiState>((set) => ({
     setTimeout(() => set({ a11yAlertMessage: '' }), 100);
   },
   addToast: (toast) => {
-    const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const id = `toast-${Date.now()}-${(++toastCounter).toString(36)}`;
     set((s) => ({ toasts: [...s.toasts, { ...toast, id }] }));
     setTimeout(() => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), 5000);
   },

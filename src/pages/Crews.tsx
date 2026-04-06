@@ -55,23 +55,8 @@ export const Crews: React.FC = () => {
     setDotPositions(initialPositions);
   }, [initialPositions]);
 
-  // Simulated movement for map dots
-  useEffect(() => {
-    if (activeTab !== 'map') return;
-    const interval = setInterval(() => {
-      setDotPositions((prev) => {
-        const next: Record<string, { x: number; y: number }> = {};
-        for (const key of Object.keys(prev)) {
-          next[key] = {
-            x: Math.max(8, Math.min(92, prev[key].x + (Math.random() - 0.5) * 3)),
-            y: Math.max(8, Math.min(92, prev[key].y + (Math.random() - 0.5) * 3)),
-          };
-        }
-        return next;
-      });
-    }, 2000);
-    return () => clearInterval(interval);
-  }, [activeTab]);
+  // Crew positions are static until real GPS tracking is integrated.
+  // Future: subscribe to crew_locations table via Supabase Realtime.
 
   if (loading) {
     return (

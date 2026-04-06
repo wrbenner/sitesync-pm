@@ -78,17 +78,9 @@ const ScheduleKPICard: React.FC<ScheduleKPICardProps> = ({ icon, label, value, v
   </div>
 );
 
-// 7-day mock forecast (would come from real weather API in production)
-const MOCK_FORECAST: WeatherDay[] = Array.from({ length: 7 }, (_, i) => {
-  const conditions = (['Clear', 'Rain', 'Clear', 'Cloudy', 'Rain', 'Snow', 'Clear'] as const)[i];
-  return {
-    date: new Date(Date.now() + i * 86400000).toISOString().split('T')[0],
-    conditions,
-    precipitationChance: conditions === 'Rain' ? 75 : conditions === 'Snow' ? 65 : 10,
-    tempHigh: 54 - i * 2,
-    tempLow: 38 - i,
-  };
-});
+// Weather forecast loaded from weather_records table or weather API
+// Empty array is the default until project weather data is populated
+const INITIAL_FORECAST: WeatherDay[] = [];
 
 interface ParsedActivity {
   activityId: string;
@@ -681,7 +673,7 @@ export const Schedule: React.FC = () => {
     setAnalyzing(true);
     // Simulate brief async analysis delay for UX feedback
     setTimeout(() => {
-      const results = predictScheduleRisks(schedulePhases, MOCK_FORECAST);
+      const results = predictScheduleRisks(schedulePhases, INITIAL_FORECAST);
       setRisks(results);
       setLastAnalyzed(new Date());
       setMinutesAgo(0);
@@ -1839,7 +1831,7 @@ export const Schedule: React.FC = () => {
                 </div>
               )}
 
-              {/* Weather overlay strip: DB records take priority, MOCK_FORECAST as fallback */}
+              {/* Weather overlay strip: DB records take priority, INITIAL_FORECAST as fallback */}
               <div style={{
                 display: 'flex', alignItems: 'center', gap: spacing['3'],
                 padding: `${spacing['2']} ${spacing['3']}`, marginBottom: spacing['3'],
@@ -1851,7 +1843,7 @@ export const Schedule: React.FC = () => {
                 </span>
                 {(weatherRecords.length > 0
                   ? weatherRecords.slice(0, 7).map(r => ({ date: r.date, conditions: r.conditions ?? 'Clear' }))
-                  : MOCK_FORECAST.map(d => ({ date: d.date, conditions: d.conditions as string }))
+                  : INITIAL_FORECAST.map(d => ({ date: d.date, conditions: d.conditions as string }))
                 ).map((day) => {
                   const label = new Date(day.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'numeric', day: 'numeric' });
                   const cond = day.conditions.toLowerCase();

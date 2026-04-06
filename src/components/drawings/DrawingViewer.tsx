@@ -40,23 +40,16 @@ interface MarkupItem {
   text?: string;
 }
 
-// Demo user info persisted within a browser session so the same tab always
-// appears as the same person during collaborative testing.
-const DEMO_USERS = [
-  { name: 'Alex Chen', initials: 'AC', color: '#4EC896' },
-  { name: 'Jordan Lee', initials: 'JL', color: '#F47820' },
-  { name: 'Sam Rivera', initials: 'SR', color: '#3B82F6' },
-  { name: 'Casey Kim', initials: 'CK', color: '#8B5CF6' },
-  { name: 'Morgan Park', initials: 'MP', color: '#EC4899' },
-];
+// Collaborative presence user derived from session or auth context.
+// Falls back to a default until real auth provides the user identity.
+const PRESENCE_FALLBACK = { name: 'Current User', initials: 'CU', color: '#4EC896' };
 
 function getDemoUser() {
-  const stored = sessionStorage.getItem('sitesync_demo_user_idx');
-  const idx = stored !== null
-    ? parseInt(stored, 10)
-    : Math.floor(Math.random() * DEMO_USERS.length);
-  if (stored === null) sessionStorage.setItem('sitesync_demo_user_idx', String(idx));
-  return DEMO_USERS[idx % DEMO_USERS.length];
+  try {
+    const stored = sessionStorage.getItem('sitesync_presence_user');
+    if (stored) return JSON.parse(stored) as { name: string; initials: string; color: string };
+  } catch { /* use fallback */ }
+  return PRESENCE_FALLBACK;
 }
 
 const disciplineLayers = [

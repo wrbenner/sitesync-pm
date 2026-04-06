@@ -235,7 +235,7 @@ function computeNextRetryAt(retryCount: number): string {
   // 2^retry * 1000ms base: 1s, 2s, 4s, 8s, 16s
   const delayMs = Math.min(Math.pow(2, retryCount) * 1000, 60_000)
   // Add jitter: ±25%
-  const jitter = delayMs * (0.75 + Math.random() * 0.5)
+  const jitter = delayMs * (0.75 + (crypto.getRandomValues(new Uint16Array(1))[0] / 65535) * 0.5)
   return new Date(Date.now() + jitter).toISOString()
 }
 

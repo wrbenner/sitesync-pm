@@ -52,19 +52,8 @@ export const LiveSiteWidget: React.FC = React.memo(() => {
   }, [crewData]);
   const [hoveredCrew, setHoveredCrew] = useState<string | null>(null);
 
-  // Simulated movement
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCrews((prev) =>
-        prev.map((c) => ({
-          ...c,
-          x: Math.max(8, Math.min(92, c.x + (Math.random() - 0.5) * 3)),
-          y: Math.max(8, Math.min(92, c.y + (Math.random() - 0.5) * 3)),
-        }))
-      );
-    }, 2000);
-    return () => clearInterval(interval);
-  }, []);
+  // Crew positions are static until real GPS tracking is integrated.
+  // Future: subscribe to crew_locations table via Supabase Realtime.
 
   const totalOnSite = crews.reduce((sum, c) => sum + c.count, 0);
 

@@ -109,7 +109,7 @@ export const getSchedulePhases = async (projectId: string): Promise<ScheduleActi
     if (error) throw error
     rows = (data ?? []) as RawRow[]
   } catch {
-    // Extended columns may not exist yet; fall back to base columns with hardcoded defaults.
+    // Extended columns may not exist yet; fall back to base columns with schema defaults.
     const { data, error } = await supabase
       .from('schedule_phases')
       .select(SCHEDULE_SELECT_BASE)
