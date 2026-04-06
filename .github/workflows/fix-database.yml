@@ -1,0 +1,117 @@
+name: Apply Database Fix
+
+# Trigger manually OR automatically when pushed with [fix-db] in commit message
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/20260407000001_fix_org_members_rls_recursion.sql'
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  apply-rls-fix:
+    name: "Apply RLS Fix via psql"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for DB password secret
+        id: check
+        run: |
+          if [ -n "${{ secrets.SUPABASE_DB_PASSWORD }}" ]; then
+            echo "has_password=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_password=false" >> $GITHUB_OUTPUT
+            echo "::warning::SUPABASE_DB_PASSWORD secret not set. Add it to GitHub Secrets to auto-apply migrations."
+          fi
+
+      - name: Apply RLS fix via psql
+        if: steps.check.outputs.has_password == 'true'
+        env:
+          PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          # Install psql
+          sudo apt-get install -y postgresql-client 2>/dev/null
+
+          # Apply the fix
+          psql "postgresql://postgres:$PGPASSWORD@db.hypxrmcppjfbtlwuoafc.supabase.co:5432/postgres" << 'SQL'
+          CREATE OR REPLACE FUNCTION get_my_org_ids()
+          RETURNS SETOF uuid
+          LANGUAGE sql
+          SECURITY DEFINER
+          STABLE
+          SET search_path = public
+          AS $$
+            SELECT organization_id FROM organization_members WHERE user_id = auth.uid();
+          $$;
+
+          GRANT EXECUTE ON FUNCTION get_my_org_ids() TO authenticated;
+          GRANT EXECUTE ON FUNCTION get_my_org_ids() TO anon;
+
+          DROP POLICY IF EXISTS org_members_select ON organization_members;
+          CREATE POLICY org_members_select ON organization_members FOR SELECT
+            USING (user_id = auth.uid() OR organization_id IN (SELECT get_my_org_ids()));
+
+          DROP POLICY IF EXISTS org_select ON organizations;
+          CREATE POLICY org_select ON organizations FOR SELECT
+            USING (id IN (SELECT get_my_org_ids()));
+
+          SELECT 'RLS fix applied successfully' as status;
+          SQL
+
+          echo "RLS fix applied"
+
+      - name: Apply via Supabase CLI if access token available
+        if: steps.check.outputs.has_password != 'true' && env.SUPABASE_ACCESS_TOKEN != ''
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          npm install -g @supabase/cli 2>/dev/null
+          supabase link --project-ref hypxrmcppjfbtlwuoafc
+          supabase db push
+
+      - name: Create help issue if no secrets
+        if: steps.check.outputs.has_password != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue create \
+            --title "[ACTION NEEDED] Add SUPABASE_DB_PASSWORD to fix database" \
+            --body "## Database Fix Required
+
+          The app cannot load project data due to an RLS policy infinite recursion bug.
+
+          **To fix (takes 60 seconds on mobile):**
+
+          ### Option A — Supabase SQL Editor (easiest on phone)
+          1. Go to: https://supabase.com/dashboard/project/hypxrmcppjfbtlwuoafc/editor
+          2. Paste and run this SQL:
+          \`\`\`sql
+          CREATE OR REPLACE FUNCTION get_my_org_ids()
+          RETURNS SETOF uuid LANGUAGE sql SECURITY DEFINER STABLE
+          SET search_path = public AS \$\$
+            SELECT organization_id FROM organization_members WHERE user_id = auth.uid();
+          \$\$;
+          GRANT EXECUTE ON FUNCTION get_my_org_ids() TO authenticated, anon;
+          DROP POLICY IF EXISTS org_members_select ON organization_members;
+          CREATE POLICY org_members_select ON organization_members FOR SELECT
+            USING (user_id = auth.uid() OR organization_id IN (SELECT get_my_org_ids()));
+          DROP POLICY IF EXISTS org_select ON organizations;
+          CREATE POLICY org_select ON organizations FOR SELECT
+            USING (id IN (SELECT get_my_org_ids()));
+          \`\`\`
+
+          ### Option B — Auto-fix (do once, never again)
+          1. Supabase Dashboard → Project Settings → Database → Connection string
+          2. Copy the password
+          3. GitHub → Settings → Secrets → Actions → New secret
+          4. Name: \`SUPABASE_DB_PASSWORD\`, Value: [the password]
+          5. This workflow auto-runs and fixes it forever after
+
+          *This issue was auto-created by the organism's health check.*" \
+            --label "bug" \
+            --label "needs-attention" 2>/dev/null || true
