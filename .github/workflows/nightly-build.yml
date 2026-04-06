@@ -111,6 +111,8 @@ jobs:
           - Add mock data to src/
           - Use hyphens in any UI text (V7 rule)
 
+          IMPORTANT: If tonight is Night 1, run `node fix-mock-data.mjs` FIRST before reading any prompt file. This is a programmatic mock data fixer.
+
           Output <promise>DONE</promise> when tonight's complete mission is finished." || true
 
       - name: Push to main
