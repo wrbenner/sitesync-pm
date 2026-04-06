@@ -1,0 +1,89 @@
+# .claudeignore — Token waste prevention
+# Claude Code ignores these when indexing the codebase
+# Result: 50-70% token reduction, organism does 2-3x more work per session
+
+# Dependencies (never needs to see these)
+node_modules/
+.pnp
+.pnp.js
+.yarn/
+
+# Build output (read from source, not build)
+dist/
+dist-ssr/
+build/
+.vite/
+.cache/
+
+# Test coverage (doesn't help the organism)
+coverage/
+.nyc_output/
+
+# Git internals
+.git/
+
+# Agent worktrees (stale Claude Code sessions)
+.worktrees/
+.claude/worktrees/
+
+# Engine logs (historical, not actionable)
+engine-logs/
+
+# Old prompt archives (organism reads V5/V6/V7, not older versions)
+archive/prompts-v1/
+archive/prompts-v2/
+archive/prompts-v3/
+archive/prompts-v4/
+archive/autonomous_loop_v3.sh
+
+# Source maps (compiled artifacts)
+**/*.map
+**/*.d.ts.map
+
+# Lock files (not helpful for code generation)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Playwright test results
+playwright-report/
+test-results/
+
+# OS and editor artifacts
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/settings.json
+
+# Supabase local dev (not the actual migrations)
+.supabase/
+
+# Generated type files (auto-generated, don't edit)
+supabase/functions/_shared/types.generated.ts
+
+# Large binary/media files
+**/*.png
+**/*.jpg
+**/*.jpeg
+**/*.gif
+**/*.svg
+**/*.ico
+**/*.woff
+**/*.woff2
+**/*.ttf
+**/*.mp4
+**/*.webm
+
+# Don't ignore (organism MUST read these):
+# src/ — all source code
+# supabase/migrations/ — all migrations
+# supabase/functions/ — all edge functions
+# v7-prompts/ — the UI perfection prompts
+# archive/prompts-v5/ — foundation prompts
+# archive/prompts-v6/ — feature prompts
+# TONIGHT.md, FEEDBACK.md, CLAUDE.md, AGENTS.md
+# LEARNINGS.md, DECISIONS.md, SPEC.md
+# .quality-floor.json
+# fix-mock-data.mjs
+# orchestrator/
