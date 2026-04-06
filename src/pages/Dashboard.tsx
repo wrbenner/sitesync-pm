@@ -63,7 +63,11 @@ const MetricCard: React.FC<MetricCardProps> = ({ icon, label, value, sub, trend,
   <motion.div
     variants={staggerItem}
     transition={staggerTransition}
+    role={onClick ? 'button' : undefined}
+    tabIndex={onClick ? 0 : undefined}
     onClick={onClick}
+    onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } } : undefined}
+    aria-label={onClick ? label : undefined}
     style={{
       flex: '1 1 0',
       minWidth: 180,
@@ -255,9 +259,14 @@ export const Dashboard: React.FC = () => {
       .filter((a) => (a as any).status === 'approved' || (a as any).status === 'paid')
       .map((a) => (a as any).id as string)
     if (approvedAppIds.length === 0) return []
-    const waivers = lienWaivers ?? []
+    const waiversByApp = new Map<string, { status: string }[]>()
+    for (const w of (lienWaivers ?? []) as any[]) {
+      const existing = waiversByApp.get(w.pay_app_id) ?? []
+      existing.push(w)
+      waiversByApp.set(w.pay_app_id, existing)
+    }
     return approvedAppIds.filter((id) => {
-      const appWaivers = (waivers as any[]).filter((w) => w.pay_app_id === id)
+      const appWaivers = waiversByApp.get(id) ?? []
       return appWaivers.length === 0 || appWaivers.every((w) => w.status === 'pending')
     })
   }, [payApps, lienWaivers]);

@@ -28,7 +28,7 @@ function trendColor(trend: 'up' | 'down' | 'flat'): string {
   return colors.statusPending;
 }
 
-function Sparkline({ values, trend }: { values: number[]; trend: 'up' | 'down' | 'flat' }) {
+const Sparkline = React.memo(function Sparkline({ values, trend }: { values: number[]; trend: 'up' | 'down' | 'flat' }) {
   const min = Math.min(...values) - 5;
   const max = Math.max(...values) + 5;
   const w = 80;
@@ -48,7 +48,7 @@ function Sparkline({ values, trend }: { values: number[]; trend: 'up' | 'down' |
       <path d={path} fill="none" stroke={trendColor(trend)} strokeWidth="1.5" strokeLinecap="round" />
     </svg>
   );
-}
+});
 
 // Generate a synthetic sparkline from a productivity score
 function generateSparkline(score: number, seed: number): number[] {

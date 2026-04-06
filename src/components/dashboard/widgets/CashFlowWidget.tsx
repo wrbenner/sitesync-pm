@@ -150,6 +150,8 @@ export const CashFlowWidget: React.FC = React.memo(() => {
               <button
                 key={opt.value}
                 onClick={() => setRetainageRate(opt.value)}
+                aria-pressed={retainageRate === opt.value}
+                aria-label={`Set retainage to ${opt.label}`}
                 style={{
                   padding: `2px ${spacing['2']}`,
                   fontSize: typography.fontSize.caption,
@@ -186,6 +188,8 @@ export const CashFlowWidget: React.FC = React.memo(() => {
       {/* Chart */}
       <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
         <svg
+          role="img"
+          aria-label="13-week cash flow bar chart showing projected inflow, outflow, and cumulative balance"
           viewBox={`0 0 ${chartWidth} ${chartHeight + 18}`}
           preserveAspectRatio="none"
           style={{ width: '100%', height: '100%' }}
