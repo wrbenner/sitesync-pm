@@ -1,58 +1,898 @@
-# FEEDBACK.md — Founder Priorities
-
-**Owner:** Walker Benner, Founder/CEO
-**Injected into:** Every autonomous agent session as P0 priority
-**Instructions:** Update this before running the organism. Clear it after each run. Be specific.
-
----
-
-## Tonight's P0 Priorities
-
-*Updated by Chief Product Strategist agent — 2026-04-05. Walker is calling GCs this week. Every priority is chosen to make the 10 minute demo flow flawless: Dashboard > RFI creation > RFI workflow > Submittals > Daily Log.*
-
-1. MOCK DATA ELIMINATION ON THE SIX DEMO CRITICAL PAGES (P0-1). This is still the single biggest blocker and was not completed in the previous run.
-   **Files to change:** `src/pages/RFIs.tsx`, `src/pages/Submittals.tsx`, `src/pages/PunchList.tsx`, `src/pages/DailyLog.tsx`, `src/pages/FieldCapture.tsx`, `src/pages/AICopilot.tsx`. Also fix mock data in these supporting files found by grep: `src/components/dashboard/widgets/CashFlowWidget.tsx`, `src/components/dashboard/widgets/LiveSiteWidget.tsx`, `src/pages/Safety.tsx`, `src/pages/Schedule.tsx`, `src/pages/Crews.tsx`, `src/pages/Meetings.tsx`.
-   **What "done" looks like:** Each of the six P0-1 pages fetches real data from the corresponding Supabase table using existing React Query hooks (check `src/hooks/` for existing query hooks before writing new ones). When the table is empty, render a proper empty state component with an icon, a message like "No RFIs yet", and a Create button. During fetch, show a loading skeleton (use the existing `LoadingSkeleton` component if one exists, or create a minimal one). After completion, run `grep -r "Math.random\|faker\|mockData\|MOCK\|hardcoded" src/ --include="*.ts" --include="*.tsx"` and confirm zero results across ALL files, not just the six pages. The grep currently returns 20 files. Fix all 20.
-   **Why this matters:** Fake data kills every demo. When Walker opens the app in front of a GC and the RFI list shows "John Doe" with random dates, the deal is dead. Real empty states are infinitely better than fake populated states. A superintendent will respect "No RFIs yet, create your first" but will never trust a tool showing obviously fabricated data.
-
-2. RFI AND SUBMITTAL STATE MACHINE COMPLETION (P0-6, P1-2, P1-3). The three most visible workflows must work end to end.
-   **Files to change:** Find the state machine definitions (likely in `src/machines/` or `src/lib/machines/` or colocated with pages). Key files: the RFI state machine, Submittal state machine, and their corresponding page components `src/pages/RFIs.tsx` and `src/pages/Submittals.tsx`. Also update `src/pages/ChangeOrders.tsx` if time permits.
-   **What "done" looks like:** (a) RFI: a user can create a draft RFI, submit it (status changes to `submitted`), it moves to `under_review`, gets a response (`responded`), and closes (`closed`). Each transition validates with Zod, checks that the transition is valid per the state machine, updates the `rfis` table in Supabase, writes a row to `activity_log` with actor/timestamp/from_state/to_state, and shows a toast. Invalid transitions (e.g., trying to close a draft) return a typed error shown as a toast, not an unhandled rejection. (b) Submittal: same pattern for `draft > submitted > in_review > approved/rejected/revise_and_resubmit`. (c) The status badges on the list views update immediately after transition (optimistic update or cache invalidation). (d) Ball in court updates on each transition for both RFIs and Submittals.
-   **Why this matters:** "Create an RFI and walk it through approval" is the first thing every GC evaluates. If the status badge doesn't change when they click "Submit", or if clicking "Approve" on a submittal throws a console error, SiteSync looks like a prototype. Procore's RFI workflow is rock solid and has been for 10 years. Ours must be equally reliable on day one. This is also the foundation for the AI copilot to suggest actions ("This RFI is 3 days overdue, want me to send a reminder?"), which is the leapfrog moment in the demo.
-
-3. DASHBOARD KPI TILES AND ACTIVITY FEED WIRED TO REAL DATA (P1-1). The dashboard is the first screen every prospect sees.
-   **Files to change:** `src/pages/Dashboard.tsx`, `src/components/dashboard/widgets/CashFlowWidget.tsx`, `src/components/dashboard/widgets/LiveSiteWidget.tsx`, and any other widget components in `src/components/dashboard/`.
-   **What "done" looks like:** (a) The four KPI tiles (Open RFIs, Overdue Submittals, Budget Variance, Schedule SPI) each make a real Supabase aggregation query. Open RFIs = `select count(*) from rfis where project_id = X and status not in ('closed', 'void')`. Overdue Submittals = `select count(*) from submittals where project_id = X and required_date < now() and status not in ('approved', 'rejected')`. Budget Variance and Schedule SPI can show "N/A" or "$0" if no budget/schedule data exists yet, that is fine. (b) Each KPI tile has a loading skeleton during fetch and an error fallback. (c) The activity feed shows the last 20 entries from the `activity_log` table, displaying actor name, action description, entity type, and relative timestamp ("2 hours ago"). If no activity exists, show "No recent activity" with a subtle prompt. (d) CashFlowWidget and LiveSiteWidget no longer use Math.random() or hardcoded data. Either wire to real queries or show a clean empty state.
-   **Why this matters:** The dashboard is SiteSync's first impression. A GC opens the app and sees four KPI cards with real zeros and an empty activity feed, they think "clean, ready for my data." They see random numbers and fake names, they think "toy." This is also where the AI advantage shows: once the activity feed is real, the next step (not tonight) is adding AI insights ("RFI #12 is approaching its 14 day SLA, architect hasn't responded"). The dashboard with real data is the foundation for every AI feature that follows. It strengthens Moat 3 (workflow habituation) and Moat 5 (proprietary data) simultaneously.
+# FEEDBACK.md — 9-Day Enterprise Mission to April 15th
+*Walker returns April 15th. These priorities run in strict sequence. Each overnight run builds on the last.*
+*Last updated: April 6, 2026 by April 15th Mission Planner*
+*Standard: A Fortune 500 GC's CTO opens this and thinks "this is better than the $80K/year Procore we use."*
 
 ---
 
-## Ongoing Priorities (injected every run)
+## THE STANDARD
 
-These never clear. They represent your permanent product north star.
+This is not demo software. Demo software looks good for 10 minutes. Enterprise software is unbreakable under adversarial conditions: bad network, wrong permissions, concurrent users, unexpected input, partial failures. Every decision made this week must serve that standard.
 
-1. **Zero mock data** — The app must work with real Supabase data. If a feature requires data that doesn't exist, create the migration and seed it. Never show hardcoded names, numbers, or arrays.
-
-2. **Field first UX** — Every interaction must work for a superintendent with dirty gloves on an iPad at a jobsite with slow internet. 44px touch targets. Offline first. Fast.
-
-3. **Better than Procore on every page** — Before finishing any page, ask: "What does Procore do here? What don't they do? What should we do that they can't?" The answer goes in the implementation.
-
-4. **AI woven in, not bolted on** — Every page should have an AI insight, suggestion, or prediction that a superintendent couldn't get from Procore. Not a chat widget — contextual intelligence.
-
-5. **Never regress quality** — If you improve a metric (coverage, bundle size, error count), update .quality-floor.json. These floors never go down.
+The GC demo on April 15th is the proof point — but the bar is the CTO who presses F12, checks the Network tab, tries to break the RFI form, and asks "where are your audit logs?" Build for that person.
 
 ---
 
-## Completed (archive)
+## THE DEMO FLOW (non-negotiable, enterprise-grade)
 
-*Move items here after they're verified complete by the verifier agent.*
+Six steps. Every step runs on real data, behind real auth, with real AI, with zero console errors.
 
-- [x] 2026-04-05: Initial organism infrastructure created (SPEC.md, AGENTS.md, homeostasis.yml, etc.)
+**Step 1 — Dashboard** (`/dashboard`)
+App loads in under 3 seconds. GC sees Riverside Tower: KPI tiles (% complete, open RFIs, budget burn %, schedule float in days), real-time activity feed (last 10 actions with actor + relative timestamp), and a weather widget pulled from the `weather` edge function using the project's lat/lon. Every number is live from Supabase. The dashboard auto-refreshes when a new RFI or task is created (Supabase realtime subscription). Zero mock data. Zero console errors.
 
-## Previous Priority History
+**Step 2 — AI Copilot** (`/copilot` panel)
+Walker types "What needs attention this week?" The UI shows a streaming word-by-word response (not a spinner). The `ai-copilot` edge function fetches real project context (open RFIs, overdue tasks, budget variance, schedule risk) and passes it to the LLM. The response names real items: "RFI-047 on the electrical drawings is 3 days overdue" — not generic platitudes. Cited items render as chips that navigate to the actual record. Response streams in under 8 seconds. No mock. No hardcoded strings.
 
-### 2026-04-05 (First Run — Not Completed)
-The following priorities were set but the nightly builder had not yet run:
-1. MOCK DATA ELIMINATION (P0-1) — Carried forward and expanded with specific file list (20 files found by grep)
-2. PERMISSIONGATE ON EVERY ACTION BUTTON (P0-3) — Deprioritized for tonight. Rationale: Walker's demos will use admin login. PermissionGate is critical for enterprise sales but not for the first GC demos this week. Will be P0 priority #2 or #3 in the next run after mock data and workflows are solid.
-3. STATE MACHINE HANDLER COMPLETION (P0-6) — Carried forward, narrowed to RFI + Submittal (the two demo critical workflows). Change Order state machine is stretch goal.
+**Step 3 — RFI Workflow** (`/rfis/new` → `/rfis/:id`)
+Walker creates an RFI. Form validated with Zod before any network call. On submit: Supabase insert → state machine fires `SUBMIT` event → status transitions `draft → submitted` → `ball_in_court` updates → activity log entry written → toast confirms. Walker clicks "Mark Under Review" → `submitted → under_review`. Walker clicks "Approve" → `under_review → responded → closed`. Every transition is enforced by the XState machine; invalid transitions throw typed errors, never silently succeed. Status badge on the detail page reflects real DB state via realtime subscription.
+
+**Step 4 — Daily Log** (`/daily-logs/new`)
+Walker taps the mic (64×64px button, minimum). Recording starts with a red pulse animation. Web Speech API transcribes in real-time (word by word as Walker speaks). On stop, the transcript populates the notes field. Entry saves to `daily_logs` with transcript, date, weather snapshot, and manpower count. Appears immediately at top of log list via realtime subscription. If microphone permission is denied, a clear actionable error is shown — not a silent failure.
+
+**Step 5 — Budget** (`/budget`)
+Six-figure budget summary: original contract, approved COs, revised contract, billed to date, cost-to-complete, variance. All live from Supabase. Line items table: Category | Budgeted | Actual | Committed | Variance — with red/green coding. Recharts stacked bar chart (budgeted vs actual by category). Virtualized if > 50 rows. CSV export button. No hardcoded numbers anywhere.
+
+**Step 6 — Payment Application** (`/payment-applications/new`)
+Click "New Pay App." G702 summary pre-populates from `schedule_of_values` + `change_orders`. G703 continuation sheet renders every SOV line item: Item No | Description | Scheduled Value | Prev Billings | This Period (editable) | Stored | Total | % | Balance | Retainage. Totals auto-calculate on keystroke. "Save Draft" commits to DB. "Export PDF" generates a clean AIA-formatted PDF (not print-to-PDF — real PDF generation via `@react-pdf/renderer` or equivalent). Every SOV row pre-filled before the GC touches anything.
+
+---
+
+## Phase 1: Unbreakable Foundation (April 6–8, Runs 1–6)
+**Goal: Security, data integrity, and permission enforcement locked down. The app is safe to show to a CTO.**
+
+---
+
+### E0-1: Security Lockdown — 2am April 7 (Run 1)
+
+**Context:** A Fortune 500 CTO will have a security team. This must pass a basic audit before any demo happens.
+
+**Files:** `supabase/migrations/20260407000001_rls_fix.sql` (already deployed — verify), all `supabase/functions/*/index.ts`, `vercel.json` or `next.config.js`, `src/lib/supabase.ts`
+
+**What to do:**
+
+1. **Verify migration 20260407000001 applied cleanly:**
+   ```bash
+   npx supabase db query "SELECT version, name FROM supabase_migrations ORDER BY version DESC LIMIT 5"
+   # Must show 20260407000001 in the output with no error state
+   ```
+   If missing, apply it now: `npx supabase db push`. If it errors, read the migration file and fix the conflict — do NOT skip it.
+
+2. **Audit ALL RLS policies across all 24 tables.** Every table must have RLS enabled. The pattern for project-scoped tables is:
+   ```sql
+   -- SELECT: org members who are project members
+   CREATE POLICY "project_members_select" ON {table} FOR SELECT
+   USING (project_id IN (
+     SELECT project_id FROM org_members
+     WHERE user_id = auth.uid() AND status = 'active'
+   ));
+   -- INSERT/UPDATE/DELETE: same check + role guard
+   CREATE POLICY "project_members_mutate" ON {table} FOR ALL
+   USING (project_id IN (
+     SELECT project_id FROM org_members
+     WHERE user_id = auth.uid() AND status = 'active'
+   ));
+   ```
+   Run: `npx supabase db query "SELECT tablename, rowsecurity FROM pg_tables WHERE schemaname='public' AND rowsecurity=false"` — the result must be empty. Any table with `rowsecurity=false` is a critical vulnerability. Fix immediately.
+
+3. **Edge function auth — zero service role keys on any edge function.** Run:
+   ```bash
+   grep -r "service_role\|SERVICE_ROLE" supabase/functions/ | grep -v ".env"
+   # Must return nothing. If it returns any file, replace with user JWT pattern:
+   ```
+   Every edge function must extract the user JWT: `const token = req.headers.get('Authorization')?.replace('Bearer ', '')` and create a per-request Supabase client: `createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { global: { headers: { Authorization: \`Bearer ${token}\` } } })`. This ensures RLS applies inside edge functions.
+
+4. **Security headers via Vercel.** Add to `vercel.json`:
+   ```json
+   {
+     "headers": [
+       {
+         "source": "/(.*)",
+         "headers": [
+           { "key": "X-Frame-Options", "value": "DENY" },
+           { "key": "X-Content-Type-Options", "value": "nosniff" },
+           { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+           { "key": "Permissions-Policy", "value": "camera=(), microphone=(self), geolocation=()" },
+           { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains; preload" },
+           { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self' 'unsafe-inline'; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.open-meteo.com; img-src 'self' data: blob:; font-src 'self'; style-src 'self' 'unsafe-inline';" }
+         ]
+       }
+     ]
+   }
+   ```
+   After deploying, verify: `curl -I https://sitesync-pm.vercel.app | grep -E "x-frame|x-content|strict-transport"`
+
+5. **`src/lib/supabase.ts` must use the anon key only.** Confirm: `grep -r "SERVICE_ROLE\|service_role" src/`. Must return nothing. The anon key is public; the service role key is never in frontend code, ever.
+
+**Verify:**
+```bash
+npx supabase db query "SELECT tablename FROM pg_tables WHERE schemaname='public' AND rowsecurity=false"
+# Empty result = pass
+
+grep -rn "service_role" supabase/functions/ src/
+# No output = pass
+
+curl -I https://sitesync-pm.vercel.app 2>/dev/null | grep -c "x-frame-options\|strict-transport"
+# Must return >= 2
+```
+
+---
+
+### E0-2: PermissionGate on Every Action — 2am April 7 (Run 1, parallel with E0-1)
+
+**Files:** `src/components/PermissionGate.tsx` (create if absent), every page with action buttons
+
+**What to do:**
+
+1. Create `src/components/PermissionGate.tsx` if absent:
+   ```tsx
+   interface PermissionGateProps {
+     action: 'create' | 'update' | 'delete' | 'approve' | 'submit';
+     resource: 'rfi' | 'submittal' | 'change_order' | 'daily_log' | 'payment_application' | 'budget' | 'punch_item' | 'task';
+     projectId: string;
+     children: React.ReactNode;
+     fallback?: React.ReactNode;
+   }
+   ```
+   It reads the current user's role from `org_members` (cached in React Query with `staleTime: Infinity`). If the user lacks permission, render `fallback` (default: null — button simply disappears). Never disable buttons with a tooltip saying "you don't have permission" — hide them entirely. A GC demo user has full permissions; the component should not block anything during the demo.
+
+2. Wrap every action button on every page. Grep for unguarded buttons:
+   ```bash
+   grep -rn "<Button\|<button" src/pages/ --include="*.tsx" | grep -v "PermissionGate\|type=\"submit\"\|disabled" | head -30
+   ```
+   Every "Create RFI", "Submit", "Approve", "Delete", "Export", "Save" button must be inside `<PermissionGate>`.
+
+3. State machine transitions (RFI, Submittal, CO, etc.) must also check permissions at the machine level — in the `guard` condition of each transition event, call `canUserPerformAction(userId, role, action)`. If the guard fails, the machine logs the attempt to the audit table with `outcome: 'blocked'` and throws a typed error: `throw new PermissionError('User lacks APPROVE role for RFIs')`.
+
+**Verify:**
+```bash
+grep -rn "PermissionGate" src/pages/ --include="*.tsx" | wc -l
+# Must be >= 20 (every action button on every page)
+
+grep -rn "<Button" src/pages/ --include="*.tsx" | grep -v "PermissionGate" | grep -v "type=\"submit\"" | wc -l
+# Must be < 5 (only non-action buttons like navigation are exempt)
+```
+
+---
+
+### E0-3: Zod Validation on Every Form — 2am April 8 (Run 3)
+
+**Context:** Bad data reaching Supabase corrupts the demo. Validate at the boundary — before any network call.
+
+**Files:** `src/lib/schemas/` (create directory), every form component
+
+**What to do:**
+
+1. Create `src/lib/schemas/index.ts`. Define Zod schemas for every form:
+   ```ts
+   export const RFISchema = z.object({
+     title: z.string().min(3, 'Title must be at least 3 characters').max(200),
+     description: z.string().min(10, 'Description required').max(5000),
+     assignee_id: z.string().uuid('Invalid assignee'),
+     due_date: z.string().datetime().optional(),
+     priority: z.enum(['low', 'medium', 'high', 'critical']),
+     specification_section: z.string().max(20).optional(),
+   });
+
+   export const DailyLogSchema = z.object({
+     date: z.string().datetime(),
+     manpower_count: z.number().int().min(0).max(9999),
+     weather_condition: z.enum(['clear', 'cloudy', 'rain', 'snow', 'wind_delay']),
+     notes: z.string().max(10000).optional(),
+     transcript: z.string().max(50000).optional(),
+   });
+
+   export const ChangeOrderSchema = z.object({ /* ... */ });
+   export const SubmittalSchema = z.object({ /* ... */ });
+   export const PunchItemSchema = z.object({ /* ... */ });
+   ```
+
+2. In every form component, use `react-hook-form` with `zodResolver`:
+   ```tsx
+   const form = useForm<z.infer<typeof RFISchema>>({
+     resolver: zodResolver(RFISchema),
+     defaultValues: { priority: 'medium' },
+   });
+   ```
+   Inline field errors must appear below each field on blur. The submit button must be disabled while the form is invalid.
+
+3. **Server-side validation in edge functions:** Every edge function that accepts a POST body must also validate with Zod before touching the DB:
+   ```ts
+   const body = await req.json();
+   const parsed = RFICreateSchema.safeParse(body);
+   if (!parsed.success) {
+     return new Response(JSON.stringify({ error: parsed.error.flatten() }), { status: 422 });
+   }
+   ```
+
+**Verify:**
+```bash
+ls src/lib/schemas/index.ts
+# Must exist
+
+grep -rn "zodResolver\|z\.object" src/pages/ src/components/ --include="*.tsx" | wc -l
+# Must be >= 8 (one per major form)
+
+grep -rn "safeParse\|zodResolver" supabase/functions/ | wc -l
+# Must be >= 4 (RFI, Submittal, CO, DailyLog edge functions)
+```
+
+---
+
+### E0-4: Bulletproof Data Layer — 2am April 8 (Run 3, parallel with E0-3)
+
+**Context:** Every mutation must be atomic: validate → optimistic update → execute → rollback on error → audit log. Every list query must be bulletproof: skeleton → error boundary → empty state → real data → realtime.
+
+**Files:** `src/hooks/useMutation.ts` (create), `src/components/QueryBoundary.tsx` (create), all list hooks
+
+**What to do:**
+
+1. Create `src/hooks/useSupabaseMutation.ts` — a wrapper that enforces the mutation contract:
+   ```ts
+   async function mutate<T>(opts: {
+     optimisticUpdate?: () => void;
+     rollback?: () => void;
+     execute: () => Promise<{ data: T | null; error: PostgrestError | null }>;
+     onSuccess?: (data: T) => void;
+     auditAction: string;
+     auditResourceId: string;
+     auditResourceType: string;
+   })
+   ```
+   On execute error: call `rollback()`, show error toast with the PostgrestError message, write a failed audit entry. On success: write a success audit entry, call `onSuccess`. Every mutation in the codebase uses this wrapper — no bare `supabase.from(...).update(...)` calls in components.
+
+2. Create `src/components/QueryBoundary.tsx` — wraps every list page:
+   - `isLoading` → render `<SkeletonList rows={8} />`
+   - `isError` → render `<ErrorCard message={error.message} onRetry={refetch} />`
+   - `data.length === 0` → render `<EmptyState resource={resource} ctaTo={ctaPath} />`
+   - `data.length > 0` → render children
+   
+   Every list page (`/rfis`, `/submittals`, `/tasks`, `/daily-logs`, `/budget`, `/payment-applications`) must be wrapped in `<QueryBoundary>`.
+
+3. **React Query configuration** in `src/lib/queryClient.ts`:
+   ```ts
+   export const queryClient = new QueryClient({
+     defaultOptions: {
+       queries: {
+         staleTime: 5 * 60 * 1000,      // 5 minutes
+         gcTime: 30 * 60 * 1000,         // 30 minutes
+         retry: 3,
+         retryDelay: attempt => Math.min(1000 * 2 ** attempt, 30000),
+         refetchOnWindowFocus: false,     // prevent surprising refetches during demo
+       },
+     },
+   });
+   ```
+
+4. **Cursor-based pagination** on all list pages. Add `cursor` and `pageSize=25` to all list queries. Implement `useInfiniteQuery` with `getNextPageParam`. "Load more" button at bottom of each list — not page numbers. Current baseline likely uses `LIMIT/OFFSET` — replace it. Offset pagination breaks when rows are inserted between page loads, which happens constantly on a construction site.
+
+5. **Offline queue** — when `navigator.onLine === false`, mutations queue to `localStorage` key `sitesync_offline_queue`. On `online` event, flush the queue in order. Show a banner: "You're offline — changes will sync when reconnected." This is not a nice-to-have; field workers have spotty LTE.
+
+**Verify:**
+```bash
+grep -rn "useSupabaseMutation" src/hooks/ src/pages/ --include="*.ts" --include="*.tsx" | wc -l
+# Must be >= 10
+
+grep -rn "QueryBoundary" src/pages/ --include="*.tsx" | wc -l
+# Must be >= 8
+
+grep -rn "staleTime.*300000\|staleTime.*5 \* 60" src/lib/queryClient.ts
+# Must match
+
+grep -rn "useInfiniteQuery\|getNextPageParam" src/hooks/ --include="*.ts" | wc -l
+# Must be >= 5
+```
+
+---
+
+## Phase 2: All 9 State Machines (April 8–10, Runs 4–9)
+**Goal: Every workflow in the app is machine-enforced. Invalid transitions are impossible, not just improbable.**
+
+---
+
+### E1-1: XState 5 — All 9 Machines Working — 2am April 9 (Run 5)
+
+**Context:** 9 machines are "built" but may have gaps. This run audits and completes all 9. State machines are the backbone — without them, the app is just a form.
+
+**Files:** `src/machines/rfiMachine.ts`, `src/machines/submittalMachine.ts`, `src/machines/changeOrderMachine.ts`, `src/machines/paymentAppMachine.ts`, `src/machines/punchItemMachine.ts`, `src/machines/taskMachine.ts`, `src/machines/dailyLogMachine.ts`, `src/machines/closeoutMachine.ts`
+
+**Required states and transitions for each machine:**
+
+| Machine | States | Terminal States |
+|---|---|---|
+| RFI | draft → submitted → under_review → responded → closed | closed, void |
+| Submittal | draft → submitted → in_review → approved / rejected / revise_and_resubmit | approved, rejected |
+| Change Order | draft → submitted → under_review → approved / rejected | approved, rejected |
+| Payment App | draft → submitted → certified → paid | paid, void |
+| Punch Item | open → in_progress → completed → verified | verified, void |
+| Task | todo → in_progress → completed | completed |
+| Daily Log | draft → submitted | submitted |
+| Closeout | in_progress → items_complete → closed | closed |
+
+**For each machine, every transition must:**
+1. Have a `guard` that checks user role via `canPerform(context.userRole, event.type)` — typed, not string-matched.
+2. Have an `entry` action that calls `supabase.from(table).update({ status, ball_in_court, updated_at })`.
+3. Have an `entry` action that writes to `audit_log`: `{ resource_type, resource_id, action, actor_id, from_state, to_state, timestamp }`.
+4. Have an `entry` action that calls the `notify` service to create a notification for the new ball-in-court owner.
+5. Throw a `InvalidTransitionError` (typed) if the guard fails — never silently return without doing anything.
+
+**Unit tests — each machine needs a test file `src/machines/__tests__/{name}Machine.test.ts`:**
+```ts
+describe('rfiMachine', () => {
+  it('transitions draft → submitted on SUBMIT event', () => { ... });
+  it('rejects APPROVE from draft state', () => { ... });
+  it('transitions through full happy path to closed', () => { ... });
+  it('writes audit entry on each transition', () => { ... });
+});
+```
+
+**Verify:**
+```bash
+ls src/machines/*.ts | wc -l
+# Must be >= 8
+
+grep -rn "InvalidTransitionError\|guard.*canPerform" src/machines/ | wc -l
+# Must be >= 20
+
+ls src/machines/__tests__/ | wc -l
+# Must be >= 8
+
+npm test src/machines/ -- --run 2>&1 | tail -5
+# Must show all tests passing
+```
+
+---
+
+### E1-2: RFI and Submittal Machines — UI Wired — 2am April 10 (Run 7)
+
+**Files:** `src/pages/RFIDetail.tsx`, `src/pages/SubmittalDetail.tsx`, `src/components/WorkflowTimeline.tsx` (create)
+
+**What to do:**
+
+1. Create `src/components/WorkflowTimeline.tsx` — a reusable horizontal stepper that renders all states of a machine, highlights the current state, and marks completed states with a checkmark. Used by RFI, Submittal, CO detail pages.
+
+2. `src/pages/RFIDetail.tsx`:
+   - Top: `<WorkflowTimeline states={rfiStates} current={rfi.status} />`
+   - Ball-in-court banner: bold name, role, avatar. Updates via realtime subscription on `rfis` table for this row.
+   - Action buttons: computed from machine's available events for current state. A `draft` RFI shows only "Submit." A `submitted` RFI shows only "Mark Under Review." Never show unavailable transitions.
+   - Clicking an action button fires the machine event, optimistically updates the UI, and persists to DB. If DB write fails, machine rolls back to previous state and shows error toast.
+   - Activity feed at bottom: all `audit_log` entries for this RFI, newest first.
+
+3. `src/pages/SubmittalDetail.tsx`: same pattern. The `revise_and_resubmit` state is critical — when a submittal is sent back, show a prominent yellow banner: "Revisions Required — See Comments." The new submission resets the review cycle.
+
+**Verify:**
+```bash
+grep -rn "WorkflowTimeline" src/pages/ src/components/ | wc -l
+# Must be >= 3
+
+grep -rn "useMachine\|useActor\|interpret" src/pages/RFIDetail.tsx src/pages/SubmittalDetail.tsx | wc -l
+# Must be >= 2
+
+# Manual: create RFI, walk to closed state, verify audit_log has 5 entries (one per transition)
+npx supabase db query "SELECT action, from_state, to_state FROM audit_log WHERE resource_type='rfi' ORDER BY created_at DESC LIMIT 10"
+```
+
+---
+
+## Phase 3: World-Class AI (April 10–11, Runs 8–11)
+**Goal: The AI Copilot is smarter than anything a GC has seen in a construction PM tool.**
+
+---
+
+### E2-1: Streaming AI Copilot — 2am April 10 (Run 8)
+
+**Files:** `supabase/functions/ai-copilot/index.ts`, `src/hooks/useCopilotStream.ts` (create), `src/components/CopilotPanel.tsx`
+
+**What to do:**
+
+1. **Streaming response in `ai-copilot` edge function.** The function must use Server-Sent Events:
+   ```ts
+   const stream = await openai.chat.completions.create({
+     model: 'gpt-4o',
+     stream: true,
+     messages: [systemMessage, ...conversationHistory, userMessage],
+   });
+   const encoder = new TextEncoder();
+   const readable = new ReadableStream({
+     async start(controller) {
+       for await (const chunk of stream) {
+         const text = chunk.choices[0]?.delta?.content ?? '';
+         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text })}\n\n`));
+       }
+       controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+       controller.close();
+     },
+   });
+   return new Response(readable, { headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' } });
+   ```
+
+2. **System prompt must include real project context.** Before calling the LLM, fetch:
+   - Open RFIs (title, number, days open, assignee)
+   - Overdue tasks (title, due date, days overdue)
+   - Budget: total variance, categories in the red
+   - Schedule: tasks starting this week, any float < 3 days
+   - Last 5 daily log entries (summary)
+   Build a structured system prompt: "You are SiteSync AI, the project intelligence for [Project Name], a $[Contract Value] construction project. Current status: [% complete]. Critical items: [list]. Answer questions about this project using only the data below..."
+
+3. **`src/hooks/useCopilotStream.ts`** — reads the SSE stream and appends tokens to a `React.useState` string, triggering re-render on each token. API: `{ messages, sendMessage, isStreaming, error }`.
+
+4. **`src/components/CopilotPanel.tsx`** — renders the streaming response word-by-word. Shows a blinking cursor while `isStreaming`. Renders `cited_items` as chips after `[DONE]`. Input bar uses `env(safe-area-inset-bottom)` padding so iOS keyboard doesn't cover it.
+
+**Verify:**
+```bash
+grep -rn "ReadableStream\|text/event-stream" supabase/functions/ai-copilot/index.ts
+# Must find streaming setup
+
+grep -rn "useCopilotStream\|isStreaming" src/components/CopilotPanel.tsx
+# Must find streaming hook usage
+
+# Manual: ask "What are the 3 biggest risks on Riverside Tower?" — response must stream word-by-word, not pop in all at once
+# Response must mention at least 2 actual items by name from the DB
+```
+
+---
+
+### E2-2: AI Insights and Schedule Risk — 2am April 11 (Run 9)
+
+**Files:** `supabase/functions/ai-insights/index.ts` (create), `supabase/functions/ai-schedule-risk/index.ts` (create), `src/components/InsightsBanner.tsx` (create)
+
+**What to do:**
+
+1. **`ai-insights` edge function** — called on dashboard load (cached with `staleTime: 15min`). Fetches the same context as ai-copilot. Returns:
+   ```json
+   {
+     "insights": [
+       { "type": "budget_risk", "severity": "high", "message": "MEP category is 12% over budget", "action_url": "/budget?category=mep" },
+       { "type": "schedule_risk", "severity": "medium", "message": "3 tasks on critical path are delayed", "action_url": "/schedule" },
+       { "type": "rfi_backlog", "severity": "low", "message": "7 RFIs have been open > 14 days", "action_url": "/rfis?filter=overdue" }
+     ]
+   }
+   ```
+
+2. **`ai-schedule-risk` edge function** — analyzes tasks with `is_critical_path=true` and computes: `{ overallRiskScore: 0-100, confidenceInterval: [low, high], topRisks: [...], predictedCompletionDate, scheduledCompletionDate }`. Uses simple heuristic scoring (days of float, number of delayed predecessors, resource conflicts) if full CPM data isn't available.
+
+3. **`src/components/InsightsBanner.tsx`** — rendered at top of Dashboard below the header. Shows 1–3 insight pills with color-coded severity. Clicking navigates to `action_url`. Dismissible per session (stored in `sessionStorage`).
+
+**Verify:**
+```bash
+ls supabase/functions/ai-insights/index.ts
+ls supabase/functions/ai-schedule-risk/index.ts
+
+# Test ai-insights returns structured data
+curl -s -X POST https://[your-project].supabase.co/functions/v1/ai-insights \
+  -H "Authorization: Bearer [anon-key]" \
+  -H "Content-Type: application/json" \
+  -d '{"projectId":"[riverside-tower-id]"}' | jq '.insights | length'
+# Must return >= 1
+```
+
+---
+
+## Phase 4: Performance and Real-Time (April 11–13, Runs 10–15)
+**Goal: The app is visibly faster than Procore. Real-time updates happen without page refresh.**
+
+---
+
+### E3-1: Lighthouse > 90 and Bundle Size < 250KB — 2am April 12 (Run 11)
+
+**Files:** `src/main.tsx`, `vite.config.ts`, all heavy page components
+
+**What to do:**
+
+1. **Code splitting** — every page not in the critical path (the 6 demo pages) must be lazy-loaded:
+   ```ts
+   const DrawingsPage = React.lazy(() => import('./pages/Drawings'));
+   const BIMPage = React.lazy(() => import('./pages/BIM'));
+   const ReportsPage = React.lazy(() => import('./pages/Reports'));
+   const AdminPage = React.lazy(() => import('./pages/Admin'));
+   ```
+   The 6 demo pages (Dashboard, Copilot, RFI, DailyLog, Budget, PayApp) are eagerly imported.
+
+2. **Virtualization** — any list with potential for > 50 rows must use `@tanstack/react-virtual`. This includes: RFI list, Submittal log, Task list, Budget line items, SOV rows in pay app, Punch item list. Pattern:
+   ```tsx
+   const rowVirtualizer = useVirtualizer({ count: items.length, getScrollElement: () => parentRef.current, estimateSize: () => 56 });
+   ```
+
+3. **`React.memo` on all widget/card components.** `useMemo` on all computed values (budget totals, KPI calculations, sorted/filtered lists). Rule: if a component re-renders when its props haven't changed, add `memo`. If a value is recomputed on every render, add `useMemo`.
+
+4. **Image optimization.** All images in `public/`: convert to WebP, max 200KB. Add `loading="lazy"` and `width`/`height` attributes to every `<img>`. Add `fetchpriority="high"` to the hero/logo image only.
+
+5. **`homeostasis.yml` bundle guard** (if the CI config exists):
+   ```yaml
+   bundle:
+     max_chunk_kb: 250
+     fail_on_exceed: true
+   ```
+
+**Verify:**
+```bash
+npm run build
+ls -lh dist/assets/*.js | awk '{print $5, $9}' | sort -rh | head -10
+# No file > 250KB
+
+npx lighthouse https://sitesync-pm.vercel.app/dashboard --only-categories=performance --output=json 2>/dev/null | jq '.categories.performance.score * 100'
+# Must be >= 90
+```
+
+---
+
+### E3-2: Real-Time Subscriptions on All 6 Demo Resources — 2am April 12 (Run 11, parallel with E3-1)
+
+**Files:** `src/hooks/useRealtimeSubscription.ts` (create), all data hooks
+
+**What to do:**
+
+1. Create `src/hooks/useRealtimeSubscription.ts`:
+   ```ts
+   export function useRealtimeSubscription<T>(
+     table: string,
+     filter: string, // e.g. "project_id=eq.{id}"
+     onInsert?: (record: T) => void,
+     onUpdate?: (record: T) => void,
+     onDelete?: (record: { id: string }) => void,
+   )
+   ```
+   Uses `supabase.channel(...).on('postgres_changes', ...)`. Cleanup on unmount: `return () => supabase.removeChannel(channel)`.
+
+2. Wire realtime to the 6 demo resources:
+   - **Dashboard KPI tiles**: subscribe to `rfis`, `tasks`, `budget_line_items` for the project. On any change, invalidate the `dashboardKpis` query key.
+   - **RFI list**: subscribe to `rfis`. On INSERT, prepend to list. On UPDATE, update the row in place.
+   - **RFI detail**: subscribe to `rfis` for this `id`. On UPDATE, update `status`, `ball_in_court` in the UI immediately.
+   - **Daily log list**: subscribe to `daily_logs`. On INSERT, prepend new entry.
+   - **Budget**: subscribe to `budget_line_items`. On UPDATE, recalculate totals.
+   - **Activity feed**: subscribe to `audit_log`. On INSERT, prepend new activity item.
+
+3. **Notification toasts** — when a realtime event affects the current user:
+   - `rfis` UPDATE where `ball_in_court = currentUser.id` → toast: "RFI-047 is now in your court — action required."
+   - `submittals` UPDATE where `status = 'approved'` → toast: "Submittal S-023 has been approved."
+   - `tasks` UPDATE where `assignee_id = currentUser.id AND status = 'overdue'` → toast: "Task overdue: [title]."
+
+**Verify:**
+```bash
+grep -rn "useRealtimeSubscription" src/hooks/ src/pages/ | wc -l
+# Must be >= 6
+
+# Manual: open /rfis in two browser tabs. Create a new RFI in Tab 1. Verify it appears in Tab 2 within 2 seconds without refresh.
+```
+
+---
+
+## Phase 5: Enterprise Polish (April 13–14, Runs 13–18)
+**Goal: The product looks like it was built by a team of 50. Not a startup prototype.**
+
+---
+
+### E4-1: Complete PDF Export — 2am April 13 (Run 13)
+
+**Files:** `src/lib/pdf/`, `src/components/PDFExport.tsx`
+**Package:** `@react-pdf/renderer` (install if not present: `npm install @react-pdf/renderer`)
+
+**What to do:**
+
+1. Build PDF templates for the 4 documents GCs care about:
+   - **RFI PDF** (`src/lib/pdf/RFIDocument.tsx`): RFI number, title, project, submitted by, date, description, response, attachments list. Company logo in header. AIA-style formatting.
+   - **Daily Log PDF** (`src/lib/pdf/DailyLogDocument.tsx`): Date, weather, manpower breakdown by trade, work performed (transcript), equipment, safety incidents, photos list.
+   - **Payment Application PDF** (`src/lib/pdf/PaymentAppDocument.tsx`): AIA G702 summary page + G703 continuation sheet. All totals. Signature line.
+   - **Submittal Transmittal PDF** (`src/lib/pdf/SubmittalDocument.tsx`): submittal number, spec section, description, revision, status, action stamps.
+
+2. Each PDF template uses `@react-pdf/renderer` `<Document>`, `<Page>`, `<View>`, `<Text>`, `<Image>`. The download button uses `pdf(Document).toBlob()` → `URL.createObjectURL()` → programmatic `<a>` click.
+
+3. Print styles for all 6 demo pages (`@media print` in global CSS): hide navigation, hide action buttons, expand tables to full width. GCs sometimes just print — this must look professional.
+
+**Verify:**
+```bash
+ls src/lib/pdf/*.tsx | wc -l
+# Must be >= 4
+
+grep -rn "react-pdf\|@react-pdf" src/lib/pdf/ | wc -l
+# Must be >= 4
+
+# Manual: open an RFI detail page, click "Export PDF", verify a clean AIA-formatted PDF downloads
+```
+
+---
+
+### E4-2: Audit Trail Page — 2am April 13 (Run 13, parallel with E4-1)
+
+**Files:** `src/pages/AuditTrail.tsx` (create), `src/hooks/useAuditLog.ts`
+**Supabase table:** `audit_log` (`id`, `resource_type`, `resource_id`, `resource_title`, `action`, `actor_id`, `actor_name`, `from_state`, `to_state`, `ip_address`, `user_agent`, `outcome`, `created_at`)
+
+**What to do:**
+
+1. Ensure every state machine transition writes to `audit_log` (verify from E1-1 work).
+2. Ensure `useSupabaseMutation` wrapper (from E0-4) also writes to `audit_log` for all mutations (create, update, delete) — not just state transitions.
+3. Build `src/pages/AuditTrail.tsx`:
+   - Filterable by: resource type, actor, date range, outcome (success/blocked)
+   - Columns: Timestamp | Actor | Action | Resource | From → To State | Outcome
+   - Export to CSV button
+   - Virtualized (can have thousands of rows)
+   - Accessible at `/audit-trail` for admin roles only (PermissionGate with `role: 'admin'`)
+4. The audit trail is what a CTO asks for when evaluating enterprise software. "Can you show me every action taken on this project in the last 30 days?" — answer must be yes, immediately.
+
+**Verify:**
+```bash
+ls src/pages/AuditTrail.tsx
+grep -rn "audit_log" src/hooks/ supabase/functions/ src/machines/ | wc -l
+# Must be >= 15 — audit log written from many places
+
+# Manual: perform 10 actions (create RFI, submit, approve, create daily log, etc.), then open /audit-trail, verify all 10 appear with correct actor and timestamp
+```
+
+---
+
+### E4-3: Accessibility and Keyboard Navigation — 2am April 14 (Run 15)
+
+**Context:** Fortune 500 companies require WCAG 2.1 AA compliance. This is not optional.
+
+**What to do:**
+
+1. **Keyboard navigation** — open the app, press Tab repeatedly. Every interactive element must receive focus in logical order. Focus indicator must be visible (2px solid outline in brand color). Run axe DevTools on all 6 demo pages. Fix all critical and serious violations.
+
+2. **Focus trapping in modals** — when a modal opens, focus must move to the first interactive element inside it. Tab must cycle within the modal only (use `focus-trap-react` or equivalent). When modal closes, focus returns to the triggering element.
+
+3. **ARIA labels** — every icon-only button must have `aria-label`. Every status badge must have `role="status"` and `aria-label="Status: Under Review"`. Every form field must have a visible `<label>` (not just a placeholder).
+
+4. **Page titles and breadcrumbs** — every page must set `document.title` to: "RFI-047: Electrical Drawings — Riverside Tower | SiteSync PM". Every page below the top level must have a breadcrumb: `Projects > Riverside Tower > RFIs > RFI-047`.
+
+5. **404 and 500 pages** — `src/pages/NotFound.tsx` and `src/pages/ServerError.tsx` must exist, match the design system, and include navigation back to Dashboard. Do not use default Vite/Next error pages.
+
+**Verify:**
+```bash
+grep -rn "aria-label\|role=\"status\"\|role=\"alert\"" src/components/ src/pages/ --include="*.tsx" | wc -l
+# Must be >= 30
+
+grep -rn "document.title\|<title>" src/pages/ --include="*.tsx" | wc -l
+# Must be >= 12 (one per page)
+
+ls src/pages/NotFound.tsx src/pages/ServerError.tsx
+# Must both exist
+
+# Manual: tab through the RFI create form with keyboard only. Complete and submit the form without touching a mouse.
+```
+
+---
+
+### E4-4: iPad Responsive — Final Polish — 2am April 14 (Run 15, parallel with E4-3)
+
+**The GC demo will be on an iPad Air. This is non-negotiable.**
+
+**What to do:**
+
+1. **Every demo page at 768×1024 (portrait) and 1024×768 (landscape):**
+   - No horizontal scroll on any page.
+   - All inputs use `font-size: 16px` minimum (iOS Safari auto-zooms inputs below 16px — this destroys the demo).
+   - All tap targets: minimum 44×44px (WCAG 2.5.5). The mic button on Daily Log: minimum 64×64px.
+   - No content hidden behind the iOS safe area (use `env(safe-area-inset-*)` padding).
+   - G703 table: `<div class="overflow-x-auto">` wrapper with snap scrolling. Sticky first column (description).
+
+2. **Navigation:** sidebar collapses to a bottom tab bar on screens < 1024px. Bottom tabs: Dashboard, RFIs, Daily Log, Budget, More. "More" reveals the full nav in a sheet. One-thumb reachability is essential.
+
+3. **Copilot input:** pinned to bottom above the keyboard when iOS keyboard is open. Use `visualViewport` resize event to adjust position: when `window.visualViewport.height < window.innerHeight * 0.7`, the keyboard is open — shift the input up by `window.innerHeight - window.visualViewport.height`.
+
+4. **Swipe gestures** on list pages: swipe left on an RFI row to reveal "Quick Actions" (Submit, Assign). Use `@use-gesture/react` or CSS `touch-action`. This is a GC wow moment — feels native.
+
+**Verify:**
+```bash
+# All inputs >= 16px font size
+grep -rn "fontSize.*1[0-5]px\|text-xs\|text-sm" src/pages/ --include="*.tsx" | grep "input\|textarea" | wc -l
+# Must return 0
+
+# Manual: Chrome DevTools → iPad Air (768x1024) → run all 6 demo steps → zero horizontal scroll
+# Manual: test Copilot input visibility when virtual keyboard is open
+```
+
+---
+
+### E4-5: Final Quality Gates — 2am April 14 (Run 17)
+
+**What to do:**
+
+1. **ESLint to zero errors.** Current baseline: 1,379. Run `npm run lint --fix` to handle auto-fixable violations. Remaining errors: fix manually. Do NOT use `eslint-disable` comments unless the rule is a false positive and the comment includes a clear explanation. Target: 0 errors.
+
+2. **TypeScript strict mode.** `tsconfig.json` must have `"strict": true`. Zero `@ts-ignore` or `@ts-expect-error` without a comment explaining why. Zero implicit `any`.
+
+3. **Test coverage to 75%.** Write tests for anything uncovered. Priority:
+   - `src/machines/__tests__/` — all 9 machines, all happy paths and all guard rejections
+   - `src/hooks/__tests__/` — all data hooks, mocking Supabase
+   - `src/lib/schemas/__tests__/` — all Zod schemas, valid and invalid inputs
+   - `src/components/__tests__/` — QueryBoundary, PermissionGate, WorkflowTimeline
+
+4. **`SPEC.md` checkoff sweep.** Grep every unchecked criterion. Check off everything that is now verifiably complete. Add `<!-- verified: April 14 via [method] -->` comments. Count: should be substantially higher than the 0/431 baseline.
+
+5. **`LEARNINGS.md` update.** Record: every migration run this week, every Supabase secrets change, every Vercel env var added, every non-obvious pattern discovered, every bug that bit you and how you fixed it. Future sessions depend on this.
+
+**Verify:**
+```bash
+npm run lint 2>&1 | grep " error " | wc -l
+# Must return 0
+
+npm run build 2>&1 | grep "error TS" | wc -l
+# Must return 0
+
+npm test -- --coverage --run 2>&1 | grep "Statements" | grep -oE "[0-9]+\.[0-9]+" | head -1
+# Must be >= 75
+
+grep -c "\- \[x\]" SPEC.md
+# Log this number in LEARNINGS.md
+```
+
+---
+
+## Ongoing Rules (apply to every session, every run)
+
+**Session startup (non-negotiable — takes 5 minutes, saves hours):**
+```bash
+# 1. Read AGENTS.md — defines constraints and tooling
+cat AGENTS.md
+
+# 2. Read LEARNINGS.md migration safety section
+cat LEARNINGS.md
+
+# 3. Understand what yesterday's session did
+git log --oneline -10
+git diff HEAD~1 --stat
+
+# 4. Check current quality floor
+npm run build 2>&1 | tail -5
+npm run lint 2>&1 | grep " error " | wc -l
+npm test -- --run 2>&1 | tail -5
+```
+Never skip this. The organism has no memory. This is its memory.
+
+**Database migrations — iron rules:**
+- `ls supabase/migrations/ | sort` before writing any migration. Read the last 3.
+- Every migration is idempotent: `CREATE TABLE IF NOT EXISTS`, `DROP POLICY IF EXISTS` before `CREATE POLICY`, `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`.
+- Never drop a column with data. Add → migrate → verify → drop in a later migration.
+- Test locally first: `npx supabase start && npx supabase db reset`. If it fails locally, it will fail in production.
+- Migration 20260407000001 is the RLS fix. Do not modify it. Build on top of it.
+
+**Mock data — zero tolerance after April 8th:**
+- After 2am April 8, if any of the 6 demo pages shows a value from `MOCK_`, `demoData`, a hardcoded constant, or a `TODO` comment — it is a blocking bug. Seed the database instead.
+- Mocks are acceptable only in unit test files (`*.test.ts`, `*.spec.ts`).
+
+**Edge functions — security contract:**
+- Every edge function: extract user JWT from `Authorization` header, create per-request Supabase client with that JWT, never use the service role key.
+- Every edge function: validate request body with Zod before touching any DB.
+- Every edge function: return typed error responses: `{ error: { code: string, message: string, details?: unknown } }` with appropriate HTTP status codes (422 for validation, 401 for auth, 403 for permissions, 500 for unexpected).
+
+**Commits and deployments:**
+- Every 2am run pushes to `main`. Vercel auto-deploys. After push: `curl -s -o /dev/null -w "%{http_code}" https://sitesync-pm.vercel.app/dashboard` must return `200`. Log in LEARNINGS.md.
+- If the build fails: fix the build before ending the session. A broken deployment is worse than no deployment — the GC could open the URL before April 15th.
+
+**Quality gates before every commit:**
+```bash
+npm run build        # Zero TS errors
+npm run lint         # Zero errors (by April 14)
+npm test -- --run    # Zero regressions
+npx tsc --noEmit     # Belt and suspenders TS check
+```
+
+---
+
+## April 15th Readiness Check
+
+The final 2am run on April 14th must execute this script and achieve exit code 0. Save as `scripts/demo-readiness-check.sh`.
+
+```bash
+#!/bin/bash
+# SiteSync PM — April 15th Enterprise Readiness Check
+# Exit 0 = ready. Exit 1 = DO NOT DEMO.
+
+set -euo pipefail
+PASS=0; FAIL=0
+PROD_URL="https://sitesync-pm.vercel.app"
+
+check() {
+  local desc="$1" cmd="$2" expect="$3"
+  local result; result=$(eval "$cmd" 2>&1) || true
+  if echo "$result" | grep -qE "$expect"; then
+    echo "  ✓  $desc"; PASS=$((PASS+1))
+  else
+    echo "  ✗  FAIL: $desc"
+    echo "     Expected pattern: $expect"
+    echo "     Got: $(echo "$result" | head -3)"
+    FAIL=$((FAIL+1))
+  fi
+}
+
+echo ""; echo "╔══════════════════════════════════════════════╗"
+echo "║  SITESYNC PM — APRIL 15TH READINESS CHECK    ║"
+echo "║  $(date '+%Y-%m-%d %H:%M:%S %Z')                    ║"
+echo "╚══════════════════════════════════════════════╝"; echo ""
+
+echo "── BUILD & TYPES ──────────────────────────────"
+check "TypeScript: zero errors"        "npm run build 2>&1 | grep -c 'error TS' || echo 0" "^0$"
+check "ESLint: zero errors"            "npm run lint 2>&1 | grep -c ' error ' || echo 0"   "^0$"
+check "Test suite: all passing"        "npm test -- --run 2>&1 | grep -E 'passed|Tests'" "passed"
+check "Coverage >= 75%"                "npm test -- --coverage --run 2>&1 | grep 'Statements' | grep -oE '[0-9]+\.[0-9]+' | head -1" "^[7-9][0-9]\|^100"
+
+echo ""; echo "── SECURITY ───────────────────────────────────"
+check "No service_role in functions"   "grep -r 'service_role' supabase/functions/ | wc -l"        "^0$"
+check "No service_role in src"         "grep -r 'SERVICE_ROLE' src/ | wc -l"                       "^0$"
+check "RLS enabled on all tables"      "npx supabase db query \"SELECT COUNT(*) FROM pg_tables WHERE schemaname='public' AND rowsecurity=false\"" "^0$"
+check "Security headers deployed"      "curl -sI $PROD_URL | grep -ci 'x-frame-options'"            "^[1-9]"
+
+echo ""; echo "── DATABASE ───────────────────────────────────"
+check "Riverside Tower project"        "npx supabase db query \"SELECT COUNT(*) FROM projects WHERE slug='riverside-tower'\"" "^1$"
+check "SOV >= 12 line items"           "npx supabase db query \"SELECT COUNT(*) FROM schedule_of_values WHERE project_id=(SELECT id FROM projects WHERE slug='riverside-tower')\"" "^1[2-9]\|^[2-9][0-9]"
+check "Budget line items >= 8"         "npx supabase db query \"SELECT COUNT(*) FROM budget_line_items WHERE project_id=(SELECT id FROM projects WHERE slug='riverside-tower')\"" "^[89]\|^[1-9][0-9]"
+check "Demo user in org_members"       "npx supabase db query \"SELECT COUNT(*) FROM org_members WHERE user_id=(SELECT id FROM auth.users WHERE email='demo@sitesync.app')\"" "^[1-9]"
+check "Audit log table populated"      "npx supabase db query \"SELECT COUNT(*) FROM audit_log WHERE created_at > now() - interval '7 days'\"" "^[1-9][0-9]"
+
+echo ""; echo "── MOCK DATA AUDIT ────────────────────────────"
+MOCK_COUNT=$(grep -rn "MOCK_\|mockData\|hardcoded\|TODO.*data" \
+  src/pages/Dashboard.tsx src/pages/Budget.tsx \
+  src/pages/RFICreate.tsx src/pages/RFIDetail.tsx \
+  src/pages/DailyLogNew.tsx src/pages/PaymentApplicationNew.tsx \
+  src/components/CopilotPanel.tsx 2>/dev/null | wc -l || echo 0)
+if [ "$MOCK_COUNT" -eq 0 ]; then
+  echo "  ✓  No mock data in demo pages"; PASS=$((PASS+1))
+else
+  echo "  ✗  FAIL: $MOCK_COUNT mock data references found in demo pages"; FAIL=$((FAIL+1))
+fi
+
+echo ""; echo "── EDGE FUNCTIONS ─────────────────────────────"
+check "ai-copilot function"       "ls supabase/functions/ai-copilot/index.ts"          "index.ts"
+check "ai-insights function"      "ls supabase/functions/ai-insights/index.ts"         "index.ts"
+check "ai-schedule-risk function" "ls supabase/functions/ai-schedule-risk/index.ts"    "index.ts"
+check "weather function"          "ls supabase/functions/weather/index.ts"             "index.ts"
+check "transcribe function"       "ls supabase/functions/transcribe/index.ts"          "index.ts"
+check "AI copilot streams"        "grep -c 'text/event-stream' supabase/functions/ai-copilot/index.ts" "^[1-9]"
+
+echo ""; echo "── STATE MACHINES ─────────────────────────────"
+for machine in rfi submittal changeOrder paymentApp punchItem task dailyLog closeout; do
+  file="src/machines/${machine}Machine.ts"
+  check "$machine machine exists" "ls $file" ".ts"
+done
+check "All machines have audit entry action" "grep -rl 'audit_log' src/machines/ | wc -l" "^[89]\|^[1-9][0-9]"
+check "Machine unit tests all pass"          "npm test src/machines/ -- --run 2>&1 | grep 'passed'" "passed"
+
+echo ""; echo "── ARCHITECTURE ───────────────────────────────"
+check "PermissionGate used >= 20x"       "grep -rn 'PermissionGate' src/pages/ --include='*.tsx' | wc -l"     "^[2-9][0-9]\|^[1-9][0-9][0-9]"
+check "Zod schemas present"              "ls src/lib/schemas/index.ts"                                          "index.ts"
+check "React Query config present"       "grep -c 'staleTime.*300000' src/lib/queryClient.ts"                  "^[1-9]"
+check "Realtime subscriptions present"   "grep -rn 'useRealtimeSubscription' src/ | wc -l"                     "^[6-9]\|^[1-9][0-9]"
+check "Audit trail page exists"          "ls src/pages/AuditTrail.tsx"                                          ".tsx"
+check "PDF templates present"            "ls src/lib/pdf/*.tsx | wc -l"                                         "^[4-9]"
+check "404 page exists"                  "ls src/pages/NotFound.tsx"                                            ".tsx"
+
+echo ""; echo "── PRODUCTION HEALTH ──────────────────────────"
+HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$PROD_URL/dashboard")
+check "Dashboard returns HTTP 200"  "echo $HTTP_STATUS"  "^200$"
+
+echo ""
+echo "╔══════════════════════════════════════════════╗"
+printf  "║  RESULTS: %3d passed · %3d failed             ║\n" $PASS $FAIL
+echo "╚══════════════════════════════════════════════╝"
+
+if [ $FAIL -gt 0 ]; then
+  echo ""
+  echo "  ✗  ENTERPRISE DEMO NOT READY — $FAIL checks failed."
+  echo "     A Fortune 500 CTO will find these gaps."
+  echo "     Fix all failures before Walker returns."
+  exit 1
+else
+  echo ""
+  echo "  ✓  ALL CHECKS PASSED."
+  echo "  ✓  Enterprise-grade. CTO-ready. Ship it."
+  echo "  Walker returns tomorrow. The product is ready."
+  exit 0
+fi
+```
+
+**Manual checks — organism logs results in `LEARNINGS.md` on April 14th morning:**
+
+- [ ] Load `https://sitesync-pm.vercel.app/dashboard` on physical iPad Air. No horizontal scroll. All KPI tiles load with real data in < 3 seconds.
+- [ ] Press F12 in Chrome on any demo page. Zero red console errors during the full 6-step demo flow.
+- [ ] Run the full 6-step demo from start to finish without touching developer tools. Under 8 minutes.
+- [ ] Ask AI Copilot "What are the top 3 risks on Riverside Tower?" Verify streaming response names 3 real items from the database.
+- [ ] Create an RFI from scratch, walk it to `closed` state. Open Supabase Studio → `audit_log`. Verify 5 rows appear for that RFI with correct `from_state → to_state`.
+- [ ] Open `/audit-trail`. Verify it shows the last 30 days of all actions with correct actors, timestamps, and outcomes.
+- [ ] Click "Export PDF" on an RFI detail page. Verify a clean, AIA-formatted PDF downloads with no blank fields.
+- [ ] Tab through the RFI create form with keyboard only. Complete and submit without touching a mouse.
+- [ ] Temporarily disconnect WiFi on the iPad. Attempt to create an RFI. Verify offline banner appears. Reconnect. Verify RFI syncs automatically.
+- [ ] Open the app as a user with read-only role. Verify all action buttons (Submit, Approve, Delete) are hidden — not disabled, hidden.
+
+---
+
+*Mission complete when `bash scripts/demo-readiness-check.sh` exits 0 and all manual checks pass.*
+*Walker doesn't need a demo. He needs enterprise software. Build accordingly.*
