@@ -1,1 +1,152 @@
+name: Agent Swarm — Parallel Build
 
+# Swarm runs at 8am (test wave) and 2pm (polish wave) CDT
+# Nightly-build handles 2am implement wave
+on:
+  schedule:
+    - cron: '0 13 * * *'   # 8:00 AM CDT — testing wave
+    - cron: '0 19 * * *'   # 2:00 PM CDT — polish wave
+  workflow_dispatch:
+    inputs:
+      agents:
+        description: 'Agents: all | alpha,beta,gamma,delta,echo'
+        default: 'all'
+      wave:
+        description: 'Wave: test | polish | implement | verify'
+        default: 'test'
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  wave-setup:
+    name: "Setup"
+    runs-on: ubuntu-latest
+    outputs:
+      wave: ${{ steps.config.outputs.wave }}
+      agents: ${{ steps.config.outputs.agents }}
+    steps:
+      - id: config
+        run: |
+          HOUR=$(date -u +%H)
+          INPUT_WAVE="${{ github.event.inputs.wave }}"
+          INPUT_AGENTS="${{ github.event.inputs.agents }}"
+          if [ -n "$INPUT_WAVE" ]; then WAVE="$INPUT_WAVE"
+          elif [ "$HOUR" -eq "13" ]; then WAVE="test"
+          else WAVE="polish"; fi
+          if [ "$INPUT_AGENTS" = "all" ] || [ -z "$INPUT_AGENTS" ]; then
+            AGENTS='["alpha","beta","gamma","delta","echo"]'
+          else
+            AGENTS=$(python3 -c "import sys,json; print(json.dumps('$INPUT_AGENTS'.split(',')))")
+          fi
+          echo "wave=$WAVE" >> $GITHUB_OUTPUT
+          echo "agents=$AGENTS" >> $GITHUB_OUTPUT
+
+  agent:
+    name: "Agent ${{ matrix.agent }}"
+    needs: wave-setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      matrix:
+        agent: ${{ fromJson(needs.wave-setup.outputs.agents) }}
+      max-parallel: 5
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+          ref: main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - run: rm -f package-lock.json && npm install
+      - run: npm install -g @anthropic-ai/claude-code
+
+      - name: Configure git
+        run: |
+          git config user.name "SiteSync Agent ${{ matrix.agent }}"
+          git config user.email "agent-${{ matrix.agent }}@sitesync.ai"
+
+      - name: Create isolated branch
+        run: |
+          BRANCH="auto/${{ matrix.agent }}-$(date +%Y%m%d-%H%M)"
+          git checkout -b "$BRANCH"
+          echo "BRANCH=$BRANCH" >> $GITHUB_ENV
+
+      - name: Run agent
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        run: |
+          AGENT="${{ matrix.agent }}"
+          WAVE="${{ needs.wave-setup.outputs.wave }}"
+          FEEDBACK=$(cat FEEDBACK.md 2>/dev/null | head -30 || echo "")
+          TONIGHT=$(cat TONIGHT.md 2>/dev/null | grep "^## TONIGHT:" | head -1 | sed 's/## TONIGHT: //' || echo "general improvement")
+          ASSIGNMENTS=$(grep -A 50 "## Agent $(python3 -c "print('$AGENT'.capitalize())")" MODULE_ASSIGNMENTS.md 2>/dev/null | head -50 || echo "Work on any file that needs improvement in your domain")
+
+          case "$WAVE" in
+            "test")     MISSION="Write unit tests (Vitest) for untested code in your module assignments. Do NOT change implementation. Target 70% coverage." ;;
+            "polish")   MISSION="Polish wave: fix accessibility (axe-core), add loading skeletons, improve empty states, fix mobile responsiveness. V7 rules apply: read v7-prompts/V7-00_SYSTEM_CONTEXT.md first." ;;
+            "implement") MISSION="Read TONIGHT.md and help implement tonight's mission in your assigned modules." ;;
+            "verify")   MISSION="Adversarially test your module assignments. Try edge cases, concurrent edits, empty inputs. Uncheck failing SPEC.md criteria." ;;
+          esac
+
+          claude \
+            --dangerously-skip-permissions \
+            --model claude-sonnet-4-6 \
+            --max-turns 40 \
+            "You are Agent ${AGENT^^} for SiteSync PM — a world-class construction project management platform.
+
+          TONIGHT'S NIGHTLY MISSION: $TONIGHT (for context — your job is to TEST/POLISH what was built)
+
+          YOUR ASSIGNED MODULES (from MODULE_ASSIGNMENTS.md):
+          $ASSIGNMENTS
+
+          YOUR MISSION ($WAVE wave): $MISSION
+
+          CONTEXT:
+          - Read v7-prompts/V7-00_SYSTEM_CONTEXT.md before any V7 work (critical rules including: no hyphens in UI text, inline styles only from theme.ts)
+          - Read LEARNINGS.md before writing any code (especially migration safety rules)
+          - Read DECISIONS.md for architecture constraints
+
+          QUALITY GATES before every commit:
+            npx tsc --noEmit && npm run lint && npx vitest run --passWithNoTests && npm run build
+
+          COMMIT FORMAT: feat(scope): description [auto-${AGENT}]
+          NEVER: touch files outside your module assignments, commit broken code, create migrations without checking existing ones
+
+          Output <promise>DONE</promise> when finished." || true
+
+      - name: Push and auto-merge PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          COMMITS=$(git log origin/main..HEAD --oneline 2>/dev/null | wc -l | tr -d ' ')
+          if [ "$COMMITS" -gt "0" ]; then
+            git push origin "$BRANCH"
+            PR_URL=$(gh pr create \
+              --title "[auto-${{ matrix.agent }}] ${{ needs.wave-setup.outputs.wave }} — $(date +%Y-%m-%d)" \
+              --body "$(git log origin/main..HEAD --oneline)" \
+              --base main \
+              --head "$BRANCH" \
+              --label "auto-generated" \
+              --label "agent-${{ matrix.agent }}" 2>/dev/null)
+            if [ -n "$PR_URL" ]; then
+              PR_NUM=$(echo "$PR_URL" | grep -o '[0-9]*$')
+              gh pr merge "$PR_NUM" --auto --squash --delete-branch 2>/dev/null || true
+              echo "PR #$PR_NUM created with auto-merge"
+            fi
+          else
+            echo "Agent ${{ matrix.agent }}: no changes produced"
+          fi
