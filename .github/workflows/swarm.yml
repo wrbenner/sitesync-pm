@@ -1,20 +1,20 @@
 name: Agent Swarm — Parallel Build
 
-# The swarm runs 3x daily. Each run spawns 5 parallel agents,
-# each owning specific modules. No conflicts. Maximum velocity.
+# Swarm runs at 8am and 2pm CDT (testing + polish waves)
+# Nightly-build handles 2am (implement wave)
+# Parallel agents create PRs that auto-merge when CI passes
 on:
   schedule:
-    - cron: '0 7 * * *'    # 2:00 AM CDT — implementation wave
     - cron: '0 13 * * *'   # 8:00 AM CDT — testing wave
     - cron: '0 19 * * *'   # 2:00 PM CDT — polish wave
   workflow_dispatch:
     inputs:
       agents:
-        description: 'Which agents to run (comma-separated: alpha,beta,gamma,delta,echo or all)'
+        description: 'Agents to run: all | alpha,beta,gamma,delta,echo'
         default: 'all'
       wave:
-        description: 'Wave type: implement, test, polish, verify'
-        default: 'implement'
+        description: 'Wave: implement | test | polish | verify'
+        default: 'test'
 
 permissions:
   contents: write
@@ -25,137 +25,72 @@ env:
   NODE_VERSION: '22'
 
 jobs:
-  # ─── Determine current wave based on time ───────────────────
   wave-setup:
-    name: "Wave Setup"
+    name: "Setup"
     runs-on: ubuntu-latest
     outputs:
-      wave: ${{ steps.wave.outputs.wave }}
-      agents: ${{ steps.wave.outputs.agents }}
+      wave: ${{ steps.config.outputs.wave }}
+      agents: ${{ steps.config.outputs.agents }}
     steps:
-      - id: wave
+      - id: config
         run: |
           HOUR=$(date -u +%H)
           INPUT_WAVE="${{ github.event.inputs.wave }}"
           INPUT_AGENTS="${{ github.event.inputs.agents }}"
 
-          # Determine wave type
           if [ -n "$INPUT_WAVE" ]; then
             WAVE="$INPUT_WAVE"
-          elif [ "$HOUR" -eq "7" ]; then
-            WAVE="implement"
           elif [ "$HOUR" -eq "13" ]; then
             WAVE="test"
           else
             WAVE="polish"
           fi
 
-          # Determine agents
           if [ "$INPUT_AGENTS" = "all" ] || [ -z "$INPUT_AGENTS" ]; then
             AGENTS='["alpha","beta","gamma","delta","echo"]'
           else
-            # Convert comma-separated to JSON array
-            AGENTS=$(echo "$INPUT_AGENTS" | jq -Rc 'split(",")')
+            AGENTS=$(echo "$INPUT_AGENTS" | python3 -c "import sys,json; print(json.dumps(sys.stdin.read().strip().split(',')))")
           fi
 
           echo "wave=$WAVE" >> $GITHUB_OUTPUT
           echo "agents=$AGENTS" >> $GITHUB_OUTPUT
-          echo "Running $WAVE wave with agents: $AGENTS"
 
-  # ─── Parallel Agent Swarm ────────────────────────────────────
   agent:
-    name: "Agent ${{ matrix.agent }} — ${{ needs.wave-setup.outputs.wave }}"
+    name: "Agent ${{ matrix.agent }}"
     needs: wave-setup
     runs-on: ubuntu-latest
     timeout-minutes: 120
     strategy:
       matrix:
         agent: ${{ fromJson(needs.wave-setup.outputs.agents) }}
-      max-parallel: 5   # All 5 run simultaneously
-      fail-fast: false  # One agent failing doesn't kill others
+      max-parallel: 5
+      fail-fast: false
 
     steps:
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
+          ref: main
 
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
-      - name: Install dependencies
-        run: npm ci
+      - run: npm ci
+      - run: npm install -g @anthropic-ai/claude-code
 
-      - name: Install Claude Code CLI
-        run: npm install -g @anthropic-ai/claude-code
-
-      - name: Configure git identity
+      - name: Configure git
         run: |
           git config user.name "SiteSync Agent ${{ matrix.agent }}"
           git config user.email "agent-${{ matrix.agent }}@sitesync.ai"
 
-      - name: Create agent branch
+      - name: Create isolated branch
         run: |
           BRANCH="auto/${{ matrix.agent }}-$(date +%Y%m%d-%H%M)"
           git checkout -b "$BRANCH"
           echo "BRANCH=$BRANCH" >> $GITHUB_ENV
-
-      - name: Build wave prompt
-        id: prompt
-        run: |
-          AGENT="${{ matrix.agent }}"
-          WAVE="${{ needs.wave-setup.outputs.wave }}"
-
-          # Read module assignments for this agent
-          ASSIGNMENTS=$(grep -A 50 "## Agent $(echo $AGENT | sed 's/./\u&/') " MODULE_ASSIGNMENTS.md | head -50 || echo "Agent not found in MODULE_ASSIGNMENTS.md")
-
-          # Read FEEDBACK.md for founder priorities
-          FEEDBACK=$(cat FEEDBACK.md 2>/dev/null | head -30 || echo "No FEEDBACK.md")
-
-          case "$WAVE" in
-            "implement")
-              WAVE_INSTRUCTION="Implement the highest-priority unchecked acceptance criteria from SPEC.md that are within your module assignments. Focus on connecting mock data to real Supabase queries. Write the code AND the tests."
-              ;;
-            "test")
-              WAVE_INSTRUCTION="Write tests for any code in your module assignments that doesn't have test coverage. Write unit tests (Vitest) and E2E tests (Playwright). Do NOT change implementation code — only write tests."
-              ;;
-            "polish")
-              WAVE_INSTRUCTION="Polish mode: improve accessibility (axe-core), add loading skeletons, fix empty states, improve error messages. No new features — only quality improvements in your module assignments."
-              ;;
-            "verify")
-              WAVE_INSTRUCTION="Adversarial verification: try to break every feature in your module assignments. SQL injection, empty inputs, concurrent edits, network disconnect. Report failures in QUESTIONS.md."
-              ;;
-          esac
-
-          cat > /tmp/agent-prompt.txt << PROMPT_EOF
-          You are Agent ${AGENT^^} for SiteSync PM.
-
-          YOUR WAVE: $WAVE_INSTRUCTION
-
-          YOUR MODULES (from MODULE_ASSIGNMENTS.md):
-          $ASSIGNMENTS
-
-          FOUNDER PRIORITIES (from FEEDBACK.md — do these first):
-          $FEEDBACK
-
-          RULES:
-          1. Read MODULE_ASSIGNMENTS.md — only touch files assigned to you
-          2. Read LEARNINGS.md before writing any code
-          3. Read DECISIONS.md before any architectural choices
-          4. Run quality gates before every commit: npx tsc --noEmit && npm run lint && npx vitest run --passWithNoTests && npm run build
-          5. If ANY gate fails, fix it before committing
-          6. Commit format: feat(scope): description [auto-${AGENT}]
-          7. Check off completed criteria in SPEC.md
-          8. Add learnings to LEARNINGS.md
-
-          DO NOT touch files outside your module assignments.
-          DO NOT commit if quality gates fail.
-          Output <promise>DONE</promise> when finished.
-          PROMPT_EOF
-
-          echo "Prompt built for agent $AGENT, wave $WAVE"
 
       - name: Run agent
         env:
@@ -163,64 +98,80 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         run: |
+          AGENT="${{ matrix.agent }}"
+          WAVE="${{ needs.wave-setup.outputs.wave }}"
+          FEEDBACK=$(cat FEEDBACK.md 2>/dev/null | head -20 || echo "")
+          ASSIGNMENTS=$(grep -A 40 "## Agent $(echo ${AGENT^})" MODULE_ASSIGNMENTS.md 2>/dev/null | head -40 || echo "No assignments found")
+
+          case "$WAVE" in
+            "test")     MISSION="Write unit tests (Vitest) for untested code in your module assignments. Do NOT change implementation. Only write test files." ;;
+            "polish")   MISSION="Fix accessibility violations (axe-core), add loading skeletons, improve empty states. Only touch your assigned files." ;;
+            "implement") MISSION="Implement the next unchecked acceptance criteria in SPEC.md within your module assignments." ;;
+            "verify")   MISSION="Adversarially test your module assignments. Try to break things. Uncheck failing SPEC.md criteria." ;;
+          esac
+
           claude \
             --dangerously-skip-permissions \
             --model claude-sonnet-4-6 \
             --max-turns 40 \
-            "$(cat /tmp/agent-prompt.txt)" || true
+            "You are Agent ${AGENT^^} for SiteSync PM.
 
-      - name: Push branch
-        run: |
-          git push origin "$BRANCH" 2>/dev/null || echo "Nothing to push"
+          YOUR ASSIGNED FILES (from MODULE_ASSIGNMENTS.md):
+          $ASSIGNMENTS
 
-      - name: Create PR if there are commits
+          FOUNDER PRIORITIES (FEEDBACK.md):
+          $FEEDBACK
+
+          YOUR MISSION ($WAVE wave): $MISSION
+
+          RULES:
+          - ONLY touch files in your module assignments
+          - Run quality gates before each commit: npx tsc --noEmit && npm run lint && npx vitest run --passWithNoTests && npm run build
+          - Commit format: feat(scope): description [auto-${AGENT}]
+          - Update SPEC.md checkboxes when criteria are complete
+          - Add patterns to LEARNINGS.md
+          - Output <promise>DONE</promise> when finished" || true
+
+      - name: Push branch and create auto-merging PR
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           COMMITS=$(git log origin/main..HEAD --oneline 2>/dev/null | wc -l | tr -d ' ')
 
           if [ "$COMMITS" -gt "0" ]; then
-            echo "Creating PR for $COMMITS commits from agent ${{ matrix.agent }}"
+            git push origin "$BRANCH"
 
-            PR_BODY="## Agent ${{ matrix.agent | upper }} — ${{ needs.wave-setup.outputs.wave }} wave
-
-            **Wave:** ${{ needs.wave-setup.outputs.wave }}
-            **Commits:** $COMMITS
-            **Modules:** See MODULE_ASSIGNMENTS.md for agent ${{ matrix.agent }}
-
-            ### Changes
-            $(git log origin/main..HEAD --oneline)
-
-            ### Quality Gates
-            All gates must pass before merging. CI will verify automatically.
-
-            *Auto-generated by the SiteSync organism*"
-
-            gh pr create \
-              --title "[auto-${{ matrix.agent }}] ${{ needs.wave-setup.outputs.wave }} wave — $(date +%Y-%m-%d)" \
-              --body "$PR_BODY" \
+            # Create PR
+            PR_URL=$(gh pr create \
+              --title "[auto-${{ matrix.agent }}] ${{ needs.wave-setup.outputs.wave }} — $(date +%Y-%m-%d)" \
+              --body "$(git log origin/main..HEAD --oneline)" \
               --base main \
               --head "$BRANCH" \
               --label "auto-generated" \
-              --label "agent-${{ matrix.agent }}" || echo "PR already exists or no changes"
+              --label "agent-${{ matrix.agent }}" 2>/dev/null)
+
+            if [ -n "$PR_URL" ]; then
+              PR_NUM=$(echo "$PR_URL" | grep -o '[0-9]*$')
+              echo "PR #$PR_NUM created: $PR_URL"
+
+              # Enable auto-merge immediately — merges when CI passes, no human needed
+              gh pr merge "$PR_NUM" --auto --squash --delete-branch 2>/dev/null \
+                && echo "Auto-merge enabled on PR #$PR_NUM" \
+                || echo "Auto-merge setup failed (will retry in auto-merge job)"
+            fi
           else
-            echo "No commits from agent ${{ matrix.agent }} — nothing to PR"
+            echo "Agent ${{ matrix.agent }}: no changes"
           fi
 
-      - name: Summarize agent work
+      - name: Summary
         if: always()
         run: |
           COMMITS=$(git log origin/main..HEAD --oneline 2>/dev/null | wc -l | tr -d ' ')
-          echo "## Agent ${{ matrix.agent }} Summary" >> $GITHUB_STEP_SUMMARY
-          echo "- **Wave:** ${{ needs.wave-setup.outputs.wave }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Commits:** $COMMITS" >> $GITHUB_STEP_SUMMARY
-          echo "- **Branch:** $BRANCH" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Agent ${{ matrix.agent }} — $COMMITS commits" >> $GITHUB_STEP_SUMMARY
           git log origin/main..HEAD --oneline >> $GITHUB_STEP_SUMMARY 2>/dev/null || echo "None" >> $GITHUB_STEP_SUMMARY
 
-  # ─── Auto-merge PRs that pass CI ────────────────────────────
-  auto-merge:
-    name: "Auto-merge passing PRs"
+  auto-merge-cleanup:
+    name: "Auto-merge remaining PRs"
     needs: agent
     if: always()
     runs-on: ubuntu-latest
@@ -229,20 +180,17 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Enable auto-merge on passing agent PRs
+      - name: Merge any approved auto-generated PRs
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Find all open auto-generated PRs with passing CI
+          # Merge any PRs where all checks have passed
           gh pr list \
             --label "auto-generated" \
             --state open \
-            --json number,headRefName,statusCheckRollup \
-            --jq '.[] | select(.statusCheckRollup != null) | select([.statusCheckRollup[].state] | all(. == "SUCCESS")) | .number' \
-          | while read PR_NUMBER; do
-              echo "Auto-merging PR #$PR_NUMBER (all checks passed)"
-              gh pr merge "$PR_NUMBER" \
-                --squash \
-                --delete-branch \
-                --subject "auto-merge: agent PR #$PR_NUMBER" || echo "Could not merge PR #$PR_NUMBER"
-            done
+            --json number,statusCheckRollup \
+            --jq '.[] | select(.statusCheckRollup | length > 0) | select([.statusCheckRollup[].state] | all(. == "SUCCESS")) | .number' \
+          2>/dev/null | while read PR; do
+            echo "Merging PR #$PR"
+            gh pr merge "$PR" --squash --delete-branch 2>/dev/null || true
+          done || true
