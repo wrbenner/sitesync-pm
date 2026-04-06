@@ -1,9 +1,10 @@
 name: Weekly Strategist — Refresh Priorities
 
-# Every Sunday at 10pm CDT (3am UTC Monday) — before the 2am organism run
+# Sunday 10pm CDT (3am UTC Monday) — refreshes priorities
+# GUARDS against overwriting active TONIGHT.md mission
 on:
   schedule:
-    - cron: '0 3 * * 1'   # 10pm CDT Sunday / 3am UTC Monday
+    - cron: '0 3 * * 1'
   workflow_dispatch:
 
 permissions:
@@ -27,51 +28,69 @@ jobs:
       - run: rm -f package-lock.json && npm install
       - run: npm install -g @anthropic-ai/claude-code
 
-      - name: Configure git
+      - name: Check if active mission is running
+        id: check_mission
+        run: |
+          # If TONIGHT.md has an active TONIGHT section, do NOT overwrite FEEDBACK.md
+          if [ -f "TONIGHT.md" ] && grep -q "^## TONIGHT:" TONIGHT.md; then
+            TONIGHT=$(grep "^## TONIGHT:" TONIGHT.md | head -1)
+            echo "active_mission=true" >> $GITHUB_OUTPUT
+            echo "tonight=$TONIGHT" >> $GITHUB_OUTPUT
+            echo "Active mission detected: $TONIGHT — skipping FEEDBACK.md overwrite"
+          else
+            echo "active_mission=false" >> $GITHUB_OUTPUT
+            echo "No active mission — proceeding with weekly refresh"
+          fi
+
+      - name: Add weekly status note (mission active — no overwrite)
+        if: steps.check_mission.outputs.active_mission == 'true'
         run: |
           git config user.name "SiteSync Strategist"
           git config user.email "strategist@sitesync.ai"
 
-      - name: Generate fresh priorities
+          NOTE="
+
+---
+*Weekly strategist note — $(date '+%B %d, %Y'): Active 9-night mission in progress (${{ steps.check_mission.outputs.tonight }}). FEEDBACK.md preserved. Strategist will resume full refresh after April 15th.*
+"
+          echo "$NOTE" >> FEEDBACK.md
+          git add FEEDBACK.md
+          git commit -m "chore(strategy): weekly note — mission active, no overwrite [skip ci]" || true
+          git push origin main || true
+
+      - name: Full FEEDBACK.md refresh (no active mission)
+        if: steps.check_mission.outputs.active_mission == 'false'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
+          git config user.name "SiteSync Strategist"
+          git config user.email "strategist@sitesync.ai"
+
           claude \
             --dangerously-skip-permissions \
             --model claude-opus-4-6 \
             --max-turns 20 \
             "You are the Chief Product Strategist for SiteSync PM.
 
-          YOUR MISSION: Update FEEDBACK.md with this week's top 3 priorities for the autonomous build organism.
+          Update FEEDBACK.md with this week's top 3 priorities for the autonomous build organism.
 
-          READ THESE FILES FIRST:
-          1. SPEC.md — find the highest-priority UNCHECKED criteria (focus on P0 and P1)
-          2. MARKET_INTELLIGENCE.md — what do real GCs need most urgently
-          3. COMPETITIVE.md — what Procore just shipped that we must match or beat
-          4. LEARNINGS.md — what patterns have worked
-          5. .quality-floor.json — current quality metrics
-          6. git log --oneline -20 — what the organism built this week
+          READ FIRST:
+          1. SPEC.md — highest-priority UNCHECKED P0 and P1 criteria
+          2. MARKET_INTELLIGENCE.md — what real GCs need urgently
+          3. COMPETITIVE.md — what Procore just shipped
+          4. LEARNINGS.md — what has worked
+          5. .quality-floor.json — current metrics
+          6. git log --oneline -20 — what was built this week
 
-          CRITERIA FOR GOOD PRIORITIES:
-          - Must be specific (name the exact file, function, or behavior)
-          - Must be demo-critical (something a GC would see in a 10-minute demo)
-          - Must be completable in one overnight session
-          - Must move toward a production-ready, sellable product
+          GOOD PRIORITIES:
+          - Specific (name the exact file and behavior)
+          - Demo-critical (a GC would see this in a 10-minute demo)
+          - Completable in one overnight session
 
-          UPDATE FEEDBACK.md:
-          - Replace 'Tonight's P0 Priorities' section with exactly 3 new priorities
-          - Keep the 'Ongoing Priorities' section unchanged
-          - Add today's date and 'Updated by Strategist Agent'
-          - Make each priority specific enough that a developer could implement it without asking questions
+          Replace 'Tonight Priorities' section with 3 new specific priorities.
+          Keep 'Ongoing Priorities' section unchanged.
+          Add today's date.
+          Commit: 'strategy: weekly priority refresh [strategist][skip ci]'" || true
 
-          Commit: 'strategy: weekly priority refresh [strategist][skip ci]'
-
-          Output <promise>DONE</promise> when finished." || true
-
-      - name: Push priorities
-        run: |
-          COMMITS=$(git log origin/main..HEAD --oneline | wc -l | tr -d ' ')
-          if [ "$COMMITS" -gt "0" ]; then
-            git push origin main
-            echo "Fresh priorities pushed to FEEDBACK.md"
-          fi
+      - name: Push
+        run: git push origin main 2>/dev/null || true
