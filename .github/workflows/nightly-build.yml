@@ -1,17 +1,17 @@
 name: Nightly Organism — Autonomous Build
 
-# Runs once nightly at 2am CDT (7am UTC)
-# Pushes DIRECTLY to main. No PRs. No manual merging.
+# Runs at 2am CDT (7am UTC) every night
+# Reads TONIGHT.md for tonight's specific mission — no guessing
 on:
   schedule:
     - cron: '0 7 * * *'   # 2:00 AM CDT daily
   workflow_dispatch:
     inputs:
-      mode:
-        description: 'implement | test | polish | verify'
-        default: 'implement'
+      override_mission:
+        description: 'Override tonight mission (leave empty to use TONIGHT.md)'
+        required: false
       use_opus:
-        description: 'Use Opus (true) or Sonnet (false)'
+        description: 'Use Opus (default true)'
         default: 'true'
 
 permissions:
@@ -20,9 +20,9 @@ permissions:
 
 jobs:
   organism:
-    name: "Organism — Nightly Build"
+    name: "Nightly Build"
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 240   # 4 hours max for big missions
 
     steps:
       - uses: actions/checkout@v4
@@ -34,138 +34,108 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'npm'
 
-      - run: npm ci
+      - name: Install
+        run: rm -f package-lock.json && npm install
 
       - name: Install Claude Code CLI
         run: npm install -g @anthropic-ai/claude-code
 
-      - name: Configure git for direct main push
+      - name: Configure git
         run: |
           git config user.name "SiteSync Organism"
           git config user.email "organism@sitesync.ai"
           git config pull.rebase true
 
-      - name: Determine wave and model
-        id: config
+      - name: Read tonight's mission
+        id: mission
         run: |
-          HOUR=$(date -u +%H)
-          MODE="${{ github.event.inputs.mode }}"
-          USE_OPUS="${{ github.event.inputs.use_opus }}"
-
-          WAVE="${MODE:-implement}"
-          MODEL="claude-opus-4-6"
-          MAX_TURNS="60"
-
-          if [ "$WAVE" = "test" ] || [ "$WAVE" = "polish" ]; then
-            if [ "$USE_OPUS" != "true" ]; then
-              MODEL="claude-sonnet-4-6"
-              MAX_TURNS="40"
-            fi
+          OVERRIDE="${{ github.event.inputs.override_mission }}"
+          if [ -n "$OVERRIDE" ]; then
+            echo "MISSION=$OVERRIDE" >> $GITHUB_ENV
+            echo "Using override mission"
+          elif [ -f "TONIGHT.md" ]; then
+            # Extract tonight's mission title
+            TONIGHT=$(grep "^## TONIGHT:" TONIGHT.md | head -1 | sed 's/## TONIGHT: //')
+            echo "MISSION=$TONIGHT" >> $GITHUB_ENV
+            echo "Tonight's mission: $TONIGHT"
+          else
+            echo "MISSION=Read SPEC.md and implement the highest-priority unchecked P0 criterion" >> $GITHUB_ENV
           fi
 
-          echo "wave=$WAVE" >> $GITHUB_OUTPUT
-          echo "model=$MODEL" >> $GITHUB_OUTPUT
-          echo "max_turns=$MAX_TURNS" >> $GITHUB_OUTPUT
-          echo "Running: wave=$WAVE model=$MODEL turns=$MAX_TURNS"
-
-      - name: Run organism — commits directly to main
+      - name: Run organism
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         run: |
-          WAVE="${{ steps.config.outputs.wave }}"
-          FEEDBACK=$(cat FEEDBACK.md 2>/dev/null | head -40 || echo "No FEEDBACK.md")
-
-          case "$WAVE" in
-            "implement")
-              INSTRUCTION="Read SPEC.md. Read FEEDBACK.md — execute P0 priorities first, then next unchecked P1 criterion. Deliver: working code + unit tests + SPEC.md checkbox updated. Focus on mock data elimination and real Supabase connections."
-              ;;
-            "test")
-              INSTRUCTION="Coverage mission: find 5 source files with zero test coverage. Write thorough unit tests using Vitest. Do NOT change implementation code. Commit tests only."
-              ;;
-            "polish")
-              INSTRUCTION="Quality mission: run axe-core on every page route, fix every violation. Find performance bottlenecks (missing React.memo, N+1 queries, large chunks). Fix them. Update .quality-floor.json when metrics improve."
-              ;;
-            "verify")
-              INSTRUCTION="Adversarial verification: attempt to break 5 recently modified features with edge cases, empty inputs, concurrent operations. Uncheck SPEC.md criteria that fail. Add findings to LEARNINGS.md."
-              ;;
-          esac
+          MODEL="claude-opus-4-6"
+          MAX_TURNS="80"
 
           claude \
             --dangerously-skip-permissions \
-            --model "${{ steps.config.outputs.model }}" \
-            --max-turns "${{ steps.config.outputs.max_turns }}" \
-            "You are the SiteSync PM autonomous build agent. You commit directly to the main branch.
+            --model "$MODEL" \
+            --max-turns "$MAX_TURNS" \
+            "You are the SiteSync PM autonomous build agent — Night Mission Runner.
 
-          READ THESE FILES FIRST (in order):
-          1. FEEDBACK.md — founder priorities (execute these first, always)
-          2. SPEC.md — product genome with acceptance criteria
-          3. AGENTS.md — your operating instructions
-          4. LEARNINGS.md — what has worked before
-          5. DECISIONS.md — architectural constraints
-          6. .quality-floor.json — quality floors that must never be breached
+          TONIGHT'S MISSION: $MISSION
 
-          FOUNDER PRIORITIES FROM FEEDBACK.md:
-          $FEEDBACK
+          READ THESE FILES IMMEDIATELY (before doing anything else):
+          1. cat TONIGHT.md                           — your specific mission for tonight
+          2. cat v7-prompts/V7-00_SYSTEM_CONTEXT.md  — tech stack rules (CRITICAL for V7 work)
+          3. cat LEARNINGS.md                         — what to avoid (especially migration rules)
+          4. cat AGENTS.md                            — your operating instructions
+          5. cat FEEDBACK.md                          — Walker's priorities
 
-          YOUR MISSION: $INSTRUCTION
+          MISSION EXECUTION PROTOCOL:
+          1. Read TONIGHT.md completely
+          2. Identify the TONIGHT section (not UPCOMING or COMPLETED)
+          3. Execute each step in that section completely
+          4. For each prompt file referenced: cat the file, read it fully, implement EVERYTHING in it
+          5. Run quality gates after every batch of changes: npx tsc --noEmit && npm run lint && npm run build
+          6. Commit changes with format: feat(scope): description [auto]
+          7. After completing ALL steps: update TONIGHT.md to mark tonight COMPLETED and advance the next UPCOMING to TONIGHT
+          8. Commit the TONIGHT.md update: chore: advance TONIGHT.md to next night [auto]
 
-          QUALITY GATES — run before EVERY commit:
-            npx tsc --noEmit            (must pass — zero errors)
-            npm run lint                (must pass — no new warnings)
-            npx vitest run --passWithNoTests  (must pass)
-            npm run build               (must pass)
+          QUALITY GATES (must pass before every commit):
+          - npx tsc --noEmit (zero TypeScript errors)
+          - npm run lint (no new ESLint errors)
+          - npx vitest run --passWithNoTests (tests pass)
+          - npm run build (build succeeds)
 
-          If any gate fails, fix the issue before committing. Never commit broken code.
+          NEVER:
+          - Skip steps because they seem hard
+          - Commit code that fails quality gates
+          - Create new migrations without checking existing ones first (read LEARNINGS.md)
+          - Use as any type casts
+          - Add mock data to src/
+          - Use hyphens in any UI text (V7 rule)
 
-          COMMIT DIRECTLY TO MAIN:
-            git add -A
-            git commit -m 'feat(scope): description [auto]'
-            (do NOT push — the workflow handles that)
-
-          After completing work:
-          1. Check off completed criteria in SPEC.md with [x]
-          2. Update LEARNINGS.md with any new patterns discovered
-          3. Update .quality-floor.json if any metric improved
-          4. Output <promise>DONE</promise>
-
-          NEVER: use as any, add mock data to src/, hardcode colors, force push, commit broken code." || true
+          Output <promise>DONE</promise> when tonight's complete mission is finished." || true
 
       - name: Push to main
         run: |
           COMMITS=$(git log origin/main..HEAD --oneline 2>/dev/null | wc -l | tr -d ' ')
-          echo "Commits to push: $COMMITS"
-
           if [ "$COMMITS" -gt "0" ]; then
-            # Pull any remote changes first
             git pull --rebase origin main 2>/dev/null || true
             git push origin main
-            echo "Pushed $COMMITS commit(s) directly to main"
-
-            # Summary
-            echo "## Organism Run — $(date '+%Y-%m-%d %H:%M UTC')" >> $GITHUB_STEP_SUMMARY
-            echo "**Wave:** ${{ steps.config.outputs.wave }}" >> $GITHUB_STEP_SUMMARY
-            echo "**Model:** ${{ steps.config.outputs.model }}" >> $GITHUB_STEP_SUMMARY
-            echo "**Commits pushed to main:** $COMMITS" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Pushed $COMMITS commit(s)"
+            echo "## Night Mission Complete — $(date '+%B %d %Y')" >> $GITHUB_STEP_SUMMARY
             git log origin/main~${COMMITS}..origin/main --oneline >> $GITHUB_STEP_SUMMARY 2>/dev/null || true
           else
-            echo "No changes produced in this session"
-            echo "## Organism Run — $(date '+%Y-%m-%d %H:%M UTC')" >> $GITHUB_STEP_SUMMARY
-            echo "No commits produced." >> $GITHUB_STEP_SUMMARY
+            echo "No commits this session"
           fi
 
-      - name: Self-heal if CI fails on main
-        if: failure()
+      - name: Alert if nothing was committed
+        if: always()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # If this step runs, the push failed or CI broke main
-          # Create an issue so the next organism run knows to prioritize fixing it
-          gh issue create \
-            --title "[auto-heal] Organism push failed — $(date +%Y-%m-%d)" \
-            --body "The nightly organism run failed to push to main. Check the workflow logs and fix the blocking issue before the next run." \
-            --label "bug" 2>/dev/null || true
+          COMMITS=$(git log origin/main..HEAD --oneline 2>/dev/null | wc -l | tr -d ' ')
+          PUSHED=$(git log --since="1 hour ago" --author="SiteSync Organism" --oneline 2>/dev/null | wc -l | tr -d ' ')
+          if [ "$COMMITS" -eq "0" ] && [ "$PUSHED" -eq "0" ]; then
+            gh issue create \
+              --title "[organism] No commits on $(date '+%B %d') — check logs" \
+              --body "The organism ran but produced no commits. Mission: $MISSION. Check the [workflow logs](https://github.com/${{ github.repository }}/actions) for details." \
+              --label "bug" 2>/dev/null || true
+          fi
