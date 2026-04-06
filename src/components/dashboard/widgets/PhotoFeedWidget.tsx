@@ -70,7 +70,11 @@ export const PhotoFeedWidget: React.FC = React.memo(() => {
         {photos.map((photo) => (
           <div
             key={photo.id}
+            role="button"
+            tabIndex={0}
+            aria-label={`View photo: ${photo.title}`}
             onClick={() => setSelectedPhoto(photo)}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedPhoto(photo); } }}
             style={{
               borderRadius: borderRadius.md,
               backgroundImage: `url(${photo.imageUrl})`,
@@ -119,14 +123,19 @@ export const PhotoFeedWidget: React.FC = React.memo(() => {
       {/* Expanded photo detail */}
       {selectedPhoto && (
         <div
+          role="presentation"
           style={{
             position: 'fixed', inset: 0, zIndex: zIndex.modal as number,
             backgroundColor: colors.overlayScrim, backdropFilter: 'blur(8px)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}
           onClick={() => setSelectedPhoto(null)}
+          onKeyDown={(e) => { if (e.key === 'Escape') setSelectedPhoto(null); }}
         >
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={selectedPhoto.title}
             style={{
               width: '480px', maxWidth: '90vw',
               backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.xl,
@@ -137,6 +146,7 @@ export const PhotoFeedWidget: React.FC = React.memo(() => {
             <div style={{ height: '240px', backgroundImage: `url(${selectedPhoto.imageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundColor: colors.surfaceInset, position: 'relative' }}>
               <button
                 onClick={() => setSelectedPhoto(null)}
+                aria-label="Close photo"
                 style={{
                   position: 'absolute', top: 12, right: 12,
                   width: 32, height: 32, borderRadius: borderRadius.full,

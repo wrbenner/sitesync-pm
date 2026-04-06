@@ -193,7 +193,10 @@ export const AIInsightsWidget: React.FC = React.memo(() => {
         {filtered.map((insight) => (
           <div
             key={insight.id}
+            role="button"
+            tabIndex={0}
             onClick={() => navigate(insight.route)}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(insight.route); } }}
             style={{
               display: 'flex',
               alignItems: 'flex-start',
@@ -214,6 +217,7 @@ export const AIInsightsWidget: React.FC = React.memo(() => {
             <button
               onClick={(e) => { e.stopPropagation(); dismissInsight(insight.id); }}
               title="Dismiss"
+              aria-label="Dismiss insight"
               style={{ background: 'none', border: 'none', padding: 2, cursor: 'pointer', color: colors.textTertiary, flexShrink: 0, marginTop: 2, opacity: 0.5 }}
             >
               ×
