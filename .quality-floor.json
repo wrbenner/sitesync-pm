@@ -36,5 +36,5 @@
     "longestResponseMs": 200
   },
   "_note": "floors reset to 9999 \u2014 CI auto-sets on first passing run, then ratchets down",
-  "_ci_trigger": "2026-04-06T14:15:00Z"
+  "_ci_trigger": "2026-04-06T14:20:00Z"
 }
