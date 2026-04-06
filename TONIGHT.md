@@ -1,138 +1,149 @@
-## TONIGHT: Night 2 — Auth & Permissions hardening
+# TONIGHT.md — 9-Night Mission to April 15th
+# Self-advancing: organism marks nights COMPLETED and advances the next
+# Walker returns April 15th. This is the only file you need to read first.
 
 ---
 
-# 9-Night Sprint to April 15th Demo
+## TONIGHT: Night 1 — April 7 (Foundation Security + Mock Data)
 
-## Night 1 — April 7 ✅ COMPLETED
-**Mission: Mock Data Elimination + Edge Security**
+**Status:** PENDING
+**RLS fix:** ✅ Already applied by Walker via Supabase dashboard. Database is live.
+**Goal:** Zero mock data in production code. Edge functions secured.
 
-Steps completed:
-1. ~~RLS fix via supabase CLI~~ — SKIPPED. Walker will apply RLS fix from Supabase dashboard (Issue #16). Do NOT attempt supabase CLI commands.
-2. Verified working tables: `curl -s "https://hypxrmcppjfbtlwuoafc.supabase.co/rest/v1/rfis?select=id&limit=1" -H "apikey: [from .env]"` — rfis, tasks, submittals return [] not errors ✅
-3. Executed V5 Phase 0A: `cat archive/prompts-v5/Phase_0A_MOCK_DATA.md` — surgical mock data elimination ✅
-4. Executed V5 Phase 0E: `cat archive/prompts-v5/Phase_0E_EDGE_SECURITY.md` — edge function security ✅
-5. Commit: `feat(security+data): night 1 — mock data eliminated, edge functions secured [auto]` ✅
+### Step 1: Run the programmatic mock data fixer first (fast, catches everything)
+```bash
+node fix-mock-data.mjs
+```
+This script was written specifically for this codebase. Run it before anything else.
+Verify: `grep -rn "Math.random()\|mockData\|MOCK_" src/ --include="*.ts" --include="*.tsx" | grep -v test | wc -l`
+Must equal 0 before continuing.
 
----
+### Step 2: Execute Phase 0A — Surgical Mock Data Verification
+```bash
+cat archive/prompts-v5/Phase_0A_MOCK_DATA.md
+```
+Read every instruction. The script handles bulk removal. This prompt handles edge cases the script missed. Verify every file it references. Commit after this step passes.
 
-## Night 2 — April 8 (TONIGHT)
-**Mission: Auth & Permissions Hardening**
+### Step 3: Execute Phase 0E — Edge Function Security
+```bash
+cat archive/prompts-v5/Phase_0E_EDGE_SECURITY.md
+```
+5 edge functions need JWT validation, rate limiting, proper auth. Execute every instruction.
 
-Steps:
-1. Read LEARNINGS.md and DECISIONS.md before touching anything
-2. Execute V5 Phase 1A: `cat archive/prompts-v5/Phase_1A_AUTH_HARDENING.md`
-3. Execute V5 Phase 1B: `cat archive/prompts-v5/Phase_1B_ROLE_PERMISSIONS.md`
-4. Verify RLS is applied (Walker should have done Issue #16 by now) — if not, note in LEARNINGS.md
-5. Run quality gates: `npx tsc --noEmit && npm run lint && npx vitest run --passWithNoTests && npm run build`
-6. Commit: `feat(auth): night 2 — auth hardened, role permissions locked [auto]`
-7. Update TONIGHT.md: mark Night 2 as COMPLETED ✅, advance Night 3 to TONIGHT
+### Quality gates before commit:
+`npx tsc --noEmit && npm run lint && npx vitest run --passWithNoTests && npm run build`
 
----
+### Commit:
+`feat(p0): night 1 — zero mock data, edge functions secured [auto]`
 
-## Night 3 — April 9
-**Mission: RFI Module — Full Lifecycle**
-
-Steps:
-1. Read LEARNINGS.md first
-2. Execute V5 Phase 2A: `cat archive/prompts-v5/Phase_2A_RFI_LIFECYCLE.md`
-3. Ensure RFI create/respond/close flow works end to end with real Supabase data
-4. Add Vitest unit tests for RFI state machine
-5. Run quality gates
-6. Commit: `feat(rfis): night 3 — RFI full lifecycle wired to Supabase [auto]`
-7. Update TONIGHT.md: mark Night 3 as COMPLETED ✅, advance Night 4 to TONIGHT
+### After completion: update this file
+- Move Night 1 to COMPLETED ✅
+- Change `## UPCOMING: Night 2` to `## TONIGHT: Night 2`
 
 ---
 
-## Night 4 — April 10
-**Mission: Submittals Module — Full Lifecycle**
+## UPCOMING: Night 2 — April 8 (Validation + Error Handling + Permissions)
 
-Steps:
-1. Read LEARNINGS.md first
-2. Execute V5 Phase 2B: `cat archive/prompts-v5/Phase_2B_SUBMITTALS_LIFECYCLE.md`
-3. Ensure submittal create/review/approve flow works with real data
-4. Add Vitest unit tests for submittal state machine
-5. Run quality gates
-6. Commit: `feat(submittals): night 4 — submittals full lifecycle wired to Supabase [auto]`
-7. Update TONIGHT.md: mark Night 4 as COMPLETED ✅, advance Night 5 to TONIGHT
+**Goal:** Every form validates. Every error is caught. Every action is gated.
+
+1. `cat archive/prompts-v5/Phase_1A_ZOD_SCHEMAS.md` — Zod schemas for all 8 entities, react-hook-form integration
+2. `cat archive/prompts-v5/Phase_1B_ERROR_HANDLING.md` — Error boundaries on all pages, typed errors, retry logic
+3. `cat archive/prompts-v5/Phase_1C_PERMISSION_GATES.md` — PermissionGate on every Create/Edit/Delete button
+
+Commit: `feat(p1): night 2 — zod validation, error handling, permission gates [auto]`
 
 ---
 
-## Night 5 — April 11
-**Mission: Daily Log + Tasks**
+## UPCOMING: Night 3 — April 9 (Real-time + Code Splitting)
 
-Steps:
-1. Read LEARNINGS.md first
-2. Execute V5 Phase 3A: `cat archive/prompts-v5/Phase_3A_DAILY_LOG.md`
-3. Execute V5 Phase 3B: `cat archive/prompts-v5/Phase_3B_TASKS.md`
-4. Ensure daily log entries persist, tasks CRUD works with real data
-5. Run quality gates
-6. Commit: `feat(daily-log+tasks): night 5 — daily log and tasks wired to Supabase [auto]`
-7. Update TONIGHT.md: mark Night 5 as COMPLETED ✅, advance Night 6 to TONIGHT
+**Goal:** The app feels alive. Data updates instantly. Loads fast.
+
+1. `cat archive/prompts-v5/Phase_1D_REALTIME.md` — Supabase real-time subscriptions on 15 pages
+2. `cat archive/prompts-v5/Phase_1E_COMPONENT_SPLITTING.md` — Code splitting, lazy loading heavy routes
+
+Commit: `feat(p1): night 3 — real-time subscriptions, code splitting [auto]`
 
 ---
 
-## Night 6 — April 12
-**Mission: AI Copilot — Real Responses**
+## UPCOMING: Night 4 — April 10 (V7 Visual Foundation)
 
-Steps:
-1. Read LEARNINGS.md first
-2. Execute V5 Phase 4A: `cat archive/prompts-v5/Phase_4A_AI_COPILOT.md`
-3. Ensure AI Copilot calls real edge function (not mock), returns real Anthropic response
-4. Verify no mock response fallbacks remain in production path
-5. Run quality gates
-6. Commit: `feat(ai-copilot): night 6 — AI Copilot wired to real Anthropic edge function [auto]`
-7. Update TONIGHT.md: mark Night 6 as COMPLETED ✅, advance Night 7 to TONIGHT
+**Goal:** Animation system and design tokens — the foundation every V7 prompt builds on.
+**CRITICAL:** Read V7-00 FIRST. Every V7 night depends on it.
 
----
+1. `cat v7-prompts/V7-00_SYSTEM_CONTEXT.md` — READ COMPLETELY before touching any file
+2. `cat v7-prompts/V7-01_ANIMATION_MICRO_INTERACTIONS.md` — Creates `src/styles/animations.ts`, motion system
+3. `cat v7-prompts/V7-02_THEME_TOKEN_CONSISTENCY.md` — Zero hardcoded hex values anywhere
 
-## Night 7 — April 13
-**Mission: Budget Module + Dashboard Widgets**
-
-Steps:
-1. Read LEARNINGS.md first
-2. Execute V5 Phase 5A: `cat archive/prompts-v5/Phase_5A_BUDGET.md`
-3. Execute V5 Phase 5B: `cat archive/prompts-v5/Phase_5B_DASHBOARD.md`
-4. Ensure budget line items persist, dashboard widgets show real aggregated data
-5. Run quality gates
-6. Commit: `feat(budget+dashboard): night 7 — budget and dashboard wired to Supabase [auto]`
-7. Update TONIGHT.md: mark Night 7 as COMPLETED ✅, advance Night 8 to TONIGHT
+Commit: `feat(v7): night 4 — animation system, theme token consistency [auto]`
 
 ---
 
-## Night 8 — April 14
-**Mission: Demo Flow Polish + E2E Tests**
+## UPCOMING: Night 5 — April 11 (Components + Loading States)
 
-Steps:
-1. Read LEARNINGS.md first
-2. Run `npx playwright test e2e/demo-flow.spec.ts` — fix every failing step
-3. Fix any accessibility issues found by axe-core
-4. Fix any mobile/tablet layout issues (iPad 1024px viewport)
-5. Ensure all 6 demo pages load under 3 seconds
-6. Run quality gates + E2E: `npx playwright test e2e/demo-flow.spec.ts`
-7. Commit: `feat(demo): night 8 — demo flow fully green, E2E passing [auto]`
-8. Update TONIGHT.md: mark Night 8 as COMPLETED ✅, advance Night 9 to TONIGHT
+**Goal:** Every shared component is world-class. Every loading state is beautiful.
+
+1. `cat v7-prompts/V7-09_TYPOGRAPHY_VISUAL_HIERARCHY.md` — Type scale enforced
+2. `cat v7-prompts/V7-05_PRIMITIVES_SPLIT_COMPONENT_POLISH.md` — 24 components polished
+3. `cat v7-prompts/V7-08_LOADING_SKELETONS_EMPTY_STATES.md` — Every skeleton matches layout
+
+Commit: `feat(v7): night 5 — typography, component polish, loading states [auto]`
 
 ---
 
-## Night 9 — April 15 (DEMO DAY)
-**Mission: Final Hardening + Freeze**
+## UPCOMING: Night 6 — April 12 (Tables, Forms, Modals)
 
-Steps:
-1. Run full E2E suite one final time: `npx playwright test`
-2. Run Lighthouse on all 6 demo pages — Performance score must be ≥ 80
-3. Fix any last-minute issues found
-4. Tag the release: `git tag v1.0.0-demo && git push origin v1.0.0-demo`
-5. Run quality gates one final time
-6. Commit: `feat(release): night 9 — demo freeze, v1.0.0-demo tagged [auto]`
-7. DO NOT merge any new features after this commit — freeze is in effect
+**Goal:** Data display and interaction patterns are exceptional.
+
+1. `cat v7-prompts/V7-06_TABLE_LIST_DATA_DISPLAY.md` — Tables lift on hover, Kanban is fluid
+2. `cat v7-prompts/V7-07_FORMS_MODALS_INPUT_POLISH.md` — Forms validate inline, modals glide in
+
+Commit: `feat(v7): night 6 — tables, forms, modals [auto]`
+
+---
+
+## UPCOMING: Night 7 — April 13 (Dashboard + Navigation)
+
+**Goal:** The first screen a GC sees takes their breath away.
+
+1. `cat v7-prompts/V7-03_DASHBOARD_REDESIGN.md` — Command center reimagined
+2. `cat v7-prompts/V7-04_SIDEBAR_NAVIGATION_POLISH.md` — Navigation feels native
+
+Commit: `feat(v7): night 7 — dashboard redesign, navigation polish [auto]`
+
+---
+
+## UPCOMING: Night 8 — April 14 (Page Polish + Demo Validation)
+
+**Goal:** Every page perfect. The GC demo test passes end to end.
+
+1. `cat v7-prompts/V7-10_PAGE_POLISH_PART1.md` — First 24 pages perfected
+2. `cat v7-prompts/V7-11_PAGE_POLISH_PART2.md` — Remaining pages perfected
+3. Run the demo test: `npx playwright test e2e/demo-flow.spec.ts --reporter=verbose`
+4. Fix every failure in the demo test before committing
+
+Commit: `feat(v7): night 8 — all pages polished, demo flow passing [auto]`
+
+---
+
+## UPCOMING: Night 9 — April 15 pre-dawn (Dark Mode + Final QA + Tag)
+
+**Goal:** Dark mode flawless. Dead code gone. Walker arrives to a world-class product.
+
+1. `cat v7-prompts/V7-12_DARK_MODE_SHADOWS_DEPTH.md` — Dark mode perfection
+2. `cat v7-prompts/V7-13_DEAD_CODE_CLEANUP_FINAL_QA.md` — Eliminate dead code, final audit
+3. Run full test suite: `npx playwright test && npx vitest run`
+4. Tag release: `git tag v1.0.0-demo && git push origin v1.0.0-demo`
+
+Commit: `feat(release): night 9 — dark mode, dead code removed, v1.0.0-demo tagged [auto]`
 
 ---
 
 ## Rules for the Organism
-- Always read LEARNINGS.md before writing code
-- Always read DECISIONS.md for architecture constraints
-- Never run `supabase` CLI commands (no CLI access in CI) — all DB changes go through Walker or migration files
-- Never commit broken code — quality gates must pass
-- Never touch files outside your MODULE_ASSIGNMENTS.md scope (swarm agents)
-- Mark nights COMPLETED only when quality gates pass and commit is on main
+
+1. **Check PAUSE.md first** — if Status is PAUSED, stop immediately
+2. **Read V7-00 before any V7 work** — `cat v7-prompts/V7-00_SYSTEM_CONTEXT.md`
+3. **Read LEARNINGS.md** before writing any code (migration safety is critical)
+4. **Quality gates before every commit** — `npx tsc --noEmit && npm run lint && npx vitest run --passWithNoTests && npm run build`
+5. **Never run supabase CLI** — no CLI access in CI. Migrations go through Walker.
+6. **Mark nights COMPLETED only when all steps done AND quality gates pass**
+7. **Update this file after each night** — advance the mission forward
