@@ -80,7 +80,9 @@ jobs:
 
           TONIGHT'S MISSION: $MISSION
 
-          READ THESE FILES IMMEDIATELY (before doing anything else):
+          READ SESSION_BRIEF.md FIRST (pre-digested context — saves 10 turns):
+          0. cat SESSION_BRIEF.md   — start here. Has tonight mission, cognitive overrides, quality metrics.
+          If SESSION_BRIEF.md does not exist, then read individually:
           1. cat TONIGHT.md                           — your specific mission for tonight
           2. cat v7-prompts/V7-00_SYSTEM_CONTEXT.md  — tech stack rules (CRITICAL for V7 work)
           3. cat LEARNINGS.md                         — what to avoid (especially migration rules)
