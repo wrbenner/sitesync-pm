@@ -257,7 +257,7 @@ const RFIs: React.FC = () => {
     rfiColHelper.accessor('priority', {
       header: 'Priority',
       size: 90,
-      cell: (info) => <span aria-label={`Priority: ${info.getValue()}`}><PriorityTag priority={info.getValue() as any} /></span>,
+      cell: (info) => <span aria-label={`Priority: ${info.getValue()}`}><PriorityTag priority={info.getValue() as 'low' | 'medium' | 'high' | 'critical'} /></span>,
     }),
     rfiColHelper.accessor('status', {
       header: 'Status',
@@ -270,7 +270,7 @@ const RFIs: React.FC = () => {
             {info.getValue() === 'pending' ? (
               <span role="status" aria-label={`Status: ${info.getValue()}`} style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.statusInfoBright, backgroundColor: colors.statusInfoSubtle, padding: '2px 8px', borderRadius: borderRadius.full, display: 'inline-block' }}>Pending</span>
             ) : (
-              <span role="status" aria-label={`Status: ${info.getValue()}`}><StatusTag status={info.getValue() as any} /></span>
+              <span role="status" aria-label={`Status: ${info.getValue()}`}><StatusTag status={info.getValue() as 'pending' | 'approved' | 'under_review' | 'revise_resubmit' | 'complete' | 'active' | 'closed' | 'pending_approval'} /></span>
             )}
             {overdue && (
               <Tag label="OVERDUE" color="#E74C3C" backgroundColor="#FEE2E2" />
@@ -738,7 +738,7 @@ const RFIs: React.FC = () => {
                   selectedRfi.priority = val;
                   toast.success('Priority updated');
                 }}
-                displayContent={<PriorityTag priority={selectedRfi.priority as any} />}
+                displayContent={<PriorityTag priority={selectedRfi.priority as 'low' | 'medium' | 'high' | 'critical'} />}
               />
               <EditableDetailField
                 label="Status"
@@ -755,7 +755,7 @@ const RFIs: React.FC = () => {
                   await handleStatusChange(String(selectedRfi.id), val);
                   selectedRfi.status = val;
                 }}
-                displayContent={<StatusTag status={selectedRfi.status as any} />}
+                displayContent={<StatusTag status={selectedRfi.status as 'pending' | 'approved' | 'under_review' | 'revise_resubmit' | 'complete' | 'active' | 'closed' | 'pending_approval'} />}
               />
               <EditableDetailField
                 label="Assigned To"

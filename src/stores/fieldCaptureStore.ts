@@ -51,14 +51,14 @@ export const useFieldCaptureStore = create<FieldCaptureState>()((set, get) => ({
   },
 
   addCapture: async (capture) => {
-    const { error } = await (supabase.from('field_captures') as any).insert(capture);
+    const { error } = await supabase.from('field_captures').insert(capture);
     if (error) return { error: error.message };
     await get().loadCaptures(capture.project_id);
     return { error: null };
   },
 
   deleteCapture: async (id) => {
-    const { error } = await (supabase.from('field_captures') as any).delete().eq('id', id);
+    const { error } = await supabase.from('field_captures').delete().eq('id', id);
     if (!error) {
       set((s) => ({ captures: s.captures.filter((c) => c.id !== id) }));
     }

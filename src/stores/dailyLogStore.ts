@@ -62,7 +62,7 @@ export const useDailyLogStore = create<DailyLogState>()((set, get) => ({
   },
 
   createLog: async (projectId, date, weather, createdBy) => {
-    const { error } = await (supabase.from('daily_logs') as any).insert({
+    const { error } = await supabase.from('daily_logs').insert({
       project_id: projectId,
       log_date: date,
       weather_condition: weather,
@@ -76,7 +76,7 @@ export const useDailyLogStore = create<DailyLogState>()((set, get) => ({
   },
 
   updateLogStatus: async (logId, status) => {
-    const { error } = await (supabase.from('daily_logs') as any).update({ status, updated_at: new Date().toISOString() }).eq('id', logId);
+    const { error } = await supabase.from('daily_logs').update({ status, updated_at: new Date().toISOString() }).eq('id', logId);
     if (!error) {
       set((s) => ({
         logs: s.logs.map((l) => (l.id === logId ? { ...l, status } : l)),
@@ -86,7 +86,7 @@ export const useDailyLogStore = create<DailyLogState>()((set, get) => ({
   },
 
   addEntry: async (logId, entryType, data) => {
-    const { error } = await (supabase.from('daily_log_entries') as any).insert({
+    const { error } = await supabase.from('daily_log_entries').insert({
       daily_log_id: logId,
       entry_type: entryType,
       data,
@@ -96,7 +96,7 @@ export const useDailyLogStore = create<DailyLogState>()((set, get) => ({
   },
 
   signAndSubmit: async (logId, signatureUrl) => {
-    const { error } = await (supabase.from('daily_logs') as any).update({
+    const { error } = await supabase.from('daily_logs').update({
       status: 'submitted',
       signature_url: signatureUrl,
       updated_at: new Date().toISOString(),

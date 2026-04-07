@@ -50,7 +50,7 @@ export const useCrewStore = create<CrewState>()((set, get) => ({
   },
 
   addCrew: async (crew) => {
-    const { error } = await (supabase.from('crews') as any).insert({
+    const { error } = await supabase.from('crews').insert({
       project_id: crew.project_id,
       name: crew.name,
       foreman_id: crew.foreman_id,
@@ -65,7 +65,7 @@ export const useCrewStore = create<CrewState>()((set, get) => ({
   },
 
   updateCrew: async (id, updates) => {
-    const { error } = await (supabase.from('crews') as any).update(updates).eq('id', id);
+    const { error } = await supabase.from('crews').update(updates).eq('id', id);
     if (!error) {
       set((s) => ({
         crews: s.crews.map((c) => (c.id === id ? { ...c, ...updates } : c)),
@@ -75,7 +75,7 @@ export const useCrewStore = create<CrewState>()((set, get) => ({
   },
 
   deleteCrew: async (id) => {
-    const { error } = await (supabase.from('crews') as any).delete().eq('id', id);
+    const { error } = await supabase.from('crews').delete().eq('id', id);
     if (!error) {
       set((s) => ({ crews: s.crews.filter((c) => c.id !== id) }));
     }

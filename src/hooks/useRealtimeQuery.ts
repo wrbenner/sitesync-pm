@@ -155,7 +155,7 @@ export function useOptimisticLock(
         .eq('id', entityId)
         .single()
       if (error) return null
-      return (data as any)?.updated_at as string | null
+      return (data as Record<string, unknown>)?.updated_at as string | null
     },
     enabled: !!entityId && !!loadedUpdatedAt,
     refetchInterval: 10_000, // Check every 10 seconds while editing

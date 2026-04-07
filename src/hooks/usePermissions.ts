@@ -225,7 +225,7 @@ export function usePermissions(): PermissionsResult {
         },
         (payload) => {
           // If this user's role changed, or they were removed, invalidate immediately
-          const row = (payload.new as any) ?? (payload.old as any)
+          const row = (payload.new as Record<string, unknown>) ?? (payload.old as Record<string, unknown>)
           if (row?.user_id === user.id || payload.eventType === 'DELETE') {
             queryClient.invalidateQueries({ queryKey: ['project_membership', projectId, user.id] })
           }

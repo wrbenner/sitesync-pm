@@ -64,14 +64,14 @@ export const useMeetingStore = create<MeetingState>()((set, get) => ({
   },
 
   createMeeting: async (meeting) => {
-    const { error } = await (supabase.from('meetings') as any).insert(meeting);
+    const { error } = await supabase.from('meetings').insert(meeting);
     if (error) return { error: error.message };
     await get().loadMeetings(meeting.project_id);
     return { error: null };
   },
 
   updateMeeting: async (id, updates) => {
-    const { error } = await (supabase.from('meetings') as any).update(updates).eq('id', id);
+    const { error } = await supabase.from('meetings').update(updates).eq('id', id);
     if (!error) {
       set((s) => ({
         meetings: s.meetings.map((m) => (m.id === id ? { ...m, ...updates } : m)),
@@ -81,7 +81,7 @@ export const useMeetingStore = create<MeetingState>()((set, get) => ({
   },
 
   deleteMeeting: async (id) => {
-    const { error } = await (supabase.from('meetings') as any).delete().eq('id', id);
+    const { error } = await supabase.from('meetings').delete().eq('id', id);
     if (!error) {
       set((s) => ({ meetings: s.meetings.filter((m) => m.id !== id) }));
     }

@@ -547,7 +547,7 @@ const Submittals: React.FC = () => {
     subColHelper.accessor('priority', {
       header: 'Priority',
       size: 90,
-      cell: (info) => <PriorityTag priority={info.getValue() as any} />,
+      cell: (info) => <PriorityTag priority={info.getValue() as 'low' | 'medium' | 'high' | 'critical'} />,
     }),
     subColHelper.accessor('status', {
       header: 'Status',
@@ -899,7 +899,7 @@ const Submittals: React.FC = () => {
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs }}>
                 <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: colors.textTertiary }}>{sub.submittalNumber}</span>
-                <PriorityTag priority={sub.priority as any} />
+                <PriorityTag priority={sub.priority as 'low' | 'medium' | 'high' | 'critical'} />
               </div>
               <div style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.sm, lineHeight: typography.lineHeight.snug }}>
                 {sub.title}
@@ -996,8 +996,8 @@ const Submittals: React.FC = () => {
               </div>
               <EditingLockBanner entityType="submittal" entityId={String(selected.id)} isEditing={editingDetail} />
               <div style={{ display: 'flex', gap: spacing.sm, flexWrap: 'wrap' }}>
-                <PriorityTag priority={selected.priority as any} />
-                <StatusTag status={selected.status as any} />
+                <PriorityTag priority={selected.priority as 'low' | 'medium' | 'high' | 'critical'} />
+                <StatusTag status={selected.status as 'pending' | 'approved' | 'under_review' | 'revise_resubmit' | 'complete' | 'active' | 'closed' | 'pending_approval'} />
               </div>
             </div>
 

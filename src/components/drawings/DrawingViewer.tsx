@@ -17,6 +17,7 @@ import {
 } from '../../lib/liveblocks';
 import { DrawingPresenceBar } from '../collaboration/PresenceBar';
 import { supabase } from '../../api/client';
+import type { Database } from '../../types/database';
 import { useUiStore } from '../../stores';
 import { useAuthStore } from '../../stores/authStore';
 
@@ -645,8 +646,7 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
         created_by: presenceUser.name,
         created_at: new Date().toISOString(),
       }));
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase as any).from('drawing_markups').insert(records);
+      await supabase.from('drawing_markups').insert(records as Database['public']['Tables']['drawing_markups']['Insert'][]);
     } finally {
       setIsSaving(false);
     }

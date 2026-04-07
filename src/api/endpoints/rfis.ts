@@ -1,6 +1,7 @@
 import { supabase, transformSupabaseError, buildPaginatedQuery, supabaseMutation } from '../client'
 import { assertProjectAccess, validateProjectId } from '../middleware/projectScope'
 import type { RfiRow, PaginationParams, PaginatedResult, CreateRfiPayload } from '../../types/api'
+import type { Database } from '../../types/database'
 
 function mapRfi(r: RfiRow) {
   return {
@@ -52,8 +53,7 @@ export const getRfiById = async (projectId: string, id: string) => {
 export const createRfi = async (projectId: string, payload: CreateRfiPayload): Promise<MappedRfi> => {
   validateProjectId(projectId)
   const data = await supabaseMutation<RfiRow>(client =>
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (client.from('rfis') as any).insert({ ...payload, project_id: projectId }).select().single()
+    client.from('rfis').insert({ ...payload, project_id: projectId } as Database['public']['Tables']['rfis']['Insert']).select().single()
   )
   return mapRfi(data)
 }
@@ -65,9 +65,8 @@ export const updateRfi = async (
 ): Promise<MappedRfi> => {
   validateProjectId(projectId)
   const data = await supabaseMutation<RfiRow>(client =>
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (client.from('rfis') as any)
-      .update({ ...updates, updated_at: new Date().toISOString() })
+    client.from('rfis')
+      .update({ ...updates, updated_at: new Date().toISOString() } as Database['public']['Tables']['rfis']['Update'])
       .eq('id', id)
       .eq('project_id', projectId)
       .select()

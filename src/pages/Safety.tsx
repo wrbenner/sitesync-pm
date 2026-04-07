@@ -155,7 +155,7 @@ const incidentColumns = [
     id: 'ca_count',
     header: 'Corrective Actions',
     cell: (info) => {
-      const count = (info.row.original as any).corrective_action_count ?? 0
+      const count = (info.row.original as Record<string, unknown>).corrective_action_count as number ?? 0
       if (count === 0) return <span style={{ color: colors.textTertiary }}>None</span>
       return (
         <span style={{

@@ -1,7 +1,7 @@
 import { supabase, transformSupabaseError, supabaseMutation, buildPaginatedQuery } from '../client'
 import { assertProjectAccess, validateProjectId } from '../middleware/projectScope'
 import type { DailyLogRow, DailyLogEntryRow, FieldCaptureRow, PunchItemRow, DailyLogPayload, PaginationParams, PaginatedResult } from '../../types/api'
-import type { Json } from '../../types/database'
+import type { Json, Database } from '../../types/database'
 
 // Sub-entry shapes produced from daily_log_entries rows
 
@@ -201,16 +201,14 @@ export interface PunchListItem {
 export const createDailyLog = async (projectId: string, payload: DailyLogPayload): Promise<DailyLogRow> => {
   const { photos: _photos, ...dbPayload } = payload
   return supabaseMutation<DailyLogRow>(client =>
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (client.from('daily_logs') as any).insert({ ...dbPayload, project_id: projectId }).select().single()
+    client.from('daily_logs').insert({ ...dbPayload, project_id: projectId } as Database['public']['Tables']['daily_logs']['Insert']).select().single()
   )
 }
 
 export const updateDailyLog = async (id: string, payload: Partial<DailyLogPayload>): Promise<DailyLogRow> => {
   const { photos: _photos, ...dbPayload } = payload
   return supabaseMutation<DailyLogRow>(client =>
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (client.from('daily_logs') as any).update(dbPayload).eq('id', id).select().single()
+    client.from('daily_logs').update(dbPayload as Database['public']['Tables']['daily_logs']['Update']).eq('id', id).select().single()
   )
 }
 
@@ -230,9 +228,8 @@ export const submitDailyLog = async (
   if (signatureUrl) updates.superintendent_signature_url = signatureUrl
   if (userId) updates.submitted_by = userId
   return supabaseMutation<DailyLogRow>(client =>
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (client.from('daily_logs') as any)
-      .update(updates)
+    client.from('daily_logs')
+      .update(updates as Database['public']['Tables']['daily_logs']['Update'])
       .eq('id', id)
       .eq('project_id', projectId)
       .select()
@@ -247,8 +244,7 @@ export const amendDailyLog = async (
 ): Promise<DailyLogRow> => {
   validateProjectId(projectId)
   return supabaseMutation<DailyLogRow>(client =>
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (client.from('daily_logs') as any)
+    client.from('daily_logs')
       .insert({
         ...payload,
         project_id: projectId,
@@ -262,7 +258,7 @@ export const amendDailyLog = async (
         approved_by: null,
         superintendent_signature_url: null,
         manager_signature_url: null,
-      })
+      } as Database['public']['Tables']['daily_logs']['Insert'])
       .select()
       .single()
   )

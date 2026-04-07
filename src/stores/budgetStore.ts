@@ -100,7 +100,7 @@ export const useBudgetStore = create<BudgetState>()((set, get) => ({
   },
 
   addLineItem: async (item) => {
-    const { error } = await (supabase.from('budget_line_items') as any).insert(item);
+    const { error } = await supabase.from('budget_line_items').insert(item);
     if (!error) {
       await get().loadLineItems(item.division_id);
     }
@@ -120,7 +120,7 @@ export const useBudgetStore = create<BudgetState>()((set, get) => ({
   },
 
   addChangeOrder: async (co) => {
-    const { error } = await (supabase.from('change_orders') as any).insert(co);
+    const { error } = await supabase.from('change_orders').insert(co);
     if (!error) await get().loadChangeOrders(co.project_id);
     return { error: error?.message ?? null };
   },
@@ -136,7 +136,7 @@ export const useBudgetStore = create<BudgetState>()((set, get) => ({
       changeOrders: s.changeOrders.map((co) => (co.id === id ? { ...co, ...updates } : co)),
     }));
 
-    const { error } = await (supabase.from('change_orders') as any).update(updates).eq('id', id);
+    const { error } = await supabase.from('change_orders').update(updates).eq('id', id);
     if (error) {
       // Roll back the optimistic update so the UI stays consistent with the DB.
       set({ changeOrders: previous });

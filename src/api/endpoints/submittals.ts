@@ -8,6 +8,7 @@ import type {
   SubmittalRevision,
   CreateSubmittalRevisionPayload,
 } from '../../types/api'
+import type { Database } from '../../types/database'
 
 function mapSubmittal(s: SubmittalRow) {
   return {
@@ -47,8 +48,7 @@ export const getSubmittalById = async (projectId: string, id: string) => {
 export const createSubmittal = async (projectId: string, payload: CreateSubmittalPayload): Promise<MappedSubmittal> => {
   validateProjectId(projectId)
   const data = await supabaseMutation<SubmittalRow>(client =>
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (client.from('submittals') as any).insert({ ...payload, project_id: projectId }).select().single()
+    client.from('submittals').insert({ ...payload, project_id: projectId } as Database['public']['Tables']['submittals']['Insert']).select().single()
   )
   return mapSubmittal(data)
 }
@@ -60,9 +60,8 @@ export const updateSubmittal = async (
 ): Promise<MappedSubmittal> => {
   validateProjectId(projectId)
   const data = await supabaseMutation<SubmittalRow>(client =>
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (client.from('submittals') as any)
-      .update({ ...updates, updated_at: new Date().toISOString() })
+    client.from('submittals')
+      .update({ ...updates, updated_at: new Date().toISOString() } as Database['public']['Tables']['submittals']['Update'])
       .eq('id', id)
       .eq('project_id', projectId)
       .select()

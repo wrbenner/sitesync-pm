@@ -87,8 +87,8 @@ export const useProjectContext = create<ProjectContextState>()(
       },
 
       createProject: async (project) => {
-        const { data, error } = await (supabase
-          .from('projects') as any)
+        const { data, error } = await supabase
+          .from('projects')
           .insert({
             name: project.name,
             company_id: project.company_id,
@@ -111,7 +111,7 @@ export const useProjectContext = create<ProjectContextState>()(
         const newProject = data as Project;
 
         // Auto add creator as project manager
-        await (supabase.from('project_members') as any).insert({
+        await supabase.from('project_members').insert({
           project_id: newProject.id,
           user_id: project.created_by,
           role: 'project_manager',
@@ -128,7 +128,7 @@ export const useProjectContext = create<ProjectContextState>()(
       },
 
       updateProject: async (projectId, updates) => {
-        const { error } = await (supabase.from('projects') as any).update(updates).eq('id', projectId);
+        const { error } = await supabase.from('projects').update(updates).eq('id', projectId);
         if (!error) {
           set((s) => ({
             projects: s.projects.map((p) => (p.id === projectId ? { ...p, ...updates } : p)),
@@ -139,7 +139,7 @@ export const useProjectContext = create<ProjectContextState>()(
       },
 
       addMember: async (projectId, userId, role) => {
-        const { error } = await (supabase.from('project_members') as any).insert({
+        const { error } = await supabase.from('project_members').insert({
           project_id: projectId,
           user_id: userId,
           role,

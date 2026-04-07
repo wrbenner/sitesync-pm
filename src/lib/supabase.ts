@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import type { Session } from '@supabase/supabase-js'
 import type { Database, Profile } from '../types/database'
 import { UserRole } from '../types/database'
 
@@ -29,10 +30,10 @@ export async function refreshSession(): Promise<void> {
  * Use this in the app root to keep tenant context in sync with the session.
  */
 export function onAuthStateChange(
-  callback: (event: string, session: ReturnType<typeof supabase.auth.getSession> | null) => void,
+  callback: (event: string, session: Session | null) => void,
 ) {
   const { data: { subscription } } = supabase.auth.onAuthStateChange(
-    (event, session) => callback(event, session as any),
+    (event, session) => callback(event, session),
   )
   return () => subscription.unsubscribe()
 }

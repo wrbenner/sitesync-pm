@@ -49,7 +49,7 @@ export const useRfiStore = create<RfiState>()((set, get) => ({
   },
 
   createRfi: async (rfi) => {
-    const { data, error } = await (supabase.from('rfis') as any)
+    const { data, error } = await supabase.from('rfis')
       .insert({
         project_id: rfi.project_id,
         title: rfi.title,
@@ -73,7 +73,7 @@ export const useRfiStore = create<RfiState>()((set, get) => ({
   },
 
   updateRfi: async (rfiId, updates) => {
-    const { error } = await (supabase.from('rfis') as any).update(updates).eq('id', rfiId);
+    const { error } = await supabase.from('rfis').update(updates).eq('id', rfiId);
     if (!error) {
       set((s) => ({
         rfis: s.rfis.map((r) => (r.id === rfiId ? { ...r, ...updates } : r)),
@@ -101,7 +101,7 @@ export const useRfiStore = create<RfiState>()((set, get) => ({
   },
 
   addResponse: async (rfiId, userId, text, attachments) => {
-    const { error } = await (supabase.from('rfi_responses') as any).insert({
+    const { error } = await supabase.from('rfi_responses').insert({
       rfi_id: rfiId,
       user_id: userId,
       response_text: text,

@@ -390,8 +390,8 @@ export function useMeeting(id: string | undefined) {
       if (meetingResult.error) throw meetingResult.error
       return {
         ...(meetingResult.data as Meeting),
-        attendees: (attendeesResult.data || []) as any[],
-        action_items: (actionItemsResult.data || []) as any[],
+        attendees: attendeesResult.data || [],
+        action_items: actionItemsResult.data || [],
       }
     },
     enabled: !!id,

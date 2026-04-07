@@ -428,7 +428,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
             </div>
 
             {/* Notification list */}
-            <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' as any }}>
+            <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
               <NotificationList
                 onNavigate={(route) => {
                   setNotificationsOpen(false);

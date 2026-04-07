@@ -518,7 +518,7 @@ const PunchListPage: React.FC = () => {
     plColHelper.accessor('priority', {
       header: 'Priority',
       size: 90,
-      cell: (info) => <PriorityTag priority={info.getValue() as any} />,
+      cell: (info) => <PriorityTag priority={info.getValue() as 'low' | 'medium' | 'high' | 'critical'} />,
     }),
     plColHelper.accessor('verification_status', {
       header: 'Status',
@@ -918,7 +918,7 @@ const PunchListPage: React.FC = () => {
                           {statusLabel[item.verification_status] ?? item.verification_status}
                         </span>
                       </div>
-                      <PriorityTag priority={item.priority as any} />
+                      <PriorityTag priority={item.priority as 'low' | 'medium' | 'high' | 'critical'} />
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '2px' }}>
                       {item.assigned && (
@@ -1001,7 +1001,7 @@ const PunchListPage: React.FC = () => {
               </div>
               <EditingLockBanner entityType="punch item" entityId={String(selected.id)} isEditing={editingDetail} />
               <div style={{ display: 'flex', gap: spacing.sm, flexWrap: 'wrap', alignItems: 'center' }}>
-                <PriorityTag priority={selected.priority as any} />
+                <PriorityTag priority={selected.priority as 'low' | 'medium' | 'high' | 'critical'} />
                 <StatusTag status={statusMap[selected.verification_status]} label={statusLabel[selected.verification_status] ?? selected.verification_status} />
                 <StatusDot status={selected.verification_status} />
               </div>
@@ -1050,7 +1050,7 @@ const PunchListPage: React.FC = () => {
                   await updatePunchItem.mutateAsync({ id: String(selected.id), updates: { priority: val }, projectId: projectId! });
                   toast.success('Priority updated');
                 }}
-                displayContent={<PriorityTag priority={selected.priority as any} />}
+                displayContent={<PriorityTag priority={selected.priority as 'low' | 'medium' | 'high' | 'critical'} />}
               />
               <EditableDetailField
                 label="Verification Status"
