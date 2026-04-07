@@ -76,3 +76,11 @@ jobs:
           The CI failure was likely caused by a TypeScript error, build error, or test failure that passed local gates but failed on Linux. Check for platform-specific issues." \
             --label "bug" \
             --label "auto-revert" 2>/dev/null || true
+
+          # Deposit immune memory
+          echo "\n### $(date +%Y-%m-%d) Immune Response: Reverted $BAD_MSG" >> LEARNINGS.md
+          echo "The organism committed code that broke CI. Root cause should be analyzed from the workflow run." >> LEARNINGS.md
+          echo "Anti-pattern: whatever the organism tried in this commit should be approached differently next time." >> LEARNINGS.md
+          git add LEARNINGS.md
+          git commit -m "learn: immune memory from auto-revert [evolution][skip ci]" 2>/dev/null || true
+          git push origin main 2>/dev/null || true
