@@ -1,9 +1,14 @@
 import React, { useState } from 'react';
-import { Plus, Calendar, MapPin } from 'lucide-react';
+import { Plus, Calendar, MapPin, AlertTriangle, RefreshCw } from 'lucide-react';
 import {
-  PageContainer, Card, Tag, Btn, MetricBox,
+  PageContainer, Tag, Btn, MetricBox, Skeleton,
 } from '../components/Primitives';
+import { MetricCardSkeleton } from '../components/ui/Skeletons';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../styles/theme';
+import { useMeetings } from '../hooks/queries';
+import { useProjectId } from '../hooks/useProjectId';
+import { PermissionGate } from '../components/auth/PermissionGate';
+import CreateMeetingModal from '../components/forms/CreateMeetingModal';
 
 // ── Type helpers ──────────────────────────────────────────────────────────────
 
@@ -31,9 +36,6 @@ function typeColors(type: string): { fg: string; bg: string } {
   return MEETING_TYPE_COLORS[type] ?? { fg: colors.statusNeutral, bg: colors.statusNeutralSubtle };
 }
 
-// Meeting data is fetched from Supabase meetings, attendees, and action_items tables.
-// Interfaces are defined in types/entities.ts.
-
 interface MeetingListItem {
   id: string;
   title: string;
@@ -53,22 +55,135 @@ interface ActionItem {
   meetingTitle: string;
 }
 
+// ── Skeleton loading state ────────────────────────────────────────────────────
+
+const MeetingsSkeleton: React.FC = () => (
+  <PageContainer title="Meetings">
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing.lg, marginBottom: spacing['2xl'] }}>
+      {[0, 1, 2, 3].map((i) => <MetricCardSkeleton key={i} />)}
+    </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.md }}>
+      {[0, 1, 2, 3].map((i) => (
+        <div key={i} style={{ background: colors.surfaceRaised, borderRadius: borderRadius.xl, padding: spacing.xl, boxShadow: shadows.card }}>
+          <Skeleton style={{ height: 20, width: '40%', marginBottom: spacing.sm }} />
+          <Skeleton style={{ height: 16, width: '60%' }} />
+        </div>
+      ))}
+    </div>
+  </PageContainer>
+);
+
+// ── Meeting card ──────────────────────────────────────────────────────────────
+
+const MeetingCard: React.FC<{ meeting: MeetingListItem }> = ({ meeting }) => {
+  const tc = typeColors(meeting.type);
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <div
+      style={{
+        background: colors.surfaceRaised,
+        borderRadius: borderRadius.xl,
+        boxShadow: hovered ? shadows.hover : shadows.card,
+        padding: spacing.xl,
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: spacing.lg,
+        cursor: 'pointer',
+        transition: transitions.quick,
+        transform: hovered ? 'translateY(-1px)' : 'none',
+      }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <div
+        style={{
+          width: 40,
+          height: 40,
+          borderRadius: borderRadius.lg,
+          background: tc.bg,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+        }}
+      >
+        <Calendar size={18} color={tc.fg} />
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs }}>
+          <p style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0 }}>
+            {meeting.title}
+          </p>
+          <Tag
+            label={typeLabel(meeting.type)}
+            color={tc.fg}
+            backgroundColor={tc.bg}
+          />
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: spacing.lg }}>
+          <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>
+            {meeting.date ? new Date(meeting.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : 'No date'}
+          </span>
+          {meeting.location && (
+            <span style={{ display: 'flex', alignItems: 'center', gap: spacing.xs, fontSize: typography.fontSize.sm, color: colors.textTertiary }}>
+              <MapPin size={12} />
+              {meeting.location}
+            </span>
+          )}
+        </div>
+      </div>
+      <Tag
+        label={meeting.status === 'scheduled' ? 'Upcoming' : 'Completed'}
+        color={meeting.status === 'scheduled' ? colors.statusInfo : colors.statusActive}
+        backgroundColor={meeting.status === 'scheduled' ? colors.statusInfoSubtle : colors.statusActiveSubtle}
+      />
+    </div>
+  );
+};
+
+// ── Page ──────────────────────────────────────────────────────────────────────
+
 export const MeetingsPage: React.FC = () => {
+  const projectId = useProjectId();
   const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
   const [showOpenOnly, setShowOpenOnly] = useState(true);
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
-  const upcomingMeetings = ([] as MeetingListItem[]).filter((m) => m.status === 'scheduled');
-  const pastMeetings = ([] as MeetingListItem[]).filter((m) => m.status === 'completed');
+  const { data: meetingsResult, isPending, error, refetch } = useMeetings(projectId);
+  const allMeetings = (meetingsResult?.data ?? []) as unknown as MeetingListItem[];
+
+  if (isPending) return <MeetingsSkeleton />;
+
+  if (error) {
+    return (
+      <PageContainer title="Meetings">
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 24px', gap: spacing.lg, textAlign: 'center' }}>
+          <AlertTriangle size={48} color={colors.statusDanger} />
+          <p style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0 }}>
+            Failed to load meetings
+          </p>
+          <p style={{ fontSize: typography.fontSize.body, color: colors.textSecondary, margin: 0 }}>
+            {error instanceof Error ? error.message : 'An unexpected error occurred'}
+          </p>
+          <Btn variant="secondary" icon={<RefreshCw size={14} />} onClick={() => refetch()}>
+            Retry
+          </Btn>
+        </div>
+      </PageContainer>
+    );
+  }
+
+  const upcomingMeetings = allMeetings.filter((m) => m.status === 'scheduled');
+  const pastMeetings = allMeetings.filter((m) => m.status === 'completed');
   const displayedMeetings = activeTab === 'upcoming' ? upcomingMeetings : pastMeetings;
 
-  // Metrics
   const allActionItems: ActionItem[] = [];
   const openActionItemsCount = allActionItems.filter((ai) => ai.status === 'open').length;
-  const meetingsThisWeek = upcomingMeetings.filter(() => true).length; // all upcoming are this week in mock
-  const allMeetings: MeetingListItem[] = [];
-  const totalAttendees = allMeetings.reduce((sum, m) => sum + m.attendees.length, 0);
+  const meetingsThisWeek = upcomingMeetings.length;
+  const totalAttendees = allMeetings.reduce((sum, m) => sum + (m.attendees?.length ?? 0), 0);
   const avgAttendance = allMeetings.length > 0 ? Math.round(totalAttendees / allMeetings.length) : 0;
-  const avgAttendanceRate = Math.round((avgAttendance / 10) * 100); // normalized to a plausible rate
+  const avgAttendanceRate = Math.round((avgAttendance / 10) * 100);
 
   const filteredActionItems = showOpenOnly
     ? allActionItems.filter((ai) => ai.status === 'open')
@@ -119,9 +234,11 @@ export const MeetingsPage: React.FC = () => {
     <PageContainer
       title="Meetings"
       actions={
-        <Btn icon={<Plus size={14} />} onClick={() => {}}>
-          Schedule Meeting
-        </Btn>
+        <PermissionGate permission="meetings.create">
+          <Btn icon={<Plus size={14} />} onClick={() => setShowCreateModal(true)}>
+            Schedule Meeting
+          </Btn>
+        </PermissionGate>
       }
     >
       {/* Metric cards */}
@@ -214,9 +331,11 @@ export const MeetingsPage: React.FC = () => {
             >
               Set up your recurring OAC meeting or schedule a one off to keep the team aligned.
             </p>
-            <Btn icon={<Plus size={14} />} onClick={() => {}}>
-              Schedule Meeting
-            </Btn>
+            <PermissionGate permission="meetings.create">
+              <Btn icon={<Plus size={14} />} onClick={() => setShowCreateModal(true)}>
+                Schedule Meeting
+              </Btn>
+            </PermissionGate>
           </div>
         </div>
       ) : (
@@ -355,8 +474,10 @@ export const MeetingsPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {showCreateModal && projectId && (
+        <CreateMeetingModal onClose={() => setShowCreateModal(false)} projectId={projectId} />
+      )}
     </PageContainer>
   );
 };
-
-export default MeetingsPage;
