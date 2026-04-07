@@ -343,6 +343,7 @@ export function DataTable<T>({
                 value={globalFilter}
                 onChange={(e) => setGlobalFilter(e.target.value)}
                 placeholder="Search..."
+                aria-label="Search table"
                 style={{
                   width: '100%',
                   padding: `${spacing['2']} ${spacing['3']} ${spacing['2']} 32px`,
@@ -361,6 +362,7 @@ export function DataTable<T>({
           {enableExport && (
             <button
               onClick={handleExport}
+              aria-label="Export to CSV"
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -375,7 +377,7 @@ export function DataTable<T>({
                 cursor: 'pointer',
               }}
             >
-              <Download size={12} /> CSV
+              <Download size={12} aria-hidden="true" /> CSV
             </button>
           )}
         </div>
@@ -512,6 +514,7 @@ export function DataTable<T>({
             <button
               disabled={!table.getCanPreviousPage()}
               onClick={() => table.previousPage()}
+              aria-label="Previous page"
               style={{
                 display: 'flex', alignItems: 'center',
                 padding: `${spacing['1']} ${spacing['2']}`,
@@ -524,11 +527,12 @@ export function DataTable<T>({
                 fontFamily: typography.fontFamily,
               }}
             >
-              <ChevronLeft size={14} /> Prev
+              <ChevronLeft size={14} aria-hidden="true" /> Prev
             </button>
             <button
               disabled={!table.getCanNextPage()}
               onClick={() => table.nextPage()}
+              aria-label="Next page"
               style={{
                 display: 'flex', alignItems: 'center',
                 padding: `${spacing['1']} ${spacing['2']}`,
@@ -541,7 +545,7 @@ export function DataTable<T>({
                 fontFamily: typography.fontFamily,
               }}
             >
-              Next <ChevronRight size={14} />
+              Next <ChevronRight size={14} aria-hidden="true" />
             </button>
           </div>
         </div>
