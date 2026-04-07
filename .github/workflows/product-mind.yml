@@ -39,6 +39,15 @@ jobs:
       - name: Gather intelligence
         id: intel
         run: |
+          echo "=== PRODUCT MIND MEMORY (last 7 days) ===" >> /tmp/daily-intel.txt
+          tail -100 DAILY_REPORT.md >> /tmp/daily-intel.txt 2>/dev/null
+
+          echo "=== EVOLUTION LEDGER (recent patterns) ===" >> /tmp/daily-intel.txt
+          python3 -c "import json; d=json.load(open('EVOLUTION_LEDGER.json')); [print(e['description']) for e in d.get('evolutions',[])[-5:]]" >> /tmp/daily-intel.txt 2>/dev/null
+
+          echo "=== STIGMERGY TRAILS ===" >> /tmp/daily-intel.txt
+          grep -A 2 "Stigmergy" LEARNINGS.md >> /tmp/daily-intel.txt 2>/dev/null
+
           echo "=== TODAY'S ORGANISM COMMITS ===" > /tmp/daily-intel.txt
           git log --since="24 hours ago" --oneline >> /tmp/daily-intel.txt 2>/dev/null
 
