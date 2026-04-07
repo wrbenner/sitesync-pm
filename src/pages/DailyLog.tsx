@@ -31,6 +31,20 @@ import { PermissionGate } from '../components/auth/PermissionGate';
 import { usePermissions } from '../hooks/usePermissions';
 import { getDailyLogStatusConfig } from '../machines/dailyLogMachine';
 import type { DailyLogState } from '../machines/dailyLogMachine';
+import type { DailyLog as DailyLogRow } from '../types/database';
+
+/** Fields stored as JSON columns not yet in the generated Database type */
+interface DailyLogExtensions {
+  crew_entries?: Array<{ trade?: string; company?: string; headcount?: number; hours?: number }>;
+  equipment_entries?: Array<{ type: string; count: number; hours_operated: number }>;
+  material_deliveries?: Array<{ description: string; quantity: number; po_reference: string; delivery_ticket: string }>;
+  safety_observations?: string;
+  toolbox_talk_topic?: string;
+  visitors?: Array<{ name: string; company: string; purpose: string; time_in: string; time_out: string }>;
+  incident_details?: Array<{ description: string; type: string; corrective_action: string }>;
+}
+
+type ExtendedDailyLog = DailyLogRow & DailyLogExtensions;
 
 interface ManpowerRow {
   id: string;
@@ -52,9 +66,9 @@ export const DailyLog: React.FC = () => {
   const approveDailyLog = useApproveDailyLog();
   const rejectDailyLog = useRejectDailyLog();
 
-  const dailyLogHistory = dailyLogData?.data ?? [];
+  const dailyLogHistory: ExtendedDailyLog[] = (dailyLogData?.data ?? []) as ExtendedDailyLog[];
   const todayStr = new Date().toISOString().split('T')[0];
-  const hasTodayLog = dailyLogHistory.some((l: any) => l.log_date?.split('T')[0] === todayStr);
+  const hasTodayLog = dailyLogHistory.some((l) => l.log_date?.split('T')[0] === todayStr);
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
   const [showComparison, setShowComparison] = useState(false);
   const [showSignature, setShowSignature] = useState(false);
@@ -136,7 +150,7 @@ export const DailyLog: React.FC = () => {
   // Seed workSummary from today's log on first load
   useEffect(() => {
     if (dailyLogHistory.length > 0 && !workSummary) {
-      const summary = (dailyLogHistory[0] as any).summary ?? '';
+      const summary = dailyLogHistory[0].summary ?? '';
       if (summary) setWorkSummary(summary);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -146,8 +160,7 @@ export const DailyLog: React.FC = () => {
   useEffect(() => {
     if (manpowerSeeded.current || dailyLogHistory.length === 0) return;
     const todayLog = dailyLogHistory[0];
-    const crewEntries: Array<{ trade?: string; company?: string; headcount?: number; hours?: number }> =
-      (todayLog as any).crew_entries ?? [];
+    const crewEntries = todayLog.crew_entries ?? [];
     if (crewEntries.length > 0) {
       setManpowerRows(crewEntries.map((c) => ({
         id: crypto.randomUUID(),
@@ -217,13 +230,13 @@ export const DailyLog: React.FC = () => {
 
   // Calendar data — 4 distinct status sets for color-coded dots
   const approvedDates = useMemo(() => new Set(
-    dailyLogHistory.filter((l: any) => l.status === 'approved' || (l.approved && l.status !== 'submitted')).map((l: any) => l.log_date?.split('T')[0])
+    dailyLogHistory.filter((l) => l.status === 'approved' || (l.approved && l.status !== 'submitted')).map((l) => l.log_date?.split('T')[0])
   ), [dailyLogHistory]);
   const submittedDates = useMemo(() => new Set(
-    dailyLogHistory.filter((l: any) => l.status === 'submitted' && !l.approved).map((l: any) => l.log_date?.split('T')[0])
+    dailyLogHistory.filter((l) => l.status === 'submitted' && !l.approved).map((l) => l.log_date?.split('T')[0])
   ), [dailyLogHistory]);
   const draftDates = useMemo(() => new Set(
-    dailyLogHistory.filter((l: any) => l.status === 'draft' || (!l.status && !l.approved)).map((l: any) => l.log_date?.split('T')[0])
+    dailyLogHistory.filter((l) => l.status === 'draft' || (!l.status && !l.approved)).map((l) => l.log_date?.split('T')[0])
   ), [dailyLogHistory]);
   // Legacy: combined set for any code still referencing loggedDates
   const loggedDates = useMemo(() => new Set([...approvedDates, ...submittedDates]), [approvedDates, submittedDates]);
@@ -242,28 +255,28 @@ export const DailyLog: React.FC = () => {
     const totalLogs = dailyLogHistory.length;
 
     // Logs this week
-    const thisWeekLogs = dailyLogHistory.filter((l: any) => {
-      const d = new Date((l.log_date as string) + 'T12:00:00');
+    const thisWeekLogs = dailyLogHistory.filter((l) => {
+      const d = new Date(l.log_date + 'T12:00:00');
       return d >= startOfWeek;
     }).length;
 
     // Avg crew size this month
-    const thisMonthLogs = dailyLogHistory.filter((l: any) => {
-      const d = new Date((l.log_date as string) + 'T12:00:00');
+    const thisMonthLogs = dailyLogHistory.filter((l) => {
+      const d = new Date(l.log_date + 'T12:00:00');
       return d >= startOfMonth;
     });
-    const crewTotal = thisMonthLogs.reduce((s: number, l: any) => s + (l.workers_onsite ?? 0), 0);
+    const crewTotal = thisMonthLogs.reduce((s, l) => s + (l.workers_onsite ?? 0), 0);
     const avgCrewSize = thisMonthLogs.length > 0 ? Math.round(crewTotal / thisMonthLogs.length) : 0;
 
     // Consecutive days without an incident (counting back from most recent log)
     let daysWithoutIncident = 0;
-    for (const log of [...dailyLogHistory].sort((a: any, b: any) => b.log_date.localeCompare(a.log_date))) {
-      if ((log as any).incidents ?? 0 > 0) break;
+    for (const log of [...dailyLogHistory].sort((a, b) => b.log_date.localeCompare(a.log_date))) {
+      if ((log.incidents ?? 0) > 0) break;
       daysWithoutIncident++;
     }
 
     // Keep legacy values for inline today metrics strip
-    const todayWorkers = (dailyLogHistory[0] as any)?.workers_onsite ?? 0;
+    const todayWorkers = dailyLogHistory[0]?.workers_onsite ?? 0;
 
     return {
       totalLogs,
@@ -308,8 +321,8 @@ export const DailyLog: React.FC = () => {
     // If today's log is already submitted/locked, prompt amendment workflow
     if (dailyLogHistory.length > 0) {
       const log = dailyLogHistory[0];
-      const status = (log as any).status;
-      const locked = (log as any).is_submitted === true || status === 'approved';
+      const status = log.status;
+      const locked = log.is_submitted === true || status === 'approved';
       if (locked) { setShowAmendmentModal(true); return; }
     }
     setShowQuickEntry(true);
@@ -318,7 +331,7 @@ export const DailyLog: React.FC = () => {
   const handleCalendarSelect = (date: string) => {
     setSelectedDate(date);
     // If the clicked date has no log, open the create form
-    const hasLog = dailyLogHistory.some((l: any) => l.log_date?.split('T')[0] === date);
+    const hasLog = dailyLogHistory.some((l) => l.log_date?.split('T')[0] === date);
     if (!hasLog) {
       setShowCreateModal(true);
     }
@@ -328,9 +341,9 @@ export const DailyLog: React.FC = () => {
 
   const handleSameAsYesterday = useCallback(async () => {
     if (!yesterday) return;
-    const yesterdayCrewEntries = (yesterday as any).crew_entries ?? [];
-    const yesterdayEquipment = (yesterday as any).equipment_entries ?? [];
-    const seededRows: ManpowerRow[] = yesterdayCrewEntries.map((c: any) => ({
+    const yesterdayCrewEntries = yesterday.crew_entries ?? [];
+    const yesterdayEquipment = yesterday.equipment_entries ?? [];
+    const seededRows: ManpowerRow[] = yesterdayCrewEntries.map((c) => ({
       id: crypto.randomUUID(),
       trade: c.trade ?? '',
       company: c.company ?? '',
@@ -349,7 +362,7 @@ export const DailyLog: React.FC = () => {
           updates: {
             crew_entries: yesterdayCrewEntries,
             equipment_entries: yesterdayEquipment,
-            workers_onsite: yesterdayCrewEntries.reduce((s: number, c: any) => s + (c.headcount ?? 0), 0),
+            workers_onsite: yesterdayCrewEntries.reduce((s, c) => s + (c.headcount ?? 0), 0),
           },
           projectId: projectId!,
         });
@@ -381,7 +394,7 @@ export const DailyLog: React.FC = () => {
   };
 
   const handleAiSummary = async () => {
-    const log = dailyLogHistory[0] as any;
+    const log = dailyLogHistory[0];
     setAiSummaryLoading(true);
     setAiSummaryGenerated(false);
     try {
@@ -396,8 +409,9 @@ export const DailyLog: React.FC = () => {
         },
       });
       if (fnError) {
-        const errMsg = (fnError as any)?.message ?? '';
-        const status = (fnError as any)?.status ?? (fnError as any)?.code;
+        const errObj = fnError as Record<string, unknown>;
+        const errMsg = (errObj?.message as string) ?? '';
+        const status = (errObj?.status as string | number) ?? (errObj?.code as string | number);
         if (status === 404 || errMsg.includes('404') || errMsg.toLowerCase().includes('not found')) {
           toast.error('AI summary is not available yet');
         } else {
@@ -405,7 +419,8 @@ export const DailyLog: React.FC = () => {
         }
         return;
       }
-      const generated = (data as any)?.summary ?? (data as any)?.text ?? '';
+      const result = data as Record<string, unknown> | null;
+      const generated = (result?.summary as string) ?? (result?.text as string) ?? '';
       if (generated) {
         setWorkSummary(generated);
         setAiSummaryGenerated(true);
@@ -414,8 +429,9 @@ export const DailyLog: React.FC = () => {
         toast.error('Could not generate summary. Try again.');
       }
     } catch (err: unknown) {
-      const errMsg = (err as any)?.message ?? '';
-      const status = (err as any)?.status ?? (err as any)?.code;
+      const errObj = err as Record<string, unknown>;
+      const errMsg = (errObj?.message as string) ?? '';
+      const status = (errObj?.status as string | number) ?? (errObj?.code as string | number);
       if (status === 404 || errMsg.includes('404') || errMsg.toLowerCase().includes('not found')) {
         toast.error('AI summary is not available yet');
       } else {
@@ -560,7 +576,7 @@ export const DailyLog: React.FC = () => {
   const previousDays = dailyLogHistory.slice(1);
 
   const filteredPreviousDays = historySearch.trim()
-    ? previousDays.filter((l: any) => {
+    ? previousDays.filter((l) => {
         const q = historySearch.toLowerCase();
         return (
           (l.log_date ?? '').includes(q) ||
@@ -575,15 +591,15 @@ export const DailyLog: React.FC = () => {
     weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
   });
 
-  const logStatus: DailyLogState = (today as any).status || (today.approved ? 'approved' : 'draft');
+  const logStatus: DailyLogState = (today.status as DailyLogState) || (today.approved ? 'approved' : 'draft');
   const statusConfig = getDailyLogStatusConfig(logStatus);
-  const isLocked = (today as any).is_submitted === true || logStatus === 'approved';
+  const isLocked = today.is_submitted === true || logStatus === 'approved';
   const isApproved = logStatus === 'approved';
   const isSubmittedOnly = logStatus === 'submitted';
   const isRejected = logStatus === 'rejected';
-  const submittedAt: string | null = (today as any).submitted_at ?? null;
-  const approvedAt: string | null = (today as any).approved_at ?? null;
-  const rejectionComments = (today as any).rejection_comments;
+  const submittedAt: string | null = today.submitted_at ?? null;
+  const approvedAt: string | null = today.approved_at ?? null;
+  const rejectionComments = today.rejection_comments;
 
   const canReturnToDraft = isSubmittedOnly && hasPermission('daily_log.reject');
 
@@ -687,17 +703,17 @@ export const DailyLog: React.FC = () => {
               temperature_low: today.temperature_low ?? undefined,
               wind_speed: today.wind_speed ?? undefined,
               precipitation: today.precipitation ?? undefined,
-              is_submitted: (today as any).is_submitted ?? false,
-              submitted_at: (today as any).submitted_at ?? null,
+              is_submitted: today.is_submitted ?? false,
+              submitted_at: today.submitted_at ?? null,
               status: logStatus,
-              crew_entries: (today as any).crew_entries ?? [],
-              equipment_entries: (today as any).equipment_entries ?? [],
-              material_deliveries: (today as any).material_deliveries ?? [],
+              crew_entries: today.crew_entries ?? [],
+              equipment_entries: today.equipment_entries ?? [],
+              material_deliveries: today.material_deliveries ?? [],
               workPerformed: today.summary ?? '',
-              safety_observations: (today as any).safety_observations ?? '',
-              toolbox_talk_topic: (today as any).toolbox_talk_topic ?? '',
-              visitors: (today as any).visitors ?? [],
-              incident_details: (today as any).incident_details ?? [],
+              safety_observations: today.safety_observations ?? '',
+              toolbox_talk_topic: today.toolbox_talk_topic ?? '',
+              visitors: today.visitors ?? [],
+              incident_details: today.incident_details ?? [],
               superintendent_signature_url: today.superintendent_signature_url,
               manager_signature_url: today.manager_signature_url,
             };
@@ -1097,14 +1113,14 @@ export const DailyLog: React.FC = () => {
           {/* Equipment on Site */}
           <Card>
             <SectionHeader title="Equipment on Site" action={
-              <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{((today as any).equipment_entries ?? []).length} items</span>
+              <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{(today.equipment_entries ?? []).length} items</span>
             } />
-            {((today as any).equipment_entries ?? []).length > 0 ? (
+            {(today.equipment_entries ?? []).length > 0 ? (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 72px 120px', gap: 1 }}>
                 {['Equipment', 'Qty', 'Hrs Operated'].map(h => (
                   <span key={h} style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.4px', backgroundColor: colors.surfaceInset }}>{h}</span>
                 ))}
-                {((today as any).equipment_entries as Array<{ type: string; count: number; hours_operated: number }>).map((eq, i) => (
+                {(today.equipment_entries as Array<{ type: string; count: number; hours_operated: number }>).map((eq, i) => (
                   <React.Fragment key={i}>
                     <span style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.sm, color: colors.textPrimary, borderBottom: `1px solid ${colors.borderSubtle}` }}>{eq.type}</span>
                     <span style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.sm, color: colors.textSecondary, borderBottom: `1px solid ${colors.borderSubtle}`, textAlign: 'center' }}>{eq.count}</span>
@@ -1122,12 +1138,12 @@ export const DailyLog: React.FC = () => {
             <SectionHeader title="Material Deliveries" action={
               <Truck size={14} style={{ color: colors.textTertiary }} />
             } />
-            {((today as any).material_deliveries ?? []).length > 0 ? (
+            {(today.material_deliveries ?? []).length > 0 ? (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 72px 120px 120px', gap: 1 }}>
                 {['Description', 'Qty', 'PO Reference', 'Delivery Ticket'].map(h => (
                   <span key={h} style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.4px', backgroundColor: colors.surfaceInset }}>{h}</span>
                 ))}
-                {((today as any).material_deliveries as Array<{ description: string; quantity: number; po_reference: string; delivery_ticket: string }>).map((d, i) => (
+                {(today.material_deliveries as Array<{ description: string; quantity: number; po_reference: string; delivery_ticket: string }>).map((d, i) => (
                   <React.Fragment key={i}>
                     <span style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.sm, color: colors.textPrimary, borderBottom: `1px solid ${colors.borderSubtle}` }}>{d.description}</span>
                     <span style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.sm, color: colors.textSecondary, borderBottom: `1px solid ${colors.borderSubtle}`, textAlign: 'center' }}>{d.quantity || '—'}</span>
@@ -1147,15 +1163,15 @@ export const DailyLog: React.FC = () => {
               <ShieldCheck size={14} style={{ color: colors.textTertiary }} />
             } />
             <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
-              {(today as any).toolbox_talk_topic && (
+              {today.toolbox_talk_topic && (
                 <div>
                   <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.4px', display: 'block', marginBottom: spacing['1'] }}>Toolbox Talk</span>
-                  <p style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, margin: 0 }}>{(today as any).toolbox_talk_topic}</p>
+                  <p style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, margin: 0 }}>{today.toolbox_talk_topic}</p>
                 </div>
               )}
               <div>
                 <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.4px', display: 'block', marginBottom: spacing['1'] }}>Observations</span>
-                <p style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, margin: 0 }}>{(today as any).safety_observations || 'No safety observations recorded.'}</p>
+                <p style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, margin: 0 }}>{today.safety_observations || 'No safety observations recorded.'}</p>
               </div>
             </div>
           </Card>
@@ -1184,21 +1200,21 @@ export const DailyLog: React.FC = () => {
                   </button>
                 )}
                 <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
-                  <UserPlus size={12} /> {((today as any).visitors ?? []).length}
+                  <UserPlus size={12} /> {(today.visitors ?? []).length}
                 </span>
               </div>
             } />
-            {noVisitorsToday && ((today as any).visitors ?? []).length === 0 ? (
+            {noVisitorsToday && (today.visitors ?? []).length === 0 ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], padding: `${spacing['2']} 0` }}>
                 <ShieldCheck size={14} color={colors.statusActive} />
                 <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>No visitors on site today</span>
               </div>
-            ) : ((today as any).visitors ?? []).length > 0 ? (
+            ) : (today.visitors ?? []).length > 0 ? (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 80px 80px', gap: 1 }}>
                 {['Name', 'Company', 'Purpose', 'Time In', 'Time Out'].map(h => (
                   <span key={h} style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.4px', backgroundColor: colors.surfaceInset }}>{h}</span>
                 ))}
-                {((today as any).visitors as Array<{ name: string; company: string; purpose: string; time_in: string; time_out: string }>).map((v, i) => (
+                {(today.visitors as Array<{ name: string; company: string; purpose: string; time_in: string; time_out: string }>).map((v, i) => (
                   <React.Fragment key={i}>
                     <span style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.sm, color: colors.textPrimary, borderBottom: `1px solid ${colors.borderSubtle}` }}>{v.name}</span>
                     <span style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.sm, color: colors.textSecondary, borderBottom: `1px solid ${colors.borderSubtle}` }}>{v.company || '—'}</span>
@@ -1237,9 +1253,9 @@ export const DailyLog: React.FC = () => {
               )
             } />
             {/* Existing incidents from DB */}
-            {((today as any).incident_details ?? []).length > 0 && (
+            {(today.incident_details ?? []).length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'], marginBottom: spacing['3'] }}>
-                {((today as any).incident_details as Array<{ description: string; type: string; corrective_action: string }>).map((inc, i) => (
+                {(today.incident_details as Array<{ description: string; type: string; corrective_action: string }>).map((inc, i) => (
                   <div key={i} style={{ padding: spacing['3'], backgroundColor: colors.statusCriticalSubtle, borderRadius: borderRadius.md, borderLeft: `3px solid ${colors.statusCritical}` }}>
                     <p style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.statusCritical, textTransform: 'uppercase', margin: 0, marginBottom: spacing['1'] }}>{inc.type.replace(/_/g, ' ')}</p>
                     <p style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, margin: 0 }}>{inc.description}</p>
@@ -1251,7 +1267,7 @@ export const DailyLog: React.FC = () => {
               </div>
             )}
             {/* No incidents confirmed */}
-            {noIncidentsToday && ((today as any).incident_details ?? []).length === 0 && (
+            {noIncidentsToday && (today.incident_details ?? []).length === 0 && (
               <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], padding: `${spacing['2']} 0` }}>
                 <ShieldCheck size={14} color={colors.statusActive} />
                 <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>No incidents reported today</span>

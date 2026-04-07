@@ -107,8 +107,8 @@ export function useExecutiveSummaryData() {
   return {
     data: {
       projectName: project.data.name ?? 'Project',
-      overallStatus: (project.data as any).health_status ?? 'on_track' as const,
-      progress: (project.data as any).percent_complete ?? 62,
+      overallStatus: ((project.data as Record<string, unknown>).health_status as string) ?? 'on_track',
+      progress: ((project.data as Record<string, unknown>).percent_complete as number) ?? 62,
       budgetTotal,
       budgetSpent,
       budgetVariance,
@@ -148,7 +148,7 @@ export function useRFILogData() {
         title: r.title ?? '',
         priority: r.priority ?? 'medium',
         status: r.status ?? 'open',
-        from: (r as any).created_by_name ?? r.created_by ?? '',
+        from: r.created_by ?? '',
         assignedTo: r.assigned_to ?? '',
         dueDate: fmtDate(r.due_date),
         createdAt: fmtDate(r.created_at),
@@ -173,11 +173,11 @@ export function useSubmittalLogData() {
       submittals: (submittals.data ?? []).map((s) => ({
         number: fmtSubmittalNumber(s.submittal_number ?? s.number, s.id),
         title: s.title ?? '',
-        specSection: (s as any).spec_section ?? '',
-        subcontractor: (s as any).subcontractor ?? s.submitted_by ?? '',
+        specSection: s.spec_section ?? '',
+        subcontractor: s.subcontractor ?? s.created_by ?? '',
         status: s.status ?? 'draft',
-        revision: String((s as any).revision_number ?? 1),
-        leadTime: (s as any).lead_time_days ? `${(s as any).lead_time_days}d` : '',
+        revision: String(s.revision_number ?? 1),
+        leadTime: s.lead_time_weeks ? `${s.lead_time_weeks}w` : '',
         dueDate: fmtDate(s.due_date),
       })),
     },
@@ -199,7 +199,7 @@ export function usePunchListData() {
       projectName: project.data.name ?? 'Project',
       items: (punchItems.data ?? []).map((p) => ({
         number: String(p.number ?? p.id?.slice(0, 6)),
-        area: (p as any).area ?? p.location ?? '',
+        area: p.area ?? p.location ?? '',
         description: p.title ?? p.description ?? '',
         assignedTo: p.assigned_to ?? '',
         priority: p.priority ?? 'medium',
@@ -229,16 +229,16 @@ export function useBudgetReportData() {
       projectName: project.data.name ?? 'Project',
       budgetTotal: budget.reduce((s, b) => s + (b.original_amount ?? 0), 0),
       budgetSpent: budget.reduce((s, b) => s + (b.actual_amount ?? 0), 0),
-      budgetCommitted: budget.reduce((s, b) => s + ((b as any).committed_amount ?? 0), 0),
+      budgetCommitted: budget.reduce((s, b) => s + (b.committed_amount ?? 0), 0),
       divisions: budget.map((b) => ({
-        division: (b as any).division ?? 'General',
+        division: b.division ?? 'General',
         budget: b.original_amount ?? 0,
         spent: b.actual_amount ?? 0,
-        committed: (b as any).committed_amount ?? 0,
-        percentComplete: (b as any).percent_complete ?? 0,
+        committed: b.committed_amount ?? 0,
+        percentComplete: b.percent_complete ?? 0,
       })),
       changeOrders: cos.map((co) => ({
-        number: `CO-${String((co as any).number ?? '').padStart(3, '0')}`,
+        number: `CO-${String(co.number ?? '').padStart(3, '0')}`,
         description: co.title ?? co.description ?? '',
         amount: co.amount ?? 0,
         status: co.status ?? 'draft',
@@ -264,15 +264,15 @@ export function useDailyLogSummaryData() {
       projectName: project.data.name ?? 'Project',
       entries: logs.map((log) => ({
         date: fmtDate(log.log_date ?? log.created_at),
-        workers: (log as any).total_workers ?? 0,
-        manHours: (log as any).total_man_hours ?? 0,
-        incidents: (log as any).incidents ?? 0,
-        weather: (log as any).weather_conditions ?? '',
-        summary: (log as any).summary ?? '',
+        workers: log.workers_onsite ?? 0,
+        manHours: log.total_hours ?? 0,
+        incidents: log.incidents ?? 0,
+        weather: log.weather ?? '',
+        summary: log.summary ?? '',
       })),
-      totalManHours: logs.reduce((s, l) => s + ((l as any).total_man_hours ?? 0), 0),
-      avgWorkers: logs.length > 0 ? Math.round(logs.reduce((s, l) => s + ((l as any).total_workers ?? 0), 0) / logs.length) : 0,
-      totalIncidents: logs.reduce((s, l) => s + ((l as any).incidents ?? 0), 0),
+      totalManHours: logs.reduce((s, l) => s + (l.total_hours ?? 0), 0),
+      avgWorkers: logs.length > 0 ? Math.round(logs.reduce((s, l) => s + (l.workers_onsite ?? 0), 0) / logs.length) : 0,
+      totalIncidents: logs.reduce((s, l) => s + (l.incidents ?? 0), 0),
     },
     loading: false,
     error: null,
@@ -311,7 +311,7 @@ export function useMonthlyProgressData() {
       periodStart: fmtDate(monthStart.toISOString()),
       periodEnd: fmtDate(now.toISOString()),
       scheduledProgress: 65,
-      actualProgress: (project.data as any).percent_complete ?? 62,
+      actualProgress: ((project.data as Record<string, unknown>).percent_complete as number) ?? 62,
       milestonesAchieved: phases.filter((p) => p.status === 'complete').slice(0, 5).map((p) => ({
         name: p.name ?? '', date: fmtDate(p.end_date),
       })),
@@ -324,8 +324,8 @@ export function useMonthlyProgressData() {
       billedToDate: budget.reduce((s, b) => s + (b.actual_amount ?? 0), 0),
       costToDate: budget.reduce((s, b) => s + (b.actual_amount ?? 0), 0),
       manpowerByTrade: [],
-      totalManHours: logs.reduce((s, l) => s + ((l as any).total_man_hours ?? 0), 0),
-      avgDailyWorkers: logs.length > 0 ? Math.round(logs.reduce((s, l) => s + ((l as any).total_workers ?? 0), 0) / logs.length) : 0,
+      totalManHours: logs.reduce((s, l) => s + (l.total_hours ?? 0), 0),
+      avgDailyWorkers: logs.length > 0 ? Math.round(logs.reduce((s, l) => s + (l.workers_onsite ?? 0), 0) / logs.length) : 0,
       incidentsThisPeriod: 0,
       nearMissesThisPeriod: 0,
       safetyInspections: 0,
@@ -337,7 +337,7 @@ export function useMonthlyProgressData() {
       submittalsApproved: subList.filter((s) => s.status === 'approved').length,
       submittalsRejected: subList.filter((s) => s.status === 'rejected').length,
       changeOrders: cos.map((co) => ({
-        number: `CO-${String((co as any).number ?? '').padStart(3, '0')}`,
+        number: `CO-${String(co.number ?? '').padStart(3, '0')}`,
         description: co.title ?? co.description ?? '',
         amount: co.amount ?? 0,
         status: co.status ?? 'draft',
@@ -345,7 +345,7 @@ export function useMonthlyProgressData() {
       workPerformed: phases.filter((p) => p.status === 'in_progress').slice(0, 10).map((p) => ({
         area: p.name ?? '',
         description: '',
-        percentComplete: (p as any).percent_complete ?? 50,
+        percentComplete: p.percent_complete ?? 50,
       })),
     },
     loading: false,
@@ -373,13 +373,15 @@ export function useCostReportData() {
   const approvedChanges = cos.filter((c) => c.status === 'approved').reduce((s, c) => s + (c.amount ?? 0), 0)
   const currentBudget = originalBudget + approvedChanges
   const actualCost = budget.reduce((s, b) => s + (b.actual_amount ?? 0), 0)
-  const committedCost = budget.reduce((s, b) => s + ((b as any).committed_amount ?? 0), 0)
+  const committedCost = budget.reduce((s, b) => s + (b.committed_amount ?? 0), 0)
 
   // Schedule % (from phases)
   const totalPhases = phases.length || 1
   const completedPhases = phases.filter((p) => p.status === 'complete').length
   const scheduledPct = totalPhases > 0 ? completedPhases / totalPhases : 0
-  const actualPct = (project.data as any).percent_complete ? (project.data as any).percent_complete / 100 : scheduledPct
+  const projectRecord = project.data as Record<string, unknown>
+  const rawPctComplete = projectRecord.percent_complete as number | undefined
+  const actualPct = rawPctComplete ? rawPctComplete / 100 : scheduledPct
 
   // Earned Value calculations
   const bac = currentBudget // Budget at Completion
@@ -396,8 +398,8 @@ export function useCostReportData() {
   const sv = ev - pv // Schedule Variance
 
   // Contingency tracking
-  const contingencyBudget = budget.filter((b) => ((b as any).division ?? '').toLowerCase().includes('contingency')).reduce((s, b) => s + (b.original_amount ?? 0), 0)
-  const contingencyUsed = budget.filter((b) => ((b as any).division ?? '').toLowerCase().includes('contingency')).reduce((s, b) => s + (b.actual_amount ?? 0), 0)
+  const contingencyBudget = budget.filter((b) => (b.division ?? '').toLowerCase().includes('contingency')).reduce((s, b) => s + (b.original_amount ?? 0), 0)
+  const contingencyUsed = budget.filter((b) => (b.division ?? '').toLowerCase().includes('contingency')).reduce((s, b) => s + (b.actual_amount ?? 0), 0)
 
   return {
     data: {
@@ -412,16 +414,16 @@ export function useCostReportData() {
       bac, ev, pv, ac, cpi, spi, eac, etc, vac, cv, sv,
       // Cost codes
       costCodes: budget.map((b) => ({
-        code: (b as any).code ?? (b as any).division ?? 'General',
-        description: (b as any).description ?? b.name ?? '',
+        code: b.cost_code ?? b.division ?? 'General',
+        description: b.description ?? '',
         budget: b.original_amount ?? 0,
         actual: b.actual_amount ?? 0,
-        committed: (b as any).committed_amount ?? 0,
+        committed: b.committed_amount ?? 0,
         variance: (b.original_amount ?? 0) - (b.actual_amount ?? 0),
         percentSpent: (b.original_amount ?? 0) > 0 ? ((b.actual_amount ?? 0) / (b.original_amount ?? 0)) * 100 : 0,
       })),
       changeOrders: cos.map((co) => ({
-        number: `CO-${String((co as any).number ?? '').padStart(3, '0')}`,
+        number: `CO-${String(co.number ?? '').padStart(3, '0')}`,
         description: co.title ?? co.description ?? '',
         amount: co.amount ?? 0,
         status: co.status ?? 'draft',
@@ -467,7 +469,7 @@ export function useScheduleReportData() {
       startDate: fmtDate(p.start_date),
       endDate: fmtDate(p.end_date),
       status: p.status ?? 'not_started',
-      percentComplete: (p as any).percent_complete ?? 0,
+      percentComplete: p.percent_complete ?? 0,
       isCritical: true,
       totalFloat: 0,
     }))
@@ -484,16 +486,18 @@ export function useScheduleReportData() {
       startDate: fmtDate(p.start_date),
       endDate: fmtDate(p.end_date),
       status: p.status ?? 'not_started',
-      assignedTo: (p as any).assigned_to ?? '',
+      assignedTo: ((p as Record<string, unknown>).assigned_to as string) ?? '',
     }))
 
   // Milestones
   const milestones = phaseList
-    .filter((p) => (p as any).is_milestone || p.status === 'complete')
+    .filter((p) => (p as Record<string, unknown>).is_milestone || p.status === 'complete')
     .slice(0, 15)
     .map((p) => {
       const planned = p.end_date ? new Date(p.end_date) : null
-      const actual = p.status === 'complete' ? (p as any).actual_end_date ? new Date((p as any).actual_end_date) : planned : null
+      const phaseRecord = p as Record<string, unknown>
+      const actualEndDate = phaseRecord.actual_end_date as string | null | undefined
+      const actual = p.status === 'complete' ? actualEndDate ? new Date(actualEndDate) : planned : null
       const variance = planned && actual ? Math.round((actual.getTime() - planned.getTime()) / (1000 * 60 * 60 * 24)) : 0
       return {
         name: p.name ?? '',
@@ -518,8 +522,8 @@ export function useScheduleReportData() {
         activity: p.name ?? '',
         plannedFinish: fmtDate(p.end_date),
         daysLate,
-        causeCode: (p as any).delay_cause ?? 'TBD',
-        responsibleParty: (p as any).assigned_to ?? 'TBD',
+        causeCode: ((p as Record<string, unknown>).delay_cause as string) ?? 'TBD',
+        responsibleParty: ((p as Record<string, unknown>).assigned_to as string) ?? 'TBD',
         impact: daysLate > 14 ? 'Critical' : daysLate > 7 ? 'Major' : 'Minor',
       }
     })
@@ -590,7 +594,7 @@ export function useSubcontractorPerformanceData() {
     sub.rfiCount++
     if (rfi.status === 'answered' || rfi.status === 'closed') {
       const created = rfi.created_at ? new Date(rfi.created_at) : null
-      const answered = (rfi as any).answered_at ? new Date((rfi as any).answered_at) : (rfi as any).updated_at ? new Date((rfi as any).updated_at) : null
+      const answered = rfi.updated_at ? new Date(rfi.updated_at) : null
       if (created && answered) {
         const days = Math.round((answered.getTime() - created.getTime()) / (1000 * 60 * 60 * 24))
         sub.rfiResponseDays.push(days)
@@ -600,7 +604,7 @@ export function useSubcontractorPerformanceData() {
 
   // Submittal rejection rates by subcontractor
   for (const s of subList) {
-    const subName = (s as any).subcontractor ?? s.submitted_by ?? ''
+    const subName = s.subcontractor ?? s.created_by ?? ''
     const sub = getSub(subName)
     if (!sub) continue
     sub.submittalCount++
