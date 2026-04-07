@@ -559,8 +559,8 @@ const Submittals: React.FC = () => {
       size: 110,
       cell: (info) => {
         const raw = info.getValue() as string | null;
-        const sub = info.row.original as any;
-        const val = formatCSICode(raw) || formatCSICode(sub.submittal_type as string | null);
+        const sub = info.row.original as Record<string, unknown>;
+        const val = formatCSICode(raw) || formatCSICode((sub.submittal_type as string | null) ?? null);
         return val ? (
           <span style={{ fontSize: typography.fontSize.sm, fontFamily: 'monospace', color: colors.textSecondary }}>{val}</span>
         ) : (
@@ -594,8 +594,8 @@ const Submittals: React.FC = () => {
       header: 'Lead Time',
       size: 130,
       cell: (info) => {
-        const sub = info.getValue() as any;
-        const daysRemaining = calcBusinessDaysRemaining(sub.due_date || sub.dueDate);
+        const sub = info.getValue() as Record<string, unknown>;
+        const daysRemaining = calcBusinessDaysRemaining((sub.due_date as string) || (sub.dueDate as string));
         if (daysRemaining === null) return <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>&mdash;</span>;
         const overdue = daysRemaining < 0;
         const color = overdue ? '#E74C3C' : daysRemaining <= 7 ? '#F5A623' : '#4EC896';
@@ -645,7 +645,7 @@ const Submittals: React.FC = () => {
       header: 'Days in Review',
       size: 120,
       cell: (info) => {
-        const sub = info.getValue() as any;
+        const sub = info.getValue() as Record<string, unknown>;
         const days = calcDaysInReview(sub);
         if (days === null) return <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>&mdash;</span>;
         const color = days > 14 ? '#E74C3C' : days > 7 ? '#F5A623' : colors.textSecondary;
@@ -1044,7 +1044,7 @@ const Submittals: React.FC = () => {
             <div>
               <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, marginBottom: spacing.sm, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Description</div>
               <p style={{ fontSize: typography.fontSize.base, color: colors.textSecondary, lineHeight: typography.lineHeight.relaxed, margin: 0 }}>
-                {(selected as any).description || 'No description provided.'}
+                {(selected as Record<string, unknown>).description as string || 'No description provided.'}
               </p>
             </div>
 

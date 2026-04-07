@@ -148,7 +148,8 @@ export function useAgentBuilder() {
     setCreating(true)
 
     try {
-      const { error: insertError } = await supabase.from('ai_agents').insert({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: insertError } = await (supabase.from('ai_agents') as any).insert({
         project_id: projectId,
         agent_type: `custom_${Date.now()}`,
         name: definition.name,
@@ -165,7 +166,7 @@ export function useAgentBuilder() {
           auto_execute_threshold: 999, // Never auto-execute (human approval required)
         },
         created_by: user?.id,
-      } as any)
+      })
 
       if (insertError) throw insertError
       toast.success(`Agent "${definition.name}" created`)

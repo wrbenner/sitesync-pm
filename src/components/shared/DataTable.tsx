@@ -291,7 +291,7 @@ export function DataTable<T>({
   useEffect(() => {
     if (sorting.length === 0) return;
     const col = sorting[0];
-    const colDef = effectiveColumns.find((c) => c.id === col.id || (c as any).accessorKey === col.id);
+    const colDef = effectiveColumns.find((c) => c.id === col.id || (c as unknown as { accessorKey?: string }).accessorKey === col.id);
     const colName = colDef
       ? typeof colDef.header === 'string'
         ? colDef.header

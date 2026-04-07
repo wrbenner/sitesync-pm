@@ -51,9 +51,9 @@ export const GenDataTable: React.FC<Props> = React.memo(({ block, onAction }) =>
     const str = String(value ?? '')
     switch (col.type) {
       case 'status':
-        return <StatusTag status={str as any} />
+        return <StatusTag status={str as 'pending' | 'approved' | 'under_review' | 'revise_resubmit' | 'complete' | 'active' | 'closed' | 'pending_approval'} />
       case 'priority':
-        return <PriorityTag priority={str as any} />
+        return <PriorityTag priority={str as 'low' | 'medium' | 'high' | 'critical'} />
       case 'date':
         if (!str) return '\u2014'
         return new Date(str).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })

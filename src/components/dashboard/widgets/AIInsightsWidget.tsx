@@ -68,8 +68,8 @@ export const AIInsightsWidget: React.FC = React.memo(() => {
       severity: (i.severity || 'info') as 'warning' | 'info' | 'success' | 'critical',
       title: i.title,
       description: i.description || '',
-      category: pageToCategory((i as any).page),
-      route: (i as any).action_link || 'dashboard',
+      category: pageToCategory((i as unknown as { page?: string }).page),
+      route: (i as unknown as { action_link?: string }).action_link || 'dashboard',
     }));
 
   const filtered = activeCategory === 'all'

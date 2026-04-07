@@ -70,7 +70,7 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
                   <FileText size={14} /> Generating PDF...
                 </div>
               }>
-                <PDFDownloadLink document={pdfDocument as any} fileName={`${filename}.pdf`}>
+                <PDFDownloadLink document={pdfDocument as React.ReactElement} fileName={`${filename}.pdf`}>
                   {({ loading }: { loading: boolean }) => (
                     <button onClick={() => setOpen(false)} style={menuItemStyle}>
                       <FileText size={14} /> {loading ? 'Preparing...' : 'Export PDF'}

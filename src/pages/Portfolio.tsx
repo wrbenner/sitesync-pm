@@ -509,7 +509,7 @@ export const Portfolio: React.FC = () => {
             />
           </Card>
 
-          {latestReport && (latestReport as any).ai_narrative && (
+          {latestReport && latestReport.ai_narrative && (
             <div style={{ marginTop: spacing['4'] }}>
               <SectionHeader title="Latest AI Narrative" />
               <Card>
@@ -521,7 +521,7 @@ export const Portfolio: React.FC = () => {
                     color: colors.textSecondary,
                     whiteSpace: 'pre-wrap',
                   }}>
-                    {(latestReport as any).ai_narrative}
+                    {latestReport.ai_narrative}
                   </p>
                 </div>
               </Card>

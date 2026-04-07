@@ -184,13 +184,14 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
 
     // Start Web Speech API recognition
     try {
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const SpeechRecognition = (window as unknown as Record<string, any>).SpeechRecognition || (window as unknown as Record<string, any>).webkitSpeechRecognition;
       if (SpeechRecognition) {
         const recognition = new SpeechRecognition();
         recognition.continuous = true;
         recognition.interimResults = true;
         recognition.lang = 'en-US';
-        recognition.onresult = (event: any) => {
+        recognition.onresult = (event: { results: { length: number; [index: number]: { [index: number]: { transcript: string } } } }) => {
           let full = '';
           for (let i = 0; i < event.results.length; i++) {
             full += event.results[i][0].transcript;

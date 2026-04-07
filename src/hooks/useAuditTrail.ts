@@ -43,6 +43,7 @@ export function useAuditTrail(filters?: AuditFilters) {
   const { isPending, isError, error } = useQuery({
     queryKey: ['audit_trail', projectId, filters],
     queryFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let query = (supabase.from('audit_trail' as any).select('*', { count: 'exact' }) as any)
         .eq('project_id', projectId!)
         .order('created_at', { ascending: false })
@@ -73,6 +74,7 @@ export function useAuditTrail(filters?: AuditFilters) {
       const nextPage = page + 1
       const from = page * AUDIT_TRAIL_PAGE_SIZE
       const to = nextPage * AUDIT_TRAIL_PAGE_SIZE - 1
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let query = (supabase.from('audit_trail' as any).select('*') as any)
         .eq('project_id', projectId)
         .order('created_at', { ascending: false })
@@ -170,6 +172,7 @@ export function useWriteAudit() {
     }) => {
       if (!projectId) return
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error } = await (supabase.from('audit_trail' as any) as any).insert({
         project_id: projectId,
         actor_id: user?.id || null,

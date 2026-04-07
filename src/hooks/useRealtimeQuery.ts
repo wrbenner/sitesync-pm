@@ -150,6 +150,7 @@ export function useOptimisticLock(
     queryFn: async () => {
       if (!entityId) return null
       const { data, error } = await supabase
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .from(table as any)
         .select('updated_at')
         .eq('id', entityId)

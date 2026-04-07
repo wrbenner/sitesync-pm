@@ -59,6 +59,7 @@ export const useBudgetStore = create<BudgetState>()((set, get) => ({
   },
 
   importDivisions: async (projectId, divisions) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase.from('budget_divisions') as any).insert(
       divisions.map((d) => ({ ...d, project_id: projectId }))
     );
@@ -69,6 +70,7 @@ export const useBudgetStore = create<BudgetState>()((set, get) => ({
   },
 
   addDivision: async (division) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase.from('budget_divisions') as any).insert(division);
     if (error) return { error: error.message };
     await get().loadBudget(division.project_id);
@@ -76,6 +78,7 @@ export const useBudgetStore = create<BudgetState>()((set, get) => ({
   },
 
   updateDivision: async (id, updates) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase.from('budget_divisions') as any).update(updates).eq('id', id);
     if (!error) {
       set((s) => ({

@@ -363,7 +363,7 @@ export const ExportCenter: React.FC<ExportCenterProps> = ({ open, onClose }) => 
                   <Suspense fallback={
                     <Btn disabled>Preparing PDF...</Btn>
                   }>
-                    <PDFDownloadLink document={pdfDocument as any} fileName={`${pdfFilename}.pdf`}>
+                    <PDFDownloadLink document={pdfDocument as React.ReactElement} fileName={`${pdfFilename}.pdf`}>
                       {({ loading }: { loading: boolean }) => (
                         <Btn
                           onClick={() => { if (!loading) { setStep('generate'); setDone(true); toast.success('PDF downloaded'); } }}

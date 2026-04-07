@@ -167,7 +167,7 @@ export const emailProvider: IntegrationProvider = {
       recordsSynced: 0,
       recordsFailed: 0,
       errors: [],
-      details: { note: 'Email integration sends on trigger, not on sync' } as any,
+      details: { emails_queued: 0 },
     }
     await logSyncResult(integrationId, result, 'export')
     await updateIntegrationStatus(integrationId, 'connected')

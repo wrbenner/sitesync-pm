@@ -256,11 +256,11 @@ export const Dashboard: React.FC = () => {
 
   const missingWaivers = useMemo(() => {
     const approvedAppIds = (payApps ?? [])
-      .filter((a) => (a as any).status === 'approved' || (a as any).status === 'paid')
-      .map((a) => (a as any).id as string)
+      .filter((a) => a.status === 'approved' || a.status === 'paid')
+      .map((a) => a.id)
     if (approvedAppIds.length === 0) return []
     const waiversByApp = new Map<string, { status: string }[]>()
-    for (const w of (lienWaivers ?? []) as any[]) {
+    for (const w of (lienWaivers ?? []) as Array<{ pay_app_id: string; status: string }>) {
       const existing = waiversByApp.get(w.pay_app_id) ?? []
       existing.push(w)
       waiversByApp.set(w.pay_app_id, existing)

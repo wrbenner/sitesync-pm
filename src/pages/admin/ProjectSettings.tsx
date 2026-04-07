@@ -3,6 +3,10 @@ import { Save, Users, Building2 } from 'lucide-react';
 import { useProjectContext } from '../../stores/projectContextStore';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
 
+interface MemberWithProfile {
+  profile?: { first_name?: string; last_name?: string };
+}
+
 export function ProjectSettings() {
   const { activeProject, updateProject, members, loadMembers } = useProjectContext();
   const [name, setName] = useState('');
@@ -316,7 +320,7 @@ export function ProjectSettings() {
                     fontWeight: typography.fontWeight.medium,
                     color: colors.textPrimary,
                   }}>
-                    {(member as any).profile?.first_name ?? 'Team'} {(member as any).profile?.last_name ?? 'Member'}
+                    {(member as unknown as MemberWithProfile).profile?.first_name ?? 'Team'} {(member as unknown as MemberWithProfile).profile?.last_name ?? 'Member'}
                   </div>
                 </div>
                 <div style={{

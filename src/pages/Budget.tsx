@@ -954,12 +954,12 @@ export const Budget: React.FC = () => {
               {/* Rows */}
               <div role="rowgroup">
               {allChangeOrders.slice(0, 10).map((co, i) => {
-                const coType = (co as any).type as ChangeOrderType || 'co';
+                const coType = co.type || 'co';
                 const coStatus = co.status as ChangeOrderState || 'draft';
                 const typeConfig = getCOTypeConfig(coType);
                 const statusConfig = getCOStatusConfig(coStatus);
                 return (
-                  <div role="row" tabIndex={0} key={co.id} onClick={() => setSelectedCO(co as any)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedCO(co as any); } }} style={{
+                  <div role="row" tabIndex={0} key={co.id} onClick={() => setSelectedCO(co)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedCO(co); } }} style={{
                     display: 'grid', gridTemplateColumns: '80px 60px 1fr 120px 140px',
                     padding: `${spacing.lg} ${spacing.xl}`,
                     borderBottom: i < allChangeOrders.length - 1 ? `1px solid ${colors.borderLight}` : 'none',

@@ -170,7 +170,7 @@ export function VirtualDataTable<T>({
 
   const columnHeaders = useMemo(
     () => Object.fromEntries(columns.map((c) => [
-      (c as any).accessorKey ?? c.id ?? '',
+      (c as unknown as { accessorKey?: string }).accessorKey ?? c.id ?? '',
       typeof c.header === 'string' ? c.header : (c.id ?? ''),
     ])),
     [columns],

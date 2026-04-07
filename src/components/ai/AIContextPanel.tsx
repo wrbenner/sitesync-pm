@@ -95,7 +95,7 @@ export const AIContextPanel: React.FC<AIContextPanelProps> = ({ currentPage }) =
                   {/* Metrics */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'], marginBottom: spacing['5'] }}>
                     {analysis.insights.map((insight: any, i: number) => {
-                      const TrendIcon = insight.trend ? (trendIcons as any)[insight.trend] : null;
+                      const TrendIcon = insight.trend ? trendIcons[insight.trend as keyof typeof trendIcons] : null;
                       const valueColor = insight.severity ? (severityColors[insight.severity] || colors.textPrimary) : colors.textPrimary;
                       return (
                         <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: `${spacing['2']} ${spacing['3']}`, backgroundColor: colors.surfaceInset, borderRadius: borderRadius.base }}>

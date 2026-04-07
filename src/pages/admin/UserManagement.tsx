@@ -52,6 +52,7 @@ export function UserManagement() {
   const handleInvite = async () => {
     if (!inviteEmail || !company?.id) return;
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (supabase.from('invitations') as any).insert({
       company_id: company.id,
       email: inviteEmail,

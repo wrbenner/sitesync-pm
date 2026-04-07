@@ -213,8 +213,8 @@ const _DrawingsPage: React.FC = () => {
   };
 
   const sortedDrawings = [...filteredDrawings].sort((a, b) => {
-    const aVal = (a as any)[sortField];
-    const bVal = (b as any)[sortField];
+    const aVal = (a as Record<string, unknown>)[sortField];
+    const bVal = (b as Record<string, unknown>)[sortField];
     if (aVal == null && bVal == null) return 0;
     if (aVal == null) return 1;
     if (bVal == null) return -1;

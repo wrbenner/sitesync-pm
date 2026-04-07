@@ -50,6 +50,7 @@ export const usePunchListStore = create<PunchListState>()((set, get) => ({
   },
 
   createItem: async (item) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase.from('punch_list_items') as any).insert(item);
     if (error) return { error: error.message };
     await get().loadItems(item.project_id);
@@ -59,6 +60,7 @@ export const usePunchListStore = create<PunchListState>()((set, get) => ({
   updateItemStatus: async (id, status) => {
     const updates: Partial<PunchListItem> = { status, updated_at: new Date().toISOString() };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase.from('punch_list_items') as any).update(updates).eq('id', id);
     if (!error) {
       set((s) => ({
@@ -69,6 +71,7 @@ export const usePunchListStore = create<PunchListState>()((set, get) => ({
   },
 
   updateItem: async (id, updates) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase.from('punch_list_items') as any).update({ ...updates, updated_at: new Date().toISOString() }).eq('id', id);
     if (!error) {
       set((s) => ({
@@ -79,6 +82,7 @@ export const usePunchListStore = create<PunchListState>()((set, get) => ({
   },
 
   deleteItem: async (id) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase.from('punch_list_items') as any).delete().eq('id', id);
     if (!error) {
       set((s) => ({ items: s.items.filter((i) => i.id !== id) }));

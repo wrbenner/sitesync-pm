@@ -70,11 +70,12 @@ export function usePushNotifications() {
       PushNotifications.addListener('registration', async (token) => {
         if (user?.id && token.value) {
           // Store push token in user metadata or a device_tokens table
-          await supabase.from('project_members' as any).update({
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (supabase.from('project_members') as any).update({
             push_token: token.value,
             push_platform: getPlatform(),
             push_updated_at: new Date().toISOString(),
-          } as any).eq('user_id', user.id)
+          }).eq('user_id', user.id)
         }
       })
 

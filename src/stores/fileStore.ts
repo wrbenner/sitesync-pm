@@ -95,6 +95,7 @@ export const useFileStore = create<FileState>()((set, get) => ({
     if (uploadError) return { error: uploadError.message, record: null };
 
     // Create file record in database
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error: dbError } = await (supabase.from('files') as any)
       .insert({
         project_id: projectId,
@@ -161,6 +162,7 @@ export const useFileStore = create<FileState>()((set, get) => ({
 
   uploadDrawingSet: async (projectId, userId, setNumber, title, discipline, files) => {
     // Create drawing record
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: dwgData, error: dwgError } = await (supabase.from('drawings') as any)
       .insert({
         project_id: projectId,
@@ -186,6 +188,7 @@ export const useFileStore = create<FileState>()((set, get) => ({
       if (uploadErr) continue;
 
       // Create file record
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: fileData } = await (supabase.from('files') as any)
         .insert({
           project_id: projectId,
@@ -200,6 +203,7 @@ export const useFileStore = create<FileState>()((set, get) => ({
         .single();
 
       // Create sheet record
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: sheetData } = await (supabase.from('drawing_sheets') as any)
         .insert({
           drawing_id: drawing.id,

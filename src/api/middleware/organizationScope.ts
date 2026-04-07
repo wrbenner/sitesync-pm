@@ -50,7 +50,7 @@ export async function withOrgAdminAccess<T>(orgId: string, fn: () => Promise<T>)
     .eq('user_id', user.id)
     .maybeSingle()
 
-  if (error || !data || !['owner', 'admin'].includes((data as any).role)) {
+  if (error || !data || !['owner', 'admin'].includes(data.role)) {
     throw new PermissionError(`Admin access required for organization ${orgId}`)
   }
 

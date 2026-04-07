@@ -120,5 +120,6 @@ export const ROLE_RANK: Record<string, number> = {
 
 export function createProjectScopedQuery(table: TableName, projectId: string) {
   validateProjectId(projectId)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return supabase.from(table as any).eq('project_id', projectId)
 }

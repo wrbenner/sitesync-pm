@@ -192,7 +192,7 @@ async function exportSchedule(integrationId: string, projectId: string): Promise
         name: p.name ?? '',
         start_date: p.start_date,
         end_date: p.end_date,
-        percent_complete: (p as any).percent_complete ?? 0,
+        percent_complete: p.percent_complete ?? 0,
         status: p.status ?? 'not_started',
       }))
     )

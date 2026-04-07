@@ -91,7 +91,7 @@ export async function generateComplianceReport(
   }).select().single()
 
   return {
-    id: (report as any)?.id ?? crypto.randomUUID(),
+    id: report?.id ?? crypto.randomUUID(),
     type: reportType,
     dateRangeStart: startDate,
     dateRangeEnd: endDate,

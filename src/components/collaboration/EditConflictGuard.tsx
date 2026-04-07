@@ -61,6 +61,7 @@ export function useOptimisticLock(
       const selectFields =
         lockedStatuses && lockedStatuses.length > 0 ? 'updated_at, status' : 'updated_at';
       const runQuery = () =>
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (supabase.from(table as any) as any)
           .select(selectFields)
           .eq('id', entityId)
