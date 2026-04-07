@@ -3,7 +3,7 @@ name: Session Brief Generator
 # Runs 30 minutes before the nightly organism (1:30am CDT = 6:30am UTC)
 on:
   schedule:
-    - cron: '30 6 * * *'   # 1:30 AM CDT daily
+    - cron: '30 6 * * *'
   workflow_dispatch:
 
 permissions:
@@ -25,76 +25,105 @@ jobs:
           git config user.email "brief@sitesync.ai"
 
           # Tonight's mission
-          TONIGHT_MISSION=$(grep -A 20 "^## TONIGHT:" TONIGHT.md 2>/dev/null | head -20 || echo "No active mission — read SPEC.md for next priority")
+          TONIGHT_SECTION=$(grep -A 30 "^## TONIGHT:" TONIGHT.md 2>/dev/null | head -30 || echo "No active mission — read SPEC.md")
+          TONIGHT_TITLE=$(grep "^## TONIGHT:" TONIGHT.md 2>/dev/null | head -1 | sed 's/## TONIGHT: //' || echo "General improvement")
 
-          # Recent commits (what was done)
-          RECENT_COMMITS=$(git log --since="48 hours ago" --oneline --author="SiteSync" | head -10 || echo "No recent organism commits")
+          # What night is it?
+          NIGHT_NUM=$(grep "^## TONIGHT:" TONIGHT.md 2>/dev/null | grep -o "Night [0-9]" | grep -o "[0-9]" || echo "?")
+
+          # Recent commits
+          RECENT=$(git log --since="48 hours ago" --oneline --author="SiteSync" 2>/dev/null | head -8 || echo "No recent organism commits")
 
           # Quality metrics
-          MOCK_COUNT=$(jq '.mockCount // "unknown"' .quality-floor.json 2>/dev/null)
-          ANY_COUNT=$(jq '.anyCount // "unknown"' .quality-floor.json 2>/dev/null)
-          LINT_ERRORS=$(jq '.eslintErrors // "unknown"' .quality-floor.json 2>/dev/null)
-          BUNDLE=$(jq '.bundleSizeKB // "unknown"' .quality-floor.json 2>/dev/null)
-
-          # SPEC progress
+          MOCK=$(jq '.mockCount // "unknown"' .quality-floor.json 2>/dev/null)
+          ANY=$(jq '.anyCount // "unknown"' .quality-floor.json 2>/dev/null)
+          LINT=$(jq '.eslintErrors // "unknown"' .quality-floor.json 2>/dev/null)
           CHECKED=$(grep -c "^\- \[x\]" SPEC.md 2>/dev/null || echo "0")
           TOTAL=$(grep -c "^\- \[" SPEC.md 2>/dev/null || echo "431")
 
-          # Key learnings relevant to tonight
-          KEY_LEARNINGS=$(grep -A 3 "Migration Safety\|Vite 8\|V7 Rules" LEARNINGS.md 2>/dev/null | head -20 || echo "Read LEARNINGS.md directly for full context")
+          # Select cognitive overrides relevant to tonight's night
+          case "$NIGHT_NUM" in
+            1|2|3)
+              COGNITIVE_OVERRIDE="SECURITY & DATA INTEGRITY NIGHTS — Override Protocol:
+              NETFLIX TEST: After every fix, simulate the failure mode. If you secured an edge function,
+              try calling it without a JWT and verify it rejects. If you removed mock data, verify the
+              page shows an empty state, not a crash. Prove it works, don't assume.
+              STRIPE TEST: Every error message must say exactly what went wrong and how to fix it.
+              Never: 'Error 500'. Always: 'The RFI could not be created because project_id is required.'
+              AMAZON TEST: Before each fix, ask: what specific pain does this eliminate for a
+              superintendent? If you cannot answer in one sentence, reconsider the approach."
+              ;;
+            4|5|6|7|8|9)
+              COGNITIVE_OVERRIDE="UI PERFECTION NIGHTS (V7) — Override Protocol:
+              APPLE TEST: After building any component — remove 30% of elements. Still works? Those were noise.
+              Can a superintendent with dirty gloves accomplish the task with one hand? If not, redesign.
+              APPLE INVISIBLE INTERFACE: The best interface is no interface. When a superintendent
+              arrives on-site, the system should already show today's tasks without them navigating.
+              CONSTRUCTION TRUTH: The reef grows from activity. Every interaction should silently deposit
+              structural intelligence as a byproduct. Users do their job. The system builds its reef."
+              ;;
+            *)
+              COGNITIVE_OVERRIDE="GENERAL — Override Protocol:
+              THE CEILING TEST: If you catch yourself implementing something that already exists in
+              Procore or any current platform — stop. That is the floor, not the ceiling.
+              AMAZON TEST: What specific decision can a construction professional make in 10 seconds
+              that previously took 2 hours? If you cannot answer that, the feature is decoration."
+              ;;
+          esac
 
           cat > SESSION_BRIEF.md << BRIEF_EOF
-          # SESSION_BRIEF — $(date '+%A, %B %d at 2am CDT')
-          *Pre-computed context for tonight's organism session. Read this instead of 6 separate files.*
-          *Generated at $(date -u '+%H:%M UTC'). Expires after tonight's session.*
+          # SESSION_BRIEF — $(date '+%A %B %d at 2am CDT')
+          *Pre-computed context. Read this INSTEAD of reading 6 separate files. Generated $(date -u '+%H:%M UTC').*
 
           ---
 
-          ## TONIGHT'S MISSION
-          $TONIGHT_MISSION
+          ## TONIGHT: $TONIGHT_TITLE
+
+          $TONIGHT_SECTION
 
           ---
 
-          ## RECENT PROGRESS (last 48 hours)
-          $RECENT_COMMITS
+          ## COGNITIVE OVERRIDE FOR TONIGHT
+
+          $COGNITIVE_OVERRIDE
 
           ---
 
-          ## QUALITY FLOOR (current state)
-          | Metric | Current | Goal |
-          |--------|---------|------|
-          | Mock data instances | $MOCK_COUNT | 0 |
-          | Unsafe casts (as any) | $ANY_COUNT | 0 |
-          | ESLint errors | $LINT_ERRORS | 0 |
-          | Bundle size | ${BUNDLE}KB | <300KB |
+          ## WHAT WAS BUILT RECENTLY
+          $RECENT
+
+          ---
+
+          ## QUALITY FLOOR (current state — only improve these)
+          | Metric | Now | Target |
+          |--------|-----|--------|
+          | Mock data | $MOCK | 0 |
+          | Unsafe casts | $ANY | 0 |
+          | ESLint errors | $LINT | 0 |
           | SPEC completion | $CHECKED / $TOTAL | 431/431 |
 
           ---
 
-          ## KEY RULES FOR TONIGHT
-          1. Check PAUSE.md first — if PAUSED, stop immediately
-          2. V7 rule: NO hyphens in UI text. "In-Progress" → "In Progress"
-          3. V7 rule: Read v7-prompts/V7-00_SYSTEM_CONTEXT.md before any V7 work
-          4. Migration rule: ALWAYS use CREATE TABLE IF NOT EXISTS and DO/EXCEPTION blocks
-          5. Never run supabase CLI — no access in CI
-          6. Quality gates before EVERY commit: npx tsc --noEmit && npm run lint && npx vitest run --passWithNoTests && npm run build
-
-          ---
-
-          ## CRITICAL LEARNINGS (relevant tonight)
-          $KEY_LEARNINGS
-
-          ---
-
-          ## ARCHITECTURE CONSTANTS
-          - Inline styles only, from src/styles/theme.ts
-          - Primary orange: #F47820 (theme.colors.primary)
-          - HashRouter (not BrowserRouter) — deployed on GitHub Pages
-          - Supabase anon key: already in src/lib/supabase.ts fallback
-          - Never hardcode credentials in source files
+          ## NON-NEGOTIABLE RULES
+          1. Check PAUSE.md — if PAUSED, stop
+          2. V7 nights: read v7-prompts/V7-00_SYSTEM_CONTEXT.md first
+          3. Migration rule: ALWAYS CREATE TABLE IF NOT EXISTS + DO/EXCEPTION blocks
+          4. Quality gates before EVERY commit: npx tsc --noEmit && npm run lint && npx vitest run --passWithNoTests && npm run build
+          5. Never run supabase CLI in CI
+          6. After completing tonight, update TONIGHT.md: mark COMPLETED, advance next night to TONIGHT
           BRIEF_EOF
 
-          echo "SESSION_BRIEF.md generated ($(wc -l < SESSION_BRIEF.md) lines)"
+          echo "SESSION_BRIEF.md generated ($(wc -l < SESSION_BRIEF.md) lines) for Night $NIGHT_NUM: $TONIGHT_TITLE"
           git add SESSION_BRIEF.md
-          git commit -m "chore: generate session brief for $(date '+%B %d') [skip ci]" || echo "No changes"
-          git push origin main || echo "Push failed"
+          git commit -m "chore: session brief for $(date '+%B %d') Night $NIGHT_NUM [skip ci]" || echo "No changes"
+          git push origin main || echo "Push failed — brief may be stale"
+
+      - name: Alert if brief generation failed
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue create \
+            --title "[brief-failure] Session brief failed — $(date '+%B %d')" \
+            --body "The 1:30am session brief generator failed. The 2am organism will run without a brief. Check [workflow logs](https://github.com/${{ github.repository }}/actions)." \
+            --label "bug" 2>/dev/null || true
