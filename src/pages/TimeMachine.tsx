@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Play, Pause, SkipForward, Columns, Flag, DollarSign, Users, HelpCircle, Camera, Calendar, Sparkles } from 'lucide-react';
-import { PageContainer, Card, Btn, ProgressBar, useToast } from '../components/Primitives';
+import { PageContainer, Card, Btn, ProgressBar, useToast, Skeleton } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme';
 import { useAnimatedNumber } from '../hooks/useAnimatedNumber';
 import { useProjectId } from '../hooks/useProjectId';
@@ -93,7 +93,7 @@ const snapshotPhotos = [
 export const TimeMachine: React.FC = () => {
   const { addToast: _addToast } = useToast();
   const projectId = useProjectId();
-  const { data: rawSnapshots } = useProjectSnapshots(projectId);
+  const { data: rawSnapshots, isLoading: loadingSnapshots } = useProjectSnapshots(projectId);
 
   const snapshots = useMemo(() => {
     const mapped = (rawSnapshots ?? [])
@@ -146,6 +146,18 @@ export const TimeMachine: React.FC = () => {
   };
 
   const rfiColor = snap.openRfis > 5 ? colors.statusCritical : snap.openRfis > 3 ? colors.statusPending : colors.statusActive;
+
+  if (loadingSnapshots) {
+    return (
+      <PageContainer title="Time Machine" subtitle="Scrub through your project history">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
+          <Skeleton width="100%" height="80px" />
+          <Skeleton width="100%" height="200px" />
+          <Skeleton width="100%" height="400px" />
+        </div>
+      </PageContainer>
+    );
+  }
 
   if (snapshots.length === 0) {
     return (
@@ -289,6 +301,7 @@ export const TimeMachine: React.FC = () => {
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'], marginBottom: spacing['3'] }}>
           <button
             onClick={() => setPlaying(!playing)}
+            aria-label={playing ? 'Pause timeline playback' : 'Play timeline'}
             style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primaryOrange, color: 'white', border: 'none', borderRadius: borderRadius.full, cursor: 'pointer' }}
           >
             {playing ? <Pause size={16} /> : <Play size={16} />}
@@ -351,6 +364,8 @@ export const TimeMachine: React.FC = () => {
                 <button
                   key={s.date}
                   onClick={() => setCurrentIndex(i)}
+                  aria-label={`Go to ${s.label}${s.milestone ? ': ' + s.milestone : s.event ? ': ' + s.event : ''}`}
+                  aria-current={isCurrent ? 'true' : undefined}
                   style={{
                     position: 'absolute', left: `${left}%`, top: 0, transform: 'translateX(-50%)',
                     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,

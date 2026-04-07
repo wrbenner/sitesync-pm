@@ -512,6 +512,8 @@ export const AICopilot: React.FC = () => {
                     style={{ position: 'fixed', inset: 0, zIndex: 998 }}
                   />
                   <div
+                    role="menu"
+                    aria-label="Export options"
                     style={{
                       position: 'absolute',
                       top: '100%',
@@ -531,6 +533,7 @@ export const AICopilot: React.FC = () => {
                       { icon: <FileText size={14} />, label: 'Export as PDF' },
                     ].map((item) => (
                       <button
+                        role="menuitem"
                         key={item.label}
                         onClick={() => {
                           addToast(
@@ -568,6 +571,9 @@ export const AICopilot: React.FC = () => {
 
           {/* Messages area */}
           <div
+            role="log"
+            aria-live="polite"
+            aria-label="AI conversation"
             style={{
               flex: 1,
               overflow: 'auto',

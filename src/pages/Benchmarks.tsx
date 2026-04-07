@@ -233,15 +233,21 @@ export const Benchmarks: React.FC = () => {
       </div>
 
       {/* Tab Switcher */}
-      <div style={{
-        display: 'flex', gap: spacing['1'],
-        backgroundColor: colors.surfaceInset, borderRadius: borderRadius.lg,
-        padding: spacing['1'], marginBottom: spacing['2xl'], overflowX: 'auto',
-      }}>
+      <div
+        role="tablist"
+        aria-label="Platform intelligence navigation"
+        style={{
+          display: 'flex', gap: spacing['1'],
+          backgroundColor: colors.surfaceInset, borderRadius: borderRadius.lg,
+          padding: spacing['1'], marginBottom: spacing['2xl'], overflowX: 'auto',
+        }}
+      >
         {tabs.map((tab) => {
           const isActive = activeTab === tab.key
           return (
             <button
+              role="tab"
+              aria-selected={isActive}
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
               style={{

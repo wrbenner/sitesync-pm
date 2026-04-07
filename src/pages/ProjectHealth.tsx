@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { TrendingUp, TrendingDown, Minus, Sparkles, ChevronRight, Share2, FileText, Link, Send } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { PageContainer, Card, SectionHeader, Btn, useToast } from '../components/Primitives';
+import { PageContainer, Card, SectionHeader, Btn, useToast, Skeleton } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, transitions, shadows } from '../styles/theme';
 import { useInView } from '../hooks/useInView';
 import { useProjectId } from '../hooks/useProjectId';
@@ -54,14 +54,16 @@ export const ProjectHealth: React.FC = () => {
   const [shareOpen, setShareOpen] = useState(false);
 
   const projectId = useProjectId();
-  const { data: schedulePhases } = useSchedulePhases(projectId);
-  const { data: budgetItems } = useBudgetItems(projectId);
+  const { data: schedulePhases, isLoading: loadingSchedule } = useSchedulePhases(projectId);
+  const { data: budgetItems, isLoading: loadingBudget } = useBudgetItems(projectId);
   const { data: punchItemsResult } = usePunchItems(projectId);
   const { data: rfisResult } = useRFIs(projectId);
   const { data: dailyLogsResult } = useDailyLogs(projectId);
   const { data: meetingsResult } = useMeetings(projectId);
   const { data: files } = useFiles(projectId);
   const { data: drawings } = useDrawings(projectId);
+
+  const isLoading = loadingSchedule || loadingBudget;
 
   const { dimensions, overallScore } = useMemo(() => {
     // ── Schedule Health ──
@@ -245,6 +247,21 @@ export const ProjectHealth: React.FC = () => {
     .map((s, i) => `${i === 0 ? 'M' : 'L'} ${i * stepX} ${yPos(s)}`)
     .join(' ');
 
+  if (isLoading) {
+    return (
+      <PageContainer title="Project Health" subtitle="Loading health data...">
+        <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: spacing['6'] }}>
+          <Skeleton width="100%" height="300px" />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <Skeleton key={i} width="100%" height="72px" />
+            ))}
+          </div>
+        </div>
+      </PageContainer>
+    );
+  }
+
   return (
     <PageContainer
       title="Project Health"
@@ -368,6 +385,7 @@ export const ProjectHealth: React.FC = () => {
                     </p>
                   )}
                   <button
+                    aria-expanded={isExpanded}
                     onClick={(e) => { e.stopPropagation(); setExpandedDim(isExpanded ? null : dim.label); }}
                     style={{
                       display: 'inline', border: 'none', backgroundColor: 'transparent', padding: 0, marginTop: 2,
@@ -396,6 +414,8 @@ export const ProjectHealth: React.FC = () => {
         <SectionHeader title="Score History" action={<span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Last 20 weeks</span>} />
         <Card padding={spacing['5']}>
           <svg
+            role="img"
+            aria-label="Project health score history chart"
             viewBox={`-12 -10 ${chartW + 24} ${chartH + 28}`}
             preserveAspectRatio="xMidYMid meet"
             style={{ width: '100%', height: '200px', overflow: 'visible' }}
