@@ -571,6 +571,8 @@ export const AIAgents: React.FC = () => {
     >
       {/* Tab Switcher */}
       <div
+        role="tablist"
+        aria-label="AI Agents navigation"
         style={{
           display: 'flex',
           gap: spacing['1'],
@@ -585,6 +587,8 @@ export const AIAgents: React.FC = () => {
           const isActive = activeTab === tab.key
           return (
             <button
+              role="tab"
+              aria-selected={isActive}
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
               style={{

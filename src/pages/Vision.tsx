@@ -1,6 +1,7 @@
 import React from 'react';
 import { PageContainer, Card, SectionHeader, Btn } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
+import { useMediaQuery } from '../hooks/useMediaQuery';
 const visionContent = {
   heading: 'The Construction Operating System',
   pillars: [
@@ -42,6 +43,7 @@ const visionContent = {
 
 export const Vision: React.FC = () => {
   const pillarNumbers = ['01', '02', '03'];
+  const isMobile = useMediaQuery('(max-width: 768px)');
 
   return (
     <PageContainer title="Vision">
@@ -81,7 +83,7 @@ export const Vision: React.FC = () => {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
+          gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
           gap: spacing.xl,
           marginBottom: spacing['3xl'],
         }}
@@ -130,7 +132,7 @@ export const Vision: React.FC = () => {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
+          gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
           gap: spacing.xl,
           marginBottom: spacing['3xl'],
         }}
@@ -234,7 +236,7 @@ export const Vision: React.FC = () => {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
+          gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(220px, 1fr))',
           gap: spacing.lg,
         }}
       >
