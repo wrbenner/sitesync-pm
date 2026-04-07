@@ -422,9 +422,11 @@ const RFIs: React.FC = () => {
           <p style={{ fontSize: 14, color: '#6B7280', margin: 0, maxWidth: 440, lineHeight: 1.6 }}>
             When questions arise in the field, create an RFI to get a documented answer
           </p>
-          <Btn onClick={() => setShowCreateModal(true)}>
-            Create First RFI
-          </Btn>
+          <PermissionGate permission="rfis.create">
+            <Btn onClick={() => setShowCreateModal(true)}>
+              Create First RFI
+            </Btn>
+          </PermissionGate>
         </div>
         {showCreateModal && <CreateRFIModal onClose={() => setShowCreateModal(false)} projectId={projectId!} />}
       </PageContainer>
@@ -641,8 +643,12 @@ const RFIs: React.FC = () => {
             icon: <UserCheck size={14} />,
             variant: 'secondary',
             onClick: async (ids) => {
-              await Promise.all(ids.map((id) => updateRFI.mutateAsync({ id, updates: { assigned_to: 'Reassigned' }, projectId: projectId! })));
-              addToast('success', `${ids.length} RFI${ids.length > 1 ? 's' : ''} reassigned`);
+              try {
+                await Promise.all(ids.map((id) => updateRFI.mutateAsync({ id, updates: { assigned_to: 'Reassigned' }, projectId: projectId! })));
+                addToast('success', `${ids.length} RFI${ids.length > 1 ? 's' : ''} reassigned`);
+              } catch {
+                addToast('error', 'Failed to reassign RFIs. Please try again.');
+              }
             },
           },
           {
@@ -650,8 +656,12 @@ const RFIs: React.FC = () => {
             icon: <Flag size={14} />,
             variant: 'secondary',
             onClick: async (ids) => {
-              await Promise.all(ids.map((id) => updateRFI.mutateAsync({ id, updates: { priority: 'high' }, projectId: projectId! })));
-              addToast('success', `Priority updated for ${ids.length} RFI${ids.length > 1 ? 's' : ''}`);
+              try {
+                await Promise.all(ids.map((id) => updateRFI.mutateAsync({ id, updates: { priority: 'high' }, projectId: projectId! })));
+                addToast('success', `Priority updated for ${ids.length} RFI${ids.length > 1 ? 's' : ''}`);
+              } catch {
+                addToast('error', 'Failed to update priority. Please try again.');
+              }
             },
           },
           {
@@ -677,8 +687,12 @@ const RFIs: React.FC = () => {
             confirm: true,
             confirmMessage: `Close ${selectedIds.size} selected RFI${selectedIds.size > 1 ? 's' : ''}? This cannot be undone.`,
             onClick: async (ids) => {
-              await Promise.all(ids.map((id) => updateRFI.mutateAsync({ id, updates: { status: 'closed' }, projectId: projectId! })));
-              addToast('success', `${ids.length} RFI${ids.length > 1 ? 's' : ''} closed`);
+              try {
+                await Promise.all(ids.map((id) => updateRFI.mutateAsync({ id, updates: { status: 'closed' }, projectId: projectId! })));
+                addToast('success', `${ids.length} RFI${ids.length > 1 ? 's' : ''} closed`);
+              } catch {
+                addToast('error', 'Failed to close RFIs. Please try again.');
+              }
             },
           },
         ]}

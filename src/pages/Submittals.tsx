@@ -938,8 +938,12 @@ const Submittals: React.FC = () => {
             icon: <UserCheck size={14} />,
             variant: 'secondary',
             onClick: async (ids) => {
-              await Promise.all(ids.map((id) => updateSubmittal.mutateAsync({ id, updates: { reviewer: 'Reassigned' }, projectId: projectId! })));
-              addToast('success', `${ids.length} submittal${ids.length > 1 ? 's' : ''} reassigned`);
+              try {
+                await Promise.all(ids.map((id) => updateSubmittal.mutateAsync({ id, updates: { reviewer: 'Reassigned' }, projectId: projectId! })));
+                addToast('success', `${ids.length} submittal${ids.length > 1 ? 's' : ''} reassigned`);
+              } catch {
+                addToast('error', 'Failed to reassign submittals. Please try again.');
+              }
             },
           },
           {
@@ -947,8 +951,12 @@ const Submittals: React.FC = () => {
             icon: <TagIcon size={14} />,
             variant: 'secondary',
             onClick: async (ids) => {
-              await Promise.all(ids.map((id) => updateSubmittal.mutateAsync({ id, updates: { status: 'under_review' }, projectId: projectId! })));
-              addToast('success', `${ids.length} submittal${ids.length > 1 ? 's' : ''} set to Under Review`);
+              try {
+                await Promise.all(ids.map((id) => updateSubmittal.mutateAsync({ id, updates: { status: 'under_review' }, projectId: projectId! })));
+                addToast('success', `${ids.length} submittal${ids.length > 1 ? 's' : ''} set to Under Review`);
+              } catch {
+                addToast('error', 'Failed to update submittal status. Please try again.');
+              }
             },
           },
           {
