@@ -1,14 +1,14 @@
 name: Nightly Organism — Autonomous Build
 
 # Runs at 2am CDT (7am UTC) every night
-# Reads TONIGHT.md for tonight's specific mission — no guessing
+# Reads SESSION_BRIEF.md (generated at 1:30am) for tonight's mission
 on:
   schedule:
-    - cron: '0 7 * * *'   # 2:00 AM CDT daily
+    - cron: '0 7 * * *'
   workflow_dispatch:
     inputs:
       override_mission:
-        description: 'Override tonight mission (leave empty to use TONIGHT.md)'
+        description: 'Override tonight mission (leave empty to use SESSION_BRIEF/TONIGHT.md)'
         required: false
       use_opus:
         description: 'Use Opus (default true)'
@@ -22,7 +22,7 @@ jobs:
   organism:
     name: "Nightly Build"
     runs-on: ubuntu-latest
-    timeout-minutes: 240   # 4 hours max for big missions
+    timeout-minutes: 240
 
     steps:
       - uses: actions/checkout@v4
@@ -35,7 +35,7 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Install
+      - name: Install (Vite 8 needs npm install not npm ci)
         run: rm -f package-lock.json && npm install
 
       - name: Install Claude Code CLI
@@ -47,20 +47,43 @@ jobs:
           git config user.email "organism@sitesync.ai"
           git config pull.rebase true
 
+      - name: Pull latest (avoids conflict with 1:30am session brief push)
+        run: git pull origin main --rebase || true
+
+      - name: Baseline quality check (organism knows its starting point)
+        id: baseline
+        run: |
+          echo "=== BASELINE STATE ===" 
+          TS_ERRORS=$(npx tsc --noEmit 2>&1 | grep "error TS" | wc -l | tr -d ' ')
+          MOCK_COUNT=$(grep -rn "Math\.random()\|mockData\|MOCK_" src/ --include="*.ts" --include="*.tsx" 2>/dev/null | grep -v test | wc -l | tr -d ' ')
+          ANY_COUNT=$(grep -rn "as any\|@ts-ignore" src/ --include="*.ts" --include="*.tsx" 2>/dev/null | grep -v test | wc -l | tr -d ' ')
+          BUILD_OK=$(npm run build > /dev/null 2>&1 && echo "PASS" || echo "FAIL")
+          
+          echo "TypeScript errors: $TS_ERRORS"
+          echo "Mock instances: $MOCK_COUNT"
+          echo "Unsafe casts: $ANY_COUNT"
+          echo "Build: $BUILD_OK"
+          
+          echo "ts_errors=$TS_ERRORS" >> $GITHUB_OUTPUT
+          echo "mock_count=$MOCK_COUNT" >> $GITHUB_OUTPUT
+          echo "any_count=$ANY_COUNT" >> $GITHUB_OUTPUT
+          echo "build_ok=$BUILD_OK" >> $GITHUB_OUTPUT
+
       - name: Read tonight's mission
         id: mission
         run: |
           OVERRIDE="${{ github.event.inputs.override_mission }}"
           if [ -n "$OVERRIDE" ]; then
-            echo "MISSION=$OVERRIDE" >> $GITHUB_ENV
             echo "Using override mission"
-          elif [ -f "TONIGHT.md" ]; then
-            # Extract tonight's mission title
-            TONIGHT=$(grep "^## TONIGHT:" TONIGHT.md | head -1 | sed 's/## TONIGHT: //')
+            echo "MISSION=$OVERRIDE" >> $GITHUB_ENV
+          elif [ -f "SESSION_BRIEF.md" ]; then
+            TONIGHT=$(grep "^## TONIGHT:" SESSION_BRIEF.md | head -1 | sed 's/## TONIGHT: //')
+            echo "Using session brief: $TONIGHT"
             echo "MISSION=$TONIGHT" >> $GITHUB_ENV
-            echo "Tonight's mission: $TONIGHT"
           else
-            echo "MISSION=Read SPEC.md and implement the highest-priority unchecked P0 criterion" >> $GITHUB_ENV
+            TONIGHT=$(grep "^## TONIGHT:" TONIGHT.md | head -1 | sed 's/## TONIGHT: //' 2>/dev/null)
+            echo "No brief found, using TONIGHT.md: $TONIGHT"
+            echo "MISSION=${TONIGHT:-Implement next SPEC.md P0 criterion}" >> $GITHUB_ENV
           fi
 
       - name: Run organism
@@ -70,7 +93,8 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         run: |
           MODEL="claude-opus-4-6"
-          MAX_TURNS="80"
+          MAX_TURNS="120"
+          FEEDBACK=$(cat FEEDBACK.md 2>/dev/null | head -40 || echo "")
 
           claude \
             --dangerously-skip-permissions \
@@ -78,68 +102,79 @@ jobs:
             --max-turns "$MAX_TURNS" \
             "You are the SiteSync PM autonomous build agent — Night Mission Runner.
 
-          TONIGHT'S MISSION: $MISSION
+          STARTING STATE (baseline from pre-flight check):
+          - TypeScript errors: ${{ steps.baseline.outputs.ts_errors }}
+          - Mock data instances: ${{ steps.baseline.outputs.mock_count }}
+          - Unsafe casts: ${{ steps.baseline.outputs.any_count }}
+          - Build: ${{ steps.baseline.outputs.build_ok }}
+          
+          Your job: make every metric BETTER by the end of this session.
 
-          READ SESSION_BRIEF.md FIRST (pre-digested context — saves 10 turns):
-          0. cat SESSION_BRIEF.md   — start here. Has tonight mission, cognitive overrides, quality metrics.
-          If SESSION_BRIEF.md does not exist, then read individually:
-          1. cat TONIGHT.md                           — your specific mission for tonight
-          2. cat v7-prompts/V7-00_SYSTEM_CONTEXT.md  — tech stack rules (CRITICAL for V7 work)
-          3. cat LEARNINGS.md                         — what to avoid (especially migration rules)
-          4. cat AGENTS.md                            — your operating instructions
-          5. cat FEEDBACK.md                          — Walker's priorities
+          STEP 1: Read SESSION_BRIEF.md if it exists (cat SESSION_BRIEF.md)
+          If it does not exist, read these individually:
+            - cat TONIGHT.md
+            - cat LEARNINGS.md (focus on Migration Safety + Vite 8 sections)
+            - cat FEEDBACK.md | head -60
 
-          MISSION EXECUTION PROTOCOL:
-          1. Read TONIGHT.md completely
-          2. Identify the TONIGHT section (not UPCOMING or COMPLETED)
-          3. Execute each step in that section completely
-          4. For each prompt file referenced: cat the file, read it fully, implement EVERYTHING in it
-          5. Run quality gates after every batch of changes: npx tsc --noEmit && npm run lint && npm run build
-          6. Commit changes with format: feat(scope): description [auto]
-          7. After completing ALL steps: update TONIGHT.md to mark tonight COMPLETED and advance the next UPCOMING to TONIGHT
-          8. Commit the TONIGHT.md update: chore: advance TONIGHT.md to next night [auto]
+          STEP 2: Check PAUSE.md — if Status is PAUSED, stop immediately.
 
-          QUALITY GATES (must pass before every commit):
-          - npx tsc --noEmit (zero TypeScript errors)
-          - npm run lint (no new ESLint errors)
-          - npx vitest run --passWithNoTests (tests pass)
-          - npm run build (build succeeds)
+          STEP 3: If tonight is Night 1 (from TONIGHT.md), run the programmatic fixer first:
+            node fix-mock-data.mjs || true
+          The || true prevents script errors from killing the session.
+
+          STEP 4: Execute tonight's mission from TONIGHT.md.
+          
+          CRITICAL EXECUTION RULES:
+          - COMMIT INCREMENTALLY. After every 5 files changed, run quality gates and commit.
+            Do NOT wait until an entire phase is complete before committing.
+            Format: feat(scope): description [auto]
+          - If you run out of turns before completing the night's full mission:
+            a) Commit everything that passes quality gates
+            b) Add a progress note to TONIGHT.md: '### Progress Note: Completed X/Y steps'
+            c) Do NOT mark the night as COMPLETED unless ALL steps are done
+          - After completing ALL steps AND quality gates pass:
+            Update TONIGHT.md: mark current night COMPLETED ✅, advance next to TONIGHT
+
+          QUALITY GATES (run before EVERY commit):
+            npx tsc --noEmit    (must pass — zero errors)
+            npm run lint         (no new errors beyond floor)
+            npx vitest run --passWithNoTests
+            npm run build
 
           NEVER:
-          - Skip steps because they seem hard
-          - Commit code that fails quality gates
-          - Create new migrations without checking existing ones first (read LEARNINGS.md)
-          - Use as any type casts
-          - Add mock data to src/
-          - Use hyphens in any UI text (V7 rule)
+          - Use 'as any' type casts
+          - Add mock/fake/placeholder data to src/
+          - Commit failing quality gates
+          - Run supabase CLI commands
 
-          IMPORTANT: If tonight is Night 1, run `node fix-mock-data.mjs` FIRST before reading any prompt file. This is a programmatic mock data fixer.
+          FOUNDER PRIORITIES (from FEEDBACK.md):
+          $FEEDBACK
 
-          Output <promise>DONE</promise> when tonight's complete mission is finished." || true
+          Output <promise>DONE</promise> when session is complete." || true
 
       - name: Push to main
         run: |
+          git pull --rebase origin main 2>/dev/null || true
           COMMITS=$(git log origin/main..HEAD --oneline 2>/dev/null | wc -l | tr -d ' ')
           if [ "$COMMITS" -gt "0" ]; then
-            git pull --rebase origin main 2>/dev/null || true
             git push origin main
-            echo "Pushed $COMMITS commit(s)"
-            echo "## Night Mission Complete — $(date '+%B %d %Y')" >> $GITHUB_STEP_SUMMARY
+            echo "## Organism Run — $(date '+%B %d %Y at 2am CDT')" >> $GITHUB_STEP_SUMMARY
+            echo "**Commits pushed:** $COMMITS" >> $GITHUB_STEP_SUMMARY
+            echo "**Starting state:** ${{ steps.baseline.outputs.ts_errors }} TS errors, ${{ steps.baseline.outputs.mock_count }} mock instances" >> $GITHUB_STEP_SUMMARY
             git log origin/main~${COMMITS}..origin/main --oneline >> $GITHUB_STEP_SUMMARY 2>/dev/null || true
           else
-            echo "No commits this session"
+            echo "No commits produced this session" >> $GITHUB_STEP_SUMMARY
           fi
 
-      - name: Alert if nothing was committed
+      - name: Alert if no commits and not a dry run
         if: always()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          COMMITS=$(git log origin/main..HEAD --oneline 2>/dev/null | wc -l | tr -d ' ')
-          PUSHED=$(git log --since="1 hour ago" --author="SiteSync Organism" --oneline 2>/dev/null | wc -l | tr -d ' ')
-          if [ "$COMMITS" -eq "0" ] && [ "$PUSHED" -eq "0" ]; then
+          PUSHED=$(git log --since="2 hours ago" --author="SiteSync Organism" --oneline 2>/dev/null | wc -l | tr -d ' ')
+          if [ "$PUSHED" -eq "0" ]; then
             gh issue create \
               --title "[organism] No commits on $(date '+%B %d') — check logs" \
-              --body "The organism ran but produced no commits. Mission: $MISSION. Check the [workflow logs](https://github.com/${{ github.repository }}/actions) for details." \
+              --body "The organism ran but produced no commits. Mission: $MISSION. Baseline: ${{ steps.baseline.outputs.ts_errors }} TS errors. Check [workflow logs](https://github.com/${{ github.repository }}/actions)." \
               --label "bug" 2>/dev/null || true
           fi
