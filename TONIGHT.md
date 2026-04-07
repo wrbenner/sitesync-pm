@@ -61,7 +61,15 @@ Commit: `feat(p1): night 2 — zod validation, error handling, permission gates 
 1. `cat archive/prompts-v5/Phase_1D_REALTIME.md` — Supabase real-time subscriptions on 15 pages
 2. `cat archive/prompts-v5/Phase_1E_COMPONENT_SPLITTING.md` — Code splitting, lazy loading heavy routes
 
-Commit: `feat(p1): night 3 — real-time subscriptions, code splitting [auto]`
+3. Build AUTONOMIC CASCADES (THE NERVOUS SYSTEM — most critical gap):
+   When a schedule task slips → downstream tasks recalculate → lookahead regenerates → PM gets alert
+   When an RFI is unanswered 7 days → escalation notification fires
+   When a cost code hits 80% → warning toast on all budget pages
+   When a submittal returns "Revise and Resubmit" → procurement schedule adjusts → installation task shifts
+   These are not features. This is the autonomic nervous system that makes SiteSync feel ALIVE vs. dead.
+   Look for supabase/functions/send-notification and supabase/functions/weekly-digest — wire them to triggers.
+
+Commit: `feat(p1): night 3 — real-time subscriptions, autonomic cascades, code splitting [auto]`
 
 ---
 
