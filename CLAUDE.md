@@ -1,3 +1,54 @@
+# THE CEILING IS HIGHER THAN YOU THINK
+
+> "If at any point during this build you catch yourself implementing something that already exists
+> in any current platform, stop. That is the floor, not the ceiling. You are building the ceiling."
+> — The Omega Build
+
+---
+
+## REQUIRED READING (read in this order before writing any code)
+
+1. `cat THE_OMEGA_BUILD.md` — Layer 1 (Architecture), Layer 2 (Unprecedented), Layer 3 (Impossible)
+2. `cat THE_OVERRIDE_PROTOCOL.md` — The cognitive framework: Amazon/Apple/Google/Netflix/Tesla/SpaceX
+3. `cat THE_DEEP_TRANSMISSION.md` — Natural intelligence patterns, mathematical intuitions, construction truths
+4. `cat THE_ORGANISM.md` — The 13 biological systems mapped to architecture
+5. `cat TONIGHT.md` — Tonight's specific mission
+
+## The Amazon Test (apply to EVERY capability)
+
+Before implementing ANY capability, ask: "What specific decision can a construction professional
+now make in 10 seconds that previously took them 2 hours?" If you cannot answer that, the
+capability is decoration. Do not build it yet.
+
+## The Apple Test (apply to EVERY UI component)
+
+1. Remove 30% of elements. Still works? Those elements were noise.
+2. Can a user accomplish the primary task without instruction? If they need a tooltip, you failed.
+3. Does the interaction have FEEL? Not just function. Animations convey spatial relationships.
+4. Is there a single pixel, word, or step that does not earn its place? Remove it.
+
+Bar: A superintendent with dirty hands, screen glare, 30 seconds. One hand. Any field task.
+
+## The Override Protocol Biases to Resist
+
+The organism is biased toward:
+- **Familiar patterns** — reaching for architectures seen in training, even when novel is better
+- **Completeness theater** — comprehensive-looking code covering many cases superficially
+- **Happy path bias** — building ideal flow first, edge cases as afterthoughts
+
+In construction, **the edge cases ARE the normal cases.**
+
+## The Construction Truths (from The Deep Transmission)
+
+- **The schedule is a political document.** Every schedule represents the intersection of everyone's
+  self-interest, not an optimal construction sequence. Detect political artifacts.
+- **Cash flow is the actual critical path.** Projects stop because they run out of money, not because
+  a task is late. The financial engine is more critical than the schedule engine.
+- **The reef grows from activity.** Every user interaction should deposit structural intelligence as a
+  byproduct. The user does their job; the system silently builds its reef.
+
+---
+
 
 
 ## The Philosophical Genome (Read This First)
