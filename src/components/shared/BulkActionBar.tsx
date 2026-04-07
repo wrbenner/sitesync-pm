@@ -64,14 +64,17 @@ export const FolderPickerModal: React.FC<FolderPickerModalProps> = ({
                 {title}
               </Dialog.Title>
               <Dialog.Close asChild>
-                <button style={{
-                  all: 'unset', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  width: 28, height: 28,
-                  borderRadius: borderRadius.full,
-                  color: colors.textTertiary,
-                }}>
-                  <X size={16} />
+                <button
+                  aria-label="Close"
+                  style={{
+                    all: 'unset', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    width: 28, height: 28,
+                    borderRadius: borderRadius.full,
+                    color: colors.textTertiary,
+                  }}
+                >
+                  <X size={16} aria-hidden="true" />
                 </button>
               </Dialog.Close>
             </div>
@@ -245,13 +248,15 @@ export const BulkActionBar: React.FC<BulkActionBarProps> = ({
               key={action.label}
               onClick={() => handleAction(action)}
               disabled={loading !== null}
+              aria-busy={loading === action.label}
+              aria-label={loading === action.label ? `${action.label}, loading` : action.label}
               style={{
                 ...getButtonStyle(action.variant),
                 opacity: loading && loading !== action.label ? 0.5 : 1,
               }}
             >
               {loading === action.label ? (
-                <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
+                <Loader2 size={14} aria-hidden="true" style={{ animation: 'spin 1s linear infinite' }} />
               ) : action.icon ? (
                 action.icon
               ) : null}

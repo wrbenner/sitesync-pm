@@ -204,17 +204,21 @@ export const PresenceAvatars: React.FC<PresenceAvatarsProps> = React.memo(({
                       {user.initials}
                       {/* Editing pulse indicator */}
                       {(user as PresenceUserWithAction).action === 'editing' && (
-                        <div style={{
-                          position: 'absolute',
-                          bottom: -1,
-                          right: -1,
-                          width: 8,
-                          height: 8,
-                          borderRadius: '50%',
-                          backgroundColor: colors.statusPending,
-                          border: `1.5px solid ${colors.surfaceRaised}`,
-                          animation: 'pulse 2s infinite',
-                        }} />
+                        <div
+                          role="status"
+                          aria-label={`${user.displayName} is editing`}
+                          style={{
+                            position: 'absolute',
+                            bottom: -1,
+                            right: -1,
+                            width: 8,
+                            height: 8,
+                            borderRadius: '50%',
+                            backgroundColor: colors.statusPending,
+                            border: `1.5px solid ${colors.surfaceRaised}`,
+                            animation: 'pulse 2s infinite',
+                          }}
+                        />
                       )}
                     </motion.div>
                   </Tooltip.Trigger>
@@ -243,6 +247,7 @@ export const PresenceAvatars: React.FC<PresenceAvatarsProps> = React.memo(({
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+                  aria-label={`${overflow} more user${overflow !== 1 ? 's' : ''}`}
                   style={{
                     width: size,
                     height: size,
@@ -260,7 +265,7 @@ export const PresenceAvatars: React.FC<PresenceAvatarsProps> = React.memo(({
                     flexShrink: 0,
                   }}
                 >
-                  +{overflow}
+                  <span aria-hidden="true">+{overflow}</span>
                 </motion.div>
               </Tooltip.Trigger>
               <Tooltip.Portal>
