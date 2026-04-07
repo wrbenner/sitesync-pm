@@ -72,7 +72,9 @@ Commit: `feat(p1): night 2 — zod validation, error handling, permission gates 
    These are not features. This is the autonomic nervous system that makes SiteSync feel ALIVE vs. dead.
    Look for supabase/functions/send-notification and supabase/functions/weekly-digest — wire them to triggers.
 
-Commit: `feat(p1): night 3 — real-time subscriptions, autonomic cascades, code splitting [auto]`
+4. `cat archive/prompts-v5/Phase_0E_EDGE_SECURITY.md` — 5 edge functions need JWT validation + rate limiting (deferred from Night 1)
+
+Commit: `feat(p1): night 3 — real-time, autonomic cascades, code splitting, edge security [auto]`
 
 ---
 
