@@ -1,6 +1,7 @@
 import Dexie, { type Table } from 'dexie'
 import { supabase } from './supabase'
 import { detectConflicts } from './conflictResolver'
+import type { Database } from '../types/database'
 
 // ── Configuration ────────────────────────────────────────
 
@@ -141,6 +142,16 @@ export class SiteSyncOfflineDB extends Dexie {
 }
 
 export const offlineDb = new SiteSyncOfflineDB()
+
+/** Type-safe dynamic table access for Dexie. Returns the Table or null if the name is unknown. */
+function getDexieTable(name: string): Table | null {
+  const db = offlineDb as Record<string, unknown>
+  const table = db[name]
+  if (table && typeof table === 'object' && 'toArray' in table) {
+    return table as Table
+  }
+  return null
+}
 
 // ── Table name mapping (private) ─────────────────────────
 
@@ -324,13 +335,14 @@ export async function resolveMutationConflict(
 
   if (resolution === 'keep_server') {
     // Atomic: apply server data to cache AND delete mutation in one transaction
-    const tablesToTouch = [offlineDb.pendingMutations]
-    if (dexieTableName) {
-      tablesToTouch.push((offlineDb as any)[dexieTableName])
+    const tablesToTouch: Table[] = [offlineDb.pendingMutations]
+    const resolvedTable = dexieTableName ? getDexieTable(dexieTableName) : null
+    if (resolvedTable) {
+      tablesToTouch.push(resolvedTable)
     }
     await offlineDb.transaction('rw', tablesToTouch, async () => {
-      if (mutation.conflict_server_data && mutation.entity_id && dexieTableName) {
-        await (offlineDb as any)[dexieTableName].put(mutation.conflict_server_data)
+      if (mutation.conflict_server_data && mutation.entity_id && resolvedTable) {
+        await resolvedTable.put(mutation.conflict_server_data)
       }
       await offlineDb.pendingMutations.delete(mutationId)
     })
@@ -339,13 +351,14 @@ export async function resolveMutationConflict(
     }
   } else if (resolution === 'use_merged' && mergedData) {
     // Apply merged data to cache and re-queue with merged payload
-    const tablesToTouch = [offlineDb.pendingMutations]
-    if (dexieTableName) {
-      tablesToTouch.push((offlineDb as any)[dexieTableName])
+    const tablesToTouch: Table[] = [offlineDb.pendingMutations]
+    const mergeTable = dexieTableName ? getDexieTable(dexieTableName) : null
+    if (mergeTable) {
+      tablesToTouch.push(mergeTable)
     }
     await offlineDb.transaction('rw', tablesToTouch, async () => {
-      if (dexieTableName && mutation.entity_id) {
-        await (offlineDb as any)[dexieTableName].put(mergedData)
+      if (mergeTable && mutation.entity_id) {
+        await mergeTable.put(mergedData)
       }
       await offlineDb.pendingMutations.update(mutationId, {
         status: 'pending',
@@ -418,7 +431,8 @@ export async function processSyncQueue(
 
     try {
       await offlineDb.pendingMutations.update(m.id!, { status: 'syncing' })
-      const from = supabase.from(m.table as any) as any
+      // Dynamic table name requires casting; the table name is validated against validTableNames on enqueue
+      const from = supabase.from(m.table as keyof Database['public']['Tables'])
 
       if (m.operation === 'insert') {
         const { error } = await from.insert(m.data)
@@ -451,13 +465,14 @@ export async function processSyncQueue(
                 )
                 if (canAutoMerge) {
                   // Non-conflicting changes on both sides: apply merged result silently
-                  const { id, updated_at: _ts, ...updates } = merged as any
-                  const { error } = await from.update(updates).eq('id', id)
+                  const { id: mergedId, updated_at: _ts, ...mergedUpdates } = merged as Record<string, unknown>
+                  const { error } = await from.update(mergedUpdates).eq('id', mergedId as string)
                   if (error) throw error
                   // Keep local cache in sync with the merged record
                   const dexieTableName = getDexieTableName(m.table)
                   if (dexieTableName) {
-                    await (offlineDb as any)[dexieTableName].put(merged)
+                    const cacheTable = getDexieTable(dexieTableName)
+                    if (cacheTable) await cacheTable.put(merged)
                   }
                   if (m.entity_id) await deleteBaseVersion(m.table, m.entity_id)
                 } else {
@@ -551,15 +566,15 @@ export async function queueFileUpload(fileName: string, bucket: string, path: st
 function classifyUploadError(error: unknown): { permanent: boolean; statusCode: number } {
   // Extract HTTP status from Supabase storage error
   if (error && typeof error === 'object') {
-    const e = error as any
-    const statusCode = e.statusCode ?? e.status ?? e.httpStatus ?? 0
+    const e = error as Record<string, unknown>
+    const statusCode = (e.statusCode ?? e.status ?? e.httpStatus ?? 0) as number
 
     if (typeof statusCode === 'number' && PERMANENT_UPLOAD_ERRORS.has(statusCode)) {
       return { permanent: true, statusCode }
     }
 
     // Check error message for known permanent failures
-    const msg = String(e.message ?? '').toLowerCase()
+    const msg = String((e as Record<string, unknown>).message ?? '').toLowerCase()
     if (msg.includes('payload too large') || msg.includes('entity too large')) {
       return { permanent: true, statusCode: 413 }
     }
@@ -601,7 +616,7 @@ export async function processUploadQueue(): Promise<{ uploaded: number; failed: 
       if (permanent) {
         // Permanent error: never retry (auth, permissions, file too large, wrong type)
         await offlineDb.pendingUploads.update(u.id!, {
-          status: 'permanent_failure' as any,
+          status: 'permanent_failure' as PendingUpload['status'],
           retryCount,
           lastError: `HTTP ${statusCode}: ${(err as Error).message}`,
         })
@@ -697,7 +712,7 @@ export async function cacheProjectData(
 
     try {
       const { data, error } = await supabase
-        .from(supaTable as any)
+        .from(supaTable as keyof Database['public']['Tables'])
         .select('*')
         .eq('project_id', projectId)
         .limit(clampedLimit)
@@ -709,7 +724,8 @@ export async function cacheProjectData(
           truncatedTables.push(supaTable)
           console.warn(`Cache truncated for ${supaTable}: ${data.length} records (limit: ${clampedLimit}). Increase recordLimit to cache all data.`)
         }
-        await (offlineDb as any)[dexieTable].bulkPut(data)
+        const cacheTable = getDexieTable(dexieTable)
+        if (cacheTable) await cacheTable.bulkPut(data)
         totalCached += data.length
       }
     } catch (err) {
@@ -729,9 +745,10 @@ export async function cacheProjectData(
 // ── Cache Read/Write ─────────────────────────────────────
 
 export async function getFromCache<T>(tableName: string, projectId?: string): Promise<T[]> {
-  const dexieTable = getDexieTableName(tableName)
-  if (!dexieTable) return []
-  const table = (offlineDb as any)[dexieTable] as Table
+  const dexieTableName = getDexieTableName(tableName)
+  if (!dexieTableName) return []
+  const table = getDexieTable(dexieTableName)
+  if (!table) return []
   if (projectId) {
     return table.where('project_id').equals(projectId).toArray()
   }
@@ -739,15 +756,19 @@ export async function getFromCache<T>(tableName: string, projectId?: string): Pr
 }
 
 export async function getOneFromCache<T>(tableName: string, id: string): Promise<T | undefined> {
-  const dexieTable = getDexieTableName(tableName)
-  if (!dexieTable) return undefined
-  return (offlineDb as any)[dexieTable].get(id)
+  const dexieTableName = getDexieTableName(tableName)
+  if (!dexieTableName) return undefined
+  const table = getDexieTable(dexieTableName)
+  if (!table) return undefined
+  return table.get(id)
 }
 
 export async function writeToCache(tableName: string, data: Record<string, unknown>) {
-  const dexieTable = getDexieTableName(tableName)
-  if (!dexieTable) return
-  await (offlineDb as any)[dexieTable].put(data)
+  const dexieTableName = getDexieTableName(tableName)
+  if (!dexieTableName) return
+  const table = getDexieTable(dexieTableName)
+  if (!table) return
+  await table.put(data)
 }
 
 // ── Exports for tests ────────────────────────────────────

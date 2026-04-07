@@ -142,7 +142,7 @@ export function useSubmittalReviewers(submittalId: string | undefined) {
         .from('submittal_approvals')
         .select('*')
         .eq('submittal_id', submittalId!)
-        .order('created_at' as any, { ascending: true })
+        .order('created_at', { ascending: true })
       if (error) throw error
       return (data ?? []) as Array<{
         id: string
@@ -538,11 +538,13 @@ export function useAIInsightsByCategory(projectId: string | undefined, category?
   return useQuery({
     queryKey: ['ai_insights', projectId, 'category', category ?? null],
     queryFn: async () => {
-      let query = supabase
+      // category column added by migration but not yet in generated DB types
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let query: any = supabase
         .from('ai_insights')
         .select('*')
         .eq('project_id', projectId!)
-        .eq('dismissed', false) as any
+        .eq('dismissed', false)
       if (category) query = query.eq('category', category)
       const { data, error } = await query.order('created_at', { ascending: false })
       if (error) throw error
@@ -565,11 +567,11 @@ export function useTaskRiskScores(projectId: string | undefined) {
   return useQuery({
     queryKey: ['task_risks', projectId],
     queryFn: async () => {
-      // risk_score and risk_level added by migration 00031
-      const { data, error } = await (supabase
+      // risk_score and risk_level added by migration 00031 but not yet in generated DB types
+      const { data, error } = await supabase
         .from('tasks')
-        .select('id, title, risk_score, risk_level' as any)
-        .eq('project_id', projectId!) as any)
+        .select('id, title, risk_score, risk_level')
+        .eq('project_id', projectId!)
       if (error) throw error
       return ((data || []) as Array<{ id: string; title: string; risk_score: number | null; risk_level: string | null }>)
         .filter(t => t.risk_level != null)
@@ -594,7 +596,7 @@ export function useEarnedValueData(projectId: string | undefined) {
       const project = projectRes.data
 
       const avgProgress = phases.length > 0
-        ? phases.reduce((s, p: any) => s + (p.percent_complete || 0), 0) / phases.length
+        ? phases.reduce((s, p) => s + (p.percent_complete || 0), 0) / phases.length
         : 0
 
       let elapsedPercent = 50
@@ -606,8 +608,8 @@ export function useEarnedValueData(projectId: string | undefined) {
       }
 
       // Inline EV computation for the client
-      const BAC = items.reduce((s, b: any) => s + (b.original_amount || 0), 0)
-      const AC = items.reduce((s, b: any) => s + (b.actual_amount || 0), 0)
+      const BAC = items.reduce((s, b) => s + (b.original_amount || 0), 0)
+      const AC = items.reduce((s, b) => s + (b.actual_amount || 0), 0)
       const PV = BAC * Math.min(1, elapsedPercent / 100)
       const EV = BAC * Math.min(1, avgProgress / 100)
       const CPI = AC > 0 ? EV / AC : 1
@@ -648,11 +650,13 @@ export function useWeeklyDigests(projectId: string | undefined) {
   return useQuery({
     queryKey: ['weekly_digests', projectId],
     queryFn: async () => {
-      // snapshot_type added by migration 00031
-      const { data, error } = await (supabase
+      // snapshot_type added by migration 00031 but not yet in generated DB types
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const query: any = supabase
         .from('project_snapshots')
         .select('*')
-        .eq('project_id', projectId!) as any)
+        .eq('project_id', projectId!)
+      const { data, error } = await query
         .eq('snapshot_type', 'weekly')
         .order('snapshot_date', { ascending: false })
         .limit(12)
@@ -1305,7 +1309,7 @@ export function useTaskCriticalPath(projectId: string | undefined) {
       if (error) throw error
 
       const { tasksToCPM, calculateCriticalPath } = await import('../../lib/criticalPath')
-      const cpmTasks = tasksToCPM((data || []).map((t: any) => ({
+      const cpmTasks = tasksToCPM((data || []).map((t) => ({
         id: t.id,
         title: t.title,
         start_date: t.start_date,
@@ -1332,11 +1336,12 @@ export function useTaskDependencies(taskId: string | undefined) {
         .single()
       if (taskError) throw taskError
 
-      const predecessorIds = (task as any)?.predecessor_ids || []
-      const successorIds = (task as any)?.successor_ids || []
+      const taskRecord = task as Record<string, unknown>
+      const predecessorIds = (taskRecord.predecessor_ids as string[] | null) || []
+      const successorIds = (taskRecord.successor_ids as string[] | null) || []
 
-      let predecessors: any[] = []
-      let successors: any[] = []
+      let predecessors: Array<{ id: string; title: string; status: string; due_date: string | null }> = []
+      let successors: Array<{ id: string; title: string; status: string; due_date: string | null }> = []
 
       if (predecessorIds.length > 0) {
         const { data } = await supabase

@@ -71,7 +71,11 @@ interface MappedTask {
   subtasks: { total: number; completed: number };
   linkedItems: Array<{ type: string; id: string }>;
   predecessorIds: string[];
+  predecessor_ids: string[];
+  successor_ids: string[];
+  percent_complete: number | null;
   isCriticalPath: boolean;
+  is_critical_path: boolean;
 }
 
 export const Tasks: React.FC = () => {
@@ -82,7 +86,9 @@ export const Tasks: React.FC = () => {
   const fetchedTasks: MappedTask[] = useMemo(() => tasksRaw.map((t: Record<string, unknown>) => {
     const name = (t.assigned_to as string) || 'Unassigned';
     const initials = name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase() || 'NA';
-    const predecessorIds = (t.predecessor_ids as string[]) || [];
+    const predecessorIds = (t.predecessor_ids as string[] | null) || [];
+    const successorIds = (t.successor_ids as string[] | null) || [];
+    const percentComplete = typeof t.percent_complete === 'number' ? t.percent_complete : null;
     const tags: string[] = [];
     if (t.is_critical_path) tags.push('critical path');
     return {
@@ -101,7 +107,11 @@ export const Tasks: React.FC = () => {
       subtasks: { total: 0, completed: 0 },
       linkedItems: [],
       predecessorIds,
+      predecessor_ids: predecessorIds,
+      successor_ids: successorIds,
+      percent_complete: percentComplete,
       isCriticalPath: !!t.is_critical_path,
+      is_critical_path: !!t.is_critical_path,
     };
   }), [tasksRaw]);
 
@@ -220,7 +230,7 @@ export const Tasks: React.FC = () => {
 
   const renderTaskCard = (task: typeof localTasks[0]) => {
     const due = formatDue(task.dueDate);
-    const cpmResult = cpmResults?.get((task as any).uuid);
+    const cpmResult = cpmResults?.get(task.uuid);
     const isCriticalPath = cpmResult?.isCritical || task.is_critical_path;
     return (
       <div
@@ -295,10 +305,10 @@ export const Tasks: React.FC = () => {
           </div>
         )}
         {/* Dependency indicator */}
-        {(task as any).predecessor_ids?.length > 0 && (
+        {task.predecessor_ids?.length > 0 && (
           <div style={{ marginBottom: spacing.md, display: 'flex', alignItems: 'center', gap: spacing.xs }}>
             <GitBranch size={10} color={colors.textTertiary} />
-            <span style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary }}>{(task as any).predecessor_ids.length} dep{(task as any).predecessor_ids.length > 1 ? 's' : ''}</span>
+            <span style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary }}>{task.predecessor_ids.length} dep{task.predecessor_ids.length > 1 ? 's' : ''}</span>
           </div>
         )}
 
@@ -540,17 +550,17 @@ export const Tasks: React.FC = () => {
           )}
 
           {/* Dependencies */}
-          {((selectedTask as any).predecessor_ids?.length > 0 || (selectedTask as any).successor_ids?.length > 0) && (
+          {(selectedTask.predecessor_ids?.length > 0 || selectedTask.successor_ids?.length > 0) && (
             <div style={{ marginBottom: spacing['2xl'] }}>
               <h3 style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing.md, display: 'flex', alignItems: 'center', gap: spacing.sm }}>
                 <GitBranch size={14} /> Dependencies
               </h3>
-              {(selectedTask as any).predecessor_ids?.length > 0 && (
+              {selectedTask.predecessor_ids?.length > 0 && (
                 <div style={{ marginBottom: spacing.md }}>
                   <span style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Predecessors</span>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs, marginTop: spacing.xs }}>
-                    {(selectedTask as any).predecessor_ids.map((pid: string) => {
-                      const pred = localTasks.find(t => (t as any).uuid === pid || String(t.id) === pid);
+                    {selectedTask.predecessor_ids.map((pid: string) => {
+                      const pred = localTasks.find(t => t.uuid === pid || String(t.id) === pid);
                       return (
                         <div key={pid} style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, padding: `${spacing.xs} ${spacing.sm}`, backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.sm }}>
                           {pred ? pred.title : pid.slice(0, 8)}
@@ -560,12 +570,12 @@ export const Tasks: React.FC = () => {
                   </div>
                 </div>
               )}
-              {(selectedTask as any).successor_ids?.length > 0 && (
+              {selectedTask.successor_ids?.length > 0 && (
                 <div>
                   <span style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Successors</span>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs, marginTop: spacing.xs }}>
-                    {(selectedTask as any).successor_ids.map((sid: string) => {
-                      const succ = localTasks.find(t => (t as any).uuid === sid || String(t.id) === sid);
+                    {selectedTask.successor_ids.map((sid: string) => {
+                      const succ = localTasks.find(t => t.uuid === sid || String(t.id) === sid);
                       return (
                         <div key={sid} style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, padding: `${spacing.xs} ${spacing.sm}`, backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.sm }}>
                           {succ ? succ.title : sid.slice(0, 8)}
@@ -580,7 +590,7 @@ export const Tasks: React.FC = () => {
 
           {/* CPM Data */}
           {(() => {
-            const cpm = cpmResults?.get((selectedTask as any).uuid);
+            const cpm = cpmResults?.get(selectedTask.uuid);
             if (!cpm) return null;
             return (
               <div style={{ marginBottom: spacing['2xl'], padding: spacing.lg, backgroundColor: cpm.isCritical ? `${colors.statusCritical}06` : colors.surfaceFlat, borderRadius: borderRadius.md, borderLeft: `3px solid ${cpm.isCritical ? colors.statusCritical : colors.statusInfo}` }}>
@@ -610,16 +620,16 @@ export const Tasks: React.FC = () => {
           })()}
 
           {/* Percent Complete */}
-          {(selectedTask as any).percent_complete != null && (
+          {selectedTask.percent_complete != null && (
             <div style={{ marginBottom: spacing['2xl'] }}>
               <h3 style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing.md }}>Progress</h3>
               <ProgressBar
-                value={(selectedTask as any).percent_complete}
+                value={selectedTask.percent_complete}
                 max={100}
                 height={8}
-                color={(selectedTask as any).percent_complete === 100 ? colors.tealSuccess : colors.primaryOrange}
+                color={selectedTask.percent_complete === 100 ? colors.tealSuccess : colors.primaryOrange}
               />
-              <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, marginTop: spacing.xs, display: 'block' }}>{(selectedTask as any).percent_complete}% complete</span>
+              <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, marginTop: spacing.xs, display: 'block' }}>{selectedTask.percent_complete}% complete</span>
             </div>
           )}
 
@@ -667,8 +677,8 @@ export const Tasks: React.FC = () => {
                     projectId: projectId!,
                   });
                   // Update local state so the UI reflects immediately
-                  setLocalTasks((prev: any[]) => prev.map((t: any) => t.id === selectedTask.id ? { ...t, status: newStatus } : t));
-                  setSelectedTask({ ...selectedTask, status: newStatus } as any);
+                  setLocalTasks((prev) => prev.map((t) => t.id === selectedTask.id ? { ...t, status: newStatus } : t));
+                  setSelectedTask({ ...selectedTask, status: newStatus });
                   addToast('success', `Task moved to ${statusConfig[newStatus].label}`);
                 } catch {
                   addToast('error', 'Failed to update task');
@@ -923,8 +933,8 @@ export const Tasks: React.FC = () => {
           <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0 }}>
             Select a template to create a set of pre configured tasks with dependencies.
           </p>
-          {(templates || []).map((tmpl: any) => (
-            <div key={tmpl.id} onClick={() => handleApplyTemplate(tmpl.id)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleApplyTemplate(tmpl.id); } }} style={{
+          {(templates || []).map((tmpl: Record<string, unknown>) => (
+            <div key={String(tmpl.id)} onClick={() => handleApplyTemplate(String(tmpl.id))} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleApplyTemplate(String(tmpl.id)); } }} style={{
               padding: spacing.lg, backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.md,
               cursor: 'pointer', transition: `background-color ${transitions.quick}`,
             }}
@@ -933,12 +943,12 @@ export const Tasks: React.FC = () => {
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div>
-                  <p style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0 }}>{tmpl.name}</p>
-                  <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: `${spacing.xs} 0 0` }}>{tmpl.description || tmpl.phase}</p>
+                  <p style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0 }}>{String(tmpl.name || '')}</p>
+                  <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: `${spacing.xs} 0 0` }}>{String(tmpl.description || tmpl.phase || '')}</p>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
                   <span style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, backgroundColor: colors.surfaceRaised, padding: `${spacing.xs} ${spacing.sm}`, borderRadius: borderRadius.full }}>
-                    {(tmpl.task_data as any[])?.length || 0} tasks
+                    {Array.isArray(tmpl.task_data) ? tmpl.task_data.length : 0} tasks
                   </span>
                   <Copy size={14} color={colors.textTertiary} />
                 </div>

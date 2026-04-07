@@ -34,24 +34,45 @@ function typeColors(type: string): { fg: string; bg: string } {
 // Meeting data is fetched from Supabase meetings, attendees, and action_items tables.
 // Interfaces are defined in types/entities.ts.
 
+interface MeetingListItem {
+  id: string;
+  title: string;
+  status: string;
+  type: string;
+  date: string;
+  location: string | null;
+  attendees: Array<{ id: string; name: string }>;
+}
+
+interface ActionItem {
+  id: string;
+  description: string;
+  assignee: string;
+  dueDate: string;
+  status: string;
+  meetingTitle: string;
+}
+
 export const MeetingsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
   const [showOpenOnly, setShowOpenOnly] = useState(true);
 
-  const upcomingMeetings = ([] as any[]).filter((m) => m.status === 'scheduled');
-  const pastMeetings = ([] as any[]).filter((m) => m.status === 'completed');
+  const upcomingMeetings = ([] as MeetingListItem[]).filter((m) => m.status === 'scheduled');
+  const pastMeetings = ([] as MeetingListItem[]).filter((m) => m.status === 'completed');
   const displayedMeetings = activeTab === 'upcoming' ? upcomingMeetings : pastMeetings;
 
   // Metrics
-  const openActionItemsCount = ([] as any[]).filter((ai) => ai.status === 'open').length;
+  const allActionItems: ActionItem[] = [];
+  const openActionItemsCount = allActionItems.filter((ai) => ai.status === 'open').length;
   const meetingsThisWeek = upcomingMeetings.filter(() => true).length; // all upcoming are this week in mock
-  const totalAttendees = ([] as any[]).reduce((sum, m) => sum + m.attendees.length, 0);
-  const avgAttendance = Math.round((totalAttendees / ([] as any[]).length));
+  const allMeetings: MeetingListItem[] = [];
+  const totalAttendees = allMeetings.reduce((sum, m) => sum + m.attendees.length, 0);
+  const avgAttendance = allMeetings.length > 0 ? Math.round(totalAttendees / allMeetings.length) : 0;
   const avgAttendanceRate = Math.round((avgAttendance / 10) * 100); // normalized to a plausible rate
 
   const filteredActionItems = showOpenOnly
-    ? ([] as any[]).filter((ai) => ai.status === 'open')
-    : ([] as any[]);
+    ? allActionItems.filter((ai) => ai.status === 'open')
+    : allActionItems;
 
   const TABS = [
     { key: 'upcoming' as const, label: 'Upcoming' },

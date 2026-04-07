@@ -80,7 +80,7 @@ export function createScopedClient(client: DbClient, projectId: string): DbClien
                 return (...args: unknown[]) => {
                   const result = (qbTarget[qbProp as keyof typeof qbTarget] as TerminalMethod).call(qbTarget, ...args).eq('project_id', projectId)
                   if ((qbProp === 'select' || qbProp === 'update' || qbProp === 'delete') && SOFT_DELETE_TABLES.has(table)) {
-                    return (result as any).is('deleted_at', null)
+                    return (result as { is: (col: string, val: null) => unknown }).is('deleted_at', null)
                   }
                   return result
                 }
@@ -209,7 +209,7 @@ export async function buildCursorPaginatedQuery<TRow, TMapped = TRow>(
     cursor?: string
     orderColumn?: string
     orderAscending?: boolean
-    filterFn?: (query: any) => any
+    filterFn?: (query: unknown) => unknown
     mapFn?: (row: TRow) => TMapped
   } = {}
 ): Promise<{ data: TMapped[]; nextCursor: string | null; hasMore: boolean }> {
@@ -222,7 +222,8 @@ export async function buildCursorPaginatedQuery<TRow, TMapped = TRow>(
     mapFn,
   } = options
 
-  let query = supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let query: any = supabase
     .from(tableName as TableName)
     .select('*')
     .eq('project_id', projectId)
@@ -234,15 +235,15 @@ export async function buildCursorPaginatedQuery<TRow, TMapped = TRow>(
   if (cursor) {
     const decoded = atob(cursor)
     query = orderAscending
-      ? (query as any).gt(orderColumn, decoded)
-      : (query as any).lt(orderColumn, decoded)
+      ? query.gt(orderColumn, decoded)
+      : query.lt(orderColumn, decoded)
   }
 
-  query = (query as any)
+  query = query
     .order(orderColumn, { ascending: orderAscending })
     .limit(pageSize + 1)
 
-  const { data, error } = await (query as any)
+  const { data, error } = await query
   if (error) throw transformSupabaseError(error)
 
   const rows = (data ?? []) as TRow[]

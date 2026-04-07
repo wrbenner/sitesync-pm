@@ -126,6 +126,22 @@ const ROLE_CATEGORY_COLOR: Record<RoleCategory, string> = {
   unknown: '#9CA3AF',
 };
 
+// ── Drawing presence data (Liveblocks presence may include extra fields) ──────
+
+interface DrawingPresenceData {
+  displayName?: string;
+  name?: string;
+  lastSeen?: number;
+  role?: string;
+  company?: string;
+  color?: string;
+  initials?: string;
+}
+
+function asPresenceData(presence: Record<string, unknown>): DrawingPresenceData {
+  return presence as DrawingPresenceData;
+}
+
 // ── Entity type display names ─────────────────────────────────────────────────
 
 const ENTITY_TYPE_LABEL: Record<string, string> = {
@@ -671,15 +687,17 @@ const DrawingPresenceBarContent: React.FC = () => {
   const safeVisible: SafeOther[] = [];
   for (const other of visible) {
     try {
+      const p = asPresenceData(other.presence as unknown as Record<string, unknown>);
+      const lastSeen = p.lastSeen ?? Date.now();
       safeVisible.push({
         connectionId: other.connectionId,
-        lastSeen: (other.presence as any).lastSeen ?? Date.now(),
-        status: getPresenceStatus((other.presence as any).lastSeen ?? Date.now()),
-        displayName: (other.presence as any).displayName || (other.presence as any).name || 'Someone',
-        role: (other.presence as any).role,
-        company: (other.presence as any).company,
-        color: (other.presence as any).color || colors.statusInfo,
-        initials: (other.presence as any).initials || '?',
+        lastSeen,
+        status: getPresenceStatus(lastSeen),
+        displayName: p.displayName || p.name || 'Someone',
+        role: p.role,
+        company: p.company,
+        color: p.color || colors.statusInfo,
+        initials: p.initials || '?',
       });
     } catch {
       // skip malformed presence entry
@@ -817,11 +835,14 @@ const DrawingPresenceBarContent: React.FC = () => {
                     style={TOOLTIP_CONTENT_STYLE}
                   >
                     <OverflowTooltipContent
-                      users={others.slice(5).map(o => ({
-                        displayName: (o.presence as any).displayName || o.presence.name || 'Someone',
-                        role: (o.presence as any).role,
-                        lastSeen: (o.presence as any).lastSeen ?? Date.now(),
-                      }))}
+                      users={others.slice(5).map(o => {
+                        const p = asPresenceData(o.presence as unknown as Record<string, unknown>);
+                        return {
+                          displayName: p.displayName || p.name || 'Someone',
+                          role: p.role,
+                          lastSeen: p.lastSeen ?? Date.now(),
+                        };
+                      })}
                     />
                     <Tooltip.Arrow style={{ fill: colors.textPrimary }} />
                   </Tooltip.Content>

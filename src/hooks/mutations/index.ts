@@ -13,13 +13,15 @@ import { useOfflineMutation } from '../useOfflineMutation'
 import { createDailyLog, updateDailyLog } from '../../api/endpoints/field'
 import type { DailyLogPayload } from '../../types/api'
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const from = (table: string) => supabase.from(table as any) as any
+import type { Database } from '../../types/database'
+type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
+// Dynamic table access helper. Tables may include those added by migration but not yet in generated types.
+const from = (table: AnyTableName) => supabase.from(table as keyof Database['public']['Tables'])
 
 // ── RFIs (Permission-checked + Audited) ──────────────────
 
 export function useCreateRFI() {
-  return useAuditedMutation<{ data: Record<string, unknown>; projectId: string }, { data: any; projectId: string }>({
+  return useAuditedMutation<{ data: Record<string, unknown>; projectId: string }, { data: Record<string, unknown>; projectId: string }>({
     permission: 'rfis.create',
     schema: rfiSchema,
     action: 'create_rfi',
@@ -119,7 +121,7 @@ export function useCreateRFIResponse() {
 // ── Submittals ────────────────────────────────────────────
 
 export function useCreateSubmittal() {
-  return useAuditedMutation<{ data: Record<string, unknown>; projectId: string }, { data: any; projectId: string }>({
+  return useAuditedMutation<{ data: Record<string, unknown>; projectId: string }, { data: Record<string, unknown>; projectId: string }>({
     permission: 'submittals.create',
     schema: submittalSchema,
     action: 'create_submittal',
@@ -161,7 +163,7 @@ export function useUpdateSubmittal() {
 // ── Punch Items ───────────────────────────────────────────
 
 export function useCreatePunchItem() {
-  return useAuditedMutation<{ data: Record<string, unknown>; projectId: string }, { data: any; projectId: string }>({
+  return useAuditedMutation<{ data: Record<string, unknown>; projectId: string }, { data: Record<string, unknown>; projectId: string }>({
     permission: 'punch_list.create',
     schema: punchItemSchema,
     action: 'create_punch_item',
@@ -202,7 +204,7 @@ export function useUpdatePunchItem() {
 // ── Tasks ─────────────────────────────────────────────────
 
 export function useCreateTask() {
-  return useAuditedMutation<{ data: Record<string, unknown>; projectId: string }, { data: any; projectId: string }>({
+  return useAuditedMutation<{ data: Record<string, unknown>; projectId: string }, { data: Record<string, unknown>; projectId: string }>({
     permission: 'tasks.create',
     schema: taskSchema,
     action: 'create_task',
@@ -257,7 +259,7 @@ export function useDeleteTask() {
 // ── Daily Logs ────────────────────────────────────────────
 
 export function useCreateDailyLog() {
-  return useAuditedMutation<{ data: Record<string, unknown>; projectId: string }, { data: any; projectId: string }>({
+  return useAuditedMutation<{ data: Record<string, unknown>; projectId: string }, { data: Record<string, unknown>; projectId: string }>({
     permission: 'daily_log.create',
     schema: dailyLogSchema,
     action: 'create_daily_log',
@@ -429,7 +431,7 @@ export function useDailyLogUpdateMutation(projectId: string) {
 // ── Change Orders ─────────────────────────────────────────
 
 export function useCreateChangeOrder() {
-  return useAuditedMutation<{ data: Record<string, unknown>; projectId: string }, { data: any; projectId: string }>({
+  return useAuditedMutation<{ data: Record<string, unknown>; projectId: string }, { data: Record<string, unknown>; projectId: string }>({
     permission: 'change_orders.create',
     schema: changeOrderSchema,
     action: 'create_change_order',
@@ -472,9 +474,9 @@ export function usePromoteChangeOrder() {
   return useMutation({
     mutationFn: async ({ sourceId, projectId, nextType }: { sourceId: string; projectId: string; nextType: 'cor' | 'co' }) => {
       // Fetch the source CO
-      const { data: source, error: fetchError } = await supabase.from('change_orders' as any).select('*').eq('id', sourceId).single()
+      const { data: source, error: fetchError } = await supabase.from('change_orders').select('*').eq('id', sourceId).single()
       if (fetchError) throw fetchError
-      const src = source as any
+      const src = source as Record<string, unknown>
       // Create new CO at the next pipeline stage
       const { data: promoted, error: createError } = await from('change_orders').insert({
         project_id: projectId,
@@ -575,7 +577,7 @@ export function useRejectChangeOrder() {
 // ── Meetings ──────────────────────────────────────────────
 
 export function useCreateMeeting() {
-  return useAuditedMutation<{ data: Record<string, unknown>; projectId: string }, { data: any; projectId: string }>({
+  return useAuditedMutation<{ data: Record<string, unknown>; projectId: string }, { data: Record<string, unknown>; projectId: string }>({
     permission: 'meetings.create',
     schema: meetingSchema,
     action: 'create_meeting',
@@ -1050,25 +1052,26 @@ export function useUpdateTaskDependencies() {
 export function useApplyTaskTemplate() {
   return useMutation({
     mutationFn: async ({ templateId, projectId }: { templateId: string; projectId: string }) => {
+      // task_templates added by migration but not yet in generated DB types
       const { data: template, error: templateError } = await supabase
-        .from('task_templates' as any)
+        .from('task_templates' as keyof Database['public']['Tables'])
         .select('*')
         .eq('id', templateId)
         .single()
       if (templateError) throw templateError
 
-      const tmpl = template as any
-      const taskData = (tmpl.task_data as any[]) || []
+      const tmpl = template as Record<string, unknown>
+      const taskData = (Array.isArray(tmpl.task_data) ? tmpl.task_data : []) as Array<Record<string, unknown>>
 
       // ATOMIC: Batch insert all tasks in a single operation
-      const taskRows = taskData.map((task: any) => ({
+      const taskRows = taskData.map((task) => ({
         project_id: projectId,
-        title: task.title,
-        description: task.description || '',
+        title: task.title as string,
+        description: (task.description as string) || '',
         status: 'todo',
-        priority: task.priority || 'medium',
-        estimated_hours: task.estimated_hours || null,
-        phase: tmpl.phase,
+        priority: (task.priority as string) || 'medium',
+        estimated_hours: (task.estimated_hours as number | null) || null,
+        phase: tmpl.phase as string,
       }))
 
       const { data: created, error: insertError } = await from('tasks')
@@ -1077,25 +1080,26 @@ export function useApplyTaskTemplate() {
       if (insertError) throw insertError
 
       // Wire up predecessor relationships in a second pass
-      const createdTasks = (created || []) as any[]
+      const createdTasks = (created || []) as Array<Record<string, unknown>>
       const idMap = new Map<string, string>()
-      taskData.forEach((task: any, i: number) => {
+      taskData.forEach((task, i: number) => {
         if (createdTasks[i]) {
-          idMap.set(task.id || task.title, createdTasks[i].id)
+          idMap.set(String(task.id || task.title), String(createdTasks[i].id))
         }
       })
 
       for (const task of taskData) {
-        if (task.predecessors?.length) {
-          const createdId = idMap.get(task.id || task.title)
-          const predIds = task.predecessors.map((p: string) => idMap.get(p)).filter(Boolean)
+        const preds = task.predecessors as string[] | undefined
+        if (preds?.length) {
+          const createdId = idMap.get(String(task.id || task.title))
+          const predIds = preds.map((p: string) => idMap.get(p)).filter(Boolean)
           if (createdId && predIds.length) {
             await from('tasks').update({ predecessor_ids: predIds }).eq('id', createdId)
           }
         }
       }
 
-      return { projectId, count: taskData.length, phase: tmpl.phase }
+      return { projectId, count: taskData.length, phase: tmpl.phase as string }
     },
     onSuccess: (result: { projectId: string; count: number; phase: string }) => {
       invalidateEntity('task', result.projectId)
