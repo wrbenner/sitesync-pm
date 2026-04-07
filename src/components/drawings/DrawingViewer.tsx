@@ -18,6 +18,7 @@ import {
 import { DrawingPresenceBar } from '../collaboration/PresenceBar';
 import { supabase } from '../../api/client';
 import { useUiStore } from '../../stores';
+import { useAuthStore } from '../../stores/authStore';
 
 // Fabric tool type for annotation canvas
 type FabricTool = 'pen' | 'highlighter' | 'text' | 'rectangle' | 'circle' | 'arrow' | 'cloud' | null;
@@ -40,16 +41,17 @@ interface MarkupItem {
   text?: string;
 }
 
-// Collaborative presence user derived from session or auth context.
-// Falls back to a default until real auth provides the user identity.
+// Derive presence identity from the authenticated user profile.
+// Falls back to a generic label when no session is available.
 const PRESENCE_FALLBACK = { name: 'Current User', initials: 'CU', color: '#4EC896' };
 
-function getDemoUser() {
-  try {
-    const stored = sessionStorage.getItem('sitesync_presence_user');
-    if (stored) return JSON.parse(stored) as { name: string; initials: string; color: string };
-  } catch { /* use fallback */ }
-  return PRESENCE_FALLBACK;
+function getPresenceUser(profile: { full_name?: string | null } | null, userEmail?: string | null): { name: string; initials: string; color: string } {
+  const fullName = profile?.full_name || userEmail || PRESENCE_FALLBACK.name;
+  const parts = fullName.trim().split(/\s+/);
+  const initials = parts.length >= 2
+    ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    : fullName.slice(0, 2).toUpperCase();
+  return { name: fullName, initials, color: PRESENCE_FALLBACK.color };
 }
 
 const disciplineLayers = [
@@ -65,7 +67,9 @@ const issuePins: IssuePin[] = [];
 // ── Outer wrapper: provides the Liveblocks room ─────────────────────────────
 
 export const DrawingViewer: React.FC<DrawingViewerProps> = (props) => {
-  const demoUser = getDemoUser();
+  const profile = useAuthStore((s) => s.profile);
+  const user = useAuthStore((s) => s.user);
+  const presenceUser = getPresenceUser(profile, user?.email);
   const roomId = `drawing:${props.drawing.id || props.drawing.setNumber}`;
 
   return (
@@ -74,13 +78,13 @@ export const DrawingViewer: React.FC<DrawingViewerProps> = (props) => {
       initialPresence={{
         cursor: null,
         page: 'drawing',
-        name: demoUser.name,
-        initials: demoUser.initials,
+        name: presenceUser.name,
+        initials: presenceUser.initials,
         avatar: null,
-        color: demoUser.color,
+        color: presenceUser.color,
       }}
     >
-      <DrawingViewerInner {...props} demoUser={demoUser} />
+      <DrawingViewerInner {...props} presenceUser={presenceUser} />
     </RoomProvider>
   );
 };
@@ -88,13 +92,13 @@ export const DrawingViewer: React.FC<DrawingViewerProps> = (props) => {
 // ── Inner component: uses Liveblocks hooks ───────────────────────────────────
 
 interface DrawingViewerInnerProps extends DrawingViewerProps {
-  demoUser: { name: string; initials: string; color: string };
+  presenceUser: { name: string; initials: string; color: string };
 }
 
 const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
   drawing,
   onClose,
-  demoUser,
+  presenceUser,
   onSave,
   annotations,
   isEditable = false,
@@ -141,8 +145,8 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
 
   // Update presence name/color once on mount
   useEffect(() => {
-    updateMyPresence({ name: demoUser.name, initials: demoUser.initials, color: demoUser.color });
-  }, [demoUser.name, demoUser.initials, demoUser.color, updateMyPresence]);
+    updateMyPresence({ name: presenceUser.name, initials: presenceUser.initials, color: presenceUser.color });
+  }, [presenceUser.name, presenceUser.initials, presenceUser.color, updateMyPresence]);
 
   // Receive remote markup events and apply to local state
   useEventListener(({ event }) => {
@@ -638,7 +642,7 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
         coordinates: JSON.stringify({ x: m.x, y: m.y, endX: m.endX, endY: m.endY }),
         color: colors.primaryOrange,
         text: m.text || null,
-        created_by: demoUser.name,
+        created_by: presenceUser.name,
         created_at: new Date().toISOString(),
       }));
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -669,16 +673,16 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
           {/* Self indicator */}
           <div
-            title={`You (${demoUser.name})`}
+            title={`You (${presenceUser.name})`}
             style={{
               width: 28, height: 28, borderRadius: '50%',
-              backgroundColor: demoUser.color,
+              backgroundColor: presenceUser.color,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: '10px', fontWeight: typography.fontWeight.bold, color: colors.white,
               border: `2px solid rgba(255, 255, 255, 0.3)`,
             }}
           >
-            {demoUser.initials}
+            {presenceUser.initials}
           </div>
           <button
             onClick={() => setShowCompare(!showCompare)}
