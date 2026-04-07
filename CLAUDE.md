@@ -1,3 +1,13 @@
+
+
+## The Philosophical Genome (Read This First)
+
+**`cat THE_ORGANISM.md`** — This is the most important file in the repository. Before reading anything else, read this. It contains the 13 biological systems that define what SiteSync must become. Every architectural decision you make must map to one of these systems.
+
+The key insight: you are growing an organism, not building software. Organisms adapt, heal, evolve, and reproduce. Dead software does not.
+
+When you encounter an ambiguous architectural choice, ask: *does this behave more like a living system or a dead one?*
+
 # SiteSync AI — Construction Operating System
 
 ## Essential Context Files (Read in This Order)
