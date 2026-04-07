@@ -1,6 +1,10 @@
 name: CI
 
 on:
+  workflow_dispatch:
+    # Legacy CI — replaced by homeostasis.yml
+    # Only runs when manually triggered
+LEGACY_DISABLED:
   push:
     branches: [main, develop]
   pull_request:
@@ -17,13 +21,21 @@ env:
 jobs:
   lint-typecheck:
     name: Lint & Type Check
-    runs-on: ubuntu-latest
+    runs-on:
+  workflow_dispatch:
+    # Legacy CI — replaced by homeostasis.yml
+    # Only runs when manually triggered
+LEGACY_DISABLED: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
 
       - uses: actions/setup-node@v6
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version:
+  workflow_dispatch:
+    # Legacy CI — replaced by homeostasis.yml
+    # Only runs when manually triggered
+LEGACY_DISABLED: ${{ env.NODE_VERSION }}
 
 
       - run: rm -f package-lock.json && npm install
@@ -36,13 +48,21 @@ jobs:
 
   security-audit:
     name: Security Audit
-    runs-on: ubuntu-latest
+    runs-on:
+  workflow_dispatch:
+    # Legacy CI — replaced by homeostasis.yml
+    # Only runs when manually triggered
+LEGACY_DISABLED: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
 
       - uses: actions/setup-node@v6
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version:
+  workflow_dispatch:
+    # Legacy CI — replaced by homeostasis.yml
+    # Only runs when manually triggered
+LEGACY_DISABLED: ${{ env.NODE_VERSION }}
 
       - run: rm -f package-lock.json && npm install
 
@@ -54,7 +74,11 @@ jobs:
 
   codeql:
     name: CodeQL Analysis
-    runs-on: ubuntu-latest
+    runs-on:
+  workflow_dispatch:
+    # Legacy CI — replaced by homeostasis.yml
+    # Only runs when manually triggered
+LEGACY_DISABLED: ubuntu-latest
     permissions:
       actions: read
       contents: read
@@ -75,13 +99,21 @@ jobs:
 
   test:
     name: Unit Tests
-    runs-on: ubuntu-latest
+    runs-on:
+  workflow_dispatch:
+    # Legacy CI — replaced by homeostasis.yml
+    # Only runs when manually triggered
+LEGACY_DISABLED: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
 
       - uses: actions/setup-node@v6
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version:
+  workflow_dispatch:
+    # Legacy CI — replaced by homeostasis.yml
+    # Only runs when manually triggered
+LEGACY_DISABLED: ${{ env.NODE_VERSION }}
 
       - run: rm -f package-lock.json && npm install
 
@@ -90,14 +122,22 @@ jobs:
 
   build:
     name: Build & Bundle Budget
-    runs-on: ubuntu-latest
+    runs-on:
+  workflow_dispatch:
+    # Legacy CI — replaced by homeostasis.yml
+    # Only runs when manually triggered
+LEGACY_DISABLED: ubuntu-latest
     needs: [lint-typecheck]
     steps:
       - uses: actions/checkout@v6
 
       - uses: actions/setup-node@v6
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version:
+  workflow_dispatch:
+    # Legacy CI — replaced by homeostasis.yml
+    # Only runs when manually triggered
+LEGACY_DISABLED: ${{ env.NODE_VERSION }}
 
       - name: Clean install for platform
         run: rm -f package-lock.json && npm install
@@ -119,14 +159,22 @@ jobs:
 
   e2e:
     name: E2E Tests
-    runs-on: ubuntu-latest
+    runs-on:
+  workflow_dispatch:
+    # Legacy CI — replaced by homeostasis.yml
+    # Only runs when manually triggered
+LEGACY_DISABLED: ubuntu-latest
     needs: [build]
     steps:
       - uses: actions/checkout@v6
 
       - uses: actions/setup-node@v6
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version:
+  workflow_dispatch:
+    # Legacy CI — replaced by homeostasis.yml
+    # Only runs when manually triggered
+LEGACY_DISABLED: ${{ env.NODE_VERSION }}
 
       - run: rm -f package-lock.json && npm install
 
@@ -154,14 +202,22 @@ jobs:
 
   accessibility:
     name: Accessibility Audit
-    runs-on: ubuntu-latest
+    runs-on:
+  workflow_dispatch:
+    # Legacy CI — replaced by homeostasis.yml
+    # Only runs when manually triggered
+LEGACY_DISABLED: ubuntu-latest
     needs: [build]
     steps:
       - uses: actions/checkout@v6
 
       - uses: actions/setup-node@v6
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version:
+  workflow_dispatch:
+    # Legacy CI — replaced by homeostasis.yml
+    # Only runs when manually triggered
+LEGACY_DISABLED: ${{ env.NODE_VERSION }}
 
       - run: rm -f package-lock.json && npm install
 
@@ -179,7 +235,11 @@ jobs:
 
   deploy-staging:
     name: Deploy to Staging
-    runs-on: ubuntu-latest
+    runs-on:
+  workflow_dispatch:
+    # Legacy CI — replaced by homeostasis.yml
+    # Only runs when manually triggered
+LEGACY_DISABLED: ubuntu-latest
     needs: [build]
     if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
     environment: staging
@@ -200,8 +260,16 @@ jobs:
           destination_dir: staging
 
   deploy-production:
+  workflow_dispatch:
+    # Legacy CI — replaced by homeostasis.yml
+    # Only runs when manually triggered
+LEGACY_DISABLED:
     name: Deploy to Production
-    runs-on: ubuntu-latest
+    runs-on:
+  workflow_dispatch:
+    # Legacy CI — replaced by homeostasis.yml
+    # Only runs when manually triggered
+LEGACY_DISABLED: ubuntu-latest
     needs: [build]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     environment: production
