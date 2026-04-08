@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { supabase } from '../lib/supabase';
+import { supabase, fromTable } from '../lib/supabase';
 
 export interface DirectoryEntry {
   id: string;
@@ -54,8 +54,7 @@ export const useDirectoryStore = create<DirectoryState>()((set, get) => ({
   },
 
   addEntry: async (entry) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase.from('directory') as any).insert({
+    const { error } = await fromTable('directory').insert({
       project_id: entry.project_id,
       company: entry.company,
       role: entry.role,
@@ -69,8 +68,7 @@ export const useDirectoryStore = create<DirectoryState>()((set, get) => ({
   },
 
   updateEntry: async (id, updates) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase.from('directory') as any).update(updates).eq('id', id);
+    const { error } = await fromTable('directory').update(updates).eq('id', id);
     if (!error) {
       set((s) => ({
         entries: s.entries.map((e) => (e.id === id ? { ...e, ...updates } : e)),
@@ -80,8 +78,7 @@ export const useDirectoryStore = create<DirectoryState>()((set, get) => ({
   },
 
   deleteEntry: async (id) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase.from('directory') as any).delete().eq('id', id);
+    const { error } = await fromTable('directory').delete().eq('id', id);
     if (!error) {
       set((s) => ({ entries: s.entries.filter((e) => e.id !== id) }));
     }

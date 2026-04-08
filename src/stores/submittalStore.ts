@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { supabase } from '../lib/supabase';
+import { supabase, fromTable } from '../lib/supabase';
 import type { Submittal, SubmittalReviewer, Priority, SubmittalStatus } from '../types/database';
 
 interface SubmittalState {
@@ -49,8 +49,7 @@ export const useSubmittalStore = create<SubmittalState>()((set, get) => ({
   },
 
   createSubmittal: async (submittal) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase.from('submittals') as any)
+    const { data, error } = await fromTable('submittals')
       .insert({
         project_id: submittal.project_id,
         title: submittal.title,
@@ -72,8 +71,7 @@ export const useSubmittalStore = create<SubmittalState>()((set, get) => ({
     // Create reviewer entries if provided
     if (submittal.reviewer_ids?.length) {
       for (let i = 0; i < submittal.reviewer_ids.length; i++) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (supabase.from('submittal_reviewers') as any).insert({
+        await fromTable('submittal_reviewers').insert({
           submittal_id: newSub.id,
           user_id: submittal.reviewer_ids[i],
           review_order: i + 1,
@@ -87,8 +85,7 @@ export const useSubmittalStore = create<SubmittalState>()((set, get) => ({
   },
 
   updateSubmittal: async (id, updates) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase.from('submittals') as any).update(updates).eq('id', id);
+    const { error } = await fromTable('submittals').update(updates).eq('id', id);
     if (!error) {
       set((s) => ({
         submittals: s.submittals.map((sub) => (sub.id === id ? { ...sub, ...updates } : sub)),
@@ -116,8 +113,7 @@ export const useSubmittalStore = create<SubmittalState>()((set, get) => ({
   },
 
   reviewSubmittal: async (submittalId, reviewerId, status, comments) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase.from('submittal_reviewers') as any)
+    const { error } = await fromTable('submittal_reviewers')
       .update({ status, reviewed_at: new Date().toISOString(), comments: comments ?? null })
       .eq('id', reviewerId);
 

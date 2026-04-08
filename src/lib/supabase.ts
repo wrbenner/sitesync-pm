@@ -17,6 +17,13 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 export const isSupabaseConfigured = !!supabaseUrl && !!supabaseAnonKey
 
 /**
+ * Typed table accessor that accepts tables added by migration but not yet in generated types.
+ * Use this instead of `supabase.from('table' as any)` to avoid `as any` casts.
+ */
+type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
+export const fromTable = (table: AnyTableName) => supabase.from(table as keyof Database['public']['Tables'])
+
+/**
  * Force a token refresh. Call this proactively before long-running operations
  * or when a 401 is received from any API endpoint.
  */

@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { useState, useCallback } from 'react'
-import { supabase } from '../lib/supabase'
+import { supabase, fromTable } from '../lib/supabase'
 import { transformSupabaseError } from '../api/client'
 import { getEntityHistory } from '../api/endpoints/auditTrail'
 import type { AuditLogEntry } from '../api/endpoints/auditTrail'
@@ -43,8 +43,7 @@ export function useAuditTrail(filters?: AuditFilters) {
   const { isPending, isError, error } = useQuery({
     queryKey: ['audit_trail', projectId, filters],
     queryFn: async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let query = (supabase.from('audit_trail' as any).select('*', { count: 'exact' }) as any)
+      let query = fromTable('audit_trail').select('*', { count: 'exact' })
         .eq('project_id', projectId!)
         .order('created_at', { ascending: false })
         .range(0, AUDIT_TRAIL_PAGE_SIZE - 1)
@@ -74,8 +73,7 @@ export function useAuditTrail(filters?: AuditFilters) {
       const nextPage = page + 1
       const from = page * AUDIT_TRAIL_PAGE_SIZE
       const to = nextPage * AUDIT_TRAIL_PAGE_SIZE - 1
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let query = (supabase.from('audit_trail' as any).select('*') as any)
+      let query = fromTable('audit_trail').select('*')
         .eq('project_id', projectId)
         .order('created_at', { ascending: false })
         .range(from, to)
@@ -172,8 +170,7 @@ export function useWriteAudit() {
     }) => {
       if (!projectId) return
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase.from('audit_trail' as any) as any).insert({
+      const { error } = await fromTable('audit_trail').insert({
         project_id: projectId,
         actor_id: user?.id || null,
         action,

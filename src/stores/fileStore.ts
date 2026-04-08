@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { supabase } from '../lib/supabase';
+import { supabase, fromTable } from '../lib/supabase';
 
 export interface LocalFile {
   id: string;
@@ -95,8 +95,7 @@ export const useFileStore = create<FileState>()((set, get) => ({
     if (uploadError) return { error: uploadError.message, record: null };
 
     // Create file record in database
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error: dbError } = await (supabase.from('files') as any)
+    const { data, error: dbError } = await fromTable('files')
       .insert({
         project_id: projectId,
         name: file.name,
@@ -162,8 +161,7 @@ export const useFileStore = create<FileState>()((set, get) => ({
 
   uploadDrawingSet: async (projectId, userId, setNumber, title, discipline, files) => {
     // Create drawing record
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: dwgData, error: dwgError } = await (supabase.from('drawings') as any)
+    const { data: dwgData, error: dwgError } = await fromTable('drawings')
       .insert({
         project_id: projectId,
         set_number: setNumber,
@@ -203,8 +201,7 @@ export const useFileStore = create<FileState>()((set, get) => ({
         .single();
 
       // Create sheet record
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: sheetData } = await (supabase.from('drawing_sheets') as any)
+      const { data: sheetData } = await fromTable('drawing_sheets')
         .insert({
           drawing_id: drawing.id,
           sheet_number: `${setNumber}-${i + 1}`,

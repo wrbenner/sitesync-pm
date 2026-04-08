@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { supabase } from '../lib/supabase';
+import { supabase, fromTable } from '../lib/supabase';
 import type { BudgetDivision, BudgetLineItem, ChangeOrder, ChangeOrderStatus } from '../types/database';
 
 export interface BudgetSummary {
@@ -59,8 +59,7 @@ export const useBudgetStore = create<BudgetState>()((set, get) => ({
   },
 
   importDivisions: async (projectId, divisions) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase.from('budget_divisions') as any).insert(
+    const { error } = await fromTable('budget_divisions').insert(
       divisions.map((d) => ({ ...d, project_id: projectId }))
     );
 
@@ -70,16 +69,14 @@ export const useBudgetStore = create<BudgetState>()((set, get) => ({
   },
 
   addDivision: async (division) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase.from('budget_divisions') as any).insert(division);
+    const { error } = await fromTable('budget_divisions').insert(division);
     if (error) return { error: error.message };
     await get().loadBudget(division.project_id);
     return { error: null };
   },
 
   updateDivision: async (id, updates) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase.from('budget_divisions') as any).update(updates).eq('id', id);
+    const { error } = await fromTable('budget_divisions').update(updates).eq('id', id);
     if (!error) {
       set((s) => ({
         divisions: s.divisions.map((d) => (d.id === id ? { ...d, ...updates } : d)),
