@@ -100,3 +100,64 @@ export const taskSchema = z.object({
 })
 
 export type TaskFormValues = z.infer<typeof taskSchema>
+
+// ── File Upload Schema ─────────────────────────────────
+
+export const fileSchema = z.object({
+  name: z.string().min(1, 'File name is required').max(255, 'File name must be under 255 characters'),
+  folder: z.string().default(''),
+  description: z.string().default(''),
+  tags: z.string().default(''),
+})
+
+export type FileFormValues = z.infer<typeof fileSchema>
+
+// ── Crew Schema ────────────────────────────────────────
+
+export const crewSchema = z.object({
+  name: z.string().min(1, 'Crew name is required').max(100, 'Crew name must be under 100 characters'),
+  trade: z.string().default(''),
+  foreman: z.string().default(''),
+  size: z.string().default(''),
+  shift: z.enum(['day', 'night', 'swing']).default('day'),
+})
+
+export type CrewFormValues = z.infer<typeof crewSchema>
+
+// ── Directory Contact Schema ───────────────────────────
+
+export const contactSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(150, 'Name must be under 150 characters'),
+  company: z.string().default(''),
+  role: z.string().default(''),
+  email: z.string().email('Invalid email address').or(z.literal('')).default(''),
+  phone: z.string().default(''),
+  trade: z.string().default(''),
+})
+
+export type ContactFormValues = z.infer<typeof contactSchema>
+
+// ── Safety Inspection Schema ───────────────────────────
+
+export const safetyInspectionSchema = z.object({
+  title: z.string().min(1, 'Title is required').max(200, 'Title must be under 200 characters'),
+  type: z.enum(['daily', 'weekly', 'toolbox_talk', 'incident_investigation', 'compliance']).default('daily'),
+  location: z.string().default(''),
+  inspector: z.string().default(''),
+  date: z.string().min(1, 'Date is required'),
+  findings: z.string().default(''),
+  corrective_actions: z.string().default(''),
+})
+
+export type SafetyInspectionFormValues = z.infer<typeof safetyInspectionSchema>
+
+// ── Field Capture Schema ───────────────────────────────
+
+export const fieldCaptureSchema = z.object({
+  title: z.string().min(1, 'Title is required').max(200, 'Title must be under 200 characters'),
+  location: z.string().default(''),
+  notes: z.string().default(''),
+  capture_type: z.enum(['photo', 'video', 'voice', 'document']).default('photo'),
+})
+
+export type FieldCaptureFormValues = z.infer<typeof fieldCaptureSchema>

@@ -171,7 +171,11 @@ function PageLoadingFallback() {
 }
 
 function PageSuspense({ children }: { children: React.ReactNode }) {
-  return <Suspense fallback={<PageLoadingFallback />}>{children}</Suspense>;
+  return (
+    <ErrorBoundary>
+      <Suspense fallback={<PageLoadingFallback />}>{children}</Suspense>
+    </ErrorBoundary>
+  );
 }
 
 function ChunkLoadFallback() {

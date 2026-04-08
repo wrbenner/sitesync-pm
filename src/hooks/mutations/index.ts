@@ -253,6 +253,7 @@ export function useDeleteTask() {
       invalidateEntity('task', result.projectId)
       posthog.capture('task_deleted', { project_id: result.projectId })
     },
+    onError: createOnError('delete_task'),
   })
 }
 
@@ -312,6 +313,7 @@ export function useCreateDailyLogEntry() {
       invalidateEntity('daily_log', result.projectId)
       posthog.capture('daily_log_entry_created', { project_id: result.projectId })
     },
+    onError: createOnError('create_daily_log_entry'),
   })
 }
 
@@ -346,6 +348,8 @@ export function useSubmitDailyLog() {
       if (ctx?.previous !== undefined) {
         queryClient.setQueryData(ctx.key, ctx.previous)
       }
+      toast.error('Failed to submit daily log')
+      Sentry.captureException(_err, { extra: { mutation: 'submit_daily_log' } })
     },
     onSuccess: (result: { projectId: string }) => {
       invalidateEntity('daily_log', result.projectId)
@@ -526,6 +530,7 @@ export function useSubmitChangeOrder() {
       queryClient.invalidateQueries({ queryKey: ['costData'] })
       posthog.capture('change_order_submitted', { project_id: result.projectId })
     },
+    onError: createOnError('submit_change_order'),
   })
 }
 
@@ -608,6 +613,7 @@ export function useCreateFile() {
       invalidateEntity('file', result.projectId)
       posthog.capture('file_uploaded', { project_id: result.projectId })
     },
+    onError: createOnError('upload_file'),
   })
 }
 
@@ -641,6 +647,7 @@ export function useCreateFieldCapture() {
       invalidateEntity('field_capture', result.projectId)
       posthog.capture('field_capture_created', { project_id: result.projectId })
     },
+    onError: createOnError('create_field_capture'),
   })
 }
 
@@ -657,6 +664,7 @@ export function useCreateDirectoryContact() {
       invalidateEntity('contact', result.projectId)
       posthog.capture('directory_contact_created', { project_id: result.projectId })
     },
+    onError: createOnError('create_directory_contact'),
   })
 }
 
@@ -673,6 +681,7 @@ export function useCreateCrew() {
       invalidateEntity('crew', result.projectId)
       posthog.capture('crew_created', { project_id: result.projectId })
     },
+    onError: createOnError('create_crew'),
   })
 }
 
@@ -690,6 +699,7 @@ export function useMarkNotificationRead() {
       queryClient.invalidateQueries({ queryKey: ['notifications', result.userId] })
       posthog.capture('notification_read', { user_id: result.userId })
     },
+    onError: createOnError('mark_notification_read'),
   })
 }
 
@@ -705,6 +715,7 @@ export function useMarkAllNotificationsRead() {
       queryClient.invalidateQueries({ queryKey: ['notifications', result.userId] })
       posthog.capture('all_notifications_read', { user_id: result.userId })
     },
+    onError: createOnError('mark_all_notifications_read'),
   })
 }
 
@@ -722,6 +733,7 @@ export function useCreateActivityFeedItem() {
       queryClient.invalidateQueries({ queryKey: ['activity_feed', result.projectId] })
       posthog.capture('activity_created', { project_id: result.projectId })
     },
+    onError: createOnError('create_activity_feed_item'),
   })
 }
 
@@ -757,6 +769,7 @@ export function useUpdateCorrectiveAction() {
       queryClient.invalidateQueries({ queryKey: ['corrective_actions', result.projectId] })
       posthog.capture('corrective_action_updated', { project_id: result.projectId })
     },
+    onError: createOnError('update_corrective_action'),
   })
 }
 
@@ -811,6 +824,7 @@ export function useCreateDrawingMarkup() {
       queryClient.invalidateQueries({ queryKey: ['drawing_markups', result.drawingId] })
       posthog.capture('drawing_markup_created', { drawing_id: result.drawingId })
     },
+    onError: createOnError('create_drawing_markup'),
   })
 }
 
@@ -826,6 +840,7 @@ export function useCreateTransmittal() {
       queryClient.invalidateQueries({ queryKey: ['transmittals', result.projectId] })
       posthog.capture('transmittal_created', { project_id: result.projectId })
     },
+    onError: createOnError('create_transmittal'),
   })
 }
 
@@ -849,6 +864,7 @@ export function useApproveAgentAction() {
       queryClient.invalidateQueries({ queryKey: ['ai_agent_actions', result.projectId] })
       posthog.capture('agent_action_approved', { project_id: result.projectId })
     },
+    onError: createOnError('approve_agent_action'),
   })
 }
 
@@ -868,6 +884,7 @@ export function useRejectAgentAction() {
       queryClient.invalidateQueries({ queryKey: ['ai_agent_actions', result.projectId] })
       posthog.capture('agent_action_rejected', { project_id: result.projectId })
     },
+    onError: createOnError('reject_agent_action'),
   })
 }
 
@@ -883,6 +900,7 @@ export function useUpdateAgentConfig() {
       queryClient.invalidateQueries({ queryKey: ['ai_agents', result.projectId] })
       posthog.capture('agent_config_updated', { project_id: result.projectId })
     },
+    onError: createOnError('update_agent_config'),
   })
 }
 
@@ -906,6 +924,7 @@ export function useRunAgent() {
       queryClient.invalidateQueries({ queryKey: ['ai_agent_actions', variables.projectId] })
       posthog.capture('agent_run_manual', { agent_type: _data?.agent_type, project_id: variables.projectId })
     },
+    onError: createOnError('run_agent'),
   })
 }
 
@@ -923,6 +942,7 @@ export function useUpdateNotificationPreferences() {
       queryClient.invalidateQueries({ queryKey: ['notification_preferences', result.userId] })
       posthog.capture('notification_preferences_updated')
     },
+    onError: createOnError('update_notification_preferences'),
   })
 }
 
@@ -939,6 +959,7 @@ export function useAddRFIWatcher() {
     onSuccess: (result: { rfiId: string }) => {
       queryClient.invalidateQueries({ queryKey: ['rfi_watchers', result.rfiId] })
     },
+    onError: createOnError('add_rfi_watcher'),
   })
 }
 
@@ -953,6 +974,7 @@ export function useRemoveRFIWatcher() {
     onSuccess: (result: { rfiId: string }) => {
       queryClient.invalidateQueries({ queryKey: ['rfi_watchers', result.rfiId] })
     },
+    onError: createOnError('remove_rfi_watcher'),
   })
 }
 
@@ -969,6 +991,7 @@ export function useBulkUpdateTasks() {
       invalidateEntity('task', result.projectId)
       posthog.capture('tasks_bulk_updated', { project_id: result.projectId, count: result.count })
     },
+    onError: createOnError('bulk_update_tasks'),
   })
 }
 
@@ -983,6 +1006,7 @@ export function useBulkDeleteTasks() {
       invalidateEntity('task', result.projectId)
       posthog.capture('tasks_bulk_deleted', { project_id: result.projectId, count: result.count })
     },
+    onError: createOnError('bulk_delete_tasks'),
   })
 }
 
@@ -1046,6 +1070,7 @@ export function useUpdateTaskDependencies() {
       queryClient.invalidateQueries({ queryKey: ['task_critical_path', result.projectId] })
       posthog.capture('task_dependencies_updated', { project_id: result.projectId })
     },
+    onError: createOnError('update_task_dependencies'),
   })
 }
 
@@ -1123,6 +1148,7 @@ export function useDismissInsight() {
       queryClient.invalidateQueries({ queryKey: ['ai_insights', result.projectId] })
       posthog.capture('insight_dismissed', { project_id: result.projectId })
     },
+    onError: createOnError('dismiss_insight'),
   })
 }
 
@@ -1141,6 +1167,7 @@ export function useActOnInsight() {
       queryClient.invalidateQueries({ queryKey: ['ai_insights', result.projectId] })
       posthog.capture('insight_acted_on', { project_id: result.projectId })
     },
+    onError: createOnError('act_on_insight'),
   })
 }
 
@@ -1161,6 +1188,7 @@ export function useConnectIntegration() {
       queryClient.invalidateQueries({ queryKey: ['integrations'] })
       posthog.capture('integration_connected', { type: result.type })
     },
+    onError: createOnError('connect_integration'),
   })
 }
 
@@ -1181,6 +1209,7 @@ export function useDisconnectIntegration() {
       queryClient.invalidateQueries({ queryKey: ['integrations'] })
       posthog.capture('integration_disconnected', { type: result.type })
     },
+    onError: createOnError('disconnect_integration'),
   })
 }
 
@@ -1199,6 +1228,7 @@ export function useSyncIntegration() {
       queryClient.invalidateQueries({ queryKey: ['integration_sync_log'] })
       posthog.capture('integration_synced', { type: result.type, synced: result.recordsSynced, failed: result.recordsFailed })
     },
+    onError: createOnError('sync_integration'),
   })
 }
 
