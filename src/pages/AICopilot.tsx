@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useRef, useEffect, useCallback, memo } from 'react'
+import React, { useState, useRef, useEffect, useCallback, memo } from 'react'
 import {
-  Sparkles, Clock, Download, Clipboard, Share2, FileText, ExternalLink,
+  Sparkles, Clock, Download, Clipboard, Share2, FileText,
   Calendar, DollarSign, ShieldCheck, ClipboardCheck, Scale, FileSearch,
   Bot, ChevronRight, Users,
 } from 'lucide-react'
@@ -8,14 +8,13 @@ import { PageContainer, useToast } from '../components/Primitives'
 import { colors, spacing, typography, borderRadius, transitions, shadows } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
 import { useMultiAgentChat } from '../hooks/useMultiAgentChat'
-import { AgentMessage, AgentTypingIndicator, AGENT_ICONS, AGENT_COLORS } from '../components/ai/AgentMessage'
+import { AgentMessage, AgentTypingIndicator, AGENT_COLORS } from '../components/ai/AgentMessage'
 import { BatchActionPreview } from '../components/ai/BatchActionPreview'
 import { AgentMentionInput } from '../components/ai/AgentMentionInput'
-import { GenerativeUIRenderer, extractGenerativeBlocks } from '../components/ai/generativeUI'
+import { GenerativeUIRenderer } from '../components/ai/generativeUI'
 import { ToolResultCard } from '../components/ai/ToolResultCard'
 import { SPECIALIST_AGENTS, AGENT_DOMAINS } from '../types/agents'
 import type { AgentDomain, AgentConversationMessage } from '../types/agents'
-import { useNavigate } from 'react-router-dom'
 
 // ── Agent Quick Access Panel ──────────────────────────────────
 
@@ -256,7 +255,6 @@ export const AICopilot: React.FC = () => {
 
   const {
     messages,
-    input,
     setInput,
     sendMessage,
     isProcessing,
@@ -494,8 +492,8 @@ export const AICopilot: React.FC = () => {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  width: 28,
-                  height: 28,
+                  minWidth: 56,
+                  minHeight: 56,
                   backgroundColor: 'transparent',
                   border: 'none',
                   borderRadius: borderRadius.base,
@@ -508,6 +506,7 @@ export const AICopilot: React.FC = () => {
               {exportOpen && (
                 <>
                   <div
+                    role="presentation"
                     onClick={() => setExportOpen(false)}
                     style={{ position: 'fixed', inset: 0, zIndex: 998 }}
                   />

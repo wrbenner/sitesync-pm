@@ -1,12 +1,12 @@
 import React, { useState, useMemo, useCallback, memo } from 'react'
 import {
-  Bot, CheckCircle, XCircle, Clock, Play, Pause, Activity, Shield,
+  Bot, Play, Pause, Activity, Shield,
   Calendar, DollarSign, ShieldCheck, ClipboardCheck, Scale, FileSearch,
-  Zap, TrendingUp, AlertTriangle, Eye,
+  Zap,
 } from 'lucide-react'
 import { PageContainer, Card, SectionHeader, MetricBox, Skeleton, EmptyState } from '../components/Primitives'
 import { DataTable, createColumnHelper } from '../components/shared/DataTable'
-import { colors, spacing, typography, borderRadius, transitions, shadows } from '../styles/theme'
+import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
 import { useAIAgents, useAIAgentActions } from '../hooks/queries'
 import { useAgentOrchestrator } from '../stores/agentOrchestrator'
@@ -513,7 +513,7 @@ const TOOL_REGISTRY: Record<
 export const AIAgents: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('overview')
   const projectId = useProjectId()
-  const { data: dbAgents, isLoading: loadingAgents } = useAIAgents(projectId)
+  const { isLoading: loadingAgents } = useAIAgents(projectId)
   const { data: dbActions, isLoading: loadingActions } = useAIAgentActions(projectId)
   const { agentStates, setAgentStatus } = useAgentOrchestrator()
 
