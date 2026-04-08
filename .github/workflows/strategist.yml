@@ -48,12 +48,7 @@ jobs:
           git config user.name "SiteSync Strategist"
           git config user.email "strategist@sitesync.ai"
 
-          NOTE="
-
----
-*Weekly strategist note — $(date '+%B %d, %Y'): Active 9-night mission in progress (${{ steps.check_mission.outputs.tonight }}). FEEDBACK.md preserved. Strategist will resume full refresh after April 15th.*
-"
-          echo "$NOTE" >> FEEDBACK.md
+          printf '\n\n---\n*Weekly strategist note \u2014 %s: Active 9-night mission in progress (%s). FEEDBACK.md preserved. Strategist will resume full refresh after April 15th.*\n' "$(date '+%B %d, %Y')" "${{ steps.check_mission.outputs.tonight }}" >> FEEDBACK.md
           git add FEEDBACK.md
           git commit -m "chore(strategy): weekly note — mission active, no overwrite [skip ci]" || true
           git push origin main || true
