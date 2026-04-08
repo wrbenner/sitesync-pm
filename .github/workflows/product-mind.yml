@@ -1,8 +1,8 @@
-name: The Product Mind — Strategic Overseer
+name: The Product Mind — Experiment Designer
 
 # Runs at 11pm CDT (4am UTC) every night — 3 hours before the organism builds
-# Reviews today's work, reads the vision, sets tomorrow's priorities
-# This is the brain. The organism is the hands.
+# Reads .metrics/*.json + vision docs + recent progress
+# Primary output: EXPERIMENTS.md — ranked experiment queue for tonight's organism
 on:
   schedule:
     - cron: '0 4 * * *'   # 11:00 PM CDT / 4:00 AM UTC
@@ -13,8 +13,8 @@ permissions:
   issues: write
 
 jobs:
-  think:
-    name: "The Product Mind"
+  design-experiments:
+    name: "Design Tonight's Experiments"
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
@@ -35,44 +35,46 @@ jobs:
         run: |
           git config user.name "SiteSync Product Mind"
           git config user.email "mind@sitesync.ai"
+          git config pull.rebase true
 
       - name: Gather intelligence
-        id: intel
         run: |
-          echo "=== RESEARCH FINDINGS (frontier intelligence) ===" >> /tmp/daily-intel.txt
-          head -40 RESEARCH_FINDINGS.md >> /tmp/daily-intel.txt 2>/dev/null
+          echo "=== WORKER CELL METRICS ===" > /tmp/intel.txt
 
-          echo "=== PRODUCT MIND MEMORY (last 7 days) ===" >> /tmp/daily-intel.txt
-          tail -100 DAILY_REPORT.md >> /tmp/daily-intel.txt 2>/dev/null
+          echo "--- Type Issues (from worker cells) ---" >> /tmp/intel.txt
+          cat .metrics/type-issues.json 2>/dev/null >> /tmp/intel.txt || echo "No type metrics yet" >> /tmp/intel.txt
 
-          echo "=== EVOLUTION LEDGER (recent patterns) ===" >> /tmp/daily-intel.txt
-          python3 -c "import json; d=json.load(open('EVOLUTION_LEDGER.json')); [print(e['description']) for e in d.get('evolutions',[])[-5:]]" >> /tmp/daily-intel.txt 2>/dev/null
+          echo -e "\n--- Quality Issues (from worker cells) ---" >> /tmp/intel.txt
+          cat .metrics/quality-issues.json 2>/dev/null >> /tmp/intel.txt || echo "No quality metrics yet" >> /tmp/intel.txt
 
-          echo "=== STIGMERGY TRAILS ===" >> /tmp/daily-intel.txt
-          grep -A 2 "Stigmergy" LEARNINGS.md >> /tmp/daily-intel.txt 2>/dev/null
+          echo -e "\n--- Untested Files (from worker cells) ---" >> /tmp/intel.txt
+          cat .metrics/untested-files.json 2>/dev/null >> /tmp/intel.txt || echo "No test metrics yet" >> /tmp/intel.txt
 
-          echo "=== TODAY'S ORGANISM COMMITS ===" > /tmp/daily-intel.txt
-          git log --since="24 hours ago" --oneline >> /tmp/daily-intel.txt 2>/dev/null
+          echo -e "\n=== RECENT COMMITS (last 24h) ===" >> /tmp/intel.txt
+          git log --since="24 hours ago" --oneline >> /tmp/intel.txt 2>/dev/null || echo "No recent commits" >> /tmp/intel.txt
 
-          echo -e "\n=== SPEC PROGRESS ===" >> /tmp/daily-intel.txt
+          echo -e "\n=== SPEC PROGRESS ===" >> /tmp/intel.txt
           CHECKED=$(grep -c "^\- \[x\]" SPEC.md 2>/dev/null || echo "0")
           TOTAL=$(grep -c "^\- \[" SPEC.md 2>/dev/null || echo "431")
-          echo "$CHECKED / $TOTAL criteria complete ($((CHECKED * 100 / TOTAL))%)" >> /tmp/daily-intel.txt
+          echo "$CHECKED / $TOTAL criteria complete" >> /tmp/intel.txt
 
-          echo -e "\n=== TONIGHT.MD STATUS ===" >> /tmp/daily-intel.txt
-          grep "TONIGHT:\|COMPLETED" TONIGHT.md >> /tmp/daily-intel.txt 2>/dev/null
+          echo -e "\n=== QUALITY FLOOR ===" >> /tmp/intel.txt
+          cat .quality-floor.json 2>/dev/null >> /tmp/intel.txt || echo "No floor set" >> /tmp/intel.txt
 
-          echo -e "\n=== QUALITY METRICS ===" >> /tmp/daily-intel.txt
-          cat .quality-floor.json >> /tmp/daily-intel.txt 2>/dev/null
+          echo -e "\n=== LAST EXPERIMENT RESULTS ===" >> /tmp/intel.txt
+          grep "✅\|❌\|RESULT:" EXPERIMENTS.md 2>/dev/null | tail -20 >> /tmp/intel.txt || echo "No prior experiments" >> /tmp/intel.txt
 
-          echo -e "\n=== OPEN ISSUES ===" >> /tmp/daily-intel.txt
-          cat /tmp/daily-intel.txt | head -5
+          echo -e "\n=== EVOLUTION PATTERNS ===" >> /tmp/intel.txt
+          python3 -c "import json; d=json.load(open('EVOLUTION_LEDGER.json')); [print(e['description']) for e in d.get('evolutions',[])[-5:]]" 2>/dev/null >> /tmp/intel.txt || true
 
-      - name: The Product Mind thinks
+          echo -e "\n=== RESEARCH FINDINGS (summary) ===" >> /tmp/intel.txt
+          head -40 RESEARCH_FINDINGS.md 2>/dev/null >> /tmp/intel.txt || true
+
+      - name: Product Mind designs experiments
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          INTEL=$(cat /tmp/daily-intel.txt)
+          INTEL=$(cat /tmp/intel.txt)
 
           claude \
             --dangerously-skip-permissions \
@@ -80,89 +82,79 @@ jobs:
             --max-turns 25 \
             "You are The Product Mind — the strategic brain of SiteSync PM.
 
-          You are not a coder. You are a product strategist who thinks like the founder.
-          Your job: review today's progress, think deeply about what matters most, and
-          set tomorrow's priorities so the organism (the coder) builds the right thing.
-
-          YOUR IDENTITY — READ THESE TO UNDERSTAND WHO YOU ARE:
+          YOUR IDENTITY — read these first to understand the vision:
           1. cat THE_OMEGA_BUILD.md — the 3-layer technical vision
           2. cat THE_OVERRIDE_PROTOCOL.md — how to think (Amazon/Apple/Google/Netflix/Tesla)
-          3. cat THE_DEEP_TRANSMISSION.md — natural intelligence patterns, construction truths
-          4. cat THE_ORGANISM.md — the 13 biological systems
+          3. cat THE_DEEP_TRANSMISSION.md — natural intelligence patterns
+          4. cat SPEC.md | head -200 — the acceptance criteria (focus on unchecked P0 items)
 
-          TODAY'S INTELLIGENCE:
+          TODAY'S INTELLIGENCE (from worker cells + git):
           $INTEL
 
-          YOUR TASKS (do all 4):
+          YOUR PRIMARY OUTPUT: Generate EXPERIMENTS.md
 
-          TASK 1: DAILY ASSESSMENT
-          Read today's commits. Read the current TONIGHT.md status. Assess:
-          - Is the organism on track for April 15th?
-          - Did it build the RIGHT thing or did it drift?
-          - Are there quality concerns in what was built?
-          - Is the TONIGHT.md sequence still optimal or should it be adjusted?
+          EXPERIMENTS.md is a ranked queue of 20-30 micro-experiments for tonight's organism.
+          Each experiment follows the Karpathy pattern: change → measure → keep or revert.
+          (Reference: Karpathy's autoresearch ran 700 experiments, 20 wins, 11% gain)
 
-          TASK 2: UPDATE FEEDBACK.md PRIORITIES
-          Read the current FEEDBACK.md. Update ONLY the 'Tonight P0 Priorities' section
-          with 3 specific priorities for tomorrow's organism run. These must be:
-          - Specific (name exact files, functions, behaviors)
-          - Aligned with the Omega Build vision
-          - The highest-impact work for getting to April 15th demo readiness
-          - Passing the Amazon test: what decision can a GC make in 10 seconds?
-          DO NOT overwrite the rest of FEEDBACK.md. Only update the priorities section.
+          Write EXPERIMENTS.md in this exact format:
 
-          TASK 3: WRITE DAILY REPORT
-          Create or update DAILY_REPORT.md with a brief report:
-          - Date
-          - What the organism built today (1 paragraph)
-          - Quality metrics trend (improving/stable/declining)
-          - TONIGHT.md progress (which night, how many completed)
-          - Assessment: ON TRACK / NEEDS ATTENTION / AT RISK
-          - Tomorrow's strategic focus (1 sentence)
-          Append to the file, don't overwrite previous days.
+          # EXPERIMENTS.md
+          Generated by Product Mind — [today's date]
+          Strategy: [1 sentence explaining tonight's strategic focus]
 
-          TASK 4: ADJUST TONIGHT.MD IF NEEDED
-          If you determine the nightly mission sequence should change (skip a night,
-          add something, reprioritize), update TONIGHT.md. Otherwise leave it alone.
-          Only adjust if there is a clear strategic reason.
+          ## Queue
 
-          CRITICAL THINKING RULES:
-          - Apply the Amazon test: if you cannot write a press release for tomorrow's work,
-            the priorities are wrong
-          - Apply the Apple test: is there anything the organism is building that a user
-            will never notice? Deprioritize it.
-          - The schedule is a political document (construction truth): the TONIGHT.md
-            sequence was written before the organism started. Reality may have diverged.
-            Adapt.
-          - Cash flow is the actual critical path (construction truth): the financial
-            engine and embedded payments are more strategically important than visual polish
+          ### EXP-001: [Short description]
+          - **File(s)**: [exact path(s) in the repo]
+          - **Task**: [specific, unambiguous instruction — what to change and how]
+          - **Metric**: [what to measure — must be a number or boolean]
+          - **Current**: [current value — get from .metrics/ data or state N/A]
+          - **Target**: [expected value after change]
+          - **Verify**: [exact shell command that outputs the metric value]
+          - **Category**: TYPE_SAFETY | QUALITY | TESTING | FEATURE | PERFORMANCE
+          - **Priority**: P0 | P1 | P2
+          - **Status**: PENDING
 
-          COMMIT FORMAT:
-          - FEEDBACK.md changes: 'strategy: daily priority update [mind][skip ci]'
-          - DAILY_REPORT.md changes: 'report: daily assessment [mind][skip ci]'
-          - TONIGHT.md changes: 'strategy: mission adjustment [mind][skip ci]'
+          [repeat for 20-30 experiments]
 
-          TASK 5: META-IMPROVEMENT (weekly, every Sunday)
-          If today is Sunday, evaluate your own decision quality:
-          - Read the last 7 days of DAILY_REPORT.md
-          - Did the organism build what you prioritized? If not, why?
-          - Were your priorities the RIGHT priorities in hindsight?
-          - What would you change about how you make decisions?
-          - Write your meta-reflection at the bottom of DAILY_REPORT.md
-          Read RESEARCH_FINDINGS.md for the latest frontier research.
-          Watch for entropy decay: if the organism is doing the same type of work
-          3+ nights in a row, force a domain switch.
+          EXPERIMENT DESIGN RULES:
+          1. Each experiment touches 1-3 files maximum (small blast radius for clean revert)
+          2. Every experiment MUST have a concrete Verify command the organism can run
+          3. P0 experiments first (blocks demo), P1 (improves demo), P2 (polish)
+          4. Mix categories: alternate TYPE_SAFETY, QUALITY, FEATURE, TESTING
+             (monotony causes context fatigue — Anthropic finding)
+          5. Use .metrics/ data to target WORST files first (highest issue count)
+          6. Include 5-8 FEATURE experiments from unchecked SPEC.md P0 criteria
+          7. The organism completes ~15-20 experiments per night — design 25-30 for buffer
+          8. Remove any experiments that were ✅ PASS in previous runs
+          9. For FEATURE experiments, the verify command should check if the feature exists
+             (e.g., grep for component name, check route exists, verify export)
+          10. Consider the April 15th demo deadline — prioritize GC-visible features
 
-          Output <promise>DONE</promise> when all tasks are complete." || true
+          ALSO DO (secondary outputs):
+          - Append to DAILY_REPORT.md: today's date, what organism built, quality trend,
+            experiment results summary, ON TRACK / NEEDS ATTENTION / AT RISK assessment
+          - Update FEEDBACK.md 'Tonight P0 Priorities' section with 3 specific priorities
+
+          WEEKLY (Sunday only): Meta-improvement — review last 7 days of DAILY_REPORT.md,
+          evaluate your own experiment design quality, adjust strategy.
+
+          COMMIT:
+          git add EXPERIMENTS.md DAILY_REPORT.md FEEDBACK.md
+          git commit -m 'strategy: experiment queue for [date] [mind][skip ci]'
+
+          Output <promise>DONE</promise> when complete." || true
 
       - name: Push updates
         run: |
-          git add FEEDBACK.md DAILY_REPORT.md TONIGHT.md 2>/dev/null || true
+          git add EXPERIMENTS.md FEEDBACK.md DAILY_REPORT.md 2>/dev/null || true
           CHANGES=$(git diff --cached --name-only | wc -l | tr -d ' ')
           if [ "$CHANGES" -gt "0" ]; then
-            git commit -m "strategy: Product Mind daily update [mind][skip ci]" || true
+            git pull --rebase origin main 2>/dev/null || true
+            git commit -m "strategy: experiment queue update [mind][skip ci]" || true
             git push origin main || true
-            echo "Product Mind pushed $CHANGES file(s)"
+            echo "Product Mind pushed experiment queue"
           else
             echo "Product Mind made no changes today"
           fi
