@@ -321,4 +321,4 @@ Check **PAUSE.md** at session start — if Status is PAUSED, stop immediately.
 - **Davis-Bacon**: Federal law requiring prevailing wages on government construction
 - **GC**: General Contractor. Sub: Subcontractor. AHJ: Authority Having Jurisdiction
 - **CPM**: Critical Path Method — standard for construction scheduling
-- **44px minimum**: All interactive elements must meet minimum touch target for field workers
+- **56px minimum (research: 56px is general touch, 56px is industrial gloved use)**: All interactive elements must meet minimum touch target for field workers
