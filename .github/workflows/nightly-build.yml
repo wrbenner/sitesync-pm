@@ -115,6 +115,11 @@ jobs:
             cat CLAUDE.md
             cat EXPERIMENTS.md
             cat LEARNINGS.md
+            cat EVOLUTION_LEDGER.json
+
+          The EVOLUTION_LEDGER contains patterns that WORKED in previous nights
+          and approaches that were KILLED. Use patterns. Avoid killed approaches.
+          If you discover a new pattern or anti-pattern tonight, append it to the ledger.
 
           STEP 2: Check PAUSE.md — if Status is PAUSED, output DONE immediately.
 
@@ -177,6 +182,10 @@ jobs:
           - NEVER run supabase CLI commands
           - NEVER modify workflow files (.github/workflows/*)
           - ALWAYS commit after each successful experiment (incremental progress)
+          - ALWAYS use fromTable<T>() helper for Supabase queries (PAT-003 in EVOLUTION_LEDGER)
+          - ALWAYS wrap RLS policies with (select auth.uid()) not bare auth.uid() (1571x perf)
+          - 56px minimum touch targets for ALL interactive elements (construction gloved use)
+          - After 2 failed corrections on the same issue, MOVE ON (Anthropic research finding)
 
           Output <promise>DONE</promise> when complete." || true
 
