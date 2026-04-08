@@ -1,10 +1,11 @@
-name: Agent Swarm — Parallel Build
+name: Agent Swarm — Test & Polish
 
 # Swarm runs at 8am (test wave) and 2pm (polish wave) CDT
-# Nightly-build handles 2am implement wave
+# NEVER implements features — that is the organism's job
+# Tests what the organism built, polishes UX, finds bugs
 on:
   schedule:
-    - cron: '0 13 * * *'   # 8:00 AM CDT — testing wave
+    - cron: '0 13 * * *'   # 8:00 AM CDT — test wave
     - cron: '0 19 * * *'   # 2:00 PM CDT — polish wave
   workflow_dispatch:
     inputs:
@@ -12,7 +13,7 @@ on:
         description: 'Agents: all | alpha,beta,gamma,delta,echo'
         default: 'all'
       wave:
-        description: 'Wave: test | polish | implement | verify'
+        description: 'Wave: test | polish'
         default: 'test'
 
 permissions:
@@ -83,6 +84,21 @@ jobs:
           git checkout -b "$BRANCH"
           echo "BRANCH=$BRANCH" >> $GITHUB_ENV
 
+      - name: Gather context
+        id: context
+        run: |
+          # What did the organism change last night?
+          ORGANISM_COMMITS=$(git log --since="12 hours ago" --author="SiteSync Organism" --oneline 2>/dev/null || echo "none")
+          echo "ORGANISM_COMMITS<<EOF" >> $GITHUB_ENV
+          echo "$ORGANISM_COMMITS" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+          # Which experiments passed?
+          PASSED_EXPERIMENTS=$(grep "✅" EXPERIMENTS.md 2>/dev/null | head -15 || echo "No experiment data")
+          echo "PASSED_EXPERIMENTS<<EOF" >> $GITHUB_ENV
+          echo "$PASSED_EXPERIMENTS" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
       - name: Run agent
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -91,44 +107,85 @@ jobs:
         run: |
           AGENT="${{ matrix.agent }}"
           WAVE="${{ needs.wave-setup.outputs.wave }}"
-          FEEDBACK=$(cat FEEDBACK.md 2>/dev/null | head -30 || echo "")
-          TONIGHT=$(cat TONIGHT.md 2>/dev/null | grep "^## TONIGHT:" | head -1 | sed 's/## TONIGHT: //' || echo "general improvement")
-          ASSIGNMENTS=$(grep -A 50 "## Agent $(python3 -c "print('$AGENT'.capitalize())")" MODULE_ASSIGNMENTS.md 2>/dev/null | head -50 || echo "Work on any file that needs improvement in your domain")
+          ASSIGNMENTS=$(grep -A 50 "## Agent $(python3 -c "print('$AGENT'.capitalize())")" MODULE_ASSIGNMENTS.md 2>/dev/null | head -50 || echo "Work on any file in your area")
 
           case "$WAVE" in
-            "test")     MISSION="Write unit tests (Vitest) for untested code in your module assignments. Do NOT change implementation. Target 70% coverage." ;;
-            "polish")   MISSION="Polish wave: fix accessibility (axe-core), add loading skeletons, improve empty states, fix mobile responsiveness. V7 rules apply: read v7-prompts/V7-00_SYSTEM_CONTEXT.md first." ;;
-            "implement") MISSION="Read TONIGHT.md and help implement tonight's mission in your assigned modules." ;;
-            "verify")   MISSION="Adversarially test your module assignments. Try edge cases, concurrent edits, empty inputs. Uncheck failing SPEC.md criteria." ;;
+            "test")
+              MISSION="Write comprehensive unit tests (Vitest) for code in your module assignments.
+
+          PRIORITY ORDER:
+          1. Files the organism changed last night (highest priority — test new code):
+             $ORGANISM_COMMITS
+
+          2. Experiments that passed (verify they actually work correctly):
+             $PASSED_EXPERIMENTS
+
+          3. Untested files from .metrics/untested-files.json (read it)
+
+          FOR EACH TEST FILE:
+          - Test the happy path (normal usage)
+          - Test edge cases: empty inputs, null/undefined, boundary values
+          - Test error states: network failures, invalid data
+          - For UI components: test render, user interactions, accessibility
+          - Name tests descriptively: 'should [behavior] when [condition]'
+
+          TARGET: Every source file you touch gets at least 1 meaningful test file." ;;
+
+            "polish")
+              MISSION="Polish the UI/UX in your module assignments. This is a construction app used on job sites.
+
+          FOCUS AREAS (in order):
+          1. Touch targets: ALL interactive elements must be 56px minimum (gloved hands)
+          2. Loading states: Suspense boundaries + skeleton loaders on every async view
+          3. Empty states: helpful message + CTA when no data exists
+          4. Error boundaries: graceful error UI, never a white/blank screen
+          5. Accessibility: aria-labels, keyboard nav, focus management, color contrast
+          6. Mobile responsiveness: test at 375px width minimum
+
+          Read CLAUDE.md and v7-prompts/V7-00_SYSTEM_CONTEXT.md for V7 design rules.
+          No hyphens in UI text. Inline styles only from theme.ts. 56px touch targets." ;;
           esac
 
           claude \
             --dangerously-skip-permissions \
             --model claude-sonnet-4-6 \
             --max-turns 40 \
-            "You are Agent ${AGENT^^} for SiteSync PM — a world-class construction project management platform.
+            "You are Agent ${AGENT^^} for SiteSync PM — a construction project management platform.
 
-          TONIGHT'S NIGHTLY MISSION: $TONIGHT (for context — your job is to TEST/POLISH what was built)
+          ====================================================================
+          ABSOLUTE RULE: You are a $WAVE agent. You NEVER implement new features.
+          You NEVER write new business logic. You NEVER add new pages or routes.
+          If you catch yourself doing any of these, STOP and refocus.
+          The organism handles all feature implementation via EXPERIMENTS.md.
+          ====================================================================
 
-          YOUR ASSIGNED MODULES (from MODULE_ASSIGNMENTS.md):
+          YOUR ASSIGNED MODULES:
           $ASSIGNMENTS
 
-          YOUR MISSION ($WAVE wave): $MISSION
+          YOUR MISSION ($WAVE wave):
+          $MISSION
 
-          CONTEXT:
-          - Read v7-prompts/V7-00_SYSTEM_CONTEXT.md before any V7 work (critical rules including: no hyphens in UI text, inline styles only from theme.ts)
-          - Read LEARNINGS.md before writing any code (especially migration safety rules)
-          - Read DECISIONS.md for architecture constraints
+          CONTEXT FILES TO READ:
+          - cat CLAUDE.md (project rules, V7 system, domain glossary)
+          - cat LEARNINGS.md (known pitfalls: Vite 8, migration safety, etc.)
 
-          QUALITY GATES before every commit:
+          QUALITY GATES (before every commit):
             npx tsc --noEmit && npm run lint && npx vitest run --passWithNoTests && npm run build
 
-          COMMIT FORMAT: feat(scope): description [auto-${AGENT}]
-          NEVER: touch files outside your module assignments, commit broken code, create migrations without checking existing ones
+          COMMIT FORMAT: $WAVE(\$scope): description [auto-${AGENT}]
+
+          HARD BOUNDARIES (violating these = wasted work that gets reverted):
+          - NEVER implement new features, business logic, or API endpoints
+          - NEVER touch files outside your module assignments
+          - NEVER modify EXPERIMENTS.md, FEEDBACK.md, DAILY_REPORT.md, or TONIGHT.md
+          - NEVER create or modify database migrations
+          - NEVER modify workflow files (.github/workflows/*)
+          - If a test reveals a BUG: write the failing test, commit it, move on.
+            The organism will fix the bug in its next experiment cycle.
 
           Output <promise>DONE</promise> when finished." || true
 
-      - name: Push and auto-merge PR
+      - name: Push and create PR
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -137,7 +194,9 @@ jobs:
             git push origin "$BRANCH"
             PR_URL=$(gh pr create \
               --title "[auto-${{ matrix.agent }}] ${{ needs.wave-setup.outputs.wave }} — $(date +%Y-%m-%d)" \
-              --body "$(git log origin/main..HEAD --oneline)" \
+              --body "## Agent ${{ matrix.agent }} — ${{ needs.wave-setup.outputs.wave }} wave
+
+          $(git log origin/main..HEAD --oneline)" \
               --base main \
               --head "$BRANCH" \
               --label "auto-generated" \
