@@ -150,9 +150,11 @@ export const Activity: React.FC = () => {
           {filterOptions.map((f) => (
             <button
               key={f.id}
+              aria-pressed={activeFilter === f.id}
               onClick={() => setActiveFilter(f.id)}
               style={{
-                padding: `${spacing['1']} ${spacing['3']}`, border: 'none', borderRadius: borderRadius.full,
+                padding: `0 ${spacing['3']}`, border: 'none', borderRadius: borderRadius.full,
+                minHeight: '36px',
                 backgroundColor: activeFilter === f.id ? colors.orangeSubtle : 'transparent',
                 color: activeFilter === f.id ? colors.orangeText : colors.textTertiary,
                 fontSize: typography.fontSize.caption, fontWeight: activeFilter === f.id ? typography.fontWeight.semibold : typography.fontWeight.medium,
@@ -169,6 +171,7 @@ export const Activity: React.FC = () => {
                 fontSize: typography.fontSize.caption, color: colors.orangeText,
                 backgroundColor: 'transparent', border: 'none', cursor: 'pointer',
                 fontFamily: typography.fontFamily, fontWeight: typography.fontWeight.medium,
+                minHeight: '36px', padding: `0 ${spacing['2']}`,
               }}
             >
               Mark all as read ({unreadCount})
@@ -181,20 +184,22 @@ export const Activity: React.FC = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
             <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textSecondary }}>Watching</span>
             <button
+              aria-label="Notification preferences"
               onClick={() => addToast('info', 'Notification preferences feature pending configuration')}
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                width: 20, height: 20, backgroundColor: 'transparent', border: 'none',
+                minWidth: '32px', minHeight: '32px', backgroundColor: 'transparent', border: 'none',
                 cursor: 'pointer', color: colors.textTertiary, borderRadius: borderRadius.sm,
               }}
             >
-              <Settings size={12} />
+              <Settings size={14} />
             </button>
           </div>
           <div style={{ display: 'flex', gap: spacing['1'] }}>
             {['rfi', 'task', 'photo', 'budget'].map((type) => (
               <button
                 key={type}
+                aria-pressed={following.has(type)}
                 onClick={() => {
                   setFollowing((prev) => {
                     const next = new Set(prev);
@@ -208,6 +213,7 @@ export const Activity: React.FC = () => {
                   color: following.has(type) ? colors.orangeText : colors.textTertiary,
                   fontSize: '10px', fontWeight: typography.fontWeight.medium,
                   fontFamily: typography.fontFamily, cursor: 'pointer', textTransform: 'capitalize',
+                  minHeight: '28px',
                 }}
               >
                 {type}
@@ -255,8 +261,12 @@ export const Activity: React.FC = () => {
           </div>
         ))}
         {grouped.length === 0 && (
-          <div style={{ padding: spacing['8'], textAlign: 'center', color: colors.textTertiary }}>
-            No activity matching this filter.
+          <div style={{ padding: `${spacing['8']} ${spacing['6']}`, textAlign: 'center' }}>
+            <p style={{ margin: 0, fontSize: typography.fontSize.body, color: colors.textTertiary }}>
+              {activeFilter === 'all'
+                ? 'No activity yet. Post an update above to get started.'
+                : `No ${activeFilter} activity found. Try a different filter.`}
+            </p>
           </div>
         )}
       </Card>

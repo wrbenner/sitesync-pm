@@ -34,62 +34,6 @@ function getSeverityStyle(severity: string | null): { fg: string; bg: string; la
 }
 
 
-const [] = [
-  {
-    id: 'ca1',
-    description: 'Install fall protection netting on Level 5 perimeter',
-    assigned_to: 'Dave Martinez',
-    due_date: '2026-04-05',
-    status: 'open',
-    severity: 'critical',
-    created_at: '2026-03-20',
-  },
-  {
-    id: 'ca2',
-    description: 'Replace damaged scaffold planks at Section B',
-    assigned_to: 'Jake Thompson',
-    due_date: '2026-04-01',
-    status: 'open',
-    severity: 'high',
-    created_at: '2026-03-25',
-  },
-  {
-    id: 'ca3',
-    description: 'Repair ground fault circuit interrupter on Level 1 panel',
-    assigned_to: 'Carlos Rivera',
-    due_date: '2026-04-10',
-    status: 'in_progress',
-    severity: 'high',
-    created_at: '2026-03-28',
-  },
-  {
-    id: 'ca4',
-    description: 'Restock first aid supplies in job trailer and Level 3 box',
-    assigned_to: 'Sarah Chen',
-    due_date: '2026-04-07',
-    status: 'in_progress',
-    severity: 'medium',
-    created_at: '2026-03-30',
-  },
-  {
-    id: 'ca5',
-    description: 'Clean up oil spill near loading dock entrance',
-    assigned_to: 'Bobby Kim',
-    due_date: '2026-03-28',
-    status: 'closed',
-    severity: 'medium',
-    created_at: '2026-03-22',
-  },
-  {
-    id: 'ca6',
-    description: 'Post updated emergency evacuation route signage on all levels',
-    assigned_to: 'Aisha Williams',
-    due_date: '2026-04-15',
-    status: 'open',
-    severity: 'low',
-    created_at: '2026-04-01',
-  },
-]
 
 // ── Column helpers ───────────────────────────────────────────
 
@@ -473,7 +417,7 @@ function EmptyState({ message, cta, onCta }: { message: string; cta?: string; on
         {message}
       </p>
       {cta && onCta && (
-        <Btn variant="primary" onClick={onCta} style={{ minHeight: '44px' }}>
+        <Btn variant="primary" onClick={onCta} style={{ minHeight: '56px' }}>
           {cta}
         </Btn>
       )}
@@ -796,27 +740,27 @@ export const Safety: React.FC = () => {
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
           <ExportButton pdfFilename="SiteSync_Safety_Report" />
           {activeTab === 'incidents' && (
-            <Btn variant="primary" icon={<Plus size={16} />} onClick={() => setShowIncidentModal(true)} style={{ minHeight: 44 }}>
+            <Btn variant="primary" icon={<Plus size={16} />} onClick={() => setShowIncidentModal(true)} style={{ minHeight: '56px' }}>
               Report Incident
             </Btn>
           )}
           {activeTab === 'inspections' && (
-            <Btn variant="primary" icon={<Plus size={16} />} onClick={() => toast.info('Form submission requires backend configuration')} style={{ minHeight: 44 }}>
+            <Btn variant="primary" icon={<Plus size={16} />} onClick={() => toast.info('Form submission requires backend configuration')} style={{ minHeight: '56px' }}>
               New Inspection
             </Btn>
           )}
           {activeTab === 'toolbox' && (
-            <Btn variant="primary" icon={<Plus size={16} />} onClick={() => setShowTalkModal(true)} style={{ minHeight: 44 }}>
+            <Btn variant="primary" icon={<Plus size={16} />} onClick={() => setShowTalkModal(true)} style={{ minHeight: '56px' }}>
               New Talk
             </Btn>
           )}
           {activeTab === 'certifications' && (
-            <Btn variant="primary" icon={<Plus size={16} />} onClick={() => toast.info('Form submission requires backend configuration')} style={{ minHeight: 44 }}>
+            <Btn variant="primary" icon={<Plus size={16} />} onClick={() => toast.info('Form submission requires backend configuration')} style={{ minHeight: '56px' }}>
               Add Certification
             </Btn>
           )}
           {activeTab === 'corrective_actions' && (
-            <Btn variant="primary" icon={<Plus size={16} />} onClick={() => toast.info('Form submission requires backend configuration')} style={{ minHeight: 44 }}>
+            <Btn variant="primary" icon={<Plus size={16} />} onClick={() => toast.info('Form submission requires backend configuration')} style={{ minHeight: '56px' }}>
               Log Corrective Action
             </Btn>
           )}
@@ -890,27 +834,34 @@ export const Safety: React.FC = () => {
       )}
 
       {/* Tab Switcher */}
-      <div style={{
-        display: 'flex',
-        gap: spacing['1'],
-        backgroundColor: colors.surfaceInset,
-        borderRadius: borderRadius.lg,
-        padding: spacing['1'],
-        marginBottom: spacing['2xl'],
-        overflowX: 'auto',
-      }}>
+      <div
+        role="tablist"
+        aria-label="Safety categories"
+        style={{
+          display: 'flex',
+          gap: spacing['1'],
+          backgroundColor: colors.surfaceInset,
+          borderRadius: borderRadius.lg,
+          padding: spacing['1'],
+          marginBottom: spacing['2xl'],
+          overflowX: 'auto',
+        }}
+      >
         {tabs.map((tab) => {
           const Icon = tab.icon
           const isActive = activeTab === tab.key
           return (
             <button
               key={tab.key}
+              role="tab"
+              aria-selected={isActive}
               onClick={() => setActiveTab(tab.key)}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: spacing['2'],
-                padding: `${spacing['2']} ${spacing['4']}`,
+                padding: `0 ${spacing['4']}`,
+                minHeight: '56px',
                 border: 'none',
                 borderRadius: borderRadius.base,
                 cursor: 'pointer',
@@ -987,10 +938,10 @@ export const Safety: React.FC = () => {
                 Safety tracking not yet configured. Set up your safety program to track incidents, inspections, and certifications.
               </p>
               <div style={{ display: 'flex', gap: spacing['3'], flexWrap: 'wrap', justifyContent: 'center' }}>
-                <Btn variant="primary" onClick={() => setShowIncidentModal(true)} style={{ minHeight: 44 }}>
+                <Btn variant="primary" onClick={() => setShowIncidentModal(true)} style={{ minHeight: '56px' }}>
                   Report First Incident
                 </Btn>
-                <Btn variant="secondary" onClick={() => toast.info('Form submission requires backend configuration')} style={{ minHeight: 44 }}>
+                <Btn variant="secondary" onClick={() => toast.info('Form submission requires backend configuration')} style={{ minHeight: '56px' }}>
                   Set Up Inspection Template
                 </Btn>
               </div>

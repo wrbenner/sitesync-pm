@@ -186,13 +186,16 @@ export const Lookahead: React.FC = () => {
       subtitle={`${weekView} week view · ${readyCount} ready, ${constrainedCount} constrained, ${blockedCount} blocked`}
       actions={
         <div style={{ display: 'flex', gap: spacing['2'] }}>
-          <div style={{ display: 'flex', gap: spacing['1'], backgroundColor: colors.surfaceInset, borderRadius: borderRadius.full, padding: 2 }}>
+          <div role="group" aria-label="Week view" style={{ display: 'flex', gap: spacing['1'], backgroundColor: colors.surfaceInset, borderRadius: borderRadius.full, padding: 2 }}>
             {([1, 2, 3] as const).map((w) => (
               <button
                 key={w}
+                aria-pressed={weekView === w}
+                aria-label={`${w} week view`}
                 onClick={() => setWeekView(w)}
                 style={{
-                  padding: `${spacing['1']} ${spacing['3']}`, border: 'none', borderRadius: borderRadius.full,
+                  padding: `0 ${spacing['3']}`, border: 'none', borderRadius: borderRadius.full,
+                  minHeight: '36px',
                   backgroundColor: weekView === w ? colors.surfaceRaised : 'transparent',
                   color: weekView === w ? colors.textPrimary : colors.textTertiary,
                   fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,

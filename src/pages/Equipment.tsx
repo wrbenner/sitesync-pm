@@ -344,27 +344,34 @@ export const EquipmentPage: React.FC = () => {
       </div>
 
       {/* Tab Switcher */}
-      <div style={{
-        display: 'flex',
-        gap: spacing['1'],
-        backgroundColor: colors.surfaceInset,
-        borderRadius: borderRadius.lg,
-        padding: spacing['1'],
-        marginBottom: spacing['2xl'],
-        overflowX: 'auto',
-      }}>
+      <div
+        role="tablist"
+        aria-label="Equipment categories"
+        style={{
+          display: 'flex',
+          gap: spacing['1'],
+          backgroundColor: colors.surfaceInset,
+          borderRadius: borderRadius.lg,
+          padding: spacing['1'],
+          marginBottom: spacing['2xl'],
+          overflowX: 'auto',
+        }}
+      >
         {tabs.map((tab) => {
           const Icon = tab.icon
           const isActive = activeTab === tab.key
           return (
             <button
               key={tab.key}
+              role="tab"
+              aria-selected={isActive}
               onClick={() => setActiveTab(tab.key)}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: spacing['2'],
-                padding: `${spacing['2']} ${spacing['4']}`,
+                padding: `0 ${spacing['4']}`,
+                minHeight: '56px',
                 border: 'none',
                 borderRadius: borderRadius.base,
                 cursor: 'pointer',
