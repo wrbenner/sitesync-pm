@@ -3,7 +3,7 @@ import { Truck, Warehouse, Plus, DollarSign } from 'lucide-react'
 import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton } from '../components/Primitives'
 import { DataTable, createColumnHelper } from '../components/shared/DataTable'
 import { ExportButton } from '../components/shared/ExportButton'
-import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme'
+import { colors, spacing, typography, borderRadius, transitions, touchTarget } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
 import { usePurchaseOrders, useDeliveries, useMaterialInventory } from '../hooks/queries'
 import { toast } from 'sonner'
@@ -252,27 +252,34 @@ export const Procurement: React.FC = () => {
       </div>
 
       {/* Tab Switcher */}
-      <div style={{
-        display: 'flex',
-        gap: spacing['1'],
-        backgroundColor: colors.surfaceInset,
-        borderRadius: borderRadius.lg,
-        padding: spacing['1'],
-        marginBottom: spacing['2xl'],
-        overflowX: 'auto',
-      }}>
+      <div
+        role="tablist"
+        aria-label="Procurement sections"
+        style={{
+          display: 'flex',
+          gap: spacing['1'],
+          backgroundColor: colors.surfaceInset,
+          borderRadius: borderRadius.lg,
+          padding: spacing['1'],
+          marginBottom: spacing['2xl'],
+          overflowX: 'auto',
+        }}
+      >
         {tabs.map((tab) => {
           const Icon = tab.icon
           const isActive = activeTab === tab.key
           return (
             <button
               key={tab.key}
+              role="tab"
+              aria-selected={isActive}
               onClick={() => setActiveTab(tab.key)}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: spacing['2'],
                 padding: `${spacing['2']} ${spacing['4']}`,
+                minHeight: touchTarget.field,
                 border: 'none',
                 borderRadius: borderRadius.base,
                 cursor: 'pointer',

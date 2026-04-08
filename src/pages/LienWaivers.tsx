@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FileCheck, AlertTriangle, Clock, CheckCircle } from 'lucide-react';
 import { PageContainer, MetricBox, Skeleton, Btn } from '../components/Primitives';
-import { colors, spacing, typography, borderRadius, shadows, transitions } from '../styles/theme';
+import { colors, spacing, typography, borderRadius, shadows, transitions, touchTarget } from '../styles/theme';
 import { supabase } from '../lib/supabase';
 import { useProjectId } from '../hooks/useProjectId';
 import { useNavigate } from 'react-router-dom';
@@ -142,6 +142,7 @@ export function LienWaivers() {
       >
         <select
           value={typeFilter}
+          aria-label="Filter by waiver type"
           onChange={(e) => setTypeFilter(e.target.value as WaiverType)}
           style={{
             fontSize: typography.fontSize.body,
@@ -150,6 +151,7 @@ export function LienWaivers() {
             border: `1px solid ${colors.borderDefault}`,
             borderRadius: borderRadius.md,
             padding: `${spacing['2']} ${spacing['3']}`,
+            minHeight: touchTarget.field,
             cursor: 'pointer',
             outline: 'none',
           }}
@@ -162,6 +164,8 @@ export function LienWaivers() {
 
         {/* Status toggle */}
         <div
+          role="group"
+          aria-label="Filter by signature status"
           style={{
             display: 'flex',
             backgroundColor: colors.surfaceInset,
@@ -173,11 +177,13 @@ export function LienWaivers() {
           {(['all', 'pending', 'signed'] as StatusFilter[]).map((s) => (
             <button
               key={s}
+              aria-pressed={statusFilter === s}
               onClick={() => setStatusFilter(s)}
               style={{
                 fontSize: typography.fontSize.sm,
                 fontWeight: typography.fontWeight.medium,
                 padding: `${spacing['1.5']} ${spacing['4']}`,
+                minHeight: touchTarget.field,
                 borderRadius: borderRadius.base,
                 border: 'none',
                 cursor: 'pointer',

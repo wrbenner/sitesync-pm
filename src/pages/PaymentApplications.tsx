@@ -7,7 +7,7 @@ import {
 } from 'lucide-react'
 import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton, EmptyState } from '../components/Primitives'
 import { DataTable, createColumnHelper } from '../components/shared/DataTable'
-import { colors, spacing, typography, borderRadius, transitions, shadows } from '../styles/theme'
+import { colors, spacing, typography, borderRadius, transitions, shadows, touchTarget } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
 import { usePayApplications, useContracts, useRetainageLedger, useLienWaivers, usePayAppSOV, useProject } from '../hooks/queries'
 import type { LienWaiverRow, LienWaiverStatus } from '../types/api'
@@ -1635,6 +1635,7 @@ const PayAppDetail = memo<{
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: spacing['2'],
                 padding: `${spacing['2']} ${spacing['4']}`,
+                minHeight: touchTarget.field,
                 border: 'none', borderRadius: borderRadius.md,
                 backgroundColor: colors.primaryOrange, color: colors.white,
                 fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold,
@@ -1666,16 +1667,23 @@ const PayAppDetail = memo<{
       )}
 
       {/* Sub-tab bar */}
-      <div style={{ display: 'flex', gap: spacing['1'], borderBottom: `1px solid ${colors.borderSubtle}`, paddingBottom: spacing['3'] }}>
+      <div
+        role="tablist"
+        aria-label="Pay application details"
+        style={{ display: 'flex', gap: spacing['1'], borderBottom: `1px solid ${colors.borderSubtle}`, paddingBottom: spacing['3'] }}
+      >
         {([
           { key: 'g702', label: 'G702 / SOV' },
           { key: 'lien_waivers', label: `Lien Waivers${appWaivers.length > 0 ? ` (${appWaivers.length})` : ''}` },
         ] as const).map((t) => (
           <button
             key={t.key}
+            role="tab"
+            aria-selected={detailTab === t.key}
             onClick={() => setDetailTab(t.key)}
             style={{
               padding: `${spacing['1.5']} ${spacing['3']}`,
+              minHeight: touchTarget.field,
               border: 'none',
               borderRadius: borderRadius.base,
               backgroundColor: detailTab === t.key ? colors.primaryOrange : 'transparent',
@@ -2425,20 +2433,27 @@ export const PaymentApplications: React.FC = () => {
       subtitle="AIA G702/G703 payment applications, lien waivers, and cash flow management"
     >
       {/* Tab Switcher */}
-      <div style={{
-        display: 'flex', gap: spacing['1'],
-        backgroundColor: colors.surfaceInset, borderRadius: borderRadius.lg,
-        padding: spacing['1'], marginBottom: spacing['2xl'], overflowX: 'auto',
-      }}>
+      <div
+        role="tablist"
+        aria-label="Payment application sections"
+        style={{
+          display: 'flex', gap: spacing['1'],
+          backgroundColor: colors.surfaceInset, borderRadius: borderRadius.lg,
+          padding: spacing['1'], marginBottom: spacing['2xl'], overflowX: 'auto',
+        }}
+      >
         {tabs.map((tab) => {
           const isActive = activeTab === tab.key
           return (
             <button
               key={tab.key}
+              role="tab"
+              aria-selected={isActive}
               onClick={() => setActiveTab(tab.key)}
               style={{
                 display: 'flex', alignItems: 'center', gap: spacing['2'],
                 padding: `${spacing['2']} ${spacing['4']}`,
+                minHeight: touchTarget.field,
                 border: 'none', borderRadius: borderRadius.base, cursor: 'pointer',
                 fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
                 fontWeight: isActive ? typography.fontWeight.medium : typography.fontWeight.normal,

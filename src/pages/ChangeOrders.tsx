@@ -616,7 +616,7 @@ export const ChangeOrders: React.FC = () => {
             const labelMap = { all: 'All', pco: 'PCO', cor: 'COR', co: 'CO' } as const;
             const label = labelMap[t];
             return (
-              <button key={t} onClick={() => setFilterType(t)}
+              <button key={t} onClick={() => setFilterType(t)} aria-pressed={active}
                 style={{
                   padding: `${spacing['1']} ${spacing['3']}`, fontSize: typography.fontSize.sm,
                   fontFamily: typography.fontFamily, fontWeight: active ? typography.fontWeight.semibold : typography.fontWeight.medium,
@@ -624,6 +624,7 @@ export const ChangeOrders: React.FC = () => {
                   color: active ? colors.textPrimary : colors.textTertiary,
                   border: 'none', borderRadius: borderRadius.full, cursor: 'pointer',
                   boxShadow: active ? shadows.sm : 'none',
+                  minHeight: touchTarget.field,
                 }}>
                 {label}
               </button>
@@ -651,7 +652,7 @@ export const ChangeOrders: React.FC = () => {
         ] as const).map(({ id, label }) => {
           const active = filterStatus === id;
           return (
-            <button key={id} onClick={() => setFilterStatus(id as ChangeOrderState | 'all')}
+            <button key={id} onClick={() => setFilterStatus(id as ChangeOrderState | 'all')} aria-pressed={active}
               style={{
                 padding: `${spacing['1']} ${spacing['3']}`, fontSize: typography.fontSize.sm,
                 fontFamily: typography.fontFamily, fontWeight: active ? typography.fontWeight.semibold : typography.fontWeight.medium,
@@ -659,6 +660,7 @@ export const ChangeOrders: React.FC = () => {
                 color: active ? colors.textPrimary : colors.textTertiary,
                 border: 'none', borderRadius: borderRadius.full, cursor: 'pointer',
                 boxShadow: active ? shadows.sm : 'none',
+                minHeight: touchTarget.field,
               }}>
               {label}
             </button>
@@ -669,11 +671,25 @@ export const ChangeOrders: React.FC = () => {
       {/* Empty state — no change orders at all */}
       {allCOs.length === 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: `${spacing['16']} ${spacing['8']}`, textAlign: 'center' }}>
-          <FileText size={48} color="#9CA3AF" style={{ marginBottom: spacing['4'] }} />
-          <h3 style={{ fontSize: 18, fontWeight: 600, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>No change orders</h3>
-          <p style={{ fontSize: 14, color: '#6B7280', margin: 0, marginBottom: spacing['5'], maxWidth: 360 }}>Scope is holding steady. When changes arise, document them here to keep the budget accurate.</p>
+          <FileText size={48} color={colors.textTertiary} style={{ marginBottom: spacing['4'] }} />
+          <h3 style={{ fontSize: typography.fontSize.subtitle, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>No change orders</h3>
+          <p style={{ fontSize: typography.fontSize.body, color: colors.textSecondary, margin: 0, marginBottom: spacing['5'], maxWidth: 360 }}>Scope is holding steady. When changes arise, document them here to keep the budget accurate.</p>
           <PermissionGate permission="change_orders.create">
-            <button onClick={() => setShowCreateModal(true)} style={{ height: 40, padding: `0 ${spacing['5']}`, backgroundColor: '#F47820', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, fontFamily: typography.fontFamily, cursor: 'pointer' }}>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              style={{
+                minHeight: touchTarget.field,
+                padding: `0 ${spacing['5']}`,
+                backgroundColor: colors.primaryOrange,
+                color: colors.white,
+                border: 'none',
+                borderRadius: borderRadius.md,
+                fontSize: typography.fontSize.sm,
+                fontWeight: typography.fontWeight.semibold,
+                fontFamily: typography.fontFamily,
+                cursor: 'pointer',
+              }}
+            >
               Create Change Order
             </button>
           </PermissionGate>
