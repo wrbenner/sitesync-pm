@@ -1,14 +1,14 @@
-import React, { useState, useMemo, memo } from 'react'
+import React, { useState, memo } from 'react'
 import {
-  BarChart3, TrendingUp, TrendingDown, Minus, Users, DollarSign,
-  Award, ShieldCheck, Package, ArrowRight, Star, Clock,
-  AlertTriangle, ChevronRight, Globe, Lock,
+  BarChart3, TrendingUp, TrendingDown, Minus, Users,
+  ShieldCheck, Package, Star,
+  Lock,
 } from 'lucide-react'
-import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton, EmptyState } from '../components/Primitives'
+import { PageContainer, Card, SectionHeader, Btn, Skeleton, EmptyState } from '../components/Primitives'
 import { colors, spacing, typography, borderRadius, transitions, shadows } from '../styles/theme'
 import { useBenchmarkComparisons, useSubcontractorProfiles, useMaterialPriceTrends } from '../hooks/usePlatformIntel'
 import { BENCHMARK_LABELS, PROJECT_TYPE_LABELS, MATERIAL_LABELS } from '../types/platformIntel'
-import type { BenchmarkComparison, SubcontractorProfile, MaterialPriceTrend, ProjectType, MaterialCategory } from '../types/platformIntel'
+import type { BenchmarkComparison, SubcontractorProfile, MaterialPriceTrend, ProjectType } from '../types/platformIntel'
 
 // ── Formatters ────────────────────────────────────────────────
 

@@ -348,7 +348,10 @@ export const ProjectHealth: React.FC = () => {
             return (
               <div
                 key={dim.label}
+                role="button"
+                tabIndex={0}
                 onClick={() => navigate(dim.route)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(dim.route); } }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: spacing['4'],
                   padding: `${spacing['3']} ${spacing['4']}`, backgroundColor: colors.surfaceRaised,
@@ -388,9 +391,11 @@ export const ProjectHealth: React.FC = () => {
                     aria-expanded={isExpanded}
                     onClick={(e) => { e.stopPropagation(); setExpandedDim(isExpanded ? null : dim.label); }}
                     style={{
-                      display: 'inline', border: 'none', backgroundColor: 'transparent', padding: 0, marginTop: 2,
+                      display: 'inline-flex', alignItems: 'center', border: 'none', backgroundColor: 'transparent',
+                      padding: `${spacing['2']} 0`, marginTop: 2,
                       fontSize: typography.fontSize.caption, color: colors.orangeText, cursor: 'pointer',
                       fontFamily: typography.fontFamily, fontWeight: typography.fontWeight.medium,
+                      minHeight: spacing['14'],
                     }}
                   >
                     {isExpanded ? 'See less' : 'See more'}

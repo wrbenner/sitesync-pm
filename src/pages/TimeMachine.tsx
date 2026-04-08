@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Play, Pause, SkipForward, Columns, Flag, DollarSign, Users, HelpCircle, Camera, Calendar, Sparkles } from 'lucide-react';
-import { PageContainer, Card, Btn, ProgressBar, useToast, Skeleton } from '../components/Primitives';
+import { PageContainer, Card, Btn, ProgressBar, Skeleton } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme';
 import { useAnimatedNumber } from '../hooks/useAnimatedNumber';
 import { useProjectId } from '../hooks/useProjectId';
@@ -91,7 +91,6 @@ const snapshotPhotos = [
 ];
 
 export const TimeMachine: React.FC = () => {
-  const { addToast: _addToast } = useToast();
   const projectId = useProjectId();
   const { data: rawSnapshots, isLoading: loadingSnapshots } = useProjectSnapshots(projectId);
 
@@ -103,17 +102,18 @@ export const TimeMachine: React.FC = () => {
     return mapped.length > 0 ? mapped : [];
   }, [rawSnapshots]);
 
-  const [currentIndex, setCurrentIndex] = useState(0);
+  // null = auto (show latest); number = user selection
+  const [manualIndex, setManualIndex] = useState<number | null>(null);
+  const currentIndex = manualIndex !== null
+    ? Math.min(manualIndex, Math.max(0, snapshots.length - 1))
+    : Math.max(0, snapshots.length - 1);
+  // Sync ref after each render so interval callback reads latest value
+  const currentIndexRef = useRef(0);
+  useEffect(() => { currentIndexRef.current = currentIndex; });
+
   const [playing, setPlaying] = useState(false);
   const [compareIndex, setCompareIndex] = useState<number | null>(null);
   const intervalRef = useRef<number | undefined>(undefined);
-
-  // Reset index when snapshots load or change
-  useEffect(() => {
-    if (snapshots.length > 0) {
-      setCurrentIndex(snapshots.length - 1);
-    }
-  }, [snapshots.length]);
 
   const snap = snapshots[currentIndex] ?? {
     date: '', label: 'Loading', progress: 0, budgetSpent: 0, budgetTotal: 1,
@@ -128,10 +128,12 @@ export const TimeMachine: React.FC = () => {
   useEffect(() => {
     if (!playing) return;
     intervalRef.current = window.setInterval(() => {
-      setCurrentIndex((prev) => {
-        if (prev >= snapshots.length - 1) { setPlaying(false); return prev; }
-        return prev + 1;
-      });
+      const next = currentIndexRef.current + 1;
+      if (next >= snapshots.length) {
+        setPlaying(false);
+        return;
+      }
+      setManualIndex(next);
     }, 550);
     return () => clearInterval(intervalRef.current);
   }, [playing, snapshots.length]);
@@ -141,7 +143,7 @@ export const TimeMachine: React.FC = () => {
       setPlaying(false);
       return;
     }
-    setCurrentIndex(0);
+    setManualIndex(0);
     setTimeout(() => setPlaying(true), 200);
   };
 
@@ -302,7 +304,7 @@ export const TimeMachine: React.FC = () => {
           <button
             onClick={() => setPlaying(!playing)}
             aria-label={playing ? 'Pause timeline playback' : 'Play timeline'}
-            style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primaryOrange, color: 'white', border: 'none', borderRadius: borderRadius.full, cursor: 'pointer' }}
+            style={{ width: 56, height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primaryOrange, color: 'white', border: 'none', borderRadius: borderRadius.full, cursor: 'pointer' }}
           >
             {playing ? <Pause size={16} /> : <Play size={16} />}
           </button>
@@ -363,7 +365,7 @@ export const TimeMachine: React.FC = () => {
               return (
                 <button
                   key={s.date}
-                  onClick={() => setCurrentIndex(i)}
+                  onClick={() => setManualIndex(i)}
                   aria-label={`Go to ${s.label}${s.milestone ? ': ' + s.milestone : s.event ? ': ' + s.event : ''}`}
                   aria-current={isCurrent ? 'true' : undefined}
                   style={{
@@ -491,7 +493,7 @@ export const TimeMachine: React.FC = () => {
                 <img
                   key={idx}
                   src={url}
-                  alt={`Site photo ${idx + 1}`}
+                  alt={`Construction site snapshot ${idx + 1}`}
                   style={{
                     width: '100%',
                     height: 80,
