@@ -41,11 +41,11 @@ const statusLabel: Record<string, string> = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  open: '#F5A623',
-  in_progress: '#3B82F6',
-  sub_complete: '#8B5CF6',
-  verified: '#4EC896',
-  rejected: '#E74C3C',
+  open: colors.statusPending,
+  in_progress: colors.statusInfo,
+  sub_complete: colors.statusReview,
+  verified: colors.statusActive,
+  rejected: colors.statusCritical,
 };
 
 const plColHelper = createColumnHelper<PunchItem>();
@@ -100,9 +100,9 @@ const PhotoThumbnail: React.FC<{ url: string; alt: string }> = ({ url, alt }) =>
 };
 
 const responsibleColors: Record<string, { bg: string; text: string }> = {
-  subcontractor: { bg: 'rgba(58, 123, 200, 0.10)', text: colors.statusInfo },
-  gc: { bg: 'rgba(244, 120, 32, 0.10)', text: colors.primaryOrange },
-  owner: { bg: 'rgba(124, 93, 199, 0.10)', text: colors.statusReview },
+  subcontractor: { bg: colors.statusInfoSubtle, text: colors.statusInfo },
+  gc: { bg: colors.orangeSubtle, text: colors.primaryOrange },
+  owner: { bg: colors.statusReviewSubtle, text: colors.statusReview },
 };
 
 const responsibleLabel: Record<string, string> = {
@@ -149,8 +149,8 @@ function getDaysRemaining(dueDate: string): number {
 
 function getDueDateColor(dueDate: string): string {
   const days = getDaysRemaining(dueDate);
-  if (days <= 0) return '#E74C3C';
-  if (days <= 4) return '#F5A623';
+  if (days <= 0) return colors.statusCritical;
+  if (days <= 4) return colors.statusPending;
   return colors.statusActive;
 }
 
@@ -561,9 +561,9 @@ const PunchListPage: React.FC = () => {
               {formatDate(val)}
             </span>
             {days <= 0 ? (
-              <span style={{ fontSize: 10, fontWeight: 600, color: '#E74C3C' }}>{Math.abs(days)} days overdue</span>
+              <span style={{ fontSize: 10, fontWeight: 600, color: colors.statusCritical }}>{Math.abs(days)} days overdue</span>
             ) : days <= 4 ? (
-              <span style={{ fontSize: 10, color: '#F5A623' }}>{days}d left</span>
+              <span style={{ fontSize: 10, color: colors.statusPending }}>{days}d left</span>
             ) : (
               <span style={{ fontSize: 10, color: colors.textTertiary }}>{days}d left</span>
             )}
@@ -580,16 +580,16 @@ const PunchListPage: React.FC = () => {
         let bg = 'transparent';
         let label = item.responsible === 'gc' ? 'GC' : item.responsible === 'owner' ? 'Owner' : trade || 'Sub';
         const isSubTrade = trade.includes('electric') || trade.includes('plumb') || trade.includes('hvac') || trade.includes('drywall') || trade.includes('paint');
-        let textColor = '#F5A623';
+        let textColor = colors.statusPending;
         if (item.responsible === 'gc') {
-          bg = 'rgba(59,130,246,0.10)';
-          textColor = '#3B82F6';
+          bg = colors.statusInfoSubtle;
+          textColor = colors.statusInfo;
         } else if (item.responsible === 'owner') {
-          bg = 'rgba(244,120,32,0.10)';
-          textColor = colors.primaryOrange as string;
+          bg = colors.orangeSubtle;
+          textColor = colors.primaryOrange;
         } else if (isSubTrade || item.responsible === 'subcontractor') {
-          bg = 'rgba(245,166,35,0.12)';
-          textColor = '#F5A623';
+          bg = colors.statusPendingSubtle;
+          textColor = colors.statusPending;
         }
         return (
           <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: borderRadius.full, backgroundColor: bg, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: textColor, whiteSpace: 'nowrap' as const }}>
@@ -609,7 +609,7 @@ const PunchListPage: React.FC = () => {
             {item.verification_status === 'open' && hasPermission('punch_list.edit') && (
               <button
                 onClick={() => handleMarkInProgressById(item)}
-                style={{ padding: '3px 8px', fontSize: 11, fontWeight: 600, fontFamily: 'inherit', backgroundColor: '#EFF6FF', color: STATUS_COLORS.in_progress, border: `1px solid ${STATUS_COLORS.in_progress}40`, borderRadius: borderRadius.base, cursor: 'pointer', whiteSpace: 'nowrap' as const }}
+                style={{ padding: '3px 8px', fontSize: 11, fontWeight: 600, fontFamily: 'inherit', backgroundColor: colors.statusInfoSubtle, color: STATUS_COLORS.in_progress, border: `1px solid ${STATUS_COLORS.in_progress}40`, borderRadius: borderRadius.base, cursor: 'pointer', whiteSpace: 'nowrap' as const }}
               >
                 Start
               </button>
@@ -617,7 +617,7 @@ const PunchListPage: React.FC = () => {
             {item.verification_status === 'in_progress' && hasPermission('punch_list.edit') && (
               <button
                 onClick={() => handleMarkSubCompleteById(item)}
-                style={{ padding: '3px 8px', fontSize: 11, fontWeight: 600, fontFamily: 'inherit', backgroundColor: '#F5F3FF', color: STATUS_COLORS.sub_complete, border: `1px solid ${STATUS_COLORS.sub_complete}40`, borderRadius: borderRadius.base, cursor: 'pointer', whiteSpace: 'nowrap' as const }}
+                style={{ padding: '3px 8px', fontSize: 11, fontWeight: 600, fontFamily: 'inherit', backgroundColor: colors.statusReviewSubtle, color: STATUS_COLORS.sub_complete, border: `1px solid ${STATUS_COLORS.sub_complete}40`, borderRadius: borderRadius.base, cursor: 'pointer', whiteSpace: 'nowrap' as const }}
               >
                 Mark Complete
               </button>
@@ -752,8 +752,8 @@ const PunchListPage: React.FC = () => {
         <MetricBox
           label="Awaiting Verification"
           value={subCompleteCount}
-          bgColorOverride={subCompleteCount > 0 ? 'rgba(139, 92, 246, 0.07)' : undefined}
-          valueColorOverride={subCompleteCount > 0 ? '#8B5CF6' : undefined}
+          bgColorOverride={subCompleteCount > 0 ? colors.statusReviewSubtle : undefined}
+          valueColorOverride={subCompleteCount > 0 ? colors.statusReview : undefined}
         />
         <MetricBox label="Verified" value={verifiedCount} colorOverride={verifiedCount > 0 ? 'success' : undefined} />
         <MetricBox label="Overdue" value={overdueCount} colorOverride={overdueCount > 0 ? 'danger' : undefined} />
@@ -786,9 +786,9 @@ const PunchListPage: React.FC = () => {
       <div style={{ display: 'flex', gap: spacing['2'], marginBottom: spacing['3'], flexWrap: 'wrap' as const }}>
         {[
           { value: 'all', label: 'All', count: totalCount, color: colors.textSecondary, activeBg: `${colors.primaryOrange}15`, activeColor: colors.primaryOrange },
-          { value: 'open', label: 'Open', count: openCount, color: STATUS_COLORS.open, activeBg: '#FEF3C7', activeColor: STATUS_COLORS.open },
-          { value: 'in_progress', label: 'In Progress', count: inProgressCount, color: STATUS_COLORS.in_progress, activeBg: '#EFF6FF', activeColor: STATUS_COLORS.in_progress },
-          { value: 'sub_complete', label: 'Awaiting Verification', count: subCompleteCount, color: STATUS_COLORS.sub_complete, activeBg: '#F5F3FF', activeColor: STATUS_COLORS.sub_complete },
+          { value: 'open', label: 'Open', count: openCount, color: STATUS_COLORS.open, activeBg: colors.statusPendingSubtle, activeColor: STATUS_COLORS.open },
+          { value: 'in_progress', label: 'In Progress', count: inProgressCount, color: STATUS_COLORS.in_progress, activeBg: colors.statusInfoSubtle, activeColor: STATUS_COLORS.in_progress },
+          { value: 'sub_complete', label: 'Awaiting Verification', count: subCompleteCount, color: STATUS_COLORS.sub_complete, activeBg: colors.statusReviewSubtle, activeColor: STATUS_COLORS.sub_complete },
           { value: 'verified', label: 'Verified', count: verifiedCount, color: STATUS_COLORS.verified, activeBg: `${STATUS_COLORS.verified}20`, activeColor: STATUS_COLORS.verified },
           { value: 'overdue', label: 'Overdue', count: overdueCount, color: STATUS_COLORS.rejected, activeBg: `${STATUS_COLORS.rejected}15`, activeColor: STATUS_COLORS.rejected },
         ].map(tab => {
@@ -798,7 +798,8 @@ const PunchListPage: React.FC = () => {
               key={tab.value}
               onClick={() => { setStatusFilter(tab.value); setAtRiskFilter(false); }}
               style={{
-                padding: `${spacing['1']} ${spacing['3']}`,
+                padding: `${spacing['2']} ${spacing['3']}`,
+                minHeight: '44px',
                 fontSize: typography.fontSize.sm,
                 fontFamily: typography.fontFamily,
                 fontWeight: isActive ? typography.fontWeight.semibold : typography.fontWeight.medium,

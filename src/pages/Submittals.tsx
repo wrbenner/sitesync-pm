@@ -33,11 +33,11 @@ const isOverdue = (dateStr: string) => new Date(dateStr) < new Date();
 type StepStatus = 'pending' | 'current' | 'approved' | 'rejected' | 'approved_as_noted';
 
 const STEP_COLORS: Record<StepStatus, { bg: string; fg: string }> = {
-  pending:           { bg: '#E5E7EB', fg: '#9CA3AF' },
-  current:           { bg: '#3B82F6', fg: '#FFFFFF' },
-  approved:          { bg: '#4EC896', fg: '#FFFFFF' },
-  rejected:          { bg: '#EF4444', fg: '#FFFFFF' },
-  approved_as_noted: { bg: '#F59E0B', fg: '#FFFFFF' },
+  pending:           { bg: colors.surfaceInset, fg: colors.textTertiary },
+  current:           { bg: colors.statusInfo, fg: colors.white },
+  approved:          { bg: colors.statusActive, fg: colors.white },
+  rejected:          { bg: colors.statusCritical, fg: colors.white },
+  approved_as_noted: { bg: colors.statusPending, fg: colors.white },
 };
 
 interface ReviewerStep {

@@ -29,18 +29,18 @@ import { EditingLockBanner } from '../components/ui/EditingLockBanner';
 const isOverdue = (dateStr: string) => new Date(dateStr) < new Date();
 
 const BIC_COLORS: Record<string, string> = {
-  GC: '#3B82F6',
-  Architect: '#8B5CF6',
-  Engineer: '#14B8A6',
-  Owner: '#F47820',
-  Subcontractor: '#6B7280',
-  Sub: '#6B7280',
+  GC: colors.statusInfo,
+  Architect: colors.statusReview,
+  Engineer: colors.statusActive,
+  Owner: colors.primaryOrange,
+  Subcontractor: colors.textSecondary,
+  Sub: colors.textSecondary,
 };
 
 const getBicColor = (party: string): string => {
   if (BIC_COLORS[party]) return BIC_COLORS[party];
   const key = Object.keys(BIC_COLORS).find(k => party.toLowerCase().includes(k.toLowerCase()));
-  return key ? BIC_COLORS[key] : '#6B7280';
+  return key ? BIC_COLORS[key] : colors.textSecondary;
 };
 
 const deriveBic = (rfi: any): string | null => {
@@ -56,8 +56,8 @@ const BallInCourtCell: React.FC<{ rfi: any }> = ({ rfi }) => {
   if (!party) {
     return (
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-        <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#6B7280', flexShrink: 0, display: 'inline-block' }} />
-        <span style={{ fontSize: 14, color: '#9CA3AF', fontStyle: 'italic' }}>Unassigned</span>
+        <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: colors.textTertiary, flexShrink: 0, display: 'inline-block' }} />
+        <span style={{ fontSize: 14, color: colors.textTertiary, fontStyle: 'italic' }}>Unassigned</span>
       </span>
     );
   }
@@ -65,7 +65,7 @@ const BallInCourtCell: React.FC<{ rfi: any }> = ({ rfi }) => {
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
       <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: color, flexShrink: 0, display: 'inline-block' }} />
-      <span style={{ fontSize: 14, color: '#374151' }}>{party}</span>
+      <span style={{ fontSize: 14, color: colors.textPrimary }}>{party}</span>
     </span>
   );
 };

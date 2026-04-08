@@ -84,7 +84,7 @@ const MeetingCard: React.FC<{ meeting: MeetingListItem }> = ({ meeting }) => {
       style={{
         background: colors.surfaceRaised,
         borderRadius: borderRadius.xl,
-        boxShadow: hovered ? shadows.hover : shadows.card,
+        boxShadow: hovered ? shadows.cardHover : shadows.card,
         padding: spacing.xl,
         display: 'flex',
         alignItems: 'flex-start',
@@ -159,7 +159,7 @@ export const MeetingsPage: React.FC = () => {
     return (
       <PageContainer title="Meetings">
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 24px', gap: spacing.lg, textAlign: 'center' }}>
-          <AlertTriangle size={48} color={colors.statusDanger} />
+          <AlertTriangle size={48} color={colors.statusCritical} />
           <p style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0 }}>
             Failed to load meetings
           </p>
@@ -205,6 +205,7 @@ export const MeetingsPage: React.FC = () => {
 
   const tabStyle = (isActive: boolean): React.CSSProperties => ({
     padding: `${spacing.sm} ${spacing.lg}`,
+    minHeight: '44px',
     borderRadius: borderRadius.md,
     border: 'none',
     cursor: 'pointer',
@@ -373,8 +374,10 @@ export const MeetingsPage: React.FC = () => {
           </div>
           <button
             onClick={() => setShowOpenOnly((v) => !v)}
+            aria-pressed={showOpenOnly}
             style={{
-              padding: `${spacing.sm} ${spacing.md}`,
+              padding: `${spacing.sm} ${spacing.xl}`,
+              minHeight: '44px',
               border: `1px solid ${colors.borderDefault}`,
               borderRadius: borderRadius.md,
               background: showOpenOnly ? colors.primaryOrange : colors.surfaceRaised,
