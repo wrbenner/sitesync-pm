@@ -1,0 +1,15 @@
+{
+  "tools": [],
+  "_comment": "Organism-created helper tools. Auto-populated during nightly runs.",
+  "_schema": {
+    "name": "snake_case tool identifier matching the .py filename (without extension)",
+    "file": "path relative to repo root, e.g. .agent/tools/count-component-props.py",
+    "description": "one-sentence description of what the tool does and when to use it",
+    "trigger_pattern": "the recurring task pattern that prompted creation of this tool",
+    "created_date": "ISO 8601 date, e.g. 2025-01-15",
+    "last_used_date": "ISO 8601 date — update every time the tool is invoked",
+    "use_count": "integer — increment each use; if 0 after 5 nights, flag for deprecation",
+    "deprecated": "boolean — set true when flagged; delete file after one more night",
+    "deprecation_reason": "optional string explaining why the tool is no longer needed"
+  }
+}

@@ -207,6 +207,9 @@ jobs:
           - ALWAYS wrap RLS policies with (select auth.uid()) not bare auth.uid() (1571x perf)
           - 56px minimum touch targets for ALL interactive elements (construction gloved use)
           - After 2 failed corrections on the same issue, MOVE ON (Anthropic research finding)
+          - TOOL CREATION: You may create helper scripts in .agent/tools/ when you encounter
+            a recurring task pattern (3+ times). See .agent/tools/README.md for the process.
+            Register new tools in .agent/tool-registry.json. Tools compound across nights.
 
           Output <promise>DONE</promise> when complete." || true
 

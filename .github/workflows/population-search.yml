@@ -1,0 +1,256 @@
+name: MAP-Elites Population Search
+
+# Optional enhancement — manually triggered (or scheduled on specific nights).
+# Runs 3 competing strategy variants as parallel matrix jobs. Best-performing
+# island's work gets squash-merged to main. Results logged to .agent/population-archive.json.
+#
+# Does NOT replace nightly-build.yml. Use this to explore multiple strategies at once.
+#
+#   Island 0 (Depth)  — top 5 experiments, max turns, debate on every change
+#   Island 1 (Breadth)— ALL experiments, min turns, no debate, max throughput
+#   Island 2 (Hybrid) — REA Three-Phase: validate top 8, combine best 3, polish winner
+#
+# Scoring: 0.5 * pass_rate + 0.3 * lines_changed_score + 0.2 * quality_gate_score
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run — run islands but do not merge winner to main'
+        type: boolean
+        default: false
+      note:
+        description: 'Optional note for this run (logged to archive)'
+        default: ''
+
+permissions:
+  contents: write
+  issues: write
+
+env:
+  STRATEGIES_FILE: wave3/scripts/island-strategies.json
+
+jobs:
+  # ── Phase 1: Run all 3 islands in parallel ─────────────────────────────────
+  island:
+    name: "Island ${{ matrix.island }} — ${{ matrix.strategy }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - island: 0
+            strategy: depth
+          - island: 1
+            strategy: breadth
+          - island: 2
+            strategy: hybrid
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+          ref: main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: rm -f package-lock.json && npm install
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Configure git
+        run: |
+          git config user.name "SiteSync Population Search"
+          git config user.email "population@sitesync.ai"
+          git config pull.rebase true
+
+      - name: Create isolated branch
+        id: branch
+        run: |
+          BRANCH="evolve/island-${{ matrix.island }}-$(date +%Y-%m-%d)"
+          git checkout -b "$BRANCH"
+          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+
+      - name: Prepare workspace
+        run: mkdir -p .evolution .agent
+
+      - name: Baseline metrics
+        id: baseline
+        run: |
+          TS_ERRORS=$(npx tsc --noEmit 2>&1 | grep "error TS" | wc -l | tr -d ' ')
+          ANY_COUNT=$(grep -rn "as any\|@ts-ignore" src/ --include="*.ts" --include="*.tsx" 2>/dev/null | grep -v test | wc -l | tr -d ' ')
+          BUILD_OK=$(npm run build > /dev/null 2>&1 && echo "PASS" || echo "FAIL")
+          echo "ts_errors=$TS_ERRORS" >> $GITHUB_OUTPUT
+          echo "any_count=$ANY_COUNT" >> $GITHUB_OUTPUT
+          echo "build_ok=$BUILD_OK" >> $GITHUB_OUTPUT
+
+      - name: Extract strategy prompt
+        run: |
+          python3 -c "
+          import json
+          with open('$STRATEGIES_FILE') as f:
+              data = json.load(f)
+          island = next(i for i in data['islands'] if i['id'] == ${{ matrix.island }})
+          print(island['prompt'])
+          " > /tmp/island-prompt.txt
+
+      - name: Run island experiment loop
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        run: |
+          claude \
+            --dangerously-skip-permissions \
+            --model claude-sonnet-4-5 \
+            --max-turns 60 \
+            "BASELINE: TS errors=${{ steps.baseline.outputs.ts_errors }}, unsafe casts=${{ steps.baseline.outputs.any_count }}, build=${{ steps.baseline.outputs.build_ok }}. Branch: ${{ steps.branch.outputs.branch }}.
+          $(cat /tmp/island-prompt.txt)" || true
+
+      - name: Ensure results file exists
+        run: |
+          RESULTS=".evolution/island-${{ matrix.island }}-results.json"
+          [ -f "$RESULTS" ] || python3 -c "
+          import json
+          json.dump({'island': ${{ matrix.island }}, 'strategy': '${{ matrix.strategy }}',
+              'experiments_attempted': 0, 'experiments_passed': 0, 'experiments_failed': 0,
+              'total_lines_changed': 0,
+              'quality_gate_results': {'tsc': 'unknown', 'lint': 'unknown', 'vitest': 'unknown', 'build': 'unknown'},
+              'pass_rate': 0.0, 'notes': 'results file not written by agent'}, open('$RESULTS', 'w'), indent=2)"
+
+      - name: Push island branch
+        run: |
+          COMMITS=$(git log origin/main..HEAD --oneline 2>/dev/null | wc -l | tr -d ' ')
+          git push origin "${{ steps.branch.outputs.branch }}" --force
+          echo "Pushed ($COMMITS commits) to ${{ steps.branch.outputs.branch }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: island-${{ matrix.island }}-results
+          path: .evolution/island-${{ matrix.island }}-results.json
+          retention-days: 30
+
+      - name: Island summary
+        run: |
+          echo "## Island ${{ matrix.island }} (${{ matrix.strategy }})" >> $GITHUB_STEP_SUMMARY
+          python3 -c "
+          import json
+          r = json.load(open('.evolution/island-${{ matrix.island }}-results.json'))
+          print(f'| Attempted | Passed | Failed | Lines | Pass Rate |')
+          print(f'|-----------|--------|--------|-------|-----------|')
+          print(f'| {r.get(\"experiments_attempted\",0)} | {r.get(\"experiments_passed\",0)} | {r.get(\"experiments_failed\",0)} | {r.get(\"total_lines_changed\",0)} | {r.get(\"pass_rate\",0):.1%} |')
+          " >> $GITHUB_STEP_SUMMARY || true
+
+  # ── Phase 2: Select winner and merge ──────────────────────────────────────
+  select-winner:
+    name: "Select Winner & Merge"
+    runs-on: ubuntu-latest
+    needs: island
+    timeout-minutes: 30
+    if: always()
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+          ref: main
+
+      - name: Configure git
+        run: |
+          git config user.name "SiteSync Population Search"
+          git config user.email "population@sitesync.ai"
+          git config pull.rebase true
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: island-*-results
+          path: .evolution
+          merge-multiple: true
+
+      - name: Run compare-islands.py
+        id: compare
+        run: |
+          mkdir -p .agent
+          python3 wave3/scripts/compare-islands.py \
+            --results-dir .evolution \
+            --archive .agent/population-archive.json \
+            --run-id "run-$(date +%Y%m%d-%H%M%S)" \
+            2>&1 | tee /tmp/compare-output.txt
+
+          WINNER_JSON=$(grep -A1 "__WINNER_JSON__" /tmp/compare-output.txt | tail -1)
+          WINNER_ISLAND=$(echo "$WINNER_JSON" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('winner_island',0))")
+          WINNER_STRATEGY=$(echo "$WINNER_JSON" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('winner_strategy','unknown'))")
+          WINNER_SCORE=$(echo "$WINNER_JSON" | python3 -c "import json,sys; d=json.load(sys.stdin); print(f\"{d.get('winner_score',0):.4f}\")")
+
+          echo "winner_island=$WINNER_ISLAND" >> $GITHUB_OUTPUT
+          echo "winner_strategy=$WINNER_STRATEGY" >> $GITHUB_OUTPUT
+          echo "winner_score=$WINNER_SCORE" >> $GITHUB_OUTPUT
+
+      - name: Merge winner to main
+        if: ${{ github.event.inputs.dry_run != 'true' && steps.compare.outputs.winner_island != '' }}
+        run: |
+          WINNER_ISLAND="${{ steps.compare.outputs.winner_island }}"
+          BRANCH="evolve/island-${WINNER_ISLAND}-$(date +%Y-%m-%d)"
+          STRATEGY="${{ steps.compare.outputs.winner_strategy }}"
+          SCORE="${{ steps.compare.outputs.winner_score }}"
+
+          git fetch origin "$BRANCH" 2>/dev/null || { echo "::notice::Branch $BRANCH not found — nothing to merge"; exit 0; }
+
+          COMMITS=$(git log main..origin/"$BRANCH" --oneline 2>/dev/null | wc -l | tr -d ' ')
+          [ "$COMMITS" -eq "0" ] && { echo "::notice::Winning island had no commits"; exit 0; }
+
+          git merge --squash origin/"$BRANCH" || { git merge --abort 2>/dev/null || true; echo "::warning::Merge conflict — leaving branches separate"; exit 0; }
+          git add -A
+          git commit -m "feat(population-search): island-${WINNER_ISLAND} ${STRATEGY} wins (score=${SCORE}) [skip ci]" \
+            -m "MAP-Elites: ${COMMITS} experiments from island-${WINNER_ISLAND} (${STRATEGY} strategy)"
+          git push origin main
+
+      - name: Commit archive update
+        run: |
+          git pull --rebase origin main || true
+          if ! git diff --quiet .agent/population-archive.json 2>/dev/null; then
+            git add .agent/population-archive.json
+            git commit -m "chore(population-search): update population archive [skip ci]" || true
+            git push origin main || true
+          fi
+
+      - name: Final summary
+        run: |
+          echo "## MAP-Elites Population Search — $(date '+%B %d %Y')" >> $GITHUB_STEP_SUMMARY
+          echo "**Winner:** Island ${{ steps.compare.outputs.winner_island }} (${{ steps.compare.outputs.winner_strategy }}) — score ${{ steps.compare.outputs.winner_score }}" >> $GITHUB_STEP_SUMMARY
+          echo "${{ github.event.inputs.dry_run == 'true' && '**Mode:** Dry run — not merged' || '**Mode:** Live — winner squash-merged to main' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Cumulative Strategy Wins" >> $GITHUB_STEP_SUMMARY
+          python3 -c "
+          import json
+          try:
+              arc = json.load(open('.agent/population-archive.json'))
+              wins = arc.get('strategy_wins', {})
+              total = sum(wins.values())
+              print('| Strategy | Wins | Win Rate |')
+              print('|----------|------|----------|')
+              for s, w in sorted(wins.items(), key=lambda x: -x[1]):
+                  print(f'| {s} | {w} | {w/total*100:.0f}% |' if total else f'| {s} | {w} | — |')
+          except Exception as e:
+              print(f'Could not read archive: {e}')
+          " >> $GITHUB_STEP_SUMMARY || true
+
+      - name: Alert if zero passes across all islands
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 -c "
+          import json, glob, sys
+          total = sum(json.load(open(f)).get('experiments_passed',0) for f in glob.glob('.evolution/island-*-results.json'))
+          sys.exit(0 if total > 0 else 1)
+          " || gh issue create \
+            --title "[population-search] All islands — zero passes — $(date '+%B %d')" \
+            --body "MAP-Elites ran but no island produced a passing experiment. See [workflow logs](https://github.com/${{ github.repository }}/actions)." \
+            --label "bug" 2>/dev/null || true

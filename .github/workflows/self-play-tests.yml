@@ -1,0 +1,385 @@
+name: Self-Play Adversarial Test Generation
+
+# Generates adversarial test cases using two-agent inference-time self-play:
+#   Agent 1 (Bug Hunter): reads codebase, writes tests that target fragile logic
+#   Agent 2 (Verifier):   runs those tests; keeps failures as proven bug probes
+#
+# No model training required — this is pure inference-time self-play.
+# Based on the SWE-RL self-play pattern (SSR, December 2025).
+
+on:
+  # Manual trigger — run on demand before a release or hardening sprint
+  workflow_dispatch:
+    inputs:
+      target_dir:
+        description: "Source directory to target (default: src/)"
+        required: false
+        default: "src/"
+      n_tests:
+        description: "Number of adversarial tests to generate (default: 10)"
+        required: false
+        default: "10"
+
+  # Scheduled weekly run — Sunday 6 PM CDT (23:00 UTC)
+  schedule:
+    - cron: "0 23 * * 0"
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Phase 1: Bug Hunter — adversarial test generation
+  # ─────────────────────────────────────────────────────────────────────────────
+  bug-hunter:
+    name: "Phase 1 — Bug Hunter (adversarial test generation)"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Run Bug Hunter (Agent 1)
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TARGET_DIR: ${{ github.event.inputs.target_dir || 'src/' }}
+          N_TESTS: ${{ github.event.inputs.n_tests || '10' }}
+        run: |
+          mkdir -p src/test/adversarial
+
+          claude \
+            --dangerously-skip-permissions \
+            --model claude-sonnet-4-5 \
+            --max-turns 40 \
+            -p "
+          You are a skilled bug hunter examining the SiteSync PM codebase.
+          Your job: create test cases that would FAIL if there were subtle bugs.
+
+          TARGET DIRECTORY: ${TARGET_DIR}
+          NUMBER OF TESTS TO GENERATE: ${N_TESTS}
+
+          INSTRUCTIONS:
+
+          Step 1 — Select critical files.
+          Identify the ${N_TESTS} most critical source files in ${TARGET_DIR}.
+          Prioritize in this order:
+            1. Page components (src/app/**/page.tsx, src/pages/**/*.tsx)
+            2. Custom hooks (src/hooks/**/*.ts, src/hooks/**/*.tsx)
+            3. API route handlers (src/app/api/**/*.ts, src/pages/api/**/*.ts)
+            4. Utility functions called from many places
+            5. Data transformation / validation logic
+
+          Step 2 — For each selected file:
+            a. Read the source file in full.
+            b. Identify the most fragile logic. Look specifically for:
+               - Boundary conditions (off-by-one, empty arrays, zero values)
+               - Null / undefined handling (optional chaining, nullish coalescing)
+               - Async race conditions (concurrent state updates, unresolved promises)
+               - Permission / authorization checks (role comparisons, ownership tests)
+               - Type coercion edge cases (number/string, truthy/falsy)
+            c. Write a Vitest test that exercises exactly that fragile logic.
+               The test MUST:
+               - Pass with correct, bug-free code
+               - Fail if there is a subtle off-by-one, race condition, or missing null check
+               - Be self-contained (mock external dependencies; do not call real DB)
+               - Use descriptive test names that explain the invariant being tested
+            d. Include a comment block at the top of each test file:
+               // ADVERSARIAL TEST
+               // Source file: <path>
+               // Fragile logic targeted: <one sentence>
+               // Failure mode: <what subtle bug would cause this test to fail>
+
+          Step 3 — Save each test file.
+          Save to: src/test/adversarial/{source_file_basename}.adversarial.test.ts
+          One test file per source file. Each test file may contain multiple it() blocks.
+
+          Step 4 — Write a manifest.
+          Create src/test/adversarial/manifest.json listing:
+          {
+            \"generated_at\": \"<ISO timestamp>\",
+            \"model\": \"claude-sonnet-4-5\",
+            \"phase\": \"bug-hunter\",
+            \"tests\": [
+              {
+                \"file\": \"src/test/adversarial/foo.adversarial.test.ts\",
+                \"source_file\": \"src/hooks/useFoo.ts\",
+                \"fragile_logic\": \"one sentence\",
+                \"failure_mode\": \"one sentence\"
+              }
+            ]
+          }
+
+          CONSTRAINTS:
+          - Do NOT introduce actual bugs into the source code. Only write test files.
+          - Do NOT modify any file outside src/test/adversarial/.
+          - Each test file must be valid TypeScript that compiles without errors.
+          - Prefer testing behavior over implementation details.
+          "
+
+      - name: Upload adversarial tests artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: adversarial-tests-raw
+          path: src/test/adversarial/
+          retention-days: 1
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Phase 2: Verifier — run tests and identify real bugs
+  # ─────────────────────────────────────────────────────────────────────────────
+  verifier:
+    name: "Phase 2 — Verifier (run tests, surface real bugs)"
+    runs-on: ubuntu-latest
+    needs: bug-hunter
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Download adversarial tests
+        uses: actions/download-artifact@v4
+        with:
+          name: adversarial-tests-raw
+          path: src/test/adversarial/
+
+      - name: Run Verifier (Agent 2)
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          claude \
+            --dangerously-skip-permissions \
+            --model claude-sonnet-4-5 \
+            --max-turns 40 \
+            -p "
+          You are a test verifier. Your job is to run the adversarial tests in
+          src/test/adversarial/ and decide which ones to keep.
+
+          INSTRUCTIONS:
+
+          Step 1 — Run all adversarial tests.
+          Execute: npx vitest run src/test/adversarial/ --reporter=json
+          Capture the full JSON output.
+
+          Step 2 — For each test file, record the result:
+            - PASS: the current code is robust against this failure mode. Keep the test.
+            - FAIL: the test has found a real bug in the codebase. This is valuable.
+
+          Step 3 — For each FAILING test:
+            - Do NOT fix the bug. The organism will fix it in the next experiment cycle.
+            - Add a comment at the top of the test file:
+              // STATUS: FAILING — real bug detected
+              // Bug description: <one sentence describing what the code does wrong>
+              // Fix hint: <one sentence on where to look, without giving the solution>
+            - Keep the test exactly as-is. A failing test is the proof that the bug exists.
+
+          Step 4 — For each PASSING test:
+            - Add a comment at the top:
+              // STATUS: PASSING — code is robust against this failure mode
+
+          Step 5 — Write a verification report.
+          Create src/test/adversarial/verification-report.json:
+          {
+            \"verified_at\": \"<ISO timestamp>\",
+            \"model\": \"claude-sonnet-4-5\",
+            \"phase\": \"verifier\",
+            \"summary\": {
+              \"total_tests\": <n>,
+              \"passing\": <n>,
+              \"failing\": <n>
+            },
+            \"results\": [
+              {
+                \"file\": \"src/test/adversarial/foo.adversarial.test.ts\",
+                \"status\": \"PASS\" | \"FAIL\",
+                \"bug_description\": \"<if FAIL: one sentence>\",
+                \"fix_hint\": \"<if FAIL: one sentence>\"
+              }
+            ]
+          }
+
+          CONSTRAINTS:
+          - Do NOT modify any source files (only files in src/test/adversarial/).
+          - Do NOT fix any bugs. Surface them; don't solve them.
+          - Do NOT delete any test files. The filter script handles removal.
+          "
+
+      - name: Upload verified tests artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: adversarial-tests-verified
+          path: src/test/adversarial/
+          retention-days: 1
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Phase 3: Filter and open PR
+  # ─────────────────────────────────────────────────────────────────────────────
+  filter-and-pr:
+    name: "Phase 3 — Filter flaky tests and open PR"
+    runs-on: ubuntu-latest
+    needs: verifier
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download verified tests
+        uses: actions/download-artifact@v4
+        with:
+          name: adversarial-tests-verified
+          path: src/test/adversarial/
+
+      - name: Filter flaky tests
+        run: |
+          python scripts/filter-adversarial-tests.py \
+            --test-dir src/test/adversarial/ \
+            --runs 3 \
+            --output src/test/adversarial/filter-summary.json
+
+      - name: Generate PR body
+        id: pr_body
+        run: |
+          python - << 'EOF'
+          import json, os
+
+          summary_path = "src/test/adversarial/filter-summary.json"
+          verification_path = "src/test/adversarial/verification-report.json"
+
+          with open(summary_path) as f:
+              summary = json.load(f)
+
+          verification = {}
+          if os.path.exists(verification_path):
+              with open(verification_path) as f:
+                  verification = json.load(f)
+
+          kept = summary.get("kept", [])
+          removed_flaky = summary.get("removed_flaky", [])
+          failing = [r for r in verification.get("results", []) if r.get("status") == "FAIL"]
+
+          lines = [
+              "## Adversarial Test Generation — Self-Play Results",
+              "",
+              "This PR was generated automatically by the self-play test workflow.",
+              "Agent 1 (Bug Hunter) created adversarial tests targeting fragile logic.",
+              "Agent 2 (Verifier) ran the tests and identified real bugs.",
+              "The filter script removed flaky tests (inconsistent across 3 runs).",
+              "",
+              f"### Summary",
+              f"- **Tests generated:** {summary.get('total_generated', 0)}",
+              f"- **Tests kept (consistent):** {len(kept)}",
+              f"- **Tests removed (flaky):** {len(removed_flaky)}",
+              f"- **Tests failing (real bugs found):** {len(failing)}",
+              "",
+          ]
+
+          if failing:
+              lines += [
+                  "### Real Bugs Detected",
+                  "These tests are FAILING — they prove a bug exists in the codebase.",
+                  "Do NOT fix the bugs in this PR. The organism will fix them in the next cycle.",
+                  "",
+              ]
+              for r in failing:
+                  lines.append(f"- `{r['file']}`: {r.get('bug_description', 'see test file')}")
+              lines.append("")
+
+          if kept:
+              lines += ["### Kept Tests (passing — code is robust)", ""]
+              for t in kept:
+                  lines.append(f"- `{t}`")
+              lines.append("")
+
+          if removed_flaky:
+              lines += ["### Removed (flaky — inconsistent results across 3 runs)", ""]
+              for t in removed_flaky:
+                  lines.append(f"- `{t}`")
+              lines.append("")
+
+          lines += [
+              "### Next Steps",
+              "1. Review failing tests — they indicate real edge cases to fix",
+              "2. Merge passing tests — they harden the test suite permanently",
+              "3. The organism will auto-pick up failing tests as bugs in the next nightly run",
+          ]
+
+          body = "\n".join(lines)
+          # Write to environment file for use in next step
+          with open(os.environ["GITHUB_ENV"], "a") as f:
+              f.write("PR_BODY<<EOF_PR_BODY\n")
+              f.write(body + "\n")
+              f.write("EOF_PR_BODY\n")
+
+          print("PR body generated.")
+          EOF
+
+      - name: Create branch and commit tests
+        run: |
+          DATE=$(date +%Y%m%d-%H%M)
+          BRANCH="self-play/adversarial-tests-${DATE}"
+          echo "BRANCH_NAME=${BRANCH}" >> $GITHUB_ENV
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git checkout -b "${BRANCH}"
+          git add src/test/adversarial/
+          git commit -m "test(adversarial): add self-play generated tests [${DATE}]
+
+          Generated by self-play-tests workflow.
+          Bug Hunter + Verifier + filter pipeline.
+          See src/test/adversarial/filter-summary.json for details." \
+            || echo "Nothing to commit"
+          git push origin "${BRANCH}"
+
+      - name: Open Pull Request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr create \
+            --title "test(adversarial): self-play generated tests $(date +%Y-%m-%d)" \
+            --body "${PR_BODY}" \
+            --base main \
+            --head "${BRANCH_NAME}" \
+            --label "adversarial-tests,self-play" \
+            || echo "PR creation failed or PR already exists"
