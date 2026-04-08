@@ -1,11 +1,14 @@
 name: Post-Session Learning — Evolution Engine
 
-# Runs AFTER every nightly organism push to main
+# Runs AFTER the nightly organism completes (not on push — GITHUB_TOKEN pushes don't trigger workflows)
 # Analyzes what was built, extracts patterns, deposits intelligence
 # This is somatic hypermutation — the organism learns from every encounter
 on:
-  push:
+  workflow_run:
+    workflows: ["Nightly Organism — Experiment Runner"]
+    types: [completed]
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -13,8 +16,8 @@ permissions:
 jobs:
   learn:
     name: "Extract learnings"
-    # Only run after organism commits (not human commits, not CI commits)
-    if: contains(github.event.head_commit.message, '[auto]')
+    # Only run if the organism actually completed (not cancelled/failed)
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
