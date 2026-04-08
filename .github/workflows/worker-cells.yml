@@ -31,11 +31,19 @@ jobs:
           git config user.email "metrics@sitesync.ai"
           git config pull.rebase true
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies (needed for eslint cell)
+        run: rm -f package-lock.json && npm install
+
       - name: Run worker cells
         run: |
           python3 scripts/cells/count-type-issues.py
           python3 scripts/cells/count-quality-issues.py
           python3 scripts/cells/find-untested.py
+          python3 scripts/cells/count-eslint-issues.py
           echo "=== Metrics collected ==="
           cat .metrics/type-issues.json | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Types: {d[\"totals\"]}')"
           cat .metrics/quality-issues.json | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Quality: {d[\"totals\"]}')"
