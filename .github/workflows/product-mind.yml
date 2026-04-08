@@ -70,6 +70,18 @@ jobs:
           echo -e "\n=== RESEARCH FINDINGS (summary) ===" >> /tmp/intel.txt
           head -40 RESEARCH_FINDINGS.md 2>/dev/null >> /tmp/intel.txt || true
 
+          echo -e "\n=== ANTI-PATTERNS FROM LEARNINGS (avoid these) ===" >> /tmp/intel.txt
+          grep -A 1 "Do NOT\|NEVER\|ALWAYS\|CRITICAL" LEARNINGS.md 2>/dev/null | head -30 >> /tmp/intel.txt || true
+
+          echo -e "\n=== UNCHECKED P0 SPEC CRITERIA (top experiment candidates) ===" >> /tmp/intel.txt
+          grep -B 2 "P0" SPEC.md 2>/dev/null | grep "^\- \[ \]" | head -20 >> /tmp/intel.txt || echo "Could not extract P0 criteria" >> /tmp/intel.txt
+
+          echo -e "\n=== ESLINT ISSUES (from worker cells) ===" >> /tmp/intel.txt
+          cat .metrics/eslint-issues.json 2>/dev/null >> /tmp/intel.txt || echo "No eslint metrics yet" >> /tmp/intel.txt
+
+          echo -e "\n=== KILLED APPROACHES (never design experiments that use these) ===" >> /tmp/intel.txt
+          python3 -c "import json; d=json.load(open('EVOLUTION_LEDGER.json')); [print(f'  KILLED: {k[\"description\"]}') for k in d.get('killed_approaches',[])]" 2>/dev/null >> /tmp/intel.txt || true
+
       - name: Product Mind designs experiments
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -86,7 +98,9 @@ jobs:
           1. cat THE_OMEGA_BUILD.md — the 3-layer technical vision
           2. cat THE_OVERRIDE_PROTOCOL.md — how to think (Amazon/Apple/Google/Netflix/Tesla)
           3. cat THE_DEEP_TRANSMISSION.md — natural intelligence patterns
-          4. cat SPEC.md | head -200 — the acceptance criteria (focus on unchecked P0 items)
+          4. Read SPEC.md — grep for unchecked P0 and P1 criteria (don't read the full file)
+             Run: grep -B 2 'P0' SPEC.md | grep '^\- \[ \]' | head -30
+             This gives you the exact unchecked P0 acceptance criteria for experiment targets
 
           TODAY'S INTELLIGENCE (from worker cells + git):
           $INTEL
