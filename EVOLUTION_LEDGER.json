@@ -2,9 +2,72 @@
   "_comment": "Cross-problem evolution memory. Every time the metabolism evolves a function, the winning pattern is stored here. The memory layer reads this before generating new implementations to avoid 2-3 generations of rediscovery.",
   "_version": "1.0",
   "_schema_version": 1,
-  "_updated": "2026-04-05T00:00:00Z",
-  "evolutions": [],
-  "killed_approaches": [],
+  "_updated": "2026-04-09T00:00:00Z",
+  "evolutions": [
+    {
+      "id": "EVO-001",
+      "night": 1,
+      "date": "2026-04-07",
+      "description": "Removed 202 'as any' casts by introducing proper Supabase type generics. Pattern: replace `(await supabase.from('table').select('*')) as any` with `supabase.from('table').select('*').returns<TableRow[]>()`. 5 incremental commits, each passing quality gates.",
+      "metric_before": "anyCount: 260",
+      "metric_after": "anyCount: ~58",
+      "approach": "File-by-file, largest offenders first. Each file committed independently.",
+      "lesson": "Type safety fixes are high-success-rate experiments. Target files with 5+ casts first for maximum impact per experiment."
+    },
+    {
+      "id": "EVO-002",
+      "night": 2,
+      "date": "2026-04-08",
+      "description": "Created typed `fromTable` helper that wraps Supabase queries with generics, eliminating 20 more 'as any' casts in one commit. Pattern: `const { data } = await fromTable('projects').select('*')` returns typed data.",
+      "metric_before": "anyCount: ~58",
+      "metric_after": "anyCount: 14",
+      "approach": "Created a shared utility first, then replaced all callers. Batch replacement after utility was tested.",
+      "lesson": "Creating a shared utility FIRST then replacing callers is more reliable than fixing each file independently. The utility becomes a force multiplier."
+    },
+    {
+      "id": "EVO-003",
+      "night": 2,
+      "date": "2026-04-08",
+      "description": "Added Zod schemas, error boundaries, and mutation error handlers across the app. Zod validates API responses at runtime, error boundaries catch render failures, mutation handlers show user-friendly errors.",
+      "metric_before": "No runtime validation, white-screen on errors",
+      "metric_after": "97 files touched, runtime validation on critical paths",
+      "approach": "Batch implementation in a single commit — error boundaries wrap route-level components, Zod schemas co-located with API hooks.",
+      "lesson": "Error handling infrastructure should be implemented as cross-cutting concerns (wrapping routers, wrapping mutations) rather than per-component. One well-placed ErrorBoundary at the route level catches everything below it."
+    },
+    {
+      "id": "EVO-004",
+      "night": 2,
+      "date": "2026-04-08",
+      "description": "Added permission gates to Schedule, FieldCapture, Directory, and Files pages. Pattern: check user role before rendering sensitive actions, show appropriate empty/forbidden state.",
+      "metric_before": "All actions visible to all users",
+      "metric_after": "Permission-gated UI on 4 pages (311 file changes)",
+      "approach": "Created a PermissionGate component, then wrapped each sensitive action.",
+      "lesson": "Permission UI is a FEATURE experiment that demos well for enterprise buyers. GCs always ask 'can I control who sees what?' High demo value."
+    }
+  ],
+  "killed_approaches": [
+    {
+      "id": "KILL-001",
+      "description": "Batch refactors across 10+ files in one commit. The immune system (homeostasis) rejects these at Tier 2 because too many concurrent changes can't be verified individually.",
+      "date": "2026-04-02",
+      "source": "LEARNINGS.md",
+      "alternative": "One file per commit. Each commit must pass quality gates independently."
+    },
+    {
+      "id": "KILL-002",
+      "description": "Adding TODO stubs or empty functions. The quality auditor scores incomplete code WORSE than no code. Never ship stubs.",
+      "date": "2026-04-02",
+      "source": "LEARNINGS.md",
+      "alternative": "Implement completely or don't implement at all. Half-implementations degrade quality scores."
+    },
+    {
+      "id": "KILL-003",
+      "description": "Using npm ci with Mac-generated lockfiles on Linux CI. Vite 8's rolldown requires platform-specific native bindings. The lockfile from Mac doesn't include Linux bindings.",
+      "date": "2026-04-06",
+      "source": "CI failure investigation",
+      "alternative": "Always use 'rm -f package-lock.json && npm install' in CI."
+    }
+  ],
   "patterns": [
     {
       "id": "PAT-001",
@@ -21,6 +84,30 @@
       "applies_to": "all useMutation hooks",
       "discovered": "2026-04-05",
       "source": "initial-seed"
+    },
+    {
+      "id": "PAT-003",
+      "name": "Typed Supabase helper (fromTable)",
+      "description": "Use the fromTable<T>('tableName') helper from src/lib/supabase.ts for all database queries. It returns typed data without 'as any' casts. Never call supabase.from() directly without type generics.",
+      "applies_to": "all Supabase queries",
+      "discovered": "2026-04-08",
+      "source": "Night 2 organism"
+    },
+    {
+      "id": "PAT-004",
+      "name": "Route-level ErrorBoundary",
+      "description": "Wrap each route in an ErrorBoundary component that catches render errors and shows a user-friendly fallback UI. One ErrorBoundary per route, not per component.",
+      "applies_to": "all page routes in App.tsx",
+      "discovered": "2026-04-08",
+      "source": "Night 2 organism"
+    },
+    {
+      "id": "PAT-005",
+      "name": "RLS with (select auth.uid()) wrapper",
+      "description": "All RLS policies MUST wrap auth.uid() in a subselect: USING (user_id = (select auth.uid())). This prevents per-row re-evaluation and gives a 1,571x performance improvement on large tables.",
+      "applies_to": "all Supabase RLS policies",
+      "discovered": "2026-04-08",
+      "source": "Deep research finding"
     }
   ]
 }
