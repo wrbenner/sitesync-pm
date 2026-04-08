@@ -131,3 +131,41 @@ Final module scores (Cycle 9): All modules at 50/100 baseline after reset.
 - **Always use `rm -f package-lock.json && npm install`** in all CI steps (never `npm ci`)
 - This is already fixed in homeostasis.yml and all other workflow files
 
+## Supabase RLS Performance (CRITICAL — from deep research April 8, 2026)
+- Default RLS with `auth.uid()` causes **11-second queries** on large tables
+- Wrapping in `(select auth.uid())` drops to **7ms** — a 1,571x improvement
+- **ALWAYS** write RLS policies as:
+  ```sql
+  CREATE POLICY "name" ON table FOR SELECT
+    USING (user_id = (select auth.uid()));
+  ```
+  NOT:
+  ```sql
+  CREATE POLICY "name" ON table FOR SELECT
+    USING (user_id = auth.uid());
+  ```
+- The `(select ...)` wrapper prevents PostgreSQL from re-evaluating auth.uid() for every row
+- This applies to EVERY table with RLS. Audit all 48 migrations.
+
+## Touch Targets for Field Workers (updated from research April 8, 2026)
+- 44px is the WCAG minimum for general touchscreens
+- **56px is required for industrial gloved use** (construction superintendents)
+- All buttons, inputs, links, and interactive elements: 56px minimum height/width
+- Research source: industrial HCI studies on gloved touchscreen interaction
+
+## Animation Timing Standards (from research April 8, 2026)
+- Button press: 100ms ease-out
+- Panel slide: 200-300ms spring(1, 0.9, 0)
+- Page transition: 300-400ms spring(1, 0.85, 0)
+- Modal open: 250ms spring. Close: 200ms ease-in
+- Hover state: 150ms ease-out
+- Loading skeleton pulse: 1.5s ease-in-out infinite
+- Rule: Springs for interactive. Easing for system. Mobile: 1.1x duration.
+
+## Loading State Rules (from research April 8, 2026)
+- 0-200ms: No indicator (feels instant)
+- 200ms-1s: Skeleton screen (NEVER spinner)
+- 1-3s: Skeleton + text hint ("Loading 24 RFIs...")
+- 3-10s: Progress bar with estimate
+- 10s+: Background job with notification
+
