@@ -1,0 +1,47 @@
+{
+  "_comment": "Failure runbook for the self-improvement loop. Based on Meta REA patterns.",
+  "runbook": {
+    "yaml_parse_error": {
+      "action": "reject_modification_and_skip",
+      "description": "Modified workflow file failed YAML parse \u2014 never deploy",
+      "max_retries": 0
+    },
+    "circuit_breaker_removed": {
+      "action": "reject_modification_and_alert",
+      "description": "Safety violation \u2014 circuit breakers must never be removed",
+      "max_retries": 0
+    },
+    "no_proposal_generated": {
+      "action": "skip_and_alert",
+      "description": "Meta-agent produced no proposal.json output",
+      "max_retries": 0
+    },
+    "modification_too_large": {
+      "action": "reject_modification",
+      "description": "Modification exceeds 200-character limit \u2014 reject",
+      "max_retries": 0
+    },
+    "score_regression": {
+      "action": "revert_last_modification",
+      "description": "Success rate dropped >10% after last modification",
+      "threshold": 0.1,
+      "max_retries": 0
+    },
+    "three_consecutive_no_improvement": {
+      "action": "freeze_for_2_nights",
+      "description": "Three nights without improvement \u2014 stability phase",
+      "freeze_days": 2,
+      "max_retries": 0
+    },
+    "target_file_not_found": {
+      "action": "reject_modification",
+      "description": "Meta-agent proposed modifying a file that doesn't exist",
+      "max_retries": 0
+    },
+    "before_text_not_found": {
+      "action": "reject_modification",
+      "description": "The 'before' text was not found in target file \u2014 stale or hallucinated",
+      "max_retries": 0
+    }
+  }
+}

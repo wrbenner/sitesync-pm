@@ -1,0 +1,369 @@
+name: Self-Improvement Loop — Meta-Agent
+
+# Triggers after nightly organism run completes.
+# Analyzes what passed vs failed, proposes ONE targeted modification,
+# validates it, archives it, and deploys it if it improves the system.
+#
+# This is the SICA loop: every night the organism gets slightly better at
+# being the organism. Small changes compound. (SICA: 17% -> 53% over iterations)
+#
+# Safety: FREEZE_SELF_IMPROVE.md disables this workflow entirely.
+# Safety: Never modifies more than 200 chars per night.
+# Safety: All versions archived -- every change is fully reversible.
+# Safety: 3 consecutive no-improvement nights -> 2-night cooldown.
+on:
+  workflow_run:
+    workflows: ["Nightly Organism \u2014 Experiment Runner"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run -- analyze and propose but do not apply modification'
+        type: boolean
+        default: false
+      force_run:
+        description: 'Ignore FREEZE_SELF_IMPROVE.md and run anyway (emergency)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  self-improve:
+    name: "SICA Meta-Improvement"
+    runs-on: ubuntu-latest
+    # Run regardless of whether organism succeeded or failed.
+    # Failures are the most valuable signal for self-improvement.
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+          ref: main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Configure git
+        run: |
+          git config user.name "SiteSync Meta-Agent"
+          git config user.email "meta@sitesync.ai"
+          git config pull.rebase true
+
+      - name: Pull latest
+        run: git pull origin main --rebase || true
+
+      - name: Create workspace directories
+        run: mkdir -p /tmp/self-improve .agent
+
+      # ── Safety Gate ─────────────────────────────────────────────────────────
+      - name: Check freeze state
+        id: freeze_check
+        run: |
+          FORCE="${{ github.event.inputs.force_run }}"
+
+          if [ "$FORCE" = "true" ]; then
+            echo "::notice::force_run=true -- ignoring freeze state"
+            echo "frozen=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Hard freeze: human operator creates this file to stop all modifications
+          if [ -f "FREEZE_SELF_IMPROVE.md" ]; then
+            echo "::warning::FREEZE_SELF_IMPROVE.md exists -- self-improvement disabled"
+            echo "frozen=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Soft freeze: check-freeze.py exits 1 if frozen (3 no-improvement nights)
+          if python3 wave2/scripts/check-freeze.py; then
+            echo "frozen=false" >> $GITHUB_OUTPUT
+          else
+            echo "frozen=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Skip if frozen
+        if: steps.freeze_check.outputs.frozen == 'true'
+        run: |
+          echo "## Self-Improvement: FROZEN" >> $GITHUB_STEP_SUMMARY
+          echo "Self-improvement is frozen. Delete FREEZE_SELF_IMPROVE.md to re-enable." >> $GITHUB_STEP_SUMMARY
+          exit 0
+
+      # ── Step 1: Gather Experiment Results ────────────────────────────────────
+      - name: Gather experiment results
+        id: results
+        if: steps.freeze_check.outputs.frozen != 'true'
+        run: |
+          if [ ! -f "EXPERIMENTS.md" ]; then
+            echo "::warning::No EXPERIMENTS.md found -- nothing to analyze"
+            echo "has_results=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "has_results=true" >> $GITHUB_OUTPUT
+
+          # Parse category breakdown -- writes /tmp/self-improve/category-results.json
+          python3 wave2/scripts/gather-results.py
+
+          # Unicode-safe counts via single-line python
+          PASSED=$(python3 -c "print(open('EXPERIMENTS.md').read().count('\u2705'))" 2>/dev/null || echo "0")
+          FAILED=$(python3 -c "print(open('EXPERIMENTS.md').read().count('\u274c'))" 2>/dev/null || echo "0")
+          PENDING=$(grep -c "PENDING" EXPERIMENTS.md 2>/dev/null || echo "0")
+          TOTAL=$(grep -c "EXP-" EXPERIMENTS.md 2>/dev/null || echo "0")
+
+          echo "total=$TOTAL" >> $GITHUB_OUTPUT
+          echo "passed=$PASSED" >> $GITHUB_OUTPUT
+          echo "failed=$FAILED" >> $GITHUB_OUTPUT
+          echo "pending=$PENDING" >> $GITHUB_OUTPUT
+
+          if [ "$((PASSED + FAILED))" -gt "0" ]; then
+            RATE=$(python3 -c "print(round($PASSED / ($PASSED + $FAILED), 4))")
+          else
+            RATE="0"
+          fi
+          echo "success_rate=$RATE" >> $GITHUB_OUTPUT
+          echo "Tonight: $PASSED passed / $FAILED failed / $PENDING pending (rate=$RATE)"
+
+          # Copy verification consensus if available
+          if [ -f ".reviews/consensus.json" ]; then
+            cp .reviews/consensus.json /tmp/self-improve/consensus.json
+          else
+            echo '{"available": false}' > /tmp/self-improve/consensus.json
+          fi
+
+      # ── Step 2: Load / Initialize the Prompt Archive ────────────────────────
+      - name: Load prompt archive
+        id: archive
+        if: steps.freeze_check.outputs.frozen != 'true'
+        run: |
+          mkdir -p .agent
+
+          if [ ! -f ".agent/prompt-archive.json" ]; then
+            echo "::notice::No prompt archive found -- seeding v0"
+            if [ -f "wave2/scripts/initialize-archive.py" ]; then
+              python3 wave2/scripts/initialize-archive.py
+            else
+              python3 wave2/scripts/seed-archive.py
+            fi
+          fi
+
+          VERSION=$(python3 wave2/scripts/get-archive-version.py 2>/dev/null || echo "v0")
+          echo "archive_version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Archive at: $VERSION"
+
+      # ── Step 3: Run Claude Opus Meta-Agent ──────────────────────────────────
+      - name: Run meta-agent (Claude Opus -- meta-reasoning)
+        id: meta_agent
+        if: steps.freeze_check.outputs.frozen != 'true' && steps.results.outputs.has_results == 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          CAT_RESULTS=$(cat /tmp/self-improve/category-results.json 2>/dev/null || echo '{}')
+          CONSENSUS=$(cat /tmp/self-improve/consensus.json 2>/dev/null || echo '{"available":false}')
+          ARCHIVE_RECENT=$(python3 wave2/scripts/get-archive-recent.py 2>/dev/null || echo '{"versions":[]}')
+          RECENT_EXPS=$(tail -80 EXPERIMENTS.md 2>/dev/null || echo "No experiments")
+          IDENTITY=$(cat wave2/agent/IDENTITY.md 2>/dev/null || cat .agent/IDENTITY.md 2>/dev/null || echo "You are the Meta-Improvement Agent for SiteSync PM.")
+          DRY_RUN="${{ github.event.inputs.dry_run }}"
+
+          claude \
+            --dangerously-skip-permissions \
+            --model claude-opus-4-6 \
+            --max-turns 30 \
+            "${IDENTITY}
+
+          ===== SICA SELF-IMPROVEMENT RUN =====
+          Date: $(date +%Y-%m-%d)
+          Dry Run: ${DRY_RUN}
+
+          TONIGHT'S RESULTS:
+          Passed: ${{ steps.results.outputs.passed }}
+          Failed: ${{ steps.results.outputs.failed }}
+          Pending (not attempted): ${{ steps.results.outputs.pending }}
+          Overall success rate: ${{ steps.results.outputs.success_rate }}
+
+          CATEGORY BREAKDOWN (from gather-results.py):
+          ${CAT_RESULTS}
+
+          RECENT EXPERIMENTS (last 80 lines of EXPERIMENTS.md):
+          ${RECENT_EXPS}
+
+          PROMPT VERSION ARCHIVE (last 5 versions):
+          ${ARCHIVE_RECENT}
+
+          MULTI-AGENT VERIFICATION REVIEW:
+          ${CONSENSUS}
+
+          ===== YOUR TASK =====
+
+          Step 1 -- Read the source files to understand the current organism:
+            cat .github/workflows/nightly-build.yml
+            cat .github/workflows/product-mind.yml
+            cat EVOLUTION_LEDGER.json
+
+          Step 2 -- ANALYZE:
+          1. Which experiment categories had the highest/lowest success rates?
+          2. Did the organism waste turns reading full files when SESSION_BRIEF.md
+             was sufficient? (signs: low experiment count, many cat commands)
+          3. Which circuit breakers triggered and why?
+          4. Were there patterns in the failures? Same file? Same error type?
+          5. Did the last archive modification improve or regress the success rate?
+             If the last deployed version's baseline_score was significantly higher
+             than tonight's rate, propose REVERT before any new modification.
+
+          Step 3 -- PROPOSE ONE MODIFICATION. Choose the highest-impact option:
+
+          A. PROMPT_MODIFICATION -- Change one specific instruction in the organism
+             prompt that caused failures. Add a targeted new rule, or remove an
+             overly restrictive one that is causing unnecessary failures.
+             Target: .github/workflows/nightly-build.yml
+
+          B. STRATEGY_MODIFICATION -- Change how the Product Mind designs experiments.
+             Adjust category mix, priority ordering, or add guidance to reduce
+             the types of failures seen tonight.
+             Target: .github/workflows/product-mind.yml
+
+          C. TOOL_CREATION -- Create a helper script that prevents a specific class
+             of failures. Write the complete tool to /tmp/self-improve/new-tool.py
+             Target: scripts/<descriptive-name>.py
+
+          D. REVERT -- The last modification made things worse (score regressed >10%).
+             Restore to the previous version from the archive.
+
+          E. SKIP -- Success rate is >80% OR there are no systematic failure patterns.
+             Stability is more valuable than unnecessary changes. When in doubt, SKIP.
+
+          Step 4 -- CONSTRAINTS (absolute, never violate):
+          - ONE modification per run
+          - NEVER remove the === CIRCUIT BREAKERS === section
+          - NEVER remove or change quality gate commands (tsc, lint, vitest, build)
+          - NEVER change the git commit format
+          - NEVER alter the keep-or-revert loop structure
+          - NEVER change the PAUSE.md check logic
+          - The 'after' field must be <= 200 characters
+          - If in doubt: SKIP. A wrong modification costs one full night.
+
+          Step 5 -- Write your decision to /tmp/self-improve/proposal.json:
+          {
+            \"analysis\": \"2-3 sentence analysis of tonight's results and the key insight\",
+            \"modification_type\": \"PROMPT_MODIFICATION|STRATEGY_MODIFICATION|TOOL_CREATION|REVERT|SKIP\",
+            \"rationale\": \"Why this specific change, tied to a specific failure pattern\",
+            \"before\": \"Exact text being replaced (null for SKIP, null for append-only additions)\",
+            \"after\": \"Exact replacement text (null for SKIP or REVERT)\",
+            \"target_file\": \".github/workflows/nightly-build.yml or product-mind.yml\",
+            \"expected_impact\": \"What improves and rough magnitude\",
+            \"risk\": \"What could go wrong with this modification\",
+            \"char_count\": 0
+          }
+
+          Output a brief plain-text summary of your decision, then output
+          <promise>DONE</promise>" || true
+
+      # ── Step 4: Validate the Modification ───────────────────────────────────
+      - name: Validate proposed modification
+        id: validate
+        if: steps.freeze_check.outputs.frozen != 'true' && steps.results.outputs.has_results == 'true'
+        run: |
+          # validate-proposal.py prints the action to stdout, logs to stderr
+          # exits 0 if valid, 1 if rejected
+          ACTION=$(python3 wave2/scripts/validate-proposal.py 2>/tmp/self-improve/validate.log)
+          EXIT_CODE=$?
+
+          cat /tmp/self-improve/validate.log || true
+
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo "::error::Validation failed -- modification rejected, defaulting to skip"
+            echo "valid=false" >> $GITHUB_OUTPUT
+            echo "action=skip" >> $GITHUB_OUTPUT
+          else
+            echo "valid=true" >> $GITHUB_OUTPUT
+            echo "action=$ACTION" >> $GITHUB_OUTPUT
+          fi
+
+          # Extract metadata from proposal for downstream steps
+          MOD_TYPE=$(python3 -c "import json; p=json.load(open('/tmp/self-improve/proposal.json')); print(p.get('modification_type','SKIP'))" 2>/dev/null || echo "SKIP")
+          TARGET=$(python3 -c "import json; p=json.load(open('/tmp/self-improve/proposal.json')); print(p.get('target_file','') or '')" 2>/dev/null || echo "")
+          echo "modification_type=$MOD_TYPE" >> $GITHUB_OUTPUT
+          echo "target=$TARGET" >> $GITHUB_OUTPUT
+
+      # ── Step 5: Archive and Deploy ────────────────────────────────────────
+      - name: Archive and deploy modification
+        if: steps.freeze_check.outputs.frozen != 'true' && steps.validate.outputs.valid == 'true'
+        env:
+          ACTION: ${{ steps.validate.outputs.action }}
+          SUCCESS_RATE: ${{ steps.results.outputs.success_rate }}
+          DRY_RUN: ${{ github.event.inputs.dry_run }}
+        run: python3 wave2/scripts/archive-decision.py
+
+      # ── Commit everything ────────────────────────────────────────────────────
+      - name: Commit archive and modifications
+        if: steps.freeze_check.outputs.frozen != 'true' && github.event.inputs.dry_run != 'true'
+        run: |
+          MOD_TYPE="${{ steps.validate.outputs.modification_type }}"
+          TODAY=$(date +%Y-%m-%d)
+
+          git add .agent/prompt-archive.json 2>/dev/null || true
+          git add .github/workflows/nightly-build.yml 2>/dev/null || true
+          git add .github/workflows/product-mind.yml 2>/dev/null || true
+          git add scripts/ 2>/dev/null || true
+
+          CHANGES=$(git diff --cached --name-only | wc -l | tr -d ' ')
+
+          if [ "$CHANGES" -gt "0" ]; then
+            git pull --rebase origin main 2>/dev/null || true
+            git commit -m "self-improve: ${MOD_TYPE:-SKIP} on $TODAY [meta][skip ci]"
+            git push origin main
+            echo "Committed: ${MOD_TYPE:-SKIP}"
+          else
+            echo "No files changed -- nothing to commit"
+          fi
+
+      # ── Step Summary ─────────────────────────────────────────────────────────
+      - name: Write step summary
+        if: always()
+        run: |
+          MOD_TYPE="${{ steps.validate.outputs.modification_type }}"
+          ACTION="${{ steps.validate.outputs.action }}"
+          RATE="${{ steps.results.outputs.success_rate }}"
+          PASSED="${{ steps.results.outputs.passed }}"
+          FAILED="${{ steps.results.outputs.failed }}"
+
+          echo "## Self-Improvement Loop -- $(date '+%B %d %Y')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Tonight's success rate | ${RATE:-N/A} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Experiments passed | ${PASSED:-0} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Experiments failed | ${FAILED:-0} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Proposed modification | ${MOD_TYPE:-N/A} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Action taken | ${ACTION:-N/A} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ -f "/tmp/self-improve/proposal.json" ]; then
+            echo "### Proposal" >> $GITHUB_STEP_SUMMARY
+            python3 wave2/scripts/summarize-proposal.py 2>/dev/null >> $GITHUB_STEP_SUMMARY || true
+          fi
+
+          if [ -f ".agent/prompt-archive.json" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Archive (last 5 versions)" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            python3 wave2/scripts/summarize-archive.py 2>/dev/null >> $GITHUB_STEP_SUMMARY || true
+          fi
+
+      - name: Alert on workflow failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue create \
+            --title "[self-improve] Meta-agent failed -- $(date '+%B %d')" \
+            --body "The self-improvement loop failed. Check [workflow logs](https://github.com/${{ github.repository }}/actions). Create FREEZE_SELF_IMPROVE.md to disable until resolved." \
+            --label "bug" 2>/dev/null || true
