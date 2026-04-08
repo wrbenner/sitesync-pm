@@ -317,9 +317,39 @@ The system operates on the Karpathy micro-experiment pattern: change → measure
 
 ### Key Files
 - `EXPERIMENTS.md` — Tonight's experiment queue (replaces TONIGHT.md)
-- `.metrics/*.json` — Worker cell measurements (auto-generated)
+- `SESSION_BRIEF.md` — Compressed 2-3KB briefing (read this first, full files only if needed)
+- `.metrics/*.json` — Worker cell measurements (4 metrics: type, quality, coverage, eslint)
+- `.reviews/consensus.json` — Multi-agent verification scores (4 agents: correctness/security/performance/style)
+- `.agent/prompt-archive.json` — Self-improvement version history
+- `.agent/tools/` — Organism-created helper scripts
+- `.claude/skills/` — Reusable SKILL.md patterns (5 skills, on-demand loading)
 - `DAILY_REPORT.md` — Product Mind's assessment log
 - `FEEDBACK.md` — Founder priorities (P0 section updated by Product Mind)
+
+### Skill Library (.claude/skills/)
+Reusable patterns from successful experiments. Read `SKILL_REGISTRY.json` (~200 tokens)
+at session start. When a task matches a skill's `when_to_use`, load the full SKILL.md.
+After discovering a new reusable pattern, create a new SKILL.md and add to the registry.
+
+### Tool Creation (.agent/tools/)
+You may create helper scripts in `.agent/tools/` when you encounter a recurring pattern
+(3+ times). Each tool must be <200 lines, deterministic, have error handling and a self-test.
+See `.agent/tools/README.md` for the full process. Register in `.agent/tool-registry.json`.
+
+### Self-Improvement Loop
+After each organism run, the self-improve.yml meta-agent analyzes experiment results and
+proposes ONE targeted modification to the organism's own prompt per night. Modifications
+are validated (YAML check, circuit breaker preservation, 200-char limit) before deployment.
+All versions are preserved in `.agent/prompt-archive.json`. If a modification decreases
+performance, it auto-reverts. To disable: create `FREEZE_SELF_IMPROVE.md` in repo root.
+
+### Multi-Agent Verification
+After the organism runs, 4 specialized Claude Sonnet agents review all commits in parallel:
+- Correctness (40% weight): logic errors, edge cases, null checks
+- Security (30%): OWASP, RLS gaps, hardcoded secrets
+- Performance (20%): O(n²), re-renders, bundle impact
+- Style (10%): V7 compliance, 56px targets, accessibility
+Results in `.reviews/consensus.json`. Issues flagged by 2+ agents are high-confidence.
 
 ## V7 Rules (for any UI work)
 
