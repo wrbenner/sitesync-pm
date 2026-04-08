@@ -69,7 +69,7 @@ export const FolderPickerModal: React.FC<FolderPickerModalProps> = ({
                   style={{
                     all: 'unset', cursor: 'pointer',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    width: 28, height: 28,
+                    width: 44, height: 44,
                     borderRadius: borderRadius.full,
                     color: colors.textTertiary,
                   }}
@@ -193,7 +193,7 @@ export const BulkActionBar: React.FC<BulkActionBarProps> = ({
       alignItems: 'center',
       gap: spacing['2'],
       transition: `all ${transitions.instant}`,
-      minHeight: 36,
+      minHeight: 56,
     }
     if (variant === 'primary') {
       return { ...base, backgroundColor: colors.primaryOrange, color: colors.white, border: 'none' }
@@ -274,8 +274,8 @@ export const BulkActionBar: React.FC<BulkActionBarProps> = ({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              width: 28,
-              height: 28,
+              width: 56,
+              height: 56,
               borderRadius: borderRadius.full,
               color: colors.textTertiary,
               transition: `background-color ${transitions.instant}`,
