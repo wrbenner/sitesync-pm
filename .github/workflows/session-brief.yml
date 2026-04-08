@@ -1,111 +1,112 @@
 name: Session Brief Generator
 
-# Runs 30 minutes before the nightly organism (1:30am CDT = 6:30am UTC)
-# Generates a pre-computed context summary so the organism wastes fewer turns reading files
+# Runs at 1:30am CDT (6:30am UTC) — 30 minutes before the nightly organism.
+# Compresses ~37KB of raw context files into a focused ~2-3KB SESSION_BRIEF.md
+# using entropy-aware filtering (SimpleMem-inspired three-stage pipeline).
+#
+# The organism reads SESSION_BRIEF.md INSTEAD of cat-ing CLAUDE.md,
+# EXPERIMENTS.md, LEARNINGS.md, and EVOLUTION_LEDGER.json separately.
+# Progressive disclosure: start compressed, expand to full files only if needed.
 on:
   schedule:
     - cron: '30 6 * * *'
   workflow_dispatch:
+    inputs:
+      verbose:
+        description: 'Print detailed compression stats'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
+  issues: write
 
 jobs:
   generate-brief:
-    name: "Build Tonight's Session Brief"
+    name: "Compress context → SESSION_BRIEF.md"
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+
     steps:
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 20
+          fetch-depth: 20   # enough for git log used by compress-context.py
 
-      - name: Generate SESSION_BRIEF.md
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Configure git identity
         run: |
-          git config user.name "SiteSync Brief Generator"
+          git config user.name  "SiteSync Brief Generator"
           git config user.email "brief@sitesync.ai"
           git config pull.rebase true
 
-          # Experiment queue summary
-          PENDING=$(grep -c "PENDING" EXPERIMENTS.md 2>/dev/null || echo "0")
-          PASSED=$(grep -c "✅" EXPERIMENTS.md 2>/dev/null || echo "0")
-          FAILED=$(grep -c "❌" EXPERIMENTS.md 2>/dev/null || echo "0")
-          STRATEGY=$(grep "^Strategy:" EXPERIMENTS.md 2>/dev/null | head -1 || echo "No strategy set")
-          P0_EXPS=$(grep -B 1 "P0" EXPERIMENTS.md 2>/dev/null | grep "^###" | head -5 || echo "  None")
-
-          # Recent organism commits
-          RECENT=$(git log --since="48 hours ago" --oneline --author="SiteSync" 2>/dev/null | head -10 || echo "No recent organism commits")
-
-          # Worker cell metrics
-          TYPE_TOTAL="unknown"
-          QUALITY_TOTAL="unknown"
-          COVERAGE="unknown"
-          if [ -f ".metrics/type-issues.json" ]; then
-            TYPE_TOTAL=$(python3 -c "import json; d=json.load(open('.metrics/type-issues.json')); print(f'{d[\"totals\"][\"as_any\"]} as-any, {d[\"totals\"][\"ts_ignore\"]} ts-ignore')" 2>/dev/null || echo "error")
-          fi
-          if [ -f ".metrics/quality-issues.json" ]; then
-            QUALITY_TOTAL=$(python3 -c "import json; d=json.load(open('.metrics/quality-issues.json')); print(f'{d[\"totals\"][\"hardcoded_colors\"]} hardcoded colors, {d[\"totals\"][\"mock_data\"]} mock data')" 2>/dev/null || echo "error")
-          fi
-          if [ -f ".metrics/untested-files.json" ]; then
-            COVERAGE=$(python3 -c "import json; d=json.load(open('.metrics/untested-files.json')); print(f'{d[\"coverage_pct\"]}% ({d[\"tested_count\"]} tested, {d[\"untested_count\"]} untested)')" 2>/dev/null || echo "error")
+      - name: Run compress-context.py
+        id: compress
+        run: |
+          VERBOSE_FLAG=""
+          if [ "${{ github.event.inputs.verbose }}" = "true" ]; then
+            VERBOSE_FLAG="--verbose"
           fi
 
-          # Quality floor
-          MOCK=$(jq '.mockCount // "unknown"' .quality-floor.json 2>/dev/null)
-          ANY=$(jq '.anyCount // "unknown"' .quality-floor.json 2>/dev/null)
-          LINT=$(jq '.eslintErrors // "unknown"' .quality-floor.json 2>/dev/null)
-          CHECKED=$(grep -c "^\- \[x\]" SPEC.md 2>/dev/null || echo "0")
-          TOTAL=$(grep -c "^\- \[" SPEC.md 2>/dev/null || echo "431")
+          python3 scripts/compress-context.py \
+            --repo-root . \
+            --output SESSION_BRIEF.md \
+            $VERBOSE_FLAG
 
-          # Days to April 15
-          DAYS_LEFT=$(python3 -c "from datetime import date; print((date(2026,4,15) - date.today()).days)" 2>/dev/null || echo "?")
+          # Capture stats for summary
+          LINES=$(wc -l < SESSION_BRIEF.md | tr -d ' ')
+          BYTES=$(wc -c < SESSION_BRIEF.md | tr -d ' ')
+          PENDING=$(grep -c "^### \[P" SESSION_BRIEF.md 2>/dev/null || grep -c "^### EXP-" SESSION_BRIEF.md 2>/dev/null || echo "0")
+          DAYS=$(grep "days until April 15" SESSION_BRIEF.md | grep -oP '^\d+' || echo "?")
 
-          cat > SESSION_BRIEF.md << BRIEF_EOF
-          # SESSION_BRIEF — $(date '+%A %B %d at 2am CDT')
-          *Pre-computed context. Generated $(date -u '+%H:%M UTC'). $DAYS_LEFT days until April 15 demo.*
+          echo "lines=$LINES"    >> $GITHUB_OUTPUT
+          echo "bytes=$BYTES"    >> $GITHUB_OUTPUT
+          echo "pending=$PENDING" >> $GITHUB_OUTPUT
+          echo "days=$DAYS"      >> $GITHUB_OUTPUT
 
-          ## TONIGHT'S EXPERIMENT QUEUE
-          $STRATEGY
-          - **Pending:** $PENDING experiments
-          - **Already passed:** $PASSED | **Failed:** $FAILED
-          - **Top P0 experiments:**
-          $P0_EXPS
+          echo "Brief stats: ${LINES} lines, ${BYTES} bytes, ${PENDING} pending experiments"
 
-          ## WORKER CELL METRICS (latest)
+      - name: Commit SESSION_BRIEF.md
+        run: |
+          DATESTAMP=$(date '+%B %d')
+          PENDING="${{ steps.compress.outputs.pending }}"
+          DAYS="${{ steps.compress.outputs.days }}"
+
+          git add SESSION_BRIEF.md
+
+          # Only commit if there are actual changes
+          if git diff --staged --quiet; then
+            echo "SESSION_BRIEF.md unchanged — no commit needed"
+          else
+            git commit -m "chore: session brief ${DATESTAMP} — ${PENDING} pending, ${DAYS}d to demo [skip ci]"
+            git pull --rebase origin main 2>/dev/null || true
+            git push origin main
+            echo "SESSION_BRIEF.md committed and pushed"
+          fi
+
+      - name: Write job summary
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY << SUMMARY_EOF
+          ## Session Brief — $(date '+%B %d %Y at %H:%M UTC')
+
           | Metric | Value |
           |--------|-------|
-          | Type issues | $TYPE_TOTAL |
-          | Quality issues | $QUALITY_TOTAL |
-          | Test coverage | $COVERAGE |
+          | Brief size | ${{ steps.compress.outputs.bytes }} bytes (${{ steps.compress.outputs.lines }} lines) |
+          | Pending experiments | ${{ steps.compress.outputs.pending }} |
+          | Days to demo | ${{ steps.compress.outputs.days }} |
+          | Target window | 2–3KB |
 
-          ## QUALITY FLOOR
-          | Metric | Now | Target |
-          |--------|-----|--------|
-          | Mock data | $MOCK | 0 |
-          | Unsafe casts | $ANY | 0 |
-          | ESLint errors | $LINT | 0 |
-          | SPEC completion | $CHECKED / $TOTAL | $TOTAL/$TOTAL |
+          **Compression approach**: Three-stage entropy-aware pipeline
+          - Stage 1: Gathers CLAUDE.md, EXPERIMENTS.md, LEARNINGS.md, EVOLUTION_LEDGER.json, .metrics/*, .quality-floor.json, SKILL_REGISTRY.json, last 20 git commits, SPEC.md P0 items, PAUSE.md
+          - Stage 2: Entropy-aware filtering — extracts only actionable signals, deduplicates rules across sources, shows top-5 worst files per metric, keeps only PENDING experiments
+          - Stage 3: Renders structured SESSION_BRIEF.md for progressive disclosure
 
-          ## RECENT ORGANISM COMMITS
-          $RECENT
-
-          ## NON-NEGOTIABLE RULES
-          1. Check PAUSE.md — if PAUSED, stop immediately
-          2. Quality gates before EVERY commit: npx tsc --noEmit && npm run lint && npx vitest run --passWithNoTests && npm run build
-          3. Never run supabase CLI in CI
-          4. Migration rule: ALWAYS CREATE TABLE IF NOT EXISTS + DO/EXCEPTION blocks
-          5. 56px touch targets (industrial gloved use)
-          6. No hyphens in UI text
-          BRIEF_EOF
-
-          # Remove leading whitespace from heredoc
-          sed -i 's/^          //' SESSION_BRIEF.md
-
-          echo "SESSION_BRIEF.md generated ($(wc -l < SESSION_BRIEF.md) lines) — $PENDING pending experiments, $DAYS_LEFT days to demo"
-          git add SESSION_BRIEF.md
-          git commit -m "chore: session brief for $(date '+%B %d') [skip ci]" || echo "No changes"
-          git pull --rebase origin main 2>/dev/null || true
-          git push origin main || echo "Push failed — brief may be stale"
+          **Organism reads**: \`cat SESSION_BRIEF.md\` (compressed) → expands to full files only if needed
+          SUMMARY_EOF
 
       - name: Alert if brief generation failed
         if: failure()
@@ -114,5 +115,14 @@ jobs:
         run: |
           gh issue create \
             --title "[brief-failure] Session brief failed — $(date '+%B %d')" \
-            --body "The 1:30am session brief generator failed. The 2am organism will run without a brief. Check [workflow logs](https://github.com/${{ github.repository }}/actions)." \
-            --label "bug" 2>/dev/null || true
+            --body "$(cat << 'EOF'
+          The 1:30am session brief generator failed. The 2am organism will run without a compressed brief.
+
+          **Impact**: Organism will read CLAUDE.md + EXPERIMENTS.md + LEARNINGS.md + EVOLUTION_LEDGER.json separately (higher token cost, lower focus).
+
+          **Fallback**: The organism's Step 1 in nightly-build.yml falls back to reading full files if SESSION_BRIEF.md is missing or stale.
+
+          Check [workflow logs](https://github.com/${{ github.repository }}/actions).
+          EOF
+          )" \
+          --label "bug" 2>/dev/null || true

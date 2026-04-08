@@ -1,0 +1,47 @@
+[
+  {
+    "name": "type-safe-supabase",
+    "description": "Replace `as any` casts on Supabase queries with the typed `fromTable<T>()` helper",
+    "when_to_use": "When encountering `as any` on a Supabase query result, or when creating any new Supabase query in the codebase",
+    "path": "type-safe-supabase/SKILL.md",
+    "version": "1.0.0",
+    "usage_count": 0,
+    "last_used": null
+  },
+  {
+    "name": "route-error-boundary",
+    "description": "Wrap route-level components in ErrorBoundary for graceful error handling",
+    "when_to_use": "When adding new pages/routes, when finding unhandled render errors in the console, or when a component crash white-screens the entire app",
+    "path": "route-error-boundary/SKILL.md",
+    "version": "1.0.0",
+    "usage_count": 0,
+    "last_used": null
+  },
+  {
+    "name": "permission-gate",
+    "description": "Gate UI elements behind user role checks using PermissionGate component",
+    "when_to_use": "When adding any create, edit, delete, approve, or export action that should be restricted by user role; when auditing pages for unauthorized action exposure",
+    "path": "permission-gate/SKILL.md",
+    "version": "1.0.0",
+    "usage_count": 0,
+    "last_used": null
+  },
+  {
+    "name": "zod-api-validation",
+    "description": "Add Zod schemas for runtime validation of API responses and form inputs",
+    "when_to_use": "When creating mutation hooks, form submission handlers, API response handlers, or any function that accepts untrusted external data; when a runtime type error surfaces from unexpected API shape",
+    "path": "zod-api-validation/SKILL.md",
+    "version": "1.0.0",
+    "usage_count": 0,
+    "last_used": null
+  },
+  {
+    "name": "industrial-touch-targets",
+    "description": "Ensure all interactive elements meet 56px minimum for gloved industrial use",
+    "when_to_use": "When creating or modifying buttons, inputs, links, checkboxes, radio buttons, toggles, dropdown triggers, or any interactive component; when reviewing a new page for field usability",
+    "path": "industrial-touch-targets/SKILL.md",
+    "version": "1.0.0",
+    "usage_count": 0,
+    "last_used": null
+  }
+]

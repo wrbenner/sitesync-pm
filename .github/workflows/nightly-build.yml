@@ -55,6 +55,16 @@ jobs:
             exit 0
           fi
 
+      - name: Check SESSION_BRIEF freshness
+        run: |
+          if [ ! -f "SESSION_BRIEF.md" ]; then
+            echo "::warning::SESSION_BRIEF.md missing — organism will read full files"
+          elif [ $(find SESSION_BRIEF.md -mmin +1560 | wc -l) -gt 0 ]; then
+            echo "::warning::SESSION_BRIEF.md is >26h old — brief may be stale"
+          else
+            echo "SESSION_BRIEF.md is fresh ($(wc -c < SESSION_BRIEF.md) bytes)"
+          fi
+
       - name: Verify EXPERIMENTS.md exists
         id: experiments
         run: |
@@ -111,15 +121,26 @@ jobs:
 
           ${FALLBACK}
 
-          STEP 1: Read your context (do this FIRST, every run):
-            cat CLAUDE.md
-            cat EXPERIMENTS.md
-            cat LEARNINGS.md
-            cat EVOLUTION_LEDGER.json
+          STEP 1: Read your compressed context (do this FIRST, every run):
+            cat SESSION_BRIEF.md
 
-          The EVOLUTION_LEDGER contains patterns that WORKED in previous nights
-          and approaches that were KILLED. Use patterns. Avoid killed approaches.
-          If you discover a new pattern or anti-pattern tonight, append it to the ledger.
+          SESSION_BRIEF.md is a pre-compressed briefing (~2-3KB) generated at 1:30am
+          by compress-context.py. It contains all pending experiments, rules, metrics,
+          evolution patterns, killed approaches, available skills, and SPEC P0 criteria.
+
+          Progressive disclosure — if you need more detail on any topic:
+            - Full rules and rationale:    cat CLAUDE.md
+            - Full experiment history:     cat EXPERIMENTS.md
+            - Full learnings context:      cat LEARNINGS.md
+            - Full evolution ledger:       cat EVOLUTION_LEDGER.json
+            - Skill implementation:        cat .claude/skills/<skill-name>/SKILL.md
+
+          If SESSION_BRIEF.md does not exist or is older than 26 hours, fall back:
+            cat CLAUDE.md && cat EXPERIMENTS.md && cat LEARNINGS.md && cat EVOLUTION_LEDGER.json
+
+          SKILL LIBRARY: Read SKILL_REGISTRY.json (~200 tokens) to see available skills.
+          When a task matches a skill's when_to_use, load the full SKILL.md for that skill.
+          If you discover a new reusable pattern, create a new SKILL.md in .claude/skills/.
 
           STEP 2: Check PAUSE.md — if Status is PAUSED, output DONE immediately.
 
