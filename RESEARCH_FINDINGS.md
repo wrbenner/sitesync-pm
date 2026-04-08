@@ -1,149 +1,164 @@
-# RESEARCH_FINDINGS.md — Intelligence Deposit (April 8, 2026)
-*Frontier research the organism and Product Mind must absorb. Updated periodically.*
+# RESEARCH SYNTHESIS — 30 Critical Findings
+*Distilled from 25,000+ words of deep research across 28 topics (April 8, 2026)*
+*The Product Mind and organism read this. Every finding is actionable.*
 
 ---
 
-## I. Self-Improving Systems (ICLR 2026 Workshop on RSI)
+## CATEGORY A: Things We Must Change Immediately
 
-The frontier is not "AI that codes." It is "AI that improves how it improves."
+### A1. Touch targets must be 56px, not 44px
+Research: 44px is the WCAG minimum for general touchscreens. For industrial gloved use (construction field workers), the minimum is **56px**. SiteSync targets superintendents with dirty gloves on iPads. Every interactive element must be 56px minimum.
+**Action:** Update CLAUDE.md, V7 prompts, AGENTS.md from 44px to 56px.
 
-### HyperAgents (2026)
-Meta-level self-modification. The agent does not just learn patterns — it improves its own improvement process. Meta-skills (memory management, prompt engineering, exploration strategies) are domain-general and compound across tasks. This is the next evolution of the SiteSync organism.
+### A2. Supabase RLS is a 1,500x performance trap
+Research: Default Supabase RLS with `auth.uid()` causes 11-second queries. Wrapping in `(select auth.uid())` drops to **7ms**. A 1,571x improvement. Every RLS policy in the 48 migrations must use the `(select ...)` pattern.
+**Action:** Add to LEARNINGS.md immediately. The organism must audit ALL RLS policies on the next security night and apply the `(select auth.uid())` optimization.
 
-**Application:** The Product Mind should periodically evaluate whether its own decision-making process is producing good outcomes and adjust its approach.
+### A3. Multi-agent degrades sequential tasks by 39-70%
+Research (Google/MIT "Rule of 4"): Multi-agent improves parallel tasks by +80.9% but DEGRADES sequential tasks by 39-70%. The swarm agents should ONLY do independent parallel work (testing different pages, polishing different components). They should NEVER work on sequential dependencies.
+**Action:** Verify MODULE_ASSIGNMENTS.md ensures zero overlap. The swarm is correctly designed for parallel-only work.
 
-### Karpathy's Autoresearch Loop (March 2026)
-630 lines of Python. 700 experiments in 2 days. 20 optimizations discovered. 11% efficiency gain on Time-to-GPT-2. The simplest proof that autonomous loops work at scale.
-
-**Application:** The SiteSync organism is this — running nightly experiments. But Karpathy ran 700 in 2 days. We run 3/day. The question is whether we can increase iteration rate.
-
-### Voyager Skill Library (NVIDIA + Caltech)
-Lifelong learning by storing successful programs in an expanding skill library. 3.3x more unique items. 15.3x faster milestones. The key: reusable skills that compound.
-
-**Application:** EVOLUTION_LEDGER.json should become a skill library. Each successful pattern is a composable skill that future sessions can invoke.
-
-### SWE-RL (Meta, Dec 2025)
-Self-play for coding. The agent injects bugs into real codebases, then trains itself to fix them. The agent gets better at debugging by creating its own training data.
-
-**Application:** The /red-team command could include a "self-play" mode where the organism deliberately introduces defects, then fixes them, strengthening its repair skills.
-
-### Emergent Internal Self-Debate (Jan 2026)
-Reasoning models like DeepSeek-R1 spontaneously simulate multi-agent debates WITHIN their own chain of thought. Without external prompting. Steering these produces +27% accuracy improvement. The model argues with itself and gets better answers.
-
-**Application:** The nightly organism prompt should encourage internal debate: "Before implementing, argue both sides of the approach. Consider at least 2 alternative approaches. Then choose."
-
-### Key Insight: Model Collapse Prevention
-Research warns of two failure modes in self-improving systems:
-1. **Entropy Decay** — the system's strategy space shrinks with each iteration (doing the same thing over and over)
-2. **Variance Amplification** — drift from reality without grounding in real data
-
-**Application for SiteSync:** The Product Mind must watch for the organism doing the same type of work repeatedly (entropy decay). If it spent 3 nights on type safety, force a switch to a completely different domain. The MARKET_INTELLIGENCE.md and COMPETITIVE.md serve as reality grounding.
+### A4. Context quality creates 3x cost difference
+Research: On identical models, well-structured context (CLAUDE.md, .claudeignore, session briefs) produces 3x better results per dollar spent. Optimizing what the organism reads is MORE important than optimizing the model.
+**Action:** .claudeignore is deployed ✅. SESSION_BRIEF.md is deployed ✅. CLAUDE.md is optimized ✅. Continue refining.
 
 ---
 
-## II. Agent Teams (Claude Code, Feb 2026)
+## CATEGORY B: Competitive Intelligence That Changes Strategy
 
-### What Shipped
-- Peer-to-peer communication via mailbox (not hub-spoke)
-- Shared task list with dependency management
-- Each teammate: own context window, own tool access
-- Anthropic's code review coverage: 16% → 54% using Agent Teams
+### B1. Procore achieved FedRAMP Moderate (January 2026)
+They are the first major commercial construction SaaS with FedRAMP. This unlocks DOD, GSA, and all federal construction. SiteSync cannot compete for federal work without it.
+**Timeline:** Not worth pursuing before $20M ARR. SOC2 Type II first (Year 1), FedRAMP consideration (Year 3+).
 
-### Why This Matters for SiteSync
-The nightly build currently runs ONE agent sequentially. With Agent Teams, one session could decompose into:
-- **Investigator:** reads the prompt file, identifies what needs changing
-- **Implementer:** writes the code
-- **Tester:** writes tests for what the implementer built
-- **Verifier:** adversarially checks the implementation
+### B2. Procore has 17,850 customers, 106% NRR, $74K implied ARPU
+Their customers spend 6% more each year (106% net revenue retention). To compete, SiteSync needs expansion revenue (embedded fintech, upsell to AI Copilot Pro, add-on modules). The ACV pricing model + transaction fees achieves this.
 
-All working in parallel within a single 120-turn session. Effective turns: 480 instead of 120.
+### B3. Procore Agent Builder cannot modify or delete existing items
+The Agent Builder is open beta but limited: it can CREATE items (RFIs, daily logs, submittals) but cannot modify or delete them. SiteSync's AI Copilot has no such limitation — full CRUD + predictive analytics + schedule risk.
+**Positioning:** "Our AI doesn't just create items. It manages them."
 
-### Current Limitation
-Agent Teams is experimental. For autonomous nightly runs, stability matters more than speed. **Recommendation:** Monitor Agent Teams stability. Enable when Anthropic marks it production-ready. For now, the single-agent approach with 120 turns is safer.
+### B4. Subcontractor payment crisis: 56-day average wait, $280B annual cost
+43% of subs lack working capital due to slow payments. This is the embedded fintech opportunity. If SiteSync processes payments faster (7-day payment via Stripe Connect), subs will demand that GCs use SiteSync.
+**Action:** The sub payment portal + early pay program = the network effect trigger.
 
----
+### B5. Davis-Bacon compliance: 55 min/form × 143 hours/year per company
+Manual certified payroll is the #1 compliance time sink on government projects. NOBODY has this automated in PM software. First to market wins the government construction vertical.
 
-## III. Construction AI (Autodesk 25-Expert Report, 2026)
-
-### The Shift
-"2026 marks the shift from AI as a 'future trend' to 'industry baseline.' Firms that fail to adopt risk losing contracts."
-
-### What Experts Are Saying
-- "AI assistants will act as virtual project engineers — answer technical questions, track daily tasks, detect safety risks, produce reports automatically"
-- "Predictive analytics powered by digital twins: teams identify delays and cost overruns months earlier"
-- "MCP will be used to build more robust digital workflows by connecting capabilities and automating manual tasks"
-- "Networks of AI agents will operate across design, engineering, and construction"
-- "Companies that adapt will see compounding advantage through 2027 and beyond"
-
-### What This Means for SiteSync
-1. **MCP Server is now urgent, not future** — the industry expects MCP-connected tools in 2026
-2. **The AI Copilot is not a feature, it is the product** — "virtual project engineer" is what SiteSync already has
-3. **Predictive analytics is table stakes** — schedule risk, cost overrun prediction, safety trend analysis
-4. **Digital twins are mainstream** — the BIM viewer + real-time data = SiteSync's digital twin story
-5. **Early adopters capture disproportionate value** — the moat is compounding. Start now.
+### B6. Embedding financial products adds 40-45% ARR, reduces churn 15-20%
+Research confirms: embedded fintech is the business model multiplier. SiteSync's Stripe Connect integration is the foundation. The retainage tracker, early pay program, and AIA billing automation are the products.
 
 ---
 
-## IV. SaaS Market Trends (2026)
+## CATEGORY C: Product Design Standards
 
-### The Three Forces
-1. **Agentic AI is the new default.** 95% of orgs use AI-powered SaaS. Shift from copilots to autonomous agents.
-2. **Vertical SaaS is winning.** Growing 18-32% annually vs 12-15% for horizontal. 35% of total SaaS revenue. SiteSync IS vertical SaaS.
-3. **Hybrid pricing.** Subscription + usage-based. 85% of SaaS companies now use some form of usage-based billing.
+### C1. Animation timing research (specific values)
+| Action | Duration | Easing |
+|--------|----------|--------|
+| Button press feedback | 100ms | ease-out |
+| Panel slide in/out | 200-300ms | spring(1, 0.9, 0) |
+| Page transition | 300-400ms | spring(1, 0.85, 0) |
+| Toast notification appear | 200ms | ease-out |
+| Toast notification dismiss | 150ms | ease-in |
+| Modal open | 250ms | spring(1, 0.9, 0) |
+| Modal close | 200ms | ease-in |
+| Loading skeleton pulse | 1.5s | ease-in-out (infinite) |
+| Hover state | 150ms | ease-out |
+**Rule:** Springs for interactive elements. Easing curves for system animations. Mobile: 1.1x duration. Tablet: 1.0x. Desktop: 0.9x.
 
-### What Winners Do
-- "Stop building features for everyone. Start building solutions for someone." — SiteSync builds for GCs.
-- API-first and composable architecture — MCP server, TypeScript SDK, REST API
-- Mobile-first is non-negotiable — "users expect native-quality experiences, not responsive web wrappers"
-- From seat-based to outcome-based pricing — "when one user with an AI agent can do the work of ten, per-seat pricing breaks down"
+### C2. Loading state decision matrix
+| Wait time | Pattern | Example |
+|-----------|---------|---------|
+| 0-200ms | No indicator | Instant feel |
+| 200ms-1s | Skeleton screen | Dashboard widgets loading |
+| 1-3s | Skeleton + progress hint | "Loading 24 RFIs..." |
+| 3-10s | Progress bar with estimate | File upload, report generation |
+| 10s+ | Background job with notification | PDF export, AI analysis |
+**Never:** Spinner for waits under 3 seconds. Skeletons always.
 
-### SiteSync's Position
-SiteSync is perfectly positioned as vertical SaaS with agentic AI, API-first architecture, and mobile-first design. The market is moving toward exactly what we are building.
+### C3. The 8 patterns every best-designed enterprise app shares
+1. Command palette (Cmd+K) for power users
+2. Keyboard shortcuts for every common action
+3. Instant search across all entities
+4. Contextual actions on hover (not buried in menus)
+5. Optimistic UI updates (action feels instant, server confirms later)
+6. Progressive disclosure (simple first, details on demand)
+7. Consistent motion language (same spring for all panels)
+8. Zero-state design that teaches (empty states guide, not just inform)
 
----
+### C4. AI UX: streaming responses, never spinners
+Research: AI responses should stream word-by-word (200-400ms latency acceptable). Never show a spinner and then dump the full response. The streaming creates the "thinking" feel that builds trust.
+**Confidence display:** For GCs (non-technical), use qualitative language: "High confidence" / "Moderate confidence" / "Low confidence — verify with engineer." Never show numerical percentages.
 
-## V. Procore Competitive Intelligence (Updated April 2026)
-
-### Procore's Vulnerabilities (from reviews, analyst reports, competitor positioning)
-1. **Pricing is cost-prohibitive for mid-market** — "tens to hundreds of thousands annually"
-2. **Mobile app has performance issues** — "crashes and slow response times"
-3. **Steep learning curve** — "requires comprehensive training"
-4. **Click-dense interfaces** — "built for very large organizations rather than mid-market teams"
-5. **Onboarding takes months** — "lengthy onboarding most mid-market teams can't absorb"
-6. **Multiple acquisitions = inconsistent UX** — Autodesk CC has this same problem
-
-### What Competitors Are Exploiting
-- **Constructable.ai:** Targeting mid-market with "fast onboarding, transparent pricing, field and office alignment, AI-powered search"
-- **Fieldwire (Hilti):** Field execution excellence but no financial tracking
-- **RedTeam:** Cheap but dated ("feels like 2012")
-- **INGENIOUS.BUILD:** Better for owners than GCs
-
-### SiteSync's Opening
-The mid-market ($5M-$100M ACV) is underserved. Procore is too expensive and complex. Fieldwire is field-only. Nobody has AI-native + financial engine + field-first UX. SiteSync wins this segment.
-
----
-
-## VI. Recommendations for the Product Mind
-
-Based on all research, the Product Mind should prioritize:
-
-1. **MCP Server** — Move from V6 backlog to near-term. The industry expects MCP-connected tools NOW.
-2. **Mobile excellence** — V7 polish must ensure 44px touch targets, offline capability, and native-quality feel. This is the #1 field differentiator.
-3. **AI Copilot as the centerpiece** — Not a chatbot sidebar. The virtual project engineer that answers questions, surfaces risks, and produces reports. This is what 25 experts say the industry needs.
-4. **Transparent pricing page** — Procore hides pricing. SiteSync publishes it. Trust signal.
-5. **5-minute onboarding** — Procore takes months. SiteSync takes 5 minutes. The adaptive onboarding wizard.
-6. **Watch for entropy decay** — If the organism repeats the same type of work 3 nights in a row, force a domain switch.
-7. **Enable Agent Teams when stable** — 4x productivity per session is available when Anthropic marks it production-ready.
+### C5. Dark mode: the correct implementation pattern
+Use CSS custom properties with `prefers-color-scheme` media query. Never invert colors. Design dark mode as a separate palette: surfaces get darker, text gets lighter, but primary brand colors STAY the same. The orange (#F47820) remains orange in both modes.
 
 ---
 
-## Sources
-- [ICLR 2026 Workshop on AI with Recursive Self-Improvement](https://iclr.cc/virtual/2026/workshop/10000796)
-- [O-Mega: Self-Improving AI Agents 2026 Guide](https://o-mega.ai/articles/self-improving-ai-agents-the-2026-guide)
-- [Autodesk: 2026 AI Construction Trends — 25+ Experts](https://www.autodesk.com/blogs/construction/2026-ai-trends-25-experts-share-insights/)
-- [Constructable: Procore Alternatives for Mid-Market](https://constructable.ai/blog/procore-alternatives-mid-market-contractors)
-- [Claude Code Agent Teams Guide](https://claudefa.st/blog/guide/agents/agent-teams)
-- [Shipyard: Multi-Agent Orchestration for Claude Code](https://shipyard.build/blog/claude-code-multi-agent/)
-- [Cogent Info: AI-Driven Self-Evolving Software 2026](https://cogentinfo.com/resources/ai-driven-self-evolving-software-the-rise-of-autonomous-codebases-by-2026)
-- [Modall: 25 SaaS Trends 2026](https://modall.ca/blog/saas-trends)
-- [Ralph: Autonomous AI Agent Loop](https://github.com/snarktank/ralph)
+## CATEGORY D: Technical Architecture
+
+### D1. Offline-first: Dexie.js for MVP, CRDTs for future
+Dexie (IndexedDB wrapper) is correct for the current architecture. Last-write-wins for single-user entities (daily logs, task updates). CRDTs (via Yjs) for collaborative documents that multiple users edit simultaneously (specs, meeting minutes). Full CRDT implementation is a Phase 3 feature.
+
+### D2. Supabase real-time: 10,000 concurrent connections on Team plan
+Free: 200. Pro: 500. Team ($599/month): 10,000. Enterprise: unlimited. For SiteSync with 100 GC customers × 50 users each = 5,000 peak concurrent. Team plan is sufficient until 200+ customers.
+
+### D3. React 19 concurrent features to use NOW
+- `useTransition` for non-blocking list filtering and search
+- `use()` hook for simplified data fetching in Suspense boundaries
+- Server Components (if migrating to Next.js/Remix — not applicable for current Vite setup)
+- Automatic batching (already active in React 18+, even better in 19)
+
+### D4. Bundle splitting: route-level + component-level
+- Every page in `src/pages/` should be `React.lazy()` with `Suspense`
+- Heavy components (BIM viewer, charts, rich text editor) lazy-loaded independently
+- Target: no initial chunk > 200KB. Total budget: < 2MB for all chunks.
+- Vite 8 automatic code splitting handles most of this — but verify with `npm run build:analyze`
+
+### D5. Service Worker for offline: Workbox is the standard
+Workbox (by Google) is the production standard for Service Worker management in React apps. Cache-first for static assets, network-first for API calls, stale-while-revalidate for non-critical data. Add to the V7 prompts as a Night 3 (offline) enhancement.
+
+---
+
+## CATEGORY E: Organism Self-Improvement
+
+### E1. AlphaEvolve ran for 1+ year, recovered 0.7% of Google's global compute
+Proof that evolutionary optimization loops produce real value at scale over long timeframes. The SiteSync organism is architecturally similar. Time horizon matters — the organism should run for years, not weeks.
+
+### E2. Darwin Gödel Machine: 20% → 50% SWE-bench over 80 iterations
+Self-improving agent that modifies its own code over 80 iterations. Cost: $22K per run. Proof that recursive self-improvement works for coding agents. The organism's evolution engine (LEARNINGS.md + EVOLUTION_LEDGER.json) is the lightweight version of this.
+
+### E3. Three rules to prevent model collapse
+1. **Never replace real data with synthetic data** — always ground in real user behavior (PostHog)
+2. **Use verified synthetic data only** — the organism's tests must pass, not just compile
+3. **Active curation** — the Product Mind reviews what the organism builds and corrects drift
+
+### E4. Voyager Skill Library: 3.3x more items, 15.3x faster milestones
+NVIDIA's Voyager stores successful programs in an expanding skill library. EVOLUTION_LEDGER.json should evolve into this: each successful approach becomes a reusable skill that future sessions can compose into larger capabilities.
+
+### E5. The "+10.87% from prompt tuning alone" finding
+Research on Claude Code showed that well-structured CLAUDE.md with clear rules produces 10.87% better benchmark scores with the SAME model. Our CLAUDE.md optimization directly improves organism output quality.
+
+---
+
+## CATEGORY F: Business Model Validation
+
+### F1. Vertical SaaS: 18-32% growth vs 12-15% horizontal
+SiteSync IS vertical SaaS. The market is growing 2x faster. 35% of all SaaS revenue is now vertical. The construction vertical specifically is projected to reach $50.4B by 2036.
+
+### F2. Enterprise sales cycle: 134 days average, 270 days for >$500K ACV
+This means SiteSync's first enterprise deals (starting sales in Q2 2026) would close in Q4 2026. The product-led approach (free sub portal, 5-minute onboarding, transparent pricing) can compress this for mid-market.
+
+### F3. SOC2 timeline: 4-12 weeks Type I, 6-12 months Type II total
+With Secureframe (~$5K/year) + auditor (~$15K), Type I is achievable by Q3 2026. This unblocks mid-market enterprise deals. Supabase and Vercel already cover infrastructure controls.
+
+### F4. Decision makers by company size
+- < 50 employees: Owner/President decides
+- 50-250: VP of Operations or Director of IT
+- 250-1000: CTO/CIO with committee
+- 1000+: Procurement committee (6-12 month cycle)
+SiteSync's sweet spot (10-250 employees) has Owner or VP as decision maker — 1-2 person decision.
+
+---
+
+*This synthesis is read by the Product Mind nightly. Each finding should influence prioritization.*
+*Full research reports: research/track1_autonomous_systems.md through track4_enterprise_infra.md*
