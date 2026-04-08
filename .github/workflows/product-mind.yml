@@ -39,6 +39,9 @@ jobs:
       - name: Gather intelligence
         id: intel
         run: |
+          echo "=== RESEARCH FINDINGS (frontier intelligence) ===" >> /tmp/daily-intel.txt
+          head -40 RESEARCH_FINDINGS.md >> /tmp/daily-intel.txt 2>/dev/null
+
           echo "=== PRODUCT MIND MEMORY (last 7 days) ===" >> /tmp/daily-intel.txt
           tail -100 DAILY_REPORT.md >> /tmp/daily-intel.txt 2>/dev/null
 
@@ -139,7 +142,18 @@ jobs:
           - DAILY_REPORT.md changes: 'report: daily assessment [mind][skip ci]'
           - TONIGHT.md changes: 'strategy: mission adjustment [mind][skip ci]'
 
-          Output <promise>DONE</promise> when all 4 tasks are complete." || true
+          TASK 5: META-IMPROVEMENT (weekly, every Sunday)
+          If today is Sunday, evaluate your own decision quality:
+          - Read the last 7 days of DAILY_REPORT.md
+          - Did the organism build what you prioritized? If not, why?
+          - Were your priorities the RIGHT priorities in hindsight?
+          - What would you change about how you make decisions?
+          - Write your meta-reflection at the bottom of DAILY_REPORT.md
+          Read RESEARCH_FINDINGS.md for the latest frontier research.
+          Watch for entropy decay: if the organism is doing the same type of work
+          3+ nights in a row, force a domain switch.
+
+          Output <promise>DONE</promise> when all tasks are complete." || true
 
       - name: Push updates
         run: |
