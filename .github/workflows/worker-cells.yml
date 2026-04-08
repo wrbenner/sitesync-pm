@@ -1,0 +1,55 @@
+name: Worker Cells — Metric Collectors
+
+# Runs on every push to main
+# 3 lightweight Python scripts that measure codebase health
+# Output: .metrics/*.json files consumed by Product Mind
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  measure:
+    name: "Collect Metrics"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 1
+
+      - name: Configure git
+        run: |
+          git config user.name "SiteSync Metrics"
+          git config user.email "metrics@sitesync.ai"
+          git config pull.rebase true
+
+      - name: Run worker cells
+        run: |
+          python3 scripts/cells/count-type-issues.py
+          python3 scripts/cells/count-quality-issues.py
+          python3 scripts/cells/find-untested.py
+          echo "=== Metrics collected ==="
+          cat .metrics/type-issues.json | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Types: {d[\"totals\"]}')"
+          cat .metrics/quality-issues.json | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Quality: {d[\"totals\"]}')"
+          cat .metrics/untested-files.json | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Coverage: {d[\"coverage_pct\"]}%')"
+
+      - name: Commit metrics (if changed)
+        run: |
+          git add .metrics/ 2>/dev/null || true
+          CHANGES=$(git diff --cached --name-only | wc -l | tr -d ' ')
+          if [ "$CHANGES" -gt "0" ]; then
+            git pull --rebase origin main 2>/dev/null || true
+            git commit -m "metrics: update codebase health [cells][skip ci]"
+            git push origin main
+            echo "Metrics updated and pushed"
+          else
+            echo "No metric changes detected"
+          fi
