@@ -46,10 +46,14 @@ jobs:
           git add .metrics/ 2>/dev/null || true
           CHANGES=$(git diff --cached --name-only | wc -l | tr -d ' ')
           if [ "$CHANGES" -gt "0" ]; then
-            git pull --rebase origin main 2>/dev/null || true
             git commit -m "metrics: update codebase health [cells][skip ci]"
-            git push origin main
-            echo "Metrics updated and pushed"
+            # Rebase on latest main (handles concurrent pushes from API or other workflows)
+            for i in 1 2 3; do
+              git pull --rebase origin main 2>/dev/null && git push origin main && echo "Metrics pushed (attempt $i)" && exit 0
+              echo "Push attempt $i failed, retrying..."
+              sleep 2
+            done
+            echo "::warning::Could not push metrics after 3 attempts — will retry on next push"
           else
             echo "No metric changes detected"
           fi
