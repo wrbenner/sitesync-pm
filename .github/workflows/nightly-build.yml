@@ -141,6 +141,13 @@ jobs:
             npx vitest run --passWithNoTests
             npm run build
 
+          INTERNAL DEBATE PROTOCOL (from ICLR 2026 RSI research):
+          Before implementing any significant change, argue both sides:
+          - What is the best approach? Why?
+          - What is the second-best approach? Why might it be better?
+          - What could go wrong with your chosen approach?
+          This internal debate produces +27% better outcomes (Jan 2026 research).
+
           NEVER:
           - Use 'as any' type casts
           - Add mock/fake/placeholder data to src/
