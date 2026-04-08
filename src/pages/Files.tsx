@@ -15,6 +15,7 @@ import { useProjectId } from '../hooks/useProjectId';
 import { useFiles } from '../hooks/queries';
 import { useCreateFile } from '../hooks/mutations';
 import { PermissionGate } from '../components/auth/PermissionGate';
+import { usePermissions } from '../hooks/usePermissions';
 import { useTableKeyboardNavigation } from '../hooks/useTableKeyboardNavigation';
 
 type ViewMode = 'list' | 'grid';
@@ -77,6 +78,7 @@ const _FilesPage: React.FC = () => {
   const { addToast } = useToast();
   const projectId = useProjectId();
   const createFile = useCreateFile();
+  const { hasPermission } = usePermissions();
   const { data: rawFiles, isPending: loading, isError, error, refetch } = useFiles(projectId);
 
   const files = useMemo(() =>
@@ -595,7 +597,7 @@ const _FilesPage: React.FC = () => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
                     handleFileClick(file);
-                  } else if (e.key === 'Delete') {
+                  } else if (e.key === 'Delete' && hasPermission('files.delete')) {
                     e.preventDefault();
                     handleDeleteFile(file);
                   }
@@ -715,7 +717,7 @@ const _FilesPage: React.FC = () => {
                     {[
                       { icon: <Sparkles size={13} />, label: `Preview ${file.name}`, action: () => { setSelectedFile(file); } },
                       { icon: <Download size={13} />, label: `Download ${file.name}`, action: () => { addToast('info', `Downloading ${file.name}`); } },
-                      { icon: <Trash2 size={13} />, label: `Delete ${file.name}`, action: () => handleDeleteFile(file), danger: true },
+                      ...(hasPermission('files.delete') ? [{ icon: <Trash2 size={13} />, label: `Delete ${file.name}`, action: () => handleDeleteFile(file), danger: true }] : []),
                     ].map(({ icon, label, action, danger }) => (
                       <button
                         key={label}

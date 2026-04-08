@@ -2,6 +2,7 @@ import React, { useState, useRef, useMemo, useCallback } from 'react';
 import { Camera, MapPin, Sparkles, RefreshCw, AlertTriangle, LayoutGrid, Map as MapIcon, X, Tag, Mic, CheckSquare, Square, Trash2, Download, Link2 } from 'lucide-react';
 import { PageContainer, Card, Btn, useToast } from '../components/Primitives';
 import { ErrorBoundary } from '../components/ErrorBoundary';
+import { PermissionGate } from '../components/auth/PermissionGate';
 import FieldCaptureSkeleton from '../components/field/FieldCaptureSkeleton';
 import { colors, spacing, typography, borderRadius, shadows, transitions, zIndex } from '../styles/theme';
 import { useProjectId } from '../hooks/useProjectId';
@@ -895,56 +896,60 @@ const FieldCaptureInner: React.FC = () => {
         .fc-fab { display: none; }
         @media (min-width: 768px) { .fc-fab { display: flex; position: fixed; top: 20px; right: 36px; height: 44px; border-radius: 10px; padding: 0 20px; z-index: 100; } }
       `}</style>
-      <button
-        className="fc-capture-btn"
-        aria-label="Capture new field photo"
-        onClick={handleCaptureClick}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: spacing['2'],
-          backgroundColor: colors.primaryOrange,
-          color: colors.white,
-          border: 'none',
-          cursor: 'pointer',
-          boxShadow: shadows.glow,
-          fontSize: typography.fontSize.title,
-          fontWeight: typography.fontWeight.semibold,
-          fontFamily: typography.fontFamily,
-          marginBottom: spacing['5'],
-          transition: `background-color ${transitions.quick}`,
-        }}
-        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.orangeHover; }}
-        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.primaryOrange; }}
-      >
-        <Camera size={22} />
-        Capture
-      </button>
+      <PermissionGate permission="field_capture.create">
+        <button
+          className="fc-capture-btn"
+          aria-label="Capture new field photo"
+          onClick={handleCaptureClick}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: spacing['2'],
+            backgroundColor: colors.primaryOrange,
+            color: colors.white,
+            border: 'none',
+            cursor: 'pointer',
+            boxShadow: shadows.glow,
+            fontSize: typography.fontSize.title,
+            fontWeight: typography.fontWeight.semibold,
+            fontFamily: typography.fontFamily,
+            marginBottom: spacing['5'],
+            transition: `background-color ${transitions.quick}`,
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.orangeHover; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.primaryOrange; }}
+        >
+          <Camera size={22} />
+          Capture
+        </button>
+      </PermissionGate>
       {/* Desktop FAB (duplicate trigger, hidden on mobile) */}
-      <button
-        className="fc-fab"
-        aria-label="Capture new field photo"
-        onClick={handleCaptureClick}
-        style={{
-          alignItems: 'center',
-          gap: spacing['2'],
-          backgroundColor: colors.primaryOrange,
-          color: colors.white,
-          border: 'none',
-          cursor: 'pointer',
-          boxShadow: shadows.glow,
-          fontSize: typography.fontSize.body,
-          fontWeight: typography.fontWeight.semibold,
-          fontFamily: typography.fontFamily,
-          transition: `background-color ${transitions.quick}`,
-        }}
-        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.orangeHover; }}
-        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.primaryOrange; }}
-      >
-        <Camera size={18} />
-        Capture
-      </button>
+      <PermissionGate permission="field_capture.create">
+        <button
+          className="fc-fab"
+          aria-label="Capture new field photo"
+          onClick={handleCaptureClick}
+          style={{
+            alignItems: 'center',
+            gap: spacing['2'],
+            backgroundColor: colors.primaryOrange,
+            color: colors.white,
+            border: 'none',
+            cursor: 'pointer',
+            boxShadow: shadows.glow,
+            fontSize: typography.fontSize.body,
+            fontWeight: typography.fontWeight.semibold,
+            fontFamily: typography.fontFamily,
+            transition: `background-color ${transitions.quick}`,
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.orangeHover; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.primaryOrange; }}
+        >
+          <Camera size={18} />
+          Capture
+        </button>
+      </PermissionGate>
 
       {/* Offline / pending banner */}
       {(!isOnline || pendingCount > 0) && (
@@ -1236,28 +1241,30 @@ const FieldCaptureInner: React.FC = () => {
                 Start documenting site conditions with photos.
               </p>
             </div>
-            <button
-              aria-label="Open camera to capture"
-              onClick={handleCaptureClick}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: spacing['2'],
-                padding: `${spacing['3']} ${spacing['6']}`,
-                backgroundColor: colors.primaryOrange,
-                color: colors.white,
-                border: 'none',
-                borderRadius: borderRadius.lg,
-                fontSize: typography.fontSize.body,
-                fontWeight: typography.fontWeight.semibold,
-                fontFamily: typography.fontFamily,
-                cursor: 'pointer',
-                minHeight: '44px',
-              }}
-            >
-              <Camera size={18} />
-              Open Camera
-            </button>
+            <PermissionGate permission="field_capture.create">
+              <button
+                aria-label="Open camera to capture"
+                onClick={handleCaptureClick}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: spacing['2'],
+                  padding: `${spacing['3']} ${spacing['6']}`,
+                  backgroundColor: colors.primaryOrange,
+                  color: colors.white,
+                  border: 'none',
+                  borderRadius: borderRadius.lg,
+                  fontSize: typography.fontSize.body,
+                  fontWeight: typography.fontWeight.semibold,
+                  fontFamily: typography.fontFamily,
+                  cursor: 'pointer',
+                  minHeight: '44px',
+                }}
+              >
+                <Camera size={18} />
+                Open Camera
+              </button>
+            </PermissionGate>
           </div>
         </Card>
       ) : viewMode === 'map' ? (
@@ -1340,19 +1347,21 @@ const FieldCaptureInner: React.FC = () => {
           >
             <Download size={15} /> Export
           </button>
-          <button
-            onClick={handleBulkDelete}
-            style={{
-              display: 'flex', alignItems: 'center', gap: spacing['1.5'],
-              padding: `${spacing['2']} ${spacing['4']}`, minHeight: '44px',
-              backgroundColor: `${colors.statusCritical}22`, color: colors.statusCritical,
-              border: `1px solid ${colors.statusCritical}44`, borderRadius: borderRadius.lg,
-              cursor: 'pointer', fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
-              fontWeight: typography.fontWeight.medium,
-            }}
-          >
-            <Trash2 size={15} /> Delete
-          </button>
+          <PermissionGate permission="field_capture.create">
+            <button
+              onClick={handleBulkDelete}
+              style={{
+                display: 'flex', alignItems: 'center', gap: spacing['1.5'],
+                padding: `${spacing['2']} ${spacing['4']}`, minHeight: '44px',
+                backgroundColor: `${colors.statusCritical}22`, color: colors.statusCritical,
+                border: `1px solid ${colors.statusCritical}44`, borderRadius: borderRadius.lg,
+                cursor: 'pointer', fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
+                fontWeight: typography.fontWeight.medium,
+              }}
+            >
+              <Trash2 size={15} /> Delete
+            </button>
+          </PermissionGate>
           <button
             onClick={clearSelection}
             style={{

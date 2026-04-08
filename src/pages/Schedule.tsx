@@ -15,6 +15,7 @@ import { PredictiveAlertBanner } from '../components/ai/PredictiveAlert';
 import { getPredictiveAlertsForPage } from '../data/aiAnnotations';
 import { GanttChart } from '../components/schedule/GanttChart';
 import { ErrorBoundary } from '../components/ErrorBoundary';
+import { PermissionGate } from '../components/auth/PermissionGate';
 import { MobileScheduleView } from '../components/schedule/MobileScheduleView';
 import { predictScheduleRisks } from '../lib/predictions';
 import type { PredictedRisk, WeatherDay } from '../lib/predictions';
@@ -871,39 +872,41 @@ export const Schedule: React.FC = () => {
           <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '32px', lineHeight: typography.lineHeight.normal }}>
             Import your P6 or MS Project schedule, or create phases manually
           </div>
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-            <button
-              onClick={() => setShowImportModal(true)}
-              style={{
-                background: colors.primaryOrange,
-                color: '#FFFFFF',
-                border: 'none',
-                borderRadius: borderRadius.md,
-                padding: `${spacing.sm} ${spacing.lg}`,
-                fontSize: typography.fontSize.body,
-                fontWeight: typography.fontWeight.medium,
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-              }}
-            >
-              Import from P6/MS Project
-            </button>
-            <button
-              style={{
-                background: '#FFFFFF',
-                color: colors.textPrimary,
-                border: `1px solid ${colors.borderDefault}`,
-                borderRadius: borderRadius.md,
-                padding: `${spacing.sm} ${spacing.lg}`,
-                fontSize: typography.fontSize.body,
-                fontWeight: typography.fontWeight.medium,
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-              }}
-            >
-              Create First Phase
-            </button>
-          </div>
+          <PermissionGate permission="schedule.edit">
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <button
+                onClick={() => setShowImportModal(true)}
+                style={{
+                  background: colors.primaryOrange,
+                  color: '#FFFFFF',
+                  border: 'none',
+                  borderRadius: borderRadius.md,
+                  padding: `${spacing.sm} ${spacing.lg}`,
+                  fontSize: typography.fontSize.body,
+                  fontWeight: typography.fontWeight.medium,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                }}
+              >
+                Import from P6/MS Project
+              </button>
+              <button
+                style={{
+                  background: '#FFFFFF',
+                  color: colors.textPrimary,
+                  border: `1px solid ${colors.borderDefault}`,
+                  borderRadius: borderRadius.md,
+                  padding: `${spacing.sm} ${spacing.lg}`,
+                  fontSize: typography.fontSize.body,
+                  fontWeight: typography.fontWeight.medium,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                }}
+              >
+                Create First Phase
+              </button>
+            </div>
+          </PermissionGate>
         </div>
       </PageContainer>
     );
@@ -946,32 +949,34 @@ export const Schedule: React.FC = () => {
       subtitle={`${metrics.daysBeforeSchedule} days ahead \u00B7 ${metrics.milestonesHit}/${metrics.milestoneTotal} milestones`}
       actions={
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing.md }}>
-          <button
-            aria-label="Import schedule from Primavera P6 or Microsoft Project"
-            onClick={() => setShowImportModal(true)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: spacing.sm,
-              padding: `0 ${spacing.lg}`,
-              height: '40px',
-              border: `1px solid ${colors.borderDefault}`,
-              borderRadius: borderRadius.md,
-              backgroundColor: colors.white,
-              cursor: 'pointer',
-              fontSize: typography.fontSize.body,
-              fontWeight: typography.fontWeight.medium,
-              color: colors.textPrimary,
-              fontFamily: 'inherit',
-              transition: transitions.quick,
-            }}
-            onMouseEnter={e => (e.currentTarget.style.backgroundColor = colors.surfaceHover)}
-            onMouseLeave={e => (e.currentTarget.style.backgroundColor = colors.white)}
-          >
-            <Calendar size={15} />
-            <Upload size={15} />
-            Import Schedule
-          </button>
+          <PermissionGate permission="schedule.edit">
+            <button
+              aria-label="Import schedule from Primavera P6 or Microsoft Project"
+              onClick={() => setShowImportModal(true)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: spacing.sm,
+                padding: `0 ${spacing.lg}`,
+                height: '40px',
+                border: `1px solid ${colors.borderDefault}`,
+                borderRadius: borderRadius.md,
+                backgroundColor: colors.white,
+                cursor: 'pointer',
+                fontSize: typography.fontSize.body,
+                fontWeight: typography.fontWeight.medium,
+                color: colors.textPrimary,
+                fontFamily: 'inherit',
+                transition: transitions.quick,
+              }}
+              onMouseEnter={e => (e.currentTarget.style.backgroundColor = colors.surfaceHover)}
+              onMouseLeave={e => (e.currentTarget.style.backgroundColor = colors.white)}
+            >
+              <Calendar size={15} />
+              <Upload size={15} />
+              Import Schedule
+            </button>
+          </PermissionGate>
           {liveIndicator}
         </div>
       }

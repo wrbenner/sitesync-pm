@@ -2,6 +2,7 @@ import React, { useState, useMemo, useRef } from 'react';
 import { Search, Users, Phone, Mail, Building } from 'lucide-react';
 import { PageContainer, Card, MetricBox, Avatar, Tag, Btn } from '../components/Primitives';
 import { Drawer } from '../components/Drawer';
+import { PermissionGate } from '../components/auth/PermissionGate';
 import { colors, spacing, typography, borderRadius, transitions, shadows } from '../styles/theme';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -228,7 +229,7 @@ export const Directory: React.FC = () => {
       actions={
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
           <ViewToggle view={view} onChange={setView} />
-          <Btn onClick={() => {}}>Add Contact</Btn>
+          <PermissionGate permission="directory.manage"><Btn onClick={() => {}}>Add Contact</Btn></PermissionGate>
         </div>
       }
     >
@@ -308,7 +309,7 @@ export const Directory: React.FC = () => {
                 Add every stakeholder so your team always knows who to call.
               </p>
             </div>
-            <Btn onClick={() => {}}>Add First Contact</Btn>
+            <PermissionGate permission="directory.manage"><Btn onClick={() => {}}>Add First Contact</Btn></PermissionGate>
           </div>
         )}
 
