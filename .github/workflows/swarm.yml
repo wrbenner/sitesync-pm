@@ -149,7 +149,7 @@ jobs:
           claude \
             --dangerously-skip-permissions \
             --model claude-sonnet-4-6 \
-            --max-turns 40 \
+            --max-turns 60 \
             "You are Agent ${AGENT^^} for SiteSync PM — a construction project management platform.
 
           ====================================================================
@@ -165,9 +165,15 @@ jobs:
           YOUR MISSION ($WAVE wave):
           $MISSION
 
-          CONTEXT FILES TO READ:
-          - cat CLAUDE.md (project rules, V7 system, domain glossary)
-          - cat LEARNINGS.md (known pitfalls: Vite 8, migration safety, etc.)
+          KEY PROJECT RULES (do NOT spend turns reading CLAUDE.md — these are the essentials):
+          - Stack: React 19 + TypeScript + Vite 8 + Supabase + Vercel
+          - Touch targets: 56px minimum (industrial gloved use, NOT the standard 44px)
+          - No hyphens in any UI-facing text
+          - All inline styles must come from theme.ts
+          - Test framework: Vitest (NOT Jest). Import from 'vitest'
+          - Build tool: Vite 8 with Rolldown. Use 'npm run build' not 'vite build'
+          - Use 'rm -f package-lock.json && npm install' if node_modules missing
+          - Read LEARNINGS.md for known pitfalls (quick read, only 10KB)
 
           QUALITY GATES (before every commit):
             npx tsc --noEmit && npm run lint && npx vitest run --passWithNoTests && npm run build
