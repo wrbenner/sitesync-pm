@@ -36,7 +36,7 @@ interface VirtualDataTableProps<T> {
   'aria-label'?: string;
 }
 
-const ROW_HEIGHT = 44;
+const ROW_HEIGHT = 56;
 
 const VirtualRow = React.memo(function VirtualRow<T>({
   row,

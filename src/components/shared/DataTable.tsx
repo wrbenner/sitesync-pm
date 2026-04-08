@@ -110,7 +110,7 @@ const MemoizedRow = React.memo(function MemoizedRow<T>({
         cursor: onClick ? 'pointer' : 'default',
         transition: `background-color ${transitions.quick}`,
         borderLeft: selected ? `2px solid ${colors.primaryOrange}` : '2px solid transparent',
-        height: '48px',
+        height: '56px',
       }}
       onMouseEnter={(e) => {
         if (onClick) (e.currentTarget as HTMLTableRowElement).style.backgroundColor = selected ? colors.surfaceSelected : colors.surfaceHover;
