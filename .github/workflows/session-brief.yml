@@ -1,6 +1,7 @@
 name: Session Brief Generator
 
 # Runs 30 minutes before the nightly organism (1:30am CDT = 6:30am UTC)
+# Generates a pre-computed context summary so the organism wastes fewer turns reading files
 on:
   schedule:
     - cron: '30 6 * * *'
@@ -23,99 +24,87 @@ jobs:
         run: |
           git config user.name "SiteSync Brief Generator"
           git config user.email "brief@sitesync.ai"
+          git config pull.rebase true
 
-          # Tonight's mission
-          TONIGHT_SECTION=$(grep -A 30 "^## TONIGHT:" TONIGHT.md 2>/dev/null | head -30 || echo "No active mission — read SPEC.md")
-          TONIGHT_TITLE=$(grep "^## TONIGHT:" TONIGHT.md 2>/dev/null | head -1 | sed 's/## TONIGHT: //' || echo "General improvement")
+          # Experiment queue summary
+          PENDING=$(grep -c "PENDING" EXPERIMENTS.md 2>/dev/null || echo "0")
+          PASSED=$(grep -c "✅" EXPERIMENTS.md 2>/dev/null || echo "0")
+          FAILED=$(grep -c "❌" EXPERIMENTS.md 2>/dev/null || echo "0")
+          STRATEGY=$(grep "^Strategy:" EXPERIMENTS.md 2>/dev/null | head -1 || echo "No strategy set")
+          P0_EXPS=$(grep -B 1 "P0" EXPERIMENTS.md 2>/dev/null | grep "^###" | head -5 || echo "  None")
 
-          # What night is it?
-          NIGHT_NUM=$(grep "^## TONIGHT:" TONIGHT.md 2>/dev/null | grep -o "Night [0-9]" | grep -o "[0-9]" || echo "?")
+          # Recent organism commits
+          RECENT=$(git log --since="48 hours ago" --oneline --author="SiteSync" 2>/dev/null | head -10 || echo "No recent organism commits")
 
-          # Recent commits
-          RECENT=$(git log --since="48 hours ago" --oneline --author="SiteSync" 2>/dev/null | head -8 || echo "No recent organism commits")
+          # Worker cell metrics
+          TYPE_TOTAL="unknown"
+          QUALITY_TOTAL="unknown"
+          COVERAGE="unknown"
+          if [ -f ".metrics/type-issues.json" ]; then
+            TYPE_TOTAL=$(python3 -c "import json; d=json.load(open('.metrics/type-issues.json')); print(f'{d[\"totals\"][\"as_any\"]} as-any, {d[\"totals\"][\"ts_ignore\"]} ts-ignore')" 2>/dev/null || echo "error")
+          fi
+          if [ -f ".metrics/quality-issues.json" ]; then
+            QUALITY_TOTAL=$(python3 -c "import json; d=json.load(open('.metrics/quality-issues.json')); print(f'{d[\"totals\"][\"hardcoded_colors\"]} hardcoded colors, {d[\"totals\"][\"mock_data\"]} mock data')" 2>/dev/null || echo "error")
+          fi
+          if [ -f ".metrics/untested-files.json" ]; then
+            COVERAGE=$(python3 -c "import json; d=json.load(open('.metrics/untested-files.json')); print(f'{d[\"coverage_pct\"]}% ({d[\"tested_count\"]} tested, {d[\"untested_count\"]} untested)')" 2>/dev/null || echo "error")
+          fi
 
-          # Quality metrics
+          # Quality floor
           MOCK=$(jq '.mockCount // "unknown"' .quality-floor.json 2>/dev/null)
           ANY=$(jq '.anyCount // "unknown"' .quality-floor.json 2>/dev/null)
           LINT=$(jq '.eslintErrors // "unknown"' .quality-floor.json 2>/dev/null)
           CHECKED=$(grep -c "^\- \[x\]" SPEC.md 2>/dev/null || echo "0")
           TOTAL=$(grep -c "^\- \[" SPEC.md 2>/dev/null || echo "431")
 
-          # Select cognitive overrides relevant to tonight's night
-          case "$NIGHT_NUM" in
-            1|2|3)
-              COGNITIVE_OVERRIDE="SECURITY & DATA INTEGRITY NIGHTS — Override Protocol:
-              NETFLIX TEST: After every fix, simulate the failure mode. If you secured an edge function,
-              try calling it without a JWT and verify it rejects. If you removed mock data, verify the
-              page shows an empty state, not a crash. Prove it works, don't assume.
-              STRIPE TEST: Every error message must say exactly what went wrong and how to fix it.
-              Never: 'Error 500'. Always: 'The RFI could not be created because project_id is required.'
-              AMAZON TEST: Before each fix, ask: what specific pain does this eliminate for a
-              superintendent? If you cannot answer in one sentence, reconsider the approach."
-              ;;
-            4|5|6|7|8|9)
-              COGNITIVE_OVERRIDE="UI PERFECTION NIGHTS (V7) — Override Protocol:
-              APPLE TEST: After building any component — remove 30% of elements. Still works? Those were noise.
-              Can a superintendent with dirty gloves accomplish the task with one hand? If not, redesign.
-              APPLE INVISIBLE INTERFACE: The best interface is no interface. When a superintendent
-              arrives on-site, the system should already show today's tasks without them navigating.
-              CONSTRUCTION TRUTH: The reef grows from activity. Every interaction should silently deposit
-              structural intelligence as a byproduct. Users do their job. The system builds its reef."
-              ;;
-            *)
-              COGNITIVE_OVERRIDE="GENERAL — Override Protocol:
-              THE CEILING TEST: If you catch yourself implementing something that already exists in
-              Procore or any current platform — stop. That is the floor, not the ceiling.
-              AMAZON TEST: What specific decision can a construction professional make in 10 seconds
-              that previously took 2 hours? If you cannot answer that, the feature is decoration."
-              ;;
-          esac
+          # Days to April 15
+          DAYS_LEFT=$(python3 -c "from datetime import date; print((date(2026,4,15) - date.today()).days)" 2>/dev/null || echo "?")
 
           cat > SESSION_BRIEF.md << BRIEF_EOF
           # SESSION_BRIEF — $(date '+%A %B %d at 2am CDT')
-          *Pre-computed context. Read this INSTEAD of reading 6 separate files. Generated $(date -u '+%H:%M UTC').*
+          *Pre-computed context. Generated $(date -u '+%H:%M UTC'). $DAYS_LEFT days until April 15 demo.*
 
-          ---
+          ## TONIGHT'S EXPERIMENT QUEUE
+          $STRATEGY
+          - **Pending:** $PENDING experiments
+          - **Already passed:** $PASSED | **Failed:** $FAILED
+          - **Top P0 experiments:**
+          $P0_EXPS
 
-          ## TONIGHT: $TONIGHT_TITLE
+          ## WORKER CELL METRICS (latest)
+          | Metric | Value |
+          |--------|-------|
+          | Type issues | $TYPE_TOTAL |
+          | Quality issues | $QUALITY_TOTAL |
+          | Test coverage | $COVERAGE |
 
-          $TONIGHT_SECTION
-
-          ---
-
-          ## COGNITIVE OVERRIDE FOR TONIGHT
-
-          $COGNITIVE_OVERRIDE
-
-          ---
-
-          ## WHAT WAS BUILT RECENTLY
-          $RECENT
-
-          ---
-
-          ## QUALITY FLOOR (current state — only improve these)
+          ## QUALITY FLOOR
           | Metric | Now | Target |
           |--------|-----|--------|
           | Mock data | $MOCK | 0 |
           | Unsafe casts | $ANY | 0 |
           | ESLint errors | $LINT | 0 |
-          | SPEC completion | $CHECKED / $TOTAL | 431/431 |
+          | SPEC completion | $CHECKED / $TOTAL | $TOTAL/$TOTAL |
 
-          ---
+          ## RECENT ORGANISM COMMITS
+          $RECENT
 
           ## NON-NEGOTIABLE RULES
-          1. Check PAUSE.md — if PAUSED, stop
-          2. V7 nights: read v7-prompts/V7-00_SYSTEM_CONTEXT.md first
-          3. Migration rule: ALWAYS CREATE TABLE IF NOT EXISTS + DO/EXCEPTION blocks
-          4. Quality gates before EVERY commit: npx tsc --noEmit && npm run lint && npx vitest run --passWithNoTests && npm run build
-          5. Never run supabase CLI in CI
-          6. After completing tonight, update TONIGHT.md: mark COMPLETED, advance next night to TONIGHT
+          1. Check PAUSE.md — if PAUSED, stop immediately
+          2. Quality gates before EVERY commit: npx tsc --noEmit && npm run lint && npx vitest run --passWithNoTests && npm run build
+          3. Never run supabase CLI in CI
+          4. Migration rule: ALWAYS CREATE TABLE IF NOT EXISTS + DO/EXCEPTION blocks
+          5. 56px touch targets (industrial gloved use)
+          6. No hyphens in UI text
           BRIEF_EOF
 
-          echo "SESSION_BRIEF.md generated ($(wc -l < SESSION_BRIEF.md) lines) for Night $NIGHT_NUM: $TONIGHT_TITLE"
+          # Remove leading whitespace from heredoc
+          sed -i 's/^          //' SESSION_BRIEF.md
+
+          echo "SESSION_BRIEF.md generated ($(wc -l < SESSION_BRIEF.md) lines) — $PENDING pending experiments, $DAYS_LEFT days to demo"
           git add SESSION_BRIEF.md
-          git commit -m "chore: session brief for $(date '+%B %d') Night $NIGHT_NUM [skip ci]" || echo "No changes"
+          git commit -m "chore: session brief for $(date '+%B %d') [skip ci]" || echo "No changes"
+          git pull --rebase origin main 2>/dev/null || true
           git push origin main || echo "Push failed — brief may be stale"
 
       - name: Alert if brief generation failed
