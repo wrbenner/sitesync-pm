@@ -12,7 +12,7 @@
 2. `cat THE_OVERRIDE_PROTOCOL.md` — The cognitive framework: Amazon/Apple/Google/Netflix/Tesla/SpaceX
 3. `cat THE_DEEP_TRANSMISSION.md` — Natural intelligence patterns, mathematical intuitions, construction truths
 4. `cat THE_ORGANISM.md` — The 13 biological systems mapped to architecture
-5. `cat TONIGHT.md` — Tonight's specific mission
+5. `cat EXPERIMENTS.md` — Tonight's ranked experiment queue (replaces TONIGHT.md)
 
 ## The Amazon Test (apply to EVERY capability)
 
@@ -189,7 +189,14 @@ sitesync-pm/
 ├── .github/workflows/
 │   ├── ci.yml                       # Existing CI pipeline
 │   ├── homeostasis.yml              # Self-healing CI + quality ratchet
-│   └── nightly-build.yml            # Autonomous overnight build
+│   ├── worker-cells.yml             # Metric collectors (on push to src/)
+│   ├── product-mind.yml             # Experiment designer (11pm CDT)
+│   ├── nightly-build.yml            # Experiment runner (2am CDT)
+│   ├── swarm.yml                    # Test & polish agents (8am/2pm CDT)
+│   ├── session-brief.yml            # Pre-run context generator
+│   ├── auto-revert.yml              # Reverts failed [auto] commits
+│   ├── post-session-learning.yml    # Evolution engine
+│   └── health-check.yml             # 30-min heartbeat
 │
 ├── COMPETITIVE.md                   # Living competitor intelligence
 ├── FEEDBACK.md                      # Founder priorities per run
@@ -283,9 +290,36 @@ Understand these terms before writing construction software:
 - **Section 42 / LIHTC** — Low Income Housing Tax Credit. Federal tax incentive for affordable housing. Requires specific compliance documentation.
 - **HUD** — Department of Housing and Urban Development. Oversees affordable housing programs with strict reporting requirements.
 
-## Tonight's Mission (ALWAYS READ FIRST)
+## Experiment-Driven Data Flow (how the organism works now)
 
-10. **TONIGHT.md** — Your exact mission for tonight. Read this BEFORE SPEC.md. It overrides general priorities with the specific nightly mission (V5/V6/V7 prompt to execute).
+The system operates on the Karpathy micro-experiment pattern: change → measure → keep or revert.
+
+### The Loop (runs every night)
+
+1. **Worker Cells** (on every push) — 3 Python scripts measure codebase health:
+   - `scripts/cells/count-type-issues.py` → `.metrics/type-issues.json`
+   - `scripts/cells/count-quality-issues.py` → `.metrics/quality-issues.json`
+   - `scripts/cells/find-untested.py` → `.metrics/untested-files.json`
+
+2. **Product Mind** (11pm CDT) — Reads `.metrics/`, SPEC.md, recent commits, and vision docs.
+   Generates `EXPERIMENTS.md`: a ranked queue of 20-30 micro-experiments with verify commands.
+
+3. **Organism** (2am CDT) — Reads `EXPERIMENTS.md`, executes each experiment:
+   - Measure BEFORE (run verify command)
+   - Implement the change
+   - Run quality gates (tsc, lint, vitest, build)
+   - Measure AFTER (run verify command again)
+   - If improved: commit. If not: full revert.
+   - Circuit breaker: 3 consecutive fails in same category → skip category
+
+4. **Swarm** (8am test, 2pm polish) — Tests and polishes what the organism built.
+   NEVER implements features. Writes tests, improves UX, finds bugs.
+
+### Key Files
+- `EXPERIMENTS.md` — Tonight's experiment queue (replaces TONIGHT.md)
+- `.metrics/*.json` — Worker cell measurements (auto-generated)
+- `DAILY_REPORT.md` — Product Mind's assessment log
+- `FEEDBACK.md` — Founder priorities (P0 section updated by Product Mind)
 
 ## V7 Rules (for any UI work)
 
