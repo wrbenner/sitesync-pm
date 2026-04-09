@@ -306,7 +306,7 @@ export const ChangeOrders: React.FC = () => {
         <div onClick={() => setSelectedCO(null)} role="presentation" aria-hidden="true" style={{ position: 'fixed', inset: 0, backgroundColor: colors.overlayBlackHeavy, zIndex: zIndex.modal as number - 1 }} />
         <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: '560px', backgroundColor: colors.surfaceRaised, boxShadow: shadows.panel, zIndex: zIndex.modal as number, overflowY: 'auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: `${spacing['4']} ${spacing['5']}`, position: 'sticky', top: 0, backgroundColor: colors.surfaceRaised, zIndex: 1 }}>
-            <button onClick={() => setSelectedCO(null)} aria-label="Close change order details" title="Close change order details" style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', border: 'none', borderRadius: borderRadius.md, cursor: 'pointer', color: colors.textTertiary }}><X size={18} /></button>
+            <button onClick={() => setSelectedCO(null)} aria-label="Close change order details" title="Close change order details" style={{ width: touchTarget.field, height: touchTarget.field, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', border: 'none', borderRadius: borderRadius.md, cursor: 'pointer', color: colors.textTertiary }}><X size={18} /></button>
           </div>
 
           <div style={{ padding: `0 ${spacing['5']} ${spacing['5']}` }}>
@@ -602,7 +602,7 @@ export const ChangeOrders: React.FC = () => {
 
       {/* Toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'], marginTop: spacing['5'], marginBottom: spacing['4'], flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], padding: `${spacing['1']} ${spacing['3']}`, backgroundColor: colors.surfaceInset, borderRadius: borderRadius.full, flex: '1 1 200px', maxWidth: 300 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], padding: `0 ${spacing['3']}`, minHeight: touchTarget.field, backgroundColor: colors.surfaceInset, borderRadius: borderRadius.full, flex: '1 1 200px', maxWidth: 300 }}>
           <Search size={14} color={colors.textTertiary} />
           <input type="text" placeholder="Search change orders..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
             style={{ flex: 1, border: 'none', backgroundColor: 'transparent', outline: 'none', fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, color: colors.textPrimary }} />
@@ -618,7 +618,7 @@ export const ChangeOrders: React.FC = () => {
             return (
               <button key={t} onClick={() => setFilterType(t)}
                 style={{
-                  padding: `${spacing['1']} ${spacing['3']}`, fontSize: typography.fontSize.sm,
+                  padding: `0 ${spacing['4']}`, minHeight: touchTarget.field, fontSize: typography.fontSize.sm,
                   fontFamily: typography.fontFamily, fontWeight: active ? typography.fontWeight.semibold : typography.fontWeight.medium,
                   backgroundColor: active ? colors.surfaceRaised : 'transparent',
                   color: active ? colors.textPrimary : colors.textTertiary,
@@ -653,7 +653,7 @@ export const ChangeOrders: React.FC = () => {
           return (
             <button key={id} onClick={() => setFilterStatus(id as ChangeOrderState | 'all')}
               style={{
-                padding: `${spacing['1']} ${spacing['3']}`, fontSize: typography.fontSize.sm,
+                padding: `0 ${spacing['4']}`, minHeight: touchTarget.field, fontSize: typography.fontSize.sm,
                 fontFamily: typography.fontFamily, fontWeight: active ? typography.fontWeight.semibold : typography.fontWeight.medium,
                 backgroundColor: active ? colors.surfaceRaised : 'transparent',
                 color: active ? colors.textPrimary : colors.textTertiary,
@@ -669,11 +669,11 @@ export const ChangeOrders: React.FC = () => {
       {/* Empty state — no change orders at all */}
       {allCOs.length === 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: `${spacing['16']} ${spacing['8']}`, textAlign: 'center' }}>
-          <FileText size={48} color="#9CA3AF" style={{ marginBottom: spacing['4'] }} />
-          <h3 style={{ fontSize: 18, fontWeight: 600, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>No change orders</h3>
-          <p style={{ fontSize: 14, color: '#6B7280', margin: 0, marginBottom: spacing['5'], maxWidth: 360 }}>Scope is holding steady. When changes arise, document them here to keep the budget accurate.</p>
+          <FileText size={48} color={colors.textTertiary} style={{ marginBottom: spacing['4'] }} />
+          <h3 style={{ fontSize: typography.fontSize.subtitle, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>No change orders</h3>
+          <p style={{ fontSize: typography.fontSize.body, color: colors.textSecondary, margin: 0, marginBottom: spacing['5'], maxWidth: 360 }}>Scope is holding steady. When changes arise, document them here to keep the budget accurate.</p>
           <PermissionGate permission="change_orders.create">
-            <button onClick={() => setShowCreateModal(true)} style={{ height: 40, padding: `0 ${spacing['5']}`, backgroundColor: '#F47820', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, fontFamily: typography.fontFamily, cursor: 'pointer' }}>
+            <button onClick={() => setShowCreateModal(true)} style={{ minHeight: touchTarget.field, padding: `0 ${spacing['5']}`, backgroundColor: colors.primaryOrange, color: colors.white, border: 'none', borderRadius: borderRadius.md, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, fontFamily: typography.fontFamily, cursor: 'pointer' }}>
               Create Change Order
             </button>
           </PermissionGate>

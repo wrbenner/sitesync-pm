@@ -3,7 +3,7 @@ import { useCopilotStore } from '../stores/copilotStore';
 import { PageContainer, Card, SectionHeader, MetricBox, ProgressBar, StatusTag, DetailPanel, RelatedItems, Skeleton, useToast } from '../components/Primitives';
 import { MetricCardSkeleton, TableRowSkeleton } from '../components/ui/Skeletons';
 import { Btn } from '../components/Primitives';
-import { colors, spacing, typography, borderRadius } from '../styles/theme';
+import { colors, spacing, typography, borderRadius, touchTarget } from '../styles/theme';
 import { useQuery } from '../hooks/useQuery';
 import { fetchBudgetDivisions, getCostCodesByDivision } from '../api/endpoints/budget';
 import { usePayApplications } from '../hooks/queries';
@@ -131,7 +131,8 @@ const DivisionDrawerContent: React.FC<{ division: MappedDivision; projectId: str
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             style={{
-              padding: `${spacing['2']} ${spacing['3']}`,
+              padding: `0 ${spacing['3']}`,
+              minHeight: touchTarget.field,
               border: 'none',
               borderBottom: activeTab === tab.id ? `2px solid ${colors.primaryOrange}` : '2px solid transparent',
               backgroundColor: 'transparent',
@@ -394,7 +395,7 @@ export const Budget: React.FC = () => {
       <BudgetUpload open={uploadOpen} onClose={() => setUploadOpen(false)} onSuccess={() => setUploadOpen(false)} />
 
       {isEmpty ? (
-        <div style={{ padding: '24px', backgroundColor: '#FFFFFF', borderRadius: '12px', border: `1px solid ${colors.border}` }}>
+        <div style={{ padding: spacing['6'], backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.xl, border: `1px solid ${colors.borderDefault}` }}>
           <EmptyState
             icon={DollarSign}
             title="No budget has been set up yet"

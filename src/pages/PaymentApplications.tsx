@@ -7,7 +7,7 @@ import {
 } from 'lucide-react'
 import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton, EmptyState } from '../components/Primitives'
 import { DataTable, createColumnHelper } from '../components/shared/DataTable'
-import { colors, spacing, typography, borderRadius, transitions, shadows } from '../styles/theme'
+import { colors, spacing, typography, borderRadius, transitions, shadows, touchTarget } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
 import { usePayApplications, useContracts, useRetainageLedger, useLienWaivers, usePayAppSOV, useProject } from '../hooks/queries'
 import type { LienWaiverRow, LienWaiverStatus } from '../types/api'
@@ -126,7 +126,7 @@ const payAppColumns = [
               onClick={(e) => { e.stopPropagation(); _editPayAppCb.current(info.row.original) }}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: spacing['1'],
-                padding: `${spacing['1']} ${spacing['3']}`, border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base,
+                padding: `0 ${spacing['3']}`, minHeight: touchTarget.field, border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base,
                 backgroundColor: 'transparent', color: colors.textSecondary,
                 fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
                 cursor: 'pointer', fontFamily: typography.fontFamily,
@@ -140,7 +140,7 @@ const payAppColumns = [
               onClick={() => toast.success('Payment flow initiated')}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: spacing['1'],
-                padding: `${spacing['1']} ${spacing['3']}`, border: 'none', borderRadius: borderRadius.base,
+                padding: `0 ${spacing['3']}`, minHeight: touchTarget.field, border: 'none', borderRadius: borderRadius.base,
                 backgroundColor: colors.primaryOrange, color: colors.white,
                 fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
                 cursor: 'pointer', fontFamily: typography.fontFamily,
@@ -154,7 +154,7 @@ const payAppColumns = [
               onClick={() => toast.success('Application submitted for review')}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: spacing['1'],
-                padding: `${spacing['1']} ${spacing['3']}`, border: 'none', borderRadius: borderRadius.base,
+                padding: `0 ${spacing['3']}`, minHeight: touchTarget.field, border: 'none', borderRadius: borderRadius.base,
                 backgroundColor: colors.statusInfoSubtle, color: colors.statusInfo,
                 fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
                 cursor: 'pointer', fontFamily: typography.fontFamily,
