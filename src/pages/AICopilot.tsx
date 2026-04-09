@@ -57,6 +57,7 @@ const AgentQuickPanel = memo<{ onSelect: (text: string) => void }>(({ onSelect }
               alignItems: 'center',
               gap: spacing['2'],
               padding: `${spacing['2']} ${spacing['3']}`,
+              minHeight: 56,
               backgroundColor: 'transparent',
               border: 'none',
               borderRadius: borderRadius.base,
@@ -153,11 +154,11 @@ const COLLABORATION_PROMPTS = [
   {
     label: 'Who is blocking the most open items?',
     icon: Users,
-    description: 'Find team members with the most idle ball-in-court assignments',
+    description: 'Find team members with the most idle ball in court assignments',
     agentCount: 2,
   },
   {
-    label: 'Which team members have pending ball-in-court items?',
+    label: 'Which team members have pending ball in court items?',
     icon: Clock,
     description: 'List all open RFIs and submittals grouped by responsible party',
     agentCount: 2,
@@ -340,7 +341,11 @@ export const AICopilot: React.FC = () => {
                   clearMessages()
                 }}
                 style={{
-                  padding: `${spacing['1']} ${spacing['2']}`,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  minHeight: 56,
+                  padding: `${spacing['1']} ${spacing['3']}`,
                   backgroundColor: colors.primaryOrange,
                   color: colors.white,
                   border: 'none',
@@ -432,6 +437,7 @@ export const AICopilot: React.FC = () => {
                 alignItems: 'center',
                 gap: spacing['1'],
                 padding: `${spacing['1']} ${spacing['2']}`,
+                minHeight: 56,
                 backgroundColor: 'transparent',
                 border: 'none',
                 borderRadius: borderRadius.base,
@@ -547,6 +553,7 @@ export const AICopilot: React.FC = () => {
                           alignItems: 'center',
                           gap: spacing['2'],
                           padding: `${spacing['2']} ${spacing['3']}`,
+                          minHeight: 56,
                           border: 'none',
                           backgroundColor: 'transparent',
                           cursor: 'pointer',
