@@ -1440,7 +1440,7 @@ export const DailyLog: React.FC = () => {
                       boxSizing: 'border-box',
                       lineHeight: '1.6',
                       cursor: isLocked ? 'not-allowed' : 'text',
-                      minHeight: '44px',
+                      minHeight: '56px',
                     }}
                   />
                   {!isLocked && (
@@ -1449,7 +1449,7 @@ export const DailyLog: React.FC = () => {
                       aria-label="Voice input for work summary"
                       onClick={() => toast.success('Voice input coming soon')}
                       style={{
-                        width: '44px', height: '44px', flexShrink: 0,
+                        width: '56px', height: '56px', flexShrink: 0,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         backgroundColor: colors.surfaceInset,
                         border: `1px solid ${colors.borderDefault}`,
@@ -1493,7 +1493,7 @@ export const DailyLog: React.FC = () => {
                   boxSizing: 'border-box',
                   lineHeight: '1.6',
                   cursor: isLocked ? 'not-allowed' : 'text',
-                  minHeight: '44px',
+                  minHeight: '56px',
                 }}
               />
               {!isLocked && (
@@ -1502,7 +1502,7 @@ export const DailyLog: React.FC = () => {
                   aria-label="Voice input for issues and delays"
                   onClick={() => toast.success('Voice input coming soon')}
                   style={{
-                    width: '44px', height: '44px', flexShrink: 0,
+                    width: '56px', height: '56px', flexShrink: 0,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     backgroundColor: colors.surfaceInset,
                     border: `1px solid ${colors.borderDefault}`,
@@ -1598,7 +1598,7 @@ export const DailyLog: React.FC = () => {
                 value={historySearch}
                 onChange={e => setHistorySearch(e.target.value)}
                 placeholder="Search logs..."
-                style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.md, outline: 'none', color: colors.textPrimary, backgroundColor: colors.white, width: 200, minHeight: '44px', boxSizing: 'border-box' }}
+                style={{ padding: `${spacing['2']} ${spacing['3']}`, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.md, outline: 'none', color: colors.textPrimary, backgroundColor: colors.white, width: 200, minHeight: '56px', boxSizing: 'border-box' }}
               />
             </div>
             {filteredPreviousDays.length === 0 && previousDays.length > 0 ? (
@@ -1698,7 +1698,7 @@ export const DailyLog: React.FC = () => {
                     fontFamily: typography.fontFamily, cursor: 'pointer',
                     boxShadow: '0 4px 24px rgba(244, 120, 32, 0.35)',
                     transition: 'opacity 160ms',
-                    minHeight: '44px',
+                    minHeight: '56px',
                   }}
                 >
                   <Send size={15} />
