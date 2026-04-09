@@ -494,7 +494,7 @@ jobs:
         run: ls -lh .reviews/
 
       - name: Run aggregate-reviews script
-        run: python wave1/scripts/aggregate-reviews.py
+        run: python scripts/aggregate-reviews.py
 
       - name: Create URGENT issue if any dimension < 4.0
         uses: actions/github-script@v7

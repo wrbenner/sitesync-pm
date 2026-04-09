@@ -109,7 +109,17 @@ jobs:
 
           EXPERIMENTS.md is a ranked queue of 20-30 micro-experiments for tonight's organism.
           Each experiment follows the Karpathy pattern: change → measure → keep or revert.
-          (Reference: Karpathy's autoresearch ran 700 experiments, 20 wins, 11% gain)
+
+          CRITICAL: You MUST use bash to physically write the file. Do not just describe
+          the content — actually run a command like:
+            cat > EXPERIMENTS.md << 'EXPEOF'
+            [content here]
+            EXPEOF
+          The file must exist on disk when you're done. If you don't write it, the organism
+          has nothing to work from tonight.
+
+          Also update DAILY_REPORT.md by appending (not overwriting) today's assessment.
+          Also update FEEDBACK.md priorities section.
 
           Write EXPERIMENTS.md in this exact format:
 

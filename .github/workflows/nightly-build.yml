@@ -190,6 +190,15 @@ jobs:
           - Best approach and why
           - What could go wrong
 
+          === TRACKING (do this DURING the loop, not just at the end) ===
+          After each experiment (pass or fail), IMMEDIATELY update EXPERIMENTS.md:
+            - Change the experiment's **Status**: line from PENDING to ✅ PASS or ❌ FAIL
+            - Add the before/after metric values
+          Use sed or a text editor to modify the file in-place. Example:
+            sed -i 's/- \*\*Status\*\*: PENDING/- **Status**: ✅ PASS (before: 5, after: 0)/' EXPERIMENTS.md
+          This tracking is CRITICAL — the Product Mind reads these results to design better
+          experiments tomorrow. The self-improvement agent uses pass/fail rates to optimize.
+
           === FINAL STEP ===
           After loop completes or circuit breaker triggers:
             git add EXPERIMENTS.md
@@ -228,6 +237,18 @@ jobs:
           else
             echo "No experiments passed this session" >> $GITHUB_STEP_SUMMARY
           fi
+
+      - name: Trigger downstream workflows
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # GITHUB_TOKEN pushes don't trigger on:push workflows.
+          # Manually dispatch homeostasis and worker-cells so quality ratchets and metrics update.
+          gh api repos/${{ github.repository }}/actions/workflows/homeostasis.yml/dispatches \
+            --method POST --field ref=main 2>/dev/null && echo "Homeostasis dispatched" || true
+          gh api repos/${{ github.repository }}/actions/workflows/worker-cells.yml/dispatches \
+            --method POST --field ref=main 2>/dev/null && echo "Worker cells dispatched" || true
 
       - name: Alert if zero experiments passed
         if: always()
