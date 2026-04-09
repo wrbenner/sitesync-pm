@@ -5,6 +5,7 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
+  workflow_dispatch:  # Allows nightly-build to trigger quality ratchet after organism pushes
 
 permissions:
   contents: write
