@@ -24,13 +24,26 @@ const statusConfig: Record<string, { icon: React.ReactNode; color: string; bg: s
 };
 
 export const ApprovalChain: React.FC<ApprovalChainProps> = ({ steps }) => {
+  if (steps.length === 0) {
+    return (
+      <div style={{
+        padding: `${spacing['4']} 0`,
+        textAlign: 'center',
+        color: colors.textTertiary,
+        fontSize: typography.fontSize.sm,
+      }}>
+        No approval steps configured.
+      </div>
+    );
+  }
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }} role="list" aria-label="Approval chain">
       {steps.map((step, i) => {
         const cfg = statusConfig[step.status];
         const isLast = i === steps.length - 1;
         return (
-          <div key={step.id} style={{ display: 'flex', alignItems: 'flex-start', gap: spacing['3'], position: 'relative' }}>
+          <div key={step.id} style={{ display: 'flex', alignItems: 'flex-start', gap: spacing['3'], position: 'relative' }} role="listitem">
             {/* Connector line */}
             {!isLast && (
               <div style={{
@@ -40,12 +53,16 @@ export const ApprovalChain: React.FC<ApprovalChainProps> = ({ steps }) => {
             )}
 
             {/* Status dot */}
-            <div style={{
-              width: 28, height: 28, borderRadius: '50%',
-              backgroundColor: cfg.bg, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              flexShrink: 0, zIndex: 1, border: `2px solid ${colors.surfaceRaised}`,
-            }}>
-              <span style={{ color: cfg.color }}>{cfg.icon}</span>
+            <div
+              role="img"
+              aria-label={cfg.label}
+              style={{
+                width: 28, height: 28, borderRadius: '50%',
+                backgroundColor: cfg.bg, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0, zIndex: 1, border: `2px solid ${colors.surfaceRaised}`,
+              }}
+            >
+              <span style={{ color: cfg.color }} aria-hidden="true">{cfg.icon}</span>
             </div>
 
             {/* Content */}
