@@ -383,7 +383,7 @@ const _DrawingsPage: React.FC = () => {
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
         @keyframes spin{to{transform:rotate(360deg)}}
         @keyframes slideInRight{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
-        .drawing-row:focus-visible{outline:2px solid #F47820;outline-offset:-2px;}
+        .drawing-row:focus-visible{outline:2px solid var(--color-primary,#F47820);outline-offset:-2px;}
       `}</style>
       <div
         style={{ position: 'relative' }}
@@ -651,7 +651,7 @@ const _DrawingsPage: React.FC = () => {
                 ref={gridRef}
                 onKeyDown={handleGridKeyDown}
               >
-              <style>{`.drawing-row:focus-visible{outline:2px solid #F47820;outline-offset:-2px;}`}</style>
+              <style>{`.drawing-row:focus-visible{outline:2px solid var(--color-primary,#F47820);outline-offset:-2px;}`}</style>
               {sortedDrawings.map((drawing, index) => {
               const thumbColor = drawing.disciplineColor || getDisciplineColor(drawing.discipline || '');
               const linked = linkedItems[drawing.id];
@@ -1002,7 +1002,7 @@ const _DrawingsPage: React.FC = () => {
                   <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0, marginBottom: spacing['5'], maxWidth: 420 }}>Upload your plans to enable digital markup, RFI linking, and AI coordination analysis.</p>
                   <button
                     onClick={() => setShowUploadModal(true)}
-                    style={{ backgroundColor: '#F47820', color: '#fff', borderRadius: 8, padding: '8px 16px', border: 'none', cursor: 'pointer', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, fontFamily: typography.fontFamily }}
+                    style={{ backgroundColor: colors.primaryOrange, color: colors.white, borderRadius: borderRadius.lg, padding: `${spacing['3']} ${spacing['4']}`, border: 'none', cursor: 'pointer', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, fontFamily: typography.fontFamily, minHeight: '56px' }}
                   >
                     Upload Drawings
                   </button>
