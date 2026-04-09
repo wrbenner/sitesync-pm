@@ -244,6 +244,7 @@ export const Btn: React.FC<BtnProps> = ({
       style={{
         display: 'inline-flex',
         width: fullWidth ? '100%' : 'auto',
+        minHeight: 56,
         padding: s.padding,
         fontSize: s.fontSize,
         fontWeight: typography.fontWeight.medium,
