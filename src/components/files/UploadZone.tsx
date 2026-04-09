@@ -60,6 +60,11 @@ export const UploadZone: React.FC<UploadZoneProps> = ({ onUpload, onTagsSuggeste
   const [uploadError, setUploadError] = useState<{ fileName: string; message: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
+
+  // Set non-standard webkitdirectory attribute via ref (widely supported but not in JSX types)
+  useEffect(() => {
+    folderInputRef.current?.setAttribute('webkitdirectory', '');
+  }, []);
   const retryFilesRef = useRef<File[]>([]);
 
   useEffect(() => {
@@ -227,12 +232,10 @@ export const UploadZone: React.FC<UploadZoneProps> = ({ onUpload, onTagsSuggeste
         style={{ display: 'none' }}
         onChange={handleFileInputChange}
       />
-      {/* webkitdirectory lets users pick an entire folder */}
+      {/* webkitdirectory attribute set via ref (non-standard, see useEffect above) */}
       <input
         ref={folderInputRef}
         type="file"
-        // @ts-expect-error webkitdirectory is non-standard but widely supported
-        webkitdirectory=""
         multiple
         style={{ display: 'none' }}
         onChange={handleFolderInputChange}
