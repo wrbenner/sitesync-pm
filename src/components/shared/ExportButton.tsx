@@ -1,6 +1,6 @@
 import React, { useState, lazy, Suspense } from 'react'
 import { Download, ChevronDown, FileText, Table2, Sheet } from 'lucide-react'
-import { colors, spacing, typography, borderRadius, shadows, transitions, vizColors } from '../../styles/theme'
+import { colors, spacing, typography, borderRadius, shadows, transitions, touchTarget } from '../../styles/theme'
 
 // Lazy load PDF rendering
 const PDFDownloadLink = lazy(() => import('@react-pdf/renderer').then(m => ({ default: m.PDFDownloadLink })))
@@ -27,11 +27,14 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
     <div style={{ position: 'relative' }}>
       <button
         onClick={() => setOpen(!open)}
+        aria-haspopup="menu"
+        aria-expanded={open}
         style={{
           display: 'flex',
           alignItems: 'center',
           gap: spacing['1'],
-          padding: `${spacing['2']} ${spacing['3']}`,
+          padding: `0 ${spacing['3']}`,
+          minHeight: touchTarget.field,
           border: `1px solid ${colors.borderDefault}`,
           borderRadius: borderRadius.md,
           backgroundColor: colors.surfaceRaised,
@@ -43,9 +46,9 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
           transition: `all ${transitions.instant}`,
         }}
       >
-        <Download size={14} />
+        <Download size={14} aria-hidden="true" />
         Export
-        <ChevronDown size={12} />
+        <ChevronDown size={12} aria-hidden="true" />
       </button>
 
       {open && (
@@ -99,15 +102,16 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
 const menuItemStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
-  gap: '8px',
+  gap: spacing['2'],
   width: '100%',
-  padding: '8px 12px',
+  padding: `0 ${spacing['3']}`,
+  minHeight: touchTarget.field,
   border: 'none',
-  borderRadius: '4px',
+  borderRadius: borderRadius.sm,
   backgroundColor: 'transparent',
-  fontSize: '13px',
-  fontFamily: '"Inter", sans-serif',
-  color: vizColors.darkText,
+  fontSize: typography.fontSize.sm,
+  fontFamily: typography.fontFamily,
+  color: colors.textPrimary,
   cursor: 'pointer',
   textAlign: 'left' as const,
   textDecoration: 'none',
