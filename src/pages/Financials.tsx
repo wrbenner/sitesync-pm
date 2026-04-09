@@ -3,7 +3,7 @@ import { DollarSign, Receipt, FileText, TrendingUp, Wallet, Plus, Check, X, Book
 import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton, EmptyState } from '../components/Primitives'
 import { DataTable, createColumnHelper } from '../components/shared/DataTable'
 import { ExportButton } from '../components/shared/ExportButton'
-import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme'
+import { colors, spacing, typography, borderRadius, transitions, touchTarget } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
 import { useContracts, usePayApplications, useJobCostEntries, useInvoicesPayable, useWipReports, useRetainageLedger } from '../hooks/queries'
 import { useBudgetRealtime } from '../hooks/queries/realtime'
@@ -437,26 +437,33 @@ export const Financials: React.FC = () => {
       }
     >
       {/* Tab Switcher */}
-      <div style={{
-        display: 'flex',
-        gap: spacing['1'],
-        backgroundColor: colors.surfaceInset,
-        borderRadius: borderRadius.lg,
-        padding: spacing['1'],
-        marginBottom: spacing['2xl'],
-        overflowX: 'auto',
-      }}>
+      <div
+        role="tablist"
+        aria-label="Financial sections"
+        style={{
+          display: 'flex',
+          gap: spacing['1'],
+          backgroundColor: colors.surfaceInset,
+          borderRadius: borderRadius.lg,
+          padding: spacing['1'],
+          marginBottom: spacing['2xl'],
+          overflowX: 'auto',
+        }}
+      >
         {tabs.map((tab) => {
           const isActive = activeTab === tab.key
           return (
             <button
               key={tab.key}
+              role="tab"
+              aria-selected={isActive}
               onClick={() => setActiveTab(tab.key)}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: spacing['2'],
-                padding: `${spacing['2']} ${spacing['4']}`,
+                padding: `0 ${spacing['4']}`,
+                minHeight: touchTarget.field,
                 border: 'none',
                 borderRadius: borderRadius.base,
                 cursor: 'pointer',
