@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { UserPlus, Mail, Search, Check } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
-import { supabase } from '../../lib/supabase';
+import { supabase, fromTable } from '../../lib/supabase';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
 import type { Profile, UserRole } from '../../types/database';
 
@@ -52,8 +52,7 @@ export function UserManagement() {
   const handleInvite = async () => {
     if (!inviteEmail || !company?.id) return;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase.from('invitations') as any).insert({
+    await fromTable('invitations').insert({
       company_id: company.id,
       email: inviteEmail,
       role: inviteRole,

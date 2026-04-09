@@ -5,7 +5,7 @@
 
 import { useEffect, useRef } from 'react'
 import { useQuery, useQueryClient, type UseQueryOptions } from '@tanstack/react-query'
-import { supabase } from '../lib/supabase'
+import { supabase, fromTable } from '../lib/supabase'
 import { useAuth } from './useAuth'
 import { useProjectId } from './useProjectId'
 import { toast } from 'sonner'
@@ -149,9 +149,7 @@ export function useOptimisticLock(
     queryKey: ['optimistic_lock', table, entityId],
     queryFn: async () => {
       if (!entityId) return null
-      const { data, error } = await supabase
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .from(table as any)
+      const { data, error } = await fromTable(table)
         .select('updated_at')
         .eq('id', entityId)
         .single()

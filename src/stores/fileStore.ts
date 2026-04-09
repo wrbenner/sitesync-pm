@@ -186,8 +186,7 @@ export const useFileStore = create<FileState>()((set, get) => ({
       if (uploadErr) continue;
 
       // Create file record
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: fileData } = await (supabase.from('files') as any)
+      const { data: fileData } = await fromTable('files')
         .insert({
           project_id: projectId,
           name: file.name,

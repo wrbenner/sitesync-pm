@@ -2,7 +2,7 @@
 // Uses Capacitor PushNotifications when native, falls back to web Push API
 
 import { useEffect, useCallback, useRef } from 'react'
-import { supabase } from '../lib/supabase'
+import { fromTable } from '../lib/supabase'
 import { useAuth } from './useAuth'
 import { toast } from 'sonner'
 
@@ -70,8 +70,7 @@ export function usePushNotifications() {
       PushNotifications.addListener('registration', async (token) => {
         if (user?.id && token.value) {
           // Store push token in user metadata or a device_tokens table
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          await (supabase.from('project_members') as any).update({
+          await fromTable('project_members').update({
             push_token: token.value,
             push_platform: getPlatform(),
             push_updated_at: new Date().toISOString(),

@@ -1,5 +1,5 @@
 import { ApiError, AuthError, ValidationError } from '../errors'
-import { supabase } from '../../lib/supabase'
+import { supabase, fromTable } from '../../lib/supabase'
 import { dedupTtl, queryKey } from '../../lib/requestDedup'
 import type { Database } from '../../types/database'
 
@@ -120,6 +120,5 @@ export const ROLE_RANK: Record<string, number> = {
 
 export function createProjectScopedQuery(table: TableName, projectId: string) {
   validateProjectId(projectId)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return supabase.from(table as any).eq('project_id', projectId)
+  return fromTable(table).select('*').eq('project_id', projectId)
 }

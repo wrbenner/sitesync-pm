@@ -3,7 +3,7 @@
 // All agent actions require human approval (no auto-execute).
 
 import { useState, useCallback } from 'react'
-import { supabase } from '../lib/supabase'
+import { supabase, fromTable } from '../lib/supabase'
 import { useProjectId } from './useProjectId'
 import { useAuth } from './useAuth'
 import { toast } from 'sonner'
@@ -148,8 +148,7 @@ export function useAgentBuilder() {
     setCreating(true)
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error: insertError } = await (supabase.from('ai_agents') as any).insert({
+      const { error: insertError } = await fromTable('ai_agents').insert({
         project_id: projectId,
         agent_type: `custom_${Date.now()}`,
         name: definition.name,
