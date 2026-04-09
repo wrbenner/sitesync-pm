@@ -656,6 +656,7 @@ export const AICopilot: React.FC = () => {
                         onClick={() => handleSendMessage(preset.label)}
                         style={{
                           padding: spacing['4'],
+                          minHeight: spacing['14'],
                           textAlign: 'left',
                           backgroundColor: colors.surfaceRaised,
                           border: `1px solid ${colors.borderSubtle}`,
@@ -744,6 +745,7 @@ export const AICopilot: React.FC = () => {
                             onClick={() => handleSendMessage(prompt.label)}
                             style={{
                               padding: `${spacing['3']} ${spacing['4']}`,
+                              minHeight: spacing['14'],
                               textAlign: 'left',
                               backgroundColor: colors.surfaceRaised,
                               border: `1px solid ${colors.borderSubtle}`,
@@ -772,7 +774,7 @@ export const AICopilot: React.FC = () => {
                                 width: 32,
                                 height: 32,
                                 borderRadius: borderRadius.base,
-                                backgroundColor: colors.teal,
+                                backgroundColor: colors.statusActive,
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
@@ -788,7 +790,7 @@ export const AICopilot: React.FC = () => {
                                   fontWeight: typography.fontWeight.medium,
                                   color: colors.textPrimary,
                                   margin: 0,
-                                  marginBottom: 2,
+                                  marginBottom: spacing['0.5'],
                                 }}
                               >
                                 {prompt.label}

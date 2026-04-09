@@ -43,6 +43,13 @@ function getLineColor(score: number): string {
   return colors.statusCritical;
 }
 
+function getScoreBg(score: number): string {
+  if (score >= 90) return colors.statusActiveSubtle;
+  if (score >= 70) return colors.statusPendingSubtle;
+  if (score >= 50) return colors.statusInfoSubtle;
+  return colors.statusCriticalSubtle;
+}
+
 const TrendIcons = { up: TrendingUp, down: TrendingDown, flat: Minus };
 const trendColors = { up: colors.statusActive, down: colors.statusCritical, flat: colors.textTertiary };
 
@@ -355,14 +362,14 @@ export const ProjectHealth: React.FC = () => {
                 style={{
                   display: 'flex', alignItems: 'center', gap: spacing['4'],
                   padding: `${spacing['3']} ${spacing['4']}`, backgroundColor: colors.surfaceRaised,
-                  borderRadius: borderRadius.md, boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                  borderRadius: borderRadius.md, boxShadow: shadows.sm,
                   cursor: 'pointer', transition: `all ${transitions.instant}`,
                 }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)'; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = '0 1px 2px rgba(0,0,0,0.03)'; }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = shadows.cardHover; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = shadows.sm; }}
               >
                 {/* Score */}
-                <div style={{ width: 48, height: 48, borderRadius: '50%', backgroundColor: `${color}10`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <div style={{ width: 48, height: 48, borderRadius: '50%', backgroundColor: getScoreBg(dim.score), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <span style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color }}>{dim.score}</span>
                 </div>
 

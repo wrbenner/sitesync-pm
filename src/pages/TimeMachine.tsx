@@ -216,7 +216,7 @@ export const TimeMachine: React.FC = () => {
             <span style={{
               fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
               color: snap.eventType === 'incident' ? colors.statusCritical : colors.statusPending,
-              backgroundColor: snap.eventType === 'incident' ? `${colors.statusCritical}08` : `${colors.statusPending}08`,
+              backgroundColor: snap.eventType === 'incident' ? colors.statusCriticalSubtle : colors.statusPendingSubtle,
               padding: `${spacing['1']} ${spacing['2']}`, borderRadius: borderRadius.full,
             }}>
               {snap.event}
@@ -386,7 +386,7 @@ export const TimeMachine: React.FC = () => {
                     transition: `all ${transitions.instant}`,
                   }} />
                   <span style={{
-                    fontSize: '9px', color: isCurrent ? colors.orangeText : colors.textTertiary,
+                    fontSize: typography.fontSize.caption, color: isCurrent ? colors.orangeText : colors.textTertiary,
                     fontWeight: isCurrent ? typography.fontWeight.semibold : typography.fontWeight.normal,
                     whiteSpace: 'nowrap',
                   }}>
@@ -433,7 +433,7 @@ export const TimeMachine: React.FC = () => {
             <div style={{ padding: spacing['3'], backgroundColor: colors.surfaceInset, borderRadius: borderRadius.md }}>
               <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0, marginBottom: spacing['1'] }}>Budget Spent</p>
               <p style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.statusInfo, margin: 0, marginBottom: spacing['1'] }}>${snap.budgetSpent}M</p>
-              <p style={{ fontSize: '9px', color: colors.textTertiary, margin: 0, marginBottom: spacing['1'] }}>of ${snap.budgetTotal}M</p>
+              <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0, marginBottom: spacing['1'] }}>of ${snap.budgetTotal}M</p>
               <div style={{ height: 4, backgroundColor: colors.borderSubtle, borderRadius: 2 }}>
                 <div style={{ height: '100%', width: `${snap.budgetTotal > 0 ? (snap.budgetSpent / snap.budgetTotal) * 100 : 0}%`, backgroundColor: colors.statusInfo, borderRadius: 2, transition: `width ${transitions.quick}` }} />
               </div>
@@ -469,7 +469,7 @@ export const TimeMachine: React.FC = () => {
                     <div style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: dotColor, flexShrink: 0 }} />
                     <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary }}>{evt.title}</span>
                     <span style={{
-                      fontSize: '9px',
+                      fontSize: typography.fontSize.caption,
                       fontWeight: typography.fontWeight.medium,
                       color: evt.type === 'milestone' ? colors.primaryOrange : evt.type === 'warning' ? colors.statusPending : colors.statusInfo,
                       backgroundColor: evt.type === 'milestone' ? colors.orangeSubtle : evt.type === 'warning' ? colors.statusPendingSubtle : colors.statusInfoSubtle,
