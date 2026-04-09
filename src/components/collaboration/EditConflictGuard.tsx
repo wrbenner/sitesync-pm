@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { AlertTriangle, RefreshCw, Lock, X } from 'lucide-react';
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
-import { supabase } from '../../lib/supabase';
+import { supabase, fromTable } from '../../lib/supabase';
 import { EntityPresence } from './PresenceBar';
 import { usePresenceStore } from '../../stores/presenceStore';
 import { useUiStore } from '../../stores';
@@ -61,8 +61,7 @@ export function useOptimisticLock(
       const selectFields =
         lockedStatuses && lockedStatuses.length > 0 ? 'updated_at, status' : 'updated_at';
       const runQuery = () =>
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (supabase.from(table as any) as any)
+        fromTable(table)
           .select(selectFields)
           .eq('id', entityId)
           .single();
@@ -472,8 +471,7 @@ export const EditConflictGuard: React.FC<EditConflictGuardProps> = ({
     const channel = supabase
       .channel(`edit_locks:${entityType}:${entityId}`)
       .on(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        'postgres_changes' as any,
+        'postgres_changes',
         {
           event: '*',
           schema: 'public',
