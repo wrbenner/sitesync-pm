@@ -146,12 +146,13 @@ export const Crews: React.FC = () => {
         {tabs.map((tab) => (
           <button
             key={tab.key}
+            aria-pressed={activeTab === tab.key}
             onClick={() => setActiveTab(tab.key)}
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: spacing.xs,
-              padding: `${spacing.sm} ${spacing.lg}`,
+              padding: `${spacing.md} ${spacing.lg}`,
               borderRadius: borderRadius.full,
               border: 'none',
               cursor: 'pointer',
@@ -161,6 +162,7 @@ export const Crews: React.FC = () => {
               backgroundColor: activeTab === tab.key ? colors.surfaceRaised : 'transparent',
               boxShadow: activeTab === tab.key ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
               transition: transitions.quick,
+              minHeight: '56px',
             }}
           >
             {tab.icon}

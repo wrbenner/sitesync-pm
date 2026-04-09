@@ -189,8 +189,8 @@ const PhotoOverlay: React.FC<PhotoOverlayProps> = ({ dataUrl, location, isSaving
               position: 'absolute',
               top: spacing['3'],
               right: spacing['3'],
-              width: '32px',
-              height: '32px',
+              width: '56px',
+              height: '56px',
               borderRadius: borderRadius.full,
               backgroundColor: 'rgba(0,0,0,0.55)',
               border: 'none',
@@ -304,8 +304,8 @@ const PhotoOverlay: React.FC<PhotoOverlayProps> = ({ dataUrl, location, isSaving
                     type="button"
                     onClick={() => toggleTag(tag)}
                     style={{
-                      padding: `${spacing['1.5']} ${spacing['3']}`,
-                      minHeight: '32px',
+                      padding: `${spacing['3']} ${spacing['4']}`,
+                      minHeight: '56px',
                       backgroundColor: active ? colors.primaryOrange : 'transparent',
                       color: active ? colors.white : colors.textSecondary,
                       border: `1px solid ${active ? colors.primaryOrange : colors.borderDefault}`,
@@ -892,9 +892,9 @@ const FieldCaptureInner: React.FC = () => {
       {/* Prominent capture button — full width on mobile, pill on desktop */}
       <style>{`
         .fc-capture-btn { width: 100%; height: 64px; border-radius: 12px; }
-        @media (min-width: 768px) { .fc-capture-btn { width: auto; height: 44px; border-radius: 10px; padding: 0 24px; align-self: flex-start; } }
+        @media (min-width: 768px) { .fc-capture-btn { width: auto; height: 56px; border-radius: 10px; padding: 0 24px; align-self: flex-start; } }
         .fc-fab { display: none; }
-        @media (min-width: 768px) { .fc-fab { display: flex; position: fixed; top: 20px; right: 36px; height: 44px; border-radius: 10px; padding: 0 20px; z-index: 100; } }
+        @media (min-width: 768px) { .fc-fab { display: flex; position: fixed; top: 20px; right: 36px; height: 56px; border-radius: 10px; padding: 0 20px; z-index: 100; } }
       `}</style>
       <PermissionGate permission="field_capture.create">
         <button
@@ -1051,7 +1051,7 @@ const FieldCaptureInner: React.FC = () => {
           onChange={e => setFilterTag(e.target.value)}
           aria-label="Filter by tag"
           style={{
-            padding: `${spacing['2']} ${spacing['3']}`,
+            padding: `${spacing['3']} ${spacing['3']}`,
             border: `1px solid ${colors.borderDefault}`,
             borderRadius: borderRadius.lg,
             fontSize: typography.fontSize.sm,
@@ -1060,7 +1060,7 @@ const FieldCaptureInner: React.FC = () => {
             backgroundColor: filterTag ? colors.orangeSubtle : colors.white,
             cursor: 'pointer',
             outline: 'none',
-            minHeight: '36px',
+            minHeight: '56px',
           }}
         >
           <option value="">All tags</option>
@@ -1073,7 +1073,7 @@ const FieldCaptureInner: React.FC = () => {
           onChange={e => setFilterDateRange(e.target.value as typeof filterDateRange)}
           aria-label="Filter by date range"
           style={{
-            padding: `${spacing['2']} ${spacing['3']}`,
+            padding: `${spacing['3']} ${spacing['3']}`,
             border: `1px solid ${colors.borderDefault}`,
             borderRadius: borderRadius.lg,
             fontSize: typography.fontSize.sm,
@@ -1082,7 +1082,7 @@ const FieldCaptureInner: React.FC = () => {
             backgroundColor: filterDateRange !== 'all' ? colors.orangeSubtle : colors.white,
             cursor: 'pointer',
             outline: 'none',
-            minHeight: '36px',
+            minHeight: '56px',
           }}
         >
           <option value="all">All dates</option>
@@ -1095,7 +1095,7 @@ const FieldCaptureInner: React.FC = () => {
           onChange={e => setFilterEntityType(e.target.value)}
           aria-label="Filter by linked entity type"
           style={{
-            padding: `${spacing['2']} ${spacing['3']}`,
+            padding: `${spacing['3']} ${spacing['3']}`,
             border: `1px solid ${colors.borderDefault}`,
             borderRadius: borderRadius.lg,
             fontSize: typography.fontSize.sm,
@@ -1104,7 +1104,7 @@ const FieldCaptureInner: React.FC = () => {
             backgroundColor: filterEntityType ? colors.orangeSubtle : colors.white,
             cursor: 'pointer',
             outline: 'none',
-            minHeight: '36px',
+            minHeight: '56px',
           }}
         >
           <option value="">All linked types</option>
@@ -1113,9 +1113,10 @@ const FieldCaptureInner: React.FC = () => {
         </select>
         {(filterTag || filterDateRange !== 'all' || filterEntityType) && (
           <button
+            aria-label="Clear all filters"
             onClick={() => { setFilterTag(''); setFilterDateRange('all'); setFilterEntityType(''); }}
             style={{
-              padding: `${spacing['2']} ${spacing['3']}`,
+              padding: `${spacing['3']} ${spacing['3']}`,
               border: `1px solid ${colors.borderDefault}`,
               borderRadius: borderRadius.lg,
               fontSize: typography.fontSize.sm,
@@ -1126,7 +1127,7 @@ const FieldCaptureInner: React.FC = () => {
               display: 'flex',
               alignItems: 'center',
               gap: spacing['1'],
-              minHeight: '36px',
+              minHeight: '56px',
             }}
           >
             <X size={12} />
@@ -1187,8 +1188,8 @@ const FieldCaptureInner: React.FC = () => {
                 display: 'flex',
                 alignItems: 'center',
                 gap: spacing['1'],
-                padding: `${spacing['2']} ${spacing['3']}`,
-                minHeight: '32px',
+                padding: `${spacing['3']} ${spacing['4']}`,
+                minHeight: '56px',
                 border: 'none',
                 borderRadius: borderRadius.md,
                 cursor: 'pointer',

@@ -359,12 +359,13 @@ export const EquipmentPage: React.FC = () => {
           return (
             <button
               key={tab.key}
+              aria-pressed={isActive}
               onClick={() => setActiveTab(tab.key)}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: spacing['2'],
-                padding: `${spacing['2']} ${spacing['4']}`,
+                padding: `${spacing['3']} ${spacing['4']}`,
                 border: 'none',
                 borderRadius: borderRadius.base,
                 cursor: 'pointer',
@@ -375,6 +376,7 @@ export const EquipmentPage: React.FC = () => {
                 backgroundColor: isActive ? colors.surfaceRaised : 'transparent',
                 transition: `all ${transitions.instant}`,
                 whiteSpace: 'nowrap',
+                minHeight: '56px',
               }}
             >
               {React.createElement(Icon, { size: 14 })}
