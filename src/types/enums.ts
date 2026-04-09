@@ -1,5 +1,6 @@
 // TypeScript enums for SiteSync AI database
 // Maps to PostgreSQL enum types defined in the Supabase schema
+import { colors } from '../styles/theme';
 
 export enum UserRole {
   Admin = 'admin',
@@ -237,54 +238,60 @@ export function getStatusLabel(status: string): string {
     .replace(/\b\w/g, l => l.toUpperCase())
 }
 
-// Status color mappings for UI
+// Status color mappings for UI (using theme badge tokens)
+const cyanBadge = { fg: colors.badgeCyan, bg: colors.badgeCyanBg };
+const amberBadge = { fg: colors.badgeAmber, bg: colors.badgeAmberBg };
+const tealBadge = { fg: colors.badgeTeal, bg: colors.badgeTealBg };
+const redBadge = { fg: colors.badgeRed, bg: colors.badgeRedBg };
+const grayBadge = { fg: colors.badgeGray, bg: colors.badgeGrayBg };
+
 export const statusColorMap: Record<string, { fg: string; bg: string }> = {
   // RFI statuses
-  [RFIStatus.Open]: { fg: '#06B6D4', bg: '#ECFDFD' },
-  [RFIStatus.UnderReview]: { fg: '#FB923C', bg: '#FFFBEB' },
-  [RFIStatus.Answered]: { fg: '#4EC896', bg: '#ECFDF5' },
-  [RFIStatus.Resubmit]: { fg: '#FB923C', bg: '#FFFBEB' },
-  [RFIStatus.Resolved]: { fg: '#4EC896', bg: '#ECFDF5' },
-  [RFIStatus.Closed]: { fg: '#8B8680', bg: '#F7F8FA' },
+  [RFIStatus.Open]: cyanBadge,
+  [RFIStatus.UnderReview]: amberBadge,
+  [RFIStatus.Answered]: tealBadge,
+  [RFIStatus.Resubmit]: amberBadge,
+  [RFIStatus.Resolved]: tealBadge,
+  [RFIStatus.Closed]: grayBadge,
 
   // Submittal statuses
-  [SubmittalStatus.Draft]: { fg: '#8B8680', bg: '#F7F8FA' },
-  [SubmittalStatus.Submitted]: { fg: '#06B6D4', bg: '#ECFDFD' },
-  [SubmittalStatus.UnderReview]: { fg: '#FB923C', bg: '#FFFBEB' },
-  [SubmittalStatus.Approved]: { fg: '#4EC896', bg: '#ECFDF5' },
-  [SubmittalStatus.ApprovedWithComments]: { fg: '#06B6D4', bg: '#ECFDFD' },
-  [SubmittalStatus.Rejected]: { fg: '#E05252', bg: '#FDF2F2' },
-  [SubmittalStatus.Resubmit]: { fg: '#FB923C', bg: '#FFFBEB' },
+  [SubmittalStatus.Draft]: grayBadge,
+  [SubmittalStatus.Submitted]: cyanBadge,
+  [SubmittalStatus.UnderReview]: amberBadge,
+  [SubmittalStatus.Approved]: tealBadge,
+  [SubmittalStatus.ApprovedWithComments]: cyanBadge,
+  [SubmittalStatus.Rejected]: redBadge,
+  [SubmittalStatus.Resubmit]: amberBadge,
 
   // Change order statuses
-  [ChangeOrderStatus.Draft]: { fg: '#8B8680', bg: '#F7F8FA' },
-  [ChangeOrderStatus.Submitted]: { fg: '#06B6D4', bg: '#ECFDFD' },
-  [ChangeOrderStatus.Pending]: { fg: '#FB923C', bg: '#FFFBEB' },
-  [ChangeOrderStatus.Approved]: { fg: '#4EC896', bg: '#ECFDF5' },
-  [ChangeOrderStatus.Rejected]: { fg: '#E05252', bg: '#FDF2F2' },
-  [ChangeOrderStatus.Executed]: { fg: '#4EC896', bg: '#ECFDF5' },
+  [ChangeOrderStatus.Draft]: grayBadge,
+  [ChangeOrderStatus.Submitted]: cyanBadge,
+  [ChangeOrderStatus.Pending]: amberBadge,
+  [ChangeOrderStatus.Approved]: tealBadge,
+  [ChangeOrderStatus.Rejected]: redBadge,
+  [ChangeOrderStatus.Executed]: tealBadge,
 
   // Punch statuses
-  [PunchStatus.Open]: { fg: '#06B6D4', bg: '#ECFDFD' },
-  [PunchStatus.InProgress]: { fg: '#FB923C', bg: '#FFFBEB' },
-  [PunchStatus.OnHold]: { fg: '#FB923C', bg: '#FFFBEB' },
-  [PunchStatus.ReadyForInspection]: { fg: '#06B6D4', bg: '#ECFDFD' },
-  [PunchStatus.Inspected]: { fg: '#06B6D4', bg: '#ECFDFD' },
-  [PunchStatus.Closed]: { fg: '#4EC896', bg: '#ECFDF5' },
+  [PunchStatus.Open]: cyanBadge,
+  [PunchStatus.InProgress]: amberBadge,
+  [PunchStatus.OnHold]: amberBadge,
+  [PunchStatus.ReadyForInspection]: cyanBadge,
+  [PunchStatus.Inspected]: cyanBadge,
+  [PunchStatus.Closed]: tealBadge,
 
   // Project statuses
-  [ProjectStatus.Bid]: { fg: '#06B6D4', bg: '#ECFDFD' },
-  [ProjectStatus.Planning]: { fg: '#FB923C', bg: '#FFFBEB' },
-  [ProjectStatus.Active]: { fg: '#4EC896', bg: '#ECFDF5' },
-  [ProjectStatus.OnHold]: { fg: '#FB923C', bg: '#FFFBEB' },
-  [ProjectStatus.Complete]: { fg: '#4EC896', bg: '#ECFDF5' },
-  [ProjectStatus.Archived]: { fg: '#8B8680', bg: '#F7F8FA' },
-}
+  [ProjectStatus.Bid]: cyanBadge,
+  [ProjectStatus.Planning]: amberBadge,
+  [ProjectStatus.Active]: tealBadge,
+  [ProjectStatus.OnHold]: amberBadge,
+  [ProjectStatus.Complete]: tealBadge,
+  [ProjectStatus.Archived]: grayBadge,
+};
 
 // Priority color mappings
 export const priorityColorMap: Record<string, { fg: string; bg: string }> = {
-  [RFIPriority.Critical]: { fg: '#E05252', bg: '#FDF2F2' },
-  [RFIPriority.High]: { fg: '#F47820', bg: '#FDDCB8' },
-  [RFIPriority.Medium]: { fg: '#FB923C', bg: '#FFFBEB' },
-  [RFIPriority.Low]: { fg: '#06B6D4', bg: '#ECFDFD' },
-}
+  [RFIPriority.Critical]: redBadge,
+  [RFIPriority.High]: { fg: colors.badgeOrange, bg: colors.badgeOrangeBg },
+  [RFIPriority.Medium]: amberBadge,
+  [RFIPriority.Low]: cyanBadge,
+};

@@ -123,6 +123,20 @@ export const colors = {
   chartPink: '#E07070',
   chartRed: '#E05252',
 
+  // Status badge palette (raw values for status/priority badges in enums)
+  badgeCyan: '#06B6D4',
+  badgeCyanBg: '#ECFDFD',
+  badgeAmber: '#FB923C',
+  badgeAmberBg: '#FFFBEB',
+  badgeTeal: '#4EC896',
+  badgeTealBg: '#ECFDF5',
+  badgeRed: '#E05252',
+  badgeRedBg: '#FDF2F2',
+  badgeGray: '#8B8680',
+  badgeGrayBg: '#F7F8FA',
+  badgeOrange: '#F47820',
+  badgeOrangeBg: '#FDDCB8',
+
   // Neutral grays
   gray300: '#D0D0D0',
   gray400: '#B0B0B0',
