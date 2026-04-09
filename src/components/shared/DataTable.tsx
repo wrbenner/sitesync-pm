@@ -13,7 +13,7 @@ import {
   type RowSelectionState,
   type Row,
 } from '@tanstack/react-table';
-import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme';
+import { colors, spacing, typography, borderRadius, transitions, touchTarget } from '../../styles/theme';
 import { useUiStore } from '../../stores';
 import { TableSkeleton } from '../ui/Skeletons';
 import { ArrowUp, ArrowDown, ChevronLeft, ChevronRight, Search, Download, Keyboard } from 'lucide-react';
@@ -367,7 +367,8 @@ export function DataTable<T>({
                 display: 'flex',
                 alignItems: 'center',
                 gap: spacing['1'],
-                padding: `${spacing['1']} ${spacing['3']}`,
+                padding: `0 ${spacing['3']}`,
+                minHeight: touchTarget.field,
                 border: `1px solid ${colors.borderDefault}`,
                 borderRadius: borderRadius.sm,
                 backgroundColor: 'transparent',
@@ -517,7 +518,8 @@ export function DataTable<T>({
               aria-label="Previous page"
               style={{
                 display: 'flex', alignItems: 'center',
-                padding: `${spacing['1']} ${spacing['2']}`,
+                padding: `0 ${spacing['2']}`,
+                minHeight: touchTarget.field,
                 border: `1px solid ${colors.borderDefault}`,
                 borderRadius: borderRadius.sm,
                 backgroundColor: 'transparent',
@@ -535,7 +537,8 @@ export function DataTable<T>({
               aria-label="Next page"
               style={{
                 display: 'flex', alignItems: 'center',
-                padding: `${spacing['1']} ${spacing['2']}`,
+                padding: `0 ${spacing['2']}`,
+                minHeight: touchTarget.field,
                 border: `1px solid ${colors.borderDefault}`,
                 borderRadius: borderRadius.sm,
                 backgroundColor: 'transparent',

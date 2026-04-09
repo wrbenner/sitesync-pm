@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
 import { X, Loader2, FolderOpen, ChevronRight } from 'lucide-react'
-import { colors, spacing, typography, borderRadius, shadows, zIndex, transitions } from '../../styles/theme'
+import { colors, spacing, typography, borderRadius, shadows, zIndex, transitions, touchTarget } from '../../styles/theme'
 import { motion, AnimatePresence } from 'framer-motion'
 
 // ── Folder Picker Modal ──────────────────────────────────
@@ -69,7 +69,7 @@ export const FolderPickerModal: React.FC<FolderPickerModalProps> = ({
                   style={{
                     all: 'unset', cursor: 'pointer',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    width: 44, height: 44,
+                    width: touchTarget.field, height: touchTarget.field,
                     borderRadius: borderRadius.full,
                     color: colors.textTertiary,
                   }}
@@ -106,7 +106,8 @@ export const FolderPickerModal: React.FC<FolderPickerModalProps> = ({
                     alignItems: 'center',
                     gap: spacing['3'],
                     width: '100%',
-                    padding: `${spacing['2']} ${spacing['3']}`,
+                    minHeight: touchTarget.field,
+                    padding: `0 ${spacing['3']}`,
                     paddingLeft: `calc(${spacing['3']} + ${(folder.depth || 0) * 20}px)`,
                     borderRadius: borderRadius.md,
                     cursor: 'pointer',
@@ -330,7 +331,8 @@ export const BulkActionBar: React.FC<BulkActionBarProps> = ({
                 <button
                   onClick={() => setConfirmAction(null)}
                   style={{
-                    padding: `${spacing['2']} ${spacing['5']}`,
+                    padding: `0 ${spacing['5']}`,
+                    minHeight: touchTarget.field,
                     fontSize: typography.fontSize.body,
                     fontFamily: typography.fontFamily,
                     fontWeight: typography.fontWeight.medium,
@@ -346,7 +348,8 @@ export const BulkActionBar: React.FC<BulkActionBarProps> = ({
                 <button
                   onClick={() => confirmAction && executeAction(confirmAction)}
                   style={{
-                    padding: `${spacing['2']} ${spacing['5']}`,
+                    padding: `0 ${spacing['5']}`,
+                    minHeight: touchTarget.field,
                     fontSize: typography.fontSize.body,
                     fontFamily: typography.fontFamily,
                     fontWeight: typography.fontWeight.semibold,
