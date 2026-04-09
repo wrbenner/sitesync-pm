@@ -253,6 +253,7 @@ export const Benchmarks: React.FC = () => {
               style={{
                 display: 'flex', alignItems: 'center', gap: spacing['2'],
                 padding: `${spacing['2']} ${spacing['4']}`,
+                minHeight: 56,
                 border: 'none', borderRadius: borderRadius.base, cursor: 'pointer',
                 fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
                 fontWeight: isActive ? typography.fontWeight.medium : typography.fontWeight.normal,
@@ -276,7 +277,9 @@ export const Benchmarks: React.FC = () => {
             <button
               onClick={() => setProjectType(undefined)}
               style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                 padding: `${spacing['1']} ${spacing['3']}`,
+                minHeight: 56,
                 backgroundColor: !projectType ? colors.primaryOrange : 'transparent',
                 color: !projectType ? colors.white : colors.textSecondary,
                 border: `1px solid ${!projectType ? colors.primaryOrange : colors.borderDefault}`,
@@ -292,7 +295,9 @@ export const Benchmarks: React.FC = () => {
                 key={pt}
                 onClick={() => setProjectType(pt)}
                 style={{
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                   padding: `${spacing['1']} ${spacing['3']}`,
+                  minHeight: 56,
                   backgroundColor: projectType === pt ? colors.primaryOrange : 'transparent',
                   color: projectType === pt ? colors.white : colors.textSecondary,
                   border: `1px solid ${projectType === pt ? colors.primaryOrange : colors.borderDefault}`,

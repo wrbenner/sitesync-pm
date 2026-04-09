@@ -355,7 +355,7 @@ export const TimeMachine: React.FC = () => {
           </div>
 
           {/* Event markers */}
-          <div style={{ position: 'relative', height: 40, marginTop: -2 }}>
+          <div style={{ position: 'relative', height: 56, marginTop: -2 }}>
             {snapshots.map((s, i) => {
               const left = snapshots.length > 1 ? (i / (snapshots.length - 1)) * 100 : 50;
               const isCurrent = i === currentIndex;
@@ -370,8 +370,9 @@ export const TimeMachine: React.FC = () => {
                   aria-current={isCurrent ? 'true' : undefined}
                   style={{
                     position: 'absolute', left: `${left}%`, top: 0, transform: 'translateX(-50%)',
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
-                    backgroundColor: 'transparent', border: 'none', cursor: 'pointer', padding: 0,
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', gap: 2,
+                    minWidth: 56, minHeight: 56,
+                    backgroundColor: 'transparent', border: 'none', cursor: 'pointer', padding: `${spacing['2']} 0`,
                   }}
                 >
                   <div style={{
