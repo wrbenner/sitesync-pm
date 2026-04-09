@@ -396,7 +396,19 @@ export const EquipmentPage: React.FC = () => {
         <Card padding={spacing['4']}>
           <SectionHeader title="Equipment Fleet" />
           <div style={{ marginTop: spacing['3'] }}>
-            <DataTable columns={fleetColumns} data={equipment || []} />
+            {(equipment || []).length === 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: `${spacing['10']} ${spacing['6']}`, gap: spacing['3'], textAlign: 'center' }}>
+                <Truck size={40} style={{ color: colors.textTertiary }} />
+                <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textTertiary, maxWidth: 320 }}>
+                  No equipment tracked on this project yet. Add your first piece of equipment to start managing your fleet.
+                </p>
+                <Btn variant="primary" icon={<Plus size={16} />} onClick={handleAdd}>
+                  Add Equipment
+                </Btn>
+              </div>
+            ) : (
+              <DataTable columns={fleetColumns} data={equipment || []} />
+            )}
           </div>
         </Card>
       )}
@@ -412,7 +424,16 @@ export const EquipmentPage: React.FC = () => {
           <Card padding={spacing['4']}>
             <SectionHeader title="Utilization by Equipment" />
             <div style={{ marginTop: spacing['3'] }}>
-              <DataTable columns={utilizationColumns} data={utilizationData} />
+              {utilizationData.length === 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: `${spacing['10']} ${spacing['6']}`, gap: spacing['3'], textAlign: 'center' }}>
+                  <BarChart3 size={40} style={{ color: colors.textTertiary }} />
+                  <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textTertiary, maxWidth: 320 }}>
+                    No utilization data available. Add equipment and log hours to see tracking here.
+                  </p>
+                </div>
+              ) : (
+                <DataTable columns={utilizationColumns} data={utilizationData} />
+              )}
             </div>
           </Card>
         </>
@@ -423,7 +444,19 @@ export const EquipmentPage: React.FC = () => {
         <Card padding={spacing['4']}>
           <SectionHeader title="Maintenance Schedule" />
           <div style={{ marginTop: spacing['3'] }}>
-            <DataTable columns={maintenanceColumns} data={maintenanceRecords} />
+            {maintenanceRecords.length === 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: `${spacing['10']} ${spacing['6']}`, gap: spacing['3'], textAlign: 'center' }}>
+                <Wrench size={40} style={{ color: colors.textTertiary }} />
+                <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textTertiary, maxWidth: 320 }}>
+                  No maintenance records found. Schedule a service to keep your fleet running smoothly.
+                </p>
+                <Btn variant="primary" icon={<Plus size={16} />} onClick={handleAdd}>
+                  Schedule Service
+                </Btn>
+              </div>
+            ) : (
+              <DataTable columns={maintenanceColumns} data={maintenanceRecords} />
+            )}
           </div>
         </Card>
       )}

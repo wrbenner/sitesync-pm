@@ -22,11 +22,11 @@ const LINK_OPTIONS = [
 ];
 
 const TAG_COLORS: Record<string, { bg: string; text: string }> = {
-  progress: { bg: '#E0F2FE', text: '#0369A1' },
-  safety:   { bg: '#FEF2F2', text: '#DC2626' },
-  quality:  { bg: '#F0FDF4', text: '#16A34A' },
-  defect:   { bg: '#FFF7ED', text: '#EA580C' },
-  delivery: { bg: '#F5F3FF', text: '#7C3AED' },
+  progress: { bg: colors.statusInfoSubtle,     text: colors.statusInfo },
+  safety:   { bg: colors.statusCriticalSubtle, text: colors.statusCritical },
+  quality:  { bg: colors.statusActiveSubtle,   text: colors.statusActive },
+  defect:   { bg: colors.statusPendingSubtle,  text: colors.statusPending },
+  delivery: { bg: colors.statusReviewSubtle,   text: colors.statusReview },
 };
 
 // ── IndexedDB helpers for offline capture queue ─────────────
@@ -139,7 +139,7 @@ const PhotoOverlay: React.FC<PhotoOverlayProps> = ({ dataUrl, location, isSaving
     outline: 'none',
     boxSizing: 'border-box',
     backgroundColor: colors.surfacePage,
-    minHeight: '44px',
+    minHeight: '56px',
   };
 
   return (
@@ -345,7 +345,7 @@ const PhotoOverlay: React.FC<PhotoOverlayProps> = ({ dataUrl, location, isSaving
 
           {/* Actions */}
           <div style={{ display: 'flex', gap: spacing['3'], paddingBottom: spacing['2'] }}>
-            <Btn variant="ghost" size="md" onClick={onCancel} style={{ flex: 1, minHeight: '44px' } as React.CSSProperties}>
+            <Btn variant="ghost" size="md" onClick={onCancel} style={{ flex: 1, minHeight: '56px' } as React.CSSProperties}>
               Cancel
             </Btn>
             <Btn
@@ -353,7 +353,7 @@ const PhotoOverlay: React.FC<PhotoOverlayProps> = ({ dataUrl, location, isSaving
               size="md"
               onClick={() => onSave({ title, notes, tags: selectedTags, linkTo, location })}
               disabled={isSaving}
-              style={{ flex: 1, minHeight: '44px' } as React.CSSProperties}
+              style={{ flex: 1, minHeight: '56px' } as React.CSSProperties}
             >
               {isSaving ? 'Saving...' : 'Save Photo'}
             </Btn>
@@ -1158,7 +1158,7 @@ const FieldCaptureInner: React.FC = () => {
                 background: 'none', border: 'none', cursor: 'pointer',
                 fontSize: typography.fontSize.sm, color: colors.primaryOrange,
                 fontFamily: typography.fontFamily, fontWeight: typography.fontWeight.medium,
-                padding: 0, minHeight: '44px',
+                padding: 0, minHeight: '56px',
               }}
             >
               {isBulkMode ? 'Deselect all' : 'Select all'}
@@ -1258,7 +1258,7 @@ const FieldCaptureInner: React.FC = () => {
                   fontWeight: typography.fontWeight.semibold,
                   fontFamily: typography.fontFamily,
                   cursor: 'pointer',
-                  minHeight: '44px',
+                  minHeight: '56px',
                 }}
               >
                 <Camera size={18} />
@@ -1325,7 +1325,7 @@ const FieldCaptureInner: React.FC = () => {
             onClick={handleBulkLink}
             style={{
               display: 'flex', alignItems: 'center', gap: spacing['1.5'],
-              padding: `${spacing['2']} ${spacing['4']}`, minHeight: '44px',
+              padding: `${spacing['2']} ${spacing['4']}`, minHeight: '56px',
               backgroundColor: 'rgba(255,255,255,0.08)', color: colors.textOnDark,
               border: '1px solid rgba(255,255,255,0.15)', borderRadius: borderRadius.lg,
               cursor: 'pointer', fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
@@ -1338,7 +1338,7 @@ const FieldCaptureInner: React.FC = () => {
             onClick={handleBulkExport}
             style={{
               display: 'flex', alignItems: 'center', gap: spacing['1.5'],
-              padding: `${spacing['2']} ${spacing['4']}`, minHeight: '44px',
+              padding: `${spacing['2']} ${spacing['4']}`, minHeight: '56px',
               backgroundColor: 'rgba(255,255,255,0.08)', color: colors.textOnDark,
               border: '1px solid rgba(255,255,255,0.15)', borderRadius: borderRadius.lg,
               cursor: 'pointer', fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
@@ -1352,7 +1352,7 @@ const FieldCaptureInner: React.FC = () => {
               onClick={handleBulkDelete}
               style={{
                 display: 'flex', alignItems: 'center', gap: spacing['1.5'],
-                padding: `${spacing['2']} ${spacing['4']}`, minHeight: '44px',
+                padding: `${spacing['2']} ${spacing['4']}`, minHeight: '56px',
                 backgroundColor: `${colors.statusCritical}22`, color: colors.statusCritical,
                 border: `1px solid ${colors.statusCritical}44`, borderRadius: borderRadius.lg,
                 cursor: 'pointer', fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
@@ -1367,7 +1367,7 @@ const FieldCaptureInner: React.FC = () => {
             style={{
               marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer',
               color: colors.textOnDarkMuted, display: 'flex', alignItems: 'center',
-              minHeight: '44px', minWidth: '44px', justifyContent: 'center',
+              minHeight: '56px', minWidth: '56px', justifyContent: 'center',
             }}
             aria-label="Close bulk selection"
           >

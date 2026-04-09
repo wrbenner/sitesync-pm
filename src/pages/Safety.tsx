@@ -21,11 +21,11 @@ const tabs: { key: TabKey; label: string; icon: React.ElementType }[] = [
 
 // OSHA incident severity — dot and badge colors per design spec
 const OSHA_SEVERITY: Record<string, { fg: string; bg: string; label: string }> = {
-  near_miss:          { fg: '#6B7280', bg: '#F3F4F6', label: 'Near Miss' },
-  first_aid:          { fg: '#F5A623', bg: '#FEF9C3', label: 'First Aid' },
-  medical_treatment:  { fg: '#E67E22', bg: '#FFF7ED', label: 'Medical Treatment' },
-  lost_time:          { fg: '#E74C3C', bg: '#FEF2F2', label: 'Lost Time' },
-  fatality:           { fg: '#1A1A2E', bg: '#F3F4F6', label: 'Fatality' },
+  near_miss:          { fg: colors.statusNeutral,   bg: colors.statusNeutralSubtle,   label: 'Near Miss' },
+  first_aid:          { fg: colors.statusPending,   bg: colors.statusPendingSubtle,   label: 'First Aid' },
+  medical_treatment:  { fg: colors.statusWarning,   bg: colors.statusWarningSubtle,   label: 'Medical Treatment' },
+  lost_time:          { fg: colors.statusCritical,  bg: colors.statusCriticalSubtle,  label: 'Lost Time' },
+  fatality:           { fg: colors.textPrimary,     bg: colors.statusNeutralSubtle,   label: 'Fatality' },
 }
 
 function getSeverityStyle(severity: string | null): { fg: string; bg: string; label: string } {
@@ -473,7 +473,7 @@ function EmptyState({ message, cta, onCta }: { message: string; cta?: string; on
         {message}
       </p>
       {cta && onCta && (
-        <Btn variant="primary" onClick={onCta} style={{ minHeight: '44px' }}>
+        <Btn variant="primary" onClick={onCta} style={{ minHeight: '56px' }}>
           {cta}
         </Btn>
       )}
@@ -796,27 +796,27 @@ export const Safety: React.FC = () => {
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
           <ExportButton pdfFilename="SiteSync_Safety_Report" />
           {activeTab === 'incidents' && (
-            <Btn variant="primary" icon={<Plus size={16} />} onClick={() => setShowIncidentModal(true)} style={{ minHeight: 44 }}>
+            <Btn variant="primary" icon={<Plus size={16} />} onClick={() => setShowIncidentModal(true)} style={{ minHeight: 56 }}>
               Report Incident
             </Btn>
           )}
           {activeTab === 'inspections' && (
-            <Btn variant="primary" icon={<Plus size={16} />} onClick={() => toast.info('Form submission requires backend configuration')} style={{ minHeight: 44 }}>
+            <Btn variant="primary" icon={<Plus size={16} />} onClick={() => toast.info('Form submission requires backend configuration')} style={{ minHeight: 56 }}>
               New Inspection
             </Btn>
           )}
           {activeTab === 'toolbox' && (
-            <Btn variant="primary" icon={<Plus size={16} />} onClick={() => setShowTalkModal(true)} style={{ minHeight: 44 }}>
+            <Btn variant="primary" icon={<Plus size={16} />} onClick={() => setShowTalkModal(true)} style={{ minHeight: 56 }}>
               New Talk
             </Btn>
           )}
           {activeTab === 'certifications' && (
-            <Btn variant="primary" icon={<Plus size={16} />} onClick={() => toast.info('Form submission requires backend configuration')} style={{ minHeight: 44 }}>
+            <Btn variant="primary" icon={<Plus size={16} />} onClick={() => toast.info('Form submission requires backend configuration')} style={{ minHeight: 56 }}>
               Add Certification
             </Btn>
           )}
           {activeTab === 'corrective_actions' && (
-            <Btn variant="primary" icon={<Plus size={16} />} onClick={() => toast.info('Form submission requires backend configuration')} style={{ minHeight: 44 }}>
+            <Btn variant="primary" icon={<Plus size={16} />} onClick={() => toast.info('Form submission requires backend configuration')} style={{ minHeight: 56 }}>
               Log Corrective Action
             </Btn>
           )}
@@ -831,7 +831,7 @@ export const Safety: React.FC = () => {
           {[1, 2, 3, 4].map((i) => (
             <div key={i} style={{
               width: '100%', minWidth: 180, height: 100,
-              backgroundColor: '#E5E7EB',
+              backgroundColor: colors.surfaceInset,
               borderRadius: borderRadius.md,
               animation: 'safety-pulse 1.5s ease-in-out infinite',
             }} />
@@ -987,10 +987,10 @@ export const Safety: React.FC = () => {
                 Safety tracking not yet configured. Set up your safety program to track incidents, inspections, and certifications.
               </p>
               <div style={{ display: 'flex', gap: spacing['3'], flexWrap: 'wrap', justifyContent: 'center' }}>
-                <Btn variant="primary" onClick={() => setShowIncidentModal(true)} style={{ minHeight: 44 }}>
+                <Btn variant="primary" onClick={() => setShowIncidentModal(true)} style={{ minHeight: 56 }}>
                   Report First Incident
                 </Btn>
-                <Btn variant="secondary" onClick={() => toast.info('Form submission requires backend configuration')} style={{ minHeight: 44 }}>
+                <Btn variant="secondary" onClick={() => toast.info('Form submission requires backend configuration')} style={{ minHeight: 56 }}>
                   Set Up Inspection Template
                 </Btn>
               </div>
@@ -1343,7 +1343,7 @@ export const Safety: React.FC = () => {
                 style={{
                   background: 'none', border: 'none', cursor: 'pointer',
                   fontSize: 20, color: colors.textSecondary, lineHeight: 1, padding: 4,
-                  minHeight: '44px', minWidth: '44px',
+                  minHeight: '56px', minWidth: '56px',
                 }}
               >
                 &times;
@@ -1352,7 +1352,7 @@ export const Safety: React.FC = () => {
 
             <div style={{ marginBottom: spacing['4'] }}>
               <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
-                Date<span style={{ color: '#E74C3C', marginLeft: 2 }}>*</span>
+                Date<span style={{ color: colors.statusCritical, marginLeft: 2 }}>*</span>
               </label>
               <input
                 ref={dateRef}
@@ -1363,18 +1363,18 @@ export const Safety: React.FC = () => {
                 style={{
                   width: '100%', boxSizing: 'border-box',
                   padding: `${spacing['2']} ${spacing['3']}`,
-                  border: fieldErrors.date ? '1px solid #E74C3C' : '1px solid #E5E7EB',
+                  border: fieldErrors.date ? `1px solid ${colors.statusCritical}` : `1px solid ${colors.borderDefault}`,
                   borderRadius: borderRadius.base,
                   fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
                   color: colors.textPrimary, outline: 'none',
                 }}
               />
-              {fieldErrors.date && <p style={{ color: '#E74C3C', fontSize: 12, margin: '4px 0 0' }}>{fieldErrors.date}</p>}
+              {fieldErrors.date && <p style={{ color: colors.statusCritical, fontSize: 12, margin: '4px 0 0' }}>{fieldErrors.date}</p>}
             </div>
 
             <div style={{ marginBottom: spacing['4'] }}>
               <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
-                Incident Type<span style={{ color: '#E74C3C', marginLeft: 2 }}>*</span>
+                Incident Type<span style={{ color: colors.statusCritical, marginLeft: 2 }}>*</span>
               </label>
               <select
                 value={incidentForm.type}
@@ -1383,7 +1383,7 @@ export const Safety: React.FC = () => {
                 style={{
                   width: '100%', boxSizing: 'border-box',
                   padding: `${spacing['2']} ${spacing['3']}`,
-                  border: fieldErrors.type ? '1px solid #E74C3C' : '1px solid #E5E7EB',
+                  border: fieldErrors.type ? `1px solid ${colors.statusCritical}` : `1px solid ${colors.borderDefault}`,
                   borderRadius: borderRadius.base,
                   fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
                   color: colors.textPrimary, outline: 'none', backgroundColor: '#fff',
@@ -1395,12 +1395,12 @@ export const Safety: React.FC = () => {
                 <option value="property_damage">Property Damage</option>
                 <option value="environmental">Environmental</option>
               </select>
-              {fieldErrors.type && <p style={{ color: '#E74C3C', fontSize: 12, margin: '4px 0 0' }}>{fieldErrors.type}</p>}
+              {fieldErrors.type && <p style={{ color: colors.statusCritical, fontSize: 12, margin: '4px 0 0' }}>{fieldErrors.type}</p>}
             </div>
 
             <div style={{ marginBottom: spacing['4'] }}>
               <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
-                Location<span style={{ color: '#E74C3C', marginLeft: 2 }}>*</span>
+                Location<span style={{ color: colors.statusCritical, marginLeft: 2 }}>*</span>
               </label>
               <input
                 ref={locationRef}
@@ -1412,18 +1412,18 @@ export const Safety: React.FC = () => {
                 style={{
                   width: '100%', boxSizing: 'border-box',
                   padding: `${spacing['2']} ${spacing['3']}`,
-                  border: fieldErrors.location ? '1px solid #E74C3C' : '1px solid #E5E7EB',
+                  border: fieldErrors.location ? `1px solid ${colors.statusCritical}` : `1px solid ${colors.borderDefault}`,
                   borderRadius: borderRadius.base,
                   fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
                   color: colors.textPrimary, outline: 'none',
                 }}
               />
-              {fieldErrors.location && <p style={{ color: '#E74C3C', fontSize: 12, margin: '4px 0 0' }}>{fieldErrors.location}</p>}
+              {fieldErrors.location && <p style={{ color: colors.statusCritical, fontSize: 12, margin: '4px 0 0' }}>{fieldErrors.location}</p>}
             </div>
 
             <div style={{ marginBottom: spacing['4'] }}>
               <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
-                Severity<span style={{ color: '#E74C3C', marginLeft: 2 }}>*</span>
+                Severity<span style={{ color: colors.statusCritical, marginLeft: 2 }}>*</span>
               </label>
               <select
                 ref={severityRef}
@@ -1433,7 +1433,7 @@ export const Safety: React.FC = () => {
                 style={{
                   width: '100%', boxSizing: 'border-box',
                   padding: `${spacing['2']} ${spacing['3']}`,
-                  border: fieldErrors.severity ? '1px solid #E74C3C' : '1px solid #E5E7EB',
+                  border: fieldErrors.severity ? `1px solid ${colors.statusCritical}` : `1px solid ${colors.borderDefault}`,
                   borderRadius: borderRadius.base,
                   fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
                   color: colors.textPrimary, outline: 'none', backgroundColor: '#fff',
@@ -1445,12 +1445,12 @@ export const Safety: React.FC = () => {
                 <option value="lost_time">Lost Time</option>
                 <option value="fatality">Fatality</option>
               </select>
-              {fieldErrors.severity && <p style={{ color: '#E74C3C', fontSize: 12, margin: '4px 0 0' }}>{fieldErrors.severity}</p>}
+              {fieldErrors.severity && <p style={{ color: colors.statusCritical, fontSize: 12, margin: '4px 0 0' }}>{fieldErrors.severity}</p>}
             </div>
 
             <div style={{ marginBottom: spacing['4'] }}>
               <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
-                Involved Party<span style={{ color: '#E74C3C', marginLeft: 2 }}>*</span>
+                Involved Party<span style={{ color: colors.statusCritical, marginLeft: 2 }}>*</span>
               </label>
               <input
                 ref={injuredPartyRef}
@@ -1462,18 +1462,18 @@ export const Safety: React.FC = () => {
                 style={{
                   width: '100%', boxSizing: 'border-box',
                   padding: `${spacing['2']} ${spacing['3']}`,
-                  border: fieldErrors.injured_party_name ? '1px solid #E74C3C' : '1px solid #E5E7EB',
+                  border: fieldErrors.injured_party_name ? `1px solid ${colors.statusCritical}` : `1px solid ${colors.borderDefault}`,
                   borderRadius: borderRadius.base,
                   fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
                   color: colors.textPrimary, outline: 'none',
                 }}
               />
-              {fieldErrors.injured_party_name && <p style={{ color: '#E74C3C', fontSize: 12, margin: '4px 0 0' }}>{fieldErrors.injured_party_name}</p>}
+              {fieldErrors.injured_party_name && <p style={{ color: colors.statusCritical, fontSize: 12, margin: '4px 0 0' }}>{fieldErrors.injured_party_name}</p>}
             </div>
 
             <div style={{ marginBottom: spacing['5'] }}>
               <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
-                Description<span style={{ color: '#E74C3C', marginLeft: 2 }}>*</span>
+                Description<span style={{ color: colors.statusCritical, marginLeft: 2 }}>*</span>
               </label>
               <textarea
                 ref={descriptionRef}
@@ -1485,13 +1485,13 @@ export const Safety: React.FC = () => {
                 style={{
                   width: '100%', boxSizing: 'border-box',
                   padding: `${spacing['2']} ${spacing['3']}`,
-                  border: fieldErrors.description ? '1px solid #E74C3C' : '1px solid #E5E7EB',
+                  border: fieldErrors.description ? `1px solid ${colors.statusCritical}` : `1px solid ${colors.borderDefault}`,
                   borderRadius: borderRadius.base,
                   fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
                   color: colors.textPrimary, resize: 'vertical', outline: 'none',
                 }}
               />
-              {fieldErrors.description && <p style={{ color: '#E74C3C', fontSize: 12, margin: '4px 0 0' }}>{fieldErrors.description}</p>}
+              {fieldErrors.description && <p style={{ color: colors.statusCritical, fontSize: 12, margin: '4px 0 0' }}>{fieldErrors.description}</p>}
             </div>
 
             <div style={{ marginBottom: spacing['4'] }}>
@@ -1507,7 +1507,7 @@ export const Safety: React.FC = () => {
                 style={{
                   width: '100%', boxSizing: 'border-box',
                   padding: `${spacing['2']} ${spacing['3']}`,
-                  border: '1px solid #E5E7EB',
+                  border: `1px solid ${colors.borderDefault}`,
                   borderRadius: borderRadius.base,
                   fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
                   color: colors.textPrimary, resize: 'vertical', outline: 'none',
@@ -1538,7 +1538,7 @@ export const Safety: React.FC = () => {
                   style={{
                     width: '100%', boxSizing: 'border-box',
                     padding: `${spacing['2']} ${spacing['3']}`,
-                    border: '1px solid #E5E7EB',
+                    border: `1px solid ${colors.borderDefault}`,
                     borderRadius: borderRadius.base,
                     fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
                     color: colors.textPrimary, outline: 'none', backgroundColor: '#fff',
@@ -1558,7 +1558,7 @@ export const Safety: React.FC = () => {
                     style={{
                       width: '100%', boxSizing: 'border-box',
                       padding: `${spacing['2']} ${spacing['3']}`,
-                      border: '1px solid #E5E7EB',
+                      border: `1px solid ${colors.borderDefault}`,
                       borderRadius: borderRadius.base,
                       fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
                       color: colors.textPrimary, outline: 'none', backgroundColor: '#fff',
@@ -1576,7 +1576,7 @@ export const Safety: React.FC = () => {
                     style={{
                       width: '100%', boxSizing: 'border-box',
                       padding: `${spacing['2']} ${spacing['3']}`,
-                      border: '1px solid #E5E7EB',
+                      border: `1px solid ${colors.borderDefault}`,
                       borderRadius: borderRadius.base,
                       fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
                       color: colors.textPrimary, outline: 'none', backgroundColor: '#fff',
@@ -1590,7 +1590,7 @@ export const Safety: React.FC = () => {
             <div style={{ marginBottom: spacing['5'] }}>
               <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
                 Photo Documentation
-                {isPhotoRequired && <span style={{ color: '#E74C3C', marginLeft: 2 }}>*</span>}
+                {isPhotoRequired && <span style={{ color: colors.statusCritical, marginLeft: 2 }}>*</span>}
                 {!isPhotoRequired && <span style={{ color: colors.textTertiary, fontSize: typography.fontSize.caption, marginLeft: spacing['2'] }}>(required for medical treatment and above)</span>}
               </label>
               {isPhotoRequired && (
@@ -1610,7 +1610,7 @@ export const Safety: React.FC = () => {
                 style={{
                   width: '100%', boxSizing: 'border-box',
                   padding: `${spacing['2']} ${spacing['3']}`,
-                  border: fieldErrors.photo ? '1px solid #E74C3C' : '1px solid #E5E7EB',
+                  border: fieldErrors.photo ? `1px solid ${colors.statusCritical}` : `1px solid ${colors.borderDefault}`,
                   borderRadius: borderRadius.base,
                   fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
                   color: colors.textPrimary, outline: 'none', cursor: 'pointer',
@@ -1622,12 +1622,12 @@ export const Safety: React.FC = () => {
                   {incidentForm.photo.name} selected
                 </p>
               )}
-              {fieldErrors.photo && <p style={{ color: '#E74C3C', fontSize: 12, margin: '4px 0 0' }}>{fieldErrors.photo}</p>}
+              {fieldErrors.photo && <p style={{ color: colors.statusCritical, fontSize: 12, margin: '4px 0 0' }}>{fieldErrors.photo}</p>}
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: spacing['3'] }}>
-              <Btn variant="ghost" onClick={handleCloseModal} style={{ minHeight: '44px', minWidth: '44px' }}>Cancel</Btn>
-              <Btn variant="primary" onClick={handleIncidentSubmit} style={{ minHeight: '44px', minWidth: '44px' }}>Submit Incident</Btn>
+              <Btn variant="ghost" onClick={handleCloseModal} style={{ minHeight: '56px', minWidth: '56px' }}>Cancel</Btn>
+              <Btn variant="primary" onClick={handleIncidentSubmit} style={{ minHeight: '56px', minWidth: '56px' }}>Submit Incident</Btn>
             </div>
           </div>
         </div>
@@ -1665,7 +1665,7 @@ export const Safety: React.FC = () => {
                 style={{
                   background: 'none', border: 'none', cursor: 'pointer',
                   fontSize: 20, color: colors.textSecondary, lineHeight: 1, padding: 4,
-                  minHeight: '44px', minWidth: '44px',
+                  minHeight: '56px', minWidth: '56px',
                 }}
               >
                 &times;
@@ -1674,7 +1674,7 @@ export const Safety: React.FC = () => {
 
             <div style={{ marginBottom: spacing['4'] }}>
               <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
-                Topic<span style={{ color: '#E74C3C', marginLeft: 2 }}>*</span>
+                Topic<span style={{ color: colors.statusCritical, marginLeft: 2 }}>*</span>
               </label>
               <input
                 type="text"
@@ -1684,19 +1684,19 @@ export const Safety: React.FC = () => {
                 style={{
                   width: '100%', boxSizing: 'border-box',
                   padding: `${spacing['2']} ${spacing['3']}`,
-                  border: talkErrors.topic ? '1px solid #E74C3C' : '1px solid #E5E7EB',
+                  border: talkErrors.topic ? `1px solid ${colors.statusCritical}` : `1px solid ${colors.borderDefault}`,
                   borderRadius: borderRadius.base,
                   fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
                   color: colors.textPrimary, outline: 'none',
                 }}
               />
-              {talkErrors.topic && <p style={{ color: '#E74C3C', fontSize: 12, margin: '4px 0 0' }}>{talkErrors.topic}</p>}
+              {talkErrors.topic && <p style={{ color: colors.statusCritical, fontSize: 12, margin: '4px 0 0' }}>{talkErrors.topic}</p>}
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['4'], marginBottom: spacing['4'] }}>
               <div>
                 <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
-                  Date<span style={{ color: '#E74C3C', marginLeft: 2 }}>*</span>
+                  Date<span style={{ color: colors.statusCritical, marginLeft: 2 }}>*</span>
                 </label>
                 <input
                   type="date"
@@ -1705,17 +1705,17 @@ export const Safety: React.FC = () => {
                   style={{
                     width: '100%', boxSizing: 'border-box',
                     padding: `${spacing['2']} ${spacing['3']}`,
-                    border: talkErrors.date ? '1px solid #E74C3C' : '1px solid #E5E7EB',
+                    border: talkErrors.date ? `1px solid ${colors.statusCritical}` : `1px solid ${colors.borderDefault}`,
                     borderRadius: borderRadius.base,
                     fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
                     color: colors.textPrimary, outline: 'none',
                   }}
                 />
-                {talkErrors.date && <p style={{ color: '#E74C3C', fontSize: 12, margin: '4px 0 0' }}>{talkErrors.date}</p>}
+                {talkErrors.date && <p style={{ color: colors.statusCritical, fontSize: 12, margin: '4px 0 0' }}>{talkErrors.date}</p>}
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
-                  Presenter<span style={{ color: '#E74C3C', marginLeft: 2 }}>*</span>
+                  Presenter<span style={{ color: colors.statusCritical, marginLeft: 2 }}>*</span>
                 </label>
                 <input
                   type="text"
@@ -1725,13 +1725,13 @@ export const Safety: React.FC = () => {
                   style={{
                     width: '100%', boxSizing: 'border-box',
                     padding: `${spacing['2']} ${spacing['3']}`,
-                    border: talkErrors.presenter ? '1px solid #E74C3C' : '1px solid #E5E7EB',
+                    border: talkErrors.presenter ? `1px solid ${colors.statusCritical}` : `1px solid ${colors.borderDefault}`,
                     borderRadius: borderRadius.base,
                     fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
                     color: colors.textPrimary, outline: 'none',
                   }}
                 />
-                {talkErrors.presenter && <p style={{ color: '#E74C3C', fontSize: 12, margin: '4px 0 0' }}>{talkErrors.presenter}</p>}
+                {talkErrors.presenter && <p style={{ color: colors.statusCritical, fontSize: 12, margin: '4px 0 0' }}>{talkErrors.presenter}</p>}
               </div>
             </div>
 
@@ -1753,20 +1753,20 @@ export const Safety: React.FC = () => {
                   style={{
                     flex: 1, boxSizing: 'border-box',
                     padding: `${spacing['2']} ${spacing['3']}`,
-                    border: talkErrors.newAttendee ? '1px solid #E74C3C' : '1px solid #E5E7EB',
+                    border: talkErrors.newAttendee ? `1px solid ${colors.statusCritical}` : `1px solid ${colors.borderDefault}`,
                     borderRadius: borderRadius.base,
                     fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
                     color: colors.textPrimary, outline: 'none',
                   }}
                 />
-                <Btn variant="secondary" onClick={handleAddAttendee} style={{ minHeight: '44px', flexShrink: 0 }}>
+                <Btn variant="secondary" onClick={handleAddAttendee} style={{ minHeight: '56px', flexShrink: 0 }}>
                   Add
                 </Btn>
               </div>
-              {talkErrors.newAttendee && <p style={{ color: '#E74C3C', fontSize: 12, margin: '0 0 4px' }}>{talkErrors.newAttendee}</p>}
+              {talkErrors.newAttendee && <p style={{ color: colors.statusCritical, fontSize: 12, margin: '0 0 4px' }}>{talkErrors.newAttendee}</p>}
               {talkForm.attendees.length > 0 && (
                 <div style={{
-                  border: '1px solid #E5E7EB',
+                  border: `1px solid ${colors.borderDefault}`,
                   borderRadius: borderRadius.base,
                   maxHeight: 180,
                   overflowY: 'auto',
@@ -1817,8 +1817,8 @@ export const Safety: React.FC = () => {
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: spacing['3'] }}>
-              <Btn variant="ghost" onClick={handleCloseTalkModal} style={{ minHeight: '44px' }}>Cancel</Btn>
-              <Btn variant="primary" onClick={handleTalkSubmit} style={{ minHeight: '44px' }}>Save Talk</Btn>
+              <Btn variant="ghost" onClick={handleCloseTalkModal} style={{ minHeight: '56px' }}>Cancel</Btn>
+              <Btn variant="primary" onClick={handleTalkSubmit} style={{ minHeight: '56px' }}>Save Talk</Btn>
             </div>
           </div>
         </div>
