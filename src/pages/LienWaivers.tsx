@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FileCheck, AlertTriangle, Clock, CheckCircle } from 'lucide-react';
 import { PageContainer, MetricBox, Skeleton, Btn } from '../components/Primitives';
-import { colors, spacing, typography, borderRadius, shadows, transitions } from '../styles/theme';
+import { colors, spacing, typography, borderRadius, shadows, transitions, touchTarget } from '../styles/theme';
 import { supabase } from '../lib/supabase';
 import { useProjectId } from '../hooks/useProjectId';
 import { useNavigate } from 'react-router-dom';
@@ -143,15 +143,17 @@ export function LienWaivers() {
         <select
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value as WaiverType)}
+          aria-label="Filter by waiver type"
           style={{
             fontSize: typography.fontSize.body,
             color: colors.textPrimary,
             backgroundColor: colors.surfaceRaised,
             border: `1px solid ${colors.borderDefault}`,
             borderRadius: borderRadius.md,
-            padding: `${spacing['2']} ${spacing['3']}`,
+            padding: `0 ${spacing['3']}`,
             cursor: 'pointer',
             outline: 'none',
+            minHeight: touchTarget.field,
           }}
         >
           <option value="all">All Types</option>
@@ -162,6 +164,8 @@ export function LienWaivers() {
 
         {/* Status toggle */}
         <div
+          role="group"
+          aria-label="Filter by status"
           style={{
             display: 'flex',
             backgroundColor: colors.surfaceInset,
@@ -174,10 +178,12 @@ export function LienWaivers() {
             <button
               key={s}
               onClick={() => setStatusFilter(s)}
+              aria-pressed={statusFilter === s}
               style={{
                 fontSize: typography.fontSize.sm,
                 fontWeight: typography.fontWeight.medium,
-                padding: `${spacing['1.5']} ${spacing['4']}`,
+                padding: `0 ${spacing['4']}`,
+                minHeight: touchTarget.field,
                 borderRadius: borderRadius.base,
                 border: 'none',
                 cursor: 'pointer',
@@ -185,6 +191,7 @@ export function LienWaivers() {
                 backgroundColor: statusFilter === s ? colors.surfaceRaised : 'transparent',
                 color: statusFilter === s ? colors.textPrimary : colors.textTertiary,
                 boxShadow: statusFilter === s ? shadows.sm : 'none',
+                fontFamily: typography.fontFamily,
               }}
             >
               {s === 'all' ? 'All' : s === 'pending' ? 'Pending' : 'Signed'}
@@ -218,7 +225,7 @@ export function LienWaivers() {
               Array.from({ length: 5 }).map((_, i) => (
                 <tr key={i}>
                   {colWidths.map((_, j) => (
-                    <td key={j} style={{ ...tdStyle, height: '52px' }}>
+                    <td key={j} style={{ ...tdStyle, height: touchTarget.field }}>
                       <Skeleton
                         width={j === 1 ? '70%' : j === 2 ? '55%' : '80%'}
                         height="14px"
@@ -278,7 +285,7 @@ export function LienWaivers() {
                     onMouseEnter={() => setHovered(w.id)}
                     onMouseLeave={() => setHovered(null)}
                     style={{
-                      height: '52px',
+                      height: touchTarget.field,
                       cursor: 'pointer',
                       backgroundColor: isHovered ? colors.surfaceHover : 'transparent',
                       transition: transitions.quick,
