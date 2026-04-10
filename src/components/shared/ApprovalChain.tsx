@@ -40,11 +40,14 @@ export const ApprovalChain: React.FC<ApprovalChainProps> = ({ steps }) => {
             )}
 
             {/* Status dot */}
-            <div style={{
-              width: 28, height: 28, borderRadius: '50%',
-              backgroundColor: cfg.bg, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              flexShrink: 0, zIndex: 1, border: `2px solid ${colors.surfaceRaised}`,
-            }}>
+            <div
+              aria-hidden="true"
+              style={{
+                width: 28, height: 28, borderRadius: '50%',
+                backgroundColor: cfg.bg, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0, zIndex: 1, border: `2px solid ${colors.surfaceRaised}`,
+              }}
+            >
               <span style={{ color: cfg.color }}>{cfg.icon}</span>
             </div>
 
