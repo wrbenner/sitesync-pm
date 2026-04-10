@@ -392,21 +392,21 @@ export const ChangeOrders: React.FC = () => {
                         <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, minWidth: 110 }}>{label}</span>
                         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
                           <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>$</span>
-                          <input type="number" value={val} min="0" onChange={e => set(e.target.value)} style={{ ...inputStyle, width: 100 }} />
+                          <input type="number" value={val} min="0" aria-label={`${label} cost`} onChange={e => set(e.target.value)} style={{ ...inputStyle, width: 100 }} />
                         </div>
                       </div>
                     ))}
                     <div style={{ ...rowStyle, borderBottom: `1px solid ${colors.borderSubtle}`, backgroundColor: colors.surfaceInset }}>
                       <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, minWidth: 110 }}>OH Markup</span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
-                        <input type="number" value={detailOhMarkup} min="0" max="100" onChange={e => setDetailOhMarkup(e.target.value)} style={{ ...inputStyle, width: 70 }} />
+                        <input type="number" value={detailOhMarkup} min="0" max="100" aria-label="Overhead markup percentage" onChange={e => setDetailOhMarkup(e.target.value)} style={{ ...inputStyle, width: 70 }} />
                         <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>%</span>
                       </div>
                     </div>
                     <div style={{ ...rowStyle, borderBottom: `1px solid ${colors.borderSubtle}`, backgroundColor: colors.white }}>
                       <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, minWidth: 110 }}>Profit Markup</span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
-                        <input type="number" value={detailProfitMarkup} min="0" max="100" onChange={e => setDetailProfitMarkup(e.target.value)} style={{ ...inputStyle, width: 70 }} />
+                        <input type="number" value={detailProfitMarkup} min="0" max="100" aria-label="Profit markup percentage" onChange={e => setDetailProfitMarkup(e.target.value)} style={{ ...inputStyle, width: 70 }} />
                         <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>%</span>
                       </div>
                     </div>
@@ -604,7 +604,7 @@ export const ChangeOrders: React.FC = () => {
       <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'], marginTop: spacing['5'], marginBottom: spacing['4'], flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], padding: `0 ${spacing['3']}`, minHeight: touchTarget.field, backgroundColor: colors.surfaceInset, borderRadius: borderRadius.full, flex: '1 1 200px', maxWidth: 300 }}>
           <Search size={14} color={colors.textTertiary} />
-          <input type="text" placeholder="Search change orders..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+          <input type="text" placeholder="Search change orders..." aria-label="Search change orders" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
             style={{ flex: 1, border: 'none', backgroundColor: 'transparent', outline: 'none', fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, color: colors.textPrimary }} />
           {searchQuery && <button onClick={() => setSearchQuery('')} aria-label="Clear search" title="Clear search" style={{ background: 'none', border: 'none', cursor: 'pointer', color: colors.textTertiary, display: 'flex' }}><X size={12} /></button>}
         </div>
@@ -703,7 +703,7 @@ export const ChangeOrders: React.FC = () => {
                 const amountColor = co.estimated_cost < 0 ? colors.statusCritical : colors.textPrimary;
                 const amountLabel = co.estimated_cost > 0 ? `+${fmt(co.estimated_cost)}` : fmt(co.estimated_cost);
                 return (
-                  <div key={co.id} onClick={() => setSelectedCO(co)} role="button" tabIndex={0}
+                  <div key={co.id} onClick={() => setSelectedCO(co)} role="button" tabIndex={0} aria-label={`${co.coNumber}: ${co.title}`}
                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedCO(co); } }}
                     style={{
                       padding: spacing['4'], backgroundColor: colors.surfaceRaised,
@@ -786,7 +786,7 @@ export const ChangeOrders: React.FC = () => {
                   };
                   const statusDisplay = statusDotMap[co.status] ?? { dot: colors.statusNeutral, label: co.status };
                   return (
-                    <div key={co.id} onClick={() => setSelectedCO(co)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedCO(co); } }} style={{
+                    <div key={co.id} onClick={() => setSelectedCO(co)} role="button" tabIndex={0} aria-label={`${co.coNumber}: ${co.title}`} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedCO(co); } }} style={{
                       display: 'grid', gridTemplateColumns: '80px 1fr 130px 130px 120px 110px 130px 90px',
                       padding: `${spacing['3']} ${spacing['4']}`,
                       borderBottom: i < filteredCOs.length - 1 ? `1px solid ${colors.borderSubtle}` : 'none',
@@ -835,7 +835,7 @@ export const ChangeOrders: React.FC = () => {
       <Modal open={showRejectModal} onClose={() => { setShowRejectModal(false); setRejectComments(''); }} title="Reject Change Order">
         <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
           <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: 0 }}>Provide a reason for rejecting {selectedCO?.coNumber}.</p>
-          <textarea value={rejectComments} onChange={e => setRejectComments(e.target.value)} placeholder="Reason for rejection..." autoFocus
+          <textarea value={rejectComments} onChange={e => setRejectComments(e.target.value)} placeholder="Reason for rejection..." aria-label="Reason for rejection" autoFocus
             style={{ width: '100%', padding: spacing['3'], fontSize: typography.fontSize.body, fontFamily: typography.fontFamily, border: 'none', backgroundColor: colors.surfaceInset, borderRadius: borderRadius.md, outline: 'none', resize: 'vertical', minHeight: '96px', boxSizing: 'border-box' }} />
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: spacing['2'] }}>
             <Btn variant="ghost" size="md" onClick={() => { setShowRejectModal(false); setRejectComments(''); }}>Cancel</Btn>
@@ -910,7 +910,7 @@ export const ChangeOrders: React.FC = () => {
                   <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, minWidth: 100 }}>{label}</span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
                     <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>$</span>
-                    <input type="number" value={val} min="0" placeholder="0" onChange={e => set(e.target.value)}
+                    <input type="number" value={val} min="0" placeholder="0" aria-label={`${label} cost`} onChange={e => set(e.target.value)}
                       style={{ width: 110, padding: `${spacing['1']} ${spacing['2']}`, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, border: `1px solid ${colors.borderDefault}`, backgroundColor: colors.white, borderRadius: borderRadius.sm, outline: 'none', textAlign: 'right' }} />
                   </div>
                 </div>
@@ -919,7 +919,7 @@ export const ChangeOrders: React.FC = () => {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: `${spacing['2']} ${spacing['3']}`, borderRight: `1px solid ${colors.borderSubtle}` }}>
                   <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>OH Markup</span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
-                    <input type="number" value={newOhMarkup} min="0" max="100" onChange={e => setNewOhMarkup(e.target.value)}
+                    <input type="number" value={newOhMarkup} min="0" max="100" aria-label="Overhead markup percentage" onChange={e => setNewOhMarkup(e.target.value)}
                       style={{ width: 60, padding: `${spacing['1']} ${spacing['2']}`, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, border: `1px solid ${colors.borderDefault}`, backgroundColor: colors.white, borderRadius: borderRadius.sm, outline: 'none', textAlign: 'right' }} />
                     <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>%</span>
                   </div>
@@ -927,7 +927,7 @@ export const ChangeOrders: React.FC = () => {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: `${spacing['2']} ${spacing['3']}` }}>
                   <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>Profit Markup</span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
-                    <input type="number" value={newProfitMarkup} min="0" max="100" onChange={e => setNewProfitMarkup(e.target.value)}
+                    <input type="number" value={newProfitMarkup} min="0" max="100" aria-label="Profit markup percentage" onChange={e => setNewProfitMarkup(e.target.value)}
                       style={{ width: 60, padding: `${spacing['1']} ${spacing['2']}`, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, border: `1px solid ${colors.borderDefault}`, backgroundColor: colors.white, borderRadius: borderRadius.sm, outline: 'none', textAlign: 'right' }} />
                     <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>%</span>
                   </div>

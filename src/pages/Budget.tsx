@@ -634,7 +634,7 @@ export const Budget: React.FC = () => {
             ...pillBase,
             backgroundColor: activeTab === 'overview' ? colors.surfaceRaised : 'transparent',
             color: activeTab === 'overview' ? colors.textPrimary : colors.textTertiary,
-            boxShadow: activeTab === 'overview' ? '0 1px 2px rgba(0,0,0,0.06)' : 'none',
+            boxShadow: activeTab === 'overview' ? shadows.sm : 'none',
           }}
         >
           Overview
@@ -648,7 +648,7 @@ export const Budget: React.FC = () => {
             ...pillBase,
             backgroundColor: activeTab === 'earned-value' ? colors.surfaceRaised : 'transparent',
             color: activeTab === 'earned-value' ? colors.textPrimary : colors.textTertiary,
-            boxShadow: activeTab === 'earned-value' ? '0 1px 2px rgba(0,0,0,0.06)' : 'none',
+            boxShadow: activeTab === 'earned-value' ? shadows.sm : 'none',
           }}
         >
           Earned Value
@@ -744,6 +744,7 @@ export const Budget: React.FC = () => {
                         <input
                           type="number"
                           step="0.01"
+                          aria-label={`Spent to date for ${division.name}`}
                           value={editingCell!.value}
                           onChange={(e) => setEditingCell(prev => prev ? { ...prev, value: e.target.value } : null)}
                           onBlur={handleSaveEdit}
@@ -765,7 +766,11 @@ export const Budget: React.FC = () => {
                         />
                       ) : (
                         <div
+                          role={canEditBudget ? 'button' : undefined}
+                          tabIndex={canEditBudget ? 0 : undefined}
+                          aria-label={canEditBudget ? `Edit spent for ${division.name}` : undefined}
                           onClick={() => { if (canEditBudget) setEditingCell({ divId: division.id, field: 'spent', value: String(division.spent) }); }}
+                          onKeyDown={(e) => { if (canEditBudget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setEditingCell({ divId: division.id, field: 'spent', value: String(division.spent) }); } }}
                           style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], cursor: canEditBudget ? 'text' : 'default', padding: `2px ${spacing['1']}`, borderRadius: borderRadius.sm }}
                         >
                           <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: isAtRisk ? colors.chartRed : colors.textPrimary }}>{fmt(division.spent)}</span>
@@ -789,6 +794,7 @@ export const Budget: React.FC = () => {
                             step="1"
                             min="0"
                             max="100"
+                            aria-label={`Percent complete for ${division.name}`}
                             value={editingCell!.value}
                             onChange={(e) => setEditingCell(prev => prev ? { ...prev, value: e.target.value } : null)}
                             onBlur={handleSaveEdit}
@@ -826,7 +832,7 @@ export const Budget: React.FC = () => {
                                 whiteSpace: 'nowrap',
                                 fontSize: typography.fontSize.xs,
                                 color: isOver ? colors.statusCritical : colors.statusActive,
-                                boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                                boxShadow: shadows.dropdown,
                               }}>
                                 {`Projected: ${fmt(oldProjected)} to ${fmt(newProjected)} (${delta >= 0 ? '+' : ''}${fmt(Math.abs(delta))})`}
                               </div>
@@ -835,7 +841,11 @@ export const Budget: React.FC = () => {
                         </>
                       ) : (
                         <div
+                          role={canEditBudget ? 'button' : undefined}
+                          tabIndex={canEditBudget ? 0 : undefined}
+                          aria-label={canEditBudget ? `Edit percent complete for ${division.name}` : undefined}
                           onClick={() => { if (canEditBudget) setEditingCell({ divId: division.id, field: 'progress', value: String(division.progress) }); }}
+                          onKeyDown={(e) => { if (canEditBudget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setEditingCell({ divId: division.id, field: 'progress', value: String(division.progress) }); } }}
                           style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], cursor: canEditBudget ? 'text' : 'default', padding: `2px ${spacing['1']}`, borderRadius: borderRadius.sm }}
                         >
                           <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: isAtRisk ? colors.chartRed : colors.textSecondary }}>{division.progress}%</span>

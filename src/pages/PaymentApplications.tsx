@@ -123,6 +123,8 @@ const payAppColumns = [
         <div style={{ display: 'flex', gap: spacing['1'] }}>
           {(status === 'draft') && (
             <button
+              aria-label="Edit Schedule of Values"
+              title="Edit Schedule of Values"
               onClick={(e) => { e.stopPropagation(); _editPayAppCb.current(info.row.original) }}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: spacing['1'],
@@ -137,6 +139,8 @@ const payAppColumns = [
           )}
           {status === 'approved' && (
             <button
+              aria-label="Pay subcontractor"
+              title="Pay subcontractor"
               onClick={() => toast.success('Payment flow initiated')}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: spacing['1'],
@@ -151,6 +155,8 @@ const payAppColumns = [
           )}
           {status === 'draft' && (
             <button
+              aria-label="Submit application for review"
+              title="Submit application for review"
               onClick={() => toast.success('Application submitted for review')}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: spacing['1'],
@@ -689,6 +695,7 @@ const CreateEditPayAppDrawer = memo<CreateEditPayAppDrawerProps>(({
                           <input
                             type="text"
                             placeholder="Description of work"
+                            aria-label={`Line item ${i + 1} description`}
                             value={row.description}
                             onChange={(e) => handleRowField(row.key, 'description', e.target.value)}
                             style={{ ...inputStyle(false), textAlign: 'left' }}
@@ -701,6 +708,7 @@ const CreateEditPayAppDrawer = memo<CreateEditPayAppDrawerProps>(({
                             min={0}
                             step={100}
                             placeholder="0"
+                            aria-label={`Line item ${i + 1} scheduled value`}
                             value={row.scheduledValue}
                             onChange={(e) => handleRowField(row.key, 'scheduledValue', e.target.value)}
                             style={{ ...inputStyle(false), textAlign: 'right', fontFamily: typography.fontFamilyMono }}
@@ -718,6 +726,8 @@ const CreateEditPayAppDrawer = memo<CreateEditPayAppDrawerProps>(({
                             max={100}
                             step={0.1}
                             placeholder="0"
+                            aria-label={`Line item ${i + 1} percent complete this period`}
+                            aria-invalid={!!row.error}
                             value={row.thisPct}
                             onChange={(e) => handleThisPct(row.key, e.target.value)}
                             style={{
@@ -734,6 +744,7 @@ const CreateEditPayAppDrawer = memo<CreateEditPayAppDrawerProps>(({
                             min={0}
                             step={100}
                             placeholder="0"
+                            aria-label={`Line item ${i + 1} stored materials`}
                             value={row.storedMaterials}
                             onChange={(e) => handleRowField(row.key, 'storedMaterials', e.target.value)}
                             style={{ ...inputStyle(false), textAlign: 'right', fontFamily: typography.fontFamilyMono }}
