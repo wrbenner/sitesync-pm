@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Play, Pause, SkipForward, Columns, Flag, DollarSign, Users, HelpCircle, Camera, Calendar, Sparkles } from 'lucide-react';
-import { PageContainer, Card, Btn, ProgressBar, Skeleton } from '../components/Primitives';
+import { PageContainer, Card, Btn, ProgressBar, Skeleton, EmptyState } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme';
 import { useAnimatedNumber } from '../hooks/useAnimatedNumber';
 import { useProjectId } from '../hooks/useProjectId';
@@ -165,9 +165,11 @@ export const TimeMachine: React.FC = () => {
     return (
       <PageContainer title="Time Machine" subtitle="Scrub through your project history">
         <Card padding={spacing['6']}>
-          <div style={{ textAlign: 'center', color: colors.textTertiary, padding: spacing['8'] }}>
-            No snapshots available yet. Snapshots are created automatically as your project progresses.
-          </div>
+          <EmptyState
+            icon={<Calendar size={32} color={colors.textTertiary} />}
+            title="No snapshots yet"
+            description="Project snapshots are created automatically as your project progresses. Check back once work has been recorded."
+          />
         </Card>
       </PageContainer>
     );
