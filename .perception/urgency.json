@@ -1,0 +1,21 @@
+{
+  "timestamp": "2026-04-10T09:55:27.131278+00:00",
+  "demo_date": "2026-04-15",
+  "today": "2026-04-10",
+  "days_remaining": 5,
+  "urgency": 0.444,
+  "phase": "feature-sprint",
+  "behavioral_modifications": {
+    "experiment_mix": {
+      "feature": 0.7,
+      "ai": 0.15,
+      "quality": 0.1,
+      "testing": 0.05
+    },
+    "risk_tolerance": "medium",
+    "allow_infrastructure": false,
+    "allow_refactoring": false,
+    "demo_rehearsal_weight": 0.4
+  },
+  "phase_rules": "Feature-sprint phase: 70% of effort on features visible in the demo. Demo is 5 days away \u2014 NO infrastructure, NO refactoring. Every commit should make the demo better. AI features get 15% allocation."
+}

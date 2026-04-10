@@ -1,0 +1,1834 @@
+{
+  "timestamp": "2026-04-10T09:55:26.619843+00:00",
+  "src_dir": "src",
+  "db_queries": {
+    "useQuery": {
+      "file_count": 30,
+      "files": [
+        "src/components/layout/MobileLayout.tsx",
+        "src/components/ai/PredictiveAlert.tsx",
+        "src/components/ai/FloatingAIButton.tsx",
+        "src/components/dashboard/widgets/AIInsightsWidget.tsx",
+        "src/pages/Schedule.tsx",
+        "src/pages/Dashboard.tsx",
+        "src/pages/PaymentApplications.tsx",
+        "src/pages/ChangeOrders.tsx",
+        "src/pages/Budget.tsx",
+        "src/pages/Drawings.tsx",
+        "src/api/endpoints/projects.ts",
+        "src/hooks/useRealtimeQuery.ts",
+        "src/hooks/useProjectMetrics.ts",
+        "src/hooks/useBIMModel.ts",
+        "src/hooks/useBudgetData.ts",
+        "src/hooks/useOrganization.ts",
+        "src/hooks/useAuditTrail.ts",
+        "src/hooks/useOfflineMutation.ts",
+        "src/hooks/useProjectList.ts",
+        "src/hooks/usePlatformIntel.ts"
+      ]
+    },
+    "fromTable": {
+      "file_count": 100,
+      "files": [
+        "src/test/api/submittals.test.ts",
+        "src/test/api/rfis.test.ts",
+        "src/test/api/client.test.ts",
+        "src/components/collaboration/EditConflictGuard.tsx",
+        "src/components/drawings/DrawingViewer.tsx",
+        "src/components/forms/CreateDailyLogModal.tsx",
+        "src/components/ai/CopilotPanel.tsx",
+        "src/components/files/DocumentSearch.tsx",
+        "src/stores/authStore.ts",
+        "src/stores/fieldCaptureStore.ts",
+        "src/stores/meetingStore.ts",
+        "src/stores/punchListStore.ts",
+        "src/stores/activityStore.ts",
+        "src/stores/dailyLogStore.ts",
+        "src/stores/crewStore.ts",
+        "src/stores/directoryStore.ts",
+        "src/stores/budgetStore.ts",
+        "src/stores/submittalStore.ts",
+        "src/stores/rfiStore.ts",
+        "src/stores/fileStore.ts"
+      ]
+    },
+    "useMutation": {
+      "file_count": 7,
+      "files": [
+        "src/pages/PaymentApplications.tsx",
+        "src/hooks/useAuditTrail.ts",
+        "src/hooks/useOfflineMutation.ts",
+        "src/hooks/useSupabase.ts",
+        "src/hooks/useCheckIn.ts",
+        "src/hooks/mutations/createAuditedMutation.ts",
+        "src/hooks/mutations/index.ts"
+      ]
+    },
+    "supabase_select": {
+      "file_count": 97,
+      "files": [
+        "src/test/api/submittals.test.ts",
+        "src/test/api/rfis.test.ts",
+        "src/test/api/client.test.ts",
+        "src/components/collaboration/EditConflictGuard.tsx",
+        "src/components/forms/CreateDailyLogModal.tsx",
+        "src/components/ai/CopilotPanel.tsx",
+        "src/components/files/DocumentSearch.tsx",
+        "src/stores/authStore.ts",
+        "src/stores/fieldCaptureStore.ts",
+        "src/stores/meetingStore.ts",
+        "src/stores/punchListStore.ts",
+        "src/stores/activityStore.ts",
+        "src/stores/dailyLogStore.ts",
+        "src/stores/crewStore.ts",
+        "src/stores/directoryStore.ts",
+        "src/stores/budgetStore.ts",
+        "src/stores/submittalStore.ts",
+        "src/stores/rfiStore.ts",
+        "src/stores/fileStore.ts",
+        "src/stores/projectContextStore.ts"
+      ]
+    },
+    "supabase_insert": {
+      "file_count": 61,
+      "files": [
+        "src/components/drawings/DrawingViewer.tsx",
+        "src/stores/authStore.ts",
+        "src/stores/fieldCaptureStore.ts",
+        "src/stores/meetingStore.ts",
+        "src/stores/punchListStore.ts",
+        "src/stores/dailyLogStore.ts",
+        "src/stores/crewStore.ts",
+        "src/stores/directoryStore.ts",
+        "src/stores/budgetStore.ts",
+        "src/stores/submittalStore.ts",
+        "src/stores/rfiStore.ts",
+        "src/stores/fileStore.ts",
+        "src/stores/projectContextStore.ts",
+        "src/pages/Dashboard.tsx",
+        "src/pages/Drawings.tsx",
+        "src/pages/Settings/NotificationSettings.tsx",
+        "src/pages/auth/Signup.tsx",
+        "src/pages/admin/UserManagement.tsx",
+        "src/lib/webhooks.ts",
+        "src/lib/offlineDb.ts"
+      ]
+    },
+    "supabase_update": {
+      "file_count": 45,
+      "files": [
+        "src/main.tsx",
+        "src/test/lib/offlineDb.test.ts",
+        "src/components/forms/CreateDailyLogModal.tsx",
+        "src/stores/authStore.ts",
+        "src/stores/meetingStore.ts",
+        "src/stores/punchListStore.ts",
+        "src/stores/dailyLogStore.ts",
+        "src/stores/crewStore.ts",
+        "src/stores/directoryStore.ts",
+        "src/stores/budgetStore.ts",
+        "src/stores/submittalStore.ts",
+        "src/stores/rfiStore.ts",
+        "src/stores/projectContextStore.ts",
+        "src/pages/Developers.tsx",
+        "src/pages/Drawings.tsx",
+        "src/lib/webhooks.ts",
+        "src/lib/offlineDb.ts",
+        "src/lib/syncManager.ts",
+        "src/api/endpoints/webhooks.ts",
+        "src/api/endpoints/editLocks.ts"
+      ]
+    },
+    "supabase_rpc": {
+      "file_count": 6,
+      "files": [
+        "src/components/files/DocumentSearch.tsx",
+        "src/lib/encryption.ts",
+        "src/api/endpoints/organizations.ts",
+        "src/services/billing.ts",
+        "src/hooks/mutations/index.ts",
+        "src/hooks/queries/index.ts"
+      ]
+    }
+  },
+  "hooks": [
+    {
+      "name": "useAppNavigate",
+      "file": "src/utils/connections.ts"
+    },
+    {
+      "name": "useSidebar",
+      "file": "src/components/Primitives.tsx"
+    },
+    {
+      "name": "useToast",
+      "file": "src/components/Primitives.tsx"
+    },
+    {
+      "name": "useToast",
+      "file": "src/components/ContextMenu.tsx"
+    },
+    {
+      "name": "useCommandPalette",
+      "file": "src/components/CommandPalette.tsx"
+    },
+    {
+      "name": "useOptimisticLock",
+      "file": "src/components/collaboration/EditConflictGuard.tsx"
+    },
+    {
+      "name": "useRealtimeFlash",
+      "file": "src/components/ui/RealtimeFlash.tsx"
+    },
+    {
+      "name": "useAuthStore",
+      "file": "src/stores/authStore.ts"
+    },
+    {
+      "name": "useCopilotStore",
+      "file": "src/stores/copilotStore.ts"
+    },
+    {
+      "name": "useFieldCaptureStore",
+      "file": "src/stores/fieldCaptureStore.ts"
+    },
+    {
+      "name": "useMeetingStore",
+      "file": "src/stores/meetingStore.ts"
+    },
+    {
+      "name": "usePunchListStore",
+      "file": "src/stores/punchListStore.ts"
+    },
+    {
+      "name": "useUserStore",
+      "file": "src/stores/userStore.ts"
+    },
+    {
+      "name": "useUiStore",
+      "file": "src/stores/uiStore.ts"
+    },
+    {
+      "name": "useActivityStore",
+      "file": "src/stores/activityStore.ts"
+    },
+    {
+      "name": "useOrganizationStore",
+      "file": "src/stores/organizationStore.ts"
+    },
+    {
+      "name": "useDailyLogStore",
+      "file": "src/stores/dailyLogStore.ts"
+    },
+    {
+      "name": "useCrewStore",
+      "file": "src/stores/crewStore.ts"
+    },
+    {
+      "name": "useDigitalTwinStore",
+      "file": "src/stores/digitalTwinStore.ts"
+    },
+    {
+      "name": "useDirectoryStore",
+      "file": "src/stores/directoryStore.ts"
+    },
+    {
+      "name": "useBudgetStore",
+      "file": "src/stores/budgetStore.ts"
+    },
+    {
+      "name": "useProjectStore",
+      "file": "src/stores/projectStore.ts"
+    },
+    {
+      "name": "useSubmittalStore",
+      "file": "src/stores/submittalStore.ts"
+    },
+    {
+      "name": "useRfiStore",
+      "file": "src/stores/rfiStore.ts"
+    },
+    {
+      "name": "useLienWaiverStore",
+      "file": "src/stores/lienWaiverStore.ts"
+    },
+    {
+      "name": "useNotificationStore",
+      "file": "src/stores/notificationStore.ts"
+    },
+    {
+      "name": "useFileStore",
+      "file": "src/stores/fileStore.ts"
+    },
+    {
+      "name": "useAgentOrchestrator",
+      "file": "src/stores/agentOrchestrator.ts"
+    },
+    {
+      "name": "useProjectContext",
+      "file": "src/stores/projectContextStore.ts"
+    },
+    {
+      "name": "useScheduleStore",
+      "file": "src/stores/scheduleStore.ts"
+    },
+    {
+      "name": "usePresenceStore",
+      "file": "src/stores/presenceStore.ts"
+    },
+    {
+      "name": "useAIAnnotationStore",
+      "file": "src/stores/aiAnnotationStore.ts"
+    },
+    {
+      "name": "useInfiniteEntityQuery",
+      "file": "src/api/client.ts"
+    },
+    {
+      "name": "useProject",
+      "file": "src/api/endpoints/projects.ts"
+    },
+    {
+      "name": "useProjectMetrics",
+      "file": "src/api/endpoints/projects.ts"
+    },
+    {
+      "name": "useOfflineStore",
+      "file": "src/services/offlineQueue.ts"
+    },
+    {
+      "name": "useRealtimeQuery",
+      "file": "src/hooks/useRealtimeQuery.ts"
+    },
+    {
+      "name": "useEntityPresence",
+      "file": "src/hooks/useRealtimeQuery.ts"
+    },
+    {
+      "name": "useOptimisticLock",
+      "file": "src/hooks/useRealtimeQuery.ts"
+    },
+    {
+      "name": "useProjectMetrics",
+      "file": "src/hooks/useProjectMetrics.ts"
+    },
+    {
+      "name": "usePortfolioMetrics",
+      "file": "src/hooks/useProjectMetrics.ts"
+    },
+    {
+      "name": "usePrefetchProjectMetrics",
+      "file": "src/hooks/useProjectMetrics.ts"
+    },
+    {
+      "name": "useDailyLogs",
+      "file": "src/hooks/useFieldOperations.ts"
+    },
+    {
+      "name": "useIncidents",
+      "file": "src/hooks/useFieldOperations.ts"
+    },
+    {
+      "name": "useSafetyInspections",
+      "file": "src/hooks/useFieldOperations.ts"
+    },
+    {
+      "name": "useToolboxTalks",
+      "file": "src/hooks/useFieldOperations.ts"
+    },
+    {
+      "name": "useCorrectiveActions",
+      "file": "src/hooks/useFieldOperations.ts"
+    },
+    {
+      "name": "useWeatherCache",
+      "file": "src/hooks/useFieldOperations.ts"
+    },
+    {
+      "name": "useSafetyCertifications",
+      "file": "src/hooks/useFieldOperations.ts"
+    },
+    {
+      "name": "useScrollReveal",
+      "file": "src/hooks/useScrollReveal.ts"
+    },
+    {
+      "name": "usePhotoAnalysis",
+      "file": "src/hooks/usePhotoAnalysis.ts"
+    },
+    {
+      "name": "useInView",
+      "file": "src/hooks/useInView.ts"
+    },
+    {
+      "name": "useBIMModels",
+      "file": "src/hooks/useBIMModel.ts"
+    },
+    {
+      "name": "useBIMMarkups",
+      "file": "src/hooks/useBIMModel.ts"
+    },
+    {
+      "name": "useBIMViewer",
+      "file": "src/hooks/useBIMModel.ts"
+    },
+    {
+      "name": "useBudgetData",
+      "file": "src/hooks/useBudgetData.ts"
+    },
+    {
+      "name": "useOrganization",
+      "file": "src/hooks/useOrganization.ts"
+    },
+    {
+      "name": "useSyncStatus",
+      "file": "src/hooks/useSyncStatus.ts"
+    },
+    {
+      "name": "useServiceWorkerUpdate",
+      "file": "src/hooks/useServiceWorkerUpdate.ts"
+    },
+    {
+      "name": "useAuditTrail",
+      "file": "src/hooks/useAuditTrail.ts"
+    },
+    {
+      "name": "useEntityHistory",
+      "file": "src/hooks/useAuditTrail.ts"
+    },
+    {
+      "name": "useWriteAudit",
+      "file": "src/hooks/useAuditTrail.ts"
+    },
+    {
+      "name": "useScheduleActivities",
+      "file": "src/hooks/useScheduleActivities.ts"
+    },
+    {
+      "name": "useAuth",
+      "file": "src/hooks/useAuth.ts"
+    },
+    {
+      "name": "useOfflineMutation",
+      "file": "src/hooks/useOfflineMutation.ts"
+    },
+    {
+      "name": "useProjectCache",
+      "file": "src/hooks/useProjectCache.ts"
+    },
+    {
+      "name": "useTableKeyboardNavigation",
+      "file": "src/hooks/useTableKeyboardNavigation.ts"
+    },
+    {
+      "name": "useMediaQuery",
+      "file": "src/hooks/useMediaQuery.ts"
+    },
+    {
+      "name": "useKeyboardShortcuts",
+      "file": "src/hooks/useKeyboardShortcuts.ts"
+    },
+    {
+      "name": "useListNavigation",
+      "file": "src/hooks/useKeyboardShortcuts.ts"
+    },
+    {
+      "name": "useDetailShortcuts",
+      "file": "src/hooks/useKeyboardShortcuts.ts"
+    },
+    {
+      "name": "useProjectRealtime",
+      "file": "src/hooks/useRealtimeSubscription.ts"
+    },
+    {
+      "name": "useRealtimeSubscription",
+      "file": "src/hooks/useRealtimeSubscription.ts"
+    },
+    {
+      "name": "usePresence",
+      "file": "src/hooks/useRealtimeSubscription.ts"
+    },
+    {
+      "name": "useDailyLogs",
+      "file": "src/hooks/useDailyLogs.ts"
+    },
+    {
+      "name": "useProjectList",
+      "file": "src/hooks/useProjectList.ts"
+    },
+    {
+      "name": "useVoiceCapture",
+      "file": "src/hooks/useVoiceCapture.ts"
+    },
+    {
+      "name": "useOfflineStatus",
+      "file": "src/hooks/useOfflineStatus.ts"
+    },
+    {
+      "name": "useIsOnline",
+      "file": "src/hooks/useOfflineStatus.ts"
+    },
+    {
+      "name": "usePushNotifications",
+      "file": "src/hooks/usePushNotifications.ts"
+    },
+    {
+      "name": "useBenchmarks",
+      "file": "src/hooks/usePlatformIntel.ts"
+    },
+    {
+      "name": "useBenchmarkComparisons",
+      "file": "src/hooks/usePlatformIntel.ts"
+    },
+    {
+      "name": "useSubcontractorProfiles",
+      "file": "src/hooks/usePlatformIntel.ts"
+    },
+    {
+      "name": "useMaterialPriceTrends",
+      "file": "src/hooks/usePlatformIntel.ts"
+    },
+    {
+      "name": "useRiskPredictions",
+      "file": "src/hooks/usePlatformIntel.ts"
+    },
+    {
+      "name": "useRetry",
+      "file": "src/hooks/useRetry.ts"
+    },
+    {
+      "name": "useOnlineStatus",
+      "file": "src/hooks/useRetry.ts"
+    },
+    {
+      "name": "useAgentBuilder",
+      "file": "src/hooks/useAgentBuilder.ts"
+    },
+    {
+      "name": "useDigitalTwin",
+      "file": "src/hooks/useDigitalTwin.ts"
+    },
+    {
+      "name": "useAccessibleStatus",
+      "file": "src/hooks/useAccessibleStatus.ts"
+    },
+    {
+      "name": "useSSO",
+      "file": "src/hooks/useSSO.ts"
+    },
+    {
+      "name": "useSSOAdmin",
+      "file": "src/hooks/useSSO.ts"
+    },
+    {
+      "name": "useHaptics",
+      "file": "src/hooks/useHaptics.ts"
+    },
+    {
+      "name": "useProjectId",
+      "file": "src/hooks/useProjectId.ts"
+    },
+    {
+      "name": "useQuery",
+      "file": "src/hooks/useQuery.ts"
+    },
+    {
+      "name": "useRFIs",
+      "file": "src/hooks/useSupabase.ts"
+    },
+    {
+      "name": "useSubmittals",
+      "file": "src/hooks/useSupabase.ts"
+    },
+    {
+      "name": "usePunchList",
+      "file": "src/hooks/useSupabase.ts"
+    },
+    {
+      "name": "useDailyLogs",
+      "file": "src/hooks/useSupabase.ts"
+    },
+    {
+      "name": "useBudgetItems",
+      "file": "src/hooks/useSupabase.ts"
+    },
+    {
+      "name": "useSchedulePhases",
+      "file": "src/hooks/useSupabase.ts"
+    },
+    {
+      "name": "useChangeOrders",
+      "file": "src/hooks/useSupabase.ts"
+    },
+    {
+      "name": "useCrews",
+      "file": "src/hooks/useSupabase.ts"
+    },
+    {
+      "name": "useNotifications",
+      "file": "src/hooks/useSupabase.ts"
+    },
+    {
+      "name": "useCreateMutation",
+      "file": "src/hooks/useSupabase.ts"
+    },
+    {
+      "name": "useAICopilot",
+      "file": "src/hooks/useSupabase.ts"
+    },
+    {
+      "name": "useActivityFeed",
+      "file": "src/hooks/useSupabase.ts"
+    },
+    {
+      "name": "useCostData",
+      "file": "src/hooks/useSupabase.ts"
+    },
+    {
+      "name": "useMobileCapture",
+      "file": "src/hooks/useMobileCapture.ts"
+    },
+    {
+      "name": "useHaptics",
+      "file": "src/hooks/useMobileCapture.ts"
+    },
+    {
+      "name": "useConversationHistory",
+      "file": "src/hooks/useMultiAgentChat.ts"
+    },
+    {
+      "name": "useMultiAgentChat",
+      "file": "src/hooks/useMultiAgentChat.ts"
+    },
+    {
+      "name": "useTheme",
+      "file": "src/hooks/useTheme.ts"
+    },
+    {
+      "name": "useNotificationRealtime",
+      "file": "src/hooks/useNotificationRealtime.ts"
+    },
+    {
+      "name": "useIFCModel",
+      "file": "src/hooks/useIFCModel.ts"
+    },
+    {
+      "name": "useReducedMotion",
+      "file": "src/hooks/useReducedMotion.ts"
+    },
+    {
+      "name": "usePermissions",
+      "file": "src/hooks/usePermissions.ts"
+    },
+    {
+      "name": "useAnimatedNumber",
+      "file": "src/hooks/useAnimatedNumber.ts"
+    },
+    {
+      "name": "useExecutiveSummaryData",
+      "file": "src/hooks/useReportData.ts"
+    },
+    {
+      "name": "useRFILogData",
+      "file": "src/hooks/useReportData.ts"
+    },
+    {
+      "name": "useSubmittalLogData",
+      "file": "src/hooks/useReportData.ts"
+    },
+    {
+      "name": "usePunchListData",
+      "file": "src/hooks/useReportData.ts"
+    },
+    {
+      "name": "useBudgetReportData",
+      "file": "src/hooks/useReportData.ts"
+    },
+    {
+      "name": "useDailyLogSummaryData",
+      "file": "src/hooks/useReportData.ts"
+    },
+    {
+      "name": "useMonthlyProgressData",
+      "file": "src/hooks/useReportData.ts"
+    },
+    {
+      "name": "useCostReportData",
+      "file": "src/hooks/useReportData.ts"
+    },
+    {
+      "name": "useScheduleReportData",
+      "file": "src/hooks/useReportData.ts"
+    },
+    {
+      "name": "useSubcontractorPerformanceData",
+      "file": "src/hooks/useReportData.ts"
+    },
+    {
+      "name": "useHeadcount",
+      "file": "src/hooks/useCheckIn.ts"
+    },
+    {
+      "name": "useCheckInMutation",
+      "file": "src/hooks/useCheckIn.ts"
+    },
+    {
+      "name": "useCheckOutMutation",
+      "file": "src/hooks/useCheckIn.ts"
+    },
+    {
+      "name": "useHeadcountRealtime",
+      "file": "src/hooks/useCheckIn.ts"
+    },
+    {
+      "name": "useWorkerLookup",
+      "file": "src/hooks/useCheckIn.ts"
+    },
+    {
+      "name": "useDailyLogCrewUpsert",
+      "file": "src/hooks/useCheckIn.ts"
+    },
+    {
+      "name": "useCheckIn",
+      "file": "src/hooks/useCheckIn.ts"
+    },
+    {
+      "name": "useSyncOfflineCheckIns",
+      "file": "src/hooks/useCheckIn.ts"
+    },
+    {
+      "name": "useOfflineQuery",
+      "file": "src/hooks/useOfflineQuery.ts"
+    },
+    {
+      "name": "useProjectAI",
+      "file": "src/hooks/useProjectAI.ts"
+    },
+    {
+      "name": "useRealtimeInvalidation",
+      "file": "src/hooks/useRealtimeInvalidation.ts"
+    },
+    {
+      "name": "useAuditedMutation",
+      "file": "src/hooks/mutations/createAuditedMutation.ts"
+    },
+    {
+      "name": "useCreateRFI",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useUpdateRFI",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useDeleteRFI",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useCreateRFIResponse",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useCreateSubmittal",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useUpdateSubmittal",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useCreatePunchItem",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useUpdatePunchItem",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useCreateTask",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useUpdateTask",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useDeleteTask",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useCreateDailyLog",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useUpdateDailyLog",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useCreateDailyLogEntry",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useSubmitDailyLog",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useApproveDailyLog",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useRejectDailyLog",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useDailyLogMutation",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useDailyLogUpdateMutation",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useCreateChangeOrder",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useUpdateChangeOrder",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "usePromoteChangeOrder",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useSubmitChangeOrder",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useApproveChangeOrder",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useRejectChangeOrder",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useCreateMeeting",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useCreateFile",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useDeleteFile",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useCreateFieldCapture",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useCreateDirectoryContact",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useCreateCrew",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useMarkNotificationRead",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useMarkAllNotificationsRead",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useCreateActivityFeedItem",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useCreateCorrectiveAction",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useUpdateCorrectiveAction",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useCreateSafetyInspection",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useCreateIncident",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useCreateDrawingMarkup",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useCreateTransmittal",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useApproveAgentAction",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useRejectAgentAction",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useUpdateAgentConfig",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useRunAgent",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useUpdateNotificationPreferences",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useAddRFIWatcher",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useRemoveRFIWatcher",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useBulkUpdateTasks",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useBulkDeleteTasks",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useReorderTasks",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useUpdateTaskDependencies",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useApplyTaskTemplate",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useDismissInsight",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useActOnInsight",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useConnectIntegration",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useDisconnectIntegration",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useSyncIntegration",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useUpdateBudgetItem",
+      "file": "src/hooks/mutations/index.ts"
+    },
+    {
+      "name": "useRealtimeRFIs",
+      "file": "src/hooks/queries/realtime.ts"
+    },
+    {
+      "name": "useRealtimeSubmittals",
+      "file": "src/hooks/queries/realtime.ts"
+    },
+    {
+      "name": "useRealtimePunchItems",
+      "file": "src/hooks/queries/realtime.ts"
+    },
+    {
+      "name": "useRealtimeTasks",
+      "file": "src/hooks/queries/realtime.ts"
+    },
+    {
+      "name": "useRealtimeDailyLogs",
+      "file": "src/hooks/queries/realtime.ts"
+    },
+    {
+      "name": "useRealtimeBudgetItems",
+      "file": "src/hooks/queries/realtime.ts"
+    },
+    {
+      "name": "useRealtimeChangeOrders",
+      "file": "src/hooks/queries/realtime.ts"
+    },
+    {
+      "name": "useRealtimeMeetings",
+      "file": "src/hooks/queries/realtime.ts"
+    },
+    {
+      "name": "useRealtimeDrawings",
+      "file": "src/hooks/queries/realtime.ts"
+    },
+    {
+      "name": "useRealtimeFiles",
+      "file": "src/hooks/queries/realtime.ts"
+    },
+    {
+      "name": "useRealtimeDirectoryContacts",
+      "file": "src/hooks/queries/realtime.ts"
+    },
+    {
+      "name": "useRealtimeCrews",
+      "file": "src/hooks/queries/realtime.ts"
+    },
+    {
+      "name": "useRealtimeSchedulePhases",
+      "file": "src/hooks/queries/realtime.ts"
+    },
+    {
+      "name": "useRealtimeFieldCaptures",
+      "file": "src/hooks/queries/realtime.ts"
+    },
+    {
+      "name": "useBudgetRealtime",
+      "file": "src/hooks/queries/realtime.ts"
+    },
+    {
+      "name": "useScheduleRealtime",
+      "file": "src/hooks/queries/realtime.ts"
+    },
+    {
+      "name": "useRealtimeActivityFeed",
+      "file": "src/hooks/queries/realtime.ts"
+    },
+    {
+      "name": "useProjects",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useProject",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useRFIs",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useRFI",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useSubmittals",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useSubmittal",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useSubmittalReviewers",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "usePunchItems",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "usePunchItem",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useTasks",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useDrawings",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useTask",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useDailyLogs",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useCrews",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useDailyLog",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useBudgetItems",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useChangeOrders",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useChangeOrder",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useMeetings",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useMeeting",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useDirectoryContacts",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useFiles",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useFieldCaptures",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useSchedulePhases",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useNotifications",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useActivityFeed",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useAIInsights",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useAIInsightsByCategory",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useAiInsightsMeta",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useTaskRiskScores",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useEarnedValueData",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useProjectSnapshots",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useWeeklyDigests",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useSafetyInspections",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useIncidents",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useToolboxTalks",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useSafetyCertifications",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useSafetyObservations",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useEstimates",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useEstimateLineItems",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useBidPackages",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useBidResponses",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useTakeoffItems",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useCostDatabase",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useOrgPortfolioMetrics",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "usePortfolios",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "usePortfolioProjects",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useExecutiveReports",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "usePortalInvitations",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useOwnerUpdates",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useSubcontractorInvoices",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useInsuranceCertificates",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "usePurchaseOrders",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useDeliveries",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useMaterialInventory",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useEquipment",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useEquipmentMaintenance",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useContracts",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "usePayApplications",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useJobCostEntries",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useInvoicesPayable",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useWipReports",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useRetainageLedger",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useAIAgents",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useAIAgentActions",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useWorkforceMembers",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useTimeEntries",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "usePermits",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "usePermitInspections",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useIntegrations",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useIntegrationSyncLog",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useCustomReports",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useSustainabilityMetrics",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useWasteLogs",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useWarranties",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useWarrantyClaims",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useTaskTemplates",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useTaskCriticalPath",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useTaskDependencies",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useSafetyInspectionTemplates",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useCorrectiveActions",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useDrawingMarkups",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useTransmittals",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useOrganization",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useOrganizationMembers",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useApiKeys",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useWebhooks",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useGlobalSearch",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useNotificationPreferences",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "usePortalAccessTokens",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "usePortalAccessByToken",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useCloseoutItems",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useWeatherRecords",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useWeeklyCommitments",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useMeetingAgendaItems",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useMeetingActionItems",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useMeetingSeries",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useOpenActionItems",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useRFIWatchers",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useReportRuns",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useReportTemplates",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useReportSchedules",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useDailyLogEntries",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useLienWaivers",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useLienWaiversByPayApp",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "useLookaheadTasks",
+      "file": "src/hooks/queries/index.ts"
+    },
+    {
+      "name": "usePayAppSOV",
+      "file": "src/hooks/queries/index.ts"
+    }
+  ],
+  "hook_count": 322,
+  "edge_functions": [
+    {
+      "name": "agent-approval",
+      "has_index": true,
+      "size_bytes": 4251
+    },
+    {
+      "name": "ai-chat",
+      "has_index": true,
+      "size_bytes": 21416
+    },
+    {
+      "name": "weather-sync",
+      "has_index": true,
+      "size_bytes": 4433
+    },
+    {
+      "name": "generate-benchmarks",
+      "has_index": true,
+      "size_bytes": 10754
+    },
+    {
+      "name": "oauth-token-exchange",
+      "has_index": true,
+      "size_bytes": 9232
+    },
+    {
+      "name": "agent-orchestrator",
+      "has_index": true,
+      "size_bytes": 32515
+    },
+    {
+      "name": "ai-daily-summary",
+      "has_index": true,
+      "size_bytes": 6301
+    },
+    {
+      "name": "webhook-receiver",
+      "has_index": true,
+      "size_bytes": 6706
+    },
+    {
+      "name": "ai-conflict-detection",
+      "has_index": true,
+      "size_bytes": 5765
+    },
+    {
+      "name": "send-notification-email",
+      "has_index": true,
+      "size_bytes": 7059
+    },
+    {
+      "name": "generate-report",
+      "has_index": true,
+      "size_bytes": 8576
+    },
+    {
+      "name": "liveblocks-auth",
+      "has_index": true,
+      "size_bytes": 4133
+    },
+    {
+      "name": "api-v1",
+      "has_index": true,
+      "size_bytes": 20356
+    },
+    {
+      "name": "voice-extract",
+      "has_index": true,
+      "size_bytes": 10593
+    },
+    {
+      "name": "agent-runner",
+      "has_index": true,
+      "size_bytes": 9279
+    },
+    {
+      "name": "insurance-alerts",
+      "has_index": true,
+      "size_bytes": 7583
+    },
+    {
+      "name": "shared",
+      "has_index": false,
+      "size_bytes": 0
+    },
+    {
+      "name": "ai-rfi-draft",
+      "has_index": true,
+      "size_bytes": 4404
+    },
+    {
+      "name": "send-notification",
+      "has_index": true,
+      "size_bytes": 5304
+    },
+    {
+      "name": "ai-insights",
+      "has_index": true,
+      "size_bytes": 6045
+    },
+    {
+      "name": "generate-insights",
+      "has_index": true,
+      "size_bytes": 18675
+    },
+    {
+      "name": "ai-schedule-risk",
+      "has_index": true,
+      "size_bytes": 5806
+    },
+    {
+      "name": "ai-copilot",
+      "has_index": true,
+      "size_bytes": 7214
+    },
+    {
+      "name": "weekly-digest",
+      "has_index": true,
+      "size_bytes": 12388
+    },
+    {
+      "name": "stripe-webhook",
+      "has_index": true,
+      "size_bytes": 5857
+    }
+  ],
+  "edge_function_count": 25,
+  "tests": {
+    "test_file_count": 47,
+    "test_case_count": 576,
+    "test_files": [
+      "./src/test/permissions.test.ts",
+      "./src/test/machines/rfiMachine.test.ts",
+      "./src/test/machines/taskMachine.test.ts",
+      "./src/test/machines/changeOrderMachine.test.ts",
+      "./src/test/machines/paymentMachine.test.ts",
+      "./src/test/machines/agentStreamMachine.test.ts",
+      "./src/test/machines/submittalMachine.test.ts",
+      "./src/test/machines/closeoutMachine.test.ts",
+      "./src/test/machines/dailyLogMachine.test.ts",
+      "./src/test/machines/punchItemMachine.test.ts",
+      "./src/test/components/PresenceAvatars.test.tsx",
+      "./src/test/components/VoiceRecorder.a11y.test.tsx",
+      "./src/test/components/DataTable.test.tsx",
+      "./src/test/components/VoiceCapture.a11y.test.tsx",
+      "./src/test/components/CaptureTimeline.a11y.test.tsx",
+      "./src/test/components/ExportButton.test.tsx",
+      "./src/test/components/SkipToContent.test.tsx",
+      "./src/test/components/QuickCapture.a11y.test.tsx",
+      "./src/test/integration/lifecycles.test.ts",
+      "./src/test/lib/search.test.ts",
+      "./src/test/lib/offlineDb.test.ts",
+      "./src/test/api/submittals.test.ts",
+      "./src/test/api/activity.test.ts",
+      "./src/test/api/projects.test.ts",
+      "./src/test/api/organizations.test.ts",
+      "./src/test/api/ai.test.ts",
+      "./src/test/api/aiServiceEndpoint.test.ts",
+      "./src/test/api/rfis.test.ts",
+      "./src/test/api/errors.test.ts",
+      "./src/test/api/client.test.ts"
+    ]
+  },
+  "git_log_24h": [
+    {
+      "hash": "26e473d0",
+      "author": "SiteSync Maintenance",
+      "email": "maintenance@sitesync.ai",
+      "message": "fix(system): extract inline Python to standalone scripts, fix ALL wrong paths [skip ci]",
+      "date": "2026-04-10 09:53:24 +0000",
+      "files_changed": []
+    },
+    {
+      "hash": "478b8cfa",
+      "author": "Autopoietic Builder",
+      "email": "builder@sitesync.ai",
+      "message": "fix: DailyLog 'New Entry' button used wrong permission key [autopoietic]",
+      "date": "2026-04-10 08:40:14 +0000",
+      "files_changed": []
+    },
+    {
+      "hash": "f0b675f3",
+      "author": "Autopoietic Builder",
+      "email": "builder@sitesync.ai",
+      "message": "feat: live Dashboard metrics fallback for new projects [autopoietic]",
+      "date": "2026-04-10 08:36:35 +0000",
+      "files_changed": []
+    },
+    {
+      "hash": "0ce43f0b",
+      "author": "Autopoietic Builder",
+      "email": "builder@sitesync.ai",
+      "message": "feat: AI Copilot graceful fallback when edge function unavailable [autopoietic]",
+      "date": "2026-04-10 08:32:43 +0000",
+      "files_changed": []
+    },
+    {
+      "hash": "8609d98c",
+      "author": "Autopoietic Builder",
+      "email": "builder@sitesync.ai",
+      "message": "fix: RFIs empty state create modal was missing open/onSubmit props [autopoietic]",
+      "date": "2026-04-10 08:31:03 +0000",
+      "files_changed": []
+    },
+    {
+      "hash": "3338102a",
+      "author": "Autopoietic Builder",
+      "email": "builder@sitesync.ai",
+      "message": "feat: project creation flow and Dashboard onboarding for empty state [autopoietic]",
+      "date": "2026-04-10 08:28:46 +0000",
+      "files_changed": []
+    },
+    {
+      "hash": "5da8d545",
+      "author": "SiteSync Maintenance",
+      "email": "maintenance@sitesync.ai",
+      "message": "fix(ci): make perception briefing compile resilient to empty/non-JSON artifacts [skip ci]",
+      "date": "2026-04-10 05:06:39 +0000",
+      "files_changed": []
+    },
+    {
+      "hash": "528c41e6",
+      "author": "SiteSync Maintenance",
+      "email": "maintenance@sitesync.ai",
+      "message": "fix(perception): Playwright install via python -m, artifact download fallback [skip ci]",
+      "date": "2026-04-10 04:48:45 +0000",
+      "files_changed": []
+    },
+    {
+      "hash": "f05ec00a",
+      "author": "SiteSync Maintenance",
+      "email": "maintenance@sitesync.ai",
+      "message": "fix(deploy): add vercel.json SPA routing \u2014 /dashboard was returning 404 [skip ci]",
+      "date": "2026-04-10 04:46:39 +0000",
+      "files_changed": []
+    },
+    {
+      "hash": "223d389a",
+      "author": "SiteSync Maintenance",
+      "email": "maintenance@sitesync.ai",
+      "message": "strategy: TONIGHT.md written by Perplexity \u2014 demo-focused create flow [skip ci]",
+      "date": "2026-04-10 04:44:19 +0000",
+      "files_changed": []
+    },
+    {
+      "hash": "1db771c0",
+      "author": "SiteSync Maintenance",
+      "email": "maintenance@sitesync.ai",
+      "message": "feat(senses): memory (world model), curiosity (autonomous research), pride (quality conscience) [skip ci]",
+      "date": "2026-04-10 04:07:23 +0000",
+      "files_changed": []
+    },
+    {
+      "hash": "fb52e09b",
+      "author": "SiteSync Maintenance",
+      "email": "maintenance@sitesync.ai",
+      "message": "feat(senses): demo rehearsal (the hands), urgency physiology (the adrenaline), taste references (the eye) [skip ci]",
+      "date": "2026-04-10 03:55:03 +0000",
+      "files_changed": []
+    },
+    {
+      "hash": "07d0c150",
+      "author": "SiteSync CI",
+      "email": "ci@sitesync.ai",
+      "message": "chore(ci): ratchet quality floor [skip ci]",
+      "date": "2026-04-10 03:37:55 +0000",
+      "files_changed": []
+    },
+    {
+      "hash": "a058ad97",
+      "author": "SiteSync Maintenance",
+      "email": "maintenance@sitesync.ai",
+      "message": "feat(autopoiesis): replace pipeline with living intelligence \u2014 perceive, reason, build, reflect, evolve",
+      "date": "2026-04-10 03:32:43 +0000",
+      "files_changed": []
+    },
+    {
+      "hash": "42c0d215",
+      "author": "SiteSync Maintenance",
+      "email": "maintenance@sitesync.ai",
+      "message": "feat(cortex): give the organism a soul \u2014 Strategic Cortex, Vision Core, Demo Sprint Override [skip ci]",
+      "date": "2026-04-10 02:56:23 +0000",
+      "files_changed": []
+    },
+    {
+      "hash": "d3a59e76",
+      "author": "SiteSync Maintenance",
+      "email": "maintenance@sitesync.ai",
+      "message": "fix(homeostasis): add workflow_dispatch trigger so organism can dispatch quality ratchet [skip ci]",
+      "date": "2026-04-09 22:34:44 +0000",
+      "files_changed": []
+    },
+    {
+      "hash": "fbc1afb8",
+      "author": "SiteSync Maintenance",
+      "email": "maintenance@sitesync.ai",
+      "message": "fix(pipeline): 5 Night 3 efficiency fixes [skip ci]",
+      "date": "2026-04-09 22:34:15 +0000",
+      "files_changed": []
+    },
+    {
+      "hash": "636ab4c5",
+      "author": "github-actions[bot]",
+      "email": "41898282+github-actions[bot]@users.noreply.github.com",
+      "message": "polish(financial): 56px touch targets and token colors on CO, Budget, PayApps (#34)",
+      "date": "2026-04-09 20:09:47 +0000",
+      "files_changed": []
+    },
+    {
+      "hash": "04d53f53",
+      "author": "github-actions[bot]",
+      "email": "41898282+github-actions[bot]@users.noreply.github.com",
+      "message": "polish(ai-pages): fix invalid color tokens, 56px touch targets, shadow tokens [auto-delta] (#32)",
+      "date": "2026-04-09 20:08:15 +0000",
+      "files_changed": []
+    },
+    {
+      "hash": "2131457c",
+      "author": "github-actions[bot]",
+      "email": "41898282+github-actions[bot]@users.noreply.github.com",
+      "message": "polish(field): enforce 56px touch targets, aria-pressed, and token colors [auto-beta] (#31)",
+      "date": "2026-04-09 20:07:52 +0000",
+      "files_changed": []
+    },
+    {
+      "hash": "404518d3",
+      "author": "github-actions[bot]",
+      "email": "41898282+github-actions[bot]@users.noreply.github.com",
+      "message": "polish(field): 56px touch targets, token colors, empty states [auto-beta] (#30)",
+      "date": "2026-04-09 15:01:44 +0000",
+      "files_changed": []
+    },
+    {
+      "hash": "722525f2",
+      "author": "github-actions[bot]",
+      "email": "41898282+github-actions[bot]@users.noreply.github.com",
+      "message": "polish(financial): 56px touch targets and ARIA roles on filter controls (#29)",
+      "date": "2026-04-09 14:58:42 +0000",
+      "files_changed": []
+    },
+    {
+      "hash": "c741262d",
+      "author": "github-actions[bot]",
+      "email": "41898282+github-actions[bot]@users.noreply.github.com",
+      "message": "polish(ai-pages): enforce 56px touch targets and fix hyphen violations [auto-delta] (#28)",
+      "date": "2026-04-09 14:57:44 +0000",
+      "files_changed": []
+    },
+    {
+      "hash": "c80cdcce",
+      "author": "github-actions[bot]",
+      "email": "41898282+github-actions[bot]@users.noreply.github.com",
+      "message": "polish(shared): enforce 56px touch targets on interactive elements (#27)",
+      "date": "2026-04-09 14:57:24 +0000",
+      "files_changed": []
+    }
+  ],
+  "commits_24h": 24,
+  "code_health": {
+    "source_file_count": 461,
+    "total_lines": 135868,
+    "unsafe_any_count": 27,
+    "unsafe_any_files": [
+      "src/test/permissions.test.ts",
+      "src/test/setup.ts",
+      "src/test/integration/lifecycles.test.ts",
+      "src/test/api/projects.test.ts",
+      "src/test/api/client.test.ts",
+      "src/lib/supabase.ts"
+    ],
+    "mock_data_count": 1,
+    "mock_data_files": [
+      "src/types/ai.ts"
+    ],
+    "console_log_count": 62
+  },
+  "summary": {
+    "source_files": 461,
+    "total_lines": 135868,
+    "hooks": 322,
+    "edge_functions": 25,
+    "test_files": 47,
+    "test_cases": 576,
+    "commits_24h": 24,
+    "unsafe_casts": 27,
+    "mock_data_instances": 1,
+    "pages_with_queries": 30
+  }
+}
