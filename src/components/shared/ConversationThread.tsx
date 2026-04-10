@@ -3,7 +3,7 @@ import { Paperclip, Reply, FileText, Image, X, SmilePlus } from 'lucide-react';
 import { Avatar } from '../Primitives';
 import { MentionInput } from '../activity/MentionInput';
 import { UploadZone } from '../files/UploadZone';
-import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
+import { colors, spacing, typography, borderRadius, shadows, transitions, touchTarget } from '../../styles/theme';
 import { uploadProjectFile } from '../../lib/storage';
 import { fetchReactions, addReaction, removeReaction } from '../../api/endpoints/messageReactions';
 
@@ -297,9 +297,12 @@ export const ConversationThread: React.FC<ConversationThreadProps> = ({
                     <button
                       key={r.emoji}
                       onClick={() => toggleReaction(msg.id, r.emoji)}
+                      aria-label={`${r.emoji} reaction, ${r.userIds.length} ${r.userIds.length === 1 ? 'person' : 'people'}`}
+                      aria-pressed={reacted}
                       style={{
                         display: 'flex', alignItems: 'center', gap: 3,
-                        padding: `2px ${spacing['2']}`,
+                        padding: `0 ${spacing['2']}`,
+                        minHeight: touchTarget.field,
                         border: `1px solid ${reacted ? colors.primaryOrange : colors.borderSubtle}`,
                         borderRadius: borderRadius.full,
                         backgroundColor: reacted ? colors.orangeSubtle : 'transparent',
@@ -318,9 +321,12 @@ export const ConversationThread: React.FC<ConversationThreadProps> = ({
                 <div style={{ position: 'relative' }}>
                   <button
                     onClick={() => setEmojiPickerFor((prev) => prev === msg.id ? null : msg.id)}
+                    aria-label="Add reaction"
+                    aria-expanded={emojiPickerFor === msg.id}
                     style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      width: 24, height: 24, border: `1px solid ${colors.borderSubtle}`,
+                      minWidth: touchTarget.field, minHeight: touchTarget.field,
+                      border: `1px solid ${colors.borderSubtle}`,
                       borderRadius: borderRadius.full, backgroundColor: 'transparent',
                       cursor: 'pointer', color: colors.textTertiary,
                       transition: `all ${transitions.instant}`,
@@ -328,7 +334,7 @@ export const ConversationThread: React.FC<ConversationThreadProps> = ({
                     onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = colors.primaryOrange; (e.currentTarget as HTMLButtonElement).style.color = colors.primaryOrange; }}
                     onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = colors.borderSubtle; (e.currentTarget as HTMLButtonElement).style.color = colors.textTertiary; }}
                   >
-                    <SmilePlus size={12} />
+                    <SmilePlus size={14} />
                   </button>
                   {emojiPickerFor === msg.id && (
                     <div
@@ -344,10 +350,12 @@ export const ConversationThread: React.FC<ConversationThreadProps> = ({
                         <button
                           key={emoji}
                           onClick={() => { toggleReaction(msg.id, emoji); setEmojiPickerFor(null); }}
+                          aria-label={`React with ${emoji}`}
                           style={{
-                            width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            minWidth: touchTarget.field, minHeight: touchTarget.field,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
                             border: 'none', borderRadius: borderRadius.sm, backgroundColor: 'transparent',
-                            cursor: 'pointer', fontSize: 16, fontFamily: typography.fontFamily,
+                            cursor: 'pointer', fontSize: 18, fontFamily: typography.fontFamily,
                             transition: `background-color ${transitions.instant}`,
                           }}
                           onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.surfaceHover; }}
@@ -363,9 +371,12 @@ export const ConversationThread: React.FC<ConversationThreadProps> = ({
                 {/* Reply button */}
                 <button
                   onClick={() => setReplyToId((prev) => prev === msg.id ? undefined : msg.id)}
+                  aria-label={`Reply to ${msg.name}`}
+                  aria-pressed={replyToId === msg.id}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 4,
-                    padding: `2px ${spacing['2']}`, border: 'none',
+                    padding: `0 ${spacing['2']}`, border: 'none',
+                    minHeight: touchTarget.field,
                     backgroundColor: 'transparent', cursor: 'pointer',
                     fontSize: typography.fontSize.caption, fontFamily: typography.fontFamily,
                     color: replyToId === msg.id ? colors.primaryOrange : colors.textTertiary,
@@ -374,7 +385,7 @@ export const ConversationThread: React.FC<ConversationThreadProps> = ({
                   onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = colors.primaryOrange; }}
                   onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = replyToId === msg.id ? colors.primaryOrange : colors.textTertiary; }}
                 >
-                  <Reply size={11} />
+                  <Reply size={13} />
                   Reply
                 </button>
               </div>
@@ -399,9 +410,14 @@ export const ConversationThread: React.FC<ConversationThreadProps> = ({
               </span>
               <button
                 onClick={() => setReplyToId(undefined)}
-                style={{ border: 'none', backgroundColor: 'transparent', cursor: 'pointer', color: colors.textTertiary, display: 'flex', alignItems: 'center', padding: 2 }}
+                aria-label="Cancel reply"
+                style={{
+                  border: 'none', backgroundColor: 'transparent', cursor: 'pointer',
+                  color: colors.textTertiary, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  minWidth: touchTarget.field, minHeight: touchTarget.field,
+                }}
               >
-                <X size={12} />
+                <X size={14} />
               </button>
             </div>
           )}
@@ -425,9 +441,14 @@ export const ConversationThread: React.FC<ConversationThreadProps> = ({
                   <span style={{ maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fileNameFromUrl(url)}</span>
                   <button
                     onClick={() => removePendingAttachment(url)}
-                    style={{ border: 'none', backgroundColor: 'transparent', cursor: 'pointer', color: colors.textTertiary, display: 'flex', padding: 0 }}
+                    aria-label="Remove attachment"
+                    style={{
+                      border: 'none', backgroundColor: 'transparent', cursor: 'pointer',
+                      color: colors.textTertiary, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      minWidth: touchTarget.field, minHeight: touchTarget.field,
+                    }}
                   >
-                    <X size={10} />
+                    <X size={12} />
                   </button>
                 </div>
               ))}
@@ -452,8 +473,11 @@ export const ConversationThread: React.FC<ConversationThreadProps> = ({
             <div style={{ position: 'relative', flexShrink: 0 }} ref={attachPopoverRef}>
               <button
                 onClick={() => setAttachmentOpen((v) => !v)}
+                aria-label="Attach file"
+                aria-expanded={attachmentOpen}
                 style={{
-                  width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  minWidth: touchTarget.field, minHeight: touchTarget.field,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
                   border: 'none', backgroundColor: 'transparent', cursor: 'pointer',
                   color: attachmentOpen ? colors.primaryOrange : colors.textTertiary,
                   borderRadius: borderRadius.full, transition: `color ${transitions.instant}`,
@@ -461,7 +485,7 @@ export const ConversationThread: React.FC<ConversationThreadProps> = ({
                 }}
                 title="Attach file (Cmd+Shift+A)"
               >
-                <Paperclip size={14} />
+                <Paperclip size={16} />
               </button>
               {attachmentOpen && (
                 <div style={{

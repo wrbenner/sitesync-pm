@@ -346,7 +346,8 @@ export function DataTable<T>({
                 aria-label="Search table"
                 style={{
                   width: '100%',
-                  padding: `${spacing['2']} ${spacing['3']} ${spacing['2']} 32px`,
+                  minHeight: touchTarget.field,
+                  padding: `0 ${spacing['3']} 0 32px`,
                   border: `1px solid ${colors.borderDefault}`,
                   borderRadius: borderRadius.md,
                   fontSize: typography.fontSize.sm,
@@ -354,6 +355,7 @@ export function DataTable<T>({
                   color: colors.textPrimary,
                   backgroundColor: colors.surfaceRaised,
                   outline: 'none',
+                  boxSizing: 'border-box',
                 }}
               />
             </div>
