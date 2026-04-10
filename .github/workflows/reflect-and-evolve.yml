@@ -269,7 +269,7 @@ jobs:
 
       - name: Score the night
         run: |
-          python autopoietic/scripts/score-night.py || echo "Scoring failed — using fallback"
+          python scripts/score-night.py || echo "Scoring failed — using fallback"
           cat .perception/nightly-score.json 2>/dev/null || echo '{"score": -1, "error": "scoring failed"}'
 
       - name: Compile REFLECTION.md

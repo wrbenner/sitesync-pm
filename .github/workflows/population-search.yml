@@ -27,7 +27,7 @@ permissions:
   issues: write
 
 env:
-  STRATEGIES_FILE: wave3/scripts/island-strategies.json
+  STRATEGIES_FILE: scripts/island-strategies.json
 
 jobs:
   # ── Phase 1: Run all 3 islands in parallel ─────────────────────────────────
@@ -177,7 +177,7 @@ jobs:
         id: compare
         run: |
           mkdir -p .agent
-          python3 wave3/scripts/compare-islands.py \
+          python3 scripts/compare-islands.py \
             --results-dir .evolution \
             --archive .agent/population-archive.json \
             --run-id "run-$(date +%Y%m%d-%H%M%S)" \
