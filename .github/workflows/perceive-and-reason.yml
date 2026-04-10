@@ -151,7 +151,22 @@ jobs:
             echo "::warning::Demo rehearsal failed — will reason without it"
           fi
 
-      # --- Perception Script 6: System Health ---
+      # --- Perception Script 6: Curiosity — Fill Knowledge Gaps ---
+      - name: "Perceive: Curiosity Research"
+        id: perceive_curiosity
+        continue-on-error: true
+        timeout-minutes: 5
+        run: |
+          python scripts/satisfy-curiosity.py
+          if [ -f ".agent/curiosity-findings.json" ]; then
+            GAPS=$(python3 -c "import json; d=json.load(open('.agent/curiosity-findings.json')); print(f'{d.get(\"gaps_resolved\",0)}/{d.get(\"gaps_identified\",0)} gaps resolved')")
+            echo "curiosity_ok=true" >> $GITHUB_OUTPUT
+            echo "Curiosity: $GAPS"
+          else
+            echo "curiosity_ok=false" >> $GITHUB_OUTPUT
+          fi
+
+      # --- Perception Script 7: System Health ---
       - name: "Perceive: System Health"
         id: perceive_health
         continue-on-error: true
@@ -219,6 +234,8 @@ jobs:
               'Competitive Landscape': '.perception/competitive-state.json',
               'Urgency Level': '.perception/urgency.json',
               'Demo Rehearsal': '.perception/demo-rehearsal-summary.md',
+              'Curiosity Findings': '.agent/curiosity-findings.json',
+              'World Model': '.agent/world-model.json',
               'System Health': '.perception/system-health.json'
           }
 

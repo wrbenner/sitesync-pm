@@ -190,11 +190,14 @@ jobs:
                npm run build
                npx vitest run --passWithNoTests 2>/dev/null || true
 
-          4. DECIDE:
-             PASS — gates pass, change adds value:
+          4. PRIDE CHECK — Before committing, run the quality conscience:
                git add -A
+               python scripts/quality-conscience.py
+             Read the output. If it says FAIL, improve your change first.
+             You have standards. A superintendent is counting on this code.
+             If conscience says PASS or you've addressed its concerns:
                git commit -m 'feat: [description] [autopoietic]'
-             FAIL — gates fail or change regresses:
+             If quality gates fail or change regresses:
                git checkout -- .
                git clean -fd
                Log what went wrong, learn from it, move on.

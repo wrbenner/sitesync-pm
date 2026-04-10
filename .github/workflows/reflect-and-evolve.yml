@@ -504,6 +504,18 @@ jobs:
 
           Output <promise>DONE</promise> when complete." || true
 
+      - name: Update World Model (Memory)
+        continue-on-error: true
+        run: |
+          python scripts/update-world-model.py
+          if [ -f ".agent/world-model.json" ]; then
+            SIZE=$(wc -c < .agent/world-model.json)
+            echo "World model updated: ${SIZE} bytes"
+            git add .agent/world-model.json
+          else
+            echo "::warning::World model update failed"
+          fi
+
       - name: Push evolution
         run: |
           git pull --rebase origin main 2>/dev/null || true
