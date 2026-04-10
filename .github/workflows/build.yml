@@ -276,6 +276,33 @@ jobs:
             echo "No changes committed this session" >> $GITHUB_STEP_SUMMARY
           fi
 
+      - name: Visual feedback — see what was built
+        if: always()
+        continue-on-error: true
+        run: |
+          echo "Waiting 90s for Vercel to deploy..."
+          sleep 90
+          echo "=== Checking live pages ==="
+          PAGES="/ /dashboard /rfis /submittals /budget /daily-log /schedule /punch-list /copilot"
+          PASS=0; FAIL=0
+          for PAGE in $PAGES; do
+            URL="https://sitesync-pm.vercel.app${PAGE}"
+            CODE=$(curl -s -o /tmp/page_check.html -w "%{http_code}" --max-time 10 "$URL")
+            SIZE=$(wc -c < /tmp/page_check.html 2>/dev/null || echo 0)
+            HAS_ERROR=$(grep -ci "error\|500\|404\|not found" /tmp/page_check.html 2>/dev/null || echo 0)
+            if [ "$CODE" = "200" ] && [ "$SIZE" -gt 1000 ] && [ "$HAS_ERROR" -lt 3 ]; then
+              echo "  ✅ ${PAGE}: HTTP ${CODE}, ${SIZE}B"
+              PASS=$((PASS+1))
+            else
+              echo "  ❌ ${PAGE}: HTTP ${CODE}, ${SIZE}B, errors: ${HAS_ERROR}"
+              FAIL=$((FAIL+1))
+            fi
+          done
+          echo ""
+          echo "Visual check: $PASS passed, $FAIL failed out of $(echo $PAGES | wc -w | tr -d ' ') pages"
+          echo "visual_pass=$PASS" >> $GITHUB_OUTPUT
+          echo "visual_fail=$FAIL" >> $GITHUB_OUTPUT
+
       - name: Trigger downstream workflows
         if: always()
         env:

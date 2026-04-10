@@ -1,146 +1,152 @@
-# Tonight's Direction — April 10, 2026
-
-**5 days until April 15 demo. The plumbing is done. Tonight we build the intelligence.**
-
----
-
-## The Gap (What Is vs What Should Be)
-
-The organism made real progress in the last 48 hours. Six commits landed since April 9: project creation flow, Dashboard onboarding, RFI create modal fix, AI Copilot fallback, Dashboard metrics fallback, DailyLog permission fix. The CRUD foundation is now solid.
-
-But here is the honest page by page assessment:
-
-| Page | Data State | Intelligence State | Demo Ready? |
-|------|-----------|-------------------|-------------|
-| Dashboard | REAL queries, project creation works, metric cards animate | KPI tiles show numbers. No narrative. No "here is what matters today." | Functional, not impressive |
-| RFIs | REAL data, full CRUD, empty/error/loading states all handled | List view with status badges. No "this RFI is on the critical path." | Solid table stakes |
-| DailyLog | REAL data, full workflow (create/submit/approve/reject), voice capture | Logs exist. No pattern matching across logs. No trend detection. | Good for demo |
-| AI Copilot | LLM chat via useMultiAgentChat, graceful fallback when edge function unavailable | The edge function may not have project context. Responses may be generic or error out. | THE critical gap |
-| Budget | REAL data via cost API, inline edits, treemap, S curve, earned value | Shows numbers. No forecasting. No "this line item is trending 15% over." | Missing error UI |
-| Submittals | REAL data, full CRUD, approval chain visualization | Table with ball in court. No "this submittal blocks the drywall start." | Solid table stakes |
-| PunchList | REAL data, full verification workflow, photo support | List with status. No "47 items, 12 in Zone C, 80% are electrical." | Solid table stakes |
-| Schedule | Realtime queries, Gantt UI, KPI cards | Import/save to DB may be WIP. No float analysis or critical path. | Uncertain |
-| PaymentApplications | Multiple real queries, complex G702/G703 flow | Some mutations return "Feature pending configuration." PDF gen uncertain. | Stubs remain |
-
-**The three largest gaps between vision and reality:**
-
-1. **The AI Copilot does not think about the project.** VISION_CORE.md says: "Walker types 'What needs attention this week?' and the response names real items: 'RFI-047 on the electrical drawings is 3 days overdue.'" Reality: the copilot has a chat UI that calls an edge function. That edge function may not query project data. It may return generic responses or fail entirely. This is the single biggest gap because the copilot IS the differentiator. Without it, we are Procore with better CSS.
-
-2. **No page has a predictive or synthesized insight.** Every page shows data the user already knows (their RFI list, their budget numbers, their punch items). No page shows what the user does NOT know: which RFI threatens the schedule, which budget line is trending toward overrun, which subcontractor is consistently late on punch items. The vision says "we surface what no human would catch in time." Today we surface what a spreadsheet already shows.
-
-3. **Payment Applications has stubs.** FEEDBACK.md Step 6 requires G702/G703 pre populated from SOV + change orders, editable line items, and PDF export. The page exists with complex queries but some mutation handlers show "Feature pending configuration" toasts. PDF generation may not work end to end. This is the most complex page and the one most likely to embarrass in a demo.
+# TONIGHT.md — April 10, 2026 (Night 5)
+**5 days until April 15 demo. Phase: FEATURE-SPRINT. The intelligence layer begins.**
 
 ---
 
-## The Insight (Cross Domain Synthesis)
+## What Was Accomplished (Night 4)
+Five features shipped: project creation flow, Dashboard onboarding, RFI create modal fix, AI Copilot graceful fallback, DailyLog permission fix. 8 of 9 demo-critical pages now have real database queries. The plumbing works.
 
-**Insight 1: The hooks exist, the copilot does not use them.**
+## The Gap That Remains
+The Strategic Intelligence identified it clearly: **The AI Copilot does not think about the project.** It has a chat UI that calls an edge function, but it doesn't gather project context before asking the LLM. When a GC types "What should I focus on today?" the system can't answer because it doesn't know what RFIs are overdue, what the budget variance is, or what's on the schedule.
 
-The codebase has 100 files using `fromTable`, 30 files with `useQuery`, and a massive mutations library with 50+ hooks (useCreateRFI, useUpdateBudgetItem, useApproveChangeOrder, etc.). The data layer is rich. But `AICopilot.tsx` uses `useMultiAgentChat` which calls an edge function — and that edge function is the only path to intelligence. It does not import `useRFIs` or `useBudgetData` or `useScheduleActivities`. The intelligence layer is completely disconnected from the data layer.
+This is the difference between SiteSync and Procore. Procore's Helix AI can query your data. SiteSync's copilot should SYNTHESIZE across RFIs, budget, schedule, and punch list in one breath and tell you what to DO about it.
 
-**The fix is not to make the edge function smarter. The fix is to gather project context on the client side and send it WITH the user's question.** The hooks already exist. The data is already queryable. The copilot panel just needs to call 4 or 5 hooks (open RFIs, overdue items, budget variance, schedule status), serialize the results, and include them in the prompt to the LLM. This is a wiring problem, not an AI problem.
+## Tonight's Direction
 
-**Insight 2: "Feature pending configuration" hides real capability.**
+### Primary: Wire the AI Copilot to project-aware intelligence
 
-PaymentApplications.tsx has 6+ query hooks (usePayApplications, useContracts, useRetainageLedger, useLienWaivers, usePayAppSOV) and complex mutation hooks (upsertPayApplication, approvePayApplication, generateWaiversFromPayApp). The data model is sophisticated. But some handlers toast "Feature pending configuration" instead of calling the mutation. The gap between the API surface and the actual DB writes is likely small — the mutation hooks exist in `src/hooks/mutations/index.ts`. These stubs may just need the actual mutation call wired in where the toast placeholder sits.
+The hooks already exist. The data layer is rich. The copilot just needs to gather context before sending the user's question to the LLM.
 
----
+**Specific implementation:**
 
-## The Position (Competitive Context)
+1. **In AICopilot.tsx (or the useMultiAgentChat hook):**
+   Before sending the user's message to the edge function, gather project context:
 
-**Where we are already differentiated:**
-- AI native architecture (copilot, multi agent chat, predictive alerts — the scaffolding exists even if the intelligence doesn't flow yet)
-- Field first UX: 56px touch targets everywhere, voice capture in daily logs, mobile layout with Capacitor
-- Modern stack speed: React 19 + Vite + Supabase realtime vs Procore's monolith
+```typescript
+// Gather project context from existing hooks
+const { data: openRfis } = useQuery({
+  queryKey: ['rfis-summary'],
+  queryFn: () => fromTable('rfis')
+    .select('id, subject, status, due_date, priority')
+    .in('status', ['open', 'overdue'])
+    .order('due_date', { ascending: true })
+    .limit(10)
+})
 
-**Where we are behind on table stakes:**
-- Payment Applications: Procore's AIA G702/G703 flow is battle tested. Ours has stubs.
-- Schedule: Procore supports P6/XER import natively. Our schedule import may not save to DB.
-- Reporting: No PDF export confirmed working across pages.
+const { data: budgetSummary } = useQuery({
+  queryKey: ['budget-summary'],
+  queryFn: () => fromTable('budget_line_items')
+    .select('description, original_amount, committed_amount, projected_amount')
+    .limit(20)
+})
 
-**The ONE capability that makes a GC say "I have never seen that":**
+const { data: recentLogs } = useQuery({
+  queryKey: ['recent-daily-logs'],
+  queryFn: () => fromTable('daily_logs')
+    .select('id, date, weather, crew_count, notes')
+    .order('date', { ascending: false })
+    .limit(5)
+})
 
-*The copilot that actually knows your project.*
+const { data: openPunchItems } = useQuery({
+  queryKey: ['punch-items-summary'],
+  queryFn: () => fromTable('punch_list_items')
+    .select('id, description, status, assigned_to, location')
+    .eq('status', 'open')
+    .limit(15)
+})
+```
 
-When the GC types "What should I focus on today?" and the system responds: "You have 3 overdue RFIs. RFI-012 (mechanical coordination) is 6 days past due and the mechanical rough in is scheduled for next week — if this doesn't resolve by Thursday, you lose 4 days of float. Your budget is 3.2% under on electrical but committed costs suggest you will be 8% over by close out. And you have 12 new punch items from yesterday's walkthrough, 9 assigned to Pacific Drywall who has a 72 hour average response time."
+2. **Build the context string and send it WITH the user's question:**
 
-Nobody does this. Procore's Helix AI can answer questions about your data. It cannot synthesize across RFIs, budget, schedule, and punch list in one breath and tell you what to DO about it. That is the ceiling.
+```typescript
+const projectContext = {
+  openRfis: openRfis || [],
+  budgetItems: budgetSummary || [],
+  recentDailyLogs: recentLogs || [],
+  openPunchItems: openPunchItems || [],
+  projectName: currentProject?.name || 'Unknown Project',
+  contractValue: currentProject?.contract_value || 0,
+}
 
----
+// When user sends a message:
+const enrichedMessage = {
+  question: userMessage,
+  projectContext: JSON.stringify(projectContext),
+  systemPrompt: `You are an AI assistant for ${projectContext.projectName}, a construction project managed in SiteSync PM. You have access to real-time project data. Answer the user's question using the project context provided. Be specific — reference actual RFI numbers, budget line items, and dates. If you identify risks or items needing attention, prioritize them.`
+}
+```
 
-## The Direction (Strategic Focus)
+3. **Call the edge function with the enriched context:**
 
-### Primary Direction: Make the AI Copilot deliver project aware intelligence.
+```typescript
+const { data, error } = await supabase.functions.invoke('ai-copilot', {
+  body: enrichedMessage
+})
 
-This is the single highest leverage action because:
-1. It is the differentiator that no competitor has
-2. It uses infrastructure that already exists (hooks, data layer, edge function)
-3. It compounds: once the copilot has context, every future enhancement (predictions, risk alerts, natural language queries) becomes possible
-4. FEEDBACK.md Demo Step 2 explicitly requires it
-5. VISION_CORE.md says the demo needs "one moment that stops him cold." This is that moment.
+// If the edge function fails (ANTHROPIC_API_KEY not set), show graceful fallback:
+if (error || !data) {
+  return {
+    response: `Based on your project data, here's what I can see:\n\n` +
+      `**Open RFIs:** ${openRfis?.length || 0} (${openRfis?.filter(r => r.status === 'overdue').length || 0} overdue)\n` +
+      `**Open Punch Items:** ${openPunchItems?.length || 0}\n` +
+      `**Recent Daily Logs:** ${recentLogs?.length || 0} entries\n\n` +
+      `_Full AI analysis requires the AI service to be configured. The data above is live from your project._`
+  }
+}
+```
 
-**What the Builder should do:**
-Wire the CopilotPanel (or the edge function) to gather real project context before sending the user's question to the LLM. The context payload should include: open RFI count + overdue RFIs with subjects, budget summary (original, revised, billed, variance), recent daily log entries, open punch item count by status, and schedule status if available. The LLM receives this context as a system message and the user's question as the user message. The response should name real items and give actionable advice.
+**This is critical:** Even if the ANTHROPIC_API_KEY isn't set in Supabase, the copilot should STILL show useful information by reading the project data directly. The fallback should feel intelligent, not broken.
 
-If the edge function is not configurable (ANTHROPIC_API_KEY not set, function not deployed), the fallback is to generate the "intelligence summary" client side using the data already available from hooks. A static (non LLM) summary that says "3 overdue RFIs, budget 2.1% under, 47 open punch items" is better than a broken chat. The AI streaming response is the wow moment, but the data synthesis alone is valuable.
+4. **Check the edge function (supabase/functions/ai-copilot/index.ts):**
+   - Make sure it reads the `projectContext` from the request body
+   - Make sure it includes the project context in the prompt to Claude
+   - If ANTHROPIC_API_KEY isn't set, return a structured error (not a 500)
 
-### Fallback Direction: Unstub Payment Applications.
+### Secondary: Fix Payment Applications stubs
 
-If the copilot direction is blocked after 30 turns (edge function errors, auth issues, API key missing with no workaround), switch to completing the PaymentApplications flow. Wire the "Feature pending configuration" handlers to their actual mutation hooks. Verify G702 summary pre populates from SOV. Verify line item editing saves. This is table stakes but it is Demo Step 6 and a GC who sees a broken pay app form will not trust the product.
+The Strategic Intelligence noted that some mutation handlers show "Feature pending configuration" instead of calling the actual mutation. The mutation hooks exist (upsertPayApplication, approvePayApplication). The fix is to replace the toast placeholders with actual mutation calls.
 
-### Do NOT work on tonight:
-- **ESLint cleanup** (1032 errors — not demo visible, purely internal quality)
-- **Bundle size reduction** (1868KB vs 250KB target — important but 5 day horizon, not tonight)
-- **Schedule file import** (complex, uncertain outcome, not the wow moment)
-- **Non demo pages** (Marketplace, Integrations, Sustainability, Estimating, Permits, etc.)
-- **Test coverage** (43.2% — Swarm handles this, not the Builder)
-- **Infrastructure or refactoring** (urgency.json explicitly forbids this: "NO infrastructure, NO refactoring")
+```typescript
+// BEFORE (stub):
+onClick={() => toast.info('Feature pending configuration')}
 
----
+// AFTER (real):
+onClick={() => upsertPayApplication.mutate(payAppData)}
+```
+
+Find all instances of "Feature pending configuration" or "pending" toasts and wire them to the actual mutations.
+
+### Tertiary: Budget error boundary
+
+The Budget page has real queries but no error boundary. If any query fails, the page white-screens. Add error boundary + retry button.
 
 ## Success Criteria
 
 Tonight is a success if:
+1. The AI Copilot shows project-aware context (even without the edge function working)
+2. The "Feature pending configuration" stubs in Payment Applications are replaced with real mutations
+3. Budget page has an error boundary
 
-1. **The AI Copilot responds with project specific information.** A user types "What needs attention this week?" and the response references actual data from the project — real RFI subjects, real budget numbers, real punch item counts. Not generic construction advice. Not "I don't have access to your data." The response names at least one real entity from the database.
+## Boundaries — Do NOT
 
-2. **The Dashboard shows an intelligence layer above the KPI tiles.** Either an AI generated summary or a computed insight (e.g., "3 RFIs overdue, 1 on critical path" or "Budget tracking 2.1% under — on target") that synthesizes data from multiple sources. The GC should see something they did NOT ask for — the system surfacing what matters proactively.
+- Touch type safety, eslint, or code quality
+- Work on non-demo pages (Marketplace, Integrations, Sustainability, etc.)
+- Refactor or restructure existing working code
+- Create new pages or routes
 
-3. **Zero "Feature pending configuration" toasts in the demo flow.** Every button the GC clicks in the 6 step demo flow (Dashboard → Copilot → RFI → DailyLog → Budget → PayApp) either performs its action or shows a meaningful error. No placeholder toasts.
+## Fallback
 
----
+If the AI Copilot wiring is blocked after 30 turns (e.g., the hook infrastructure doesn't support the pattern above), switch to: make the copilot show a rich project summary dashboard instead of a chat interface — display the key metrics (open RFIs, budget status, schedule status, punch items) in a clean layout. This is less impressive than a chat but still shows intelligence.
 
-## Context for the Builder
+## Research Insights
 
-**DB and API state:**
-- 48 Supabase migrations deployed. Tables exist for all entities.
-- The project creation flow works (commit 3338102). Dashboard shows created projects.
-- All core hooks exist: useRFIs, useSubmittals, usePunchItems, useDailyLogs, useBudgetData, useScheduleActivities, usePayApplications. These are REAL and query Supabase.
-- The mutations library in `src/hooks/mutations/index.ts` has 50+ hooks ready to use.
-- Edge function `ai-copilot` exists in `supabase/functions/`. It needs ANTHROPIC_API_KEY set in Supabase secrets to work. If that is not available, build the context gathering client side and use a fallback.
+**Context-Augmented Generation (CAG) pattern** — The latest approach (InfoQ, April 2026) says don't just do RAG (retrieve documents). Instead, assemble user, session, and project context at the application layer BEFORE invoking the LLM. This is exactly what we're doing: gather RFIs, budget, schedule, punch items client-side, then send with the question. The LLM gets pre-assembled context, not raw document retrieval.
 
-**Key files for the copilot direction:**
-- `src/pages/AICopilot.tsx` — The chat page UI (856 lines)
-- `src/components/ai/CopilotPanel.tsx` — The panel component (uses fromTable)
-- `src/hooks/useMultiAgentChat.ts` — The chat hook
-- `src/hooks/useSupabase.ts` — Contains useAICopilot hook
-- `src/stores/copilotStore.ts` — Copilot state management
-
-**Key files for the PayApp fallback:**
-- `src/pages/PaymentApplications.tsx` — Main page
-- `src/hooks/mutations/index.ts` — Contains mutation hooks
-- `src/hooks/useSupabase.ts` — Contains query hooks
-
-**Patterns that work (from LEARNINGS.md):**
-- Copy CreateRFIModal.tsx pattern for any new form modal
-- Use `createAuditedMutation` for write operations
-- Never use floating point for money — integer cents
-- Supabase RLS: always use `(select auth.uid())` wrapper, not bare `auth.uid()`
-
-**What broke recently and was fixed:**
-- DailyLog "New Entry" button had wrong permission key (fixed 478b8cf)
-- RFIs empty state create modal was missing props (fixed 8609d98)
-- Dashboard 404 on Vercel (fixed with vercel.json SPA routing, f05ec00)
-- These suggest the create flows are fresh code — test them before building on top.
-
-**The build may not compile locally** — `npm install` may be needed. The CI uses `rm -f package-lock.json && npm install` (LEARNINGS.md: Vite 8/Rolldown lockfile issue). Run that first.
+**Supabase edge function invocation pattern:**
+```typescript
+const { data, error } = await supabase.functions.invoke('function-name', {
+  body: { question, projectContext }
+})
+```
+The Supabase client automatically forwards the user's auth token. The edge function receives it in `req.headers.get('Authorization')`.
