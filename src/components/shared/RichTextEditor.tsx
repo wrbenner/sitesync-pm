@@ -9,7 +9,7 @@ import {
   Bold, Italic, Strikethrough, Heading2, List, ListOrdered,
   CheckSquare, Highlighter,
 } from 'lucide-react'
-import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme'
+import { colors, spacing, typography, borderRadius, transitions, touchTarget } from '../../styles/theme'
 
 interface RichTextEditorProps {
   content?: string
@@ -28,8 +28,10 @@ const ToolbarButton: React.FC<{
   <button
     onClick={onClick}
     title={title}
+    aria-label={title}
+    aria-pressed={active}
     style={{
-      width: 28, height: 28,
+      minWidth: touchTarget.field, minHeight: touchTarget.field,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       border: 'none', borderRadius: borderRadius.sm,
       backgroundColor: active ? colors.orangeSubtle : 'transparent',
