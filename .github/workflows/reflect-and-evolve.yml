@@ -1,0 +1,543 @@
+# =============================================================================
+# reflect-and-evolve.yml — The Autopoietic Reflection & Evolution Layer
+# =============================================================================
+#
+# Triggers after build.yml ("Autonomous Builder") completes. Three jobs:
+#
+# 1. VERIFY — 4 specialized Sonnet verification agents in parallel matrix
+#    (CodeX-Verify pattern: +39.7pp bug detection vs single agent)
+#
+# 2. REFLECT — Score the night's work with score-night.py, compile
+#    consensus from verification agents, write REFLECTION.md
+#
+# 3. EVOLVE — Claude Opus (20 turns) analyzes the reflection and
+#    evolves the system: updates LEARNINGS.md, EVOLUTION_LEDGER.json,
+#    and optionally modifies its own CLAUDE.md (SICA safety: 200 char
+#    limit, YAML validation, archive all versions)
+#
+# Architecture inspired by:
+#   - CodeX-Verify: 4 specialized agents, ρ=0.05-0.25 correlation
+#   - CollabEval: independent → discuss → consensus
+#   - SICA: self-modification with safety constraints
+#   - DGM: archive all versions (stepping stones matter)
+# =============================================================================
+
+name: Reflect and Evolve
+
+on:
+  workflow_run:
+    workflows: ["Autonomous Builder"]
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      skip_evolution:
+        description: 'Skip evolution step (verify + reflect only)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  # ===========================================================================
+  # Job 1: Multi-Perspective Verification (4 parallel Sonnet agents)
+  # ===========================================================================
+  verify:
+    name: "Verify: ${{ matrix.perspective }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        perspective:
+          - correctness
+          - security
+          - performance
+          - ux-quality
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 10
+          ref: main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: rm -f package-lock.json && npm install
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Get tonight's diff
+        id: diff
+        run: |
+          DIFF=$(git log --since="8 hours ago" --author="Autopoietic Builder" -p --stat 2>/dev/null | head -3000)
+          if [ -z "$DIFF" ]; then
+            DIFF=$(git log -1 -p --stat 2>/dev/null | head -3000)
+          fi
+          echo "$DIFF" > /tmp/tonight-diff.txt
+          DIFF_LINES=$(wc -l < /tmp/tonight-diff.txt | tr -d ' ')
+          echo "diff_lines=$DIFF_LINES" >> $GITHUB_OUTPUT
+          echo "Tonight's diff: $DIFF_LINES lines"
+
+      - name: "Verify: ${{ matrix.perspective }}"
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PERSPECTIVE: ${{ matrix.perspective }}
+        run: |
+          mkdir -p .reviews
+
+          CORRECTNESS_PROMPT="You are a CORRECTNESS verification agent. Review tonight's code changes for:
+          1. Logic errors — trace through each function with edge-case inputs
+          2. Off-by-one errors in array/loop operations
+          3. Null/undefined handling — every .property access, every array index
+          4. Error handling — are all async operations try/caught? Are errors meaningful?
+          5. Type safety — are types accurate or are there hidden coercions?
+          6. Race conditions in React state updates or async flows
+          For each issue found, cite the EXACT file and line. Rate severity: critical/major/minor."
+
+          SECURITY_PROMPT="You are a SECURITY verification agent. Review tonight's code changes for:
+          1. OWASP Top 10 vulnerabilities (XSS, injection, CSRF, etc.)
+          2. Supabase RLS policy correctness — are queries filtered by project_id?
+          3. Secret exposure — any API keys, tokens, or credentials in code?
+          4. Input validation — are user inputs sanitized before DB queries?
+          5. Auth bypass — can any endpoint be called without authentication?
+          6. Insecure dependencies or known CVEs
+          For each issue found, cite the EXACT file and line. Rate severity: critical/major/minor."
+
+          PERFORMANCE_PROMPT="You are a PERFORMANCE verification agent. Review tonight's code changes for:
+          1. N+1 query patterns — are there loops that each make a DB call?
+          2. Missing indexes — SELECT without WHERE on indexed columns
+          3. Unbounded queries — any SELECT * without LIMIT on large tables?
+          4. Bundle size — are large libraries imported for small features?
+          5. Re-render storms — React components that re-render on every parent render
+          6. Memory leaks — event listeners or subscriptions not cleaned up
+          For each issue found, cite the EXACT file and line. Rate severity: critical/major/minor."
+
+          UX_PROMPT="You are a UX QUALITY verification agent. Review tonight's code changes for:
+          1. Mobile-first — do all interactive elements have min 56px touch targets?
+          2. Loading states — is there a skeleton (not spinner) for every async load?
+          3. Empty states — does every list/table have a meaningful empty state with CTA?
+          4. Error states — does every query failure show a user-friendly message?
+          5. Accessibility — are there aria-labels, keyboard navigation, contrast ratios?
+          6. Field usability — can a superintendent use this with one hand, in gloves, in sunlight?
+          For each issue found, cite the EXACT file and line. Rate severity: critical/major/minor."
+
+          case "$PERSPECTIVE" in
+            correctness) REVIEW_PROMPT="$CORRECTNESS_PROMPT" ;;
+            security) REVIEW_PROMPT="$SECURITY_PROMPT" ;;
+            performance) REVIEW_PROMPT="$PERFORMANCE_PROMPT" ;;
+            ux-quality) REVIEW_PROMPT="$UX_PROMPT" ;;
+          esac
+
+          claude \
+            --dangerously-skip-permissions \
+            --model claude-sonnet-4-20250514 \
+            --max-turns 10 \
+            "${REVIEW_PROMPT}
+
+          Read tonight's changes:
+            cat /tmp/tonight-diff.txt
+
+          Also read the full current state of key changed files to understand context.
+          Use grep and cat to inspect any file referenced in the diff.
+
+          Read the product vision for context on what 'good' looks like:
+            cat VISION_CORE.md 2>/dev/null || echo 'No vision doc'
+
+          Read success criteria:
+            cat TONIGHT.md 2>/dev/null || echo 'No tonight doc'
+
+          === OUTPUT FORMAT ===
+
+          Write your review to .reviews/${PERSPECTIVE}-review.json in this exact format:
+          {
+            \"perspective\": \"${PERSPECTIVE}\",
+            \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",
+            \"files_reviewed\": [list of files you actually read],
+            \"issues\": [
+              {
+                \"severity\": \"critical|major|minor\",
+                \"file\": \"path/to/file.ts\",
+                \"line\": 42,
+                \"description\": \"What is wrong\",
+                \"suggestion\": \"How to fix it\"
+              }
+            ],
+            \"scores\": {
+              \"overall\": 0-10,
+              \"detail\": \"one paragraph summary\"
+            },
+            \"deploy_recommendation\": \"yes|no|conditional\",
+            \"conditions\": [\"list of conditions if conditional\"]
+          }
+
+          Be thorough but fair. Only flag real issues, not style preferences." || true
+
+      - name: Upload review
+        uses: actions/upload-artifact@v4
+        with:
+          name: "review-${{ matrix.perspective }}"
+          path: .reviews/
+          retention-days: 30
+
+  # ===========================================================================
+  # Job 2: Reflection — score the night and compile consensus
+  # ===========================================================================
+  reflect:
+    name: "Reflect and Score"
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+          ref: main
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Python dependencies
+        run: pip install pyyaml
+
+      - name: Download all reviews
+        uses: actions/download-artifact@v4
+        with:
+          pattern: review-*
+          path: .reviews/
+          merge-multiple: true
+
+      - name: List downloaded reviews
+        run: |
+          echo "Downloaded reviews:"
+          find .reviews/ -name "*.json" -ls 2>/dev/null || echo "No reviews found"
+
+      - name: Compile consensus from verification agents
+        run: |
+          python3 -c "
+          import json, os, glob
+
+          reviews = {}
+          all_issues = []
+          scores = {}
+          deploy_votes = []
+
+          for review_file in sorted(glob.glob('.reviews/*-review.json')):
+              try:
+                  with open(review_file) as f:
+                      review = json.load(f)
+                  perspective = review.get('perspective', os.path.basename(review_file))
+                  reviews[perspective] = review
+                  all_issues.extend(review.get('issues', []))
+                  if 'scores' in review:
+                      scores[perspective] = review['scores'].get('overall', 0)
+                  deploy_votes.append(review.get('deploy_recommendation', 'unknown'))
+              except Exception as e:
+                  print(f'Warning: could not parse {review_file}: {e}')
+
+          # Compile consensus
+          consensus = {
+              'timestamp': '$(date -u +%Y-%m-%dT%H:%M:%SZ)',
+              'agents_reporting': len(reviews),
+              'perspectives': list(reviews.keys()),
+              'scores': scores,
+              'average_score': round(sum(scores.values()) / max(len(scores), 1), 1),
+              'deploy_votes': deploy_votes,
+              'consensus_deploy': deploy_votes.count('yes') >= len(deploy_votes) * 0.75 if deploy_votes else False,
+              'critical_issues': [i for i in all_issues if i.get('severity') == 'critical'],
+              'major_issues': [i for i in all_issues if i.get('severity') == 'major'],
+              'minor_issues': [i for i in all_issues if i.get('severity') == 'minor'],
+              'total_issues': len(all_issues)
+          }
+
+          os.makedirs('.reviews', exist_ok=True)
+          with open('.reviews/consensus.json', 'w') as f:
+              json.dump(consensus, f, indent=2)
+
+          print(json.dumps(consensus, indent=2))
+          "
+
+      - name: Score the night
+        run: |
+          python autopoietic/scripts/score-night.py || echo "Scoring failed — using fallback"
+          cat .perception/nightly-score.json 2>/dev/null || echo '{"score": -1, "error": "scoring failed"}'
+
+      - name: Compile REFLECTION.md
+        run: |
+          python3 -c "
+          import json, os
+          from datetime import datetime
+
+          sections = []
+          sections.append(f'# Reflection — {datetime.utcnow().strftime(\"%Y-%m-%d\")}\n')
+
+          # Nightly score
+          if os.path.exists('.perception/nightly-score.json'):
+              with open('.perception/nightly-score.json') as f:
+                  score = json.load(f)
+              sections.append(f'## Nightly Score: {score.get(\"score\", \"N/A\")} / 100')
+              sections.append(f'')
+              for k, v in score.get('breakdown', {}).items():
+                  sections.append(f'- **{k}**: {v}')
+              sections.append('')
+
+          # Verification consensus
+          if os.path.exists('.reviews/consensus.json'):
+              with open('.reviews/consensus.json') as f:
+                  consensus = json.load(f)
+              sections.append(f'## Verification Consensus')
+              sections.append(f'')
+              sections.append(f'- Agents reporting: {consensus.get(\"agents_reporting\", 0)} / 4')
+              sections.append(f'- Average score: {consensus.get(\"average_score\", \"N/A\")} / 10')
+              sections.append(f'- Deploy consensus: {\"YES\" if consensus.get(\"consensus_deploy\") else \"NO\"}')
+              sections.append(f'- Critical issues: {len(consensus.get(\"critical_issues\", []))}')
+              sections.append(f'- Major issues: {len(consensus.get(\"major_issues\", []))}')
+              sections.append(f'- Minor issues: {len(consensus.get(\"minor_issues\", []))}')
+              sections.append(f'')
+
+              for issue in consensus.get('critical_issues', [])[:5]:
+                  sections.append(f'  - **CRITICAL** [{issue.get(\"file\", \"unknown\")}]: {issue.get(\"description\", \"\")}')
+              sections.append('')
+
+          # Builder's own reflection
+          if os.path.exists('REFLECTION.md'):
+              with open('REFLECTION.md') as f:
+                  builder_reflection = f.read()[:2000]
+              sections.append(f'## Builder Self-Reflection')
+              sections.append(builder_reflection)
+
+          reflection = '\n'.join(sections)
+          with open('REFLECTION.md', 'w') as f:
+              f.write(reflection)
+          print(f'REFLECTION.md written: {len(reflection)} chars')
+          "
+
+      - name: Commit reflection
+        run: |
+          git config user.name "Autopoietic Reflector"
+          git config user.email "reflector@sitesync.ai"
+          git add REFLECTION.md .reviews/ .perception/nightly-score*.json
+          git diff --staged --quiet || git commit -m "reflect: nightly score and verification $(date +%Y-%m-%d) [autopoietic][skip ci]"
+          git pull --rebase origin main 2>/dev/null || true
+          git push origin main || true
+
+      - name: Upload reflection artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: reflection-data
+          path: |
+            REFLECTION.md
+            .reviews/consensus.json
+            .perception/nightly-score.json
+          retention-days: 30
+
+  # ===========================================================================
+  # Job 3: Evolution — update the system itself (SICA safety)
+  # ===========================================================================
+  evolve:
+    name: "Evolve the System"
+    needs: reflect
+    if: ${{ github.event.inputs.skip_evolution != 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+          ref: main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Python dependencies
+        run: pip install pyyaml
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Configure git
+        run: |
+          git config user.name "Autopoietic Evolver"
+          git config user.email "evolver@sitesync.ai"
+          git config pull.rebase true
+          git pull origin main --rebase || true
+
+      - name: Download reflection data
+        uses: actions/download-artifact@v4
+        with:
+          name: reflection-data
+          path: .
+
+      - name: Archive current system state (SICA safety)
+        run: |
+          ARCHIVE_DIR=".evolution/archive/$(date +%Y-%m-%d_%H%M%S)"
+          mkdir -p "$ARCHIVE_DIR"
+          cp CLAUDE.md "$ARCHIVE_DIR/" 2>/dev/null || true
+          cp LEARNINGS.md "$ARCHIVE_DIR/" 2>/dev/null || true
+          cp EVOLUTION_LEDGER.json "$ARCHIVE_DIR/" 2>/dev/null || true
+          cp TONIGHT.md "$ARCHIVE_DIR/" 2>/dev/null || true
+          cp REFLECTION.md "$ARCHIVE_DIR/" 2>/dev/null || true
+          echo "Archived to $ARCHIVE_DIR"
+          ls -la "$ARCHIVE_DIR/"
+
+      - name: "Evolve with Claude Opus"
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          claude \
+            --dangerously-skip-permissions \
+            --model claude-opus-4-6 \
+            --max-turns 20 \
+            "You are the Evolution Engine of an autopoietic intelligence system.
+          Your job: learn from tonight's build and make the system smarter for tomorrow.
+
+          === READ CURRENT STATE ===
+
+          Read tonight's reflection:
+            cat REFLECTION.md
+
+          Read the verification consensus:
+            cat .reviews/consensus.json 2>/dev/null || echo 'No consensus'
+
+          Read the nightly score:
+            cat .perception/nightly-score.json 2>/dev/null || echo 'No score'
+
+          Read current learnings:
+            cat LEARNINGS.md 2>/dev/null || echo 'No learnings yet'
+
+          Read evolution history:
+            cat EVOLUTION_LEDGER.json 2>/dev/null || echo '[]'
+
+          Read current system rules:
+            cat CLAUDE.md 2>/dev/null || echo 'No CLAUDE.md'
+
+          === YOUR TASKS ===
+
+          1. UPDATE LEARNINGS.md
+             Add new learnings from tonight. Format each as:
+             - [DATE] LEARNING: [what we learned]
+               EVIDENCE: [specific data that proves it]
+               ACTION: [what changes because of this]
+
+             Only add learnings that are:
+             - Backed by evidence from tonight's build
+             - Actionable (they change future behavior)
+             - Not duplicates of existing learnings
+
+          2. UPDATE EVOLUTION_LEDGER.json
+             Add an entry for tonight:
+             {
+               \"date\": \"YYYY-MM-DD\",
+               \"score\": [nightly score],
+               \"commits\": [number of commits],
+               \"critical_issues\": [count],
+               \"learnings_added\": [count],
+               \"evolution_applied\": [description of changes]
+             }
+
+          3. CONSIDER CLAUDE.md MODIFICATIONS (SICA safety constraints)
+             You MAY modify CLAUDE.md if and only if:
+             a) A clear pattern emerged from 3+ nights of data
+             b) The modification is small (max 200 characters of new text)
+             c) You can validate the modification will not break YAML parsing
+             d) The current version is archived (already done in previous step)
+
+             If you modify CLAUDE.md:
+             - Add a comment: # EVOLVED [DATE]: [reason]
+             - Keep the change minimal and reversible
+             - Validate: python3 -c \"open('CLAUDE.md').read()\" (ensure readable)
+
+             If you are unsure, DO NOT modify CLAUDE.md. Conservative is correct.
+
+          4. EXTRACT SKILLS (if applicable)
+             If tonight's build discovered a reusable pattern:
+             - Create .claude/skills/{skill-name}/SKILL.md
+             - Follow the SKILL.md format (name, description, when_to_use, steps)
+             - Only create skills for patterns that appeared 3+ times
+
+          === SICA SAFETY CONSTRAINTS ===
+
+          These are ABSOLUTE. No exceptions.
+
+          - Every file you modify must be archived in .evolution/archive/ FIRST (done)
+          - CLAUDE.md changes are LIMITED to 200 characters of new text per night
+          - All JSON files must pass: python3 -c \"import json; json.load(open(f))\"
+          - All YAML files must pass: python3 -c \"import yaml; yaml.safe_load(open(f))\"
+          - If ANY validation fails, revert the change and log the failure
+          - Never delete existing learnings (append-only)
+          - Never modify workflow files (.github/workflows/*)
+
+          === VALIDATION ===
+
+          After all changes, run:
+            python3 -c \"import json; json.load(open('EVOLUTION_LEDGER.json'))\" && echo 'Ledger OK'
+            test -f LEARNINGS.md && echo 'Learnings OK'
+            ls -la .evolution/archive/ && echo 'Archive OK'
+
+          === COMMIT ===
+
+          If changes pass validation:
+            git add LEARNINGS.md EVOLUTION_LEDGER.json .evolution/ .claude/skills/
+            git add CLAUDE.md 2>/dev/null || true
+            git commit -m 'evolve: system evolution $(date +%Y-%m-%d) [autopoietic][skip ci]'
+
+          If validation fails:
+            git checkout -- .
+            echo 'Evolution aborted — validation failure' >> /tmp/evolution-failure.log
+
+          Output <promise>DONE</promise> when complete." || true
+
+      - name: Push evolution
+        run: |
+          git pull --rebase origin main 2>/dev/null || true
+          COMMITS=$(git log origin/main..HEAD --oneline 2>/dev/null | wc -l | tr -d ' ')
+          if [ "$COMMITS" -gt "0" ]; then
+            git push origin main
+            echo "## Evolution — $(date '+%B %d %Y')" >> $GITHUB_STEP_SUMMARY
+            echo "**Evolution commits:** $COMMITS" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            git log origin/main~${COMMITS}..origin/main --oneline >> $GITHUB_STEP_SUMMARY 2>/dev/null || true
+          else
+            echo "No evolution changes this cycle" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Generate evolution summary
+        if: always()
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### System State After Evolution" >> $GITHUB_STEP_SUMMARY
+          if [ -f "EVOLUTION_LEDGER.json" ]; then
+            echo '```json' >> $GITHUB_STEP_SUMMARY
+            python3 -c "
+          import json
+          with open('EVOLUTION_LEDGER.json') as f:
+              ledger = json.load(f)
+          if isinstance(ledger, list) and len(ledger) > 0:
+              print(json.dumps(ledger[-1], indent=2))
+          else:
+              print('No entries yet')
+          " >> $GITHUB_STEP_SUMMARY 2>/dev/null || echo "Could not parse ledger" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ -f ".perception/nightly-score.json" ]; then
+            SCORE=$(python3 -c "import json; print(json.load(open('.perception/nightly-score.json')).get('score', 'N/A'))" 2>/dev/null || echo "N/A")
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Nightly Score:** $SCORE / 100" >> $GITHUB_STEP_SUMMARY
+          fi

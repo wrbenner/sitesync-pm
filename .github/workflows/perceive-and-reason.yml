@@ -1,0 +1,444 @@
+# =============================================================================
+# perceive-and-reason.yml — The Autopoietic Perception Layer
+# =============================================================================
+#
+# Runs at 4am UTC (11pm CDT). Before the Builder wakes, this workflow
+# perceives the world: the live product, the codebase, the competitive
+# landscape, and the system's own health. Then Claude Opus synthesizes
+# everything into TONIGHT.md — a strategic direction document, NOT a task list.
+#
+# Architecture inspired by:
+#   - Meta REA's three-phase planning (2× model accuracy, 5× eng output)
+#   - SimpleMem's semantic compression (30× token reduction)
+#   - SICA's asynchronous overseer pattern
+#
+# The output TONIGHT.md tells the Builder WHO we are building for,
+# WHAT gaps exist, and WHY certain directions matter. The Builder
+# has full autonomy to decide HOW.
+# =============================================================================
+
+name: Perceive and Reason
+
+on:
+  schedule:
+    - cron: '0 4 * * *'  # 4am UTC daily
+  workflow_dispatch:
+    inputs:
+      skip_competitors:
+        description: 'Skip competitor analysis (saves ~2min)'
+        type: boolean
+        default: false
+      reasoning_turns:
+        description: 'Max turns for strategic reasoning (default 40)'
+        default: '40'
+
+permissions:
+  contents: write
+  issues: write
+
+env:
+  NODE_VERSION: '22'
+  PYTHON_VERSION: '3.12'
+
+jobs:
+  # ===========================================================================
+  # Job 1: Perception — gather raw signals from all sources
+  # ===========================================================================
+  perceive:
+    name: "Perceive the World"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+          ref: main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Python dependencies
+        run: pip install requests beautifulsoup4 pyyaml
+
+      - name: Install Playwright
+        run: |
+          pip install playwright
+          npx playwright install --with-deps chromium
+
+      - name: Create perception output directory
+        run: mkdir -p .perception
+
+      # --- Perception Script 1: Live Product State ---
+      - name: "Perceive: Live Product"
+        id: perceive_product
+        continue-on-error: true
+        run: |
+          python autopoietic/scripts/perceive-product.py
+          if [ -f ".perception/app-state.json" ]; then
+            echo "product_ok=true" >> $GITHUB_OUTPUT
+            echo "Product perception complete: $(wc -c < .perception/app-state.json) bytes"
+          else
+            echo "product_ok=false" >> $GITHUB_OUTPUT
+            echo "::warning::Product perception failed — app-state.json not created"
+          fi
+        env:
+          APP_URL: "https://sitesync-pm.vercel.app"
+
+      # --- Perception Script 2: Codebase State ---
+      - name: "Perceive: Codebase"
+        id: perceive_codebase
+        continue-on-error: true
+        run: |
+          python autopoietic/scripts/perceive-codebase.py
+          if [ -f ".perception/codebase-state.json" ]; then
+            echo "codebase_ok=true" >> $GITHUB_OUTPUT
+            echo "Codebase perception complete: $(wc -c < .perception/codebase-state.json) bytes"
+          else
+            echo "codebase_ok=false" >> $GITHUB_OUTPUT
+            echo "::warning::Codebase perception failed"
+          fi
+
+      # --- Perception Script 3: Competitive Landscape ---
+      - name: "Perceive: Competitors"
+        id: perceive_competitors
+        if: ${{ github.event.inputs.skip_competitors != 'true' }}
+        continue-on-error: true
+        run: |
+          python autopoietic/scripts/perceive-competitors.py
+          if [ -f ".perception/competitive-state.json" ]; then
+            echo "competitors_ok=true" >> $GITHUB_OUTPUT
+            echo "Competitive perception complete"
+          else
+            echo "competitors_ok=false" >> $GITHUB_OUTPUT
+            echo "::warning::Competitor perception failed — will reason without it"
+          fi
+
+      # --- Perception Script 4: System Health ---
+      - name: "Perceive: System Health"
+        id: perceive_health
+        continue-on-error: true
+        run: |
+          python3 -c "
+          import json, subprocess, os, glob as g
+          from datetime import datetime, timezone
+
+          health = {}
+
+          # Nightly score history (last 7 days)
+          score_files = sorted(g.glob('.perception/nightly-score-*.json'))[-7:]
+          scores = []
+          for sf in score_files:
+              try:
+                  with open(sf) as f:
+                      scores.append(json.load(f))
+              except Exception:
+                  pass
+          health['score_history'] = scores
+
+          # Workflow run stats (via git log)
+          try:
+              result = subprocess.run(
+                  ['git', 'log', '--since=7 days ago', '--oneline', '--grep=auto'],
+                  capture_output=True, text=True, timeout=10
+              )
+              health['auto_commits_7d'] = len(result.stdout.strip().split('\n')) if result.stdout.strip() else 0
+          except Exception:
+              health['auto_commits_7d'] = -1
+
+          # TONIGHT.md staleness
+          if os.path.exists('TONIGHT.md'):
+              mtime = os.path.getmtime('TONIGHT.md')
+              age_hours = (datetime.now(timezone.utc).timestamp() - mtime) / 3600
+              health['tonight_md_age_hours'] = round(age_hours, 1)
+          else:
+              health['tonight_md_age_hours'] = -1
+
+          # Perception file sizes
+          for pf in g.glob('.perception/*.json'):
+              name = os.path.basename(pf)
+              health[f'perception_{name}_bytes'] = os.path.getsize(pf)
+
+          health['timestamp'] = datetime.now(timezone.utc).isoformat()
+
+          with open('.perception/system-health.json', 'w') as f:
+              json.dump(health, f, indent=2)
+          print(json.dumps(health, indent=2))
+          "
+          echo "health_ok=true" >> $GITHUB_OUTPUT
+
+      # --- Collect all perception data into a single briefing ---
+      - name: "Compile Perception Briefing"
+        id: compile
+        run: |
+          python3 -c "
+          import json, os
+
+          briefing_parts = []
+
+          files = {
+              'Product State': '.perception/app-state.json',
+              'Codebase State': '.perception/codebase-state.json',
+              'Competitive Landscape': '.perception/competitive-state.json',
+              'System Health': '.perception/system-health.json'
+          }
+
+          for label, path in files.items():
+              if os.path.exists(path):
+                  with open(path) as f:
+                      data = json.load(f)
+                  briefing_parts.append(f'## {label}\n\`\`\`json\n{json.dumps(data, indent=2)[:8000]}\n\`\`\`')
+              else:
+                  briefing_parts.append(f'## {label}\n*Not available — perception script failed or was skipped.*')
+
+          # Include VISION_CORE.md if it exists
+          if os.path.exists('VISION_CORE.md'):
+              with open('VISION_CORE.md') as f:
+                  vision = f.read()[:4000]
+              briefing_parts.append(f'## Vision Core (excerpt)\n{vision}')
+
+          # Include last TONIGHT.md for continuity
+          if os.path.exists('TONIGHT.md'):
+              with open('TONIGHT.md') as f:
+                  last_tonight = f.read()[:3000]
+              briefing_parts.append(f'## Previous TONIGHT.md (for continuity)\n{last_tonight}')
+
+          # Include recent DAILY_REPORT.md
+          if os.path.exists('DAILY_REPORT.md'):
+              with open('DAILY_REPORT.md') as f:
+                  report = f.read()[:3000]
+              briefing_parts.append(f'## Recent Daily Report (excerpt)\n{report}')
+
+          briefing = '\n\n'.join(briefing_parts)
+          with open('.perception/compiled-briefing.md', 'w') as f:
+              f.write(briefing)
+
+          print(f'Compiled briefing: {len(briefing)} chars from {len(briefing_parts)} sources')
+          "
+
+      - name: Upload perception artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: perception-data
+          path: .perception/
+          retention-days: 30
+
+    outputs:
+      product_ok: ${{ steps.perceive_product.outputs.product_ok }}
+      codebase_ok: ${{ steps.perceive_codebase.outputs.codebase_ok }}
+      competitors_ok: ${{ steps.perceive_competitors.outputs.competitors_ok }}
+
+  # ===========================================================================
+  # Job 2: Strategic Reasoning — synthesize perception into direction
+  # ===========================================================================
+  reason:
+    name: "Strategic Reasoning"
+    needs: perceive
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+          ref: main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Download perception data
+        uses: actions/download-artifact@v4
+        with:
+          name: perception-data
+          path: .perception/
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Configure git
+        run: |
+          git config user.name "Autopoietic Mind"
+          git config user.email "mind@sitesync.ai"
+          git config pull.rebase true
+
+      - name: Pull latest
+        run: git pull origin main --rebase || true
+
+      - name: Check pause state
+        run: |
+          if grep -q "Status: PAUSED" PAUSE.md 2>/dev/null; then
+            echo "::warning::PAUSE.md says PAUSED — skipping reasoning"
+            exit 0
+          fi
+
+      - name: "Strategic Reasoning with Claude Opus"
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PERCEPTION_PRODUCT: ${{ needs.perceive.outputs.product_ok }}
+          PERCEPTION_CODEBASE: ${{ needs.perceive.outputs.codebase_ok }}
+          PERCEPTION_COMPETITORS: ${{ needs.perceive.outputs.competitors_ok }}
+        run: |
+          MAX_TURNS="${{ github.event.inputs.reasoning_turns || '40' }}"
+
+          claude \
+            --dangerously-skip-permissions \
+            --model claude-opus-4-6 \
+            --max-turns "$MAX_TURNS" \
+            "You are the Strategic Mind of SiteSync PM — an autopoietic intelligence system
+          that perceives, reasons, and directs its own evolution.
+
+          You are NOT generating a task list. You are NOT writing experiment descriptions.
+          You are thinking deeply about WHERE this product needs to go and WHY.
+
+          === YOUR PERCEPTION DATA ===
+
+          Read the compiled perception briefing:
+            cat .perception/compiled-briefing.md
+
+          Read the soul of the product:
+            cat VISION_CORE.md
+
+          Read the current state of the codebase:
+            cat .perception/codebase-state.json 2>/dev/null || echo 'Not available'
+
+          Read the live product state:
+            cat .perception/app-state.json 2>/dev/null || echo 'Not available'
+
+          Read the competitive landscape:
+            cat .perception/competitive-state.json 2>/dev/null || echo 'Not available'
+
+          Read the system health:
+            cat .perception/system-health.json 2>/dev/null || echo 'Not available'
+
+          Read the previous TONIGHT.md for continuity:
+            cat TONIGHT.md 2>/dev/null || echo 'No previous direction'
+
+          Read the daily report for recent build context:
+            cat DAILY_REPORT.md 2>/dev/null || echo 'No recent report'
+
+          Read LEARNINGS.md for accumulated wisdom:
+            cat LEARNINGS.md 2>/dev/null || echo 'No learnings yet'
+
+          === YOUR REASONING PROCESS ===
+
+          Think through these dimensions IN ORDER. Do not skip any.
+
+          1. GAP ANALYSIS
+             Compare VISION_CORE.md (the ceiling) with the live product state (reality).
+             For each page: what does the superintendent see today vs what he SHOULD see?
+             Be brutally honest. If a page shows empty shells, say so.
+             If a page has real data but no intelligence, say so.
+             Identify the THREE largest gaps between vision and reality.
+
+          2. CROSS-DOMAIN SYNTHESIS
+             Connect signals across perception sources:
+             - Does the codebase structure support what the product needs?
+             - Are there DB queries that exist but pages that do not use them?
+             - Are there pages that exist but have no backend support?
+             - What patterns in the git log suggest momentum or stagnation?
+             Find at least TWO non-obvious connections.
+
+          3. COMPETITIVE POSITIONING
+             Given what Procore, Fieldwire, and Autodesk CC offer:
+             - Where are we already differentiated (intelligence, not features)?
+             - Where are we behind on TABLE STAKES (basic features every GC expects)?
+             - What is the ONE capability that would make a GC say 'I have never seen that'?
+             This is not about feature parity. It is about category creation.
+
+          4. STRATEGIC DIRECTION
+             Given gaps, synthesis, and competitive position:
+             - What is the SINGLE most important direction for tonight's build?
+             - What is the SECOND most important if the first is blocked?
+             - What should the Builder explicitly NOT work on (and why)?
+             Reason about leverage: which direction compounds across nights?
+
+          5. SUCCESS CRITERIA
+             Define 2-3 concrete, measurable criteria for tonight's build.
+             These must be observable (can a human verify them in 60 seconds?).
+             Example: 'The /dashboard page shows real Riverside Tower data with
+             at least 3 intelligence-layer insights visible above the fold.'
+             NOT: 'Improve the dashboard.' That is not a criterion.
+
+          === OUTPUT ===
+
+          Write TONIGHT.md using this exact structure:
+
+          # Tonight's Direction — [DATE]
+
+          ## The Gap (What Is vs What Should Be)
+          [Your gap analysis — specific, honest, with page-by-page assessment]
+
+          ## The Insight (Cross-Domain Synthesis)
+          [Non-obvious connections you discovered across perception sources]
+
+          ## The Position (Competitive Context)
+          [Where we stand relative to competitors — table stakes AND differentiation]
+
+          ## The Direction (Strategic Focus)
+          [THE single most important direction + fallback + what to avoid]
+
+          ## Success Criteria
+          [2-3 measurable, observable criteria]
+
+          ## Context for the Builder
+          [Key facts the Builder needs — DB state, broken patterns, available hooks]
+
+          ---
+
+          After writing TONIGHT.md, also update DAILY_REPORT.md with a section:
+
+          ## Perception Report — [DATE]
+          - Pages perceived: [count] / 8
+          - Pages with real data: [count]
+          - Pages with empty states: [list]
+          - Codebase: [summary stats]
+          - Competitive signals: [key findings]
+          - System health: [score trend]
+          - Strategic direction chosen: [one sentence]
+
+          Commit both files:
+            git add TONIGHT.md DAILY_REPORT.md .perception/
+            git commit -m 'perception: strategic direction for $(date +%Y-%m-%d) [autopoietic][skip ci]'
+
+          === CONSTRAINTS ===
+
+          - TONIGHT.md must be under 3000 words. The Builder has limited context.
+          - Do NOT list specific code changes. The Builder decides implementation.
+          - Do NOT generate experiment descriptions. That is the old system.
+          - EVERY claim must be grounded in perception data. No speculation.
+          - If perception data is missing, say so explicitly and reason from what IS available.
+          - Think like a Chief Product Officer who reads dashboards at 4am, not an engineer.
+
+          BEGIN. Read your perception data. Think deeply. Write TONIGHT.md." || true
+
+      - name: Push results
+        run: |
+          git pull --rebase origin main 2>/dev/null || true
+          git add -A
+          git diff --staged --quiet || git commit -m "perception: strategic direction $(date +%Y-%m-%d) [autopoietic][skip ci]"
+          git push origin main || true
+
+      - name: Generate step summary
+        if: always()
+        run: |
+          echo "## Perception & Reasoning — $(date '+%B %d %Y')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Perception sources:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Product: ${{ needs.perceive.outputs.product_ok }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Codebase: ${{ needs.perceive.outputs.codebase_ok }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Competitors: ${{ needs.perceive.outputs.competitors_ok }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f "TONIGHT.md" ]; then
+            echo "### TONIGHT.md Preview" >> $GITHUB_STEP_SUMMARY
+            head -30 TONIGHT.md >> $GITHUB_STEP_SUMMARY
+          else
+            echo "*TONIGHT.md was not generated.*" >> $GITHUB_STEP_SUMMARY
+          fi
