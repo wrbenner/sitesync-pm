@@ -318,8 +318,8 @@ const PunchListPage: React.FC = () => {
         updates: { verification_status: 'sub_complete', sub_completed_at: new Date().toISOString() },
         projectId: projectId!,
       });
-      toast.success(`${item.itemNumber} marked sub-complete. Superintendent notified for verification.`);
-      setAriaAnnouncement(`${item.itemNumber} marked sub-complete`);
+      toast.success(`${item.itemNumber} marked Sub Complete. Superintendent notified for verification.`);
+      setAriaAnnouncement(`${item.itemNumber} marked Sub Complete`);
     } catch {
       toast.error('Failed to update status');
     }
@@ -379,8 +379,8 @@ const PunchListPage: React.FC = () => {
         updates: { verification_status: 'sub_complete', sub_completed_at: new Date().toISOString() },
         projectId: projectId!,
       });
-      toast.success(`${selected.itemNumber} marked sub-complete. Superintendent notified for verification.`);
-      setAriaAnnouncement(`${selected.itemNumber} marked sub-complete`);
+      toast.success(`${selected.itemNumber} marked Sub Complete. Superintendent notified for verification.`);
+      setAriaAnnouncement(`${selected.itemNumber} marked Sub Complete`);
       setSelectedId(null);
     } catch {
       toast.error('Failed to update status');
@@ -1353,7 +1353,7 @@ const PunchListPage: React.FC = () => {
               for (const id of ids) {
                 await updatePunchItem.mutateAsync({ id, updates: { verification_status: 'sub_complete', sub_completed_at: new Date().toISOString() }, projectId: projectId! });
               }
-              toast.success(`${ids.length} items marked sub-complete. Superintendent notified.`);
+              toast.success(`${ids.length} items marked Sub Complete. Superintendent notified.`);
             },
           },
           {

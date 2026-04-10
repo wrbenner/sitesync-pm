@@ -654,7 +654,7 @@ const RFIs: React.FC = () => {
         entityLabel="RFIs"
         actions={[
           {
-            label: 'Reassign Ball-in-Court',
+            label: 'Reassign Ball in Court',
             icon: <UserCheck size={14} />,
             variant: 'secondary',
             onClick: async (ids) => {

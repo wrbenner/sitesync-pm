@@ -377,11 +377,13 @@ export const Tasks: React.FC = () => {
                 </span>
               </div>
               <button
+                aria-label={`Add task to ${config.label}`}
                 onClick={() => setShowNewTask(true)}
                 style={{
-                  width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  width: 56, height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center',
                   backgroundColor: 'transparent', border: 'none', borderRadius: borderRadius.sm,
                   cursor: 'pointer', color: colors.textTertiary, transition: `color ${transitions.quick}`,
+                  margin: '-17px -17px -17px 0',
                 }}
                 onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = colors.textPrimary; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = colors.textTertiary; }}
@@ -479,8 +481,9 @@ export const Tasks: React.FC = () => {
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: `${spacing.lg} ${spacing.xl}`, position: 'sticky', top: 0, backgroundColor: colors.surfaceRaised, zIndex: 1 }}>
           <button
+            aria-label="Close task detail"
             onClick={() => setSelectedTask(null)}
-            style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', border: 'none', borderRadius: borderRadius.md, cursor: 'pointer', color: colors.textTertiary, transition: `background-color ${transitions.quick}` }}
+            style={{ width: 56, height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', border: 'none', borderRadius: borderRadius.md, cursor: 'pointer', color: colors.textTertiary, transition: `background-color ${transitions.quick}` }}
             onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.surfaceFlat; }}
             onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'; }}
           >
