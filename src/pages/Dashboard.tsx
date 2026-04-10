@@ -21,7 +21,7 @@ import { DashboardGrid } from '../components/dashboard/DashboardGrid';
 import { useProjectContext } from '../stores/projectContextStore';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 const CreateProjectModal = lazy(() => import('../components/forms/CreateProjectModal'));
@@ -420,6 +420,47 @@ export const Dashboard: React.FC = () => {
   return <DashboardInner />;
 };
 
+// ── Live Metrics Fallback ───────────────────────────────
+// When the materialized view hasn't been refreshed (e.g. new project),
+// run direct count queries so the dashboard shows real numbers.
+
+function useLiveMetricsFallback(projectId: string | undefined, matViewHasData: boolean) {
+  return useQuery({
+    queryKey: ['live-metrics', projectId],
+    queryFn: async () => {
+      const [rfis, punchItems, budgetItems, submittals, dailyLogs] = await Promise.all([
+        supabase.from('rfis').select('id, status, due_date', { count: 'exact' }).eq('project_id', projectId!),
+        supabase.from('punch_items').select('id, status', { count: 'exact' }).eq('project_id', projectId!),
+        supabase.from('budget_items').select('original_amount, actual_amount', { count: 'exact' }).eq('project_id', projectId!),
+        supabase.from('submittals').select('id, status', { count: 'exact' }).eq('project_id', projectId!),
+        supabase.from('daily_logs').select('id', { count: 'exact' }).eq('project_id', projectId!),
+      ]);
+
+      const rfiRows = rfis.data ?? [];
+      const punchRows = punchItems.data ?? [];
+      const budgetRows = budgetItems.data ?? [];
+      const submittalRows = submittals.data ?? [];
+      const today = new Date().toISOString().split('T')[0];
+
+      return {
+        rfis_open: rfiRows.filter((r) => r.status === 'open' || r.status === 'under_review').length,
+        rfis_overdue: rfiRows.filter((r) => (r.status === 'open' || r.status === 'under_review') && r.due_date && r.due_date < today).length,
+        rfis_total: rfis.count ?? rfiRows.length,
+        punch_open: punchRows.filter((p) => p.status === 'open' || p.status === 'in_progress').length,
+        punch_total: punchItems.count ?? punchRows.length,
+        budget_total: budgetRows.reduce((sum, b) => sum + (b.original_amount ?? 0), 0),
+        budget_spent: budgetRows.reduce((sum, b) => sum + (b.actual_amount ?? 0), 0),
+        submittals_pending: submittalRows.filter((s) => s.status === 'in_review' || s.status === 'submitted').length,
+        submittals_total: submittals.count ?? submittalRows.length,
+        daily_logs_total: dailyLogs.count ?? 0,
+      };
+    },
+    enabled: !!projectId && !matViewHasData,
+    staleTime: 30_000,
+    refetchInterval: 30_000,
+  });
+}
+
 // ── Dashboard Inner (has a project) ─────────────────────
 
 const DashboardInner: React.FC = () => {
@@ -429,11 +470,42 @@ const DashboardInner: React.FC = () => {
 
   const { data: project } = useProject(projectId);
   // Single batched query against the project_metrics materialized view.
-  // Replaces individual useRFIs / useBudgetItems / useSchedulePhases / usePunchItems /
-  // useIncidents / useCrews hook calls that previously issued 6 separate round trips.
-  const { data: metrics, isPending: metricsLoading } = useProjectMetrics(projectId);
+  const { data: matViewMetrics, isPending: metricsLoading } = useProjectMetrics(projectId);
   const { data: payApps } = usePayApplications(projectId);
   const { data: lienWaivers } = useLienWaivers(projectId);
+
+  // Fallback: live counts when materialized view has no data for this project
+  const { data: liveMetrics } = useLiveMetricsFallback(projectId, !!matViewMetrics);
+
+  // Merge: prefer materialized view, fall back to live counts
+  const metrics = useMemo(() => {
+    if (matViewMetrics) return matViewMetrics;
+    if (!liveMetrics) return undefined;
+    return {
+      project_id: projectId ?? '',
+      project_name: project?.name ?? '',
+      contract_value: project?.contract_value ?? null,
+      overall_progress: 0,
+      milestones_completed: 0,
+      milestones_total: 0,
+      schedule_variance_days: 0,
+      rfis_open: liveMetrics.rfis_open,
+      rfis_overdue: liveMetrics.rfis_overdue,
+      rfis_total: liveMetrics.rfis_total,
+      avg_rfi_response_days: 0,
+      punch_open: liveMetrics.punch_open,
+      punch_total: liveMetrics.punch_total,
+      budget_total: liveMetrics.budget_total,
+      budget_spent: liveMetrics.budget_spent,
+      budget_committed: 0,
+      crews_active: 0,
+      workers_onsite: 0,
+      safety_incidents_this_month: 0,
+      submittals_pending: liveMetrics.submittals_pending,
+      submittals_approved: 0,
+      submittals_total: liveMetrics.submittals_total,
+    } satisfies import('../types/api').ProjectMetrics;
+  }, [matViewMetrics, liveMetrics, projectId, project?.name, project?.contract_value]);
 
   // ── Derived KPIs ──────────────────────────────────────
 
@@ -470,11 +542,12 @@ const DashboardInner: React.FC = () => {
 
   const fieldActivity = metrics?.workers_onsite ?? 0;
 
-  // Show onboarding checklist when project has no activity yet
-  const isEmptyProject = !!metrics &&
-    (metrics.rfis_total ?? 0) === 0 &&
+  // Show onboarding checklist when project has no activity yet.
+  // Also shows when metrics are unavailable (new project not yet in materialized view).
+  const isEmptyProject = !metrics ||
+    ((metrics.rfis_total ?? 0) === 0 &&
     (metrics.punch_total ?? 0) === 0 &&
-    (metrics.budget_total ?? 0) === 0;
+    (metrics.budget_total ?? 0) === 0);
 
   const daysRemaining = useMemo(() =>
     project?.target_completion
