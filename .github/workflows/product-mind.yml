@@ -1,184 +1,362 @@
-name: The Product Mind — Experiment Designer
+name: Strategic Cortex — Product Mind
 
-# Runs at 11pm CDT (4am UTC) every night — 3 hours before the organism builds
-# Reads .metrics/*.json + vision docs + recent progress
-# Primary output: EXPERIMENTS.md — ranked experiment queue for tonight's organism
 on:
-  schedule:
-    - cron: '0 4 * * *'   # 11:00 PM CDT / 4:00 AM UTC
   workflow_dispatch:
-
-permissions:
-  contents: write
-  issues: write
+  schedule:
+    # Runs at 1:00 AM UTC (before nightly build at 2:00 AM UTC)
+    - cron: '0 1 * * *'
 
 jobs:
-  design-experiments:
-    name: "Design Tonight's Experiments"
+  strategic-cortex:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 30
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 30
+          fetch-depth: 0
 
-      - uses: actions/setup-node@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '20'
 
-      - run: rm -f package-lock.json && npm install
-      - run: npm install -g @anthropic-ai/claude-code
+      - name: Install dependencies
+        run: npm ci --prefer-offline || npm install
 
-      - name: Configure git
-        run: |
-          git config user.name "SiteSync Product Mind"
-          git config user.email "mind@sitesync.ai"
-          git config pull.rebase true
+      - name: Run Strategic Cortex via Claude
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          model: claude-opus-4-5
+          max_turns: 30
+          allowed_tools: "Bash,Read,Write,Glob,Grep"
+          prompt: |
+            You are the Strategic Cortex of SiteSync PM. You are not a metric optimizer.
+            You are a product visionary whose job is to determine what matters most tonight
+            and design the experiment list that will get this product to demo-ready.
 
-      - name: Gather intelligence
-        run: |
-          echo "=== WORKER CELL METRICS ===" > /tmp/intel.txt
+            Your output shapes everything the build organism does for the next 8 hours.
+            Think carefully. Make hard calls. Write clearly.
 
-          echo "--- Type Issues (from worker cells) ---" >> /tmp/intel.txt
-          cat .metrics/type-issues.json 2>/dev/null >> /tmp/intel.txt || echo "No type metrics yet" >> /tmp/intel.txt
+            ═══════════════════════════════════════════
+            PHASE 1 — READ YOUR IDENTITY
+            ═══════════════════════════════════════════
 
-          echo -e "\n--- Quality Issues (from worker cells) ---" >> /tmp/intel.txt
-          cat .metrics/quality-issues.json 2>/dev/null >> /tmp/intel.txt || echo "No quality metrics yet" >> /tmp/intel.txt
+            Read VISION_CORE.md. Do not skim it.
+            Internalize these principles before you evaluate anything:
+            - The Amazon Test: What decision can a construction professional now make in 10 seconds?
+            - The Apple Test: Can a superintendent use this with one hand in gloves?
+            - The Google Test: Does this work at 100,000 projects?
+            - The Netflix Test: Is every page under 1 second?
+            - The Tesla Test: Does every interaction make the system smarter?
 
-          echo -e "\n--- Untested Files (from worker cells) ---" >> /tmp/intel.txt
-          cat .metrics/untested-files.json 2>/dev/null >> /tmp/intel.txt || echo "No test metrics yet" >> /tmp/intel.txt
+            Read it now:
+            cat VISION_CORE.md
 
-          echo -e "\n=== RECENT COMMITS (last 24h) ===" >> /tmp/intel.txt
-          git log --since="24 hours ago" --oneline >> /tmp/intel.txt 2>/dev/null || echo "No recent commits" >> /tmp/intel.txt
+            ═══════════════════════════════════════════
+            PHASE 2 — EVALUATE CURRENT PRODUCT STATE
+            ═══════════════════════════════════════════
 
-          echo -e "\n=== SPEC PROGRESS ===" >> /tmp/intel.txt
-          CHECKED=$(grep -c "^\- \[x\]" SPEC.md 2>/dev/null || echo "0")
-          TOTAL=$(grep -c "^\- \[" SPEC.md 2>/dev/null || echo "431")
-          echo "$CHECKED / $TOTAL criteria complete" >> /tmp/intel.txt
+            You must evaluate the product from the user's perspective. Run these commands
+            and record your findings. Do not skip any of them.
 
-          echo -e "\n=== QUALITY FLOOR ===" >> /tmp/intel.txt
-          cat .quality-floor.json 2>/dev/null >> /tmp/intel.txt || echo "No floor set" >> /tmp/intel.txt
+            **2A — How many pages exist?**
+            ls src/pages/*.tsx 2>/dev/null | wc -l
+            ls src/pages/*.tsx 2>/dev/null
 
-          echo -e "\n=== LAST EXPERIMENT RESULTS ===" >> /tmp/intel.txt
-          grep "✅\|❌\|RESULT:" EXPERIMENTS.md 2>/dev/null | tail -20 >> /tmp/intel.txt || echo "No prior experiments" >> /tmp/intel.txt
+            **2B — How many pages are wired to real data?**
+            grep -rl "useQuery\|fromTable\|supabase\.from\|useMutation" src/pages/ 2>/dev/null | wc -l
+            grep -rl "useQuery\|fromTable\|supabase\.from\|useMutation" src/pages/ 2>/dev/null
 
-          echo -e "\n=== EVOLUTION PATTERNS ===" >> /tmp/intel.txt
-          python3 -c "import json; d=json.load(open('EVOLUTION_LEDGER.json')); [print(e['description']) for e in d.get('evolutions',[])[-5:]]" 2>/dev/null >> /tmp/intel.txt || true
+            **2C — Audit the 5 Tier 1 demo-critical pages specifically**
 
-          echo -e "\n=== RESEARCH FINDINGS (summary) ===" >> /tmp/intel.txt
-          head -40 RESEARCH_FINDINGS.md 2>/dev/null >> /tmp/intel.txt || true
+            For each page, run the grep and classify as WIRED, PARTIAL, or EMPTY:
 
-          echo -e "\n=== ANTI-PATTERNS FROM LEARNINGS (avoid these) ===" >> /tmp/intel.txt
-          grep -A 1 "Do NOT\|NEVER\|ALWAYS\|CRITICAL" LEARNINGS.md 2>/dev/null | head -30 >> /tmp/intel.txt || true
+            echo "=== Dashboard ==="
+            grep -n "useQuery\|fromTable\|supabase\.from\|useMutation" src/pages/Dashboard.tsx 2>/dev/null | head -20
+            grep -c "useQuery\|fromTable\|supabase\.from" src/pages/Dashboard.tsx 2>/dev/null || echo "0 database references"
 
-          echo -e "\n=== UNCHECKED P0 SPEC CRITERIA (top experiment candidates) ===" >> /tmp/intel.txt
-          grep -B 2 "P0" SPEC.md 2>/dev/null | grep "^\- \[ \]" | head -20 >> /tmp/intel.txt || echo "Could not extract P0 criteria" >> /tmp/intel.txt
+            echo "=== Submittals ==="
+            grep -n "useQuery\|fromTable\|supabase\.from\|useMutation" src/pages/Submittals.tsx 2>/dev/null | head -20
+            grep -c "useQuery\|fromTable\|supabase\.from" src/pages/Submittals.tsx 2>/dev/null || echo "0 database references"
 
-          echo -e "\n=== ESLINT ISSUES (from worker cells) ===" >> /tmp/intel.txt
-          cat .metrics/eslint-issues.json 2>/dev/null >> /tmp/intel.txt || echo "No eslint metrics yet" >> /tmp/intel.txt
+            echo "=== PunchList ==="
+            grep -n "useQuery\|fromTable\|supabase\.from\|useMutation" src/pages/PunchList.tsx 2>/dev/null | head -20
+            grep -c "useQuery\|fromTable\|supabase\.from" src/pages/PunchList.tsx 2>/dev/null || echo "0 database references"
 
-          echo -e "\n=== KILLED APPROACHES (never design experiments that use these) ===" >> /tmp/intel.txt
-          python3 -c "import json; d=json.load(open('EVOLUTION_LEDGER.json')); [print(f'  KILLED: {k[\"description\"]}') for k in d.get('killed_approaches',[])]" 2>/dev/null >> /tmp/intel.txt || true
+            echo "=== Tasks ==="
+            grep -n "useQuery\|fromTable\|supabase\.from\|useMutation" src/pages/Tasks.tsx 2>/dev/null | head -20
+            grep -c "useQuery\|fromTable\|supabase\.from" src/pages/Tasks.tsx 2>/dev/null || echo "0 database references"
 
-      - name: Product Mind designs experiments
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: |
-          INTEL=$(cat /tmp/intel.txt)
+            echo "=== AICopilot ==="
+            grep -n "functions\.invoke\|ai-copilot\|fetch.*functions" src/pages/AICopilot.tsx src/components/AICopilot.tsx 2>/dev/null | head -20
+            grep -c "functions\.invoke\|ai-copilot" src/pages/AICopilot.tsx src/components/AICopilot.tsx 2>/dev/null || echo "0 edge function calls"
 
-          claude \
-            --dangerously-skip-permissions \
-            --model claude-opus-4-6 \
-            --max-turns 25 \
-            "You are The Product Mind — the strategic brain of SiteSync PM.
+            **2D — Check the seed data situation**
+            ls -la supabase/seed.sql 2>/dev/null && wc -l supabase/seed.sql || echo "No seed.sql found"
 
-          YOUR IDENTITY — read these first to understand the vision:
-          1. cat THE_OMEGA_BUILD.md — the 3-layer technical vision
-          2. cat THE_OVERRIDE_PROTOCOL.md — how to think (Amazon/Apple/Google/Netflix/Tesla)
-          3. cat THE_DEEP_TRANSMISSION.md — natural intelligence patterns
-          4. Read SPEC.md — grep for unchecked P0 and P1 criteria (don't read the full file)
-             Run: grep -B 2 'P0' SPEC.md | grep '^\- \[ \]' | head -30
-             This gives you the exact unchecked P0 acceptance criteria for experiment targets
+            **2E — Check AI edge functions exist**
+            ls supabase/functions/ 2>/dev/null | head -30
+            cat supabase/functions/ai-copilot/index.ts 2>/dev/null | head -40 || echo "ai-copilot function not found"
 
-          TODAY'S INTELLIGENCE (from worker cells + git):
-          $INTEL
+            **2F — Read existing metrics (secondary signal)**
+            cat .metrics/*.json 2>/dev/null | head -100 || echo "No metrics files found"
 
-          YOUR PRIMARY OUTPUT: Generate EXPERIMENTS.md
+            **2G — Read PRIORITY_OVERRIDE.md**
+            cat PRIORITY_OVERRIDE.md
 
-          EXPERIMENTS.md is a ranked queue of 20-30 micro-experiments for tonight's organism.
-          Each experiment follows the Karpathy pattern: change → measure → keep or revert.
+            **2H — Read SPEC.md P0 criteria**
+            grep -A 5 "P0\|priority.*0\|critical" SPEC.md 2>/dev/null | head -40 || echo "No SPEC.md found"
 
-          CRITICAL: You MUST use bash to physically write the file. Do not just describe
-          the content — actually run a command like:
+            **2I — Check what was done last night**
+            cat DAILY_REPORT.md 2>/dev/null | tail -60 || echo "No daily report found"
+            cat EXPERIMENTS.md 2>/dev/null | tail -40 || echo "No experiments file found"
+
+            ═══════════════════════════════════════════
+            PHASE 3 — STRATEGIC REASONING
+            ═══════════════════════════════════════════
+
+            Before designing any experiments, you must reason about strategic priorities.
+            Write your reasoning explicitly. Do not skip this step.
+
+            Answer these questions in your scratchpad (you will include a summary in EXPERIMENTS.md):
+
+            1. **Gap Analysis**: How many of the 5 Tier 1 pages are currently WIRED (showing real data)?
+               What is the gap between now and "a GC can see real Riverside Tower data on demo day"?
+
+            2. **Highest Leverage**: If the organism can only accomplish ONE thing tonight that matters
+               for demo day, what is it? Why?
+
+            3. **Blockers**: Are there infrastructure blockers that would prevent any wiring from working?
+               (e.g., Supabase connection broken, query hook pattern missing, seed data not loaded)
+               If so, fixing these is the highest priority — even above feature shipping.
+
+            4. **AI Copilot Status**: Is the AI Copilot calling the edge function? If not, what is the
+               minimum work to make it do so? This is the "wow" moment of the demo.
+
+            5. **Realistic Tonight**: Given the organism's track record, how many FEATURE experiments
+               can realistically be completed in one 8-hour run? Plan for that, not for an ideal world.
+
+            6. **The Demo Scenario**: Walk through the demo. A GC navigates to Dashboard, Submittals,
+               Punch List, Tasks, and AI Copilot. What does he see on each page right now?
+               What would he need to see to say "I need this on my next project"?
+
+            ═══════════════════════════════════════════
+            PHASE 4 — DESIGN EXPERIMENTS
+            ═══════════════════════════════════════════
+
+            Now design 25–30 experiments. Follow PRIORITY_OVERRIDE.md exactly:
+            - 70% FEATURE (17–21 experiments)
+            - 15% AI (4–5 experiments)
+            - 10% QUALITY (2–3 experiments, ONLY on demo-visible pages)
+            - 5% TESTING (1–2 experiments, ONLY e2e demo flow)
+
+            **Rules for FEATURE experiments:**
+            - The experiment MUST result in a page showing real data where it previously showed nothing
+            - Name it: "Wire [PageName] to Supabase — [specific functionality]"
+            - The Implement section MUST include:
+              * The exact import statement needed
+              * The exact useQuery pattern with table name and select columns
+              * The loading skeleton implementation (not a spinner)
+              * The empty state with CTA text
+            - The Verify command MUST check for actual database references:
+              `grep -c "supabase.from\|useQuery" src/pages/[PageName].tsx`
+            - The Verify command MUST also check data renders:
+              `grep -c "isLoading\|skeleton\|Skeleton" src/pages/[PageName].tsx`
+            - SUCCESS criteria: "Page fetches real data on mount; skeleton shown while loading; 
+              empty state shown when no data; GC sees real Riverside Tower data"
+
+            **Rules for AI experiments:**
+            - Primary target: Wire AICopilot.tsx to call the ai-copilot edge function
+            - The Implement section MUST include:
+              * Replace any mock/static response with `supabase.functions.invoke('ai-copilot', ...)`
+              * Pass projectId in the request body
+              * Show typing indicator while awaiting response
+              * Render markdown response
+            - The Verify command: `grep "functions.invoke\|ai-copilot" src/components/AICopilot.tsx`
+            - Secondary AI targets: wire AI Insights, Risk Analysis, or Cost Prediction to edge functions
+            - SUCCESS criteria: "User types question → edge function → Claude → project-specific response"
+
+            **Rules for QUALITY experiments:**
+            - ONLY on these pages: Dashboard, Submittals, PunchList, Tasks, AICopilot, RFIs, Schedule
+            - Focus: fix errors that would visibly break the demo (runtime crashes, broken layouts)
+            - DO NOT: fix type errors on unwired pages, improve eslint scores on pages the GC won't see
+            - SUCCESS criteria: "Demo-critical page has zero console errors, renders correctly on tablet"
+
+            **Rules for TESTING experiments:**
+            - Only one task: write a Playwright or Cypress test that walks the demo flow
+            - Demo flow: login → Dashboard (verify data) → Submittals (verify list) → 
+              PunchList (verify list) → Tasks (verify list) → AI Copilot (verify response)
+            - SUCCESS criteria: "e2e test passes on the demo flow without human intervention"
+
+            **Experiment format — use exactly this structure for each:**
+            ```
+            ---
+            ID: EXP-[number]
+            Category: FEATURE | AI | QUALITY | TESTING
+            Priority: P0 | P1 | P2
+            Title: [Clear, specific title]
+            Hypothesis: If we [specific action], then [specific measurable outcome], because [reason].
+            Implement:
+              1. [Exact step with code where applicable]
+              2. [Next step]
+              3. [Continue...]
+            Verify: [Exact bash command to confirm success]
+            Success: [One sentence: what does passing look like?]
+            Estimated time: [30m | 1h | 2h]
+            ```
+
+            **Priority rules:**
+            - P0: Tier 1 demo-critical pages (Dashboard, Submittals, PunchList, Tasks, AICopilot)
+            - P1: Tier 2 pages (RFIs, Schedule, Budget, Daily Log, Change Orders)
+            - P2: Everything else
+
+            The organism executes experiments in P0 order first. Make sure P0 experiments are
+            self-contained and can succeed independently (no P0 experiment should depend on
+            another P0 experiment completing first, unless explicitly noted).
+
+            ═══════════════════════════════════════════
+            PHASE 5 — WRITE ALL OUTPUT FILES
+            ═══════════════════════════════════════════
+
+            CRITICAL: Write files using cat heredoc, not echo. This ensures multi-line content
+            is written correctly. Use the exact patterns below.
+
+            **Step 5A — Write EXPERIMENTS.md**
+
+            The file MUST begin with a STRATEGIC_DIRECTION section before any experiments.
+            The STRATEGIC_DIRECTION must include:
+            - Current state summary (X of 44 pages wired, Tier 1 status)
+            - The single most important thing to accomplish tonight
+            - The demo scenario: what a GC will see on each Tier 1 page after tonight
+            - Any infrastructure blockers that must be fixed first
+            - Experiment distribution: X FEATURE / Y AI / Z QUALITY / W TESTING
+
+            Write the file:
             cat > EXPERIMENTS.md << 'EXPEOF'
-            [content here]
+            # EXPERIMENTS.md — Generated by Strategic Cortex
+            # Date: [today's date]
+            # Valid for: Tonight's build run
+
+            ## STRATEGIC_DIRECTION
+
+            ### Current State
+            [Your gap analysis from Phase 3]
+
+            ### Tonight's Single Most Important Goal
+            [One sentence. Specific. Measurable.]
+
+            ### Demo Scenario (Post-Build)
+            After tonight's build, a GC navigating the demo should see:
+            - Dashboard: [what they'll see]
+            - Submittals: [what they'll see]
+            - PunchList: [what they'll see]
+            - Tasks: [what they'll see]
+            - AI Copilot: [what they'll see]
+
+            ### Infrastructure Blockers (Fix First)
+            [List any blockers, or "None identified"]
+
+            ### Distribution
+            - FEATURE: [count] experiments ([percentage]%)
+            - AI: [count] experiments ([percentage]%)
+            - QUALITY: [count] experiments ([percentage]%)
+            - TESTING: [count] experiments ([percentage]%)
+
+            ---
+
+            ## EXPERIMENTS
+
+            [All 25–30 experiments in the format above, sorted P0 first then P1 then P2]
+
             EXPEOF
-          The file must exist on disk when you're done. If you don't write it, the organism
-          has nothing to work from tonight.
 
-          Also update DAILY_REPORT.md by appending (not overwriting) today's assessment.
-          Also update FEEDBACK.md priorities section.
+            **Step 5B — Update DAILY_REPORT.md**
 
-          Write EXPERIMENTS.md in this exact format:
+            Append today's strategic assessment:
+            cat >> DAILY_REPORT.md << 'REPORTEOF'
 
-          # EXPERIMENTS.md
-          Generated by Product Mind — [today's date]
-          Strategy: [1 sentence explaining tonight's strategic focus]
+            ---
+            ## Strategic Cortex Report — [today's date]
 
-          ## Queue
+            ### Product State Assessment
+            - Total pages: [count]
+            - Pages wired to Supabase: [count]
+            - Tier 1 pages status: [Dashboard: WIRED/PARTIAL/EMPTY, etc.]
+            - AI Copilot status: [WIRED/UI-ONLY]
+            - Seed data: [LOADED/NOT_LOADED]
 
-          ### EXP-001: [Short description]
-          - **File(s)**: [exact path(s) in the repo]
-          - **Task**: [specific, unambiguous instruction — what to change and how]
-          - **Metric**: [what to measure — must be a number or boolean]
-          - **Current**: [current value — get from .metrics/ data or state N/A]
-          - **Target**: [expected value after change]
-          - **Verify**: [exact shell command that outputs the metric value]
-          - **Category**: TYPE_SAFETY | QUALITY | TESTING | FEATURE | PERFORMANCE
-          - **Priority**: P0 | P1 | P2
-          - **Status**: PENDING
+            ### Strategic Priorities for Tonight
+            1. [Priority 1]
+            2. [Priority 2]
+            3. [Priority 3]
 
-          [repeat for 20-30 experiments]
+            ### Experiment Distribution
+            - FEATURE: [count] / AI: [count] / QUALITY: [count] / TESTING: [count]
 
-          EXPERIMENT DESIGN RULES:
-          1. Each experiment touches 1-3 files maximum (small blast radius for clean revert)
-          2. Every experiment MUST have a concrete Verify command the organism can run
-          3. P0 experiments first (blocks demo), P1 (improves demo), P2 (polish)
-          4. Mix categories: alternate TYPE_SAFETY, QUALITY, FEATURE, TESTING
-             (monotony causes context fatigue — Anthropic finding)
-          5. Use .metrics/ data to target WORST files first (highest issue count)
-          6. Include 5-8 FEATURE experiments from unchecked SPEC.md P0 criteria
-          7. The organism completes ~15-20 experiments per night — design 25-30 for buffer
-          8. Remove any experiments that were ✅ PASS in previous runs
-          9. For FEATURE experiments, the verify command should check if the feature exists
-             (e.g., grep for component name, check route exists, verify export)
-          10. Consider the April 15th demo deadline — prioritize GC-visible features
+            ### Expected Demo Readiness After Tonight
+            [One paragraph: what will the GC see tomorrow morning?]
 
-          ALSO DO (secondary outputs):
-          - Append to DAILY_REPORT.md: today's date, what organism built, quality trend,
-            experiment results summary, ON TRACK / NEEDS ATTENTION / AT RISK assessment
-          - Update FEEDBACK.md 'Tonight P0 Priorities' section with 3 specific priorities
+            REPORTEOF
 
-          WEEKLY (Sunday only): Meta-improvement — review last 7 days of DAILY_REPORT.md,
-          evaluate your own experiment design quality, adjust strategy.
+            **Step 5C — Update FEEDBACK.md**
 
-          COMMIT:
-          git add EXPERIMENTS.md DAILY_REPORT.md FEEDBACK.md
-          git commit -m 'strategy: experiment queue for [date] [mind][skip ci]'
+            Write the current strategic priorities so the organism and next Product Mind cycle
+            know what matters:
+            cat > FEEDBACK.md << 'FBEOF'
+            # FEEDBACK.md — Strategic Priorities
 
-          Output <promise>DONE</promise> when complete." || true
+            ## Current Priority Order
+            1. Wire Tier 1 pages to Supabase (Dashboard, Submittals, PunchList, Tasks, AICopilot)
+            2. Load seed data if not loaded (Riverside Tower, supabase/seed.sql)
+            3. Wire AI Copilot to ai-copilot edge function
+            4. Wire Tier 2 pages (RFIs, Schedule, Budget, Daily Log, Change Orders)
+            5. Quality only on demo-visible pages
+            6. E2e demo flow test
 
-      - name: Push updates
-        run: |
-          git add EXPERIMENTS.md FEEDBACK.md DAILY_REPORT.md 2>/dev/null || true
-          CHANGES=$(git diff --cached --name-only | wc -l | tr -d ' ')
-          if [ "$CHANGES" -gt "0" ]; then
-            git pull --rebase origin main 2>/dev/null || true
-            git commit -m "strategy: experiment queue update [mind][skip ci]" || true
-            git push origin main || true
-            echo "Product Mind pushed experiment queue"
-          else
-            echo "Product Mind made no changes today"
-          fi
+            ## Do NOT Work On
+            - Type safety improvements on unwired pages
+            - Eslint errors on non-demo pages
+            - Any page in the Tier 3 / Ignore list from PRIORITY_OVERRIDE.md
+
+            ## Definition of Done (Demo)
+            A page is DONE when:
+            - It calls supabase.from() with real table and columns
+            - It shows a loading skeleton (not spinner) while loading
+            - It shows an empty state with CTA when no data
+            - It renders real Riverside Tower data when data exists
+            - It has zero console errors on load
+
+            ## Tonight's Top Experiment IDs
+            [List the 5 most critical experiment IDs from EXPERIMENTS.md]
+
+            FBEOF
+
+            **Step 5D — Commit all files**
+            git add EXPERIMENTS.md DAILY_REPORT.md FEEDBACK.md
+            git commit -m "chore: Strategic Cortex — [date] experiment plan ([count] experiments: [X] FEATURE / [Y] AI / [Z] QUALITY / [W] TESTING)"
+            git push origin main
+
+            **Step 5E — Final verification**
+            Confirm the files were written and committed:
+            echo "=== EXPERIMENTS.md word count ==="
+            wc -l EXPERIMENTS.md
+            echo "=== STRATEGIC_DIRECTION exists? ==="
+            grep -c "STRATEGIC_DIRECTION" EXPERIMENTS.md
+            echo "=== Experiment count ==="
+            grep -c "^ID: EXP-" EXPERIMENTS.md
+            echo "=== FEATURE experiments ==="
+            grep -c "Category: FEATURE" EXPERIMENTS.md
+            echo "=== AI experiments ==="
+            grep -c "Category: AI" EXPERIMENTS.md
+            echo "=== QUALITY experiments ==="
+            grep -c "Category: QUALITY" EXPERIMENTS.md
+            echo "=== Last git commit ==="
+            git log --oneline -1
+
+            If any count is 0 when it should not be, rewrite the affected section and recommit.
+
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
