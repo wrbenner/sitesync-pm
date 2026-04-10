@@ -205,6 +205,7 @@ export const MeetingsPage: React.FC = () => {
 
   const tabStyle = (isActive: boolean): React.CSSProperties => ({
     padding: `${spacing.sm} ${spacing.lg}`,
+    minHeight: 56,
     borderRadius: borderRadius.md,
     border: 'none',
     cursor: 'pointer',
@@ -268,6 +269,7 @@ export const MeetingsPage: React.FC = () => {
               key={tab.key}
               role="tab"
               aria-selected={activeTab === tab.key}
+              aria-label={`Show ${tab.label.toLowerCase()} meetings`}
               style={tabStyle(activeTab === tab.key)}
               onClick={() => setActiveTab(tab.key)}
             >

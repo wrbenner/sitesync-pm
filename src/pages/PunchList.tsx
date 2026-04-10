@@ -797,8 +797,11 @@ const PunchListPage: React.FC = () => {
             <button
               key={tab.value}
               onClick={() => { setStatusFilter(tab.value); setAtRiskFilter(false); }}
+              aria-label={`Filter by ${tab.label} (${tab.count} items)`}
+              aria-pressed={isActive}
               style={{
                 padding: `${spacing['1']} ${spacing['3']}`,
+                minHeight: 56,
                 fontSize: typography.fontSize.sm,
                 fontFamily: typography.fontFamily,
                 fontWeight: isActive ? typography.fontWeight.semibold : typography.fontWeight.medium,
@@ -847,8 +850,10 @@ const PunchListPage: React.FC = () => {
         {atRiskFilter && (
           <button
             onClick={() => setAtRiskFilter(false)}
+            aria-label="Clear at risk filter"
             style={{
               padding: `${spacing['1']} ${spacing['3']}`,
+              minHeight: 56,
               fontSize: typography.fontSize.caption,
               fontFamily: typography.fontFamily,
               fontWeight: typography.fontWeight.medium,
@@ -872,7 +877,8 @@ const PunchListPage: React.FC = () => {
               <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: 0 }}>No punch items match your current filters</p>
               <button
                 onClick={clearAllFilters}
-                style={{ padding: `${spacing['2']} ${spacing['4']}`, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, fontWeight: typography.fontWeight.medium, backgroundColor: colors.primaryOrange, color: colors.white, border: 'none', borderRadius: borderRadius.base, cursor: 'pointer' }}
+                aria-label="Clear all active filters"
+                style={{ padding: `${spacing['2']} ${spacing['4']}`, minHeight: 56, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, fontWeight: typography.fontWeight.medium, backgroundColor: colors.primaryOrange, color: colors.white, border: 'none', borderRadius: borderRadius.base, cursor: 'pointer' }}
               >
                 Clear All Filters
               </button>
@@ -954,7 +960,8 @@ const PunchListPage: React.FC = () => {
               <p style={{ fontSize: typography.fontSize.base, color: colors.textSecondary, margin: 0 }}>No punch items match your current filters</p>
               <button
                 onClick={clearAllFilters}
-                style={{ padding: `${spacing['2']} ${spacing['4']}`, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, fontWeight: typography.fontWeight.medium, backgroundColor: colors.primaryOrange, color: colors.white, border: 'none', borderRadius: borderRadius.base, cursor: 'pointer' }}
+                aria-label="Clear all active filters"
+                style={{ padding: `${spacing['2']} ${spacing['4']}`, minHeight: 56, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, fontWeight: typography.fontWeight.medium, backgroundColor: colors.primaryOrange, color: colors.white, border: 'none', borderRadius: borderRadius.base, cursor: 'pointer' }}
               >
                 Clear All Filters
               </button>
