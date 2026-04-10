@@ -184,6 +184,20 @@ export const ConversationThread: React.FC<ConversationThreadProps> = ({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['1'] }}>
+      {messages.length === 0 && (
+        <div style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          padding: `${spacing['8']} ${spacing['4']}`, textAlign: 'center',
+          color: colors.textTertiary,
+        }}>
+          <p style={{ margin: 0, fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium, color: colors.textSecondary }}>
+            No messages yet
+          </p>
+          <p style={{ margin: `${spacing['1']} 0 0`, fontSize: typography.fontSize.sm }}>
+            Add a comment to start the conversation.
+          </p>
+        </div>
+      )}
       {messages.map((msg, i) => {
         const cfg = typeConfig[msg.type] || typeConfig.comment;
         const msgReactions = reactions[msg.id] ?? [];
