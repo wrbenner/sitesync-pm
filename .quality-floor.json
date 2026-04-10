@@ -1,9 +1,9 @@
 {
   "_comment": "Quality floors \u2014 these values can only improve, never regress. CI and immune-gate.sh enforce this. Updated automatically when metrics improve.",
   "_version": 2,
-  "_updated": "2026-04-06T14:38:17.438982+00:00",
+  "_updated": "2026-04-10T03:37:55.296221+00:00",
   "_updatedBy": "immune-gate.sh",
-  "bundleSizeKB": 1896,
+  "bundleSizeKB": 1868,
   "coveragePercent": 43.2,
   "testCoverage": {
     "statements": 43.2,
@@ -12,8 +12,8 @@
     "lines": 43.2
   },
   "tsErrors": 0,
-  "eslintErrors": 1379,
-  "anyCount": 260,
+  "eslintErrors": 1032,
+  "anyCount": 1,
   "mockCount": 7,
   "a11yViolations": 0,
   "eslintWarnings": 52,
