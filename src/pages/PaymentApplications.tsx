@@ -527,7 +527,7 @@ const CreateEditPayAppDrawer = memo<CreateEditPayAppDrawerProps>(({
             aria-label="Close drawer"
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              width: 32, height: 32, border: 'none', borderRadius: borderRadius.base,
+              minWidth: touchTarget.field, minHeight: touchTarget.field, border: 'none', borderRadius: borderRadius.base,
               backgroundColor: 'transparent', cursor: 'pointer', color: colors.textSecondary,
             }}
           >
@@ -756,7 +756,7 @@ const CreateEditPayAppDrawer = memo<CreateEditPayAppDrawerProps>(({
                           <button
                             onClick={() => removeRow(row.key)}
                             aria-label="Remove row"
-                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24, border: 'none', borderRadius: borderRadius.base, backgroundColor: 'transparent', cursor: 'pointer', color: colors.textTertiary }}
+                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: touchTarget.field, minHeight: touchTarget.field, border: 'none', borderRadius: borderRadius.base, backgroundColor: 'transparent', cursor: 'pointer', color: colors.textTertiary }}
                           >
                             <X size={12} />
                           </button>
@@ -1242,7 +1242,7 @@ const G702SummaryCard = memo<{
               onClick={onApprove}
               disabled={isApproving || hasPendingWaivers}
               title={hasPendingWaivers ? 'Collect all lien waivers before approving' : undefined}
-              style={{ minHeight: 44, minWidth: 44 }}
+              style={{ minHeight: 56, minWidth: 56 }}
             >
               <CheckCircle size={14} /> {isApproving ? 'Approving...' : 'Approve Pay App'}
             </Btn>
@@ -1254,7 +1254,7 @@ const G702SummaryCard = memo<{
               variant="primary"
               size="sm"
               onClick={() => toast.success('Opening payment flow...')}
-              style={{ minHeight: 44, minWidth: 44 }}
+              style={{ minHeight: 56, minWidth: 56 }}
             >
               <CreditCard size={14} /> Process Payment
             </Btn>
