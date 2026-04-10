@@ -70,7 +70,7 @@ jobs:
       - name: Install Playwright
         run: |
           pip install playwright
-          npx playwright install --with-deps chromium
+          python -m playwright install --with-deps chromium
 
       - name: Create perception output directory
         run: mkdir -p .perception
@@ -306,9 +306,22 @@ jobs:
 
       - name: Download perception data
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           name: perception-data
           path: .perception/
+
+      - name: Fallback — generate minimal perception if download failed
+        run: |
+          mkdir -p .perception
+          if [ ! -f ".perception/codebase-state.json" ]; then
+            echo "Perception download failed — generating minimal codebase perception"
+            python scripts/perceive-codebase.py 2>/dev/null || echo '{"error": "perception failed"}' > .perception/codebase-state.json
+          fi
+          if [ ! -f ".perception/urgency.json" ]; then
+            python scripts/compute-urgency.py 2>/dev/null || echo '{"urgency": 0.5, "phase": "feature-sprint", "days_remaining": 5}' > .perception/urgency.json
+          fi
+          ls -la .perception/ 2>/dev/null || echo "No perception data available"
 
       - name: Install Claude Code CLI
         run: npm install -g @anthropic-ai/claude-code
