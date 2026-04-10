@@ -319,8 +319,12 @@ export const ProjectHealth: React.FC = () => {
         {/* Score ring */}
         <Card padding={spacing['6']}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <div style={{ position: 'relative', width: 180, height: 180 }}>
-              <svg width={180} height={180} style={{ transform: 'rotate(-90deg)' }}>
+            <div
+              role="img"
+              aria-label={`Project health score: ${overallScore} out of 100`}
+              style={{ position: 'relative', width: 180, height: 180 }}
+            >
+              <svg width={180} height={180} style={{ transform: 'rotate(-90deg)' }} aria-hidden="true">
                 <circle cx={90} cy={90} r={70} fill="none" stroke={colors.surfaceInset} strokeWidth="12" />
                 <circle
                   cx={90} cy={90} r={70} fill="none" stroke={scoreColor} strokeWidth="12"

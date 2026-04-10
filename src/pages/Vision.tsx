@@ -37,7 +37,7 @@ const visionContent = {
     { phase: 1, name: 'Field Intelligence', quarter: 'Q2 2026', features: 'Mobile capture, Real time insights, Crew coordination' },
     { phase: 2, name: 'Predictive Analytics', quarter: 'Q3 2026', features: 'Schedule optimization, Risk forecasting, Budget trending' },
     { phase: 3, name: 'Autonomous Workflows', quarter: 'Q4 2026', features: 'Auto RFI routing, Change order automation, Safety alerts' },
-    { phase: 4, name: 'Enterprise Integration', quarter: 'Q1 2026', features: 'ERP connectors, Custom APIs, Multi project dashboards' },
+    { phase: 4, name: 'Enterprise Integration', quarter: 'Q1 2027', features: 'ERP connectors, Custom APIs, Multi project dashboards' },
   ],
 };
 

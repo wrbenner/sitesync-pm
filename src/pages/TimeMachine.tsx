@@ -401,8 +401,9 @@ export const TimeMachine: React.FC = () => {
         {/* Compare slider */}
         {compareIndex !== null && (
           <div style={{ marginTop: spacing['2'] }}>
-            <label style={{ fontSize: typography.fontSize.caption, color: colors.statusReview, fontWeight: typography.fontWeight.medium }}>Compare to: {snapshots[compareIndex]?.label ?? ''}</label>
+            <label htmlFor="compare-snapshot" style={{ fontSize: typography.fontSize.caption, color: colors.statusReview, fontWeight: typography.fontWeight.medium }}>Compare to: {snapshots[compareIndex]?.label ?? ''}</label>
             <input
+              id="compare-snapshot"
               type="range"
               min={0}
               max={snapshots.length - 1}
