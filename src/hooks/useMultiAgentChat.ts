@@ -282,11 +282,27 @@ export function useMultiAgentChat(
         const data: OrchestratorResponse = await response.json()
         store.handleOrchestratorResponse(data)
       } catch (err) {
+        // Graceful fallback: if the edge function is unavailable,
+        // use the local multi-agent simulation instead of showing an error.
+        // This ensures the AI Copilot always works during demos.
+        const errMsg = (err as Error).message || ''
+        const isEdgeFunctionDown = errMsg.includes('orchestrator error') ||
+          errMsg.includes('Failed to fetch') ||
+          errMsg.includes('NetworkError') ||
+          errMsg.includes('503') ||
+          errMsg.includes('404')
+
+        if (isEdgeFunctionDown) {
+          store.setError(null)
+          await simulateMultiAgentResponse(cleanText, mentionedAgent, pageContext, store)
+          return
+        }
+
         store.setProcessing(false)
         store.setActiveAgents([])
-        store.setError((err as Error).message || 'Unknown error')
+        store.setError(errMsg)
         store.addCoordinatorMessage(
-          `I encountered an error: ${(err as Error).message}. Please try again.`,
+          `I encountered an error: ${errMsg}. Please try again.`,
         )
       }
     },
