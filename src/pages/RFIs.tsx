@@ -414,12 +414,12 @@ const RFIs: React.FC = () => {
   if (!rfis.length) {
     return (
       <PageContainer title="RFIs" subtitle="No items">
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 24px', gap: '16px', textAlign: 'center' }}>
-          <FileQuestion size={48} color="#9CA3AF" />
-          <h3 style={{ fontSize: 18, fontWeight: 600, color: '#1A1A2E', margin: 0 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: `${spacing['12']} ${spacing['6']}`, gap: spacing['4'], textAlign: 'center' }}>
+          <FileQuestion size={48} color={colors.textTertiary} />
+          <h3 style={{ fontSize: typography.fontSize.subtitle, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0 }}>
             No RFIs have been created for this project yet
           </h3>
-          <p style={{ fontSize: 14, color: '#6B7280', margin: 0, maxWidth: 440, lineHeight: 1.6 }}>
+          <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: 0, maxWidth: 440, lineHeight: typography.lineHeight.relaxed }}>
             When questions arise in the field, create an RFI to get a documented answer
           </p>
           <PermissionGate permission="rfis.create">
@@ -428,7 +428,22 @@ const RFIs: React.FC = () => {
             </Btn>
           </PermissionGate>
         </div>
-        {showCreateModal && <CreateRFIModal onClose={() => setShowCreateModal(false)} projectId={projectId!} />}
+        <CreateRFIModal
+          open={showCreateModal}
+          onClose={() => setShowCreateModal(false)}
+          onSubmit={async (data) => {
+            try {
+              await createRFI.mutateAsync({
+                projectId: projectId!,
+                data: { ...data, project_id: projectId! },
+              });
+              toast.success('RFI created successfully');
+            } catch (err) {
+              toast.error('Failed to create RFI. Please try again.');
+              throw err;
+            }
+          }}
+        />
       </PageContainer>
     );
   }
