@@ -296,7 +296,7 @@ export const ProjectHealth: React.FC = () => {
                     onClick={() => { addToast('info', 'This feature is being configured'); setShareOpen(false); }}
                     style={{
                       width: '100%', display: 'flex', alignItems: 'center', gap: spacing['2'],
-                      padding: `${spacing['2']} ${spacing['3']}`, border: 'none',
+                      padding: `${spacing['2']} ${spacing['3']}`, minHeight: 56, border: 'none',
                       backgroundColor: 'transparent', cursor: 'pointer',
                       fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
                       color: colors.textPrimary, textAlign: 'left',
@@ -361,6 +361,7 @@ export const ProjectHealth: React.FC = () => {
                 key={dim.label}
                 role="button"
                 tabIndex={0}
+                aria-label={`${dim.label}: score ${dim.score}. Go to ${dim.label} details`}
                 onClick={() => navigate(dim.route)}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(dim.route); } }}
                 style={{
