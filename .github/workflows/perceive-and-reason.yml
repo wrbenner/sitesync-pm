@@ -239,13 +239,32 @@ jobs:
               'System Health': '.perception/system-health.json'
           }
 
-          for label, path in files.items():
-              if os.path.exists(path):
+          def read_json_or_text(path: str):
+              """Best-effort reader.
+
+              Some perception artifacts are JSON, some are markdown, and sometimes
+              a file can exist but be empty/partially-written (e.g., after a failed run).
+              This function prevents the workflow from failing in those cases.
+              """
+              try:
+                  if not os.path.exists(path) or os.path.getsize(path) == 0:
+                      return None, 'missing-or-empty'
+                  if path.endswith('.json'):
+                      with open(path) as f:
+                          return json.load(f), 'json'
                   with open(path) as f:
-                      data = json.load(f)
+                      return f.read(), 'text'
+              except Exception as e:
+                  return {'error': str(e)}, 'error'
+
+          for label, path in files.items():
+              data, kind = read_json_or_text(path)
+              if data is None:
+                  briefing_parts.append(f'## {label}\n*Not available — perception artifact missing or empty.*')
+              elif kind in ('json', 'error'):
                   briefing_parts.append(f'## {label}\n\`\`\`json\n{json.dumps(data, indent=2)[:8000]}\n\`\`\`')
               else:
-                  briefing_parts.append(f'## {label}\n*Not available — perception script failed or was skipped.*')
+                  briefing_parts.append(f'## {label}\n\`\`\`\n{str(data)[:8000]}\n\`\`\`')
 
           # Include VISION_CORE.md if it exists
           if os.path.exists('VISION_CORE.md'):
