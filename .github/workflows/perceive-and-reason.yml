@@ -80,7 +80,7 @@ jobs:
         id: perceive_product
         continue-on-error: true
         run: |
-          python autopoietic/scripts/perceive-product.py
+          python scripts/perceive-product.py
           if [ -f ".perception/app-state.json" ]; then
             echo "product_ok=true" >> $GITHUB_OUTPUT
             echo "Product perception complete: $(wc -c < .perception/app-state.json) bytes"
@@ -96,7 +96,7 @@ jobs:
         id: perceive_codebase
         continue-on-error: true
         run: |
-          python autopoietic/scripts/perceive-codebase.py
+          python scripts/perceive-codebase.py
           if [ -f ".perception/codebase-state.json" ]; then
             echo "codebase_ok=true" >> $GITHUB_OUTPUT
             echo "Codebase perception complete: $(wc -c < .perception/codebase-state.json) bytes"
@@ -111,7 +111,7 @@ jobs:
         if: ${{ github.event.inputs.skip_competitors != 'true' }}
         continue-on-error: true
         run: |
-          python autopoietic/scripts/perceive-competitors.py
+          python scripts/perceive-competitors.py
           if [ -f ".perception/competitive-state.json" ]; then
             echo "competitors_ok=true" >> $GITHUB_OUTPUT
             echo "Competitive perception complete"
@@ -120,7 +120,38 @@ jobs:
             echo "::warning::Competitor perception failed — will reason without it"
           fi
 
-      # --- Perception Script 4: System Health ---
+      # --- Perception Script 4: Urgency Physiology ---
+      - name: "Perceive: Urgency Level"
+        id: perceive_urgency
+        continue-on-error: true
+        run: |
+          python scripts/compute-urgency.py
+          if [ -f ".perception/urgency.json" ]; then
+            PHASE=$(python3 -c "import json; print(json.load(open('.perception/urgency.json'))['phase'])")
+            DAYS=$(python3 -c "import json; print(json.load(open('.perception/urgency.json'))['days_remaining'])")
+            echo "urgency_ok=true" >> $GITHUB_OUTPUT
+            echo "Urgency: $DAYS days remaining — phase: $PHASE"
+          else
+            echo "urgency_ok=false" >> $GITHUB_OUTPUT
+          fi
+
+      # --- Perception Script 5: Demo Rehearsal ---
+      - name: "Perceive: Demo Rehearsal"
+        id: perceive_demo
+        continue-on-error: true
+        timeout-minutes: 10
+        run: |
+          python scripts/rehearse-demo.py
+          if [ -f ".perception/demo-rehearsal.json" ]; then
+            SCORE=$(python3 -c "import json; d=json.load(open('.perception/demo-rehearsal.json')); print(d.get('overall_score', 0))")
+            echo "demo_ok=true" >> $GITHUB_OUTPUT
+            echo "Demo rehearsal score: $SCORE/100"
+          else
+            echo "demo_ok=false" >> $GITHUB_OUTPUT
+            echo "::warning::Demo rehearsal failed — will reason without it"
+          fi
+
+      # --- Perception Script 6: System Health ---
       - name: "Perceive: System Health"
         id: perceive_health
         continue-on-error: true
@@ -186,6 +217,8 @@ jobs:
               'Product State': '.perception/app-state.json',
               'Codebase State': '.perception/codebase-state.json',
               'Competitive Landscape': '.perception/competitive-state.json',
+              'Urgency Level': '.perception/urgency.json',
+              'Demo Rehearsal': '.perception/demo-rehearsal-summary.md',
               'System Health': '.perception/system-health.json'
           }
 
