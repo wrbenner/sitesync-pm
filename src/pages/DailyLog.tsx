@@ -489,7 +489,7 @@ export const DailyLog: React.FC = () => {
       <PageContainer
         title="Daily Log"
         subtitle="No entries"
-        actions={<PermissionGate permission="daily_logs.create"><Btn onClick={() => setShowCreateModal(true)}>New Entry</Btn></PermissionGate>}
+        actions={<PermissionGate permission="daily_log.create"><Btn onClick={() => setShowCreateModal(true)}>New Entry</Btn></PermissionGate>}
       >
         {/* Aggregate metric cards — all zeros until first log is created */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'], marginBottom: spacing['6'] }}>
