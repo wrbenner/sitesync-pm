@@ -740,11 +740,11 @@ export const ChangeOrders: React.FC = () => {
               })}
               {filteredCOs.length === 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: `${spacing['12']} ${spacing['8']}`, textAlign: 'center' }}>
-                  <FileText size={48} color="#9CA3AF" style={{ marginBottom: spacing['4'] }} />
+                  <FileText size={48} color={colors.textTertiary} style={{ marginBottom: spacing['4'] }} />
                   <h3 style={{ fontSize: 18, fontWeight: 600, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>No change orders match your filters</h3>
-                  <p style={{ fontSize: 14, color: '#6B7280', margin: 0, marginBottom: spacing['5'] }}>Try adjusting your search or filter criteria.</p>
+                  <p style={{ fontSize: 14, color: colors.textSecondary, margin: 0, marginBottom: spacing['5'] }}>Try adjusting your search or filter criteria.</p>
                   {hasActiveFilters && (
-                    <button onClick={() => { setSearchQuery(''); setFilterType('all'); setFilterStatus('all'); }} style={{ height: 40, padding: `0 ${spacing['5']}`, backgroundColor: '#F47820', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, fontFamily: typography.fontFamily, cursor: 'pointer' }}>
+                    <button onClick={() => { setSearchQuery(''); setFilterType('all'); setFilterStatus('all'); }} style={{ minHeight: touchTarget.field, padding: `0 ${spacing['5']}`, backgroundColor: colors.primaryOrange, color: colors.white, border: 'none', borderRadius: 8, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, fontFamily: typography.fontFamily, cursor: 'pointer' }}>
                       Clear Filters
                     </button>
                   )}
@@ -762,11 +762,11 @@ export const ChangeOrders: React.FC = () => {
                 </div>
                 {filteredCOs.map((co, i) => {
                   const typeColorMap: Record<string, { color: string; bg: string; label: string }> = {
-                    owner_change:      { color: '#F47820', bg: '#FEF5ED', label: 'Owner Change' },
+                    owner_change:      { color: colors.brand400, bg: colors.brand50, label: 'Owner Change' },
                     field_condition:   { color: '#14B8A6', bg: '#F0FDFA', label: 'Field Condition' },
-                    design_error:      { color: '#E74C3C', bg: '#FEF2F2', label: 'Design Error' },
-                    value_engineering: { color: '#4EC896', bg: '#F0FBF6', label: 'Value Engineering' },
-                    regulatory:        { color: '#3B82F6', bg: '#EFF6FF', label: 'Regulatory' },
+                    design_error:      { color: colors.badgeRed, bg: colors.badgeRedBg, label: 'Design Error' },
+                    value_engineering: { color: colors.badgeTeal, bg: colors.badgeTealBg, label: 'Value Engineering' },
+                    regulatory:        { color: colors.statusInfo, bg: colors.statusInfoSubtle, label: 'Regulatory' },
                     unforeseen:        { color: '#8B5CF6', bg: '#F5F3FF', label: 'Unforeseen' },
                   };
                   const typeDisplay = co.reason_code
@@ -778,13 +778,13 @@ export const ChangeOrders: React.FC = () => {
                   const schedColor = co.schedule_impact_days > 0 ? colors.statusCritical : co.schedule_impact_days < 0 ? colors.statusActive : colors.textTertiary;
                   const schedLabel = co.schedule_impact_days > 0 ? `+${co.schedule_impact_days} days` : co.schedule_impact_days < 0 ? `${co.schedule_impact_days} days` : 'No impact';
                   const statusDotMap: Record<string, { dot: string; label: string }> = {
-                    draft:        { dot: '#9CA3AF', label: 'Draft' },
-                    pending:      { dot: '#F5A623', label: 'Pending Approval' },
-                    approved:     { dot: '#4EC896', label: 'Approved' },
-                    rejected:     { dot: '#E74C3C', label: 'Rejected' },
-                    implemented:  { dot: '#3B82F6', label: 'Implemented' },
+                    draft:        { dot: colors.statusNeutral, label: 'Draft' },
+                    pending:      { dot: colors.statusPending, label: 'Pending Approval' },
+                    approved:     { dot: colors.statusActive, label: 'Approved' },
+                    rejected:     { dot: colors.statusCritical, label: 'Rejected' },
+                    implemented:  { dot: colors.statusInfo, label: 'Implemented' },
                   };
-                  const statusDisplay = statusDotMap[co.status] ?? { dot: '#9CA3AF', label: co.status };
+                  const statusDisplay = statusDotMap[co.status] ?? { dot: colors.statusNeutral, label: co.status };
                   return (
                     <div key={co.id} onClick={() => setSelectedCO(co)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedCO(co); } }} style={{
                       display: 'grid', gridTemplateColumns: '80px 1fr 130px 130px 120px 110px 130px 90px',
@@ -812,11 +812,11 @@ export const ChangeOrders: React.FC = () => {
                 })}
                 {filteredCOs.length === 0 && (
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: `${spacing['12']} ${spacing['8']}`, textAlign: 'center' }}>
-                    <FileText size={48} color="#9CA3AF" style={{ marginBottom: spacing['4'] }} />
+                    <FileText size={48} color={colors.textTertiary} style={{ marginBottom: spacing['4'] }} />
                     <h3 style={{ fontSize: 18, fontWeight: 600, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>No change orders match your filters</h3>
-                    <p style={{ fontSize: 14, color: '#6B7280', margin: 0, marginBottom: spacing['5'] }}>Try adjusting your search or filter criteria.</p>
+                    <p style={{ fontSize: 14, color: colors.textSecondary, margin: 0, marginBottom: spacing['5'] }}>Try adjusting your search or filter criteria.</p>
                     {hasActiveFilters && (
-                      <button onClick={() => { setSearchQuery(''); setFilterType('all'); setFilterStatus('all'); }} style={{ height: 40, padding: `0 ${spacing['5']}`, backgroundColor: '#F47820', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, fontFamily: typography.fontFamily, cursor: 'pointer' }}>
+                      <button onClick={() => { setSearchQuery(''); setFilterType('all'); setFilterStatus('all'); }} style={{ minHeight: touchTarget.field, padding: `0 ${spacing['5']}`, backgroundColor: colors.primaryOrange, color: colors.white, border: 'none', borderRadius: 8, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, fontFamily: typography.fontFamily, cursor: 'pointer' }}>
                         Clear Filters
                       </button>
                     )}

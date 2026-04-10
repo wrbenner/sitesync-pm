@@ -414,13 +414,13 @@ export const Budget: React.FC = () => {
             gap: spacing['3'],
             padding: `${spacing['3']} ${spacing['4']}`,
             marginBottom: spacing['4'],
-            backgroundColor: '#FFFBEB',
-            border: '1px solid #FDE68A',
+            backgroundColor: colors.badgeAmberBg,
+            border: `1px solid ${colors.statusPendingSubtle}`,
             borderRadius: borderRadius.base,
           }}
         >
-          <AlertTriangle size={16} color="#D97706" style={{ flexShrink: 0 }} />
-          <span style={{ fontSize: typography.fontSize.sm, color: '#92400E' }}>
+          <AlertTriangle size={16} color={colors.statusPending} style={{ flexShrink: 0 }} />
+          <span style={{ fontSize: typography.fontSize.sm, color: colors.statusPending }}>
             Budget line items exist but all values are $0. Update your budget to see accurate financial tracking.
           </span>
         </div>
@@ -439,20 +439,20 @@ export const Budget: React.FC = () => {
             gap: spacing['3'],
             padding: `${spacing['3']} ${spacing['4']}`,
             marginBottom: spacing['4'],
-            backgroundColor: '#FEF2F2',
-            border: '1px solid #FECACA',
+            backgroundColor: colors.badgeRedBg,
+            border: `1px solid ${colors.statusCriticalSubtle}`,
             borderRadius: borderRadius.base,
             cursor: 'pointer',
             transition: 'background-color 0.15s ease',
           }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = '#FEE2E2'; }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = '#FEF2F2'; }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = colors.statusCriticalSubtle; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = colors.badgeRedBg; }}
         >
-          <AlertTriangle size={16} color="#DC2626" style={{ flexShrink: 0 }} />
-          <span style={{ flex: 1, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: '#991B1B' }}>
+          <AlertTriangle size={16} color={colors.statusCritical} style={{ flexShrink: 0 }} />
+          <span style={{ flex: 1, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.statusCritical }}>
             AI detected {criticalAnomalies.length} division{criticalAnomalies.length > 1 ? 's' : ''} at risk of cost overrun. View Details.
           </span>
-          <ArrowRight size={14} color="#DC2626" style={{ flexShrink: 0 }} />
+          <ArrowRight size={14} color={colors.statusCritical} style={{ flexShrink: 0 }} />
         </div>
       )}
 
@@ -470,13 +470,13 @@ export const Budget: React.FC = () => {
               alignItems: 'center',
               gap: spacing['1'],
               padding: `2px ${spacing['2']}`,
-              backgroundColor: '#F47820',
+              backgroundColor: colors.primaryOrange,
               borderRadius: borderRadius.full,
               zIndex: 10,
             }}
           >
-            <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#FFFFFF', display: 'inline-block', flexShrink: 0 }} />
-            <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: '#FFFFFF', whiteSpace: 'nowrap' }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: colors.white, display: 'inline-block', flexShrink: 0 }} />
+            <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: colors.white, whiteSpace: 'nowrap' }}>
               Budget updated just now
             </span>
           </div>
@@ -886,21 +886,21 @@ export const Budget: React.FC = () => {
                       alignItems: 'flex-start',
                       gap: spacing['3'],
                       padding: `${spacing['3']} ${spacing['4']}`,
-                      backgroundColor: anomaly.severity === 'critical' ? '#FEF2F2' : '#FFFBEB',
-                      border: `1px solid ${anomaly.severity === 'critical' ? '#FECACA' : '#FDE68A'}`,
+                      backgroundColor: anomaly.severity === 'critical' ? colors.badgeRedBg : colors.badgeAmberBg,
+                      border: `1px solid ${anomaly.severity === 'critical' ? colors.statusCriticalSubtle : colors.statusPendingSubtle}`,
                       borderRadius: borderRadius.base,
                     }}
                   >
                     <AlertTriangle
                       size={14}
-                      color={anomaly.severity === 'critical' ? '#DC2626' : colors.statusPending}
+                      color={anomaly.severity === 'critical' ? colors.statusCritical : colors.statusPending}
                       style={{ flexShrink: 0, marginTop: 2 }}
                     />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ margin: 0, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: anomaly.severity === 'critical' ? '#991B1B' : '#92400E' }}>
+                      <p style={{ margin: 0, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: anomaly.severity === 'critical' ? colors.statusCritical : colors.statusPending }}>
                         {anomaly.severity === 'critical' ? 'Cost Overrun Risk' : 'Budget Alert'}: {anomaly.divisionName}
                       </p>
-                      <p style={{ margin: 0, marginTop: spacing['1'], fontSize: typography.fontSize.sm, color: anomaly.severity === 'critical' ? '#B91C1C' : '#78350F' }}>
+                      <p style={{ margin: 0, marginTop: spacing['1'], fontSize: typography.fontSize.sm, color: anomaly.severity === 'critical' ? colors.statusCritical : colors.statusPending }}>
                         {anomaly.message}
                       </p>
                     </div>
@@ -910,8 +910,8 @@ export const Budget: React.FC = () => {
                       borderRadius: borderRadius.full,
                       fontSize: typography.fontSize.caption,
                       fontWeight: typography.fontWeight.semibold,
-                      backgroundColor: anomaly.severity === 'critical' ? '#FEE2E2' : '#FEF3C7',
-                      color: anomaly.severity === 'critical' ? '#DC2626' : '#D97706',
+                      backgroundColor: anomaly.severity === 'critical' ? colors.statusCriticalSubtle : colors.statusPendingSubtle,
+                      color: anomaly.severity === 'critical' ? colors.statusCritical : colors.statusPending,
                     }}>
                       {anomaly.variancePct.toFixed(0)}%
                     </span>
