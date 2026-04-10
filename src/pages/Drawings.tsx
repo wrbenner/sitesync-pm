@@ -527,6 +527,7 @@ const _DrawingsPage: React.FC = () => {
                     fontFamily: typography.fontFamily,
                     fontWeight: typography.fontWeight.medium,
                     transition: `all ${transitions.quick}`,
+                    minHeight: '56px',
                   }}
                 >
                   {discipline}
@@ -549,6 +550,7 @@ const _DrawingsPage: React.FC = () => {
             })}
             {activeFilters.size > 0 && (
               <button
+                aria-label="Clear all discipline filters"
                 onClick={() => setActiveFilters(new Set())}
                 style={{
                   padding: `${spacing.sm} ${spacing.md}`,
@@ -559,6 +561,7 @@ const _DrawingsPage: React.FC = () => {
                   fontFamily: typography.fontFamily,
                   color: colors.textTertiary,
                   textDecoration: 'underline',
+                  minHeight: '56px',
                 }}
               >
                 Clear Filters

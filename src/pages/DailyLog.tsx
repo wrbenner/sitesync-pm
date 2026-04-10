@@ -495,7 +495,7 @@ export const DailyLog: React.FC = () => {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'], marginBottom: spacing['6'] }}>
           {[
             { icon: <Users size={24} color={colors.primaryOrange} />, label: "Today's Workers", value: '0', delta: 0, positiveIsGood: true },
-            { icon: <Clock size={24} color={colors.statusActive} />, label: 'Man-Hours This Week', value: '0', delta: 0, positiveIsGood: true },
+            { icon: <Clock size={24} color={colors.statusActive} />, label: 'Hours This Week', value: '0', delta: 0, positiveIsGood: true },
             { icon: <ShieldCheck size={24} color={colors.statusActive} />, label: 'Open Incidents (30d)', value: '0', delta: 0, positiveIsGood: false },
             { icon: <CalendarDays size={24} color={colors.statusInfo} />, label: 'Logs This Month', value: '0', delta: 0, positiveIsGood: true },
           ].map((m) => (
@@ -532,7 +532,7 @@ export const DailyLog: React.FC = () => {
                 </p>
                 <button
                   onClick={() => { setSelectedDate(new Date().toISOString().split('T')[0]); setShowCreateModal(true); }}
-                  style={{ backgroundColor: colors.primaryOrange, color: '#FFFFFF', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily, cursor: 'pointer' }}
+                  style={{ backgroundColor: colors.primaryOrange, color: '#FFFFFF', border: 'none', borderRadius: '8px', padding: `${spacing['3']} ${spacing['5']}`, fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily, cursor: 'pointer', minHeight: '56px' }}
                 >
                   Start Today Log
                 </button>
@@ -733,7 +733,7 @@ export const DailyLog: React.FC = () => {
                   { label: 'vs Yesterday', mode: 'yesterday' as const },
                   { label: 'vs Same Day Last Week', mode: 'lastweek' as const },
                 ].map(opt => (
-                  <button key={opt.mode} onClick={() => { setCompareMode(opt.mode); setShowComparison(true); setCompareDropdownOpen(false); }} style={{ width: '100%', padding: `${spacing['2']} ${spacing['3']}`, border: 'none', backgroundColor: 'transparent', cursor: 'pointer', fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, color: colors.textPrimary, textAlign: 'left' }}>
+                  <button key={opt.mode} onClick={() => { setCompareMode(opt.mode); setShowComparison(true); setCompareDropdownOpen(false); }} style={{ width: '100%', padding: `${spacing['3']} ${spacing['4']}`, border: 'none', backgroundColor: 'transparent', cursor: 'pointer', fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, color: colors.textPrimary, textAlign: 'left', minHeight: '56px' }}>
                     {opt.label}
                   </button>
                 ))}
@@ -796,6 +796,7 @@ export const DailyLog: React.FC = () => {
         {([['log', 'Log Entry'], ['calendar', 'Calendar View']] as const).map(([view, label]) => (
           <button
             key={view}
+            aria-pressed={activeView === view}
             onClick={() => setActiveView(view)}
             style={{
               padding: `${spacing['3']} ${spacing['5']}`,
@@ -809,6 +810,7 @@ export const DailyLog: React.FC = () => {
               cursor: 'pointer',
               marginBottom: '-1px',
               transition: `color ${transitions.quick}, border-color ${transitions.quick}`,
+              minHeight: '56px',
             }}
           >
             {label}

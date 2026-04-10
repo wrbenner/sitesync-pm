@@ -905,6 +905,7 @@ export const Safety: React.FC = () => {
           return (
             <button
               key={tab.key}
+              aria-pressed={isActive}
               onClick={() => setActiveTab(tab.key)}
               style={{
                 display: 'flex',
@@ -921,6 +922,7 @@ export const Safety: React.FC = () => {
                 backgroundColor: isActive ? colors.surfaceRaised : 'transparent',
                 transition: `all ${transitions.instant}`,
                 whiteSpace: 'nowrap',
+                minHeight: '56px',
               }}
             >
               {React.createElement(Icon, { size: 14 })}
@@ -1045,6 +1047,7 @@ export const Safety: React.FC = () => {
                       color: isActive ? colors.orangeText : colors.textPrimary,
                       backgroundColor: isActive ? colors.orangeSubtle : colors.surfaceRaised,
                       transition: `all ${transitions.instant}`,
+                      minHeight: '56px',
                     }}
                   >
                     {CHECKLIST_TEMPLATES[key].label}
@@ -1084,9 +1087,11 @@ export const Safety: React.FC = () => {
                               return (
                                 <button
                                   key={val}
+                                  aria-pressed={isSelected}
+                                  aria-label={`${val === 'na' ? 'N/A' : val.charAt(0).toUpperCase() + val.slice(1)} for: ${item}`}
                                   onClick={() => setChecklistResults((p) => ({ ...p, [idx]: isSelected ? null : val }))}
                                   style={{
-                                    padding: `4px 10px`,
+                                    padding: `${spacing['1']} ${spacing['3']}`,
                                     border: isSelected ? `1.5px solid ${btnColor.border}` : `1px solid ${colors.borderDefault}`,
                                     borderRadius: borderRadius.base,
                                     cursor: 'pointer',
@@ -1098,7 +1103,8 @@ export const Safety: React.FC = () => {
                                     transition: `all ${transitions.instant}`,
                                     textTransform: 'uppercase',
                                     letterSpacing: '0.04em',
-                                    minHeight: 32,
+                                    minHeight: '56px',
+                                    minWidth: '52px',
                                   }}
                                 >
                                   {val === 'na' ? 'N/A' : val.charAt(0).toUpperCase() + val.slice(1)}
@@ -1145,7 +1151,7 @@ export const Safety: React.FC = () => {
                       setChecklistResults({})
                       setChecklistNotes({})
                     }}
-                    style={{ minHeight: 36 }}
+                    style={{ minHeight: '56px' }}
                   >
                     Complete Inspection
                   </Btn>

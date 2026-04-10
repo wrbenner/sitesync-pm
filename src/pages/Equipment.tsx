@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { Truck, Wrench, BarChart3, Plus } from 'lucide-react'
+import { Truck, Wrench, BarChart3, Plus, AlertTriangle, RefreshCw } from 'lucide-react'
 import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton } from '../components/Primitives'
 import { DataTable, createColumnHelper } from '../components/shared/DataTable'
 import { ExportButton } from '../components/shared/ExportButton'
@@ -257,7 +257,7 @@ const maintenanceColumns = [
 
 export const EquipmentPage: React.FC = () => {
   const projectId = useProjectId()
-  const { data: equipment, isPending: loading } = useEquipment(projectId)
+  const { data: equipment, isPending: loading, isError, error, refetch } = useEquipment(projectId)
   const [activeTab, setActiveTab] = useState<TabKey>('fleet')
 
   // ── KPIs ────────────────────────────────────────────────────
@@ -321,6 +321,23 @@ export const EquipmentPage: React.FC = () => {
   }
 
   // ── Render ──────────────────────────────────────────────────
+
+  if (isError) {
+    return (
+      <PageContainer title="Equipment" subtitle="Unable to load">
+        <Card padding={spacing['6']}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['4'], padding: spacing['6'], textAlign: 'center' }}>
+            <AlertTriangle size={40} color={colors.statusCritical} />
+            <div>
+              <p style={{ fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>Failed to load equipment</p>
+              <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: 0 }}>{(error as Error)?.message || 'Unable to fetch equipment data'}</p>
+            </div>
+            <Btn variant="primary" size="sm" icon={<RefreshCw size={14} />} onClick={() => refetch()}>Try Again</Btn>
+          </div>
+        </Card>
+      </PageContainer>
+    )
+  }
 
   return (
     <PageContainer
