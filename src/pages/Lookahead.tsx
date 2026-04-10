@@ -190,6 +190,8 @@ export const Lookahead: React.FC = () => {
             {([1, 2, 3] as const).map((w) => (
               <button
                 key={w}
+                aria-pressed={weekView === w}
+                aria-label={`${w} week view`}
                 onClick={() => setWeekView(w)}
                 style={{
                   padding: `${spacing['1']} ${spacing['3']}`, border: 'none', borderRadius: borderRadius.full,
@@ -198,6 +200,7 @@ export const Lookahead: React.FC = () => {
                   fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
                   fontFamily: typography.fontFamily, cursor: 'pointer',
                   boxShadow: weekView === w ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                  minHeight: '56px', minWidth: '40px',
                 }}
               >
                 {w}W
