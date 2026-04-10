@@ -1,10 +1,10 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Calendar, DollarSign, HelpCircle, Shield, Users,
   TrendingUp, TrendingDown, ArrowRight, Scale, AlertCircle,
-  ClipboardList, Circle,
+  ClipboardList, Circle, Plus, Building2, HardHat,
 } from 'lucide-react';
 import { PageContainer } from '../components/Primitives';
 import { MetricCardSkeleton } from '../components/ui/Skeletons';
@@ -12,12 +12,19 @@ import { colors, spacing, typography, borderRadius, shadows } from '../styles/th
 import { duration, easing, easingArray } from '../styles/animations';
 import { useProjectId } from '../hooks/useProjectId';
 import {
-  useProject, usePayApplications, useLienWaivers,
+  useProject, useProjects, usePayApplications, useLienWaivers,
 } from '../hooks/queries';
 import { useProjectMetrics } from '../hooks/useProjectMetrics';
 import { useAnimatedNumber } from '../hooks/useAnimatedNumber';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import { DashboardGrid } from '../components/dashboard/DashboardGrid';
+import { useProjectContext } from '../stores/projectContextStore';
+import { useAuth } from '../hooks/useAuth';
+import { supabase } from '../lib/supabase';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+
+const CreateProjectModal = lazy(() => import('../components/forms/CreateProjectModal'));
 
 // ── Number Formatting ───────────────────────────────────
 
@@ -191,9 +198,231 @@ function DashboardSkeleton() {
   );
 }
 
+// ── Welcome / Create Project Onboarding ─────────────────
+
+const WelcomeOnboarding: React.FC<{ onProjectCreated: () => void }> = ({ onProjectCreated }) => {
+  const [showModal, setShowModal] = useState(false);
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const reducedMotion = useReducedMotion();
+
+  const handleSubmit = async (data: Record<string, unknown>) => {
+    const { data: newProject, error } = await supabase
+      .from('projects')
+      .insert({
+        name: data.name as string,
+        address: (data.address as string) || null,
+        city: (data.city as string) || null,
+        state: (data.state as string) || null,
+        project_type: (data.project_type as string) || null,
+        contract_value: data.contract_value ? Number(data.contract_value) : null,
+        start_date: (data.start_date as string) || null,
+        target_completion: (data.target_completion as string) || null,
+        description: (data.description as string) || null,
+        status: 'active',
+        owner_id: user?.id ?? null,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      toast.error(`Failed to create project: ${error.message}`);
+      return;
+    }
+
+    // Add creator as project manager
+    if (user?.id && newProject) {
+      await supabase.from('project_members').insert({
+        project_id: newProject.id,
+        user_id: user.id,
+        role: 'project_manager',
+        accepted_at: new Date().toISOString(),
+      });
+    }
+
+    // Set as active project and refresh queries
+    if (newProject) {
+      useProjectContext.getState().setActiveProject(newProject.id);
+      // Update store projects list directly
+      useProjectContext.setState((s) => ({
+        projects: [newProject, ...s.projects],
+        activeProject: newProject,
+        activeProjectId: newProject.id,
+      }));
+      await queryClient.invalidateQueries({ queryKey: ['projects'] });
+      toast.success('Project created');
+      setShowModal(false);
+      onProjectCreated();
+    }
+  };
+
+  return (
+    <PageContainer>
+      <motion.div
+        initial={reducedMotion ? undefined : { opacity: 0, y: 16 }}
+        animate={reducedMotion ? undefined : { opacity: 1, y: 0 }}
+        transition={reducedMotion ? undefined : { duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '60vh',
+          textAlign: 'center',
+          padding: spacing['8'],
+        }}
+      >
+        <div
+          style={{
+            width: 80,
+            height: 80,
+            borderRadius: borderRadius.xl,
+            backgroundColor: colors.primaryOrange,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: spacing['6'],
+            boxShadow: `0 8px 24px ${colors.primaryOrange}33`,
+          }}
+        >
+          <HardHat size={40} color={colors.white} />
+        </div>
+
+        <h1
+          style={{
+            fontSize: typography.fontSize['4xl'],
+            fontWeight: typography.fontWeight.bold,
+            color: colors.textPrimary,
+            margin: 0,
+            marginBottom: spacing['3'],
+            letterSpacing: typography.letterSpacing.tight,
+          }}
+        >
+          Welcome to SiteSync PM
+        </h1>
+        <p
+          style={{
+            fontSize: typography.fontSize.subtitle,
+            color: colors.textSecondary,
+            margin: 0,
+            marginBottom: spacing['8'],
+            maxWidth: 480,
+            lineHeight: typography.lineHeight.relaxed,
+          }}
+        >
+          The construction management platform that thinks like a 30 year veteran superintendent.
+          Create your first project to get started.
+        </p>
+
+        <button
+          onClick={() => setShowModal(true)}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: spacing['2'],
+            padding: `${spacing['4']} ${spacing['8']}`,
+            minHeight: 56,
+            backgroundColor: colors.primaryOrange,
+            color: colors.white,
+            border: 'none',
+            borderRadius: borderRadius.lg,
+            fontSize: typography.fontSize.subtitle,
+            fontWeight: typography.fontWeight.semibold,
+            fontFamily: typography.fontFamily,
+            cursor: 'pointer',
+            boxShadow: `0 4px 12px ${colors.primaryOrange}40`,
+            transition: `transform ${duration.fast}ms ${easing.standard}, box-shadow ${duration.fast}ms ${easing.standard}`,
+          }}
+          onMouseEnter={(e) => {
+            const el = e.currentTarget;
+            el.style.transform = 'translateY(-2px)';
+            el.style.boxShadow = `0 6px 20px ${colors.primaryOrange}50`;
+          }}
+          onMouseLeave={(e) => {
+            const el = e.currentTarget;
+            el.style.transform = 'translateY(0)';
+            el.style.boxShadow = `0 4px 12px ${colors.primaryOrange}40`;
+          }}
+        >
+          <Plus size={20} />
+          Create Your First Project
+        </button>
+
+        <div
+          style={{
+            display: 'flex',
+            gap: spacing['8'],
+            marginTop: spacing['12'],
+            flexWrap: 'wrap',
+            justifyContent: 'center',
+          }}
+        >
+          {[
+            { icon: <Building2 size={20} />, label: 'RFIs, Submittals, Change Orders' },
+            { icon: <Calendar size={20} />, label: 'Schedule and Daily Logs' },
+            { icon: <DollarSign size={20} />, label: 'Budget and Payment Tracking' },
+          ].map((item) => (
+            <div
+              key={item.label}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: spacing['2'],
+                color: colors.textTertiary,
+                fontSize: typography.fontSize.sm,
+              }}
+            >
+              {item.icon}
+              <span>{item.label}</span>
+            </div>
+          ))}
+        </div>
+      </motion.div>
+
+      <Suspense fallback={null}>
+        {showModal && (
+          <CreateProjectModal
+            open={showModal}
+            onClose={() => setShowModal(false)}
+            onSubmit={handleSubmit}
+          />
+        )}
+      </Suspense>
+    </PageContainer>
+  );
+};
+
 // ── Dashboard ───────────────────────────────────────────
 
 export const Dashboard: React.FC = () => {
+  const projectId = useProjectId();
+  const navigate = useNavigate();
+  const reducedMotion = useReducedMotion();
+  const setActiveProject = useProjectContext((s) => s.setActiveProject);
+
+  // Fetch all projects to detect "no projects" state
+  const { data: allProjects, isPending: projectsLoading } = useProjects();
+  const [projectCreated, setProjectCreated] = useState(0);
+
+  // Auto-select first project if none selected
+  useEffect(() => {
+    if (!projectId && allProjects && allProjects.length > 0) {
+      setActiveProject(allProjects[0].id);
+    }
+  }, [projectId, allProjects, setActiveProject]);
+
+  // Show onboarding if no projects exist
+  if (projectsLoading) return <DashboardSkeleton />;
+  if (!allProjects || allProjects.length === 0) {
+    return <WelcomeOnboarding onProjectCreated={() => setProjectCreated((c) => c + 1)} />;
+  }
+
+  return <DashboardInner />;
+};
+
+// ── Dashboard Inner (has a project) ─────────────────────
+
+const DashboardInner: React.FC = () => {
   const projectId = useProjectId();
   const navigate = useNavigate();
   const reducedMotion = useReducedMotion();

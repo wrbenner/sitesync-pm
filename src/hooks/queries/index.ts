@@ -35,6 +35,20 @@ import type {
 
 // ── Projects ──────────────────────────────────────────────
 
+export function useProjects() {
+  return useQuery({
+    queryKey: ['projects'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('*')
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return (data ?? []) as Project[]
+    },
+  })
+}
+
 export function useProject(projectId: string | undefined) {
   return useQuery({
     queryKey: ['projects', projectId],
