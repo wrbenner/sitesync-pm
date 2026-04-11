@@ -2,7 +2,7 @@
   "_comment": "Cross-problem evolution memory. Every time the metabolism evolves a function, the winning pattern is stored here. The memory layer reads this before generating new implementations to avoid 2-3 generations of rediscovery.",
   "_version": "1.0",
   "_schema_version": 1,
-  "_updated": "2026-04-11T00:00:00Z",
+  "_updated": "2026-04-09T00:00:00Z",
   "evolutions": [
     {
       "id": "EVO-001",
@@ -43,16 +43,6 @@
       "metric_after": "Permission-gated UI on 4 pages (311 file changes)",
       "approach": "Created a PermissionGate component, then wrapped each sensitive action.",
       "lesson": "Permission UI is a FEATURE experiment that demos well for enterprise buyers. GCs always ask 'can I control who sees what?' High demo value."
-    },
-    {
-      "id": "EVO-005",
-      "night": 6,
-      "date": "2026-04-11",
-      "description": "Enhanced computed insights to reference specific entity names (RFI subjects, budget line descriptions, phase names) instead of generic counts. Added copilot context to all 9 demo pages with domain-specific suggested prompts. Surfaced AI intelligence banner on Dashboard above the fold.",
-      "metric_before": "Generic count-based insights: '1 RFI overdue'. No copilot context on 7 of 9 pages.",
-      "metric_after": "Entity-specific insights: 'RFI 047 is 3 days past due. Ball in court: Architect'. Copilot context on 9/9 pages. Dashboard AI banner live.",
-      "approach": "Read existing infrastructure first (10 min). Surgical edits to computed insights fallback chain, copilot context setters, and error boundary wrappers. 4 focused commits.",
-      "lesson": "AI intelligence that references specific entities passes the Amazon Test. Generic counts do not. Always query for entity identifiers. Reading before building eliminates wasted work."
     }
   ],
   "killed_approaches": [
@@ -118,28 +108,6 @@
       "applies_to": "all Supabase RLS policies",
       "discovered": "2026-04-08",
       "source": "Deep research finding"
-    },
-    {
-      "id": "PAT-006",
-      "name": "Entity-specific AI insights",
-      "description": "Computed insights must query for specific entity identifiers (RFI subjects, budget line descriptions, trade names, phase names) and include them in the insight text. 'RFI 047 is 3 days past due' not '1 RFI overdue'. Fallback chain: edge function → computed with entities → computed with counts → static.",
-      "applies_to": "all AI insight generation and computed intelligence",
-      "discovered": "2026-04-11",
-      "source": "Night 6 organism — Amazon Test application"
-    }
-  ],
-  "nightly_entries": [
-    {
-      "date": "2026-04-11",
-      "night": 6,
-      "score": 42,
-      "grade": "F",
-      "commits": 4,
-      "critical_issues": 0,
-      "learnings_added": 3,
-      "evolution_applied": "Added entity-specific AI insights pattern (PAT-006), enhanced computed insights fallback chain, wired copilot context on all 9 demo pages, added error boundaries on all demo pages, replaced export stubs with working clipboard action",
-      "biggest_bottleneck": "Verification pipeline: 0/4 agents reporting = 25 points forfeited (25% of total)",
-      "next_priority": "Fix multi-agent verification workflow to stop forfeiting 25 points per night"
     }
   ]
 }
