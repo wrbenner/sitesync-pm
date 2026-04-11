@@ -1,11 +1,11 @@
 {
-  "timestamp": "2026-04-11T08:12:36.151757+00:00",
-  "score": 42,
+  "timestamp": "2026-04-11T23:26:09.825457+00:00",
+  "score": 34,
   "max_score": 100,
-  "percentage": 42.0,
+  "percentage": 34.0,
   "breakdown": {
     "success_criteria": {
-      "points": 23,
+      "points": 12,
       "max": 35
     },
     "verification": {
@@ -21,31 +21,31 @@
       "max": 10
     },
     "intelligence_growth": {
-      "points": 2,
+      "points": 5,
       "max": 10
     }
   },
   "details": {
     "success_criteria": {
       "max_points": 35,
-      "points": 23,
+      "points": 12,
       "criteria_found": 3,
-      "criteria_met": 2,
+      "criteria_met": 1,
       "details": [
         {
-          "criterion": "**The Dashboard shows at least 2 AI-generated insights above the fold that reference real project da",
-          "met": true,
-          "confidence": 0.58
-        },
-        {
-          "criterion": "**The AI Copilot from any of the 9 demo pages shows page-contextual suggested prompts.** Verificatio",
-          "met": true,
-          "confidence": 0.5
-        },
-        {
-          "criterion": "**No demo page white-screens on query failure.** Verification: temporarily break the Supabase connec",
+          "criterion": "**The Dashboard or Schedule page shows at least one proactive cross-entity conflict** that connects ",
           "met": false,
-          "confidence": 0.3
+          "confidence": 0.25
+        },
+        {
+          "criterion": "**The Dashboard weather widget shows data from the weather_cache table or weather edge function**, n",
+          "met": false,
+          "confidence": 0.27
+        },
+        {
+          "criterion": "**No demo-critical page can silently fail.** Every query error on Dashboard, Budget, ChangeOrders, a",
+          "met": true,
+          "confidence": 0.56
         }
       ]
     },
@@ -85,8 +85,9 @@
     },
     "intelligence_growth": {
       "max_points": 10,
-      "points": 2,
+      "points": 5,
       "details": [
+        "New learnings added today: 7",
         "Skills in library: 5",
         "No intelligence signals detected in product"
       ]
