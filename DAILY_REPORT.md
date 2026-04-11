@@ -5,6 +5,30 @@
 
 ---
 
+## Perception Report — April 11, 2026
+
+- Pages perceived: 9 / 40 (demo critical pages only)
+- Pages with real data: 9 (Dashboard, RFIs, DailyLog, Submittals, PunchList, Budget, Schedule, PaymentApplications, ChangeOrders)
+- Pages with intelligence integration: 5 (RFIs, Budget, Schedule, DailyLog, AI Copilot)
+- Pages missing copilot context: 4 (PaymentApplications, ChangeOrders, PunchList, Submittals)
+- Pages missing error boundaries: 7 (Dashboard, RFIs, Budget, PaymentApplications, ChangeOrders, DailyLog, Submittals)
+- Codebase: 211+ TS files, 40 pages, 48 migrations, 100 files using fromTable, 50+ mutation hooks, 45 tests, 43.2% coverage
+- Quality floor: tsErrors=0, anyCount=1, mockCount=7, eslintErrors=1032, bundleSize=1868KB, e2ePassRate=0.7, a11yViolations=0
+- Competitive signals: Procore Helix AI queries data. SiteSync ai-copilot edge function synthesizes across RFIs, schedule, budget, weather. This is our differentiator. But it is invisible to the user.
+- System health: Build broken on Linux CI (Vite 8/rolldown native bindings). Vercel deploy works. TypeScript clean. Last 10 commits were accessibility polish. Quality improving but intelligence layer not yet surfaced.
+- AI edge functions: ai-copilot (Claude Sonnet, full context), ai-insights (rule-based, no LLM), ai-schedule-risk (Claude Sonnet). All exist and function. None prominently surfaced in the UI.
+- Strategic direction chosen: Surface existing intelligence on Dashboard and wire copilot context on 4 missing pages. Make the brain visible. Add error boundaries for demo resilience.
+
+**Gap assessment since last report (April 10):**
+- Polish wave landed: 10 commits improving 56px touch targets, aria-labels, theme tokens across all page categories
+- a11yViolations dropped to 0. Accessibility foundation solid.
+- No new features since Night 5 direction was written. The intelligence layer proposed on April 10 has not been built yet.
+- Phase shift: from "polish" back to "intelligence surfacing." The pages look good. They need to think.
+
+**4 days to demo. This is the critical intelligence sprint.**
+
+---
+
 ## Perception Report — April 10, 2026
 
 - Pages perceived: 9 / 40 (demo critical pages only)
