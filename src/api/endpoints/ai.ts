@@ -75,20 +75,23 @@ export const getAiInsights = async (
   if (cachedInsights.length === 0 && budgetInsights.length === 0) {
     const now = new Date().toISOString()
 
-    // Query real project data before falling back to onboarding placeholders
-    let overdueRfiCount = 0
+    // Query real project data with specific entities for rich insights
+    let overdueRfis: Array<{ id: string; rfi_number: string | null; subject: string | null; due_date: string | null; ball_in_court: string | null }> = []
     let openPunchCount = 0
-    let overBudgetCount = 0
-    let pendingSubmittalCount = 0
+    let overBudgetItems: Array<{ id: string; description: string | null; division: string | null; spent_to_date: number; current_budget: number }> = []
+    let pendingSubmittals: Array<{ id: string; number: string | null; title: string | null }> = []
+    let atRiskPhases: Array<{ id: string; name: string | null; status: string | null }> = []
 
     try {
-      const { count } = await supabase
+      const { data } = await supabase
         .from('rfis')
-        .select('id', { count: 'exact', head: true })
+        .select('id, rfi_number, subject, due_date, ball_in_court')
         .eq('project_id', projectId)
         .neq('status', 'closed')
         .lt('due_date', now)
-      overdueRfiCount = count ?? 0
+        .order('due_date', { ascending: true })
+        .limit(5)
+      overdueRfis = (data ?? []) as typeof overdueRfis
     } catch { /* non-fatal */ }
 
     try {
@@ -103,100 +106,133 @@ export const getAiInsights = async (
     try {
       const { data: budgetRows } = await supabase
         .from('budget_line_items')
-        .select('spent_to_date, current_budget')
+        .select('id, description, division, spent_to_date, current_budget')
         .eq('project_id', projectId)
-      overBudgetCount = (budgetRows ?? []).filter(
-        (row) => (row.spent_to_date ?? 0) > (row.current_budget ?? 0)
-      ).length
+      overBudgetItems = ((budgetRows ?? []) as typeof overBudgetItems).filter(
+        (row) => (row.spent_to_date ?? 0) > (row.current_budget ?? 0) && (row.current_budget ?? 0) > 0
+      )
     } catch { /* non-fatal */ }
 
     try {
-      const { count } = await supabase
+      const { data } = await supabase
         .from('submittals')
-        .select('id', { count: 'exact', head: true })
+        .select('id, number, title')
         .eq('project_id', projectId)
         .eq('status', 'pending')
-      pendingSubmittalCount = count ?? 0
+        .limit(5)
+      pendingSubmittals = (data ?? []) as typeof pendingSubmittals
+    } catch { /* non-fatal */ }
+
+    try {
+      const { data } = await supabase
+        .from('schedule_phases')
+        .select('id, name, status')
+        .eq('project_id', projectId)
+        .in('status', ['delayed', 'at_risk'])
+        .limit(3)
+      atRiskPhases = (data ?? []) as typeof atRiskPhases
     } catch { /* non-fatal */ }
 
     const dynamicInsights: AIInsight[] = []
 
-    if (overdueRfiCount > 0) {
-      const rfiSeverity: AIInsight['severity'] =
-        overdueRfiCount > 10 ? 'critical' : overdueRfiCount > 5 ? 'warning' : 'info'
+    if (overdueRfis.length > 0) {
+      const count = overdueRfis.length
+      const mostOverdue = overdueRfis[0]
+      const rfiLabel = mostOverdue.rfi_number ? `RFI ${mostOverdue.rfi_number}` : 'an RFI'
+      const daysPast = mostOverdue.due_date
+        ? Math.ceil((Date.now() - new Date(mostOverdue.due_date).getTime()) / (1000 * 60 * 60 * 24))
+        : 0
+      const bicNote = mostOverdue.ball_in_court ? ` Ball in court: ${mostOverdue.ball_in_court}.` : ''
       dynamicInsights.push({
         id: 'computed-rfi-overdue',
         type: 'risk',
-        severity: rfiSeverity,
-        title: `${overdueRfiCount} RFI${overdueRfiCount === 1 ? '' : 's'} are overdue and may delay critical path`,
-        description: `${overdueRfiCount} open RFI${overdueRfiCount === 1 ? '' : 's'} passed their due date. Unresolved RFIs can block field work and push the schedule. Review and respond immediately.`,
-        affectedEntities: [],
-        suggestedAction: 'Navigate to RFIs to review and respond',
+        severity: count > 5 ? 'critical' : count > 2 ? 'warning' : 'info',
+        title: `${count} overdue RFI${count === 1 ? '' : 's'}. ${rfiLabel} is ${daysPast} day${daysPast === 1 ? '' : 's'} past due`,
+        description: mostOverdue.subject
+          ? `"${mostOverdue.subject}" is the most overdue.${bicNote} Unresolved RFIs can block field work and push the schedule.`
+          : `${count} open RFI${count === 1 ? '' : 's'} passed their due date.${bicNote} Review and respond immediately.`,
+        affectedEntities: overdueRfis.map((r) => ({ type: 'rfi', id: r.id, name: r.rfi_number ? `RFI ${r.rfi_number}` : r.id })),
+        suggestedAction: 'Open RFIs to review overdue items',
+        confidence: 0.9,
+        source: 'computed' as const,
+        createdAt: now,
+        generatedAt: now,
+        dismissed: false,
+      })
+    }
+
+    if (atRiskPhases.length > 0) {
+      const phaseNames = atRiskPhases.map((p) => p.name ?? 'Unnamed phase').join(', ')
+      dynamicInsights.push({
+        id: 'computed-schedule-risk',
+        type: 'schedule_risk',
+        severity: atRiskPhases.some((p) => p.status === 'delayed') ? 'critical' : 'warning',
+        title: `${atRiskPhases.length} schedule phase${atRiskPhases.length === 1 ? ' is' : 's are'} at risk or delayed`,
+        description: `${phaseNames}. Delayed phases cascade into downstream trades and may push the completion date.`,
+        affectedEntities: atRiskPhases.map((p) => ({ type: 'schedule_phase', id: p.id, name: p.name ?? 'Phase' })),
+        suggestedAction: 'Open Schedule to review impacted phases',
         confidence: 0.85,
         source: 'computed' as const,
         createdAt: now,
         generatedAt: now,
-        expiresAt: null,
         dismissed: false,
       })
     }
 
     if (openPunchCount > 0) {
-      const punchSeverity: AIInsight['severity'] =
-        openPunchCount > 10 ? 'critical' : openPunchCount > 5 ? 'warning' : 'info'
       dynamicInsights.push({
         id: 'computed-punch-open',
         type: 'action_needed',
-        severity: punchSeverity,
+        severity: openPunchCount > 10 ? 'critical' : openPunchCount > 5 ? 'warning' : 'info',
         title: `${openPunchCount} open punch list item${openPunchCount === 1 ? '' : 's'} require resolution`,
-        description: `${openPunchCount} punch list item${openPunchCount === 1 ? '' : 's'} remain open. Clearing these is required before closeout.`,
+        description: `${openPunchCount} punch list item${openPunchCount === 1 ? '' : 's'} remain open. Clearing these is required before substantial completion and closeout.`,
         affectedEntities: [],
-        suggestedAction: 'Navigate to Punch List to review open items',
+        suggestedAction: 'Open Punch List to review open items',
         confidence: 0.85,
         source: 'computed' as const,
         createdAt: now,
         generatedAt: now,
-        expiresAt: null,
         dismissed: false,
       })
     }
 
-    if (overBudgetCount > 0) {
-      const budgetSeverity: AIInsight['severity'] =
-        overBudgetCount > 10 ? 'critical' : overBudgetCount > 5 ? 'warning' : 'info'
+    if (overBudgetItems.length > 0) {
+      const count = overBudgetItems.length
+      const worst = overBudgetItems.sort((a, b) => (b.spent_to_date - b.current_budget) - (a.spent_to_date - a.current_budget))[0]
+      const overrun = worst ? worst.spent_to_date - worst.current_budget : 0
+      const worstLabel = worst?.description ?? worst?.division ?? 'a line item'
       dynamicInsights.push({
         id: 'computed-budget-overrun',
-        type: 'risk',
-        severity: budgetSeverity,
-        title: `${overBudgetCount} budget line item${overBudgetCount === 1 ? '' : 's'} are over budget`,
-        description: `${overBudgetCount} cost code${overBudgetCount === 1 ? '' : 's'} show spending above the current budget. Review cost exposure and issue change orders if needed.`,
-        affectedEntities: [],
-        suggestedAction: 'Navigate to Budget to review cost variance',
+        type: 'budget_risk',
+        severity: count > 5 ? 'critical' : count > 2 ? 'warning' : 'info',
+        title: `${count} budget line${count === 1 ? '' : 's'} over budget. ${worstLabel} is $${Math.round(overrun).toLocaleString()} over`,
+        description: `${count} cost code${count === 1 ? '' : 's'} show spending above the current budget. Review cost exposure and issue change orders if needed.`,
+        affectedEntities: overBudgetItems.slice(0, 3).map((b) => ({ type: 'budget_item', id: b.id, name: b.description ?? b.division ?? b.id })),
+        suggestedAction: 'Open Budget to review cost variance',
         confidence: 0.85,
         source: 'computed' as const,
         createdAt: now,
         generatedAt: now,
-        expiresAt: null,
         dismissed: false,
       })
     }
 
-    if (pendingSubmittalCount > 0) {
-      const submittalSeverity: AIInsight['severity'] =
-        pendingSubmittalCount > 10 ? 'critical' : pendingSubmittalCount > 5 ? 'warning' : 'info'
+    if (pendingSubmittals.length > 0) {
+      const count = pendingSubmittals.length
+      const first = pendingSubmittals[0]
+      const firstLabel = first.number ? `Submittal ${first.number}` : (first.title ?? 'a submittal')
       dynamicInsights.push({
         id: 'computed-submittals-pending',
         type: 'action_needed',
-        severity: submittalSeverity,
-        title: `${pendingSubmittalCount} pending submittal${pendingSubmittalCount === 1 ? '' : 's'} need attention`,
-        description: `${pendingSubmittalCount} submittal${pendingSubmittalCount === 1 ? ' is' : 's are'} awaiting review or approval. Delays in submittal review can hold up material procurement and field work.`,
-        affectedEntities: [],
-        suggestedAction: 'Navigate to Submittals to review pending items',
+        severity: count > 10 ? 'critical' : count > 5 ? 'warning' : 'info',
+        title: `${count} pending submittal${count === 1 ? '' : 's'} awaiting review`,
+        description: `${firstLabel}${count > 1 ? ` and ${count - 1} other${count - 1 === 1 ? '' : 's'}` : ''} awaiting review or approval. Delays in submittal review can hold up material procurement and field work.`,
+        affectedEntities: pendingSubmittals.map((s) => ({ type: 'submittal', id: s.id, name: s.number ? `Submittal ${s.number}` : (s.title ?? s.id) })),
+        suggestedAction: 'Open Submittals to review pending items',
         confidence: 0.85,
         source: 'computed' as const,
         createdAt: now,
         generatedAt: now,
-        expiresAt: null,
         dismissed: false,
       })
     }
