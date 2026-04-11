@@ -1,0 +1,93 @@
+{
+  "_version": "1.0",
+  "_last_updated": "2026-04-11T08:29:39Z",
+  "_night_count": 1,
+  "_days_until_demo": 3,
+  "product_understanding": {
+    "pages": {},
+    "features": {},
+    "demo_readiness": {
+      "overall_score": 42.0,
+      "scene_scores": {},
+      "critical_blockers": [],
+      "trend": "stable"
+    }
+  },
+  "technical_understanding": {
+    "architecture": {
+      "total_pages": 0,
+      "pages_with_db": 0,
+      "pages_without_db": 0,
+      "edge_functions": 0,
+      "edge_functions_wired": 0,
+      "test_coverage_pct": 0.0
+    },
+    "architecture_history": [
+      {
+        "total_pages": 0,
+        "pages_with_db": 0,
+        "pages_without_db": 0,
+        "edge_functions": 0,
+        "edge_functions_wired": 0,
+        "test_coverage_pct": 0.0,
+        "date": "2026-04-11"
+      }
+    ],
+    "recurring_problems": [],
+    "successful_patterns": [
+      {
+        "pattern": "punch_items table name mismatch",
+        "times_used": 1,
+        "success_rate": 1.0
+      }
+    ]
+  },
+  "strategic_understanding": {
+    "what_works": [
+      "Always use cursor-based pagination for lists. Never offset-based. Cursor: use the last item's created_at + id as the cursor. This avoids the 'page drift' problem when items are added while paginating.",
+      "For mutations: 1) save previousData with queryClient.getQueryData, 2) optimistically update with queryClient.setQueryData, 3) onError: restore previousData and show toast, 4) onSettled: invalidate to get server truth. Never skip the rollback.",
+      "Use the fromTable<T>('tableName') helper from src/lib/supabase.ts for all database queries. It returns typed data without 'as any' casts. Never call supabase.from() directly without type generics.",
+      "Wrap each route in an ErrorBoundary component that catches render errors and shows a user-friendly fallback UI. One ErrorBoundary per route, not per component.",
+      "All RLS policies MUST wrap auth.uid() in a subselect: USING (user_id = (select auth.uid())). This prevents per-row re-evaluation and gives a 1,571x performance improvement on large tables.",
+      "Computed insights must query for specific entity identifiers (RFI subjects, budget line descriptions, trade names, phase names) and include them in the insight text. 'RFI 047 is 3 days past due' not '1 RFI overdue'. Fallback chain: edge function → computed with entities → computed with counts → static."
+    ],
+    "what_fails": [
+      "Batch refactors across 10+ files in one commit. The immune system (homeostasis) rejects these at Tier 2 because too many concurrent changes can't be verified individually.",
+      "Adding TODO stubs or empty functions. The quality auditor scores incomplete code WORSE than no code. Never ship stubs.",
+      "Using npm ci with Mac-generated lockfiles on Linux CI. Vite 8's rolldown requires platform-specific native bindings. The lockfile from Mac doesn't include Linux bindings."
+    ],
+    "competitive_position": {
+      "ahead_of_procore": [],
+      "behind_procore": [],
+      "unique_advantages": []
+    },
+    "demo_strategy": {
+      "must_show": [],
+      "skip_in_demo": [],
+      "wow_moment": ""
+    }
+  },
+  "derived_insights": {
+    "stuck_pages": [],
+    "stuck_page_count": 0,
+    "unwired_pages": [],
+    "unwired_page_count": 0,
+    "demo_trend": "stable",
+    "nights_of_improvement": 0,
+    "total_commits": 25,
+    "total_experiments_passed": 0,
+    "total_experiments_failed": 0
+  },
+  "nightly_history": [
+    {
+      "night": 1,
+      "date": "2026-04-11",
+      "direction": "Tonight's Direction — April 11, 2026 (Night 6)",
+      "commits": 25,
+      "experiments_passed": 0,
+      "experiments_failed": 0,
+      "score": 42.0,
+      "key_learning": "- **success_criteria**: {'points': 23, 'max': 35}"
+    }
+  ]
+}
