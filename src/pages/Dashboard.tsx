@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import {
   Calendar, DollarSign, HelpCircle, Shield, Users,
   TrendingUp, TrendingDown, ArrowRight, Scale, AlertCircle,
-  ClipboardList, Circle, Plus, Building2, HardHat,
+  ClipboardList, Circle, Plus, Building2, HardHat, Sparkles,
 } from 'lucide-react';
 import { PageContainer } from '../components/Primitives';
 import { MetricCardSkeleton } from '../components/ui/Skeletons';
@@ -13,11 +13,14 @@ import { duration, easing, easingArray } from '../styles/animations';
 import { useProjectId } from '../hooks/useProjectId';
 import {
   useProject, useProjects, usePayApplications, useLienWaivers,
+  useAiInsightsMeta,
 } from '../hooks/queries';
 import { useProjectMetrics } from '../hooks/useProjectMetrics';
 import { useAnimatedNumber } from '../hooks/useAnimatedNumber';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import { DashboardGrid } from '../components/dashboard/DashboardGrid';
+import { ErrorBoundary } from '../components/ErrorBoundary';
+import type { AIInsight } from '../types/ai';
 import { useProjectContext } from '../stores/projectContextStore';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
@@ -394,7 +397,7 @@ const WelcomeOnboarding: React.FC<{ onProjectCreated: () => void }> = ({ onProje
 
 // ── Dashboard ───────────────────────────────────────────
 
-export const Dashboard: React.FC = () => {
+const DashboardPage: React.FC = () => {
   const projectId = useProjectId();
   const navigate = useNavigate();
   const reducedMotion = useReducedMotion();
@@ -419,6 +422,12 @@ export const Dashboard: React.FC = () => {
 
   return <DashboardInner />;
 };
+
+export const Dashboard: React.FC = () => (
+  <ErrorBoundary message="The dashboard could not be displayed. Check your connection and try again.">
+    <DashboardPage />
+  </ErrorBoundary>
+);
 
 // ── Live Metrics Fallback ───────────────────────────────
 // When the materialized view hasn't been refreshed (e.g. new project),
@@ -461,6 +470,164 @@ function useLiveMetricsFallback(projectId: string | undefined, matViewHasData: b
   });
 }
 
+// ── AI Insights Banner (above the fold) ─────────────────
+
+const SEVERITY_COLORS: Record<string, { bg: string; border: string; icon: string }> = {
+  critical: { bg: colors.statusCriticalSubtle, border: colors.statusCritical, icon: colors.statusCritical },
+  warning: { bg: colors.statusPendingSubtle || '#FFF8E1', border: colors.statusPending, icon: colors.statusPending },
+  info: { bg: colors.statusInfoSubtle || '#E3F2FD', border: colors.statusInfo || colors.primaryOrange, icon: colors.statusInfo || colors.primaryOrange },
+};
+
+const InsightRow: React.FC<{ insight: AIInsight; onClick?: () => void }> = ({ insight, onClick }) => {
+  const sev = SEVERITY_COLORS[insight.severity] || SEVERITY_COLORS.info;
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: spacing['3'],
+        padding: `${spacing['3']} ${spacing['4']}`,
+        borderLeft: `3px solid ${sev.border}`,
+        backgroundColor: sev.bg,
+        borderRadius: borderRadius.base,
+        cursor: onClick ? 'pointer' : 'default',
+        transition: `background-color ${duration.fast}ms ${easing.standard}`,
+      }}
+    >
+      <AlertCircle size={16} color={sev.icon} style={{ flexShrink: 0, marginTop: 2 }} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{
+          margin: 0,
+          fontSize: typography.fontSize.sm,
+          fontWeight: typography.fontWeight.semibold,
+          color: colors.textPrimary,
+          lineHeight: typography.lineHeight.tight,
+        }}>
+          {insight.title}
+        </p>
+        <p style={{
+          margin: 0,
+          marginTop: spacing['1'],
+          fontSize: typography.fontSize.caption,
+          color: colors.textSecondary,
+          lineHeight: typography.lineHeight.normal,
+        }}>
+          {insight.description}
+        </p>
+        {insight.suggestedAction && (
+          <p style={{
+            margin: 0,
+            marginTop: spacing['1'],
+            fontSize: typography.fontSize.caption,
+            fontWeight: typography.fontWeight.medium,
+            color: sev.icon,
+          }}>
+            {insight.suggestedAction}
+          </p>
+        )}
+      </div>
+      {onClick && <ArrowRight size={14} color={colors.textTertiary} style={{ flexShrink: 0, marginTop: 2 }} />}
+    </div>
+  );
+};
+
+const AIInsightsBanner: React.FC<{ insights: AIInsight[]; navigate: (path: string) => void }> = ({ insights, navigate }) => {
+  const topInsights = insights
+    .filter((i) => !i.dismissed && !i.isPlaceholder)
+    .sort((a, b) => {
+      const sevOrder: Record<string, number> = { critical: 0, warning: 1, info: 2 };
+      return (sevOrder[a.severity] ?? 2) - (sevOrder[b.severity] ?? 2);
+    })
+    .slice(0, 3);
+
+  if (topInsights.length === 0) return null;
+
+  const getNavigationPath = (insight: AIInsight): string | undefined => {
+    const typeRoutes: Record<string, string> = {
+      schedule_risk: '/schedule',
+      budget_risk: '/budget',
+    };
+    if (typeRoutes[insight.type]) return typeRoutes[insight.type];
+    const entity = insight.affectedEntities?.[0];
+    if (!entity) return undefined;
+    const entityRoutes: Record<string, string> = {
+      rfi: '/rfis', schedule_phase: '/schedule', budget_item: '/budget',
+      punch_item: '/punch-list', submittal: '/submittals', change_order: '/change-orders',
+    };
+    return entityRoutes[entity.type];
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: duration.smooth / 1000, ease: easingArray.apple }}
+      style={{
+        backgroundColor: colors.surfaceRaised,
+        borderRadius: borderRadius.xl,
+        boxShadow: shadows.card,
+        marginBottom: spacing['5'],
+        border: `1px solid ${colors.borderSubtle}`,
+        overflow: 'hidden',
+      }}
+    >
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: spacing['2'],
+        padding: `${spacing['3']} ${spacing['4']}`,
+        borderBottom: `1px solid ${colors.borderSubtle}`,
+      }}>
+        <div style={{
+          width: 24,
+          height: 24,
+          borderRadius: borderRadius.full,
+          background: `linear-gradient(135deg, ${colors.primaryOrange} 0%, #FF9A5C 100%)`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+        }}>
+          <Sparkles size={12} color={colors.white} />
+        </div>
+        <p style={{
+          margin: 0,
+          fontSize: typography.fontSize.sm,
+          fontWeight: typography.fontWeight.semibold,
+          color: colors.textPrimary,
+          flex: 1,
+        }}>
+          AI Project Intelligence
+        </p>
+        <span style={{
+          fontSize: typography.fontSize.caption,
+          color: colors.textTertiary,
+        }}>
+          {topInsights.length} active {topInsights.length === 1 ? 'alert' : 'alerts'}
+        </span>
+      </div>
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: spacing['2'],
+        padding: spacing['3'],
+      }}>
+        {topInsights.map((insight) => {
+          const path = getNavigationPath(insight);
+          return (
+            <InsightRow
+              key={insight.id}
+              insight={insight}
+              onClick={path ? () => navigate(path) : undefined}
+            />
+          );
+        })}
+      </div>
+    </motion.div>
+  );
+};
+
 // ── Dashboard Inner (has a project) ─────────────────────
 
 const DashboardInner: React.FC = () => {
@@ -469,6 +636,7 @@ const DashboardInner: React.FC = () => {
   const reducedMotion = useReducedMotion();
 
   const { data: project } = useProject(projectId);
+  const { data: insightsData } = useAiInsightsMeta(projectId);
   // Single batched query against the project_metrics materialized view.
   const { data: matViewMetrics, isPending: metricsLoading } = useProjectMetrics(projectId);
   const { data: payApps } = usePayApplications(projectId);
@@ -683,6 +851,11 @@ const DashboardInner: React.FC = () => {
           </div>
         </div>
       </motion.div>
+
+      {/* ── AI Insights (above the fold) ────────────────── */}
+      {insightsData?.insights && insightsData.insights.length > 0 && (
+        <AIInsightsBanner insights={insightsData.insights} navigate={navigate} />
+      )}
 
       {/* ── Metric Strip ──────────────────────────────────── */}
       <motion.div

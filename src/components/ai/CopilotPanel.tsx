@@ -46,6 +46,30 @@ const CONTEXT_PROMPTS: Record<string, Array<{ label: string; icon: React.Element
     { label: '@schedule are crew hours tracking to plan?', icon: Calendar, description: 'Labor hours vs scheduled plan' },
     { label: 'What issues were reported today?', icon: ClipboardCheck, description: 'Open items from the latest daily log' },
   ],
+  'payment-applications': [
+    { label: '@cost what is the retainage balance?', icon: DollarSign, description: 'Total retainage held across all pay apps' },
+    { label: 'Which pay apps are missing lien waivers?', icon: Scale, description: 'Approved payments without waivers on file' },
+    { label: '@cost review the G702 for the latest application', icon: FileText, description: 'AIA G702 summary and continuation sheet analysis' },
+    { label: 'What is the cash flow forecast?', icon: DollarSign, description: 'Projected billings and collections' },
+  ],
+  'change-orders': [
+    { label: '@cost what is the total change order exposure?', icon: DollarSign, description: 'Sum of pending and potential change orders' },
+    { label: 'Which change orders are at risk of rejection?', icon: Clock, description: 'COs stalled in approval chain' },
+    { label: '@cost breakdown by reason code', icon: ClipboardCheck, description: 'Owner change vs field condition vs design error' },
+    { label: 'What is the net budget impact of approved COs?', icon: DollarSign, description: 'Contract value adjustments from signed COs' },
+  ],
+  'punch-list': [
+    { label: 'Which trades have the most open punch items?', icon: Users, description: 'Punch items grouped by responsible sub' },
+    { label: '@quality what areas have the highest defect density?', icon: ClipboardCheck, description: 'Punch items by location and severity' },
+    { label: 'Are we on track for substantial completion?', icon: Calendar, description: 'Open punch items vs completion timeline' },
+    { label: '@safety any safety related punch items open?', icon: ShieldCheck, description: 'Life safety and code items flagged for priority' },
+  ],
+  submittals: [
+    { label: 'Which submittals are blocking material procurement?', icon: Clock, description: 'Overdue submittals on the critical path' },
+    { label: '@document summarize the review status', icon: FileSearch, description: 'Submittals by review stage and aging' },
+    { label: 'Who has the most submittals in their court?', icon: Users, description: 'Ball in court analysis by reviewer' },
+    { label: '@schedule which submittals could delay the schedule?', icon: Calendar, description: 'Lead time analysis for pending submittals' },
+  ],
   default: [
     { label: "How's the project doing?", icon: Sparkles, description: 'Multi-agent health check across all areas' },
     { label: 'What needs my attention today?', icon: Clock, description: 'Overdue items, pending approvals, risk flags' },

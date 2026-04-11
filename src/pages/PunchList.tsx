@@ -23,6 +23,7 @@ import { ArrowUp, Trash2, UserCheck, Pencil } from 'lucide-react';
 import { PermissionGate } from '../components/auth/PermissionGate';
 import { PresenceAvatars } from '../components/shared/PresenceAvatars';
 import { EditingLockBanner } from '../components/ui/EditingLockBanner';
+import { useCopilotStore } from '../stores/copilotStore';
 
 const statusMap: Record<string, 'pending' | 'active' | 'complete'> = {
   open: 'pending',
@@ -162,6 +163,9 @@ function formatDate(dateStr: string): string {
 }
 
 const PunchListPage: React.FC = () => {
+  const { setPageContext } = useCopilotStore();
+  useEffect(() => { setPageContext('punch-list'); }, [setPageContext]);
+
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [atRiskFilter, setAtRiskFilter] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>('all');

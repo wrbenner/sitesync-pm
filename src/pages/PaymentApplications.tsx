@@ -31,6 +31,8 @@ import type { LienWaiverRowContext, WaiverState } from '../components/export/Lie
 import { G702ApplicationPDF } from '../components/export/G702ApplicationPDF'
 import { G703ContinuationPDF } from '../components/export/G703ContinuationPDF'
 import { PermissionGate } from '../components/auth/PermissionGate'
+import { ErrorBoundary } from '../components/ErrorBoundary'
+import { useCopilotStore } from '../stores/copilotStore'
 import { toast } from 'sonner'
 
 const PDFDownloadLink = lazy(() =>
@@ -2309,7 +2311,10 @@ LienWaiverPanel.displayName = 'LienWaiverPanel'
 
 // ── Main Page ─────────────────────────────────────────────────
 
-export const PaymentApplications: React.FC = () => {
+const PaymentApplicationsPage: React.FC = () => {
+  const { setPageContext } = useCopilotStore()
+  useEffect(() => { setPageContext('payment-applications') }, [setPageContext])
+
   const [activeTab, setActiveTab] = useState<TabKey>('applications')
   const [selectedAppId, setSelectedAppId] = useState<string | null>(null)
   const [markingWaiverId, setMarkingWaiverId] = useState<string | null>(null)
@@ -2589,5 +2594,11 @@ export const PaymentApplications: React.FC = () => {
     </PageContainer>
   )
 }
+
+export const PaymentApplications: React.FC = () => (
+  <ErrorBoundary message="Payment applications could not be displayed. Check your connection and try again.">
+    <PaymentApplicationsPage />
+  </ErrorBoundary>
+)
 
 export default PaymentApplications

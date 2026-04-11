@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useCopilotStore } from '../stores/copilotStore';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import { Users, Clock, ShieldCheck, Cloud, ChevronRight, Camera, Send, BarChart3, Sparkles, Zap, CalendarDays, Calendar, X, Lock, AlertTriangle, BookOpen, RefreshCw, Truck, UserPlus, FileEdit, HardHat, Mic } from 'lucide-react';
 import { PageContainer, Card, Btn, Skeleton, SectionHeader, useToast } from '../components/Primitives';
 import EmptyState from '../components/ui/EmptyState';
@@ -54,7 +55,7 @@ interface ManpowerRow {
   hours: number;
 }
 
-export const DailyLog: React.FC = () => {
+const DailyLogPage: React.FC = () => {
   const { addToast } = useToast();
   const projectId = useProjectId();
   const { setPageContext } = useCopilotStore();
@@ -1803,3 +1804,9 @@ export const DailyLog: React.FC = () => {
     </PageContainer>
   );
 };
+
+export const DailyLog: React.FC = () => (
+  <ErrorBoundary message="Daily logs could not be displayed. Check your connection and try again.">
+    <DailyLogPage />
+  </ErrorBoundary>
+);

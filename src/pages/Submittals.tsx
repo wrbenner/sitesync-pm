@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { VirtualDataTable } from '../components/shared/VirtualDataTable';
 import { BulkActionBar } from '../components/shared/BulkActionBar';
 import { createColumnHelper } from '@tanstack/react-table';
@@ -26,6 +26,8 @@ import { EditableDetailField } from '../components/forms/EditableField';
 import { toast } from 'sonner';
 import { PresenceAvatars } from '../components/shared/PresenceAvatars';
 import { EditingLockBanner } from '../components/ui/EditingLockBanner';
+import { ErrorBoundary } from '../components/ErrorBoundary';
+import { useCopilotStore } from '../stores/copilotStore';
 
 const isOverdue = (dateStr: string) => new Date(dateStr) < new Date();
 
@@ -328,7 +330,10 @@ const MiniApprovalChain: React.FC<{ status: string }> = ({ status }) => {
 
 const subColHelper = createColumnHelper<any>();
 
-const Submittals: React.FC = () => {
+const SubmittalsPage: React.FC = () => {
+  const { setPageContext } = useCopilotStore();
+  useEffect(() => { setPageContext('submittals'); }, [setPageContext]);
+
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
@@ -1172,6 +1177,12 @@ const Submittals: React.FC = () => {
     </PageContainer>
   );
 };
+
+const Submittals: React.FC = () => (
+  <ErrorBoundary message="Submittals could not be displayed. Check your connection and try again.">
+    <SubmittalsPage />
+  </ErrorBoundary>
+);
 
 export { Submittals };
 export default Submittals;

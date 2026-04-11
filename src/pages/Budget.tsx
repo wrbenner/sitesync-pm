@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect, useId } from 'react';
 import { useCopilotStore } from '../stores/copilotStore';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import { PageContainer, Card, SectionHeader, MetricBox, ProgressBar, StatusTag, DetailPanel, RelatedItems, Skeleton, useToast } from '../components/Primitives';
 import { MetricCardSkeleton, TableRowSkeleton } from '../components/ui/Skeletons';
 import { Btn } from '../components/Primitives';
@@ -254,7 +255,7 @@ const DivisionDrawerContent: React.FC<{ division: MappedDivision; projectId: str
   );
 };
 
-export const Budget: React.FC = () => {
+const BudgetPage: React.FC = () => {
   const appNavigate = useAppNavigate();
   const navigate = useNavigate();
   const { addToast } = useToast();
@@ -1076,3 +1077,9 @@ export const Budget: React.FC = () => {
     </PageContainer>
   );
 };
+
+export const Budget: React.FC = () => (
+  <ErrorBoundary message="Budget could not be displayed. Check your connection and try again.">
+    <BudgetPage />
+  </ErrorBoundary>
+);

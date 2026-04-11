@@ -14,6 +14,7 @@ import { useCreateRFI, useUpdateRFI } from '../hooks/mutations';
 import { useProjectId } from '../hooks/useProjectId';
 import { useNavigate } from 'react-router-dom';
 import { useCopilotStore } from '../stores/copilotStore';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import { PermissionGate } from '../components/auth/PermissionGate';
 import { AIAnnotationIndicator } from '../components/ai/AIAnnotation';
 import { PredictiveAlertBanner } from '../components/ai/PredictiveAlert';
@@ -87,7 +88,7 @@ const MetaItem: React.FC<{ label: string; children: React.ReactNode }> = ({ labe
   </div>
 );
 
-const RFIs: React.FC = () => {
+const RFIsPage: React.FC = () => {
   const projectId = useProjectId();
   const { setPageContext } = useCopilotStore();
   useEffect(() => { setPageContext('rfis'); }, [setPageContext]);
@@ -1058,6 +1059,12 @@ const RFIs: React.FC = () => {
     </PageContainer>
   );
 };
+
+const RFIs: React.FC = () => (
+  <ErrorBoundary message="RFIs could not be displayed. Check your connection and try again.">
+    <RFIsPage />
+  </ErrorBoundary>
+);
 
 export { RFIs };
 export default RFIs;

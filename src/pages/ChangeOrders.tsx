@@ -17,6 +17,8 @@ import {
 } from '../machines/changeOrderMachine';
 import type { ChangeOrderType, ChangeOrderState, ReasonCode } from '../machines/changeOrderMachine';
 import { PermissionGate } from '../components/auth/PermissionGate';
+import { ErrorBoundary } from '../components/ErrorBoundary';
+import { useCopilotStore } from '../stores/copilotStore';
 import type { MappedChangeOrder } from '../api/endpoints/budget';
 import { useTableKeyboardNavigation } from '../hooks/useTableKeyboardNavigation';
 const fmt = (n: number): string => {
@@ -44,9 +46,11 @@ const REASON_CODES: { value: ReasonCode; label: string }[] = [
   { value: 'unforeseen', label: 'Unforeseen' },
 ];
 
-export const ChangeOrders: React.FC = () => {
+const ChangeOrdersPage: React.FC = () => {
   const { addToast } = useToast();
   const projectId = useProjectId();
+  const { setPageContext } = useCopilotStore();
+  useEffect(() => { setPageContext('change-orders'); }, [setPageContext]);
   const { data: costData, loading: costLoading } = useQuery(`costData-${projectId}`, () => fetchBudgetDivisions(projectId!), { enabled: !!projectId });
   const { data: projectData, loading: projectLoading } = useQuery(`projectData-${projectId}`, () => getProject(projectId!), { enabled: !!projectId });
 
@@ -971,3 +975,9 @@ export const ChangeOrders: React.FC = () => {
     </PageContainer>
   );
 };
+
+export const ChangeOrders: React.FC = () => (
+  <ErrorBoundary message="Change orders could not be displayed. Check your connection and try again.">
+    <ChangeOrdersPage />
+  </ErrorBoundary>
+);
