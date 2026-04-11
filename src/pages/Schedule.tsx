@@ -1562,7 +1562,7 @@ export const Schedule: React.FC = () => {
                 </div>
                 <div style={{ display: 'flex', gap: spacing['3'] }}>
                   <button
-                    onClick={() => addToast('info', 'Phase creation coming soon')}
+                    onClick={() => addToast('info', 'Phase creation available in the next update')}
                     style={{
                       padding: `${spacing.sm} ${spacing.xl}`,
                       backgroundColor: '#F47820',
@@ -1578,7 +1578,7 @@ export const Schedule: React.FC = () => {
                     Create First Phase
                   </button>
                   <button
-                    onClick={() => addToast('info', 'P6/MS Project import coming soon')}
+                    onClick={() => addToast('info', 'P6/MS Project import available in the next update')}
                     style={{
                       padding: `${spacing.sm} ${spacing.xl}`,
                       backgroundColor: 'transparent',
@@ -2049,8 +2049,8 @@ export const Schedule: React.FC = () => {
                   whatIfMode={whatIfMode}
                   isLoading={loading}
                   zoomLevel={zoomLevel}
-                  onImportSchedule={() => addToast('info', 'Schedule import coming soon')}
-                  onAddActivity={() => addToast('info', 'Activity drawer coming soon')}
+                  onImportSchedule={() => addToast('info', 'Schedule import available in the next update')}
+                  onAddActivity={() => addToast('info', 'Activity drawer available in the next update')}
                   onPhaseClick={(phase) => {
                     addToast('info', `${phase.name}: ${phase.progress}% complete`);
                     setScheduleAnnouncement(`Schedule updated: ${phase.name} is now ${(phase.status ?? 'not started').replace(/_/g, ' ')}`);

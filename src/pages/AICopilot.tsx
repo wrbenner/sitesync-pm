@@ -533,18 +533,21 @@ export const AICopilot: React.FC = () => {
                     }}
                   >
                     {[
-                      { icon: <Clipboard size={14} />, label: 'Copy to Clipboard' },
-                      { icon: <Share2 size={14} />, label: 'Share to Activity Feed' },
-                      { icon: <FileText size={14} />, label: 'Export as PDF' },
+                      { icon: <Clipboard size={14} />, label: 'Copy to Clipboard', action: () => {
+                        const text = messages.map((m) => `${m.role === 'user' ? 'You' : 'AI'}: ${m.content}`).join('\n\n');
+                        navigator.clipboard.writeText(text).then(
+                          () => addToast('success', 'Conversation copied to clipboard'),
+                          () => addToast('error', 'Failed to copy to clipboard'),
+                        );
+                      }},
+                      { icon: <Share2 size={14} />, label: 'Share to Activity Feed', action: () => addToast('info', 'Activity feed sharing will be available in the next update') },
+                      { icon: <FileText size={14} />, label: 'Export as PDF', action: () => addToast('info', 'PDF export will be available in the next update') },
                     ].map((item) => (
                       <button
                         role="menuitem"
                         key={item.label}
                         onClick={() => {
-                          addToast(
-                            'success',
-                            `${item.label}: Feature pending configuration`,
-                          )
+                          item.action()
                           setExportOpen(false)
                         }}
                         style={{

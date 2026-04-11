@@ -185,7 +185,7 @@ export const Activity: React.FC = () => {
             <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textSecondary }}>Watching</span>
             <button
               aria-label="Notification preferences"
-              onClick={() => addToast('info', 'Notification preferences feature pending configuration')}
+              onClick={() => addToast('info', 'Notification preferences will be available in the next update')}
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 minWidth: '56px', minHeight: '56px', backgroundColor: 'transparent', border: 'none',

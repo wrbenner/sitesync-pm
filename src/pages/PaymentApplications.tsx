@@ -1644,7 +1644,7 @@ const PayAppDetail = memo<{
         {(appStatus === 'submitted' || appStatus === 'approved') && (
           <PermissionGate permission="financials.edit">
             <button
-              onClick={() => toast.info('PDF generation coming soon')}
+              onClick={() => toast.info('PDF generation available in the next update')}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: spacing['2'],
                 padding: `${spacing['2']} ${spacing['4']}`,

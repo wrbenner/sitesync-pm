@@ -268,7 +268,7 @@ const PhotoOverlay: React.FC<PhotoOverlayProps> = ({ dataUrl, location, isSaving
             />
             <button
               type="button"
-              aria-label="Voice to text (coming soon)"
+              aria-label="Voice to text"
               title="Voice to text"
               style={{
                 position: 'absolute',
@@ -740,11 +740,11 @@ const FieldCaptureInner: React.FC = () => {
   };
 
   const handleBulkExport = () => {
-    addToast('success', 'Export feature coming soon');
+    addToast('success', 'Export feature available in the next update');
   };
 
   const handleBulkLink = () => {
-    addToast('success', 'Bulk link feature coming soon');
+    addToast('success', 'Bulk link feature available in the next update');
   };
 
   const handleCaptureClick = () => {

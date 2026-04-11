@@ -1450,7 +1450,7 @@ const DailyLogPage: React.FC = () => {
                     <button
                       title="Voice input"
                       aria-label="Voice input for work summary"
-                      onClick={() => toast.success('Voice input coming soon')}
+                      onClick={() => toast.success('Voice input available in the next update')}
                       style={{
                         width: '56px', height: '56px', flexShrink: 0,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1503,7 +1503,7 @@ const DailyLogPage: React.FC = () => {
                 <button
                   title="Voice input"
                   aria-label="Voice input for issues and delays"
-                  onClick={() => toast.success('Voice input coming soon')}
+                  onClick={() => toast.success('Voice input available in the next update')}
                   style={{
                     width: '56px', height: '56px', flexShrink: 0,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
