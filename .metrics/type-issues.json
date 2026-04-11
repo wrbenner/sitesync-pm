@@ -1,58 +1,13 @@
 {
   "totals": {
-    "as_any": 13,
-    "ts_ignore": 1,
-    "files": 10
+    "as_any": 2,
+    "ts_ignore": 0,
+    "files": 1
   },
   "files": [
     {
-      "file": "src/components/collaboration/EditConflictGuard.tsx",
-      "as_any": 3,
-      "ts_ignore": 0
-    },
-    {
-      "file": "src/lib/rls.ts",
-      "as_any": 2,
-      "ts_ignore": 0
-    },
-    {
       "file": "src/lib/supabase.ts",
       "as_any": 2,
-      "ts_ignore": 0
-    },
-    {
-      "file": "src/components/files/UploadZone.tsx",
-      "as_any": 0,
-      "ts_ignore": 1
-    },
-    {
-      "file": "src/stores/fileStore.ts",
-      "as_any": 1,
-      "ts_ignore": 0
-    },
-    {
-      "file": "src/pages/admin/UserManagement.tsx",
-      "as_any": 1,
-      "ts_ignore": 0
-    },
-    {
-      "file": "src/hooks/useRealtimeQuery.ts",
-      "as_any": 1,
-      "ts_ignore": 0
-    },
-    {
-      "file": "src/hooks/usePushNotifications.ts",
-      "as_any": 1,
-      "ts_ignore": 0
-    },
-    {
-      "file": "src/hooks/useAgentBuilder.ts",
-      "as_any": 1,
-      "ts_ignore": 0
-    },
-    {
-      "file": "src/api/middleware/projectScope.ts",
-      "as_any": 1,
       "ts_ignore": 0
     }
   ]

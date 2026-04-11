@@ -1,24 +1,14 @@
 {
   "totals": {
     "mock_data": 0,
-    "hardcoded_colors": 570,
-    "files": 48
+    "hardcoded_colors": 404,
+    "files": 47
   },
   "files": [
-    {
-      "file": "src/types/enums.ts",
-      "mock_data": 0,
-      "hardcoded_colors": 70
-    },
     {
       "file": "src/pages/Submittals.tsx",
       "mock_data": 0,
       "hardcoded_colors": 54
-    },
-    {
-      "file": "src/pages/Safety.tsx",
-      "mock_data": 0,
-      "hardcoded_colors": 47
     },
     {
       "file": "src/components/schedule/GanttChart.tsx",
@@ -31,16 +21,6 @@
       "hardcoded_colors": 33
     },
     {
-      "file": "src/pages/ChangeOrders.tsx",
-      "mock_data": 0,
-      "hardcoded_colors": 30
-    },
-    {
-      "file": "src/pages/Budget.tsx",
-      "mock_data": 0,
-      "hardcoded_colors": 26
-    },
-    {
       "file": "src/components/schedule/MobileScheduleView.tsx",
       "mock_data": 0,
       "hardcoded_colors": 25
@@ -48,7 +28,7 @@
     {
       "file": "src/pages/RFIs.tsx",
       "mock_data": 0,
-      "hardcoded_colors": 25
+      "hardcoded_colors": 22
     },
     {
       "file": "src/components/export/DailyLogPDF.tsx",
@@ -71,12 +51,12 @@
       "hardcoded_colors": 15
     },
     {
-      "file": "src/components/export/SafetyReport.tsx",
+      "file": "src/pages/Safety.tsx",
       "mock_data": 0,
-      "hardcoded_colors": 13
+      "hardcoded_colors": 15
     },
     {
-      "file": "src/pages/FieldCapture.tsx",
+      "file": "src/components/export/SafetyReport.tsx",
       "mock_data": 0,
       "hardcoded_colors": 13
     },
@@ -96,22 +76,17 @@
       "hardcoded_colors": 8
     },
     {
-      "file": "src/pages/Drawings.tsx",
-      "mock_data": 0,
-      "hardcoded_colors": 8
-    },
-    {
       "file": "src/api/endpoints/documents.ts",
       "mock_data": 0,
       "hardcoded_colors": 8
     },
     {
-      "file": "src/components/export/SubmittalLog.tsx",
+      "file": "src/components/export/BudgetReport.tsx",
       "mock_data": 0,
       "hardcoded_colors": 7
     },
     {
-      "file": "src/components/export/BudgetReport.tsx",
+      "file": "src/components/export/SubmittalLog.tsx",
       "mock_data": 0,
       "hardcoded_colors": 7
     },
@@ -121,17 +96,22 @@
       "hardcoded_colors": 7
     },
     {
+      "file": "src/pages/Drawings.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 7
+    },
+    {
       "file": "src/components/export/DailyLogReport.tsx",
       "mock_data": 0,
       "hardcoded_colors": 6
     },
     {
-      "file": "src/components/files/UploadZone.tsx",
+      "file": "src/components/drawings/DrawingsEmptyState.tsx",
       "mock_data": 0,
       "hardcoded_colors": 5
     },
     {
-      "file": "src/components/drawings/DrawingsEmptyState.tsx",
+      "file": "src/components/files/UploadZone.tsx",
       "mock_data": 0,
       "hardcoded_colors": 5
     },
@@ -151,6 +131,16 @@
       "hardcoded_colors": 4
     },
     {
+      "file": "src/pages/ChangeOrders.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 4
+    },
+    {
+      "file": "src/pages/FieldCapture.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 3
+    },
+    {
       "file": "src/pages/Files.tsx",
       "mock_data": 0,
       "hardcoded_colors": 3
@@ -161,7 +151,7 @@
       "hardcoded_colors": 2
     },
     {
-      "file": "src/components/drawings/DrawingViewer.tsx",
+      "file": "src/components/ui/ConflictResolutionModal.tsx",
       "mock_data": 0,
       "hardcoded_colors": 2
     },
@@ -176,12 +166,12 @@
       "hardcoded_colors": 2
     },
     {
-      "file": "src/components/ui/ConflictResolutionModal.tsx",
+      "file": "src/components/ui/RealtimeFlash.tsx",
       "mock_data": 0,
       "hardcoded_colors": 2
     },
     {
-      "file": "src/components/ui/RealtimeFlash.tsx",
+      "file": "src/components/drawings/DrawingViewer.tsx",
       "mock_data": 0,
       "hardcoded_colors": 2
     },
@@ -191,17 +181,22 @@
       "hardcoded_colors": 2
     },
     {
+      "file": "src/pages/Dashboard.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 2
+    },
+    {
       "file": "src/pages/Settings/NotificationSettings.tsx",
       "mock_data": 0,
       "hardcoded_colors": 2
     },
     {
-      "file": "src/pages/auth/Login.tsx",
+      "file": "src/pages/auth/Signup.tsx",
       "mock_data": 0,
       "hardcoded_colors": 2
     },
     {
-      "file": "src/pages/auth/Signup.tsx",
+      "file": "src/pages/auth/Login.tsx",
       "mock_data": 0,
       "hardcoded_colors": 2
     },
@@ -221,6 +216,11 @@
       "hardcoded_colors": 1
     },
     {
+      "file": "src/components/drawings/MarkupToolbar.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 1
+    },
+    {
       "file": "src/components/shared/PresenceAvatars.tsx",
       "mock_data": 0,
       "hardcoded_colors": 1
@@ -231,17 +231,12 @@
       "hardcoded_colors": 1
     },
     {
-      "file": "src/components/export/CostReport.tsx",
-      "mock_data": 0,
-      "hardcoded_colors": 1
-    },
-    {
-      "file": "src/components/drawings/MarkupToolbar.tsx",
-      "mock_data": 0,
-      "hardcoded_colors": 1
-    },
-    {
       "file": "src/components/dashboard/widgets/BIMPreviewWidget.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 1
+    },
+    {
+      "file": "src/components/export/CostReport.tsx",
       "mock_data": 0,
       "hardcoded_colors": 1
     }

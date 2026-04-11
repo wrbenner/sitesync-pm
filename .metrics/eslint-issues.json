@@ -1,10 +1,10 @@
 {
   "totals": {
-    "errors": 1063,
+    "errors": 1033,
     "warnings": 52,
     "fixable_errors": 3,
     "fixable_warnings": 9,
-    "files": 193
+    "files": 188
   },
   "files": [
     {
@@ -113,27 +113,6 @@
       ]
     },
     {
-      "file": "src/pages/Budget.tsx",
-      "errors": 27,
-      "warnings": 1,
-      "fixable_errors": 0,
-      "fixable_warnings": 0,
-      "top_rules": [
-        {
-          "rule": "react-hooks/rules-of-hooks",
-          "count": 7
-        },
-        {
-          "rule": "@typescript-eslint/no-unused-vars",
-          "count": 5
-        },
-        {
-          "rule": "jsx-a11y/click-events-have-key-events",
-          "count": 5
-        }
-      ]
-    },
-    {
       "file": "src/pages/DailyLog.tsx",
       "errors": 18,
       "warnings": 7,
@@ -171,6 +150,27 @@
         },
         {
           "rule": "jsx-a11y/no-static-element-interactions",
+          "count": 3
+        }
+      ]
+    },
+    {
+      "file": "src/pages/Budget.tsx",
+      "errors": 23,
+      "warnings": 1,
+      "fixable_errors": 0,
+      "fixable_warnings": 0,
+      "top_rules": [
+        {
+          "rule": "react-hooks/rules-of-hooks",
+          "count": 7
+        },
+        {
+          "rule": "@typescript-eslint/no-unused-vars",
+          "count": 5
+        },
+        {
+          "rule": "@typescript-eslint/no-explicit-any",
           "count": 3
         }
       ]
@@ -526,7 +526,7 @@
       ]
     },
     {
-      "file": "src/pages/Benchmarks.tsx",
+      "file": "src/pages/Dashboard.tsx",
       "errors": 10,
       "warnings": 0,
       "fixable_errors": 0,
@@ -534,7 +534,15 @@
       "top_rules": [
         {
           "rule": "@typescript-eslint/no-unused-vars",
-          "count": 10
+          "count": 3
+        },
+        {
+          "rule": "react-hooks/purity",
+          "count": 3
+        },
+        {
+          "rule": "jsx-a11y/click-events-have-key-events",
+          "count": 2
         }
       ]
     },
@@ -780,40 +788,6 @@
       ]
     },
     {
-      "file": "src/pages/AIAgents.tsx",
-      "errors": 8,
-      "warnings": 0,
-      "fixable_errors": 0,
-      "fixable_warnings": 0,
-      "top_rules": [
-        {
-          "rule": "@typescript-eslint/no-unused-vars",
-          "count": 8
-        }
-      ]
-    },
-    {
-      "file": "src/pages/AICopilot.tsx",
-      "errors": 8,
-      "warnings": 0,
-      "fixable_errors": 0,
-      "fixable_warnings": 0,
-      "top_rules": [
-        {
-          "rule": "@typescript-eslint/no-unused-vars",
-          "count": 6
-        },
-        {
-          "rule": "jsx-a11y/click-events-have-key-events",
-          "count": 1
-        },
-        {
-          "rule": "jsx-a11y/no-static-element-interactions",
-          "count": 1
-        }
-      ]
-    },
-    {
       "file": "src/pages/FieldCapture.tsx",
       "errors": 6,
       "warnings": 2,
@@ -950,6 +924,40 @@
         {
           "rule": "jsx-a11y/no-static-element-interactions",
           "count": 3
+        }
+      ]
+    },
+    {
+      "file": "src/components/dashboard/DashboardGrid.tsx",
+      "errors": 6,
+      "warnings": 0,
+      "fixable_errors": 0,
+      "fixable_warnings": 0,
+      "top_rules": [
+        {
+          "rule": "jsx-a11y/click-events-have-key-events",
+          "count": 2
+        },
+        {
+          "rule": "jsx-a11y/no-static-element-interactions",
+          "count": 2
+        },
+        {
+          "rule": "@typescript-eslint/no-explicit-any",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "file": "src/components/forms/AddContactModal.tsx",
+      "errors": 6,
+      "warnings": 0,
+      "fixable_errors": 0,
+      "fixable_warnings": 0,
+      "top_rules": [
+        {
+          "rule": "jsx-a11y/label-has-associated-control",
+          "count": 6
         }
       ]
     }
