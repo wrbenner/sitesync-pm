@@ -1,3 +1,24 @@
+# Reflection — 2026-04-11
+
+## Nightly Score: 42 / 100
+
+- **success_criteria**: {'points': 23, 'max': 35}
+- **verification**: {'points': 0, 'max': 25}
+- **code_health**: {'points': 12, 'max': 20}
+- **build_integrity**: {'points': 5, 'max': 10}
+- **intelligence_growth**: {'points': 2, 'max': 10}
+
+## Verification Consensus
+
+- Agents reporting: 0 / 4
+- Average score: 0.0 / 10
+- Deploy consensus: NO
+- Critical issues: 0
+- Major issues: 0
+- Minor issues: 0
+
+
+## Builder Self-Reflection
 # Build Session Reflection — 2026-04-11 (Night 6)
 
 ## What Was Built
@@ -36,55 +57,4 @@ and generates intelligence like "RFI 047 is 3 days past due. Ball in court: Arch
   (ai-insights edge function, CopilotPanel context system, ErrorBoundary component) meant
   every edit was surgical. Zero wasted work.
 
-- **Progressive enhancement.** The AI insights work at three levels:
-  1. Edge function running = live AI insights
-  2. Supabase cache = cached insights from last run
-  3. Neither = computed insights from live Supabase data
-  The banner shows something intelligent at every level.
-
-- **The computed insights fallback is the real demo hero.** The edge function requires
-  ANTHROPIC_API_KEY configured. The computed fallback queries live project data and
-  generates real insights. This is what the demo will actually use.
-
-## What Surprised Me
-
-- The `punch_list_items` vs `punch_items` table name mismatch was silent. The computed
-  insights would have returned 0 open punch items during the demo because the query
-  hit the wrong table. This kind of bug is invisible until someone opens the Dashboard
-  with real data and says "why does it say zero punch items?"
-
-- The copilotStore `setPageContext` API was already built and ready. The CopilotPanel
-  already had the context-aware prompt system. The 4 dead-zone pages just needed a
-  one-line useEffect. This is what good architecture looks like: the hard part was
-  already done, the wiring was trivial.
-
-## What Failed
-
-Nothing failed. Zero reverts. Every commit passed TypeScript, build, and tests.
-The pre-existing test failures (7 tests in permissions and lifecycle suites)
-are unrelated to tonight's work.
-
-## Demo Readiness Assessment
-
-| Criterion | Status |
-|-----------|--------|
-| Dashboard shows AI insights above the fold | DONE |
-| All 9 pages have contextual copilot prompts | DONE |
-| No page white-screens on error | DONE |
-| No visible stubs or "pending" toasts | DONE |
-| Insights reference real entity names | DONE |
-| TypeScript errors | 0 |
-| Build | PASS |
-| as any casts | 0 (the 1 remaining is a comment in supabase.ts) |
-
-## What Night 7 Should Focus On
-
-1. **Verify AI Copilot conversation works end to end.** The multi-agent orchestrator
-   edge function exists and is properly wired. But during a live demo, the response
-   quality matters. Test with real prompts from each page context.
-
-2. **Polish the copilot response rendering.** The PanelMessageRenderer shows agent
-   messages, tool results, and generative UI blocks. Make sure these look good.
-
-3. **Demo rehearsal.** Walk through every page as if you are the GC. Time each
-   interaction. Find the friction.
+- **Progressive enhancemen

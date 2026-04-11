@@ -1,0 +1,96 @@
+{
+  "timestamp": "2026-04-11T08:12:36.151757+00:00",
+  "score": 42,
+  "max_score": 100,
+  "percentage": 42.0,
+  "breakdown": {
+    "success_criteria": {
+      "points": 23,
+      "max": 35
+    },
+    "verification": {
+      "points": 0,
+      "max": 25
+    },
+    "code_health": {
+      "points": 12,
+      "max": 20
+    },
+    "build_integrity": {
+      "points": 5,
+      "max": 10
+    },
+    "intelligence_growth": {
+      "points": 2,
+      "max": 10
+    }
+  },
+  "details": {
+    "success_criteria": {
+      "max_points": 35,
+      "points": 23,
+      "criteria_found": 3,
+      "criteria_met": 2,
+      "details": [
+        {
+          "criterion": "**The Dashboard shows at least 2 AI-generated insights above the fold that reference real project da",
+          "met": true,
+          "confidence": 0.58
+        },
+        {
+          "criterion": "**The AI Copilot from any of the 9 demo pages shows page-contextual suggested prompts.** Verificatio",
+          "met": true,
+          "confidence": 0.5
+        },
+        {
+          "criterion": "**No demo page white-screens on query failure.** Verification: temporarily break the Supabase connec",
+          "met": false,
+          "confidence": 0.3
+        }
+      ]
+    },
+    "verification": {
+      "max_points": 25,
+      "points": 0,
+      "details": {
+        "agents_reporting": 0,
+        "average_score": 0.0,
+        "base_points": 0,
+        "coverage_points": 0,
+        "critical_penalty": 0,
+        "major_penalty": 0,
+        "critical_issues": 0,
+        "major_issues": 0
+      }
+    },
+    "code_health": {
+      "max_points": 20,
+      "points": 12,
+      "details": {
+        "unsafe_casts": 27,
+        "cast_points": 1,
+        "mock_count": 1,
+        "mock_points": 5,
+        "test_cases": 576,
+        "test_points": 6
+      }
+    },
+    "build_integrity": {
+      "max_points": 10,
+      "points": 5,
+      "details": [
+        "Build status unclear or failing",
+        "No regressions detected"
+      ]
+    },
+    "intelligence_growth": {
+      "max_points": 10,
+      "points": 2,
+      "details": [
+        "Skills in library: 5",
+        "No intelligence signals detected in product"
+      ]
+    }
+  },
+  "grade": "F"
+}

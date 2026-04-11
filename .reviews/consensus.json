@@ -1,0 +1,13 @@
+{
+  "timestamp": "2026-04-11T08:12:36Z",
+  "agents_reporting": 0,
+  "perspectives": [],
+  "scores": {},
+  "average_score": 0.0,
+  "deploy_votes": [],
+  "consensus_deploy": false,
+  "critical_issues": [],
+  "major_issues": [],
+  "minor_issues": [],
+  "total_issues": 0
+}
