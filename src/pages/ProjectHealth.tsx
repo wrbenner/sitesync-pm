@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { TrendingUp, TrendingDown, Minus, Sparkles, ChevronRight, Share2, FileText, Link, Send } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, Sparkles, ChevronRight, Share2, FileText, Link, Send, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { PageContainer, Card, SectionHeader, Btn, useToast, Skeleton } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, transitions, shadows } from '../styles/theme';
@@ -61,8 +61,8 @@ export const ProjectHealth: React.FC = () => {
   const [shareOpen, setShareOpen] = useState(false);
 
   const projectId = useProjectId();
-  const { data: schedulePhases, isLoading: loadingSchedule } = useSchedulePhases(projectId);
-  const { data: budgetItems, isLoading: loadingBudget } = useBudgetItems(projectId);
+  const { data: schedulePhases, isLoading: loadingSchedule, isError: errorSchedule } = useSchedulePhases(projectId);
+  const { data: budgetItems, isLoading: loadingBudget, isError: errorBudget } = useBudgetItems(projectId);
   const { data: punchItemsResult } = usePunchItems(projectId);
   const { data: rfisResult } = useRFIs(projectId);
   const { data: dailyLogsResult } = useDailyLogs(projectId);
@@ -71,6 +71,7 @@ export const ProjectHealth: React.FC = () => {
   const { data: drawings } = useDrawings(projectId);
 
   const isLoading = loadingSchedule || loadingBudget;
+  const isError = errorSchedule || errorBudget;
 
   const { dimensions, overallScore } = useMemo(() => {
     // ── Schedule Health ──
@@ -265,6 +266,21 @@ export const ProjectHealth: React.FC = () => {
             ))}
           </div>
         </div>
+      </PageContainer>
+    );
+  }
+
+  if (isError) {
+    return (
+      <PageContainer title="Project Health" subtitle="Health score and diagnostics">
+        <Card>
+          <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'], padding: spacing['4'], color: colors.statusCritical }}>
+            <AlertCircle size={20} />
+            <span style={{ fontSize: typography.fontSize.body, color: colors.textSecondary }}>
+              Unable to load project health data. Check your connection and try again.
+            </span>
+          </div>
+        </Card>
       </PageContainer>
     );
   }

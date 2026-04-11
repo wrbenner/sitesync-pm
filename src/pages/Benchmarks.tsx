@@ -82,9 +82,9 @@ const BenchmarkCard = memo<{ comparison: BenchmarkComparison }>(({ comparison })
 
         {/* Labels */}
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: spacing['2'] }}>
-          <span style={{ fontSize: '9px', color: colors.statusActive }}>Best (P25)</span>
-          <span style={{ fontSize: '9px', color: colors.textTertiary }}>Median</span>
-          <span style={{ fontSize: '9px', color: colors.statusCritical }}>Worst (P75)</span>
+          <span style={{ fontSize: typography.fontSize.caption, color: colors.statusActive }}>Best (P25)</span>
+          <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Median</span>
+          <span style={{ fontSize: typography.fontSize.caption, color: colors.statusCritical }}>Worst (P75)</span>
         </div>
       </div>
     </Card>
@@ -141,8 +141,8 @@ const SubProfileCard = memo<{ profile: SubcontractorProfile }>(({ profile }) => 
               return (
                 <div key={m.label}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: spacing['0.5'] }}>
-                    <span style={{ fontSize: '9px', color: colors.textTertiary }}>{m.label}</span>
-                    <span style={{ fontSize: '9px', fontWeight: typography.fontWeight.semibold, color: colors.textSecondary }}>{Math.round(m.value)}{m.suffix}</span>
+                    <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{m.label}</span>
+                    <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textSecondary }}>{Math.round(m.value)}{m.suffix}</span>
                   </div>
                   <div style={{ height: 3, backgroundColor: colors.surfaceInset, borderRadius: borderRadius.full }}>
                     <div style={{ height: '100%', width: `${m.value}%`, backgroundColor: barColor, borderRadius: borderRadius.full }} />

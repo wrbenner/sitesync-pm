@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback, memo } from 'react'
 import {
   Bot, Play, Pause, Activity, Shield,
   Calendar, DollarSign, ShieldCheck, ClipboardCheck, Scale, FileSearch,
-  Zap,
+  Zap, AlertCircle,
 } from 'lucide-react'
 import { PageContainer, Card, SectionHeader, MetricBox, Skeleton, EmptyState } from '../components/Primitives'
 import { DataTable, createColumnHelper } from '../components/shared/DataTable'
@@ -514,8 +514,8 @@ const TOOL_REGISTRY: Record<
 export const AIAgents: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('overview')
   const projectId = useProjectId()
-  const { isLoading: loadingAgents } = useAIAgents(projectId)
-  const { data: dbActions, isLoading: loadingActions } = useAIAgentActions(projectId)
+  const { isLoading: loadingAgents, isError: errorAgents } = useAIAgents(projectId)
+  const { data: dbActions, isLoading: loadingActions, isError: errorActions } = useAIAgentActions(projectId)
   const { agentStates, setAgentStatus } = useAgentOrchestrator()
 
   // Compute metrics from DB + local state
@@ -564,6 +564,25 @@ export const AIAgents: React.FC = () => {
   }, [dbActions])
 
   const isLoading = loadingAgents || loadingActions
+  const isError = errorAgents || errorActions
+
+  if (isError) {
+    return (
+      <PageContainer
+        title="AI Agents"
+        subtitle="Your team of 6 specialist agents"
+      >
+        <Card padding={spacing['4']}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'], color: colors.statusCritical }}>
+            <AlertCircle size={20} />
+            <span style={{ fontSize: typography.fontSize.body, color: colors.textSecondary }}>
+              Unable to load agent data. Check your connection and try again.
+            </span>
+          </div>
+        </Card>
+      </PageContainer>
+    )
+  }
 
   return (
     <PageContainer

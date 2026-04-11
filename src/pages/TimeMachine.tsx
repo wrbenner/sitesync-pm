@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Play, Pause, SkipForward, Columns, Flag, DollarSign, Users, HelpCircle, Camera, Calendar, Sparkles } from 'lucide-react';
+import { Play, Pause, SkipForward, Columns, Flag, DollarSign, Users, HelpCircle, Camera, Calendar, Sparkles, AlertCircle } from 'lucide-react';
 import { PageContainer, Card, Btn, ProgressBar, Skeleton, EmptyState } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme';
 import { useAnimatedNumber } from '../hooks/useAnimatedNumber';
@@ -92,7 +92,7 @@ const snapshotPhotos = [
 
 export const TimeMachine: React.FC = () => {
   const projectId = useProjectId();
-  const { data: rawSnapshots, isLoading: loadingSnapshots } = useProjectSnapshots(projectId);
+  const { data: rawSnapshots, isLoading: loadingSnapshots, isError: errorSnapshots } = useProjectSnapshots(projectId);
 
   const snapshots = useMemo(() => {
     const mapped = (rawSnapshots ?? [])
@@ -157,6 +157,21 @@ export const TimeMachine: React.FC = () => {
           <Skeleton width="100%" height="200px" />
           <Skeleton width="100%" height="400px" />
         </div>
+      </PageContainer>
+    );
+  }
+
+  if (errorSnapshots) {
+    return (
+      <PageContainer title="Time Machine" subtitle="Scrub through your project history">
+        <Card>
+          <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'], padding: spacing['4'], color: colors.statusCritical }}>
+            <AlertCircle size={20} />
+            <span style={{ fontSize: typography.fontSize.body, color: colors.textSecondary }}>
+              Unable to load project snapshots. Check your connection and try again.
+            </span>
+          </div>
+        </Card>
       </PageContainer>
     );
   }
