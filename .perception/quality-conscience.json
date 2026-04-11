@@ -1,0 +1,49 @@
+{
+  "timestamp": "2026-04-11T08:07:06Z",
+  "diff_summary": {
+    "files_changed": 1,
+    "lines_added": 84,
+    "lines_removed": 48,
+    "files": [
+      "src/api/endpoints/ai.ts"
+    ]
+  },
+  "dimensions": {
+    "completeness": {
+      "score": 8.0,
+      "issues": [
+        "Wired to Supabase but no UI to display the data — invisible change"
+      ],
+      "checks_run": 5
+    },
+    "craftsmanship": {
+      "score": 10.0,
+      "issues": [],
+      "checks_run": 8
+    },
+    "user_impact": {
+      "score": 9.0,
+      "issues": [
+        "Changes 1 backend file(s) — wires up real functionality",
+        "Touches demo-relevant area(s): rfi, submittal, schedule, project, punch list"
+      ],
+      "checks_run": 5
+    },
+    "pride": {
+      "score": 10.0,
+      "issues": [
+        "Clean, focused commit with high completeness and craftsmanship"
+      ],
+      "checks_run": 4
+    }
+  },
+  "verdict": "PASS",
+  "average_score": 9.2,
+  "scores": {
+    "completeness": 8.0,
+    "craftsmanship": 10.0,
+    "user_impact": 9.0,
+    "pride": 10.0
+  },
+  "improvement": ""
+}
