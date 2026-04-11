@@ -134,10 +134,58 @@ const ProtectedRoute: React.FC<Props> = ({ children, requiredPermission, moduleI
   const { hasPermission, loading: permissionsLoading } = usePermissions()
   const location = useLocation()
 
-  if ((authLoading || permissionsLoading) && !isDevBypassActive()) {
+  // Auth timeout: if auth/permissions loading takes >8 seconds, stop waiting.
+  // This prevents the entire app from being stuck in skeleton state when
+  // Supabase is misconfigured or network is down.
+  const [authTimedOut, setAuthTimedOut] = useState(false)
+  useEffect(() => {
+    if (!authLoading && !permissionsLoading) return
+    const timer = setTimeout(() => setAuthTimedOut(true), 8000)
+    return () => clearTimeout(timer)
+  }, [authLoading, permissionsLoading])
+
+  const isLoading = (authLoading || permissionsLoading) && !authTimedOut
+
+  if (isLoading && !isDevBypassActive()) {
     return (
       <div aria-live="polite">
         <SkeletonLoader ariaLabel="Verifying access" />
+      </div>
+    )
+  }
+
+  // If auth timed out and we still have no user, show an error with retry
+  if (authTimedOut && !user && !isDevBypassActive()) {
+    return (
+      <div style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        minHeight: '60vh', textAlign: 'center', padding: spacing['6'],
+      }}>
+        <h2 style={{
+          fontSize: typography.fontSize.subtitle, fontWeight: typography.fontWeight.semibold,
+          color: colors.textPrimary, margin: 0, marginBottom: spacing['2'],
+        }}>
+          Connection Issue
+        </h2>
+        <p style={{
+          fontSize: typography.fontSize.body, color: colors.textSecondary,
+          margin: 0, marginBottom: spacing['5'], maxWidth: 400,
+        }}>
+          Unable to verify your session. Check your connection and try again.
+        </p>
+        <button
+          onClick={() => window.location.reload()}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: spacing['2'],
+            minHeight: 56, backgroundColor: colors.primaryOrange, color: colors.white,
+            border: 'none', borderRadius: borderRadius.md,
+            padding: `${spacing['2']} ${spacing['5']}`,
+            fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium,
+            cursor: 'pointer', fontFamily: typography.fontFamily,
+          }}
+        >
+          Retry
+        </button>
       </div>
     )
   }
