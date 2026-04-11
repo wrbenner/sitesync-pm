@@ -533,13 +533,18 @@ const InsightRow: React.FC<{ insight: AIInsight; onClick?: () => void }> = ({ in
 };
 
 const AIInsightsBanner: React.FC<{ insights: AIInsight[]; navigate: (path: string) => void }> = ({ insights, navigate }) => {
-  const topInsights = insights
+  // Show real insights first; if none, show onboarding placeholders so the banner is never empty
+  const realInsights = insights
     .filter((i) => !i.dismissed && !i.isPlaceholder)
     .sort((a, b) => {
       const sevOrder: Record<string, number> = { critical: 0, warning: 1, info: 2 };
       return (sevOrder[a.severity] ?? 2) - (sevOrder[b.severity] ?? 2);
     })
     .slice(0, 3);
+
+  const topInsights = realInsights.length > 0
+    ? realInsights
+    : insights.filter((i) => !i.dismissed).slice(0, 3);
 
   if (topInsights.length === 0) return null;
 
@@ -635,15 +640,22 @@ const DashboardInner: React.FC = () => {
   const navigate = useNavigate();
   const reducedMotion = useReducedMotion();
 
-  const { data: project } = useProject(projectId);
+  const { data: project, isError: projectError, error: projectErrorObj } = useProject(projectId);
   const { data: insightsData } = useAiInsightsMeta(projectId);
   // Single batched query against the project_metrics materialized view.
-  const { data: matViewMetrics, isPending: metricsLoading } = useProjectMetrics(projectId);
+  const { data: matViewMetrics, isPending: metricsLoading, isError: metricsError } = useProjectMetrics(projectId);
   const { data: payApps } = usePayApplications(projectId);
   const { data: lienWaivers } = useLienWaivers(projectId);
 
   // Fallback: live counts when materialized view has no data for this project
   const { data: liveMetrics } = useLiveMetricsFallback(projectId, !!matViewMetrics);
+
+  // Timeout: never show skeleton for more than 5 seconds
+  const [skeletonTimedOut, setSkeletonTimedOut] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setSkeletonTimedOut(true), 5000);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Merge: prefer materialized view, fall back to live counts
   const metrics = useMemo(() => {
@@ -766,7 +778,59 @@ const DashboardInner: React.FC = () => {
   const animSafety = useAnimatedNumber(safetyScore);
   const animFieldActivity = useAnimatedNumber(fieldActivity);
 
-  if (!project || metricsLoading) return <DashboardSkeleton />;
+  // Show error state if the project query itself failed
+  if (projectError) {
+    return (
+      <PageContainer>
+        <div
+          role="alert"
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minHeight: '40vh',
+            textAlign: 'center',
+            padding: spacing['8'],
+          }}
+        >
+          <AlertCircle size={40} color={colors.statusCritical} style={{ marginBottom: spacing['4'] }} />
+          <h2 style={{ margin: 0, marginBottom: spacing['2'], fontSize: typography.fontSize.heading, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+            Unable to load project
+          </h2>
+          <p style={{ margin: 0, marginBottom: spacing['6'], fontSize: typography.fontSize.sm, color: colors.textSecondary, maxWidth: 400 }}>
+            {projectErrorObj?.message || 'Check your connection and try again.'}
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: spacing['2'],
+              padding: `${spacing['3']} ${spacing['6']}`,
+              minHeight: 56,
+              backgroundColor: colors.primaryOrange,
+              color: colors.white,
+              border: 'none',
+              borderRadius: borderRadius.lg,
+              fontSize: typography.fontSize.sm,
+              fontWeight: typography.fontWeight.semibold,
+              fontFamily: typography.fontFamily,
+              cursor: 'pointer',
+            }}
+          >
+            Retry
+          </button>
+        </div>
+      </PageContainer>
+    );
+  }
+
+  // Show skeleton only while project is genuinely loading (not errored, not timed out)
+  if (!project && !skeletonTimedOut) return <DashboardSkeleton />;
+
+  // If metrics are loading but the project loaded (or timed out), proceed with zero metrics
+  // instead of blocking the entire dashboard
 
   const motionProps = reducedMotion ? {} : {
     variants: staggerContainer,
@@ -804,7 +868,7 @@ const DashboardInner: React.FC = () => {
               lineHeight: typography.lineHeight.tight,
             }}
           >
-            {project.name}
+            {project?.name ?? 'Project Dashboard'}
           </h1>
           <p
             style={{
