@@ -633,6 +633,88 @@ const AIInsightsBanner: React.FC<{ insights: AIInsight[]; navigate: (path: strin
   );
 };
 
+// ── Deterministic Insights Fallback (metrics only, no AI) ──────
+
+const DeterministicInsightsBanner: React.FC<{
+  metrics: import('../types/api').ProjectMetrics;
+  navigate: (path: string) => void;
+}> = ({ metrics, navigate }) => {
+  const insights: AIInsight[] = [];
+  const now = new Date().toISOString();
+
+  if ((metrics.rfis_overdue ?? 0) > 0) {
+    insights.push({
+      id: 'det-rfi',
+      type: 'risk',
+      severity: (metrics.rfis_overdue ?? 0) > 5 ? 'critical' : 'warning',
+      title: `${metrics.rfis_overdue} overdue RFI${(metrics.rfis_overdue ?? 0) === 1 ? '' : 's'} need response`,
+      description: 'Overdue RFIs can block field work and push the schedule. Review and respond to prevent downstream delays.',
+      affectedEntities: [],
+      suggestedAction: 'Open RFIs to review overdue items',
+      confidence: 0.9,
+      source: 'computed',
+      createdAt: now,
+      dismissed: false,
+    });
+  }
+
+  if ((metrics.punch_open ?? 0) > 0) {
+    insights.push({
+      id: 'det-punch',
+      type: 'action_needed',
+      severity: (metrics.punch_open ?? 0) > 10 ? 'critical' : (metrics.punch_open ?? 0) > 5 ? 'warning' : 'info',
+      title: `${metrics.punch_open} open punch list item${(metrics.punch_open ?? 0) === 1 ? '' : 's'} require resolution`,
+      description: 'Open punch items must be cleared before substantial completion and closeout.',
+      affectedEntities: [],
+      suggestedAction: 'Open Punch List to review open items',
+      confidence: 0.85,
+      source: 'computed',
+      createdAt: now,
+      dismissed: false,
+    });
+  }
+
+  const budgetPct = (metrics.budget_total ?? 0) > 0
+    ? Math.round(((metrics.budget_spent ?? 0) / (metrics.budget_total ?? 1)) * 100)
+    : 0;
+  if (budgetPct > 85) {
+    insights.push({
+      id: 'det-budget',
+      type: 'budget_risk',
+      severity: budgetPct > 95 ? 'critical' : 'warning',
+      title: `Budget is ${budgetPct}% utilized`,
+      description: `$${Math.round((metrics.budget_spent ?? 0) / 1000).toLocaleString()}K spent of $${Math.round((metrics.budget_total ?? 0) / 1000).toLocaleString()}K total. Monitor closely and review change order exposure.`,
+      affectedEntities: [],
+      suggestedAction: 'Open Budget to review cost variance',
+      confidence: 0.85,
+      source: 'computed',
+      createdAt: now,
+      dismissed: false,
+    });
+  }
+
+  if ((metrics.schedule_variance_days ?? 0) < 0) {
+    const days = Math.abs(metrics.schedule_variance_days ?? 0);
+    insights.push({
+      id: 'det-schedule',
+      type: 'schedule_risk',
+      severity: days > 14 ? 'critical' : days > 7 ? 'warning' : 'info',
+      title: `Schedule is ${days} day${days === 1 ? '' : 's'} behind`,
+      description: 'Schedule delays cascade into downstream trades. Review the critical path and consider acceleration strategies.',
+      affectedEntities: [],
+      suggestedAction: 'Open Schedule to review impacted phases',
+      confidence: 0.85,
+      source: 'computed',
+      createdAt: now,
+      dismissed: false,
+    });
+  }
+
+  if (insights.length === 0) return null;
+
+  return <AIInsightsBanner insights={insights} navigate={navigate} />;
+};
+
 // ── Dashboard Inner (has a project) ─────────────────────
 
 const DashboardInner: React.FC = () => {
@@ -917,9 +999,11 @@ const DashboardInner: React.FC = () => {
       </motion.div>
 
       {/* ── AI Insights (above the fold) ────────────────── */}
-      {insightsData?.insights && insightsData.insights.length > 0 && (
+      {insightsData?.insights && insightsData.insights.length > 0 ? (
         <AIInsightsBanner insights={insightsData.insights} navigate={navigate} />
-      )}
+      ) : metrics ? (
+        <DeterministicInsightsBanner metrics={metrics} navigate={navigate} />
+      ) : null}
 
       {/* ── Metric Strip ──────────────────────────────────── */}
       <motion.div
