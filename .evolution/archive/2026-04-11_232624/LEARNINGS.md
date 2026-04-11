@@ -186,25 +186,3 @@ Final module scores (Cycle 9): All modules at 50/100 baseline after reset.
   EVIDENCE: Build integrity scored 5/10 with note "Build status unclear or failing" despite no regressions detected. The scoring system needs an explicit green build signal.
   ACTION: Ensure `npm run build` runs and succeeds as part of the nightly pipeline before scoring. A passing build must be machine verifiable, not inferred.
 
-## Night 7 Learnings (2026-04-11 evening)
-
-<!-- Added 2026-04-11 | Source: Score regression 42→34 despite 5 demo-polish commits -->
-- [2026-04-11] LEARNING: Demo polish (error states, stub cleanup, skeleton timeouts) does not move the nightly score. The scoring rubric rewards capabilities (conflict intelligence, weather integration, verification agents), not error handling or UX fixes. Polish is necessary for the April 15 demo but diverges from what the scoring system measures.
-  EVIDENCE: Night 7 scored 34/100 (down from 42). 5 commits fixed skeleton traps, added error fallbacks, cleaned stub messages, and added auth timeout. Success criteria unchanged: conflict intelligence (unmet), weather widget (unmet), silent failure prevention (met, same as Night 6). Net effect on score: negative, because code_health dropped (27 `as any` casts vs previous baseline) while no new capability was added.
-  ACTION: Separate "demo readiness" from "organism score." Polish sessions should be tagged explicitly and not expected to improve nightly scores. Score improvement requires building the capabilities the rubric measures.
-
-<!-- Added 2026-04-11 | Source: 2 consecutive nights with 0/4 verification agents -->
-- [2026-04-11] LEARNING: The verification pipeline has been broken for at least 2 consecutive nights. This is no longer a one off. 50 total points forfeited across Nights 6 and 7 from verification alone. This single infrastructure failure is worth more than any 3 feature commits combined.
-  EVIDENCE: Night 6: 0/25 verification. Night 7: 0/25 verification. No agents reporting in either consensus.json. The workflow either fails silently or never triggers.
-  ACTION: Before the next nightly build, manually test `.github/workflows/` verification steps locally. If the workflow depends on secrets or API keys, verify they are configured in the repository settings. This is the highest leverage fix in the system.
-
-<!-- Added 2026-04-11 | Source: Commits 9b66222, ceecd5f, 4563a2d — timeout pattern across 3 components -->
-- [2026-04-11] LEARNING: Loading state timeouts are a reliable pattern for preventing skeleton traps. Three components now use this: Dashboard (5s timeout), Schedule (error check before loading check), ProtectedRoute (8s auth timeout). The pattern is: set a timer on mount, if loading is still true when it fires, force an error/fallback state.
-  EVIDENCE: Dashboard skeleton trap fixed with 5s timeout (commit 9b66222). Schedule skeleton trap fixed with error priority over loading (commit ceecd5f). Auth skeleton trap fixed with 8s timeout (commit 4563a2d). All three followed the same pattern independently.
-  ACTION: Standardize a `useLoadingTimeout(ms)` hook that returns `hasTimedOut`. Apply to any component with a loading gate. Default timeout: 8 seconds for auth, 5 seconds for data queries.
-
-<!-- Added 2026-04-11 | Source: `as any` count grew from ~14 (Night 2) to 27 (Night 7) -->
-- [2026-04-11] LEARNING: Type safety regresses silently when new code is added without the `fromTable<T>()` pattern. The `as any` count grew from ~14 after Night 2 cleanup to 27 by Night 7. New features introduced casts that the nightly process did not catch.
-  EVIDENCE: Night 2 ended with ~14 `as any` casts after EVO-001 and EVO-002. Night 7 code_health shows 27 unsafe casts. cast_points dropped to 1/5. The new code from Nights 3 through 7 reintroduced casts.
-  ACTION: Add a pre-commit or CI check that fails if `as any` count exceeds current floor. The quality ratchet must include `as any` count as a gated metric, not just a measured one.
-

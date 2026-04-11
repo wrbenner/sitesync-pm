@@ -53,16 +53,6 @@
       "metric_after": "Entity-specific insights: 'RFI 047 is 3 days past due. Ball in court: Architect'. Copilot context on 9/9 pages. Dashboard AI banner live.",
       "approach": "Read existing infrastructure first (10 min). Surgical edits to computed insights fallback chain, copilot context setters, and error boundary wrappers. 4 focused commits.",
       "lesson": "AI intelligence that references specific entities passes the Amazon Test. Generic counts do not. Always query for entity identifiers. Reading before building eliminates wasted work."
-    },
-    {
-      "id": "EVO-006",
-      "night": 7,
-      "date": "2026-04-11",
-      "description": "Demo-polish session: fixed skeleton traps in Dashboard (5s timeout), Schedule (error priority), and ProtectedRoute (8s auth timeout). Added deterministic insights fallback. Cleaned 7 stub messages across demo pages. Implemented working clipboard export for Copilot.",
-      "metric_before": "Score: 42/100. Multiple pages had infinite skeleton states on query failure. 7 pages showed 'Feature pending configuration' stubs.",
-      "metric_after": "Score: 34/100. All demo pages now have error fallbacks and timeouts. No stub messages visible. But score decreased because polish doesn't address capability criteria.",
-      "approach": "Targeted the most visible demo failures first. Each fix was a focused commit. Prioritized 'no blank pages' over 'new capabilities'.",
-      "lesson": "Polish and score improvement are orthogonal concerns. Polish is critical for demos but does not earn points in the current scoring system. The loading timeout pattern (PAT-007) emerged organically from 3 independent fixes — it should be a shared hook."
     }
   ],
   "killed_approaches": [
@@ -86,13 +76,6 @@
       "date": "2026-04-06",
       "source": "CI failure investigation",
       "alternative": "Always use 'rm -f package-lock.json && npm install' in CI."
-    },
-    {
-      "id": "KILL-004",
-      "description": "Expecting demo-polish sessions to improve nightly scores. The scoring rubric rewards capability additions (conflict intelligence, weather integration, verification), not error handling or UX fixes. Night 7 scored 34 (down from 42) after 5 polish commits.",
-      "date": "2026-04-11",
-      "source": "Night 7 score regression",
-      "alternative": "Tag polish sessions explicitly. Track demo readiness separately from organism score. Only expect score improvements from capability work or infrastructure fixes (verification pipeline)."
     }
   ],
   "patterns": [
@@ -143,14 +126,6 @@
       "applies_to": "all AI insight generation and computed intelligence",
       "discovered": "2026-04-11",
       "source": "Night 6 organism — Amazon Test application"
-    },
-    {
-      "id": "PAT-007",
-      "name": "Loading state timeout to prevent skeleton traps",
-      "description": "Any component gated by a loading boolean must have a timeout. On mount, start a timer. If loading is still true when timer fires, force error/fallback state. Auth routes: 8s. Data queries: 5s. Check error state before loading state in render logic. Pattern: `const [timedOut, setTimedOut] = useState(false); useEffect(() => { const t = setTimeout(() => setTimedOut(true), ms); return () => clearTimeout(t); }, []);`",
-      "applies_to": "all components with loading skeleton gates",
-      "discovered": "2026-04-11",
-      "source": "Night 7 — 3 independent skeleton trap fixes confirmed the pattern"
     }
   ],
   "nightly_entries": [
@@ -165,18 +140,6 @@
       "evolution_applied": "Added entity-specific AI insights pattern (PAT-006), enhanced computed insights fallback chain, wired copilot context on all 9 demo pages, added error boundaries on all demo pages, replaced export stubs with working clipboard action",
       "biggest_bottleneck": "Verification pipeline: 0/4 agents reporting = 25 points forfeited (25% of total)",
       "next_priority": "Fix multi-agent verification workflow to stop forfeiting 25 points per night"
-    },
-    {
-      "date": "2026-04-11",
-      "night": 7,
-      "score": 34,
-      "grade": "F",
-      "commits": 5,
-      "critical_issues": 0,
-      "learnings_added": 4,
-      "evolution_applied": "Demo-polish session: fixed 3 skeleton traps (dashboard, schedule, auth), added deterministic insights fallback, cleaned 7 stub messages, added auth timeout. Score regressed because polish doesn't address scoring criteria (conflict intelligence, weather, verification).",
-      "biggest_bottleneck": "Scoring rubric misalignment: 5 useful fixes produced a score decrease. Verification still 0/4 (now 2 consecutive nights, 50 points forfeited total).",
-      "next_priority": "1) Fix verification pipeline (25 pts/night). 2) Add as-any count to quality ratchet gate. 3) Do NOT expect score improvement from polish work."
     }
   ]
 }
