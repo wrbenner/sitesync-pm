@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check, Clock, X } from 'lucide-react';
+import { Check, Clock, X, GitBranch } from 'lucide-react';
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
 
 export interface ApprovalStep {
@@ -14,6 +14,8 @@ export interface ApprovalStep {
 
 interface ApprovalChainProps {
   steps: ApprovalStep[];
+  loading?: boolean;
+  emptyMessage?: string;
 }
 
 const statusConfig: Record<string, { icon: React.ReactNode; color: string; bg: string; label: string }> = {
@@ -23,14 +25,92 @@ const statusConfig: Record<string, { icon: React.ReactNode; color: string; bg: s
   waiting: { icon: <Clock size={10} />, color: colors.textTertiary, bg: colors.surfaceInset, label: 'Waiting' },
 };
 
-export const ApprovalChain: React.FC<ApprovalChainProps> = ({ steps }) => {
+const SkeletonRow: React.FC<{ isLast?: boolean }> = ({ isLast = false }) => (
+  <div style={{ display: 'flex', alignItems: 'flex-start', gap: spacing['3'], position: 'relative' }}>
+    {!isLast && (
+      <div style={{
+        position: 'absolute', left: 13, top: 30, bottom: -4,
+        width: 2, backgroundColor: colors.borderSubtle,
+      }} />
+    )}
+    <div style={{
+      width: 28, height: 28, borderRadius: '50%',
+      backgroundColor: colors.surfaceInset,
+      flexShrink: 0, zIndex: 1,
+      animation: 'approvalSkeletonPulse 1.4s ease-in-out infinite',
+    }} />
+    <div style={{ flex: 1, paddingBottom: isLast ? 0 : spacing['4'] }}>
+      <div style={{
+        height: 14, width: '60%', borderRadius: borderRadius.sm,
+        backgroundColor: colors.surfaceInset,
+        animation: 'approvalSkeletonPulse 1.4s ease-in-out infinite',
+        marginBottom: spacing['1'],
+      }} />
+      <div style={{
+        height: 12, width: '40%', borderRadius: borderRadius.sm,
+        backgroundColor: colors.surfaceInset,
+        animation: 'approvalSkeletonPulse 1.4s ease-in-out infinite 0.2s',
+      }} />
+    </div>
+  </div>
+);
+
+export const ApprovalChain: React.FC<ApprovalChainProps> = ({
+  steps,
+  loading = false,
+  emptyMessage = 'No approval steps configured',
+}) => {
+  if (loading) {
+    return (
+      <>
+        <style>{`@keyframes approvalSkeletonPulse { 0%,100%{opacity:1} 50%{opacity:0.45} }`}</style>
+        <div
+          role="status"
+          aria-label="Loading approval chain"
+          aria-busy="true"
+          style={{ display: 'flex', flexDirection: 'column', gap: 0 }}
+        >
+          <SkeletonRow />
+          <SkeletonRow />
+          <SkeletonRow isLast />
+        </div>
+      </>
+    );
+  }
+
+  if (steps.length === 0) {
+    return (
+      <div
+        role="status"
+        style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          gap: spacing['2'], padding: `${spacing['6']} ${spacing['4']}`,
+          color: colors.textTertiary, textAlign: 'center',
+        }}
+      >
+        <GitBranch size={20} aria-hidden="true" style={{ color: colors.borderDefault }} />
+        <p style={{ fontSize: typography.fontSize.sm, margin: 0, color: colors.textTertiary }}>
+          {emptyMessage}
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+    <div
+      role="list"
+      aria-label="Approval chain"
+      style={{ display: 'flex', flexDirection: 'column', gap: 0 }}
+    >
       {steps.map((step, i) => {
         const cfg = statusConfig[step.status];
         const isLast = i === steps.length - 1;
         return (
-          <div key={step.id} style={{ display: 'flex', alignItems: 'flex-start', gap: spacing['3'], position: 'relative' }}>
+          <div
+            key={step.id}
+            role="listitem"
+            style={{ display: 'flex', alignItems: 'flex-start', gap: spacing['3'], position: 'relative' }}
+          >
             {/* Connector line */}
             {!isLast && (
               <div style={{
