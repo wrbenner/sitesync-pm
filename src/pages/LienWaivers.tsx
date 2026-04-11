@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FileCheck, AlertTriangle, Clock, CheckCircle } from 'lucide-react';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import { PageContainer, MetricBox, Skeleton, Btn } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, shadows, transitions, touchTarget } from '../styles/theme';
 import { supabase } from '../lib/supabase';
@@ -36,7 +37,7 @@ function isSignedStatus(status: LienWaiver['status']): boolean {
   return status === 'received';
 }
 
-export function LienWaivers() {
+function LienWaiversPage() {
   const projectId = useProjectId();
   const navigate = useNavigate();
 
@@ -382,5 +383,11 @@ export function LienWaivers() {
     </PageContainer>
   );
 }
+
+export const LienWaivers: React.FC = () => (
+  <ErrorBoundary message="Lien waivers could not be displayed. Check your connection and try again.">
+    <LienWaiversPage />
+  </ErrorBoundary>
+);
 
 export default LienWaivers;

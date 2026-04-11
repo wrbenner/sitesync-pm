@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react'
 import { Truck, Warehouse, Plus, DollarSign } from 'lucide-react'
+import { ErrorBoundary } from '../components/ErrorBoundary'
 import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton } from '../components/Primitives'
 import { DataTable, createColumnHelper } from '../components/shared/DataTable'
 import { ExportButton } from '../components/shared/ExportButton'
@@ -189,7 +190,7 @@ const inventoryColumns = [
 
 // ── Main Component ───────────────────────────────────────────
 
-export const Procurement: React.FC = () => {
+const ProcurementPage: React.FC = () => {
   const projectId = useProjectId()
   const { data: pos, isPending: posLoading } = usePurchaseOrders(projectId)
   const { data: deliveries, isPending: delLoading } = useDeliveries(projectId)
@@ -350,5 +351,11 @@ export const Procurement: React.FC = () => {
     </PageContainer>
   )
 }
+
+export const Procurement: React.FC = () => (
+  <ErrorBoundary message="Procurement could not be displayed. Check your connection and try again.">
+    <ProcurementPage />
+  </ErrorBoundary>
+)
 
 export default Procurement

@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { DollarSign, Receipt, FileText, TrendingUp, Wallet, Plus, Check, X, BookOpen } from 'lucide-react'
+import { ErrorBoundary } from '../components/ErrorBoundary'
 import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton, EmptyState } from '../components/Primitives'
 import { DataTable, createColumnHelper } from '../components/shared/DataTable'
 import { ExportButton } from '../components/shared/ExportButton'
@@ -356,7 +357,7 @@ const retainageColumns = [
 
 // ── Main Component ───────────────────────────────────────────
 
-export const Financials: React.FC = () => {
+const FinancialsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('overview')
   const projectId = useProjectId()
   const { isFlashing } = useBudgetRealtime(projectId)
@@ -695,5 +696,11 @@ export const Financials: React.FC = () => {
     </PageContainer>
   )
 }
+
+export const Financials: React.FC = () => (
+  <ErrorBoundary message="Financials could not be displayed. Check your connection and try again.">
+    <FinancialsPage />
+  </ErrorBoundary>
+)
 
 export default Financials

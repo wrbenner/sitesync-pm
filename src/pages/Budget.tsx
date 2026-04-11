@@ -4,7 +4,7 @@ import { ErrorBoundary } from '../components/ErrorBoundary';
 import { PageContainer, Card, SectionHeader, MetricBox, ProgressBar, StatusTag, DetailPanel, RelatedItems, Skeleton, useToast } from '../components/Primitives';
 import { MetricCardSkeleton, TableRowSkeleton } from '../components/ui/Skeletons';
 import { Btn } from '../components/Primitives';
-import { colors, spacing, typography, borderRadius, touchTarget } from '../styles/theme';
+import { colors, spacing, typography, borderRadius, touchTarget, transitions } from '../styles/theme';
 import { useQuery } from '../hooks/useQuery';
 import { fetchBudgetDivisions, getCostCodesByDivision } from '../api/endpoints/budget';
 import { usePayApplications } from '../hooks/queries';
@@ -143,7 +143,7 @@ const DivisionDrawerContent: React.FC<{ division: MappedDivision; projectId: str
               fontFamily: typography.fontFamily,
               cursor: 'pointer',
               marginBottom: '-1px',
-              transition: 'color 0.15s ease',
+              transition: transitions.quick,
             }}
           >
             {tab.label}
