@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback, memo } from 'react'
 import {
   Sparkles, X, Bot, DollarSign, ShieldCheck, ClipboardCheck, Scale, FileSearch,
-  Calendar, Users, Clock, Download, Clipboard, Share2, FileText,
+  Calendar, Users, Clock, Download, Clipboard, FileText,
 } from 'lucide-react'
 import { colors, spacing, typography, borderRadius, transitions, shadows } from '../../styles/theme'
 import { useCopilotStore } from '../../stores/copilotStore'
@@ -16,7 +16,6 @@ import { GenerativeUIRenderer } from './generativeUI'
 import { ToolResultCard } from './ToolResultCard'
 import { SPECIALIST_AGENTS, AGENT_DOMAINS } from '../../types/agents'
 import type { AgentDomain, AgentConversationMessage } from '../../types/agents'
-import { useToast } from '../Primitives'
 import { toast } from 'sonner'
 
 // ── Context-aware suggested prompts ──────────────────────────
@@ -135,7 +134,6 @@ PanelMessageRenderer.displayName = 'PanelMessageRenderer'
 export const CopilotPanel: React.FC = () => {
   const { isOpen, closeCopilot, currentPageContext } = useCopilotStore()
   const { activeProjectId } = useProjectContext()
-  const { addToast } = useToast()
   const { addCoordinatorMessage } = useAgentOrchestrator()
 
   const {
@@ -452,7 +450,7 @@ export const CopilotPanel: React.FC = () => {
             </p>
             {currentPageContext !== 'dashboard' && (
               <p style={{ margin: 0, fontSize: typography.fontSize.caption, color: colors.textTertiary, textTransform: 'capitalize' }}>
-                {currentPageContext.replace('-', ' ')} context
+                {currentPageContext.replaceAll('-', ' ')} context
               </p>
             )}
           </div>
@@ -525,14 +523,21 @@ export const CopilotPanel: React.FC = () => {
                   }}
                 >
                   {[
-                    { icon: <Clipboard size={14} />, label: 'Copy to Clipboard' },
-                    { icon: <Share2 size={14} />, label: 'Share to Activity Feed' },
-                    { icon: <FileText size={14} />, label: 'Export as PDF' },
+                    { icon: <Clipboard size={14} />, label: 'Copy to Clipboard', action: () => {
+                      const text = messages
+                        .map((m) => `${m.role === 'user' ? 'You' : (m.agentDomain ? SPECIALIST_AGENTS[m.agentDomain].shortName : 'AI Copilot')}: ${m.content}`)
+                        .join('\n\n')
+                      if (!text) { toast.error('No messages to copy'); return }
+                      navigator.clipboard.writeText(text).then(
+                        () => toast.success('Conversation copied to clipboard'),
+                        () => toast.error('Could not copy to clipboard'),
+                      )
+                    }},
                   ].map((item) => (
                     <button
                       key={item.label}
                       onClick={() => {
-                        addToast('success', `${item.label}: Feature pending configuration`)
+                        item.action()
                         setExportOpen(false)
                       }}
                       style={{
@@ -694,7 +699,7 @@ export const CopilotPanel: React.FC = () => {
                     marginBottom: spacing['1'],
                   }}
                 >
-                  {currentPageContext !== 'dashboard' ? `${currentPageContext.replace('-', ' ')} suggestions` : 'Suggested prompts'}
+                  {currentPageContext !== 'dashboard' ? `${currentPageContext.replaceAll('-', ' ')} suggestions` : 'Suggested prompts'}
                 </p>
               </div>
               {contextPrompts.map((prompt) => {
