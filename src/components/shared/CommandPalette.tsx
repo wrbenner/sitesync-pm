@@ -6,7 +6,7 @@ import {
   DollarSign, Users, CheckSquare, BookOpen, Zap, Eye, Briefcase, ListChecks,
   MessageCircle, Heart, Clock, Plus, Camera, Upload, PenTool,
 } from 'lucide-react'
-import { colors, spacing, typography, borderRadius, shadows, zIndex, transitions } from '../../styles/theme'
+import { colors, spacing, typography, borderRadius, shadows, zIndex, transitions, touchTarget } from '../../styles/theme'
 import { searchAll, type SearchResult } from '../../lib/search'
 import { registerGlobal } from '../../hooks/useKeyboardShortcuts'
 
@@ -155,6 +155,7 @@ const itemStyle: React.CSSProperties = {
   alignItems: 'center',
   gap: spacing.md,
   padding: `${spacing.md} ${spacing.lg}`,
+  minHeight: touchTarget.field,
   borderRadius: borderRadius.md,
   cursor: 'pointer',
   fontSize: typography.fontSize.body,
