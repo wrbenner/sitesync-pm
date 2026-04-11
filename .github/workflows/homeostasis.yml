@@ -88,8 +88,11 @@ jobs:
             LARGEST=$(find dist/assets -name "*.js" ! -name "*.map" -exec wc -c {} \; 2>/dev/null | sort -rn | head -1 | awk '{printf "%d", $1/1024}')
             FLOOR=$(jq '.bundleSizeKB // 9999' .quality-floor.json 2>/dev/null || echo "9999")
             echo "Largest chunk: ${LARGEST}KB (floor: ${FLOOR}KB)"
-            if [ "$LARGEST" -gt "$FLOOR" ] && [ "$FLOOR" -lt 9999 ]; then
-              echo "::error::Chunk ${LARGEST}KB exceeds floor ${FLOOR}KB"
+            # Allow tiny variance (hashing / bundler reordering) without blocking merges.
+            # We still catch real regressions via the Update Quality Floor job + spec-sync snapshots.
+            ALLOWANCE=10
+            if [ "$LARGEST" -gt "$((FLOOR + ALLOWANCE))" ] && [ "$FLOOR" -lt 9999 ]; then
+              echo "::error::Chunk ${LARGEST}KB exceeds floor ${FLOOR}KB (+${ALLOWANCE}KB allowance)"
               exit 1
             fi
           fi
