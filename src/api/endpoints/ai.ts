@@ -93,7 +93,7 @@ export const getAiInsights = async (
 
     try {
       const { count } = await supabase
-        .from('punch_list_items')
+        .from('punch_items')
         .select('id', { count: 'exact', head: true })
         .eq('project_id', projectId)
         .in('status', ['open', 'in_progress'])
