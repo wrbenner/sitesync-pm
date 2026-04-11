@@ -5,6 +5,30 @@
 
 ---
 
+## Perception Report — April 11, 2026 (Night 8 Strategic Assessment)
+
+- Pages perceived: 9 / 40 (demo critical pages only)
+- Pages with real data: 9 (Dashboard, RFIs, DailyLog, Submittals, PunchList, Budget, Schedule, PaymentApplications, ChangeOrders)
+- Pages with intelligence surfaced: 6 (Dashboard AI insights banner, RFIs ai-rfi-draft, Schedule ai-schedule-risk, DailyLog ai-daily-summary, PunchList/Submittals PredictiveAlertBanner)
+- Pages with mock/hardcoded data remaining: 1 (Dashboard weather widget)
+- Error boundaries: 9/9 demo pages wrapped. 4 pages lack inline query error states (Dashboard, Budget, ChangeOrders, Schedule full-page).
+- Copilot context: 8/8 demo pages wired via setPageContext
+- Build: GREEN — vite build completes in 3.56s, 0 TS errors
+- Codebase: 211+ TS files, 40 pages, 48 migrations, 100 files using fromTable, 45 tests, 43.2% coverage
+- Quality floor: tsErrors=0, anyCount=1, a11yViolations=0, eslintErrors=1033, bundleSize=1869KB, e2ePassRate=0.7
+- Edge functions: 8 AI functions exist. 5 wired to frontend. ai-conflict-detection (highest value) has 0 frontend invocations.
+- Competitive: Procore Helix AI queries data reactively. SiteSync can proactively detect cross-entity conflicts (schedule+weather+RFI+submittal) — but this capability is sitting in an unwired edge function.
+- Strategic direction chosen: Surface ai-conflict-detection as the demo wow moment. Fix weather widget. Harden error states.
+
+**Gap assessment since last report (April 11 earlier entry):**
+- Night 7 direction proposed fixing skeleton-only experience + intelligence surfacing. The intelligence surfacing was completed (commits 187ecd5, 0991304, 22285f5). AI insights banner now shows entity-specific insights above the fold.
+- Build confirmed GREEN with 0 TS errors. Previous "unclear" build status was a CI perception problem, not a code problem.
+- Phase shift: from "surface existing intelligence" to "create the wow moment." The brain has a mouth now. It needs to say something no competitor's brain can say.
+
+**4 days to demo. The code is healthy. The intelligence layer is present but incomplete. Tonight's build should produce the single moment that makes the demo unforgettable.**
+
+---
+
 ## Perception Report — April 11, 2026
 
 - Pages perceived: 9 / 40 (demo critical pages only)
