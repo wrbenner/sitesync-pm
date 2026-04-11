@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Sparkles, AlertTriangle, ChevronDown, ChevronUp, CheckCircle, RefreshCw, Zap, CalendarClock, TrendingUp, GitBranch, Gauge, CalendarCheck, Calendar, CalendarDays, BarChart3, ToggleLeft, ToggleRight, ClipboardList, Upload, X, Sun, Cloud, CloudRain } from 'lucide-react';
+import { Sparkles, AlertTriangle, AlertCircle, ChevronDown, ChevronUp, CheckCircle, RefreshCw, Zap, CalendarClock, TrendingUp, GitBranch, Gauge, CalendarCheck, Calendar, CalendarDays, BarChart3, ToggleLeft, ToggleRight, ClipboardList, Upload, X, Sun, Cloud, CloudRain } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { PageContainer, Card, SectionHeader, MetricBox, Skeleton, Btn, useToast, Tag } from '../components/Primitives';
 import { useRealtimeSchedulePhases, useScheduleRealtime } from '../hooks/queries/realtime';
@@ -807,6 +807,53 @@ export const Schedule: React.FC = () => {
   }, [createConversation, setActiveConversation, sendMessage, navigate]);
 
   const GANTT_ROW_WIDTHS = ['70%', '55%', '85%', '40%', '90%', '60%', '75%', '45%'];
+
+  if (error && !loading) {
+    return (
+      <PageContainer title="Schedule" subtitle="">
+        <div
+          role="alert"
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minHeight: '40vh',
+            textAlign: 'center',
+            padding: spacing.xl,
+          }}
+        >
+          <AlertCircle size={40} color={colors.statusCritical} style={{ marginBottom: spacing.lg }} />
+          <h2 style={{ margin: 0, marginBottom: spacing.sm, fontSize: typography.fontSize.heading, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+            Unable to load schedule
+          </h2>
+          <p style={{ margin: 0, marginBottom: spacing.xl, fontSize: typography.fontSize.sm, color: colors.textSecondary, maxWidth: 400 }}>
+            {error || 'Check your connection and try again.'}
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: spacing.sm,
+              padding: `${spacing.md} ${spacing.xl}`,
+              minHeight: 56,
+              backgroundColor: colors.primaryOrange,
+              color: colors.white,
+              border: 'none',
+              borderRadius: borderRadius.lg,
+              fontSize: typography.fontSize.sm,
+              fontWeight: typography.fontWeight.semibold,
+              fontFamily: typography.fontFamily,
+              cursor: 'pointer',
+            }}
+          >
+            Retry
+          </button>
+        </div>
+      </PageContainer>
+    );
+  }
 
   if (loading) {
     const SKEL_ROW_WIDTHS = ['70%', '55%', '85%', '40%', '90%', '60%', '75%', '45%'];
