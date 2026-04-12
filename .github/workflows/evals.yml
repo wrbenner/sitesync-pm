@@ -22,17 +22,7 @@ jobs:
 
       - name: Generate eval config
         run: |
-          cat > evals/config.json << 'CONF'
-          {
-            "supabase": {
-              "url": "$SUPABASE_URL",
-              "anon_key": "$SUPABASE_ANON_KEY",
-              "service_role_key": "$SUPABASE_SERVICE_ROLE_KEY",
-              "db_url": "$SUPABASE_DB_URL"
-            }
-          }
-          CONF
-        # Config uses env var references — run-evals.sh resolves them at runtime
+          printf '{"supabase":{"url":"$SUPABASE_URL","anon_key":"$SUPABASE_ANON_KEY","service_role_key":"$SUPABASE_SERVICE_ROLE_KEY","db_url":"$SUPABASE_DB_URL"}}' > evals/config.json
 
       - name: Run Layer 1
         env:
@@ -56,16 +46,7 @@ jobs:
 
       - name: Generate eval config
         run: |
-          cat > evals/config.json << 'CONF'
-          {
-            "supabase": {
-              "url": "$SUPABASE_URL",
-              "anon_key": "$SUPABASE_ANON_KEY",
-              "service_role_key": "$SUPABASE_SERVICE_ROLE_KEY",
-              "db_url": "$SUPABASE_DB_URL"
-            }
-          }
-          CONF
+          printf '{"supabase":{"url":"$SUPABASE_URL","anon_key":"$SUPABASE_ANON_KEY","service_role_key":"$SUPABASE_SERVICE_ROLE_KEY","db_url":"$SUPABASE_DB_URL"}}' > evals/config.json
 
       - name: Run Layer 2
         env:
