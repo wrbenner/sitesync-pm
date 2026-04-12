@@ -5,6 +5,35 @@
 
 ---
 
+## Perception Report — April 12, 2026 (Night 9 Strategic Assessment)
+
+- Pages perceived: 9 / 40 (demo critical pages only)
+- Pages with real data: 9 (Dashboard, RFIs, DailyLog, Submittals, PunchList, Budget, Schedule, PaymentApplications, ChangeOrders)
+- Pages with intelligence surfaced: 6 (Dashboard deterministic insights, RFIs ai-rfi-draft, Schedule ai-schedule-risk, DailyLog ai-daily-summary, PunchList/Submittals PredictiveAlertBanner)
+- Pages with mock/hardcoded data remaining: 0 (weather widget was removed, not replaced)
+- Pages MISSING expected data: 1 (Dashboard has no weather widget at all)
+- Error boundaries: 9/9 demo pages wrapped. Error state hardening landed on Night 8 (Dashboard, Schedule).
+- Copilot context: 8/8 demo pages wired via setPageContext
+- Build: GREEN — 0 TS errors
+- Codebase: 211+ TS files, 40 pages, 48 migrations, 100 files using fromTable, 576 tests, 43.2% coverage
+- Quality floor: tsErrors=0, anyCount=23 (11 in tests), a11yViolations=0, bundleSize=1869KB
+- Edge functions: 8 AI functions exist. 5 wired to frontend. ai-conflict-detection still has 0 frontend invocations (third consecutive night).
+- Nightly score: 34/100 (F). Verification: 0/25 (broken 3+ nights). Success criteria: 12/35 (1 of 3 met).
+- CRITICAL FINDING: `getAiInsights` in api/endpoints/ai.ts produces entity specific insights (RFI names, budget descriptions, phase names) but Dashboard calls `useAiInsightsMeta` which returns metadata only. The rich insights are built but disconnected from rendering.
+- Competitive: Procore Helix AI queries data reactively. SiteSync has proactive entity specific intelligence built in the API layer — but Dashboard renders generic count based alerts instead.
+- Strategic direction chosen: Wire existing intelligence to Dashboard. Connect getAiInsights → AIInsightsBanner. Add weather data. Add cross entity conflict insights through the same pipeline.
+
+**Gap assessment since last report (April 11, Night 8):**
+- Night 8 direction proposed: (1) Surface conflict intelligence, (2) Fix weather widget, (3) Harden error states. Result: only error states improved. Conflict detection and weather remain unbuilt.
+- Night 8 builder produced 5 commits: skeleton trap fixes (Dashboard, Schedule, ProtectedRoute), stub cleanup, deterministic insights fallback. All polish, no capability building.
+- Night 8 score dropped from 42 to 34. The polish work was valuable for demo stability but did not advance the success criteria.
+- Root cause identified: the direction said "wire the conflict detection" but the real blocker is simpler — Dashboard doesn't call the right function for ANY insights. Fix the wiring first, then add conflicts.
+- Phase shift: from "build the wow moment" to "connect the existing intelligence." The brain exists. The mouth exists. Connect them. THEN add conflict detection as a new insight type.
+
+**3 days to demo. The code is healthy. The intelligence infrastructure is mature. Tonight's build should produce the moment the GC has never seen — by connecting what already exists, not by building something new.**
+
+---
+
 ## Perception Report — April 11, 2026 (Night 8 Strategic Assessment)
 
 - Pages perceived: 9 / 40 (demo critical pages only)
