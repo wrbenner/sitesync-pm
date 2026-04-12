@@ -1,0 +1,207 @@
+{
+  "generated_at": "2026-04-12T23:37:43.659626+00:00",
+  "test_dir": "/home/runner/work/sitesync-pm/sitesync-pm/src/test/adversarial",
+  "n_runs": 3,
+  "total_generated": 10,
+  "kept": [
+    "budget.adversarial.test.ts",
+    "conflictResolver.adversarial.test.ts",
+    "financialEngine.adversarial.test.ts",
+    "payApplications.adversarial.test.ts",
+    "useAuth.adversarial.test.ts",
+    "useBudgetData.adversarial.test.ts",
+    "useOfflineMutation.adversarial.test.ts",
+    "usePermissions.adversarial.test.ts",
+    "useProjectId.adversarial.test.ts",
+    "useRealtimeQuery.adversarial.test.ts"
+  ],
+  "removed_flaky": [],
+  "stats": {
+    "kept_count": 10,
+    "removed_flaky_count": 0,
+    "consistent_pass": 1,
+    "consistent_fail": 9
+  },
+  "details": [
+    {
+      "file": "test/adversarial/budget.adversarial.test.ts",
+      "classification": "consistent_fail",
+      "runs": [
+        {
+          "run": 1,
+          "passed": false
+        },
+        {
+          "run": 2,
+          "passed": false
+        },
+        {
+          "run": 3,
+          "passed": false
+        }
+      ]
+    },
+    {
+      "file": "test/adversarial/conflictResolver.adversarial.test.ts",
+      "classification": "consistent_fail",
+      "runs": [
+        {
+          "run": 1,
+          "passed": false
+        },
+        {
+          "run": 2,
+          "passed": false
+        },
+        {
+          "run": 3,
+          "passed": false
+        }
+      ]
+    },
+    {
+      "file": "test/adversarial/financialEngine.adversarial.test.ts",
+      "classification": "consistent_pass",
+      "runs": [
+        {
+          "run": 1,
+          "passed": true
+        },
+        {
+          "run": 2,
+          "passed": true
+        },
+        {
+          "run": 3,
+          "passed": true
+        }
+      ]
+    },
+    {
+      "file": "test/adversarial/payApplications.adversarial.test.ts",
+      "classification": "consistent_fail",
+      "runs": [
+        {
+          "run": 1,
+          "passed": false
+        },
+        {
+          "run": 2,
+          "passed": false
+        },
+        {
+          "run": 3,
+          "passed": false
+        }
+      ]
+    },
+    {
+      "file": "test/adversarial/useAuth.adversarial.test.ts",
+      "classification": "consistent_fail",
+      "runs": [
+        {
+          "run": 1,
+          "passed": false
+        },
+        {
+          "run": 2,
+          "passed": false
+        },
+        {
+          "run": 3,
+          "passed": false
+        }
+      ]
+    },
+    {
+      "file": "test/adversarial/useBudgetData.adversarial.test.ts",
+      "classification": "consistent_fail",
+      "runs": [
+        {
+          "run": 1,
+          "passed": false
+        },
+        {
+          "run": 2,
+          "passed": false
+        },
+        {
+          "run": 3,
+          "passed": false
+        }
+      ]
+    },
+    {
+      "file": "test/adversarial/useOfflineMutation.adversarial.test.ts",
+      "classification": "consistent_fail",
+      "runs": [
+        {
+          "run": 1,
+          "passed": false
+        },
+        {
+          "run": 2,
+          "passed": false
+        },
+        {
+          "run": 3,
+          "passed": false
+        }
+      ]
+    },
+    {
+      "file": "test/adversarial/usePermissions.adversarial.test.ts",
+      "classification": "consistent_fail",
+      "runs": [
+        {
+          "run": 1,
+          "passed": false
+        },
+        {
+          "run": 2,
+          "passed": false
+        },
+        {
+          "run": 3,
+          "passed": false
+        }
+      ]
+    },
+    {
+      "file": "test/adversarial/useProjectId.adversarial.test.ts",
+      "classification": "consistent_fail",
+      "runs": [
+        {
+          "run": 1,
+          "passed": false
+        },
+        {
+          "run": 2,
+          "passed": false
+        },
+        {
+          "run": 3,
+          "passed": false
+        }
+      ]
+    },
+    {
+      "file": "test/adversarial/useRealtimeQuery.adversarial.test.ts",
+      "classification": "consistent_fail",
+      "runs": [
+        {
+          "run": 1,
+          "passed": false
+        },
+        {
+          "run": 2,
+          "passed": false
+        },
+        {
+          "run": 3,
+          "passed": false
+        }
+      ]
+    }
+  ]
+}

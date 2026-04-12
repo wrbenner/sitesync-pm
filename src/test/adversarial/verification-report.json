@@ -1,0 +1,110 @@
+{
+  "verified_at": "2026-04-12T23:33:10.000Z",
+  "model": "claude-sonnet-4-5",
+  "phase": "verifier",
+  "summary": {
+    "total_tests": 59,
+    "passing": 49,
+    "failing": 10,
+    "total_files": 10,
+    "passing_files": 1,
+    "failing_files": 9
+  },
+  "results": [
+    {
+      "file": "src/test/adversarial/financialEngine.adversarial.test.ts",
+      "status": "PASS",
+      "tests_run": 12,
+      "tests_passed": 12,
+      "tests_failed": 0,
+      "bug_description": null,
+      "fix_hint": null
+    },
+    {
+      "file": "src/test/adversarial/budget.adversarial.test.ts",
+      "status": "FAIL",
+      "tests_run": 8,
+      "tests_passed": 7,
+      "tests_failed": 1,
+      "bug_description": "Variance percent calculation returns wrong sign (expected 10, got -40)",
+      "fix_hint": "Check the variance percent calculation formula in getBudgetSummaryMetrics, specifically the order of subtraction"
+    },
+    {
+      "file": "src/test/adversarial/conflictResolver.adversarial.test.ts",
+      "status": "FAIL",
+      "tests_run": 17,
+      "tests_passed": 13,
+      "tests_failed": 4,
+      "bug_description": "detectConflicts and buildMergedRecord do not properly handle undefined vs null differences, deleted fields, and per-field resolutions",
+      "fix_hint": "Check the conflict detection logic for null/undefined equality and field deletion detection in detectConflicts and buildMergedRecord functions"
+    },
+    {
+      "file": "src/test/adversarial/payApplications.adversarial.test.ts",
+      "status": "FAIL",
+      "tests_run": 13,
+      "tests_passed": 12,
+      "tests_failed": 1,
+      "bug_description": "Intermediate monetary values are not rounded to cents, causing floating point drift (expected 3330.00, got 3330.11)",
+      "fix_hint": "Check computeCurrentPaymentDue function to ensure all intermediate monetary calculations round to cents before further arithmetic"
+    },
+    {
+      "file": "src/test/adversarial/useProjectId.adversarial.test.ts",
+      "status": "FAIL",
+      "tests_run": 9,
+      "tests_passed": 5,
+      "tests_failed": 4,
+      "bug_description": "useProjectId returns falsy values (empty string, false, 0) instead of normalizing them to undefined",
+      "fix_hint": "Check the nullish coalescing logic in useProjectId hook, should use || instead of ?? to filter all falsy values"
+    },
+    {
+      "file": "src/test/adversarial/useAuth.adversarial.test.ts",
+      "status": "FAIL",
+      "tests_run": 0,
+      "tests_passed": 0,
+      "tests_failed": 0,
+      "bug_description": "Test file has JSX syntax error at line 36 preventing vitest from parsing it (Unterminated regular expression)",
+      "fix_hint": "Check JSX syntax near line 36, ensure proper TypeScript/JSX configuration in vitest setup"
+    },
+    {
+      "file": "src/test/adversarial/useBudgetData.adversarial.test.ts",
+      "status": "FAIL",
+      "tests_run": 0,
+      "tests_passed": 0,
+      "tests_failed": 0,
+      "bug_description": "Test file has JSX syntax error at line 24 preventing vitest from parsing it (Expected > but found client)",
+      "fix_hint": "Check JSX syntax near line 24, ensure proper TypeScript/JSX configuration in vitest setup"
+    },
+    {
+      "file": "src/test/adversarial/useOfflineMutation.adversarial.test.ts",
+      "status": "FAIL",
+      "tests_run": 0,
+      "tests_passed": 0,
+      "tests_failed": 0,
+      "bug_description": "Test file has JSX syntax error at line 24 preventing vitest from parsing it (Expected > but found client)",
+      "fix_hint": "Check JSX syntax near line 24, ensure proper TypeScript/JSX configuration in vitest setup"
+    },
+    {
+      "file": "src/test/adversarial/usePermissions.adversarial.test.ts",
+      "status": "FAIL",
+      "tests_run": 0,
+      "tests_passed": 0,
+      "tests_failed": 0,
+      "bug_description": "Test file has JSX syntax error at line 24 preventing vitest from parsing it (Expected > but found client)",
+      "fix_hint": "Check JSX syntax near line 24, ensure proper TypeScript/JSX configuration in vitest setup"
+    },
+    {
+      "file": "src/test/adversarial/useRealtimeQuery.adversarial.test.ts",
+      "status": "FAIL",
+      "tests_run": 0,
+      "tests_passed": 0,
+      "tests_failed": 0,
+      "bug_description": "Test file has JSX syntax error at line 25 preventing vitest from parsing it (Expected > but found client)",
+      "fix_hint": "Check JSX syntax near line 25, ensure proper TypeScript/JSX configuration in vitest setup"
+    }
+  ],
+  "bugs_found": {
+    "code_bugs": 4,
+    "test_infrastructure_bugs": 5
+  },
+  "notes": "Four test files revealed real bugs in production code (budget variance calculation, conflict resolution logic, payment application rounding, and project ID normalization). Five test files have JSX parsing errors that prevent them from running, indicating a vitest configuration issue with JSX/TSX support. All failing tests have been preserved as-is with status comments added."
+}

@@ -1,0 +1,67 @@
+{
+  "generated_at": "2026-04-12T00:00:00.000Z",
+  "model": "claude-sonnet-4-5",
+  "phase": "bug-hunter",
+  "tests": [
+    {
+      "file": "src/test/adversarial/useAuth.adversarial.test.ts",
+      "source_file": "src/hooks/useAuth.ts",
+      "fragile_logic": "Subscriber count management and auth state race conditions during rapid mount/unmount cycles",
+      "failure_mode": "Double-decrement of subscriberCount, auth state leaked between test runs, cleanup race during sign-in"
+    },
+    {
+      "file": "src/test/adversarial/usePermissions.adversarial.test.ts",
+      "source_file": "src/hooks/usePermissions.ts",
+      "fragile_logic": "Role hierarchy comparisons using >= operator, permission matrix lookups with null roles",
+      "failure_mode": "Off-by-one errors in isAtLeast(), missing permission in matrix causing silent failures, null role edge cases"
+    },
+    {
+      "file": "src/test/adversarial/useBudgetData.adversarial.test.ts",
+      "source_file": "src/hooks/useBudgetData.ts",
+      "fragile_logic": "Invoice derivation filter (actual_amount > 0) and null vs zero handling in aggregations",
+      "failure_mode": "Missing invoices when actual_amount is exactly 0, null vs undefined inconsistencies"
+    },
+    {
+      "file": "src/test/adversarial/useOfflineMutation.adversarial.test.ts",
+      "source_file": "src/hooks/useOfflineMutation.ts",
+      "fragile_logic": "Online/offline state race condition and base version capture timing for updates",
+      "failure_mode": "isOnline changes between check and mutation execution, missing entity ID for base version storage"
+    },
+    {
+      "file": "src/test/adversarial/useRealtimeQuery.adversarial.test.ts",
+      "source_file": "src/hooks/useRealtimeQuery.ts",
+      "fragile_logic": "Debounce timeout cleanup and user ID comparison for toast filtering",
+      "failure_mode": "Memory leak from uncanceled pending timeouts, toast spam when currentUserId is null"
+    },
+    {
+      "file": "src/test/adversarial/budget.adversarial.test.ts",
+      "source_file": "src/api/endpoints/budget.ts",
+      "fragile_logic": "Floating point to cents conversion, CSI division 01 detection, forecast_amount fallback logic",
+      "failure_mode": "Rounding errors accumulate across many line items, off-by-one in CSI code check, null vs zero budget confusion"
+    },
+    {
+      "file": "src/test/adversarial/payApplications.adversarial.test.ts",
+      "source_file": "src/api/endpoints/payApplications.ts",
+      "fragile_logic": "Percentage validation boundaries and retainage calculation rounding",
+      "failure_mode": "Off-by-one in percent complete validation, floating point drift in AIA G702 calculations"
+    },
+    {
+      "file": "src/test/adversarial/financialEngine.adversarial.test.ts",
+      "source_file": "src/lib/financialEngine.ts",
+      "fragile_logic": "Division by zero in variance calculations, array aggregations with null values, date parsing from schedule activities",
+      "failure_mode": "NaN propagation from division by zero, null/undefined in reduce operations, invalid dates causing NaN in elapsed time"
+    },
+    {
+      "file": "src/test/adversarial/conflictResolver.adversarial.test.ts",
+      "source_file": "src/lib/conflictResolver.ts",
+      "fragile_logic": "JSON.stringify comparison for field equality, field exclusions (updated_at, id), empty object handling",
+      "failure_mode": "Different JSON serialization order causing false conflicts, undefined vs null comparison, missing field exclusions"
+    },
+    {
+      "file": "src/test/adversarial/useProjectId.adversarial.test.ts",
+      "source_file": "src/hooks/useProjectId.ts",
+      "fragile_logic": "undefined vs null return value inconsistency",
+      "failure_mode": "Consuming code expecting null instead of undefined, or vice versa"
+    }
+  ]
+}
