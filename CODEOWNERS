@@ -1,0 +1,26 @@
+# Auth and identity
+src/hooks/useAuth.ts                     @wrbenner
+src/hooks/usePermissions.ts              @wrbenner
+src/hooks/useSSO.ts                      @wrbenner
+src/hooks/useOrganization.ts             @wrbenner
+
+# RLS and database
+supabase/migrations/                     @wrbenner
+supabase/seed.sql                        @wrbenner
+
+# Edge functions (AI and API)
+supabase/functions/                      @wrbenner
+
+# Workflow and agent control
+.github/workflows/                       @wrbenner
+.agent/                                  @wrbenner
+scripts/                                 @wrbenner
+
+# Deployment
+vercel.json                              @wrbenner
+vite.config.ts                           @wrbenner
+
+# Kernel and architecture documents
+DOMAIN_KERNEL_SPEC.md                    @wrbenner
+SCHEMA_GAP_ANALYSIS.md                   @wrbenner
+DEPRECATION_LEDGER.md                    @wrbenner
