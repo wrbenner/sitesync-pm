@@ -744,7 +744,7 @@ const PunchListPage: React.FC = () => {
         <Sparkles size={14} color={colors.statusReview} style={{ marginTop: 2, flexShrink: 0 }} />
         <div style={{ flex: 1 }}>
           <p style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0 }}>AI Analysis: 2 punch items trending overdue based on current response times. Completion rate at {completionPct}%. Floor 8 has the highest concentration of open items.</p>
-          <button onClick={() => setAtRiskFilter(true)} style={{ marginTop: spacing['2'], padding: `${spacing['1']} ${spacing['3']}`, backgroundColor: colors.statusReview, color: 'white', border: 'none', borderRadius: borderRadius.base, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, fontFamily: typography.fontFamily, cursor: 'pointer' }}>View At Risk Items</button>
+          <button onClick={() => setAtRiskFilter(true)} style={{ marginTop: spacing['2'], padding: `${spacing['1']} ${spacing['3']}`, minHeight: 44, backgroundColor: colors.statusReview, color: 'white', border: 'none', borderRadius: borderRadius.base, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, fontFamily: typography.fontFamily, cursor: 'pointer' }}>View At Risk Items</button>
         </div>
       </div>
 
@@ -801,8 +801,10 @@ const PunchListPage: React.FC = () => {
             <button
               key={tab.value}
               onClick={() => { setStatusFilter(tab.value); setAtRiskFilter(false); }}
+              aria-pressed={isActive}
               style={{
                 padding: `${spacing['1']} ${spacing['3']}`,
+                minHeight: 56,
                 fontSize: typography.fontSize.sm,
                 fontFamily: typography.fontFamily,
                 fontWeight: isActive ? typography.fontWeight.semibold : typography.fontWeight.medium,
@@ -834,6 +836,7 @@ const PunchListPage: React.FC = () => {
           onChange={(e) => { setAreaFilter(e.target.value); setAtRiskFilter(false); }}
           style={{
             padding: `${spacing['1']} ${spacing['3']}`,
+            minHeight: 56,
             fontSize: typography.fontSize.sm,
             fontFamily: typography.fontFamily,
             border: `1px solid ${colors.borderDefault}`,

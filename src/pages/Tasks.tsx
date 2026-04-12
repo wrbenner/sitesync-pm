@@ -820,7 +820,11 @@ export const Tasks: React.FC = () => {
             style={{ flex: 1, border: 'none', backgroundColor: 'transparent', outline: 'none', fontSize: typography.fontSize.base, fontFamily: typography.fontFamily, color: colors.textPrimary }}
           />
           {searchQuery && (
-            <button onClick={() => setSearchQuery('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: colors.textTertiary, display: 'flex' }}>
+            <button
+              onClick={() => setSearchQuery('')}
+              aria-label="Clear search"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: colors.textTertiary, display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 44, minHeight: 44, borderRadius: borderRadius.full }}
+            >
               <X size={14} />
             </button>
           )}
@@ -836,6 +840,7 @@ export const Tasks: React.FC = () => {
                 onClick={() => setFilterPriority(p)}
                 style={{
                   padding: `${spacing.xs} ${spacing.md}`,
+                  minHeight: 56,
                   fontSize: typography.fontSize.sm,
                   fontFamily: typography.fontFamily,
                   fontWeight: isActive ? typography.fontWeight.semibold : typography.fontWeight.medium,
@@ -859,8 +864,10 @@ export const Tasks: React.FC = () => {
         {/* My Tasks toggle */}
         <button
           onClick={() => setMyTasksOnly(!myTasksOnly)}
+          aria-pressed={myTasksOnly}
           style={{
             padding: `${spacing.xs} ${spacing.lg}`,
+            minHeight: 56,
             fontSize: typography.fontSize.sm,
             fontFamily: typography.fontFamily,
             fontWeight: myTasksOnly ? typography.fontWeight.semibold : typography.fontWeight.medium,

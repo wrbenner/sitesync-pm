@@ -81,6 +81,10 @@ const MeetingCard: React.FC<{ meeting: MeetingListItem }> = ({ meeting }) => {
 
   return (
     <div
+      role="button"
+      tabIndex={0}
+      aria-label={`${meeting.title}, ${typeLabel(meeting.type)}, ${meeting.date ? new Date(meeting.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : 'No date'}`}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); } }}
       style={{
         background: colors.surfaceRaised,
         borderRadius: borderRadius.xl,
@@ -205,6 +209,7 @@ export const MeetingsPage: React.FC = () => {
 
   const tabStyle = (isActive: boolean): React.CSSProperties => ({
     padding: `${spacing.sm} ${spacing.lg}`,
+    minHeight: 56,
     borderRadius: borderRadius.md,
     border: 'none',
     cursor: 'pointer',
@@ -373,8 +378,10 @@ export const MeetingsPage: React.FC = () => {
           </div>
           <button
             onClick={() => setShowOpenOnly((v) => !v)}
+            aria-pressed={showOpenOnly}
             style={{
               padding: `${spacing.sm} ${spacing.md}`,
+              minHeight: 56,
               border: `1px solid ${colors.borderDefault}`,
               borderRadius: borderRadius.md,
               background: showOpenOnly ? colors.primaryOrange : colors.surfaceRaised,
