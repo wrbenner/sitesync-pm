@@ -1062,7 +1062,7 @@ is_project_role(p_project_id uuid, allowed_roles text[]) → boolean
 | DELETE (project-scoped) | `is_project_role(project_id, ARRAY['owner','admin'])` | Owner/admin only for most entities |
 | SELECT (child table) | `is_project_member((SELECT project_id FROM parent WHERE parent.id = parent_fk))` | Resolved via parent |
 | SELECT (user-scoped) | `user_id = auth.uid()` | Own records only |
-| SELECT (org-scoped) | `organization_id IN (SELECT org_id FROM org_members WHERE user_id = auth.uid())` | Org members |
+| SELECT (org-scoped) | `organization_id IN (SELECT organization_id FROM organization_members WHERE user_id = auth.uid())` | Org members |
 
 **Critical gap:** Current DB `project_members.role` CHECK constraint uses `('owner', 'admin', 'member', 'viewer')` which maps imprecisely to the kernel's 6-role model. The `is_project_role` function and all policies using role arrays must be updated to use the kernel roles: `('owner', 'admin', 'project_manager', 'superintendent', 'subcontractor', 'viewer')`.
 
