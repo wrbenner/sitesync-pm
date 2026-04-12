@@ -477,8 +477,8 @@ function useLiveMetricsFallback(projectId: string | undefined, matViewHasData: b
 
 const SEVERITY_COLORS: Record<string, { bg: string; border: string; icon: string }> = {
   critical: { bg: colors.statusCriticalSubtle, border: colors.statusCritical, icon: colors.statusCritical },
-  warning: { bg: colors.statusPendingSubtle || '#FFF8E1', border: colors.statusPending, icon: colors.statusPending },
-  info: { bg: colors.statusInfoSubtle || '#E3F2FD', border: colors.statusInfo || colors.primaryOrange, icon: colors.statusInfo || colors.primaryOrange },
+  warning: { bg: colors.statusPendingSubtle, border: colors.statusPending, icon: colors.statusPending },
+  info: { bg: colors.statusInfoSubtle, border: colors.statusInfo, icon: colors.statusInfo },
 };
 
 const InsightRow: React.FC<{ insight: AIInsight; onClick?: () => void }> = ({ insight, onClick }) => {
@@ -591,7 +591,7 @@ const AIInsightsBanner: React.FC<{ insights: AIInsight[]; navigate: (path: strin
           width: 24,
           height: 24,
           borderRadius: borderRadius.full,
-          background: `linear-gradient(135deg, ${colors.primaryOrange} 0%, #FF9A5C 100%)`,
+          background: `linear-gradient(135deg, ${colors.primaryOrange} 0%, ${colors.orangeLight} 100%)`,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
