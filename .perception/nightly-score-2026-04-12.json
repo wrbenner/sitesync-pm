@@ -1,8 +1,8 @@
 {
-  "timestamp": "2026-04-12T08:11:09.225866+00:00",
-  "score": 19,
+  "timestamp": "2026-04-12T08:42:05.807905+00:00",
+  "score": 22,
   "max_score": 100,
-  "percentage": 19.0,
+  "percentage": 22.0,
   "breakdown": {
     "success_criteria": {
       "points": 0,
@@ -21,7 +21,7 @@
       "max": 10
     },
     "intelligence_growth": {
-      "points": 2,
+      "points": 5,
       "max": 10
     }
   },
@@ -40,7 +40,7 @@
         {
           "criterion": "**The Dashboard shows weather data.** Either a dedicated weather section or a weather based insight ",
           "met": false,
-          "confidence": 0.16
+          "confidence": 0.12
         },
         {
           "criterion": "**At least one insight connects two different entity types.** Something like \"RFI 047 response deadl",
@@ -85,8 +85,9 @@
     },
     "intelligence_growth": {
       "max_points": 10,
-      "points": 2,
+      "points": 5,
       "details": [
+        "New learnings added today: 9",
         "Skills in library: 5",
         "No intelligence signals detected in product"
       ]
