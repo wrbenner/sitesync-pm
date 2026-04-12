@@ -518,6 +518,30 @@ const InsightRow: React.FC<{ insight: AIInsight; onClick?: () => void }> = ({ in
         }}>
           {insight.description}
         </p>
+        {insight.affectedEntities && insight.affectedEntities.length > 0 && (
+          <div style={{ display: 'flex', gap: spacing['1'], marginTop: spacing['2'], flexWrap: 'wrap' }}>
+            {insight.affectedEntities.slice(0, 3).map((entity) => (
+              <span
+                key={entity.id}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: spacing['1'],
+                  padding: `1px ${spacing['2']}`,
+                  fontSize: typography.fontSize.caption,
+                  fontWeight: typography.fontWeight.medium,
+                  color: colors.textSecondary,
+                  backgroundColor: colors.surfaceInset,
+                  borderRadius: borderRadius.full,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                <Circle size={6} fill={sev.border} color={sev.border} />
+                {entity.name}
+              </span>
+            ))}
+          </div>
+        )}
         {insight.suggestedAction && (
           <p style={{
             margin: 0,

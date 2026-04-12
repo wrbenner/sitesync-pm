@@ -1,51 +1,48 @@
 {
-  "timestamp": "2026-04-12T08:30:22Z",
+  "timestamp": "2026-04-12T08:32:59Z",
   "diff_summary": {
     "files_changed": 2,
-    "lines_added": 74,
-    "lines_removed": 38,
+    "lines_added": 22,
+    "lines_removed": 19,
     "files": [
       ".perception/quality-conscience.json",
-      "src/components/dashboard/widgets/WeatherImpactWidget.tsx"
+      "src/pages/Dashboard.tsx"
     ]
   },
   "dimensions": {
     "completeness": {
-      "score": 5.5,
-      "issues": [
-        "Adds a data hook but no loading state — users will see a blank flash",
-        "Adds a data hook but no error handling — failures will be silent"
-      ],
+      "score": 10.0,
+      "issues": [],
       "checks_run": 5
     },
     "craftsmanship": {
-      "score": 9.5,
-      "issues": [
-        "Possibly unused import: useSchedulePhases"
-      ],
+      "score": 10.0,
+      "issues": [],
       "checks_run": 8
     },
     "user_impact": {
-      "score": 9.0,
+      "score": 7.0,
       "issues": [
         "Changes 1 UI file(s) — directly visible to users",
-        "Touches demo-relevant area(s): dashboard, rfi, schedule, project"
+        "Touches demo-relevant area(s): dashboard, schedule"
       ],
       "checks_run": 5
     },
     "pride": {
-      "score": 8.0,
-      "issues": [],
+      "score": 10.0,
+      "issues": [
+        "Clean, focused commit with high completeness and craftsmanship"
+      ],
       "checks_run": 4
     }
   },
   "verdict": "PASS",
-  "average_score": 8.0,
+  "average_score": 9.2,
   "scores": {
-    "completeness": 5.5,
-    "craftsmanship": 9.5,
-    "user_impact": 9.0,
-    "pride": 8.0
+    "completeness": 10.0,
+    "craftsmanship": 10.0,
+    "user_impact": 7.0,
+    "pride": 10.0
   },
   "improvement": ""
 }
