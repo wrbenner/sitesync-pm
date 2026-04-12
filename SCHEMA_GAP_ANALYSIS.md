@@ -11,7 +11,7 @@
 
 ## 1. Methodology
 
-This document compares the existing 98-table database schema against the canonical domain model defined in `DOMAIN_KERNEL_SPEC.md`. Every table is individually assessed for:
+This document compares the database schema (99 tables) against the canonical domain model defined in `DOMAIN_KERNEL_SPEC.md`. Every table is individually assessed for:
 
 1. **Kernel mapping** — Does a kernel entity exist for this table?
 2. **Scope type** — system, org, project, org+project, or user
@@ -24,8 +24,8 @@ This document compares the existing 98-table database schema against the canonic
 ### 1.1 Sources
 
 - **Kernel spec:** `DOMAIN_KERNEL_SPEC.md` Sections 2–6, Appendix A
-- **RLS data:** Extracted from `supabase/migrations/` — 44 tables confirmed with RLS enabled, 56 tables with unknown RLS status
-- **Table list:** 98 tables confirmed in database
+- **RLS data:** Extracted from `supabase/migrations/` — 43 tables confirmed with RLS enabled, 56 tables with unknown RLS status
+- **Table list:** 98 named tables + `time_entries` (discovered during migration analysis) = 99 total
 
 ### 1.2 Kernel Temporal Requirements (Section 6.1)
 
@@ -46,7 +46,7 @@ Every kernel table must have:
 
 ## 2. Master Gap Analysis Table
 
-For every one of the 98 tables:
+For all 99 tables:
 
 | # | Table | Kernel Entity | Scope Type | RLS Enabled | Has SELECT | Has INSERT | Has UPDATE | Has DELETE | RLS Status | Missing Columns | State Machine Status | Temporal Columns | Migration Action |
 |---|-------|--------------|------------|-------------|------------|------------|------------|------------|------------|-----------------|---------------------|-----------------|-----------------|
@@ -150,7 +150,7 @@ For every one of the 98 tables:
 | 98 | `weather_records` | WeatherRecord | project | unknown | unknown | unknown | unknown | unknown | ❓ unknown | `created_by` | N/A | ⚠️ partial (missing `created_by`) | add RLS + add columns |
 | 99 | `time_entries` | TimeEntry | project | unknown | unknown | unknown | unknown | unknown | ❓ unknown | `created_by`, `deleted_at`, `deleted_by` | N/A | ⚠️ partial (missing `created_by`, `deleted_at`, `deleted_by`) | add RLS + add columns |
 
-**Note on table count:** The database contains 98 named tables plus `time_entries` (a kernel entity discovered in migrations but not in the original table list), for a total of 99 rows in this audit. The kernel defines 97 entities. Two tables (`bim_markups`, `payment_applications`) have no kernel mapping. Of the 99 audited tables: 43 have confirmed RLS, 56 have unknown RLS status (Section 4.2). The count discrepancy between the original "98 tables" and "99 rows" is due to `time_entries` being added during migration analysis.
+**Note on table count:** 98 named tables + `time_entries` (discovered during migration analysis) = 99 total. The kernel defines 97 entities; 2 tables (`bim_markups`, `payment_applications`) have no kernel mapping. RLS split: 43 confirmed (§4.1), 56 unknown (§4.2).
 
 ---
 
@@ -158,7 +158,7 @@ For every one of the 98 tables:
 
 | Metric | Count |
 |--------|-------|
-| **Total tables** | 98 |
+| **Total tables** | 99 (98 named + `time_entries`) |
 | **Tables with kernel mapping** | 96 (97 kernel entities, 96 unique tables after deduplication) |
 | **Tables with no kernel mapping** | 2 (`bim_markups`, `payment_applications`) |
 | **Tables fully conformant** (no migration needed) | **5** (`rfi_watchers`, `meeting_attendees`, `audit_log`, `webhook_deliveries`, `notifications`) |
