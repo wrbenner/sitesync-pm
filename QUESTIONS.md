@@ -20,7 +20,15 @@
 
 ## Open Questions
 
-_No open questions yet. The organism is ready to begin._
+### Q-001: Bug in resolveConflict (src/lib/conflictResolver.ts)
+**Date:** 2026-04-12
+**Agent:** echo (architecture)
+**Context:** Writing tests for conflictResolver.ts revealed that the `fieldResolutions` parameter of `resolveConflict` is dead code. The function returns early when `resolution` is `'local'` or `'server'`, so per-field overrides are never applied.
+**Bug:** In `resolveConflict(conflict, 'server', { title: 'local' })`, the caller expects `title` to come from the local version, but the function ignores `fieldResolutions` and returns the full server version unchanged. The per-field merge block (lines after the two early returns) is unreachable with the current `'local' | 'server'` type constraint.
+**Failing test documented in:** `src/test/lib/conflictResolver.test.ts > resolveConflict > should return full server version when resolution is server, ignoring fieldResolutions`
+**Fix suggestion:** Either remove the `fieldResolutions` parameter (if intentionally unused), or change the early returns to check whether `fieldResolutions` is provided and process them before returning.
+**Answer:** [Filled in by Walker]
+**Answered Date:** [Filled in by Walker]
 
 ## Answered Questions
 
