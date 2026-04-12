@@ -1,0 +1,20 @@
+{
+  "_comment": "Copy this file to config.json and replace placeholders with real values from your test environment. NEVER use production credentials.",
+  "supabase": {
+    "url": "$SUPABASE_TEST_URL",
+    "anon_key": "$SUPABASE_TEST_KEY",
+    "service_role_key": "$SUPABASE_TEST_SERVICE_KEY",
+    "db_url": "$SUPABASE_TEST_DB_URL"
+  },
+  "test_settings": {
+    "timeout_ms": 30000,
+    "parallel": false,
+    "cleanup_on_failure": true
+  },
+  "layers": {
+    "layer1": { "enabled": true },
+    "layer2": { "enabled": true },
+    "layer3": { "enabled": false, "reason": "Placeholder — requires kernel hooks" },
+    "layer4": { "enabled": false, "reason": "Placeholder — requires AI policy layer" }
+  }
+}
