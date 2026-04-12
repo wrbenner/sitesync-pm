@@ -302,7 +302,7 @@ export const AICopilot: React.FC = () => {
   )
 
   return (
-    <PageContainer>
+    <PageContainer aria-label="AI Copilot">
       <div style={{ display: 'flex', gap: spacing['5'], height: 'calc(100vh - 160px)' }}>
         {/* Agent sidebar panel */}
         {showAgentPanel && (
@@ -564,6 +564,15 @@ export const AICopilot: React.FC = () => {
                           fontFamily: typography.fontFamily,
                           color: colors.textPrimary,
                           textAlign: 'left',
+                          transition: `background-color ${transitions.instant}`,
+                        }}
+                        onMouseEnter={(e) => {
+                          ;(e.currentTarget as HTMLButtonElement).style.backgroundColor =
+                            colors.surfaceHover
+                        }}
+                        onMouseLeave={(e) => {
+                          ;(e.currentTarget as HTMLButtonElement).style.backgroundColor =
+                            'transparent'
                         }}
                       >
                         <span style={{ color: colors.textTertiary, display: 'flex' }}>

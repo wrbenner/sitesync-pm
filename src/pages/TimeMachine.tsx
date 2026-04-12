@@ -3,6 +3,7 @@ import { Play, Pause, SkipForward, Columns, Flag, DollarSign, Users, HelpCircle,
 import { PageContainer, Card, Btn, ProgressBar, Skeleton, EmptyState } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme';
 import { useAnimatedNumber } from '../hooks/useAnimatedNumber';
+import { useMediaQuery } from '../hooks/useMediaQuery';
 import { useProjectId } from '../hooks/useProjectId';
 import { useProjectSnapshots } from '../hooks/queries';
 import type { ProjectSnapshot, Json } from '../types/database';
@@ -92,6 +93,7 @@ const snapshotPhotos = [
 
 export const TimeMachine: React.FC = () => {
   const projectId = useProjectId();
+  const isMobile = useMediaQuery('(max-width: 768px)');
   const { data: rawSnapshots, isLoading: loadingSnapshots } = useProjectSnapshots(projectId);
 
   const snapshots = useMemo(() => {
@@ -186,7 +188,7 @@ export const TimeMachine: React.FC = () => {
         </p>
       </div>
       {/* Metrics for current snapshot */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: spacing['3'], marginBottom: spacing['5'] }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)', gap: spacing['3'], marginBottom: spacing['5'] }}>
         {[
           { icon: <Flag size={16} />, label: 'Progress', value: `${snap.progress}%`, color: colors.primaryOrange },
           { icon: <DollarSign size={16} />, label: 'Spent', value: `$${animBudget.toFixed(1)}M`, color: colors.statusInfo },
@@ -418,7 +420,7 @@ export const TimeMachine: React.FC = () => {
       </Card>
 
       {/* Project Snapshot section */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['4'], marginTop: spacing['4'] }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: spacing['4'], marginTop: spacing['4'] }}>
         {/* Left: Snapshot metric cards in 2x2 grid */}
         <Card padding={spacing['4']}>
           <p style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.4px', margin: 0, marginBottom: spacing['3'] }}>Project Snapshot</p>
