@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { ApiError } from '../../api/errors'
 
 vi.mock('../../lib/errorTracking', () => ({
   captureException: vi.fn(),
@@ -84,32 +83,36 @@ describe('getAiInsights', () => {
     })
   })
 
-  describe('double-failure path', () => {
-    it('throws 503 ApiError with AI_UNAVAILABLE code when both aiService and Supabase fail', async () => {
+  describe('double-failure path (AI service + Supabase cache both fail)', () => {
+    it('falls through to computed/onboarding insights when both aiService and Supabase fail', async () => {
       ;(aiService.isConfigured as ReturnType<typeof vi.fn>).mockReturnValue(true)
       ;(aiService.generateInsights as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('AI down'))
       mockSupabaseChain({ data: null, error: { message: 'DB error', code: '500' } })
 
-      await expect(getAiInsights(projectId)).rejects.toMatchObject({
-        status: 503,
-        code: 'AI_UNAVAILABLE',
-      })
+      const result = await getAiInsights(projectId)
+
+      expect(Array.isArray(result.insights)).toBe(true)
+      expect(result.insights.length).toBeGreaterThan(0)
+      expect(result.degraded).toBe(true)
+      expect(result.degradedReason).toBe('Error')
     })
 
-    it('throws ApiError (not raw error) so callers always receive typed errors', async () => {
+    it('returns onboarding insights (not a throw) so the Dashboard always renders', async () => {
       ;(aiService.isConfigured as ReturnType<typeof vi.fn>).mockReturnValue(true)
       ;(aiService.generateInsights as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('AI down'))
       mockSupabaseChain({ data: null, error: { message: 'DB error', code: '500' } })
 
-      await expect(getAiInsights(projectId)).rejects.toBeInstanceOf(ApiError)
+      const result = await getAiInsights(projectId)
+
+      expect(result.insights.some((i) => i.source === 'onboarding' || i.source === 'computed')).toBe(true)
     })
 
-    it('still calls captureException for aiService error before throwing on Supabase failure', async () => {
+    it('still calls captureException for aiService error even when Supabase also fails', async () => {
       ;(aiService.isConfigured as ReturnType<typeof vi.fn>).mockReturnValue(true)
       ;(aiService.generateInsights as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('AI down'))
       mockSupabaseChain({ data: null, error: { message: 'DB error', code: '500' } })
 
-      await expect(getAiInsights(projectId)).rejects.toThrow()
+      await getAiInsights(projectId)
       expect(captureException).toHaveBeenCalledOnce()
     })
   })

@@ -1,9 +1,9 @@
 {
-  "timestamp": "2026-04-12T08:32:59Z",
+  "timestamp": "2026-04-12T08:34:53Z",
   "diff_summary": {
     "files_changed": 2,
-    "lines_added": 22,
-    "lines_removed": 19,
+    "lines_added": 43,
+    "lines_removed": 22,
     "files": [
       ".perception/quality-conscience.json",
       "src/pages/Dashboard.tsx"
@@ -21,7 +21,7 @@
       "checks_run": 8
     },
     "user_impact": {
-      "score": 7.0,
+      "score": 8.0,
       "issues": [
         "Changes 1 UI file(s) — directly visible to users",
         "Touches demo-relevant area(s): dashboard, schedule"
@@ -37,11 +37,11 @@
     }
   },
   "verdict": "PASS",
-  "average_score": 9.2,
+  "average_score": 9.5,
   "scores": {
     "completeness": 10.0,
     "craftsmanship": 10.0,
-    "user_impact": 7.0,
+    "user_impact": 8.0,
     "pride": 10.0
   },
   "improvement": ""
