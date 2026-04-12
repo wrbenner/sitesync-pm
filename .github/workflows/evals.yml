@@ -1,0 +1,77 @@
+name: Eval Harness
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: evals-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  layer1-database:
+    name: "Eval Layer 1: Database/RLS"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install psql
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Generate eval config
+        run: |
+          cat > evals/config.json << 'CONF'
+          {
+            "supabase": {
+              "url": "$SUPABASE_URL",
+              "anon_key": "$SUPABASE_ANON_KEY",
+              "service_role_key": "$SUPABASE_SERVICE_ROLE_KEY",
+              "db_url": "$SUPABASE_DB_URL"
+            }
+          }
+          CONF
+        # Config uses env var references — run-evals.sh resolves them at runtime
+
+      - name: Run Layer 1
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          chmod +x evals/run-evals.sh
+          evals/run-evals.sh --layer 1
+
+  layer2-api:
+    name: "Eval Layer 2: API"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate eval config
+        run: |
+          cat > evals/config.json << 'CONF'
+          {
+            "supabase": {
+              "url": "$SUPABASE_URL",
+              "anon_key": "$SUPABASE_ANON_KEY",
+              "service_role_key": "$SUPABASE_SERVICE_ROLE_KEY",
+              "db_url": "$SUPABASE_DB_URL"
+            }
+          }
+          CONF
+
+      - name: Run Layer 2
+        env:
+          SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          chmod +x evals/run-evals.sh
+          evals/run-evals.sh --layer 2
