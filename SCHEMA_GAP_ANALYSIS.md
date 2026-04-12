@@ -24,7 +24,7 @@ This document compares the existing 98-table database schema against the canonic
 ### 1.1 Sources
 
 - **Kernel spec:** `DOMAIN_KERNEL_SPEC.md` Sections 2–6, Appendix A
-- **RLS data:** Extracted from `supabase/migrations/` — 44 tables confirmed with RLS enabled, 54 tables with unknown RLS status
+- **RLS data:** Extracted from `supabase/migrations/` — 44 tables confirmed with RLS enabled, 56 tables with unknown RLS status
 - **Table list:** 98 tables confirmed in database
 
 ### 1.2 Kernel Temporal Requirements (Section 6.1)
@@ -94,7 +94,7 @@ For every one of the 98 tables:
 | 42 | `audit_log` | AuditLog | project | yes | yes | yes | yes | yes | ✅ covered | — | N/A | ✅ complete (immutable, no soft delete) | none |
 | 43 | `bim_markups` | **No kernel mapping** | project | yes | yes | yes | yes | yes | ✅ covered | — | N/A | — | **candidate for deprecation** |
 | 44 | `webhook_deliveries` | WebhookDelivery | system (child) | yes | yes | yes | yes | yes | ✅ covered | — | N/A | ✅ complete | none |
-| 45 | `payment_applications` | **No kernel mapping** (duplicate of `pay_applications`?) | project | yes | yes | yes | yes | yes | ✅ covered | — | — | — | **investigate: possible duplicate of `pay_applications`** |
+| 45 | `payment_applications` | **No kernel mapping** (suspected duplicate of `pay_applications`) | project | yes | yes | yes | yes | yes | ✅ covered | — | — | — | **deprecation candidate** — investigate if duplicate of `pay_applications` (see DEPRECATION_LEDGER.md §2) |
 | 46 | `portfolios` | Portfolio | org | unknown | unknown | unknown | unknown | unknown | ❓ unknown | `created_by`, `deleted_at`, `deleted_by` | N/A | ⚠️ partial (missing `created_by`, `deleted_at`, `deleted_by`) | add RLS + add columns |
 | 47 | `portfolio_projects` | PortfolioProject | org | unknown | unknown | unknown | unknown | unknown | ❓ unknown | — | N/A | ✅ complete (join table) | add RLS |
 | 48 | `transmittals` | Transmittal | project | unknown | unknown | unknown | unknown | unknown | ❓ unknown | `created_by`, `deleted_at`, `deleted_by` | N/A | ⚠️ partial (missing `created_by`, `deleted_at`, `deleted_by`) | add RLS + add columns |
@@ -148,9 +148,9 @@ For every one of the 98 tables:
 | 96 | `toolbox_talks` | ToolboxTalk | project | unknown | unknown | unknown | unknown | unknown | ❓ unknown | `created_by`, `deleted_at`, `deleted_by` | N/A | ⚠️ partial (missing `created_by`, `deleted_at`, `deleted_by`) | add RLS + add columns |
 | 97 | `toolbox_talk_attendees` | ToolboxTalkAttendee | project (child) | unknown | unknown | unknown | unknown | unknown | ❓ unknown | — | N/A | ✅ complete (join table) | add RLS |
 | 98 | `weather_records` | WeatherRecord | project | unknown | unknown | unknown | unknown | unknown | ❓ unknown | `created_by` | N/A | ⚠️ partial (missing `created_by`) | add RLS + add columns |
-| — | `time_entries` | TimeEntry | project | unknown | unknown | unknown | unknown | unknown | ❓ unknown | `created_by`, `deleted_at`, `deleted_by` | N/A | ⚠️ partial (missing `created_by`, `deleted_at`, `deleted_by`) | add RLS + add columns |
+| 99 | `time_entries` | TimeEntry | project | unknown | unknown | unknown | unknown | unknown | ❓ unknown | `created_by`, `deleted_at`, `deleted_by` | N/A | ⚠️ partial (missing `created_by`, `deleted_at`, `deleted_by`) | add RLS + add columns |
 
-**Note on table count:** The provided list contains 98 named tables. The kernel defines 97 entities. Two tables (`bim_markups`, `payment_applications`) have no kernel mapping. `time_entries` is a kernel entity that appears in the unknown-RLS list. The count discrepancy is due to `bim_markups` (no kernel mapping) and `payment_applications` (possible duplicate of `pay_applications`).
+**Note on table count:** The database contains 98 named tables plus `time_entries` (a kernel entity discovered in migrations but not in the original table list), for a total of 99 rows in this audit. The kernel defines 97 entities. Two tables (`bim_markups`, `payment_applications`) have no kernel mapping. Of the 99 audited tables: 43 have confirmed RLS, 56 have unknown RLS status (Section 4.2). The count discrepancy between the original "98 tables" and "99 rows" is due to `time_entries` being added during migration analysis.
 
 ---
 
@@ -161,10 +161,10 @@ For every one of the 98 tables:
 | **Total tables** | 98 |
 | **Tables with kernel mapping** | 96 (97 kernel entities, 96 unique tables after deduplication) |
 | **Tables with no kernel mapping** | 2 (`bim_markups`, `payment_applications`) |
-| **Tables fully conformant** (no migration needed) | **6** (`rfi_watchers`, `meeting_attendees`, `audit_log`, `webhook_deliveries`, `notifications`, `payment_applications`*) |
+| **Tables fully conformant** (no migration needed) | **5** (`rfi_watchers`, `meeting_attendees`, `audit_log`, `webhook_deliveries`, `notifications`) |
 | **Tables needing column additions** | **86** (most need `created_by`, `deleted_at`, `deleted_by`) |
-| **Tables needing RLS** | **54** (all tables with unknown RLS status) |
-| **Tables needing both RLS + columns** | **48** |
+| **Tables needing RLS** | **56** (all tables with unknown RLS status, including `weather_records` and `time_entries`) |
+| **Tables needing both RLS + columns** | **50** |
 | **Tables needing role enum update** | **1** (`project_members` — critical path item) |
 | **Tables needing state machine enum** | **1** (`incidents` — severity should be CHECK-constrained enum) |
 | **Tables candidate for deprecation** | **2** (`bim_markups`, `payment_applications`) |
@@ -172,7 +172,7 @@ For every one of the 98 tables:
 ### 3.1 Critical Path Items (ordered by exposure risk)
 
 1. **`project_members` role enum mismatch** — DB allows `('owner', 'admin', 'member', 'viewer')` but kernel requires `('owner', 'admin', 'project_manager', 'superintendent', 'subcontractor', 'viewer')`. Every RLS policy and the `is_project_role()` function depends on this. **Must be resolved first.**
-2. **54 tables with unknown RLS status** — Any table without RLS is potentially exposed via the Supabase REST API to any authenticated user.
+2. **56 tables with unknown RLS status** — Any table without RLS is potentially exposed via the Supabase REST API to any authenticated user.
 3. **`deleted_at`/`deleted_by` columns missing on ~86 tables** — Soft delete cannot function without these columns. RLS SELECT policies cannot include `AND deleted_at IS NULL` until columns exist.
 4. **`created_by` column missing on ~75 tables** — Audit provenance incomplete.
 
@@ -180,7 +180,7 @@ For every one of the 98 tables:
 
 ## 4. Explicit RLS Audit
 
-### 4.1 Tables with Confirmed RLS (44 tables)
+### 4.1 Tables with Confirmed RLS (43 tables)
 
 Every table below has been confirmed to have RLS enabled via migration analysis. Per-operation policy status is based on migration extraction.
 
@@ -230,7 +230,7 @@ Every table below has been confirmed to have RLS enabled via migration analysis.
 | 42 | `webhook_deliveries` | yes | yes | yes | yes | yes | ✅ covered |
 | 43 | `payment_applications` | yes | yes | yes | yes | yes | ✅ covered |
 
-### 4.2 Tables with Unknown RLS Status (54 tables)
+### 4.2 Tables with Unknown RLS Status (56 tables)
 
 **Every table below is potentially exposed.** Until RLS is confirmed or added, these tables may be accessible to any authenticated Supabase user via the REST API.
 
@@ -290,8 +290,8 @@ Every table below has been confirmed to have RLS enabled via migration analysis.
 | 52 | `api_keys` | unknown | unknown | unknown | unknown | unknown | ❓ unknown | **CRITICAL** — API credentials |
 | 53 | `toolbox_talks` | unknown | unknown | unknown | unknown | unknown | ❓ unknown | MEDIUM — safety content |
 | 54 | `toolbox_talk_attendees` | unknown | unknown | unknown | unknown | unknown | ❓ unknown | MEDIUM — attendance |
-| — | `weather_records` | unknown | unknown | unknown | unknown | unknown | ❓ unknown | LOW — weather data |
-| — | `time_entries` | unknown | unknown | unknown | unknown | unknown | ❓ unknown | **HIGH** — labor/rate data |
+| 55 | `weather_records` | unknown | unknown | unknown | unknown | unknown | ❓ unknown | LOW — weather data |
+| 56 | `time_entries` | unknown | unknown | unknown | unknown | unknown | ❓ unknown | **HIGH** — labor/rate data |
 
 ### 4.3 RLS Priority Queue (by exposure risk)
 
@@ -447,7 +447,7 @@ The kernel defines state machines for 8 entities (Section 5) plus status enums f
 
 | Action | Tables Affected |
 |--------|----------------|
-| Add RLS policies to MEDIUM-priority tables | 25 |
+| Add RLS policies to MEDIUM-priority tables | 24 |
 | Add RLS policies to LOW-priority tables | 7 |
 
 ### 6.5 Table Resolution
