@@ -77,6 +77,19 @@ async function runTests() {
     process.exit(0);
   }
 
+  // Connectivity check
+  try {
+    await fetch(`${baseUrl}/rest/v1/`, { method: "HEAD", signal: AbortSignal.timeout(10000) });
+  } catch {
+    console.log("SKIP [V.1] Supabase unreachable");
+    console.log("SKIP [V.2] Supabase unreachable");
+    console.log("SKIP [V.3] Supabase unreachable");
+    console.log("SKIP [V.4] Supabase unreachable");
+    console.log("SKIP [V.5] Supabase unreachable");
+    console.log("\n--- Input Validation: 0 passed, 0 failed (all skipped — host unreachable) ---");
+    process.exit(0);
+  }
+
   // Use service_role key for these tests to bypass RLS and isolate input
   // validation from permission checks.
   const headers = {
