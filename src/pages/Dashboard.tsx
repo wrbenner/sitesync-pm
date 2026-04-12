@@ -16,7 +16,7 @@ import { duration, easing, easingArray } from '../styles/animations';
 import { useProjectId } from '../hooks/useProjectId';
 import {
   useProject, useProjects, usePayApplications, useLienWaivers,
-  useAiInsightsMeta,
+  useAiInsightsMeta, useSchedulePhases,
 } from '../hooks/queries';
 import { useProjectMetrics } from '../hooks/useProjectMetrics';
 import { useAnimatedNumber } from '../hooks/useAnimatedNumber';
@@ -753,6 +753,58 @@ const DashboardInner: React.FC = () => {
     refetchOnWindowFocus: false,
   });
 
+  // Schedule phases for weather-schedule conflict detection
+  const { data: schedulePhases } = useSchedulePhases(projectId);
+
+  // Weather-schedule conflict insights: connect forecast to upcoming outdoor phases
+  const weatherConflictInsights = useMemo<AIInsight[]>(() => {
+    if (!forecastData || !schedulePhases) return [];
+    const now = new Date().toISOString();
+    const conflicts: AIInsight[] = [];
+    const activePhases = schedulePhases.filter(
+      (p) => p.status !== 'complete' && (p.percent_complete ?? 0) < 100 && p.start_date
+    );
+
+    for (const day of forecastData) {
+      if (day.precip_probability < 60) continue;
+      const forecastDate = day.date;
+      const matchingPhase = activePhases.find((p) => {
+        if (!p.start_date) return false;
+        const phaseStart = p.start_date.split('T')[0];
+        const phaseEnd = p.end_date ? p.end_date.split('T')[0] : phaseStart;
+        return forecastDate >= phaseStart && forecastDate <= phaseEnd;
+      });
+      if (!matchingPhase) continue;
+
+      const dayLabel = new Date(forecastDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long' });
+      const phaseName = matchingPhase.name ?? 'Scheduled phase';
+      conflicts.push({
+        id: `weather-conflict-${forecastDate}-${matchingPhase.id}`,
+        type: 'risk',
+        severity: day.precip_probability >= 80 ? 'critical' : 'warning',
+        title: `${day.conditions} forecast for ${dayLabel}. ${phaseName} may be impacted`,
+        description: `${day.precip_probability}% chance of precipitation on ${dayLabel} (${day.temp_high}°/${day.temp_low}°). ${phaseName} is scheduled during this period. Consider identifying indoor backup scope or adjusting the sequence.`,
+        affectedEntities: [
+          { type: 'schedule_phase', id: matchingPhase.id, name: phaseName },
+        ],
+        suggestedAction: `Review ${phaseName} schedule and prepare contingency`,
+        confidence: 0.8,
+        source: 'computed' as const,
+        createdAt: now,
+        generatedAt: now,
+        dismissed: false,
+      });
+      if (conflicts.length >= 2) break;
+    }
+    return conflicts;
+  }, [forecastData, schedulePhases]);
+
+  // Merge AI insights with weather conflict insights
+  const mergedInsights = useMemo<AIInsight[]>(() => {
+    const aiInsights = insightsData?.insights ?? [];
+    return [...aiInsights, ...weatherConflictInsights];
+  }, [insightsData?.insights, weatherConflictInsights]);
+
   // Timeout: never show skeleton for more than 5 seconds
   const [skeletonTimedOut, setSkeletonTimedOut] = useState(false);
   useEffect(() => {
@@ -1102,8 +1154,8 @@ const DashboardInner: React.FC = () => {
       )}
 
       {/* ── AI Insights (above the fold) ────────────────── */}
-      {insightsData?.insights && insightsData.insights.length > 0 ? (
-        <AIInsightsBanner insights={insightsData.insights} navigate={navigate} />
+      {mergedInsights.length > 0 ? (
+        <AIInsightsBanner insights={mergedInsights} navigate={navigate} />
       ) : metrics ? (
         <DeterministicInsightsBanner metrics={metrics} navigate={navigate} />
       ) : null}
