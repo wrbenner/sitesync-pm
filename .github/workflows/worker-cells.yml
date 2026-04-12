@@ -59,7 +59,7 @@ jobs:
             for i in 1 2 3 4 5; do
               git fetch origin main 2>/dev/null
               git rebase origin/main 2>/dev/null || { git rebase --abort 2>/dev/null; git reset --soft HEAD~1; git stash; git pull origin main; git stash pop; git add .metrics/; git commit -m "metrics: update codebase health [cells][skip ci]"; }
-              git push origin main 2>&1 && echo "Metrics pushed (attempt $i)" && exit 0
+              echo "Creating PR instead of direct push" && BRANCH="auto/metrics-$(date +%Y%m%d-%H%M)" && git checkout -b "$BRANCH" 2>/dev/null || true && git push origin "$BRANCH" 2>&1 && gh pr create --title "[auto] metrics update $(date +%Y-%m-%d)" --body "Worker cell metrics update" --base main --head "$BRANCH" || true 2>&1 && echo "Metrics pushed (attempt $i)" && exit 0
               echo "Push attempt $i failed, retrying in $((i*3))s..."
               sleep $((i*3))
             done

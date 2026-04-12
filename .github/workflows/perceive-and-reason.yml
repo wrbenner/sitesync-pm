@@ -441,7 +441,7 @@ jobs:
           git pull --rebase origin main 2>/dev/null || true
           git add -A
           git diff --staged --quiet || git commit -m "perception: strategic direction $(date +%Y-%m-%d) [autopoietic][skip ci]"
-          git push origin main || true
+          echo "Creating PR instead of direct push" && BRANCH="auto/strategy-$(date +%Y%m%d-%H%M)" && git checkout -b "$BRANCH" 2>/dev/null || true && git push origin "$BRANCH" 2>&1 && gh pr create --title "[autopoietic] strategy $(date +%Y-%m-%d)" --body "Strategic direction update" --base main --head "$BRANCH" || true || true
 
       - name: Generate step summary
         if: always()

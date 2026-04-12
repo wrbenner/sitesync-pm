@@ -265,7 +265,7 @@ jobs:
           git pull --rebase origin main 2>/dev/null || true
           COMMITS=$(git log origin/main..HEAD --oneline 2>/dev/null | wc -l | tr -d ' ')
           if [ "$COMMITS" -gt "0" ]; then
-            git push origin main
+            echo "Creating PR instead of direct push" && git push origin "$BRANCH" 2>&1 && gh pr create --title "[autopoietic] build $(date +%Y-%m-%d)" --body "Autonomous builder output" --base main --head "$BRANCH" || true
             echo "## Autonomous Builder — $(date '+%B %d %Y')" >> $GITHUB_STEP_SUMMARY
             echo "**Commits pushed:** $COMMITS" >> $GITHUB_STEP_SUMMARY
             echo "**Baseline:** ${{ steps.baseline.outputs.ts_errors }} TS errors, ${{ steps.baseline.outputs.any_count }} unsafe casts, ${{ steps.baseline.outputs.mock_count }} mock" >> $GITHUB_STEP_SUMMARY

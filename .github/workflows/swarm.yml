@@ -209,7 +209,7 @@ jobs:
               --label "agent-${{ matrix.agent }}" 2>/dev/null)
             if [ -n "$PR_URL" ]; then
               PR_NUM=$(echo "$PR_URL" | grep -o '[0-9]*$')
-              gh pr merge "$PR_NUM" --auto --squash --delete-branch 2>/dev/null || true
+              echo "PR created — awaiting review (auto-merge disabled)"
               echo "PR #$PR_NUM created with auto-merge"
             fi
           else

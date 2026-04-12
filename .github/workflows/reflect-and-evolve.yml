@@ -352,7 +352,7 @@ jobs:
           git add REFLECTION.md .reviews/ .perception/nightly-score*.json
           git diff --staged --quiet || git commit -m "reflect: nightly score and verification $(date +%Y-%m-%d) [autopoietic][skip ci]"
           git pull --rebase origin main 2>/dev/null || true
-          git push origin main || true
+          echo "Creating PR instead of direct push" && BRANCH="auto/evolve-$(date +%Y%m%d-%H%M)" && git checkout -b "$BRANCH" 2>/dev/null || true && git push origin "$BRANCH" 2>&1 && gh pr create --title "[autopoietic] evolve $(date +%Y-%m-%d)" --body "Evolution and reflection output" --base main --head "$BRANCH" || true || true
 
       - name: Upload reflection artifacts
         uses: actions/upload-artifact@v4
@@ -544,7 +544,7 @@ jobs:
           git pull --rebase origin main 2>/dev/null || true
           COMMITS=$(git log origin/main..HEAD --oneline 2>/dev/null | wc -l | tr -d ' ')
           if [ "$COMMITS" -gt "0" ]; then
-            git push origin main
+            echo "Creating PR instead of direct push" && BRANCH="auto/evolve-$(date +%Y%m%d-%H%M)" && git checkout -b "$BRANCH" 2>/dev/null || true && git push origin "$BRANCH" 2>&1 && gh pr create --title "[autopoietic] evolve $(date +%Y-%m-%d)" --body "Evolution and reflection output" --base main --head "$BRANCH" || true
             echo "## Evolution — $(date '+%B %d %Y')" >> $GITHUB_STEP_SUMMARY
             echo "**Evolution commits:** $COMMITS" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
