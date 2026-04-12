@@ -93,13 +93,6 @@
       "date": "2026-04-11",
       "source": "Night 7 score regression",
       "alternative": "Tag polish sessions explicitly. Track demo readiness separately from organism score. Only expect score improvements from capability work or infrastructure fixes (verification pipeline)."
-    },
-    {
-      "id": "KILL-005",
-      "description": "Comparing nightly scores across nights when perception changes the success criteria. Night 7→8 showed a 15-point drop with zero code changes because the criteria themselves changed. The score reflects criteria alignment, not code quality delta.",
-      "date": "2026-04-12",
-      "source": "Night 8 score regression analysis — 34→19 with 0 build commits",
-      "alternative": "Only compare scores when criteria are stable. When criteria change, note it in the nightly entry. Track criteria stability as a separate metric. Perception should carry forward partially-met criteria rather than replacing them."
     }
   ],
   "patterns": [
@@ -184,18 +177,6 @@
       "evolution_applied": "Demo-polish session: fixed 3 skeleton traps (dashboard, schedule, auth), added deterministic insights fallback, cleaned 7 stub messages, added auth timeout. Score regressed because polish doesn't address scoring criteria (conflict intelligence, weather, verification).",
       "biggest_bottleneck": "Scoring rubric misalignment: 5 useful fixes produced a score decrease. Verification still 0/4 (now 2 consecutive nights, 50 points forfeited total).",
       "next_priority": "1) Fix verification pipeline (25 pts/night). 2) Add as-any count to quality ratchet gate. 3) Do NOT expect score improvement from polish work."
-    },
-    {
-      "date": "2026-04-12",
-      "night": 8,
-      "score": 19,
-      "grade": "F",
-      "commits": 0,
-      "critical_issues": 0,
-      "learnings_added": 4,
-      "evolution_applied": "No build commits produced. Evolution focused on diagnosing systemic failures: builder workflow not triggering, perception criteria drift causing score volatility, verification pipeline broken for 3rd consecutive night. Added KILL-005 (criteria comparison across unstable criteria sets).",
-      "biggest_bottleneck": "Builder workflow did not run — zero feature commits produced. Verification still 0/4 (3 consecutive nights, 75 points forfeited total). Criteria drift caused 12-point phantom regression.",
-      "next_priority": "1) Debug why nightly-build.yml did not produce commits. 2) Fix verification pipeline (75 points forfeited over 3 nights). 3) Stabilize perception criteria to allow meaningful night-to-night score comparison."
     }
   ]
 }

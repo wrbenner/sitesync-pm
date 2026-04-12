@@ -208,25 +208,3 @@ Final module scores (Cycle 9): All modules at 50/100 baseline after reset.
   EVIDENCE: Night 2 ended with ~14 `as any` casts after EVO-001 and EVO-002. Night 7 code_health shows 27 unsafe casts. cast_points dropped to 1/5. The new code from Nights 3 through 7 reintroduced casts.
   ACTION: Add a pre-commit or CI check that fails if `as any` count exceeds current floor. The quality ratchet must include `as any` count as a gated metric, not just a measured one.
 
-## Night 8 Learnings (2026-04-12)
-
-<!-- Added 2026-04-12 | Source: Score regression 34→19 with 0 build commits -->
-- [2026-04-12] LEARNING: The nightly builder produced zero feature commits on Night 8. The perception set a strategic direction ("wire existing intelligence to Dashboard") but no builder workflow executed it. The organism cannot improve its score if the builder does not run.
-  EVIDENCE: Between the Night 7 evolution (commit 9e91249) and Night 8 reflection (commit baf3ee3), only 2 automated commits exist: perception (24864eb) and reflection (baf3ee3). Zero feature or build commits. The score dropped 15 points despite no code changes.
-  ACTION: Verify nightly-build.yml is triggering correctly. Check workflow run history for failures or skipped runs. The builder must produce at least 1 commit per night or the organism stalls.
-
-<!-- Added 2026-04-12 | Source: Success criteria changed between Night 7 and Night 8 -->
-- [2026-04-12] LEARNING: Perception criteria drift causes score volatility independent of code quality. When perception changes the success criteria, previously met criteria stop being measured. Night 7 had partially met criteria (12/35). Night 8 had entirely different criteria (entity specific insights, weather, cross entity connections), all unmet. Score dropped 12 points from criteria shift alone.
-  EVIDENCE: Night 7 success_criteria: 12/35 (some criteria met). Night 8 success_criteria: 0/35 (3 new criteria, all at <0.25 confidence). The criteria "AI Insights banner names specific entities" (0.21), "Dashboard shows weather data" (0.16), "cross entity insights" (0.06) were not the same criteria measured on Night 7. No code changed between measurements.
-  ACTION: Perception should carry forward partially met criteria rather than replacing them entirely. Alternatively, the evolution engine should account for criteria changes when comparing scores across nights. Night to night score comparisons are only valid when criteria are stable.
-
-<!-- Added 2026-04-12 | Source: 3 consecutive nights of 0/4 verification agents -->
-- [2026-04-12] LEARNING: The verification pipeline has been non functional for 3 consecutive nights (Nights 6, 7, 8). This is a confirmed systemic failure. 75 total points forfeited (25 per night). This single infrastructure problem is the largest scoring bottleneck in the system by a wide margin.
-  EVIDENCE: Night 6: 0/25 verification. Night 7: 0/25 verification. Night 8: 0/25 verification. consensus.json shows 0 agents reporting on all 3 nights. No critical, major, or minor issues logged — meaning the agents never ran, not that they found no issues.
-  ACTION: This is now the #1 priority for the organism. Before any feature work, the verification workflow must be debugged end to end. Check: (1) Does the workflow trigger? (2) Do the agents have API keys? (3) Does consensus.json get written with real data? Until this is fixed, the organism cannot score above 75/100 under any circumstances.
-
-<!-- Added 2026-04-12 | Source: intelligence_growth scored 5 on Night 7 and 2 on Night 8 with identical code -->
-- [2026-04-12] LEARNING: The intelligence_growth scoring dimension is non deterministic. The same codebase scored 5/10 on Night 7 and 2/10 on Night 8. The "intelligence signals detected in product" check produces inconsistent results across runs.
-  EVIDENCE: Night 7: intelligence_growth 5/10 ("Skills in library: 5" plus some signals). Night 8: intelligence_growth 2/10 ("Skills in library: 5", "No intelligence signals detected in product"). Zero code changes between measurements. The "intelligence signals" detection varies despite identical code.
-  ACTION: Investigate what constitutes an "intelligence signal" in the scoring system. If the detection is based on heuristics or LLM evaluation, the scoring needs to be made deterministic or the variance needs to be accounted for in trend analysis.
-
