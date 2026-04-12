@@ -1,8 +1,11 @@
 import React, { useMemo } from 'react';
 import { CloudRain, Sun, Cloud, CloudSun, Droplets } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { colors, spacing, typography, borderRadius, transitions } from '../../../styles/theme';
 import { useProjectId } from '../../../hooks/useProjectId';
-import { useSchedulePhases } from '../../../hooks/queries';
+import { useSchedulePhases, useProject } from '../../../hooks/queries';
+import { fetchWeatherForecast5Day } from '../../../lib/weather';
+import type { WeatherDay } from '../../../lib/weather';
 
 interface DayForecast {
   day: string;
@@ -15,15 +18,6 @@ interface DayForecast {
   conflict: string | null;
 }
 
-// Weather data fetched from weather service when API key is configured
-const baseForecast: Omit<DayForecast, 'outdoorWork' | 'conflict'>[] = [
-  { day: 'Mon', icon: 'sun', high: 82, low: 65, precipitation: 0, impactScore: 95 },
-  { day: 'Tue', icon: 'cloud-sun', high: 78, low: 62, precipitation: 10, impactScore: 88 },
-  { day: 'Wed', icon: 'cloud', high: 71, low: 58, precipitation: 30, impactScore: 65 },
-  { day: 'Thu', icon: 'rain', high: 66, low: 54, precipitation: 85, impactScore: 12 },
-  { day: 'Fri', icon: 'cloud-sun', high: 74, low: 60, precipitation: 15, impactScore: 82 },
-];
-
 const weatherIcons = {
   sun: Sun,
   'cloud-sun': CloudSun,
@@ -31,6 +25,24 @@ const weatherIcons = {
   rain: CloudRain,
   storm: Droplets,
 };
+
+function conditionsToIcon(conditions: string): DayForecast['icon'] {
+  const c = conditions.toLowerCase();
+  if (c.includes('thunder') || c.includes('storm')) return 'storm';
+  if (c.includes('rain') || c.includes('drizzle')) return 'rain';
+  if (c.includes('cloud') || c.includes('fog') || c.includes('overcast')) return 'cloud';
+  if (c.includes('partly')) return 'cloud-sun';
+  return 'sun';
+}
+
+function precipToImpact(precip: number, conditions: string): number {
+  if (conditions.toLowerCase().includes('thunder')) return 5;
+  if (precip >= 80) return 10;
+  if (precip >= 60) return 30;
+  if (precip >= 40) return 55;
+  if (precip >= 20) return 75;
+  return 95;
+}
 
 function getImpactColor(score: number): string {
   if (score >= 80) return colors.statusActive;
@@ -40,24 +52,53 @@ function getImpactColor(score: number): string {
 
 export const WeatherImpactWidget: React.FC = React.memo(() => {
   const projectId = useProjectId();
+  const { data: project } = useProject(projectId);
   const { data: phases } = useSchedulePhases(projectId);
 
-  // Merge real phase names into the weather forecast as "outdoor work" labels and conflicts
+  const lat = project?.latitude ?? 40.7128;
+  const lon = project?.longitude ?? -74.0060;
+  const projectCity = [project?.city, project?.state].filter(Boolean).join(', ') || 'Project Site';
+
+  const { data: weatherDays } = useQuery<WeatherDay[]>({
+    queryKey: ['weather_forecast_widget', projectId, lat, lon],
+    queryFn: () => fetchWeatherForecast5Day(lat, lon),
+    enabled: !!projectId,
+    staleTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
   const forecast: DayForecast[] = useMemo(() => {
     const activePhases = (phases || []).filter((p) => (p.status || '').toLowerCase() !== 'complete' && (p.percent_complete ?? 0) < 100);
     const defaultLabels = ['Exterior work', 'Steel erection', 'Exterior painting', 'Concrete pour', 'Roofing'];
 
-    return baseForecast.map((day, i) => {
-      const phaseName = activePhases[i % activePhases.length]?.name || defaultLabels[i];
+    if (!weatherDays || weatherDays.length === 0) {
+      // Fallback: show default labels with neutral weather
+      return defaultLabels.slice(0, 5).map((label, i) => ({
+        day: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'][i],
+        icon: 'sun' as const,
+        high: 75,
+        low: 55,
+        precipitation: 0,
+        outdoorWork: activePhases[i % Math.max(activePhases.length, 1)]?.name || label,
+        impactScore: 95,
+        conflict: null,
+      }));
+    }
+
+    return weatherDays.slice(0, 5).map((day, i) => {
+      const dayLabel = new Date(day.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short' });
+      const phaseName = activePhases[i % Math.max(activePhases.length, 1)]?.name || defaultLabels[i];
+      const icon = conditionsToIcon(day.conditions);
+      const impactScore = precipToImpact(day.precip_probability, day.conditions);
       let conflict: string | null = null;
-      if (day.impactScore < 50) {
-        conflict = `Rain forecast. ${phaseName} scheduled. 87% chance of delay.`;
-      } else if (day.impactScore < 70) {
-        conflict = `Wind advisory, ${phaseName} at risk`;
+      if (impactScore < 50) {
+        conflict = `${day.conditions} forecast. ${phaseName} scheduled. ${day.precip_probability}% chance of precipitation.`;
+      } else if (impactScore < 70) {
+        conflict = `${day.conditions} expected, ${phaseName} at risk`;
       }
-      return { ...day, outdoorWork: phaseName, conflict };
+      return { day: dayLabel, icon, high: day.temp_high, low: day.temp_low, precipitation: day.precip_probability, outdoorWork: phaseName, impactScore, conflict };
     });
-  }, [phases]);
+  }, [phases, weatherDays]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -66,7 +107,7 @@ export const WeatherImpactWidget: React.FC = React.memo(() => {
         <span style={{ fontSize: typography.fontSize.label, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, textTransform: 'uppercase', letterSpacing: typography.letterSpacing.wider }}>
           Weather Impact
         </span>
-        <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, marginLeft: 'auto' }}>Dallas, TX</span>
+        <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, marginLeft: 'auto' }}>{projectCity}</span>
       </div>
 
       {/* 5-day bar */}

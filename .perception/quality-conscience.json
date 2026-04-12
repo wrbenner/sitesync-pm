@@ -1,22 +1,18 @@
 {
-  "timestamp": "2026-04-12T08:27:29Z",
+  "timestamp": "2026-04-12T08:29:10Z",
   "diff_summary": {
-    "files_changed": 3,
-    "lines_added": 219,
-    "lines_removed": 43,
+    "files_changed": 2,
+    "lines_added": 72,
+    "lines_removed": 16,
     "files": [
-      "package-lock.json",
-      "src/api/endpoints/ai.ts",
+      ".perception/quality-conscience.json",
       "src/pages/Dashboard.tsx"
     ]
   },
   "dimensions": {
     "completeness": {
-      "score": 6.0,
-      "issues": [
-        "Adds a data hook but no loading state — users will see a blank flash",
-        "Adds a data hook but no empty state — what does the user see with no data?"
-      ],
+      "score": 10.0,
+      "issues": [],
       "checks_run": 5
     },
     "craftsmanship": {
@@ -25,28 +21,27 @@
       "checks_run": 8
     },
     "user_impact": {
-      "score": 9.5,
+      "score": 9.0,
       "issues": [
         "Changes 1 UI file(s) — directly visible to users",
-        "Changes 1 backend file(s) — wires up real functionality",
-        "Touches demo-relevant area(s): rfi, schedule, project"
+        "Touches demo-relevant area(s): dashboard, rfi, schedule, project"
       ],
       "checks_run": 5
     },
     "pride": {
       "score": 10.0,
       "issues": [
-        "End-to-end change (frontend + backend) — this moves the needle"
+        "Clean, focused commit with high completeness and craftsmanship"
       ],
       "checks_run": 4
     }
   },
   "verdict": "PASS",
-  "average_score": 8.9,
+  "average_score": 9.8,
   "scores": {
-    "completeness": 6.0,
+    "completeness": 10.0,
     "craftsmanship": 10.0,
-    "user_impact": 9.5,
+    "user_impact": 9.0,
     "pride": 10.0
   },
   "improvement": ""
