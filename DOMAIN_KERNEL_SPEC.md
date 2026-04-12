@@ -1643,20 +1643,20 @@ These 20 fixtures define expected system behavior for evaluation testing. Each f
 
 **Preconditions:**
 - Building permit P-001, `status = 'not_applied'`.
-- 2 required inspections configured.
+- 2 required inspections: INS-001, INS-002, both `status = 'not_scheduled'`.
 
 **Actions:**
 1. PM transitions permit: `not_applied` → `application_submitted` → `under_review` → `approved`
-2. Inspector schedules inspection #1, conducts it → `passed`
-3. Inspector schedules inspection #2, conducts it → `failed`, `corrections_required = 'Fire blocking missing'`
-4. Re-inspection scheduled, conducted → `passed`
+2. Superintendent schedules INS-001 (`not_scheduled` → `scheduled`), conducts it → `passed`
+3. Superintendent schedules INS-002 (`not_scheduled` → `scheduled`), conducts it → `failed`, `corrections_required = 'Fire blocking missing'`
+4. Superintendent re-schedules INS-002 (`failed` → `scheduled`, sets `re_inspection_date`), conducts re-inspection → `passed`
 5. PM transitions permit: `approved` → `closed`
 
 **Expected Results:**
 - Permit status = `closed`
-- 2 inspections with `passed`, 1 with `failed` (3 total `permit_inspections` rows)
-- Step 5 only succeeds because all inspections are `passed`
-- Audit trail captures full history
+- 2 `permit_inspections` rows: INS-001 `passed`, INS-002 `passed` (re-inspection transitions the same row per §5.8, not a new row)
+- Step 5 only succeeds because all `permit_inspections` for P-001 have `status = 'passed'` (close precondition in §5.7)
+- Audit trail captures the full INS-002 state history: `not_scheduled → scheduled → failed → scheduled → passed`
 
 **Entities:** `permits`, `permit_inspections`, `audit_log`
 
