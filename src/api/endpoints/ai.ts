@@ -3,7 +3,6 @@ import { supabase } from '../client'
 import { validateProjectId } from '../middleware/projectScope'
 import { aiService } from '../../lib/aiService'
 import { captureException } from '../../lib/errorTracking'
-import { ApiError } from '../errors'
 import type { AIInsight, AiInsightsResponse } from '../../types/ai'
 import type { ProjectFinancials, DivisionFinancials } from '../../types/financial'
 
@@ -39,24 +38,23 @@ export const getAiInsights = async (
     }
   }
 
-  const { data, error } = await supabase
-    .from('ai_insights')
-    .select('*')
-    .eq('project_id', projectId)
-    .eq('dismissed', false)
-    .order('created_at', { ascending: false })
+  let cachedData: Array<Record<string, unknown>> = []
+  try {
+    const { data, error } = await supabase
+      .from('ai_insights')
+      .select('*')
+      .eq('project_id', projectId)
+      .eq('dismissed', false)
+      .order('created_at', { ascending: false })
 
-  if (error) {
-    throw new ApiError(
-      'AI insights temporarily unavailable',
-      503,
-      'AI_UNAVAILABLE',
-      'AI insights temporarily unavailable',
-      error
-    )
+    if (!error && data) {
+      cachedData = data as Array<Record<string, unknown>>
+    }
+  } catch {
+    // Non-fatal: fall through to computed insights
   }
 
-  const cachedInsights = (data || []).map((row): AIInsight => ({
+  const cachedInsights = cachedData.map((row): AIInsight => ({
     id: row.id,
     type: row.type,
     severity: row.severity,
@@ -132,6 +130,37 @@ export const getAiInsights = async (
         .limit(3)
       atRiskPhases = (data ?? []) as typeof atRiskPhases
     } catch { /* non-fatal */ }
+
+    // Cross-entity conflict detection: RFIs blocking upcoming schedule phases
+    let upcomingPhases: Array<{ id: string; name: string | null; start_date: string | null; status: string | null }> = []
+    let openRfisWithDates: Array<{ id: string; rfi_number: string | null; subject: string | null; due_date: string | null; ball_in_court: string | null }> = []
+    try {
+      const sevenDaysOut = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()
+      const { data } = await supabase
+        .from('schedule_phases')
+        .select('id, name, start_date, status')
+        .eq('project_id', projectId)
+        .neq('status', 'complete')
+        .gte('start_date', now)
+        .lte('start_date', sevenDaysOut)
+        .order('start_date', { ascending: true })
+        .limit(10)
+      upcomingPhases = (data ?? []) as typeof upcomingPhases
+    } catch { /* non-fatal */ }
+
+    if (upcomingPhases.length > 0) {
+      try {
+        const { data } = await supabase
+          .from('rfis')
+          .select('id, rfi_number, subject, due_date, ball_in_court')
+          .eq('project_id', projectId)
+          .neq('status', 'closed')
+          .not('due_date', 'is', null)
+          .order('due_date', { ascending: true })
+          .limit(20)
+        openRfisWithDates = (data ?? []) as typeof openRfisWithDates
+      } catch { /* non-fatal */ }
+    }
 
     const dynamicInsights: AIInsight[] = []
 
@@ -235,6 +264,50 @@ export const getAiInsights = async (
         generatedAt: now,
         dismissed: false,
       })
+    }
+
+    // Cross-entity: find RFI due dates that fall near upcoming phase start dates
+    if (openRfisWithDates.length > 0 && upcomingPhases.length > 0) {
+      for (const phase of upcomingPhases) {
+        if (!phase.start_date) continue
+        const phaseStart = new Date(phase.start_date).getTime()
+        const phaseName = phase.name ?? 'Upcoming phase'
+
+        for (const rfi of openRfisWithDates) {
+          if (!rfi.due_date) continue
+          const rfiDue = new Date(rfi.due_date).getTime()
+          const daysBetween = Math.ceil((phaseStart - rfiDue) / (1000 * 60 * 60 * 24))
+
+          // RFI due date falls within 5 days before the phase start (or is already past due)
+          if (daysBetween >= -7 && daysBetween <= 5) {
+            const rfiLabel = rfi.rfi_number ? `RFI ${rfi.rfi_number}` : 'An open RFI'
+            const bicNote = rfi.ball_in_court ? ` Ball in court: ${rfi.ball_in_court}.` : ''
+            const urgency = daysBetween <= 0
+              ? `${rfiLabel} response is past due and ${phaseName} start date is imminent`
+              : `${rfiLabel} response deadline is ${daysBetween} day${daysBetween === 1 ? '' : 's'} before ${phaseName} starts`
+
+            dynamicInsights.push({
+              id: `computed-conflict-rfi-phase-${rfi.id}-${phase.id}`,
+              type: 'risk',
+              severity: daysBetween <= 0 ? 'critical' : 'warning',
+              title: urgency,
+              description: `${rfi.subject ? `"${rfi.subject}" ` : ''}needs resolution before ${phaseName} can proceed.${bicNote} If the response slips, ${phaseName} is at risk of delay.`,
+              affectedEntities: [
+                { type: 'rfi', id: rfi.id, name: rfiLabel },
+                { type: 'schedule_phase', id: phase.id, name: phaseName },
+              ],
+              suggestedAction: `Escalate ${rfiLabel} to unblock ${phaseName}`,
+              confidence: 0.9,
+              source: 'computed' as const,
+              createdAt: now,
+              generatedAt: now,
+              dismissed: false,
+            })
+            break // One conflict per phase is enough
+          }
+        }
+        if (dynamicInsights.filter((i) => i.id.startsWith('computed-conflict-')).length >= 2) break
+      }
     }
 
     if (dynamicInsights.length > 0) {
