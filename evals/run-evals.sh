@@ -161,13 +161,24 @@ run_layer1() {
     local filepath="$SCRIPT_DIR/layer1-database/$test_file"
     if [[ ! -f "$filepath" ]]; then
       echo -e "  ${RED}Missing: $test_file${NC}"
-      ((L1_FAILED++))
+      L1_FAILED=$((L1_FAILED + 1))
       continue
     fi
 
     echo -e "  ${CYAN}Running $test_file...${NC}"
     local output
-    output=$(psql "$DB_URL" -f "$filepath" 2>&1) || true
+    local exit_code=0
+    output=$(psql "$DB_URL" -f "$filepath" 2>&1) || exit_code=$?
+
+    # If psql itself failed (connection error, auth failure, syntax error),
+    # report it as a test failure — do not silently swallow.
+    if [[ $exit_code -ne 0 ]]; then
+      echo -e "  ${RED}psql exited with code $exit_code for $test_file${NC}"
+      # Show the last few lines of output for diagnosis
+      echo "$output" | tail -5 | sed 's/^/    /' >&2
+      L1_FAILED=$((L1_FAILED + 1))
+      continue
+    fi
 
     # Parse PASS/FAIL/SKIP from RAISE NOTICE output
     local p f s
@@ -228,19 +239,29 @@ run_layer2() {
     local filepath="$SCRIPT_DIR/layer2-api/$test_file"
     if [[ ! -f "$filepath" ]]; then
       echo -e "  ${RED}Missing: $test_file${NC}"
-      ((L2_FAILED++))
+      L2_FAILED=$((L2_FAILED + 1))
       continue
     fi
 
     echo -e "  ${CYAN}Running $test_file...${NC}"
     local output
-    output=$(cd "$SCRIPT_DIR" && npx tsx "$filepath" 2>&1) || true
+    local exit_code=0
+    output=$(cd "$SCRIPT_DIR" && npx tsx "$filepath" 2>&1) || exit_code=$?
 
     # Parse results
     local p f s
     p=$(echo "$output" | grep -c "^PASS " || true)
     f=$(echo "$output" | grep -c "^FAIL " || true)
     s=$(echo "$output" | grep -c "^SKIP " || true)
+
+    # If the test process crashed (non-zero exit) and produced no PASS/FAIL
+    # output, surface the crash as a failure rather than silently swallowing.
+    if [[ $exit_code -ne 0 ]] && [[ $((p + f)) -eq 0 ]]; then
+      echo -e "  ${RED}$test_file crashed with exit code $exit_code${NC}"
+      echo "$output" | tail -5 | sed 's/^/    /' >&2
+      L2_FAILED=$((L2_FAILED + 1))
+      continue
+    fi
 
     # Print individual results
     echo "$output" | grep -E "^(PASS|FAIL|SKIP)" | while read -r line; do
@@ -277,7 +298,7 @@ run_layer3() {
 
   for test_file in "${test_files[@]}"; do
     echo -e "  ${YELLOW}SKIP $test_file (placeholder)${NC}"
-    ((L3_SKIPPED++))
+    L3_SKIPPED=$((L3_SKIPPED + 1))
   done
 
   echo ""
@@ -299,7 +320,7 @@ run_layer4() {
 
   for test_file in "${test_files[@]}"; do
     echo -e "  ${YELLOW}SKIP $test_file (placeholder)${NC}"
-    ((L4_SKIPPED++))
+    L4_SKIPPED=$((L4_SKIPPED + 1))
   done
 
   echo ""

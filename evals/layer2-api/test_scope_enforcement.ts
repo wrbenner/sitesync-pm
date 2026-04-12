@@ -1,9 +1,16 @@
 /**
  * =============================================================================
- * Layer 2 Test: Scope Enforcement
+ * Layer 2 Test: Scope Enforcement (SCAFFOLD)
  * =============================================================================
  * Validates that authenticated users can only access data within their
  * authorized scope (project membership).
+ *
+ * STATUS: All tests will SKIP until a reliable test-user auth path exists.
+ * The current setup.sql creates auth.users rows without password hashes,
+ * so getTestUserToken() cannot sign in. These tests become active after:
+ *   1. project_members.role migration (Step 4 Phase 1)
+ *   2. Test user auth setup (either password hashes in setup.sql or
+ *      service-role token impersonation)
  *
  * Gold-Standard Fixtures:
  *   #1  — Tenant isolation via API
