@@ -29,6 +29,7 @@ export const submittalMachine = setup({
       | { type: 'ARCHITECT_APPROVE' }
       | { type: 'ARCHITECT_REJECT' }
       | { type: 'ARCHITECT_REVISE' }
+      | { type: 'REQUEST_RESUBMIT' }
       | { type: 'RESUBMIT' }
       | { type: 'CLOSE' },
   },
@@ -59,6 +60,7 @@ export const submittalMachine = setup({
         GC_APPROVE: { target: 'architect_review' },
         GC_REJECT: { target: 'rejected' },
         ARCHITECT_REVISE: { target: 'resubmit' },
+        REQUEST_RESUBMIT: { target: 'resubmit' },
       },
     },
     architect_review: {
@@ -66,6 +68,7 @@ export const submittalMachine = setup({
         ARCHITECT_APPROVE: { target: 'approved' },
         ARCHITECT_REJECT: { target: 'rejected' },
         ARCHITECT_REVISE: { target: 'resubmit' },
+        REQUEST_RESUBMIT: { target: 'resubmit' },
       },
     },
     approved: {
