@@ -15,8 +15,13 @@
 -- WHAT THIS MIGRATION DOES:
 --   1. Drops the old CHECK constraint
 --   2. Adds a new CHECK constraint that accepts BOTH legacy and kernel roles
---   3. Updates is_project_role() to document the expanded role set
---   4. Adds a mapping function for future use
+--   3. Adds an advisory helper function (kernel_role_label) for read-time labeling
+--
+-- WHAT THIS MIGRATION DEFERS:
+--   - Semantic remapping of legacy 'member' to a kernel role is deferred to a
+--     later migration. This migration does NOT enforce any role equivalence.
+--   - kernel_role_label() is advisory only — it has no enforcement or
+--     data-modification authority.
 --
 -- WHAT THIS MIGRATION DOES NOT DO:
 --   - Does NOT backfill or rename any existing 'member' rows
@@ -64,24 +69,23 @@ ALTER TABLE project_members ADD CONSTRAINT project_members_role_check
   ));
 
 -- ---------------------------------------------------------------------------
--- 2. Add kernel_role_label() utility function
+-- 2. Add kernel_role_label() — advisory read-time helper only
 -- ---------------------------------------------------------------------------
--- Maps legacy roles to their kernel equivalents for display purposes.
--- Does NOT modify data — purely a read-time helper.
--- Used by evals and future migration scripts to understand role semantics.
+-- Returns a human-readable label for a role value. This function is purely
+-- advisory: it does not modify data, enforce permissions, or remap roles.
+-- Semantic remapping of 'member' to a kernel role is deferred.
 CREATE OR REPLACE FUNCTION kernel_role_label(raw_role text)
 RETURNS text AS $$
   SELECT CASE raw_role
-    -- Legacy 'member' maps to 'viewer' under least-privilege principle.
-    -- Individual members should be upgraded by a project admin after review.
-    WHEN 'member' THEN 'viewer (legacy member)'
+    WHEN 'member' THEN 'member (legacy — not yet remapped to kernel role)'
     ELSE raw_role
   END;
 $$ LANGUAGE sql IMMUTABLE;
 
 COMMENT ON FUNCTION kernel_role_label(text) IS
-  'Maps legacy project_members.role values to kernel-equivalent labels. '
-  'Does not modify data. See DEPRECATION_LEDGER.md §3.1 for migration plan.';
+  'Advisory read-time helper. Returns a label for a project_members.role value. '
+  'Does not modify data or enforce permissions. '
+  'Semantic remapping of legacy member is deferred. See DEPRECATION_LEDGER.md §3.1.';
 
 -- ---------------------------------------------------------------------------
 -- 3. Document the change in a comment on the column
@@ -89,7 +93,7 @@ COMMENT ON FUNCTION kernel_role_label(text) IS
 COMMENT ON COLUMN project_members.role IS
   'Project role. Kernel roles: owner, admin, project_manager, superintendent, '
   'subcontractor, viewer. Legacy value "member" is accepted for backward '
-  'compatibility and treated as "viewer" under least-privilege. '
-  'See DOMAIN_KERNEL_SPEC.md §7 and DEPRECATION_LEDGER.md §3.1.';
+  'compatibility. Semantic remapping of "member" to a kernel role is deferred '
+  'to a later migration. See DOMAIN_KERNEL_SPEC.md §7 and DEPRECATION_LEDGER.md §3.1.';
 
 COMMIT;
