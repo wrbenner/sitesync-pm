@@ -269,7 +269,9 @@ export const AICopilot: React.FC = () => {
     clearMessages,
   } = useMultiAgentChat(contextPage)
 
-  const [showAgentPanel, setShowAgentPanel] = useState(true)
+  const [showAgentPanel, setShowAgentPanel] = useState(
+    () => typeof window === 'undefined' ? true : !window.matchMedia('(max-width: 768px)').matches,
+  )
   const [exportOpen, setExportOpen] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
