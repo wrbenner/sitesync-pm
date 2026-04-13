@@ -30,18 +30,18 @@ import { EditingLockBanner } from '../components/ui/EditingLockBanner';
 const isOverdue = (dateStr: string) => new Date(dateStr) < new Date();
 
 const BIC_COLORS: Record<string, string> = {
-  GC: '#3B82F6',
-  Architect: '#8B5CF6',
-  Engineer: '#14B8A6',
-  Owner: '#F47820',
-  Subcontractor: '#6B7280',
-  Sub: '#6B7280',
+  GC: colors.statusInfo,
+  Architect: colors.statusReview,
+  Engineer: colors.statusActive,
+  Owner: colors.primaryOrange,
+  Subcontractor: colors.statusNeutral,
+  Sub: colors.statusNeutral,
 };
 
 const getBicColor = (party: string): string => {
   if (BIC_COLORS[party]) return BIC_COLORS[party];
   const key = Object.keys(BIC_COLORS).find(k => party.toLowerCase().includes(k.toLowerCase()));
-  return key ? BIC_COLORS[key] : '#6B7280';
+  return key ? BIC_COLORS[key] : colors.statusNeutral;
 };
 
 const deriveBic = (rfi: any): string | null => {
@@ -57,8 +57,8 @@ const BallInCourtCell: React.FC<{ rfi: any }> = ({ rfi }) => {
   if (!party) {
     return (
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-        <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#6B7280', flexShrink: 0, display: 'inline-block' }} />
-        <span style={{ fontSize: 14, color: '#9CA3AF', fontStyle: 'italic' }}>Unassigned</span>
+        <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: colors.statusNeutral, flexShrink: 0, display: 'inline-block' }} />
+        <span style={{ fontSize: 14, color: colors.textTertiary, fontStyle: 'italic' }}>Unassigned</span>
       </span>
     );
   }
@@ -66,7 +66,7 @@ const BallInCourtCell: React.FC<{ rfi: any }> = ({ rfi }) => {
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
       <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: color, flexShrink: 0, display: 'inline-block' }} />
-      <span style={{ fontSize: 14, color: '#374151' }}>{party}</span>
+      <span style={{ fontSize: 14, color: colors.textPrimary }}>{party}</span>
     </span>
   );
 };
@@ -274,7 +274,7 @@ const RFIsPage: React.FC = () => {
               <span role="status" aria-label={`Status: ${info.getValue()}`}><StatusTag status={info.getValue() as 'pending' | 'approved' | 'under_review' | 'revise_resubmit' | 'complete' | 'active' | 'closed' | 'pending_approval'} /></span>
             )}
             {overdue && (
-              <Tag label="OVERDUE" color="#E74C3C" backgroundColor="#FEE2E2" />
+              <Tag label="OVERDUE" color={colors.statusCritical} backgroundColor={colors.statusCriticalSubtle} />
             )}
           </div>
         );
@@ -481,10 +481,10 @@ const RFIsPage: React.FC = () => {
       actions={
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
           <div style={{ display: 'flex', gap: spacing['1'], backgroundColor: colors.surfaceInset, borderRadius: borderRadius.full, padding: 2 }}>
-            <button className="rfi-interactive" aria-pressed={viewMode === 'table'} onClick={() => setViewMode('table')} style={{ display: 'flex', alignItems: 'center', padding: '6px 12px', border: 'none', borderRadius: borderRadius.full, backgroundColor: viewMode === 'table' ? colors.surfaceRaised : 'transparent', color: viewMode === 'table' ? colors.textPrimary : colors.textTertiary, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily, cursor: 'pointer', boxShadow: viewMode === 'table' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none' }}>
+            <button className="rfi-interactive" aria-pressed={viewMode === 'table'} onClick={() => setViewMode('table')} style={{ display: 'flex', alignItems: 'center', minHeight: 56, padding: '8px 16px', border: 'none', borderRadius: borderRadius.full, backgroundColor: viewMode === 'table' ? colors.surfaceRaised : 'transparent', color: viewMode === 'table' ? colors.textPrimary : colors.textTertiary, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily, cursor: 'pointer', boxShadow: viewMode === 'table' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none' }}>
               <List size={14} style={{ marginRight: 4 }} /> Table
             </button>
-            <button className="rfi-interactive" aria-pressed={viewMode === 'kanban'} onClick={() => setViewMode('kanban')} style={{ display: 'flex', alignItems: 'center', padding: '6px 12px', border: 'none', borderRadius: borderRadius.full, backgroundColor: viewMode === 'kanban' ? colors.surfaceRaised : 'transparent', color: viewMode === 'kanban' ? colors.textPrimary : colors.textTertiary, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily, cursor: 'pointer', boxShadow: viewMode === 'kanban' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none' }}>
+            <button className="rfi-interactive" aria-pressed={viewMode === 'kanban'} onClick={() => setViewMode('kanban')} style={{ display: 'flex', alignItems: 'center', minHeight: 56, padding: '8px 16px', border: 'none', borderRadius: borderRadius.full, backgroundColor: viewMode === 'kanban' ? colors.surfaceRaised : 'transparent', color: viewMode === 'kanban' ? colors.textPrimary : colors.textTertiary, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily, cursor: 'pointer', boxShadow: viewMode === 'kanban' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none' }}>
               <LayoutGrid size={14} style={{ marginRight: 4 }} /> Kanban
             </button>
           </div>

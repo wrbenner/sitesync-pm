@@ -9,6 +9,7 @@ import { useMeetings } from '../hooks/queries';
 import { useProjectId } from '../hooks/useProjectId';
 import { PermissionGate } from '../components/auth/PermissionGate';
 import CreateMeetingModal from '../components/forms/CreateMeetingModal';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 
 // ── Type helpers ──────────────────────────────────────────────────────────────
 
@@ -481,3 +482,9 @@ export const MeetingsPage: React.FC = () => {
     </PageContainer>
   );
 };
+
+export const Meetings: React.FC = () => (
+  <ErrorBoundary message="Meetings could not be displayed. Check your connection and try again.">
+    <MeetingsPage />
+  </ErrorBoundary>
+);

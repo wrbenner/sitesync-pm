@@ -41,6 +41,7 @@ import { AIAnnotationIndicator } from '../components/ai/AIAnnotation';
 import { PredictiveAlertBanner } from '../components/ai/PredictiveAlert';
 import { getAnnotationsForEntity, getPredictiveAlertsForPage } from '../data/aiAnnotations';
 import { PermissionGate } from '../components/auth/PermissionGate';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 
 type TaskStatus = 'todo' | 'in_progress' | 'in_review' | 'done';
 type TaskPriority = 'low' | 'medium' | 'high' | 'critical';
@@ -78,7 +79,7 @@ interface MappedTask {
   is_critical_path: boolean;
 }
 
-export const Tasks: React.FC = () => {
+const TasksPage: React.FC = () => {
   const projectId = useProjectId();
   const { data: tasksRaw = [], isPending: loading, error: tasksError, refetch } = useTasks(projectId);
 
@@ -1045,3 +1046,9 @@ export const Tasks: React.FC = () => {
     </PageContainer>
   );
 };
+
+export const Tasks: React.FC = () => (
+  <ErrorBoundary message="Tasks could not be displayed. Check your connection and try again.">
+    <TasksPage />
+  </ErrorBoundary>
+);
