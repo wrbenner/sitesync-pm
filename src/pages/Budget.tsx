@@ -4,7 +4,7 @@ import { ErrorBoundary } from '../components/ErrorBoundary';
 import { PageContainer, Card, SectionHeader, MetricBox, ProgressBar, StatusTag, DetailPanel, RelatedItems, Skeleton, useToast } from '../components/Primitives';
 import { MetricCardSkeleton, TableRowSkeleton } from '../components/ui/Skeletons';
 import { Btn } from '../components/Primitives';
-import { colors, spacing, typography, borderRadius, touchTarget } from '../styles/theme';
+import { colors, spacing, typography, borderRadius, touchTarget, transitions } from '../styles/theme';
 import { useQuery } from '../hooks/useQuery';
 import { fetchBudgetDivisions, getCostCodesByDivision } from '../api/endpoints/budget';
 import { usePayApplications } from '../hooks/queries';
@@ -444,7 +444,7 @@ const BudgetPage: React.FC = () => {
             border: `1px solid ${colors.statusCriticalSubtle}`,
             borderRadius: borderRadius.base,
             cursor: 'pointer',
-            transition: 'background-color 0.15s ease',
+            transition: `background-color ${transitions.quick}`,
           }}
           onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = colors.statusCriticalSubtle; }}
           onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = colors.badgeRedBg; }}
@@ -722,7 +722,7 @@ const BudgetPage: React.FC = () => {
                       cursor: 'pointer',
                       outline: isFocused ? `2px solid ${colors.primaryOrange}` : 'none',
                       outlineOffset: '-2px',
-                      transition: 'background-color 0.1s ease',
+                      transition: `background-color ${transitions.instant}`,
                     }}
                   >
                     {/* Division name */}

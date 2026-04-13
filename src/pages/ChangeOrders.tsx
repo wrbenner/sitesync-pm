@@ -745,10 +745,10 @@ const ChangeOrdersPage: React.FC = () => {
               {filteredCOs.length === 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: `${spacing['12']} ${spacing['8']}`, textAlign: 'center' }}>
                   <FileText size={48} color={colors.textTertiary} style={{ marginBottom: spacing['4'] }} />
-                  <h3 style={{ fontSize: 18, fontWeight: 600, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>No change orders match your filters</h3>
-                  <p style={{ fontSize: 14, color: colors.textSecondary, margin: 0, marginBottom: spacing['5'] }}>Try adjusting your search or filter criteria.</p>
+                  <h3 style={{ fontSize: typography.fontSize.subtitle, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>No change orders match your filters</h3>
+                  <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: 0, marginBottom: spacing['5'] }}>Try adjusting your search or filter criteria.</p>
                   {hasActiveFilters && (
-                    <button onClick={() => { setSearchQuery(''); setFilterType('all'); setFilterStatus('all'); }} style={{ minHeight: touchTarget.field, padding: `0 ${spacing['5']}`, backgroundColor: colors.primaryOrange, color: colors.white, border: 'none', borderRadius: 8, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, fontFamily: typography.fontFamily, cursor: 'pointer' }}>
+                    <button onClick={() => { setSearchQuery(''); setFilterType('all'); setFilterStatus('all'); }} style={{ minHeight: touchTarget.field, padding: `0 ${spacing['5']}`, backgroundColor: colors.primaryOrange, color: colors.white, border: 'none', borderRadius: borderRadius.md, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, fontFamily: typography.fontFamily, cursor: 'pointer' }}>
                       Clear Filters
                     </button>
                   )}
@@ -767,11 +767,11 @@ const ChangeOrdersPage: React.FC = () => {
                 {filteredCOs.map((co, i) => {
                   const typeColorMap: Record<string, { color: string; bg: string; label: string }> = {
                     owner_change:      { color: colors.brand400, bg: colors.brand50, label: 'Owner Change' },
-                    field_condition:   { color: '#14B8A6', bg: '#F0FDFA', label: 'Field Condition' },
+                    field_condition:   { color: colors.statusActive, bg: colors.statusActiveSubtle, label: 'Field Condition' },
                     design_error:      { color: colors.badgeRed, bg: colors.badgeRedBg, label: 'Design Error' },
                     value_engineering: { color: colors.badgeTeal, bg: colors.badgeTealBg, label: 'Value Engineering' },
                     regulatory:        { color: colors.statusInfo, bg: colors.statusInfoSubtle, label: 'Regulatory' },
-                    unforeseen:        { color: '#8B5CF6', bg: '#F5F3FF', label: 'Unforeseen' },
+                    unforeseen:        { color: colors.statusReview, bg: colors.statusReviewSubtle, label: 'Unforeseen' },
                   };
                   const typeDisplay = co.reason_code
                     ? (typeColorMap[co.reason_code] ?? { color: colors.textTertiary, bg: colors.surfaceInset, label: co.reason_code })
@@ -817,10 +817,10 @@ const ChangeOrdersPage: React.FC = () => {
                 {filteredCOs.length === 0 && (
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: `${spacing['12']} ${spacing['8']}`, textAlign: 'center' }}>
                     <FileText size={48} color={colors.textTertiary} style={{ marginBottom: spacing['4'] }} />
-                    <h3 style={{ fontSize: 18, fontWeight: 600, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>No change orders match your filters</h3>
-                    <p style={{ fontSize: 14, color: colors.textSecondary, margin: 0, marginBottom: spacing['5'] }}>Try adjusting your search or filter criteria.</p>
+                    <h3 style={{ fontSize: typography.fontSize.subtitle, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>No change orders match your filters</h3>
+                    <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: 0, marginBottom: spacing['5'] }}>Try adjusting your search or filter criteria.</p>
                     {hasActiveFilters && (
-                      <button onClick={() => { setSearchQuery(''); setFilterType('all'); setFilterStatus('all'); }} style={{ minHeight: touchTarget.field, padding: `0 ${spacing['5']}`, backgroundColor: colors.primaryOrange, color: colors.white, border: 'none', borderRadius: 8, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, fontFamily: typography.fontFamily, cursor: 'pointer' }}>
+                      <button onClick={() => { setSearchQuery(''); setFilterType('all'); setFilterStatus('all'); }} style={{ minHeight: touchTarget.field, padding: `0 ${spacing['5']}`, backgroundColor: colors.primaryOrange, color: colors.white, border: 'none', borderRadius: borderRadius.md, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, fontFamily: typography.fontFamily, cursor: 'pointer' }}>
                         Clear Filters
                       </button>
                     )}

@@ -645,6 +645,7 @@ export const Financials: React.FC = () => {
             columns={costColumns}
             data={jobCosts || []}
             enableSorting
+            emptyMessage="No job cost entries yet. Costs are recorded as invoices and field labor are posted."
           />
         </Card>
       )}
@@ -656,6 +657,7 @@ export const Financials: React.FC = () => {
             columns={billingColumns}
             data={payApps || []}
             enableSorting
+            emptyMessage="No pay applications submitted yet. Create your first pay app to begin billing."
           />
         </Card>
       )}
@@ -667,6 +669,7 @@ export const Financials: React.FC = () => {
             columns={payableColumns}
             data={invoices || []}
             enableSorting
+            emptyMessage="No payables recorded. Subcontractor and vendor invoices appear here once entered."
           />
         </Card>
       )}
@@ -678,6 +681,7 @@ export const Financials: React.FC = () => {
             columns={wipColumns}
             data={wipReports || []}
             enableSorting
+            emptyMessage="No WIP reports yet. Generate a report at period end to track earned revenue vs costs."
           />
         </Card>
       )}
@@ -689,6 +693,7 @@ export const Financials: React.FC = () => {
             columns={retainageColumns}
             data={retainage || []}
             enableSorting
+            emptyMessage="No retainage entries. Retainage is tracked automatically from approved pay applications."
           />
         </Card>
       )}
