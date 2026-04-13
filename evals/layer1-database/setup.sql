@@ -4,17 +4,17 @@
 -- Creates a known test environment with deterministic UUIDs.
 -- Run BEFORE any Layer 1 test. Run teardown.sql AFTER.
 --
--- Test Topology (current DB roles — pre-migration):
+-- Test Topology (kernel roles):
 --   Org A ("Acme Construction")
 --     └── Project Alpha
 --           ├── Eve     — owner
---           ├── Alice   — admin   (future: project_manager)
---           ├── Sam     — member  (future: superintendent)
---           ├── Charlie — member  (future: subcontractor)
+--           ├── Alice   — project_manager
+--           ├── Sam     — superintendent
+--           ├── Charlie — subcontractor
 --           └── Vic     — viewer
 --   Org B ("Beta Builders")
 --     └── Project Beta
---           └── Bob — admin (future: project_manager)
+--           └── Bob — project_manager
 --
 -- All UUIDs are deterministic so tests can reference them by name.
 -- =============================================================================
@@ -95,23 +95,19 @@ BEGIN
   ON CONFLICT (id) DO NOTHING;
 
   -- ---------------------------------------------------------------------------
-  -- 6. Project Members
+  -- 6. Project Members (using kernel roles from Batch 1 migration)
   -- ---------------------------------------------------------------------------
-  -- IMPORTANT: The current DB CHECK constraint allows only:
-  --   owner, admin, member, viewer
-  -- The kernel spec (§7) defines 6 roles:
+  -- The CHECK constraint now accepts kernel roles:
   --   owner, admin, project_manager, superintendent, subcontractor, viewer
-  -- After the project_members.role migration (Step 4, Phase 1), update
-  -- these inserts to use kernel roles and uncomment the role-specific
-  -- test assertions in Layer 1 tests.
+  -- Plus legacy 'member' for backward compatibility.
   INSERT INTO project_members (project_id, user_id, role, created_at)
   VALUES
-    (v_project_alpha_id, v_alice_id,   'admin',   now()),  -- future: project_manager
-    (v_project_alpha_id, v_sam_id,     'member',  now()),  -- future: superintendent
-    (v_project_alpha_id, v_charlie_id, 'member',  now()),  -- future: subcontractor
-    (v_project_alpha_id, v_vic_id,     'viewer',  now()),
-    (v_project_alpha_id, v_eve_id,     'owner',   now()),
-    (v_project_beta_id,  v_bob_id,     'admin',   now())   -- future: project_manager
+    (v_project_alpha_id, v_alice_id,   'project_manager', now()),
+    (v_project_alpha_id, v_sam_id,     'superintendent',  now()),
+    (v_project_alpha_id, v_charlie_id, 'subcontractor',   now()),
+    (v_project_alpha_id, v_vic_id,     'viewer',          now()),
+    (v_project_alpha_id, v_eve_id,     'owner',           now()),
+    (v_project_beta_id,  v_bob_id,     'project_manager', now())
   ON CONFLICT DO NOTHING;
 
   -- ---------------------------------------------------------------------------
