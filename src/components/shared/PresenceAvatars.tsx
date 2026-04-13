@@ -38,7 +38,7 @@ const STATUS_COLOR: Record<PresenceStatus, string> = {
 const STATUS_BORDER: Record<PresenceStatus, string> = {
   active: colors.statusActive,
   idle: colors.statusPending,
-  away: '#C0C4CC',
+  away: colors.statusNeutral,
 }
 
 const TOOLTIP_CONTENT_STYLE: React.CSSProperties = {

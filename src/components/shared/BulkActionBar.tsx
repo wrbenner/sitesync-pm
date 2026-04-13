@@ -34,7 +34,7 @@ export const FolderPickerModal: React.FC<FolderPickerModalProps> = ({
       <Dialog.Portal>
         <Dialog.Overlay style={{
           position: 'fixed', inset: 0,
-          backgroundColor: 'rgba(0,0,0,0.4)',
+          backgroundColor: colors.overlayBackdrop,
           backdropFilter: 'blur(4px)',
           zIndex: zIndex.modal as number,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -296,7 +296,7 @@ export const BulkActionBar: React.FC<BulkActionBarProps> = ({
         <Dialog.Portal>
           <Dialog.Overlay style={{
             position: 'fixed', inset: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.4)',
+            backgroundColor: colors.overlayBackdrop,
             backdropFilter: 'blur(4px)',
             zIndex: zIndex.modal as number,
             display: 'flex', alignItems: 'center', justifyContent: 'center',

@@ -87,7 +87,7 @@ function addRecentPage(label: string, path: string) {
 const overlayStyle: React.CSSProperties = {
   position: 'fixed',
   inset: 0,
-  background: 'rgba(0,0,0,0.4)',
+  background: colors.overlayBackdrop,
   backdropFilter: 'blur(4px)',
   WebkitBackdropFilter: 'blur(4px)',
   zIndex: zIndex.command as number,

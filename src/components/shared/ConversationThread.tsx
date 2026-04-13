@@ -37,12 +37,12 @@ interface ConversationThreadProps {
   currentUserId?: string;
 }
 
-const typeConfig: Record<string, { label: string; color: string }> = {
-  submitted: { label: 'Submitted', color: colors.statusInfo },
-  comment: { label: 'Comment', color: colors.textSecondary },
-  response: { label: 'Response', color: colors.statusActive },
-  approved: { label: 'Approved', color: colors.statusActive },
-  rejected: { label: 'Rejected', color: colors.statusCritical },
+const typeConfig: Record<string, { label: string; color: string; bg: string }> = {
+  submitted: { label: 'Submitted', color: colors.statusInfo, bg: colors.statusInfoSubtle },
+  comment: { label: 'Comment', color: colors.textSecondary, bg: colors.surfaceInset },
+  response: { label: 'Response', color: colors.statusActive, bg: colors.statusActiveSubtle },
+  approved: { label: 'Approved', color: colors.statusActive, bg: colors.statusActiveSubtle },
+  rejected: { label: 'Rejected', color: colors.statusCritical, bg: colors.statusCriticalSubtle },
 };
 
 const QUICK_EMOJIS = ['👍', '👎', '✅', '❌', '🔥', '💬'];
@@ -252,7 +252,7 @@ export const ConversationThread: React.FC<ConversationThreadProps> = ({
                 <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>{msg.name}</span>
                 <span style={{
                   fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
-                  color: cfg.color, backgroundColor: `${cfg.color}12`,
+                  color: cfg.color, backgroundColor: cfg.bg,
                   padding: `0 ${spacing['1']}`, borderRadius: borderRadius.sm,
                   textTransform: 'uppercase', letterSpacing: typography.letterSpacing.wider,
                 }}>
