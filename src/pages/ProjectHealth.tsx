@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { TrendingUp, TrendingDown, Minus, Sparkles, ChevronRight, Share2, FileText, Link, Send } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { PageContainer, Card, SectionHeader, Btn, useToast, Skeleton } from '../components/Primitives';
+import { useMediaQuery } from '../hooks/useMediaQuery';
 import { colors, spacing, typography, borderRadius, transitions, shadows } from '../styles/theme';
 import { useInView } from '../hooks/useInView';
 import { useProjectId } from '../hooks/useProjectId';
@@ -56,6 +57,7 @@ const trendColors = { up: colors.statusActive, down: colors.statusCritical, flat
 export const ProjectHealth: React.FC = () => {
   const { addToast } = useToast();
   const navigate = useNavigate();
+  const isMobile = useMediaQuery('(max-width: 768px)');
   const [chartRef, chartInView] = useInView();
   const [expandedDim, setExpandedDim] = useState<string | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
@@ -257,7 +259,7 @@ export const ProjectHealth: React.FC = () => {
   if (isLoading) {
     return (
       <PageContainer title="Project Health" subtitle="Loading health data...">
-        <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: spacing['6'] }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '300px 1fr', gap: spacing['6'] }}>
           <Skeleton width="100%" height="300px" />
           <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
             {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -315,7 +317,7 @@ export const ProjectHealth: React.FC = () => {
         </div>
       }
     >
-      <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: spacing['6'] }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '300px 1fr', gap: spacing['6'] }}>
         {/* Score ring */}
         <Card padding={spacing['6']}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>

@@ -15,6 +15,7 @@ import { GenerativeUIRenderer } from '../components/ai/generativeUI'
 import { ToolResultCard } from '../components/ai/ToolResultCard'
 import { SPECIALIST_AGENTS, AGENT_DOMAINS } from '../types/agents'
 import type { AgentDomain, AgentConversationMessage } from '../types/agents'
+import { useMediaQuery } from '../hooks/useMediaQuery'
 
 // ── Agent Quick Access Panel ──────────────────────────────────
 
@@ -269,7 +270,8 @@ export const AICopilot: React.FC = () => {
     clearMessages,
   } = useMultiAgentChat(contextPage)
 
-  const [showAgentPanel, setShowAgentPanel] = useState(true)
+  const isMobile = useMediaQuery('(max-width: 768px)')
+  const [showAgentPanel, setShowAgentPanel] = useState(!isMobile)
   const [exportOpen, setExportOpen] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -303,17 +305,20 @@ export const AICopilot: React.FC = () => {
 
   return (
     <PageContainer>
-      <div style={{ display: 'flex', gap: spacing['5'], height: 'calc(100vh - 160px)' }}>
+      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: spacing['5'], height: isMobile ? 'auto' : 'calc(100vh - 160px)' }}>
         {/* Agent sidebar panel */}
         {showAgentPanel && (
           <div
             style={{
-              width: '220px',
+              width: isMobile ? '100%' : '220px',
               flexShrink: 0,
               display: 'flex',
-              flexDirection: 'column',
-              borderRight: `1px solid ${colors.borderSubtle}`,
-              paddingRight: spacing['4'],
+              flexDirection: isMobile ? 'row' : 'column',
+              flexWrap: isMobile ? 'wrap' : undefined,
+              borderRight: isMobile ? 'none' : `1px solid ${colors.borderSubtle}`,
+              borderBottom: isMobile ? `1px solid ${colors.borderSubtle}` : 'none',
+              paddingRight: isMobile ? 0 : spacing['4'],
+              paddingBottom: isMobile ? spacing['3'] : 0,
               overflow: 'auto',
             }}
           >
@@ -419,7 +424,7 @@ export const AICopilot: React.FC = () => {
         )}
 
         {/* Main chat area */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: isMobile ? '60vh' : undefined }}>
           {/* Toolbar */}
           <div
             style={{
@@ -470,7 +475,7 @@ export const AICopilot: React.FC = () => {
                         color: agentColors.fg,
                         fontSize: typography.fontSize.caption,
                         fontWeight: typography.fontWeight.medium,
-                        animation: 'pulse 2s infinite',
+                        opacity: 0.85,
                       }}
                     >
                       <Icon size={9} />
