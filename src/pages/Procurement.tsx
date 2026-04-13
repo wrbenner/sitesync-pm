@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react'
-import { Truck, Warehouse, Plus, DollarSign } from 'lucide-react'
+import { Truck, Warehouse, Plus, DollarSign, AlertTriangle } from 'lucide-react'
 import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton } from '../components/Primitives'
+import { ErrorBoundary } from '../components/ErrorBoundary'
 import { DataTable, createColumnHelper } from '../components/shared/DataTable'
 import { ExportButton } from '../components/shared/ExportButton'
 import { colors, spacing, typography, borderRadius, transitions, touchTarget } from '../styles/theme'
@@ -189,14 +190,15 @@ const inventoryColumns = [
 
 // ── Main Component ───────────────────────────────────────────
 
-export const Procurement: React.FC = () => {
+const ProcurementPage: React.FC = () => {
   const projectId = useProjectId()
-  const { data: pos, isPending: posLoading } = usePurchaseOrders(projectId)
-  const { data: deliveries, isPending: delLoading } = useDeliveries(projectId)
-  const { data: inventory, isPending: invLoading } = useMaterialInventory(projectId)
+  const { data: pos, isPending: posLoading, isError: posError } = usePurchaseOrders(projectId)
+  const { data: deliveries, isPending: delLoading, isError: delError } = useDeliveries(projectId)
+  const { data: inventory, isPending: invLoading, isError: invError } = useMaterialInventory(projectId)
   const [activeTab, setActiveTab] = useState<TabKey>('orders')
 
   const isLoading = posLoading || delLoading || invLoading
+  const isError = posError || delError || invError
 
   // ── KPIs ────────────────────────────────────────────────────
 
@@ -229,6 +231,20 @@ export const Procurement: React.FC = () => {
   }
 
   // ── Render ──────────────────────────────────────────────────
+
+  if (isError) {
+    return (
+      <PageContainer title="Procurement" subtitle="Purchase orders, deliveries, and material inventory tracking">
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '64px 0', gap: '16px' }}>
+          <AlertTriangle size={40} color={colors.statusCritical} strokeWidth={1.5} />
+          <p style={{ fontSize: typography.fontSize.body, color: colors.textSecondary, margin: 0 }}>
+            Procurement data could not be loaded. Check your connection and try again.
+          </p>
+          <Btn variant="secondary" onClick={() => window.location.reload()}>Retry</Btn>
+        </div>
+      </PageContainer>
+    )
+  }
 
   return (
     <PageContainer
@@ -350,5 +366,11 @@ export const Procurement: React.FC = () => {
     </PageContainer>
   )
 }
+
+export const Procurement: React.FC = () => (
+  <ErrorBoundary message="Procurement data could not be displayed. Check your connection and try again.">
+    <ProcurementPage />
+  </ErrorBoundary>
+)
 
 export default Procurement

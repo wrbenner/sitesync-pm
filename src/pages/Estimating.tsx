@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react'
-import { Calculator, Users, Ruler, Plus, DollarSign, Award } from 'lucide-react'
+import { Calculator, Users, Ruler, Plus, DollarSign, Award, AlertTriangle } from 'lucide-react'
 import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton } from '../components/Primitives'
+import { ErrorBoundary } from '../components/ErrorBoundary'
 import { DataTable, createColumnHelper } from '../components/shared/DataTable'
 import { ExportButton } from '../components/shared/ExportButton'
 import { colors, spacing, typography, borderRadius, transitions, touchTarget } from '../styles/theme'
@@ -216,12 +217,12 @@ const takeoffColumns = [
 
 // ── Main Component ───────────────────────────────────────────
 
-export const Estimating: React.FC = () => {
+const EstimatingPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('estimates')
   const projectId = useProjectId()
-  const { data: estimates, isPending: estimatesLoading } = useEstimates(projectId)
-  const { data: bidPackages, isPending: bidsLoading } = useBidPackages(projectId)
-  const { data: takeoffItems, isPending: takeoffsLoading } = useTakeoffItems(projectId)
+  const { data: estimates, isPending: estimatesLoading, isError: estimatesError } = useEstimates(projectId)
+  const { data: bidPackages, isPending: bidsLoading, isError: bidsError } = useBidPackages(projectId)
+  const { data: takeoffItems, isPending: takeoffsLoading, isError: takeoffsError } = useTakeoffItems(projectId)
 
   // ── KPIs ───────────────────────────────────────────────────
 
@@ -257,6 +258,21 @@ export const Estimating: React.FC = () => {
   // ── Render ─────────────────────────────────────────────────
 
   const isLoading = estimatesLoading || bidsLoading || takeoffsLoading
+  const isError = estimatesError || bidsError || takeoffsError
+
+  if (isError) {
+    return (
+      <PageContainer title="Estimating" subtitle="Preconstruction estimates, bid packages, and quantity takeoffs">
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '64px 0', gap: '16px' }}>
+          <AlertTriangle size={40} color={colors.statusCritical} strokeWidth={1.5} />
+          <p style={{ fontSize: typography.fontSize.body, color: colors.textSecondary, margin: 0 }}>
+            Estimating data could not be loaded. Check your connection and try again.
+          </p>
+          <Btn variant="secondary" onClick={() => window.location.reload()}>Retry</Btn>
+        </div>
+      </PageContainer>
+    )
+  }
 
   return (
     <PageContainer
@@ -390,5 +406,11 @@ export const Estimating: React.FC = () => {
     </PageContainer>
   )
 }
+
+export const Estimating: React.FC = () => (
+  <ErrorBoundary message="Estimating data could not be displayed. Check your connection and try again.">
+    <EstimatingPage />
+  </ErrorBoundary>
+)
 
 export default Estimating

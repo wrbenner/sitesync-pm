@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
-import { DollarSign, Receipt, FileText, TrendingUp, Wallet, Plus, Check, X, BookOpen } from 'lucide-react'
+import { DollarSign, Receipt, FileText, TrendingUp, Wallet, Plus, Check, X, BookOpen, AlertTriangle } from 'lucide-react'
 import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton, EmptyState } from '../components/Primitives'
+import { ErrorBoundary } from '../components/ErrorBoundary'
 import { DataTable, createColumnHelper } from '../components/shared/DataTable'
 import { ExportButton } from '../components/shared/ExportButton'
 import { colors, spacing, typography, borderRadius, transitions, touchTarget } from '../styles/theme'
@@ -356,17 +357,17 @@ const retainageColumns = [
 
 // ── Main Component ───────────────────────────────────────────
 
-export const Financials: React.FC = () => {
+const FinancialsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('overview')
   const projectId = useProjectId()
   const { isFlashing } = useBudgetRealtime(projectId)
 
-  const { data: contracts, isLoading: loadingContracts } = useContracts(projectId)
-  const { data: payApps, isLoading: loadingPayApps } = usePayApplications(projectId)
-  const { data: jobCosts, isLoading: loadingCosts } = useJobCostEntries(projectId)
-  const { data: invoices, isLoading: loadingInvoices } = useInvoicesPayable(projectId)
-  const { data: wipReports, isLoading: loadingWip } = useWipReports(projectId)
-  const { data: retainage, isLoading: loadingRetainage } = useRetainageLedger(projectId)
+  const { data: contracts, isLoading: loadingContracts, isError: errorContracts } = useContracts(projectId)
+  const { data: payApps, isLoading: loadingPayApps, isError: errorPayApps } = usePayApplications(projectId)
+  const { data: jobCosts, isLoading: loadingCosts, isError: errorCosts } = useJobCostEntries(projectId)
+  const { data: invoices, isLoading: loadingInvoices, isError: errorInvoices } = useInvoicesPayable(projectId)
+  const { data: wipReports, isLoading: loadingWip, isError: errorWip } = useWipReports(projectId)
+  const { data: retainage, isLoading: loadingRetainage, isError: errorRetainage } = useRetainageLedger(projectId)
 
   // ── KPIs ───────────────────────────────────────────────────
 
@@ -420,6 +421,21 @@ export const Financials: React.FC = () => {
   // ── Render ─────────────────────────────────────────────────
 
   const isLoading = loadingContracts || loadingPayApps || loadingCosts || loadingInvoices || loadingWip || loadingRetainage
+  const isError = errorContracts || errorPayApps || errorCosts || errorInvoices || errorWip || errorRetainage
+
+  if (isError) {
+    return (
+      <PageContainer title="Financials" subtitle="Contracts, billing, job costs, payables, WIP reporting, and retainage tracking">
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '64px 0', gap: '16px' }}>
+          <AlertTriangle size={40} color={colors.statusCritical} strokeWidth={1.5} />
+          <p style={{ fontSize: typography.fontSize.body, color: colors.textSecondary, margin: 0 }}>
+            Financial data could not be loaded. Check your connection and try again.
+          </p>
+          <Btn variant="secondary" onClick={() => window.location.reload()}>Retry</Btn>
+        </div>
+      </PageContainer>
+    )
+  }
 
   return (
     <PageContainer
@@ -695,5 +711,11 @@ export const Financials: React.FC = () => {
     </PageContainer>
   )
 }
+
+export const Financials: React.FC = () => (
+  <ErrorBoundary message="Financial data could not be displayed. Check your connection and try again.">
+    <FinancialsPage />
+  </ErrorBoundary>
+)
 
 export default Financials

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FileCheck, AlertTriangle, Clock, CheckCircle } from 'lucide-react';
 import { PageContainer, MetricBox, Skeleton, Btn } from '../components/Primitives';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import { colors, spacing, typography, borderRadius, shadows, transitions, touchTarget } from '../styles/theme';
 import { supabase } from '../lib/supabase';
 import { useProjectId } from '../hooks/useProjectId';
@@ -36,12 +37,13 @@ function isSignedStatus(status: LienWaiver['status']): boolean {
   return status === 'received';
 }
 
-export function LienWaivers() {
+function LienWaiversPage() {
   const projectId = useProjectId();
   const navigate = useNavigate();
 
   const [waivers, setWaivers] = useState<LienWaiver[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
   const [typeFilter, setTypeFilter] = useState<WaiverType>('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [hovered, setHovered] = useState<string | null>(null);
@@ -52,12 +54,17 @@ export function LienWaivers() {
       return;
     }
     setLoading(true);
+    setFetchError(false);
     supabase
       .from('lien_waivers')
       .select('*')
       .eq('project_id', projectId)
       .then(({ data, error }) => {
-        if (!error && data) setWaivers(data);
+        if (error) {
+          setFetchError(true);
+        } else if (data) {
+          setWaivers(data);
+        }
         setLoading(false);
       });
   }, [projectId]);
@@ -95,6 +102,20 @@ export function LienWaivers() {
     padding: `0 ${spacing['4']}`,
     verticalAlign: 'middle',
   };
+
+  if (fetchError) {
+    return (
+      <PageContainer title="Lien Waivers" subtitle="Track conditional and unconditional lien waivers from subcontractors and vendors.">
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '64px 0', gap: '16px' }}>
+          <AlertTriangle size={40} color={colors.statusCritical} strokeWidth={1.5} />
+          <p style={{ fontSize: typography.fontSize.body, color: colors.textSecondary, margin: 0 }}>
+            Lien waiver data could not be loaded. Check your connection and try again.
+          </p>
+          <Btn variant="secondary" onClick={() => window.location.reload()}>Retry</Btn>
+        </div>
+      </PageContainer>
+    )
+  }
 
   return (
     <PageContainer
@@ -381,6 +402,14 @@ export function LienWaivers() {
       </div>
     </PageContainer>
   );
+}
+
+export function LienWaivers() {
+  return (
+    <ErrorBoundary message="Lien waivers could not be displayed. Check your connection and try again.">
+      <LienWaiversPage />
+    </ErrorBoundary>
+  )
 }
 
 export default LienWaivers;
