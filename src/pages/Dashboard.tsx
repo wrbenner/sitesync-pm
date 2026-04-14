@@ -481,7 +481,16 @@ const SEVERITY_COLORS: Record<string, { bg: string; border: string; icon: string
   info: { bg: colors.statusInfoSubtle, border: colors.statusInfo, icon: colors.statusInfo },
 };
 
-const InsightRow: React.FC<{ insight: AIInsight; onClick?: () => void }> = ({ insight, onClick }) => {
+const ENTITY_ROUTES: Record<string, string> = {
+  rfi: '/rfis',
+  schedule_phase: '/schedule',
+  budget_item: '/budget',
+  punch_item: '/punch-list',
+  submittal: '/submittals',
+  change_order: '/change-orders',
+};
+
+const InsightRow: React.FC<{ insight: AIInsight; onClick?: () => void; onNavigateEntity?: (path: string) => void }> = ({ insight, onClick, onNavigateEntity }) => {
   const sev = SEVERITY_COLORS[insight.severity] || SEVERITY_COLORS.info;
   return (
     <div
@@ -520,26 +529,36 @@ const InsightRow: React.FC<{ insight: AIInsight; onClick?: () => void }> = ({ in
         </p>
         {insight.affectedEntities && insight.affectedEntities.length > 0 && (
           <div style={{ display: 'flex', gap: spacing['1'], marginTop: spacing['2'], flexWrap: 'wrap' }}>
-            {insight.affectedEntities.slice(0, 3).map((entity) => (
-              <span
-                key={entity.id}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: spacing['1'],
-                  padding: `1px ${spacing['2']}`,
-                  fontSize: typography.fontSize.caption,
-                  fontWeight: typography.fontWeight.medium,
-                  color: colors.textSecondary,
-                  backgroundColor: colors.surfaceInset,
-                  borderRadius: borderRadius.full,
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                <Circle size={6} fill={sev.border} color={sev.border} />
-                {entity.name}
-              </span>
-            ))}
+            {insight.affectedEntities.slice(0, 3).map((entity) => {
+              const entityRoute = ENTITY_ROUTES[entity.type];
+              const isClickable = !!entityRoute && !!onNavigateEntity;
+              return (
+                <span
+                  key={entity.id}
+                  role={isClickable ? 'link' : undefined}
+                  tabIndex={isClickable ? 0 : undefined}
+                  onClick={isClickable ? (e) => { e.stopPropagation(); onNavigateEntity(entityRoute); } : undefined}
+                  onKeyDown={isClickable ? (e) => { if (e.key === 'Enter') { e.stopPropagation(); onNavigateEntity(entityRoute); } } : undefined}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: spacing['1'],
+                    padding: `1px ${spacing['2']}`,
+                    fontSize: typography.fontSize.caption,
+                    fontWeight: typography.fontWeight.medium,
+                    color: isClickable ? colors.primaryOrange : colors.textSecondary,
+                    backgroundColor: colors.surfaceInset,
+                    borderRadius: borderRadius.full,
+                    whiteSpace: 'nowrap',
+                    cursor: isClickable ? 'pointer' : 'default',
+                    transition: `color ${duration.fast}ms ${easing.standard}`,
+                  }}
+                >
+                  <Circle size={6} fill={sev.border} color={sev.border} />
+                  {entity.name}
+                </span>
+              );
+            })}
           </div>
         )}
         {insight.suggestedAction && (
@@ -652,6 +671,7 @@ const AIInsightsBanner: React.FC<{ insights: AIInsight[]; navigate: (path: strin
               key={insight.id}
               insight={insight}
               onClick={path ? () => navigate(path) : undefined}
+              onNavigateEntity={navigate}
             />
           );
         })}

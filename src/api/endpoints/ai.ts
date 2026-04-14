@@ -310,6 +310,92 @@ export const getAiInsights = async (
       }
     }
 
+    // Cross-entity: submittals with approaching required onsite date still pending approval
+    let urgentSubmittals: Array<{ id: string; number: string | null; title: string | null; required_onsite_date: string; status: string; lead_time_weeks: number | null }> = []
+    try {
+      const twentyOneDaysOut = new Date(Date.now() + 21 * 24 * 60 * 60 * 1000).toISOString()
+      const { data } = await supabase
+        .from('submittals')
+        .select('id, number, title, required_onsite_date, status, lead_time_weeks')
+        .eq('project_id', projectId)
+        .in('status', ['pending', 'submitted', 'in_review'])
+        .not('required_onsite_date', 'is', null)
+        .lte('required_onsite_date', twentyOneDaysOut)
+        .gte('required_onsite_date', now)
+        .order('required_onsite_date', { ascending: true })
+        .limit(5)
+      urgentSubmittals = (data ?? []) as typeof urgentSubmittals
+    } catch { /* non-fatal */ }
+
+    for (const sub of urgentSubmittals.slice(0, 2)) {
+      const submittalLabel = sub.number ? `Submittal ${sub.number}` : (sub.title ?? 'A pending submittal')
+      const daysUntilNeeded = Math.ceil((new Date(sub.required_onsite_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+      const leadWeeks = sub.lead_time_weeks ?? 0
+      const statusLabel = sub.status === 'in_review' ? 'in review' : 'pending approval'
+
+      // Match against upcoming phases starting near the required onsite date
+      const matchingPhase = upcomingPhases.find((p) => {
+        if (!p.start_date) return false
+        const phaseStart = new Date(p.start_date).getTime()
+        const onsiteDate = new Date(sub.required_onsite_date).getTime()
+        return Math.abs(phaseStart - onsiteDate) <= 7 * 24 * 60 * 60 * 1000
+      })
+      const phaseName = matchingPhase?.name
+      const phaseContext = phaseName ? ` ${phaseName} may be impacted.` : ''
+
+      dynamicInsights.push({
+        id: `computed-conflict-submittal-schedule-${sub.id}`,
+        type: 'risk',
+        severity: daysUntilNeeded <= 7 ? 'critical' : 'warning',
+        title: `${submittalLabel} needed onsite in ${daysUntilNeeded} day${daysUntilNeeded === 1 ? '' : 's'} but still ${statusLabel}`,
+        description: `${sub.title ? `"${sub.title}" ` : ''}must be approved and materials procured${leadWeeks > 0 ? ` (${leadWeeks} week lead time)` : ''} before the required onsite date.${phaseContext} Delays in submittal approval cascade into material procurement and field work.`,
+        affectedEntities: [
+          { type: 'submittal', id: sub.id, name: submittalLabel },
+          ...(matchingPhase ? [{ type: 'schedule_phase', id: matchingPhase.id, name: phaseName! }] : []),
+        ],
+        suggestedAction: `Review and approve ${submittalLabel} immediately`,
+        confidence: 0.9,
+        source: 'computed' as const,
+        createdAt: now,
+        generatedAt: now,
+        dismissed: false,
+      })
+    }
+
+    // Budget trajectory: flag if total overrun exceeds 5% of total budget
+    if (overBudgetItems.length > 0) {
+      try {
+        const { data: allBudgetRows } = await supabase
+          .from('budget_line_items')
+          .select('spent_to_date, current_budget')
+          .eq('project_id', projectId)
+        if (allBudgetRows && allBudgetRows.length > 0) {
+          const typedRows = allBudgetRows as Array<{ spent_to_date: number; current_budget: number }>
+          const totalBudget = typedRows.reduce((s, r) => s + (r.current_budget ?? 0), 0)
+          const totalSpent = typedRows.reduce((s, r) => s + (r.spent_to_date ?? 0), 0)
+          const totalOverrun = totalSpent - totalBudget
+          const overrunPct = totalBudget > 0 ? (totalOverrun / totalBudget) * 100 : 0
+
+          if (totalOverrun > 0 && overrunPct > 2) {
+            dynamicInsights.push({
+              id: 'computed-budget-trajectory',
+              type: 'budget_risk',
+              severity: overrunPct > 10 ? 'critical' : overrunPct > 5 ? 'warning' : 'info',
+              title: `Project spending exceeds budget by $${Math.round(totalOverrun).toLocaleString()} (${overrunPct.toFixed(1)}%)`,
+              description: `Total spend to date is $${Math.round(totalSpent).toLocaleString()} against a $${Math.round(totalBudget).toLocaleString()} budget across ${typedRows.length} line items. ${overBudgetItems.length} division${overBudgetItems.length === 1 ? ' is' : 's are'} individually over budget. Review cost exposure and consider change order recovery.`,
+              affectedEntities: overBudgetItems.slice(0, 3).map((b) => ({ type: 'budget_item', id: b.id, name: b.description ?? b.division ?? b.id })),
+              suggestedAction: 'Open Budget to review cost trajectory and change order exposure',
+              confidence: 0.9,
+              source: 'computed' as const,
+              createdAt: now,
+              generatedAt: now,
+              dismissed: false,
+            })
+          }
+        }
+      } catch { /* non-fatal */ }
+    }
+
     if (dynamicInsights.length > 0) {
       return {
         insights: dynamicInsights,
