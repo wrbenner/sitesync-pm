@@ -504,6 +504,10 @@ describe('Project Scope Access Control', () => {
   const AUTHED_USER_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 
   beforeEach(async () => {
+    // Clear the TTL cache to prevent cross-test contamination from dedupTtl
+    const { clearTtlCache } = await import('../lib/requestDedup')
+    clearTtlCache()
+
     const { supabase } = await import('../lib/supabase')
     vi.mocked(supabase.auth.getUser).mockResolvedValue({
       data: { user: { id: AUTHED_USER_ID } as any },

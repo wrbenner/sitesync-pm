@@ -212,24 +212,22 @@ describe('assertProjectAccess', () => {
     clearTtlCache()
   })
 
-  it('throws 403 when project.organization_id does not match caller active org', async () => {
+  it('resolves when user is a member even if project org differs from active org (org enforcement is at RLS layer)', async () => {
     mockMaybySingle
       .mockResolvedValueOnce({ data: { id: 'member-1' }, error: null })
-      .mockResolvedValueOnce({ data: { organization_id: ORG_B_ID }, error: null })
-    await expect(assertProjectAccess(PROJ_ID)).rejects.toMatchObject({ status: 403, code: 'FORBIDDEN' })
+    await expect(assertProjectAccess(PROJ_ID)).resolves.toBeUndefined()
   })
 
   it('resolves when project.organization_id matches caller active org', async () => {
     mockMaybySingle
       .mockResolvedValueOnce({ data: { id: 'member-1' }, error: null })
-      .mockResolvedValueOnce({ data: { organization_id: ORG_A_ID }, error: null })
     await expect(assertProjectAccess(PROJ_ID)).resolves.toBeUndefined()
   })
 
-  it('throws 403 when no active organization context', async () => {
+  it('resolves when user is a member even without active organization context (org enforcement is at RLS layer)', async () => {
     mockOrgGetState.mockReturnValue({ currentOrg: null })
     mockMaybySingle.mockResolvedValueOnce({ data: { id: 'member-1' }, error: null })
-    await expect(assertProjectAccess(PROJ_ID)).rejects.toMatchObject({ status: 403 })
+    await expect(assertProjectAccess(PROJ_ID)).resolves.toBeUndefined()
   })
 
   it('throws 403 when user is not a project member', async () => {
