@@ -159,6 +159,7 @@ export const BulkActionBar: React.FC<BulkActionBarProps> = ({
 }) => {
   const [loading, setLoading] = useState<string | null>(null)
   const [confirmAction, setConfirmAction] = useState<BulkAction | null>(null)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const count = selectedIds.length
 
   const handleAction = async (action: BulkAction) => {
@@ -171,12 +172,14 @@ export const BulkActionBar: React.FC<BulkActionBarProps> = ({
 
   const executeAction = async (action: BulkAction) => {
     setLoading(action.label)
+    setErrorMsg(null)
     setConfirmAction(null)
     try {
       await action.onClick(selectedIds)
       onClearSelection()
-    } catch {
-      // Error handled by the action callback
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Action failed. Please try again.'
+      setErrorMsg(msg)
     } finally {
       setLoading(null)
     }
@@ -241,6 +244,23 @@ export const BulkActionBar: React.FC<BulkActionBarProps> = ({
           }}>
             {count} selected
           </span>
+
+          {errorMsg && (
+            <span
+              role="alert"
+              aria-live="assertive"
+              style={{
+                fontSize: typography.fontSize.sm,
+                color: colors.statusCritical,
+                whiteSpace: 'nowrap',
+                maxWidth: 240,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {errorMsg}
+            </span>
+          )}
 
           <div style={{ width: 1, height: 24, backgroundColor: colors.borderDefault }} />
 

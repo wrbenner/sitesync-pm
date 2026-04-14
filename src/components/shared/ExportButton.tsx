@@ -1,4 +1,4 @@
-import React, { useState, lazy, Suspense } from 'react'
+import React, { useState, useRef, useEffect, useCallback, lazy, Suspense } from 'react'
 import { Download, ChevronDown, FileText, Table2, Sheet } from 'lucide-react'
 import { colors, spacing, typography, borderRadius, shadows, transitions, touchTarget } from '../../styles/theme'
 
@@ -20,12 +20,33 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
   pdfFilename = 'SiteSync_Report',
 }) => {
   const [open, setOpen] = useState(false)
+  const triggerRef = useRef<HTMLButtonElement>(null)
   const dateStr = new Date().toISOString().slice(0, 10)
   const filename = `${pdfFilename}_${dateStr}`
+
+  // Return focus to trigger when dropdown closes
+  const closeMenu = useCallback(() => {
+    setOpen(false)
+    triggerRef.current?.focus()
+  }, [])
+
+  // Escape key closes the dropdown
+  useEffect(() => {
+    if (!open) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        closeMenu()
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [open, closeMenu])
 
   return (
     <div style={{ position: 'relative' }}>
       <button
+        ref={triggerRef}
         onClick={() => setOpen(!open)}
         aria-haspopup="menu"
         aria-expanded={open}
@@ -53,20 +74,23 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
 
       {open && (
         <>
-          <div style={{ position: 'fixed', inset: 0, zIndex: 50 }} onClick={() => setOpen(false)} role="presentation" aria-hidden="true" />
-          <div style={{
-            position: 'absolute',
-            top: '100%',
-            right: 0,
-            marginTop: spacing['1'],
-            backgroundColor: colors.surfaceRaised,
-            borderRadius: borderRadius.md,
-            boxShadow: shadows.dropdown,
-            border: `1px solid ${colors.borderSubtle}`,
-            padding: spacing['1'],
-            minWidth: '160px',
-            zIndex: 51,
-          }}>
+          <div style={{ position: 'fixed', inset: 0, zIndex: 50 }} onClick={closeMenu} role="presentation" aria-hidden="true" />
+          <div
+            role="menu"
+            aria-label="Export options"
+            style={{
+              position: 'absolute',
+              top: '100%',
+              right: 0,
+              marginTop: spacing['1'],
+              backgroundColor: colors.surfaceRaised,
+              borderRadius: borderRadius.md,
+              boxShadow: shadows.dropdown,
+              border: `1px solid ${colors.borderSubtle}`,
+              padding: spacing['1'],
+              minWidth: '160px',
+              zIndex: 51,
+            }}>
             {pdfDocument && (
               <Suspense fallback={
                 <div style={menuItemStyle}>
@@ -75,7 +99,7 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
               }>
                 <PDFDownloadLink document={pdfDocument as React.ReactElement} fileName={`${filename}.pdf`}>
                   {({ loading }: { loading: boolean }) => (
-                    <button onClick={() => setOpen(false)} style={menuItemStyle}>
+                    <button role="menuitem" onClick={closeMenu} style={menuItemStyle}>
                       <FileText size={14} /> {loading ? 'Preparing...' : 'Export PDF'}
                     </button>
                   )}
@@ -83,12 +107,12 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
               </Suspense>
             )}
             {onExportCSV && (
-              <button onClick={() => { onExportCSV(); setOpen(false); }} style={menuItemStyle}>
+              <button role="menuitem" onClick={() => { onExportCSV(); closeMenu(); }} style={menuItemStyle}>
                 <Table2 size={14} /> Export CSV
               </button>
             )}
             {onExportXLSX && (
-              <button onClick={() => { onExportXLSX(); setOpen(false); }} style={menuItemStyle}>
+              <button role="menuitem" onClick={() => { onExportXLSX(); closeMenu(); }} style={menuItemStyle}>
                 <Sheet size={14} /> Export XLSX
               </button>
             )}

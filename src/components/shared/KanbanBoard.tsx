@@ -86,10 +86,23 @@ function SortableCard<T>({ item, renderCard, getKey }: { item: T; renderCard: (i
     boxShadow: isDragging ? shadows.cardHover : shadows.card,
     overflow: 'hidden',
     cursor: 'grab',
+    outline: 'none',
   }
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      onFocus={(e) => {
+        // Show a visible focus ring on keyboard focus (not pointer focus)
+        e.currentTarget.style.boxShadow = `0 0 0 2px ${colors.primaryOrange}`;
+      }}
+      onBlur={(e) => {
+        e.currentTarget.style.boxShadow = isDragging ? shadows.cardHover : shadows.card;
+      }}
+    >
       <motion.div whileHover={{ y: -1 }}>
         {renderCard(item)}
       </motion.div>

@@ -205,44 +205,52 @@ export function DataTable<T>({
     size: 40,
     enableSorting: false,
     header: ({ table: t }) => (
-      <input
-        type="checkbox"
-        checked={t.getIsAllRowsSelected()}
-        ref={(el) => { if (el) el.indeterminate = t.getIsSomeRowsSelected(); }}
-        onChange={(e) => {
-          t.getToggleAllRowsSelectedHandler()(e);
-          lastCheckedRef.current = null;
-        }}
-        style={{ cursor: 'pointer', accentColor: colors.primaryOrange, width: 14, height: 14 }}
+      <label
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: touchTarget.field, minHeight: touchTarget.field, cursor: 'pointer' }}
         aria-label="Select all rows"
-      />
+      >
+        <input
+          type="checkbox"
+          checked={t.getIsAllRowsSelected()}
+          ref={(el) => { if (el) el.indeterminate = t.getIsSomeRowsSelected(); }}
+          onChange={(e) => {
+            t.getToggleAllRowsSelectedHandler()(e);
+            lastCheckedRef.current = null;
+          }}
+          style={{ cursor: 'pointer', accentColor: colors.primaryOrange, width: 16, height: 16, margin: 0 }}
+        />
+      </label>
     ),
     cell: ({ row, table: t }) => {
       const index = row.index;
       return (
-        <input
-          type="checkbox"
-          checked={row.getIsSelected()}
-          onChange={() => {/* controlled via onClick */}}
-          onClick={(e) => {
-            e.stopPropagation();
-            if (e.shiftKey && lastCheckedRef.current !== null) {
-              // Range select: toggle all rows between lastChecked and current to match current row's new state
-              const allRows = t.getRowModel().rows;
-              const from = Math.min(lastCheckedRef.current, index);
-              const to = Math.max(lastCheckedRef.current, index);
-              const targetState = !row.getIsSelected();
-              allRows.slice(from, to + 1).forEach((r) => {
-                if (r.getCanSelect()) r.toggleSelected(targetState);
-              });
-            } else {
-              row.toggleSelected();
-            }
-            lastCheckedRef.current = index;
-          }}
-          style={{ cursor: 'pointer', accentColor: colors.primaryOrange, width: 14, height: 14 }}
+        <label
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: touchTarget.field, minHeight: touchTarget.field, cursor: 'pointer' }}
           aria-label="Select row"
-        />
+        >
+          <input
+            type="checkbox"
+            checked={row.getIsSelected()}
+            onChange={() => {/* controlled via onClick */}}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (e.shiftKey && lastCheckedRef.current !== null) {
+                // Range select: toggle all rows between lastChecked and current to match current row's new state
+                const allRows = t.getRowModel().rows;
+                const from = Math.min(lastCheckedRef.current, index);
+                const to = Math.max(lastCheckedRef.current, index);
+                const targetState = !row.getIsSelected();
+                allRows.slice(from, to + 1).forEach((r) => {
+                  if (r.getCanSelect()) r.toggleSelected(targetState);
+                });
+              } else {
+                row.toggleSelected();
+              }
+              lastCheckedRef.current = index;
+            }}
+            style={{ cursor: 'pointer', accentColor: colors.primaryOrange, width: 16, height: 16, margin: 0 }}
+          />
+        </label>
       );
     },
   // lastCheckedRef is a stable ref object, safe to omit from deps

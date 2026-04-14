@@ -265,6 +265,7 @@ export function CommandPalette({ open: controlledOpen, onClose }: CommandPalette
   const [query, setQuery] = useState('')
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
   const [searching, setSearching] = useState(false)
+  const [resultAnnouncement, setResultAnnouncement] = useState('')
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const handleClose = useCallback(() => {
@@ -319,8 +320,14 @@ export function CommandPalette({ open: controlledOpen, onClose }: CommandPalette
       try {
         const results = await searchAll(query.trim(), 10)
         setSearchResults(results)
+        setResultAnnouncement(
+          results.length === 0
+            ? 'No results found'
+            : `${results.length} result${results.length !== 1 ? 's' : ''} found`
+        )
       } catch {
         setSearchResults([])
+        setResultAnnouncement('Search failed')
       } finally {
         setSearching(false)
       }
@@ -516,6 +523,16 @@ export function CommandPalette({ open: controlledOpen, onClose }: CommandPalette
               </>
             )}
           </Command.List>
+
+          {/* Screen-reader live region for search result announcements */}
+          <span
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+            style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap' }}
+          >
+            {resultAnnouncement}
+          </span>
 
           {/* Footer with keyboard hints */}
           <div style={footerStyle}>
