@@ -767,11 +767,11 @@ const ChangeOrdersPage: React.FC = () => {
                 {filteredCOs.map((co, i) => {
                   const typeColorMap: Record<string, { color: string; bg: string; label: string }> = {
                     owner_change:      { color: colors.brand400, bg: colors.brand50, label: 'Owner Change' },
-                    field_condition:   { color: '#14B8A6', bg: '#F0FDFA', label: 'Field Condition' },
+                    field_condition:   { color: colors.badgeTeal, bg: colors.badgeTealBg, label: 'Field Condition' },
                     design_error:      { color: colors.badgeRed, bg: colors.badgeRedBg, label: 'Design Error' },
-                    value_engineering: { color: colors.badgeTeal, bg: colors.badgeTealBg, label: 'Value Engineering' },
+                    value_engineering: { color: colors.indigo, bg: colors.indigoSubtle, label: 'Value Engineering' },
                     regulatory:        { color: colors.statusInfo, bg: colors.statusInfoSubtle, label: 'Regulatory' },
-                    unforeseen:        { color: '#8B5CF6', bg: '#F5F3FF', label: 'Unforeseen' },
+                    unforeseen:        { color: colors.purple, bg: colors.statusReviewSubtle, label: 'Unforeseen' },
                   };
                   const typeDisplay = co.reason_code
                     ? (typeColorMap[co.reason_code] ?? { color: colors.textTertiary, bg: colors.surfaceInset, label: co.reason_code })

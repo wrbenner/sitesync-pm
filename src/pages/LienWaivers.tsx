@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FileCheck, AlertTriangle, Clock, CheckCircle } from 'lucide-react';
 import { PageContainer, MetricBox, Skeleton, Btn } from '../components/Primitives';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import { colors, spacing, typography, borderRadius, shadows, transitions, touchTarget } from '../styles/theme';
 import { supabase } from '../lib/supabase';
 import { useProjectId } from '../hooks/useProjectId';
@@ -136,6 +137,7 @@ export function LienWaivers() {
         style={{
           display: 'flex',
           alignItems: 'center',
+          flexWrap: 'wrap',
           gap: spacing['4'],
           marginBottom: spacing['5'],
         }}
@@ -207,9 +209,11 @@ export function LienWaivers() {
           borderRadius: borderRadius.xl,
           boxShadow: shadows.card,
           overflow: 'hidden',
+          overflowX: 'auto',
+          WebkitOverflowScrolling: 'touch',
         }}
       >
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <table style={{ width: '100%', minWidth: 640, borderCollapse: 'collapse' }}>
           <colgroup>
             {colWidths.map((w, i) => <col key={i} style={{ width: w }} />)}
           </colgroup>
@@ -383,4 +387,10 @@ export function LienWaivers() {
   );
 }
 
-export default LienWaivers;
+const LienWaiversWithBoundary: React.FC = () => (
+  <ErrorBoundary>
+    <LienWaivers />
+  </ErrorBoundary>
+)
+
+export default LienWaiversWithBoundary;

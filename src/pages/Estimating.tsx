@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import { Calculator, Users, Ruler, Plus, DollarSign, Award } from 'lucide-react'
 import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton } from '../components/Primitives'
+import { ErrorBoundary } from '../components/ErrorBoundary'
 import { DataTable, createColumnHelper } from '../components/shared/DataTable'
 import { ExportButton } from '../components/shared/ExportButton'
 import { colors, spacing, typography, borderRadius, transitions, touchTarget } from '../styles/theme'
@@ -391,4 +392,10 @@ export const Estimating: React.FC = () => {
   )
 }
 
-export default Estimating
+const EstimatingWithBoundary: React.FC = () => (
+  <ErrorBoundary>
+    <Estimating />
+  </ErrorBoundary>
+)
+
+export default EstimatingWithBoundary

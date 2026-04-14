@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { DollarSign, Receipt, FileText, TrendingUp, Wallet, Plus, Check, X, BookOpen } from 'lucide-react'
 import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton, EmptyState } from '../components/Primitives'
+import { ErrorBoundary } from '../components/ErrorBoundary'
 import { DataTable, createColumnHelper } from '../components/shared/DataTable'
 import { ExportButton } from '../components/shared/ExportButton'
 import { colors, spacing, typography, borderRadius, transitions, touchTarget } from '../styles/theme'
@@ -645,6 +646,7 @@ export const Financials: React.FC = () => {
             columns={costColumns}
             data={jobCosts || []}
             enableSorting
+            emptyMessage="No cost entries recorded. Post job costs here as invoices and payroll are processed."
           />
         </Card>
       )}
@@ -656,6 +658,7 @@ export const Financials: React.FC = () => {
             columns={billingColumns}
             data={payApps || []}
             enableSorting
+            emptyMessage="No pay applications submitted yet. Create a pay application to begin billing the owner."
           />
         </Card>
       )}
@@ -667,6 +670,7 @@ export const Financials: React.FC = () => {
             columns={payableColumns}
             data={invoices || []}
             enableSorting
+            emptyMessage="No outstanding payables. Subcontractor invoices will appear here once received."
           />
         </Card>
       )}
@@ -678,6 +682,7 @@ export const Financials: React.FC = () => {
             columns={wipColumns}
             data={wipReports || []}
             enableSorting
+            emptyMessage="No WIP reports generated. Run a WIP analysis to compare earned revenue against billings."
           />
         </Card>
       )}
@@ -689,6 +694,7 @@ export const Financials: React.FC = () => {
             columns={retainageColumns}
             data={retainage || []}
             enableSorting
+            emptyMessage="No retainage tracked. Retainage withheld from pay applications will appear here."
           />
         </Card>
       )}
@@ -696,4 +702,10 @@ export const Financials: React.FC = () => {
   )
 }
 
-export default Financials
+const FinancialsWithBoundary: React.FC = () => (
+  <ErrorBoundary>
+    <Financials />
+  </ErrorBoundary>
+)
+
+export default FinancialsWithBoundary

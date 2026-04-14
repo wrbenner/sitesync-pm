@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import { Truck, Warehouse, Plus, DollarSign } from 'lucide-react'
 import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton } from '../components/Primitives'
+import { ErrorBoundary } from '../components/ErrorBoundary'
 import { DataTable, createColumnHelper } from '../components/shared/DataTable'
 import { ExportButton } from '../components/shared/ExportButton'
 import { colors, spacing, typography, borderRadius, transitions, touchTarget } from '../styles/theme'
@@ -351,4 +352,10 @@ export const Procurement: React.FC = () => {
   )
 }
 
-export default Procurement
+const ProcurementWithBoundary: React.FC = () => (
+  <ErrorBoundary>
+    <Procurement />
+  </ErrorBoundary>
+)
+
+export default ProcurementWithBoundary
