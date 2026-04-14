@@ -432,19 +432,31 @@ export const AICopilot: React.FC = () => {
             <button
               onClick={() => setShowAgentPanel(!showAgentPanel)}
               aria-label={showAgentPanel ? 'Hide agent panel' : 'Show agent panel'}
+              aria-pressed={showAgentPanel}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: spacing['1'],
                 padding: `${spacing['1']} ${spacing['2']}`,
                 minHeight: 56,
-                backgroundColor: 'transparent',
+                backgroundColor: showAgentPanel ? colors.surfaceInset : 'transparent',
                 border: 'none',
                 borderRadius: borderRadius.base,
                 cursor: 'pointer',
-                color: colors.textTertiary,
+                color: showAgentPanel ? colors.textSecondary : colors.textTertiary,
                 fontSize: typography.fontSize.caption,
                 fontFamily: typography.fontFamily,
+                transition: `background-color ${transitions.instant}`,
+              }}
+              onMouseEnter={(e) => {
+                if (!showAgentPanel) {
+                  ;(e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.surfaceHover
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!showAgentPanel) {
+                  ;(e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'
+                }
               }}
             >
               <Bot size={12} />
