@@ -24,6 +24,7 @@ import { ProductivityPulseWidget } from './widgets/ProductivityPulseWidget';
 import { MilestoneTimelineWidget } from './widgets/MilestoneTimelineWidget';
 import { PhotoFeedWidget } from './widgets/PhotoFeedWidget';
 import { BIMPreviewWidget } from './widgets/BIMPreviewWidget';
+import { ActivityFeedWidget } from './widgets/ActivityFeedWidget';
 
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
@@ -38,6 +39,7 @@ const widgetComponents: Record<string, React.FC> = {
   'milestone-timeline': MilestoneTimelineWidget,
   'photo-feed': PhotoFeedWidget,
   'bim-preview': BIMPreviewWidget,
+  'activity-feed': ActivityFeedWidget,
 };
 
 const STORAGE_KEY = 'sitesync-dashboard-layout';
@@ -53,6 +55,7 @@ const defaultWidgets = [
   'milestone-timeline',
   'photo-feed',
   'bim-preview',
+  'activity-feed',
 ];
 
 function getDefaultLayout(widgets: string[]): Layout[] {

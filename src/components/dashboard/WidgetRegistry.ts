@@ -102,6 +102,16 @@ export const widgetDefinitions: WidgetDefinition[] = [
     minW: 3,
     minH: 2,
   },
+  {
+    type: 'activity-feed',
+    label: 'Activity Feed',
+    description: 'Real time project activity with actor and timestamp',
+    icon: '📋',
+    defaultW: 4,
+    defaultH: 4,
+    minW: 3,
+    minH: 3,
+  },
 ];
 
 // Lazy import map, resolved at render time by DashboardGrid
