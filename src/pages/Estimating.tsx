@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import { Calculator, Users, Ruler, Plus, DollarSign, Award } from 'lucide-react'
 import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton } from '../components/Primitives'
+import { ErrorBoundary } from '../components/ErrorBoundary'
 import { DataTable, createColumnHelper } from '../components/shared/DataTable'
 import { ExportButton } from '../components/shared/ExportButton'
 import { colors, spacing, typography, borderRadius, transitions, touchTarget } from '../styles/theme'
@@ -216,7 +217,7 @@ const takeoffColumns = [
 
 // ── Main Component ───────────────────────────────────────────
 
-export const Estimating: React.FC = () => {
+const EstimatingInner: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('estimates')
   const projectId = useProjectId()
   const { data: estimates, isPending: estimatesLoading } = useEstimates(projectId)
@@ -390,5 +391,11 @@ export const Estimating: React.FC = () => {
     </PageContainer>
   )
 }
+
+export const Estimating: React.FC = () => (
+  <ErrorBoundary message="Estimating could not be displayed. Check your connection and try again.">
+    <EstimatingInner />
+  </ErrorBoundary>
+)
 
 export default Estimating

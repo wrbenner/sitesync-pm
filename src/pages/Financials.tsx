@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { DollarSign, Receipt, FileText, TrendingUp, Wallet, Plus, Check, X, BookOpen } from 'lucide-react'
 import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton, EmptyState } from '../components/Primitives'
+import { ErrorBoundary } from '../components/ErrorBoundary'
 import { DataTable, createColumnHelper } from '../components/shared/DataTable'
 import { ExportButton } from '../components/shared/ExportButton'
 import { colors, spacing, typography, borderRadius, transitions, touchTarget } from '../styles/theme'
@@ -356,7 +357,7 @@ const retainageColumns = [
 
 // ── Main Component ───────────────────────────────────────────
 
-export const Financials: React.FC = () => {
+const FinancialsInner: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('overview')
   const projectId = useProjectId()
   const { isFlashing } = useBudgetRealtime(projectId)
@@ -645,6 +646,7 @@ export const Financials: React.FC = () => {
             columns={costColumns}
             data={jobCosts || []}
             enableSorting
+            emptyMessage="No job cost entries yet. Costs appear here as invoices and time entries are posted."
           />
         </Card>
       )}
@@ -656,6 +658,7 @@ export const Financials: React.FC = () => {
             columns={billingColumns}
             data={payApps || []}
             enableSorting
+            emptyMessage="No pay applications submitted yet. Create one from the Pay Applications page."
           />
         </Card>
       )}
@@ -667,6 +670,7 @@ export const Financials: React.FC = () => {
             columns={payableColumns}
             data={invoices || []}
             enableSorting
+            emptyMessage="No payables recorded. Vendor invoices will appear here once entered."
           />
         </Card>
       )}
@@ -678,6 +682,7 @@ export const Financials: React.FC = () => {
             columns={wipColumns}
             data={wipReports || []}
             enableSorting
+            emptyMessage="No WIP reports generated. Reports are created at each billing period close."
           />
         </Card>
       )}
@@ -689,11 +694,18 @@ export const Financials: React.FC = () => {
             columns={retainageColumns}
             data={retainage || []}
             enableSorting
+            emptyMessage="No retainage entries yet. Retainage is tracked as pay applications are certified."
           />
         </Card>
       )}
     </PageContainer>
   )
 }
+
+export const Financials: React.FC = () => (
+  <ErrorBoundary message="Financials could not be displayed. Check your connection and try again.">
+    <FinancialsInner />
+  </ErrorBoundary>
+)
 
 export default Financials
