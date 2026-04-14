@@ -396,6 +396,43 @@ export const getAiInsights = async (
       } catch { /* non-fatal */ }
     }
 
+    // Risk convergence: detect schedule phases referenced by 2+ different insights
+    if (dynamicInsights.length >= 2) {
+      const phaseRiskMap = new Map<string, { phaseName: string; riskTypes: string[]; insightTitles: string[] }>()
+      for (const insight of dynamicInsights) {
+        for (const entity of insight.affectedEntities ?? []) {
+          if (entity.type === 'schedule_phase') {
+            const entry = phaseRiskMap.get(entity.id) ?? { phaseName: entity.name, riskTypes: [], insightTitles: [] }
+            if (!entry.riskTypes.includes(insight.type)) {
+              entry.riskTypes.push(insight.type)
+              entry.insightTitles.push(insight.title)
+            }
+            phaseRiskMap.set(entity.id, entry)
+          }
+        }
+      }
+
+      for (const [phaseId, entry] of phaseRiskMap) {
+        if (entry.riskTypes.length >= 2) {
+          dynamicInsights.unshift({
+            id: `computed-convergence-${phaseId}`,
+            type: 'risk',
+            severity: 'critical',
+            title: `${entry.riskTypes.length} risk factors converging on ${entry.phaseName}`,
+            description: `Multiple independent risks affect ${entry.phaseName}: ${entry.insightTitles.join('; ')}. When risks converge on a single phase, the probability of delay multiplies. Prioritize immediate action.`,
+            affectedEntities: [{ type: 'schedule_phase', id: phaseId, name: entry.phaseName }],
+            suggestedAction: `Open Schedule to review all risks affecting ${entry.phaseName}`,
+            confidence: 0.95,
+            source: 'computed' as const,
+            createdAt: now,
+            generatedAt: now,
+            dismissed: false,
+          })
+          break // One convergence insight is enough for demo impact
+        }
+      }
+    }
+
     if (dynamicInsights.length > 0) {
       return {
         insights: dynamicInsights,
