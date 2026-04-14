@@ -42,11 +42,11 @@ const statusLabel: Record<string, string> = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  open: '#F5A623',
-  in_progress: '#3B82F6',
-  sub_complete: '#8B5CF6',
-  verified: '#4EC896',
-  rejected: '#E74C3C',
+  open: colors.statusPending,
+  in_progress: colors.statusInfo,
+  sub_complete: colors.statusReview,
+  verified: colors.statusActive,
+  rejected: colors.statusCritical,
 };
 
 const plColHelper = createColumnHelper<PunchItem>();
@@ -150,8 +150,8 @@ function getDaysRemaining(dueDate: string): number {
 
 function getDueDateColor(dueDate: string): string {
   const days = getDaysRemaining(dueDate);
-  if (days <= 0) return '#E74C3C';
-  if (days <= 4) return '#F5A623';
+  if (days <= 0) return colors.statusCritical;
+  if (days <= 4) return colors.statusPending;
   return colors.statusActive;
 }
 
@@ -565,9 +565,9 @@ const PunchListPage: React.FC = () => {
               {formatDate(val)}
             </span>
             {days <= 0 ? (
-              <span style={{ fontSize: 10, fontWeight: 600, color: '#E74C3C' }}>{Math.abs(days)} days overdue</span>
+              <span style={{ fontSize: 10, fontWeight: 600, color: colors.statusCritical }}>{Math.abs(days)} days overdue</span>
             ) : days <= 4 ? (
-              <span style={{ fontSize: 10, color: '#F5A623' }}>{days}d left</span>
+              <span style={{ fontSize: 10, color: colors.statusPending }}>{days}d left</span>
             ) : (
               <span style={{ fontSize: 10, color: colors.textTertiary }}>{days}d left</span>
             )}

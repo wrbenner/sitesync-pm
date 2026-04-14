@@ -30,18 +30,18 @@ import { EditingLockBanner } from '../components/ui/EditingLockBanner';
 const isOverdue = (dateStr: string) => new Date(dateStr) < new Date();
 
 const BIC_COLORS: Record<string, string> = {
-  GC: '#3B82F6',
-  Architect: '#8B5CF6',
-  Engineer: '#14B8A6',
-  Owner: '#F47820',
-  Subcontractor: '#6B7280',
-  Sub: '#6B7280',
+  GC: colors.statusInfo,
+  Architect: colors.statusReview,
+  Engineer: colors.chartCyan,
+  Owner: colors.primaryOrange,
+  Subcontractor: colors.textTertiary,
+  Sub: colors.textTertiary,
 };
 
 const getBicColor = (party: string): string => {
   if (BIC_COLORS[party]) return BIC_COLORS[party];
   const key = Object.keys(BIC_COLORS).find(k => party.toLowerCase().includes(k.toLowerCase()));
-  return key ? BIC_COLORS[key] : '#6B7280';
+  return key ? BIC_COLORS[key] : colors.textTertiary;
 };
 
 const deriveBic = (rfi: any): string | null => {
@@ -57,8 +57,8 @@ const BallInCourtCell: React.FC<{ rfi: any }> = ({ rfi }) => {
   if (!party) {
     return (
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-        <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#6B7280', flexShrink: 0, display: 'inline-block' }} />
-        <span style={{ fontSize: 14, color: '#9CA3AF', fontStyle: 'italic' }}>Unassigned</span>
+        <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: colors.textTertiary, flexShrink: 0, display: 'inline-block' }} />
+        <span style={{ fontSize: 14, color: colors.textTertiary, fontStyle: 'italic' }}>Unassigned</span>
       </span>
     );
   }
@@ -66,7 +66,7 @@ const BallInCourtCell: React.FC<{ rfi: any }> = ({ rfi }) => {
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
       <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: color, flexShrink: 0, display: 'inline-block' }} />
-      <span style={{ fontSize: 14, color: '#374151' }}>{party}</span>
+      <span style={{ fontSize: 14, color: colors.textSecondary }}>{party}</span>
     </span>
   );
 };
@@ -237,7 +237,7 @@ const RFIsPage: React.FC = () => {
               {info.getValue()}
               {(rfi.ai_generated || getAnnotationsForEntity('rfi', rfi.id).length > 0) && (
                 <span title={rfi.ai_generated ? 'AI assisted' : (getAnnotationsForEntity('rfi', rfi.id)[0]?.insight || 'AI assisted')} style={{ display: 'inline-flex', alignItems: 'center', gap: 2, marginLeft: spacing['2'], padding: '1px 5px', backgroundColor: `${colors.statusReview}10`, borderRadius: borderRadius.full, verticalAlign: 'middle' }}>
-                  <Sparkles size={10} color="#8B5CF6" />
+                  <Sparkles size={10} color={colors.indigo} />
                 </span>
               )}
             </span>
@@ -274,7 +274,7 @@ const RFIsPage: React.FC = () => {
               <span role="status" aria-label={`Status: ${info.getValue()}`}><StatusTag status={info.getValue() as 'pending' | 'approved' | 'under_review' | 'revise_resubmit' | 'complete' | 'active' | 'closed' | 'pending_approval'} /></span>
             )}
             {overdue && (
-              <Tag label="OVERDUE" color="#E74C3C" backgroundColor="#FEE2E2" />
+              <Tag label="OVERDUE" color={colors.statusCritical} backgroundColor={colors.statusCriticalSubtle} />
             )}
           </div>
         );
@@ -312,7 +312,7 @@ const RFIsPage: React.FC = () => {
         const overdue = !!info.getValue() && new Date(info.getValue()) < new Date() && rfi.status !== 'closed';
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            <span style={{ fontSize: typography.fontSize.sm, color: overdue ? '#E74C3C' : colors.textTertiary, fontVariantNumeric: 'tabular-nums' as const }}>
+            <span style={{ fontSize: typography.fontSize.sm, color: overdue ? colors.statusCritical : colors.textTertiary, fontVariantNumeric: 'tabular-nums' as const }}>
               {formatDate(info.getValue())}
             </span>
           </div>
@@ -481,10 +481,10 @@ const RFIsPage: React.FC = () => {
       actions={
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
           <div style={{ display: 'flex', gap: spacing['1'], backgroundColor: colors.surfaceInset, borderRadius: borderRadius.full, padding: 2 }}>
-            <button className="rfi-interactive" aria-pressed={viewMode === 'table'} onClick={() => setViewMode('table')} style={{ display: 'flex', alignItems: 'center', padding: '6px 12px', border: 'none', borderRadius: borderRadius.full, backgroundColor: viewMode === 'table' ? colors.surfaceRaised : 'transparent', color: viewMode === 'table' ? colors.textPrimary : colors.textTertiary, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily, cursor: 'pointer', boxShadow: viewMode === 'table' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none' }}>
+            <button className="rfi-interactive" aria-pressed={viewMode === 'table'} onClick={() => setViewMode('table')} style={{ display: 'flex', alignItems: 'center', minHeight: '44px', padding: '6px 14px', border: 'none', borderRadius: borderRadius.full, backgroundColor: viewMode === 'table' ? colors.surfaceRaised : 'transparent', color: viewMode === 'table' ? colors.textPrimary : colors.textTertiary, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily, cursor: 'pointer', boxShadow: viewMode === 'table' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none' }}>
               <List size={14} style={{ marginRight: 4 }} /> Table
             </button>
-            <button className="rfi-interactive" aria-pressed={viewMode === 'kanban'} onClick={() => setViewMode('kanban')} style={{ display: 'flex', alignItems: 'center', padding: '6px 12px', border: 'none', borderRadius: borderRadius.full, backgroundColor: viewMode === 'kanban' ? colors.surfaceRaised : 'transparent', color: viewMode === 'kanban' ? colors.textPrimary : colors.textTertiary, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily, cursor: 'pointer', boxShadow: viewMode === 'kanban' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none' }}>
+            <button className="rfi-interactive" aria-pressed={viewMode === 'kanban'} onClick={() => setViewMode('kanban')} style={{ display: 'flex', alignItems: 'center', minHeight: '44px', padding: '6px 14px', border: 'none', borderRadius: borderRadius.full, backgroundColor: viewMode === 'kanban' ? colors.surfaceRaised : 'transparent', color: viewMode === 'kanban' ? colors.textPrimary : colors.textTertiary, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily, cursor: 'pointer', boxShadow: viewMode === 'kanban' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none' }}>
               <LayoutGrid size={14} style={{ marginRight: 4 }} /> Kanban
             </button>
           </div>
@@ -495,11 +495,11 @@ const RFIsPage: React.FC = () => {
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: spacing.xs,
                 padding: '7px 14px', border: 'none', borderRadius: borderRadius.md,
-                background: 'linear-gradient(135deg, #EDE9FE 0%, #DBEAFE 100%)',
-                color: '#6D28D9', fontSize: typography.fontSize.sm,
+                background: `linear-gradient(135deg, ${colors.indigoSubtle} 0%, ${colors.statusInfoSubtle} 100%)`,
+                color: colors.indigo, fontSize: typography.fontSize.sm,
                 fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily,
                 cursor: 'pointer', whiteSpace: 'nowrap' as const,
-                boxShadow: '0 0 0 1px rgba(139,92,246,0.2)',
+                boxShadow: `0 0 0 1px ${colors.indigoSubtle}`,
               }}
             >
               <Wand2 size={14} />
@@ -513,7 +513,7 @@ const RFIsPage: React.FC = () => {
         </div>
       }
     >
-      <style>{`.rfi-interactive:focus-visible { outline: 2px solid #F47820; outline-offset: 2px; }`}</style>
+      <style>{`.rfi-interactive:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }`}</style>
       {pageAlerts.map((alert) => (
         <PredictiveAlertBanner key={alert.id} alert={alert} />
       ))}
@@ -555,7 +555,7 @@ const RFIsPage: React.FC = () => {
                     border: 'none',
                     borderRadius: borderRadius.full,
                     backgroundColor: isSelected ? colors.primaryOrange : 'transparent',
-                    color: isSelected ? '#fff' : colors.textSecondary,
+                    color: isSelected ? colors.white : colors.textSecondary,
                     fontSize: typography.fontSize.sm,
                     fontWeight: isSelected ? typography.fontWeight.semibold : typography.fontWeight.medium,
                     fontFamily: typography.fontFamily,
@@ -571,7 +571,7 @@ const RFIsPage: React.FC = () => {
                     fontSize: typography.fontSize.caption,
                     fontWeight: typography.fontWeight.medium,
                     backgroundColor: isSelected ? 'rgba(255,255,255,0.25)' : colors.surfaceInset,
-                    color: isSelected ? '#fff' : colors.textTertiary,
+                    color: isSelected ? colors.white : colors.textTertiary,
                     borderRadius: borderRadius.full,
                     padding: '1px 6px',
                     minWidth: 18,
@@ -585,11 +585,11 @@ const RFIsPage: React.FC = () => {
           </div>
           {filteredRfis.length === 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 24px', gap: '16px', textAlign: 'center' }}>
-              <FilterX size={48} color="#9CA3AF" />
-              <h3 style={{ fontSize: 18, fontWeight: 600, color: '#1A1A2E', margin: 0 }}>
+              <FilterX size={48} color={colors.textTertiary} />
+              <h3 style={{ fontSize: typography.fontSize.subtitle, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0 }}>
                 No RFIs match your current filters
               </h3>
-              <p style={{ fontSize: 14, color: '#6B7280', margin: 0 }}>
+              <p style={{ fontSize: typography.fontSize.body, color: colors.textSecondary, margin: 0 }}>
                 Try adjusting your search or filter criteria.
               </p>
               <Btn variant="secondary" onClick={() => setStatusFilter('all')}>
@@ -609,7 +609,7 @@ const RFIsPage: React.FC = () => {
               getRowAriaLabel={(rfi) => `RFI ${rfi.rfiNumber}: ${rfi.title}, status ${rfi.status}`}
               getRowStyle={(rfi) => {
                 const overdue = rfi.dueDate && new Date(rfi.dueDate) < new Date() && rfi.status !== 'closed';
-                return overdue ? { backgroundColor: 'rgba(231,76,60,0.06)' } : {};
+                return overdue ? { backgroundColor: `${colors.statusCritical}0A` } : {};
               }}
               loading={rfisLoading}
               emptyMessage="No RFIs match your filters"
@@ -915,8 +915,8 @@ const RFIsPage: React.FC = () => {
             {aiSuggestion !== null ? (
               <div style={{ marginTop: spacing['4'], padding: spacing['3'], backgroundColor: `${colors.statusReview}06`, borderRadius: borderRadius.md, borderLeft: `3px solid ${colors.statusReview}` }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['2'] }}>
-                  <Sparkles size={12} color="#8B5CF6" />
-                  <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: '#8B5CF6', textTransform: 'uppercase' as const, letterSpacing: '0.4px' }}>AI Suggested Response</span>
+                  <Sparkles size={12} color={colors.indigo} />
+                  <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.indigo, textTransform: 'uppercase' as const, letterSpacing: '0.4px' }}>AI Suggested Response</span>
                 </div>
                 <textarea
                   value={aiSuggestion}
@@ -1012,7 +1012,7 @@ const RFIsPage: React.FC = () => {
           <div style={{ backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.xl, padding: spacing['6'], width: '100%', maxWidth: 480, boxShadow: '0 16px 48px rgba(0,0,0,0.18)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing['4'] }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
-                <Wand2 size={18} color="#8B5CF6" />
+                <Wand2 size={18} color={colors.indigo} />
                 <span style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>AI Draft RFI</span>
               </div>
               <button
@@ -1035,7 +1035,7 @@ const RFIsPage: React.FC = () => {
               style={{ width: '100%', padding: spacing['3'], border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.md, fontSize: typography.fontSize.sm, color: colors.textPrimary, backgroundColor: colors.surfacePage, resize: 'none' as const, fontFamily: typography.fontFamily, boxSizing: 'border-box' as const, outline: 'none' }}
             />
             {aiDraftLoading && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginTop: spacing['3'], color: '#8B5CF6', fontSize: typography.fontSize.sm }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginTop: spacing['3'], color: colors.indigo, fontSize: typography.fontSize.sm }}>
                 <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
                 AI is drafting your RFI...
               </div>

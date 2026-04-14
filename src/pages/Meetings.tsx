@@ -205,6 +205,7 @@ export const MeetingsPage: React.FC = () => {
 
   const tabStyle = (isActive: boolean): React.CSSProperties => ({
     padding: `${spacing.sm} ${spacing.lg}`,
+    minHeight: '44px',
     borderRadius: borderRadius.md,
     border: 'none',
     cursor: 'pointer',
@@ -375,6 +376,7 @@ export const MeetingsPage: React.FC = () => {
             onClick={() => setShowOpenOnly((v) => !v)}
             style={{
               padding: `${spacing.sm} ${spacing.md}`,
+              minHeight: '44px',
               border: `1px solid ${colors.borderDefault}`,
               borderRadius: borderRadius.md,
               background: showOpenOnly ? colors.primaryOrange : colors.surfaceRaised,
