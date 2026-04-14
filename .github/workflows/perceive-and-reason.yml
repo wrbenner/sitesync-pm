@@ -259,7 +259,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Download perception data
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         continue-on-error: true
         with:
           name: perception-data

@@ -161,7 +161,7 @@ jobs:
         run: npm install -g @anthropic-ai/claude-code
 
       - name: Download adversarial tests
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: adversarial-tests-raw
           path: src/test/adversarial/
@@ -264,7 +264,7 @@ jobs:
         run: npm ci
 
       - name: Download verified tests
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: adversarial-tests-verified
           path: src/test/adversarial/
