@@ -316,7 +316,7 @@ export const Benchmarks: React.FC = () => {
               {[1, 2, 3, 4].map((i) => <Skeleton key={i} width="100%" height="180px" />)}
             </div>
           ) : comparisons && comparisons.length > 0 ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: spacing['4'] }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(400px, 100%), 1fr))', gap: spacing['4'] }}>
               {comparisons.map((c) => <BenchmarkCard key={c.metric} comparison={c} />)}
             </div>
           ) : (
@@ -343,7 +343,7 @@ export const Benchmarks: React.FC = () => {
               {subProfiles.filter((s) => s.featured).length > 0 && (
                 <div style={{ marginBottom: spacing['5'] }}>
                   <SectionHeader title="Top Performers" />
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: spacing['4'], marginTop: spacing['3'] }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(360px, 100%), 1fr))', gap: spacing['4'], marginTop: spacing['3'] }}>
                     {subProfiles.filter((s) => s.featured).map((p) => (
                       <SubProfileCard key={p.companyId} profile={p} />
                     ))}
@@ -351,7 +351,7 @@ export const Benchmarks: React.FC = () => {
                 </div>
               )}
               <SectionHeader title="All Subcontractors" />
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: spacing['4'], marginTop: spacing['3'] }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(360px, 100%), 1fr))', gap: spacing['4'], marginTop: spacing['3'] }}>
                 {subProfiles.map((p) => (
                   <SubProfileCard key={p.companyId} profile={p} />
                 ))}

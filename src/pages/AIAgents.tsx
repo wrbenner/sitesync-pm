@@ -589,7 +589,9 @@ export const AIAgents: React.FC = () => {
           return (
             <button
               role="tab"
+              id={`ai-agents-tab-${tab.key}`}
               aria-selected={isActive}
+              aria-controls={`ai-agents-panel-${tab.key}`}
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
               style={{
@@ -667,9 +669,13 @@ export const AIAgents: React.FC = () => {
       {/* Overview Tab — Agent Cards */}
       {activeTab === 'overview' && !isLoading && (
         <div
+          role="tabpanel"
+          id="ai-agents-panel-overview"
+          aria-labelledby="ai-agents-tab-overview"
+          tabIndex={0}
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(min(340px, 100%), 1fr))',
             gap: spacing['4'],
           }}
         >
@@ -687,28 +693,39 @@ export const AIAgents: React.FC = () => {
 
       {/* Activity Tab */}
       {activeTab === 'activity' && !isLoading && (
-        <Card padding={spacing['4']}>
-          <SectionHeader title="Agent Activity Feed" />
-          {dbActions && dbActions.length > 0 ? (
-            <div style={{ marginTop: spacing['3'] }}>
-              <DataTable
-                columns={actionColumns}
-                data={dbActions as Record<string, unknown>[]}
+        <div
+          role="tabpanel"
+          id="ai-agents-panel-activity"
+          aria-labelledby="ai-agents-tab-activity"
+          tabIndex={0}
+        >
+          <Card padding={spacing['4']}>
+            <SectionHeader title="Agent Activity Feed" />
+            {dbActions && dbActions.length > 0 ? (
+              <div style={{ marginTop: spacing['3'] }}>
+                <DataTable
+                  columns={actionColumns}
+                  data={dbActions as Record<string, unknown>[]}
+                />
+              </div>
+            ) : (
+              <EmptyState
+                icon={<Activity size={32} color={colors.textTertiary} />}
+                title="No activity yet"
+                description="Agent activity will appear here as agents analyze your project data and suggest actions."
               />
-            </div>
-          ) : (
-            <EmptyState
-              icon={<Activity size={32} color={colors.textTertiary} />}
-              title="No activity yet"
-              description="Agent activity will appear here as agents analyze your project data and suggest actions."
-            />
-          )}
-        </Card>
+            )}
+          </Card>
+        </div>
       )}
 
       {/* Tools Tab */}
       {activeTab === 'tools' && !isLoading && (
         <div
+          role="tabpanel"
+          id="ai-agents-panel-tools"
+          aria-labelledby="ai-agents-tab-tools"
+          tabIndex={0}
           style={{
             display: 'flex',
             flexDirection: 'column',
