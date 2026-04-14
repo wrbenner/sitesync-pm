@@ -128,7 +128,7 @@ jobs:
           "
 
       - name: Upload adversarial tests artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: adversarial-tests-raw
           path: src/test/adversarial/
@@ -228,7 +228,7 @@ jobs:
           "
 
       - name: Upload verified tests artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: adversarial-tests-verified
           path: src/test/adversarial/

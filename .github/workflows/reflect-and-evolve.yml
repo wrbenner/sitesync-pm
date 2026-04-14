@@ -204,7 +204,7 @@ jobs:
           echo "Review file: $(wc -c < $REVIEW_FILE) bytes"
 
       - name: Upload review
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: "review-${{ matrix.perspective }}"
           path: .reviews/
@@ -355,7 +355,7 @@ jobs:
           echo "Creating PR instead of direct push" && BRANCH="auto/evolve-$(date +%Y%m%d-%H%M)" && git checkout -b "$BRANCH" 2>/dev/null || true && git push origin "$BRANCH" 2>&1 && gh pr create --title "[autopoietic] evolve $(date +%Y-%m-%d)" --body "Evolution and reflection output" --base main --head "$BRANCH" || true || true
 
       - name: Upload reflection artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: reflection-data
           path: |
