@@ -83,7 +83,11 @@ async function runTests() {
 
   // Connectivity check — if Supabase is unreachable, skip all tests
   try {
-    await fetch(`${baseUrl}/rest/v1/`, { method: "HEAD", signal: AbortSignal.timeout(10000) });
+    await fetch(`${baseUrl}/rest/v1/`, {
+      method: "HEAD",
+      headers: { apikey: config.supabase.anon_key },
+      signal: AbortSignal.timeout(10000),
+    });
   } catch {
     console.log("SKIP [A.1] Supabase unreachable");
     console.log("SKIP [A.2] Supabase unreachable");
