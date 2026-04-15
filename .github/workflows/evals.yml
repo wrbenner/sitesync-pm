@@ -29,6 +29,24 @@ jobs:
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
+          # Ensure SSL mode is set for Supabase direct connections
+          if [[ "$SUPABASE_DB_URL" != *sslmode* ]]; then
+            if [[ "$SUPABASE_DB_URL" == *\?* ]]; then
+              export SUPABASE_DB_URL="${SUPABASE_DB_URL}&sslmode=require"
+            else
+              export SUPABASE_DB_URL="${SUPABASE_DB_URL}?sslmode=require"
+            fi
+          fi
+          # Debug: show connection details (password masked)
+          echo "DB host: $(echo "$SUPABASE_DB_URL" | sed 's|://[^@]*@|://***@|')"
+          echo "SSL mode appended: $(echo "$SUPABASE_DB_URL" | grep -c sslmode) (1=yes)"
+          # Test connection with verbose error output
+          echo "Testing database connectivity..."
+          psql "$SUPABASE_DB_URL" -c "SELECT 'CONNECTED' as status, current_database(), version()" 2>&1 || {
+            echo "::error::psql connection failed. URL format: $(echo "$SUPABASE_DB_URL" | sed 's|://[^@]*@|://***@|')"
+            exit 1
+          }
+          echo "Database connection successful"
           chmod +x evals/run-evals.sh
           evals/run-evals.sh --layer 1
 
