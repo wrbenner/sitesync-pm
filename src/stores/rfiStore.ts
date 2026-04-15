@@ -1,6 +1,7 @@
 import { create } from 'zustand';
-import { supabase } from '../lib/supabase';
-import type { RFI, RFIResponse, Priority, RfiStatus } from '../types/database';
+import { rfiService } from '../services/rfiService';
+import type { RFI, RFIResponse, RfiStatus } from '../types/database';
+import type { CreateRfiInput } from '../services/rfiService';
 
 interface RfiState {
   rfis: RFI[];
@@ -9,20 +10,13 @@ interface RfiState {
   error: string | null;
 
   loadRfis: (projectId: string) => Promise<void>;
-  createRfi: (rfi: {
-    project_id: string;
-    title: string;
-    description?: string;
-    priority: Priority;
-    assigned_to?: string;
-    due_date?: string;
-    created_by: string;
-    linked_drawing_id?: string;
-  }) => Promise<{ error: string | null; rfi: RFI | null }>;
+  createRfi: (rfi: CreateRfiInput) => Promise<{ error: string | null; rfi: RFI | null }>;
   updateRfi: (rfiId: string, updates: Partial<RFI>) => Promise<{ error: string | null }>;
+  transitionStatus: (rfiId: string, status: RfiStatus, userRole?: string) => Promise<{ error: string | null }>;
+  /** @deprecated Use transitionStatus instead */
   updateRfiStatus: (rfiId: string, status: RfiStatus) => Promise<{ error: string | null }>;
   loadResponses: (rfiId: string) => Promise<void>;
-  addResponse: (rfiId: string, userId: string, text: string, attachments?: string[]) => Promise<{ error: string | null }>;
+  addResponse: (rfiId: string, text: string, attachments?: string[]) => Promise<{ error: string | null }>;
   deleteRfi: (rfiId: string) => Promise<{ error: string | null }>;
 }
 
@@ -34,92 +28,73 @@ export const useRfiStore = create<RfiState>()((set, get) => ({
 
   loadRfis: async (projectId) => {
     set({ loading: true, error: null });
-    try {
-      const { data, error } = await supabase
-        .from('rfis')
-        .select('*')
-        .eq('project_id', projectId)
-        .order('rfi_number', { ascending: false });
-
-      if (error) throw error;
-      set({ rfis: (data ?? []) as RFI[], loading: false });
-    } catch (e) {
-      set({ error: (e as Error).message, loading: false });
+    const { data, error } = await rfiService.loadRfis(projectId);
+    if (error) {
+      set({ error, loading: false });
+    } else {
+      set({ rfis: data ?? [], loading: false });
     }
   },
 
-  createRfi: async (rfi) => {
-    const { data, error } = await supabase.from('rfis')
-      .insert({
-        project_id: rfi.project_id,
-        title: rfi.title,
-        description: rfi.description ?? null,
-        status: 'draft',
-        priority: rfi.priority,
-        created_by: rfi.created_by,
-        assigned_to: rfi.assigned_to ?? null,
-        due_date: rfi.due_date ?? null,
-        ball_in_court_id: rfi.assigned_to ?? null,
-        linked_drawing_id: rfi.linked_drawing_id ?? null,
-      })
-      .select()
-      .single();
-
-    if (error) return { error: error.message, rfi: null };
-
-    const newRfi = data as RFI;
-    set((s) => ({ rfis: [newRfi, ...s.rfis] }));
-    return { error: null, rfi: newRfi };
+  createRfi: async (input) => {
+    const { data, error } = await rfiService.createRfi(input);
+    if (error) return { error, rfi: null };
+    if (data) {
+      set((s) => ({ rfis: [data, ...s.rfis] }));
+    }
+    return { error: null, rfi: data };
   },
 
   updateRfi: async (rfiId, updates) => {
-    const { error } = await supabase.from('rfis').update(updates).eq('id', rfiId);
+    const { error } = await rfiService.updateRfi(rfiId, updates);
     if (!error) {
       set((s) => ({
         rfis: s.rfis.map((r) => (r.id === rfiId ? { ...r, ...updates } : r)),
       }));
     }
-    return { error: error?.message ?? null };
+    return { error };
   },
 
+  transitionStatus: async (rfiId, status, userRole) => {
+    const { error } = await rfiService.transitionStatus(rfiId, status, userRole);
+    if (!error) {
+      set((s) => ({
+        rfis: s.rfis.map((r) => (r.id === rfiId ? { ...r, status } : r)),
+      }));
+    }
+    return { error };
+  },
+
+  // Backward compat shim — delegates to transitionStatus
   updateRfiStatus: async (rfiId, status) => {
-    return get().updateRfi(rfiId, { status });
+    return get().transitionStatus(rfiId, status);
   },
 
   loadResponses: async (rfiId) => {
-    const { data, error } = await supabase
-      .from('rfi_responses')
-      .select('*')
-      .eq('rfi_id', rfiId)
-      .order('created_at');
-
+    const { data, error } = await rfiService.loadResponses(rfiId);
     if (!error && data) {
       set((s) => ({
-        responses: { ...s.responses, [rfiId]: data as RFIResponse[] },
+        responses: { ...s.responses, [rfiId]: data },
       }));
     }
   },
 
-  addResponse: async (rfiId, userId, text, attachments) => {
-    const { error } = await supabase.from('rfi_responses').insert({
-      rfi_id: rfiId,
-      user_id: userId,
-      response_text: text,
-      attachments: attachments ?? null,
-    });
-
+  addResponse: async (rfiId, text, attachments) => {
+    const { error } = await rfiService.addResponse(rfiId, text, attachments);
     if (!error) {
       await get().loadResponses(rfiId);
-      await get().updateRfiStatus(rfiId, 'responded');
+      set((s) => ({
+        rfis: s.rfis.map((r) => (r.id === rfiId ? { ...r, status: 'answered' as RfiStatus } : r)),
+      }));
     }
-    return { error: error?.message ?? null };
+    return { error };
   },
 
   deleteRfi: async (rfiId) => {
-    const { error } = await supabase.from('rfis').delete().eq('id', rfiId);
+    const { error } = await rfiService.deleteRfi(rfiId);
     if (!error) {
       set((s) => ({ rfis: s.rfis.filter((r) => r.id !== rfiId) }));
     }
-    return { error: error?.message ?? null };
+    return { error };
   },
 }));

@@ -6554,6 +6554,7 @@ export type InsertTables<T extends keyof PublicTables> = PublicTables[T]['Insert
 export type UpdateTables<T extends keyof PublicTables> = PublicTables[T]['Update']
 export type Project = TableRow<'projects'>
 export type RFI = TableRow<'rfis'>
+export type RfiStatus = 'draft' | 'open' | 'under_review' | 'answered' | 'closed' | 'void'
 export type Submittal = TableRow<'submittals'>
 export type PunchItem = TableRow<'punch_items'>
 export type Task = TableRow<'tasks'>
