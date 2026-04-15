@@ -95,20 +95,33 @@ BEGIN
   ON CONFLICT (id) DO NOTHING;
 
   -- ---------------------------------------------------------------------------
-  -- 6. Project Members (using kernel roles from Batch 1 migration)
+  -- 6. Project Members
   -- ---------------------------------------------------------------------------
-  -- The CHECK constraint now accepts kernel roles:
-  --   owner, admin, project_manager, superintendent, subcontractor, viewer
-  -- Plus legacy 'member' for backward compatibility.
-  INSERT INTO project_members (project_id, user_id, role, created_at)
-  VALUES
-    (v_project_alpha_id, v_alice_id,   'project_manager', now()),
-    (v_project_alpha_id, v_sam_id,     'superintendent',  now()),
-    (v_project_alpha_id, v_charlie_id, 'subcontractor',   now()),
-    (v_project_alpha_id, v_vic_id,     'viewer',          now()),
-    (v_project_alpha_id, v_eve_id,     'owner',           now()),
-    (v_project_beta_id,  v_bob_id,     'project_manager', now())
-  ON CONFLICT DO NOTHING;
+  -- Try kernel roles first. If CHECK constraint rejects them (DB hasn't
+  -- had Step 4 Batch 1 migration applied yet), fall back to legacy roles.
+  BEGIN
+    INSERT INTO project_members (project_id, user_id, role, created_at)
+    VALUES
+      (v_project_alpha_id, v_alice_id,   'project_manager', now()),
+      (v_project_alpha_id, v_sam_id,     'superintendent',  now()),
+      (v_project_alpha_id, v_charlie_id, 'subcontractor',   now()),
+      (v_project_alpha_id, v_vic_id,     'viewer',          now()),
+      (v_project_alpha_id, v_eve_id,     'owner',           now()),
+      (v_project_beta_id,  v_bob_id,     'project_manager', now())
+    ON CONFLICT DO NOTHING;
+  EXCEPTION WHEN check_violation THEN
+    -- Kernel roles not yet in CHECK constraint — use legacy roles
+    RAISE NOTICE 'Kernel roles not yet accepted — using legacy roles for test setup';
+    INSERT INTO project_members (project_id, user_id, role, created_at)
+    VALUES
+      (v_project_alpha_id, v_alice_id,   'admin',   now()),
+      (v_project_alpha_id, v_sam_id,     'member',  now()),
+      (v_project_alpha_id, v_charlie_id, 'member',  now()),
+      (v_project_alpha_id, v_vic_id,     'viewer',  now()),
+      (v_project_alpha_id, v_eve_id,     'owner',   now()),
+      (v_project_beta_id,  v_bob_id,     'admin',   now())
+    ON CONFLICT DO NOTHING;
+  END;
 
   -- ---------------------------------------------------------------------------
   -- 7. Seed data: RFIs in Project Alpha (for tenant isolation tests)

@@ -147,10 +147,24 @@ run_layer1() {
     return
   fi
 
+  # Connectivity check — verify psql can connect before running tests
+  if ! psql "$DB_URL" -c "SELECT 1" > /dev/null 2>&1; then
+    echo -e "${RED}╔══════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${RED}║  CANNOT CONNECT TO DATABASE                            ║${NC}"
+    echo -e "${RED}║  psql connection failed — check SUPABASE_DB_URL        ║${NC}"
+    echo -e "${RED}╚══════════════════════════════════════════════════════════╝${NC}"
+    echo "::error::Layer 1 FAILED: Cannot connect to database. Check SUPABASE_DB_URL secret."
+    L1_FAILED=1
+    return
+  fi
+
   # Run setup
   echo -e "  ${CYAN}Running setup.sql...${NC}"
-  if ! psql "$DB_URL" -f "$SCRIPT_DIR/layer1-database/setup.sql" > /dev/null 2>&1; then
-    echo -e "  ${YELLOW}WARNING: setup.sql had errors (some tables may not exist yet)${NC}"
+  local setup_output
+  setup_output=$(psql "$DB_URL" -f "$SCRIPT_DIR/layer1-database/setup.sql" 2>&1) || true
+  if echo "$setup_output" | grep -qi 'error'; then
+    echo -e "  ${YELLOW}WARNING: setup.sql had errors:${NC}"
+    echo "$setup_output" | grep -i 'error' | head -5 | sed 's/^/    /'
   fi
 
   # Run each test file
