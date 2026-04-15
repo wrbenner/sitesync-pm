@@ -16,7 +16,12 @@
 //   - The router maps task types to providers
 //   - Fallback chain: if primary fails, try secondary provider
 //   - All responses normalized to a common shape
-//   - All calls log to ai_usage table for cost tracking
+//   - Timeout enforcement via AbortSignal on all provider calls
+//
+// NOT YET IMPLEMENTED:
+//   - ai_usage table persistence (usage data returned but not stored)
+//   - Rate limiting / quota management
+//   - Cost ceiling enforcement
 //
 // SECURITY:
 //   - API keys read from Deno.env (Supabase edge function secrets)
@@ -73,7 +78,6 @@ export interface AIResponse {
 
 export interface AIRouterConfig {
   fallback_enabled: boolean
-  max_retries: number
   timeout_ms: number
 }
 
@@ -106,6 +110,10 @@ const TASK_ROUTING: Record<AITaskType, ProviderSpec> = {
     model: 'gemini-2.5-flash',
     fallback: { provider: 'anthropic', model: 'claude-sonnet-4-20250514' },
   },
+  // IMPORTANT: code_lookup results are research assists, NOT authoritative
+  // legal/compliance sources. Results must include jurisdiction context,
+  // citation persistence, and confidence markers. See ai-rfi-draft for
+  // the constrained implementation pattern.
   code_lookup: {
     primary: 'perplexity',
     model: 'sonar-pro',
@@ -434,6 +442,7 @@ async function callProvider(
   provider: AIProvider,
   model: string,
   request: AIRequest,
+  timeoutMs: number = 30000,
 ): Promise<AIResponse> {
   const maxTokens = request.max_tokens ?? 1024
   const temperature = request.temperature ?? 0.3
@@ -456,7 +465,6 @@ async function callProvider(
 
 const DEFAULT_CONFIG: AIRouterConfig = {
   fallback_enabled: true,
-  max_retries: 1,
   timeout_ms: 30000,
 }
 
@@ -482,7 +490,7 @@ export async function routeAI(
 
   // Try primary provider
   try {
-    const response = await callProvider(spec.primary, spec.model, request)
+    const response = await callProvider(spec.primary, spec.model, request, cfg.timeout_ms)
     return response
   } catch (primaryError) {
     console.error(`[aiRouter] Primary ${spec.primary}/${spec.model} failed:`, primaryError)
@@ -491,7 +499,7 @@ export async function routeAI(
     if (cfg.fallback_enabled && spec.fallback) {
       try {
         console.warn(`[aiRouter] Falling back to ${spec.fallback.provider}/${spec.fallback.model}`)
-        const response = await callProvider(spec.fallback.provider, spec.fallback.model, request)
+        const response = await callProvider(spec.fallback.provider, spec.fallback.model, request, cfg.timeout_ms)
         return response
       } catch (fallbackError) {
         console.error(`[aiRouter] Fallback ${spec.fallback.provider}/${spec.fallback.model} also failed:`, fallbackError)
