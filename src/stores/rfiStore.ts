@@ -12,7 +12,7 @@ interface RfiState {
   loadRfis: (projectId: string) => Promise<void>;
   createRfi: (rfi: CreateRfiInput) => Promise<{ error: string | null; rfi: RFI | null }>;
   updateRfi: (rfiId: string, updates: Partial<RFI>) => Promise<{ error: string | null }>;
-  transitionStatus: (rfiId: string, status: RfiStatus, userRole?: string) => Promise<{ error: string | null }>;
+  transitionStatus: (rfiId: string, status: RfiStatus) => Promise<{ error: string | null }>;
   /** @deprecated Use transitionStatus instead */
   updateRfiStatus: (rfiId: string, status: RfiStatus) => Promise<{ error: string | null }>;
   loadResponses: (rfiId: string) => Promise<void>;
@@ -55,8 +55,8 @@ export const useRfiStore = create<RfiState>()((set, get) => ({
     return { error };
   },
 
-  transitionStatus: async (rfiId, status, userRole) => {
-    const { error } = await rfiService.transitionStatus(rfiId, status, userRole);
+  transitionStatus: async (rfiId, status) => {
+    const { error } = await rfiService.transitionStatus(rfiId, status);
     if (!error) {
       set((s) => ({
         rfis: s.rfis.map((r) => (r.id === rfiId ? { ...r, status } : r)),

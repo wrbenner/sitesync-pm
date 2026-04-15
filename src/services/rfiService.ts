@@ -5,9 +5,36 @@ import { getValidTransitions, getBallInCourt } from '../machines/rfiMachine';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
+/**
+ * Get the current authenticated user ID from Supabase session.
+ * Returns null if no session (unauthenticated).
+ */
 async function getCurrentUserId(): Promise<string | null> {
   const { data } = await supabase.auth.getSession();
   return data.session?.user?.id ?? null;
+}
+
+/**
+ * Resolve the user's authoritative project role from the database.
+ * Does NOT trust caller-supplied role values.
+ *
+ * Returns the role string from project_members, or null if the user
+ * is not a member of the project.
+ */
+async function resolveProjectRole(
+  projectId: string,
+  userId: string | null,
+): Promise<string | null> {
+  if (!userId) return null;
+
+  const { data } = await supabase
+    .from('project_members')
+    .select('role')
+    .eq('project_id', projectId)
+    .eq('user_id', userId)
+    .single();
+
+  return data?.role ?? null;
 }
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -73,16 +100,23 @@ export const rfiService = {
 
   /**
    * Transition RFI status with lifecycle enforcement.
-   * Validates the transition is allowed by rfiMachine before executing.
+   *
+   * IMPORTANT: This method resolves the user's authoritative role from the
+   * database. It does NOT accept caller-supplied roles.
+   *
+   * Validates that:
+   *   1. The RFI exists
+   *   2. The user has a project role
+   *   3. The transition is valid per rfiMachine for that role
    */
   async transitionStatus(
     rfiId: string,
     newStatus: RfiStatus,
-    userRole: string = 'viewer'
   ): Promise<RfiServiceResult> {
+    // 1. Fetch current RFI
     const { data: rfi, error: fetchError } = await supabase
       .from('rfis')
-      .select('status, created_by, assigned_to')
+      .select('status, created_by, assigned_to, project_id')
       .eq('id', rfiId)
       .single();
 
@@ -90,21 +124,28 @@ export const rfiService = {
       return { data: null, error: fetchError?.message ?? 'RFI not found' };
     }
 
+    // 2. Resolve authoritative role — do NOT trust caller
+    const userId = await getCurrentUserId();
+    const role = await resolveProjectRole(rfi.project_id, userId);
+    if (!role) {
+      return { data: null, error: 'User is not a member of this project' };
+    }
+
+    // 3. Validate transition
     const currentStatus = rfi.status as RfiStatus;
-    const validTransitions = getValidTransitions(currentStatus, userRole);
+    const validTransitions = getValidTransitions(currentStatus, role);
     if (!validTransitions.includes(newStatus)) {
       return {
         data: null,
-        error: `Invalid transition: ${currentStatus} → ${newStatus}. Valid: ${validTransitions.join(', ')}`,
+        error: `Invalid transition: ${currentStatus} → ${newStatus} (role: ${role}). Valid: ${validTransitions.join(', ')}`,
       };
     }
 
-    const ballInCourt = getBallInCourt(newStatus, rfi.created_by, rfi.assigned_to);
-    const userId = await getCurrentUserId();
+    // 4. Execute transition with provenance
     const updates: Record<string, unknown> = {
       status: newStatus,
       updated_by: userId,
-      ball_in_court_id: ballInCourt,
+      ball_in_court_id: getBallInCourt(newStatus, rfi.created_by, rfi.assigned_to),
     };
 
     if (newStatus === 'closed') {
@@ -122,6 +163,7 @@ export const rfiService = {
 
   /**
    * Update RFI fields (non-status). Populates updated_by.
+   * Use transitionStatus() for status changes.
    */
   async updateRfi(rfiId: string, updates: Partial<RFI>): Promise<RfiServiceResult> {
     const userId = await getCurrentUserId();
@@ -170,7 +212,13 @@ export const rfiService = {
   },
 
   /**
-   * Add a response and auto-transition to 'answered'.
+   * Add a response to an RFI and atomically transition to 'answered'.
+   *
+   * IMPORTANT: If the response inserts successfully but the status
+   * transition fails, the ENTIRE operation is reported as an error.
+   * The response will exist in the database (Supabase doesn't support
+   * client-side transactions across tables), but the caller will know
+   * the transition failed and can retry or handle it.
    */
   async addResponse(
     rfiId: string,
@@ -179,16 +227,27 @@ export const rfiService = {
   ): Promise<RfiServiceResult> {
     const userId = await getCurrentUserId();
 
-    const { error } = await supabase.from('rfi_responses').insert({
+    // 1. Insert response
+    const { error: insertError } = await supabase.from('rfi_responses').insert({
       rfi_id: rfiId,
       user_id: userId,
       response_text: text,
       attachments: attachments ?? null,
     });
 
-    if (error) return { data: null, error: error.message };
+    if (insertError) {
+      return { data: null, error: `Failed to insert response: ${insertError.message}` };
+    }
 
-    await rfiService.transitionStatus(rfiId, 'answered' as RfiStatus);
+    // 2. Transition to 'answered' — surface failure, do NOT ignore
+    const transitionResult = await rfiService.transitionStatus(rfiId, 'answered' as RfiStatus);
+    if (transitionResult.error) {
+      return {
+        data: null,
+        error: `Response saved but status transition failed: ${transitionResult.error}`,
+      };
+    }
+
     return { data: null, error: null };
   },
 };
