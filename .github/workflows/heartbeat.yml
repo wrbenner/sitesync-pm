@@ -1,0 +1,273 @@
+# =============================================================================
+# heartbeat.yml — The Self-Improvement Loop
+# =============================================================================
+#
+# A structured, measurable nightly pipeline:
+#   1. COLLECT METRICS — run worker cell scripts
+#   2. GENERATE EXPERIMENTS — deterministic experiment queue from metrics
+#   3. RUN EXPERIMENTS — branch/measure/change/verify/keep-or-revert
+#   4. REPORT — summarize results, alert on failures
+#
+# This replaces the broken build.yml approach (120 turns, full autonomy,
+# 0 commits) with constrained, measurable micro-experiments (15 turns each,
+# specific task, specific file, specific metric).
+#
+# Architecture:
+#   - No LLM for planning (pure data transform)
+#   - LLM only for code changes (tightly scoped)
+#   - Auto-revert is the default, merge requires proof of improvement
+#   - Circuit breaker: 3 failures in same category -> skip category
+#   - Quality ratchet: floors only go down (quality only improves)
+# =============================================================================
+
+name: "Heartbeat — Self-Improvement Loop"
+
+on:
+  schedule:
+    - cron: '0 7 * * *'  # 7am UTC (2am CDT)
+  workflow_dispatch:
+    inputs:
+      max_experiments:
+        description: 'Max experiments to run (default 5)'
+        default: '5'
+      dry_run:
+        description: 'Dry run — collect metrics and generate experiments only'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  # ─── Job 1: Collect Metrics ───
+  collect-metrics:
+    name: "Step 1: Collect Metrics"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 1
+          ref: main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: rm -f package-lock.json && npm install
+
+      - name: Check pause state
+        run: |
+          if grep -q "Status: PAUSED" PAUSE.md 2>/dev/null; then
+            echo "::warning::PAUSE.md says PAUSED — aborting heartbeat"
+            exit 1
+          fi
+
+      - name: Run all metric collectors
+        run: bash scripts/cells/collect-all-metrics.sh
+
+      - name: Upload metrics
+        uses: actions/upload-artifact@v4
+        with:
+          name: metrics
+          path: .metrics/
+          retention-days: 30
+
+  # ─── Job 2: Generate Experiments ───
+  generate-experiments:
+    name: "Step 2: Generate Experiments"
+    needs: collect-metrics
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: main
+
+      - name: Download metrics
+        uses: actions/download-artifact@v4
+        with:
+          name: metrics
+          path: .metrics/
+
+      - name: Generate experiment queue
+        run: python3 scripts/generate-experiments.py
+
+      - name: Show experiments
+        run: cat EXPERIMENTS.md
+
+      - name: Upload experiments
+        uses: actions/upload-artifact@v4
+        with:
+          name: experiments
+          path: |
+            EXPERIMENTS.md
+            .metrics/
+          retention-days: 30
+
+  # ─── Job 3: Run Experiments ───
+  run-experiments:
+    name: "Step 3: Run Experiments"
+    needs: generate-experiments
+    if: ${{ github.event.inputs.dry_run != 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+          ref: main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: rm -f package-lock.json && npm install
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Download experiments
+        uses: actions/download-artifact@v4
+        with:
+          name: experiments
+          path: .
+
+      - name: Configure git
+        run: |
+          git config user.name "SiteSync Heartbeat"
+          git config user.email "heartbeat@sitesync.ai"
+          git config pull.rebase true
+
+      - name: Run experiment loop
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          MAX="${{ github.event.inputs.max_experiments || '5' }}"
+          bash scripts/run-experiments.sh "$MAX"
+
+      - name: Update quality floor
+        run: python3 scripts/update-quality-floor.py
+
+      - name: Commit results
+        run: |
+          git add .quality-floor.json .metrics/ LEARNINGS.md EXPERIMENTS.md 2>/dev/null || true
+          git diff --staged --quiet || git commit -m "[auto] heartbeat: quality improvements $(date +%Y-%m-%d)"
+
+      - name: Push results
+        run: |
+          git pull --rebase origin main 2>/dev/null || true
+          COMMITS=$(git log origin/main..HEAD --oneline 2>/dev/null | wc -l | tr -d ' ')
+          if [ "$COMMITS" -gt "0" ]; then
+            for i in 1 2 3 4; do
+              git push -u origin main && echo "Pushed $COMMITS commits" && exit 0
+              echo "Push attempt $i failed, retrying in $((i*2))s..."
+              sleep $((i*2))
+              git pull --rebase origin main 2>/dev/null || true
+            done
+            # Final fallback: push as PR
+            BRANCH="auto/heartbeat-$(date +%Y%m%d-%H%M)"
+            git checkout -b "$BRANCH"
+            git push -u origin "$BRANCH" || true
+            echo "::warning::Could not push to main, created branch $BRANCH"
+          else
+            echo "No changes to push"
+          fi
+
+      - name: Trigger downstream workflows
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api repos/${{ github.repository }}/actions/workflows/homeostasis.yml/dispatches \
+            --method POST --field ref=main 2>/dev/null && echo "Homeostasis dispatched" || true
+          gh api repos/${{ github.repository }}/actions/workflows/worker-cells.yml/dispatches \
+            --method POST --field ref=main 2>/dev/null && echo "Worker cells dispatched" || true
+
+  # ─── Job 4: Report ───
+  report:
+    name: "Step 4: Report"
+    needs: [collect-metrics, generate-experiments, run-experiments]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Download experiment results
+        uses: actions/download-artifact@v4
+        with:
+          name: experiments
+          path: .
+        continue-on-error: true
+
+      - name: Generate summary
+        run: |
+          echo "## Heartbeat — $(date '+%B %d %Y')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ -f ".metrics/experiment-results.json" ]; then
+            python3 -c "
+          import json
+          with open('.metrics/experiment-results.json') as f:
+              r = json.load(f)
+          s = r.get('summary', {})
+          exps = r.get('experiments', [])
+          print(f'**Experiments run:** {s.get(\"completed\", len(exps))}')
+          print(f'**Succeeded:** {s.get(\"succeeded\", sum(1 for e in exps if e.get(\"result\")==\"SUCCESS\"))}')
+          print(f'**Reverted:** {s.get(\"reverted\", sum(1 for e in exps if e.get(\"result\")==\"REVERTED\"))}')
+          print()
+          print('### Results')
+          print('| Experiment | Result | Before | After |')
+          print('|---|---|---|---|')
+          for e in exps:
+              print(f'| {e[\"id\"]} | {e[\"result\"]} | {e[\"before\"]} | {e[\"after\"]} |')
+          " >> $GITHUB_STEP_SUMMARY
+          else
+            echo "No experiment results found (dry run or experiments skipped)" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ -f "EXPERIMENTS.md" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Experiment Queue" >> $GITHUB_STEP_SUMMARY
+            head -30 EXPERIMENTS.md >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Alert if zero successes
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ ! -f ".metrics/experiment-results.json" ]; then
+            echo "No results file — skipping alert"
+            exit 0
+          fi
+
+          python3 -c "
+          import json, sys
+          try:
+              with open('.metrics/experiment-results.json') as f:
+                  r = json.load(f)
+              successes = sum(1 for e in r.get('experiments',[]) if e.get('result')=='SUCCESS')
+              total = len(r.get('experiments', []))
+              if total > 0 and successes == 0:
+                  sys.exit(1)
+          except Exception:
+              sys.exit(1)
+          " || gh issue create \
+              --title "[heartbeat] Zero successful experiments — $(date '+%B %d')" \
+              --body "The heartbeat ran but all experiments were reverted. Check [workflow logs](https://github.com/${{ github.repository }}/actions)." \
+              --label "heartbeat" 2>/dev/null || true

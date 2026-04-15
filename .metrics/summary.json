@@ -1,0 +1,349 @@
+{
+  "type_issues": {
+    "timestamp": "2026-04-15T21:57:50.054120+00:00",
+    "totals": {
+      "as_any": 2,
+      "ts_ignore": 0,
+      "files": 1
+    },
+    "files": [
+      {
+        "file": "src/lib/supabase.ts",
+        "as_any": 2,
+        "ts_ignore": 0
+      }
+    ]
+  },
+  "quality_issues": {
+    "timestamp": "2026-04-15T21:57:50.636035+00:00",
+    "totals": {
+      "mock_data": 0,
+      "hardcoded_colors": 402,
+      "files": 46
+    },
+    "files": [
+      {
+        "file": "src/pages/Submittals.tsx",
+        "mock_data": 0,
+        "hardcoded_colors": 54
+      },
+      {
+        "file": "src/components/schedule/GanttChart.tsx",
+        "mock_data": 0,
+        "hardcoded_colors": 43
+      },
+      {
+        "file": "src/pages/Schedule.tsx",
+        "mock_data": 0,
+        "hardcoded_colors": 33
+      },
+      {
+        "file": "src/components/schedule/MobileScheduleView.tsx",
+        "mock_data": 0,
+        "hardcoded_colors": 25
+      },
+      {
+        "file": "src/pages/RFIs.tsx",
+        "mock_data": 0,
+        "hardcoded_colors": 22
+      },
+      {
+        "file": "src/components/export/DailyLogPDF.tsx",
+        "mock_data": 0,
+        "hardcoded_colors": 19
+      },
+      {
+        "file": "src/pages/PunchList.tsx",
+        "mock_data": 0,
+        "hardcoded_colors": 18
+      },
+      {
+        "file": "src/pages/Safety.tsx",
+        "mock_data": 0,
+        "hardcoded_colors": 15
+      },
+      {
+        "file": "src/components/Primitives.tsx",
+        "mock_data": 0,
+        "hardcoded_colors": 15
+      },
+      {
+        "file": "src/components/export/ExecutiveSummary.tsx",
+        "mock_data": 0,
+        "hardcoded_colors": 15
+      },
+      {
+        "file": "src/components/export/SafetyReport.tsx",
+        "mock_data": 0,
+        "hardcoded_colors": 13
+      },
+      {
+        "file": "src/components/collaboration/PresenceBar.tsx",
+        "mock_data": 0,
+        "hardcoded_colors": 9
+      },
+      {
+        "file": "src/components/dashboard/widgets/CashFlowWidget.tsx",
+        "mock_data": 0,
+        "hardcoded_colors": 9
+      },
+      {
+        "file": "src/components/forms/CreateDailyLogModal.tsx",
+        "mock_data": 0,
+        "hardcoded_colors": 8
+      },
+      {
+        "file": "src/api/endpoints/documents.ts",
+        "mock_data": 0,
+        "hardcoded_colors": 8
+      },
+      {
+        "file": "src/pages/Drawings.tsx",
+        "mock_data": 0,
+        "hardcoded_colors": 7
+      },
+      {
+        "file": "src/pages/DailyLog.tsx",
+        "mock_data": 0,
+        "hardcoded_colors": 7
+      },
+      {
+        "file": "src/components/export/BudgetReport.tsx",
+        "mock_data": 0,
+        "hardcoded_colors": 7
+      },
+      {
+        "file": "src/components/export/SubmittalLog.tsx",
+        "mock_data": 0,
+        "hardcoded_colors": 7
+      },
+      {
+        "file": "src/components/export/DailyLogReport.tsx",
+        "mock_data": 0,
+        "hardcoded_colors": 6
+      },
+      {
+        "file": "src/components/files/UploadZone.tsx",
+        "mock_data": 0,
+        "hardcoded_colors": 5
+      },
+      {
+        "file": "src/components/drawings/DrawingsEmptyState.tsx",
+        "mock_data": 0,
+        "hardcoded_colors": 5
+      },
+      {
+        "file": "src/components/dashboard/widgets/AIInsightsWidget.tsx",
+        "mock_data": 0,
+        "hardcoded_colors": 5
+      },
+      {
+        "file": "src/pages/ChangeOrders.tsx",
+        "mock_data": 0,
+        "hardcoded_colors": 4
+      },
+      {
+        "file": "src/components/drawings/BIMViewer.tsx",
+        "mock_data": 0,
+        "hardcoded_colors": 4
+      },
+      {
+        "file": "src/components/dailylog/QuickEntry.tsx",
+        "mock_data": 0,
+        "hardcoded_colors": 4
+      },
+      {
+        "file": "src/pages/Files.tsx",
+        "mock_data": 0,
+        "hardcoded_colors": 3
+      },
+      {
+        "file": "src/pages/FieldCapture.tsx",
+        "mock_data": 0,
+        "hardcoded_colors": 3
+      },
+      {
+        "file": "src/pages/auth/Login.tsx",
+        "mock_data": 0,
+        "hardcoded_colors": 2
+      },
+      {
+        "file": "src/pages/auth/Signup.tsx",
+        "mock_data": 0,
+        "hardcoded_colors": 2
+      },
+      {
+        "file": "src/pages/Settings/NotificationSettings.tsx",
+        "mock_data": 0,
+        "hardcoded_colors": 2
+      },
+      {
+        "file": "src/components/schedule/LookaheadBoard.tsx",
+        "mock_data": 0,
+        "hardcoded_colors": 2
+      },
+      {
+        "file": "src/components/drawings/DrawingViewer.tsx",
+        "mock_data": 0,
+        "hardcoded_colors": 2
+      },
+      {
+        "file": "src/components/budget/WaterfallChart.tsx",
+        "mock_data": 0,
+        "hardcoded_colors": 2
+      },
+      {
+        "file": "src/components/ui/RealtimeFlash.tsx",
+        "mock_data": 0,
+        "hardcoded_colors": 2
+      },
+      {
+        "file": "src/components/ui/Skeletons.tsx",
+        "mock_data": 0,
+        "hardcoded_colors": 2
+      },
+      {
+        "file": "src/components/ui/EmptyState.tsx",
+        "mock_data": 0,
+        "hardcoded_colors": 2
+      },
+      {
+        "file": "src/components/ui/ConflictResolutionModal.tsx",
+        "mock_data": 0,
+        "hardcoded_colors": 2
+      },
+      {
+        "file": "src/hooks/useTheme.ts",
+        "mock_data": 0,
+        "hardcoded_colors": 2
+      },
+      {
+        "file": "src/App.tsx",
+        "mock_data": 0,
+        "hardcoded_colors": 1
+      },
+      {
+        "file": "src/components/export/CostReport.tsx",
+        "mock_data": 0,
+        "hardcoded_colors": 1
+      },
+      {
+        "file": "src/components/files/FilePreview.tsx",
+        "mock_data": 0,
+        "hardcoded_colors": 1
+      },
+      {
+        "file": "src/components/shared/PresenceAvatars.tsx",
+        "mock_data": 0,
+        "hardcoded_colors": 1
+      },
+      {
+        "file": "src/components/drawings/MarkupToolbar.tsx",
+        "mock_data": 0,
+        "hardcoded_colors": 1
+      },
+      {
+        "file": "src/components/activity/MentionInput.tsx",
+        "mock_data": 0,
+        "hardcoded_colors": 1
+      },
+      {
+        "file": "src/components/dashboard/widgets/BIMPreviewWidget.tsx",
+        "mock_data": 0,
+        "hardcoded_colors": 1
+      }
+    ]
+  },
+  "untested_files": {
+    "timestamp": "2026-04-15T21:57:50.700241+00:00",
+    "coverage_pct": 7.7,
+    "tested_count": 31,
+    "untested_count": 372,
+    "tested": [
+      "src/lib/search.ts",
+      "src/lib/offlineDb.ts",
+      "src/lib/financialEngine.ts",
+      "src/machines/agentStreamMachine.ts",
+      "src/machines/changeOrderMachine.ts",
+      "src/machines/taskMachine.ts",
+      "src/machines/rfiMachine.ts",
+      "src/machines/submittalMachine.ts",
+      "src/machines/dailyLogMachine.ts",
+      "src/machines/closeoutMachine.ts",
+      "src/machines/paymentMachine.ts",
+      "src/machines/punchItemMachine.ts",
+      "src/components/shared/PresenceAvatars.tsx",
+      "src/components/shared/DataTable.tsx",
+      "src/components/shared/ExportButton.tsx",
+      "src/components/shared/ApprovalChain.tsx",
+      "src/components/ui/SkipToContent.tsx",
+      "src/api/client.ts",
+      "src/api/errors.ts",
+      "src/api/endpoints/projects.ts"
+    ],
+    "untested": [
+      "src/pages/Meetings.tsx",
+      "src/pages/Portfolio.tsx",
+      "src/pages/Marketplace.tsx",
+      "src/pages/PunchList.tsx",
+      "src/pages/OwnerPortal.tsx",
+      "src/pages/Budget.tsx",
+      "src/pages/Tasks.tsx",
+      "src/pages/Submittals.tsx",
+      "src/pages/Files.tsx",
+      "src/pages/ProjectHealth.tsx",
+      "src/pages/Workforce.tsx",
+      "src/pages/AIAgents.tsx",
+      "src/pages/Dashboard.tsx",
+      "src/pages/Reports.tsx",
+      "src/pages/Insurance.tsx",
+      "src/pages/ChangeOrders.tsx",
+      "src/pages/AuditTrail.tsx",
+      "src/pages/Permits.tsx",
+      "src/pages/AICopilot.tsx",
+      "src/pages/Financials.tsx",
+      "src/pages/Schedule.tsx",
+      "src/pages/Benchmarks.tsx",
+      "src/pages/Integrations.tsx",
+      "src/pages/PaymentApplications.tsx",
+      "src/pages/Equipment.tsx",
+      "src/pages/Drawings.tsx",
+      "src/pages/Warranties.tsx",
+      "src/pages/RFIs.tsx",
+      "src/pages/Lookahead.tsx",
+      "src/pages/Sustainability.tsx",
+      "src/pages/Onboarding.tsx",
+      "src/pages/LienWaivers.tsx",
+      "src/pages/FieldCapture.tsx",
+      "src/pages/Safety.tsx",
+      "src/pages/Directory.tsx",
+      "src/pages/Procurement.tsx",
+      "src/pages/Crews.tsx",
+      "src/pages/Activity.tsx",
+      "src/pages/Estimating.tsx",
+      "src/pages/TimeMachine.tsx",
+      "src/pages/Vision.tsx",
+      "src/pages/DailyLog.tsx",
+      "src/pages/Developers.tsx",
+      "src/pages/auth/Register.tsx",
+      "src/pages/auth/Login.tsx",
+      "src/pages/auth/Signup.tsx",
+      "src/pages/errors/NotFound.tsx",
+      "src/pages/Settings/NotificationSettings.tsx",
+      "src/pages/admin/ProjectSettings.tsx",
+      "src/pages/admin/UserManagement.tsx"
+    ]
+  },
+  "eslint_issues": {
+    "timestamp": "2026-04-15T21:57:53.877961+00:00",
+    "totals": {
+      "errors": 0,
+      "warnings": 0,
+      "fixable_errors": 0,
+      "fixable_warnings": 0,
+      "files": 0
+    },
+    "files": []
+  },
+  "collected_at": "2026-04-15T21:57:53.947523+00:00"
+}

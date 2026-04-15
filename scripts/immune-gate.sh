@@ -105,7 +105,7 @@ MOCK_COUNT=$(grep -rn "mock\|Mock\|MOCK\|fake\|Fake\|placeholder\|Lorem\|dummy" 
     2>/dev/null | grep -v "test\|spec\|__test__\|\.test\.\|\.spec\.\|setup\.ts\|factories\.ts" \
     | grep -v "// immune-ok\|// mock-ok" \
     | wc -l | tr -d ' ')
-FLOOR_MOCKS=$(jq '.mockDataInstances' .quality-floor.json 2>/dev/null || echo "999999")
+FLOOR_MOCKS=$(jq '.mockCount' .quality-floor.json 2>/dev/null || echo "999999")
 
 if [ "$MOCK_COUNT" -gt "$FLOOR_MOCKS" ]; then
     echo "✗ Mock Data: FAILED — $MOCK_COUNT instances exceeds floor of $FLOOR_MOCKS"
@@ -114,7 +114,7 @@ else
     echo "✓ Mock Data: PASSED ($MOCK_COUNT instances, floor: $FLOOR_MOCKS)"
     PASS=$((PASS + 1))
     if [ "$MOCK_COUNT" -lt "$FLOOR_MOCKS" ]; then
-        jq ".mockDataInstances = $MOCK_COUNT" .quality-floor.json > .quality-floor.json.tmp
+        jq ".mockCount = $MOCK_COUNT" .quality-floor.json > .quality-floor.json.tmp
         mv .quality-floor.json.tmp .quality-floor.json
         echo "  ↓ Quality floor improved: $FLOOR_MOCKS → $MOCK_COUNT mock instances"
     fi
@@ -128,7 +128,7 @@ ANY_COUNT=$(grep -rn "as any\|@ts-ignore\|@ts-expect-error" src/ \
     2>/dev/null | grep -v "test\|spec\|__test__" \
     | grep -v "// type-safe-ok" \
     | wc -l | tr -d ' ')
-FLOOR_ANY=$(jq '.anyTypeCasts' .quality-floor.json 2>/dev/null || echo "999999")
+FLOOR_ANY=$(jq '.anyCount' .quality-floor.json 2>/dev/null || echo "999999")
 
 if [ "$ANY_COUNT" -gt "$FLOOR_ANY" ]; then
     echo "✗ Type Safety: FAILED — $ANY_COUNT unsafe casts exceeds floor of $FLOOR_ANY"
@@ -137,7 +137,7 @@ else
     echo "✓ Type Safety: PASSED ($ANY_COUNT unsafe casts, floor: $FLOOR_ANY)"
     PASS=$((PASS + 1))
     if [ "$ANY_COUNT" -lt "$FLOOR_ANY" ]; then
-        jq ".anyTypeCasts = $ANY_COUNT" .quality-floor.json > .quality-floor.json.tmp
+        jq ".anyCount = $ANY_COUNT" .quality-floor.json > .quality-floor.json.tmp
         mv .quality-floor.json.tmp .quality-floor.json
         echo "  ↓ Quality floor improved: $FLOOR_ANY → $ANY_COUNT unsafe casts"
     fi

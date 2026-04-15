@@ -36,7 +36,7 @@ jobs:
           node-version: '22'
 
       - name: Install dependencies (needed for eslint cell)
-        run: npm ci
+        run: rm -f package-lock.json && npm install
 
       - name: Run worker cells
         run: |

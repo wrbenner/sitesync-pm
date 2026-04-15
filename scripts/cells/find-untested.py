@@ -3,22 +3,21 @@
 Runs on every push. Writes .metrics/untested-files.json."""
 
 import os, json
+from datetime import datetime, timezone
 
-source_files = []
-test_files = set()
+# Collect all test files and map them to source names
+test_file_map = {}  # source_name -> test_file_path
 
-# Collect all test files
 for root, dirs, files in os.walk("src"):
     for f in files:
         if '.test.' in f or '.spec.' in f:
-            # Map test file back to source: Component.test.tsx -> Component.tsx
             source_name = f.replace('.test.', '.').replace('.spec.', '.')
-            test_files.add(source_name)
+            test_file_map[source_name] = os.path.join(root, f)
 
 for root, dirs, files in os.walk("e2e"):
     for f in files:
         if f.endswith('.spec.ts'):
-            test_files.add(f)
+            test_file_map[f] = os.path.join(root, f)
 
 # Find source files without tests
 untested = []
@@ -31,12 +30,12 @@ for root, dirs, files in os.walk("src"):
         if '.test.' in f or '.spec.' in f: continue
         if f.startswith('index.'): continue  # Barrel exports don't need tests
         if f == 'vite-env.d.ts': continue
-        
+
         path = os.path.join(root, f)
-        has_test = f in test_files or f.replace('.tsx', '.test.tsx') in test_files or f.replace('.ts', '.test.ts') in test_files
-        
-        if has_test:
-            tested.append(path)
+        test_path = test_file_map.get(f) or test_file_map.get(f.replace('.tsx', '.test.tsx')) or test_file_map.get(f.replace('.ts', '.test.ts'))
+
+        if test_path:
+            tested.append({"source": path, "test": test_path})
         else:
             untested.append(path)
 
@@ -54,9 +53,11 @@ coverage = len(tested) / (len(tested) + len(untested)) * 100 if (tested or untes
 
 with open(".metrics/untested-files.json", "w") as f:
     json.dump({
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "coverage_pct": round(coverage, 1),
         "tested_count": len(tested),
         "untested_count": len(untested),
+        "tested": [t["source"] for t in tested[:20]],
         "untested": untested[:50]  # Top 50 most important untested files
     }, f, indent=2)
 

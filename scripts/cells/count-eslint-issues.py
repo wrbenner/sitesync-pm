@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Worker Cell: Count ESLint errors and warnings per file.
 Runs on every push. Writes .metrics/eslint-issues.json.
-The Product Mind reads this to generate lint-fix experiment targets."""
+The experiment generator reads this to create lint-fix experiment targets."""
 
 import os, json, subprocess
+from datetime import datetime, timezone
 
 # Run eslint and capture output
 try:
@@ -23,12 +24,12 @@ for entry in eslint_output:
     # Make path relative
     if "/src/" in filepath:
         filepath = "src/" + filepath.split("/src/", 1)[1]
-    
+
     error_count = entry.get("errorCount", 0)
     warning_count = entry.get("warningCount", 0)
     fixable_error = entry.get("fixableErrorCount", 0)
     fixable_warning = entry.get("fixableWarningCount", 0)
-    
+
     if error_count + warning_count > 0:
         # Get top 3 rule violations for this file
         rule_counts = {}
@@ -37,7 +38,7 @@ for entry in eslint_output:
             if rule:
                 rule_counts[rule] = rule_counts.get(rule, 0) + 1
         top_rules = sorted(rule_counts.items(), key=lambda x: -x[1])[:3]
-        
+
         files.append({
             "file": filepath,
             "errors": error_count,
@@ -58,6 +59,7 @@ files.sort(key=lambda x: x["errors"] + x["warnings"], reverse=True)
 os.makedirs(".metrics", exist_ok=True)
 with open(".metrics/eslint-issues.json", "w") as f:
     json.dump({
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "totals": totals,
         "files": files[:50]  # Top 50 worst files
     }, f, indent=2)
