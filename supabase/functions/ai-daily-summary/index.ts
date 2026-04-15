@@ -1,5 +1,4 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import {
   authenticateRequest,
   handleCors,
@@ -44,9 +43,7 @@ serve(async (req) => {
       throw new HttpError(500, 'ANTHROPIC_API_KEY not configured')
     }
 
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const adminClient = createClient(supabaseUrl, serviceRoleKey)
+    // SECURITY: Use authenticated user's client (not service role key)
 
     const dayStart = `${body.date}T00:00:00Z`
     const dayEnd = `${body.date}T23:59:59Z`
@@ -57,26 +54,26 @@ serve(async (req) => {
       { data: punchChanges },
       { data: projectInfo },
     ] = await Promise.all([
-      adminClient
+      supabase
         .from('daily_logs')
         .select('id, crew_name, entry_text, weather, equipment_used')
         .eq('project_id', projectId)
         .gte('created_at', dayStart)
         .lt('created_at', dayEnd)
         .order('created_at', { ascending: true }),
-      adminClient
+      supabase
         .from('rfis')
         .select('id, subject, status, updated_at')
         .eq('project_id', projectId)
         .gte('updated_at', dayStart)
         .lt('updated_at', dayEnd),
-      adminClient
+      supabase
         .from('punch_items')
         .select('id, area, trade, status, updated_at')
         .eq('project_id', projectId)
         .gte('updated_at', dayStart)
         .lt('updated_at', dayEnd),
-      adminClient.from('projects').select('name, location').eq('id', projectId).single(),
+      supabase.from('projects').select('name, location').eq('id', projectId).single(),
     ])
 
     if (
@@ -179,7 +176,7 @@ Focus on:
       throw new HttpError(500, 'Failed to parse summary generation response')
     }
 
-    await adminClient.from('daily_summaries').insert({
+    await supabase.from('daily_summaries').insert({
       project_id: projectId,
       date: body.date,
       summary: summaryResult.summary,

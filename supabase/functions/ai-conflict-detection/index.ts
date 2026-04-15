@@ -1,5 +1,4 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import {
   authenticateRequest,
   handleCors,
@@ -44,9 +43,8 @@ serve(async (req) => {
       throw new HttpError(500, 'ANTHROPIC_API_KEY not configured')
     }
 
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const adminClient = createClient(supabaseUrl, serviceRoleKey)
+    // SECURITY: Use authenticated user's client (not service role key)
+    // All queries are project-scoped and RLS enforces access control
 
     const [
       { data: schedulePhases },
@@ -55,29 +53,29 @@ serve(async (req) => {
       { data: openRfis },
       { data: projectInfo },
     ] = await Promise.all([
-      adminClient
+      supabase
         .from('schedule_phases')
         .select('id, name, scheduled_start, scheduled_end, is_critical_path, status')
         .eq('project_id', projectId)
         .order('scheduled_start', { ascending: true }),
-      adminClient
+      supabase
         .from('submittals')
         .select('id, spec_section, name, due_date, submission_date, approval_date')
         .eq('project_id', projectId)
         .order('due_date', { ascending: true }),
-      adminClient
+      supabase
         .from('weather_cache')
         .select('forecast_data')
         .eq('project_id', projectId)
         .order('cached_at', { ascending: false })
         .limit(1)
         .single(),
-      adminClient
+      supabase
         .from('rfis')
         .select('id, subject, affected_phases, due_date')
         .eq('project_id', projectId)
         .eq('status', 'open'),
-      adminClient.from('projects').select('name, start_date').eq('id', projectId).single(),
+      supabase.from('projects').select('name, start_date').eq('id', projectId).single(),
     ])
 
     if (!schedulePhases || schedulePhases.length === 0) {

@@ -1,5 +1,4 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import {
   authenticateRequest,
   handleCors,
@@ -41,9 +40,7 @@ serve(async (req) => {
 
     await verifyProjectMembership(supabase, user.id, projectId)
 
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const adminClient = createClient(supabaseUrl, serviceRoleKey)
+    // SECURITY: Use authenticated user's client (not service role key)
 
     const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY')
     if (!anthropicApiKey) {
@@ -54,7 +51,7 @@ serve(async (req) => {
     let conversationHistory: Array<{ role: string; content: string }> = []
 
     if (conversationId) {
-      const { data: messages, error: msgError } = await adminClient
+      const { data: messages, error: msgError } = await supabase
         .from('ai_messages')
         .select('role, content')
         .eq('conversation_id', conversationId)
@@ -80,31 +77,31 @@ serve(async (req) => {
       { data: weatherData },
       { data: projectInfo },
     ] = await Promise.all([
-      adminClient
+      supabase
         .from('rfis')
         .select('id, subject, status, due_date')
         .eq('project_id', projectId)
         .order('created_at', { ascending: false })
         .limit(5),
-      adminClient
+      supabase
         .from('schedule_phases')
         .select('name, status, scheduled_start, scheduled_end')
         .eq('project_id', projectId)
         .eq('status', 'at_risk')
         .limit(3),
-      adminClient
+      supabase
         .from('budget_items')
         .select('division, original_amount, actual_amount')
         .eq('project_id', projectId)
         .limit(10),
-      adminClient
+      supabase
         .from('weather_cache')
         .select('forecast_data, cached_at')
         .eq('project_id', projectId)
         .order('cached_at', { ascending: false })
         .limit(1)
         .single(),
-      adminClient.from('projects').select('name, location, start_date').eq('id', projectId).single(),
+      supabase.from('projects').select('name, location, start_date').eq('id', projectId).single(),
     ])
 
     const contextParts: string[] = []
@@ -185,13 +182,13 @@ Be concise, practical, and construction industry appropriate. Avoid unnecessary 
     const tokensUsed = (anthropicData.usage?.input_tokens || 0) + (anthropicData.usage?.output_tokens || 0)
 
     await Promise.all([
-      adminClient.from('ai_conversations').insert({
+      supabase.from('ai_conversations').insert({
         id: conversationId,
         project_id: projectId,
         user_id: user.id,
         last_message_at: new Date().toISOString(),
       }).select(),
-      adminClient.from('ai_messages').insert([
+      supabase.from('ai_messages').insert([
         {
           conversation_id: conversationId,
           role: 'user',

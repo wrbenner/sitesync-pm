@@ -1,5 +1,4 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import {
   authenticateRequest,
   handleCors,
@@ -59,11 +58,9 @@ serve(async (req) => {
 
     // ── Fetch project context ────────────────────────────────────────────
 
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const adminClient = createClient(supabaseUrl, serviceRoleKey)
+    // SECURITY: Use authenticated user's client (not service role key)
 
-    const { data: projectInfo } = await adminClient
+    const { data: projectInfo } = await supabase
       .from('projects')
       .select('name, specs_version')
       .eq('id', projectId)
@@ -227,7 +224,7 @@ Spec section: ${rfiDraft.spec_section ?? 'unknown'}`,
     rfiDraft.providers_used = providersUsed
 
     // Save draft to database
-    await adminClient.from('rfi_drafts').insert({
+    await supabase.from('rfi_drafts').insert({
       project_id: projectId,
       user_id: user.id,
       subject: rfiDraft.subject,
