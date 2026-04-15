@@ -21,7 +21,7 @@ jobs:
         with:
           node-version: '22'
 
-      - run: rm -f package-lock.json && npm install
+      - run: npm ci
       - run: npx tsc --noEmit
       - run: npm run lint
       - run: npx vitest run --passWithNoTests

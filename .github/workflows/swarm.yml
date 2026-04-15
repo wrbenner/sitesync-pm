@@ -70,7 +70,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - run: rm -f package-lock.json && npm install
+      - run: npm ci
       - run: npm install -g @anthropic-ai/claude-code
 
       - name: Configure git
@@ -172,7 +172,7 @@ jobs:
           - All inline styles must come from theme.ts
           - Test framework: Vitest (NOT Jest). Import from 'vitest'
           - Build tool: Vite 8 with Rolldown. Use 'npm run build' not 'vite build'
-          - Use 'rm -f package-lock.json && npm install' if node_modules missing
+          - Use 'npm ci' if node_modules missing
           - Read LEARNINGS.md for known pitfalls (quick read, only 10KB)
 
           QUALITY GATES (before every commit):

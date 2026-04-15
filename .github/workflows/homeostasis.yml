@@ -23,7 +23,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - run: rm -f package-lock.json && npm install
+      - run: npm ci
       - run: npx tsc --noEmit
 
   lint:
@@ -34,7 +34,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - run: rm -f package-lock.json && npm install
+      - run: npm ci
       - name: Run ESLint on src/ only (not .claude/worktrees)
         run: npx eslint "src/**/*.{ts,tsx}" --format json -o /tmp/eslint-report.json || true
       - name: Check ESLint ratchet (fail only if errors INCREASE)
@@ -61,7 +61,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - run: rm -f package-lock.json && npm install
+      - run: npm ci
       - name: Run unit tests (skip Supabase-dependent tests)
         run: |
           npx vitest run \
@@ -80,7 +80,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - run: rm -f package-lock.json && npm install
+      - run: npm ci
       - run: npm run build
       - name: Bundle size ratchet
         run: |
@@ -137,7 +137,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - run: rm -f package-lock.json && npm install
+      - run: npm ci
       - name: Measure and ratchet quality floor
         run: |
           git config user.name "SiteSync CI"
