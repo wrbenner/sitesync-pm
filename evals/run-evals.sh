@@ -136,7 +136,13 @@ run_layer1() {
   echo -e "${BOLD}── Layer 1: Database / RLS Tests ──${NC}"
 
   if [[ -z "$DB_URL" ]]; then
-    echo -e "${YELLOW}  SKIP: No database URL configured${NC}"
+    echo -e "${RED}╔══════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${RED}║  WARNING: SUPABASE_DB_URL not configured                ║${NC}"
+    echo -e "${RED}║  Layer 1 is SKIPPING ALL TESTS — this gate is not real  ║${NC}"
+    echo -e "${RED}║  Add SUPABASE_DB_URL to GitHub Actions secrets          ║${NC}"
+    echo -e "${RED}╚══════════════════════════════════════════════════════════╝${NC}"
+    # GitHub Actions annotation — visible in the Actions UI summary
+    echo "::warning::Layer 1 SKIPPED: SUPABASE_DB_URL not configured. This eval gate is not testing anything."
     L1_SKIPPED=6
     return
   fi
@@ -362,6 +368,15 @@ printf "  Layer 4 (AI):        %s passed, %s failed, %s skipped\n" "$L4_PASSED" 
 echo   "  ─────────────────────────────────"
 printf "  ${BOLD}TOTAL:               %s passed, %s failed, %s skipped (placeholder)${NC}\n" "$TOTAL_PASSED" "$TOTAL_FAILED" "$TOTAL_SKIPPED"
 echo ""
+
+# Emit warning if no tests actually ran
+if [[ "$TOTAL_PASSED" -eq 0 ]] && [[ "$TOTAL_FAILED" -eq 0 ]]; then
+  echo -e "${RED}╔══════════════════════════════════════════════════════════╗${NC}"
+  echo -e "${RED}║  ZERO TESTS EXECUTED — this eval gate tested nothing   ║${NC}"
+  echo -e "${RED}║  All $TOTAL_SKIPPED tests were skipped                         ║${NC}"
+  echo -e "${RED}╚══════════════════════════════════════════════════════════╝${NC}"
+  echo "::warning::ZERO TESTS EXECUTED. All $TOTAL_SKIPPED tests were skipped. This eval gate is not providing any assurance."
+fi
 
 if [[ "$TOTAL_FAILED" -gt 0 ]]; then
   echo -e "${RED}Some tests failed.${NC}"
