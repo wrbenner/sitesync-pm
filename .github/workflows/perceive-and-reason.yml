@@ -20,8 +20,6 @@
 name: Perceive and Reason
 
 on:
-  schedule:
-    - cron: '0 4 * * *'  # 4am UTC daily
   workflow_dispatch:
     inputs:
       skip_competitors:

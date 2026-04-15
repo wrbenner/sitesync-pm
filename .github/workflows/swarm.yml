@@ -4,9 +4,6 @@ name: Agent Swarm — Test & Polish
 # NEVER implements features — that is the organism's job
 # Tests what the organism built, polishes UX, finds bugs
 on:
-  schedule:
-    - cron: '0 13 * * *'   # 8:00 AM CDT — test wave
-    - cron: '0 19 * * *'   # 2:00 PM CDT — polish wave
   workflow_dispatch:
     inputs:
       agents:

@@ -21,8 +21,6 @@
 name: "Autonomous Builder"
 
 on:
-  schedule:
-    - cron: '0 7 * * *'  # 7am UTC daily
   workflow_dispatch:
     inputs:
       max_turns:
