@@ -587,7 +587,13 @@ const AIInsightsBanner: React.FC<{ insights: AIInsight[]; navigate: (path: strin
       rfi: '/rfis', schedule_phase: '/schedule', budget_item: '/budget',
       punch_item: '/punch-list', submittal: '/submittals', change_order: '/change-orders',
     };
-    return entityRoutes[entity.type];
+    const basePath = entityRoutes[entity.type];
+    if (!basePath) return undefined;
+    // Deep-link to the specific entity when we have an ID
+    if (entity.id && entity.type !== 'schedule_phase' && entity.type !== 'budget_item') {
+      return `${basePath}?selected=${entity.id}`;
+    }
+    return basePath;
   };
 
   return (

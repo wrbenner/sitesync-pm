@@ -55,8 +55,8 @@ export const paymentMachine = setup({
     },
     gc_review: {
       on: {
-        OWNER_APPROVE: { target: 'approved' },
-        OWNER_REJECT: { target: 'rejected' },
+        GC_APPROVE: { target: 'owner_review' },
+        GC_REJECT: { target: 'rejected' },
         VOID: { target: 'void' },
       },
     },
@@ -95,7 +95,7 @@ export function getValidPaymentTransitions(status: PaymentStatus): string[] {
   const transitions: Record<PaymentStatus, string[]> = {
     draft: ['Submit Application'],
     submitted: ['Approve (GC Review)', 'Reject'],
-    gc_review: ['Forward to Owner', 'Reject'],
+    gc_review: ['Approve and Forward to Owner', 'Reject'],
     owner_review: ['Approve Payment', 'Reject'],
     approved: ['Mark as Paid', 'Void'],
     rejected: ['Revise and Resubmit', 'Void'],

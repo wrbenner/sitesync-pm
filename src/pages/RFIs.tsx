@@ -30,12 +30,12 @@ import { EditingLockBanner } from '../components/ui/EditingLockBanner';
 const isOverdue = (dateStr: string) => new Date(dateStr) < new Date();
 
 const BIC_COLORS: Record<string, string> = {
-  GC: '#3B82F6',
+  GC: colors.info ?? '#3B82F6',
   Architect: '#8B5CF6',
-  Engineer: '#14B8A6',
-  Owner: '#F47820',
-  Subcontractor: '#6B7280',
-  Sub: '#6B7280',
+  Engineer: colors.tealSuccess ?? '#14B8A6',
+  Owner: colors.primary,
+  Subcontractor: colors.textTertiary,
+  Sub: colors.textTertiary,
 };
 
 const getBicColor = (party: string): string => {
@@ -57,8 +57,8 @@ const BallInCourtCell: React.FC<{ rfi: any }> = ({ rfi }) => {
   if (!party) {
     return (
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-        <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#6B7280', flexShrink: 0, display: 'inline-block' }} />
-        <span style={{ fontSize: 14, color: '#9CA3AF', fontStyle: 'italic' }}>Unassigned</span>
+        <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: colors.textTertiary, flexShrink: 0, display: 'inline-block' }} />
+        <span style={{ fontSize: 14, color: colors.textSecondary, fontStyle: 'italic' }}>Unassigned</span>
       </span>
     );
   }
@@ -66,7 +66,7 @@ const BallInCourtCell: React.FC<{ rfi: any }> = ({ rfi }) => {
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
       <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: color, flexShrink: 0, display: 'inline-block' }} />
-      <span style={{ fontSize: 14, color: '#374151' }}>{party}</span>
+      <span style={{ fontSize: 14, color: colors.textPrimary }}>{party}</span>
     </span>
   );
 };
@@ -119,6 +119,34 @@ const RFIsPage: React.FC = () => {
     const weekAgo = Date.now() - 7 * 86400000;
     return rfis.filter((r: any) => r.status === 'closed' && r.closed_at && new Date(r.closed_at).getTime() >= weekAgo).length;
   }, [rfis]);
+
+  // Accountability: average response time by party (ball in court)
+  const slowestResponder = useMemo(() => {
+    const closed = rfis.filter((r: any) => r.status === 'closed' && r.closed_at && r.created_at && r.assigned_to);
+    if (!closed.length) return null;
+
+    const byParty: Record<string, { total: number; count: number }> = {};
+    for (const r of closed) {
+      const party = (r as any).assigned_to;
+      const days = Math.floor((new Date((r as any).closed_at).getTime() - new Date((r as any).created_at).getTime()) / 86400000);
+      if (!byParty[party]) byParty[party] = { total: 0, count: 0 };
+      byParty[party].total += days;
+      byParty[party].count += 1;
+    }
+
+    let slowest = '';
+    let slowestAvg = 0;
+    for (const [party, stats] of Object.entries(byParty)) {
+      const avg = stats.total / stats.count;
+      if (avg > slowestAvg) {
+        slowestAvg = avg;
+        slowest = party;
+      }
+    }
+
+    return slowest ? { party: slowest, avgDays: Math.round(slowestAvg) } : null;
+  }, [rfis]);
+
   const [selectedRfi, setSelectedRfi] = useState<any>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
@@ -523,11 +551,18 @@ const RFIsPage: React.FC = () => {
       </div>
 
       {/* KPI metric cards */}
-      <div aria-label="RFI metrics" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'], marginBottom: spacing['4'] }}>
+      <div aria-label="RFI metrics" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: spacing['4'], marginBottom: spacing['4'] }}>
         <MetricBox label="Total Open" value={totalOpen} />
         <MetricBox label="Overdue" value={overdueCount} colorOverride={overdueCount > 0 ? 'danger' : undefined} />
         <MetricBox label="Avg Days to Close" value={avgDaysToClose} unit="days" />
         <MetricBox label="Closed This Week" value={closedThisWeek} />
+        {slowestResponder && (
+          <MetricBox
+            label="Slowest Responder"
+            value={`${slowestResponder.party} (${slowestResponder.avgDays}d)`}
+            colorOverride={slowestResponder.avgDays > 7 ? 'danger' : slowestResponder.avgDays > 3 ? 'warning' : undefined}
+          />
+        )}
       </div>
 
       {viewMode === 'table' ? (
