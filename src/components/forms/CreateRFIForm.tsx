@@ -51,7 +51,6 @@ export function CreateRFIForm({ open, onClose, onSuccess }: CreateRFIFormProps) 
       priority,
       due_date: dueDate || undefined,
       assigned_to: assignedTo || undefined,
-      created_by: profile.id,
     });
 
     if (createError) {
@@ -62,7 +61,7 @@ export function CreateRFIForm({ open, onClose, onSuccess }: CreateRFIFormProps) 
 
     // If not draft, immediately submit
     if (!asDraft && rfi) {
-      await useRfiStore.getState().updateRfiStatus(rfi.id, 'submitted');
+      await useRfiStore.getState().transitionStatus(rfi.id, 'open');
     }
 
     setSaving(false);
