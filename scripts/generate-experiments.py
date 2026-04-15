@@ -39,6 +39,46 @@ def load_killed_files():
     return killed
 
 
+def load_category_caps():
+    """Load experiment caps per category from experiment history.
+
+    If a category has a high success rate (>70%), allow more experiments.
+    If a category has a low success rate (<40%), reduce to 1 experiment.
+    Default cap is 3 per category if no history exists.
+    """
+    default_caps = {
+        "TYPE_SAFETY": 3,
+        "ESLINT_FIXABLE": 1,
+        "ESLINT_MANUAL": 5,
+        "TESTING": 3,
+        "HARDCODED_COLORS": 3,
+    }
+
+    history = read_json(".metrics/experiment-history.json")
+    cat_rates = history.get("aggregate", {}).get("category_rates", {})
+
+    if not cat_rates:
+        return default_caps  # No history yet, use defaults
+
+    caps = dict(default_caps)
+    for cat, stats in cat_rates.items():
+        total = stats.get("total", 0)
+        rate = stats.get("rate", 0.5)
+
+        if total < 3:
+            continue  # Not enough data to adjust
+
+        if rate >= 0.7:
+            # High success category: allow up to 5 experiments
+            caps[cat] = min(5, default_caps.get(cat, 3) + 2)
+        elif rate < 0.4:
+            # Low success category: reduce to 1 experiment
+            caps[cat] = 1
+        # Otherwise keep default
+
+    return caps
+
+
 def generate_type_safety_experiments(metrics, experiments, counter):
     """Generate experiments to remove as_any and ts_ignore casts."""
     type_issues = metrics.get("type_issues", metrics.get("type-issues", {}))
@@ -287,15 +327,32 @@ def main():
         return
 
     killed = load_killed_files()
+    caps = load_category_caps()
     experiments = []
     counter = [0]  # Mutable counter for experiment IDs
 
-    # Generate experiments in priority order
+    print(f"  Category caps (from experiment history): {caps}")
+
+    # Generate experiments in priority order, respecting learned caps
     generate_type_safety_experiments(summary, experiments, counter)
     generate_eslint_fixable_experiment(summary, experiments, counter)
     generate_eslint_manual_experiments(summary, experiments, counter)
     generate_testing_experiments(summary, experiments, counter)
     generate_hardcoded_color_experiments(summary, experiments, counter)
+
+    # Apply category caps from experiment history
+    capped = []
+    category_counts = {}
+    for exp in experiments:
+        cat = exp["category"]
+        count = category_counts.get(cat, 0)
+        cap = caps.get(cat, 3)
+        if count < cap:
+            capped.append(exp)
+            category_counts[cat] = count + 1
+        else:
+            print(f"  CAP: Skipping {exp['id']} ({cat} already at cap of {cap})")
+    experiments = capped
 
     # Cap at 15 experiments
     experiments = experiments[:15]

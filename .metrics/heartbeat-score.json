@@ -1,0 +1,75 @@
+{
+  "timestamp": "2026-04-15T22:11:01.227741+00:00",
+  "score": 61,
+  "max_score": 100,
+  "percentage": 61.0,
+  "grade": "D",
+  "breakdown": {
+    "experiment_success": {
+      "points": 24,
+      "max": 40
+    },
+    "quality_improvement": {
+      "points": 15,
+      "max": 25
+    },
+    "build_integrity": {
+      "points": 5,
+      "max": 15
+    },
+    "learning_growth": {
+      "points": 7,
+      "max": 10
+    },
+    "velocity": {
+      "points": 10,
+      "max": 10
+    }
+  },
+  "details": {
+    "experiment_success": {
+      "max_points": 40,
+      "points": 24,
+      "details": {
+        "succeeded": 3,
+        "attempted": 5,
+        "skipped": 0,
+        "success_rate": 0.6
+      }
+    },
+    "quality_improvement": {
+      "max_points": 25,
+      "points": 15,
+      "details": {
+        "floor_updated_today": true,
+        "metrics_at_target": 0
+      }
+    },
+    "build_integrity": {
+      "max_points": 15,
+      "points": 5,
+      "details": [
+        "TypeScript: PASS",
+        "Build: FAIL",
+        "Tests: FAIL"
+      ]
+    },
+    "learning_growth": {
+      "max_points": 10,
+      "points": 7,
+      "details": [
+        "Experiment history: 1 runs tracked",
+        "Skills in library: 5"
+      ]
+    },
+    "velocity": {
+      "max_points": 10,
+      "points": 10,
+      "details": {
+        "completed": 5,
+        "max_allowed": 5,
+        "utilization": 1.0
+      }
+    }
+  }
+}

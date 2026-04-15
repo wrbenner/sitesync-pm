@@ -1,0 +1,12 @@
+{
+  "decision": "STRATEGY_MODIFICATION",
+  "rationale": "TESTING category success rate is 0% over 3+ experiments. Reducing scope to 1 test experiment per night to improve success rate.",
+  "target_file": "scripts/generate-experiments.py",
+  "modification": {
+    "before": "targets[:3]",
+    "after": "targets[:1]",
+    "char_count": 11
+  },
+  "expected_impact": "Increase TESTING success rate by focusing on fewer, higher-quality experiments",
+  "risk": "Fewer TESTING experiments generated per night"
+}

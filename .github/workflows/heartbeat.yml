@@ -194,10 +194,254 @@ jobs:
           gh api repos/${{ github.repository }}/actions/workflows/worker-cells.yml/dispatches \
             --method POST --field ref=main 2>/dev/null && echo "Worker cells dispatched" || true
 
-  # ─── Job 4: Report ───
+  # ─── Job 4: Verify (2 parallel agents) ───
+  verify:
+    name: "Step 4: Verify (${{ matrix.perspective }})"
+    needs: run-experiments
+    if: ${{ github.event.inputs.dry_run != 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        perspective:
+          - correctness
+          - security
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 10
+          ref: main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Get heartbeat diff
+        run: |
+          DIFF=$(git log --since="6 hours ago" --author="SiteSync Heartbeat" -p --stat 2>/dev/null | head -2000)
+          if [ -z "$DIFF" ]; then
+            DIFF=$(git log -1 -p --stat 2>/dev/null | head -2000)
+          fi
+          echo "$DIFF" > /tmp/heartbeat-diff.txt
+          echo "Diff: $(wc -l < /tmp/heartbeat-diff.txt) lines"
+
+      - name: "Verify: ${{ matrix.perspective }}"
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          mkdir -p .reviews
+          PERSPECTIVE="${{ matrix.perspective }}"
+
+          if [ "$PERSPECTIVE" = "correctness" ]; then
+            PROMPT="Review tonight's code changes for: 1) Logic errors 2) Null/undefined handling 3) Type safety 4) Error handling completeness. For each issue: cite file:line, rate severity (critical/major/minor)."
+          else
+            PROMPT="Review tonight's code changes for: 1) OWASP vulnerabilities 2) Supabase RLS correctness 3) Secret exposure 4) Input validation 5) Auth bypass. For each issue: cite file:line, rate severity (critical/major/minor)."
+          fi
+
+          claude \
+            --dangerously-skip-permissions \
+            --model claude-sonnet-4-6 \
+            --max-turns 10 \
+            --print \
+            "${PROMPT}
+
+          Read the diff:
+            cat /tmp/heartbeat-diff.txt
+
+          Write your review to .reviews/${PERSPECTIVE}-review.json:
+          {
+            \"perspective\": \"${PERSPECTIVE}\",
+            \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",
+            \"files_reviewed\": [\"list of files\"],
+            \"issues\": [{\"severity\": \"critical|major|minor\", \"file\": \"path\", \"line\": 0, \"description\": \"what\", \"suggestion\": \"how\"}],
+            \"scores\": {\"overall\": 0},
+            \"deploy_recommendation\": \"yes|no\"
+          }" > /dev/null 2>&1 || true
+
+          # Ensure review file exists (fallback if agent didn't write it)
+          if [ ! -f ".reviews/${PERSPECTIVE}-review.json" ]; then
+            echo "{\"perspective\":\"${PERSPECTIVE}\",\"scores\":{\"overall\":5},\"issues\":[],\"fallback\":true}" > ".reviews/${PERSPECTIVE}-review.json"
+          fi
+
+      - name: Upload review
+        uses: actions/upload-artifact@v4
+        with:
+          name: "review-${{ matrix.perspective }}"
+          path: .reviews/
+          retention-days: 30
+
+  # ─── Job 5: Reflect and Evolve (meta-loop) ───
+  reflect-and-evolve:
+    name: "Step 5: Reflect and Evolve"
+    needs: [run-experiments, verify]
+    if: ${{ github.event.inputs.dry_run != 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+          ref: main
+
+      - name: Download experiment artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: experiments
+          path: .
+        continue-on-error: true
+
+      - name: Download reviews
+        uses: actions/download-artifact@v4
+        with:
+          pattern: review-*
+          path: .reviews/
+          merge-multiple: true
+        continue-on-error: true
+
+      - name: Compile verification consensus
+        run: |
+          python3 scripts/aggregate-reviews.py --reviews-dir .reviews 2>/dev/null || \
+          python3 -c "
+          import json, os, glob
+          reviews = {}
+          scores = {}
+          all_issues = []
+          for f in sorted(glob.glob('.reviews/*-review.json')):
+              try:
+                  with open(f) as fh:
+                      r = json.load(fh)
+                  p = r.get('perspective', os.path.basename(f))
+                  reviews[p] = r
+                  all_issues.extend(r.get('issues', []))
+                  if 'scores' in r:
+                      scores[p] = r['scores'].get('overall', 0)
+              except: pass
+          consensus = {
+              'agents_reporting': len(reviews),
+              'perspectives': list(reviews.keys()),
+              'scores': scores,
+              'average_score': round(sum(scores.values()) / max(len(scores), 1), 1),
+              'critical_issues': [i for i in all_issues if i.get('severity') == 'critical'],
+              'major_issues': [i for i in all_issues if i.get('severity') == 'major'],
+              'total_issues': len(all_issues)
+          }
+          os.makedirs('.reviews', exist_ok=True)
+          with open('.reviews/consensus.json', 'w') as fh:
+              json.dump(consensus, fh, indent=2)
+          print(f'Consensus: {len(reviews)} agents, avg score {consensus[\"average_score\"]}')
+          "
+
+      - name: Track experiment history
+        run: python3 scripts/track-experiment-history.py
+
+      - name: Score heartbeat run
+        run: python3 scripts/score-heartbeat.py || echo "Scoring failed"
+
+      - name: Compile reflection
+        run: python3 scripts/compile-reflection.py
+
+      - name: Run self-improvement agent
+        run: python3 scripts/self-improve.py
+
+      - name: Apply proposal (if any)
+        run: python3 scripts/apply-proposal.py
+
+      - name: Update evolution ledger
+        run: |
+          python3 -c "
+          import json, os
+          from datetime import datetime, timezone
+
+          ledger_path = 'EVOLUTION_LEDGER.json'
+          try:
+              with open(ledger_path) as f:
+                  ledger = json.load(f)
+          except: ledger = {'nightly_entries': []}
+
+          # Read tonight's data
+          score_data = {}
+          try:
+              with open('.metrics/heartbeat-score.json') as f:
+                  score_data = json.load(f)
+          except: pass
+
+          results = {}
+          try:
+              with open('.metrics/experiment-results.json') as f:
+                  results = json.load(f)
+          except: pass
+
+          proposal = {}
+          try:
+              with open('.agent/proposal.json') as f:
+                  proposal = json.load(f)
+          except: pass
+
+          exps = results.get('experiments', [])
+          succeeded = sum(1 for e in exps if e.get('result') == 'SUCCESS')
+
+          entry = {
+              'date': datetime.now(timezone.utc).strftime('%Y-%m-%d'),
+              'night': len(ledger.get('nightly_entries', [])) + 1,
+              'score': score_data.get('score', 0),
+              'grade': score_data.get('grade', 'N/A'),
+              'commits': succeeded,
+              'experiments_attempted': len(exps),
+              'experiments_succeeded': succeeded,
+              'success_rate': round(succeeded / len(exps), 2) if exps else 0,
+              'self_improvement_decision': proposal.get('decision', 'NONE'),
+              'biggest_bottleneck': '',
+              'next_priority': ''
+          }
+
+          if 'nightly_entries' not in ledger:
+              ledger['nightly_entries'] = []
+          ledger['nightly_entries'].append(entry)
+
+          with open(ledger_path, 'w') as f:
+              json.dump(ledger, f, indent=2)
+              f.write('\n')
+          print(f'Ledger updated: night {entry[\"night\"]}, score {entry[\"score\"]}, {succeeded} commits')
+          "
+
+      - name: Configure git
+        run: |
+          git config user.name "SiteSync Heartbeat"
+          git config user.email "heartbeat@sitesync.ai"
+          git config pull.rebase true
+
+      - name: Commit reflection and evolution
+        run: |
+          git add REFLECTION.md EVOLUTION_LEDGER.json .reviews/ .metrics/experiment-history.json \
+                  .metrics/heartbeat-score*.json .agent/state.json .agent/proposal.json \
+                  .agent/prompt-archive.json scripts/generate-experiments.py scripts/run-experiments.sh \
+                  2>/dev/null || true
+          git diff --staged --quiet || git commit -m "[auto] heartbeat: reflect and evolve $(date +%Y-%m-%d)"
+
+      - name: Push evolution
+        run: |
+          git pull --rebase origin main 2>/dev/null || true
+          COMMITS=$(git log origin/main..HEAD --oneline 2>/dev/null | wc -l | tr -d ' ')
+          if [ "$COMMITS" -gt "0" ]; then
+            for i in 1 2 3 4; do
+              git push -u origin main && echo "Pushed $COMMITS commits" && exit 0
+              sleep $((i*2))
+              git pull --rebase origin main 2>/dev/null || true
+            done
+          fi
+
+  # ─── Job 6: Report ───
   report:
-    name: "Step 4: Report"
-    needs: [collect-metrics, generate-experiments, run-experiments]
+    name: "Step 6: Report"
+    needs: [collect-metrics, generate-experiments, run-experiments, verify, reflect-and-evolve]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5

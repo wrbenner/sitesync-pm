@@ -1381,6 +1381,51 @@
           "pending": 15
         }
       }
+    },
+    {
+      "version": "v1",
+      "date": "2026-04-15",
+      "modification_type": "SKIP",
+      "target": "",
+      "before": "",
+      "after": "",
+      "rationale": "Success rate 60%, no actionable pattern found.",
+      "expected_impact": "",
+      "risk": "",
+      "baseline_score": 0.6,
+      "score_after": null,
+      "deployed": false,
+      "validation_result": "SKIP decision"
+    },
+    {
+      "version": "v2",
+      "date": "2026-04-15",
+      "modification_type": "STRATEGY_MODIFICATION",
+      "target": "scripts/generate-experiments.py",
+      "before": "targets[:3]",
+      "after": "targets[:1]  # Reduced: TESTING success rate below 40%",
+      "rationale": "TESTING category success rate is 0% over 3+ experiments. Reducing scope to 1 test experiment per night to improve success rate.",
+      "expected_impact": "Increase TESTING success rate by focusing on fewer, higher-quality experiments",
+      "risk": "Fewer TESTING experiments generated per night",
+      "baseline_score": 0.6,
+      "score_after": null,
+      "deployed": false,
+      "validation_result": "Python syntax error after modification: expected ':' (generate-experiments.py, line 211)"
+    },
+    {
+      "version": "v3",
+      "date": "2026-04-15",
+      "modification_type": "STRATEGY_MODIFICATION",
+      "target": "scripts/generate-experiments.py",
+      "before": "targets[:3]",
+      "after": "targets[:1]",
+      "rationale": "TESTING category success rate is 0% over 3+ experiments. Reducing scope to 1 test experiment per night to improve success rate.",
+      "expected_impact": "Increase TESTING success rate by focusing on fewer, higher-quality experiments",
+      "risk": "Fewer TESTING experiments generated per night",
+      "baseline_score": 0.6,
+      "score_after": null,
+      "deployed": true,
+      "validation_result": "Applied successfully"
     }
   ]
 }

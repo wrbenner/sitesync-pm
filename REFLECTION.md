@@ -1,84 +1,47 @@
-# Reflection — 2026-04-12
+# Heartbeat Reflection — 2026-04-15
 
-## Nightly Score: 22 / 100
+## Score: 61 / 100 (Grade: D)
 
-- **success_criteria**: {'points': 0, 'max': 35}
-- **verification**: {'points': 0, 'max': 25}
-- **code_health**: {'points': 12, 'max': 20}
-- **build_integrity**: {'points': 5, 'max': 10}
-- **intelligence_growth**: {'points': 5, 'max': 10}
+- **experiment_success**: 24 / 40
+- **quality_improvement**: 15 / 25
+- **build_integrity**: 5 / 15
+- **learning_growth**: 7 / 10
+- **velocity**: 10 / 10
 
-## Verification Consensus
+## Experiments: 3 succeeded, 2 reverted out of 5 total
 
-- Agents reporting: 0 / 4
-- Average score: 0.0 / 10
-- Deploy consensus: NO
-- Critical issues: 0
-- Major issues: 0
-- Minor issues: 0
+| Experiment | Result | Before | After | Reason |
+|---|---|---|---|---|
+| EXP-001 | SUCCESS | 2 | 0 |  |
+| EXP-002 | REVERTED | 17 | 17 | gates=false improved=false |
+| EXP-003 | SUCCESS | 12 | 0 |  |
+| EXP-004 | REVERTED | 0 | 0 | gates=false improved=false |
+| EXP-005 | SUCCESS | 54 | 12 |  |
 
+## Cumulative Stats
 
-## Builder Self-Reflection
-# Reflection — 2026-04-12
+- Total runs: 1
+- Total experiments: 5
+- Overall success rate: 60%
+- Current streak: 1 consecutive successes
 
-## Nightly Score: 19 / 100
+### Category Success Rates
 
-- **success_criteria**: {'points': 0, 'max': 35}
-- **verification**: {'points': 0, 'max': 25}
-- **code_health**: {'points': 12, 'max': 20}
-- **build_integrity**: {'points': 5, 'max': 10}
-- **intelligence_growth**: {'points': 2, 'max': 10}
+| Category | Succeeded | Total | Rate |
+|---|---|---|---|
+| ESLINT_FIXABLE | 1 | 1 | 100% |
+| ESLINT_MANUAL | 0 | 1 | 0% |
+| HARDCODED_COLORS | 1 | 1 | 100% |
+| TESTING | 0 | 1 | 0% |
+| TYPE_SAFETY | 1 | 1 | 100% |
 
-## Verification Consensus
+## Quality Floor
 
-- Agents reporting: 0 / 4
-- Average score: 0.0 / 10
-- Deploy consensus: NO
-- Critical issues: 0
-- Major issues: 0
-- Minor issues: 0
-
-
-## Builder Self-Reflection
-# Reflection — 2026-04-11
-
-## Nightly Score: 34 / 100
-
-- **success_criteria**: {'points': 12, 'max': 35}
-- **verification**: {'points': 0, 'max': 25}
-- **code_health**: {'points': 12, 'max': 20}
-- **build_integrity**: {'points': 5, 'max': 10}
-- **intelligence_growth**: {'points': 5, 'max': 10}
-
-## Verification Consensus
-
-- Agents reporting: 0 / 4
-- Average score: 0.0 / 10
-- Deploy consensus: NO
-- Critical issues: 0
-- Major issues: 0
-- Minor issues: 0
-
-
-## Builder Self-Reflection
-# Build Session Reflection — 2026-04-11
-
-## Mission
-Demo-polish only. 3 days until the April 15 demo. The app was rendering as skeleton-only/blank content on `/dashboard`. Every fix targeted the same north star: no page can be blank, broken, or embarrassing during a live demo.
-
-## What Was Built (5 commits)
-
-### 1. Dashboard Skeleton Trap Fix
-**Problem:** `if (!project || metricsLoading) return <DashboardSkeleton />` rendered skeleton forever if the `project_metrics` materialized view was missing or the project query errored.
-
-**Fix:** 
-- Extract `isError` from query hooks and show explicit error UI with retry
-- Add 5 second timeout so skeleton always resolves
-- When project query errors: show clear error state with retry button
-- When metrics fail: proceed with zero metrics instead of blocking
-
-### 2. Above the Fold Intelligence (Always)
-**Problem:** AI insights banner only showed when the AI service returned data. If the query failed, nothing showed above the fold.
-
-**Fix:**
-- Modified `AIInsightsBanner` to show onb
+| Metric | Current | Target |
+|---|---|---|
+| anyCount | 1 | 0 |
+| mockCount | 7 | 0 |
+| eslintErrors | 1033 | ? |
+| eslintWarnings | 52 | 0 |
+| coveragePercent | 43.2 | 70 |
+| bundleSizeKB | 1869 | 250 |

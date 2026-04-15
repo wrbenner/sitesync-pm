@@ -1,5 +1,4 @@
 {
-  "_comment": "Current self-improvement state. Read at start of each session (REA hibernate-wake pattern).",
   "phase": "initialized",
   "last_run": null,
   "last_modification_type": null,
