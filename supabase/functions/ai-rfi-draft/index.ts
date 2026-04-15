@@ -200,11 +200,13 @@ Spec section: ${rfiDraft.spec_section ?? 'unknown'}`,
 
     if (providers.perplexity && rfiDraft.spec_section) {
       try {
+        // IMPORTANT: Code lookup is a RESEARCH ASSIST, not authoritative
+        // legal/compliance guidance. Output must include confidence markers.
         const codeRequest: AIRequest = {
           task: 'code_lookup',
           messages: [{
             role: 'user',
-            content: `For an RFI about "${rfiDraft.subject}", find the relevant building code or standard requirement for specification section ${rfiDraft.spec_section}. Include the specific code section number, edition year, and exact requirement text. If IBC, cite the specific section. If ASTM/ACI, cite the standard number.`,
+            content: `For an RFI about "${rfiDraft.subject}", find the relevant building code or standard requirement for specification section ${rfiDraft.spec_section}. Include the specific code section number, edition year, and exact requirement text. If IBC, cite the specific section. If ASTM/ACI, cite the standard number. IMPORTANT: Always state the jurisdiction and edition year. If uncertain, say so explicitly.`,
           }],
           search_context: `construction building code specification ${rfiDraft.spec_section}`,
           max_tokens: 512,
