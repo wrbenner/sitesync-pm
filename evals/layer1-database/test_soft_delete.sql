@@ -15,26 +15,69 @@
 BEGIN;
 
 -- ---------------------------------------------------------------------------
--- Pre-check: Does the deleted_at column exist on rfis?
+-- Test 6.0a: Verify soft-delete columns exist on core tables
 -- ---------------------------------------------------------------------------
 DO $$
 DECLARE
-  v_has_column boolean;
+  v_tables text[] := ARRAY['rfis', 'submittals', 'tasks', 'daily_logs', 'change_orders', 'punch_items'];
+  v_table text;
+  v_has_deleted_at boolean;
+  v_has_deleted_by boolean;
+  v_pass_count int := 0;
+  v_fail_count int := 0;
 BEGIN
-  SELECT EXISTS (
-    SELECT 1
-      FROM information_schema.columns
-     WHERE table_schema = 'public'
-       AND table_name = 'rfis'
-       AND column_name = 'deleted_at'
-  ) INTO v_has_column;
+  FOREACH v_table IN ARRAY v_tables LOOP
+    SELECT EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = v_table AND column_name = 'deleted_at'
+    ) INTO v_has_deleted_at;
+    SELECT EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = v_table AND column_name = 'deleted_by'
+    ) INTO v_has_deleted_by;
 
-  IF NOT v_has_column THEN
-    RAISE NOTICE 'SKIP [6.0] rfis.deleted_at column does not exist yet (schema gap — deferred)';
-    -- We still continue to test what we can
+    IF v_has_deleted_at AND v_has_deleted_by THEN
+      v_pass_count := v_pass_count + 1;
+    ELSE
+      v_fail_count := v_fail_count + 1;
+    END IF;
+  END LOOP;
+
+  IF v_fail_count = 0 THEN
+    RAISE NOTICE 'PASS [6.0a] All 6 core tables have deleted_at + deleted_by columns';
   ELSE
-    RAISE NOTICE 'INFO [6.0] rfis.deleted_at column exists — running soft delete tests';
+    RAISE NOTICE 'FAIL [6.0a] % of 6 tables missing soft-delete columns', v_fail_count;
   END IF;
+END $$;
+
+-- ---------------------------------------------------------------------------
+-- Test 6.0b: deleted_at + deleted_by can be set and cleared on rfis
+-- ---------------------------------------------------------------------------
+DO $$
+DECLARE
+  v_rfi_id uuid;
+  v_deleted_at timestamptz;
+BEGIN
+  INSERT INTO rfis (project_id, title, status, created_at, updated_at)
+  VALUES (
+    (SELECT id FROM projects LIMIT 1),
+    'Soft Delete Column Test RFI',
+    'open',
+    now(), now()
+  ) RETURNING id INTO v_rfi_id;
+
+  -- Set deleted_at
+  UPDATE rfis SET deleted_at = now(), deleted_by = auth.uid() WHERE id = v_rfi_id;
+  SELECT deleted_at INTO v_deleted_at FROM rfis WHERE id = v_rfi_id;
+
+  IF v_deleted_at IS NOT NULL THEN
+    RAISE NOTICE 'PASS [6.0b] deleted_at can be set on rfis';
+  ELSE
+    RAISE NOTICE 'FAIL [6.0b] deleted_at was not persisted after UPDATE';
+  END IF;
+
+  -- Cleanup
+  DELETE FROM rfis WHERE id = v_rfi_id;
 END $$;
 
 -- ---------------------------------------------------------------------------

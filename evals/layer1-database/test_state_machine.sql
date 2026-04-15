@@ -1,72 +1,98 @@
 -- =============================================================================
--- Layer 1 Test: State Machine Transitions
+-- Layer 1 Test: State Machine CHECK Constraints
 -- =============================================================================
--- PLACEHOLDER — Real tests deferred until status enum types exist in the schema.
+-- Validates DOMAIN_KERNEL_SPEC.md §5 State Machines:
+--   - rfis.status CHECK accepts all 6 kernel states
+--   - rfis.status CHECK rejects invalid values
+--   - Default status is 'draft' (kernel entry point)
 --
--- This test will validate DOMAIN_KERNEL_SPEC.md §5 State Machines:
---   - Only valid state transitions are allowed
---   - Invalid transitions are rejected (e.g., 'draft' → 'approved' skipping steps)
---   - Transition role restrictions are enforced
---   - Side effects fire correctly (e.g., setting approved_by, approved_at)
+-- NOTE: This tests CHECK constraints only — NOT transition enforcement.
+-- Transition enforcement (e.g., blocking draft→closed) requires triggers
+-- which are deferred. This test validates the DB schema is correct.
 --
--- Gold-Standard Fixtures to cover:
---   #4  — RFI Lifecycle (draft→open→under_review→answered→closed)
---   #5  — RFI Void (only owner/admin can void)
---   #6  — Submittal Resubmission (rejected→resubmit with new revision)
---   #7  — Change Order Promotion (PCO→COR→CO)
---   #8  — Daily Log Rejection and Resubmission
---   #9  — Punch Item Verification Rejection (resolved→open)
---   #10 — Pay Application Lifecycle (draft→submitted→certified→paid)
---   #13 — Permit Lifecycle with Inspections
---
--- PREREQUISITES before this test can be activated:
---   1. Status enum types created in schema (rfi_status, submittal_status, etc.)
---   2. CHECK constraints or trigger-based state machine enforcement in place
---   3. Transition role checks implemented (via RLS or triggers)
---   4. Side effect triggers implemented (e.g., set approved_at on approval)
---
--- When ready, each fixture should become a test block that:
---   a) Creates test entity in initial state
---   b) Attempts valid transition → expects success + side effects
---   c) Attempts invalid transition → expects rejection
---   d) Cleans up test data
+-- Depends on: 20260415000001_rfi_status_widen.sql
 -- =============================================================================
 
--- PLACEHOLDER: test.skip equivalent for SQL
+-- Test 4.1: All 6 kernel RFI states are accepted by CHECK constraint
 DO $$
+DECLARE
+  v_rfi_id uuid;
+  v_states text[] := ARRAY['draft', 'open', 'under_review', 'answered', 'closed', 'void'];
+  v_state text;
 BEGIN
-  RAISE NOTICE 'SKIP [4.1] RFI state machine transitions — blocked on status enum creation';
-  RAISE NOTICE 'SKIP [4.2] Submittal state machine transitions — blocked on status enum creation';
-  RAISE NOTICE 'SKIP [4.3] Change order state machine transitions — blocked on status enum creation';
-  RAISE NOTICE 'SKIP [4.4] Daily log state machine transitions — blocked on status enum creation';
-  RAISE NOTICE 'SKIP [4.5] Punch item state machine transitions — blocked on status enum creation';
-  RAISE NOTICE 'SKIP [4.6] Pay application state machine transitions — blocked on status enum creation';
-  RAISE NOTICE 'SKIP [4.7] Permit state machine transitions — blocked on status enum creation';
+  -- Create a test RFI to mutate
+  INSERT INTO rfis (project_id, title, status, created_at, updated_at)
+  VALUES (
+    (SELECT id FROM projects LIMIT 1),
+    'State Machine Test RFI',
+    'draft',
+    now(), now()
+  ) RETURNING id INTO v_rfi_id;
+
+  -- Test each kernel state
+  FOREACH v_state IN ARRAY v_states LOOP
+    UPDATE rfis SET status = v_state WHERE id = v_rfi_id;
+  END LOOP;
+
+  -- Cleanup
+  DELETE FROM rfis WHERE id = v_rfi_id;
+
+  RAISE NOTICE 'PASS [4.1] All 6 kernel RFI states accepted by CHECK constraint';
+EXCEPTION WHEN check_violation THEN
+  RAISE NOTICE 'FAIL [4.1] A valid kernel state was rejected: %', SQLERRM;
 END $$;
 
--- Example of what a real test will look like (commented out):
---
--- DO $$
--- DECLARE
---   v_status text;
--- BEGIN
---   -- Create RFI in draft state
---   INSERT INTO rfis (id, project_id, title, status, created_by, created_at, updated_at)
---   VALUES ('test-rfi-sm', 'project-alpha', 'SM Test RFI', 'draft', 'alice', now(), now());
---
---   -- Valid transition: draft → open
---   UPDATE rfis SET status = 'open' WHERE id = 'test-rfi-sm';
---   SELECT status INTO v_status FROM rfis WHERE id = 'test-rfi-sm';
---   ASSERT v_status = 'open', 'Draft → open transition should succeed';
---
---   -- Invalid transition: open → closed (must go through under_review → answered first)
---   BEGIN
---     UPDATE rfis SET status = 'closed' WHERE id = 'test-rfi-sm';
---     RAISE EXCEPTION 'FAIL: open → closed should have been rejected';
---   EXCEPTION WHEN check_violation THEN
---     RAISE NOTICE 'PASS: Invalid transition open → closed rejected';
---   END;
---
---   -- Cleanup
---   DELETE FROM rfis WHERE id = 'test-rfi-sm';
--- END $$;
+-- Test 4.2: Invalid RFI status is rejected
+DO $$
+DECLARE
+  v_rfi_id uuid;
+BEGIN
+  INSERT INTO rfis (project_id, title, status, created_at, updated_at)
+  VALUES (
+    (SELECT id FROM projects LIMIT 1),
+    'Invalid State Test RFI',
+    'draft',
+    now(), now()
+  ) RETURNING id INTO v_rfi_id;
+
+  BEGIN
+    UPDATE rfis SET status = 'bogus_state' WHERE id = v_rfi_id;
+    -- If we get here, the CHECK didn't fire
+    DELETE FROM rfis WHERE id = v_rfi_id;
+    RAISE NOTICE 'FAIL [4.2] Invalid status "bogus_state" was accepted — CHECK constraint missing or broken';
+  EXCEPTION WHEN check_violation THEN
+    DELETE FROM rfis WHERE id = v_rfi_id;
+    RAISE NOTICE 'PASS [4.2] Invalid status "bogus_state" correctly rejected by CHECK';
+  END;
+END $$;
+
+-- Test 4.3: Default status is 'draft' (kernel entry point)
+DO $$
+DECLARE
+  v_status text;
+  v_rfi_id uuid;
+BEGIN
+  INSERT INTO rfis (project_id, title, created_at, updated_at)
+  VALUES (
+    (SELECT id FROM projects LIMIT 1),
+    'Default State Test RFI',
+    now(), now()
+  ) RETURNING id, status INTO v_rfi_id, v_status;
+
+  DELETE FROM rfis WHERE id = v_rfi_id;
+
+  IF v_status = 'draft' THEN
+    RAISE NOTICE 'PASS [4.3] Default rfis.status is ''draft'' (kernel entry point)';
+  ELSE
+    RAISE NOTICE 'FAIL [4.3] Default rfis.status is ''%'' — expected ''draft''', v_status;
+  END IF;
+END $$;
+
+-- Still deferred:
+DO $$
+BEGIN
+  RAISE NOTICE 'SKIP [4.4] Submittal state machine — blocked on submittal status widening';
+  RAISE NOTICE 'SKIP [4.5] Change order state machine — blocked on CO status widening';
+  RAISE NOTICE 'SKIP [4.6] Pay application state machine — blocked on pay app status widening';
+  RAISE NOTICE 'SKIP [4.7] Permit state machine — blocked on permit status widening';
+END $$;
