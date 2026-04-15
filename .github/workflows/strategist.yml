@@ -3,8 +3,6 @@ name: Weekly Strategist — Refresh Priorities
 # Sunday 10pm CDT (3am UTC Monday) — refreshes priorities
 # GUARDS against overwriting active TONIGHT.md mission
 on:
-  schedule:
-    - cron: '0 3 * * 1'
   workflow_dispatch:
 
 permissions:
