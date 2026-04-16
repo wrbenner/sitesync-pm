@@ -19,3 +19,4 @@ export { useDirectoryStore } from './directoryStore';
 export { useScheduleStore } from './scheduleStore';
 export { useActivityStore } from './activityStore';
 export { useLienWaiverStore } from './lienWaiverStore';
+export { usePunchItemStore } from './punchItemStore';

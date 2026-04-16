@@ -1,8 +1,8 @@
 {
-  "_comment": "Quality floors \u2014 these values can only improve, never regress. CI and immune-gate.sh enforce this. Updated automatically when metrics improve.",
+  "_comment": "Quality floors — these values can only improve, never regress. CI and immune-gate.sh enforce this. Updated automatically when metrics improve.",
   "_version": 2,
-  "_updated": "2026-04-12T12:14:00+00:00",
-  "_updatedBy": "manual \u2014 pre-governance errors acknowledged",
+  "_updated": "2026-04-16T11:16:47Z",
+  "_updatedBy": "organism",
   "bundleSizeKB": 1869,
   "coveragePercent": 43.2,
   "testCoverage": {
@@ -12,7 +12,7 @@
     "lines": 43.2
   },
   "tsErrors": 0,
-  "eslintErrors": 1036,
+  "eslintErrors": 943,
   "anyCount": 1,
   "mockCount": 7,
   "a11yViolations": 0,
@@ -24,7 +24,7 @@
   "testCount": 45,
   "migrationCount": 48,
   "_targets": {
-    "_comment": "Where we want to be in 6 months \u2014 the organism moves floor values toward these targets",
+    "_comment": "Where we want to be in 6 months — the organism moves floor values toward these targets",
     "coveragePercent": 70,
     "anyCount": 0,
     "mockCount": 0,
