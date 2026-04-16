@@ -1,7 +1,7 @@
 {
-  "coverage_pct": 7.0,
-  "tested_count": 28,
-  "untested_count": 374,
+  "coverage_pct": 7.7,
+  "tested_count": 31,
+  "untested_count": 372,
   "untested": [
     "src/pages/ProjectHealth.tsx",
     "src/pages/LienWaivers.tsx",

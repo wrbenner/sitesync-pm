@@ -1,8 +1,8 @@
 {
   "totals": {
     "mock_data": 0,
-    "hardcoded_colors": 404,
-    "files": 47
+    "hardcoded_colors": 402,
+    "files": 46
   },
   "files": [
     {
@@ -177,11 +177,6 @@
     },
     {
       "file": "src/components/budget/WaterfallChart.tsx",
-      "mock_data": 0,
-      "hardcoded_colors": 2
-    },
-    {
-      "file": "src/pages/Dashboard.tsx",
       "mock_data": 0,
       "hardcoded_colors": 2
     },

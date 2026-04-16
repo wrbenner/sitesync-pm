@@ -1,0 +1,29 @@
+{
+  "timestamp": "2026-04-16T06:56:56Z",
+  "eslint": {
+    "errors": 0,
+    "warnings": 0,
+    "floor": 1036
+  },
+  "typescript": {
+    "errors": 0
+  },
+  "quality": {
+    "issues": 0,
+    "untested_files": 0
+  },
+  "schema": {
+    "total_tables": 462,
+    "conformant": 105
+  },
+  "coverage": {
+    "floor_percent": 43.2
+  },
+  "bundle": {
+    "floor_kb": 1869
+  },
+  "organism": {
+    "open_prs": 0,
+    "recent_eval_passes": 5
+  }
+}
