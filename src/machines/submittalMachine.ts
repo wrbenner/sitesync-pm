@@ -97,7 +97,58 @@ export const submittalMachine = setup({
   },
 })
 
-// ── Valid Transitions ────────────────────────────────────
+// ── Role-Based Status Transitions (for service-layer validation) ─────────────
+
+/**
+ * Returns the target SubmittalState values that are valid for a given
+ * current status and user role. Used by submittalService.transitionStatus()
+ * to enforce server-side lifecycle rules.
+ *
+ * Role groups:
+ *   gc_roles        project_manager, superintendent, gc_member, admin, owner
+ *   architect_roles architect, designer, admin, owner
+ *   any_member      anyone with a project role can submit or start a revision
+ */
+export function getValidSubmittalStatusTransitions(
+  status: SubmittalState,
+  userRole: string = 'viewer',
+): SubmittalState[] {
+  const isGC = [
+    'project_manager',
+    'superintendent',
+    'gc_member',
+    'admin',
+    'owner',
+  ].includes(userRole)
+
+  const isArchitect = ['architect', 'designer', 'admin', 'owner'].includes(userRole)
+
+  const canClose = isGC || userRole === 'admin' || userRole === 'owner'
+
+  switch (status) {
+    case 'draft':
+      // Any project member (non-viewer) may submit the package
+      return userRole !== 'viewer' ? ['submitted'] : []
+    case 'submitted':
+      return isGC ? ['gc_review', 'rejected'] : []
+    case 'gc_review':
+      return isGC ? ['architect_review', 'rejected', 'resubmit'] : []
+    case 'architect_review':
+      return isArchitect ? ['approved', 'rejected', 'resubmit'] : []
+    case 'approved':
+      return canClose ? ['closed'] : []
+    case 'rejected':
+    case 'resubmit':
+      // Any project member may initiate a revision cycle
+      return userRole !== 'viewer' ? ['draft'] : []
+    case 'closed':
+      return []
+    default:
+      return []
+  }
+}
+
+// ── Valid Transitions (action labels for UI) ─────────────────────────────────
 
 export function getValidSubmittalTransitions(status: SubmittalState): string[] {
   const transitions: Record<SubmittalState, string[]> = {
