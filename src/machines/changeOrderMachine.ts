@@ -57,6 +57,39 @@ export const changeOrderMachine = setup({
   },
 })
 
+// ── Role-Based Status Transitions ───────────────────────
+//
+// Used by changeOrderService.transitionStatus() for server-side
+// role validation. Returns valid NEXT STATUSES (not action labels)
+// for the given current status and user role.
+//
+// Roles:
+//   admin / owner   — can approve, reject, void
+//   member          — can submit, resubmit, return to draft
+//   viewer          — read-only, no transitions
+
+export function getValidCOStatusTransitions(
+  status: ChangeOrderState,
+  role: string = 'viewer',
+): ChangeOrderState[] {
+  const isAdminOrOwner = role === 'admin' || role === 'owner'
+  const isMember = role === 'member' || isAdminOrOwner
+
+  const map: Record<ChangeOrderState, ChangeOrderState[]> = {
+    // Any project member can submit a draft
+    draft: isMember ? ['pending_review'] : [],
+    // Only admin/owner can approve, reject, or void from review
+    pending_review: isAdminOrOwner ? ['approved', 'rejected', 'void'] : [],
+    // Only admin/owner can void an approved CO
+    approved: isAdminOrOwner ? ['void'] : [],
+    // Any member can resubmit or return to draft for revision
+    rejected: isMember ? ['pending_review', 'draft'] : [],
+    void: [],
+  }
+
+  return map[status] ?? []
+}
+
 // ── Valid Transitions ────────────────────────────────────
 
 export function getValidCOTransitions(status: ChangeOrderState, coType?: ChangeOrderType): string[] {
