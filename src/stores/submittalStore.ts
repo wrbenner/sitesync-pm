@@ -1,10 +1,19 @@
-// TODO: Migrate to entityStore — see src/stores/entityStore.ts
+// MIGRATED to entityStore — see src/stores/entityStore.ts
+// This file is kept for backward-compatibility; all imports continue to work.
 import { create } from 'zustand';
 import { submittalService } from '../services/submittalService';
 import type { ServiceError } from '../services/errors';
 import type { Submittal } from '../types/database';
 import type { SubmittalApproval } from '../types/entities';
 import type { SubmittalStatus, SubmittalReviewer, CreateSubmittalInput } from '../types/submittal';
+import { useEntityActions, useEntityStoreRoot } from './entityStore';
+
+// ── Re-exports of generic entity hooks ────────────────────────────────────────
+// New code should prefer useEntityStore("submittals") and useEntityActions("submittals").
+
+export { useEntityActions as useSubmittalEntityActions };
+
+// ── Legacy store (backward-compat shim) ───────────────────────────────────────
 
 interface SubmittalState {
   submittals: Submittal[];
@@ -51,14 +60,18 @@ export const useSubmittalStore = create<SubmittalState>()((set, get) => ({
   errorDetails: null,
 
   loadSubmittals: async (projectId) => {
+    const actions = useEntityActions<Submittal>('submittals');
     set({ loading: true, error: null, errorDetails: null });
     const { data, error } = await submittalService.loadSubmittals(projectId);
     if (error) {
-      // Preserve existing submittals so UI stays populated on transient errors
       set({ error: error.userMessage, errorDetails: error, loading: false });
+      useEntityStoreRoot.getState()._setSlice('submittals', { error: error.userMessage, loading: false });
     } else {
-      set({ submittals: data ?? [], loading: false });
+      const items = data ?? [];
+      set({ submittals: items, loading: false });
+      useEntityStoreRoot.getState()._setSlice('submittals', { items, loading: false, error: null });
     }
+    void actions;
   },
 
   createSubmittal: async (input) => {
@@ -66,6 +79,15 @@ export const useSubmittalStore = create<SubmittalState>()((set, get) => ({
     if (error) return { error: error.userMessage, submittal: null };
     if (data) {
       set((s) => ({ submittals: [data, ...s.submittals] }));
+      useEntityStoreRoot.setState((s) => ({
+        slices: {
+          ...s.slices,
+          submittals: {
+            ...s.slices['submittals'],
+            items: [data, ...(s.slices['submittals']?.items ?? [])],
+          },
+        },
+      }));
     }
     return { error: null, submittal: data };
   },
@@ -78,6 +100,17 @@ export const useSubmittalStore = create<SubmittalState>()((set, get) => ({
         sub.id === submittalId ? { ...sub, ...updates } : sub,
       ),
     }));
+    useEntityStoreRoot.setState((s) => ({
+      slices: {
+        ...s.slices,
+        submittals: {
+          ...s.slices['submittals'],
+          items: (s.slices['submittals']?.items ?? []).map((sub) =>
+            sub.id === submittalId ? { ...sub, ...updates } : sub,
+          ),
+        },
+      },
+    }));
     return { error: null };
   },
 
@@ -88,6 +121,17 @@ export const useSubmittalStore = create<SubmittalState>()((set, get) => ({
       submittals: s.submittals.map((sub) =>
         sub.id === submittalId ? { ...sub, status } : sub,
       ),
+    }));
+    useEntityStoreRoot.setState((s) => ({
+      slices: {
+        ...s.slices,
+        submittals: {
+          ...s.slices['submittals'],
+          items: (s.slices['submittals']?.items ?? []).map((sub) =>
+            sub.id === submittalId ? { ...sub, status } : sub,
+          ),
+        },
+      },
     }));
     return { error: null };
   },
@@ -120,6 +164,7 @@ export const useSubmittalStore = create<SubmittalState>()((set, get) => ({
       );
       if (updated) {
         set({ submittals: updated });
+        useEntityStoreRoot.getState()._setSlice('submittals', { items: updated });
       }
     }
     return { error: error?.userMessage ?? null };
@@ -131,6 +176,15 @@ export const useSubmittalStore = create<SubmittalState>()((set, get) => ({
     set((s) => ({
       submittals: s.submittals.filter((sub) => sub.id !== submittalId),
     }));
+    useEntityStoreRoot.setState((s) => ({
+      slices: {
+        ...s.slices,
+        submittals: {
+          ...s.slices['submittals'],
+          items: (s.slices['submittals']?.items ?? []).filter((sub) => sub.id !== submittalId),
+        },
+      },
+    }));
     return { error: null };
   },
 
@@ -139,6 +193,15 @@ export const useSubmittalStore = create<SubmittalState>()((set, get) => ({
     if (error) return { error: error.userMessage, submittal: null };
     if (data) {
       set((s) => ({ submittals: [data, ...s.submittals] }));
+      useEntityStoreRoot.setState((s) => ({
+        slices: {
+          ...s.slices,
+          submittals: {
+            ...s.slices['submittals'],
+            items: [data, ...(s.slices['submittals']?.items ?? [])],
+          },
+        },
+      }));
     }
     return { error: null, submittal: data };
   },

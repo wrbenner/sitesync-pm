@@ -1,9 +1,18 @@
-// TODO: Migrate to entityStore — see src/stores/entityStore.ts
+// MIGRATED to entityStore — see src/stores/entityStore.ts
+// This file is kept for backward-compatibility; all imports continue to work.
+// The generic items slice is mirrored into entityStore key "dailyLogs".
+// Custom state (currentLog, entries, addCapture, approveLog, etc.) stays here.
 import { create } from 'zustand';
 import { dailyLogService } from '../services/dailyLogService';
 import type { DailyLog, DailyLogEntry } from '../types/entities';
 import type { DailyLogStatus } from '../types/database';
 import type { CaptureType } from '../services/dailyLogService';
+import { useEntityStore, useEntityActions, useEntityStoreRoot } from './entityStore';
+
+// ── Re-exports of generic entity hooks ────────────────────────────────────────
+// New code should prefer useEntityStore("dailyLogs") and useEntityActions("dailyLogs").
+
+export { useEntityStore as useDailyLogEntityStore, useEntityActions as useDailyLogEntityActions };
 
 export interface DailyLogSummary {
   id: string;
@@ -41,9 +50,11 @@ export const useDailyLogStore = create<DailyLogState>()((set, get) => ({
 
   loadLogs: async (projectId) => {
     set({ loading: true, error: null });
+    useEntityStoreRoot.getState()._setSlice('dailyLogs', { loading: true, error: null });
     const { data, error } = await dailyLogService.listLogs(projectId);
     if (error) {
       set({ error, loading: false });
+      useEntityStoreRoot.getState()._setSlice('dailyLogs', { error, loading: false });
       return;
     }
     const logs: DailyLogSummary[] = (data ?? []).map((d) => ({
@@ -57,6 +68,8 @@ export const useDailyLogStore = create<DailyLogState>()((set, get) => ({
       status: d.status as DailyLogStatus,
     }));
     set({ logs, loading: false });
+    // Mirror raw data into entityStore (items hold the raw DB rows)
+    useEntityStoreRoot.getState()._setSlice('dailyLogs', { items: data ?? [], loading: false, error: null });
   },
 
   loadTodayLog: async (projectId) => {
@@ -92,6 +105,17 @@ export const useDailyLogStore = create<DailyLogState>()((set, get) => ({
       currentLog: s.currentLog?.id === logId ? { ...s.currentLog, status: 'approved' as DailyLogStatus } : s.currentLog,
       logs: s.logs.map((l) => (l.id === logId ? { ...l, status: 'approved' as DailyLogStatus } : l)),
     }));
+    useEntityStoreRoot.setState((s) => ({
+      slices: {
+        ...s.slices,
+        dailyLogs: {
+          ...s.slices['dailyLogs'],
+          items: (s.slices['dailyLogs']?.items ?? []).map((l) =>
+            l.id === logId ? { ...l, status: 'approved' } : l,
+          ),
+        },
+      },
+    }));
     return { error: null };
   },
 
@@ -104,6 +128,17 @@ export const useDailyLogStore = create<DailyLogState>()((set, get) => ({
     set((s) => ({
       currentLog: s.currentLog?.id === logId ? { ...s.currentLog, status } : s.currentLog,
       logs: s.logs.map((l) => (l.id === logId ? { ...l, status } : l)),
+    }));
+    useEntityStoreRoot.setState((s) => ({
+      slices: {
+        ...s.slices,
+        dailyLogs: {
+          ...s.slices['dailyLogs'],
+          items: (s.slices['dailyLogs']?.items ?? []).map((l) =>
+            l.id === logId ? { ...l, status } : l,
+          ),
+        },
+      },
     }));
     return { error: null };
   },

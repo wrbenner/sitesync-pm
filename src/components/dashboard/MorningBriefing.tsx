@@ -10,7 +10,8 @@ import { useAuth } from '../../hooks/useAuth';
 import { useProjectId } from '../../hooks/useProjectId';
 import { useProject } from '../../hooks/queries';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
-import { useRfiStore } from '../../stores/rfiStore';
+import { useEntityStore } from '../../stores/entityStore';
+import type { RFI } from '../../types/database';
 import { useScheduleStore } from '../../stores/scheduleStore';
 import { fetchWeatherForProject } from '../../lib/weather';
 import type { WeatherSnapshot } from '../../lib/weather';
@@ -133,9 +134,9 @@ export const MorningBriefing: React.FC = () => {
   const { data: project } = useProject(projectId);
   const reducedMotion = useReducedMotion();
 
-  // Stores
-  const rfis = useRfiStore((s) => s.rfis);
-  const rfiLoading = useRfiStore((s) => s.loading);
+  // Stores — migrated to entityStore (key: "rfis")
+  const { items: _rfiItems, loading: rfiLoading } = useEntityStore('rfis');
+  const rfis = _rfiItems as RFI[];
   const phases = useScheduleStore((s) => s.phases);
   const scheduleMetrics = useScheduleStore((s) => s.metrics);
 

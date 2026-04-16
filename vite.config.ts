@@ -44,7 +44,7 @@ export default defineConfig(({ mode }) => {
             if (id.includes('/@react-pdf/') || id.includes('/pdfjs-dist/')) return 'vendor-pdf'
             if (id.includes('/maplibre-gl/') || id.includes('/react-map-gl/')) return 'vendor-maps'
             if (id.includes('/@tiptap/') || id.includes('/prosemirror') || id.includes('/yjs/')) return 'vendor-editor'
-            if (id.includes('/@nivo/') || id.includes('/d3-')) return 'vendor-charts'
+            if (id.includes('/recharts/') || id.includes('/d3-')) return 'vendor-charts'
             if (id.includes('/@dnd-kit/')) return 'vendor-dndkit'
             if (id.includes('/@liveblocks/')) return 'vendor-liveblocks'
             if (id.includes('/tesseract/')) return 'vendor-ocr'

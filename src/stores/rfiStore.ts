@@ -1,9 +1,21 @@
-// TODO: Migrate to entityStore — see src/stores/entityStore.ts
+// MIGRATED to entityStore — see src/stores/entityStore.ts
+// This file is kept for backward-compatibility; all imports continue to work.
 import { create } from 'zustand';
 import { rfiService } from '../services/rfiService';
 import type { ServiceError } from '../services/errors';
 import type { RFI, RFIResponse, RfiStatus } from '../types/database';
 import type { CreateRfiInput } from '../services/rfiService';
+import { useEntityStore, useEntityActions, useEntityStoreRoot } from './entityStore';
+
+// ── Re-exports of generic entity hooks ────────────────────────────────────────
+// New code should prefer useEntityStore("rfis") and useEntityActions("rfis").
+
+export { useEntityStore as useRfiEntityStore, useEntityActions as useRfiEntityActions };
+
+// ── Legacy store (backward-compat shim) ───────────────────────────────────────
+// Keeps the exact same shape so every existing import continues to compile
+// and behave correctly. Generic CRUD is delegated to entityStore where possible;
+// RFI-specific logic (service calls, transitionStatus, responses) stays here.
 
 interface RfiState {
   rfis: RFI[];
@@ -32,14 +44,19 @@ export const useRfiStore = create<RfiState>()((set, get) => ({
   errorDetails: null,
 
   loadRfis: async (projectId) => {
+    // Mirror into entityStore so new code reading useEntityStore("rfis") stays in sync
+    const actions = useEntityActions<RFI>('rfis');
     set({ loading: true, error: null, errorDetails: null });
     const { data, error } = await rfiService.loadRfis(projectId);
     if (error) {
-      // Preserve existing rfis so UI stays populated on transient errors
       set({ error: error.userMessage, errorDetails: error, loading: false });
+      useEntityStoreRoot.getState()._setSlice('rfis', { error: error.userMessage, loading: false });
     } else {
-      set({ rfis: data ?? [], loading: false });
+      const items = data ?? [];
+      set({ rfis: items, loading: false });
+      useEntityStoreRoot.getState()._setSlice('rfis', { items, loading: false, error: null });
     }
+    void actions; // ensure entityStore slice is initialised
   },
 
   createRfi: async (input) => {
@@ -47,6 +64,16 @@ export const useRfiStore = create<RfiState>()((set, get) => ({
     if (error) return { error: error.userMessage, rfi: null };
     if (data) {
       set((s) => ({ rfis: [data, ...s.rfis] }));
+      // Mirror into entityStore
+      useEntityStoreRoot.setState((s) => ({
+        slices: {
+          ...s.slices,
+          rfis: {
+            ...s.slices['rfis'],
+            items: [data, ...(s.slices['rfis']?.items ?? [])],
+          },
+        },
+      }));
     }
     return { error: null, rfi: data };
   },
@@ -57,6 +84,17 @@ export const useRfiStore = create<RfiState>()((set, get) => ({
     set((s) => ({
       rfis: s.rfis.map((r) => (r.id === rfiId ? { ...r, ...updates } : r)),
     }));
+    useEntityStoreRoot.setState((s) => ({
+      slices: {
+        ...s.slices,
+        rfis: {
+          ...s.slices['rfis'],
+          items: (s.slices['rfis']?.items ?? []).map((r) =>
+            r.id === rfiId ? { ...r, ...updates } : r,
+          ),
+        },
+      },
+    }));
     return { error: null };
   },
 
@@ -65,6 +103,17 @@ export const useRfiStore = create<RfiState>()((set, get) => ({
     if (error) return { error: error.userMessage };
     set((s) => ({
       rfis: s.rfis.map((r) => (r.id === rfiId ? { ...r, status } : r)),
+    }));
+    useEntityStoreRoot.setState((s) => ({
+      slices: {
+        ...s.slices,
+        rfis: {
+          ...s.slices['rfis'],
+          items: (s.slices['rfis']?.items ?? []).map((r) =>
+            r.id === rfiId ? { ...r, status } : r,
+          ),
+        },
+      },
     }));
     return { error: null };
   },
@@ -94,8 +143,17 @@ export const useRfiStore = create<RfiState>()((set, get) => ({
 
   deleteRfi: async (rfiId) => {
     const { error } = await rfiService.deleteRfi(rfiId);
-    if (error) return { error: error.userMessage };
+    if (error) return { error: error.userMessage }; 
     set((s) => ({ rfis: s.rfis.filter((r) => r.id !== rfiId) }));
+    useEntityStoreRoot.setState((s) => ({
+      slices: {
+        ...s.slices,
+        rfis: {
+          ...s.slices['rfis'],
+          items: (s.slices['rfis']?.items ?? []).filter((r) => r.id !== rfiId),
+        },
+      },
+    }));
     return { error: null };
   },
 

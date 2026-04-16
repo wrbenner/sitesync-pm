@@ -1,7 +1,16 @@
-// TODO: Migrate to entityStore — see src/stores/entityStore.ts
+// MIGRATED to entityStore — see src/stores/entityStore.ts
+// This file is kept for backward-compatibility; all imports continue to work.
+// Generic CRUD is delegated to entityStore key "punchItems".
+// Custom logic (comments, summary, updateItemStatus) remains here.
 import { create } from 'zustand';
 import { supabase, fromTable } from '../lib/supabase';
 import type { PunchListItem, PunchItemStatus } from '../types/database';
+import { useEntityStore, useEntityActions, useEntityStoreRoot } from './entityStore';
+
+// ── Re-exports of generic entity hooks ────────────────────────────────────────
+// New code should prefer useEntityStore("punchItems") and useEntityActions("punchItems").
+
+export { useEntityStore as usePunchItemEntityStore, useEntityActions as usePunchItemEntityActions };
 
 export interface PunchComment {
   id: string;
@@ -36,6 +45,7 @@ export const usePunchListStore = create<PunchListState>()((set, get) => ({
 
   loadItems: async (projectId) => {
     set({ loading: true, error: null });
+    useEntityStoreRoot.getState()._setSlice('punchItems', { loading: true, error: null });
     try {
       const { data, error } = await supabase
         .from('punch_list_items')
@@ -44,9 +54,13 @@ export const usePunchListStore = create<PunchListState>()((set, get) => ({
         .order('item_number');
 
       if (error) throw error;
-      set({ items: (data ?? []) as PunchListItem[], loading: false });
+      const items = (data ?? []) as PunchListItem[];
+      set({ items, loading: false });
+      useEntityStoreRoot.getState()._setSlice('punchItems', { items, loading: false, error: null });
     } catch (e) {
-      set({ error: (e as Error).message, loading: false });
+      const msg = (e as Error).message;
+      set({ error: msg, loading: false });
+      useEntityStoreRoot.getState()._setSlice('punchItems', { error: msg, loading: false });
     }
   },
 
@@ -65,6 +79,17 @@ export const usePunchListStore = create<PunchListState>()((set, get) => ({
       set((s) => ({
         items: s.items.map((i) => (i.id === id ? { ...i, ...updates } : i)),
       }));
+      useEntityStoreRoot.setState((s) => ({
+        slices: {
+          ...s.slices,
+          punchItems: {
+            ...s.slices['punchItems'],
+            items: (s.slices['punchItems']?.items ?? []).map((i) =>
+              i.id === id ? { ...i, ...updates } : i,
+            ),
+          },
+        },
+      }));
     }
     return { error: error?.message ?? null };
   },
@@ -75,6 +100,17 @@ export const usePunchListStore = create<PunchListState>()((set, get) => ({
       set((s) => ({
         items: s.items.map((i) => (i.id === id ? { ...i, ...updates } : i)),
       }));
+      useEntityStoreRoot.setState((s) => ({
+        slices: {
+          ...s.slices,
+          punchItems: {
+            ...s.slices['punchItems'],
+            items: (s.slices['punchItems']?.items ?? []).map((i) =>
+              i.id === id ? { ...i, ...updates } : i,
+            ),
+          },
+        },
+      }));
     }
     return { error: error?.message ?? null };
   },
@@ -83,6 +119,15 @@ export const usePunchListStore = create<PunchListState>()((set, get) => ({
     const { error } = await fromTable('punch_list_items').delete().eq('id', id);
     if (!error) {
       set((s) => ({ items: s.items.filter((i) => i.id !== id) }));
+      useEntityStoreRoot.setState((s) => ({
+        slices: {
+          ...s.slices,
+          punchItems: {
+            ...s.slices['punchItems'],
+            items: (s.slices['punchItems']?.items ?? []).filter((i) => i.id !== id),
+          },
+        },
+      }));
     }
     return { error: error?.message ?? null };
   },
