@@ -95,11 +95,7 @@ describe('dailyLogService.loadTodayLog', () => {
     const newLog = { id: 'log-new', project_id: 'proj-1', log_date: TODAY, status: 'draft' }
     mockSingle.mockResolvedValue({ data: newLog, error: null })
 
-    let callCount = 0
-    mockFrom.mockImplementation(() => {
-      callCount++
-      return makeChain()
-    })
+    mockFrom.mockImplementation(() => makeChain())
 
     const result = await dailyLogService.loadTodayLog('proj-1')
 
@@ -250,23 +246,38 @@ describe('dailyLogService.approveLog', () => {
 
   it('marks log as approved with user and timestamp', async () => {
     session('u-approver')
-    const chain = makeChain()
-    chain.eq.mockResolvedValue({ error: null })
-    mockFrom.mockReturnValue(chain)
+    // 1) fetch log status, 2) resolve project role, 3) update
+    mockSingle
+      .mockResolvedValueOnce({ data: { status: 'submitted', project_id: 'proj-1' }, error: null })
+      .mockResolvedValueOnce({ data: { role: 'project_manager' }, error: null })
+    const updateChain = makeChain()
+    updateChain.eq.mockResolvedValue({ error: null })
+    const selectLogChain = makeChain()
+    const selectRoleChain = makeChain()
+    mockFrom
+      .mockReturnValueOnce(selectLogChain)
+      .mockReturnValueOnce(selectRoleChain)
+      .mockReturnValueOnce(updateChain)
 
     const result = await dailyLogService.approveLog('log-1')
 
     expect(result.error).toBeNull()
-    expect(chain.update).toHaveBeenCalledWith(
+    expect(updateChain.update).toHaveBeenCalledWith(
       expect.objectContaining({ status: 'approved', approved: true, approved_by: 'u-approver' })
     )
   })
 
   it('returns error on failure', async () => {
     session('u-1')
-    const chain = makeChain()
-    chain.eq.mockResolvedValue({ error: { message: 'permission denied' } })
-    mockFrom.mockReturnValue(chain)
+    mockSingle
+      .mockResolvedValueOnce({ data: { status: 'submitted', project_id: 'proj-1' }, error: null })
+      .mockResolvedValueOnce({ data: { role: 'project_manager' }, error: null })
+    const updateChain = makeChain()
+    updateChain.eq.mockResolvedValue({ error: { message: 'permission denied' } })
+    mockFrom
+      .mockReturnValueOnce(makeChain())
+      .mockReturnValueOnce(makeChain())
+      .mockReturnValueOnce(updateChain)
 
     const result = await dailyLogService.approveLog('log-1')
 
@@ -309,14 +320,21 @@ describe('dailyLogService.updateStatus', () => {
   beforeEach(() => vi.clearAllMocks())
 
   it('updates status field', async () => {
-    const chain = makeChain()
-    chain.eq.mockResolvedValue({ error: null })
-    mockFrom.mockReturnValue(chain)
+    session('u-1')
+    mockSingle
+      .mockResolvedValueOnce({ data: { status: 'draft', project_id: 'proj-1' }, error: null })
+      .mockResolvedValueOnce({ data: { role: 'project_manager' }, error: null })
+    const updateChain = makeChain()
+    updateChain.eq.mockResolvedValue({ error: null })
+    mockFrom
+      .mockReturnValueOnce(makeChain())
+      .mockReturnValueOnce(makeChain())
+      .mockReturnValueOnce(updateChain)
 
     const result = await dailyLogService.updateStatus('log-1', 'submitted')
 
     expect(result.error).toBeNull()
-    expect(chain.update).toHaveBeenCalledWith(
+    expect(updateChain.update).toHaveBeenCalledWith(
       expect.objectContaining({ status: 'submitted' })
     )
   })

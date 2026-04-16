@@ -305,8 +305,8 @@ describe('getUsageSummary', () => {
 
   it('aggregates events by event_type', async () => {
     const events = [
-      { event_type: 'ai_page_processed', quantity: 3, unit_price: 0.10 },
-      { event_type: 'ai_page_processed', quantity: 2, unit_price: 0.10 },
+      { event_type: 'ai_page_processed', quantity: 3, unit_price: 10 },
+      { event_type: 'ai_page_processed', quantity: 2, unit_price: 10 },
       { event_type: 'report_generated', quantity: 1, unit_price: 0 },
     ]
     const chain = makeChain(events)
@@ -318,7 +318,7 @@ describe('getUsageSummary', () => {
 
     const aiEntry = summary.find((s) => s.eventType === 'ai_page_processed')
     expect(aiEntry?.totalQuantity).toBe(5)
-    expect(aiEntry?.totalAmount).toBeCloseTo(0.5)
+    expect(aiEntry?.totalAmount).toBe(50)
 
     const reportEntry = summary.find((s) => s.eventType === 'report_generated')
     expect(reportEntry?.totalQuantity).toBe(1)

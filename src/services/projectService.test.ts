@@ -122,7 +122,6 @@ describe('projectService.createProject', () => {
     })
 
     let insertArg: Record<string, unknown> | null = null
-    const origMockFrom = mockFrom.getMockImplementation()
     callCount = 0
     mockFrom.mockImplementation((table: string) => {
       callCount++

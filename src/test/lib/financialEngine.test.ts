@@ -556,9 +556,9 @@ describe('compute13WeekCashFlow', () => {
       makeDivision({ budget: 520_000, committed: 400_000 }), // uncommitted = 120_000
     ]
     const rows = compute13WeekCashFlow([], [], divisions, 0.10, 30, 30)
-    const weeklyBurn = 120_000 / 13
+    const weeklyBurn = Math.round(120_000 / 13)
     for (const row of rows) {
-      expect(row.outflow).toBeCloseTo(weeklyBurn, 5)
+      expect(row.outflow).toBe(weeklyBurn)
     }
   })
 })

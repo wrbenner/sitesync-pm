@@ -142,7 +142,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = React.memo(({ item, onC
       )}
     </div>
   );
-};
+});
 
 interface GroupedMetaProps {
   type: string;
@@ -201,5 +201,5 @@ function GroupedMeta({ type, color, timestamp, preview, photoGradient, commentCo
       </div>
     </>
   );
-});
+}
 ActivityCard.displayName = 'ActivityCard';
