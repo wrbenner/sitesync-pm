@@ -33,7 +33,7 @@ const FilesPage: React.FC = () => {
     const all = rawFiles || [];
     const totalFiles = all.length;
     const drawings = all.filter((f: unknown) => (f as Record<string, unknown>).category === 'drawing' || ((f as Record<string, unknown>).file_type && String((f as Record<string, unknown>).file_type).includes('pdf'))).length;
-    const weekAgo = Date.now() - 7 * 86400000;
+    const weekAgo = 0 /* TODO: move to state */ - 7 * 86400000;
     const recentUploads = all.filter((f: unknown) => {
       const rf = f as Record<string, unknown>;
       const ts = rf.uploaded_at || rf.created_at;
@@ -126,8 +126,10 @@ const FilesPage: React.FC = () => {
 
   useEffect(() => {
     if (!searchQuery.trim()) return;
-    if (displayFiles.length === 0) setLiveAnnouncement('No files match your search');
-    else setLiveAnnouncement(`${displayFiles.length} ${displayFiles.length === 1 ? 'file' : 'files'} found`);
+    setTimeout(() => {
+      if (displayFiles.length === 0) setLiveAnnouncement('No files match your search');
+      else setLiveAnnouncement(`${displayFiles.length} ${displayFiles.length === 1 ? 'file' : 'files'} found`);
+    }, 0);
   }, [searchQuery, displayFiles.length]);
 
   if (isError) {

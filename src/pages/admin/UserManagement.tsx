@@ -32,12 +32,6 @@ export function UserManagement() {
   const [inviteSuccess, setInviteSuccess] = useState(false);
   const [members, setMembers] = useState<Profile[]>([]);
 
-  // Load company members
-  React.useEffect(() => {
-    const timer = setTimeout(() => loadMembers(), 0);
-    return () => clearTimeout(timer);
-  }, [company?.id]);
-
   const loadMembers = async () => {
     if (!company?.id) return;
 
@@ -49,6 +43,13 @@ export function UserManagement() {
 
     if (data) setMembers(data as Profile[]);
   };
+
+  // Load company members
+  React.useEffect(() => {
+    const timer = setTimeout(() => loadMembers(), 0);
+    return () => clearTimeout(timer);
+  }, [company?.id]);
+
 
   const handleInvite = async () => {
     if (!inviteEmail || !company?.id) return;

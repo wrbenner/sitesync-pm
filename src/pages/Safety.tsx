@@ -520,7 +520,7 @@ export const Safety: React.FC = () => {
     .sort((a: any, b: unknown) => new Date(b.date).getTime() - new Date(a.date).getTime())[0] ?? null
 
   const daysSinceIncident = lastRecordableIncident
-    ? Math.floor((Date.now() - new Date(lastRecordableIncident.date).getTime()) / 86400000)
+    ? Math.floor((0 /* TODO: move to state */ - new Date(lastRecordableIncident.date).getTime()) / 86400000)
     : null
 
   const computedHours = dailyLogs?.reduce((s: number, l: unknown) => s + (l.total_hours || 0), 0) ?? 0

@@ -8,11 +8,12 @@ const RECENT_MS = 48 * 60 * 60 * 1000;
 
 // RevisionBadge: amber when revision > 0, red when issued within 48h
 export const RevisionBadge: React.FC<{ revision: DrawingRevision }> = ({ revision }) => {
+  const [nowMs] = useState(() => Date.now());
   const isRecent = useMemo(() =>
     revision.issued_date
-      ? Date.now() - new Date(revision.issued_date).getTime() < RECENT_MS
+      ? nowMs - new Date(revision.issued_date).getTime() < RECENT_MS
       : false,
-  [revision.issued_date]);
+  [revision.issued_date, nowMs]);
 
   const bg = isRecent
     ? colors.statusCriticalSubtle

@@ -16,18 +16,21 @@ export const PhotoComparison: React.FC<PhotoComparisonProps> = ({ photos }) => {
   const [sliderPos, setSliderPos] = useState(50)
   const [mode, setMode] = useState<'slider' | 'side-by-side'>('side-by-side')
   const sliderRef = useRef<HTMLDivElement>(null)
-  const isDragging = useRef(false)
+  const isDraggingRef = useRef(false)
+  const [isDraggingState, setIsDraggingState] = useState(false)
 
   const handleMouseDown = useCallback(() => {
-    isDragging.current = true
+    isDraggingRef.current = true
+    setIsDraggingState(true)
   }, [])
 
   const handleMouseUp = useCallback(() => {
-    isDragging.current = false
+    isDraggingRef.current = false
+    setIsDraggingState(false)
   }, [])
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!isDragging.current || !sliderRef.current) return
+    if (!isDraggingRef.current || !sliderRef.current) return
     const rect = sliderRef.current.getBoundingClientRect()
     const x = ((e.clientX - rect.left) / rect.width) * 100
     setSliderPos(Math.max(5, Math.min(95, x)))
@@ -198,7 +201,7 @@ export const PhotoComparison: React.FC<PhotoComparisonProps> = ({ photos }) => {
             borderRadius: borderRadius.lg,
             overflow: 'hidden',
             height: 320,
-            cursor: isDragging.current ? 'col-resize' : 'default',
+            cursor: isDraggingState ? 'col-resize' : 'default',
             userSelect: 'none',
           }}
         >

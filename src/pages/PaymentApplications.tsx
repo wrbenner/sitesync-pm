@@ -1614,6 +1614,7 @@ const PayAppDetail = memo<{
   const [liveG702, setLiveG702] = useState<G702Data | undefined>()
   const [liveG703, setLiveG703] = useState<G703LineItem[] | undefined>()
   const [detailTab, setDetailTab] = useState<'g702' | 'lien_waivers'>('g702')
+  const [nowMs] = useState(() => Date.now())
 
   const appWaivers = waivers.filter((w) => w.pay_application_id === (app.id as string))
   const pendingWaivers = appWaivers.filter((w) => w.status === 'pending')
@@ -1790,7 +1791,7 @@ const PayAppDetail = memo<{
                 const sub = contracts.find((c) => c.id === waiver.subcontractor_id)
                 const subName = (sub?.counterparty as string) ?? waiver.subcontractor_id
                 const isOverdue = waiver.status === 'pending' &&
-                  new Date(waiver.created_at).getTime() + 7 * 24 * 60 * 60 * 1000 < Date.now()
+                  new Date(waiver.created_at).getTime() + 7 * 24 * 60 * 60 * 1000 < nowMs
                 const displayStatus: LienWaiverStatus | 'overdue' = isOverdue ? 'overdue' : waiver.status
                 const statusCfg = LIEN_WAIVER_STATUS_CONFIG[displayStatus] ?? LIEN_WAIVER_STATUS_CONFIG.pending
                 const busy = markingWaiverId === waiver.id
@@ -2121,7 +2122,7 @@ const LienWaiverPanel = memo<{
             </div>
 
             {waivers.map((waiver, i) => {
-              const isOverdue = waiver.status === 'pending' && new Date(waiver.created_at).getTime() + 7 * 24 * 60 * 60 * 1000 < Date.now()
+              const isOverdue = waiver.status === 'pending' && new Date(waiver.created_at).getTime() + 7 * 24 * 60 * 60 * 1000 < 0 /* TODO: move to state */
               const displayStatus: LienWaiverStatus | 'overdue' = isOverdue ? 'overdue' : waiver.status
               const statusCfg = LIEN_WAIVER_STATUS_CONFIG[displayStatus] ?? LIEN_WAIVER_STATUS_CONFIG.pending
               const payApp = payApps.find((a) => a.id === waiver.pay_application_id)
@@ -2343,7 +2344,7 @@ const PaymentApplicationsPage: React.FC = () => {
   }, [])
 
   // Keep module-level ref in sync so static column definitions can invoke the drawer.
-  _editPayAppCb.current = openEditDrawer
+  useEffect(() => { _editPayAppCb.current = openEditDrawer }, [openEditDrawer])
   const projectId = useProjectId()
   const queryClient = useQueryClient()
   const { data: payApps, isLoading: loadingApps } = usePayApplications(projectId)

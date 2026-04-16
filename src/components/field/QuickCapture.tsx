@@ -108,53 +108,56 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
   // Apply AI analysis results when ready
   useEffect(() => {
     if (analysisState === 'ready' && analysisResult) {
-      startTransition(() => { setCaption(analysisResult.summary); });
       const allTags = [...new Set([
         ...analysisResult.suggestedTags,
         ...analysisResult.materials,
         ...analysisResult.equipment,
       ])];
-      setAiTags(allTags);
-
-      // Critical violations have confidence > 0.7 by severity definition
       const criticalViolation = analysisResult.safetyViolations.find(v => v.severity === 'critical');
-      if (criticalViolation) {
-        setSafetyAlertBlock({
-          ui_type: 'safety_alert',
-          alert_id: crypto.randomUUID(),
-          severity: 'critical',
-          title: criticalViolation.type,
-          description: criticalViolation.description,
-          location: criticalViolation.location,
-          reported_by: 'Field App',
-          timestamp: new Date().toISOString(),
-          status: 'open',
-          recommended_actions: analysisResult.ppeCompliance.violations.length > 0
-            ? analysisResult.ppeCompliance.violations.map(v => `Address PPE violation: ${v}`)
-            : ['Stop work in affected area', 'Notify site safety officer immediately'],
-          photo_url: capturedImage || undefined,
-        });
-      }
+      setTimeout(() => {
+        startTransition(() => { setCaption(analysisResult.summary); });
+        setAiTags(allTags);
+        if (criticalViolation) {
+          setSafetyAlertBlock({
+            ui_type: 'safety_alert',
+            alert_id: crypto.randomUUID(),
+            severity: 'critical',
+            title: criticalViolation.type,
+            description: criticalViolation.description,
+            location: criticalViolation.location,
+            reported_by: 'Field App',
+            timestamp: new Date().toISOString(),
+            status: 'open',
+            recommended_actions: analysisResult.ppeCompliance.violations.length > 0
+              ? analysisResult.ppeCompliance.violations.map(v => `Address PPE violation: ${v}`)
+              : ['Stop work in affected area', 'Notify site safety officer immediately'],
+            photo_url: capturedImage || undefined,
+          });
+        }
+      }, 0);
     }
   }, [analysisState, analysisResult, capturedImage]);
 
   // Reset on close
   useEffect(() => {
     if (!open) {
-      setCapturedImage(null);
-      setStep('capture');
-      setCategory('progress');
-      setLocationText('');
-      setRelatedItem('');
-      setNotes('');
-      setTranscript('');
-      setQrData(null);
-      setRecording(false);
-      setElapsed(0);
-      setCaption('');
-      setAiTags([]);
-      setSafetyAlertBlock(null);
-      resetAnalysis();
+      const timer = setTimeout(() => {
+        setCapturedImage(null);
+        setStep('capture');
+        setCategory('progress');
+        setLocationText('');
+        setRelatedItem('');
+        setNotes('');
+        setTranscript('');
+        setQrData(null);
+        setRecording(false);
+        setElapsed(0);
+        setCaption('');
+        setAiTags([]);
+        setSafetyAlertBlock(null);
+        resetAnalysis();
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [open, resetAnalysis]);
 

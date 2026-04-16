@@ -80,6 +80,8 @@ const FilesPage: React.FC = () => {
   const createFile = useCreateFile();
   const { hasPermission } = usePermissions();
   const { data: rawFiles, isPending: loading, isError, error, refetch } = useFiles(projectId);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [nowMs] = useState(() => Date.now());
 
   const files = useMemo(() =>
     (rawFiles || []).map(f => ({
@@ -94,14 +96,14 @@ const FilesPage: React.FC = () => {
     const all = rawFiles || [];
     const totalFiles = all.length;
     const drawings = all.filter((f: unknown) => f.category === 'drawing' || (f.file_type && String(f.file_type).includes('pdf'))).length;
-    const weekAgo = Date.now() - 7 * 86400000;
+    const weekAgo = nowMs - 7 * 86400000;
     const recentUploads = all.filter((f: unknown) => {
       const ts = f.uploaded_at || f.created_at;
       return ts && new Date(ts).getTime() > weekAgo;
     }).length;
     const totalBytes = all.reduce((sum: number, f: unknown) => sum + (f.file_size_bytes || 0), 0);
     return { totalFiles, drawings, recentUploads, totalBytes };
-  }, [rawFiles]);
+  }, [rawFiles, nowMs]);
 
   // ── Accessibility live region ─────────────────────────
   const [liveAnnouncement, setLiveAnnouncement] = useState('');
@@ -170,9 +172,6 @@ const FilesPage: React.FC = () => {
       addToast('success', `Moved "${source.name}" into "${target.name}"`);
     }
   }, [files, addToast]);
-
-  // ── Row selection ─────────────────────────────────────
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // ── Folder picker modal for "Move to Folder" ─────────
   const [folderPickerOpen, setFolderPickerOpen] = useState(false);
@@ -279,11 +278,11 @@ const FilesPage: React.FC = () => {
   // ── Announce search result counts ─────────────────────
   useEffect(() => {
     if (!searchQuery.trim()) return;
-    if (displayFiles.length === 0) {
-      setLiveAnnouncement('No files match your search');
-    } else {
-      setLiveAnnouncement(`${displayFiles.length} ${displayFiles.length === 1 ? 'file' : 'files'} found`);
-    }
+    const msg = displayFiles.length === 0
+      ? 'No files match your search'
+      : `${displayFiles.length} ${displayFiles.length === 1 ? 'file' : 'files'} found`;
+    const timer = setTimeout(() => setLiveAnnouncement(msg), 0);
+    return () => clearTimeout(timer);
   }, [searchQuery, displayFiles.length]);
 
   // ── File click handler ────────────────────────────────

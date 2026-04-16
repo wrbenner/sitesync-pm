@@ -42,10 +42,11 @@ export const AIInsightsWidget: React.FC = React.memo(() => {
   const mostRecentCreatedAt = rawInsights.length > 0
     ? rawInsights.reduce((latest, i) => (i.createdAt > latest ? i.createdAt : latest), rawInsights[0].createdAt)
     : null;
-  const nowMsRef = useRef(0);
+  const [mountedAt] = useState(() => Date.now());
+  const mountedAtRef = useRef(mountedAt);
   const [isStale, setIsStale] = useState(false);
   useEffect(() => {
-    const now = nowMsRef.current;
+    const now = mountedAtRef.current;
     if (mostRecentCreatedAt) {
       setIsStale(now - new Date(mostRecentCreatedAt).getTime() > STALENESS_THRESHOLD_MS);
     } else {

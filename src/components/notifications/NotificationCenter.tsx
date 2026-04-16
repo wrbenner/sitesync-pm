@@ -434,7 +434,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ onClose })
   const handleClickNotification = (notification: unknown) => {
     handleMarkRead(notification.id);
     if (notification.link) {
-      window.location.hash = `#${notification.link}`;
+      window.location.assign(`#${notification.link}`);
       onClose();
     }
   };

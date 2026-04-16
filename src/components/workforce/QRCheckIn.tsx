@@ -433,11 +433,12 @@ const SwipeToCheckOutRow = memo<{
   const [translateX, setTranslateX] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
   const startXRef = useRef(0)
+  const [nowMs] = useState(() => Date.now())
 
   const checkInTime = new Date(record.checkInAt).toLocaleTimeString('en-US', {
     hour: 'numeric', minute: '2-digit',
   })
-  const elapsedMin = Math.round((Date.now() - new Date(record.checkInAt).getTime()) / 60000)
+  const elapsedMin = Math.round((nowMs - new Date(record.checkInAt).getTime()) / 60000)
   const elapsedLabel = record.checkOutAt
     ? `${record.hoursOnSite}h total`
     : elapsedMin < 60

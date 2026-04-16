@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { Grid, List, Search, Download, FolderInput, Trash2, Link2, Sparkles } from 'lucide-react';
-import { Card, Btn } from '../../components/Primitives';
+import { Card } from '../../components/Primitives';
 import { DataTable, createColumnHelper } from '../../components/shared/DataTable';
 import { BulkActionBar, FolderPickerModal } from '../../components/shared/BulkActionBar';
 import { FolderBreadcrumbs } from '../../components/Breadcrumbs';

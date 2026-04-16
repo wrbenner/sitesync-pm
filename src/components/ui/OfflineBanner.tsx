@@ -410,11 +410,14 @@ const QueuedItemsSheet: React.FC<{
 
   useEffect(() => {
     if (open) {
-      setLoading(true);
-      getPendingMutations().then((m) => {
-        setMutations(m);
-        setLoading(false);
-      });
+      const timer = setTimeout(() => {
+        setLoading(true);
+        getPendingMutations().then((m) => {
+          setMutations(m);
+          setLoading(false);
+        });
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [open]);
 
