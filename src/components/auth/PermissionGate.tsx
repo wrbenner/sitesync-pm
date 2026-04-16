@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { usePermissions } from '../../hooks/usePermissions';
 import type { Permission, ProjectRole } from '../../hooks/usePermissions';
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
@@ -99,7 +100,7 @@ export const RequestAccessPage: React.FC<{ moduleName?: string }> = ({ moduleNam
           You don't have permission to access {moduleName || 'this section'}. Your current role is {role || 'unknown'}.
         </p>
         <button
-          onClick={() => alert('Access request sent to your project administrator')}
+          onClick={() => toast.success('Access request sent to your project administrator')}
           style={{
             backgroundColor: colors.primary,
             color: 'white',

@@ -5,6 +5,7 @@ import { Btn } from '../Primitives'
 import { colors, spacing, typography, borderRadius } from '../../styles/theme'
 import { toast } from 'sonner'
 import { useProjectId } from '../../hooks/useProjectId'
+import { supabase } from '../../lib/supabase'
 import { Loader2 } from 'lucide-react'
 
 // ── Zod Schema ─────────────────────────────────────────────
@@ -170,11 +171,18 @@ export const CreateAPIKeyModal: React.FC<CreateAPIKeyModalProps> = ({ open, onCl
 
     setIsSubmitting(true)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+      if (!token) {
+        toast.error('Your session has expired. Please sign in again.')
+        setIsSubmitting(false)
+        return
+      }
       const response = await fetch('/functions/v1/api-keys', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           projectId,

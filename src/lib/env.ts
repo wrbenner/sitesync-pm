@@ -33,11 +33,12 @@ type Env = z.infer<typeof envSchema>
 function parseEnv(): Env {
   const result = envSchema.safeParse(import.meta.env)
   if (!result.success) {
-    console.error(
-      'Environment validation failed:',
-      result.error.flatten().fieldErrors,
-    )
-    // Don't crash the app — log and return raw env
+    if (import.meta.env.PROD) {
+      throw new Error(
+        `Missing required environment variables: ${result.error.issues.map((i) => i.path.join('.')).join(', ')}`,
+      )
+    }
+    console.error('Environment validation failed:', result.error.flatten())
     return import.meta.env as unknown as Env
   }
   return result.data
