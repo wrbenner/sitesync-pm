@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useCopilotStore } from '../stores/copilotStore';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { Users, Clock, ShieldCheck, Cloud, ChevronRight, Camera, Send, BarChart3, Sparkles, Zap, CalendarDays, Calendar, X, Lock, AlertTriangle, BookOpen, RefreshCw, Truck, UserPlus, FileEdit, HardHat, Mic } from 'lucide-react';
@@ -103,6 +103,10 @@ const DailyLogPage: React.FC = () => {
   const [newManpowerRow, setNewManpowerRow] = useState({ trade: '', company: '', headcount: 0, hours: 0 });
   const [showAddManpowerRow, setShowAddManpowerRow] = useState(false);
   const [workSummary, setWorkSummary] = useState('');
+  const [isRecordingWork, setIsRecordingWork] = useState(false);
+  const [isRecordingIssues, setIsRecordingIssues] = useState(false);
+  const workRecognitionRef = useRef<any>(null);
+  const issuesRecognitionRef = useRef<any>(null);
   const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
   const [aiSummaryGenerated, setAiSummaryGenerated] = useState(false);
 
@@ -1448,17 +1452,50 @@ const DailyLogPage: React.FC = () => {
                   />
                   {!isLocked && (
                     <button
-                      title="Voice input"
-                      aria-label="Voice input for work summary"
-                      onClick={() => toast.success('Voice input available in the next update')}
+                      title={isRecordingWork ? 'Stop recording' : 'Voice input'}
+                      aria-label={isRecordingWork ? 'Stop voice recording' : 'Voice input for work summary'}
+                      onClick={() => {
+                        const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+                        if (!SR) { toast.error('Voice input is not supported in this browser'); return; }
+                        if (isRecordingWork) {
+                          workRecognitionRef.current?.stop();
+                          setIsRecordingWork(false);
+                          return;
+                        }
+                        const recognition = new SR();
+                        recognition.continuous = true;
+                        recognition.interimResults = true;
+                        recognition.lang = 'en-US';
+                        const baseText = workSummary;
+                        recognition.onresult = (event: any) => {
+                          let final = '';
+                          let interim = '';
+                          for (let i = 0; i < event.results.length; i++) {
+                            if (event.results[i].isFinal) final += event.results[i][0].transcript + ' ';
+                            else interim += event.results[i][0].transcript;
+                          }
+                          setWorkSummary(baseText + (baseText ? ' ' : '') + final.trim() + (interim ? ' ' + interim : ''));
+                        };
+                        recognition.onerror = (e: any) => {
+                          if (e.error === 'not-allowed') toast.error('Microphone access denied. Check browser permissions.');
+                          else toast.error(`Voice error: ${e.error}`);
+                          setIsRecordingWork(false);
+                        };
+                        recognition.onend = () => setIsRecordingWork(false);
+                        recognition.start();
+                        workRecognitionRef.current = recognition;
+                        setIsRecordingWork(true);
+                        toast.success('Listening... speak now');
+                      }}
                       style={{
                         width: '56px', height: '56px', flexShrink: 0,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        backgroundColor: colors.surfaceInset,
-                        border: `1px solid ${colors.borderDefault}`,
+                        backgroundColor: isRecordingWork ? colors.statusCritical : colors.surfaceInset,
+                        border: `1px solid ${isRecordingWork ? colors.statusCritical : colors.borderDefault}`,
                         borderRadius: borderRadius.md,
                         cursor: 'pointer',
-                        color: colors.textTertiary,
+                        color: isRecordingWork ? colors.white : colors.textTertiary,
+                        transition: 'all 0.2s ease',
                       }}
                     >
                       <Mic size={18} />
@@ -1501,17 +1538,50 @@ const DailyLogPage: React.FC = () => {
               />
               {!isLocked && (
                 <button
-                  title="Voice input"
-                  aria-label="Voice input for issues and delays"
-                  onClick={() => toast.success('Voice input available in the next update')}
+                  title={isRecordingIssues ? 'Stop recording' : 'Voice input'}
+                  aria-label={isRecordingIssues ? 'Stop voice recording' : 'Voice input for issues and delays'}
+                  onClick={() => {
+                    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+                    if (!SR) { toast.error('Voice input is not supported in this browser'); return; }
+                    if (isRecordingIssues) {
+                      issuesRecognitionRef.current?.stop();
+                      setIsRecordingIssues(false);
+                      return;
+                    }
+                    const recognition = new SR();
+                    recognition.continuous = true;
+                    recognition.interimResults = true;
+                    recognition.lang = 'en-US';
+                    const baseText = issuesDelays;
+                    recognition.onresult = (event: any) => {
+                      let final = '';
+                      let interim = '';
+                      for (let i = 0; i < event.results.length; i++) {
+                        if (event.results[i].isFinal) final += event.results[i][0].transcript + ' ';
+                        else interim += event.results[i][0].transcript;
+                      }
+                      setIssuesDelays(baseText + (baseText ? ' ' : '') + final.trim() + (interim ? ' ' + interim : ''));
+                    };
+                    recognition.onerror = (e: any) => {
+                      if (e.error === 'not-allowed') toast.error('Microphone access denied. Check browser permissions.');
+                      else toast.error(`Voice error: ${e.error}`);
+                      setIsRecordingIssues(false);
+                    };
+                    recognition.onend = () => setIsRecordingIssues(false);
+                    recognition.start();
+                    issuesRecognitionRef.current = recognition;
+                    setIsRecordingIssues(true);
+                    toast.success('Listening... speak now');
+                  }}
                   style={{
                     width: '56px', height: '56px', flexShrink: 0,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    backgroundColor: colors.surfaceInset,
-                    border: `1px solid ${colors.borderDefault}`,
+                    backgroundColor: isRecordingIssues ? colors.statusCritical : colors.surfaceInset,
+                    border: `1px solid ${isRecordingIssues ? colors.statusCritical : colors.borderDefault}`,
                     borderRadius: borderRadius.md,
                     cursor: 'pointer',
-                    color: colors.textTertiary,
+                    color: isRecordingIssues ? colors.white : colors.textTertiary,
+                    transition: 'all 0.2s ease',
                   }}
                 >
                   <Mic size={18} />

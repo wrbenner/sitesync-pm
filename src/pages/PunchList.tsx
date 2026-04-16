@@ -7,6 +7,7 @@ import PunchListSkeleton from '../components/field/PunchListSkeleton';
 import EmptyState from '../components/ui/EmptyState';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 import { usePunchItems, useDirectoryContacts } from '../hooks/queries';
+import { usePunchListStore } from '../stores/punchListStore';
 import { AlertTriangle, Camera, CheckCircle, CheckSquare, Inbox, MessageSquare, RefreshCw, Search, Sparkles, XCircle } from 'lucide-react';
 import { usePermissions } from '../hooks/usePermissions';
 import { useAppNavigate, getRelatedItemsForPunchItem } from '../utils/connections';
@@ -19,7 +20,7 @@ import { useCreatePunchItem, useUpdatePunchItem } from '../hooks/mutations';
 import CreatePunchItemModal from '../components/forms/CreatePunchItemModal';
 import { BulkActionBar } from '../components/shared/BulkActionBar';
 import { InlineEditCell, EditableDetailField } from '../components/forms/EditableField';
-import { ArrowUp, Trash2, UserCheck, Pencil } from 'lucide-react';
+import { ArrowUp, Trash2, UserCheck, Pencil, Send } from 'lucide-react';
 import { PermissionGate } from '../components/auth/PermissionGate';
 import { PresenceAvatars } from '../components/shared/PresenceAvatars';
 import { EditingLockBanner } from '../components/ui/EditingLockBanner';
@@ -150,8 +151,8 @@ function getDaysRemaining(dueDate: string): number {
 
 function getDueDateColor(dueDate: string): string {
   const days = getDaysRemaining(dueDate);
-  if (days <= 0) return '#E74C3C';
-  if (days <= 4) return '#F5A623';
+  if (days <= 0) return colors.statusCritical;
+  if (days <= 4) return colors.statusPending;
   return colors.statusActive;
 }
 
@@ -299,7 +300,11 @@ const PunchListPage: React.FC = () => {
   }, []);
 
   const selected = punchListItems.find(p => p.id === selectedId) || null;
-  const comments: Comment[] = []; // TODO: load from punch_item_comments query
+  const { getComments, addComment: storeAddComment } = usePunchListStore();
+  const comments: Comment[] = selectedId
+    ? getComments(selectedId).map(c => ({ author: c.author, initials: c.initials, time: c.created_at, text: c.text }))
+    : [];
+  const [newComment, setNewComment] = useState('');
 
   const handleMarkInProgressById = useCallback(async (item: PunchItem) => {
     try {
@@ -1225,7 +1230,7 @@ const PunchListPage: React.FC = () => {
                           {comment.author}
                         </span>
                         <span style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary }}>
-                          {comment.time}
+                          {new Date(comment.time).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                         </span>
                       </div>
                       <p style={{ fontSize: typography.fontSize.base, color: colors.textSecondary, lineHeight: typography.lineHeight.relaxed, margin: 0 }}>
@@ -1234,6 +1239,36 @@ const PunchListPage: React.FC = () => {
                     </div>
                   </div>
                 ))}
+                {/* Add comment input */}
+                {selectedId && (
+                  <div style={{ display: 'flex', gap: spacing.sm, marginTop: spacing.md }}>
+                    <textarea
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      placeholder="Add a comment..."
+                      aria-label="Add a comment"
+                      style={{
+                        flex: 1, resize: 'vertical', minHeight: 56, padding: spacing.sm,
+                        borderRadius: borderRadius.md, border: `1px solid ${colors.borderSubtle}`,
+                        fontSize: typography.fontSize.sm, fontFamily: 'inherit',
+                        backgroundColor: colors.surfaceBase, color: colors.textPrimary,
+                      }}
+                    />
+                    <Btn
+                      variant="primary"
+                      size="sm"
+                      disabled={!newComment.trim()}
+                      onClick={() => {
+                        if (!newComment.trim() || !selectedId) return;
+                        storeAddComment(selectedId, 'You', 'YO', newComment.trim());
+                        setNewComment('');
+                      }}
+                      style={{ alignSelf: 'flex-end', minHeight: 56, minWidth: 56 }}
+                    >
+                      <Send size={16} />
+                    </Btn>
+                  </div>
+                )}
               </div>
             </div>
 

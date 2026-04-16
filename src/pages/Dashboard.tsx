@@ -671,7 +671,8 @@ const AIInsightsBanner: React.FC<{ insights: AIInsight[]; navigate: (path: strin
 const DeterministicInsightsBanner: React.FC<{
   metrics: import('../types/api').ProjectMetrics;
   navigate: (path: string) => void;
-}> = ({ metrics, navigate }) => {
+  schedulePhases?: Array<{ id: string; name: string | null; status: string | null; start_date?: string | null }>;
+}> = ({ metrics, navigate, schedulePhases }) => {
   const insights: AIInsight[] = [];
   const now = new Date().toISOString();
 
@@ -728,13 +729,25 @@ const DeterministicInsightsBanner: React.FC<{
 
   if ((metrics.schedule_variance_days ?? 0) < 0) {
     const days = Math.abs(metrics.schedule_variance_days ?? 0);
+    // Find the specific delayed/at-risk phases to explain WHY the schedule is behind
+    const delayedPhases = (schedulePhases ?? []).filter(
+      p => p.status === 'delayed' || p.status === 'at_risk'
+    );
+    const phaseNames = delayedPhases.slice(0, 3).map(p => p.name ?? 'Unnamed phase');
+    const phaseContext = phaseNames.length > 0
+      ? ` Impacted: ${phaseNames.join(', ')}.`
+      : '';
+    const entities = delayedPhases.slice(0, 3).map(p => ({
+      type: 'schedule_phase' as const, id: p.id, name: p.name ?? 'Phase',
+    }));
+
     insights.push({
       id: 'det-schedule',
       type: 'schedule_risk',
       severity: days > 14 ? 'critical' : days > 7 ? 'warning' : 'info',
       title: `Schedule is ${days} day${days === 1 ? '' : 's'} behind`,
-      description: 'Schedule delays cascade into downstream trades. Review the critical path and consider acceleration strategies.',
-      affectedEntities: [],
+      description: `${phaseContext} Schedule delays cascade into downstream trades. Review the critical path and consider acceleration or re-sequencing.`,
+      affectedEntities: entities,
       suggestedAction: 'Open Schedule to review impacted phases',
       confidence: 0.85,
       source: 'computed',
@@ -1187,7 +1200,7 @@ const DashboardInner: React.FC = () => {
       {mergedInsights.length > 0 ? (
         <AIInsightsBanner insights={mergedInsights} navigate={navigate} />
       ) : metrics ? (
-        <DeterministicInsightsBanner metrics={metrics} navigate={navigate} />
+        <DeterministicInsightsBanner metrics={metrics} navigate={navigate} schedulePhases={schedulePhases} />
       ) : null}
 
       {/* ── Metric Strip ──────────────────────────────────── */}
