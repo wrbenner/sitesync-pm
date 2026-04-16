@@ -109,12 +109,21 @@ export const Login: React.FC = () => {
 
       if (signUpError) {
         setSignupError(mapAuthError(signUpError.message))
-      } else if (data.session) {
-        // Email confirmation is disabled — user is already signed in
-        navigate('/dashboard')
       } else {
-        // Email confirmation required
-        setSignupSuccess(true)
+        // Create profile row for the new user
+        if (data.user) {
+          await supabase.from('profiles').insert({
+            user_id: data.user.id,
+            full_name: `${signupFirstName.trim()} ${signupLastName.trim()}`.trim(),
+            first_name: signupFirstName.trim(),
+            last_name: signupLastName.trim(),
+          })
+        }
+        if (data.session) {
+          navigate('/dashboard')
+        } else {
+          setSignupSuccess(true)
+        }
       }
     } finally {
       setSignupSubmitting(false)

@@ -43,11 +43,6 @@ async function initAuth() {
   if (initialized) return
   initialized = true
 
-  if (!import.meta.env.VITE_SUPABASE_URL) {
-    setState({ loading: false })
-    return
-  }
-
   try {
     const { data: { session: s } } = await supabase.auth.getSession()
     setState({ session: s, user: s?.user ?? null })
