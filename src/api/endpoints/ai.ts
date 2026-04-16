@@ -16,7 +16,14 @@ export const getAiInsights = async (
     financials && !financials.summary.isEmpty
       ? await aiService
           .generateBudgetInsights(projectId, financials.summary, financials.divisions)
-          .catch(() => [])
+          .catch((err) => {
+            console.error('[AI Endpoint] generateBudgetInsights failed:', err instanceof Error ? err.message : err)
+            captureException(err instanceof Error ? err : new Error(String(err)), {
+              projectId,
+              extra: { context: 'getAiInsights_generateBudgetInsights' },
+            })
+            return []
+          })
       : []
 
   let aiServiceFailed = false
@@ -50,8 +57,12 @@ export const getAiInsights = async (
     if (!error && data) {
       cachedData = data as Array<Record<string, unknown>>
     }
-  } catch {
-    // Non-fatal: fall through to computed insights
+  } catch (err) {
+    console.error('[AI Endpoint] ai_insights cache lookup failed:', err instanceof Error ? err.message : err)
+    captureException(err instanceof Error ? err : new Error(String(err)), {
+      projectId,
+      extra: { context: 'getAiInsights_cacheLookup' },
+    })
   }
 
   const cachedInsights = cachedData.map((row): AIInsight => ({
@@ -90,7 +101,13 @@ export const getAiInsights = async (
         .order('due_date', { ascending: true })
         .limit(5)
       overdueRfis = (data ?? []) as typeof overdueRfis
-    } catch { /* non-fatal */ }
+    } catch (err) {
+      console.error('[AI Endpoint] overdueRfis query failed:', err instanceof Error ? err.message : err)
+      captureException(err instanceof Error ? err : new Error(String(err)), {
+        projectId,
+        extra: { context: 'getAiInsights_overdueRfis' },
+      })
+    }
 
     try {
       const { count } = await supabase
@@ -99,7 +116,13 @@ export const getAiInsights = async (
         .eq('project_id', projectId)
         .in('status', ['open', 'in_progress'])
       openPunchCount = count ?? 0
-    } catch { /* non-fatal */ }
+    } catch (err) {
+      console.error('[AI Endpoint] openPunchCount query failed:', err instanceof Error ? err.message : err)
+      captureException(err instanceof Error ? err : new Error(String(err)), {
+        projectId,
+        extra: { context: 'getAiInsights_openPunchCount' },
+      })
+    }
 
     try {
       const { data: budgetRows } = await supabase
@@ -109,7 +132,13 @@ export const getAiInsights = async (
       overBudgetItems = ((budgetRows ?? []) as typeof overBudgetItems).filter(
         (row) => (row.spent_to_date ?? 0) > (row.current_budget ?? 0) && (row.current_budget ?? 0) > 0
       )
-    } catch { /* non-fatal */ }
+    } catch (err) {
+      console.error('[AI Endpoint] overBudgetItems query failed:', err instanceof Error ? err.message : err)
+      captureException(err instanceof Error ? err : new Error(String(err)), {
+        projectId,
+        extra: { context: 'getAiInsights_overBudgetItems' },
+      })
+    }
 
     try {
       const { data } = await supabase
@@ -119,7 +148,13 @@ export const getAiInsights = async (
         .eq('status', 'pending')
         .limit(5)
       pendingSubmittals = (data ?? []) as typeof pendingSubmittals
-    } catch { /* non-fatal */ }
+    } catch (err) {
+      console.error('[AI Endpoint] pendingSubmittals query failed:', err instanceof Error ? err.message : err)
+      captureException(err instanceof Error ? err : new Error(String(err)), {
+        projectId,
+        extra: { context: 'getAiInsights_pendingSubmittals' },
+      })
+    }
 
     try {
       const { data } = await supabase
@@ -129,7 +164,13 @@ export const getAiInsights = async (
         .in('status', ['delayed', 'at_risk'])
         .limit(3)
       atRiskPhases = (data ?? []) as typeof atRiskPhases
-    } catch { /* non-fatal */ }
+    } catch (err) {
+      console.error('[AI Endpoint] atRiskPhases query failed:', err instanceof Error ? err.message : err)
+      captureException(err instanceof Error ? err : new Error(String(err)), {
+        projectId,
+        extra: { context: 'getAiInsights_atRiskPhases' },
+      })
+    }
 
     // Cross-entity conflict detection: RFIs blocking upcoming schedule phases
     let upcomingPhases: Array<{ id: string; name: string | null; start_date: string | null; status: string | null }> = []
@@ -146,7 +187,13 @@ export const getAiInsights = async (
         .order('start_date', { ascending: true })
         .limit(10)
       upcomingPhases = (data ?? []) as typeof upcomingPhases
-    } catch { /* non-fatal */ }
+    } catch (err) {
+      console.error('[AI Endpoint] upcomingPhases query failed:', err instanceof Error ? err.message : err)
+      captureException(err instanceof Error ? err : new Error(String(err)), {
+        projectId,
+        extra: { context: 'getAiInsights_upcomingPhases' },
+      })
+    }
 
     if (upcomingPhases.length > 0) {
       try {
@@ -159,7 +206,13 @@ export const getAiInsights = async (
           .order('due_date', { ascending: true })
           .limit(20)
         openRfisWithDates = (data ?? []) as typeof openRfisWithDates
-      } catch { /* non-fatal */ }
+      } catch (err) {
+        console.error('[AI Endpoint] openRfisWithDates query failed:', err instanceof Error ? err.message : err)
+        captureException(err instanceof Error ? err : new Error(String(err)), {
+          projectId,
+          extra: { context: 'getAiInsights_openRfisWithDates' },
+        })
+      }
     }
 
     const dynamicInsights: AIInsight[] = []

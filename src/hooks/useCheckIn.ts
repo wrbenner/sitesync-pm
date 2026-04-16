@@ -7,6 +7,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { useProjectId } from './useProjectId'
 import { useOfflineMutation } from './useOfflineMutation'
+import { usePermissions, PermissionError } from './usePermissions'
+import { logAuditEntry } from '../lib/auditLogger'
+import posthog from '../lib/analytics'
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -151,6 +154,7 @@ export function useHeadcount() {
 export function useCheckInMutation() {
   const projectId = useProjectId()
   const queryClient = useQueryClient()
+  const { hasPermission } = usePermissions()
 
   return useMutation({
     mutationFn: async (params: {
@@ -163,6 +167,11 @@ export function useCheckInMutation() {
       gpsLng?: number
     }) => {
       if (!projectId) throw new Error('Project not configured')
+
+      // Permission check: headcount is a legal/OSHA record — restrict writes
+      if (!hasPermission('crews.manage')) {
+        throw new PermissionError('You do not have permission to record check-ins', 'crews.manage')
+      }
 
       // Offline: queue for background sync when reconnected
       if (!navigator.onLine || !isSupabaseConfigured) {
@@ -178,12 +187,13 @@ export function useCheckInMutation() {
         return null
       }
 
+      const checkInAt = new Date().toISOString()
       const { data, error } = await supabase
         .from('site_check_ins')
         .insert({
           project_id: projectId,
           worker_id: params.workerId || null,
-          check_in_at: new Date().toISOString(),
+          check_in_at: checkInAt,
           gps_lat: params.gpsLat || null,
           gps_lng: params.gpsLng || null,
           method: params.method,
@@ -192,6 +202,35 @@ export function useCheckInMutation() {
         .single()
 
       if (error) throw error
+
+      // Audit trail: construction headcount is a legal/OSHA record
+      const entityId = (data?.id as string | undefined) ?? params.workerId ?? 'unknown'
+      logAuditEntry({
+        projectId,
+        entityType: 'site_check_in',
+        entityId,
+        action: 'create',
+        afterState: {
+          worker_id: params.workerId ?? null,
+          worker_name: params.workerName,
+          company: params.company,
+          trade: params.trade,
+          method: params.method,
+          check_in_at: checkInAt,
+        },
+        metadata: {
+          gpsLat: params.gpsLat,
+          gpsLng: params.gpsLng,
+        },
+      }).catch(() => {}) // already logged inside logAuditEntry
+
+      posthog.capture('site_check_in_created', {
+        project_id: projectId,
+        method: params.method,
+        company: params.company,
+        trade: params.trade,
+      })
+
       return data
     },
     onSuccess: () => {
@@ -205,19 +244,41 @@ export function useCheckInMutation() {
 export function useCheckOutMutation() {
   const projectId = useProjectId()
   const queryClient = useQueryClient()
+  const { hasPermission } = usePermissions()
 
   return useMutation({
     mutationFn: async (checkInId: string) => {
       if (!isSupabaseConfigured) throw new Error('Not configured')
 
+      if (!hasPermission('crews.manage')) {
+        throw new PermissionError('You do not have permission to record check-outs', 'crews.manage')
+      }
+
+      const checkOutAt = new Date().toISOString()
       const { data, error } = await supabase
         .from('site_check_ins')
-        .update({ check_out_at: new Date().toISOString() })
+        .update({ check_out_at: checkOutAt })
         .eq('id', checkInId)
         .select()
         .single()
 
       if (error) throw error
+
+      if (projectId) {
+        logAuditEntry({
+          projectId,
+          entityType: 'site_check_in',
+          entityId: checkInId,
+          action: 'update',
+          afterState: { check_out_at: checkOutAt },
+        }).catch(() => {})
+
+        posthog.capture('site_check_out_recorded', {
+          project_id: projectId,
+          check_in_id: checkInId,
+        })
+      }
+
       return data
     },
     onSuccess: () => {
@@ -426,23 +487,47 @@ export function enqueueOfflineCheckIn(item: Omit<OfflinePendingCheckIn, 'tempId'
 
 export function useCheckIn() {
   const projectId = useProjectId()
+  const { hasPermission } = usePermissions()
 
   const mutation = useOfflineMutation<unknown, { userId: string; projectId: string; locationId: string }>({
     table: 'crew_checkins',
     operation: 'insert',
     mutationFn: async (variables) => {
       if (!isSupabaseConfigured) throw new Error('Supabase not configured')
+      if (!hasPermission('crews.manage')) {
+        throw new PermissionError('You do not have permission to record check-ins', 'crews.manage')
+      }
+      const checkedInAt = new Date().toISOString()
       const { data, error } = await supabase
         .from('crew_checkins')
         .insert({
           user_id: variables.userId,
           project_id: variables.projectId,
           location_id: variables.locationId,
-          checked_in_at: new Date().toISOString(),
+          checked_in_at: checkedInAt,
         })
         .select()
         .single()
       if (error) throw error
+
+      const entityId = (data?.id as string | undefined) ?? variables.userId
+      logAuditEntry({
+        projectId: variables.projectId,
+        entityType: 'crew_checkin',
+        entityId,
+        action: 'create',
+        afterState: {
+          user_id: variables.userId,
+          location_id: variables.locationId,
+          checked_in_at: checkedInAt,
+        },
+      }).catch(() => {})
+
+      posthog.capture('crew_checkin_created', {
+        project_id: variables.projectId,
+        location_id: variables.locationId,
+      })
+
       return data
     },
     getOfflinePayload: (variables) => ({
