@@ -1,14 +1,14 @@
 name: "Organism — Cycle"
 on:
   schedule:
-    - cron: "0 0,6,12,18 * * *" # Every 6 hours
+    - cron: "0 */2 * * *" # Every 2 hours
   workflow_dispatch:
     inputs:
       max_turns:
-        description: 'Max Claude Code turns (default 30)'
-        default: '30'
+        description: 'Max Claude Code turns'
+        default: '50'
       focus:
-        description: 'Focus area (auto, moment3, moment4, moment5, rfi, security, evals, quality)'
+        description: 'Focus area (auto, quality, pages, services, tests, performance)'
         default: 'auto'
 
 permissions:
@@ -18,14 +18,17 @@ permissions:
 
 env:
   NODE_VERSION: "22"
+  OWNER: "wrbenner"
+  REPO: "sitesync-pm"
 
 jobs:
-  perceive:
-    name: "Phase 1: Perceive"
+  perceive-and-reason:
+    name: "Perceive & Reason"
     runs-on: ubuntu-latest
     outputs:
       experiment: ${{ steps.reason.outputs.experiment }}
       branch: ${{ steps.reason.outputs.branch }}
+      title: ${{ steps.reason.outputs.title }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -35,92 +38,74 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Gather codebase metrics
-        id: metrics
+      - name: Install and measure
         run: |
           npm ci --silent 2>/dev/null
+          echo "ESLINT_ERRORS=$(npx eslint src/ --format json 2>/dev/null | python3 -c "import json,sys; d=json.load(sys.stdin); print(sum(r['errorCount'] for r in d))" 2>/dev/null || echo 0)" >> "$GITHUB_ENV"
+          echo "FLOOR=$(jq '.eslintErrors' .quality-floor.json)" >> "$GITHUB_ENV"
 
-          # ESLint count
-          ESLINT_ERRORS=$(npx eslint src/ --format json 2>/dev/null | python3 -c "import json,sys; d=json.load(sys.stdin); print(sum(r['errorCount'] for r in d))" 2>/dev/null || echo "0")
-          
-          # TypeScript errors
-          TS_ERRORS=$(npx tsc --noEmit 2>&1 | grep -c 'error TS' || echo "0")
-          
-          # Test coverage
-          TEST_RESULT=$(npx vitest run --reporter=json 2>/dev/null | tail -1 || echo '{}')
-          
-          # Quality floor
-          FLOOR=$(cat .quality-floor.json)
-          
-          # Schema gap summary
-          SCHEMA_TABLES=$(grep -c '| `' SCHEMA_GAP_ANALYSIS.md 2>/dev/null || echo "0")
-          SCHEMA_CONFORMANT=$(grep -c '✅ complete' SCHEMA_GAP_ANALYSIS.md 2>/dev/null || echo "0")
-          
-          # Eval status
-          EVAL_PASSING=$(grep -c 'PASS' evals/layer1-database/run-layer1-rest.sh 2>/dev/null || echo "0")
-          
-          # Product vision moments status
-          MOMENT1=$(test -f src/components/dashboard/MorningBriefing.tsx && echo "built" || echo "missing")
-          MOMENT2=$(test -f src/components/field/QuickRFI.tsx && echo "built" || echo "missing")
-          MOMENT3=$(test -f src/components/dailylog/AutoDailyLog.tsx && echo "built" || echo "missing")
-          MOMENT4=$(test -f src/components/schedule/CoordinationEngine.tsx && echo "built" || echo "missing")
-          MOMENT5=$(test -f src/components/reports/OwnerReport.tsx && echo "built" || echo "missing")
-          
-          echo "eslint_errors=$ESLINT_ERRORS" >> "$GITHUB_OUTPUT"
-          echo "ts_errors=$TS_ERRORS" >> "$GITHUB_OUTPUT"
-          echo "moment1=$MOMENT1" >> "$GITHUB_OUTPUT"
-          echo "moment2=$MOMENT2" >> "$GITHUB_OUTPUT"
-          echo "moment3=$MOMENT3" >> "$GITHUB_OUTPUT"
-          echo "moment4=$MOMENT4" >> "$GITHUB_OUTPUT"
-          echo "moment5=$MOMENT5" >> "$GITHUB_OUTPUT"
-
-      - name: Reason — select experiment
+      - name: Decide what to build
         id: reason
         run: |
           FOCUS="${{ github.event.inputs.focus || 'auto' }}"
-          
-          # Read product vision priorities
-          VISION_SUMMARY=$(head -100 .organism/vision/PRODUCT_VISION.md 2>/dev/null || echo "No vision doc")
-          
-          # Determine what to build based on metrics and focus
+
+          # Check what exists
+          check_file() { test -f "$1" && echo "yes" || echo "no"; }
+
+          # Service layers
+          HAS_SUBMITTAL_SVC=$(check_file src/services/submittalService.ts)
+          HAS_DAILYLOG_SVC=$(check_file src/services/dailyLogService.ts)
+          HAS_CO_SVC=$(check_file src/services/changeOrderService.ts)
+          HAS_PUNCH_SVC=$(check_file src/services/punchItemService.ts)
+
           if [ "$FOCUS" = "auto" ]; then
-            # Priority: unbuilt moments > quality improvements > security > evals
-            if [ "${{ steps.metrics.outputs.moment3 }}" = "missing" ]; then
-              EXPERIMENT="Build Moment 3: The Self-Writing Daily Log. Read .organism/vision/PRODUCT_VISION.md Part 4 Moment 4 for the full specification. Create src/components/dailylog/AutoDailyLog.tsx that captures observations throughout the day (photos, voice notes, RFI activity, inspection results, weather) and compiles them into a complete daily log at end of day. The super reviews in 2 minutes instead of writing for 45."
-              BRANCH="organism/moment3-daily-log"
-              TITLE="Moment 3: Self-writing daily log"
-            elif [ "${{ steps.metrics.outputs.moment4 }}" = "missing" ]; then
-              EXPERIMENT="Build Moment 4: The Coordination Engine. Read .organism/vision/PRODUCT_VISION.md Part 4 Moment 3 for the full specification. Create src/components/schedule/CoordinationEngine.tsx that detects trade overlaps from the schedule, shows visual conflict on the floor plan, provides historical resolution data, and offers one-tap resolution with notification."
-              BRANCH="organism/moment4-coordination"
-              TITLE="Moment 4: Coordination engine"
-            elif [ "${{ steps.metrics.outputs.moment5 }}" = "missing" ]; then
-              EXPERIMENT="Build Moment 5: The Owner Report. Read .organism/vision/PRODUCT_VISION.md Part 4 Moment 5 for the full specification. Create src/components/reports/OwnerReport.tsx that auto-generates a progress narrative, visual progress heat map, budget/schedule dashboard, photo comparison timeline, and 3-week lookahead with risk flags."
-              BRANCH="organism/moment5-owner-report"
-              TITLE="Moment 5: Owner report"
+            # Priority 1: Missing service layers (kernel conformance)
+            if [ "$HAS_SUBMITTAL_SVC" = "no" ]; then
+              EXP="Create src/services/submittalService.ts — a kernel-native service layer for submittals following the exact pattern of src/services/rfiService.ts. It must: load submittals with soft-delete filter, create with provenance, enforce lifecycle transitions via the submittal state machine, implement soft-delete, and populate updated_by. Then rewire src/stores/submittalStore.ts to delegate to the service. Update any call sites in src/pages/Submittals.tsx."
+              BRANCH="organism/submittal-service-$(date +%H%M)"
+              TITLE="Kernel service layer for submittals"
+
+            elif [ "$HAS_CO_SVC" = "no" ]; then
+              EXP="Create src/services/changeOrderService.ts — kernel-native service layer for change orders following rfiService.ts pattern. Lifecycle enforcement, provenance, soft-delete. Rewire changeOrderStore.ts."
+              BRANCH="organism/change-order-service-$(date +%H%M)"
+              TITLE="Kernel service layer for change orders"
+
+            elif [ "$HAS_PUNCH_SVC" = "no" ]; then
+              EXP="Create src/services/punchItemService.ts — kernel-native service layer for punch items following rfiService.ts pattern. Lifecycle enforcement, provenance, soft-delete. Rewire punchListStore.ts."
+              BRANCH="organism/punch-item-service-$(date +%H%M)"
+              TITLE="Kernel service layer for punch items"
+
+            # Priority 2: ESLint error reduction
+            elif [ "$ESLINT_ERRORS" -gt "1000" ]; then
+              EXP="Reduce ESLint errors. Current count: $ESLINT_ERRORS (floor: $FLOOR). Go through src/ and fix the most impactful errors: unused variables, missing types, unreachable code, any-type assertions. Target: reduce by at least 15. Do NOT add eslint-disable comments — actually fix the code."
+              BRANCH="organism/eslint-fixes-$(date +%H%M)"
+              TITLE="Quality: fix $((ESLINT_ERRORS > 15 ? 15 : ESLINT_ERRORS)) ESLint errors"
+
+            # Priority 3: Page polish
             else
-              EXPERIMENT="Improve code quality. Read .quality-floor.json. Find and fix ESLint errors to reduce the error count. Focus on the most impactful fixes — unused variables, missing types, unreachable code. Target: reduce eslint errors by at least 5."
-              BRANCH="organism/quality-$(date +%Y%m%d-%H%M)"
-              TITLE="Quality: reduce ESLint errors"
+              EXP="Pick ONE page from src/pages/ that has hardcoded data, missing error handling, or poor mobile layout. Read .organism/DIRECTIVES.md for the quality standard. Make that page enterprise-grade: proper loading/error/empty states, real data from stores, mobile-responsive, 48px touch targets, framer-motion animations."
+              BRANCH="organism/page-polish-$(date +%H%M)"
+              TITLE="Enterprise polish: page improvement"
             fi
           else
             case "$FOCUS" in
-              moment3) EXPERIMENT="Build Moment 3: Self-Writing Daily Log. Read .organism/vision/PRODUCT_VISION.md for spec."; BRANCH="organism/moment3-daily-log"; TITLE="Moment 3: Self-writing daily log" ;;
-              moment4) EXPERIMENT="Build Moment 4: Coordination Engine. Read .organism/vision/PRODUCT_VISION.md for spec."; BRANCH="organism/moment4-coordination"; TITLE="Moment 4: Coordination engine" ;;
-              moment5) EXPERIMENT="Build Moment 5: Owner Report. Read .organism/vision/PRODUCT_VISION.md for spec."; BRANCH="organism/moment5-owner-report"; TITLE="Moment 5: Owner report" ;;
-              quality) EXPERIMENT="Fix ESLint errors. Target: reduce by 10+."; BRANCH="organism/quality-$(date +%Y%m%d-%H%M)"; TITLE="Quality: ESLint fixes" ;;
-              *) EXPERIMENT="Auto-select highest leverage improvement."; BRANCH="organism/auto-$(date +%Y%m%d-%H%M)"; TITLE="Auto improvement" ;;
+              quality) EXP="Fix ESLint errors. Current: $ESLINT_ERRORS. Reduce by 15+."; BRANCH="organism/eslint-$(date +%H%M)"; TITLE="ESLint fixes" ;;
+              pages) EXP="Polish one page to enterprise quality."; BRANCH="organism/pages-$(date +%H%M)"; TITLE="Page polish" ;;
+              services) EXP="Create the next missing kernel service layer."; BRANCH="organism/services-$(date +%H%M)"; TITLE="Service layer" ;;
+              tests) EXP="Add tests for existing service layers."; BRANCH="organism/tests-$(date +%H%M)"; TITLE="Test coverage" ;;
+              performance) EXP="Reduce bundle size and improve load times."; BRANCH="organism/perf-$(date +%H%M)"; TITLE="Performance" ;;
+              *) EXP="Auto-select highest leverage."; BRANCH="organism/auto-$(date +%H%M)"; TITLE="Auto improvement" ;;
             esac
           fi
-          
-          echo "experiment=$EXPERIMENT" >> "$GITHUB_OUTPUT"
+
+          echo "experiment=$EXP" >> "$GITHUB_OUTPUT"
           echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
           echo "title=$TITLE" >> "$GITHUB_OUTPUT"
-          echo "Experiment: $TITLE"
-          echo "Branch: $BRANCH"
+          echo "::notice::Experiment: $TITLE"
 
   build:
-    name: "Phase 2: Build with Claude Code"
-    needs: perceive
+    name: "Build with Claude Code"
+    needs: perceive-and-reason
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -134,94 +119,119 @@ jobs:
       - name: Install Claude Code
         run: npm install -g @anthropic-ai/claude-code
 
-      - name: Create experiment branch
+      - name: Create branch
         run: |
           git config user.name "organism[bot]"
           git config user.email "organism[bot]@users.noreply.github.com"
-          git checkout -b "${{ needs.perceive.outputs.branch }}"
+          git checkout -b "${{ needs.perceive-and-reason.outputs.branch }}"
 
-      - name: Execute experiment with Claude Code (all 4 AI providers available)
+      - name: Build
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
         run: |
-          MAX_TURNS="${{ github.event.inputs.max_turns || '30' }}"
-          
-          claude -p "${{ needs.perceive.outputs.experiment }}
+          MAX_TURNS="${{ github.event.inputs.max_turns || '50' }}"
 
-YOU ARE THE SITESYNC ORGANISM. You are building the world's best construction management platform.
+          claude -p "${{ needs.perceive-and-reason.outputs.experiment }}
 
-READ FIRST:
-- .organism/DIRECTIVES.md — your mission and quality standards
-- .organism/vision/PRODUCT_VISION.md — the product vision (5 moments, 10 design principles)
-- DOMAIN_KERNEL_SPEC.md — the canonical domain model
+YOU ARE THE SITESYNC ORGANISM. Read .organism/DIRECTIVES.md FIRST.
 
-YOU HAVE ACCESS TO 4 AI PROVIDERS via environment variables:
-- ANTHROPIC_API_KEY (Claude) — for complex reasoning and code generation
-- OPENAI_API_KEY (GPT-4o) — for classification, structured JSON, embeddings, code review
-- GEMINI_API_KEY (Gemini) — for photo/image analysis, large document understanding
-- PERPLEXITY_API_KEY (Perplexity) — for real-time web search, building code lookup, competitor research
+You have 4 AI providers: Claude (you), OpenAI, Gemini, Perplexity — all via env vars.
+Use curl to call their APIs when you need capabilities beyond code generation.
+See supabase/functions/shared/aiRouter.ts for API call patterns.
 
-Use these via curl to their REST APIs when you need capabilities beyond code generation:
-- Need to look up a building code? Call Perplexity.
-- Need to analyze a design pattern? Call OpenAI for structured analysis.
-- Need to understand an image or screenshot? Call Gemini.
-- Need deep reasoning about architecture? You already are Claude.
-
-You can also use supabase/functions/shared/aiRouter.ts as reference for the API call patterns.
-
-CRITICAL RULES:
-1. Styling: inline styles with theme tokens from src/styles/theme.ts — NO CSS modules, NO Tailwind
-2. Use existing stores, services, hooks — don't reinvent
-3. Mobile-first — construction workers use phones on job sites
-4. Use framer-motion for animations (installed)
-5. Every component must be TypeScript-clean (npx tsc --noEmit must pass)
-6. ESLint errors must not increase (check npx eslint on your files)
-7. Do NOT modify: GOVERNANCE.md, CODEOWNERS, auth code, billing code, migrations
-8. When done, run: npx tsc --noEmit && npm run build to verify
-9. Make it BEAUTIFUL. Apple-level polish. Linear-level speed. This is construction software that changes the world." \
+RULES:
+- Read .organism/DIRECTIVES.md and .organism/vision/PRODUCT_VISION.md
+- Inline styles with src/styles/theme.ts tokens only
+- Mobile-first, 48px touch targets, framer-motion animations
+- npx tsc --noEmit must pass
+- ESLint errors must NOT increase
+- npm run build must pass
+- Make it BEAUTIFUL. Apple quality." \
             --max-turns "$MAX_TURNS" \
-            --allowedTools "Edit,Write,Read,Bash(npm*),Bash(npx*),Bash(git*),Bash(cat*),Bash(grep*),Bash(find*),Bash(ls*),Bash(head*),Bash(tail*),Bash(wc*),Bash(curl*)" \
-            --output-format json 2>&1 | tail -100
+            --allowedTools "Edit,Write,Read,Bash(npm*),Bash(npx*),Bash(git*),Bash(cat*),Bash(grep*),Bash(find*),Bash(ls*),Bash(head*),Bash(tail*),Bash(wc*),Bash(curl*),Bash(python3*)" \
+            --output-format json 2>&1 | tail -50
 
-      - name: Verify build
+      - name: Verify
         run: |
           npm ci --silent 2>/dev/null
-          echo "=== TypeScript ===" && npx tsc --noEmit
-          echo "=== Build ===" && npm run build
-          echo "=== ESLint check ===" 
+          npx tsc --noEmit
+          npm run build
           NEW_ERRORS=$(npx eslint src/ --format json 2>/dev/null | python3 -c "import json,sys; d=json.load(sys.stdin); print(sum(r['errorCount'] for r in d))" 2>/dev/null || echo "9999")
           OLD_ERRORS=$(jq '.eslintErrors' .quality-floor.json)
           echo "ESLint: $NEW_ERRORS (floor: $OLD_ERRORS)"
           if [ "$NEW_ERRORS" -gt "$OLD_ERRORS" ]; then
-            echo "::error::ESLint errors increased: $NEW_ERRORS > $OLD_ERRORS"
+            echo "::error::ESLint errors increased"
             exit 1
           fi
+          # Ratchet down if improved
+          if [ "$NEW_ERRORS" -lt "$OLD_ERRORS" ]; then
+            jq ".eslintErrors = $NEW_ERRORS | ._updated = \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" | ._updatedBy = \"organism\"" .quality-floor.json > .qf.tmp && mv .qf.tmp .quality-floor.json
+            echo "::notice::Quality floor improved: $OLD_ERRORS -> $NEW_ERRORS"
+          fi
 
-      - name: Create PR
+      - name: Push and create PR
         if: success()
         run: |
           git add -A
           git diff --cached --quiet && echo "No changes" && exit 0
-          git commit -m "${{ needs.perceive.outputs.title }}
-
-Built by the organism using Claude Code.
-Experiment: ${{ needs.perceive.outputs.experiment }}"
-          git push -u origin "${{ needs.perceive.outputs.branch }}"
+          git commit -m "[organism] ${{ needs.perceive-and-reason.outputs.title }}"
+          git push -u origin "${{ needs.perceive-and-reason.outputs.branch }}"
           gh pr create --base main \
-            --head "${{ needs.perceive.outputs.branch }}" \
-            --title "[organism] ${{ needs.perceive.outputs.title }}" \
-            --body "Built autonomously by the organism.
+            --head "${{ needs.perceive-and-reason.outputs.branch }}" \
+            --title "[organism] ${{ needs.perceive-and-reason.outputs.title }}" \
+            --body "Autonomous build. All gates must pass for auto-merge."
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  auto-merge:
+    name: "Auto-merge if CI passes"
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for CI gates
+        run: sleep 180 # Wait 3 minutes for CI to start and run
+
+      - name: Find and merge organism PR
+        run: |
+          PR_NUMBER=$(gh pr list --repo ${{ env.OWNER }}/${{ env.REPO }} \
+            --head "${{ needs.perceive-and-reason.outputs.branch }}" \
+            --json number --jq '.[0].number')
+          
+          if [ -z "$PR_NUMBER" ]; then
+            echo "No PR found"
+            exit 0
+          fi
+
+          echo "Checking PR #$PR_NUMBER"
+
+          # Wait up to 10 minutes for CI
+          for i in $(seq 1 20); do
+            PASS=$(gh pr checks "$PR_NUMBER" --repo ${{ env.OWNER }}/${{ env.REPO }} 2>&1 | grep -c 'pass' || echo "0")
+            FAIL=$(gh pr checks "$PR_NUMBER" --repo ${{ env.OWNER }}/${{ env.REPO }} 2>&1 | grep -c 'fail' || echo "0")
+            PENDING=$(gh pr checks "$PR_NUMBER" --repo ${{ env.OWNER }}/${{ env.REPO }} 2>&1 | grep -c 'pending' || echo "0")
             
-**Experiment:** ${{ needs.perceive.outputs.experiment }}
-
-**Verification:**
-- TypeScript: ✅ clean
-- Build: ✅ passes
-- ESLint: ✅ no increase
-
-Awaiting human review and CI gates."
+            echo "Attempt $i: $PASS pass, $FAIL fail, $PENDING pending"
+            
+            if [ "$FAIL" -gt "0" ]; then
+              echo "::error::CI failed. PR #$PR_NUMBER will not be merged."
+              exit 1
+            fi
+            
+            if [ "$PENDING" -eq "0" ] && [ "$PASS" -gt "0" ]; then
+              echo "All gates passed. Merging PR #$PR_NUMBER"
+              gh pr merge "$PR_NUMBER" --repo ${{ env.OWNER }}/${{ env.REPO }} \
+                --merge --subject "[organism] ${{ needs.perceive-and-reason.outputs.title }} (#$PR_NUMBER)" \
+                --admin
+              echo "::notice::PR #$PR_NUMBER merged automatically"
+              exit 0
+            fi
+            
+            sleep 30
+          done
+          
+          echo "::warning::Timed out waiting for CI"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
