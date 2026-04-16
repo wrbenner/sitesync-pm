@@ -56,6 +56,7 @@ function lazyWithRetry(importFn: () => Promise<any>, retries = 3, delay = 1000) 
 // Auth pages
 const Login = lazy(() => import('./pages/auth/Login').then((m) => ({ default: m.Login })));
 const Signup = lazy(() => import('./pages/auth/Signup').then((m) => ({ default: m.Signup })));
+const JoinProject = lazy(() => import('./pages/JoinProject'));
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 
 // Lazy loaded overlay panels (only render when opened)
@@ -322,6 +323,7 @@ function AppRoutes() {
           <Routes location={location}>
             <Route path="/login" element={<PageSuspense><Login /></PageSuspense>} />
             <Route path="/signup" element={<PageSuspense><Signup /></PageSuspense>} />
+            <Route path="/join/:token" element={<PageSuspense><JoinProject /></PageSuspense>} />
             <Route path="/portfolio" element={<PageSuspense><ProtectedRoute moduleId="portfolio" moduleName="Portfolio"><Portfolio /></ProtectedRoute></PageSuspense>} />
             <Route path="/" element={<PageSuspense><ProtectedRoute moduleId="dashboard" moduleName="Dashboard"><Dashboard /></ProtectedRoute></PageSuspense>} />
             <Route path="/dashboard" element={<PageSuspense><ProtectedRoute moduleId="dashboard" moduleName="Dashboard"><Dashboard /></ProtectedRoute></PageSuspense>} />
