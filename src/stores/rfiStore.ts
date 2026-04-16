@@ -45,7 +45,7 @@ export const useRfiStore = create<RfiState>()((set, get) => ({
 
   loadRfis: async (projectId) => {
     // Mirror into entityStore so new code reading useEntityStore("rfis") stays in sync
-    const actions = useEntityActions<RFI>('rfis');
+    useEntityStoreRoot.getState().initSlice('rfis');
     set({ loading: true, error: null, errorDetails: null });
     const { data, error } = await rfiService.loadRfis(projectId);
     if (error) {
@@ -56,7 +56,6 @@ export const useRfiStore = create<RfiState>()((set, get) => ({
       set({ rfis: items, loading: false });
       useEntityStoreRoot.getState()._setSlice('rfis', { items, loading: false, error: null });
     }
-    void actions; // ensure entityStore slice is initialised
   },
 
   createRfi: async (input) => {

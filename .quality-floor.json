@@ -16,7 +16,7 @@
   "anyCount": 1,
   "mockCount": 7,
   "a11yViolations": 0,
-  "eslintWarnings": 52,
+  "eslintWarnings": 470,
   "e2ePassRate": 0.7,
   "tsIgnoreComments": 0,
   "longestResponseMs": 340,

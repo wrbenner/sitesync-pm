@@ -268,7 +268,7 @@ describe('submittalService.updateSubmittal', () => {
     mockFrom.mockReturnValue(chain)
 
     const result = await submittalService.updateSubmittal('sub-1', { title: 'X' })
-    expect(result.error).toBe('update failed')
+    expect(result.error?.message).toBe('update failed')
   })
 })
 
@@ -311,7 +311,7 @@ describe('submittalService.loadApprovals', () => {
     mockFrom.mockReturnValue(makeChain(null, { message: 'no table' }))
 
     const result = await submittalService.loadApprovals('sub-1')
-    expect(result.error).toBe('no table')
+    expect(result.error?.message).toBe('no table')
   })
 })
 

@@ -60,7 +60,7 @@ export const useSubmittalStore = create<SubmittalState>()((set, get) => ({
   errorDetails: null,
 
   loadSubmittals: async (projectId) => {
-    const actions = useEntityActions<Submittal>('submittals');
+    useEntityStoreRoot.getState().initSlice('submittals');
     set({ loading: true, error: null, errorDetails: null });
     const { data, error } = await submittalService.loadSubmittals(projectId);
     if (error) {
@@ -71,7 +71,6 @@ export const useSubmittalStore = create<SubmittalState>()((set, get) => ({
       set({ submittals: items, loading: false });
       useEntityStoreRoot.getState()._setSlice('submittals', { items, loading: false, error: null });
     }
-    void actions;
   },
 
   createSubmittal: async (input) => {
