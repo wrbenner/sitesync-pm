@@ -7,7 +7,7 @@ import { colors, spacing, typography, borderRadius } from '../../styles/theme'
 import { usePayAppSOV } from '../../hooks/queries'
 import type { G702Data, G703LineItem } from '../../machines/paymentMachine'
 import type { LienWaiverRow, LienWaiverStatus } from '../../types/api'
-import { fmtCurrency, fmtDate, LIEN_WAIVER_STATUS_CONFIG } from './types'
+import { fmtCurrency, LIEN_WAIVER_STATUS_CONFIG } from './types'
 import { G702Preview } from './G702Preview'
 import { SOVEditorPanel } from './SOVEditor'
 

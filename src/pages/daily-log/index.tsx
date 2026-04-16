@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useCopilotStore } from '../../stores/copilotStore';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
-import { Users, Clock, ShieldCheck, Cloud, Send, BarChart3, Zap, CalendarDays, Calendar, Lock, AlertTriangle, BookOpen, RefreshCw, FileEdit } from 'lucide-react';
+import { Users, Clock, ShieldCheck, Send, BarChart3, Zap, CalendarDays, Calendar, Lock, AlertTriangle, BookOpen, RefreshCw, FileEdit } from 'lucide-react';
 import { PageContainer, Card, Btn, useToast } from '../../components/Primitives';
 import CreateDailyLogModal from '../../components/forms/CreateDailyLogModal';
 import { colors, spacing, typography, borderRadius, transitions, tradeColors } from '../../styles/theme';
@@ -21,7 +21,6 @@ import { supabase } from '../../lib/supabase';
 import type { WeatherData } from '../../lib/weather';
 import { PermissionGate } from '../../components/auth/PermissionGate';
 import { usePermissions } from '../../hooks/usePermissions';
-import { getDailyLogStatusConfig } from '../../machines/dailyLogMachine';
 import type { DailyLogState } from '../../machines/dailyLogMachine';
 import type { ExtendedDailyLog, ManpowerRow } from './types';
 import { DailyLogForm } from './DailyLogForm';
