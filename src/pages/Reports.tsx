@@ -1,5 +1,6 @@
 import React, { useState, lazy, Suspense } from 'react'
-import { Plus, FileText, Play, Clock, Calendar, Download, ChevronRight, BarChart3, DollarSign, HardHat, ClipboardList, Shield, Users, Wrench, CalendarDays } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Plus, FileText, Play, Clock, Calendar, Download, ChevronRight, BarChart3, DollarSign, HardHat, ClipboardList, Shield, Users, Wrench, CalendarDays, Sparkles } from 'lucide-react'
 import { PageContainer, Card, SectionHeader, MetricBox, Btn, TabBar, Skeleton, Tag } from '../components/Primitives'
 import { colors, spacing, typography, borderRadius, shadows, transitions, colorVars } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
@@ -12,6 +13,7 @@ const ExportCenter = lazy(() => import('../components/export/ExportCenter').then
 // ── Report Category Icons ───────────────────────────────
 
 const reportIcons: Record<string, React.ReactNode> = {
+  owner_report: <Sparkles size={18} />,
   executive_summary: <BarChart3 size={18} />,
   monthly_progress: <CalendarDays size={18} />,
   cost_report: <DollarSign size={18} />,
@@ -26,6 +28,7 @@ const reportIcons: Record<string, React.ReactNode> = {
 }
 
 const reportCategories: Record<string, string> = {
+  owner_report: 'AI Powered',
   executive_summary: 'Overview',
   monthly_progress: 'Overview',
   cost_report: 'Financial',
@@ -64,6 +67,7 @@ const TABS = [
 
 export const Reports: React.FC = () => {
   const projectId = useProjectId()
+  const navigate = useNavigate()
   const { data: customReports } = useCustomReports(projectId)
   const { data: recentRuns, isLoading: runsLoading } = useReportRuns(projectId)
 
@@ -77,6 +81,10 @@ export const Reports: React.FC = () => {
   const recentRunCount = recentRuns?.length ?? 0
 
   const handleRunReport = (type: ReportType) => {
+    if (type === 'owner_report') {
+      navigate('/reports/owner')
+      return
+    }
     setSelectedType(type)
     setExportOpen(true)
   }
@@ -112,52 +120,81 @@ export const Reports: React.FC = () => {
       {/* Standard Reports Gallery */}
       {activeTab === 'standard' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: spacing['4'] }}>
-          {REPORT_TYPES.map((report) => (
-            <Card key={report.type} padding={spacing['5']}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: spacing['3'] }}>
-                <div style={{
-                  width: 40, height: 40, borderRadius: borderRadius.md,
-                  backgroundColor: colors.orangeSubtle,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: colors.orangeText,
-                }}>
-                  {reportIcons[report.type] ?? <FileText size={18} />}
+          {REPORT_TYPES.map((report) => {
+            const isOwner = report.type === 'owner_report'
+            return (
+              <Card
+                key={report.type}
+                padding={spacing['5']}
+              >
+                {isOwner && (
+                  <div style={{
+                    margin: `-${spacing['5']}`,
+                    marginBottom: spacing['4'],
+                    padding: `${spacing['2']} ${spacing['5']}`,
+                    background: `linear-gradient(135deg, ${colors.primaryOrange}, #FF9C42)`,
+                    borderRadius: `${borderRadius.lg} ${borderRadius.lg} 0 0`,
+                  }}>
+                    <span style={{
+                      fontSize: typography.fontSize.caption,
+                      fontWeight: typography.fontWeight.semibold,
+                      color: colors.white,
+                      letterSpacing: typography.letterSpacing.wider,
+                      textTransform: 'uppercase',
+                    }}>
+                      Recommended for OAC Meetings
+                    </span>
+                  </div>
+                )}
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: spacing['3'] }}>
+                  <div style={{
+                    width: 40, height: 40, borderRadius: borderRadius.md,
+                    backgroundColor: isOwner ? colors.primaryOrange : colors.orangeSubtle,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: isOwner ? colors.white : colors.orangeText,
+                  }}>
+                    {reportIcons[report.type] ?? <FileText size={18} />}
+                  </div>
+                  <Tag
+                    label={reportCategories[report.type] ?? 'General'}
+                    color={isOwner ? colors.primaryOrange : undefined}
+                    backgroundColor={isOwner ? colors.orangeSubtle : undefined}
+                  />
                 </div>
-                <Tag>{reportCategories[report.type] ?? 'General'}</Tag>
-              </div>
 
-              <h3 style={{
-                fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold,
-                color: colorVars.textPrimary, margin: 0, marginBottom: spacing['1'],
-              }}>
-                {report.label}
-              </h3>
-              <p style={{
-                fontSize: typography.fontSize.sm, color: colorVars.textTertiary,
-                margin: 0, marginBottom: spacing['2'], lineHeight: '1.5',
-              }}>
-                {report.description}
-              </p>
+                <h3 style={{
+                  fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold,
+                  color: colorVars.textPrimary, margin: 0, marginBottom: spacing['1'],
+                }}>
+                  {report.label}
+                </h3>
+                <p style={{
+                  fontSize: typography.fontSize.sm, color: colorVars.textTertiary,
+                  margin: 0, marginBottom: spacing['2'], lineHeight: '1.5',
+                }}>
+                  {report.description}
+                </p>
 
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: spacing['1'],
-                fontSize: typography.fontSize.caption, color: colorVars.textTertiary,
-                marginBottom: spacing['3'],
-              }}>
-                <FileText size={11} /> {report.estimatedPages} pages
-              </div>
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: spacing['1'],
+                  fontSize: typography.fontSize.caption, color: colorVars.textTertiary,
+                  marginBottom: spacing['3'],
+                }}>
+                  <FileText size={11} /> {report.estimatedPages} pages
+                </div>
 
-              <div style={{ display: 'flex', gap: spacing['2'] }}>
-                <Btn
-                  variant="primary" size="sm"
-                  icon={<Play size={14} />}
-                  onClick={() => handleRunReport(report.type)}
-                >
-                  Generate
-                </Btn>
-              </div>
-            </Card>
-          ))}
+                <div style={{ display: 'flex', gap: spacing['2'] }}>
+                  <Btn
+                    variant="primary" size="sm"
+                    icon={isOwner ? <Sparkles size={14} /> : <Play size={14} />}
+                    onClick={() => handleRunReport(report.type)}
+                  >
+                    {isOwner ? 'Open Report' : 'Generate'}
+                  </Btn>
+                </div>
+              </Card>
+            )
+          })}
         </div>
       )}
 

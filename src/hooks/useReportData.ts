@@ -18,6 +18,7 @@ import { useProjectId } from './useProjectId'
 // ── Types ────────────────────────────────────────────────
 
 export type ReportType =
+  | 'owner_report'
   | 'executive_summary'
   | 'monthly_progress'
   | 'cost_report'
@@ -38,6 +39,7 @@ export interface ReportConfig {
 }
 
 export const REPORT_TYPES: ReportConfig[] = [
+  { type: 'owner_report', label: 'Owner Report', description: 'AI-generated progress narrative, schedule and budget dashboards, risk flags, photo comparison, 3-week lookahead', estimatedPages: '3-6' },
   { type: 'executive_summary', label: 'Executive Summary', description: 'Project health, milestones, budget, risks', estimatedPages: '1-2' },
   { type: 'monthly_progress', label: 'Monthly Progress', description: 'Progress by phase, financials, schedule, safety', estimatedPages: '5-10' },
   { type: 'cost_report', label: 'Cost Report', description: 'Budget vs actual, earned value analysis, contingency burn', estimatedPages: '3-6' },

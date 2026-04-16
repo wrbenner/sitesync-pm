@@ -1257,6 +1257,62 @@ const DashboardInner: React.FC = () => {
         />
       </motion.div>
 
+      {/* ── Owner Report Quick Access ─────────────────────── */}
+      <motion.div
+        initial={reducedMotion ? undefined : { opacity: 0, y: 8 }}
+        animate={reducedMotion ? undefined : { opacity: 1, y: 0 }}
+        transition={reducedMotion ? undefined : { ...staggerTransition, delay: 0.15 }}
+        role="button"
+        tabIndex={0}
+        onClick={() => navigate('/reports/owner')}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate('/reports/owner'); } }}
+        aria-label="Generate Owner Report"
+        style={{
+          display: 'flex', alignItems: 'center', gap: spacing['4'],
+          padding: spacing['4'],
+          backgroundColor: colors.surfaceRaised,
+          border: `1px solid ${colors.borderSubtle}`,
+          borderLeft: `3px solid ${colors.primaryOrange}`,
+          borderRadius: borderRadius.lg,
+          marginBottom: spacing['5'],
+          boxShadow: shadows.card,
+          cursor: 'pointer',
+          transition: `transform 200ms ease, box-shadow 200ms ease`,
+        }}
+        onMouseEnter={(e) => {
+          const el = e.currentTarget as HTMLDivElement;
+          el.style.transform = 'translateY(-1px)';
+          el.style.boxShadow = shadows.cardHover;
+        }}
+        onMouseLeave={(e) => {
+          const el = e.currentTarget as HTMLDivElement;
+          el.style.transform = 'translateY(0)';
+          el.style.boxShadow = shadows.card;
+        }}
+      >
+        <div style={{
+          width: 36, height: 36, borderRadius: borderRadius.base, flexShrink: 0,
+          background: `linear-gradient(135deg, ${colors.primaryOrange}, #FF9C42)`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <Sparkles size={16} color={colors.white} />
+        </div>
+        <div style={{ flex: 1 }}>
+          <p style={{
+            fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold,
+            color: colors.textPrimary, margin: 0,
+          }}>
+            Owner Report Ready
+          </p>
+          <p style={{
+            fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0, marginTop: 1,
+          }}>
+            AI-generated progress narrative, schedule and budget dashboards for your next OAC meeting
+          </p>
+        </div>
+        <ArrowRight size={16} color={colors.textTertiary} />
+      </motion.div>
+
       {/* ── Action Items ──────────────────────────────────── */}
       {missingWaivers.length > 0 && (
         <motion.div
