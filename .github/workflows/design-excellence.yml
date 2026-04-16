@@ -309,7 +309,8 @@ jobs:
         run: |
           PAGE="${{ steps.select.outputs.page }}"
 
-          # Install Playwright and browser
+          # Install Playwright package AND browser
+          npm install playwright 2>/dev/null
           npx playwright install chromium --with-deps 2>/dev/null
 
           # Start preview server
