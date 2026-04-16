@@ -5,9 +5,9 @@ import {
   BookOpen, Briefcase, CheckSquare,
   Users, Zap, Search,
   Activity, Clock, Heart, Shield,
-  Calculator, ShieldCheck, Package, Truck,
+  Calculator, Package, Truck,
   Sun, Moon, Bot, ClipboardCheck,
-  Plug, BarChart3, Leaf, ScrollText, Code, Globe, Store,
+  Plug, BarChart3, ScrollText, Code,
   TrendingUp, FileDiff, Send, HardHat, Repeat2,
   Receipt, Milestone,
   X, MoreHorizontal,
@@ -80,7 +80,6 @@ const sections = [
       { id: 'crews', label: 'Crews', icon: Users },
       { id: 'workforce', label: 'Workforce', icon: HardHat },
       { id: 'safety', label: 'Safety', icon: Shield },
-      { id: 'insurance', label: 'Insurance', icon: ShieldCheck },
     ],
   },
   {
@@ -102,12 +101,8 @@ const sections = [
     items: [
       { id: 'audit-trail', label: 'Audit Trail', icon: ScrollText },
       { id: 'integrations', label: 'Integrations', icon: Plug },
-      { id: 'marketplace', label: 'Marketplace', icon: Store },
       { id: 'developers', label: 'Developers', icon: Code },
       { id: 'reports', label: 'Reports', icon: BarChart3 },
-      { id: 'benchmarks', label: 'Benchmarks', icon: Globe },
-      { id: 'sustainability', label: 'Sustainability', icon: Leaf },
-      { id: 'warranties', label: 'Warranties', icon: ShieldCheck },
     ],
   },
 ];

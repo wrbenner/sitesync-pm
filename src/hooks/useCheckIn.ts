@@ -7,6 +7,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { useProjectId } from './useProjectId'
 import { useOfflineMutation } from './useOfflineMutation'
+import { logAuditEntry } from '../lib/auditLogger'
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -178,12 +179,13 @@ export function useCheckInMutation() {
         return null
       }
 
+      const checkInAt = new Date().toISOString()
       const { data, error } = await supabase
         .from('site_check_ins')
         .insert({
           project_id: projectId,
           worker_id: params.workerId || null,
-          check_in_at: new Date().toISOString(),
+          check_in_at: checkInAt,
           gps_lat: params.gpsLat || null,
           gps_lng: params.gpsLng || null,
           method: params.method,
@@ -192,6 +194,31 @@ export function useCheckInMutation() {
         .single()
 
       if (error) throw error
+
+      // Site attendance is a legal record (OSHA, Davis Bacon), so every
+      // check-in produces an audit trail entry even when the mutation does
+      // not go through createAuditedMutation (the permission model assumes
+      // only supervisors write, but workers self-check-in via QR).
+      if (data?.id) {
+        logAuditEntry({
+          projectId,
+          entityType: 'site_check_in',
+          entityId: data.id,
+          action: 'create',
+          afterState: {
+            worker_id: params.workerId || null,
+            worker_name: params.workerName,
+            company: params.company,
+            trade: params.trade,
+            method: params.method,
+            check_in_at: checkInAt,
+            gps_lat: params.gpsLat ?? null,
+            gps_lng: params.gpsLng ?? null,
+          },
+          metadata: { source: 'useCheckInMutation' },
+        }).catch(() => {})
+      }
+
       return data
     },
     onSuccess: () => {
@@ -210,14 +237,27 @@ export function useCheckOutMutation() {
     mutationFn: async (checkInId: string) => {
       if (!isSupabaseConfigured) throw new Error('Not configured')
 
+      const checkOutAt = new Date().toISOString()
       const { data, error } = await supabase
         .from('site_check_ins')
-        .update({ check_out_at: new Date().toISOString() })
+        .update({ check_out_at: checkOutAt })
         .eq('id', checkInId)
         .select()
         .single()
 
       if (error) throw error
+
+      if (projectId && data?.id) {
+        logAuditEntry({
+          projectId,
+          entityType: 'site_check_in',
+          entityId: data.id,
+          action: 'update',
+          afterState: { check_out_at: checkOutAt },
+          metadata: { source: 'useCheckOutMutation' },
+        }).catch(() => {})
+      }
+
       return data
     },
     onSuccess: () => {

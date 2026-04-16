@@ -2,9 +2,18 @@
 import { supabase } from '../client'
 import { validateProjectId } from '../middleware/projectScope'
 import { aiService } from '../../lib/aiService'
-import { captureException } from '../../lib/errorTracking'
+import { captureException, addBreadcrumb } from '../../lib/errorTracking'
 import type { AIInsight, AiInsightsResponse } from '../../types/ai'
 import type { ProjectFinancials, DivisionFinancials } from '../../types/financial'
+
+function recordEnrichmentFailure(projectId: string, query: string, err: unknown) {
+  const message = err instanceof Error ? err.message : String(err)
+  addBreadcrumb(`ai enrichment query failed: ${query}`, 'ai-insights', {
+    projectId,
+    query,
+    message,
+  })
+}
 
 export const getAiInsights = async (
   projectId: string,
@@ -50,8 +59,8 @@ export const getAiInsights = async (
     if (!error && data) {
       cachedData = data as Array<Record<string, unknown>>
     }
-  } catch {
-    // Non-fatal: fall through to computed insights
+  } catch (err) {
+    recordEnrichmentFailure(projectId, 'ai_insights_cache', err)
   }
 
   const cachedInsights = cachedData.map((row): AIInsight => ({
@@ -90,7 +99,9 @@ export const getAiInsights = async (
         .order('due_date', { ascending: true })
         .limit(5)
       overdueRfis = (data ?? []) as typeof overdueRfis
-    } catch { /* non-fatal */ }
+    } catch (err) {
+      recordEnrichmentFailure(projectId, 'overdue_rfis', err)
+    }
 
     try {
       const { count } = await supabase
@@ -99,7 +110,9 @@ export const getAiInsights = async (
         .eq('project_id', projectId)
         .in('status', ['open', 'in_progress'])
       openPunchCount = count ?? 0
-    } catch { /* non-fatal */ }
+    } catch (err) {
+      recordEnrichmentFailure(projectId, 'open_punch_count', err)
+    }
 
     try {
       const { data: budgetRows } = await supabase
@@ -109,7 +122,9 @@ export const getAiInsights = async (
       overBudgetItems = ((budgetRows ?? []) as typeof overBudgetItems).filter(
         (row) => (row.spent_to_date ?? 0) > (row.current_budget ?? 0) && (row.current_budget ?? 0) > 0
       )
-    } catch { /* non-fatal */ }
+    } catch (err) {
+      recordEnrichmentFailure(projectId, 'over_budget_items', err)
+    }
 
     try {
       const { data } = await supabase
@@ -119,7 +134,9 @@ export const getAiInsights = async (
         .eq('status', 'pending')
         .limit(5)
       pendingSubmittals = (data ?? []) as typeof pendingSubmittals
-    } catch { /* non-fatal */ }
+    } catch (err) {
+      recordEnrichmentFailure(projectId, 'pending_submittals', err)
+    }
 
     try {
       const { data } = await supabase
@@ -129,7 +146,9 @@ export const getAiInsights = async (
         .in('status', ['delayed', 'at_risk'])
         .limit(3)
       atRiskPhases = (data ?? []) as typeof atRiskPhases
-    } catch { /* non-fatal */ }
+    } catch (err) {
+      recordEnrichmentFailure(projectId, 'at_risk_phases', err)
+    }
 
     // Cross-entity conflict detection: RFIs blocking upcoming schedule phases
     let upcomingPhases: Array<{ id: string; name: string | null; start_date: string | null; status: string | null }> = []
@@ -146,7 +165,9 @@ export const getAiInsights = async (
         .order('start_date', { ascending: true })
         .limit(10)
       upcomingPhases = (data ?? []) as typeof upcomingPhases
-    } catch { /* non-fatal */ }
+    } catch (err) {
+      recordEnrichmentFailure(projectId, 'upcoming_phases', err)
+    }
 
     if (upcomingPhases.length > 0) {
       try {
@@ -159,7 +180,9 @@ export const getAiInsights = async (
           .order('due_date', { ascending: true })
           .limit(20)
         openRfisWithDates = (data ?? []) as typeof openRfisWithDates
-      } catch { /* non-fatal */ }
+      } catch (err) {
+        recordEnrichmentFailure(projectId, 'open_rfis_with_dates', err)
+      }
     }
 
     const dynamicInsights: AIInsight[] = []

@@ -12,6 +12,19 @@ import type {
 } from '../types/financial'
 import type { MappedDivision, MappedChangeOrder } from '../api/endpoints/budget'
 import type { BudgetItemRow, ScheduleActivity } from '../types/api'
+import {
+  toCents,
+  fromCents,
+  addCents,
+  subCents,
+  sumCents,
+  maxCents,
+  pctCents,
+  retainage,
+  RETAINAGE_BASIS_POINTS,
+  ZERO_CENTS,
+  type Cents,
+} from './money'
 
 function assertFinancialInputs(divisions: MappedDivision[], changeOrders: MappedChangeOrder[]): void {
   if (!Array.isArray(divisions) || !Array.isArray(changeOrders)) throw new Error('Invalid financial inputs')
@@ -23,64 +36,84 @@ export function computeProjectFinancials(
   contractValue: number
 ): ProjectFinancials {
   assertFinancialInputs(divisions, changeOrders)
-  const originalContractValue = contractValue
 
-  const approvedChangeOrders = changeOrders
-    .filter(co => co.status === 'approved')
-    .reduce((sum, co) => sum + co.approved_cost, 0)
+  const originalContractValueCents = toCents(contractValue)
 
-  const revisedContractValue = originalContractValue + approvedChangeOrders
+  const approvedChangeOrderCents = sumCents(
+    changeOrders
+      .filter((co) => co.status === 'approved')
+      .map((co) => toCents(co.approved_cost)),
+  )
 
-  const pendingChangeOrders = changeOrders
-    .filter(co => co.status === 'pending_review')
-    .reduce((sum, co) => sum + co.amount, 0)
+  const revisedContractValueCents = addCents(originalContractValueCents, approvedChangeOrderCents)
 
-  const pendingCOValue = changeOrders
-    .filter(co => co.status === 'pending_review')
-    .reduce((sum, co) => sum + co.submitted_cost, 0)
+  const pendingChangeOrderCents = sumCents(
+    changeOrders
+      .filter((co) => co.status === 'pending_review')
+      .map((co) => toCents(co.amount)),
+  )
 
-  const pendingExposure = changeOrders
-    .filter(co => co.status === 'pending_review')
-    .reduce((sum, co) => sum + co.estimated_cost, 0)
+  const pendingCOValueCents = sumCents(
+    changeOrders
+      .filter((co) => co.status === 'pending_review')
+      .map((co) => toCents(co.submitted_cost)),
+  )
 
-  const totalPotentialContract = revisedContractValue + pendingChangeOrders
+  const pendingExposureCents = sumCents(
+    changeOrders
+      .filter((co) => co.status === 'pending_review')
+      .map((co) => toCents(co.estimated_cost)),
+  )
 
-  const committedCost = divisions.reduce((s, d) => s + d.committed, 0)
-  const invoicedToDate = divisions.reduce((s, d) => s + d.spent, 0)
-  const costToComplete = Math.max(0, committedCost - invoicedToDate)
-  const projectedFinalCost = invoicedToDate + costToComplete
+  const totalPotentialContractCents = addCents(revisedContractValueCents, pendingChangeOrderCents)
 
-  const variance = revisedContractValue - projectedFinalCost
-  const variancePercent = revisedContractValue > 0 ? (variance / revisedContractValue) * 100 : 0
-  const percentComplete = committedCost > 0 ? (invoicedToDate / committedCost) * 100 : 0
+  const committedCostCents = sumCents(divisions.map((d) => toCents(d.committed)))
+  const invoicedToDateCents = sumCents(divisions.map((d) => toCents(d.spent)))
+  const costToCompleteCents = maxCents(ZERO_CENTS, subCents(committedCostCents, invoicedToDateCents))
+  const projectedFinalCostCents = addCents(invoicedToDateCents, costToCompleteCents)
+
+  const varianceCents = subCents(revisedContractValueCents, projectedFinalCostCents)
+  const variancePercent =
+    (revisedContractValueCents as number) > 0
+      ? ((varianceCents as number) / (revisedContractValueCents as number)) * 100
+      : 0
+  const percentComplete =
+    (committedCostCents as number) > 0
+      ? ((invoicedToDateCents as number) / (committedCostCents as number)) * 100
+      : 0
+
+  const retainageCents = retainage(invoicedToDateCents, RETAINAGE_BASIS_POINTS)
 
   return {
     isEmpty: divisions.length === 0,
-    originalContractValue,
-    approvedChangeOrders,
-    approvedCOValue: approvedChangeOrders,
-    revisedContractValue,
-    pendingChangeOrders,
-    pendingCOValue,
-    pendingExposure,
-    totalPotentialContract,
-    committedCost,
-    invoicedToDate,
-    costToComplete,
-    projectedFinalCost,
-    variance,
+    originalContractValue: fromCents(originalContractValueCents),
+    approvedChangeOrders: fromCents(approvedChangeOrderCents),
+    approvedCOValue: fromCents(approvedChangeOrderCents),
+    revisedContractValue: fromCents(revisedContractValueCents),
+    pendingChangeOrders: fromCents(pendingChangeOrderCents),
+    pendingCOValue: fromCents(pendingCOValueCents),
+    pendingExposure: fromCents(pendingExposureCents),
+    totalPotentialContract: fromCents(totalPotentialContractCents),
+    committedCost: fromCents(committedCostCents),
+    invoicedToDate: fromCents(invoicedToDateCents),
+    costToComplete: fromCents(costToCompleteCents),
+    projectedFinalCost: fromCents(projectedFinalCostCents),
+    variance: fromCents(varianceCents),
     variancePercent,
     percentComplete,
-    retainageHeld: invoicedToDate * 0.10,
-    retainageReceivable: invoicedToDate * 0.10,
-    overUnder: variance,
+    retainageHeld: fromCents(retainageCents),
+    retainageReceivable: fromCents(retainageCents),
+    overUnder: fromCents(varianceCents),
   }
 }
 
 export function getApprovedCOTotal(changeOrders: MappedChangeOrder[]): number {
-  return changeOrders
-    .filter(co => co.status === 'approved')
-    .reduce((sum, co) => sum + co.approved_cost, 0)
+  const totalCents = sumCents(
+    changeOrders
+      .filter((co) => co.status === 'approved')
+      .map((co) => toCents(co.approved_cost)),
+  )
+  return fromCents(totalCents)
 }
 
 export function computeDivisionFinancials(
@@ -88,28 +121,35 @@ export function computeDivisionFinancials(
   changeOrders: MappedChangeOrder[]
 ): DivisionFinancials[] {
   assertFinancialInputs(divisions, changeOrders)
-  return divisions.map(d => {
-    const divisionCOs = changeOrders.filter(co =>
-      co.status === 'approved' && co.cost_code === d.cost_code
+  return divisions.map((d) => {
+    const divisionCOs = changeOrders.filter(
+      (co) => co.status === 'approved' && co.cost_code === d.cost_code,
     )
-    const approvedChanges = divisionCOs.reduce((s, co) => s + co.approved_cost, 0)
-    const revisedBudget = d.budget + approvedChanges
-    const costToComplete = Math.max(0, d.committed - d.spent)
-    const projectedFinalCost = d.spent + costToComplete
-    const variance = revisedBudget - projectedFinalCost
+    const originalBudgetCents = toCents(d.budget)
+    const approvedChangesCents = sumCents(divisionCOs.map((co) => toCents(co.approved_cost)))
+    const revisedBudgetCents = addCents(originalBudgetCents, approvedChangesCents)
+    const committedCents = toCents(d.committed)
+    const invoicedCents = toCents(d.spent)
+    const costToCompleteCents = maxCents(ZERO_CENTS, subCents(committedCents, invoicedCents))
+    const projectedFinalCostCents = addCents(invoicedCents, costToCompleteCents)
+    const varianceCents = subCents(revisedBudgetCents, projectedFinalCostCents)
+    const variancePercent =
+      (revisedBudgetCents as number) > 0
+        ? ((varianceCents as number) / (revisedBudgetCents as number)) * 100
+        : 0
 
     return {
       divisionCode: d.cost_code || '',
       divisionName: d.name,
-      originalBudget: d.budget,
-      approvedChanges,
-      revisedBudget,
-      committedCost: d.committed,
-      invoicedToDate: d.spent,
-      costToComplete,
-      projectedFinalCost,
-      variance,
-      variancePercent: revisedBudget > 0 ? (variance / revisedBudget) * 100 : 0,
+      originalBudget: fromCents(originalBudgetCents),
+      approvedChanges: fromCents(approvedChangesCents),
+      revisedBudget: fromCents(revisedBudgetCents),
+      committedCost: fromCents(committedCents),
+      invoicedToDate: fromCents(invoicedCents),
+      costToComplete: fromCents(costToCompleteCents),
+      projectedFinalCost: fromCents(projectedFinalCostCents),
+      variance: fromCents(varianceCents),
+      variancePercent,
       percentComplete: d.progress,
     }
   })

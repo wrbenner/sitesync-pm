@@ -520,15 +520,18 @@ describe('Cross-Org Document Access Control', () => {
   // blocking direct client calls that bypass the API middleware.
   // -------------------------------------------------------------------------
   describe('RLS policy definitions', () => {
-    it('drawings RLS policy enforces project membership via auth.uid()', () => {
-      expect(DRAWINGS_RLS_POLICY).toContain('auth.uid() IN')
+    // Policies wrap auth.uid() in a subselect so Postgres caches the call
+    // per query instead of per row. LEARNINGS.md documents a 1,571x speedup
+    // for this pattern. Both match patterns below must hold together.
+    it('drawings RLS policy enforces project membership via (select auth.uid())', () => {
+      expect(DRAWINGS_RLS_POLICY).toContain('(select auth.uid()) IN')
       expect(DRAWINGS_RLS_POLICY).toContain(
         'SELECT user_id FROM project_members WHERE project_id = drawings.project_id'
       )
     })
 
-    it('files RLS policy enforces project membership via auth.uid()', () => {
-      expect(FILES_RLS_POLICY).toContain('auth.uid() IN')
+    it('files RLS policy enforces project membership via (select auth.uid())', () => {
+      expect(FILES_RLS_POLICY).toContain('(select auth.uid()) IN')
       expect(FILES_RLS_POLICY).toContain(
         'SELECT user_id FROM project_members WHERE project_id = files.project_id'
       )

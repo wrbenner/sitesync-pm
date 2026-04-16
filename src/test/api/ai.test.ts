@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 vi.mock('../../lib/errorTracking', () => ({
   captureException: vi.fn(),
+  addBreadcrumb: vi.fn(),
 }))
 
 vi.mock('../../lib/aiService', () => ({

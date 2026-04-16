@@ -1,9 +1,12 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { usePermissions } from '../../hooks/usePermissions';
 import type { Permission, ProjectRole } from '../../hooks/usePermissions';
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
 import { Lock, ShieldAlert } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
+import { useProjectId } from '../../hooks/useProjectId';
 
 // ── PermissionGate: conditionally render children based on permission ──
 
@@ -73,6 +76,60 @@ const PermissionDenied: React.FC = () => (
 export const RequestAccessPage: React.FC<{ moduleName?: string }> = ({ moduleName }) => {
   const { role } = usePermissions();
   const navigate = useNavigate();
+  const projectId = useProjectId();
+  const [requesting, setRequesting] = React.useState(false);
+
+  const submitRequest = React.useCallback(async () => {
+    if (requesting) return;
+    setRequesting(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.email) {
+        toast.error('You must be signed in to request access');
+        return;
+      }
+
+      // Look up project admins so we know where to send the request.
+      let adminEmails: string[] = [];
+      if (projectId) {
+        const { data } = await supabase
+          .from('project_members')
+          .select('user:user_id(email)')
+          .eq('project_id', projectId)
+          .in('role', ['owner', 'admin', 'project_manager']);
+        adminEmails = (data ?? [])
+          .map((row) => (row as { user?: { email?: string | null } }).user?.email)
+          .filter((email): email is string => !!email);
+      }
+
+      const subject = `Access request: ${moduleName ?? 'SiteSync module'}`;
+      const bodyLines = [
+        `User: ${user.email}`,
+        `Current role: ${role ?? 'unknown'}`,
+        `Requested access: ${moduleName ?? 'unspecified module'}`,
+        projectId ? `Project: ${projectId}` : '',
+        '',
+        'Please grant the appropriate role in Project Settings > Members.',
+      ].filter(Boolean);
+
+      const mailto =
+        `mailto:${adminEmails.join(',')}` +
+        `?subject=${encodeURIComponent(subject)}` +
+        `&body=${encodeURIComponent(bodyLines.join('\n'))}`;
+
+      window.location.href = mailto;
+      toast.success(
+        adminEmails.length > 0
+          ? 'Opening email to your project administrator'
+          : 'Opening email client. Add your administrator address to send.',
+      );
+    } catch (err) {
+      toast.error('Unable to prepare access request. Please contact your administrator directly.');
+      console.error('Access request failed:', err);
+    } finally {
+      setRequesting(false);
+    }
+  }, [requesting, projectId, moduleName, role]);
 
   return (
     <div
@@ -99,20 +156,22 @@ export const RequestAccessPage: React.FC<{ moduleName?: string }> = ({ moduleNam
           You don't have permission to access {moduleName || 'this section'}. Your current role is {role || 'unknown'}.
         </p>
         <button
-          onClick={() => alert('Access request sent to your project administrator')}
+          onClick={submitRequest}
+          disabled={requesting}
           style={{
             backgroundColor: colors.primary,
             color: 'white',
             padding: `${spacing['2']} ${spacing['4']}`,
             borderRadius: borderRadius.md,
             border: 'none',
-            cursor: 'pointer',
+            cursor: requesting ? 'default' : 'pointer',
             marginTop: spacing['6'],
             fontSize: typography.fontSize.sm,
             fontWeight: typography.fontWeight.medium,
+            opacity: requesting ? 0.6 : 1,
           }}
         >
-          Request Access
+          {requesting ? 'Sending...' : 'Request Access'}
         </button>
         <button
           onClick={() => navigate('/dashboard')}

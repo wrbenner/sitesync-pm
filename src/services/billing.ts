@@ -1,7 +1,11 @@
 // SiteSync AI — Billing & Subscription Service
 // Manages plan limits, usage tracking, and Stripe subscription lifecycle.
+//
+// Money math is done in integer cents to avoid floating point drift. Dollar
+// values cross the boundary at read and write; aggregation stays in cents.
 
 import { supabase } from '../lib/supabase'
+import { toCents, fromCents, addCents, mulCents, ZERO_CENTS, type Cents } from '../lib/money'
 
 // ── Types ───────────────────────────────────────────────
 
@@ -237,20 +241,25 @@ export async function getUsageSummary(
 
   if (error) throw error
 
-  // Aggregate by event type
-  const summary = new Map<string, { quantity: number; amount: number }>()
+  // Aggregate by event type. Amounts accumulate in cents to avoid FP drift
+  // on values like 0.10 * 100 quantities.
+  const summary = new Map<string, { quantity: number; amountCents: Cents }>()
 
   for (const event of data ?? []) {
-    const existing = summary.get(event.event_type) ?? { quantity: 0, amount: 0 }
+    const existing = summary.get(event.event_type) ?? {
+      quantity: 0,
+      amountCents: ZERO_CENTS,
+    }
+    const lineCents = mulCents(toCents(event.unit_price ?? 0), event.quantity)
     existing.quantity += event.quantity
-    existing.amount += event.quantity * (event.unit_price ?? 0)
+    existing.amountCents = addCents(existing.amountCents, lineCents)
     summary.set(event.event_type, existing)
   }
 
-  return Array.from(summary.entries()).map(([eventType, { quantity, amount }]) => ({
+  return Array.from(summary.entries()).map(([eventType, { quantity, amountCents }]) => ({
     eventType,
     period: start,
     totalQuantity: quantity,
-    totalAmount: amount,
+    totalAmount: fromCents(amountCents),
   }))
 }

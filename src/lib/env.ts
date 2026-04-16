@@ -33,14 +33,27 @@ type Env = z.infer<typeof envSchema>
 function parseEnv(): Env {
   const result = envSchema.safeParse(import.meta.env)
   if (!result.success) {
-    console.error(
-      'Environment validation failed:',
-      result.error.flatten().fieldErrors,
-    )
-    // Don't crash the app — log and return raw env
+    const errors = result.error.flatten().fieldErrors
+    console.error('Environment validation failed:', errors)
+    if (import.meta.env.PROD) {
+      throw new Error(
+        'Environment validation failed in production: ' + JSON.stringify(errors),
+      )
+    }
     return import.meta.env as unknown as Env
   }
-  return result.data
+  const parsed = result.data
+  if (parsed.PROD) {
+    const missing: string[] = []
+    if (!parsed.VITE_SUPABASE_URL) missing.push('VITE_SUPABASE_URL')
+    if (!parsed.VITE_SUPABASE_ANON_KEY) missing.push('VITE_SUPABASE_ANON_KEY')
+    if (missing.length > 0) {
+      throw new Error(
+        `Missing required production env vars: ${missing.join(', ')}`,
+      )
+    }
+  }
+  return parsed
 }
 
 export const env = parseEnv()

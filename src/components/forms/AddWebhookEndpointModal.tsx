@@ -6,6 +6,7 @@ import { colors, spacing, typography, borderRadius } from '../../styles/theme'
 import { toast } from 'sonner'
 import { useProjectId } from '../../hooks/useProjectId'
 import { Copy, Check, Loader2 } from 'lucide-react'
+import { supabase } from '../../lib/supabase'
 
 // ── Zod Schema ─────────────────────────────────────────────
 
@@ -207,11 +208,15 @@ export const AddWebhookEndpointModal: React.FC<AddWebhookEndpointModalProps> = (
 
     setIsSubmitting(true)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        throw new Error('Not authenticated')
+      }
       const response = await fetch('/functions/v1/webhooks', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          'Authorization': `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           projectId,

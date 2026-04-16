@@ -121,9 +121,13 @@ const ROLE_LEVEL: Record<string, number> = {
   member: 2,
 };
 
+// Minimum role level required for each action category. Subcontractors are
+// permitted write access because they submit RFIs, submittals, and daily log
+// entries. This aligns with ROLE_PERMISSIONS below so both decision paths
+// agree on whether a role may write.
 const ACTION_MIN_ROLE: Record<'read' | 'write' | 'admin', string> = {
   read: 'viewer',
-  write: 'superintendent',
+  write: 'subcontractor',
   admin: 'project_manager',
 };
 
@@ -225,10 +229,13 @@ export function scopedQuery(table: string) {
 //   supabase/migrations/00052_drawings_files_rls.sql
 // ---------------------------------------------------------------------------
 
+// NOTE: policies wrap auth.uid() in a subselect so Postgres evaluates it once
+// per query instead of once per row. LEARNINGS.md documents a 1,571x speedup
+// for this pattern (11s full scan to 7ms indexed lookup).
 export const DRAWINGS_RLS_POLICY = `
 CREATE POLICY "Project members can read drawings" ON drawings
   FOR SELECT USING (
-    auth.uid() IN (
+    (select auth.uid()) IN (
       SELECT user_id FROM project_members WHERE project_id = drawings.project_id
     )
   );
@@ -237,7 +244,7 @@ CREATE POLICY "Project members can read drawings" ON drawings
 export const FILES_RLS_POLICY = `
 CREATE POLICY "Project members can read files" ON files
   FOR SELECT USING (
-    auth.uid() IN (
+    (select auth.uid()) IN (
       SELECT user_id FROM project_members WHERE project_id = files.project_id
     )
   );

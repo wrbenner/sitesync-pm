@@ -2,6 +2,15 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useProjectId } from './useProjectId'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { useAgentOrchestrator } from '../stores/agentOrchestrator'
+import { addBreadcrumb } from '../lib/errorTracking'
+
+function logChatFailure(label: string, err: unknown) {
+  const message = err instanceof Error ? err.message : String(err)
+  addBreadcrumb(`ai chat: ${label}`, 'ai-chat', { message })
+  if (import.meta.env.DEV) {
+    console.warn(`[AI] ${label}:`, err)
+  }
+}
 import {
   parseAgentMention,
   stripAgentMention,
@@ -34,10 +43,10 @@ async function createConversation(
       })
       .select('id')
       .single()
-    if (error) { console.warn('[AI] Failed to create conversation:', error); return null }
+    if (error) { logChatFailure('create_conversation', error); return null }
     return data.id
   } catch (err) {
-    console.warn('[AI] Error creating conversation:', err)
+    logChatFailure('create_conversation_exception', err)
     return null
   }
 }
@@ -59,9 +68,9 @@ async function persistMessage(
         content: msg.content,
         metadata: Object.keys(metadata).length > 0 ? metadata : null,
       })
-    if (error) console.warn('[AI] Failed to persist message:', error)
+    if (error) logChatFailure('persist_message', error)
   } catch (err) {
-    console.warn('[AI] Error persisting message:', err)
+    logChatFailure('persist_message_exception', err)
   }
 }
 
@@ -80,10 +89,10 @@ export function useConversationHistory() {
         .eq('project_id', projectId)
         .order('started_at', { ascending: false })
         .limit(20)
-      if (error) { console.warn('[AI] Failed to load conversation history:', error); return [] }
+      if (error) { logChatFailure('load_history', error); return [] }
       return data ?? []
     } catch (err) {
-      console.warn('[AI] Error loading conversation history:', err)
+      logChatFailure('load_history_exception', err)
       return []
     }
   }, [projectId])
@@ -152,7 +161,7 @@ export function useMultiAgentChat(
           .eq('conversation_id', initialConversationId)
           .order('created_at', { ascending: true })
 
-        if (error) { console.warn('[AI] Failed to load messages:', error); return }
+        if (error) { logChatFailure('load_messages_initial', error); return }
         if (!data?.length) return
 
         const loaded: AgentConversationMessage[] = data.map((row) => {
@@ -174,7 +183,7 @@ export function useMultiAgentChat(
 
         useAgentOrchestrator.setState({ messages: loaded })
       } catch (err) {
-        console.warn('[AI] Error loading conversation history:', err)
+        logChatFailure('load_history_initial_exception', err)
       } finally {
         isLoadingHistoryRef.current = false
       }
@@ -396,7 +405,7 @@ export function useMultiAgentChat(
         .eq('conversation_id', id)
         .order('created_at', { ascending: true })
 
-      if (error) { console.warn('[AI] Failed to load messages:', error); return }
+      if (error) { logChatFailure('load_messages_reset', error); return }
       if (!data?.length) return
 
       const loaded: AgentConversationMessage[] = data.map((row) => {
@@ -416,7 +425,7 @@ export function useMultiAgentChat(
       for (const m of loaded) persistedMsgIdsRef.current.add(m.id)
       useAgentOrchestrator.setState({ messages: loaded })
     } catch (err) {
-      console.warn('[AI] Error loading conversation:', err)
+      logChatFailure('load_conversation_reset_exception', err)
     } finally {
       isLoadingHistoryRef.current = false
     }
