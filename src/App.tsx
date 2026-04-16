@@ -83,11 +83,9 @@ const Directory = lazy(() => import('./pages/Directory').then((m) => ({ default:
 const Meetings = lazy(() => import('./pages/Meetings').then((m) => ({ default: m.Meetings })));
 const Files = lazy(() => import('./pages/Files').then((m) => ({ default: m.Files })));
 const AICopilot = lazy(() => import('./pages/AICopilot').then((m) => ({ default: m.AICopilot })));
-const Vision = lazy(() => import('./pages/Vision').then((m) => ({ default: m.Vision })));
 const Lookahead = lazy(() => import('./pages/Lookahead').then((m) => ({ default: m.Lookahead })));
 const Activity = lazy(() => import('./pages/Activity').then((m) => ({ default: m.Activity })));
 const AuditTrail = lazy(() => import('./pages/AuditTrail').then((m) => ({ default: m.AuditTrail })));
-const TimeMachine = lazy(() => import('./pages/TimeMachine').then((m) => ({ default: m.TimeMachine })));
 const ProjectHealth = lazy(() => import('./pages/ProjectHealth').then((m) => ({ default: m.ProjectHealth })));
 const Safety = lazy(() => import('./pages/Safety').then((m) => ({ default: m.Safety })));
 const Estimating = lazy(() => import('./pages/Estimating'));
@@ -96,19 +94,13 @@ const EquipmentPage = lazy(() => import('./pages/Equipment'));
 const Portfolio = lazy(() => import('./pages/Portfolio'));
 const Financials = lazy(() => import('./pages/Financials'));
 const PaymentApplications = lazy(() => import('./pages/PaymentApplications'));
-const Insurance = lazy(() => import('./pages/Insurance'));
 const OwnerPortal = lazy(() => import('./pages/OwnerPortal'));
 const AIAgents = lazy(() => import('./pages/AIAgents'));
 const Workforce = lazy(() => import('./pages/Workforce'));
 const Permits = lazy(() => import('./pages/Permits'));
 const Integrations = lazy(() => import('./pages/Integrations'));
-const Marketplace = lazy(() => import('./pages/Marketplace'));
-const Developers = lazy(() => import('./pages/Developers'));
 const Reports = lazy(() => import('./pages/Reports'));
 const OwnerReportPage = lazy(() => import('./pages/OwnerReportPage'));
-const Sustainability = lazy(() => import('./pages/Sustainability'));
-const Benchmarks = lazy(() => import('./pages/Benchmarks'));
-const WarrantiesPage = lazy(() => import('./pages/Warranties'));
 const LienWaivers = lazy(() => import('./pages/LienWaivers').then((m) => ({ default: m.LienWaivers })));
 const Onboarding = lazy(() => import('./pages/Onboarding').then((m) => ({ default: m.Onboarding })));
 const NotFound = lazy(() => import('./pages/errors/NotFound').then((m) => ({ default: m.NotFound })));
@@ -347,26 +339,18 @@ function AppRoutes() {
             <Route path="/copilot" element={<PageSuspense><ProtectedRoute moduleId="copilot" moduleName="AI Copilot"><AICopilot /></ProtectedRoute></PageSuspense>} />
             <Route path="/activity" element={<PageSuspense><ProtectedRoute moduleId="activity" moduleName="Activity"><Activity /></ProtectedRoute></PageSuspense>} />
             <Route path="/audit-trail" element={<PageSuspense><ProtectedRoute moduleId="audit-trail" moduleName="Audit Trail"><AuditTrail /></ProtectedRoute></PageSuspense>} />
-            <Route path="/time-machine" element={<PageSuspense><ProtectedRoute moduleId="time-machine" moduleName="Time Machine"><TimeMachine /></ProtectedRoute></PageSuspense>} />
             <Route path="/project-health" element={<PageSuspense><ProtectedRoute moduleId="project-health" moduleName="Project Health"><ProjectHealth /></ProtectedRoute></PageSuspense>} />
             <Route path="/financials" element={<PageSuspense><ProtectedRoute moduleId="financials" moduleName="Financials"><Financials /></ProtectedRoute></PageSuspense>} />
             <Route path="/pay-apps" element={<PageSuspense><ProtectedRoute moduleId="pay-apps" moduleName="Payment Applications"><PaymentApplications /></ProtectedRoute></PageSuspense>} />
-            <Route path="/insurance" element={<PageSuspense><ProtectedRoute moduleId="insurance" moduleName="Insurance"><Insurance /></ProtectedRoute></PageSuspense>} />
             <Route path="/portal/owner" element={<PageSuspense><ProtectedRoute requiredPermission="project.settings" moduleName="Owner Portal"><OwnerPortal /></ProtectedRoute></PageSuspense>} />
             <Route path="/ai-agents" element={<PageSuspense><ProtectedRoute moduleId="ai-agents" moduleName="AI Agents"><AIAgents /></ProtectedRoute></PageSuspense>} />
             <Route path="/workforce" element={<PageSuspense><ProtectedRoute moduleId="workforce" moduleName="Workforce"><Workforce /></ProtectedRoute></PageSuspense>} />
             <Route path="/permits" element={<PageSuspense><ProtectedRoute moduleId="permits" moduleName="Permits"><Permits /></ProtectedRoute></PageSuspense>} />
             <Route path="/integrations" element={<PageSuspense><ProtectedRoute moduleId="integrations" moduleName="Integrations"><Integrations /></ProtectedRoute></PageSuspense>} />
-            <Route path="/marketplace" element={<PageSuspense><ProtectedRoute moduleId="marketplace" moduleName="App Marketplace"><Marketplace /></ProtectedRoute></PageSuspense>} />
-            <Route path="/developers" element={<PageSuspense><ProtectedRoute moduleId="developers" moduleName="Developer Portal"><Developers /></ProtectedRoute></PageSuspense>} />
             <Route path="/reports" element={<PageSuspense><ProtectedRoute moduleId="reports" moduleName="Reports"><Reports /></ProtectedRoute></PageSuspense>} />
             <Route path="/reports/owner" element={<PageSuspense><ProtectedRoute moduleId="reports" moduleName="Reports"><OwnerReportPage /></ProtectedRoute></PageSuspense>} />
-            <Route path="/sustainability" element={<PageSuspense><ProtectedRoute moduleId="sustainability" moduleName="Sustainability"><Sustainability /></ProtectedRoute></PageSuspense>} />
-            <Route path="/benchmarks" element={<PageSuspense><ProtectedRoute moduleId="benchmarks" moduleName="Platform Intelligence"><Benchmarks /></ProtectedRoute></PageSuspense>} />
-            <Route path="/warranties" element={<PageSuspense><ProtectedRoute moduleId="warranties" moduleName="Warranties"><WarrantiesPage /></ProtectedRoute></PageSuspense>} />
             <Route path="/lien-waivers" element={<PageSuspense><ProtectedRoute moduleId="lien-waivers" moduleName="Lien Waivers"><LienWaivers /></ProtectedRoute></PageSuspense>} />
             <Route path="/onboarding" element={<PageSuspense><Onboarding /></PageSuspense>} />
-            <Route path="/vision" element={<PageSuspense><ProtectedRoute><Vision /></ProtectedRoute></PageSuspense>} />
             <Route path="*" element={<PageSuspense><NotFound /></PageSuspense>} />
           </Routes>
         </motion.div>

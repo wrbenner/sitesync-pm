@@ -49,7 +49,6 @@ const sections = [
     items: [
       { id: 'copilot', label: 'AI Copilot', icon: Zap },
       { id: 'ai-agents', label: 'AI Agents', icon: Bot },
-      { id: 'time-machine', label: 'Time Machine', icon: Clock },
       { id: 'lookahead', label: 'Lookahead', icon: Milestone },
     ],
   },
@@ -80,7 +79,6 @@ const sections = [
       { id: 'crews', label: 'Crews', icon: Users },
       { id: 'workforce', label: 'Workforce', icon: HardHat },
       { id: 'safety', label: 'Safety', icon: Shield },
-      { id: 'insurance', label: 'Insurance', icon: ShieldCheck },
     ],
   },
   {
@@ -102,12 +100,7 @@ const sections = [
     items: [
       { id: 'audit-trail', label: 'Audit Trail', icon: ScrollText },
       { id: 'integrations', label: 'Integrations', icon: Plug },
-      { id: 'marketplace', label: 'Marketplace', icon: Store },
-      { id: 'developers', label: 'Developers', icon: Code },
       { id: 'reports', label: 'Reports', icon: BarChart3 },
-      { id: 'benchmarks', label: 'Benchmarks', icon: Globe },
-      { id: 'sustainability', label: 'Sustainability', icon: Leaf },
-      { id: 'warranties', label: 'Warranties', icon: ShieldCheck },
     ],
   },
 ];
@@ -128,7 +121,6 @@ const PAGE_PREFETCH_MAP: Record<string, () => void> = {
   'project-health': () => import('../pages/ProjectHealth').catch(() => {}),
   copilot:        () => import('../pages/AICopilot').catch(() => {}),
   'ai-agents':    () => import('../pages/AIAgents').catch(() => {}),
-  'time-machine': () => import('../pages/TimeMachine').catch(() => {}),
   lookahead:      () => import('../pages/Lookahead').catch(() => {}),
   tasks:          () => import('../pages/Tasks').catch(() => {}),
   schedule:       () => import('../pages/Schedule').catch(() => {}),
@@ -149,19 +141,13 @@ const PAGE_PREFETCH_MAP: Record<string, () => void> = {
   crews:          () => import('../pages/Crews').catch(() => {}),
   workforce:      () => import('../pages/Workforce').catch(() => {}),
   safety:         () => import('../pages/Safety').catch(() => {}),
-  insurance:      () => import('../pages/Insurance').catch(() => {}),
   activity:       () => import('../pages/Activity').catch(() => {}),
   meetings:       () => import('../pages/Meetings').catch(() => {}),
   directory:      () => import('../pages/Directory').catch(() => {}),
   files:          () => import('../pages/Files').catch(() => {}),
   'audit-trail':  () => import('../pages/AuditTrail').catch(() => {}),
   integrations:   () => import('../pages/Integrations').catch(() => {}),
-  marketplace:    () => import('../pages/Marketplace').catch(() => {}),
-  developers:     () => import('../pages/Developers').catch(() => {}),
   reports:        () => import('../pages/Reports').catch(() => {}),
-  benchmarks:     () => import('../pages/Benchmarks').catch(() => {}),
-  sustainability: () => import('../pages/Sustainability').catch(() => {}),
-  warranties:     () => import('../pages/Warranties').catch(() => {}),
 };
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, mode, onClose }) => {
