@@ -317,120 +317,242 @@ jobs:
           PREVIEW_PID=$!
           sleep 5
 
-          # Take screenshots at desktop and mobile widths
+          # Interactive experience test — USE the page like a real human
           python3 << 'PYEOF'
           import subprocess, json, base64, os, sys
 
           page = os.environ.get("PAGE", "Dashboard")
 
-          # Map page names to likely routes
           routes = {
-              "Dashboard": "/",
-              "RFIs": "/#/rfis",
-              "Budget": "/#/budget",
-              "DailyLog": "/#/daily-log",
-              "Submittals": "/#/submittals",
-              "Schedule": "/#/schedule",
-              "Safety": "/#/safety",
-              "Reports": "/#/reports",
-              "Projects": "/#/projects",
+              "Dashboard": "/", "RFIs": "/#/rfis", "Budget": "/#/budget",
+              "DailyLog": "/#/daily-log", "Submittals": "/#/submittals",
+              "Schedule": "/#/schedule", "Safety": "/#/safety",
+              "Reports": "/#/reports", "Projects": "/#/projects",
               "PaymentApplications": "/#/payment-applications",
           }
           route = routes.get(page, "/")
 
-          # Playwright screenshot script
-          screenshot_script = f"""
+          # Full interaction test script — captures the EXPERIENCE
+          interaction_script = f"""
           const {{ chromium }} = require('playwright');
+          const fs = require('fs');
+
           (async () => {{
               const browser = await chromium.launch({{ headless: true }});
+              const metrics = {{ timings: {{}}, interactions: [], issues: [] }};
 
-              // Desktop screenshot
+              // ═══ DESKTOP EXPERIENCE (1440x900) ═══════════════════════
               const desktop = await browser.newPage();
               await desktop.setViewportSize({{ width: 1440, height: 900 }});
-              await desktop.goto('http://localhost:4173{route}', {{ waitUntil: 'networkidle', timeout: 15000 }}).catch(() => {{}});
-              await desktop.waitForTimeout(2000);
-              await desktop.screenshot({{ path: '/tmp/screenshot-desktop.png', fullPage: false }});
 
-              // Mobile screenshot
+              // Moment 1: First paint — what does the user see immediately?
+              const navStart = Date.now();
+              await desktop.goto('http://localhost:4173{route}', {{ timeout: 15000 }}).catch(() => {{}});
+              await desktop.screenshot({{ path: '/tmp/ux-01-first-paint.png' }});
+              metrics.timings.firstPaint = Date.now() - navStart;
+
+              // Moment 2: Content loaded — skeleton → real content transition
+              await desktop.waitForTimeout(2500);
+              await desktop.screenshot({{ path: '/tmp/ux-02-content-loaded.png' }});
+              metrics.timings.contentLoaded = Date.now() - navStart;
+
+              // Moment 3: Hover interactions — do cards lift? do buttons respond?
+              const cards = await desktop.$$('[class*="card" i], [class*="Card" i], [role="button"], button');
+              if (cards.length > 0) {{
+                  try {{
+                      await cards[0].hover();
+                      await desktop.waitForTimeout(300);
+                      await desktop.screenshot({{ path: '/tmp/ux-03-hover-state.png' }});
+                      metrics.interactions.push('hover: card/button hover captured');
+                  }} catch(e) {{ metrics.issues.push('hover: ' + e.message.slice(0, 80)); }}
+              }} else {{
+                  metrics.issues.push('No interactive cards/buttons found on page');
+                  await desktop.screenshot({{ path: '/tmp/ux-03-hover-state.png' }});
+              }}
+
+              // Moment 4: Click interaction — open a modal, detail panel, or navigate
+              const clickTargets = await desktop.$$('button:visible, [role="button"]:visible, a:visible, [class*="clickable" i]:visible');
+              if (clickTargets.length > 1) {{
+                  try {{
+                      const clickStart = Date.now();
+                      await clickTargets[1].click();
+                      await desktop.waitForTimeout(500);
+                      await desktop.screenshot({{ path: '/tmp/ux-04-after-click.png' }});
+                      metrics.timings.clickResponse = Date.now() - clickStart;
+                      metrics.interactions.push('click: interactive element clicked, response captured');
+                  }} catch(e) {{ metrics.issues.push('click: ' + e.message.slice(0, 80)); }}
+              }}
+
+              // Moment 5: Scroll — does the page scroll smoothly? sticky headers?
+              await desktop.evaluate(() => window.scrollTo({{ top: 600, behavior: 'smooth' }}));
+              await desktop.waitForTimeout(800);
+              await desktop.screenshot({{ path: '/tmp/ux-05-scrolled.png' }});
+              metrics.interactions.push('scroll: scrolled 600px');
+
+              // Moment 6: Keyboard — can you tab through the page?
+              await desktop.keyboard.press('Tab');
+              await desktop.waitForTimeout(200);
+              await desktop.keyboard.press('Tab');
+              await desktop.waitForTimeout(200);
+              await desktop.keyboard.press('Tab');
+              await desktop.waitForTimeout(200);
+              const focusVisible = await desktop.evaluate(() => {{
+                  const el = document.activeElement;
+                  if (!el) return false;
+                  const style = window.getComputedStyle(el);
+                  return style.outlineStyle !== 'none' || style.boxShadow !== 'none';
+              }});
+              await desktop.screenshot({{ path: '/tmp/ux-06-keyboard-focus.png' }});
+              metrics.interactions.push('keyboard: focus visible = ' + focusVisible);
+              if (!focusVisible) metrics.issues.push('No visible focus indicator on Tab');
+
+              // ═══ MOBILE EXPERIENCE (375x812) ═════════════════════════
               const mobile = await browser.newPage();
               await mobile.setViewportSize({{ width: 375, height: 812 }});
-              await mobile.goto('http://localhost:4173{route}', {{ waitUntil: 'networkidle', timeout: 15000 }}).catch(() => {{}});
-              await mobile.waitForTimeout(2000);
-              await mobile.screenshot({{ path: '/tmp/screenshot-mobile.png', fullPage: false }});
+
+              await mobile.goto('http://localhost:4173{route}', {{ timeout: 15000 }}).catch(() => {{}});
+              await mobile.waitForTimeout(2500);
+              await mobile.screenshot({{ path: '/tmp/ux-07-mobile-loaded.png' }});
+
+              // Check touch target sizes
+              const touchTargets = await mobile.$$eval(
+                  'button, a, [role="button"], input, select, [class*="btn" i]',
+                  els => els.map(el => {{
+                      const rect = el.getBoundingClientRect();
+                      return {{ tag: el.tagName, w: Math.round(rect.width), h: Math.round(rect.height), text: (el.textContent || '').slice(0, 20) }};
+                  }}).filter(e => e.w > 0 && e.h > 0)
+              );
+              const smallTargets = touchTargets.filter(t => t.w < 44 || t.h < 44);
+              if (smallTargets.length > 0) {{
+                  metrics.issues.push('Touch targets too small (<44px): ' +
+                      smallTargets.slice(0, 3).map(t => t.tag + '(' + t.w + 'x' + t.h + ')').join(', '));
+              }}
+              metrics.interactions.push('mobile: ' + touchTargets.length + ' touch targets, ' + smallTargets.length + ' undersized');
+
+              // Mobile scroll
+              await mobile.evaluate(() => window.scrollTo({{ top: 400, behavior: 'smooth' }}));
+              await mobile.waitForTimeout(600);
+              await mobile.screenshot({{ path: '/tmp/ux-08-mobile-scrolled.png' }});
+
+              // Check for horizontal overflow (broken mobile layout)
+              const hasOverflow = await mobile.evaluate(() => document.body.scrollWidth > window.innerWidth);
+              if (hasOverflow) metrics.issues.push('CRITICAL: Horizontal scroll on mobile — layout is broken');
 
               await browser.close();
-              console.log('Screenshots taken');
+
+              // Save metrics
+              fs.writeFileSync('/tmp/ux-metrics.json', JSON.stringify(metrics, null, 2));
+              console.log('Experience test complete:');
+              console.log('  Timings:', JSON.stringify(metrics.timings));
+              console.log('  Interactions:', metrics.interactions.length);
+              console.log('  Issues:', metrics.issues.length);
           }})();
           """
 
-          with open("/tmp/screenshot.js", "w") as f:
-              f.write(screenshot_script)
+          with open("/tmp/experience-test.js", "w") as f:
+              f.write(interaction_script)
 
-          result = subprocess.run(["node", "/tmp/screenshot.js"],
-              capture_output=True, text=True, timeout=30)
+          result = subprocess.run(["node", "/tmp/experience-test.js"],
+              capture_output=True, text=True, timeout=60)
 
           if result.returncode != 0:
-              print(f"⚠️  Screenshot failed: {{result.stderr[:200]}}")
+              print(f"\u26a0\ufe0f  Experience test failed: {result.stderr[:300]}")
               with open(os.environ["GITHUB_OUTPUT"], "a") as f:
-                  f.write("visual_pass=true\n")  # Degrade gracefully
-                  f.write("visual_feedback=Screenshot failed - skipping visual check\n")
+                  f.write("visual_pass=true\n")
+                  f.write("visual_feedback=Experience test failed - skipping\n")
               sys.exit(0)
 
-          # Send to Gemini Vision for evaluation
+          print(result.stdout)
+
+          # Load metrics
+          metrics = {}
+          try:
+              metrics = json.load(open("/tmp/ux-metrics.json"))
+          except:
+              pass
+
+          # Collect all experience screenshots
           screenshots = []
-          for name in ["desktop", "mobile"]:
-              path = f"/tmp/screenshot-{{name}}.png"
+          labels = [
+              "01-first-paint", "02-content-loaded", "03-hover-state",
+              "04-after-click", "05-scrolled", "06-keyboard-focus",
+              "07-mobile-loaded", "08-mobile-scrolled"
+          ]
+          for label in labels:
+              path = f"/tmp/ux-{label}.png"
               try:
                   with open(path, "rb") as f:
-                      screenshots.append({{
-                          "name": name,
-                          "data": base64.b64encode(f.read()).decode()
-                      }})
+                      screenshots.append({"label": label, "data": base64.b64encode(f.read()).decode()})
               except:
                   pass
 
           if not screenshots:
-              print("⚠️  No screenshots captured")
+              print("\u26a0\ufe0f  No screenshots captured")
               with open(os.environ["GITHUB_OUTPUT"], "a") as f:
                   f.write("visual_pass=true\n")
                   f.write("visual_feedback=No screenshots - skipping\n")
               sys.exit(0)
 
-          # Build Gemini request with both screenshots
-          parts = [{"text": f"""You are a design critic evaluating a construction management app page ({page}).
+          print(f"\n\U0001f4f8 Captured {len(screenshots)} experience moments")
 
-          Score this page 1-10 on:
-          1. VISUAL HIERARCHY — Is there a clear focal point? Does the eye flow naturally?
-          2. SPACING & ALIGNMENT — Is spacing consistent? Are elements properly aligned?
-          3. TYPOGRAPHY — Clear hierarchy? Readable sizes? Proper weights?
-          4. COLOR — Professional palette? Good contrast? Accessible?
-          5. MOBILE RESPONSIVENESS — Does the mobile version work? Touch targets adequate?
-          6. POLISH — Loading states? Animations? Does it feel premium?
-          7. OVERALL — Would Steve Jobs ship this?
+          # Build Gemini request with experience sequence + metrics
+          metrics_summary = json.dumps(metrics, indent=2) if metrics else "No metrics captured"
+          parts = [{"text": f"""You are a UX critic experiencing a construction management app page ({page}).
 
-          Image 1 is desktop (1440px). Image 2 is mobile (375px).
+          You are seeing 8 moments from a real interaction test:
+          1. FIRST PAINT — What the user sees the instant the page loads
+          2. CONTENT LOADED — After 2.5 seconds (skeleton → real content)
+          3. HOVER STATE — Mouse hovering over the first interactive element
+          4. AFTER CLICK — Result of clicking an interactive element
+          5. SCROLLED — Page scrolled down 600px
+          6. KEYBOARD FOCUS — After pressing Tab 3 times (accessibility)
+          7. MOBILE LOADED — Full page on iPhone 13 (375px)
+          8. MOBILE SCROLLED — Mobile after scrolling
 
-          Be BRUTALLY HONEST. If something looks bad, say so specifically.
+          INTERACTION METRICS:
+          {metrics_summary}
+
+          EVALUATE THE FULL EXPERIENCE, not just the visuals:
+
+          1. FIRST IMPRESSION (images 1-2) — Does it feel fast? Is there a smooth loading transition?
+             Ideal: content appears in <500ms, skeleton → content is seamless
+          2. INTERACTIVITY (images 3-4) — Do hover states feel alive? Does clicking produce clear feedback?
+             Ideal: hover lifts cards, click produces instant visual response
+          3. SCROLLING (image 5) — Is there a sticky header? Does content flow naturally?
+          4. ACCESSIBILITY (image 6) — Is focus visible? Can keyboard users navigate?
+          5. MOBILE (images 7-8) — Does the layout adapt? Are touch targets 48px+? No horizontal scroll?
+          6. OVERALL FEEL — Does this feel like Apple/Linear quality? Is it delightful?
+
+          Score 1-10 on each. Be BRUTALLY HONEST.
 
           Output JSON only:
           {{{{
-              "scores": {{"visual_hierarchy": N, "spacing": N, "typography": N, "color": N, "mobile": N, "polish": N, "overall": N}},
+              "scores": {{{{
+                  "first_impression": N,
+                  "interactivity": N,
+                  "scrolling": N,
+                  "accessibility": N,
+                  "mobile": N,
+                  "overall_feel": N,
+                  "overall": N
+              }}}},
               "issues": ["specific issue 1", "specific issue 2"],
               "verdict": "SHIP" or "NEEDS_WORK",
-              "feedback": "2-3 sentences of specific actionable feedback"
+              "feedback": "3-4 sentences of specific, actionable UX feedback"
           }}}}"""}]
 
+          # Add all screenshots in sequence
           for ss in screenshots:
-              parts.append({{"inline_data": {{"mime_type": "image/png", "data": ss["data"]}}}})
+              parts.append({"inline_data": {"mime_type": "image/png", "data": ss["data"]}})
 
-          payload = json.dumps({{
-              "contents": [{{"parts": parts}}],
-              "generationConfig": {{"temperature": 0.1}}
-          }})
+          payload = json.dumps({
+              "contents": [{"parts": parts}],
+              "generationConfig": {"temperature": 0.1}
+          })
 
           gemini_result = subprocess.run(
-              ["curl", "-s", "-m", "60",
-               f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={{os.environ['GEMINI_API_KEY']}}",
+              ["curl", "-s", "-m", "90",
+               f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={os.environ['GEMINI_API_KEY']}",
                "-H", "Content-Type: application/json",
                "-d", payload],
               capture_output=True, text=True)
@@ -440,9 +562,8 @@ jobs:
           try:
               resp = json.loads(gemini_result.stdout)
               text = resp["candidates"][0]["content"]["parts"][0]["text"]
-              # Extract JSON from response
-              start = text.find("{{")
-              end = text.rfind("}}") + 1
+              start = text.find("{")
+              end = text.rfind("}") + 1
               review = json.loads(text[start:end])
 
               overall = review["scores"]["overall"]
@@ -450,26 +571,35 @@ jobs:
               feedback = review.get("feedback", "No feedback")
               issues = review.get("issues", [])
 
-              print(f"\n👁️  Gemini Visual Review: {{overall}}/10 — {{verdict}}")
-              print(f"   Scores: {{json.dumps(review['scores'])}}")
+              print(f"\n\U0001f441\ufe0f  Gemini UX Review: {overall}/10 \u2014 {verdict}")
+              print(f"   Scores: {json.dumps(review['scores'])}")
               for issue in issues[:5]:
-                  print(f"   ⚠️  {{issue}}")
-              print(f"   Feedback: {{feedback}}")
+                  print(f"   \u26a0\ufe0f  {issue}")
+              print(f"   Feedback: {feedback}")
+
+              # Add automated issues from Playwright
+              for mi in metrics.get("issues", []):
+                  print(f"   \U0001f916 Playwright: {mi}")
 
               if verdict == "NEEDS_WORK" or overall < 6:
                   visual_pass = False
-                  print("\n❌ Visual review failed — page needs more polish")
+                  print("\n\u274c UX review failed \u2014 experience needs work")
               else:
-                  print("\n✅ Visual review passed")
+                  print("\n\u2705 UX review passed")
 
           except Exception as e:
-              print(f"\n⚠️  Gemini review failed: {{e}}")
-              print(f"   Response: {{gemini_result.stdout[:300]}}")
-              feedback = f"Gemini review failed: {{str(e)[:100]}}"
+              print(f"\n\u26a0\ufe0f  Gemini review failed: {e}")
+              print(f"   Response: {gemini_result.stdout[:300]}")
+              feedback = f"Gemini review failed: {str(e)[:100]}"
+
+          # Combine Gemini feedback with Playwright metrics issues
+          all_issues = metrics.get("issues", [])
+          if all_issues:
+              feedback += " Playwright also found: " + "; ".join(all_issues[:3])
 
           with open(os.environ["GITHUB_OUTPUT"], "a") as f:
-              f.write(f"visual_pass={{str(visual_pass).lower()}}\n")
-              f.write(f"visual_feedback={{feedback[:200]}}\n")
+              f.write(f"visual_pass={str(visual_pass).lower()}\n")
+              f.write(f"visual_feedback={feedback[:500]}\n")
           PYEOF
 
           # Clean up preview server
