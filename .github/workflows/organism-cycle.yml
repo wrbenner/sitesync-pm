@@ -3,27 +3,203 @@ on:
   schedule:
     - cron: "0 0,6,12,18 * * *" # Every 6 hours
   workflow_dispatch:
+    inputs:
+      max_turns:
+        description: 'Max Claude Code turns (default 30)'
+        default: '30'
+      focus:
+        description: 'Focus area (auto, moment3, moment4, moment5, rfi, security, evals, quality)'
+        default: 'auto'
+
 permissions:
-  contents: read
+  contents: write
+  pull-requests: write
+  actions: write
+
+env:
+  NODE_VERSION: "22"
+
 jobs:
-  cycle:
+  perceive:
+    name: "Phase 1: Perceive"
+    runs-on: ubuntu-latest
+    outputs:
+      experiment: ${{ steps.reason.outputs.experiment }}
+      branch: ${{ steps.reason.outputs.branch }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Gather codebase metrics
+        id: metrics
+        run: |
+          npm ci --silent 2>/dev/null
+
+          # ESLint count
+          ESLINT_ERRORS=$(npx eslint src/ --format json 2>/dev/null | python3 -c "import json,sys; d=json.load(sys.stdin); print(sum(r['errorCount'] for r in d))" 2>/dev/null || echo "0")
+          
+          # TypeScript errors
+          TS_ERRORS=$(npx tsc --noEmit 2>&1 | grep -c 'error TS' || echo "0")
+          
+          # Test coverage
+          TEST_RESULT=$(npx vitest run --reporter=json 2>/dev/null | tail -1 || echo '{}')
+          
+          # Quality floor
+          FLOOR=$(cat .quality-floor.json)
+          
+          # Schema gap summary
+          SCHEMA_TABLES=$(grep -c '| `' SCHEMA_GAP_ANALYSIS.md 2>/dev/null || echo "0")
+          SCHEMA_CONFORMANT=$(grep -c '✅ complete' SCHEMA_GAP_ANALYSIS.md 2>/dev/null || echo "0")
+          
+          # Eval status
+          EVAL_PASSING=$(grep -c 'PASS' evals/layer1-database/run-layer1-rest.sh 2>/dev/null || echo "0")
+          
+          # Product vision moments status
+          MOMENT1=$(test -f src/components/dashboard/MorningBriefing.tsx && echo "built" || echo "missing")
+          MOMENT2=$(test -f src/components/field/QuickRFI.tsx && echo "built" || echo "missing")
+          MOMENT3=$(test -f src/components/dailylog/AutoDailyLog.tsx && echo "built" || echo "missing")
+          MOMENT4=$(test -f src/components/schedule/CoordinationEngine.tsx && echo "built" || echo "missing")
+          MOMENT5=$(test -f src/components/reports/OwnerReport.tsx && echo "built" || echo "missing")
+          
+          echo "eslint_errors=$ESLINT_ERRORS" >> "$GITHUB_OUTPUT"
+          echo "ts_errors=$TS_ERRORS" >> "$GITHUB_OUTPUT"
+          echo "moment1=$MOMENT1" >> "$GITHUB_OUTPUT"
+          echo "moment2=$MOMENT2" >> "$GITHUB_OUTPUT"
+          echo "moment3=$MOMENT3" >> "$GITHUB_OUTPUT"
+          echo "moment4=$MOMENT4" >> "$GITHUB_OUTPUT"
+          echo "moment5=$MOMENT5" >> "$GITHUB_OUTPUT"
+
+      - name: Reason — select experiment
+        id: reason
+        run: |
+          FOCUS="${{ github.event.inputs.focus || 'auto' }}"
+          
+          # Read product vision priorities
+          VISION_SUMMARY=$(head -100 .organism/vision/PRODUCT_VISION.md 2>/dev/null || echo "No vision doc")
+          
+          # Determine what to build based on metrics and focus
+          if [ "$FOCUS" = "auto" ]; then
+            # Priority: unbuilt moments > quality improvements > security > evals
+            if [ "${{ steps.metrics.outputs.moment3 }}" = "missing" ]; then
+              EXPERIMENT="Build Moment 3: The Self-Writing Daily Log. Read .organism/vision/PRODUCT_VISION.md Part 4 Moment 4 for the full specification. Create src/components/dailylog/AutoDailyLog.tsx that captures observations throughout the day (photos, voice notes, RFI activity, inspection results, weather) and compiles them into a complete daily log at end of day. The super reviews in 2 minutes instead of writing for 45."
+              BRANCH="organism/moment3-daily-log"
+              TITLE="Moment 3: Self-writing daily log"
+            elif [ "${{ steps.metrics.outputs.moment4 }}" = "missing" ]; then
+              EXPERIMENT="Build Moment 4: The Coordination Engine. Read .organism/vision/PRODUCT_VISION.md Part 4 Moment 3 for the full specification. Create src/components/schedule/CoordinationEngine.tsx that detects trade overlaps from the schedule, shows visual conflict on the floor plan, provides historical resolution data, and offers one-tap resolution with notification."
+              BRANCH="organism/moment4-coordination"
+              TITLE="Moment 4: Coordination engine"
+            elif [ "${{ steps.metrics.outputs.moment5 }}" = "missing" ]; then
+              EXPERIMENT="Build Moment 5: The Owner Report. Read .organism/vision/PRODUCT_VISION.md Part 4 Moment 5 for the full specification. Create src/components/reports/OwnerReport.tsx that auto-generates a progress narrative, visual progress heat map, budget/schedule dashboard, photo comparison timeline, and 3-week lookahead with risk flags."
+              BRANCH="organism/moment5-owner-report"
+              TITLE="Moment 5: Owner report"
+            else
+              EXPERIMENT="Improve code quality. Read .quality-floor.json. Find and fix ESLint errors to reduce the error count. Focus on the most impactful fixes — unused variables, missing types, unreachable code. Target: reduce eslint errors by at least 5."
+              BRANCH="organism/quality-$(date +%Y%m%d-%H%M)"
+              TITLE="Quality: reduce ESLint errors"
+            fi
+          else
+            case "$FOCUS" in
+              moment3) EXPERIMENT="Build Moment 3: Self-Writing Daily Log. Read .organism/vision/PRODUCT_VISION.md for spec."; BRANCH="organism/moment3-daily-log"; TITLE="Moment 3: Self-writing daily log" ;;
+              moment4) EXPERIMENT="Build Moment 4: Coordination Engine. Read .organism/vision/PRODUCT_VISION.md for spec."; BRANCH="organism/moment4-coordination"; TITLE="Moment 4: Coordination engine" ;;
+              moment5) EXPERIMENT="Build Moment 5: Owner Report. Read .organism/vision/PRODUCT_VISION.md for spec."; BRANCH="organism/moment5-owner-report"; TITLE="Moment 5: Owner report" ;;
+              quality) EXPERIMENT="Fix ESLint errors. Target: reduce by 10+."; BRANCH="organism/quality-$(date +%Y%m%d-%H%M)"; TITLE="Quality: ESLint fixes" ;;
+              *) EXPERIMENT="Auto-select highest leverage improvement."; BRANCH="organism/auto-$(date +%Y%m%d-%H%M)"; TITLE="Auto improvement" ;;
+            esac
+          fi
+          
+          echo "experiment=$EXPERIMENT" >> "$GITHUB_OUTPUT"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+          echo "title=$TITLE" >> "$GITHUB_OUTPUT"
+          echo "Experiment: $TITLE"
+          echo "Branch: $BRANCH"
+
+  build:
+    name: "Phase 2: Build with Claude Code"
+    needs: perceive
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger organism cycle
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Create experiment branch
         run: |
-          RESPONSE=$(curl -s -w "\n%{http_code}" \
-            -X POST "${SUPABASE_URL}/functions/v1/organism-cycle" \
-            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
-            -H "Content-Type: application/json" \
-            -d "{\"trigger\": \"scheduled\", \"github_token\": \"${GITHUB_TOKEN}\"}")
-          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
-          BODY=$(echo "$RESPONSE" | sed '$d')
-          echo "$BODY" | head -50
-          if [ "$HTTP_CODE" != "200" ]; then
-            echo "::error::Organism cycle failed (HTTP $HTTP_CODE)"
+          git config user.name "organism[bot]"
+          git config user.email "organism[bot]@users.noreply.github.com"
+          git checkout -b "${{ needs.perceive.outputs.branch }}"
+
+      - name: Execute experiment with Claude Code
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          MAX_TURNS="${{ github.event.inputs.max_turns || '30' }}"
+          
+          claude -p "${{ needs.perceive.outputs.experiment }}
+
+CRITICAL RULES:
+1. Read .organism/vision/PRODUCT_VISION.md for the product vision and design principles
+2. Read .organism/research/ for deep research on construction workflows, design patterns, competitors
+3. Read DOMAIN_KERNEL_SPEC.md for the canonical domain model
+4. Styling: inline styles with theme tokens from src/styles/theme.ts — NO CSS modules, NO Tailwind
+5. Use existing stores, services, hooks — don't reinvent
+6. Mobile-first — construction workers use phones on job sites
+7. Use framer-motion for animations (installed)
+8. Every component must be TypeScript-clean (npx tsc --noEmit must pass)
+9. ESLint errors must not increase (check npx eslint on your files)
+10. Do NOT modify: GOVERNANCE.md, CODEOWNERS, auth code, billing code, migrations
+11. When done, run: npx tsc --noEmit && npm run build to verify" \
+            --max-turns "$MAX_TURNS" \
+            --allowedTools "Edit,Write,Read,Bash(npm*),Bash(npx*),Bash(git*),Bash(cat*),Bash(grep*),Bash(find*),Bash(ls*),Bash(head*),Bash(tail*),Bash(wc*)" \
+            --output-format json 2>&1 | tail -100
+
+      - name: Verify build
+        run: |
+          npm ci --silent 2>/dev/null
+          echo "=== TypeScript ===" && npx tsc --noEmit
+          echo "=== Build ===" && npm run build
+          echo "=== ESLint check ===" 
+          NEW_ERRORS=$(npx eslint src/ --format json 2>/dev/null | python3 -c "import json,sys; d=json.load(sys.stdin); print(sum(r['errorCount'] for r in d))" 2>/dev/null || echo "9999")
+          OLD_ERRORS=$(jq '.eslintErrors' .quality-floor.json)
+          echo "ESLint: $NEW_ERRORS (floor: $OLD_ERRORS)"
+          if [ "$NEW_ERRORS" -gt "$OLD_ERRORS" ]; then
+            echo "::error::ESLint errors increased: $NEW_ERRORS > $OLD_ERRORS"
             exit 1
           fi
+
+      - name: Create PR
+        if: success()
+        run: |
+          git add -A
+          git diff --cached --quiet && echo "No changes" && exit 0
+          git commit -m "${{ needs.perceive.outputs.title }}
+
+Built by the organism using Claude Code.
+Experiment: ${{ needs.perceive.outputs.experiment }}"
+          git push -u origin "${{ needs.perceive.outputs.branch }}"
+          gh pr create --base main \
+            --head "${{ needs.perceive.outputs.branch }}" \
+            --title "[organism] ${{ needs.perceive.outputs.title }}" \
+            --body "Built autonomously by the organism.
+            
+**Experiment:** ${{ needs.perceive.outputs.experiment }}
+
+**Verification:**
+- TypeScript: ✅ clean
+- Build: ✅ passes
+- ESLint: ✅ no increase
+
+Awaiting human review and CI gates."
         env:
-          SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
