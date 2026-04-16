@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { changeOrderService } from '../services/changeOrderService';
+import type { ServiceError } from '../services/errors';
 import type { ChangeOrder } from '../types/database';
 import type { ChangeOrderState } from '../machines/changeOrderMachine';
 import type { CreateChangeOrderInput } from '../services/changeOrderService';
@@ -8,6 +9,7 @@ interface ChangeOrderStoreState {
   changeOrders: ChangeOrder[];
   loading: boolean;
   error: string | null;
+  errorDetails: ServiceError | null;
 
   loadChangeOrders: (projectId: string) => Promise<void>;
   createChangeOrder: (input: CreateChangeOrderInput) => Promise<{ error: string | null; changeOrder: ChangeOrder | null }>;
@@ -15,18 +17,21 @@ interface ChangeOrderStoreState {
   transitionStatus: (coId: string, status: ChangeOrderState, comments?: string) => Promise<{ error: string | null }>;
   deleteChangeOrder: (coId: string) => Promise<{ error: string | null }>;
   promoteType: (coId: string) => Promise<{ error: string | null; changeOrder: ChangeOrder | null }>;
+  clearError: () => void;
 }
 
 export const useChangeOrderStore = create<ChangeOrderStoreState>()((set) => ({
   changeOrders: [],
   loading: false,
   error: null,
+  errorDetails: null,
 
   loadChangeOrders: async (projectId) => {
-    set({ loading: true, error: null });
+    set({ loading: true, error: null, errorDetails: null });
     const { data, error } = await changeOrderService.loadChangeOrders(projectId);
     if (error) {
-      set({ error, loading: false });
+      // Preserve existing changeOrders so UI stays populated on transient errors
+      set({ error: error.userMessage, errorDetails: error, loading: false });
     } else {
       set({ changeOrders: data ?? [], loading: false });
     }
@@ -34,7 +39,7 @@ export const useChangeOrderStore = create<ChangeOrderStoreState>()((set) => ({
 
   createChangeOrder: async (input) => {
     const { data, error } = await changeOrderService.createChangeOrder(input);
-    if (error) return { error, changeOrder: null };
+    if (error) return { error: error.userMessage, changeOrder: null };
     if (data) {
       set((s) => ({ changeOrders: [data, ...s.changeOrders] }));
     }
@@ -43,41 +48,41 @@ export const useChangeOrderStore = create<ChangeOrderStoreState>()((set) => ({
 
   updateChangeOrder: async (coId, updates) => {
     const { error } = await changeOrderService.updateChangeOrder(coId, updates);
-    if (!error) {
-      set((s) => ({
-        changeOrders: s.changeOrders.map((co) =>
-          co.id === coId ? { ...co, ...updates } : co
-        ),
-      }));
-    }
-    return { error };
+    if (error) return { error: error.userMessage };
+    set((s) => ({
+      changeOrders: s.changeOrders.map((co) =>
+        co.id === coId ? { ...co, ...updates } : co
+      ),
+    }));
+    return { error: null };
   },
 
   transitionStatus: async (coId, status, comments) => {
     const { error } = await changeOrderService.transitionStatus(coId, status, comments);
-    if (!error) {
-      set((s) => ({
-        changeOrders: s.changeOrders.map((co) =>
-          co.id === coId ? { ...co, status } : co
-        ),
-      }));
-    }
-    return { error };
+    if (error) return { error: error.userMessage };
+    set((s) => ({
+      changeOrders: s.changeOrders.map((co) =>
+        co.id === coId ? { ...co, status } : co
+      ),
+    }));
+    return { error: null };
   },
 
   deleteChangeOrder: async (coId) => {
     const { error } = await changeOrderService.deleteChangeOrder(coId);
-    if (!error) {
-      set((s) => ({ changeOrders: s.changeOrders.filter((co) => co.id !== coId) }));
-    }
-    return { error };
+    if (error) return { error: error.userMessage };
+    set((s) => ({ changeOrders: s.changeOrders.filter((co) => co.id !== coId) }));
+    return { error: null };
   },
 
   promoteType: async (coId) => {
     const { data, error } = await changeOrderService.promoteType(coId);
-    if (!error && data) {
+    if (error) return { error: error.userMessage, changeOrder: null };
+    if (data) {
       set((s) => ({ changeOrders: [data, ...s.changeOrders] }));
     }
-    return { error, changeOrder: data };
+    return { error: null, changeOrder: data };
   },
+
+  clearError: () => set({ error: null, errorDetails: null }),
 }));

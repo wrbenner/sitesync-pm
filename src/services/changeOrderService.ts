@@ -7,8 +7,17 @@ import {
   type ChangeOrderType,
   type ReasonCode,
 } from '../machines/changeOrderMachine';
+import {
+  type Result,
+  ok,
+  fail,
+  dbError,
+  permissionError,
+  notFoundError,
+  validationError,
+  conflictError,
+} from './errors';
 
-// Augmented insert type — created_by added via migration 20260413000003
 type COInsert = Database['public']['Tables']['change_orders']['Insert'];
 type COInsertAugmented = COInsert & {
   created_by?: string | null;
@@ -57,25 +66,20 @@ export type CreateChangeOrderInput = {
   parent_co_id?: string;
 };
 
-export type ChangeOrderServiceResult<T = void> = {
-  data: T | null;
-  error: string | null;
-};
+/** @deprecated Use Result<T> from services/errors instead */
+export type ChangeOrderServiceResult<T = void> = Result<T>;
 
 // ── Service ──────────────────────────────────────────────────────────────────
 
 export const changeOrderService = {
-  /**
-   * Load all active (non-deleted) change orders for a project.
-   */
-  async loadChangeOrders(projectId: string): Promise<ChangeOrderServiceResult<ChangeOrder[]>> {
+  async loadChangeOrders(projectId: string): Promise<Result<ChangeOrder[]>> {
     const { data, error } = await supabase
       .from('change_orders')
       .select('*')
       .eq('project_id', projectId)
       .order('number', { ascending: false });
 
-    if (error) return { data: null, error: error.message };
+    if (error) return fail(dbError(error.message, { projectId }));
 
     // Filter soft-deleted records in-memory until database.ts is regenerated
     // post-migration 20260413000004 which added deleted_at to change_orders
@@ -84,13 +88,10 @@ export const changeOrderService = {
       return !ext.deleted_at;
     });
 
-    return { data: active as ChangeOrder[], error: null };
+    return ok(active as ChangeOrder[]);
   },
 
-  /**
-   * Create a new change order in 'draft' status with provenance.
-   */
-  async createChangeOrder(input: CreateChangeOrderInput): Promise<ChangeOrderServiceResult<ChangeOrder>> {
+  async createChangeOrder(input: CreateChangeOrderInput): Promise<Result<ChangeOrder>> {
     const userId = await getCurrentUserId();
 
     const payload: COInsertAugmented = {
@@ -113,8 +114,8 @@ export const changeOrderService = {
       .select()
       .single();
 
-    if (error) return { data: null, error: error.message };
-    return { data: data as ChangeOrder, error: null };
+    if (error) return fail(dbError(error.message, { project_id: input.project_id }));
+    return ok(data as ChangeOrder);
   },
 
   /**
@@ -122,18 +123,12 @@ export const changeOrderService = {
    *
    * IMPORTANT: Resolves the user's authoritative role from the database.
    * Does NOT accept caller-supplied roles.
-   *
-   * Validates that:
-   *   1. The change order exists
-   *   2. The user has a project role
-   *   3. The transition is valid per changeOrderMachine for that role
    */
   async transitionStatus(
     coId: string,
     newStatus: ChangeOrderState,
     comments?: string,
-  ): Promise<ChangeOrderServiceResult> {
-    // 1. Fetch current change order
+  ): Promise<Result> {
     const { data: co, error: fetchError } = await supabase
       .from('change_orders')
       .select('status, project_id, type')
@@ -141,27 +136,26 @@ export const changeOrderService = {
       .single();
 
     if (fetchError || !co) {
-      return { data: null, error: fetchError?.message ?? 'Change order not found' };
+      return fail(notFoundError('Change order', coId));
     }
 
-    // 2. Resolve authoritative role — do NOT trust caller
     const userId = await getCurrentUserId();
     const role = await resolveProjectRole(co.project_id, userId);
     if (!role) {
-      return { data: null, error: 'User is not a member of this project' };
+      return fail(permissionError('User is not a member of this project'));
     }
 
-    // 3. Validate transition
     const currentStatus = co.status as ChangeOrderState;
     const validTargets = getValidCOTransitionsForRole(currentStatus, role);
     if (!validTargets.includes(newStatus)) {
-      return {
-        data: null,
-        error: `Invalid transition: ${currentStatus} → ${newStatus} (role: ${role}). Valid: ${validTargets.join(', ')}`,
-      };
+      return fail(
+        validationError(
+          `Invalid transition: ${currentStatus} \u2192 ${newStatus} (role: ${role}). Valid: ${validTargets.join(', ')}`,
+          { currentStatus, newStatus, role, validTargets },
+        ),
+      );
     }
 
-    // 4. Execute transition with provenance
     const now = new Date().toISOString();
     const updates: Record<string, unknown> = {
       status: newStatus,
@@ -186,18 +180,17 @@ export const changeOrderService = {
       .update(updates)
       .eq('id', coId);
 
-    if (error) return { data: null, error: error.message };
+    if (error) return fail(dbError(error.message, { coId, newStatus }));
     return { data: null, error: null };
   },
 
   /**
-   * Update change order fields (non-status). Populates updated_by.
-   * Use transitionStatus() for status changes.
+   * Update change order fields (non-status). Use transitionStatus() for status changes.
    */
   async updateChangeOrder(
     coId: string,
     updates: Partial<ChangeOrder>,
-  ): Promise<ChangeOrderServiceResult> {
+  ): Promise<Result> {
     const userId = await getCurrentUserId();
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { status: _status, ...safeUpdates } = updates as Record<string, unknown>;
@@ -207,14 +200,11 @@ export const changeOrderService = {
       .update({ ...safeUpdates, updated_by: userId })
       .eq('id', coId);
 
-    if (error) return { data: null, error: error.message };
+    if (error) return fail(dbError(error.message, { coId }));
     return { data: null, error: null };
   },
 
-  /**
-   * Soft-delete a change order.
-   */
-  async deleteChangeOrder(coId: string): Promise<ChangeOrderServiceResult> {
+  async deleteChangeOrder(coId: string): Promise<Result> {
     const userId = await getCurrentUserId();
 
     const { error } = await supabase
@@ -225,16 +215,15 @@ export const changeOrderService = {
       })
       .eq('id', coId);
 
-    if (error) return { data: null, error: error.message };
+    if (error) return fail(dbError(error.message, { coId }));
     return { data: null, error: null };
   },
 
   /**
-   * Promote an approved change order to the next type in the PCO → COR → CO chain.
+   * Promote an approved change order to the next type in the PCO \u2192 COR \u2192 CO chain.
    * Creates a new record at the next stage linked back via promoted_from_id.
    */
-  async promoteType(coId: string): Promise<ChangeOrderServiceResult<ChangeOrder>> {
-    // 1. Fetch current change order
+  async promoteType(coId: string): Promise<Result<ChangeOrder>> {
     const { data: co, error: fetchError } = await supabase
       .from('change_orders')
       .select('*')
@@ -242,22 +231,23 @@ export const changeOrderService = {
       .single();
 
     if (fetchError || !co) {
-      return { data: null, error: fetchError?.message ?? 'Change order not found' };
+      return fail(notFoundError('Change order', coId));
     }
 
     const currentType = co.type as ChangeOrderType;
     if (currentType === 'co') {
-      return { data: null, error: 'Change orders cannot be promoted further' };
+      return fail(conflictError('Change orders cannot be promoted further', { coId, currentType }));
     }
     if (co.status !== 'approved') {
-      return { data: null, error: 'Only approved change orders can be promoted' };
+      return fail(
+        conflictError('Only approved change orders can be promoted', { coId, status: co.status }),
+      );
     }
 
-    // 2. Resolve authoritative role
     const userId = await getCurrentUserId();
     const role = await resolveProjectRole(co.project_id, userId);
     if (!role) {
-      return { data: null, error: 'User is not a member of this project' };
+      return fail(permissionError('User is not a member of this project'));
     }
 
     const nextType: ChangeOrderType = currentType === 'pco' ? 'cor' : 'co';
@@ -286,14 +276,14 @@ export const changeOrderService = {
       .select()
       .single();
 
-    if (insertError) return { data: null, error: insertError.message };
+    if (insertError) return fail(dbError(insertError.message, { coId, nextType }));
 
-    // Mark source as promoted
+    // Mark source as promoted — non-critical; failure doesn't block the caller
     await supabase
       .from('change_orders')
       .update({ promoted_at: now, updated_by: userId } as Record<string, unknown>)
       .eq('id', coId);
 
-    return { data: promoted as ChangeOrder, error: null };
+    return ok(promoted as ChangeOrder);
   },
 };
