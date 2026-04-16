@@ -117,14 +117,25 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Commit metrics
+      - name: Commit metrics and create PR
         run: |
           git config user.name "organism[bot]"
           git config user.email "organism[bot]@users.noreply.github.com"
           git add .metrics/
           git diff --cached --quiet && echo "No metric changes" && exit 0
+          
+          # Create a branch for metrics (cannot push directly to protected main)
+          BRANCH="organism/metrics-$(date -u +%Y%m%d-%H%M)"
+          git checkout -b "$BRANCH"
           git commit -m "metrics: perception snapshot $(date -u +%Y-%m-%d-%H%M)"
-          git push
+          git push -u origin "$BRANCH"
+          
+          # Create a PR for the metrics update
+          gh pr create --base main --head "$BRANCH" \
+            --title "[organism] Perception metrics $(date -u +%Y-%m-%d)" \
+            --body "Automated perception snapshot. Metrics only — no code changes."
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Trigger Reason workflow
         run: |

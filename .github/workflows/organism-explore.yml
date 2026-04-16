@@ -157,4 +157,7 @@ jobs:
           git add .agent/
           git diff --cached --quiet && echo "No new exploration data" && exit 0
           git commit -m "explore: weekly landscape scan $(date -u +%Y-%m-%d)"
-          git push
+          BRANCH="organism/explore-$(date -u +%Y%m%d-%H%M)"
+          git checkout -b "$BRANCH"
+          git push -u origin "$BRANCH"
+          gh pr create --base main --head "$BRANCH" --title "[organism] Exploration scan $(date -u +%Y-%m-%d)" --body "Automated exploration scan — competitor and regulatory updates."

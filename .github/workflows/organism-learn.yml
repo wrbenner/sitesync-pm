@@ -208,4 +208,7 @@ jobs:
           git add EVOLUTION_LEDGER.md LEARNINGS.md .quality-floor.json .agent/ 2>/dev/null || true
           git diff --cached --quiet && echo "No changes to commit" && exit 0
           git commit -m "learn: ${{ inputs.outcome }} — ${{ steps.parse.outputs.title }}"
-          git push
+          BRANCH="organism/learn-$(date -u +%Y%m%d-%H%M)"
+          git checkout -b "$BRANCH"
+          git push -u origin "$BRANCH"
+          gh pr create --base main --head "$BRANCH" --title "[organism] Learning update $(date -u +%Y-%m-%d)" --body "Automated learning update from experiment outcome."

@@ -257,7 +257,10 @@ jobs:
           git add .agent/current-experiments.json EXPERIMENTS.md
           git diff --cached --quiet && echo "No changes" && exit 0
           git commit -m "reason: generated 3 experiments $(date -u +%Y-%m-%d)"
-          git push
+          BRANCH="organism/reason-$(date -u +%Y%m%d-%H%M)"
+          git checkout -b "$BRANCH"
+          git push -u origin "$BRANCH"
+          gh pr create --base main --head "$BRANCH" --title "[organism] Experiments $(date -u +%Y-%m-%d)" --body "Automated experiment generation from reasoning cycle."
 
       - name: Trigger Build for experiment 0
         run: |
