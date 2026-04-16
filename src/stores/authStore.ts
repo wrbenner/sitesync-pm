@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
+import { userService } from '../services/userService';
 import type { Profile, Organization } from '../types/database';
 import type { Session, User } from '@supabase/supabase-js';
 
@@ -45,7 +46,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         await get().loadOrganization();
       }
 
-      // Listen for auth changes
       supabase.auth.onAuthStateChange(async (_event, session) => {
         set({ session, user: session?.user ?? null });
         if (session?.user) {
@@ -67,9 +67,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
-        set({ error });
-      }
+      if (error) set({ error });
       set({ loading: false });
       return { error: error?.message ?? null };
     } catch (err) {
@@ -95,14 +93,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         return { error: error.message };
       }
 
-      // Create profile row for the new user
       if (data.user) {
-        await supabase.from('profiles').insert({
-          user_id: data.user.id,
-          full_name: fullName,
-          first_name: firstName,
-          last_name: lastName ?? null,
-        });
+        await userService.createProfile(data.user.id, fullName, firstName, lastName);
       }
 
       set({ loading: false });
@@ -131,9 +123,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/reset-password`,
       });
-      if (error) {
-        set({ error });
-      }
+      if (error) set({ error });
       set({ loading: false });
       return { error: error?.message ?? null };
     } catch (err) {
@@ -146,12 +136,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   updatePassword: async (newPassword: string) => {
     set({ loading: true, error: null });
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword,
-      });
-      if (error) {
-        set({ error });
-      }
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) set({ error });
       set({ loading: false });
       return { error: error?.message ?? null };
     } catch (err) {
@@ -164,93 +150,43 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   loadProfile: async () => {
     const { user } = get();
     if (!user) return;
-
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('user_id', user.id)
-      .single();
-
+    const { data, error } = await userService.loadProfile(user.id);
     if (!error && data) {
-      set({ profile: data as Profile });
+      set({ profile: data });
     }
   },
 
   loadOrganization: async () => {
     const { profile } = get();
     if (!profile?.organization_id) return;
-
-    const { data, error } = await supabase
-      .from('organizations')
-      .select('*')
-      .eq('id', profile.organization_id)
-      .single();
-
+    const { data, error } = await userService.loadOrganization(profile.organization_id);
     if (!error && data) {
-      set({ organization: data as Organization });
+      set({ organization: data });
     }
   },
 
   updateProfile: async (updates) => {
     const { user } = get();
     if (!user) return { error: 'Not authenticated' };
-
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update(updates)
-        .eq('user_id', user.id);
-
-      if (!error) {
-        await get().loadProfile();
-      }
-
-      return { error: error?.message ?? null };
-    } catch (err) {
-      const error = err instanceof Error ? err.message : String(err);
-      return { error };
+    const { error } = await userService.updateProfile(user.id, updates);
+    if (!error) {
+      await get().loadProfile();
     }
+    return { error: error?.userMessage ?? null };
   },
 
   createOrganization: async (name) => {
     const { user } = get();
     if (!user) return { error: 'Not authenticated', organization: null };
-
-    try {
-      const { data, error } = await supabase
-        .from('organizations')
-        .insert({ name, slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') })
-        .select()
-        .single();
-
-      if (error) return { error: error.message, organization: null };
-
-      const organization = data as Organization;
-
-      // Add user as owner in organization_members
-      await supabase.from('organization_members').insert({
-        organization_id: organization.id,
-        user_id: user.id,
-        role: 'owner',
-      });
-
-      // Link profile to organization
-      await supabase
-        .from('profiles')
-        .update({ organization_id: organization.id })
-        .eq('user_id', user.id);
-
+    const { data, error } = await userService.createOrganization(name, user.id);
+    if (error) return { error: error.userMessage, organization: null };
+    if (data) {
       await get().loadProfile();
-      set({ organization });
-
-      return { error: null, organization };
-    } catch (err) {
-      const error = err instanceof Error ? err.message : String(err);
-      return { error, organization: null };
+      set({ organization: data });
     }
+    return { error: null, organization: data };
   },
 
-  // Alias for createOrganization (used by Register.tsx)
   createCompany: async (name) => {
     return get().createOrganization(name);
   },

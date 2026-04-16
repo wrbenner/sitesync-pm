@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import type { BudgetItem, ChangeOrder } from '../types/database';
+import type { BudgetLineItemRow } from '../types/api';
 import { type Result, ok, fail, dbError } from './errors';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -118,5 +119,67 @@ export const budgetService = {
 
     if (error) return fail(dbError(error.message, { id, status }));
     return { data: null, error: null };
+  },
+
+  async loadLineItems(projectId: string): Promise<Result<BudgetLineItemRow[]>> {
+    const { data, error } = await supabase
+      .from('budget_line_items')
+      .select('*')
+      .eq('project_id', projectId)
+      .order('csi_code');
+
+    if (error) return fail(dbError(error.message, { projectId }));
+    return ok((data ?? []) as BudgetLineItemRow[]);
+  },
+
+  async addLineItem(item: {
+    project_id: string;
+    csi_code?: string | null;
+    description?: string | null;
+    original_amount?: number | null;
+    committed_cost?: number | null;
+    actual_cost?: number | null;
+  }): Promise<Result<BudgetLineItemRow>> {
+    const { data, error } = await supabase
+      .from('budget_line_items')
+      .insert(item)
+      .select()
+      .single();
+
+    if (error) return fail(dbError(error.message, { project_id: item.project_id }));
+    return ok(data as BudgetLineItemRow);
+  },
+
+  // ── Division-layer helpers (map to budget_items) ─────────────────────────────
+  // budget_divisions does not exist in the schema; budget_items is the canonical table.
+  // These methods accept the legacy "division" shape from BudgetUpload and map it
+  // to BudgetItemInsert so callers do not need to know the internal field names.
+
+  async importDivisionRows(
+    projectId: string,
+    rows: Array<{
+      name: string;
+      code?: string;
+      budgeted_amount?: number;
+      spent?: number;
+      committed?: number;
+    }>,
+  ): Promise<Result<BudgetItem[]>> {
+    const items = rows.map((r) => ({
+      project_id: projectId,
+      division: r.name,
+      csi_division: r.code ?? null,
+      original_amount: r.budgeted_amount ?? null,
+      actual_amount: r.spent ?? null,
+      committed_amount: r.committed ?? null,
+    }));
+
+    const { data, error } = await supabase
+      .from('budget_items')
+      .insert(items)
+      .select();
+
+    if (error) return fail(dbError(error.message, { projectId }));
+    return ok((data ?? []) as BudgetItem[]);
   },
 };
