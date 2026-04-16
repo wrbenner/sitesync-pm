@@ -182,6 +182,9 @@ jobs:
           ## Product Vision (excerpt)
           {vision[:2000]}
 
+          ## Engineering Standards
+          {read_file(".organism/ENGINEERING_STANDARDS.md", 2000)}
+
           ## Directives
           {directives[:1500]}
 
@@ -434,7 +437,7 @@ jobs:
           prompt = desc + """
 
           ═══════════════════════════════════════════════════════════════════
-          YOU ARE THE SITESYNC ORGANISM. Read .organism/DIRECTIVES.md FIRST.
+          YOU ARE THE SITESYNC ORGANISM. Read .organism/DIRECTIVES.md and .organism/ENGINEERING_STANDARDS.md FIRST.
           Then read .organism/vision/PRODUCT_VISION.md for the quality standard.
 
           You have 4 AI providers available via env vars:

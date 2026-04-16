@@ -162,7 +162,7 @@ jobs:
           that's Design Excellence's job. Your job is to make every feature on the {page} page
           BULLETPROOF. Enterprise quality means it never breaks, no matter what the user does.
 
-          Read .organism/DIRECTIVES.md and .organism/vision/PRODUCT_VISION.md first.
+          Read .organism/DIRECTIVES.md, .organism/vision/PRODUCT_VISION.md, and .organism/ENGINEERING_STANDARDS.md first.
           Then read src/pages/{page}.tsx and its related stores/services CAREFULLY.
 
           ═══════════════════════════════════════════════════════════════

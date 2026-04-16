@@ -193,7 +193,7 @@ jobs:
           prompt = f"""You are the Design Excellence agent — your mission is to make the {page}
           page so beautiful, so polished, so delightful that Steve Jobs would ship it.
 
-          Read .organism/DIRECTIVES.md and .organism/vision/PRODUCT_VISION.md first.
+          Read .organism/DIRECTIVES.md, .organism/vision/PRODUCT_VISION.md, and .organism/ENGINEERING_STANDARDS.md first.
           Then read src/pages/{page}.tsx carefully.
 
           ═══════════════════════════════════════════════════════════════
