@@ -109,18 +109,28 @@ export const Signup: React.FC = () => {
       const userId = data.user.id
 
       // Insert organization row
+      const slug = company.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
       const { data: orgData, error: orgError } = await supabase
         .from('organizations')
-        .insert({ name: company.trim() })
+        .insert({ name: company.trim(), slug })
         .select('id')
         .single()
 
       const organizationId = orgError ? null : orgData?.id ?? null
 
-      // Insert user profile row (non-fatal if table not yet provisioned)
-      await (supabase.from as (t: string) => ReturnType<typeof supabase.from>)('users').insert({
-        id: userId,
-        email,
+      // Add user as owner of the organization
+      if (organizationId) {
+        await supabase.from('organization_members').insert({
+          organization_id: organizationId,
+          user_id: userId,
+          role: 'owner',
+        })
+      }
+
+      // Create user profile
+      await supabase.from('profiles').insert({
+        user_id: userId,
+        full_name: `${firstName.trim()} ${lastName.trim()}`,
         first_name: firstName.trim(),
         last_name: lastName.trim(),
         job_title: jobTitle.trim() || null,

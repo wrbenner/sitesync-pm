@@ -153,10 +153,10 @@ export function useAuth(): AuthState {
       const nameParts = name.trim().split(' ')
       const first_name = nameParts[0] ?? ''
       const last_name = nameParts.slice(1).join(' ') || null
-      // Insert profile row into users table (errors here are non-fatal)
-      await (supabase.from as (t: string) => ReturnType<typeof supabase.from>)('users').insert({
-        id: data.user.id,
-        email,
+      // Create profile row for the new user
+      await supabase.from('profiles').insert({
+        user_id: data.user.id,
+        full_name: name.trim(),
         first_name,
         last_name,
         organization_id: null,
