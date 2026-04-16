@@ -18,6 +18,7 @@ import { PdfViewer } from '../components/drawings/PdfViewer';
 import { PermissionGate } from '../components/auth/PermissionGate';
 import { supabase } from '../lib/supabase';
 import { UploadZone } from '../components/files/UploadZone';
+import { drawingService } from '../services/drawingService';
 
 
 const aiChanges: Record<number, number> = { 1: 3, 5: 2, 11: 4 };
@@ -241,14 +242,13 @@ const _DrawingsPage: React.FC = () => {
         const { data: storageData } = await supabase.storage.from('drawings').upload(storagePath, file);
         if (storageData?.path) fileUrl = storageData.path;
       } catch { /* storage upload failed, continue with generated path */ }
-      await supabase.from('drawings').insert({
+      await drawingService.createDrawing({
         project_id: projectId,
         title: titleNoExt,
         discipline: uploadDiscipline,
         sheet_number: sheetNumber,
         revision: '1',
         file_url: fileUrl,
-        status: 'current',
       });
       completed++;
     }
