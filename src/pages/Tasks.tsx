@@ -80,7 +80,8 @@ interface MappedTask {
 
 export const Tasks: React.FC = () => {
   const projectId = useProjectId();
-  const { data: tasksRaw = [], isPending: loading, error: tasksError, refetch } = useTasks(projectId);
+  const { data: tasksResult, isPending: loading, error: tasksError, refetch } = useTasks(projectId);
+  const tasksRaw = tasksResult?.data ?? [];
 
   // Map API tasks to component shape
   const fetchedTasks: MappedTask[] = useMemo(() => tasksRaw.map((t: Record<string, unknown>) => {

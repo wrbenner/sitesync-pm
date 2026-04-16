@@ -210,18 +210,22 @@ export function usePunchItem(id: string | undefined) {
 
 // ── Tasks ─────────────────────────────────────────────────
 
-export function useTasks(projectId: string | undefined) {
+export function useTasks(projectId: string | undefined, pagination?: PaginationParams) {
+  const { page = 1, pageSize = 50 } = pagination ?? {}
   return useQuery({
-    queryKey: ['tasks', projectId],
-    queryFn: async () => {
-      const { data, error } = await supabase
+    queryKey: ['tasks', projectId, page, pageSize],
+    queryFn: async (): Promise<PaginatedResult<Task>> => {
+      const from = (page - 1) * pageSize
+      const to = from + pageSize - 1
+      const { data, error, count } = await supabase
         .from('tasks')
-        .select('*')
+        .select('*', { count: 'exact' })
         .eq('project_id', projectId!)
         .order('sort_order', { ascending: true })
         .order('created_at', { ascending: true })
+        .range(from, to)
       if (error) throw error
-      return data as Task[]
+      return { data: (data ?? []) as Task[], total: count ?? 0, page, pageSize }
     },
     enabled: !!projectId,
   })
@@ -229,17 +233,21 @@ export function useTasks(projectId: string | undefined) {
 
 // ── Drawings ──────────────────────────────────────────────
 
-export function useDrawings(projectId: string | undefined) {
+export function useDrawings(projectId: string | undefined, pagination?: PaginationParams) {
+  const { page = 1, pageSize = 50 } = pagination ?? {}
   return useQuery({
-    queryKey: ['drawings', projectId],
-    queryFn: async () => {
-      const { data, error } = await supabase
+    queryKey: ['drawings', projectId, page, pageSize],
+    queryFn: async (): Promise<PaginatedResult<Drawing>> => {
+      const from = (page - 1) * pageSize
+      const to = from + pageSize - 1
+      const { data, error, count } = await supabase
         .from('drawings')
-        .select('*')
+        .select('*', { count: 'exact' })
         .eq('project_id', projectId!)
         .order('set_number', { ascending: true })
+        .range(from, to)
       if (error) throw error
-      return data as Drawing[]
+      return { data: (data ?? []) as Drawing[], total: count ?? 0, page, pageSize }
     },
     enabled: !!projectId,
   })

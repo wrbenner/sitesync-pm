@@ -68,7 +68,8 @@ export const ProjectHealth: React.FC = () => {
   const { data: dailyLogsResult } = useDailyLogs(projectId);
   const { data: meetingsResult } = useMeetings(projectId);
   const { data: files } = useFiles(projectId);
-  const { data: drawings } = useDrawings(projectId);
+  const { data: drawingsResult } = useDrawings(projectId);
+  const drawings = drawingsResult?.data;
 
   const isLoading = loadingSchedule || loadingBudget;
 
