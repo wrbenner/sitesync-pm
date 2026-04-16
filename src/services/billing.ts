@@ -2,6 +2,8 @@
 // Manages plan limits, usage tracking, and Stripe subscription lifecycle.
 
 import { supabase } from '../lib/supabase'
+import type { Cents } from '../types/money'
+import { multiplyCents, addCents } from '../types/money'
 
 // ── Types ───────────────────────────────────────────────
 
@@ -9,8 +11,8 @@ export interface Plan {
   id: string
   name: string
   description: string
-  priceMonthly: number
-  priceAnnual: number
+  priceMonthly: Cents  // integer cents
+  priceAnnual: Cents  // integer cents
   maxProjects: number
   maxUsers: number
   maxStorageGb: number
@@ -19,8 +21,8 @@ export interface Plan {
   customReports: boolean
   sso: boolean
   apiAccess: boolean
-  aiPerPageRate: number
-  paymentProcessingRate: number
+  aiPerPageRate: Cents  // integer cents per page
+  paymentProcessingRate: number  // percentage rate, not money
 }
 
 export interface Subscription {
@@ -238,12 +240,12 @@ export async function getUsageSummary(
   if (error) throw error
 
   // Aggregate by event type
-  const summary = new Map<string, { quantity: number; amount: number }>()
+  const summary = new Map<string, { quantity: number; amount: Cents }>()
 
   for (const event of data ?? []) {
-    const existing = summary.get(event.event_type) ?? { quantity: 0, amount: 0 }
+    const existing = summary.get(event.event_type) ?? { quantity: 0, amount: 0 as Cents }
     existing.quantity += event.quantity
-    existing.amount += event.quantity * (event.unit_price ?? 0)
+    existing.amount = addCents(existing.amount as Cents, multiplyCents((event.unit_price ?? 0) as Cents, event.quantity))
     summary.set(event.event_type, existing)
   }
 
