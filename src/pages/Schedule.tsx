@@ -914,7 +914,7 @@ export const Schedule: React.FC = () => {
           projectId={activeProject?.id}
         />
         <div role="status" aria-label="Build Your Project Schedule" style={{ maxWidth: '480px', margin: '80px auto', textAlign: 'center' }}>
-          <CalendarDays size={48} color=colors.textTertiary style={{ marginBottom: '24px' }} />
+          <CalendarDays size={48} color={colors.textTertiary} style={{ marginBottom: '24px' }} />
           <div style={{ fontSize: '18px', fontWeight: 600, color: colors.textPrimary, marginBottom: '12px' }}>
             Build your schedule to track every phase from mobilization to closeout
           </div>
