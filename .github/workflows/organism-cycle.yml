@@ -749,8 +749,8 @@ jobs:
           owner = os.environ.get("OWNER", "wrbenner")
           repo = os.environ.get("REPO", "sitesync-pm")
           merged = False
-          merged_branch = ""
-          merged_title = ""
+          merged_titles = []
+          merged_count = 0
 
           def run_gh(*args):
               """Run a gh CLI command and return (returncode, stdout, stderr)."""
@@ -918,37 +918,33 @@ jobs:
 
               if pr_merged:
                   merged = True
-                  merged_branch = branch
-                  merged_title = exp["title"]
-                  break
+                  merged_titles.append(exp["title"])
+                  merged_count += 1
+                  print(f"   ✅ {merged_count} experiments merged so far")
+                  # DON'T break — try to merge ALL passing experiments
               else:
-                  # Close failed PR, try next experiment
                   run_gh("gh", "pr", "close", pr_number,
                       "--repo", f"{owner}/{repo}",
-                      "--comment", f"{'CI failed' if ci_failed else 'Timed out'}. Organism trying next-best experiment.")
-
-          # Clean up losing branches
-          for exp in ranked:
-              if exp["branch"] != merged_branch:
-                  run_gh("gh", "api", f"repos/{owner}/{repo}/git/refs/heads/{exp['branch']}", "-X", "DELETE")
+                      "--comment", f"{'CI failed' if ci_failed else 'Timed out'}.")
 
           # Output results
+          merged_title = " + ".join(merged_titles) if merged_titles else ""
           outcome = "merged" if merged else "no_merge"
           with open(os.environ["GITHUB_OUTPUT"], "a") as f:
-              f.write(f"merged_branch={merged_branch}\n")
+              f.write(f"merged_branch=multiple\n")
               f.write(f"merged_title={merged_title}\n")
               f.write(f"cycle_outcome={outcome}\n")
 
           # Save for reflect phase
           json.dump({
               "merged": merged,
-              "merged_branch": merged_branch,
+              "merged_count": merged_count,
               "merged_title": merged_title,
               "ranked": ranked,
           }, open("/tmp/merge-result.json", "w"), indent=2)
 
           if merged:
-              print(f"\n🏆 Cycle complete: merged '{merged_title}'")
+              print(f"\n🏆 Cycle complete: merged {merged_count} experiment(s): {merged_title}")
           else:
               print("\n⚠️  No experiments merged this cycle")
           PYEOF
