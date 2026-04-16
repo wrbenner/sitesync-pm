@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Calendar, DollarSign, HelpCircle, Shield, Users,
   TrendingUp, TrendingDown, ArrowRight, Scale, AlertCircle,
@@ -12,7 +12,7 @@ import { MetricCardSkeleton } from '../components/ui/Skeletons';
 import { colors, spacing, typography, borderRadius, shadows, focusRing } from '../styles/theme';
 import { fetchWeather, fetchWeatherForecast5Day, getWeatherImpact } from '../lib/weather';
 import type { WeatherData, WeatherDay } from '../lib/weather';
-import { duration, easing, easingArray } from '../styles/animations';
+import { duration, easing, easingArray, skeletonStyle } from '../styles/animations';
 import { useProjectId } from '../hooks/useProjectId';
 import {
   useProject, useProjects, usePayApplications, useLienWaivers,
@@ -53,7 +53,7 @@ function formatPct(value: number): string {
 
 const staggerContainer = {
   initial: {},
-  animate: { transition: { staggerChildren: 0.05 } },
+  animate: { transition: { staggerChildren: 0.03 } },
 };
 
 const staggerItem = {
@@ -61,7 +61,7 @@ const staggerItem = {
   animate: { opacity: 1, y: 0 },
 };
 
-const staggerTransition = { duration: duration.normal / 1000, ease: easingArray.apple };
+const staggerTransition = { type: 'spring' as const, stiffness: 350, damping: 30 };
 
 // ── Metric Card ─────────────────────────────────────────
 
@@ -106,8 +106,8 @@ const MetricCard: React.FC<MetricCardProps> = React.memo(({ icon, label, value, 
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['4'] }}>
         <div style={{
-          width: 40,
-          height: 40,
+          width: 44,
+          height: 44,
           borderRadius: borderRadius.md,
           backgroundColor: colors.surfaceInset,
           display: 'flex',
@@ -203,27 +203,21 @@ ProgressRing.displayName = 'ProgressRing';
 
 // ── Loading Skeleton ────────────────────────────────────
 
+const skeletonCard: React.CSSProperties = {
+  ...skeletonStyle,
+  border: `1px solid ${colors.borderSubtle}`,
+  boxShadow: shadows.card,
+};
+
 function DashboardSkeleton() {
   return (
     <PageContainer>
       {/* Hero placeholder */}
-      <div style={{
-        height: 104, borderRadius: borderRadius.xl, marginBottom: spacing['5'],
-        backgroundColor: colors.surfaceRaised, border: `1px solid ${colors.borderSubtle}`,
-        boxShadow: shadows.card,
-      }} />
+      <div style={{ ...skeletonCard, height: 104, borderRadius: borderRadius.xl, marginBottom: spacing['5'] }} />
       {/* Weather strip placeholder */}
-      <div style={{
-        height: 60, borderRadius: borderRadius.lg, marginBottom: spacing['4'],
-        backgroundColor: colors.surfaceRaised, border: `1px solid ${colors.borderSubtle}`,
-        boxShadow: shadows.card,
-      }} />
+      <div style={{ ...skeletonCard, height: 60, borderRadius: borderRadius.lg, marginBottom: spacing['4'], animationDelay: '0.2s' }} />
       {/* Insights panel placeholder */}
-      <div style={{
-        height: 88, borderRadius: borderRadius.xl, marginBottom: spacing['5'],
-        backgroundColor: colors.surfaceRaised, border: `1px solid ${colors.borderSubtle}`,
-        boxShadow: shadows.card,
-      }} />
+      <div style={{ ...skeletonCard, height: 88, borderRadius: borderRadius.xl, marginBottom: spacing['5'], animationDelay: '0.4s' }} />
       <MetricCardSkeleton count={6} />
     </PageContainer>
   );
@@ -379,7 +373,7 @@ const WelcomeOnboarding: React.FC<{ onProjectCreated: () => void }> = ({ onProje
           Create Your First Project
         </button>
 
-        <div
+        <motion.div
           style={{
             display: 'flex',
             gap: spacing['8'],
@@ -387,14 +381,19 @@ const WelcomeOnboarding: React.FC<{ onProjectCreated: () => void }> = ({ onProje
             flexWrap: 'wrap',
             justifyContent: 'center',
           }}
+          variants={staggerContainer}
+          initial={reducedMotion ? undefined : 'initial'}
+          animate={reducedMotion ? undefined : 'animate'}
         >
           {[
             { icon: <Building2 size={20} />, label: 'RFIs, Submittals, Change Orders' },
             { icon: <Calendar size={20} />, label: 'Schedule and Daily Logs' },
             { icon: <DollarSign size={20} />, label: 'Budget and Payment Tracking' },
           ].map((item) => (
-            <div
+            <motion.div
               key={item.label}
+              variants={staggerItem}
+              transition={staggerTransition}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -405,9 +404,9 @@ const WelcomeOnboarding: React.FC<{ onProjectCreated: () => void }> = ({ onProje
             >
               {item.icon}
               <span>{item.label}</span>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       </motion.div>
 
       <Suspense fallback={null}>
@@ -805,7 +804,7 @@ const DashboardInner: React.FC = () => {
   // Weather: fetch current conditions + 5 day forecast using project coordinates
   const projectLat = project?.latitude ?? undefined;
   const projectLon = project?.longitude ?? undefined;
-  const { data: weatherData } = useQuery<WeatherData>({
+  const { data: weatherData, isPending: weatherPending } = useQuery<WeatherData>({
     queryKey: ['weather_current', projectId, projectLat, projectLon],
     queryFn: () => fetchWeather(projectLat, projectLon),
     enabled: !!projectId,
@@ -1169,10 +1168,26 @@ const DashboardInner: React.FC = () => {
       </motion.div>
 
       {/* ── Weather Strip ─────────────────────────────────── */}
+      {weatherPending && !weatherData && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: [0.55, 1, 0.55] }}
+          transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut', times: [0, 0.5, 1] }}
+          style={{
+            ...skeletonCard,
+            height: 60,
+            borderRadius: borderRadius.lg,
+            marginBottom: spacing['4'],
+          }}
+        />
+      )}
+      <AnimatePresence>
       {weatherData && (
         <motion.div
+          key="weather-strip"
           initial={reducedMotion ? undefined : { opacity: 0, y: 8 }}
           animate={reducedMotion ? undefined : { opacity: 1, y: 0 }}
+          exit={reducedMotion ? undefined : { opacity: 0, y: -4, transition: { duration: 0.15 } }}
           transition={reducedMotion ? undefined : { duration: duration.smooth / 1000, ease: easingArray.apple, delay: 0.05 }}
           style={{
             display: 'flex',
@@ -1249,13 +1264,32 @@ const DashboardInner: React.FC = () => {
           )}
         </motion.div>
       )}
+      </AnimatePresence>
 
       {/* ── AI Insights (above the fold) ────────────────── */}
-      {mergedInsights.length > 0 ? (
-        <AIInsightsBanner insights={mergedInsights} navigate={navigate} />
-      ) : metrics ? (
-        <DeterministicInsightsBanner metrics={metrics} navigate={navigate} />
-      ) : null}
+      <AnimatePresence mode="wait">
+        {mergedInsights.length > 0 ? (
+          <motion.div
+            key="ai-insights"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4, transition: { duration: 0.15 } }}
+            transition={{ type: 'spring', stiffness: 400, damping: 35 }}
+          >
+            <AIInsightsBanner insights={mergedInsights} navigate={navigate} />
+          </motion.div>
+        ) : metrics ? (
+          <motion.div
+            key="det-insights"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4, transition: { duration: 0.15 } }}
+            transition={{ type: 'spring', stiffness: 400, damping: 35 }}
+          >
+            <DeterministicInsightsBanner metrics={metrics} navigate={navigate} />
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
 
       {/* ── Metric Strip ──────────────────────────────────── */}
       <motion.div
@@ -1461,13 +1495,19 @@ const DashboardInner: React.FC = () => {
               { label: 'Invite team members', path: '/directory', icon: <Users size={14} /> },
               { label: 'Create first RFI', path: '/rfis', icon: <HelpCircle size={14} /> },
               { label: 'Start punch list', path: '/punch-list', icon: <ClipboardList size={14} /> },
-            ].map((item) => (
-              <div
+            ].map((item, i) => (
+              <motion.div
                 key={item.path}
                 role="button"
                 tabIndex={0}
                 onClick={() => navigate(item.path)}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(item.path); } }}
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 35, delay: i * 0.05 }}
+                whileHover={{ x: 3, transition: { type: 'spring', stiffness: 500, damping: 28 } }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = colors.surfaceInset; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = 'transparent'; }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: spacing['3'],
                   padding: `${spacing['3']} ${spacing['4']}`,
@@ -1476,8 +1516,6 @@ const DashboardInner: React.FC = () => {
                   cursor: 'pointer',
                   transition: `background-color ${duration.fast}ms ${easing.standard}`,
                 }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = colors.surfaceInset; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = 'transparent'; }}
               >
                 <Circle size={16} color={colors.borderDefault} />
                 <span style={{ color: colors.textTertiary, display: 'flex' }}>{item.icon}</span>
@@ -1485,7 +1523,7 @@ const DashboardInner: React.FC = () => {
                   {item.label}
                 </span>
                 <ArrowRight size={14} color={colors.textTertiary} />
-              </div>
+              </motion.div>
             ))}
           </div>
         </motion.div>
