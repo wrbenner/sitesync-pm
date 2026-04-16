@@ -21,7 +21,7 @@ name: "Organism — Supreme Intelligence"
 
 on:
   schedule:
-    - cron: "0 */2 * * *"  # Every 2 hours — 12 cycles per day
+    - cron: "0 0,6,12,18 * * *"  # Every 6 hours — 4 cycles per day (Cycle A lead)
   workflow_dispatch:
     inputs:
       focus:
@@ -192,15 +192,21 @@ jobs:
           {"No override — choose highest leverage automatically" if focus == "auto" else f"User requested focus: {focus}"}
 
           ## Cross-Tier Awareness
-          You are one of THREE specialized tiers running in parallel:
+          You are one of FOUR specialized tiers in a coordinated hierarchy:
           1. YOU (Strategic Experiments) — service layers, architecture, features
-          2. Quality Swarm — running every 3h, fixing ESLint errors
-          3. Design Excellence — running every 4h, polishing one page per cycle
+          2. Quality Swarm — fixing ESLint errors
+          3. Design Excellence — polishing pages to Apple quality
+          4. Feature Hardening — making features bulletproof
 
           DO NOT duplicate their work:
           - Don’t fix ESLint errors (Quality Swarm handles that)
           - Don’t polish page UI (Design Excellence handles that)
+          - Don’t add error handling/loading states (Feature Hardening handles that)
           - Focus on what ONLY you can do: service layers, architecture, state machines, store rewiring
+
+          LEARN FROM HISTORY — avoid repeating failures:
+          Look at the cycle history above. If an experiment title or approach appears in failed cycles,
+          choose a DIFFERENT approach. Don’t keep trying the same thing.
 
           ## Your Task
           Design exactly 3 experiments for this cycle. Each must be:
@@ -850,83 +856,55 @@ jobs:
               else:
                   print(f"   ⚠️  Could not get head SHA for check runs")
 
-              # ── Wait for GitHub to process check runs ───────────────────
-              print("   ⏳ Waiting for GitHub to process checks (30s)...")
+              # ── Merge with auto-rebase on conflicts ─────────────────
+              print("   ⏳ Waiting for checks to register (30s)...")
               time.sleep(30)
 
               pr_merged = False
               ci_failed = False
-              for attempt in range(30):  # Up to 15 more minutes
+              for attempt in range(25):
                   state = get_pr_state(pr_number)
                   ms = state["mergeable_state"]
                   print(f"   Attempt {attempt+1}: state={ms}, checks={state['passed']}✅/{state['failed']}❌/{state['in_progress']}⏳ of {state['total']}")
 
-                  # Case 1: PR is clean — all required checks passed
                   if ms == "clean":
-                      print(f"   ✅ All CI gates passed! Merging...")
-                      # Try normal merge first
-                      rc, out, err = run_gh("gh", "pr", "merge", pr_number,
+                      rc, _, err = run_gh("gh", "pr", "merge", pr_number,
                           "--repo", f"{owner}/{repo}", "--merge",
                           "--subject", f"{title} (#{pr_number})")
                       if rc == 0:
                           pr_merged = True
                           print(f"   🎉 Merged PR #{pr_number}!")
                       else:
-                          # Fallback: try with --admin
-                          print(f"   ⚠️  Normal merge failed ({err[:100]}), trying admin...")
-                          rc2, _, err2 = run_gh("gh", "pr", "merge", pr_number,
+                          rc2, _, _ = run_gh("gh", "pr", "merge", pr_number,
                               "--repo", f"{owner}/{repo}", "--merge", "--admin",
                               "--subject", f"{title} (#{pr_number})")
                           if rc2 == 0:
                               pr_merged = True
                               print(f"   🎉 Merged PR #{pr_number} (admin)!")
                           else:
-                              print(f"   ❌ Merge failed: {err2[:200]}")
+                              print(f"   ❌ Merge failed: {err[:200]}")
                       break
 
-                  # Case 2: Checks explicitly failed
-                  if ms == "blocked" and state["failed"] > 0:
-                      print(f"   ❌ CI failed: {', '.join(state['failed_names'][:5])}")
-                      ci_failed = True
-                      break
-
-                  # Case 3: Blocked but no failures yet — checks still registering
-                  if ms == "blocked" and state["total"] < 3 and attempt < 8:
-                      time.sleep(30)
+                  if ms == "dirty":
+                      # Auto-rebase on latest main instead of giving up
+                      print(f"   🔄 Merge conflict — rebasing on latest main...")
+                      run_gh("gh", "api",
+                          f"repos/{owner}/{repo}/pulls/{pr_number}/update-branch",
+                          "--method", "PUT", "-f", "update_method=rebase")
+                      time.sleep(20)
                       continue
 
-                  # Case 4: Blocked with no progress after many attempts
-                  if ms == "blocked" and attempt >= 8:
-                      # Checks registered but not passing — likely a real block
-                      if state["in_progress"] > 0:
-                          time.sleep(30)
-                          continue  # Still running, give more time
-                      print(f"   ❌ PR blocked (state=blocked, {state['total']} checks, {state['failed']} failed)")
-                      ci_failed = True
-                      break
-
-                  # Case 5: Unstable or unknown — checks still running
-                  if ms in ("unstable", "unknown"):
-                      if state["in_progress"] > 0 or state["total"] < 3:
-                          time.sleep(30)
-                          continue
-                      # If no checks are in progress and we have enough checks, something is wrong
-                      if attempt > 15:
-                          print(f"   ⚠️  Stuck in {ms} state after {attempt+1} attempts")
+                  if ms == "blocked":
+                      if state["failed"] > 0:
+                          print(f"   ❌ CI failed: {', '.join(state['failed_names'][:5])}")
+                          ci_failed = True
                           break
                       time.sleep(30)
                       continue
 
-                  # Case 6: Merge conflicts
-                  if ms == "dirty":
-                      print("   ❌ Merge conflicts — skipping")
-                      ci_failed = True
-                      break
-
-                  # Default: keep waiting
                   time.sleep(30)
               else:
-                  print(f"   ⏰ Timed out waiting for CI ({attempt+1} attempts)")
+                  print(f"   ⏰ Timed out after {attempt+1} attempts")
 
               if pr_merged:
                   merged = True

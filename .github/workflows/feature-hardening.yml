@@ -15,7 +15,7 @@ name: "Feature Hardening — Enterprise Functionality"
 
 on:
   schedule:
-    - cron: "0 1,5,9,13,17,21 * * *"  # Every 4 hours, offset from Design Excellence
+    - cron: "20 4,10,16,22 * * *"  # Every 6 hours at :20 past (Cycle B follow-up, after Design merges)
   workflow_dispatch:
     inputs:
       target_page:
@@ -106,7 +106,11 @@ jobs:
 
           Recent tier activity: {context}
 
-          Priority: Pages with service layers first. Then pages with the most user interactions.
+          Priority order:
+          1. Pages that Design Excellence ALREADY POLISHED (harden the beautiful pages first)
+          2. Pages with service layers (real data flows to harden)
+          3. Pages with the most user interactions
+
           Focus on pages that HANDLE DATA (forms, filters, state changes), not static pages.
 
           Output ONLY the page name (e.g., "RFIs" or "Budget"), nothing else."""}]
