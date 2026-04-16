@@ -465,6 +465,9 @@ jobs:
           2. Check ESLint: npx eslint src/ --format json | python3 -c 'import json,sys; d=json.load(sys.stdin); print("Errors:", sum(r["errorCount"] for r in d))'
              Compare against floor: cat .quality-floor.json | jq .eslintErrors
           3. npm run build
+
+          6. Write at least 3 tests for any new service layer or store you create.
+             Use Vitest. Mock supabase. Test lifecycle transitions and error handling.
           """
           open("/tmp/full-prompt.txt", "w").write(prompt)
           print(f"Prompt prepared ({len(prompt)} chars)")

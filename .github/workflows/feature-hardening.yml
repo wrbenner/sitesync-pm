@@ -216,6 +216,14 @@ jobs:
           □ List with 0 items, 1 item, and 100+ items all work
           ═══════════════════════════════════════════════════════════════
 
+          TESTS — write tests for every fix:
+          □ For each form: test validation rejects bad input, accepts good input
+          □ For each data view: test loading/error/empty states render correctly
+          □ For each state transition: test valid transitions pass, invalid reject
+          □ Put tests next to the component as .test.tsx or in src/__tests__/
+          □ Use Vitest + @testing-library/react
+          □ Mock supabase client — no real API calls
+
           APPROACH:
           1. Read the page and all its dependencies thoroughly
           2. Go through EVERY checkbox above
