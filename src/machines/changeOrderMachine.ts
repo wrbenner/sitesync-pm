@@ -175,6 +175,43 @@ export function getApprovalChain(type: ChangeOrderType): { role: string; action:
   return chains[type] || []
 }
 
+// ── Role-Based Transitions ───────────────────────────────
+
+/**
+ * Returns valid target ChangeOrderStates for a given current status and user role.
+ * Used by changeOrderService to enforce server-side authorization.
+ * Resolves roles from the database — never trust caller-supplied values.
+ */
+export function getValidCOTransitionsForRole(
+  status: ChangeOrderState,
+  role: string,
+): ChangeOrderState[] {
+  const isAdmin = ['admin', 'owner'].includes(role)
+  const isApprover = ['project_manager', 'owner_rep', 'architect', 'owner'].includes(role)
+  const isSubmitter = ['superintendent', 'foreman', 'project_manager', 'subcontractor'].includes(role)
+
+  switch (status) {
+    case 'draft':
+      if (isAdmin || isSubmitter) return ['pending_review']
+      return []
+    case 'pending_review':
+      if (isAdmin) return ['approved', 'rejected', 'void']
+      if (isApprover) return ['approved', 'rejected']
+      return []
+    case 'approved':
+      if (isAdmin) return ['void']
+      return []
+    case 'rejected':
+      if (isAdmin) return ['pending_review', 'void']
+      if (isSubmitter) return ['pending_review']
+      return []
+    case 'void':
+      return []
+    default:
+      return []
+  }
+}
+
 // ── Format CO Number ─────────────────────────────────────
 
 export function formatCONumber(type: ChangeOrderType, number: number): string {
