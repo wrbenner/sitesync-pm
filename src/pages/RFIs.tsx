@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef, lazy, Suspense } from 'react';
 import { supabase } from '../lib/supabase';
 import { VirtualDataTable } from '../components/shared/VirtualDataTable';
 import { BulkActionBar } from '../components/shared/BulkActionBar';
@@ -26,6 +26,8 @@ import { EditableDetailField } from '../components/forms/EditableField';
 import { toast } from 'sonner';
 import { PresenceAvatars } from '../components/shared/PresenceAvatars';
 import { EditingLockBanner } from '../components/ui/EditingLockBanner';
+
+const QuickRFIButton = lazy(() => import('../components/field/QuickRFIButton'));
 
 const isOverdue = (dateStr: string) => new Date(dateStr) < new Date();
 
@@ -1056,6 +1058,10 @@ const RFIsPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      <Suspense fallback={null}>
+        <QuickRFIButton />
+      </Suspense>
     </PageContainer>
   );
 };

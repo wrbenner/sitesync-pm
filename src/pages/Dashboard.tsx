@@ -32,6 +32,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 const CreateProjectModal = lazy(() => import('../components/forms/CreateProjectModal'));
+const QuickRFIButton = lazy(() => import('../components/field/QuickRFIButton'));
 
 // ── Number Formatting ───────────────────────────────────
 
@@ -1364,6 +1365,10 @@ const DashboardInner: React.FC = () => {
       >
         <DashboardGrid />
       </motion.div>
+
+      <Suspense fallback={null}>
+        <QuickRFIButton />
+      </Suspense>
     </PageContainer>
   );
 };
