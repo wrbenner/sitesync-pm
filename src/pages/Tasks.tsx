@@ -376,6 +376,7 @@ export const Tasks: React.FC = () => {
                   {columnTasks.length}
                 </span>
               </div>
+              <PermissionGate permission="tasks.create">
               <button
                 aria-label={`Add task to ${config.label}`}
                 onClick={() => setShowNewTask(true)}
@@ -390,6 +391,7 @@ export const Tasks: React.FC = () => {
               >
                 <Plus size={14} />
               </button>
+              </PermissionGate>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.md }}>
               {columnTasks.map(renderTaskCard)}

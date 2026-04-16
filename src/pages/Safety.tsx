@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { AlertTriangle, ClipboardCheck, Award, Users, Plus, ShieldCheck, Shield, Wrench } from 'lucide-react'
 import { PageContainer, Card, Btn, MetricBox } from '../components/Primitives'
+import { PermissionGate } from '../components/auth/PermissionGate'
 import { DataTable, createColumnHelper } from '../components/shared/DataTable'
 import { ExportButton } from '../components/shared/ExportButton'
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme'
@@ -1577,7 +1578,7 @@ export const Safety: React.FC = () => {
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: spacing['3'] }}>
               <Btn variant="ghost" onClick={handleCloseModal} style={{ minHeight: '56px', minWidth: '56px' }}>Cancel</Btn>
-              <Btn variant="primary" onClick={handleIncidentSubmit} style={{ minHeight: '56px', minWidth: '56px' }}>Submit Incident</Btn>
+              <PermissionGate permission="safety.manage"><Btn variant="primary" onClick={handleIncidentSubmit} style={{ minHeight: '56px', minWidth: '56px' }}>Submit Incident</Btn></PermissionGate>
             </div>
           </div>
         </div>
@@ -1768,7 +1769,7 @@ export const Safety: React.FC = () => {
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: spacing['3'] }}>
               <Btn variant="ghost" onClick={handleCloseTalkModal} style={{ minHeight: '56px' }}>Cancel</Btn>
-              <Btn variant="primary" onClick={handleTalkSubmit} style={{ minHeight: '56px' }}>Save Talk</Btn>
+              <PermissionGate permission="safety.manage"><Btn variant="primary" onClick={handleTalkSubmit} style={{ minHeight: '56px' }}>Save Talk</Btn></PermissionGate>
             </div>
           </div>
         </div>

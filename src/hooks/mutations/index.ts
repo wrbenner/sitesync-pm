@@ -12,11 +12,84 @@ import {
 import { useOfflineMutation } from '../useOfflineMutation'
 import { createDailyLog, updateDailyLog } from '../../api/endpoints/field'
 import type { DailyLogPayload } from '../../types/api'
+import { getValidTransitions } from '../../machines/rfiMachine'
+import { getValidSubmittalStatusTransitions } from '../../machines/submittalMachine'
+import type { RfiStatus } from '../../types/database'
+import type { SubmittalStatus } from '../../types/submittal'
 
 import type { Database } from '../../types/database'
 type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
 // Dynamic table access helper. Tables may include those added by migration but not yet in generated types.
 const from = (table: AnyTableName) => supabase.from(table as keyof Database['public']['Tables'])
+
+// ── State machine validation helpers ─────────────────────
+
+async function resolveUserRole(projectId: string): Promise<string> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+    const userId = session?.user?.id
+    if (!userId || !projectId) return 'viewer'
+    const { data } = await supabase
+      .from('project_members')
+      .select('role')
+      .eq('project_id', projectId)
+      .eq('user_id', userId)
+      .single()
+    return (data?.role as string) ?? 'viewer'
+  } catch {
+    return 'viewer'
+  }
+}
+
+async function validateRfiStatusTransition(
+  rfiId: string,
+  projectId: string,
+  newStatus: string,
+): Promise<void> {
+  const { data: rfi } = await supabase
+    .from('rfis')
+    .select('status')
+    .eq('id', rfiId)
+    .single()
+  if (!rfi) return // Let DB handle missing entity
+  const userRole = await resolveUserRole(projectId)
+  const validTransitions = getValidTransitions(rfi.status as RfiStatus, userRole)
+  // Map from machine action labels to status values
+  const rfiActionToStatus: Record<string, string> = {
+    'Submit': 'open',
+    'Assign for Review': 'under_review',
+    'Respond': 'answered',
+    'Close': 'closed',
+    'Reopen': 'open',
+    'Void': 'void',
+  }
+  const allowedStatuses = validTransitions.map((action) => rfiActionToStatus[action]).filter(Boolean)
+  if (!allowedStatuses.includes(newStatus)) {
+    throw new Error(
+      `Invalid RFI status transition: ${rfi.status} → ${newStatus} (role: ${userRole}). Valid transitions: ${validTransitions.join(', ')}`,
+    )
+  }
+}
+
+async function validateSubmittalStatusTransition(
+  submittalId: string,
+  projectId: string,
+  newStatus: string,
+): Promise<void> {
+  const { data: submittal } = await supabase
+    .from('submittals')
+    .select('status')
+    .eq('id', submittalId)
+    .single()
+  if (!submittal) return // Let DB handle missing entity
+  const userRole = await resolveUserRole(projectId)
+  const validNext = getValidSubmittalStatusTransitions(submittal.status as SubmittalStatus, userRole)
+  if (!validNext.includes(newStatus as SubmittalStatus)) {
+    throw new Error(
+      `Invalid submittal status transition: ${submittal.status} → ${newStatus} (role: ${userRole}). Valid: ${validNext.join(', ')}`,
+    )
+  }
+}
 
 // ── RFIs (Permission-checked + Audited) ──────────────────
 
@@ -60,6 +133,10 @@ export function useUpdateRFI() {
     getEntityId: (p) => p.id,
     getNewValue: (p) => p.updates,
     mutationFn: async ({ id, updates, projectId }) => {
+      // State machine enforcement: validate status transition before persisting
+      if (typeof updates.status === 'string') {
+        await validateRfiStatusTransition(id, projectId, updates.status)
+      }
       const { error } = await from('rfis').update(updates).eq('id', id)
       if (error) throw error
       return { projectId, id }
@@ -149,6 +226,10 @@ export function useUpdateSubmittal() {
     getEntityId: (p) => p.id,
     getNewValue: (p) => p.updates,
     mutationFn: async ({ id, updates, projectId }) => {
+      // State machine enforcement: validate status transition before persisting
+      if (typeof updates.status === 'string') {
+        await validateSubmittalStatusTransition(id, projectId, updates.status)
+      }
       const { error } = await from('submittals').update(updates).eq('id', id)
       if (error) throw error
       return { projectId, id }

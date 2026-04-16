@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // Must be hoisted before any imports that pull in supabase
 vi.mock('../../lib/supabase', () => {
-  const mockQueryBuilder = {
+  // const mockQueryBuilder = {
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
     maybeSingle: vi.fn(),

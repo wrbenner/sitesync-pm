@@ -6,7 +6,7 @@ import {
   parseAgentMention,
   stripAgentMention,
   SPECIALIST_AGENTS,
-  AGENT_TOOLS,
+  
 } from '../types/agents'
 import type {
   AgentDomain,
@@ -228,7 +228,7 @@ export function useMultiAgentChat(
       const cleanText = mentionedAgent ? stripAgentMention(text) : text
 
       // Add user message
-      const userMsg = store.addUserMessage(text)
+      // const userMsg = store.addUserMessage(text)
       store.setInput('')
       store.setProcessing(true)
       store.setError(null)

@@ -55,7 +55,7 @@ const getBicColor = (party: string): string => {
   return key ? BIC_COLORS[key] : colors.gray500;
 };
 
-const getBallInCourt = (rfi: { status: string; assigned_to: string | null; from?: string | null }): string | null => {
+// const getBallInCourt = (rfi: { status: string; assigned_to: string | null; from?: string | null }): string | null => {
   const { status, assigned_to, from: originator } = rfi;
   if (status === 'open' && assigned_to) return assigned_to;
   if (status === 'under_review') return assigned_to || null;

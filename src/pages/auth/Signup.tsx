@@ -24,7 +24,7 @@ function mapSignupError(message: string): { text: string; linkToLogin?: boolean 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export const Signup: React.FC = () => {
-  const navigate = useNavigate()
+  // const navigate = useNavigate()
 
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')

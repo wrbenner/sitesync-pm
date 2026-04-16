@@ -2549,9 +2549,11 @@ const PaymentApplicationsPage: React.FC = () => {
                 title="No payment applications"
                 description="Create your first AIA G702 payment application from the schedule of values."
                 action={
-                  <Btn onClick={openCreateDrawer} size="sm">
-                    <Plus size={14} /> Create Pay App
-                  </Btn>
+                  <PermissionGate permission="payments.create">
+                    <Btn onClick={openCreateDrawer} size="sm">
+                      <Plus size={14} /> Create Pay App
+                    </Btn>
+                  </PermissionGate>
                 }
               />
             )}

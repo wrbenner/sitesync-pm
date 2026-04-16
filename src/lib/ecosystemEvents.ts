@@ -76,7 +76,7 @@ async function executeStep(
 
 // ── Get Connected Integrations ────────────────────────────────
 
-async function getConnectedIntegrations(_projectId: string): Promise<Set<string>> {
+async function getConnectedIntegrations(_: string): Promise<Set<string>> {
   if (!isSupabaseConfigured) return new Set()
 
   const { data } = await supabase

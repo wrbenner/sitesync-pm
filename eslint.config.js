@@ -39,6 +39,9 @@ export default defineConfig([
       'jsx-a11y/no-interactive-element-to-noninteractive-role': 'warn',
       'jsx-a11y/img-redundant-alt': 'warn',
       'jsx-a11y/role-supports-aria-props': 'warn',
+      'jsx-a11y/interactive-supports-focus': 'warn',
+      'jsx-a11y/no-noninteractive-element-to-interactive-role': 'warn',
+      'jsx-a11y/role-has-required-aria-props': 'warn',
       //
       // TypeScript any: real issue, tracked as warning while we add types.
       '@typescript-eslint/no-explicit-any': 'warn',

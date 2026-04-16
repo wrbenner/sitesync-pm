@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Save, Users, Building2 } from 'lucide-react';
 import { useProjectContext } from '../../stores/projectContextStore';
+import { PermissionGate } from '../../components/auth/PermissionGate';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
 
 interface MemberWithProfile {
@@ -116,6 +117,7 @@ export function ProjectSettings() {
             Configure {activeProject.name}
           </p>
         </div>
+        <PermissionGate permission="project.settings">
         <button
           onClick={handleSave}
           disabled={saving}
@@ -137,6 +139,7 @@ export function ProjectSettings() {
           <Save size={16} />
           {saving ? 'Saving...' : saved ? 'Saved!' : 'Save Changes'}
         </button>
+        </PermissionGate>
       </div>
 
       {/* Project Details Card */}

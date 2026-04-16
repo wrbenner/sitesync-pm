@@ -289,7 +289,7 @@ const DailyLogPage: React.FC = () => {
     };
   }, [dailyLogHistory]);
 
-  const handleQuickSave = useCallback((_: QuickEntryData) => {
+  const handleQuickSave = useCallback((_data: QuickEntryData) => {
     toast.success('Draft saved');
   }, []);
 
@@ -532,12 +532,14 @@ const DailyLogPage: React.FC = () => {
                 <p style={{ fontSize: typography.fontSize.body, color: colors.textTertiary, margin: 0, maxWidth: '440px' }}>
                   The daily log is your project official record. Start documenting site conditions today.
                 </p>
-                <button
-                  onClick={() => { setSelectedDate(new Date().toISOString().split('T')[0]); setShowCreateModal(true); }}
-                  style={{ backgroundColor: colors.primaryOrange, color: '#FFFFFF', border: 'none', borderRadius: '8px', padding: `${spacing['3']} ${spacing['5']}`, fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily, cursor: 'pointer', minHeight: '56px' }}
-                >
-                  Start Today Log
-                </button>
+                <PermissionGate permission="daily_log.create">
+                  <button
+                    onClick={() => { setSelectedDate(new Date().toISOString().split('T')[0]); setShowCreateModal(true); }}
+                    style={{ backgroundColor: colors.primaryOrange, color: '#FFFFFF', border: 'none', borderRadius: '8px', padding: `${spacing['3']} ${spacing['5']}`, fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily, cursor: 'pointer', minHeight: '56px' }}
+                  >
+                    Start Today Log
+                  </button>
+                </PermissionGate>
               </div>
             </Card>
           )}
@@ -860,7 +862,7 @@ const DailyLogPage: React.FC = () => {
                   Today's daily log hasn't been started
                 </span>
               </div>
-              <Btn size="sm" variant="primary" onClick={() => { setSelectedDate(todayStr); setShowCreateModal(true); }}>Start Log</Btn>
+              <PermissionGate permission="daily_log.create"><Btn size="sm" variant="primary" onClick={() => { setSelectedDate(todayStr); setShowCreateModal(true); }}>Start Log</Btn></PermissionGate>
             </div>
           )}
 

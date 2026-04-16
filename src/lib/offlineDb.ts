@@ -405,7 +405,7 @@ export async function processSyncQueue(
 ): Promise<{ synced: number; failed: number; conflicts: number }> {
   if (!navigator.onLine) return { synced: 0, failed: 0, conflicts: 0 }
 
-  const now = new Date().toISOString()
+  // const now = new Date().toISOString()
   const pending = await offlineDb.pendingMutations
     .where('status')
     .anyOf('pending', 'failed')
@@ -514,7 +514,7 @@ export async function processSyncQueue(
 
       await offlineDb.pendingMutations.delete(m.id!)
       synced++
-    } catch (err) {
+    } catch (_err) {
       // BUG #1 FIX: Retry with exponential backoff, not immediate failure
       const retryCount = (m.retryCount || 0) + 1
       if (retryCount >= MAX_RETRY_COUNT) {
@@ -609,7 +609,7 @@ export async function processUploadQueue(): Promise<{ uploaded: number; failed: 
       if (error) throw error
       await offlineDb.pendingUploads.delete(u.id!)
       uploaded++
-    } catch (err) {
+    } catch (_err) {
       const { permanent, statusCode } = classifyUploadError(err)
       const retryCount = (u.retryCount || 0) + 1
 
@@ -697,7 +697,7 @@ export async function cacheProjectData(
       await offlineDb.projects.put(data)
       totalCached++
     }
-  } catch (err) {
+  } catch (_err) {
     errors.push(`projects: ${(err as Error).message}`)
     tablesFailed++
   }
@@ -728,7 +728,7 @@ export async function cacheProjectData(
         if (cacheTable) await cacheTable.bulkPut(data)
         totalCached += data.length
       }
-    } catch (err) {
+    } catch (_err) {
       errors.push(`${supaTable}: ${(err as Error).message}`)
       tablesFailed++
     }

@@ -1318,6 +1318,7 @@ const PunchListPage: React.FC = () => {
 
       {/* Mobile FAB: quick punch item capture */}
       {isMobile && (
+        <PermissionGate permission="punch_list.create">
         <button
           onClick={() => setShowCreateModal(true)}
           aria-label="Quick capture punch item"
@@ -1340,6 +1341,7 @@ const PunchListPage: React.FC = () => {
         >
           <Camera size={24} color="white" />
         </button>
+        </PermissionGate>
       )}
 
       <PermissionGate permission="punch_list.edit">
