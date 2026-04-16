@@ -207,8 +207,8 @@ export const rfiService = {
 
     const { error: insertError } = await supabase.from('rfi_responses').insert({
       rfi_id: rfiId,
-      user_id: userId,
-      response_text: text,
+      author_id: userId,
+      content: text,
       attachments: attachments ?? null,
     });
 

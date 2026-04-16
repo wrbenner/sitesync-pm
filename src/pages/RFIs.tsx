@@ -5,7 +5,7 @@ import { BulkActionBar } from '../components/shared/BulkActionBar';
 import { createColumnHelper } from '@tanstack/react-table';
 import { PageContainer, Card, Btn, StatusTag, PriorityTag, DetailPanel, Avatar, Tag, RelatedItems, useToast, MetricBox } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
-import { useRFIs } from '../hooks/queries';
+import { useRFIs, useRFI } from '../hooks/queries';
 import { AlertTriangle, FileQuestion, FilterX, Plus, Clock, MessageSquare, Paperclip, Calendar, RefreshCw, Send, Sparkles, LayoutGrid, List, UserCheck, Flag, Download, XCircle, Wand2, Loader2, X } from 'lucide-react';
 import { useAppNavigate, getRelatedItemsForRfi } from '../utils/connections';
 import { useCreateRFI, useUpdateRFI } from '../hooks/mutations';
@@ -27,7 +27,8 @@ import { EditingLockBanner } from '../components/ui/EditingLockBanner';
 
 const QuickRFIButton = lazy(() => import('../components/field/QuickRFIButton'));
 
-const isOverdue = (dateStr: string) => new Date(dateStr) < new Date();
+const isOverdue = (dateStr: string | null | undefined): boolean =>
+  !!dateStr && new Date(dateStr) < new Date();
 
 const BIC_COLORS: Record<string, string> = {
   GC: '#3B82F6',
@@ -71,11 +72,26 @@ const BallInCourtCell: React.FC<{ rfi: any }> = ({ rfi }) => {
   );
 };
 
-const formatDate = (dateStr: string) =>
-  new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+const formatDate = (dateStr: string | null | undefined): string => {
+  if (!dateStr) return 'Not set';
+  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+};
+
+const getInitials = (name: string | null | undefined): string => {
+  if (!name?.trim()) return '?';
+  return name.split(' ').filter(Boolean).map((w: string) => w[0]).join('').slice(0, 2).toUpperCase();
+};
 
 const rfiColHelper = createColumnHelper<any>();
 
+
+const STATUS_TABS = [
+  { key: 'all', label: 'All' },
+  { key: 'open', label: 'Open' },
+  { key: 'pending_response', label: 'Pending Response' },
+  { key: 'overdue', label: 'Overdue' },
+  { key: 'closed', label: 'Closed' },
+];
 
 const MetaItem: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
   <div>
@@ -110,14 +126,14 @@ const RFIsPage: React.FC = () => {
   const totalOpen = useMemo(() => rfis.filter((r: Record<string, unknown>) => r.status !== 'closed').length, [rfis]);
   const overdueCount = useMemo(() => rfis.filter((r: Record<string, unknown>) => r.status !== 'closed' && r.dueDate && isOverdue(r.dueDate as string)).length, [rfis]);
   const avgDaysToClose = useMemo(() => {
-    const closed = rfis.filter((r: any) => r.status === 'closed' && r.closed_at && r.created_at);
+    const closed = rfis.filter((r: any) => r.status === 'closed' && r.closed_date && r.created_at);
     if (!closed.length) return 0;
-    const total = closed.reduce((sum: number, r: any) => sum + Math.floor((new Date(r.closed_at).getTime() - new Date(r.created_at).getTime()) / 86400000), 0);
+    const total = closed.reduce((sum: number, r: any) => sum + Math.floor((new Date(r.closed_date).getTime() - new Date(r.created_at).getTime()) / 86400000), 0);
     return Math.round(total / closed.length);
   }, [rfis]);
   const closedThisWeek = useMemo(() => {
     const weekAgo = Date.now() - 7 * 86400000;
-    return rfis.filter((r: any) => r.status === 'closed' && r.closed_at && new Date(r.closed_at).getTime() >= weekAgo).length;
+    return rfis.filter((r: any) => r.status === 'closed' && r.closed_date && new Date(r.closed_date).getTime() >= weekAgo).length;
   }, [rfis]);
   const [selectedRfi, setSelectedRfi] = useState<any>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -362,6 +378,26 @@ const RFIsPage: React.FC = () => {
 
   const allRfiColumns = useMemo(() => [checkboxColumn, ...rfiColumns], [checkboxColumn, rfiColumns]);
 
+  // These must stay ABOVE the conditional early returns to satisfy Rules of Hooks.
+  const allRfis = rfis;
+
+  const filteredRfis = useMemo(() => {
+    if (statusFilter === 'all') return allRfis;
+    if (statusFilter === 'overdue') return allRfis.filter((r: any) => r.status !== 'closed' && isOverdue(r.dueDate));
+    if (statusFilter === 'pending_response') return allRfis.filter((r: any) => r.status === 'pending' || r.status === 'under_review');
+    return allRfis.filter((r: any) => r.status === statusFilter);
+  }, [allRfis, statusFilter]);
+
+  const kanbanColumns: KanbanColumn<any>[] = useMemo(() => [
+    { id: 'draft', label: 'In Draft', color: colors.textTertiary, items: allRfis.filter((r) => r.status === 'draft') },
+    { id: 'open', label: 'Open', color: colors.statusPending, items: allRfis.filter((r) => r.status === 'open' || r.status === 'pending') },
+    { id: 'under_review', label: 'Under Review', color: colors.statusInfo, items: allRfis.filter((r) => r.status === 'under_review') },
+    { id: 'answered', label: 'Answered', color: colors.statusActive, items: allRfis.filter((r) => r.status === 'answered') },
+    { id: 'closed', label: 'Closed', color: colors.statusNeutral, items: allRfis.filter((r) => r.status === 'closed') },
+  ], [allRfis]);
+
+  const { data: selectedRfiDetail } = useRFI(selectedRfi?.id);
+
   if (rfisLoading) {
     return (
       <PageContainer title="RFIs" subtitle="Loading...">
@@ -448,31 +484,6 @@ const RFIsPage: React.FC = () => {
       </PageContainer>
     );
   }
-
-  const allRfis = rfis || [];
-
-  const STATUS_TABS = [
-    { key: 'all', label: 'All' },
-    { key: 'open', label: 'Open' },
-    { key: 'pending_response', label: 'Pending Response' },
-    { key: 'overdue', label: 'Overdue' },
-    { key: 'closed', label: 'Closed' },
-  ];
-
-  const filteredRfis = useMemo(() => {
-    if (statusFilter === 'all') return allRfis;
-    if (statusFilter === 'overdue') return allRfis.filter((r: any) => r.status !== 'closed' && r.dueDate && new Date(r.dueDate) < new Date());
-    if (statusFilter === 'pending_response') return allRfis.filter((r: any) => r.status === 'pending' || r.status === 'under_review');
-    return allRfis.filter((r: any) => r.status === statusFilter);
-  }, [allRfis, statusFilter]);
-
-  const kanbanColumns: KanbanColumn<any>[] = useMemo(() => [
-    { id: 'draft', label: 'In Draft', color: colors.textTertiary, items: [] },
-    { id: 'pending', label: 'Submitted', color: colors.statusPending, items: allRfis.filter((r) => r.status === 'pending') },
-    { id: 'under_review', label: 'Under Review', color: colors.statusInfo, items: [] },
-    { id: 'approved', label: 'Answered', color: colors.statusActive, items: allRfis.filter((r) => r.status === 'approved') },
-    { id: 'closed', label: 'Closed', color: colors.statusNeutral, items: [] },
-  ], [allRfis]);
 
   return (
     <PageContainer
@@ -765,7 +776,7 @@ const RFIsPage: React.FC = () => {
                 ]}
                 onSave={async (val) => {
                   await updateRFI.mutateAsync({ id: String(selectedRfi.id), updates: { priority: val }, projectId: projectId! });
-                  selectedRfi.priority = val;
+                  setSelectedRfi((prev) => prev ? { ...prev, priority: val } : prev);
                   toast.success('Priority updated');
                 }}
                 displayContent={<PriorityTag priority={selectedRfi.priority as 'low' | 'medium' | 'high' | 'critical'} />}
@@ -783,7 +794,7 @@ const RFIsPage: React.FC = () => {
                 ]}
                 onSave={async (val) => {
                   await handleStatusChange(String(selectedRfi.id), val);
-                  selectedRfi.status = val;
+                  setSelectedRfi((prev: any) => prev ? { ...prev, status: val } : prev);
                 }}
                 displayContent={<StatusTag status={selectedRfi.status as 'pending' | 'approved' | 'under_review' | 'revise_resubmit' | 'complete' | 'active' | 'closed' | 'pending_approval'} />}
               />
@@ -794,13 +805,13 @@ const RFIsPage: React.FC = () => {
                 type="text"
                 onSave={async (val) => {
                   await updateRFI.mutateAsync({ id: String(selectedRfi.id), updates: { assigned_to: val }, projectId: projectId! });
-                  selectedRfi.to = val;
+                  setSelectedRfi((prev: any) => prev ? { ...prev, to: val, assigned_to: val } : prev);
                   toast.success('Assignee updated');
                 }}
                 displayContent={
                   selectedRfi.to ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
-                      <Avatar initials={selectedRfi.to.split(' ').map((w: string) => w[0]).join('').slice(0, 2)} size={24} />
+                      <Avatar initials={getInitials(selectedRfi.to)} size={24} />
                       <span>{selectedRfi.to}</span>
                     </div>
                   ) : undefined
@@ -813,7 +824,7 @@ const RFIsPage: React.FC = () => {
                 type="date"
                 onSave={async (val) => {
                   await updateRFI.mutateAsync({ id: String(selectedRfi.id), updates: { due_date: val }, projectId: projectId! });
-                  selectedRfi.dueDate = val;
+                  setSelectedRfi((prev: any) => prev ? { ...prev, dueDate: val, due_date: val } : prev);
                   toast.success('Due date updated');
                 }}
                 displayContent={
@@ -830,8 +841,8 @@ const RFIsPage: React.FC = () => {
               />
               <MetaItem label="From">
                 <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
-                  <Avatar initials={selectedRfi.from.split(' ').map((w: string) => w[0]).join('').slice(0, 2)} size={24} />
-                  <span>{selectedRfi.from}</span>
+                  <Avatar initials={getInitials(selectedRfi.from)} size={24} />
+                  <span>{selectedRfi.from || 'Unknown'}</span>
                 </div>
               </MetaItem>
               <MetaItem label="Submitted">
@@ -848,67 +859,60 @@ const RFIsPage: React.FC = () => {
                 Description
               </div>
               <p style={{ margin: 0, fontSize: typography.fontSize.base, color: colors.textSecondary, lineHeight: typography.lineHeight.relaxed }}>
-                Requesting clarification on the specification details referenced in the current drawing set.
-                The field team has identified a discrepancy between the architectural drawings and the structural
-                details that needs to be resolved before proceeding with installation. Please review the attached
-                markup and provide direction on the preferred approach. This item is blocking work on the affected
-                area and requires a timely response to maintain schedule.
+                {selectedRfi.description || 'No description provided.'}
               </p>
             </div>
 
-            {/* Attachments hint */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, padding: spacing.md, backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.sm, border: `1px dashed ${colors.border}` }}>
-              <Paperclip size={16} style={{ color: colors.textTertiary }} />
-              <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>2 attachments (markup sketch, spec reference)</span>
-            </div>
+            {/* Spec and drawing references */}
+            {(selectedRfi.spec_section || selectedRfi.drawing_reference) && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, padding: spacing.md, backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.sm, border: `1px dashed ${colors.border}` }}>
+                <Paperclip size={16} style={{ color: colors.textTertiary }} />
+                <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>
+                  {[selectedRfi.spec_section && `Spec: ${selectedRfi.spec_section}`, selectedRfi.drawing_reference && `Dwg: ${selectedRfi.drawing_reference}`].filter(Boolean).join(' · ')}
+                </span>
+              </div>
+            )}
 
             {/* Response Timeline */}
             <div>
               <div style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.lg, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Response Timeline
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                {([] as Array<{initials: string; name: string; role: string; date: string; message: string; type: string}>).map((entry, idx) => (
-                  <div key={idx} style={{ display: 'flex', gap: spacing.md, position: 'relative' }}>
-                    {/* Timeline line */}
-                    {idx < ([] as Array<{initials: string; name: string; role: string; date: string; message: string; type: string}>).length - 1 && (
-                      <div
-                        style={{
-                          position: 'absolute',
-                          left: '17px',
-                          top: '40px',
-                          bottom: '-4px',
-                          width: '2px',
-                          backgroundColor: colors.borderLight,
-                        }}
-                      />
-                    )}
-                    {/* Avatar */}
-                    <div style={{ flexShrink: 0, paddingTop: '2px' }}>
-                      <Avatar initials={entry.initials} size={36} />
-                    </div>
-                    {/* Content */}
-                    <div style={{ flex: 1, paddingBottom: idx < ([] as Array<{initials: string; name: string; role: string; date: string; message: string; type: string}>).length - 1 ? spacing.xl : '0' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs, flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
-                          {entry.name}
-                        </span>
-                        <Tag
-                          label={entry.type === 'submitted' ? 'Submitted' : entry.type === 'comment' ? 'Comment' : 'Response'}
-                          color={entry.type === 'response' ? colors.tealSuccess : entry.type === 'submitted' ? colors.statusPending : colors.blue}
-                          backgroundColor={entry.type === 'response' ? 'rgba(78,200,150,0.1)' : entry.type === 'submitted' ? colors.statusPendingSubtle : 'rgba(59,130,246,0.1)'}
-                        />
+              {(selectedRfiDetail?.responses ?? []).length === 0 ? (
+                <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textTertiary, fontStyle: 'italic' }}>
+                  No responses yet. Use the form below to submit the first response.
+                </p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                  {(selectedRfiDetail?.responses ?? []).map((entry, idx) => {
+                    const responses = selectedRfiDetail?.responses ?? [];
+                    return (
+                      <div key={entry.id} style={{ display: 'flex', gap: spacing.md, position: 'relative' }}>
+                        {idx < responses.length - 1 && (
+                          <div style={{ position: 'absolute', left: '17px', top: '40px', bottom: '-4px', width: '2px', backgroundColor: colors.borderLight }} />
+                        )}
+                        <div style={{ flexShrink: 0, paddingTop: '2px' }}>
+                          <Avatar initials={getInitials(entry.author_id)} size={36} />
+                        </div>
+                        <div style={{ flex: 1, paddingBottom: idx < responses.length - 1 ? spacing.xl : '0' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs, flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+                              Response
+                            </span>
+                            <Tag label="Response" color={colors.tealSuccess} backgroundColor="rgba(78,200,150,0.1)" />
+                          </div>
+                          <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, marginBottom: spacing.sm }}>
+                            {formatDate(entry.created_at)}
+                          </div>
+                          <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textSecondary, lineHeight: typography.lineHeight.relaxed }}>
+                            {entry.content}
+                          </p>
+                        </div>
                       </div>
-                      <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, marginBottom: spacing.sm }}>
-                        {entry.role} · {entry.date}
-                      </div>
-                      <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textSecondary, lineHeight: typography.lineHeight.relaxed }}>
-                        {entry.message}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* AI Suggest Response */}
@@ -952,7 +956,7 @@ const RFIsPage: React.FC = () => {
                     fullWidth
                     icon={<Send size={15} />}
                     onClick={async () => {
-                      await handleStatusChange(String(selectedRfi.id), 'approved');
+                      await handleStatusChange(String(selectedRfi.id), 'answered');
                       addToast('success', 'Response submitted successfully');
                       setSelectedRfi(null);
                     }}
@@ -1008,6 +1012,8 @@ const RFIsPage: React.FC = () => {
           aria-label="AI Draft RFI"
           style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.45)', zIndex: 1045, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: spacing['4'] }}
           onClick={(e) => { if (e.target === e.currentTarget) { setShowAIDraftModal(false); setAiDraftInput(''); } }}
+          onKeyDown={(e) => { if (e.key === 'Escape' && !aiDraftLoading) { setShowAIDraftModal(false); setAiDraftInput(''); } }}
+          tabIndex={-1}
         >
           <div style={{ backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.xl, padding: spacing['6'], width: '100%', maxWidth: 480, boxShadow: '0 16px 48px rgba(0,0,0,0.18)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing['4'] }}>
