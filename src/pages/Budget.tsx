@@ -24,7 +24,7 @@ import { EarnedValueDashboard } from '../components/budget/EarnedValueDashboard'
 import { WaterfallChart } from '../components/budget/WaterfallChart';
 import { Download, AlertTriangle, ChevronRight, ArrowRight, DollarSign,  Sparkles, RefreshCw, Pencil } from 'lucide-react';
 import { computeDivisionFinancials, computeProjectFinancials, detectBudgetAnomalies } from '../lib/financialEngine';
-import { BudgetUpload } from '../components/budget/BudgetUpload';
+const BudgetUpload = React.lazy(() => import('../components/budget/BudgetUpload').then(m => ({ default: m.BudgetUpload })));
 import EmptyState from '../components/ui/EmptyState';
 import { toast } from 'sonner';
 import { useProjectId } from '../hooks/useProjectId';

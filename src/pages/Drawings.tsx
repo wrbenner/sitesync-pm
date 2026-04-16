@@ -13,7 +13,7 @@ import { AIAnnotationIndicator } from '../components/ai/AIAnnotation';
 import { getAnnotationsForEntity } from '../data/aiAnnotations';
 import { DrawingViewer } from '../components/drawings/DrawingViewer';
 import { VersionCompare } from '../components/drawings/VersionCompare';
-import { PdfViewer } from '../components/drawings/PdfViewer';
+const PdfViewer = React.lazy(() => import('../components/drawings/PdfViewer').then(m => ({ default: m.PdfViewer })));
 import { PermissionGate } from '../components/auth/PermissionGate';
 import { supabase } from '../lib/supabase';
 import { UploadZone } from '../components/files/UploadZone';
@@ -1267,11 +1267,13 @@ const DrawingsPage: React.FC = () => {
       )}
 
       {viewRevPdfUrl && (
-        <PdfViewer
-          file={viewRevPdfUrl}
-          title={`${selectedDrawing?.title ?? 'Drawing'} — Rev ${viewingRevisionNum ?? 'Current'}`}
-          onClose={() => setViewRevPdfUrl(null)}
-        />
+        <React.Suspense fallback={<div style={{padding: 20}}>Loading viewer...</div>}>
+          <PdfViewer
+            file={viewRevPdfUrl}
+            title={`${selectedDrawing?.title ?? 'Drawing'} — Rev ${viewingRevisionNum ?? 'Current'}`}
+            onClose={() => setViewRevPdfUrl(null)}
+          />
+        </React.Suspense>
       )}
 
       {showVersionCompare && selectedDrawing && revisionHistory && revisionHistory.length >= 2 && (
