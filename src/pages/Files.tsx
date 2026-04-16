@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
 import JSZip from 'jszip';
 import { Grid, List, Upload as UploadIcon, FolderOpen, FileText, Image, Table, File as FileIcon, Sparkles, Search, Download, FolderInput, Trash2, Link2, Files as FilesIcon, FileImage, HardDrive } from 'lucide-react';
 import { Card, Btn, useToast, PageContainer } from '../components/Primitives';
@@ -192,12 +193,20 @@ const _FilesPage: React.FC = () => {
       onClick: async (ids: string[]) => {
         const zip = new JSZip();
         const selected = files.filter((f: FileItem) => ids.includes(f.id));
-        selected.forEach((f: FileItem) => {
-          if (f.type !== 'folder') {
-            // In a real app, fetch blob from storage URL. Stub placeholder content here.
-            zip.file(f.name, `Placeholder content for ${f.name}`);
+        for (const f of selected) {
+          if (f.type === 'folder') continue;
+          try {
+            // Try to fetch from Supabase Storage
+            const { data } = await supabase.storage.from('project-files').download(f.id);
+            if (data) {
+              zip.file(f.name, data);
+              continue;
+            }
+          } catch {
+            // Fallback: file content not available from storage
           }
-        });
+          zip.file(f.name, `[File content pending upload: ${f.name}]`);
+        }
         const blob = await zip.generateAsync({ type: 'blob' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
