@@ -1,0 +1,74 @@
+# Organism Lessons — Accumulated Wisdom
+
+> This file is the organism's long-term memory. It is updated automatically
+> after every 3 cycles by the reflect phase. The organism reads this before
+> every strategic decision.
+
+## Architecture — The Kernel Pattern
+
+- The gold standard service layer is `src/services/rfiService.ts` — ALL new services MUST follow its exact pattern
+- Service layers enforce: server-resolved roles, lifecycle transitions via state machines, provenance columns (created_by, updated_by), soft-delete filtering (deleted_at IS NULL)
+- Data flow: service layer → Zustand store → React component. Never skip the service layer.
+- Never trust client-side role checks. Roles are resolved server-side only.
+- State machines in `src/machines/` define valid lifecycle transitions. Services MUST enforce these.
+
+## Code Quality — Hard-Won Rules
+
+- `npm ci` is MANDATORY — never use `rm -f package-lock.json && npm install` (causes @react-pdf/svg 404)
+- ESLint errors can only decrease. The quality floor in `.quality-floor.json` is a ratchet.
+- Do NOT add `eslint-disable` comments — actually fix the code
+- All TypeScript must be strict — no `any` types, no `@ts-ignore`
+- Migrations must be idempotent: use `DROP IF EXISTS` before `CREATE POLICY`, `CREATE TRIGGER`, etc.
+- `project_members.created_at` does NOT exist — use `invited_at` instead
+- psql direct connections fail in CI — always use REST API (Supabase client) for database access
+- After merging workflow changes, GitHub Actions takes up to 60 minutes to register new cron schedules
+
+## UI Standards — Apple-Level Polish
+
+- Every style MUST use tokens from `src/styles/theme.ts` — NEVER raw hex colors or hardcoded pixel values
+- Mobile-first: 48px minimum touch targets on ALL interactive elements
+- Every data-dependent view needs three states: loading skeleton, error boundary, empty state
+- Animations: use framer-motion with subtle, purposeful transitions
+- Typography must follow the scale in theme.ts — no arbitrary font sizes
+- Color palette is construction-grade: deep navy, warm amber accents, clean whites
+- Glass morphism effects for elevated surfaces (cards, modals)
+
+## What Works (High Success Rate)
+
+- Fixing ESLint errors in `src/stores/` — patterns are repetitive, low risk
+- Creating service layers from the rfiService.ts template — well-defined pattern
+- Single-page polish (one page per PR) — focused changes pass CI reliably
+- Reducing unused imports — easy wins for ESLint count
+
+## What Fails (Avoid These)
+
+- Multi-page refactors in a single PR — too many changes, CI failures
+- Broad hook refactors — cascade of breaking changes
+- Adding new dependencies — risk of npm compatibility issues
+- Touching `.agent/CONSTITUTION.md` — these are immutable safety rules
+- Global AI rollout changes — out of approved scope
+- Cleanup removals of existing code — may break unknown dependencies
+
+## Priority Hierarchy
+
+1. Quality emergencies (ESLint/TS regressions on main)
+2. Missing kernel service layers (submittal, dailyLog, changeOrder, punchItem, schedule, inspection, drawing)
+3. Page polish to enterprise quality
+4. Test coverage for critical service paths
+5. Performance and bundle size improvements
+6. Accessibility improvements
+
+## Approved Scope
+
+YES: governance, kernel spec, schema migrations, eval harness, RFI vertical slice, organism infrastructure, service layers, page polish
+NO: non-core pages, broad hook refactors, global AI rollout, cleanup removals, workflow rebuilds beyond RFI
+
+## The 5 Moments (Product Vision)
+
+1. Morning Briefing — personalized AI summary
+2. Field Capture — voice/photo to structured data
+3. Self-Writing Daily Log — continuous capture, 2-minute review
+4. Coordination Engine — trade conflict detection
+5. Owner Report — auto-generated dashboards
+
+These moments define the product. Every change should move toward making them perfect.
