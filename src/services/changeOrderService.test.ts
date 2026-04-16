@@ -123,7 +123,7 @@ describe('changeOrderService.loadChangeOrders', () => {
     mockFrom.mockReturnValue(makeChain(null, { message: 'connection refused' }))
 
     const result = await changeOrderService.loadChangeOrders('proj-1')
-    expect(result.error).toBe('connection refused')
+    expect(result.error?.message).toBe('connection refused')
     expect(result.data).toBeNull()
   })
 })
@@ -224,7 +224,7 @@ describe('changeOrderService.transitionStatus', () => {
       .mockReturnValueOnce(roleChain)
 
     const result = await changeOrderService.transitionStatus('co-1', 'approved')
-    expect(result.error).toContain('Invalid transition')
+    expect(result.error?.message).toContain('Invalid transition')
   })
 
   it('returns error when user is not a project member', async () => {
@@ -239,7 +239,7 @@ describe('changeOrderService.transitionStatus', () => {
       .mockReturnValueOnce(roleChain)
 
     const result = await changeOrderService.transitionStatus('co-1', 'pending_review')
-    expect(result.error).toContain('not a member')
+    expect(result.error?.message).toContain('not a member')
   })
 
   it('returns error when change order not found', async () => {
@@ -324,7 +324,7 @@ describe('changeOrderService.deleteChangeOrder', () => {
     mockFrom.mockReturnValue(chain)
 
     const result = await changeOrderService.deleteChangeOrder('co-1')
-    expect(result.error).toBe('forbidden')
+    expect(result.error?.message).toBe('forbidden')
   })
 })
 
@@ -368,7 +368,7 @@ describe('changeOrderService.promoteType', () => {
     mockFrom.mockReturnValueOnce(chain)
 
     const result = await changeOrderService.promoteType('co-1')
-    expect(result.error).toContain('approved')
+    expect(result.error?.message).toContain('approved')
   })
 
   it('prevents promotion when type is already CO (end of chain)', async () => {
@@ -378,7 +378,7 @@ describe('changeOrderService.promoteType', () => {
     mockFrom.mockReturnValueOnce(chain)
 
     const result = await changeOrderService.promoteType('co-1')
-    expect(result.error).toContain('cannot be promoted further')
+    expect(result.error?.message).toContain('cannot be promoted further')
   })
 
   it('returns error when user is not a project member', async () => {
@@ -393,7 +393,7 @@ describe('changeOrderService.promoteType', () => {
       .mockReturnValueOnce(roleChain)
 
     const result = await changeOrderService.promoteType('co-1')
-    expect(result.error).toContain('not a member')
+    expect(result.error?.message).toContain('not a member')
   })
 
   it('returns error when source CO not found', async () => {

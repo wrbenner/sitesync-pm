@@ -91,7 +91,7 @@ describe('submittalService.loadSubmittals', () => {
     const result = await submittalService.loadSubmittals('proj-1')
 
     expect(result.data).toBeNull()
-    expect(result.error).toBe('relation not found')
+    expect(result.error?.message).toBe('relation not found')
   })
 
   it('returns empty array when no submittals exist', async () => {
@@ -153,7 +153,7 @@ describe('submittalService.createSubmittal', () => {
 
     const result = await submittalService.createSubmittal({ project_id: 'proj-1', title: 'Bad Sub' })
 
-    expect(result.error).toBe('insert failed')
+    expect(result.error?.message).toBe('insert failed')
     expect(result.data).toBeNull()
   })
 })
@@ -194,7 +194,7 @@ describe('submittalService.transitionStatus', () => {
 
     // draft → approved is not a valid transition for gc_member
     const result = await submittalService.transitionStatus('sub-1', 'approved')
-    expect(result.error).toContain('Invalid transition')
+    expect(result.error?.message).toContain('Invalid transition')
   })
 
   it('returns error when user is not a project member', async () => {
@@ -209,7 +209,7 @@ describe('submittalService.transitionStatus', () => {
       .mockReturnValueOnce(roleChain)
 
     const result = await submittalService.transitionStatus('sub-1', 'submitted')
-    expect(result.error).toContain('not a member')
+    expect(result.error?.message).toContain('not a member')
   })
 
   it('returns error when submittal not found', async () => {
