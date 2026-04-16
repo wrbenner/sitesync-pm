@@ -2,12 +2,57 @@ import { supabase } from '../lib/supabase';
 import { fetchWeatherForProject } from '../lib/weather';
 import type { WeatherSnapshot } from '../lib/weather';
 import type { DailyLog, DailyLogEntry } from '../types/entities';
+import type { DailyLogState } from '../machines/dailyLogMachine';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 async function getCurrentUserId(): Promise<string | null> {
   const { data } = await supabase.auth.getSession();
   return data.session?.user?.id ?? null;
+}
+
+async function resolveProjectRole(
+  projectId: string,
+  userId: string | null,
+): Promise<string | null> {
+  if (!userId) return null;
+  const { data } = await supabase
+    .from('project_members')
+    .select('role')
+    .eq('project_id', projectId)
+    .eq('user_id', userId)
+    .single();
+  return data?.role ?? null;
+}
+
+/**
+ * Role-gated daily log transitions derived from dailyLogMachine.
+ *
+ *   draft        → submitted                (non-viewer)
+ *   submitted    → approved / rejected      (gc/owner/admin — approvers)
+ *   rejected     → draft / submitted        (non-viewer — edit or resubmit)
+ *   approved     → terminal
+ */
+function getValidDailyLogTransitions(
+  status: DailyLogState,
+  role: string,
+): DailyLogState[] {
+  const canApprove = ['project_manager', 'superintendent', 'admin', 'owner'].includes(role);
+  const nonViewer = role !== 'viewer';
+
+  switch (status) {
+    case 'draft':
+      return nonViewer ? ['submitted'] : [];
+    case 'submitted':
+      return canApprove ? ['approved', 'rejected'] : [];
+    case 'rejected':
+      return nonViewer ? ['draft', 'submitted'] : [];
+    case 'approved':
+    case 'amending':
+      return [];
+    default:
+      return [];
+  }
 }
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -47,13 +92,10 @@ export interface CompiledLog {
 export const dailyLogService = {
   /**
    * Load or create today's daily log for a project.
-   * If a log already exists for today, returns it.
-   * Otherwise, creates a new draft log with auto-fetched weather.
    */
   async loadTodayLog(projectId: string): Promise<DailyLogServiceResult<DailyLog>> {
     const today = new Date().toISOString().split('T')[0];
 
-    // Check for existing log
     const { data: existing, error: fetchError } = await supabase
       .from('daily_logs')
       .select('*')
@@ -64,13 +106,12 @@ export const dailyLogService = {
     if (fetchError) return { data: null, error: fetchError.message };
     if (existing) return { data: existing as DailyLog, error: null };
 
-    // Create new log with auto-fetched weather
     const userId = await getCurrentUserId();
     let weather: WeatherSnapshot | null = null;
     try {
       weather = await fetchWeatherForProject(projectId);
     } catch {
-      // Weather fetch is non-critical — continue without it
+      // Weather fetch is non-critical
     }
 
     const { data: created, error: createError } = await supabase
@@ -94,10 +135,6 @@ export const dailyLogService = {
     return { data: created as DailyLog, error: null };
   },
 
-  /**
-   * Add a capture entry to a daily log.
-   * Captures are timestamped entries: photos, voice notes, crew counts, safety notes, visitors.
-   */
   async addCapture(
     logId: string,
     type: CaptureType,
@@ -130,12 +167,7 @@ export const dailyLogService = {
     return { data: entry as DailyLogEntry, error: null };
   },
 
-  /**
-   * Compile all captures into a formatted daily log narrative.
-   * Aggregates entries by type and generates a professional summary.
-   */
   async compileLog(logId: string): Promise<DailyLogServiceResult<CompiledLog>> {
-    // Fetch log and its entries
     const [logRes, entriesRes] = await Promise.all([
       supabase.from('daily_logs').select('*').eq('id', logId).single(),
       supabase.from('daily_log_entries').select('*').eq('daily_log_id', logId).order('created_at'),
@@ -147,7 +179,6 @@ export const dailyLogService = {
     const log = logRes.data;
     const entries = (entriesRes.data ?? []) as DailyLogEntry[];
 
-    // Group entries by type
     const crews = entries.filter((e) => e.type === 'crew');
     const safetyEntries = entries.filter((e) => e.type === 'safety');
     const visitors = entries.filter((e) => e.type === 'visitor');
@@ -155,7 +186,6 @@ export const dailyLogService = {
     const voiceNotes = entries.filter((e) => e.type === 'voice');
     const notes = entries.filter((e) => e.type === 'note');
 
-    // Weather section
     const weatherParts: string[] = [];
     if (log.temperature_high || log.temperature_low) {
       weatherParts.push(`Temperature: ${log.temperature_low ?? '—'}°F – ${log.temperature_high ?? '—'}°F`);
@@ -167,7 +197,6 @@ export const dailyLogService = {
       ? weatherParts.join('. ') + '.'
       : 'Weather data not available.';
 
-    // Workforce section
     const totalWorkers = crews.reduce((sum, c) => sum + (c.headcount ?? 0), 0);
     const crewLines = crews.map((c) => {
       const parts = [c.company ?? c.trade ?? 'Unknown'];
@@ -179,7 +208,6 @@ export const dailyLogService = {
       ? `${totalWorkers} workers on site. ${crewLines.join('. ')}.`
       : 'No workforce entries recorded.';
 
-    // Activities section
     const activityParts: string[] = [];
     for (const note of voiceNotes) {
       if (note.description) activityParts.push(note.description);
@@ -191,7 +219,6 @@ export const dailyLogService = {
       ? activityParts.join('. ') + '.'
       : 'No activity entries recorded.';
 
-    // Visitors section
     const visitorLines = visitors.map((v) => {
       const parts = [v.company ?? 'Visitor'];
       if (v.inspector_name) parts[0] = v.inspector_name;
@@ -204,7 +231,6 @@ export const dailyLogService = {
       ? visitorLines.join('. ') + '.'
       : 'No visitors recorded.';
 
-    // Safety section
     const safetyParts: string[] = [];
     for (const s of safetyEntries) {
       if (s.description) safetyParts.push(s.description);
@@ -213,12 +239,10 @@ export const dailyLogService = {
       ? safetyParts.join('. ') + '.'
       : 'No safety incidents or observations. Toolbox talk conducted.';
 
-    // Photos section
     const photosText = photos.length > 0
       ? `${photos.length} photos captured throughout the day.`
       : 'No photos captured.';
 
-    // Narrative
     const dateFmt = new Date(log.log_date).toLocaleDateString('en-US', {
       weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
     });
@@ -253,30 +277,14 @@ export const dailyLogService = {
   },
 
   /**
-   * Approve a daily log — mark as approved with the current user's ID.
+   * Approve a daily log. Routes through transitionStatus for lifecycle enforcement.
    */
   async approveLog(logId: string): Promise<DailyLogServiceResult> {
-    const userId = await getCurrentUserId();
-    const now = new Date().toISOString();
-
-    const { error } = await supabase
-      .from('daily_logs')
-      .update({
-        status: 'approved',
-        approved: true,
-        approved_by: userId,
-        approved_at: now,
-        updated_at: now,
-      })
-      .eq('id', logId);
-
-    if (error) return { data: null, error: error.message };
+    const result = await dailyLogService.transitionStatus(logId, 'approved');
+    if (result.error) return { data: null, error: result.error.message };
     return { data: null, error: null };
   },
 
-  /**
-   * Update the weather data on a daily log (called by auto-refresh).
-   */
   async refreshWeather(logId: string, projectId: string): Promise<DailyLogServiceResult<WeatherSnapshot>> {
     let weather: WeatherSnapshot;
     try {
@@ -302,9 +310,6 @@ export const dailyLogService = {
     return { data: weather, error: null };
   },
 
-  /**
-   * Load all entries for a specific daily log.
-   */
   async loadEntries(logId: string): Promise<DailyLogServiceResult<DailyLogEntry[]>> {
     const { data, error } = await supabase
       .from('daily_log_entries')
@@ -316,9 +321,6 @@ export const dailyLogService = {
     return { data: (data ?? []) as DailyLogEntry[], error: null };
   },
 
-  /**
-   * List all daily logs for a project, newest first.
-   */
   async listLogs(projectId: string): Promise<DailyLogServiceResult<DailyLog[]>> {
     const { data, error } = await supabase
       .from('daily_logs')
@@ -331,21 +333,73 @@ export const dailyLogService = {
   },
 
   /**
-   * Update a daily log's status.
+   * Update a daily log's status. Routes through the lifecycle machine so callers
+   * cannot bypass role or transition checks.
    */
   async updateStatus(logId: string, status: string): Promise<DailyLogServiceResult> {
-    const { error } = await supabase
-      .from('daily_logs')
-      .update({ status, updated_at: new Date().toISOString() })
-      .eq('id', logId);
-
-    if (error) return { data: null, error: error.message };
+    const result = await dailyLogService.transitionStatus(logId, status as DailyLogState);
+    if (result.error) return { data: null, error: result.error.message };
     return { data: null, error: null };
   },
 
   /**
-   * Update the AI summary / narrative on a daily log.
+   * Transition daily log status with lifecycle enforcement.
+   * Resolves user role from project_members. Does NOT trust caller-supplied roles.
    */
+  async transitionStatus(
+    logId: string,
+    newStatus: DailyLogState,
+  ): Promise<{ data: null; error: { message: string } | null }> {
+    const { data: log, error: fetchError } = await supabase
+      .from('daily_logs')
+      .select('status, project_id')
+      .eq('id', logId)
+      .single();
+
+    if (fetchError || !log) {
+      return { data: null, error: { message: `Daily log not found (id: ${logId})` } };
+    }
+
+    const userId = await getCurrentUserId();
+    const role = await resolveProjectRole(log.project_id, userId);
+    if (!role) {
+      return { data: null, error: { message: 'User is not a member of this project' } };
+    }
+
+    const currentStatus = (log.status ?? 'draft') as DailyLogState;
+    const valid = getValidDailyLogTransitions(currentStatus, role);
+    if (!valid.includes(newStatus)) {
+      return {
+        data: null,
+        error: {
+          message: `Invalid daily log transition: ${currentStatus} → ${newStatus} (role: ${role}). Valid: ${valid.join(', ') || '(none)'}`,
+        },
+      };
+    }
+
+    const updates: Record<string, unknown> = {
+      status: newStatus,
+      updated_at: new Date().toISOString(),
+    };
+    if (newStatus === 'submitted') {
+      updates.is_submitted = true;
+      updates.submitted_at = new Date().toISOString();
+    }
+    if (newStatus === 'approved') {
+      updates.approved = true;
+      updates.approved_at = new Date().toISOString();
+      updates.approved_by = userId;
+    }
+
+    const { error } = await supabase
+      .from('daily_logs')
+      .update(updates)
+      .eq('id', logId);
+
+    if (error) return { data: null, error: { message: error.message } };
+    return { data: null, error: null };
+  },
+
   async updateSummary(logId: string, summary: string): Promise<DailyLogServiceResult> {
     const { error } = await supabase
       .from('daily_logs')
@@ -356,6 +410,8 @@ export const dailyLogService = {
     return { data: null, error: null };
   },
 };
+
+export { getValidDailyLogTransitions };
 
 // ── Utilities ──────────────────────────────────────────────────
 

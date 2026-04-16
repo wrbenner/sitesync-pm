@@ -2,6 +2,7 @@ import { supabase, transformSupabaseError } from '../client'
 import { assertProjectAccess, validateProjectId } from '../middleware/projectScope'
 import type { PayApplication, CreatePayAppPayload, LienWaiverRow } from '../../types/api'
 import { autoGenerateLienWaivers } from './lienWaivers'
+import { paymentService } from '../../services/paymentService'
 
 
 type LienWaiverType = typeof LIEN_WAIVER_TYPES[number]
@@ -215,16 +216,16 @@ export const submitPayApplication = async (
   id: string,
 ): Promise<PayApplication> => {
   validateProjectId(projectId)
+  // Route through the lifecycle machine so invalid status writes are rejected.
+  const transition = await paymentService.transitionStatus(id, 'submitted')
+  if (transition.error) {
+    throw new Error(transition.error.message)
+  }
   const { data, error } = await supabase
     .from('pay_applications')
-    .update({
-      status: 'submitted',
-      submitted_date: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    })
+    .select('*')
     .eq('project_id', projectId)
     .eq('id', id)
-    .select()
     .single()
   if (error) throw transformSupabaseError(error)
   return data as PayApplication
@@ -238,16 +239,17 @@ export const approvePayApplication = async (
   payAppId: string,
 ): Promise<{ payApp: PayApplication; waivers: LienWaiverRow[] }> => {
   await assertProjectAccess(projectId)
+  // Route through the lifecycle machine so only a valid gc_review/owner_review
+  // → approved transition is allowed for the acting user's role.
+  const transition = await paymentService.transitionStatus(payAppId, 'approved')
+  if (transition.error) {
+    throw new Error(transition.error.message)
+  }
   const { data, error } = await supabase
     .from('pay_applications')
-    .update({
-      status: 'approved',
-      approved_date: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    })
+    .select('*')
     .eq('project_id', projectId)
     .eq('id', payAppId)
-    .select()
     .single()
   if (error) throw transformSupabaseError(error)
   const waivers = await autoGenerateLienWaivers(projectId, payAppId)

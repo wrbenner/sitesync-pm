@@ -14,6 +14,12 @@ import { createDailyLog, updateDailyLog } from '../../api/endpoints/field'
 import type { DailyLogPayload } from '../../types/api'
 import { getValidTransitions } from '../../machines/rfiMachine'
 import { getValidSubmittalStatusTransitions } from '../../machines/submittalMachine'
+import { getValidTaskTransitions } from '../../services/taskService'
+import { getValidPunchTransitions } from '../../machines/punchItemMachine'
+import { getValidDailyLogTransitions } from '../../services/dailyLogService'
+import type { TaskState } from '../../machines/taskMachine'
+import type { PunchItemState } from '../../machines/punchItemMachine'
+import type { DailyLogState } from '../../machines/dailyLogMachine'
 import type { RfiStatus } from '../../types/database'
 import type { SubmittalStatus } from '../../types/submittal'
 
@@ -87,6 +93,68 @@ async function validateSubmittalStatusTransition(
   if (!validNext.includes(newStatus as SubmittalStatus)) {
     throw new Error(
       `Invalid submittal status transition: ${submittal.status} → ${newStatus} (role: ${userRole}). Valid: ${validNext.join(', ')}`,
+    )
+  }
+}
+
+async function validateTaskStatusTransition(
+  taskId: string,
+  projectId: string,
+  newStatus: string,
+): Promise<void> {
+  const { data: task } = await supabase.from('tasks').select('status').eq('id', taskId).single()
+  if (!task) return
+  const userRole = await resolveUserRole(projectId)
+  const current = (task.status ?? 'todo') as TaskState
+  const valid = getValidTaskTransitions(current, userRole)
+  if (!valid.includes(newStatus as TaskState)) {
+    throw new Error(
+      `Invalid task status transition: ${current} → ${newStatus} (role: ${userRole}). Valid: ${valid.join(', ') || '(none)'}`,
+    )
+  }
+}
+
+async function validatePunchItemStatusTransition(
+  punchItemId: string,
+  _projectId: string,
+  newStatus: string,
+): Promise<void> {
+  const { data: item } = await supabase.from('punch_items').select('status').eq('id', punchItemId).single()
+  if (!item) return
+  // punchItemMachine uses action-label transitions; convert valid actions to
+  // the set of target statuses reachable from the current state.
+  const current = ((item as { status?: string | null }).status ?? 'open') as PunchItemState
+  const actionToStatus: Record<string, PunchItemState> = {
+    'Start Work': 'in_progress',
+    'Verify (Complete at Creation)': 'verified',
+    'Mark Resolved': 'resolved',
+    'Reopen': 'open',
+    'Verify': 'verified',
+    'Reject Verification': 'in_progress',
+  }
+  const allowed = getValidPunchTransitions(current)
+    .map((a) => actionToStatus[a])
+    .filter(Boolean)
+  if (!allowed.includes(newStatus as PunchItemState)) {
+    throw new Error(
+      `Invalid punch item status transition: ${current} → ${newStatus}. Valid: ${allowed.join(', ') || '(none)'}`,
+    )
+  }
+}
+
+async function validateDailyLogStatusTransition(
+  logId: string,
+  projectId: string,
+  newStatus: string,
+): Promise<void> {
+  const { data: log } = await supabase.from('daily_logs').select('status').eq('id', logId).single()
+  if (!log) return
+  const userRole = await resolveUserRole(projectId)
+  const current = ((log as { status?: string | null }).status ?? 'draft') as DailyLogState
+  const valid = getValidDailyLogTransitions(current, userRole)
+  if (!valid.includes(newStatus as DailyLogState)) {
+    throw new Error(
+      `Invalid daily log status transition: ${current} → ${newStatus} (role: ${userRole}). Valid: ${valid.join(', ') || '(none)'}`,
     )
   }
 }
@@ -272,6 +340,9 @@ export function useUpdatePunchItem() {
     getEntityId: (p) => p.id,
     getNewValue: (p) => p.updates,
     mutationFn: async ({ id, updates, projectId }) => {
+      if (typeof updates.status === 'string') {
+        await validatePunchItemStatusTransition(id, projectId, updates.status)
+      }
       const { error } = await from('punch_items').update(updates).eq('id', id)
       if (error) throw error
       return { projectId, id }
@@ -313,6 +384,9 @@ export function useUpdateTask() {
     getEntityId: (p) => p.id,
     getNewValue: (p) => p.updates,
     mutationFn: async ({ id, updates, projectId }) => {
+      if (typeof updates.status === 'string') {
+        await validateTaskStatusTransition(id, projectId, updates.status)
+      }
       const { error } = await from('tasks').update(updates).eq('id', id)
       if (error) throw error
       return { projectId, id }
@@ -418,7 +492,12 @@ export function useSubmitDailyLog() {
       return { previous, key }
     },
     mutationFn: async ({ id, signatureUrl, projectId }: { id: string; signatureUrl?: string; projectId: string }) => {
-      const updates: Record<string, unknown> = { status: 'submitted', submitted_at: new Date().toISOString() }
+      await validateDailyLogStatusTransition(id, projectId, 'submitted')
+      const updates: Record<string, unknown> = {
+        status: 'submitted',
+        is_submitted: true,
+        submitted_at: new Date().toISOString(),
+      }
       if (signatureUrl) updates.superintendent_signature_url = signatureUrl
       const { error } = await from('daily_logs').update(updates).eq('id', id)
       if (error) throw error
@@ -447,6 +526,7 @@ export function useApproveDailyLog() {
     getEntityId: (p) => p.id,
     getNewValue: (p) => ({ status: 'approved', approved_by: p.userId }),
     mutationFn: async ({ id, signatureUrl, userId, projectId }) => {
+      await validateDailyLogStatusTransition(id, projectId, 'approved')
       const updates: Record<string, unknown> = {
         status: 'approved', approved: true, approved_at: new Date().toISOString(), approved_by: userId,
       }
@@ -469,7 +549,7 @@ export function useRejectDailyLog() {
     getEntityId: (p) => p.id,
     getNewValue: (p) => ({ status: 'rejected', comments: p.comments, rejected_by: p.userId }),
     mutationFn: async ({ id, comments, userId, projectId }) => {
-      // FIX: Add rejected_at and rejected_by (were missing)
+      await validateDailyLogStatusTransition(id, projectId, 'rejected')
       const { error } = await from('daily_logs').update({
         status: 'rejected',
         rejection_comments: comments,
