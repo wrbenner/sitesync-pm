@@ -1,9 +1,9 @@
 import React, { useState, useMemo, useEffect, useCallback, memo, lazy, Suspense } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
-  DollarSign, FileText, CheckCircle, Clock, AlertTriangle,
-  CreditCard, Send, Eye, Plus, ChevronRight, Building2,
-  Scale, Receipt, ArrowRight, X, Save, Download,
+  DollarSign, FileText, CheckCircle, AlertTriangle,
+  CreditCard, Send, Plus,
+  Scale, Receipt, X, Save, Download,
 } from 'lucide-react'
 import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton, EmptyState } from '../components/Primitives'
 import { DataTable, createColumnHelper } from '../components/shared/DataTable'
@@ -16,10 +16,8 @@ import {
   getValidPaymentTransitions,
   calculateG702,
   calculateG703LineItem,
-  getLienWaiverStatusConfig,
-  LIEN_WAIVER_FORMS,
 } from '../machines/paymentMachine'
-import type { PaymentStatus, G702Data, G703LineItem, LienWaiverState } from '../machines/paymentMachine'
+import type { PaymentStatus, G702Data, G703LineItem } from '../machines/paymentMachine'
 import { saveSOVProgress } from '../api/endpoints/budget'
 import type { PayApplicationData } from '../api/endpoints/budget'
 import { upsertPayApplication, approvePayApplication } from '../api/endpoints/payApplications'

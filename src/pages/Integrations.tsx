@@ -1,11 +1,11 @@
 import React, { useState } from 'react'
-import { Plug, Check, X, RefreshCw, ChevronRight, Clock, AlertTriangle, Zap, Shield, ExternalLink } from 'lucide-react'
+import { Plug, Check, X, RefreshCw, ChevronRight, Clock, AlertTriangle, Zap, Shield } from 'lucide-react'
 import { PageContainer, Card, Btn, Skeleton, MetricBox, TabBar } from '../components/Primitives'
-import { colors, spacing, typography, borderRadius, shadows, transitions } from '../styles/theme'
+import { colors, spacing, typography, borderRadius } from '../styles/theme'
 import { useIntegrations, useIntegrationSyncLog } from '../hooks/queries'
 import { useConnectIntegration, useDisconnectIntegration, useSyncIntegration } from '../hooks/mutations'
 import { useProjectId } from '../hooks/useProjectId'
-import { INTEGRATION_REGISTRY, type IntegrationMeta } from '../services/integrations'
+import { INTEGRATION_REGISTRY } from '../services/integrations'
 import { FormModal, FormBody, FormFooter, FormField, FormInput } from '../components/forms/FormPrimitives'
 import { toast } from 'sonner'
 import { PermissionGate } from '../components/auth/PermissionGate'
@@ -382,7 +382,7 @@ const SyncHistoryPanel: React.FC<{
   type: string
   name: string
   onClose: () => void
-}> = ({ integrationId, type, name, onClose }) => {
+}> = ({ integrationId, type: _type, name, onClose }) => {
   const { data: syncLog, isLoading } = useIntegrationSyncLog(integrationId)
 
   return (

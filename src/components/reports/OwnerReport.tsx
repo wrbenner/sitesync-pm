@@ -13,17 +13,17 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import {
-  FileText, Download, Calendar, DollarSign, AlertTriangle,
-  Camera, Eye, Clock, CheckCircle, XCircle, ArrowRight,
-  TrendingUp, TrendingDown, RefreshCw, Sparkles, ChevronRight,
-  AlertCircle, ArrowUpRight,
+  Download, Calendar, DollarSign, AlertTriangle,
+  CheckCircle, XCircle,
+  TrendingUp, RefreshCw, Sparkles,
+  AlertCircle,
 } from 'lucide-react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Cell,
 } from 'recharts'
 import { Card, Btn, SectionHeader, Tag, ProgressBar } from '../Primitives'
-import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme'
+import { colors, spacing, typography, borderRadius } from '../../styles/theme'
 import { ProgressTimeline } from './ProgressTimeline'
 import { PhotoComparison } from './PhotoComparison'
 import {
@@ -65,7 +65,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
 
 export const OwnerReport: React.FC = () => {
   const projectId = useProjectId()
-  const { data: project } = useProject(projectId)
+  const { data: _project } = useProject(projectId)
   const [report, setReport] = useState<OwnerReportData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)

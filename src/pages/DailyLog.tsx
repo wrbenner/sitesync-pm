@@ -1,9 +1,8 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useCopilotStore } from '../stores/copilotStore';
 import { ErrorBoundary } from '../components/ErrorBoundary';
-import { Users, Clock, ShieldCheck, Cloud, ChevronRight, Camera, Send, BarChart3, Sparkles, Zap, CalendarDays, Calendar, X, Lock, AlertTriangle, BookOpen, RefreshCw, Truck, UserPlus, FileEdit, HardHat, Mic } from 'lucide-react';
-import { PageContainer, Card, Btn, Skeleton, SectionHeader, useToast } from '../components/Primitives';
-import EmptyState from '../components/ui/EmptyState';
+import { Users, Clock, ShieldCheck, Cloud, ChevronRight, Camera, Send, BarChart3, Sparkles, Zap, CalendarDays, Calendar, X, Lock, AlertTriangle, BookOpen, RefreshCw, Truck, UserPlus, FileEdit, Mic } from 'lucide-react';
+import { PageContainer, Card, Btn, SectionHeader, useToast } from '../components/Primitives';
 import CreateDailyLogModal from '../components/forms/CreateDailyLogModal';
 import { colors, spacing, typography, borderRadius, transitions, tradeColors, shadows } from '../styles/theme';
 import { ExportButton } from '../components/shared/ExportButton';
@@ -11,7 +10,6 @@ import { DailyLogPDF } from '../components/export/DailyLogPDF';
 import type { DailyLogPDFData } from '../components/export/DailyLogPDF';
 import { toast } from 'sonner';
 import { AutoNarrative } from '../components/dailylog/AutoNarrative';
-import DailyLogSkeleton from '../components/dailylog/DailyLogSkeleton';
 import { DayComparison } from '../components/dailylog/DayComparison';
 import { SignaturePad } from '../components/dailylog/SignaturePad';
 import { WeatherCard } from '../components/dailylog/WeatherCard';
@@ -79,7 +77,7 @@ const DailyLogPage: React.FC = () => {
   const [compareMode, setCompareMode] = useState<'yesterday' | 'lastweek' | null>(null);
   const [expandedIncident, setExpandedIncident] = useState<string | null>(null);
   const [showQuickEntry, setShowQuickEntry] = useState(false);
-  const [showCalendar, setShowCalendar] = useState(false);
+  const [_showCalendar, _setShowCalendar] = useState(false);
   const [activeView, setActiveView] = useState<'auto' | 'calendar' | 'log'>('auto');
   const [showCaptureBar, setShowCaptureBar] = useState(true);
   const [weather, setWeather] = useState<WeatherData | null>(null);
@@ -243,7 +241,7 @@ const DailyLogPage: React.FC = () => {
     dailyLogHistory.filter((l) => l.status === 'draft' || (!l.status && !l.approved)).map((l) => l.log_date?.split('T')[0])
   ), [dailyLogHistory]);
   // Legacy: combined set for any code still referencing loggedDates
-  const loggedDates = useMemo(() => new Set([...approvedDates, ...submittedDates]), [approvedDates, submittedDates]);
+  const _loggedDates = useMemo(() => new Set([...approvedDates, ...submittedDates]), [approvedDates, submittedDates]);
 
   const aggMetrics = useMemo(() => {
     const now = new Date();

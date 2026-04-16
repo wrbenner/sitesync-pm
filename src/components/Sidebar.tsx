@@ -3,19 +3,19 @@ import {
   Home, LayoutGrid, Calendar, DollarSign,
   HelpCircle, FileText,
   BookOpen, Briefcase, CheckSquare,
-  Users, Zap, Search, ListChecks,
+  Users, Zap, Search,
   Activity, Clock, Heart, Shield,
   Calculator, ShieldCheck, Package, Truck,
   Sun, Moon, Bot, ClipboardCheck,
   Plug, BarChart3, Leaf, ScrollText, Code, Globe, Store,
   TrendingUp, FileDiff, Send, HardHat, Repeat2,
-  Receipt, Milestone, ChevronDown, ChevronRight,
-  Bell, Settings, LogOut, X, MoreHorizontal,
+  Receipt, Milestone,
+  X, MoreHorizontal,
 } from 'lucide-react';
 import { useUiStore } from '../stores';
 import { motion } from 'framer-motion';
 import { colors, spacing, typography, borderRadius, transitions, layout, zIndex } from '../styles/theme';
-import { duration, easing, motion as motionTokens } from '../styles/animations';
+import { duration, easing } from '../styles/animations';
 import { ProgressBar } from './Primitives';
 import { usePermissions } from '../hooks/usePermissions';
 import { SidebarPresenceDot } from './collaboration/PresenceBar';

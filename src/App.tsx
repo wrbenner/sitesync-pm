@@ -2,7 +2,7 @@ import React, { Suspense, lazy, useState, useEffect, useRef } from 'react';
 import { HardHat } from 'lucide-react';
 import { HashRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { SidebarContext, ToastProvider, Skeleton } from './components/Primitives';
+import { SidebarContext, ToastProvider } from './components/Primitives';
 import { CommandPalette } from './components/shared/CommandPalette';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import Sentry from './lib/sentry';
@@ -16,9 +16,8 @@ import { MobileLayout } from './components/layout/MobileLayout';
 import { OfflineBanner } from './components/ui/OfflineBanner';
 import { useUiStore, useAIAnnotationStore } from './stores';
 import { useCopilotStore } from './stores/copilotStore';
-import { colors, colorVars, layout, spacing, typography, borderRadius, transitions, zIndex } from './styles/theme';
+import { colors, colorVars, layout, spacing, typography, borderRadius, transitions } from './styles/theme';
 import { keyframes as animationKeyframes } from './styles/animations';
-import { pageTransition } from './components/transitions/variants';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import type { Shortcut } from './hooks/useKeyboardShortcuts';
 import { useMediaQuery } from './hooks/useMediaQuery';
@@ -456,8 +455,8 @@ function AppContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMobile, isTablet]);
   const { toggleContextPanel, contextPanelOpen } = useAIAnnotationStore();
-  const { openCopilot, closeCopilot, isOpen: copilotOpen } = useCopilotStore();
-  const sidebarWidth = sidebarCollapsed ? layout.sidebarCollapsed : layout.sidebarWidth;
+  const { openCopilot: _openCopilot, closeCopilot, isOpen: copilotOpen } = useCopilotStore();
+  const _sidebarWidth = sidebarCollapsed ? layout.sidebarCollapsed : layout.sidebarWidth;
 
   const handleNavigate = (view: string) => {
     setActiveView(view);

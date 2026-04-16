@@ -1,11 +1,11 @@
-import React, { useState, useMemo, useCallback, memo } from 'react'
+import React, { useState, useCallback, memo } from 'react'
 import {
   Key, Code, Webhook, BarChart3, Copy, Check, Plus, Trash2,
-  Eye, EyeOff, RefreshCw, ExternalLink, ChevronRight, Terminal,
+  RefreshCw, Terminal,
   AlertTriangle, Clock, Zap, Globe, Shield, Package,
 } from 'lucide-react'
 import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton, EmptyState } from '../components/Primitives'
-import { colors, spacing, typography, borderRadius, transitions, shadows } from '../styles/theme'
+import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
 import { useApiKeys, useWebhooks } from '../hooks/queries'
 import { PermissionGate } from '../components/auth/PermissionGate'
@@ -129,7 +129,7 @@ CodeBlock.displayName = 'CodeBlock'
 // ── API Key Card ──────────────────────────────────────────────
 
 const ApiKeyCard = memo<{ apiKey: Record<string, unknown> }>(({ apiKey }) => {
-  const [showKey, setShowKey] = useState(false)
+  const [_showKey, _setShowKey] = useState(false)
   const prefix = apiKey.key_prefix as string
   const name = apiKey.name as string
   const lastUsed = apiKey.last_used_at as string | null

@@ -1,8 +1,8 @@
 import React, { useState, lazy, Suspense } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, FileText, Play, Clock, Calendar, Download, ChevronRight, BarChart3, DollarSign, HardHat, ClipboardList, Shield, Users, Wrench, CalendarDays, Sparkles } from 'lucide-react'
+import { FileText, Play, Calendar, Download, BarChart3, DollarSign, HardHat, ClipboardList, Shield, Users, Wrench, CalendarDays, Sparkles } from 'lucide-react'
 import { PageContainer, Card, SectionHeader, MetricBox, Btn, TabBar, Skeleton, Tag } from '../components/Primitives'
-import { colors, spacing, typography, borderRadius, shadows, transitions, colorVars } from '../styles/theme'
+import { colors, spacing, typography, borderRadius, colorVars } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
 import { useCustomReports, useReportRuns } from '../hooks/queries'
 import { REPORT_TYPES, type ReportType } from '../hooks/useReportData'
@@ -73,7 +73,7 @@ export const Reports: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<TabId>('standard')
   const [exportOpen, setExportOpen] = useState(false)
-  const [selectedType, setSelectedType] = useState<ReportType | null>(null)
+  const [_selectedType, setSelectedType] = useState<ReportType | null>(null)
 
   // Metrics
   const totalReports = REPORT_TYPES.length + (customReports?.length ?? 0)

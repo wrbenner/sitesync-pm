@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect, useId } from 'react';
 import { useCopilotStore } from '../stores/copilotStore';
 import { ErrorBoundary } from '../components/ErrorBoundary';
-import { PageContainer, Card, SectionHeader, MetricBox, ProgressBar, StatusTag, DetailPanel, RelatedItems, Skeleton, useToast } from '../components/Primitives';
+import { PageContainer, Card, SectionHeader, MetricBox, StatusTag, DetailPanel, RelatedItems, Skeleton, useToast } from '../components/Primitives';
 import { MetricCardSkeleton, TableRowSkeleton } from '../components/ui/Skeletons';
 import { Btn } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, touchTarget } from '../styles/theme';
@@ -22,7 +22,7 @@ import { Treemap } from '../components/budget/Treemap';
 import { SCurve } from '../components/budget/SCurve';
 import { EarnedValueDashboard } from '../components/budget/EarnedValueDashboard';
 import { WaterfallChart } from '../components/budget/WaterfallChart';
-import { Download, AlertTriangle, ChevronRight, ArrowRight, DollarSign, Upload, Sparkles, X, RefreshCw, Pencil } from 'lucide-react';
+import { Download, AlertTriangle, ChevronRight, ArrowRight, DollarSign, Upload, Sparkles, RefreshCw, Pencil } from 'lucide-react';
 import { computeDivisionFinancials, computeProjectFinancials, detectBudgetAnomalies } from '../lib/financialEngine';
 import { BudgetUpload } from '../components/budget/BudgetUpload';
 import EmptyState from '../components/ui/EmptyState';
@@ -32,7 +32,7 @@ import { useUpdateChangeOrder, useUpdateBudgetItem } from '../hooks/mutations';
 import { PermissionGate } from '../components/auth/PermissionGate';
 import { usePermissions } from '../hooks/usePermissions';
 import { getCOTypeConfig, getCOStatusConfig } from '../machines/changeOrderMachine';
-import type { ChangeOrderType, ChangeOrderState } from '../machines/changeOrderMachine';
+import type { ChangeOrderState } from '../machines/changeOrderMachine';
 import { useNavigate } from 'react-router-dom'
 import { useBudgetRealtime } from '../hooks/queries/realtime'
 import { MetricFlash } from '../components/ui/RealtimeFlash';
@@ -348,7 +348,7 @@ const BudgetPage: React.FC = () => {
   }, [payApps]);
 
   // elapsedFraction: weighted average physical progress across divisions, used as schedule proxy
-  const elapsedFraction = useMemo(() => {
+  const _elapsedFraction = useMemo(() => {
     const totalBudget = costData.divisions.reduce((s, d) => s + d.budget, 0);
     if (totalBudget === 0) return 0;
     return costData.divisions.reduce((s, d) => s + d.budget * (d.progress / 100), 0) / totalBudget;

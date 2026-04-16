@@ -2,9 +2,9 @@ import React, { memo, useCallback, useMemo } from 'react'
 import {
   Mic, Square, X, CheckCircle, Play, Pause, Globe, Sparkles,
   FileText, AlertTriangle, ClipboardCheck, ShieldAlert, Trash2,
-  ChevronDown, Volume2, Wifi, WifiOff, Camera,
+  WifiOff,
 } from 'lucide-react'
-import { colors, spacing, typography, borderRadius, transitions, shadows, zIndex } from '../../styles/theme'
+import { colors, spacing, typography, borderRadius, transitions, zIndex } from '../../styles/theme'
 import { useVoiceCapture } from '../../hooks/useVoiceCapture'
 import type { ExtractedEntity, SupportedLanguage } from '../../hooks/useVoiceCapture'
 

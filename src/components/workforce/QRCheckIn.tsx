@@ -1,12 +1,12 @@
-import React, { useState, useRef, useCallback, useEffect, memo } from 'react'
+import React, { useState, useRef, useCallback, memo } from 'react'
 import {
-  QrCode, Users, Clock, Building2, ArrowRight, Check,
-  X, MapPin, AlertTriangle, UserCheck, Scan, LogOut,
+  QrCode, Users, Building2, ArrowRight, Check,
+  X, AlertTriangle, UserCheck, Scan, LogOut,
 } from 'lucide-react'
 import { Scanner } from '@yudiel/react-qr-scanner'
 import type { IDetectedBarcode } from '@yudiel/react-qr-scanner'
 import { colors, spacing, typography, borderRadius, transitions, shadows, zIndex } from '../../styles/theme'
-import { Btn, Card, MetricBox, SectionHeader, useToast } from '../Primitives'
+import { Btn, Card, SectionHeader, useToast } from '../Primitives'
 import {
   useHeadcount,
   useCheckInMutation,
@@ -206,7 +206,7 @@ export const QRScannerSheet: React.FC<QRScannerSheetProps> = ({ onClose }) => {
 // ── QR Code Display (for gate/entrance) ───────────────────────
 
 const QRCodeDisplay = memo<{ projectId: string }>(({ projectId }) => {
-  const payload = generateQRPayload(projectId)
+  const _payload = generateQRPayload(projectId)
 
   // Simple SVG QR-like pattern (in production, use a real QR library)
   return (

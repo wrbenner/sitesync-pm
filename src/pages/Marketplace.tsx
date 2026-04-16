@@ -1,13 +1,11 @@
-import React, { useState, useMemo, useCallback, memo } from 'react'
+import React, { useState, useMemo, memo } from 'react'
 import {
-  Store, Search, Star, Download, ExternalLink, Shield, Zap,
+  Store, Search, Star, Download, Shield,
   DollarSign, Calendar, ShieldCheck, Truck, Calculator, Box,
-  CheckCircle, Clock, ChevronRight, Globe, Code, X, Users,
+  CheckCircle, Clock, Code, X, Users,
 } from 'lucide-react'
-import { PageContainer, Card, SectionHeader, Btn, Skeleton, EmptyState } from '../components/Primitives'
+import { PageContainer, Card, SectionHeader, Btn, EmptyState } from '../components/Primitives'
 import { colors, spacing, typography, borderRadius, transitions, shadows, zIndex } from '../styles/theme'
-import { useProjectId } from '../hooks/useProjectId'
-import { useIntegrations } from '../hooks/queries'
 import { PermissionGate } from '../components/auth/PermissionGate'
 import { toast } from 'sonner'
 
