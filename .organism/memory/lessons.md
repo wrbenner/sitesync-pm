@@ -6,6 +6,24 @@ Every cycle should make existing pages better — not add new ones.
 The goal: every page enterprise-grade, better than any platform out there.
 Only build infrastructure (service layers) when needed to support existing pages.
 
+
+## Merge Conflicts — Auto-Rebase (April 16, 2026)
+When multiple tiers run simultaneously, the first to merge changes main.
+Later tiers' PRs become "dirty" (merge conflicts). NEVER just poll and timeout.
+All tiers MUST call the GitHub update-branch API to auto-rebase:
+
+```python
+if state == "dirty":
+    run_gh("gh", "api", f"repos/{owner}/{repo}/pulls/{pr_number}/update-branch",
+        "--method", "PUT", "-f", "update_method=rebase")
+    time.sleep(15)
+    continue
+```
+
+This applies to ALL tiers: Strategic Experiments, Design Excellence, Feature Hardening,
+Quality Swarm, and Test Coverage. If a new tier is created, it MUST include this pattern.
+Without it, the tier builds successfully but wastes the entire cycle on a timeout.
+
 > This file is the organism's long-term memory. It is updated automatically
 > after every 3 cycles by the reflect phase. The organism reads this before
 > every strategic decision.
