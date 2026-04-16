@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { motion } from 'framer-motion';
-import { Sparkles, AlertTriangle, AlertCircle, ChevronDown, ChevronUp, CheckCircle, RefreshCw, Zap, CalendarClock, TrendingUp, GitBranch, Gauge, CalendarCheck, Calendar, CalendarDays, BarChart3, ToggleLeft, ToggleRight, ClipboardList, Upload, X, Sun, Cloud, CloudRain } from 'lucide-react';
+import { Sparkles, AlertTriangle, AlertCircle, ChevronDown, ChevronUp, CheckCircle, RefreshCw, TrendingUp, Calendar, CalendarDays, ToggleLeft, ToggleRight, Upload, X, Sun, Cloud, CloudRain } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { PageContainer, Card, SectionHeader, MetricBox, Skeleton, Btn, useToast, Tag } from '../components/Primitives';
 import { useRealtimeSchedulePhases, useScheduleRealtime } from '../hooks/queries/realtime';
@@ -17,7 +16,6 @@ import { GanttChart } from '../components/schedule/GanttChart';
 import { CoordinationEngine } from '../components/schedule/CoordinationEngine';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { PermissionGate } from '../components/auth/PermissionGate';
-import { MobileScheduleView } from '../components/schedule/MobileScheduleView';
 import { predictScheduleRisks } from '../lib/predictions';
 import type { PredictedRisk, WeatherDay } from '../lib/predictions';
 import { computeScheduleKPIs } from '../lib/criticalPath';
@@ -240,13 +238,13 @@ interface ScheduleImportModalProps {
   projectId?: string;
 }
 
-const ScheduleImportModal: React.FC<ScheduleImportModalProps> = ({ open, onClose, onImportComplete, projectId }) => {
+const ScheduleImportModal: React.FC<ScheduleImportModalProps> = ({ open, onClose, onImportComplete: _onImportComplete, projectId: _projectId }) => {
   const [dragOver, setDragOver] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileType, setFileType] = useState<'xml' | 'xer' | 'mpp' | 'csv' | null>(null);
   const [parsing, setParsing] = useState(false);
   const [parsed, setParsed] = useState<ParsedActivity[] | null>(null);
-  const [importing, setImporting] = useState(false);
+  const [_importing, setImporting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const { addToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -616,7 +614,7 @@ export const Schedule: React.FC = () => {
   const [aiEdgeLoading, setAiEdgeLoading] = useState(false);
   const [weatherRecords, setWeatherRecords] = useState<Array<{ date: string; conditions: string | null }>>([]);
 
-  const kpis = useMemo(() => computeScheduleKPIs(schedulePhases), [schedulePhases])
+  const _kpis = useMemo(() => computeScheduleKPIs(schedulePhases), [schedulePhases])
 
   const hasBaselineData = useMemo(
     () => schedulePhases.some(p => p.baselineStartDate != null && p.baselineEndDate != null),
@@ -807,7 +805,7 @@ export const Schedule: React.FC = () => {
     setTimeout(() => sendMessage(prompt), 100);
   }, [createConversation, setActiveConversation, sendMessage, navigate]);
 
-  const GANTT_ROW_WIDTHS = ['70%', '55%', '85%', '40%', '90%', '60%', '75%', '45%'];
+  const _GANTT_ROW_WIDTHS = ['70%', '55%', '85%', '40%', '90%', '60%', '75%', '45%'];
 
   if (error && !loading) {
     return (
@@ -1932,7 +1930,7 @@ export const Schedule: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody data-schedule-list>
-                      {schedulePhases.map((phase, i) => {
+                      {schedulePhases.map((phase, _i) => {
                         const statusLabel = (phase.status ?? 'not started').replace(/_/g, ' ');
                         const durationDays = Math.round((new Date(phase.endDate).getTime() - new Date(phase.startDate).getTime()) / 86400000);
                         const floatDays = phase.float_days ?? (phase as unknown as Record<string, unknown>).floatDays ?? 0;

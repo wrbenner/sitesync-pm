@@ -5,7 +5,7 @@ import {
   Calendar, DollarSign, HelpCircle, Shield, Users,
   TrendingUp, TrendingDown, ArrowRight, Scale, AlertCircle,
   ClipboardList, Circle, Plus, Building2, HardHat, Sparkles,
-  CloudSun, Thermometer, Wind, Droplets,
+  CloudSun, Wind, Droplets,
 } from 'lucide-react';
 import { PageContainer } from '../components/Primitives';
 import { MetricCardSkeleton } from '../components/ui/Skeletons';
@@ -406,13 +406,13 @@ const WelcomeOnboarding: React.FC<{ onProjectCreated: () => void }> = ({ onProje
 
 const DashboardPage: React.FC = () => {
   const projectId = useProjectId();
-  const navigate = useNavigate();
-  const reducedMotion = useReducedMotion();
+  const _navigate = useNavigate();
+  const _reducedMotion = useReducedMotion();
   const setActiveProject = useProjectContext((s) => s.setActiveProject);
 
   // Fetch all projects to detect "no projects" state
   const { data: allProjects, isPending: projectsLoading } = useProjects();
-  const [projectCreated, setProjectCreated] = useState(0);
+  const [_projectCreated, setProjectCreated] = useState(0);
 
   // Auto-select first project if none selected
   useEffect(() => {
@@ -756,7 +756,7 @@ const DashboardInner: React.FC = () => {
   const { data: project, isError: projectError, error: projectErrorObj } = useProject(projectId);
   const { data: insightsData } = useAiInsightsMeta(projectId);
   // Single batched query against the project_metrics materialized view.
-  const { data: matViewMetrics, isPending: metricsLoading, isError: metricsError } = useProjectMetrics(projectId);
+  const { data: matViewMetrics, isPending: _metricsLoading, isError: _metricsError } = useProjectMetrics(projectId);
   const { data: payApps } = usePayApplications(projectId);
   const { data: lienWaivers } = useLienWaivers(projectId);
 

@@ -1,13 +1,13 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { VirtualDataTable } from '../components/shared/VirtualDataTable';
 import { createColumnHelper } from '@tanstack/react-table';
-import { PageContainer, Card, Btn, StatusTag, PriorityTag, DetailPanel, Avatar, RelatedItems, useToast, Skeleton, MetricBox } from '../components/Primitives';
+import { PageContainer, Card, Btn, StatusTag, PriorityTag, DetailPanel, Avatar, RelatedItems, useToast, MetricBox } from '../components/Primitives';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import PunchListSkeleton from '../components/field/PunchListSkeleton';
 import EmptyState from '../components/ui/EmptyState';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 import { usePunchItems, useDirectoryContacts } from '../hooks/queries';
-import { AlertTriangle, Camera, CheckCircle, CheckSquare, Inbox, MessageSquare, RefreshCw, Search, Sparkles, XCircle } from 'lucide-react';
+import { AlertTriangle, Camera, CheckCircle, CheckSquare, MessageSquare, RefreshCw, Search, Sparkles, XCircle } from 'lucide-react';
 import { usePermissions } from '../hooks/usePermissions';
 import { useAppNavigate, getRelatedItemsForPunchItem } from '../utils/connections';
 import { AIAnnotationIndicator } from '../components/ai/AIAnnotation';
@@ -19,7 +19,7 @@ import { useCreatePunchItem, useUpdatePunchItem } from '../hooks/mutations';
 import CreatePunchItemModal from '../components/forms/CreatePunchItemModal';
 import { BulkActionBar } from '../components/shared/BulkActionBar';
 import { InlineEditCell, EditableDetailField } from '../components/forms/EditableField';
-import { ArrowUp, Trash2, UserCheck, Pencil } from 'lucide-react';
+import { ArrowUp, Trash2 } from 'lucide-react';
 import { PermissionGate } from '../components/auth/PermissionGate';
 import { PresenceAvatars } from '../components/shared/PresenceAvatars';
 import { EditingLockBanner } from '../components/ui/EditingLockBanner';
@@ -198,7 +198,7 @@ const PunchListPage: React.FC = () => {
 
   // Fetch team members for assignment
   const { data: teamMembersResult } = useDirectoryContacts(projectId);
-  const teamMembers = teamMembersResult?.data ?? [];
+  const _teamMembers = teamMembersResult?.data ?? [];
 
   const pageAlerts = getPredictiveAlertsForPage('punchlist');
 
@@ -235,9 +235,9 @@ const PunchListPage: React.FC = () => {
 
   // Counts (memoized)
   const {
-    openCount, inProgressCount, subCompleteCount, verifiedCount, rejectedCount,
+    openCount, inProgressCount, subCompleteCount, verifiedCount, rejectedCount: _rejectedCount,
     totalCount, completionPct, overdueCount,
-    criticalCount, highCount, mediumCount, lowCount,
+    criticalCount: _criticalCount, highCount: _highCount, mediumCount: _mediumCount, lowCount: _lowCount,
   } = useMemo(() => {
     let open = 0, inProgress = 0, subComplete = 0, verified = 0, rejected = 0, overdue = 0;
     let critical = 0, high = 0, medium = 0, low = 0;
@@ -276,7 +276,6 @@ const PunchListPage: React.FC = () => {
   const filteredList = useMemo(() => {
     let list = punchListItems;
     if (statusFilter === 'overdue') {
-      const now = Date.now();
       list = list.filter(p => p.dueDate && getDaysRemaining(p.dueDate) <= 0 && p.verification_status !== 'verified');
     } else if (statusFilter !== 'all') {
       list = list.filter(p => p.verification_status === statusFilter);

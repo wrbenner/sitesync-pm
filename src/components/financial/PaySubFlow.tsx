@@ -1,7 +1,7 @@
-import React, { useState, useMemo, useCallback, memo } from 'react'
+import React, { useState, useCallback, memo } from 'react'
 import {
-  CreditCard, Building2, DollarSign, ArrowRight, CheckCircle,
-  AlertTriangle, Loader, X, Shield, Receipt,
+  CreditCard, Building2, ArrowRight, CheckCircle,
+  X, Shield,
 } from 'lucide-react'
 import { colors, spacing, typography, borderRadius, transitions, shadows, zIndex } from '../../styles/theme'
 import { Btn } from '../Primitives'

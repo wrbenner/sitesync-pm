@@ -1,8 +1,6 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { ErrorBoundary } from '../components/ErrorBoundary';
-import { DrawingsEmptyState } from '../components/drawings/DrawingsEmptyState';
-import { TableRowSkeleton } from '../components/ui/Skeletons';
-import { Upload, X, Sparkles, FileText, AlertTriangle, AlertCircle, CheckCircle2, Loader2, ChevronRight, ChevronDown, Layers, Columns, SlidersHorizontal } from 'lucide-react';
+import { Upload, X, Sparkles, FileText, AlertTriangle, AlertCircle, CheckCircle2, Loader2, ChevronRight, ChevronDown } from 'lucide-react';
 import { aiService } from '../lib/aiService';
 import type { DrawingAnalysis } from '../types/ai';
 import type { DrawingRevision } from '../types/api';
@@ -15,7 +13,7 @@ import { usePermissions } from '../hooks/usePermissions';
 import { AIAnnotationIndicator } from '../components/ai/AIAnnotation';
 import { getAnnotationsForEntity } from '../data/aiAnnotations';
 import { DrawingViewer } from '../components/drawings/DrawingViewer';
-import { VersionCompare, type CompareMode } from '../components/drawings/VersionCompare';
+import { VersionCompare } from '../components/drawings/VersionCompare';
 import { PdfViewer } from '../components/drawings/PdfViewer';
 import { PermissionGate } from '../components/auth/PermissionGate';
 import { supabase } from '../lib/supabase';
@@ -75,7 +73,7 @@ const coordinationConflicts = [
 
 const _DrawingsPage: React.FC = () => {
   const { addToast } = useToast();
-  const { hasPermission } = usePermissions();
+  const { hasPermission: _hasPermission } = usePermissions();
   const projectId = useProjectId();
   const { data: drawings, loading, error, refetch } = useQuery(`drawings-${projectId}`, () => getDrawings(projectId!), { enabled: !!projectId });
   const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set());
@@ -87,9 +85,9 @@ const _DrawingsPage: React.FC = () => {
   const [analyzingId, setAnalyzingId] = useState<number | null>(null);
   const [analysisResults, setAnalysisResults] = useState<Record<number, DrawingAnalysis>>({});
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [uploadFiles, setUploadFiles] = useState<File[]>([]);
-  const [isDragging, setIsDragging] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [_uploadFiles, setUploadFiles] = useState<File[]>([]);
+  const [_isDragging, setIsDragging] = useState(false);
+  const _fileInputRef = useRef<HTMLInputElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const [focusedIndex, setFocusedIndex] = useState(0);
   const sortedDrawingsRef = useRef<typeof sortedDrawings>([]);
@@ -1538,7 +1536,7 @@ const _DrawingsPage: React.FC = () => {
 
             {/* Upload Zone */}
             <UploadZone
-              onUpload={(_fileName) => {}}
+              onUpload={() => {}}
               onFileReady={handleFileReady}
             />
 

@@ -1,11 +1,11 @@
-import React, { useState, useRef, useMemo, useCallback, Suspense, memo } from 'react'
+import React, { useState, useRef, useMemo, useCallback, Suspense } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { OrbitControls, Grid } from '@react-three/drei'
 import * as THREE from 'three'
 import { colors, spacing, typography, borderRadius, shadows, transitions, vizColors } from '../../styles/theme'
 import {
   Layers, RotateCcw, Eye, TrendingUp, AlertTriangle, ShieldAlert,
-  Calendar, Users, Camera, MapPin, Ruler, Bookmark, Share2, X,
+  Calendar, Users, Camera, X,
 } from 'lucide-react'
 import { useDigitalTwin } from '../../hooks/useDigitalTwin'
 import {

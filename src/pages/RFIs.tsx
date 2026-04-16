@@ -3,12 +3,10 @@ import { supabase } from '../lib/supabase';
 import { VirtualDataTable } from '../components/shared/VirtualDataTable';
 import { BulkActionBar } from '../components/shared/BulkActionBar';
 import { createColumnHelper } from '@tanstack/react-table';
-import { PageContainer, Card, Btn, StatusTag, PriorityTag, DetailPanel, Avatar, Tag, RelatedItems, Skeleton, useToast, MetricBox } from '../components/Primitives';
-import EmptyState from '../components/ui/EmptyState';
-import { MetricCardSkeleton } from '../components/ui/Skeletons';
+import { PageContainer, Card, Btn, StatusTag, PriorityTag, DetailPanel, Avatar, Tag, RelatedItems, useToast, MetricBox } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 import { useRFIs } from '../hooks/queries';
-import { AlertTriangle, FileQuestion, FileText, FilterX, Plus, Clock, MessageSquare, Paperclip, Calendar, RefreshCw, Send, Sparkles, LayoutGrid, List, UserCheck, Flag, Download, XCircle, Wand2, Loader2, X } from 'lucide-react';
+import { AlertTriangle, FileQuestion, FilterX, Plus, Clock, MessageSquare, Paperclip, Calendar, RefreshCw, Send, Sparkles, LayoutGrid, List, UserCheck, Flag, Download, XCircle, Wand2, Loader2, X } from 'lucide-react';
 import { useAppNavigate, getRelatedItemsForRfi } from '../utils/connections';
 import { useCreateRFI, useUpdateRFI } from '../hooks/mutations';
 import { useProjectId } from '../hooks/useProjectId';
@@ -46,7 +44,7 @@ const getBicColor = (party: string): string => {
   return key ? BIC_COLORS[key] : '#6B7280';
 };
 
-const deriveBic = (rfi: any): string | null => {
+const _deriveBic = (rfi: any): string | null => {
   const { status, assigned_to, from: originator } = rfi;
   if (status === 'open' && assigned_to) return assigned_to;
   if (status === 'under_review') return assigned_to || null;
