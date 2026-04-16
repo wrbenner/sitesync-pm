@@ -261,3 +261,46 @@ jobs:
           else:
               print("⏰ Merge timed out")
           PYEOF
+
+      - name: Update shared memory
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 << 'PYEOF'
+          import json, subprocess, os
+          from datetime import datetime, timezone
+
+          # Pull latest main to avoid conflicts
+          subprocess.run(["git", "checkout", "main"], capture_output=True)
+          subprocess.run(["git", "pull", "--rebase", "origin", "main"], capture_output=True)
+
+          os.makedirs(".organism/memory", exist_ok=True)
+
+          entry = {
+              "timestamp": datetime.now(timezone.utc).isoformat(),
+              "tier": "quality-swarm",
+              "errors_before": int("${{ steps.measure.outputs.errors }}" or "0"),
+              "errors_after": int("${{ steps.verify.outputs.new_errors }}" or "0"),
+              "fixed": int("${{ steps.verify.outputs.fixed }}" or "0"),
+              "success": "${{ steps.verify.outputs.success }}" == "true",
+          }
+
+          with open(".organism/memory/cycle-log.jsonl", "a") as f:
+              f.write(json.dumps(entry) + "\n")
+
+          subprocess.run(["git", "config", "user.name", "organism[bot]"], check=True)
+          subprocess.run(["git", "config", "user.email", "organism[bot]@users.noreply.github.com"], check=True)
+          subprocess.run(["git", "add", ".organism/memory/"], check=True)
+
+          diff = subprocess.run(["git", "diff", "--cached", "--quiet"], capture_output=True)
+          if diff.returncode != 0:
+              ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M")
+              subprocess.run(["git", "commit", "-m", f"[quality-swarm] memory update — {ts}"], check=True)
+              subprocess.run(["git", "pull", "--rebase", "origin", "main"], capture_output=True)
+              r = subprocess.run(["git", "push", "origin", "main"], capture_output=True, text=True)
+              if r.returncode == 0:
+                  print("✅ Memory updated")
+              else:
+                  print(f"⚠️  Memory push failed (non-critical): {r.stderr[:200]}")
+          PYEOF

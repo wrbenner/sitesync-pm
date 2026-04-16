@@ -191,6 +191,17 @@ jobs:
           ## Focus Override
           {"No override — choose highest leverage automatically" if focus == "auto" else f"User requested focus: {focus}"}
 
+          ## Cross-Tier Awareness
+          You are one of THREE specialized tiers running in parallel:
+          1. YOU (Strategic Experiments) — service layers, architecture, features
+          2. Quality Swarm — running every 3h, fixing ESLint errors
+          3. Design Excellence — running every 4h, polishing one page per cycle
+
+          DO NOT duplicate their work:
+          - Don’t fix ESLint errors (Quality Swarm handles that)
+          - Don’t polish page UI (Design Excellence handles that)
+          - Focus on what ONLY you can do: service layers, architecture, state machines, store rewiring
+
           ## Your Task
           Design exactly 3 experiments for this cycle. Each must be:
           1. HIGH LEVERAGE — maximum impact on quality, UX, or architecture
@@ -1008,6 +1019,7 @@ jobs:
 
           cycle_entry = {
               "timestamp": datetime.now(timezone.utc).isoformat(),
+              "tier": "strategic-experiments",
               "experiments_planned": len(experiments),
               "experiments_succeeded": len([r for r in all_results if r.get("success")]),
               "merged": merge_result.get("merged", False),
@@ -1041,20 +1053,39 @@ jobs:
               try: current_lessons = open(".organism/memory/lessons.md").read()
               except: pass
 
-              lesson_prompt = f"""You maintain the lessons-learned document for an autonomous development organism.
+              lesson_prompt = f"""You maintain the shared lessons-learned document for a MULTI-TIER autonomous
+          development system with three specialized tiers:
+
+          1. STRATEGIC EXPERIMENTS — service layers, architecture, features (3 parallel experiments)
+          2. QUALITY SWARM — ESLint error elimination, type fixes, code hygiene
+          3. DESIGN EXCELLENCE — one page per cycle polished to Apple/Linear/Figma quality
+
+          All three tiers read this document before making decisions. Your updates affect
+          what ALL tiers do next. Think cross-tier — what did one tier learn that helps another?
 
           Current lessons:
           {current_lessons[:2000]}
 
-          Recent cycle history:
+          Recent cycle history (ALL tiers):
           {recent}
 
-          Latest cycle:
+          Latest strategic experiments cycle:
           {json.dumps(cycle_entry, indent=2)}
 
-          Update the lessons document. Keep what's still relevant, add new insights from recent cycles.
-          Focus on actionable patterns: what works, what fails, what to avoid.
-          Keep it under 100 lines. Output ONLY the updated markdown content."""
+          Update the lessons document with cross-tier intelligence:
+          - What patterns work across tiers?
+          - What files are "hot" (being touched by multiple tiers)?
+          - What pages have been polished vs need polish?
+          - What service layers exist vs are missing?
+          - What ESLint patterns are easiest to fix?
+          - What design patterns are working well?
+          - What experiments failed and why (so other tiers avoid the same issues)?
+
+          Keep the structure from the existing document. Add a new section:
+          ## Cross-Tier Intelligence
+          with insights that help tiers coordinate.
+
+          Keep it under 120 lines. Output ONLY the updated markdown content."""
 
               payload = json.dumps({
                   "model": "claude-sonnet-4-20250514",

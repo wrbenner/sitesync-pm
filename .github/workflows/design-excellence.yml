@@ -83,16 +83,40 @@ jobs:
           except:
               pass
 
-          # Read memory for pages already polished
-          polished = ""
+          # Read SHARED memory — what have ALL tiers done recently?
+          polished_pages = []
+          recent_activity = []
           try:
               with open(".organism/memory/cycle-log.jsonl") as f:
                   for line in f:
-                      entry = json.loads(line)
-                      if "polish" in entry.get("merged_title", "").lower():
-                          polished += entry["merged_title"] + "\n"
+                      try:
+                          entry = json.loads(line)
+                          # Track pages polished by design-excellence
+                          if entry.get("tier") == "design-excellence" and entry.get("success"):
+                              polished_pages.append(entry.get("page", ""))
+                          # Track all tier activity for context
+                          recent_activity.append(f"{entry.get('tier','?')}: {entry.get('merged_title', entry.get('page', 'N/A'))} ({'success' if entry.get('success') else 'failed'})")
+                      except:
+                          pass
           except:
               pass
+
+          # Also check merged PR titles for polish work
+          try:
+              with open(".organism/memory/cycle-log.jsonl") as f:
+                  for line in f:
+                      entry = json.loads(line.strip()) if line.strip() else {}
+                      title = entry.get("merged_title", "")
+                      if "polish" in title.lower() or "design" in title.lower():
+                          # Extract page name from title
+                          for pg in ["Dashboard", "RFIs", "Budget", "DailyLog", "Submittals", "Schedule", "Safety", "Reports", "Projects"]:
+                              if pg.lower() in title.lower():
+                                  polished_pages.append(pg)
+          except:
+              pass
+
+          polished = "\n".join(set(polished_pages)) if polished_pages else "None yet"
+          cross_tier_context = "\n".join(recent_activity[-10:]) if recent_activity else "No activity yet"
 
           if target != "auto":
               page = target
@@ -110,8 +134,11 @@ jobs:
           Error counts per page:
           {json.dumps(page_errors, indent=2)}
 
-          Already polished (skip these):
-          {polished or "None yet"}
+          Already polished (SKIP these):
+          {polished}
+
+          Recent activity across ALL tiers (for context):
+          {cross_tier_context}
 
           Pick the page with the HIGHEST USER IMPACT that hasn't been polished yet.
           Priority: Dashboard > RFIs > Budget > DailyLog > Submittals > Schedule > Safety > Reports
@@ -365,4 +392,45 @@ jobs:
               time.sleep(15)
           else:
               print("⏰ Merge timed out")
+          PYEOF
+
+      - name: Update shared memory
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 << 'PYEOF'
+          import json, subprocess, os
+          from datetime import datetime, timezone
+
+          subprocess.run(["git", "checkout", "main"], capture_output=True)
+          subprocess.run(["git", "pull", "--rebase", "origin", "main"], capture_output=True)
+
+          os.makedirs(".organism/memory", exist_ok=True)
+
+          entry = {
+              "timestamp": datetime.now(timezone.utc).isoformat(),
+              "tier": "design-excellence",
+              "page": "${{ steps.select.outputs.page }}",
+              "success": "${{ steps.verify.outputs.success }}" == "true",
+              "eslint_after": int("${{ steps.verify.outputs.eslint_errors }}" or "0"),
+          }
+
+          with open(".organism/memory/cycle-log.jsonl", "a") as f:
+              f.write(json.dumps(entry) + "\n")
+
+          subprocess.run(["git", "config", "user.name", "organism[bot]"], check=True)
+          subprocess.run(["git", "config", "user.email", "organism[bot]@users.noreply.github.com"], check=True)
+          subprocess.run(["git", "add", ".organism/memory/"], check=True)
+
+          diff = subprocess.run(["git", "diff", "--cached", "--quiet"], capture_output=True)
+          if diff.returncode != 0:
+              ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M")
+              subprocess.run(["git", "commit", "-m", f"[design-excellence] memory update — {ts}"], check=True)
+              subprocess.run(["git", "pull", "--rebase", "origin", "main"], capture_output=True)
+              r = subprocess.run(["git", "push", "origin", "main"], capture_output=True, text=True)
+              if r.returncode == 0:
+                  print("✅ Memory updated")
+              else:
+                  print(f"⚠️  Memory push failed: {r.stderr[:200]}")
           PYEOF
