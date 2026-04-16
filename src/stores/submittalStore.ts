@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { submittalService } from '../services/submittalService';
+import type { ServiceError } from '../services/errors';
 import type { Submittal } from '../types/database';
 import type { SubmittalApproval } from '../types/entities';
 import type { SubmittalStatus, SubmittalReviewer, CreateSubmittalInput } from '../types/submittal';
@@ -9,6 +10,7 @@ interface SubmittalState {
   approvals: Record<string, SubmittalReviewer[]>;
   loading: boolean;
   error: string | null;
+  errorDetails: ServiceError | null;
 
   loadSubmittals: (projectId: string) => Promise<void>;
   createSubmittal: (
@@ -37,6 +39,7 @@ interface SubmittalState {
   createRevision: (
     parentSubmittalId: string,
   ) => Promise<{ error: string | null; submittal: Submittal | null }>;
+  clearError: () => void;
 }
 
 export const useSubmittalStore = create<SubmittalState>()((set, get) => ({
@@ -44,12 +47,14 @@ export const useSubmittalStore = create<SubmittalState>()((set, get) => ({
   approvals: {},
   loading: false,
   error: null,
+  errorDetails: null,
 
   loadSubmittals: async (projectId) => {
-    set({ loading: true, error: null });
+    set({ loading: true, error: null, errorDetails: null });
     const { data, error } = await submittalService.loadSubmittals(projectId);
     if (error) {
-      set({ error, loading: false });
+      // Preserve existing submittals so UI stays populated on transient errors
+      set({ error: error.userMessage, errorDetails: error, loading: false });
     } else {
       set({ submittals: data ?? [], loading: false });
     }
@@ -57,7 +62,7 @@ export const useSubmittalStore = create<SubmittalState>()((set, get) => ({
 
   createSubmittal: async (input) => {
     const { data, error } = await submittalService.createSubmittal(input);
-    if (error) return { error, submittal: null };
+    if (error) return { error: error.userMessage, submittal: null };
     if (data) {
       set((s) => ({ submittals: [data, ...s.submittals] }));
     }
@@ -66,29 +71,26 @@ export const useSubmittalStore = create<SubmittalState>()((set, get) => ({
 
   updateSubmittal: async (submittalId, updates) => {
     const { error } = await submittalService.updateSubmittal(submittalId, updates);
-    if (!error) {
-      set((s) => ({
-        submittals: s.submittals.map((sub) =>
-          sub.id === submittalId ? { ...sub, ...updates } : sub,
-        ),
-      }));
-    }
-    return { error };
+    if (error) return { error: error.userMessage };
+    set((s) => ({
+      submittals: s.submittals.map((sub) =>
+        sub.id === submittalId ? { ...sub, ...updates } : sub,
+      ),
+    }));
+    return { error: null };
   },
 
   transitionStatus: async (submittalId, status) => {
     const { error } = await submittalService.transitionStatus(submittalId, status);
-    if (!error) {
-      set((s) => ({
-        submittals: s.submittals.map((sub) =>
-          sub.id === submittalId ? { ...sub, status } : sub,
-        ),
-      }));
-    }
-    return { error };
+    if (error) return { error: error.userMessage };
+    set((s) => ({
+      submittals: s.submittals.map((sub) =>
+        sub.id === submittalId ? { ...sub, status } : sub,
+      ),
+    }));
+    return { error: null };
   },
 
-  // Backward compat shim — delegates to transitionStatus
   updateSubmittalStatus: async (submittalId, status) => {
     return get().transitionStatus(submittalId, status);
   },
@@ -119,26 +121,26 @@ export const useSubmittalStore = create<SubmittalState>()((set, get) => ({
         set({ submittals: updated });
       }
     }
-    return { error };
+    return { error: error?.userMessage ?? null };
   },
 
   deleteSubmittal: async (submittalId) => {
     const { error } = await submittalService.deleteSubmittal(submittalId);
-    if (!error) {
-      // Remove from local state — soft-deleted records are filtered server-side
-      set((s) => ({
-        submittals: s.submittals.filter((sub) => sub.id !== submittalId),
-      }));
-    }
-    return { error };
+    if (error) return { error: error.userMessage };
+    set((s) => ({
+      submittals: s.submittals.filter((sub) => sub.id !== submittalId),
+    }));
+    return { error: null };
   },
 
   createRevision: async (parentSubmittalId) => {
     const { data, error } = await submittalService.createRevision(parentSubmittalId);
-    if (error) return { error, submittal: null };
+    if (error) return { error: error.userMessage, submittal: null };
     if (data) {
       set((s) => ({ submittals: [data, ...s.submittals] }));
     }
     return { error: null, submittal: data };
   },
+
+  clearError: () => set({ error: null, errorDetails: null }),
 }));
