@@ -23,9 +23,11 @@ import { useAnimatedNumber } from '../hooks/useAnimatedNumber';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import { DashboardGrid } from '../components/dashboard/DashboardGrid';
 import { MorningBriefing } from '../components/dashboard/MorningBriefing';
+import { CoordinationEngine } from '../components/schedule/CoordinationEngine';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import type { AIInsight } from '../types/ai';
 import { useProjectContext } from '../stores/projectContextStore';
+import { useScheduleStore } from '../stores/scheduleStore';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -761,6 +763,12 @@ const DashboardInner: React.FC = () => {
   // Fallback: live counts when materialized view has no data for this project
   const { data: liveMetrics } = useLiveMetricsFallback(projectId, !!matViewMetrics);
 
+  // Load schedule phases into Zustand store for coordination engine conflict detection
+  const loadSchedule = useScheduleStore((s) => s.loadSchedule);
+  useEffect(() => {
+    if (projectId) loadSchedule(projectId);
+  }, [projectId, loadSchedule]);
+
   // Weather: fetch current conditions + 5 day forecast using project coordinates
   const projectLat = project?.latitude ?? undefined;
   const projectLon = project?.longitude ?? undefined;
@@ -1023,6 +1031,9 @@ const DashboardInner: React.FC = () => {
     <PageContainer>
       {/* ── Morning Briefing ─────────────────────────────── */}
       <MorningBriefing />
+
+      {/* ── Coordination Alerts (only when conflicts exist) ── */}
+      <CoordinationEngine compact maxItems={3} />
 
       {/* ── Hero Section ──────────────────────────────────── */}
       <motion.div
