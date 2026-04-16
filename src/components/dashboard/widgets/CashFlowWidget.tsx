@@ -62,7 +62,6 @@ function EmptyState(): React.ReactElement {
 export const CashFlowWidget: React.FC = React.memo(() => {
   const [hovered, setHovered] = useState<number | null>(null);
   const [retainageRate, setRetainageRate] = useState(0.10);
-  void retainageRate; // retained for UI toggle but computeThirteenWeekCashFlow uses fixed 0.9 net
   const projectId = useProjectId();
   const { data: budgetItems, isLoading: budgetLoading } = useBudgetItems(projectId);
   const { data: rawPayApps, isLoading: payAppsLoading } = usePayApplications(projectId);
@@ -84,8 +83,10 @@ export const CashFlowWidget: React.FC = React.memo(() => {
       payApps,
       [],
       budgetItems ?? [],
+      undefined,
+      retainageRate,
     ),
-    [payApps, budgetItems]
+    [payApps, budgetItems, retainageRate]
   );
 
   if (budgetLoading || payAppsLoading) {

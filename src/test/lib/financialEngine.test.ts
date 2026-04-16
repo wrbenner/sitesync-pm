@@ -10,6 +10,7 @@ import {
 import type { MappedDivision, MappedChangeOrder } from '../../api/endpoints/budget'
 import type { BudgetItemRow } from '../../types/api'
 import type { DivisionFinancials, ProjectFinancials, PayApplicationRow, InvoiceRow } from '../../types/financial'
+import { toCents } from '../../types/money'
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -333,47 +334,49 @@ describe('computeCashFlowForecast', () => {
 // ── detectBudgetAnomalies ──────────────────────────────────────────────────
 
 describe('detectBudgetAnomalies', () => {
-  function makeProjectFinancials(overrides: Partial<ProjectFinancials> = {}): ProjectFinancials {
-    return {
+  type ProjectFinancialsOverrides = Partial<Record<keyof ProjectFinancials, number | boolean>>
+  function makeProjectFinancials(overrides: ProjectFinancialsOverrides = {}): ProjectFinancials {
+    const base: ProjectFinancials = {
       isEmpty: false,
-      originalContractValue: 1_000_000,
-      approvedChangeOrders: 0,
-      approvedCOValue: 0,
-      revisedContractValue: 1_000_000,
-      pendingChangeOrders: 0,
-      pendingCOValue: 0,
-      pendingExposure: 0,
-      totalPotentialContract: 1_000_000,
-      committedCost: 800_000,
-      invoicedToDate: 400_000,
-      costToComplete: 400_000,
-      projectedFinalCost: 800_000,
-      variance: 200_000,
+      originalContractValue: toCents(1_000_000),
+      approvedChangeOrders: toCents(0),
+      approvedCOValue: toCents(0),
+      revisedContractValue: toCents(1_000_000),
+      pendingChangeOrders: toCents(0),
+      pendingCOValue: toCents(0),
+      pendingExposure: toCents(0),
+      totalPotentialContract: toCents(1_000_000),
+      committedCost: toCents(800_000),
+      invoicedToDate: toCents(400_000),
+      costToComplete: toCents(400_000),
+      projectedFinalCost: toCents(800_000),
+      variance: toCents(200_000),
       variancePercent: 20,
       percentComplete: 50,
-      retainageHeld: 40_000,
-      retainageReceivable: 40_000,
-      overUnder: 200_000,
-      ...overrides,
+      retainageHeld: toCents(40_000),
+      retainageReceivable: toCents(40_000),
+      overUnder: toCents(200_000),
     }
+    return { ...base, ...(overrides as Partial<ProjectFinancials>) }
   }
 
-  function makeDivisionFinancials(overrides: Partial<DivisionFinancials> = {}): DivisionFinancials {
-    return {
+  type DivisionFinancialsOverrides = Partial<Record<keyof DivisionFinancials, number | string>>
+  function makeDivisionFinancials(overrides: DivisionFinancialsOverrides = {}): DivisionFinancials {
+    const base: DivisionFinancials = {
       divisionCode: '03',
       divisionName: 'Concrete',
-      originalBudget: 500_000,
-      approvedChanges: 0,
-      revisedBudget: 500_000,
-      committedCost: 400_000,
-      invoicedToDate: 300_000,
-      costToComplete: 100_000,
-      projectedFinalCost: 400_000,
-      variance: 100_000,
+      originalBudget: toCents(500_000),
+      approvedChanges: toCents(0),
+      revisedBudget: toCents(500_000),
+      committedCost: toCents(400_000),
+      invoicedToDate: toCents(300_000),
+      costToComplete: toCents(100_000),
+      projectedFinalCost: toCents(400_000),
+      variance: toCents(100_000),
       variancePercent: 20,
       percentComplete: 60,
-      ...overrides,
     }
+    return { ...base, ...(overrides as Partial<DivisionFinancials>) }
   }
 
   it('should return empty array when financials are empty', () => {

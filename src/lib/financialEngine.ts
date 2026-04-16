@@ -10,8 +10,15 @@ import type {
   PayAppRow,
   InvoiceRow,
 } from '../types/financial'
+import type { Cents } from '../types/money'
+import { toCents, addCents, subtractCents, applyRateCents } from '../types/money'
 import type { MappedDivision, MappedChangeOrder } from '../api/endpoints/budget'
 import type { BudgetItemRow, ScheduleActivity } from '../types/api'
+
+/** Default retainage rate (10%) — construction industry standard. Override per-project as needed. */
+export const DEFAULT_RETAINAGE_RATE = 0.10
+
+const ZERO_CENTS = 0 as Cents
 
 function assertFinancialInputs(divisions: MappedDivision[], changeOrders: MappedChangeOrder[]): void {
   if (!Array.isArray(divisions) || !Array.isArray(changeOrders)) throw new Error('Invalid financial inputs')
@@ -20,39 +27,42 @@ function assertFinancialInputs(divisions: MappedDivision[], changeOrders: Mapped
 export function computeProjectFinancials(
   divisions: MappedDivision[],
   changeOrders: MappedChangeOrder[],
-  contractValue: number
+  contractValue: number,
+  retainageRate: number = DEFAULT_RETAINAGE_RATE,
 ): ProjectFinancials {
   assertFinancialInputs(divisions, changeOrders)
-  const originalContractValue = contractValue
+  const originalContractValue = toCents(contractValue)
 
   const approvedChangeOrders = changeOrders
     .filter(co => co.status === 'approved')
-    .reduce((sum, co) => sum + co.approved_cost, 0)
+    .reduce<Cents>((sum, co) => addCents(sum, toCents(co.approved_cost)), ZERO_CENTS)
 
-  const revisedContractValue = originalContractValue + approvedChangeOrders
+  const revisedContractValue = addCents(originalContractValue, approvedChangeOrders)
 
   const pendingChangeOrders = changeOrders
     .filter(co => co.status === 'pending_review')
-    .reduce((sum, co) => sum + co.amount, 0)
+    .reduce<Cents>((sum, co) => addCents(sum, toCents(co.amount)), ZERO_CENTS)
 
   const pendingCOValue = changeOrders
     .filter(co => co.status === 'pending_review')
-    .reduce((sum, co) => sum + co.submitted_cost, 0)
+    .reduce<Cents>((sum, co) => addCents(sum, toCents(co.submitted_cost)), ZERO_CENTS)
 
   const pendingExposure = changeOrders
     .filter(co => co.status === 'pending_review')
-    .reduce((sum, co) => sum + co.estimated_cost, 0)
+    .reduce<Cents>((sum, co) => addCents(sum, toCents(co.estimated_cost)), ZERO_CENTS)
 
-  const totalPotentialContract = revisedContractValue + pendingChangeOrders
+  const totalPotentialContract = addCents(revisedContractValue, pendingChangeOrders)
 
-  const committedCost = divisions.reduce((s, d) => s + d.committed, 0)
-  const invoicedToDate = divisions.reduce((s, d) => s + d.spent, 0)
-  const costToComplete = Math.max(0, committedCost - invoicedToDate)
-  const projectedFinalCost = invoicedToDate + costToComplete
+  const committedCost = divisions.reduce<Cents>((s, d) => addCents(s, toCents(d.committed)), ZERO_CENTS)
+  const invoicedToDate = divisions.reduce<Cents>((s, d) => addCents(s, toCents(d.spent)), ZERO_CENTS)
+  const costToComplete = (Math.max(0, committedCost - invoicedToDate)) as Cents
+  const projectedFinalCost = addCents(invoicedToDate, costToComplete)
 
-  const variance = revisedContractValue - projectedFinalCost
+  const variance = subtractCents(revisedContractValue, projectedFinalCost)
   const variancePercent = revisedContractValue > 0 ? (variance / revisedContractValue) * 100 : 0
   const percentComplete = committedCost > 0 ? (invoicedToDate / committedCost) * 100 : 0
+
+  const retainage = applyRateCents(invoicedToDate, retainageRate)
 
   return {
     isEmpty: divisions.length === 0,
@@ -71,16 +81,16 @@ export function computeProjectFinancials(
     variance,
     variancePercent,
     percentComplete,
-    retainageHeld: invoicedToDate * 0.10,
-    retainageReceivable: invoicedToDate * 0.10,
+    retainageHeld: retainage,
+    retainageReceivable: retainage,
     overUnder: variance,
   }
 }
 
-export function getApprovedCOTotal(changeOrders: MappedChangeOrder[]): number {
+export function getApprovedCOTotal(changeOrders: MappedChangeOrder[]): Cents {
   return changeOrders
     .filter(co => co.status === 'approved')
-    .reduce((sum, co) => sum + co.approved_cost, 0)
+    .reduce<Cents>((sum, co) => addCents(sum, toCents(co.approved_cost)), ZERO_CENTS)
 }
 
 export function computeDivisionFinancials(
@@ -89,23 +99,30 @@ export function computeDivisionFinancials(
 ): DivisionFinancials[] {
   assertFinancialInputs(divisions, changeOrders)
   return divisions.map(d => {
+    const originalBudget = toCents(d.budget)
+    const committedCost = toCents(d.committed)
+    const invoicedToDate = toCents(d.spent)
+
     const divisionCOs = changeOrders.filter(co =>
       co.status === 'approved' && co.cost_code === d.cost_code
     )
-    const approvedChanges = divisionCOs.reduce((s, co) => s + co.approved_cost, 0)
-    const revisedBudget = d.budget + approvedChanges
-    const costToComplete = Math.max(0, d.committed - d.spent)
-    const projectedFinalCost = d.spent + costToComplete
-    const variance = revisedBudget - projectedFinalCost
+    const approvedChanges = divisionCOs.reduce<Cents>(
+      (s, co) => addCents(s, toCents(co.approved_cost)),
+      ZERO_CENTS,
+    )
+    const revisedBudget = addCents(originalBudget, approvedChanges)
+    const costToComplete = Math.max(0, committedCost - invoicedToDate) as Cents
+    const projectedFinalCost = addCents(invoicedToDate, costToComplete)
+    const variance = subtractCents(revisedBudget, projectedFinalCost)
 
     return {
       divisionCode: d.cost_code || '',
       divisionName: d.name,
-      originalBudget: d.budget,
+      originalBudget,
       approvedChanges,
       revisedBudget,
-      committedCost: d.committed,
-      invoicedToDate: d.spent,
+      committedCost,
+      invoicedToDate,
       costToComplete,
       projectedFinalCost,
       variance,
@@ -132,20 +149,26 @@ export function computeEarnedValue(
   invoices: InvoiceRow[],
   scheduleActivities: ScheduleActivity[],
 ): EarnedValueMetrics {
-  const totalBudget = budgetItems.reduce((s, b) => s + (b.original_amount ?? 0), 0)
+  const totalBudget = budgetItems.reduce<Cents>(
+    (s, b) => addCents(s, toCents(b.original_amount ?? 0)),
+    ZERO_CENTS,
+  )
   const approvedCO = changeOrders
     .filter(co => co.status === 'approved')
-    .reduce((s, co) => s + co.approved_cost, 0)
-  const bac = totalBudget + approvedCO
+    .reduce<Cents>((s, co) => addCents(s, toCents(co.approved_cost)), ZERO_CENTS)
+  const bac = addCents(totalBudget, approvedCO)
 
   // BCWP: budgeted cost of work performed = physical % complete applied to each budget line
-  const bcwp = budgetItems.reduce(
-    (s, b) => s + (b.original_amount ?? 0) * ((b.percent_complete ?? 0) / 100),
-    0,
+  const bcwp = budgetItems.reduce<Cents>(
+    (s, b) => addCents(
+      s,
+      applyRateCents(toCents(b.original_amount ?? 0), (b.percent_complete ?? 0) / 100),
+    ),
+    ZERO_CENTS,
   )
 
   // BCWS: budgeted cost of work scheduled = BAC * time-elapsed fraction from schedule dates
-  let bcws = 0
+  let bcws: Cents = ZERO_CENTS
   if (scheduleActivities.length > 0) {
     const starts = scheduleActivities
       .map(a => new Date(a.start_date).getTime())
@@ -160,21 +183,21 @@ export function computeEarnedValue(
         projectEnd > projectStart
           ? Math.max(0, Math.min(1, (Date.now() - projectStart) / (projectEnd - projectStart)))
           : 0
-      bcws = bac * elapsed
+      bcws = applyRateCents(bac, elapsed)
     }
   }
 
   // ACWP: actual cost of work performed = sum of approved/paid invoice totals
   const acwp = invoices
     .filter(inv => inv.status === 'approved' || inv.status === 'paid')
-    .reduce((s, inv) => s + inv.total, 0)
+    .reduce<Cents>((s, inv) => addCents(s, toCents(inv.total)), ZERO_CENTS)
 
   const cpi = acwp > 0 ? bcwp / acwp : 1.0
   const spi = bcws > 0 ? bcwp / bcws : 1.0
-  const eac = cpi > 0 ? bac / cpi : bac
-  const etc = eac - acwp
-  const vac = bac - eac
-  const costVariance = bcwp - acwp
+  const eac = (cpi > 0 ? Math.round(bac / cpi) : bac) as Cents
+  const etc = subtractCents(eac, acwp)
+  const vac = subtractCents(bac, eac)
+  const costVariance = subtractCents(bcwp, acwp)
 
   const scheduleVarianceDays =
     scheduleActivities.length > 0
@@ -198,13 +221,13 @@ export function compute13WeekCashFlow(
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  const totalUncommitted = committedCosts.reduce(
-    (s, d) => s + Math.max(0, d.budget - d.committed),
-    0
+  const totalUncommitted = committedCosts.reduce<Cents>(
+    (s, d) => addCents(s, toCents(Math.max(0, d.budget - d.committed))),
+    ZERO_CENTS,
   )
-  const weeklyBurn = totalUncommitted / 13
+  const weeklyBurn = Math.round(totalUncommitted / 13) as Cents
 
-  let cumulative = 0
+  let cumulative: Cents = ZERO_CENTS
   const rows: WeeklyCashFlowRow[] = []
 
   for (let i = 0; i < 13; i++) {
@@ -220,9 +243,9 @@ export function compute13WeekCashFlow(
         clearDate.setDate(clearDate.getDate() + collectionLagDays)
         return clearDate >= weekStart && clearDate <= weekEnd
       })
-      .reduce((s, pa) => s + pa.amount, 0)
+      .reduce<Cents>((s, pa) => addCents(s, toCents(pa.amount)), ZERO_CENTS)
 
-    const inflow = grossInflow * (1 - retainageRate)
+    const inflow = applyRateCents(grossInflow, 1 - retainageRate)
 
     const subOutflow = subInvoices
       .filter(inv => {
@@ -236,11 +259,11 @@ export function compute13WeekCashFlow(
         if (!payDate) return false
         return payDate >= weekStart && payDate <= weekEnd
       })
-      .reduce((s, inv) => s + inv.amount, 0)
+      .reduce<Cents>((s, inv) => addCents(s, toCents(inv.amount)), ZERO_CENTS)
 
-    const outflow = subOutflow + weeklyBurn
-    const net = inflow - outflow
-    cumulative += net
+    const outflow = addCents(subOutflow, weeklyBurn)
+    const net = subtractCents(inflow, outflow)
+    cumulative = addCents(cumulative, net)
 
     rows.push({
       weekStart: weekStart.toISOString().slice(0, 10),
@@ -304,16 +327,17 @@ export function computeCashFlowForecast(
   startingCash: number,
   startDate: Date
 ): CashFlowForecast {
-  let cumulative = startingCash
-  let lowest = startingCash
+  const startingCents = toCents(startingCash)
+  let cumulative: Cents = startingCents
+  let lowest: Cents = startingCents
   let lowestWeek = 0
   const weeks: CashFlowWeek[] = []
 
   for (let i = 0; i < 13; i++) {
-    const inflow = weeklyInflows[i] || 0
-    const outflow = weeklyOutflows[i] || 0
-    const net = inflow - outflow
-    cumulative += net
+    const inflow = toCents(weeklyInflows[i] || 0)
+    const outflow = toCents(weeklyOutflows[i] || 0)
+    const net = subtractCents(inflow, outflow)
+    cumulative = addCents(cumulative, net)
 
     if (cumulative < lowest) {
       lowest = cumulative
@@ -335,7 +359,7 @@ export function computeCashFlowForecast(
 
   return {
     weeks,
-    currentCashPosition: startingCash,
+    currentCashPosition: startingCents,
     lowestProjectedPosition: lowest,
     lowestPositionWeek: lowestWeek,
   }
@@ -348,24 +372,31 @@ export function computeThirteenWeekCashFlow(
   changeOrders: MappedChangeOrder[],
   budgetItems: BudgetItemRow[],
   startDate?: Date,
+  retainageRate: number = DEFAULT_RETAINAGE_RATE,
 ): CashFlowWeek[] {
   void changeOrders // reserved for future CO-driven inflow adjustments
 
   const start = startDate ? new Date(startDate) : new Date()
   start.setHours(0, 0, 0, 0)
 
+  // Net-of-retainage factor (e.g. 10% retainage → pay out 90%)
+  const netFactor = 1 - retainageRate
+
   // Weekly outflow: committed costs spread at a 1/12 monthly burn rate, prorated to weekly
-  const totalCommitted = budgetItems.reduce((s, b) => s + (b.committed_amount ?? 0), 0)
-  const weeklyOutflow = totalCommitted / 52
+  const totalCommitted = budgetItems.reduce<Cents>(
+    (s, b) => addCents(s, toCents(b.committed_amount ?? 0)),
+    ZERO_CENTS,
+  )
+  const weeklyOutflow = Math.round(totalCommitted / 52) as Cents
 
   const approvedApps = payApps.filter(pa => pa.status === 'approved')
   const hasPaymentDates = approvedApps.some(pa => pa.approved_date != null)
-  const totalApprovedBilling = approvedApps.reduce(
-    (s, pa) => s + (pa.current_payment_due ?? 0),
-    0,
+  const totalApprovedBilling = approvedApps.reduce<Cents>(
+    (s, pa) => addCents(s, toCents(pa.current_payment_due ?? 0)),
+    ZERO_CENTS,
   )
 
-  let cumulative = 0
+  let cumulative: Cents = ZERO_CENTS
   const weeks: CashFlowWeek[] = []
 
   for (let i = 0; i < 13; i++) {
@@ -374,7 +405,7 @@ export function computeThirteenWeekCashFlow(
     const weekEnd = new Date(weekStart)
     weekEnd.setDate(weekStart.getDate() + 6)
 
-    let inflow: number
+    let inflow: Cents
     if (hasPaymentDates) {
       const gross = approvedApps
         .filter(pa => {
@@ -382,15 +413,17 @@ export function computeThirteenWeekCashFlow(
           const d = new Date(pa.approved_date)
           return d >= weekStart && d <= weekEnd
         })
-        .reduce((s, pa) => s + (pa.current_payment_due ?? 0), 0)
-      inflow = gross * 0.9
+        .reduce<Cents>((s, pa) => addCents(s, toCents(pa.current_payment_due ?? 0)), ZERO_CENTS)
+      inflow = applyRateCents(gross, netFactor)
     } else {
       // Distribute remaining approved billing evenly over weeks 1-8
-      inflow = i < 8 ? (totalApprovedBilling / 8) * 0.9 : 0
+      inflow = i < 8
+        ? (Math.round((totalApprovedBilling / 8) * netFactor) as Cents)
+        : ZERO_CENTS
     }
 
-    const netCash = inflow - weeklyOutflow
-    cumulative += netCash
+    const netCash = subtractCents(inflow, weeklyOutflow)
+    cumulative = addCents(cumulative, netCash)
 
     weeks.push({
       weekLabel: `${WEEK_MONTHS[weekStart.getMonth()]} ${weekStart.getDate()}`,

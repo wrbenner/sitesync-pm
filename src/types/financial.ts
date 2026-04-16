@@ -1,66 +1,68 @@
+import type { Cents } from './money'
+
 export interface ProjectFinancials {
   isEmpty: boolean
-  originalContractValue: number
-  approvedChangeOrders: number
-  approvedCOValue: number
-  revisedContractValue: number
-  pendingChangeOrders: number
-  pendingCOValue: number
-  pendingExposure: number
-  totalPotentialContract: number
-  committedCost: number
-  invoicedToDate: number
-  costToComplete: number
-  projectedFinalCost: number
-  variance: number // positive = under budget
+  originalContractValue: Cents
+  approvedChangeOrders: Cents
+  approvedCOValue: Cents
+  revisedContractValue: Cents
+  pendingChangeOrders: Cents
+  pendingCOValue: Cents
+  pendingExposure: Cents
+  totalPotentialContract: Cents
+  committedCost: Cents
+  invoicedToDate: Cents
+  costToComplete: Cents
+  projectedFinalCost: Cents
+  variance: Cents // positive = under budget
   variancePercent: number
   percentComplete: number
-  retainageHeld: number // from subs
-  retainageReceivable: number // from owner
-  overUnder: number
+  retainageHeld: Cents // from subs
+  retainageReceivable: Cents // from owner
+  overUnder: Cents
 }
 
 export interface DivisionFinancials {
   divisionCode: string
   divisionName: string
-  originalBudget: number
-  approvedChanges: number
-  revisedBudget: number
-  committedCost: number
-  invoicedToDate: number
-  costToComplete: number
-  projectedFinalCost: number
-  variance: number
+  originalBudget: Cents
+  approvedChanges: Cents
+  revisedBudget: Cents
+  committedCost: Cents
+  invoicedToDate: Cents
+  costToComplete: Cents
+  projectedFinalCost: Cents
+  variance: Cents
   variancePercent: number
   percentComplete: number
 }
 
 export interface EarnedValueMetrics {
-  bcws: number              // Planned Value
-  bcwp: number              // Earned Value
-  acwp: number              // Actual Cost
-  spi: number               // Schedule Performance Index
-  cpi: number               // Cost Performance Index
-  eac: number               // Estimate at Completion
-  etc: number               // Estimate to Complete
-  vac: number               // Variance at Completion
+  bcws: Cents              // Planned Value
+  bcwp: Cents              // Earned Value
+  acwp: Cents              // Actual Cost
+  spi: number              // Schedule Performance Index
+  cpi: number              // Cost Performance Index
+  eac: Cents               // Estimate at Completion
+  etc: Cents               // Estimate to Complete
+  vac: Cents               // Variance at Completion
   scheduleVarianceDays: number // Estimated days ahead (positive) or behind (negative) schedule
-  costVariance: number      // BCWP - ACWP (positive = under budget)
+  costVariance: Cents      // BCWP - ACWP (positive = under budget)
 }
 
 export interface CashFlowWeek {
   weekLabel: string
   weekStart: string
-  projectedInflow: number
-  projectedOutflow: number
-  netCash: number
-  cumulativePosition: number
+  projectedInflow: Cents
+  projectedOutflow: Cents
+  netCash: Cents
+  cumulativePosition: Cents
 }
 
 export interface CashFlowForecast {
   weeks: CashFlowWeek[]
-  currentCashPosition: number
-  lowestProjectedPosition: number
+  currentCashPosition: Cents
+  lowestProjectedPosition: Cents
   lowestPositionWeek: number
 }
 
@@ -68,10 +70,10 @@ export interface CashFlowForecast {
 export interface WeeklyCashFlowRow {
   weekStart: string
   weekEnd: string
-  inflow: number
-  outflow: number
-  net: number
-  cumulativeBalance: number
+  inflow: Cents
+  outflow: Cents
+  net: Cents
+  cumulativeBalance: Cents
 }
 
 export interface PayAppRow {
