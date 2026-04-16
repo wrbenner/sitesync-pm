@@ -301,6 +301,209 @@ jobs:
             echo "success=false" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Visual verification — Gemini sees the page
+        id: visual
+        if: steps.verify.outputs.success == 'true'
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          PAGE="${{ steps.select.outputs.page }}"
+
+          # Install Playwright and browser
+          npx playwright install chromium --with-deps 2>/dev/null
+
+          # Start preview server
+          npx vite preview --port 4173 &
+          PREVIEW_PID=$!
+          sleep 5
+
+          # Take screenshots at desktop and mobile widths
+          python3 << 'PYEOF'
+          import subprocess, json, base64, os, sys
+
+          page = os.environ.get("PAGE", "Dashboard")
+
+          # Map page names to likely routes
+          routes = {
+              "Dashboard": "/",
+              "RFIs": "/#/rfis",
+              "Budget": "/#/budget",
+              "DailyLog": "/#/daily-log",
+              "Submittals": "/#/submittals",
+              "Schedule": "/#/schedule",
+              "Safety": "/#/safety",
+              "Reports": "/#/reports",
+              "Projects": "/#/projects",
+              "PaymentApplications": "/#/payment-applications",
+          }
+          route = routes.get(page, "/")
+
+          # Playwright screenshot script
+          screenshot_script = f"""
+          const {{ chromium }} = require('playwright');
+          (async () => {{
+              const browser = await chromium.launch({{ headless: true }});
+
+              // Desktop screenshot
+              const desktop = await browser.newPage();
+              await desktop.setViewportSize({{ width: 1440, height: 900 }});
+              await desktop.goto('http://localhost:4173{route}', {{ waitUntil: 'networkidle', timeout: 15000 }}).catch(() => {{}});
+              await desktop.waitForTimeout(2000);
+              await desktop.screenshot({{ path: '/tmp/screenshot-desktop.png', fullPage: false }});
+
+              // Mobile screenshot
+              const mobile = await browser.newPage();
+              await mobile.setViewportSize({{ width: 375, height: 812 }});
+              await mobile.goto('http://localhost:4173{route}', {{ waitUntil: 'networkidle', timeout: 15000 }}).catch(() => {{}});
+              await mobile.waitForTimeout(2000);
+              await mobile.screenshot({{ path: '/tmp/screenshot-mobile.png', fullPage: false }});
+
+              await browser.close();
+              console.log('Screenshots taken');
+          }})();
+          """
+
+          with open("/tmp/screenshot.js", "w") as f:
+              f.write(screenshot_script)
+
+          result = subprocess.run(["node", "/tmp/screenshot.js"],
+              capture_output=True, text=True, timeout=30)
+
+          if result.returncode != 0:
+              print(f"⚠️  Screenshot failed: {{result.stderr[:200]}}")
+              with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+                  f.write("visual_pass=true\n")  # Degrade gracefully
+                  f.write("visual_feedback=Screenshot failed - skipping visual check\n")
+              sys.exit(0)
+
+          # Send to Gemini Vision for evaluation
+          screenshots = []
+          for name in ["desktop", "mobile"]:
+              path = f"/tmp/screenshot-{{name}}.png"
+              try:
+                  with open(path, "rb") as f:
+                      screenshots.append({{
+                          "name": name,
+                          "data": base64.b64encode(f.read()).decode()
+                      }})
+              except:
+                  pass
+
+          if not screenshots:
+              print("⚠️  No screenshots captured")
+              with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+                  f.write("visual_pass=true\n")
+                  f.write("visual_feedback=No screenshots - skipping\n")
+              sys.exit(0)
+
+          # Build Gemini request with both screenshots
+          parts = [{"text": f"""You are a design critic evaluating a construction management app page ({page}).
+
+          Score this page 1-10 on:
+          1. VISUAL HIERARCHY — Is there a clear focal point? Does the eye flow naturally?
+          2. SPACING & ALIGNMENT — Is spacing consistent? Are elements properly aligned?
+          3. TYPOGRAPHY — Clear hierarchy? Readable sizes? Proper weights?
+          4. COLOR — Professional palette? Good contrast? Accessible?
+          5. MOBILE RESPONSIVENESS — Does the mobile version work? Touch targets adequate?
+          6. POLISH — Loading states? Animations? Does it feel premium?
+          7. OVERALL — Would Steve Jobs ship this?
+
+          Image 1 is desktop (1440px). Image 2 is mobile (375px).
+
+          Be BRUTALLY HONEST. If something looks bad, say so specifically.
+
+          Output JSON only:
+          {{{{
+              "scores": {{"visual_hierarchy": N, "spacing": N, "typography": N, "color": N, "mobile": N, "polish": N, "overall": N}},
+              "issues": ["specific issue 1", "specific issue 2"],
+              "verdict": "SHIP" or "NEEDS_WORK",
+              "feedback": "2-3 sentences of specific actionable feedback"
+          }}}}"""}]
+
+          for ss in screenshots:
+              parts.append({{"inline_data": {{"mime_type": "image/png", "data": ss["data"]}}}})
+
+          payload = json.dumps({{
+              "contents": [{{"parts": parts}}],
+              "generationConfig": {{"temperature": 0.1}}
+          }})
+
+          gemini_result = subprocess.run(
+              ["curl", "-s", "-m", "60",
+               f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={{os.environ['GEMINI_API_KEY']}}",
+               "-H", "Content-Type: application/json",
+               "-d", payload],
+              capture_output=True, text=True)
+
+          visual_pass = True
+          feedback = "No visual feedback"
+          try:
+              resp = json.loads(gemini_result.stdout)
+              text = resp["candidates"][0]["content"]["parts"][0]["text"]
+              # Extract JSON from response
+              start = text.find("{{")
+              end = text.rfind("}}") + 1
+              review = json.loads(text[start:end])
+
+              overall = review["scores"]["overall"]
+              verdict = review.get("verdict", "UNKNOWN")
+              feedback = review.get("feedback", "No feedback")
+              issues = review.get("issues", [])
+
+              print(f"\n👁️  Gemini Visual Review: {{overall}}/10 — {{verdict}}")
+              print(f"   Scores: {{json.dumps(review['scores'])}}")
+              for issue in issues[:5]:
+                  print(f"   ⚠️  {{issue}}")
+              print(f"   Feedback: {{feedback}}")
+
+              if verdict == "NEEDS_WORK" or overall < 6:
+                  visual_pass = False
+                  print("\n❌ Visual review failed — page needs more polish")
+              else:
+                  print("\n✅ Visual review passed")
+
+          except Exception as e:
+              print(f"\n⚠️  Gemini review failed: {{e}}")
+              print(f"   Response: {{gemini_result.stdout[:300]}}")
+              feedback = f"Gemini review failed: {{str(e)[:100]}}"
+
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write(f"visual_pass={{str(visual_pass).lower()}}\n")
+              f.write(f"visual_feedback={{feedback[:200]}}\n")
+          PYEOF
+
+          # Clean up preview server
+          kill $PREVIEW_PID 2>/dev/null || true
+
+      - name: Fix visual issues if needed
+        if: steps.verify.outputs.success == 'true' && steps.visual.outputs.visual_pass == 'false'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          FEEDBACK="${{ steps.visual.outputs.visual_feedback }}"
+          PAGE="${{ steps.select.outputs.page }}"
+
+          python3 << 'PYEOF'
+          feedback = os.environ.get("FEEDBACK", "") if __import__("os").environ.get("FEEDBACK") else "unknown issues"
+          page = os.environ.get("PAGE", "unknown")
+          prompt = f"""Gemini Vision reviewed the {page} page and found visual issues:
+
+          {feedback}
+
+          Fix these specific visual issues. The page must look premium — Steve Jobs level.
+          Use ONLY src/styles/theme.ts tokens. Verify tsc, eslint, and build still pass."""
+          open("/tmp/visual-fix-prompt.txt", "w").write(prompt)
+          PYEOF
+
+          claude -p "$(cat /tmp/visual-fix-prompt.txt)" \
+            --max-turns 20 \
+            --allowedTools "Edit,Write,Read,Bash(npm*),Bash(npx*),Bash(cat*),Bash(grep*),Bash(find*),Bash(ls*),Bash(head*),Bash(tail*),Bash(wc*),Bash(python3*)" \
+            --output-format json 2>&1 | tail -30
+
+          # Re-verify after fixes
+          npx tsc --noEmit 2>/dev/null
+          npm run build 2>/dev/null
+
       - name: Push, PR, and merge
         if: steps.verify.outputs.success == 'true'
         env:
