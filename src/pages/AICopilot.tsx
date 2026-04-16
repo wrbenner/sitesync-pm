@@ -249,7 +249,7 @@ MessageRenderer.displayName = 'MessageRenderer'
 
 export const AICopilot: React.FC = () => {
   const { addToast } = useToast()
-  useProjectId()
+  const projectId = useProjectId()
 
   const previousPage = window.location.hash.replace('#/', '').split('/')[0] || 'dashboard'
   const contextPage = previousPage === 'copilot' ? 'dashboard' : previousPage
@@ -267,7 +267,7 @@ export const AICopilot: React.FC = () => {
     approveAllPending,
     rejectAllPending,
     clearMessages,
-  } = useMultiAgentChat(contextPage)
+  } = useMultiAgentChat(contextPage, projectId)
 
   const [showAgentPanel, setShowAgentPanel] = useState(true)
   const [exportOpen, setExportOpen] = useState(false)

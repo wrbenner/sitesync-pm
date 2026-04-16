@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback , startTransition} from 'react';
+import React, { useState, useEffect, useCallback} from 'react';
 import { AlertTriangle, Check, X, ArrowLeft, ArrowRight, GitMerge, Layers } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, shadows, zIndex, transitions } from '../../styles/theme';
 import {

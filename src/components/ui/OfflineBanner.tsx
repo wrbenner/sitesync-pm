@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef , startTransition} from 'react';
+import React, { useState, useEffect, useRef} from 'react';
 import { WifiOff, RefreshCw, Check, AlertTriangle, Cloud, Clock, ChevronDown, ChevronUp, X } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
 import { useOfflineStatus } from '../../hooks/useOfflineStatus';

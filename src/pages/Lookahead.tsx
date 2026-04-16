@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { AlertTriangle, Calendar, Printer, RefreshCw, Share2, Sparkles } from 'lucide-react';
 import { PageContainer, Card, Btn, Skeleton, EmptyState, useToast } from '../components/Primitives';
+import { PermissionGate } from '../components/auth/PermissionGate';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 import { LookaheadBoard } from '../components/schedule/LookaheadBoard';
 import type { LookaheadTask } from '../components/schedule/LookaheadBoard';
@@ -174,7 +175,7 @@ export const Lookahead: React.FC = () => {
           icon={<Calendar size={40} color={colors.textTertiary} />}
           title="No tasks planned"
           description="Start planning by creating the first lookahead task or importing from your schedule."
-          action={<Btn variant="primary" size="sm" onClick={() => setIsCreating(true)}>Create Task</Btn>}
+          action={<PermissionGate permission="schedule.edit"><Btn variant="primary" size="sm" onClick={() => setIsCreating(true)}>Create Task</Btn></PermissionGate>}
         />
       </PageContainer>
     );

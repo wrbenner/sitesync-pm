@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef , startTransition} from 'react';
+import React, { useState, useEffect, useRef} from 'react';
 import { Paperclip, Reply, FileText, Image, X, SmilePlus } from 'lucide-react';
 import { Avatar } from '../Primitives';
 import { MentionInput } from '../activity/MentionInput';

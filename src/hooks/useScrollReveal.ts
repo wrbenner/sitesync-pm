@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState , startTransition} from 'react';
+import { useRef, useEffect, useState} from 'react';
 
 /**
  * Returns a ref and a boolean indicating whether the element is in view.

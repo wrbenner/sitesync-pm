@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect , startTransition} from 'react';
+import React, { useState, useRef, useCallback, useEffect} from 'react';
 import { Home, ClipboardList, Camera, BookOpen, MoreHorizontal, X, Search,
   ChevronRight, ArrowLeft, Bell, Check, QrCode } from 'lucide-react';
 import { QRScannerSheet } from '../workforce/QRCheckIn';

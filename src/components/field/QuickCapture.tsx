@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect, KeyboardEvent as ReactKeyboardEvent , startTransition} from 'react';
+import React, { useState, useCallback, useRef, useEffect, KeyboardEvent as ReactKeyboardEvent} from 'react';
 import { X, Camera, Mic, QrCode, MapPin, Tag, Link2, Check, Square, RefreshCw, Clock, Sparkles, AlertTriangle, BookOpen } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { colors, spacing, typography, borderRadius, shadows, transitions, zIndex } from '../../styles/theme';

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo , startTransition} from 'react';
+import React, { useState, useEffect, useMemo} from 'react';
 import { MapPin, Users } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, shadows } from '../../../styles/theme';
 import { useProjectId } from '../../../hooks/useProjectId';
