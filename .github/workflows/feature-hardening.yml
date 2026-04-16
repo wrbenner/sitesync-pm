@@ -347,6 +347,11 @@ jobs:
               rc_s, state, _ = run_gh("gh", "api",
                   f"repos/{owner}/{repo}/pulls/{pr_number}", "--jq", ".mergeable_state")
               print(f"Attempt {attempt+1}: {state}")
+              if state == "dirty":
+                  run_gh("gh", "api", f"repos/{owner}/{repo}/pulls/{pr_number}/update-branch",
+                      "--method", "PUT", "-f", "update_method=rebase")
+                  time.sleep(15)
+                  continue
               if state == "clean":
                   rc_m, _, err_m = run_gh("gh", "pr", "merge", pr_number,
                       "--repo", f"{owner}/{repo}", "--merge",
