@@ -36,7 +36,7 @@ export const useCrewStore = create<CrewState>()((set, get) => ({
         .order('name');
 
       if (error) throw error;
-      const crews: CrewWithDetails[] = (data ?? []).map((c: any) => ({
+      const crews: CrewWithDetails[] = (data ?? []).map((c) => ({
         ...c,
         location: c.location || 'TBD',
         task: c.task || 'Unassigned',

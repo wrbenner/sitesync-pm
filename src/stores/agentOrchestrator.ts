@@ -2,7 +2,6 @@ import { create } from 'zustand'
 import type {
   AgentDomain,
   AgentConversationMessage,
-  AgentSuggestedAction,
   AgentState,
   AgentStatus,
   BatchAction,

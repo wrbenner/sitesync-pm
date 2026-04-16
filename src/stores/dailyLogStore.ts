@@ -45,7 +45,7 @@ export const useDailyLogStore = create<DailyLogState>()((set, get) => ({
         .order('log_date', { ascending: false });
 
       if (error) throw error;
-      const logs: DailyLogSummary[] = (data ?? []).map((d: any) => ({
+      const logs: DailyLogSummary[] = (data ?? []).map((d) => ({
         id: d.id,
         date: d.log_date,
         workers: 0,

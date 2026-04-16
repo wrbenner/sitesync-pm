@@ -19,10 +19,6 @@ const SLIPPAGE_COL_WIDTH = 72;
 const FLOAT_COL_WIDTH = 84;
 const BASELINE_DATE_COL_WIDTH = 88;
 
-function toISO(ms: number): string {
-  return new Date(ms).toISOString().slice(0, 10);
-}
-
 export type GanttPhase = MappedSchedulePhase;
 
 interface GanttChartProps {
@@ -66,9 +62,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   const [riskTooltipPhase, setRiskTooltipPhase] = useState<string | null>(null);
   const [delayTooltipPhase, setDelayTooltipPhase] = useState<string | null>(null);
   const [localPhases, setLocalPhases] = useState<GanttPhase[]>(phases);
-  const [announcement, setAnnouncement] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [trackWidth, setTrackWidth] = useState(0);
 
   const probeRef = useRef<HTMLDivElement>(null);
   const trackWidthRef = useRef(0);
@@ -398,8 +392,8 @@ export const GanttChart: React.FC<GanttChartProps> = ({
 
           {/* Time labels header */}
           <div role="row" style={{ display: 'flex', marginBottom: spacing['2'] }}>
-            <div role="columnheader" scope="col" aria-label="Activity" style={{ width: LABEL_WIDTH, flexShrink: 0, position: 'sticky', left: 0, backgroundColor: colors.surfaceRaised, zIndex: 7 }} />
-            <div role="columnheader" scope="col" aria-label="Timeline" ref={probeRef} style={{ width: totalTrackWidth, flexShrink: 0, position: 'relative', height: 20 }}>
+            <div role="columnheader" aria-label="Activity" style={{ width: LABEL_WIDTH, flexShrink: 0, position: 'sticky', left: 0, backgroundColor: colors.surfaceRaised, zIndex: 7 }} />
+            <div role="columnheader" aria-label="Timeline" ref={probeRef} style={{ width: totalTrackWidth, flexShrink: 0, position: 'relative', height: 20 }}>
               {timeLabels.map(tl => (
                 <span
                   key={tl.label + tl.offset}
@@ -412,7 +406,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                 </span>
               ))}
             </div>
-            <div role="columnheader" scope="col" style={{
+            <div role="columnheader" style={{
               width: SLIPPAGE_COL_WIDTH, flexShrink: 0, textAlign: 'right',
               paddingRight: spacing['2'], height: 20, display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
             }}>
@@ -420,7 +414,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                 Slip
               </span>
             </div>
-            <div role="columnheader" scope="col" style={{
+            <div role="columnheader" style={{
               width: FLOAT_COL_WIDTH, flexShrink: 0, textAlign: 'right',
               paddingRight: spacing['2'], height: 20, display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
             }}>
@@ -429,7 +423,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
               </span>
             </div>
             {showBaseline && (
-              <div role="columnheader" scope="col" style={{
+              <div role="columnheader" style={{
                 width: BASELINE_DATE_COL_WIDTH, flexShrink: 0, textAlign: 'right',
                 paddingRight: spacing['2'], height: 20, display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
               }}>
@@ -439,7 +433,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
               </div>
             )}
             {showBaseline && (
-              <div role="columnheader" scope="col" style={{
+              <div role="columnheader" style={{
                 width: BASELINE_DATE_COL_WIDTH, flexShrink: 0, textAlign: 'right',
                 paddingRight: spacing['2'], height: 20, display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
               }}>
@@ -476,7 +470,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
           <div
             ref={ganttGridRef}
             id="gantt-activities"
-            role="table"
+            role="grid"
             aria-label="Project schedule activities"
             aria-rowcount={localPhases.length}
             aria-activedescendant={ganttActiveRowId}
@@ -497,12 +491,12 @@ export const GanttChart: React.FC<GanttChartProps> = ({
 
             {/* Visually hidden header row so screen readers announce column names */}
             <div role="row" style={{ position: 'absolute', left: -9999, width: 1, height: 1, overflow: 'hidden' }}>
-              <div role="columnheader" scope="col" aria-sort="none" style={{}}>Activity</div>
-              <div role="columnheader" scope="col" aria-sort="none" style={{}}>Schedule</div>
-              <div role="columnheader" scope="col" aria-sort="none" style={{}}>Slippage</div>
-              <div role="columnheader" scope="col" aria-sort="none" style={{}}>Float</div>
-              {showBaseline && <div role="columnheader" scope="col" aria-sort="none" style={{}}>Baseline Start</div>}
-              {showBaseline && <div role="columnheader" scope="col" aria-sort="none" style={{}}>Baseline End</div>}
+              <div role="columnheader" aria-sort="none" style={{}}>Activity</div>
+              <div role="columnheader" aria-sort="none" style={{}}>Schedule</div>
+              <div role="columnheader" aria-sort="none" style={{}}>Slippage</div>
+              <div role="columnheader" aria-sort="none" style={{}}>Float</div>
+              {showBaseline && <div role="columnheader" aria-sort="none" style={{}}>Baseline Start</div>}
+              {showBaseline && <div role="columnheader" aria-sort="none" style={{}}>Baseline End</div>}
             </div>
 
             {/* SVG overlay for dependency arrows */}
@@ -690,6 +684,8 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                   {/* Track */}
                   <div
                     className="gantt-phase-track"
+                    role="button"
+                    tabIndex={-1}
                     style={{
                       width: totalTrackWidth, flexShrink: 0, height: 32, position: 'relative',
                       backgroundColor: colors.surfaceInset, borderRadius: borderRadius.sm,
@@ -697,6 +693,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                       userSelect: 'none',
                     }}
                     onClick={() => onPhaseClick?.(phase)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPhaseClick?.(phase); } }}
                   >
                     {/* Baseline ghost bar — visible when showBaseline is true and baseline data exists */}
                     {showBaseline && (() => {
@@ -766,7 +763,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                       return (
                       /* Regular phase bar */
                       <div
-                        role="cell"
+                        role="gridcell"
                         data-gantt-bar="true"
                         aria-label={`${phase.name}, ${fmtDate(phase.startDate)} to ${fmtDate(phase.endDate)}, ${phase.progress}% complete, ${barStatus}`}
                         tabIndex={0}
