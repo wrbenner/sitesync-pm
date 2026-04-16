@@ -70,11 +70,13 @@ COMMENT ON FUNCTION fn_audit_trigger() IS
   'See DOMAIN_KERNEL_SPEC.md §8.';
 
 -- 3. Attach to rfis (all operations)
+DROP TRIGGER IF EXISTS trg_rfis_audit ON rfis;
 CREATE TRIGGER trg_rfis_audit
   AFTER INSERT OR UPDATE OR DELETE ON rfis
   FOR EACH ROW EXECUTE FUNCTION fn_audit_trigger();
 
 -- 4. Attach to rfi_responses (INSERT only — responses are immutable)
+DROP TRIGGER IF EXISTS trg_rfi_responses_audit ON rfi_responses;
 CREATE TRIGGER trg_rfi_responses_audit
   AFTER INSERT ON rfi_responses
   FOR EACH ROW EXECUTE FUNCTION fn_audit_trigger();
