@@ -13,7 +13,7 @@ interface CrewHoursSummaryProps {
   crews: CrewHoursEntry[];
 }
 
-export const CrewHoursSummary: React.FC<CrewHoursSummaryProps> = ({ crews }) => {
+export const CrewHoursSummary: React.FC<CrewHoursSummaryProps> = React.memo(({ crews }) => {
   const totalActual = crews.reduce((s, c) => s + c.hours, 0);
   const totalPlanned = crews.reduce((s, c) => s + c.plannedHours, 0);
   const totalWorkers = crews.reduce((s, c) => s + c.workers, 0);
@@ -82,4 +82,5 @@ export const CrewHoursSummary: React.FC<CrewHoursSummaryProps> = ({ crews }) => 
       </div>
     </div>
   );
-};
+});
+CrewHoursSummary.displayName = 'CrewHoursSummary';

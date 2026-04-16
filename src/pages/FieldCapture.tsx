@@ -139,7 +139,7 @@ const PhotoOverlay: React.FC<PhotoOverlayProps> = ({ dataUrl, location, isSaving
       >
         {/* Preview image */}
         <div style={{ position: 'relative' }}>
-          <img
+          <img loading="lazy"
             src={dataUrl}
             alt="Captured photo preview"
             style={{

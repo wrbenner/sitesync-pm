@@ -4,6 +4,7 @@ import { AlertTriangle, Clock, MapPin, ChevronDown, ChevronUp, CheckCircle, User
 import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme';
 import { tradeColors } from '../../styles/theme';
 import { duration, easingArray, easing } from '../../styles/animations';
+import { useReducedMotion } from '../../hooks/useReducedMotion';
 import type { TradeConflict, ConflictUrgency } from '../../services/coordinationService';
 import { getTradeLabel } from '../../services/coordinationService';
 
@@ -78,6 +79,7 @@ interface ConflictCardProps {
 }
 
 export const ConflictCard: React.FC<ConflictCardProps> = React.memo(({ conflict, onResolve }) => {
+  const reducedMotion = useReducedMotion();
   const [expanded, setExpanded] = useState(false);
   const urgencyConfig = URGENCY_CONFIG[conflict.urgency];
   const tradeA = getTradeLabel(conflict.phaseA);
@@ -118,10 +120,10 @@ export const ConflictCard: React.FC<ConflictCardProps> = React.memo(({ conflict,
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -8 }}
-      transition={{ duration: duration.smooth / 1000, ease: easingArray.apple }}
+      initial={reducedMotion ? undefined : { opacity: 0, y: 12 }}
+      animate={reducedMotion ? undefined : { opacity: 1, y: 0 }}
+      exit={reducedMotion ? undefined : { opacity: 0, y: -8 }}
+      transition={reducedMotion ? { duration: 0 } : { duration: duration.smooth / 1000, ease: easingArray.apple }}
       style={{
         backgroundColor: colors.surfaceRaised,
         borderRadius: borderRadius.lg,

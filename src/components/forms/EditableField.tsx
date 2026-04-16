@@ -16,7 +16,7 @@ interface InlineEditCellProps {
   displayComponent?: React.ReactNode
 }
 
-export const InlineEditCell: React.FC<InlineEditCellProps> = ({
+export const InlineEditCell: React.FC<InlineEditCellProps> = React.memo(({
   value,
   onSave,
   type = 'text',
@@ -184,7 +184,8 @@ export const InlineEditCell: React.FC<InlineEditCellProps> = ({
       )}
     </div>
   )
-}
+})
+InlineEditCell.displayName = 'InlineEditCell'
 
 // ── Editable Detail Field ───────────────────────────────
 // For use inside detail panels. Renders as display, then switches to edit mode.
@@ -199,7 +200,7 @@ interface EditableDetailFieldProps {
   displayContent?: React.ReactNode
 }
 
-export const EditableDetailField: React.FC<EditableDetailFieldProps> = ({
+export const EditableDetailField: React.FC<EditableDetailFieldProps> = React.memo(({
   label,
   value,
   onSave,
@@ -300,4 +301,5 @@ export const EditableDetailField: React.FC<EditableDetailFieldProps> = ({
       )}
     </div>
   )
-}
+})
+EditableDetailField.displayName = 'EditableDetailField'

@@ -307,7 +307,7 @@ const PhotoCard: React.FC<{ photo: ProgressPhoto | undefined }> = ({ photo }) =>
   return (
     <div style={{ position: 'relative' }}>
       {photo.url ? (
-        <img
+        <img loading="lazy"
           src={photo.url}
           alt={photo.caption || 'Progress photo'}
           style={{

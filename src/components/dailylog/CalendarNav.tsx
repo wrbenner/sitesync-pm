@@ -35,7 +35,7 @@ function isWeekday(year: number, month: number, day: number): boolean {
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-export const CalendarNav: React.FC<CalendarNavProps> = ({ approvedDates, submittedDates, loggedDates, draftDates, selectedDate, onSelectDate }) => {
+export const CalendarNav: React.FC<CalendarNavProps> = React.memo(({ approvedDates, submittedDates, loggedDates, draftDates, selectedDate, onSelectDate }) => {
   // Merge legacy loggedDates into approvedDates/submittedDates sets for display
   const effectiveApproved = approvedDates ?? loggedDates ?? new Set<string>();
   const effectiveSubmitted = submittedDates ?? new Set<string>();
@@ -188,4 +188,5 @@ export const CalendarNav: React.FC<CalendarNavProps> = ({ approvedDates, submitt
       </div>
     </div>
   );
-};
+});
+CalendarNav.displayName = 'CalendarNav';

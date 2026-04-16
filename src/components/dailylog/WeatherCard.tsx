@@ -11,7 +11,7 @@ interface WeatherCardProps {
   forecast?: WeatherDay[];
 }
 
-export const WeatherCard: React.FC<WeatherCardProps> = ({ weather, onUpdate, locked, forecast }) => {
+export const WeatherCard: React.FC<WeatherCardProps> = React.memo(({ weather, onUpdate, locked, forecast }) => {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(weather);
   const impact = getWeatherImpact(weather);
@@ -176,4 +176,5 @@ export const WeatherCard: React.FC<WeatherCardProps> = ({ weather, onUpdate, loc
       )}
     </div>
   );
-};
+});
+WeatherCard.displayName = 'WeatherCard';

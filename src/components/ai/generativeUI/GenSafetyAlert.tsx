@@ -61,7 +61,7 @@ export const GenSafetyAlert: React.FC<GenSafetyAlertProps> = React.memo(({ block
       {/* Photo */}
       {block.photo_url && (
         <div style={{ marginBottom: spacing['3'] }}>
-          <img
+          <img loading="lazy"
             src={block.photo_url}
             alt={`Safety issue: ${block.title}`}
             style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: borderRadius.base, border: `1px solid ${cfg.color}40` }}

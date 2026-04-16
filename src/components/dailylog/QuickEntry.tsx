@@ -75,7 +75,7 @@ function emptyCrewEntries(): CrewEntry[] {
 
 // ── AddRowButton ─────────────────────────────────────────
 
-const AddRowBtn: React.FC<{ label: string; onClick: () => void }> = ({ label, onClick }) => (
+const AddRowBtn: React.FC<{ label: string; onClick: () => void }> = React.memo(({ label, onClick }) => (
   <button onClick={onClick} style={{
     display: 'flex', alignItems: 'center', gap: spacing['1'],
     padding: `${spacing['2']} ${spacing['3']}`, border: `1px dashed ${colors.borderDefault}`,
@@ -85,16 +85,18 @@ const AddRowBtn: React.FC<{ label: string; onClick: () => void }> = ({ label, on
   }}>
     <Plus size={14} /> {label}
   </button>
-);
+));
+AddRowBtn.displayName = 'AddRowBtn';
 
-const RemoveBtn: React.FC<{ onClick: () => void }> = ({ onClick }) => (
+const RemoveBtn: React.FC<{ onClick: () => void }> = React.memo(({ onClick }) => (
   <button onClick={onClick} style={{
     padding: spacing['2'], border: 'none', backgroundColor: 'transparent',
     cursor: 'pointer', color: colors.textTertiary, borderRadius: borderRadius.sm, flexShrink: 0,
   }}>
     <Trash2 size={14} />
   </button>
-);
+));
+RemoveBtn.displayName = 'RemoveBtn';
 
 // ── Main Component ───────────────────────────────────────
 

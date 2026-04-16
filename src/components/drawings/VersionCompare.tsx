@@ -280,7 +280,7 @@ export const VersionCompare: React.FC<VersionCompareProps> = ({
             overflow: 'hidden', border: `1px solid ${colors.borderSubtle}`,
           }}>
             {hasImages ? (
-              <img
+              <img loading="lazy"
                 src={prevUrl!} alt={`Rev ${previousRev}`}
                 style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain' }}
               />
@@ -290,7 +290,7 @@ export const VersionCompare: React.FC<VersionCompareProps> = ({
 
             <div style={{ position: 'absolute', inset: 0, opacity: opacity / 100 }}>
               {hasImages ? (
-                <img
+                <img loading="lazy"
                   src={currUrl!} alt={`Rev ${currentRev}`}
                   style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                 />
@@ -300,7 +300,7 @@ export const VersionCompare: React.FC<VersionCompareProps> = ({
             </div>
 
             {showDiff && diffDataUrl && (
-              <img
+              <img loading="lazy"
                 src={diffDataUrl} alt="Pixel diff overlay"
                 style={{
                   position: 'absolute', inset: 0,
@@ -318,7 +318,7 @@ export const VersionCompare: React.FC<VersionCompareProps> = ({
               overflow: 'hidden', border: `1px solid ${colors.borderSubtle}`,
             }}>
               {hasImages ? (
-                <img src={prevUrl!} alt={`Rev ${previousRev}`} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                <img loading="lazy" src={prevUrl!} alt={`Rev ${previousRev}`} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
               ) : (
                 <div style={{
                   width: '100%', height: '100%',
@@ -347,7 +347,7 @@ export const VersionCompare: React.FC<VersionCompareProps> = ({
               overflow: 'hidden', border: `1px solid ${colors.borderSubtle}`,
             }}>
               {hasImages ? (
-                <img src={currUrl!} alt={`Rev ${currentRev}`} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                <img loading="lazy" src={currUrl!} alt={`Rev ${currentRev}`} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
               ) : (
                 <div style={{
                   width: '100%', height: '100%',
@@ -360,7 +360,7 @@ export const VersionCompare: React.FC<VersionCompareProps> = ({
                 </div>
               )}
               {showDiff && diffDataUrl && (
-                <img
+                <img loading="lazy"
                   src={diffDataUrl} alt="Pixel diff overlay"
                   style={{
                     position: 'absolute', inset: 0,
@@ -387,21 +387,21 @@ export const VersionCompare: React.FC<VersionCompareProps> = ({
             userSelect: 'none',
           }}>
             {hasImages ? (
-              <img src={prevUrl!} alt={`Rev ${previousRev}`}
+              <img loading="lazy" src={prevUrl!} alt={`Rev ${previousRev}`}
                 style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain' }} />
             ) : renderPlaceholder(`Rev ${previousRev}`, {
               background: `linear-gradient(135deg, ${colors.surfaceHover} 0%, ${colors.borderDefault} 100%)`,
             })}
             <div style={{ position: 'absolute', inset: 0, clipPath: `inset(0 ${100 - sliderPos}% 0 0)` }}>
               {hasImages ? (
-                <img src={currUrl!} alt={`Rev ${currentRev}`}
+                <img loading="lazy" src={currUrl!} alt={`Rev ${currentRev}`}
                   style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
               ) : renderPlaceholder(`Rev ${currentRev}`, {
                 background: `linear-gradient(135deg, ${colors.surfaceInset} 0%, ${colors.surfaceHover} 100%)`,
               })}
             </div>
             {showDiff && diffDataUrl && (
-              <img src={diffDataUrl} alt="Pixel diff overlay"
+              <img loading="lazy" src={diffDataUrl} alt="Pixel diff overlay"
                 style={{
                   position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain',
                   pointerEvents: 'none', clipPath: `inset(0 ${100 - sliderPos}% 0 0)`,

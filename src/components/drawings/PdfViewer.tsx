@@ -451,7 +451,7 @@ export function PdfViewer({ file, title, onClose }: PdfViewerProps) {
               boxShadow: shadows.panel,
               zIndex: (zIndex.toast as number) + 2,
             }}>
-              <img src={rfiScreenshot} alt="Drawing screenshot" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <img loading="lazy" src={rfiScreenshot} alt="Drawing screenshot" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             </div>
           )}
           <CreateRFIModal

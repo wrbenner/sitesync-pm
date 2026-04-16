@@ -283,7 +283,7 @@ export const ConversationThread: React.FC<ConversationThreadProps> = ({
                         borderRadius: borderRadius.md, overflow: 'hidden', border: `1px solid ${colors.borderSubtle}`,
                         width: 120, height: 80,
                       }}>
-                        <img src={url} alt="attachment" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <img loading="lazy" src={url} alt="attachment" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       </div>
                     ) : (
                       <a key={url} href={url} target="_blank" rel="noopener noreferrer" style={{

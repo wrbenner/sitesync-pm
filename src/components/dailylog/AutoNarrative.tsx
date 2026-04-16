@@ -8,7 +8,7 @@ interface AutoNarrativeProps {
   logData: Record<string, unknown>;
 }
 
-export const AutoNarrative: React.FC<AutoNarrativeProps> = ({ logData }) => {
+export const AutoNarrative: React.FC<AutoNarrativeProps> = React.memo(({ logData }) => {
   const [summary, setSummary] = useState<string | null>(
     (logData.ai_summary as string | null) ?? null
   );
@@ -94,4 +94,5 @@ export const AutoNarrative: React.FC<AutoNarrativeProps> = ({ logData }) => {
       )}
     </div>
   );
-};
+});
+AutoNarrative.displayName = 'AutoNarrative';

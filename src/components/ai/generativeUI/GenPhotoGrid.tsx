@@ -192,7 +192,7 @@ const Lightbox: React.FC<LightboxProps> = React.memo(({ photo, onClose, onAction
         <X size={16} />
       </button>
 
-      <img
+      <img loading="lazy"
         src={photo.url}
         alt={photo.caption || 'Construction progress photo'}
         style={{ width: '100%', borderRadius: borderRadius.base, marginBottom: spacing['3'] }}

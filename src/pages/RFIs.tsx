@@ -25,6 +25,7 @@ import { EditableDetailField } from '../components/forms/EditableField';
 import { toast } from 'sonner';
 import { PresenceAvatars } from '../components/shared/PresenceAvatars';
 import { EditingLockBanner } from '../components/ui/EditingLockBanner';
+import { useReducedMotion } from '../hooks/useReducedMotion';
 
 const QuickRFIButton = lazy(() => import('../components/field/QuickRFIButton'));
 
@@ -93,6 +94,7 @@ const MetaItem: React.FC<{ label: string; children: React.ReactNode }> = ({ labe
 );
 
 const RFIsPage: React.FC = () => {
+  const reducedMotion = useReducedMotion();
   const projectId = useProjectId();
   const { setPageContext } = useCopilotStore();
   useEffect(() => { setPageContext('rfis'); }, [setPageContext]);
@@ -533,14 +535,14 @@ const RFIsPage: React.FC = () => {
       <motion.div
         aria-label="RFI metrics"
         style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'], marginBottom: spacing['4'] }}
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
+        variants={reducedMotion ? undefined : containerVariants}
+        initial={reducedMotion ? undefined : 'hidden'}
+        animate={reducedMotion ? undefined : 'visible'}
       >
-        <motion.div variants={itemVariants}><MetricBox label="Total Open" value={totalOpen} /></motion.div>
-        <motion.div variants={itemVariants}><MetricBox label="Overdue" value={overdueCount} colorOverride={overdueCount > 0 ? 'danger' : undefined} /></motion.div>
-        <motion.div variants={itemVariants}><MetricBox label="Avg Days to Close" value={avgDaysToClose} unit="days" /></motion.div>
-        <motion.div variants={itemVariants}><MetricBox label="Closed This Week" value={closedThisWeek} /></motion.div>
+        <motion.div variants={reducedMotion ? undefined : itemVariants}><MetricBox label="Total Open" value={totalOpen} /></motion.div>
+        <motion.div variants={reducedMotion ? undefined : itemVariants}><MetricBox label="Overdue" value={overdueCount} colorOverride={overdueCount > 0 ? 'danger' : undefined} /></motion.div>
+        <motion.div variants={reducedMotion ? undefined : itemVariants}><MetricBox label="Avg Days to Close" value={avgDaysToClose} unit="days" /></motion.div>
+        <motion.div variants={reducedMotion ? undefined : itemVariants}><MetricBox label="Closed This Week" value={closedThisWeek} /></motion.div>
       </motion.div>
 
       <AnimatePresence mode="wait" initial={false}>

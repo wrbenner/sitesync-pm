@@ -11,6 +11,7 @@ import {
 import { colors, spacing, typography, borderRadius, zIndex, touchTarget } from '../../styles/theme';
 import { duration, easingArray } from '../../styles/animations';
 import { useVoiceCapture } from '../../hooks/useVoiceCapture';
+import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { useHaptics } from '../../hooks/useMobileCapture';
 import { useProjectId } from '../../hooks/useProjectId';
 import { supabase } from '../../lib/supabase';
@@ -134,6 +135,7 @@ function UrgencyBadge({ level }: { level: string }) {
 // ── Main Component ───────────────────────────────────────────
 
 const QuickRFI: React.FC<QuickRFIProps> = ({ open, onClose }) => {
+  const reducedMotion = useReducedMotion();
   const projectId = useProjectId();
   const { impact, notification } = useHaptics();
   const voice = useVoiceCapture();
@@ -404,10 +406,10 @@ const QuickRFI: React.FC<QuickRFIProps> = ({ open, onClose }) => {
       {open && (
         <motion.div
           key="quick-rfi-overlay"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: duration.normal / 1000 }}
+          initial={reducedMotion ? undefined : { opacity: 0 }}
+          animate={reducedMotion ? undefined : { opacity: 1 }}
+          exit={reducedMotion ? undefined : { opacity: 0 }}
+          transition={reducedMotion ? { duration: 0 } : { duration: duration.normal / 1000 }}
           style={{
             position: 'fixed',
             inset: 0,
@@ -729,7 +731,7 @@ const QuickRFI: React.FC<QuickRFIProps> = ({ open, onClose }) => {
                     animate={{ scale: [1, 1.02, 1] }}
                     transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
                   >
-                    <img
+                    <img loading="lazy"
                       src={photoDataUrl}
                       alt="Processing"
                       style={{
@@ -786,7 +788,7 @@ const QuickRFI: React.FC<QuickRFIProps> = ({ open, onClose }) => {
                 {/* Photo strip at top */}
                 {photoDataUrl && (
                   <div style={{ height: 160, flexShrink: 0, position: 'relative' }}>
-                    <img
+                    <img loading="lazy"
                       src={photoDataUrl}
                       alt="RFI field observation"
                       style={{

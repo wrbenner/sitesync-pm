@@ -232,7 +232,7 @@ export const AIPhotoAnalysis: React.FC = () => {
         <div>
           {/* Image with analysis overlay */}
           <div style={{ position: 'relative', marginBottom: spacing['4'] }}>
-            <img
+            <img loading="lazy"
               src={imagePreview}
               alt="Uploaded site photo"
               style={{

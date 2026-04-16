@@ -5,6 +5,7 @@ import { colors, spacing, typography, borderRadius, shadows } from '../../styles
 import type { PresenceUser } from '../../lib/realtime'
 import { usePresenceStore } from '../../stores/presenceStore'
 import { useShallow } from 'zustand/react/shallow'
+import { useReducedMotion } from '../../hooks/useReducedMotion'
 
 const EMPTY_USERS: PresenceUser[] = []
 
@@ -148,6 +149,7 @@ export const PresenceAvatars: React.FC<PresenceAvatarsProps> = React.memo(({
   maxVisible = 5,
   size = 32,
 }) => {
+  const reducedMotion = useReducedMotion()
   const pageUsers = usePresenceStore(useShallow((s) => page ? s.getUsersOnPage(page) : EMPTY_USERS))
   const entityUsers = usePresenceStore(useShallow((s) => entityId ? s.getUsersViewingEntity(entityId) : EMPTY_USERS))
 
@@ -175,10 +177,10 @@ export const PresenceAvatars: React.FC<PresenceAvatarsProps> = React.memo(({
                 <Tooltip.Root key={user.userId}>
                   <Tooltip.Trigger asChild>
                     <motion.div
-                      initial={{ scale: 0, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      exit={{ scale: 0, opacity: 0 }}
-                      transition={{ type: 'spring', stiffness: 500, damping: 25, duration: 0.2 }}
+                      initial={reducedMotion ? undefined : { scale: 0, opacity: 0 }}
+                      animate={reducedMotion ? undefined : { scale: 1, opacity: 1 }}
+                      exit={reducedMotion ? undefined : { scale: 0, opacity: 0 }}
+                      transition={reducedMotion ? { duration: 0 } : { type: 'spring', stiffness: 500, damping: 25, duration: 0.2 }}
                       layout
                       title={user.displayName}
                       style={{
@@ -244,9 +246,9 @@ export const PresenceAvatars: React.FC<PresenceAvatarsProps> = React.memo(({
             <Tooltip.Root>
               <Tooltip.Trigger asChild>
                 <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+                  initial={reducedMotion ? undefined : { scale: 0 }}
+                  animate={reducedMotion ? undefined : { scale: 1 }}
+                  transition={reducedMotion ? { duration: 0 } : { type: 'spring', stiffness: 500, damping: 25 }}
                   aria-label={`${overflow} more user${overflow !== 1 ? 's' : ''}`}
                   style={{
                     width: size,

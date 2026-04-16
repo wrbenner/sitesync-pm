@@ -1013,7 +1013,7 @@ export function AutoDailyLog({ onCapturePress }: AutoDailyLogProps) {
                         }}
                       >
                         {photoUrl ? (
-                          <img
+                          <img loading="lazy"
                             src={photoUrl}
                             alt={photo.description ?? 'Site photo'}
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}

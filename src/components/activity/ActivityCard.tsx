@@ -81,7 +81,7 @@ function EntityLabel({ target, entityPath, onEntityClick }: { target: string; en
   return <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>{target}</span>;
 }
 
-export const ActivityCard: React.FC<ActivityCardProps> = ({ item, onComment, onClick, onEntityClick }) => {
+export const ActivityCard: React.FC<ActivityCardProps> = React.memo(({ item, onComment, onClick, onEntityClick }) => {
   const [liked, setLiked] = useState(false);
   const [saved, setSaved] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -126,7 +126,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({ item, onComment, onC
         /* Normal: avatar + full header */
         <div style={{ display: 'flex', gap: spacing['3'] }}>
           {item.actorAvatar ? (
-            <img src={item.actorAvatar} alt={item.user} style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+            <img loading="lazy" src={item.actorAvatar} alt={item.user} style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
           ) : (
             <Avatar initials={item.userInitials} size={32} />
           )}
@@ -201,4 +201,5 @@ function GroupedMeta({ type, color, timestamp, preview, photoGradient, commentCo
       </div>
     </>
   );
-}
+});
+ActivityCard.displayName = 'ActivityCard';

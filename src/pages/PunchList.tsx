@@ -73,6 +73,7 @@ const PhotoThumbnail: React.FC<{ url: string; alt: string }> = ({ url, alt }) =>
       <img
         src={url}
         alt={alt}
+        loading="lazy"
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         style={{ width: 32, height: 32, objectFit: 'cover', borderRadius: borderRadius.base, border: `1px solid ${colors.borderDefault}`, cursor: 'zoom-in', display: 'block' }}
@@ -92,6 +93,7 @@ const PhotoThumbnail: React.FC<{ url: string; alt: string }> = ({ url, alt }) =>
           <img
             src={url}
             alt={alt}
+            loading="lazy"
             style={{ width: 120, height: 120, objectFit: 'cover', borderRadius: borderRadius.md, border: `1px solid ${colors.borderDefault}`, boxShadow: '0 4px 16px rgba(0,0,0,0.18)', display: 'block' }}
           />
         </div>
@@ -937,7 +939,7 @@ const PunchListPage: React.FC = () => {
                   {/* Before photo thumbnail */}
                   {item.before_photo_url && (
                     <div style={{ flexShrink: 0 }}>
-                      <img
+                      <img loading="lazy"
                         src={item.before_photo_url}
                         alt="Before"
                         style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: borderRadius.base, border: `1px solid ${colors.borderDefault}` }}
@@ -1108,7 +1110,7 @@ const PunchListPage: React.FC = () => {
                 <div style={isMobile ? { scrollSnapAlign: 'start', minWidth: '100%', flexShrink: 0 } : {}}>
                   <div style={{ fontSize: typography.fontSize.caption, fontWeight: 600, color: colors.textSecondary, marginBottom: spacing.xs }}>Before</div>
                   {selected.before_photo_url ? (
-                    <img
+                    <img loading="lazy"
                       src={selected.before_photo_url}
                       alt="Before"
                       style={{ width: '100%', height: '140px', objectFit: 'cover', borderRadius: borderRadius.base, border: `1px solid ${colors.border}` }}
@@ -1128,7 +1130,7 @@ const PunchListPage: React.FC = () => {
                 <div style={isMobile ? { scrollSnapAlign: 'start', minWidth: '100%', flexShrink: 0 } : {}}>
                   <div style={{ fontSize: typography.fontSize.caption, fontWeight: 600, color: colors.textSecondary, marginBottom: spacing.xs }}>After</div>
                   {selected.after_photo_url ? (
-                    <img
+                    <img loading="lazy"
                       src={selected.after_photo_url}
                       alt="After"
                       style={{ width: '100%', height: '140px', objectFit: 'cover', borderRadius: borderRadius.base, border: `1px solid ${colors.border}` }}

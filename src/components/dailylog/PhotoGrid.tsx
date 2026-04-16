@@ -29,7 +29,7 @@ const categoryConfig: Record<PhotoCategory, { label: string; color: string }> = 
   weather: { label: 'Weather', color: colors.statusPending },
 };
 
-export const PhotoGrid: React.FC<PhotoGridProps> = ({ photos, onCapture, onUpdateCaption }) => {
+export const PhotoGrid: React.FC<PhotoGridProps> = React.memo(({ photos, onCapture, onUpdateCaption }) => {
   const [viewIndex, setViewIndex] = useState<number | null>(null);
   const [batchRunning, setBatchRunning] = useState(false);
   const [batchProgress, setBatchProgress] = useState({ done: 0, total: 0 });
@@ -108,7 +108,7 @@ export const PhotoGrid: React.FC<PhotoGridProps> = ({ photos, onCapture, onUpdat
               onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = 'scale(1)'; }}
             >
               {photo.url ? (
-                <img src={photo.url} alt={photo.caption} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img loading="lazy" src={photo.url} alt={photo.caption} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               ) : (
                 <div style={{ width: '100%', height: '100%', background: `linear-gradient(135deg, ${cat.color}22, ${cat.color}44)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Camera size={24} color={cat.color} />
@@ -186,7 +186,7 @@ export const PhotoGrid: React.FC<PhotoGridProps> = ({ photos, onCapture, onUpdat
           {/* Image */}
           <div onClick={e => e.stopPropagation()} style={{ maxWidth: '90vw', maxHeight: '80vh', position: 'relative' }}>
             {viewing.url ? (
-              <img src={viewing.url} alt={viewing.caption} style={{ maxWidth: '100%', maxHeight: '80vh', borderRadius: borderRadius.lg }} />
+              <img loading="lazy" src={viewing.url} alt={viewing.caption} style={{ maxWidth: '100%', maxHeight: '80vh', borderRadius: borderRadius.lg }} />
             ) : (
               <div style={{ width: 400, height: 300, background: `linear-gradient(135deg, ${categoryConfig[viewing.category].color}22, ${categoryConfig[viewing.category].color}44)`, borderRadius: borderRadius.lg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Camera size={48} color={categoryConfig[viewing.category].color} />
@@ -224,4 +224,5 @@ export const PhotoGrid: React.FC<PhotoGridProps> = ({ photos, onCapture, onUpdat
       )}
     </>
   );
-};
+});
+PhotoGrid.displayName = 'PhotoGrid';
