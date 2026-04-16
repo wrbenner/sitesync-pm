@@ -1,133 +1,137 @@
 import { create } from 'zustand';
-import { supabase, fromTable } from '../lib/supabase';
-import type { Submittal, SubmittalReviewer, Priority, SubmittalStatus } from '../types/database';
+import { submittalService } from '../services/submittalService';
+import type { Submittal } from '../types/database';
+import type { SubmittalState } from '../machines/submittalMachine';
+import type { CreateSubmittalInput, SubmittalReviewer } from '../services/submittalService';
 
-interface SubmittalState {
+interface SubmittalStoreState {
   submittals: Submittal[];
   reviewers: Record<string, SubmittalReviewer[]>;
   loading: boolean;
   error: string | null;
 
   loadSubmittals: (projectId: string) => Promise<void>;
-  createSubmittal: (submittal: {
-    project_id: string;
-    title: string;
-    description?: string;
-    spec_section?: string;
-    priority: Priority;
-    created_by: string;
-    due_date?: string;
-    reviewer_ids?: string[];
-  }) => Promise<{ error: string | null; submittal: Submittal | null }>;
-  updateSubmittal: (id: string, updates: Partial<Submittal>) => Promise<{ error: string | null }>;
-  updateSubmittalStatus: (id: string, status: SubmittalStatus) => Promise<{ error: string | null }>;
+  createSubmittal: (
+    input: CreateSubmittalInput,
+  ) => Promise<{ error: string | null; submittal: Submittal | null }>;
+  updateSubmittal: (
+    id: string,
+    updates: Partial<Submittal>,
+  ) => Promise<{ error: string | null }>;
+  transitionStatus: (
+    id: string,
+    status: SubmittalState,
+  ) => Promise<{ error: string | null }>;
+  /** @deprecated Use transitionStatus instead */
+  updateSubmittalStatus: (
+    id: string,
+    status: SubmittalState,
+  ) => Promise<{ error: string | null }>;
   loadReviewers: (submittalId: string) => Promise<void>;
-  reviewSubmittal: (submittalId: string, reviewerId: string, status: 'approved' | 'rejected' | 'revise', comments?: string) => Promise<{ error: string | null }>;
+  reviewSubmittal: (
+    submittalId: string,
+    reviewerId: string,
+    decision: 'approved' | 'rejected' | 'revise',
+    comments?: string,
+  ) => Promise<{ error: string | null }>;
   deleteSubmittal: (id: string) => Promise<{ error: string | null }>;
 }
 
-export const useSubmittalStore = create<SubmittalState>()((set, get) => ({
+export const useSubmittalStore = create<SubmittalStoreState>()((set, get) => ({
   submittals: [],
-  reviewers: {},
-  loading: false,
-  error: null,
+  reviewers:  {},
+  loading:    false,
+  error:      null,
 
   loadSubmittals: async (projectId) => {
     set({ loading: true, error: null });
-    try {
-      const { data, error } = await supabase
-        .from('submittals')
-        .select('*')
-        .eq('project_id', projectId)
-        .order('submittal_number', { ascending: false });
-
-      if (error) throw error;
-      set({ submittals: (data ?? []) as Submittal[], loading: false });
-    } catch (e) {
-      set({ error: (e as Error).message, loading: false });
+    const { data, error } = await submittalService.loadSubmittals(projectId);
+    if (error) {
+      set({ error, loading: false });
+    } else {
+      set({ submittals: data ?? [], loading: false });
     }
   },
 
-  createSubmittal: async (submittal) => {
-    const { data, error } = await fromTable('submittals')
-      .insert({
-        project_id: submittal.project_id,
-        title: submittal.title,
-        description: submittal.description ?? null,
-        spec_section: submittal.spec_section ?? null,
-        status: 'draft',
-        priority: submittal.priority,
-        created_by: submittal.created_by,
-        due_date: submittal.due_date ?? null,
-        revision_number: 1,
-      })
-      .select()
-      .single();
-
-    if (error) return { error: error.message, submittal: null };
-
-    const newSub = data as Submittal;
-
-    // Create reviewer entries if provided
-    if (submittal.reviewer_ids?.length) {
-      for (let i = 0; i < submittal.reviewer_ids.length; i++) {
-        await fromTable('submittal_reviewers').insert({
-          submittal_id: newSub.id,
-          user_id: submittal.reviewer_ids[i],
-          review_order: i + 1,
-          status: 'pending',
-        });
-      }
+  createSubmittal: async (input) => {
+    const { data, error } = await submittalService.createSubmittal(input);
+    if (error) return { error, submittal: null };
+    if (data) {
+      set((s) => ({ submittals: [data, ...s.submittals] }));
     }
-
-    set((s) => ({ submittals: [newSub, ...s.submittals] }));
-    return { error: null, submittal: newSub };
+    return { error: null, submittal: data };
   },
 
   updateSubmittal: async (id, updates) => {
-    const { error } = await fromTable('submittals').update(updates).eq('id', id);
+    const { error } = await submittalService.updateSubmittal(id, updates);
     if (!error) {
       set((s) => ({
-        submittals: s.submittals.map((sub) => (sub.id === id ? { ...sub, ...updates } : sub)),
+        submittals: s.submittals.map((sub) =>
+          sub.id === id ? { ...sub, ...updates } : sub,
+        ),
       }));
     }
-    return { error: error?.message ?? null };
+    return { error };
   },
 
+  transitionStatus: async (id, status) => {
+    const { error } = await submittalService.transitionStatus(id, status);
+    if (!error) {
+      set((s) => ({
+        submittals: s.submittals.map((sub) =>
+          sub.id === id ? { ...sub, status } : sub,
+        ),
+      }));
+    }
+    return { error };
+  },
+
+  // Backward compat shim — delegates to transitionStatus
   updateSubmittalStatus: async (id, status) => {
-    return get().updateSubmittal(id, { status });
+    return get().transitionStatus(id, status);
   },
 
   loadReviewers: async (submittalId) => {
-    const { data, error } = await supabase
-      .from('submittal_reviewers')
-      .select('*')
-      .eq('submittal_id', submittalId)
-      .order('review_order');
-
+    const { data, error } = await submittalService.loadReviewers(submittalId);
     if (!error && data) {
       set((s) => ({
-        reviewers: { ...s.reviewers, [submittalId]: data as SubmittalReviewer[] },
+        reviewers: { ...s.reviewers, [submittalId]: data },
       }));
     }
   },
 
-  reviewSubmittal: async (submittalId, reviewerId, status, comments) => {
-    const { error } = await fromTable('submittal_reviewers')
-      .update({ status, reviewed_at: new Date().toISOString(), comments: comments ?? null })
-      .eq('id', reviewerId);
-
+  reviewSubmittal: async (submittalId, reviewerId, decision, comments) => {
+    const { error } = await submittalService.reviewSubmittal(
+      submittalId,
+      reviewerId,
+      decision,
+      comments,
+    );
     if (!error) {
       await get().loadReviewers(submittalId);
+      const decisionToStatus: Record<string, SubmittalState> = {
+        approved: 'approved',
+        rejected: 'rejected',
+        revise:   'resubmit',
+      };
+      const nextStatus = decisionToStatus[decision];
+      if (nextStatus) {
+        set((s) => ({
+          submittals: s.submittals.map((sub) =>
+            sub.id === submittalId ? { ...sub, status: nextStatus } : sub,
+          ),
+        }));
+      }
     }
-    return { error: error?.message ?? null };
+    return { error };
   },
 
   deleteSubmittal: async (id) => {
-    const { error } = await supabase.from('submittals').delete().eq('id', id);
+    const { error } = await submittalService.deleteSubmittal(id);
     if (!error) {
+      // Remove from local state (the RLS select policy now filters deleted rows)
       set((s) => ({ submittals: s.submittals.filter((sub) => sub.id !== id) }));
     }
-    return { error: error?.message ?? null };
+    return { error };
   },
 }));
