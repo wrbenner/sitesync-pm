@@ -801,7 +801,7 @@ jobs:
               }
 
           for exp in ranked:
-              if exp.get("review_recommendation") == "REJECT" and exp.get("review_score", 0) < 4:
+              if exp.get("review_score", 0) < 5.5:
                   print(f"\n⏭️  Skipping #{exp['index']} — rejected by reviewer (score: {exp.get('review_score')})")
                   continue
 

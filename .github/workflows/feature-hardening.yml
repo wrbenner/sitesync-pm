@@ -107,7 +107,8 @@ jobs:
           Recent tier activity: {context}
 
           Priority order:
-          1. Pages that Design Excellence ALREADY POLISHED (harden the beautiful pages first)
+          1. The MOST RECENTLY polished page by Design Excellence (harden what was just made beautiful)
+             Look at the recent activity — find the latest design-excellence entry and pick THAT page
           2. Pages with service layers (real data flows to harden)
           3. Pages with the most user interactions
 

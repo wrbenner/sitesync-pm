@@ -118,6 +118,7 @@ jobs:
           - Total errors: ${{ steps.measure.outputs.errors }}
           - Quality floor: ${{ steps.measure.outputs.floor }}
           - Target: Fix at least {TARGET} errors this cycle
+          - Warnings: ${{ steps.measure.outputs.warnings }} (fix these too when errors at floor)
 
           TOP ERROR FILES:
           {top_files}
@@ -129,6 +130,8 @@ jobs:
           4. Remove unreachable code after return statements
           5. Fix unused variables — prefix with _ if they're destructured, remove if truly unused
           6. NEVER change functionality — only fix lint errors
+          8. When ESLint errors are at the floor, also fix: warnings, any types, @ts-ignore comments
+          9. Replace any with proper TypeScript types (check the existing interfaces in src/types/)
           7. NEVER touch .organism/ or .github/workflows/ files
           8. Use src/styles/theme.ts tokens if fixing style-related errors
           9. npx tsc --noEmit MUST still pass after your changes

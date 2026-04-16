@@ -50,6 +50,18 @@ jobs:
           python3 << 'PYEOF'
           import os, json, subprocess
 
+          # Read shared memory for context
+          memory_context = ""
+          try:
+              import base64, subprocess as sp
+              r = sp.run(["gh", "api", "repos/wrbenner/sitesync-pm/contents/.organism/memory/cycle-log.jsonl", "--jq", ".content"], capture_output=True, text=True)
+              if r.returncode == 0:
+                  mem = base64.b64decode(r.stdout.strip()).decode()
+                  lines = [l for l in mem.strip().split("\n") if l]
+                  memory_context = f"Recent organism activity: {len(lines)} cycles logged"
+          except:
+              pass
+
           # Find all source files
           src_files = []
           for root, dirs, files in os.walk("src"):
