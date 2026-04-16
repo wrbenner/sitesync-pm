@@ -5,37 +5,62 @@ import { ShieldCheck } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme';
 import { toast } from 'sonner';
 import { CHECKLIST_TEMPLATES, type TemplateKey } from './safetyTypes';
+import { inspectionService } from '../../services/inspectionService';
+import { getInspectionStatusConfig, getScoreConfig } from '../../machines/inspectionMachine';
+import type { Inspection, InspectionType, ChecklistItem } from '../../types/inspection';
 
-// ── Inspection columns ────────────────────────────────────────
+// ── Template type mapping ─────────────────────────────────────────────────────
 
-const inspectionCol = createColumnHelper<Record<string, unknown>>();
+const TEMPLATE_TYPE_MAP: Record<TemplateKey, InspectionType> = {
+  daily_walk:       'safety',
+  weekly_audit:     'safety',
+  monthly_equipment: 'safety',
+};
+
+// ── Inspection columns ────────────────────────────────────────────────────────
+
+const inspectionCol = createColumnHelper<Inspection>();
 const inspectionColumns = [
-  inspectionCol.accessor('date', {
+  inspectionCol.accessor('title', {
+    header: 'Title',
+    cell: (info) => (
+      <span style={{ fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>
+        {info.getValue() ?? ''}
+      </span>
+    ),
+  }),
+  inspectionCol.accessor('scheduled_date', {
     header: 'Date',
-    cell: (info) => <span style={{ color: colors.textSecondary }}>{info.getValue() ? new Date(info.getValue() as string).toLocaleDateString() : ''}</span>,
+    cell: (info) => (
+      <span style={{ color: colors.textSecondary }}>
+        {info.getValue() ? new Date(info.getValue() as string).toLocaleDateString() : <span style={{ color: colors.textTertiary }}>TBD</span>}
+      </span>
+    ),
   }),
   inspectionCol.accessor('type', {
     header: 'Type',
-    cell: (info) => <span style={{ fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>{info.getValue() as string}</span>,
+    cell: (info) => (
+      <span style={{ color: colors.textSecondary }}>
+        {(info.getValue() ?? '').charAt(0).toUpperCase() + (info.getValue() ?? '').slice(1)}
+      </span>
+    ),
   }),
-  inspectionCol.accessor('inspector', {
-    header: 'Inspector',
-    cell: (info) => <span style={{ color: colors.textSecondary }}>{info.getValue() as string}</span>,
-  }),
-  inspectionCol.accessor('area', {
-    header: 'Area',
-    cell: (info) => <span style={{ color: colors.textSecondary }}>{info.getValue() as string}</span>,
+  inspectionCol.accessor('location', {
+    header: 'Location',
+    cell: (info) => (
+      <span style={{ color: colors.textSecondary }}>{info.getValue() ?? <span style={{ color: colors.textTertiary }}>—</span>}</span>
+    ),
   }),
   inspectionCol.accessor('status', {
     header: 'Status',
     cell: (info) => {
-      const v = info.getValue() as string;
-      const statusColor = v === 'passed' ? colors.statusActive : v === 'failed' ? colors.statusCritical : v === 'pending' ? colors.statusPending : colors.statusInfo;
-      const statusBg = v === 'passed' ? colors.statusActiveSubtle : v === 'failed' ? colors.statusCriticalSubtle : v === 'pending' ? colors.statusPendingSubtle : colors.statusInfoSubtle;
+      const status = info.getValue();
+      if (!status) return null;
+      const cfg = getInspectionStatusConfig(status);
       return (
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: spacing.xs, padding: `2px ${spacing.sm}`, borderRadius: borderRadius.full, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: statusColor, backgroundColor: statusBg }}>
-          <div style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: statusColor }} />
-          {v ? v.charAt(0).toUpperCase() + v.slice(1) : ''}
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: spacing.xs, padding: `2px ${spacing.sm}`, borderRadius: borderRadius.full, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: cfg.color, backgroundColor: cfg.bg }}>
+          <div style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: cfg.color }} />
+          {cfg.label}
         </span>
       );
     },
@@ -45,13 +70,13 @@ const inspectionColumns = [
     cell: (info) => {
       const score = info.getValue() as number | null;
       if (score == null) return <span style={{ color: colors.textTertiary }}>N/A</span>;
-      const scoreColor = score >= 90 ? colors.statusActive : score >= 70 ? colors.statusPending : colors.statusCritical;
-      return <span style={{ fontWeight: typography.fontWeight.semibold, color: scoreColor }}>{score}%</span>;
+      const cfg = getScoreConfig(score);
+      return <span style={{ fontWeight: typography.fontWeight.semibold, color: cfg.color }}>{score}%</span>;
     },
   }),
 ];
 
-// ── Cert columns ─────────────────────────────────────────────
+// ── Cert columns ──────────────────────────────────────────────────────────────
 
 const certCol = createColumnHelper<Record<string, unknown>>();
 const certColumns = [
@@ -87,7 +112,7 @@ const certColumns = [
   }),
 ];
 
-// ── Corrective Action columns ─────────────────────────────────
+// ── Corrective Action columns ─────────────────────────────────────────────────
 
 const caCol = createColumnHelper<Record<string, unknown>>();
 export const caColumns = [
@@ -138,18 +163,88 @@ export const caColumns = [
   }),
 ];
 
-// ── Inspections Tab ───────────────────────────────────────────
+// ── Inspections Tab ───────────────────────────────────────────────────────────
 
 interface InspectionsTabProps {
-  inspections: unknown[];
+  inspections: Inspection[];
   passCount: number;
   failCount: number;
+  projectId: string | null | undefined;
+  onRefetch?: () => void;
 }
 
-export const InspectionsTab: React.FC<InspectionsTabProps> = ({ inspections, passCount, failCount }) => {
+export const InspectionsTab: React.FC<InspectionsTabProps> = ({
+  inspections,
+  passCount,
+  failCount,
+  projectId,
+  onRefetch,
+}) => {
   const [activeTemplate, setActiveTemplate] = React.useState<TemplateKey | null>(null);
-  const [checklistResults, setChecklistResults] = React.useState<Record<string, 'pass' | 'fail' | 'na' | null>>({});
-  const [checklistNotes, setChecklistNotes] = React.useState<Record<string, string>>({});
+  const [checklistResults, setChecklistResults] = React.useState<Record<number, 'pass' | 'fail' | 'na' | null>>({});
+  const [checklistNotes, setChecklistNotes] = React.useState<Record<number, string>>({});
+  const [submitting, setSubmitting] = React.useState(false);
+
+  const handleCompleteInspection = async () => {
+    if (!activeTemplate) return;
+    if (!projectId) {
+      toast.error('Project not loaded');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const items: ChecklistItem[] = CHECKLIST_TEMPLATES[activeTemplate].items.map((desc, idx) => ({
+        id: String(idx),
+        description: desc,
+        result: checklistResults[idx] ?? null,
+        notes: checklistNotes[idx] || undefined,
+      }));
+
+      const failCount = items.filter((i) => i.result === 'fail').length;
+      const passedItems = items.filter((i) => i.result === 'pass').length;
+      const scoredItems = items.filter((i) => i.result !== null).length;
+      const score = scoredItems > 0 ? Math.round((passedItems / scoredItems) * 100) : null;
+
+      const createResult = await inspectionService.createInspection({
+        project_id: projectId,
+        title: CHECKLIST_TEMPLATES[activeTemplate].label,
+        type: TEMPLATE_TYPE_MAP[activeTemplate],
+        priority: failCount > 0 ? 'high' : 'medium',
+        checklist_items: items,
+      });
+
+      if (createResult.error) {
+        toast.error(createResult.error.userMessage ?? 'Failed to save inspection');
+        return;
+      }
+
+      const inspectionId = createResult.data.id;
+
+      const startResult = await inspectionService.transitionStatus(inspectionId, 'in_progress');
+      if (startResult.error) {
+        toast.error(`Inspection created but could not start: ${startResult.error.message}`);
+        return;
+      }
+
+      const scoreUpdate = score !== null ? await inspectionService.updateInspection(inspectionId, { score }) : null;
+      void scoreUpdate;
+
+      const completeResult = await inspectionService.transitionStatus(inspectionId, 'completed');
+      if (completeResult.error) {
+        toast.error(`Inspection saved but could not mark complete: ${completeResult.error.message}`);
+        return;
+      }
+
+      toast.success(`Inspection complete. Score: ${score !== null ? `${score}%` : 'N/A'}`);
+      setActiveTemplate(null);
+      setChecklistResults({});
+      setChecklistNotes({});
+      onRefetch?.();
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <>
@@ -205,7 +300,14 @@ export const InspectionsTab: React.FC<InspectionsTabProps> = ({ inspections, pas
                 {Object.values(checklistResults).filter(Boolean).length} of {CHECKLIST_TEMPLATES[activeTemplate].items.length} items reviewed
                 {Object.values(checklistResults).filter((r) => r === 'fail').length > 0 && <span style={{ marginLeft: spacing['2'], color: colors.statusCritical, fontWeight: typography.fontWeight.medium }}>{Object.values(checklistResults).filter((r) => r === 'fail').length} failed</span>}
               </span>
-              <Btn variant="primary" onClick={() => { toast.info('Inspection saved. Backend required to persist.'); setActiveTemplate(null); setChecklistResults({}); setChecklistNotes({}); }} style={{ minHeight: '56px' }}>Complete Inspection</Btn>
+              <Btn
+                variant="primary"
+                onClick={handleCompleteInspection}
+                loading={submitting}
+                style={{ minHeight: '56px' }}
+              >
+                Complete Inspection
+              </Btn>
             </div>
           </>
         )}
@@ -216,18 +318,17 @@ export const InspectionsTab: React.FC<InspectionsTabProps> = ({ inspections, pas
         <Card>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: `${spacing['10']} ${spacing['6']}`, gap: spacing['4'], textAlign: 'center' }}>
             <ShieldCheck size={40} style={{ color: colors.textTertiary }} />
-            <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textTertiary, maxWidth: 360 }}>No inspections recorded. Safety tracking not yet configured.</p>
-            <Btn variant="primary" onClick={() => toast.info('Form submission requires backend configuration')} style={{ minHeight: '56px' }}>Schedule First Inspection</Btn>
+            <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textTertiary, maxWidth: 360 }}>No inspections recorded. Run a checklist above or schedule a new inspection.</p>
           </div>
         </Card>
       ) : (
         <>
           <div style={{ display: 'flex', gap: spacing['4'], marginBottom: spacing['4'] }}>
             <div style={{ backgroundColor: colors.statusActiveSubtle, borderRadius: borderRadius.md, padding: `${spacing['2']} ${spacing['4']}` }}>
-              <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.statusActive }}>{passCount} Passed</span>
+              <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.statusActive }}>{passCount} Approved</span>
             </div>
             <div style={{ backgroundColor: colors.statusCriticalSubtle, borderRadius: borderRadius.md, padding: `${spacing['2']} ${spacing['4']}` }}>
-              <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.statusCritical }}>{failCount} Failed</span>
+              <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.statusCritical }}>{failCount} Rejected</span>
             </div>
           </div>
           <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
@@ -241,7 +342,7 @@ export const InspectionsTab: React.FC<InspectionsTabProps> = ({ inspections, pas
   );
 };
 
-// ── Certifications Tab ────────────────────────────────────────
+// ── Certifications Tab ────────────────────────────────────────────────────────
 
 interface CertificationsTabProps {
   certifications: unknown[];
@@ -268,7 +369,7 @@ export const CertificationsTab: React.FC<CertificationsTabProps> = ({ certificat
   );
 };
 
-// ── Corrective Actions Tab ────────────────────────────────────
+// ── Corrective Actions Tab ────────────────────────────────────────────────────
 
 interface CorrectiveActionsTabProps {
   correctiveActions: unknown[];

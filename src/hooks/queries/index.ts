@@ -683,15 +683,12 @@ export function useWeeklyDigests(projectId: string | undefined) {
 
 export function useSafetyInspections(projectId: string | undefined) {
   return useQuery({
-    queryKey: ['safety_inspections', projectId],
+    queryKey: ['inspections', projectId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('safety_inspections')
-        .select('*')
-        .eq('project_id', projectId!)
-        .order('date', { ascending: false })
-      if (error) throw error
-      return data
+      const { inspectionService } = await import('../../services/inspectionService')
+      const result = await inspectionService.loadInspections(projectId!)
+      if (result.error) throw new Error(result.error.message)
+      return result.data ?? []
     },
     enabled: !!projectId,
   })

@@ -13,6 +13,7 @@ import { IncidentList } from './IncidentList';
 import { IncidentForm } from './IncidentForm';
 import { ToolboxTalksList, ToolboxTalkForm } from './ToolboxTalks';
 import { InspectionsTab, CertificationsTab, CorrectiveActionsTab } from './InspectionsAndCerts';
+import { InspectionForm } from './InspectionForm';
 
 const tabs: { key: TabKey; label: string; icon: React.ElementType }[] = [
   { key: 'incidents', label: 'Incidents', icon: AlertTriangle },
@@ -28,11 +29,12 @@ export const Safety: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('incidents');
   const [showIncidentModal, setShowIncidentModal] = useState(false);
   const [showTalkModal, setShowTalkModal] = useState(false);
+  const [showInspectionModal, setShowInspectionModal] = useState(false);
   const [windowWidth, setWindowWidth] = useState(() => window.innerWidth);
 
   const projectId = useProjectId();
 
-  const { data: inspections, isLoading: loadingInspections, isError: errorInspections } = useSafetyInspections(projectId);
+  const { data: inspections, isLoading: loadingInspections, isError: errorInspections, refetch: refetchInspections } = useSafetyInspections(projectId);
   const { data: incidents, isLoading: loadingIncidents, isError: errorIncidents, refetch: refetchIncidents } = useIncidents(projectId);
   const { data: talks, isLoading: loadingTalks, isError: errorTalks, refetch: refetchTalks } = useToolboxTalks(projectId);
   const { data: certifications, isLoading: loadingCerts, isError: errorCerts, refetch: refetchCerts } = useSafetyCertifications(projectId);
@@ -90,8 +92,8 @@ export const Safety: React.FC = () => {
     return daysUntil > 0 && daysUntil <= 30;
   }).length ?? 0;
 
-  const passCount = inspections?.filter((i: unknown) => (i as Record<string, unknown>).status === 'passed').length ?? 0;
-  const failCount = inspections?.filter((i: unknown) => (i as Record<string, unknown>).status === 'failed').length ?? 0;
+  const passCount = inspections?.filter((i: unknown) => (i as Record<string, unknown>).status === 'approved').length ?? 0;
+  const failCount = inspections?.filter((i: unknown) => (i as Record<string, unknown>).status === 'rejected').length ?? 0;
 
   const weekStart = new Date(now);
   weekStart.setHours(0, 0, 0, 0);
@@ -100,8 +102,8 @@ export const Safety: React.FC = () => {
   weekEnd.setDate(weekStart.getDate() + 7);
   const inspectionsThisWeek = inspections?.filter((insp: unknown) => {
     const i = insp as Record<string, unknown>;
-    if (!i.date) return false;
-    const d = new Date(i.date as string);
+    if (!i.scheduled_date) return false;
+    const d = new Date(i.scheduled_date as string);
     return d >= weekStart && d < weekEnd;
   }).length ?? 0;
 
@@ -114,7 +116,7 @@ export const Safety: React.FC = () => {
   const isLoading = loadingInspections || loadingIncidents || loadingTalks || loadingCerts || loadingCAs;
   const hasError = errorInspections || errorIncidents || errorTalks || errorCerts || errorCAs;
 
-  const handleRetry = () => { refetchIncidents(); refetchTalks(); refetchCerts(); refetchCAs(); };
+  const handleRetry = () => { refetchInspections(); refetchIncidents(); refetchTalks(); refetchCerts(); refetchCAs(); };
 
   return (
     <PageContainer
@@ -124,7 +126,7 @@ export const Safety: React.FC = () => {
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
           <ExportButton pdfFilename="SiteSync_Safety_Report" />
           {activeTab === 'incidents' && <Btn variant="primary" icon={<Plus size={16} />} onClick={() => setShowIncidentModal(true)} style={{ minHeight: 56 }}>Report Incident</Btn>}
-          {activeTab === 'inspections' && <Btn variant="primary" icon={<Plus size={16} />} onClick={() => toast.info('Form submission requires backend configuration')} style={{ minHeight: 56 }}>New Inspection</Btn>}
+          {activeTab === 'inspections' && <Btn variant="primary" icon={<Plus size={16} />} onClick={() => setShowInspectionModal(true)} style={{ minHeight: 56 }}>New Inspection</Btn>}
           {activeTab === 'toolbox' && <Btn variant="primary" icon={<Plus size={16} />} onClick={() => setShowTalkModal(true)} style={{ minHeight: 56 }}>New Talk</Btn>}
           {activeTab === 'certifications' && <Btn variant="primary" icon={<Plus size={16} />} onClick={() => toast.info('Form submission requires backend configuration')} style={{ minHeight: 56 }}>Add Certification</Btn>}
           {activeTab === 'corrective_actions' && <Btn variant="primary" icon={<Plus size={16} />} onClick={() => toast.info('Form submission requires backend configuration')} style={{ minHeight: 56 }}>Log Corrective Action</Btn>}
@@ -196,7 +198,7 @@ export const Safety: React.FC = () => {
       {!isLoading && !hasError && (
         <>
           {activeTab === 'incidents' && <IncidentList incidents={displayIncidents} onReportIncident={() => setShowIncidentModal(true)} />}
-          {activeTab === 'inspections' && <InspectionsTab inspections={inspections || []} passCount={passCount} failCount={failCount} />}
+          {activeTab === 'inspections' && <InspectionsTab inspections={inspections || []} passCount={passCount} failCount={failCount} projectId={projectId} onRefetch={refetchInspections} />}
           {activeTab === 'toolbox' && <ToolboxTalksList talks={talks || []} onNewTalk={() => setShowTalkModal(true)} />}
           {activeTab === 'certifications' && <CertificationsTab certifications={certifications || []} />}
           {activeTab === 'corrective_actions' && <CorrectiveActionsTab correctiveActions={displayCAs} />}
@@ -213,6 +215,13 @@ export const Safety: React.FC = () => {
       )}
       {showTalkModal && (
         <ToolboxTalkForm onClose={() => setShowTalkModal(false)} />
+      )}
+      {showInspectionModal && (
+        <InspectionForm
+          projectId={projectId}
+          onClose={() => setShowInspectionModal(false)}
+          onSubmitSuccess={() => { refetchInspections(); }}
+        />
       )}
     </PageContainer>
   );
