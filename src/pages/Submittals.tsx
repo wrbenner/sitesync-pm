@@ -34,11 +34,11 @@ const isOverdue = (dateStr: string) => new Date(dateStr) < new Date();
 type StepStatus = 'pending' | 'current' | 'approved' | 'rejected' | 'approved_as_noted';
 
 const STEP_COLORS: Record<StepStatus, { bg: string; fg: string }> = {
-  pending:           { bg: '#E5E7EB', fg: '#9CA3AF' },
-  current:           { bg: '#3B82F6', fg: '#FFFFFF' },
-  approved:          { bg: '#4EC896', fg: '#FFFFFF' },
-  rejected:          { bg: '#EF4444', fg: '#FFFFFF' },
-  approved_as_noted: { bg: '#F59E0B', fg: '#FFFFFF' },
+  pending:           { bg: colors.borderLight, fg: colors.textTertiary },
+  current:           { bg: colors.statusInfo, fg: colors.white },
+  approved:          { bg: colors.statusActive, fg: colors.white },
+  rejected:          { bg: colors.statusCritical, fg: colors.white },
+  approved_as_noted: { bg: colors.statusPending, fg: colors.white },
 };
 
 interface ReviewerStep {
@@ -165,7 +165,7 @@ const ReviewerStepper: React.FC<{ status: string; reviewers: ReviewerRow[] }> = 
                 height: 2,
                 marginTop: 15,
                 ...(isDone
-                  ? { backgroundColor: '#4EC896' }
+                  ? { backgroundColor: colors.statusActive }
                   : {
                       backgroundImage: 'repeating-linear-gradient(90deg, #D1D5DB 0, #D1D5DB 6px, transparent 6px, transparent 12px)',
                       backgroundColor: 'transparent',
@@ -181,16 +181,16 @@ const ReviewerStepper: React.FC<{ status: string; reviewers: ReviewerRow[] }> = 
 };
 
 const BIC_COLORS: Record<string, string> = {
-  GC: '#3B82F6',
-  Architect: '#8B5CF6',
-  Engineer: '#14B8A6',
-  Owner: '#F47820',
-  Sub: '#6B7280',
+  GC: colors.statusInfo,
+  Architect: colors.statusReview,
+  Engineer: colors.statusActive,
+  Owner: colors.primaryOrange,
+  Sub: colors.textSecondary,
 };
 
 const BallInCourtBadge: React.FC<{ value: string | null }> = ({ value }) => {
   if (!value) return null;
-  const color = BIC_COLORS[value] ?? '#6B7280';
+  const color = BIC_COLORS[value] ?? colors.textSecondary;
   return (
     <span style={{
       display: 'inline-block',
@@ -208,13 +208,13 @@ const BallInCourtBadge: React.FC<{ value: string | null }> = ({ value }) => {
 };
 
 const SUBMITTAL_STATUS_STYLES: Record<string, { bg: string; text: string; label: string }> = {
-  pending:           { bg: '#F3F4F6', text: '#6B7280', label: 'Pending' },
-  under_review:      { bg: '#DBEAFE', text: '#3B82F6', label: 'Under Review' },
-  approved:          { bg: '#D1FAE5', text: '#4EC896', label: 'Approved' },
-  approved_as_noted: { bg: '#D1FAE5', text: '#4EC896', label: 'Approved as Noted' },
-  rejected:          { bg: '#FEE2E2', text: '#E74C3C', label: 'Rejected' },
-  revise_resubmit:   { bg: '#FEF3C7', text: '#F5A623', label: 'Resubmit' },
-  resubmit:          { bg: '#FEF3C7', text: '#F5A623', label: 'Resubmit' },
+  pending:           { bg: colors.surfaceInset, text: colors.textSecondary, label: 'Pending' },
+  under_review:      { bg: colors.statusInfoSubtle, text: colors.statusInfo, label: 'Under Review' },
+  approved:          { bg: colors.statusActiveSubtle, text: colors.statusActive, label: 'Approved' },
+  approved_as_noted: { bg: colors.statusActiveSubtle, text: colors.statusActive, label: 'Approved as Noted' },
+  rejected:          { bg: colors.statusCriticalSubtle, text: colors.statusCritical, label: 'Rejected' },
+  revise_resubmit:   { bg: colors.statusPendingSubtle, text: colors.statusPending, label: 'Resubmit' },
+  resubmit:          { bg: colors.statusPendingSubtle, text: colors.statusPending, label: 'Resubmit' },
 };
 
 function formatCSICode(raw: string | null | undefined): string | null {
@@ -251,7 +251,7 @@ function calcBusinessDaysRemaining(dueDateStr: string | null | undefined): numbe
 }
 
 const SubmittalStatusTag: React.FC<{ status: string }> = ({ status }) => {
-  const style = SUBMITTAL_STATUS_STYLES[status] ?? { bg: '#F3F4F6', text: '#6B7280', label: status };
+  const style = SUBMITTAL_STATUS_STYLES[status] ?? { bg: colors.surfaceInset, text: colors.textSecondary, label: status };
   return (
     <span style={{
       display: 'inline-block',
@@ -287,7 +287,7 @@ function calcDaysInReview(sub: unknown): number | null {
   return bizDays;
 }
 
-const CHAIN_COLORS = { green: '#4EC896', amber: '#F5A623', gray: '#D1D5DB', red: '#E74C3C' };
+const CHAIN_COLORS = { green: colors.statusActive, amber: colors.statusPending, gray: colors.borderDefault, red: colors.statusCritical };
 
 type ChainColor = keyof typeof CHAIN_COLORS;
 
@@ -310,7 +310,7 @@ const MiniApprovalChain: React.FC<{ status: string }> = ({ status }) => {
     <div aria-label="Approval chain" style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
       {steps.map((step, i) => (
         <React.Fragment key={step.label}>
-          {i > 0 && <div style={{ width: 8, height: 1, backgroundColor: '#E5E7EB', flexShrink: 0 }} />}
+          {i > 0 && <div style={{ width: 8, height: 1, backgroundColor: colors.borderLight, flexShrink: 0 }} />}
           <div
             title={step.label}
             style={{
@@ -477,7 +477,7 @@ const SubmittalsPage: React.FC = () => {
         const daysRemaining = calcBusinessDaysRemaining((sub.due_date as string) || (sub.dueDate as string));
         if (daysRemaining === null) return <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>&mdash;</span>;
         const overdue = daysRemaining < 0;
-        const color = overdue ? '#E74C3C' : daysRemaining <= 7 ? '#F5A623' : '#4EC896';
+        const color = overdue ? colors.statusCritical : daysRemaining <= 7 ? colors.statusPending : colors.statusActive;
         const label = overdue
           ? `${Math.abs(daysRemaining)} days overdue`
           : `${daysRemaining} days remaining`;
@@ -496,7 +496,7 @@ const SubmittalsPage: React.FC = () => {
         if (!val) return <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>Unassigned</span>;
         return (
           <span style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#3B82F6', flexShrink: 0, display: 'inline-block' }} />
+            <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: colors.statusInfo, flexShrink: 0, display: 'inline-block' }} />
             <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary }}>{val}</span>
           </span>
         );
@@ -527,7 +527,7 @@ const SubmittalsPage: React.FC = () => {
         const sub = info.getValue() as Record<string, unknown>;
         const days = calcDaysInReview(sub);
         if (days === null) return <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>&mdash;</span>;
-        const color = days > 14 ? '#E74C3C' : days > 7 ? '#F5A623' : colors.textSecondary;
+        const color = days > 14 ? colors.statusCritical : days > 7 ? colors.statusPending : colors.textSecondary;
         return (
           <span style={{ fontSize: typography.fontSize.sm, color, fontWeight: days > 14 ? typography.fontWeight.semibold : typography.fontWeight.normal, fontVariantNumeric: 'tabular-nums' as const, whiteSpace: 'nowrap' }}>
             {days}d
@@ -685,13 +685,13 @@ const SubmittalsPage: React.FC = () => {
           alignItems: 'center',
           gap: spacing['3'],
           padding: `${spacing['4']} ${spacing['5']}`,
-          backgroundColor: '#FEF2F2',
-          border: `1px solid #FECACA`,
+          backgroundColor: colors.statusCriticalSubtle,
+          border: `1px solid ${colors.statusCritical}40`,
           borderRadius: borderRadius.md,
           color: colors.statusCritical,
         }}>
           <AlertTriangle size={16} style={{ flexShrink: 0 }} />
-          <span style={{ flex: 1, fontSize: typography.fontSize.sm, color: '#991B1B' }}>
+          <span style={{ flex: 1, fontSize: typography.fontSize.sm, color: colors.statusCritical }}>
             Unable to load submittals. Check your connection and try again.
           </span>
           <Btn variant="secondary" size="sm" icon={<RefreshCw size={14} />} onClick={() => refetch()}>Retry</Btn>
@@ -791,13 +791,13 @@ const SubmittalsPage: React.FC = () => {
           gap: spacing['3'],
           padding: `${spacing['3']} ${spacing['4']}`,
           marginBottom: spacing['4'],
-          backgroundColor: '#FEF2F2',
-          border: `1px solid #FECACA`,
+          backgroundColor: colors.statusCriticalSubtle,
+          border: `1px solid ${colors.statusCritical}40`,
           borderRadius: borderRadius.md,
           color: colors.statusCritical,
         }}>
           <AlertTriangle size={16} style={{ flexShrink: 0 }} />
-          <span style={{ flex: 1, fontSize: typography.fontSize.sm, color: '#991B1B' }}>
+          <span style={{ flex: 1, fontSize: typography.fontSize.sm, color: colors.statusCritical }}>
             Unable to load submittals. Check your connection and try again.
           </span>
           <Btn variant="secondary" size="sm" icon={<RefreshCw size={14} />} onClick={() => refetch()}>Retry</Btn>
@@ -812,9 +812,9 @@ const SubmittalsPage: React.FC = () => {
       <div style={{ display: 'flex', gap: spacing['4'], marginBottom: spacing['4'], flexWrap: 'wrap' }}>
         {[
           { label: 'Total Submittals', value: totalCount, color: colors.textPrimary, bg: colors.white },
-          { label: 'Pending Review', value: pendingReviewCount, color: '#F5A623', bg: '#FFFBF0' },
-          { label: 'Approved', value: approvedCount, color: '#4EC896', bg: '#F0FDF9' },
-          { label: 'Overdue', value: overdueCount, color: '#E74C3C', bg: '#FEF2F2' },
+          { label: 'Pending Review', value: pendingReviewCount, color: colors.statusPending, bg: colors.statusPendingSubtle },
+          { label: 'Approved', value: approvedCount, color: colors.statusActive, bg: colors.statusActiveSubtle },
+          { label: 'Overdue', value: overdueCount, color: colors.statusCritical, bg: colors.statusCriticalSubtle },
         ].map(({ label, value, color, bg }) => (
           <div key={label} style={{
             flex: '1 1 140px',

@@ -26,7 +26,7 @@ class PresenceBarErrorBoundary extends React.Component<
   }
 
   componentDidCatch(error: Error) {
-    console.debug('[PresenceBar] Liveblocks context unavailable:', error);
+    if (import.meta.env.DEV) console.debug('[PresenceBar] Liveblocks context unavailable:', error);
     usePresenceStore.getState().setInitialized(true);
   }
 
@@ -651,7 +651,7 @@ const DrawingPresenceBarContent: React.FC = () => {
       }
       prevLengthRef.current = others.length;
     } catch (err) {
-      console.warn('[PresenceBar] Error syncing presence state:', err);
+      if (import.meta.env.DEV) console.warn('[PresenceBar] Error syncing presence state:', err);
     }
   }, [others.length]);
 

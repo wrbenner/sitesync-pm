@@ -183,7 +183,7 @@ export const Safety: React.FC = () => {
 
       {/* Error state */}
       {!isLoading && hasError && (
-        <div style={{ backgroundColor: '#FEF2F2', border: '1px solid #FECACA', borderRadius: borderRadius.md, padding: `${spacing['4']} ${spacing['5']}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: spacing['4'], marginBottom: spacing['4'] }}>
+        <div style={{ backgroundColor: colors.statusCriticalSubtle, border: `1px solid ${colors.statusCritical}40`, borderRadius: borderRadius.md, padding: `${spacing['4']} ${spacing['5']}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: spacing['4'], marginBottom: spacing['4'] }}>
           <div>
             <p style={{ margin: 0, fontWeight: typography.fontWeight.medium, color: '#991B1B', fontSize: typography.fontSize.sm }}>Unable to load safety data</p>
             <p style={{ margin: '2px 0 0', color: '#B91C1C', fontSize: typography.fontSize.caption }}>Check your connection and try again.</p>

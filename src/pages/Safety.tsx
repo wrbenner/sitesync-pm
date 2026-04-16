@@ -253,7 +253,7 @@ const certColumns = [
             display: 'inline-flex', alignItems: 'center',
             padding: `2px ${spacing.sm}`, borderRadius: borderRadius.full,
             fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.bold,
-            color: '#FFFFFF', backgroundColor: colors.statusCritical,
+            color: colors.white, backgroundColor: colors.statusCritical,
             letterSpacing: '0.05em',
           }}>
             EXPIRED
@@ -279,9 +279,9 @@ const certColumns = [
             display: 'inline-flex', alignItems: 'center', gap: spacing.xs,
             padding: `2px ${spacing.sm}`, borderRadius: borderRadius.full,
             fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
-            color: '#E67E22', backgroundColor: '#FFF7ED',
+            color: colors.primaryOrange, backgroundColor: colors.orangeSubtle,
           }}>
-            <div style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: '#E67E22' }} />
+            <div style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: colors.primaryOrange }} />
             Expires in {Math.ceil(daysUntil)}d
           </span>
         )
@@ -362,7 +362,7 @@ const caColumns = [
       const v = (info.getValue() as string) || 'medium'
       const colorMap: Record<string, { fg: string; bg: string }> = {
         critical: { fg: colors.statusCritical, bg: colors.statusCriticalSubtle },
-        high:     { fg: '#E67E22', bg: '#FFF7ED' },
+        high:     { fg: colors.primaryOrange, bg: colors.orangeSubtle },
         medium:   { fg: colors.statusPending, bg: colors.statusPendingSubtle },
         low:      { fg: colors.statusInfo, bg: colors.statusInfoSubtle },
       }
@@ -883,11 +883,11 @@ export const Safety: React.FC = () => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <div key={i} style={{ display: 'flex', gap: spacing['3'] }}>
-                <div style={{ flex: '0 0 100px', height: 20, backgroundColor: '#E5E7EB', borderRadius: borderRadius.sm, animation: 'safety-pulse 1.5s ease-in-out infinite' }} />
-                <div style={{ flex: '0 0 140px', height: 20, backgroundColor: '#E5E7EB', borderRadius: borderRadius.sm, animation: 'safety-pulse 1.5s ease-in-out infinite', animationDelay: `${i * 0.1}s` }} />
-                <div style={{ flex: '0 0 120px', height: 20, backgroundColor: '#E5E7EB', borderRadius: borderRadius.sm, animation: 'safety-pulse 1.5s ease-in-out infinite', animationDelay: `${i * 0.15}s` }} />
-                <div style={{ flex: '1', height: 20, backgroundColor: '#E5E7EB', borderRadius: borderRadius.sm, animation: 'safety-pulse 1.5s ease-in-out infinite', animationDelay: `${i * 0.2}s` }} />
-                <div style={{ flex: '0 0 90px', height: 20, backgroundColor: '#E5E7EB', borderRadius: borderRadius.sm, animation: 'safety-pulse 1.5s ease-in-out infinite', animationDelay: `${i * 0.25}s` }} />
+                <div style={{ flex: '0 0 100px', height: 20, backgroundColor: colors.borderLight, borderRadius: borderRadius.sm, animation: 'safety-pulse 1.5s ease-in-out infinite' }} />
+                <div style={{ flex: '0 0 140px', height: 20, backgroundColor: colors.borderLight, borderRadius: borderRadius.sm, animation: 'safety-pulse 1.5s ease-in-out infinite', animationDelay: `${i * 0.1}s` }} />
+                <div style={{ flex: '0 0 120px', height: 20, backgroundColor: colors.borderLight, borderRadius: borderRadius.sm, animation: 'safety-pulse 1.5s ease-in-out infinite', animationDelay: `${i * 0.15}s` }} />
+                <div style={{ flex: '1', height: 20, backgroundColor: colors.borderLight, borderRadius: borderRadius.sm, animation: 'safety-pulse 1.5s ease-in-out infinite', animationDelay: `${i * 0.2}s` }} />
+                <div style={{ flex: '0 0 90px', height: 20, backgroundColor: colors.borderLight, borderRadius: borderRadius.sm, animation: 'safety-pulse 1.5s ease-in-out infinite', animationDelay: `${i * 0.25}s` }} />
               </div>
             ))}
           </div>
@@ -897,8 +897,8 @@ export const Safety: React.FC = () => {
       {/* Error state */}
       {!isLoading && hasError && (
         <div style={{
-          backgroundColor: '#FEF2F2',
-          border: `1px solid #FECACA`,
+          backgroundColor: colors.statusCriticalSubtle,
+          border: `1px solid ${colors.statusCritical}40`,
           borderRadius: borderRadius.md,
           padding: `${spacing['4']} ${spacing['5']}`,
           display: 'flex',
@@ -908,10 +908,10 @@ export const Safety: React.FC = () => {
           marginBottom: spacing['4'],
         }}>
           <div>
-            <p style={{ margin: 0, fontWeight: typography.fontWeight.medium, color: '#991B1B', fontSize: typography.fontSize.sm }}>
+            <p style={{ margin: 0, fontWeight: typography.fontWeight.medium, color: colors.statusCritical, fontSize: typography.fontSize.sm }}>
               Unable to load safety data
             </p>
-            <p style={{ margin: '2px 0 0', color: '#B91C1C', fontSize: typography.fontSize.caption }}>
+            <p style={{ margin: '2px 0 0', color: colors.statusCritical, fontSize: typography.fontSize.caption }}>
               Check your connection and try again.
             </p>
           </div>
@@ -1275,7 +1275,7 @@ export const Safety: React.FC = () => {
           onClick={(e) => { if (e.target === e.currentTarget) handleCloseModal() }}
         >
           <div style={{
-            backgroundColor: '#fff',
+            backgroundColor: colors.white,
             borderRadius: borderRadius.lg,
             padding: spacing['6'],
             width: '100%',
@@ -1337,7 +1337,7 @@ export const Safety: React.FC = () => {
                   border: fieldErrors.type ? `1px solid ${colors.statusCritical}` : `1px solid ${colors.borderDefault}`,
                   borderRadius: borderRadius.base,
                   fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
-                  color: colors.textPrimary, outline: 'none', backgroundColor: '#fff',
+                  color: colors.textPrimary, outline: 'none', backgroundColor: colors.white,
                 }}
               >
                 <option value="">Select type...</option>
@@ -1387,7 +1387,7 @@ export const Safety: React.FC = () => {
                   border: fieldErrors.severity ? `1px solid ${colors.statusCritical}` : `1px solid ${colors.borderDefault}`,
                   borderRadius: borderRadius.base,
                   fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
-                  color: colors.textPrimary, outline: 'none', backgroundColor: '#fff',
+                  color: colors.textPrimary, outline: 'none', backgroundColor: colors.white,
                 }}
               >
                 <option value="">Select severity...</option>
@@ -1492,7 +1492,7 @@ export const Safety: React.FC = () => {
                     border: `1px solid ${colors.borderDefault}`,
                     borderRadius: borderRadius.base,
                     fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
-                    color: colors.textPrimary, outline: 'none', backgroundColor: '#fff',
+                    color: colors.textPrimary, outline: 'none', backgroundColor: colors.white,
                   }}
                 />
               </div>
@@ -1512,7 +1512,7 @@ export const Safety: React.FC = () => {
                       border: `1px solid ${colors.borderDefault}`,
                       borderRadius: borderRadius.base,
                       fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
-                      color: colors.textPrimary, outline: 'none', backgroundColor: '#fff',
+                      color: colors.textPrimary, outline: 'none', backgroundColor: colors.white,
                     }}
                   />
                 </div>
@@ -1530,7 +1530,7 @@ export const Safety: React.FC = () => {
                       border: `1px solid ${colors.borderDefault}`,
                       borderRadius: borderRadius.base,
                       fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
-                      color: colors.textPrimary, outline: 'none', backgroundColor: '#fff',
+                      color: colors.textPrimary, outline: 'none', backgroundColor: colors.white,
                     }}
                   />
                 </div>
@@ -1545,7 +1545,7 @@ export const Safety: React.FC = () => {
                 {!isPhotoRequired && <span style={{ color: colors.textTertiary, fontSize: typography.fontSize.caption, marginLeft: spacing['2'] }}>(required for medical treatment and above)</span>}
               </label>
               {isPhotoRequired && (
-                <p style={{ margin: `0 0 ${spacing['2']} 0`, fontSize: typography.fontSize.caption, color: '#E67E22' }}>
+                <p style={{ margin: `0 0 ${spacing['2']} 0`, fontSize: typography.fontSize.caption, color: colors.primaryOrange }}>
                   Photo documentation is required for this severity level per OSHA recordkeeping standards.
                 </p>
               )}
@@ -1565,7 +1565,7 @@ export const Safety: React.FC = () => {
                   borderRadius: borderRadius.base,
                   fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
                   color: colors.textPrimary, outline: 'none', cursor: 'pointer',
-                  backgroundColor: '#fff',
+                  backgroundColor: colors.white,
                 }}
               />
               {incidentForm.photo && (
@@ -1597,7 +1597,7 @@ export const Safety: React.FC = () => {
           onClick={(e) => { if (e.target === e.currentTarget) handleCloseTalkModal() }}
         >
           <div style={{
-            backgroundColor: '#fff',
+            backgroundColor: colors.white,
             borderRadius: borderRadius.lg,
             padding: spacing['6'],
             width: '100%',

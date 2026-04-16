@@ -276,7 +276,7 @@ export async function queueMutation(
 
   // Check storage quota
   const quota = await checkStorageQuota()
-  if (!quota.ok) {
+  if (!quota.ok && import.meta.env.DEV) {
     console.warn(`Storage quota at ${Math.round(quota.percentUsed * 100)}%. Offline cache may be unreliable.`)
   }
 
@@ -679,7 +679,7 @@ export async function cacheProjectData(
 
   // Check quota before starting
   const quota = await checkStorageQuota()
-  if (!quota.ok) {
+  if (!quota.ok && import.meta.env.DEV) {
     console.warn(`Storage quota at ${Math.round(quota.percentUsed * 100)}% before caching. Some data may not be cached.`)
   }
 
@@ -726,7 +726,7 @@ export async function cacheProjectData(
         // Check if results were truncated
         if (data.length >= clampedLimit) {
           truncatedTables.push(supaTable)
-          console.warn(`Cache truncated for ${supaTable}: ${data.length} records (limit: ${clampedLimit}). Increase recordLimit to cache all data.`)
+          if (import.meta.env.DEV) console.warn(`Cache truncated for ${supaTable}: ${data.length} records (limit: ${clampedLimit}). Increase recordLimit to cache all data.`)
         }
         const cacheTable = getDexieTable(dexieTable)
         if (cacheTable) await cacheTable.bulkPut(data)

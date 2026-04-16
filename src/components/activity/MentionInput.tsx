@@ -50,7 +50,7 @@ export const MentionInput: React.FC<MentionInputProps> = ({
         setMembersLoading(false);
       })
       .catch((err) => {
-        console.error('Failed to load project members for mention:', err);
+        if (import.meta.env.DEV) console.error('Failed to load project members for mention:', err);
         setMemberLoadError(true);
         setMembersLoading(false);
       });

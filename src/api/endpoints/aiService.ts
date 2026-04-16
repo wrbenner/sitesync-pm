@@ -6,7 +6,7 @@ export const generateProjectInsights = async (projectId: string): Promise<AIInsi
   try {
     return await aiService.generateInsights(projectId)
   } catch (err) {
-    console.error('[aiService] generateProjectInsights failed:', err)
+    if (import.meta.env.DEV) console.error('[aiService] generateProjectInsights failed:', err)
     return []
   }
 }
@@ -16,7 +16,7 @@ export const draftRFIResponse = async (rfiId: string, context: AIContext): Promi
   try {
     return await aiService.draftRFIResponse(rfiId, context)
   } catch (err) {
-    console.error('[aiService] draftRFIResponse failed:', err)
+    if (import.meta.env.DEV) console.error('[aiService] draftRFIResponse failed:', err)
     return ''
   }
 }

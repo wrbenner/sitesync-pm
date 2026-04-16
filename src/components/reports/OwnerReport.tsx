@@ -78,7 +78,7 @@ export const OwnerReport: React.FC = () => {
       setReport(data)
     } catch (err) {
       setError('Failed to generate report. Please try again.')
-      console.error('Owner report generation failed:', err)
+      if (import.meta.env.DEV) console.error('Owner report generation failed:', err)
     } finally {
       setLoading(false)
     }

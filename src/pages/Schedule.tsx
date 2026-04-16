@@ -47,10 +47,10 @@ interface ScheduleKPICardProps {
 
 const ScheduleKPICard: React.FC<ScheduleKPICardProps> = ({ icon, label, value, valueColor, trend, progressPct, ariaLabel, isMobile }) => (
   <div aria-label={ariaLabel} style={{
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: '12px',
     padding: '24px',
-    border: '1px solid #E5E7EB',
+    border: `1px solid ${colors.borderLight}`,
     display: 'flex',
     flexDirection: 'column',
     gap: '8px',
@@ -64,7 +64,7 @@ const ScheduleKPICard: React.FC<ScheduleKPICardProps> = ({ icon, label, value, v
     </span>
     {progressPct != null && (
       <div style={{ marginTop: '2px' }}>
-        <div style={{ height: '4px', borderRadius: '2px', backgroundColor: '#E5E7EB', overflow: 'hidden' }}>
+        <div style={{ height: '4px', borderRadius: '2px', backgroundColor: colors.borderLight, overflow: 'hidden' }}>
           <div style={{ height: '100%', width: `${Math.min(100, Math.max(0, progressPct))}%`, borderRadius: '2px', backgroundColor: colors.statusActive, transition: 'width 0.4s ease' }} />
         </div>
       </div>
@@ -914,11 +914,11 @@ export const Schedule: React.FC = () => {
           projectId={activeProject?.id}
         />
         <div role="status" aria-label="Build Your Project Schedule" style={{ maxWidth: '480px', margin: '80px auto', textAlign: 'center' }}>
-          <CalendarDays size={48} color='#9CA3AF' style={{ marginBottom: '24px' }} />
-          <div style={{ fontSize: '18px', fontWeight: 600, color: '#1A1A2E', marginBottom: '12px' }}>
+          <CalendarDays size={48} color=colors.textTertiary style={{ marginBottom: '24px' }} />
+          <div style={{ fontSize: '18px', fontWeight: 600, color: colors.textPrimary, marginBottom: '12px' }}>
             Build your schedule to track every phase from mobilization to closeout
           </div>
-          <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '32px', lineHeight: typography.lineHeight.normal }}>
+          <div style={{ fontSize: '14px', color: colors.textSecondary, marginBottom: '32px', lineHeight: typography.lineHeight.normal }}>
             Import your P6 or MS Project schedule, or create phases manually
           </div>
           <PermissionGate permission="schedule.edit">
@@ -927,7 +927,7 @@ export const Schedule: React.FC = () => {
                 onClick={() => setShowImportModal(true)}
                 style={{
                   background: colors.primaryOrange,
-                  color: '#FFFFFF',
+                  color: colors.white,
                   border: 'none',
                   borderRadius: borderRadius.md,
                   padding: `${spacing.sm} ${spacing.lg}`,
@@ -941,7 +941,7 @@ export const Schedule: React.FC = () => {
               </button>
               <button
                 style={{
-                  background: '#FFFFFF',
+                  background: colors.white,
                   color: colors.textPrimary,
                   border: `1px solid ${colors.borderDefault}`,
                   borderRadius: borderRadius.md,
@@ -973,7 +973,7 @@ export const Schedule: React.FC = () => {
         alignItems: 'center',
         gap: '6px',
         fontSize: '12px',
-        color: '#6B7280',
+        color: colors.textSecondary,
         fontWeight: 500,
       }}
     >
@@ -983,7 +983,7 @@ export const Schedule: React.FC = () => {
           width: '8px',
           height: '8px',
           borderRadius: '50%',
-          backgroundColor: '#4EC896',
+          backgroundColor: colors.statusActive,
           animation: 'livePulse 1.8s ease-in-out infinite',
           flexShrink: 0,
         }}
@@ -1057,8 +1057,8 @@ export const Schedule: React.FC = () => {
           height: 1,
           overflow: 'hidden',
           zIndex: 1000,
-          backgroundColor: '#0F1629',
-          color: '#fff',
+          backgroundColor: colors.darkNavy,
+          color: colors.white,
           padding: '8px 16px',
           borderRadius: '4px',
           textDecoration: 'none',
@@ -1444,7 +1444,7 @@ export const Schedule: React.FC = () => {
                         onClick={() => openCopilotWithRisk(risk)}
                         style={{
                           padding: `${spacing['1']} ${spacing['3']}`,
-                          backgroundColor: colors.primaryOrange, color: '#fff',
+                          backgroundColor: colors.primaryOrange, color: colors.white,
                           border: 'none', borderRadius: borderRadius.base,
                           fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
                           fontFamily: typography.fontFamily, cursor: 'pointer',
@@ -1472,7 +1472,7 @@ export const Schedule: React.FC = () => {
                   style={{
                     display: 'flex', alignItems: 'center', gap: spacing['2'],
                     padding: `${spacing['1']} ${spacing['3']}`,
-                    backgroundColor: colors.primaryOrange, color: '#fff',
+                    backgroundColor: colors.primaryOrange, color: colors.white,
                     border: 'none', borderRadius: borderRadius.base,
                     fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
                     fontFamily: typography.fontFamily,
@@ -1514,8 +1514,8 @@ export const Schedule: React.FC = () => {
         {error ? (
           /* Inline API error card */
           <div style={{
-            backgroundColor: '#FEF2F2',
-            border: '1px solid #FECACA',
+            backgroundColor: colors.statusCriticalSubtle,
+            border: '1px solid ${colors.statusCritical}40',
             borderRadius: borderRadius.lg,
             padding: spacing['5'],
             display: 'flex',
@@ -1561,7 +1561,7 @@ export const Schedule: React.FC = () => {
                   <p style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: colors.textPrimary }}>
                     Build your project schedule
                   </p>
-                  <p style={{ margin: 0, fontSize: '14px', color: '#6B7280', lineHeight: typography.lineHeight.relaxed }}>
+                  <p style={{ margin: 0, fontSize: '14px', color: colors.textSecondary, lineHeight: typography.lineHeight.relaxed }}>
                     Create phases and activities to track every milestone from mobilization to closeout. Import from Primavera P6 or Microsoft Project to get started quickly.
                   </p>
                 </div>
@@ -1570,8 +1570,8 @@ export const Schedule: React.FC = () => {
                     onClick={() => addToast('info', 'Phase creation available in the next update')}
                     style={{
                       padding: `${spacing.sm} ${spacing.xl}`,
-                      backgroundColor: '#F47820',
-                      color: '#FFFFFF',
+                      backgroundColor: colors.primaryOrange,
+                      color: colors.white,
                       border: 'none',
                       borderRadius: borderRadius.md,
                       fontSize: typography.fontSize.body,
@@ -1588,7 +1588,7 @@ export const Schedule: React.FC = () => {
                       padding: `${spacing.sm} ${spacing.xl}`,
                       backgroundColor: 'transparent',
                       color: colors.textPrimary,
-                      border: '1px solid #E5E7EB',
+                      border: `1px solid ${colors.borderLight}`,
                       borderRadius: borderRadius.md,
                       fontSize: typography.fontSize.body,
                       fontWeight: typography.fontWeight.semibold,
@@ -1609,7 +1609,7 @@ export const Schedule: React.FC = () => {
               position: 'sticky',
               top: 0,
               zIndex: 10,
-              backgroundColor: '#F7F8FA',
+              backgroundColor: colors.surfacePage,
               padding: '12px 0 8px',
               display: 'flex',
               alignItems: 'center',
@@ -1660,8 +1660,8 @@ export const Schedule: React.FC = () => {
                       marginRight: 8,
                       border: active ? 'none' : `1px solid ${colors.borderDefault}`,
                       borderRadius: 22,
-                      backgroundColor: active ? colors.primaryOrange : '#FFFFFF',
-                      color: active ? '#FFFFFF' : colors.textSecondary,
+                      backgroundColor: active ? colors.primaryOrange : colors.white,
+                      color: active ? colors.white : colors.textSecondary,
                       fontSize: 14,
                       fontWeight: active ? 600 : 400,
                       fontFamily: typography.fontFamily,
@@ -1683,10 +1683,10 @@ export const Schedule: React.FC = () => {
                 })
                 .map((phase) => {
                 const statusColor =
-                  phase.status === 'completed' ? '#4EC896'
-                  : phase.status === 'in_progress' ? '#3B82F6'
-                  : phase.status === 'delayed' ? '#E74C3C'
-                  : '#F59E0B';
+                  phase.status === 'completed' ? colors.statusActive
+                  : phase.status === 'in_progress' ? colors.statusInfo
+                  : phase.status === 'delayed' ? colors.statusCritical
+                  : colors.statusPending;
                 const statusLabel = (phase.status ?? 'not started').replace(/_/g, ' ');
                 const floatDays = phase.float_days ?? (phase as unknown as Record<string, unknown>).floatDays ?? 0;
                 return (
@@ -1711,10 +1711,10 @@ export const Schedule: React.FC = () => {
                       }
                     }}
                     style={{
-                      backgroundColor: '#FFFFFF',
+                      backgroundColor: colors.white,
                       borderRadius: 8,
-                      border: '1px solid #E5E7EB',
-                      borderLeft: phase.is_critical_path === true ? '3px solid #E74C3C' : '1px solid #E5E7EB',
+                      border: `1px solid ${colors.borderLight}`,
+                      borderLeft: phase.is_critical_path === true ? `3px solid ${colors.statusCritical}` : `1px solid ${colors.borderLight}`,
                       padding: 16,
                       minHeight: 64,
                       cursor: 'pointer',
@@ -1725,13 +1725,13 @@ export const Schedule: React.FC = () => {
                     <span style={{ fontWeight: 600, fontSize: 14, color: colors.textPrimary, display: 'block', marginBottom: 6 }}>
                       {phase.is_milestone ? '◆ ' : ''}{phase.name}
                     </span>
-                    <span style={{ fontSize: 14, color: '#6B7280', display: 'block', marginBottom: 8 }}>
+                    <span style={{ fontSize: 14, color: colors.textSecondary, display: 'block', marginBottom: 8 }}>
                       {new Date(phase.startDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: '2-digit' })}
                       {' \u2014 '}
                       {new Date(phase.endDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: '2-digit' })}
                     </span>
                     {!phase.is_milestone && (
-                      <div style={{ height: 6, backgroundColor: '#E5E7EB', borderRadius: 3, overflow: 'hidden', marginBottom: 8 }}>
+                      <div style={{ height: 6, backgroundColor: colors.borderLight, borderRadius: 3, overflow: 'hidden', marginBottom: 8 }}>
                         <div style={{ height: '100%', width: `${phase.progress ?? 0}%`, backgroundColor: statusColor, borderRadius: 3 }} />
                       </div>
                     )}
@@ -1938,10 +1938,10 @@ export const Schedule: React.FC = () => {
                         const durationDays = Math.round((new Date(phase.endDate).getTime() - new Date(phase.startDate).getTime()) / 86400000);
                         const floatDays = phase.float_days ?? (phase as unknown as Record<string, unknown>).floatDays ?? 0;
                         const statusColor =
-                          phase.status === 'completed' ? '#9CA3AF'
-                          : phase.status === 'in_progress' ? '#3B82F6'
-                          : phase.status === 'delayed' ? '#F5A623'
-                          : '#9CA3AF';
+                          phase.status === 'completed' ? colors.textTertiary
+                          : phase.status === 'in_progress' ? colors.statusInfo
+                          : phase.status === 'delayed' ? colors.statusPending
+                          : colors.textTertiary;
                         const isCP = phase.is_critical_path === true;
                         return (
                           <tr
@@ -1951,7 +1951,7 @@ export const Schedule: React.FC = () => {
                             aria-label={`${phase.name}, ${statusLabel}, ${phase.progress ?? 0}% complete, starts ${phase.startDate}`}
                             style={{
                               borderBottom: `1px solid ${colors.borderSubtle}`,
-                              borderLeft: isCP ? '3px solid #E74C3C' : '3px solid transparent',
+                              borderLeft: isCP ? `3px solid ${colors.statusCritical}` : '3px solid transparent',
                               cursor: 'pointer',
                               transition: transitions.quick,
                               outline: 'none',
@@ -1975,7 +1975,7 @@ export const Schedule: React.FC = () => {
                             }}
                           >
                             <td role="gridcell" style={{ padding: `${spacing.sm} ${spacing.md}`, color: colors.textPrimary, fontWeight: isCP ? typography.fontWeight.semibold : typography.fontWeight.normal, maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {isCP && <span style={{ fontSize: '10px', fontWeight: 700, backgroundColor: '#E74C3C', color: '#fff', padding: '0 4px', borderRadius: 3, lineHeight: '16px', marginRight: 6 }}>CP</span>}
+                              {isCP && <span style={{ fontSize: '10px', fontWeight: 700, backgroundColor: colors.statusCritical, color: colors.white, padding: '0 4px', borderRadius: 3, lineHeight: '16px', marginRight: 6 }}>CP</span>}
                               {phase.name}
                             </td>
                             <td role="gridcell" style={{ padding: `${spacing.sm} ${spacing.md}`, color: colors.textSecondary, whiteSpace: 'nowrap' }}>
@@ -2000,7 +2000,7 @@ export const Schedule: React.FC = () => {
                                 <span style={{ fontSize: typography.fontSize.caption, color: colors.textSecondary, minWidth: 28 }}>{phase.progress ?? 0}%</span>
                               </div>
                             </td>
-                            <td role="gridcell" style={{ padding: `${spacing.sm} ${spacing.md}`, color: Number(floatDays) === 0 ? '#E74C3C' : colors.textTertiary, fontWeight: Number(floatDays) === 0 ? typography.fontWeight.semibold : typography.fontWeight.normal }}>
+                            <td role="gridcell" style={{ padding: `${spacing.sm} ${spacing.md}`, color: Number(floatDays) === 0 ? colors.statusCritical : colors.textTertiary, fontWeight: Number(floatDays) === 0 ? typography.fontWeight.semibold : typography.fontWeight.normal }}>
                               {floatDays}d
                             </td>
                           </tr>
@@ -2014,9 +2014,9 @@ export const Schedule: React.FC = () => {
                 fallback={(err) => (
                   <div style={{
                     padding: spacing['5'],
-                    backgroundColor: '#FEF2F2',
+                    backgroundColor: colors.statusCriticalSubtle,
                     borderRadius: borderRadius.md,
-                    border: '1px solid #FECACA',
+                    border: '1px solid ${colors.statusCritical}40',
                   }}>
                     <p style={{ margin: 0, fontWeight: typography.fontWeight.semibold, color: colors.statusCritical, fontSize: typography.fontSize.sm }}>
                       Schedule could not be displayed
@@ -2035,7 +2035,7 @@ export const Schedule: React.FC = () => {
                         marginTop: spacing['3'],
                         padding: `${spacing['2']} ${spacing['4']}`,
                         backgroundColor: colors.statusCritical,
-                        color: '#fff',
+                        color: colors.white,
                         border: 'none',
                         borderRadius: borderRadius.base,
                         fontSize: typography.fontSize.sm,

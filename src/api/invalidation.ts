@@ -161,7 +161,7 @@ export async function triggerNotificationsForMutation(
         return
     }
   } catch (err) {
-    console.error('triggerNotificationsForMutation error:', err)
+    if (import.meta.env.DEV) console.error('triggerNotificationsForMutation error:', err)
   }
 }
 

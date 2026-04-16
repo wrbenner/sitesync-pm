@@ -95,7 +95,7 @@ export function useDailyLogs(projectId: string) {
         return data as DailyLogRow
       } catch (err) {
         setLogs((prev) => prev.filter((l) => l.id !== optimisticItem.id))
-        console.error('createLog failed:', err)
+        if (import.meta.env.DEV) console.error('createLog failed:', err)
         throw err
       }
     },
@@ -118,7 +118,7 @@ export function useDailyLogs(projectId: string) {
         return data as DailyLogRow
       } catch (err) {
         if (previous) setLogs((prev) => prev.map((l) => (l.id === id ? previous : l)))
-        console.error('updateLog failed:', err)
+        if (import.meta.env.DEV) console.error('updateLog failed:', err)
         throw err
       }
     },
@@ -195,7 +195,7 @@ export function useIncidents(projectId: string) {
         return data as IncidentRow
       } catch (err) {
         setIncidents((prev) => prev.filter((i) => i.id !== optimisticItem.id))
-        console.error('createIncident failed:', err)
+        if (import.meta.env.DEV) console.error('createIncident failed:', err)
         throw err
       }
     },
@@ -218,7 +218,7 @@ export function useIncidents(projectId: string) {
         return data as IncidentRow
       } catch (err) {
         if (previous) setIncidents((prev) => prev.map((i) => (i.id === id ? previous : i)))
-        console.error('updateIncident failed:', err)
+        if (import.meta.env.DEV) console.error('updateIncident failed:', err)
         throw err
       }
     },
@@ -343,7 +343,7 @@ export function useToolboxTalks(projectId: string) {
         return data as ToolboxTalkRow
       } catch (err) {
         setTalks((prev) => prev.filter((t) => t.id !== optimisticItem.id))
-        console.error('createTalk failed:', err)
+        if (import.meta.env.DEV) console.error('createTalk failed:', err)
         throw err
       }
     },
@@ -421,7 +421,7 @@ export function useCorrectiveActions(projectId: string) {
         return data as CorrectiveActionRow
       } catch (err) {
         setActions((prev) => prev.filter((a) => a.id !== optimisticItem.id))
-        console.error('createAction failed:', err)
+        if (import.meta.env.DEV) console.error('createAction failed:', err)
         throw err
       }
     },
@@ -444,7 +444,7 @@ export function useCorrectiveActions(projectId: string) {
         return data as CorrectiveActionRow
       } catch (err) {
         if (previous) setActions((prev) => prev.map((a) => (a.id === id ? previous : a)))
-        console.error('updateAction failed:', err)
+        if (import.meta.env.DEV) console.error('updateAction failed:', err)
         throw err
       }
     },

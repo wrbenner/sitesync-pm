@@ -95,7 +95,7 @@ class SyncManager {
     this.pollInterval = setInterval(() => {
       // Error handling in polling callback
       this.refreshCounts().catch((err) => {
-        console.warn('SyncManager: Failed to refresh counts:', err)
+        if (import.meta.env.DEV) console.warn('SyncManager: Failed to refresh counts:', err)
       })
     }, 3000)
   }
@@ -110,7 +110,7 @@ class SyncManager {
       this.update({ pendingCount, conflictCount, lastSynced })
     } catch (err) {
       // Dexie may throw if DB is closing or tab is being unloaded
-      console.warn('SyncManager: refreshCounts error:', err)
+      if (import.meta.env.DEV) console.warn('SyncManager: refreshCounts error:', err)
     }
   }
 
@@ -149,7 +149,7 @@ class SyncManager {
       this.update({ syncState: 'idle', syncProgress: null })
       return result
     } catch (err) {
-      console.error('SyncManager: sync error:', err)
+      if (import.meta.env.DEV) console.error('SyncManager: sync error:', err)
       this.update({ syncState: 'error', syncProgress: null })
       return { synced: 0, failed: 0, conflicts: 0 }
     } finally {
@@ -178,16 +178,18 @@ class SyncManager {
       this.update({ syncState: 'idle', cacheProgress: null })
 
       // Warn about failures
-      if (result.errors.length > 0) {
-        console.warn(`SyncManager: Cache completed with ${result.errors.length} table errors:`, result.errors)
-      }
-      if (result.truncatedTables.length > 0) {
-        console.warn(`SyncManager: Data truncated for tables:`, result.truncatedTables)
+      if (import.meta.env.DEV) {
+        if (result.errors.length > 0) {
+          console.warn(`SyncManager: Cache completed with ${result.errors.length} table errors:`, result.errors)
+        }
+        if (result.truncatedTables.length > 0) {
+          console.warn(`SyncManager: Data truncated for tables:`, result.truncatedTables)
+        }
       }
 
       return result
     } catch (err) {
-      console.error('SyncManager: cacheProject error:', err)
+      if (import.meta.env.DEV) console.error('SyncManager: cacheProject error:', err)
       this.update({ syncState: 'error', cacheProgress: null })
       return null
     }

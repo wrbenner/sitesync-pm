@@ -56,7 +56,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         }
       });
     } catch (error) {
-      console.error('Auth initialization failed:', error);
+      if (import.meta.env.DEV) console.error('Auth initialization failed:', error);
       set({ error: error instanceof Error ? error : new Error(String(error)) });
     } finally {
       set({ loading: false, initialized: true });

@@ -57,7 +57,7 @@ async function batchFetchEntityLabels(
             setCachedEntityLabel(`${projectId}:rfi:${row.id}`, label)
           }
         })
-        .catch((err: unknown) => { console.warn('[ActivityFeed] Failed to fetch entity labels for type:', err instanceof Error ? err.message : String(err)) }),
+        .catch((err: unknown) => { if (import.meta.env.DEV) console.warn('[ActivityFeed] Failed to fetch entity labels for type:', err instanceof Error ? err.message : String(err)) }),
     )
   }
 
@@ -75,7 +75,7 @@ async function batchFetchEntityLabels(
             setCachedEntityLabel(`${projectId}:submittal:${row.id}`, label)
           }
         })
-        .catch((err: unknown) => { console.warn('[ActivityFeed] Failed to fetch entity labels for type:', err instanceof Error ? err.message : String(err)) }),
+        .catch((err: unknown) => { if (import.meta.env.DEV) console.warn('[ActivityFeed] Failed to fetch entity labels for type:', err instanceof Error ? err.message : String(err)) }),
     )
   }
 
@@ -93,7 +93,7 @@ async function batchFetchEntityLabels(
             setCachedEntityLabel(`${projectId}:punch_list_item:${row.id}`, label)
           }
         })
-        .catch((err: unknown) => { console.warn('[ActivityFeed] punch_list_item label fetch failed:', err instanceof Error ? err.message : String(err)) }),
+        .catch((err: unknown) => { if (import.meta.env.DEV) console.warn('[ActivityFeed] punch_list_item label fetch failed:', err instanceof Error ? err.message : String(err)) }),
     )
   }
 
@@ -111,7 +111,7 @@ async function batchFetchEntityLabels(
             setCachedEntityLabel(`${projectId}:change_order:${row.id}`, label)
           }
         })
-        .catch((err: unknown) => { console.warn('[ActivityFeed] Failed to fetch entity labels for type:', err instanceof Error ? err.message : String(err)) }),
+        .catch((err: unknown) => { if (import.meta.env.DEV) console.warn('[ActivityFeed] Failed to fetch entity labels for type:', err instanceof Error ? err.message : String(err)) }),
     )
   }
 
@@ -129,7 +129,7 @@ async function batchFetchEntityLabels(
             setCachedEntityLabel(`${projectId}:punch_item:${row.id}`, label)
           }
         })
-        .catch((err: unknown) => { console.warn('[ActivityFeed] Failed to fetch entity labels for type:', err instanceof Error ? err.message : String(err)) }),
+        .catch((err: unknown) => { if (import.meta.env.DEV) console.warn('[ActivityFeed] Failed to fetch entity labels for type:', err instanceof Error ? err.message : String(err)) }),
     )
   }
 
@@ -147,7 +147,7 @@ async function batchFetchEntityLabels(
             setCachedEntityLabel(`${projectId}:daily_log:${row.id}`, label)
           }
         })
-        .catch((err: unknown) => { console.warn('[ActivityFeed] Failed to fetch entity labels for type:', err instanceof Error ? err.message : String(err)) }),
+        .catch((err: unknown) => { if (import.meta.env.DEV) console.warn('[ActivityFeed] Failed to fetch entity labels for type:', err instanceof Error ? err.message : String(err)) }),
     )
   }
 
@@ -165,7 +165,7 @@ async function batchFetchEntityLabels(
             setCachedEntityLabel(`${projectId}:drawing:${row.id}`, label)
           }
         })
-        .catch((err: unknown) => { console.warn('[ActivityFeed] Failed to fetch entity labels for type:', err instanceof Error ? err.message : String(err)) }),
+        .catch((err: unknown) => { if (import.meta.env.DEV) console.warn('[ActivityFeed] Failed to fetch entity labels for type:', err instanceof Error ? err.message : String(err)) }),
     )
   }
 
@@ -183,7 +183,7 @@ async function batchFetchEntityLabels(
             setCachedEntityLabel(`${projectId}:meeting:${row.id}`, label)
           }
         })
-        .catch((err: unknown) => { console.warn('[ActivityFeed] Failed to fetch entity labels for type:', err instanceof Error ? err.message : String(err)) }),
+        .catch((err: unknown) => { if (import.meta.env.DEV) console.warn('[ActivityFeed] Failed to fetch entity labels for type:', err instanceof Error ? err.message : String(err)) }),
     )
   }
 
@@ -200,7 +200,7 @@ async function batchFetchEntityLabels(
             setCachedEntityLabel(`${projectId}:task:${row.id}`, row.title)
           }
         })
-        .catch((err: unknown) => { console.warn('[ActivityFeed] Failed to fetch entity labels for type:', err instanceof Error ? err.message : String(err)) }),
+        .catch((err: unknown) => { if (import.meta.env.DEV) console.warn('[ActivityFeed] Failed to fetch entity labels for type:', err instanceof Error ? err.message : String(err)) }),
     )
   }
 

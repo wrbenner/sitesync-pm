@@ -474,7 +474,7 @@ const DrawingsPage: React.FC = () => {
           </div>
 
           {/* Discipline filter pills */}
-          <div style={{ position: 'sticky', top: 0, zIndex: 10, backgroundColor: '#ffffff', paddingTop: spacing['2'], paddingBottom: spacing['2'], marginBottom: spacing.xl }}>
+          <div style={{ position: 'sticky', top: 0, zIndex: 10, backgroundColor: colors.white, paddingTop: spacing['2'], paddingBottom: spacing['2'], marginBottom: spacing.xl }}>
           <div role="group" aria-label="Filter by discipline" style={{ display: 'flex', gap: spacing.sm, flexWrap: 'wrap', alignItems: 'center' }}>
             {uniqueDisciplines.map((discipline) => {
               const isActive = activeFilters.has(discipline);
@@ -512,7 +512,7 @@ const DrawingsPage: React.FC = () => {
                     gap: spacing['1'],
                     padding: `${spacing.sm} ${spacing.md}`,
                     backgroundColor: isActive ? pillColor : 'transparent',
-                    color: isActive ? '#ffffff' : pillColor,
+                    color: isActive ? colors.white : pillColor,
                     border: `1.5px solid ${pillColor}`,
                     borderRadius: borderRadius.full,
                     cursor: 'pointer',
@@ -634,7 +634,7 @@ const DrawingsPage: React.FC = () => {
               </>
             )}
             {!loading && error && (
-              <div role="alert" style={{ margin: spacing['4'], padding: spacing['4'], backgroundColor: '#fff', border: `1px solid ${colors.borderSubtle}`, borderRadius: 12, display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
+              <div role="alert" style={{ margin: spacing['4'], padding: spacing['4'], backgroundColor: colors.white, border: `1px solid ${colors.borderSubtle}`, borderRadius: 12, display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
                 <AlertCircle size={16} color={colors.statusCritical} style={{ flexShrink: 0 }} />
                 <p style={{ flex: 1, margin: 0, fontSize: typography.fontSize.sm, color: colors.textPrimary }}>Unable to load drawings. Check your connection and try again.</p>
                 <Btn variant="secondary" size="sm" onClick={() => refetch()}>Retry</Btn>
@@ -1023,13 +1023,13 @@ const DrawingsPage: React.FC = () => {
           <div style={{ position: 'sticky', top: spacing.xl, height: 'fit-content' }}>
             <Card padding={spacing.xl}>
               {viewingRevisionNum !== null && (
-                <div style={{ marginBottom: spacing.xl, padding: `${spacing.sm} ${spacing.md}`, backgroundColor: '#FFFBEB', border: '1px solid #F59E0B', borderRadius: borderRadius.base, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm }}>
-                  <span style={{ fontSize: typography.fontSize.sm, color: '#92400E' }}>
+                <div style={{ marginBottom: spacing.xl, padding: `${spacing.sm} ${spacing.md}`, backgroundColor: colors.statusPendingSubtle, border: `1px solid ${colors.statusPending}`, borderRadius: borderRadius.base, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm }}>
+                  <span style={{ fontSize: typography.fontSize.sm, color: colors.statusPending }}>
                     Viewing Revision {viewingRevisionNum} — not the current version
                   </span>
                   <button
                     onClick={() => setViewingRevisionNum(null)}
-                    style={{ fontSize: typography.fontSize.sm, color: '#D97706', fontWeight: typography.fontWeight.semibold, border: 'none', background: 'none', cursor: 'pointer', padding: 0, fontFamily: typography.fontFamily, whiteSpace: 'nowrap' }}
+                    style={{ fontSize: typography.fontSize.sm, color: colors.primaryOrange, fontWeight: typography.fontWeight.semibold, border: 'none', background: 'none', cursor: 'pointer', padding: 0, fontFamily: typography.fontFamily, whiteSpace: 'nowrap' }}
                   >
                     Back to Current
                   </button>
@@ -1181,7 +1181,7 @@ const DrawingsPage: React.FC = () => {
                           role="listitem"
                           aria-label={`Revision ${rev.revision_number}`}
                           style={{
-                            borderLeft: `2px solid ${isCurrent ? colors.statusActive : '#E5E7EB'}`,
+                            borderLeft: `2px solid ${isCurrent ? colors.statusActive : colors.borderLight}`,
                             paddingLeft: 16,
                             marginBottom: 12,
                             display: 'flex',
@@ -1196,7 +1196,7 @@ const DrawingsPage: React.FC = () => {
                               width: 8,
                               height: 8,
                               borderRadius: '50%',
-                              backgroundColor: isCurrent ? colors.statusActive : '#9CA3AF',
+                              backgroundColor: isCurrent ? colors.statusActive : colors.textTertiary,
                               flexShrink: 0,
                               marginTop: 4,
                             }}

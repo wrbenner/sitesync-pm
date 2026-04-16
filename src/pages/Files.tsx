@@ -417,7 +417,7 @@ const FilesPage: React.FC = () => {
 
   if (loading) {
     const skeletonPulse: React.CSSProperties = {
-      backgroundColor: '#E5E7EB',
+      backgroundColor: colors.borderLight,
       animation: 'pulse 1.5s ease-in-out infinite',
       borderRadius: 4,
       opacity: 0.6,
@@ -523,7 +523,7 @@ const FilesPage: React.FC = () => {
           { label: 'This Week', value: metrics.recentUploads, icon: <UploadIcon size={20} color={colors.statusActive} /> },
           { label: 'Total Size', value: formatBytes(metrics.totalBytes), icon: <HardDrive size={20} color={colors.textSecondary} /> },
         ].map(({ label, value, icon }) => (
-          <div key={label} style={{ background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: 12, padding: 24 }}>
+          <div key={label} style={{ background: colors.white, border: '1px solid #E5E7EB', borderRadius: 12, padding: 24 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
               <span style={{ fontSize: 12, color: colors.textTertiary, fontWeight: typography.fontWeight.medium }}>{label}</span>
               {icon}

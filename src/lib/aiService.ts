@@ -61,7 +61,7 @@ export class AIService {
       const systemTokens = Math.ceil(CONSTRUCTION_SYSTEM_PROMPT.length / APPROX_CHARS_PER_TOKEN)
       const contextTokens = Math.ceil(contextText.length / APPROX_CHARS_PER_TOKEN)
       if (systemTokens + contextTokens > TOTAL_TOKEN_LIMIT) {
-        console.warn(`[aiService] Context budget exceeded: system ~${systemTokens} + context ~${contextTokens} tokens > ${TOTAL_TOKEN_LIMIT} limit`)
+        if (import.meta.env.DEV) console.warn(`[aiService] Context budget exceeded: system ~${systemTokens} + context ~${contextTokens} tokens > ${TOTAL_TOKEN_LIMIT} limit`)
       }
       return [systemMessage, this.makeContextMessage(contextText), ...messages]
     }

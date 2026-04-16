@@ -49,6 +49,6 @@ export async function logAuditEntry(entry: AuditEntry): Promise<void> {
 
   if (error) {
     // Never block the user's action due to audit logging failures
-    console.error('Failed to write audit log:', error)
+    if (import.meta.env.DEV) console.error('Failed to write audit log:', error)
   }
 }

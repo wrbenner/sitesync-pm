@@ -284,7 +284,7 @@ export function buildProjectContext(data: ProjectAIContext): string {
   const estimatedTokens = Math.ceil(result.length / APPROX_CHARS_PER_TOKEN)
   if (estimatedTokens > CONTEXT_TOKEN_LIMIT) {
     const maxChars = CONTEXT_TOKEN_LIMIT * APPROX_CHARS_PER_TOKEN
-    console.warn(`[aiPrompts] Project context truncated: ~${estimatedTokens} tokens exceeds ${CONTEXT_TOKEN_LIMIT} token limit`)
+    if (import.meta.env.DEV) console.warn(`[aiPrompts] Project context truncated: ~${estimatedTokens} tokens exceeds ${CONTEXT_TOKEN_LIMIT} token limit`)
     return result.slice(0, maxChars)
   }
   return result

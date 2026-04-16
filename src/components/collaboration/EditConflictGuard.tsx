@@ -78,7 +78,7 @@ export function useOptimisticLock(
         }
 
         if (error || !data) {
-          console.warn(`[useOptimisticLock] Conflict check failed for table "${table}":`, error?.message ?? 'No data returned');
+          if (import.meta.env.DEV) console.warn(`[useOptimisticLock] Conflict check failed for table "${table}":`, error?.message ?? 'No data returned');
           useUiStore.getState().addToast({
             type: 'warning',
             title: 'Conflict check failed',
@@ -458,13 +458,13 @@ export const EditConflictGuard: React.FC<EditConflictGuardProps> = ({
     const tryAcquire = () =>
       acquireEditLock(entityType, entityId, userId)
         .then((result) => { if (!cancelled) setLockResult(result); })
-        .catch(console.error);
+        .catch((err) => { if (import.meta.env.DEV) console.error(err); });
 
     tryAcquire();
 
     // Renew every 60 s to keep the lock alive
     renewRef.current = setInterval(() => {
-      renewEditLock(entityType, entityId, userId).catch(console.error);
+      renewEditLock(entityType, entityId, userId).catch((err) => { if (import.meta.env.DEV) console.error(err); });
     }, 60_000);
 
     // Realtime: re-evaluate lock whenever this entity's lock row changes
@@ -485,7 +485,7 @@ export const EditConflictGuard: React.FC<EditConflictGuardProps> = ({
     return () => {
       cancelled = true;
       if (renewRef.current) clearInterval(renewRef.current);
-      releaseEditLock(entityType, entityId, userId).catch(console.error);
+      releaseEditLock(entityType, entityId, userId).catch((err) => { if (import.meta.env.DEV) console.error(err); });
       supabase.removeChannel(channel);
     };
   // Stable identity: only run on mount / when ids change
@@ -513,7 +513,7 @@ export const EditConflictGuard: React.FC<EditConflictGuardProps> = ({
     // Re-attempt acquisition: signals intent to take over an expired or released lock
     acquireEditLock(entityType, entityId, userId)
       .then(setLockResult)
-      .catch(console.error);
+      .catch((err) => { if (import.meta.env.DEV) console.error(err); });
   }, [entityType, entityId, userId]);
 
   const isLockedByOther = lockResult?.locked === true;

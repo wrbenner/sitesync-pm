@@ -419,7 +419,7 @@ const PhotoCard: React.FC<PhotoCardProps> = ({ capture, isSelected = false, onSe
             gap: '3px',
           }}
         >
-          <span style={{ fontSize: '10px', color: '#fff', fontWeight: typography.fontWeight.medium }}>weather</span>
+          <span style={{ fontSize: '10px', color: colors.white, fontWeight: typography.fontWeight.medium }}>weather</span>
         </div>
       )}
 
@@ -439,7 +439,7 @@ const PhotoCard: React.FC<PhotoCardProps> = ({ capture, isSelected = false, onSe
           }}
         >
           <Sparkles size={11} color="#fff" />
-          <span style={{ fontSize: '10px', color: '#fff', fontWeight: typography.fontWeight.semibold }}>
+          <span style={{ fontSize: '10px', color: colors.white, fontWeight: typography.fontWeight.semibold }}>
             {capture.ai_category}
           </span>
         </div>
@@ -461,7 +461,7 @@ const PhotoCard: React.FC<PhotoCardProps> = ({ capture, isSelected = false, onSe
           }}
         >
           <MapPin size={10} color="#fff" />
-          <span style={{ fontSize: '10px', color: '#fff' }}>{capture.location}</span>
+          <span style={{ fontSize: '10px', color: colors.white }}>{capture.location}</span>
         </div>
       )}
 
@@ -930,13 +930,13 @@ const FieldCaptureInner: React.FC = () => {
             gap: spacing['2'],
             padding: spacing['3'],
             marginBottom: spacing['4'],
-            backgroundColor: '#FEF3C7',
-            border: `1px solid #F59E0B`,
+            backgroundColor: colors.statusPendingSubtle,
+            border: `1px solid ${colors.statusPending}`,
             borderRadius: borderRadius.md,
           }}
         >
           <AlertTriangle size={16} color="#B45309" style={{ flexShrink: 0 }} />
-          <span style={{ fontSize: typography.fontSize.sm, color: '#92400E', fontWeight: typography.fontWeight.medium }}>
+          <span style={{ fontSize: typography.fontSize.sm, color: colors.statusPending, fontWeight: typography.fontWeight.medium }}>
             {pendingCount > 0
               ? `${pendingCount} photo${pendingCount !== 1 ? 's' : ''} pending upload`
               : 'You are offline. Photos will sync when you reconnect.'}

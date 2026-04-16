@@ -29,11 +29,11 @@ async function fetchScheduleMetrics(projectId: string): Promise<{
   ])
 
   if (criticalResult.error) {
-    console.warn('fetchScheduleMetrics critical query failed for project', projectId, criticalResult.error.message)
+    if (import.meta.env.DEV) console.warn('fetchScheduleMetrics critical query failed for project', projectId, criticalResult.error.message)
     return { scheduleVarianceDays: null, completionPercentage: null }
   }
   if (completionResult.error) {
-    console.warn('fetchScheduleMetrics completion query failed for project', projectId, completionResult.error.message)
+    if (import.meta.env.DEV) console.warn('fetchScheduleMetrics completion query failed for project', projectId, completionResult.error.message)
     return { scheduleVarianceDays: null, completionPercentage: null }
   }
 

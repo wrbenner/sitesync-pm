@@ -374,7 +374,7 @@ export const Login: React.FC = () => {
             </div>
 
             {error && (
-              <div role="alert" aria-live="polite" style={{ color: '#E74C3C', fontSize: '14px', padding: '8px 12px', backgroundColor: '#FEF2F2', borderRadius: '8px', marginTop: '8px', border: '1px solid #FECACA' }}>
+              <div role="alert" aria-live="polite" style={{ color: colors.statusCritical, fontSize: '14px', padding: '8px 12px', backgroundColor: colors.statusCriticalSubtle, borderRadius: '8px', marginTop: '8px', border: `1px solid ${colors.statusCritical}40` }}>
                 {error}
               </div>
             )}

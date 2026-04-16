@@ -91,7 +91,7 @@ export async function getPortfolioMetrics(orgId: string): Promise<PortfolioMetri
       const { data: rpcRows, error: rpcError } = await supabase.rpc('get_portfolio_metrics', { org_id: orgId })
 
       if (rpcError) {
-        console.warn('get_portfolio_metrics RPC unavailable, computing from queries:', rpcError.message)
+        if (import.meta.env.DEV) console.warn('get_portfolio_metrics RPC unavailable, computing from queries:', rpcError.message)
         // Fall back to manual aggregation using direct table queries scoped to the org's project IDs.
         // This handles missing RPC (42883), permission errors, and any other RPC failure.
         try {

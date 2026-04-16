@@ -52,7 +52,7 @@ export const DrawingDetail: React.FC<DrawingDetailProps> = ({
     <div style={{ position: 'sticky', top: spacing.xl, height: 'fit-content' }}>
       <Card padding={spacing.xl}>
         {viewingRevisionNum !== null && (
-          <div style={{ marginBottom: spacing.xl, padding: `${spacing.sm} ${spacing.md}`, backgroundColor: '#FFFBEB', border: '1px solid #F59E0B', borderRadius: borderRadius.base, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm }}>
+          <div style={{ marginBottom: spacing.xl, padding: `${spacing.sm} ${spacing.md}`, backgroundColor: colors.statusPendingSubtle, border: `1px solid ${colors.statusPending}`, borderRadius: borderRadius.base, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm }}>
             <span style={{ fontSize: typography.fontSize.sm, color: '#92400E' }}>Viewing Revision {viewingRevisionNum} — not the current version</span>
             <button onClick={() => setViewingRevisionNum(null)} style={{ fontSize: typography.fontSize.sm, color: '#D97706', fontWeight: typography.fontWeight.semibold, border: 'none', background: 'none', cursor: 'pointer', padding: 0, fontFamily: typography.fontFamily, whiteSpace: 'nowrap' }}>
               Back to Current

@@ -49,7 +49,7 @@ export async function deliverWebhook(
     .single()
 
   if (insertError) {
-    console.error('[webhooks] Failed to create delivery record:', insertError.message)
+    if (import.meta.env.DEV) console.error('[webhooks] Failed to create delivery record:', insertError.message)
     return
   }
 
@@ -82,7 +82,7 @@ export async function deliverWebhook(
       .eq('id', deliveryId)
 
     if (!response.ok) {
-      console.warn(`[webhooks] Delivery ${deliveryId} got ${response.status} — scheduled for retry`)
+      if (import.meta.env.DEV) console.warn(`[webhooks] Delivery ${deliveryId} got ${response.status} — scheduled for retry`)
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
@@ -95,7 +95,7 @@ export async function deliverWebhook(
       })
       .eq('id', deliveryId)
 
-    console.error('[webhooks] Delivery error:', message)
+    if (import.meta.env.DEV) console.error('[webhooks] Delivery error:', message)
   }
 }
 
@@ -107,7 +107,7 @@ export async function retryWebhook(deliveryId: string): Promise<void> {
     .single()
 
   if (error || !delivery) {
-    console.error('[webhooks] Could not load delivery for retry:', deliveryId)
+    if (import.meta.env.DEV) console.error('[webhooks] Could not load delivery for retry:', deliveryId)
     return
   }
 

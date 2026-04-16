@@ -478,7 +478,7 @@ const DailyLogPage: React.FC = () => {
           {/* 5 table row skeletons */}
           <div style={{ backgroundColor: colors.white, borderRadius: borderRadius.xl, border: `1px solid ${colors.borderSubtle}`, overflow: 'hidden' }}>
             {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} style={{ height: 48, margin: `${spacing['2']} ${spacing['5']}`, backgroundColor: '#E5E7EB', borderRadius: 8, animation: 'pulse-dl 1.5s ease-in-out infinite', borderBottom: i < 4 ? `1px solid ${colors.borderSubtle}` : 'none' }} aria-hidden="true" />
+              <div key={i} style={{ height: 48, margin: `${spacing['2']} ${spacing['5']}`, backgroundColor: colors.borderLight, borderRadius: 8, animation: 'pulse-dl 1.5s ease-in-out infinite', borderBottom: i < 4 ? `1px solid ${colors.borderSubtle}` : 'none' }} aria-hidden="true" />
             ))}
           </div>
         </div>
@@ -513,7 +513,7 @@ const DailyLogPage: React.FC = () => {
         {/* Inline error banner and empty state */}
         <div aria-live="polite">
           {error && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'], padding: `${spacing['3']} ${spacing['4']}`, backgroundColor: '#FEF2F2', border: `1px solid #FECACA`, borderRadius: borderRadius.lg, marginBottom: spacing['4'] }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'], padding: `${spacing['3']} ${spacing['4']}`, backgroundColor: colors.statusCriticalSubtle, border: `1px solid ${colors.statusCritical}40`, borderRadius: borderRadius.lg, marginBottom: spacing['4'] }}>
               <AlertTriangle size={16} color={colors.statusCritical} style={{ flexShrink: 0 }} />
               <p style={{ fontSize: typography.fontSize.sm, color: colors.statusCritical, margin: 0, flex: 1 }}>
                 {error}
@@ -535,7 +535,7 @@ const DailyLogPage: React.FC = () => {
                 <PermissionGate permission="daily_log.create">
                   <button
                     onClick={() => { setSelectedDate(new Date().toISOString().split('T')[0]); setShowCreateModal(true); }}
-                    style={{ backgroundColor: colors.primaryOrange, color: '#FFFFFF', border: 'none', borderRadius: '8px', padding: `${spacing['3']} ${spacing['5']}`, fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily, cursor: 'pointer', minHeight: '56px' }}
+                    style={{ backgroundColor: colors.primaryOrange, color: colors.white, border: 'none', borderRadius: '8px', padding: `${spacing['3']} ${spacing['5']}`, fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily, cursor: 'pointer', minHeight: '56px' }}
                   >
                     Start Today Log
                   </button>
@@ -769,7 +769,7 @@ const DailyLogPage: React.FC = () => {
       </div>
     }>
       {logError && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'], padding: `${spacing['3']} ${spacing['4']}`, backgroundColor: '#FEF2F2', border: `1px solid #FECACA`, borderRadius: borderRadius.lg, marginBottom: spacing['4'] }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'], padding: `${spacing['3']} ${spacing['4']}`, backgroundColor: colors.statusCriticalSubtle, border: `1px solid ${colors.statusCritical}40`, borderRadius: borderRadius.lg, marginBottom: spacing['4'] }}>
           <AlertTriangle size={16} color={colors.statusCritical} style={{ flexShrink: 0 }} />
           <p style={{ fontSize: typography.fontSize.sm, color: colors.statusCritical, margin: 0, flex: 1 }}>
             {(logError as Error).message || 'Failed to load daily log data'}
@@ -1354,8 +1354,8 @@ const DailyLogPage: React.FC = () => {
                     <span style={{
                       fontSize: '11px',
                       fontWeight: typography.fontWeight.semibold,
-                      color: '#7C3AED',
-                      backgroundColor: '#EDE9FE',
+                      color: colors.statusReview,
+                      backgroundColor: colors.statusReviewSubtle,
                       padding: `2px ${spacing['2']}`,
                       borderRadius: borderRadius.full,
                       letterSpacing: '0.2px',

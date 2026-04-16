@@ -17,7 +17,7 @@ export const getAiInsights = async (
       ? await aiService
           .generateBudgetInsights(projectId, financials.summary, financials.divisions)
           .catch((err) => {
-            console.error('[AI Endpoint] generateBudgetInsights failed:', err instanceof Error ? err.message : err)
+            if (import.meta.env.DEV) console.error('[AI Endpoint] generateBudgetInsights failed:', err instanceof Error ? err.message : err)
             captureException(err instanceof Error ? err : new Error(String(err)), {
               projectId,
               extra: { context: 'getAiInsights_generateBudgetInsights' },
@@ -58,7 +58,7 @@ export const getAiInsights = async (
       cachedData = data as Array<Record<string, unknown>>
     }
   } catch (err) {
-    console.error('[AI Endpoint] ai_insights cache lookup failed:', err instanceof Error ? err.message : err)
+    if (import.meta.env.DEV) console.error('[AI Endpoint] ai_insights cache lookup failed:', err instanceof Error ? err.message : err)
     captureException(err instanceof Error ? err : new Error(String(err)), {
       projectId,
       extra: { context: 'getAiInsights_cacheLookup' },
@@ -102,7 +102,7 @@ export const getAiInsights = async (
         .limit(5)
       overdueRfis = (data ?? []) as typeof overdueRfis
     } catch (err) {
-      console.error('[AI Endpoint] overdueRfis query failed:', err instanceof Error ? err.message : err)
+      if (import.meta.env.DEV) console.error('[AI Endpoint] overdueRfis query failed:', err instanceof Error ? err.message : err)
       captureException(err instanceof Error ? err : new Error(String(err)), {
         projectId,
         extra: { context: 'getAiInsights_overdueRfis' },
@@ -117,7 +117,7 @@ export const getAiInsights = async (
         .in('status', ['open', 'in_progress'])
       openPunchCount = count ?? 0
     } catch (err) {
-      console.error('[AI Endpoint] openPunchCount query failed:', err instanceof Error ? err.message : err)
+      if (import.meta.env.DEV) console.error('[AI Endpoint] openPunchCount query failed:', err instanceof Error ? err.message : err)
       captureException(err instanceof Error ? err : new Error(String(err)), {
         projectId,
         extra: { context: 'getAiInsights_openPunchCount' },
@@ -133,7 +133,7 @@ export const getAiInsights = async (
         (row) => (row.spent_to_date ?? 0) > (row.current_budget ?? 0) && (row.current_budget ?? 0) > 0
       )
     } catch (err) {
-      console.error('[AI Endpoint] overBudgetItems query failed:', err instanceof Error ? err.message : err)
+      if (import.meta.env.DEV) console.error('[AI Endpoint] overBudgetItems query failed:', err instanceof Error ? err.message : err)
       captureException(err instanceof Error ? err : new Error(String(err)), {
         projectId,
         extra: { context: 'getAiInsights_overBudgetItems' },
@@ -149,7 +149,7 @@ export const getAiInsights = async (
         .limit(5)
       pendingSubmittals = (data ?? []) as typeof pendingSubmittals
     } catch (err) {
-      console.error('[AI Endpoint] pendingSubmittals query failed:', err instanceof Error ? err.message : err)
+      if (import.meta.env.DEV) console.error('[AI Endpoint] pendingSubmittals query failed:', err instanceof Error ? err.message : err)
       captureException(err instanceof Error ? err : new Error(String(err)), {
         projectId,
         extra: { context: 'getAiInsights_pendingSubmittals' },
@@ -165,7 +165,7 @@ export const getAiInsights = async (
         .limit(3)
       atRiskPhases = (data ?? []) as typeof atRiskPhases
     } catch (err) {
-      console.error('[AI Endpoint] atRiskPhases query failed:', err instanceof Error ? err.message : err)
+      if (import.meta.env.DEV) console.error('[AI Endpoint] atRiskPhases query failed:', err instanceof Error ? err.message : err)
       captureException(err instanceof Error ? err : new Error(String(err)), {
         projectId,
         extra: { context: 'getAiInsights_atRiskPhases' },
@@ -188,7 +188,7 @@ export const getAiInsights = async (
         .limit(10)
       upcomingPhases = (data ?? []) as typeof upcomingPhases
     } catch (err) {
-      console.error('[AI Endpoint] upcomingPhases query failed:', err instanceof Error ? err.message : err)
+      if (import.meta.env.DEV) console.error('[AI Endpoint] upcomingPhases query failed:', err instanceof Error ? err.message : err)
       captureException(err instanceof Error ? err : new Error(String(err)), {
         projectId,
         extra: { context: 'getAiInsights_upcomingPhases' },
@@ -207,7 +207,7 @@ export const getAiInsights = async (
           .limit(20)
         openRfisWithDates = (data ?? []) as typeof openRfisWithDates
       } catch (err) {
-        console.error('[AI Endpoint] openRfisWithDates query failed:', err instanceof Error ? err.message : err)
+        if (import.meta.env.DEV) console.error('[AI Endpoint] openRfisWithDates query failed:', err instanceof Error ? err.message : err)
         captureException(err instanceof Error ? err : new Error(String(err)), {
           projectId,
           extra: { context: 'getAiInsights_openRfisWithDates' },
