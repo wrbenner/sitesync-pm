@@ -1,8 +1,9 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { Upload, X, FileSpreadsheet, CheckCircle, Sparkles, AlertCircle } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { useQueryClient } from '@tanstack/react-query';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
-import { useBudgetStore } from '../../stores/budgetStore';
+import { fromTable } from '../../lib/supabase';
 import { useProjectContext } from '../../stores/projectContextStore';
 
 interface ParsedRow {
@@ -86,7 +87,7 @@ function parseNumber(val: unknown): number {
 }
 
 export function BudgetUpload({ open, onClose, onSuccess }: BudgetUploadProps) {
-  const { importDivisions } = useBudgetStore();
+  const queryClient = useQueryClient();
   const { activeProject } = useProjectContext();
   const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
   const [warnings, setWarnings] = useState<string[]>([]);
@@ -224,11 +225,13 @@ export function BudgetUpload({ open, onClose, onSuccess }: BudgetUploadProps) {
       committed: row.committed,
     }));
 
-    const { error: importError } = await importDivisions(activeProject.id, divisions);
+    const { error: importError } = await fromTable('budget_divisions').insert(divisions);
 
     if (importError) {
-      setError(importError);
+      setError(importError.message);
     } else {
+      await queryClient.invalidateQueries({ queryKey: ['budget_divisions', activeProject.id] });
+      await queryClient.invalidateQueries({ queryKey: ['budget_items', activeProject.id] });
       onSuccess?.();
       handleClose();
     }

@@ -1,5 +1,9 @@
-// TODO: Migrate to entityStore — see src/stores/entityStore.ts
-import { create } from 'zustand';
+// Thin wrapper over React Query — server data lives in the query cache.
+// The old Zustand store has been removed. Keeps the existing consumer API
+// (phases, metrics, loadSchedule, updatePhase) so call sites stay unchanged.
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback } from 'react';
+import { supabase } from '../lib/supabase';
 import { scheduleService } from '../services/scheduleService';
 import type { CreatePhaseInput } from '../services/scheduleService';
 import type { MappedSchedulePhase } from '../types/entities';
@@ -38,7 +42,6 @@ function makeDemoPhase(
     depends_on: null,
     created_at: null,
     updated_at: null,
-    // Extended domain
     baseline_start_date: startDate,
     baseline_end_date: baselineEnd ?? endDate,
     baseline_percent_complete: null,
@@ -53,7 +56,6 @@ function makeDemoPhase(
     baseline_duration_days: null,
     slippage_days: slippageDays,
     is_critical: isCritical,
-    // Camelcase
     startDate,
     endDate,
     progress,
@@ -87,8 +89,6 @@ const DEMO_PHASES: MappedSchedulePhase[] = [
   makeDemoPhase('demo-10', 'Commissioning and Closeout', '2027-01-04', '2027-02-27', 0, 'not_started', true),
 ];
 
-// ── Mapping ───────────────────────────────────────────────────────────────────
-
 function mapToMappedPhase(d: Record<string, unknown>): MappedSchedulePhase {
   const startDate = (d['start_date'] as string | null) ?? '';
   const endDate = (d['end_date'] as string | null) ?? '';
@@ -120,7 +120,6 @@ function mapToMappedPhase(d: Record<string, unknown>): MappedSchedulePhase {
     depends_on: (d['depends_on'] as string | null) ?? null,
     created_at: (d['created_at'] as string | null) ?? null,
     updated_at: (d['updated_at'] as string | null) ?? null,
-    // Extended domain fields
     baseline_start_date: null,
     baseline_end_date: null,
     baseline_percent_complete: null,
@@ -135,7 +134,6 @@ function mapToMappedPhase(d: Record<string, unknown>): MappedSchedulePhase {
     baseline_duration_days: null,
     slippage_days: slippageDays,
     is_critical: isCritical,
-    // Camelcase convenience
     startDate,
     endDate,
     progress: pct,
@@ -156,8 +154,6 @@ function mapToMappedPhase(d: Record<string, unknown>): MappedSchedulePhase {
   };
 }
 
-// ── Store ─────────────────────────────────────────────────────────────────────
-
 export type SchedulePhase = MappedSchedulePhase;
 
 export interface ScheduleMetrics {
@@ -166,27 +162,6 @@ export interface ScheduleMetrics {
   milestoneTotal: number;
   aiConfidenceLevel: number | null;
 }
-
-interface ScheduleState {
-  phases: SchedulePhase[];
-  metrics: ScheduleMetrics;
-  loading: boolean;
-  error: string | null;
-
-  loadSchedule: (projectId: string) => Promise<void>;
-  createPhase: (input: CreatePhaseInput) => Promise<{ error: string | null }>;
-  updatePhase: (id: string, updates: Partial<CreatePhaseInput>) => Promise<{ error: string | null }>;
-  transitionStatus: (phaseId: string, newStatus: ScheduleStatus) => Promise<{ error: string | null }>;
-  deletePhase: (phaseId: string) => Promise<{ error: string | null }>;
-  updateDependencies: (phaseId: string, predecessorIds: string[]) => Promise<{ error: string | null }>;
-}
-
-const DEFAULT_METRICS: ScheduleMetrics = {
-  daysBeforeSchedule: 0,
-  milestonesHit: 0,
-  milestoneTotal: 0,
-  aiConfidenceLevel: null,
-};
 
 function deriveMetrics(phases: SchedulePhase[]): ScheduleMetrics {
   const completedCount = phases.filter((p) => p.completed).length;
@@ -198,107 +173,124 @@ function deriveMetrics(phases: SchedulePhase[]): ScheduleMetrics {
   };
 }
 
-export const useScheduleStore = create<ScheduleState>()((set) => ({
-  phases: [],
-  metrics: DEFAULT_METRICS,
-  loading: false,
-  error: null,
+const DEFAULT_METRICS: ScheduleMetrics = {
+  daysBeforeSchedule: 0,
+  milestonesHit: 0,
+  milestoneTotal: 0,
+  aiConfidenceLevel: null,
+};
 
-  loadSchedule: async (projectId) => {
-    set({ loading: true, error: null });
-    const { data, error } = await scheduleService.loadPhases(projectId);
+interface ScheduleHookState {
+  phases: SchedulePhase[];
+  metrics: ScheduleMetrics;
+  loading: boolean;
+  error: string | null;
+  loadSchedule: (projectId: string) => Promise<void>;
+  createPhase: (input: CreatePhaseInput) => Promise<{ error: string | null }>;
+  updatePhase: (id: string, updates: Partial<CreatePhaseInput>) => Promise<{ error: string | null }>;
+  transitionStatus: (phaseId: string, newStatus: ScheduleStatus) => Promise<{ error: string | null }>;
+  deletePhase: (phaseId: string) => Promise<{ error: string | null }>;
+  updateDependencies: (phaseId: string, predecessorIds: string[]) => Promise<{ error: string | null }>;
+}
 
-    if (error) {
-      set({ error, loading: false });
-      return;
+// Tracks the most recently-requested project so legacy `loadSchedule(id)` calls
+// can steer which project the hook subscribes to.
+let activeProjectId: string | null = null;
+
+function useActiveScheduleProjectId(): string | null {
+  const { data } = useQuery({
+    queryKey: ['schedule_active_project'],
+    queryFn: () => activeProjectId,
+    staleTime: Infinity,
+  });
+  return data ?? activeProjectId;
+}
+
+/**
+ * Backwards-compatible hook. Reads phases via React Query (single source of
+ * truth); mutations invalidate the cache. The `loadSchedule(projectId)` method
+ * is retained for legacy call sites — it simply (re)points the active query.
+ */
+export function useScheduleStore<T = ScheduleHookState>(
+  selector?: (s: ScheduleHookState) => T,
+): T {
+  const queryClient = useQueryClient();
+  const projectId = useActiveScheduleProjectId();
+
+  const query = useQuery({
+    queryKey: ['schedule_phases_mapped', projectId],
+    queryFn: async () => {
+      if (!projectId) return [] as SchedulePhase[];
+      const { data, error } = await scheduleService.loadPhases(projectId);
+      if (error) throw new Error(error);
+      const mapped = ((data ?? []) as Record<string, unknown>[]).map(mapToMappedPhase);
+      return mapped.length > 0 ? mapped : DEMO_PHASES;
+    },
+    enabled: !!projectId,
+  });
+
+  const phases = query.data ?? [];
+  const metrics = phases.length ? deriveMetrics(phases) : DEFAULT_METRICS;
+
+  const loadSchedule = useCallback(async (id: string) => {
+    activeProjectId = id;
+    queryClient.setQueryData(['schedule_active_project'], id);
+    await queryClient.invalidateQueries({ queryKey: ['schedule_phases_mapped', id] });
+  }, [queryClient]);
+
+  const invalidate = useCallback(() => {
+    if (activeProjectId) {
+      queryClient.invalidateQueries({ queryKey: ['schedule_phases_mapped', activeProjectId] });
     }
+  }, [queryClient]);
 
-    const phases = ((data ?? []) as Record<string, unknown>[]).map(mapToMappedPhase);
-    const resolved = phases.length > 0 ? phases : DEMO_PHASES;
+  const createPhase = useCallback(async (input: CreatePhaseInput) => {
+    const { error } = await scheduleService.createPhase(input);
+    if (!error) invalidate();
+    return { error };
+  }, [invalidate]);
 
-    set({
-      phases: resolved,
-      metrics: deriveMetrics(resolved),
-      loading: false,
-    });
-  },
-
-  createPhase: async (input) => {
-    const { data, error } = await scheduleService.createPhase(input);
-    if (error) return { error };
-    if (data) {
-      const mapped = mapToMappedPhase(data as Record<string, unknown>);
-      set((s) => ({
-        phases: [...s.phases, mapped],
-        metrics: deriveMetrics([...s.phases, mapped]),
-      }));
-    }
-    return { error: null };
-  },
-
-  updatePhase: async (id, updates) => {
+  const updatePhase = useCallback(async (id: string, updates: Partial<CreatePhaseInput>) => {
     const { error } = await scheduleService.updatePhase(id, updates);
-    if (!error) {
-      set((s) => {
-        const phases = s.phases.map((p) =>
-          p.id === id ? { ...p, ...(updates as Partial<SchedulePhase>) } : p,
-        );
-        return { phases, metrics: deriveMetrics(phases) };
-      });
-    }
+    if (!error) invalidate();
     return { error };
-  },
+  }, [invalidate]);
 
-  transitionStatus: async (phaseId, newStatus) => {
+  const transitionStatus = useCallback(async (phaseId: string, newStatus: ScheduleStatus) => {
     const { error } = await scheduleService.transitionStatus(phaseId, newStatus);
-    if (!error) {
-      set((s) => {
-        const phases = s.phases.map((p) => {
-          if (p.id !== phaseId) return p;
-          const pct = newStatus === 'completed' ? 100 : p.percent_complete ?? 0;
-          return {
-            ...p,
-            status: newStatus,
-            percent_complete: pct,
-            progress: pct,
-            completed: newStatus === 'completed',
-          };
-        });
-        return { phases, metrics: deriveMetrics(phases) };
-      });
-    }
+    if (!error) invalidate();
     return { error };
-  },
+  }, [invalidate]);
 
-  deletePhase: async (phaseId) => {
+  const deletePhase = useCallback(async (phaseId: string) => {
     const { error } = await scheduleService.deletePhase(phaseId);
-    if (!error) {
-      set((s) => {
-        const phases = s.phases.filter((p) => p.id !== phaseId);
-        return { phases, metrics: deriveMetrics(phases) };
-      });
-    }
+    if (!error) invalidate();
     return { error };
-  },
+  }, [invalidate]);
 
-  updateDependencies: async (phaseId, predecessorIds) => {
+  const updateDependencies = useCallback(async (phaseId: string, predecessorIds: string[]) => {
     const { error } = await scheduleService.updateDependencies(phaseId, predecessorIds);
-    if (!error) {
-      set((s) => ({
-        phases: s.phases.map((p) =>
-          p.id === phaseId
-            ? { ...p, dependencies: predecessorIds, predecessorIds, depends_on: predecessorIds[0] ?? null }
-            : p,
-        ),
-      }));
-    }
+    if (!error) invalidate();
     return { error };
-  },
+  }, [invalidate]);
 
-  // Legacy synchronous helper kept for component backward compatibility.
-  // Prefer the async updatePhase() which persists to the database.
-  ...({} as Record<string, unknown>),
-}));
+  const state: ScheduleHookState = {
+    phases,
+    metrics,
+    loading: query.isLoading,
+    error: query.error ? (query.error as Error).message : null,
+    loadSchedule,
+    createPhase,
+    updatePhase,
+    transitionStatus,
+    deletePhase,
+    updateDependencies,
+  };
 
-// Re-export for backward compatibility with existing component imports
+  return selector ? selector(state) : (state as unknown as T);
+}
+
+// Silence unused-import warnings in case downstream refactors remove callers.
+void supabase;
+
 export { useScheduleStore as default };
