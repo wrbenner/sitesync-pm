@@ -14,7 +14,7 @@ interface AuthState {
 
   initialize: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: string | null }>;
+  signUp: (email: string, password: string, firstName: string, lastName?: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: string | null }>;
   updatePassword: (newPassword: string) => Promise<{ error: string | null }>;
@@ -22,6 +22,7 @@ interface AuthState {
   loadOrganization: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<{ error: string | null }>;
   createOrganization: (name: string) => Promise<{ error: string | null; organization: Organization | null }>;
+  createCompany: (name: string) => Promise<{ error: string | null; organization: Organization | null }>;
   clearError: () => void;
 }
 
@@ -78,21 +79,34 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  signUp: async (email, password, fullName) => {
+  signUp: async (email, password, firstName, lastName) => {
     set({ loading: true, error: null });
     try {
-      const { error } = await supabase.auth.signUp({
+      const fullName = lastName ? `${firstName} ${lastName}` : firstName;
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: { full_name: fullName },
+          data: { full_name: fullName, first_name: firstName, last_name: lastName ?? '' },
         },
       });
       if (error) {
-        set({ error });
+        set({ error, loading: false });
+        return { error: error.message };
       }
+
+      // Create profile row for the new user
+      if (data.user) {
+        await supabase.from('profiles').insert({
+          user_id: data.user.id,
+          full_name: fullName,
+          first_name: firstName,
+          last_name: lastName ?? null,
+        });
+      }
+
       set({ loading: false });
-      return { error: error?.message ?? null };
+      return { error: null };
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
       set({ error, loading: false });
@@ -205,7 +219,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const { data, error } = await supabase
         .from('organizations')
-        .insert({ name, slug: name.toLowerCase().replace(/\s+/g, '-') })
+        .insert({ name, slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') })
         .select()
         .single();
 
@@ -213,7 +227,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       const organization = data as Organization;
 
-      // Link user to organization
+      // Add user as owner in organization_members
+      await supabase.from('organization_members').insert({
+        organization_id: organization.id,
+        user_id: user.id,
+        role: 'owner',
+      });
+
+      // Link profile to organization
       await supabase
         .from('profiles')
         .update({ organization_id: organization.id })
@@ -227,6 +248,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const error = err instanceof Error ? err.message : String(err);
       return { error, organization: null };
     }
+  },
+
+  // Alias for createOrganization (used by Register.tsx)
+  createCompany: async (name) => {
+    return get().createOrganization(name);
   },
 
   clearError: () => set({ error: null }),
