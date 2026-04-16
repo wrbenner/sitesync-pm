@@ -22,6 +22,7 @@ import { useProjectMetrics } from '../hooks/useProjectMetrics';
 import { useAnimatedNumber } from '../hooks/useAnimatedNumber';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import { DashboardGrid } from '../components/dashboard/DashboardGrid';
+import { MorningBriefing } from '../components/dashboard/MorningBriefing';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import type { AIInsight } from '../types/ai';
 import { useProjectContext } from '../stores/projectContextStore';
@@ -1019,6 +1020,9 @@ const DashboardInner: React.FC = () => {
 
   return (
     <PageContainer>
+      {/* ── Morning Briefing ─────────────────────────────── */}
+      <MorningBriefing />
+
       {/* ── Hero Section ──────────────────────────────────── */}
       <motion.div
         initial={reducedMotion ? undefined : { opacity: 0, y: 8 }}
