@@ -2,17 +2,19 @@ import React, { useState, useRef } from 'react';
 import { Search, Sparkles, FileText, FolderOpen, Zap } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme';
 import { supabase } from '../../lib/supabase';
+import { documentService } from '../../services/documentService';
+import { useProjectId } from '../../hooks/useProjectId';
 
 const AI_ENDPOINT = import.meta.env.VITE_AI_ENDPOINT || '/api/ai'
 const AI_API_KEY = import.meta.env.VITE_AI_API_KEY || ''
 
 interface SearchResult {
-  id: number;
+  id: string;
   name: string;
   type: 'file' | 'folder';
   match: string;
   category: string;
-  semanticScore?: number; // cosine similarity 0-1
+  semanticScore?: number;
 }
 
 interface DocumentSearchProps {
@@ -40,55 +42,42 @@ async function getQueryEmbedding(query: string): Promise<number[] | null> {
   }
 }
 
-async function semanticSearch(query: string): Promise<SearchResult[]> {
-  const embedding = await getQueryEmbedding(query)
+async function semanticSearchRpc(embedding: number[]): Promise<SearchResult[]> {
+  try {
+    const { data } = await supabase.rpc('match_documents', {
+      query_embedding: embedding,
+      match_threshold: 0.6,
+      match_count: 10,
+    }) as { data: Array<{ id: string; name: string; category: string; similarity: number }> | null }
 
-  if (embedding) {
-    // Query via cosine similarity against document_embeddings table
-    try {
-      const { data } = await supabase.rpc('match_documents', {
-        query_embedding: embedding,
-        match_threshold: 0.6,
-        match_count: 10,
-      }) as { data: Array<{ id: number; name: string; category: string; similarity: number }> | null }
-
-      if (data && data.length > 0) {
-        return data.map((row) => ({
-          id: row.id,
-          name: row.name,
-          type: 'file' as const,
-          match: `${Math.round(row.similarity * 100)}% semantic match`,
-          category: row.category || 'Documents',
-          semanticScore: row.similarity,
-        }))
-      }
-    } catch {
-      // Fall through to keyword search
+    if (data && data.length > 0) {
+      return data.map((row) => ({
+        id: row.id,
+        name: row.name,
+        type: 'file' as const,
+        match: `${Math.round(row.similarity * 100)}% semantic match`,
+        category: row.category || 'Documents',
+        semanticScore: row.similarity,
+      }))
     }
+  } catch {
+    // Fall through to keyword search
   }
-
-  // Keyword fallback
-  const { data } = await supabase
-    .from('documents')
-    .select('id, name, category')
-    .ilike('name', `%${query}%`)
-    .limit(10)
-
-  return (data || []).map((doc: Record<string, unknown>) => ({
-    id: doc.id as number,
-    name: doc.name as string,
-    type: 'file' as const,
-    match: 'Keyword match',
-    category: (doc.category as string) || 'Documents',
-  }))
+  return []
 }
 
-export const DocumentSearch: React.FC<DocumentSearchProps> = ({ onSelect, inputId, ariaLabel, ariaControls }) => {
+export const DocumentSearch: React.FC<DocumentSearchProps> = ({
+  onSelect,
+  inputId,
+  ariaLabel,
+  ariaControls,
+}) => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [isSemanticMode, setIsSemanticMode] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const projectId = useProjectId();
 
   const handleSearch = (q: string) => {
     setQuery(q);
@@ -99,10 +88,35 @@ export const DocumentSearch: React.FC<DocumentSearchProps> = ({ onSelect, inputI
 
     debounceRef.current = setTimeout(async () => {
       try {
-        const res = await semanticSearch(q)
-        const hasSemantic = res.some((r) => r.semanticScore != null)
-        setIsSemanticMode(hasSemantic)
-        setResults(res)
+        // Try semantic search first via AI embeddings
+        const embedding = await getQueryEmbedding(q)
+        if (embedding) {
+          const semanticResults = await semanticSearchRpc(embedding)
+          if (semanticResults.length > 0) {
+            setIsSemanticMode(true)
+            setResults(semanticResults)
+            setSearching(false)
+            return
+          }
+        }
+
+        // Keyword fallback via service layer (replaces direct supabase.from('documents') call)
+        setIsSemanticMode(false)
+        if (!projectId) {
+          setResults([])
+          setSearching(false)
+          return
+        }
+        const { data } = await documentService.searchDocuments(projectId, q)
+        setResults(
+          (data ?? []).map((doc) => ({
+            id: doc.id,
+            name: doc.title,
+            type: 'file' as const,
+            match: 'Keyword match',
+            category: doc.discipline || 'Documents',
+          }))
+        )
       } catch {
         setResults([]);
       }
@@ -146,7 +160,18 @@ export const DocumentSearch: React.FC<DocumentSearchProps> = ({ onSelect, inputI
       </div>
 
       {(results.length > 0 || searching) && (
-        <div id={ariaControls} role="listbox" aria-label="Search results" style={{ marginTop: spacing['2'], backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.md, border: `1px solid ${colors.borderSubtle}`, overflow: 'hidden' }}>
+        <div
+          id={ariaControls}
+          role="listbox"
+          aria-label="Search results"
+          style={{
+            marginTop: spacing['2'],
+            backgroundColor: colors.surfaceRaised,
+            borderRadius: borderRadius.md,
+            border: `1px solid ${colors.borderSubtle}`,
+            overflow: 'hidden',
+          }}
+        >
           {searching ? (
             <div style={{ padding: spacing['4'], textAlign: 'center' }}>
               <Sparkles size={16} color={colors.statusReview} style={{ animation: 'pulse 1s infinite' }} />
@@ -156,7 +181,11 @@ export const DocumentSearch: React.FC<DocumentSearchProps> = ({ onSelect, inputI
             results.map((result, i) => (
               <div
                 key={result.id}
+                role="option"
+                aria-selected={false}
+                tabIndex={0}
                 onClick={() => onSelect?.(result)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect?.(result); } }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: spacing['3'],
                   padding: `${spacing['3']} ${spacing['4']}`,
@@ -166,10 +195,17 @@ export const DocumentSearch: React.FC<DocumentSearchProps> = ({ onSelect, inputI
                 onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = colors.surfaceHover; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = 'transparent'; }}
               >
-                {result.type === 'folder' ? <FolderOpen size={16} color={colors.primaryOrange} /> : <FileText size={16} color={colors.textTertiary} />}
+                {result.type === 'folder'
+                  ? <FolderOpen size={16} color={colors.primaryOrange} />
+                  : <FileText size={16} color={colors.textTertiary} />
+                }
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, margin: 0 }}>{result.name}</p>
-                  <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0, marginTop: 1 }}>{result.match}</p>
+                  <p style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, margin: 0 }}>
+                    {result.name}
+                  </p>
+                  <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0, marginTop: 1 }}>
+                    {result.match}
+                  </p>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], flexShrink: 0 }}>
                   {result.semanticScore != null && (
@@ -177,7 +213,9 @@ export const DocumentSearch: React.FC<DocumentSearchProps> = ({ onSelect, inputI
                       {Math.round(result.semanticScore * 100)}%
                     </span>
                   )}
-                  <span style={{ fontSize: typography.fontSize.caption, color: colors.statusReview, fontWeight: typography.fontWeight.medium }}>{result.category}</span>
+                  <span style={{ fontSize: typography.fontSize.caption, color: colors.statusReview, fontWeight: typography.fontWeight.medium }}>
+                    {result.category}
+                  </span>
                 </div>
               </div>
             ))
