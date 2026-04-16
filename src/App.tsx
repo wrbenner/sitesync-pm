@@ -106,6 +106,7 @@ const Integrations = lazy(() => import('./pages/Integrations'));
 const Marketplace = lazy(() => import('./pages/Marketplace'));
 const Developers = lazy(() => import('./pages/Developers'));
 const Reports = lazy(() => import('./pages/Reports'));
+const OwnerReportPage = lazy(() => import('./pages/OwnerReportPage'));
 const Sustainability = lazy(() => import('./pages/Sustainability'));
 const Benchmarks = lazy(() => import('./pages/Benchmarks'));
 const WarrantiesPage = lazy(() => import('./pages/Warranties'));
@@ -360,6 +361,7 @@ function AppRoutes() {
             <Route path="/marketplace" element={<PageSuspense><ProtectedRoute moduleId="marketplace" moduleName="App Marketplace"><Marketplace /></ProtectedRoute></PageSuspense>} />
             <Route path="/developers" element={<PageSuspense><ProtectedRoute moduleId="developers" moduleName="Developer Portal"><Developers /></ProtectedRoute></PageSuspense>} />
             <Route path="/reports" element={<PageSuspense><ProtectedRoute moduleId="reports" moduleName="Reports"><Reports /></ProtectedRoute></PageSuspense>} />
+            <Route path="/reports/owner" element={<PageSuspense><ProtectedRoute moduleId="reports" moduleName="Reports"><OwnerReportPage /></ProtectedRoute></PageSuspense>} />
             <Route path="/sustainability" element={<PageSuspense><ProtectedRoute moduleId="sustainability" moduleName="Sustainability"><Sustainability /></ProtectedRoute></PageSuspense>} />
             <Route path="/benchmarks" element={<PageSuspense><ProtectedRoute moduleId="benchmarks" moduleName="Platform Intelligence"><Benchmarks /></ProtectedRoute></PageSuspense>} />
             <Route path="/warranties" element={<PageSuspense><ProtectedRoute moduleId="warranties" moduleName="Warranties"><WarrantiesPage /></ProtectedRoute></PageSuspense>} />
