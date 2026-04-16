@@ -317,6 +317,33 @@ export const dailyLogService = {
   },
 
   /**
+   * List all daily logs for a project, newest first.
+   */
+  async listLogs(projectId: string): Promise<DailyLogServiceResult<DailyLog[]>> {
+    const { data, error } = await supabase
+      .from('daily_logs')
+      .select('*')
+      .eq('project_id', projectId)
+      .order('log_date', { ascending: false });
+
+    if (error) return { data: null, error: error.message };
+    return { data: (data ?? []) as DailyLog[], error: null };
+  },
+
+  /**
+   * Update a daily log's status.
+   */
+  async updateStatus(logId: string, status: string): Promise<DailyLogServiceResult> {
+    const { error } = await supabase
+      .from('daily_logs')
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq('id', logId);
+
+    if (error) return { data: null, error: error.message };
+    return { data: null, error: null };
+  },
+
+  /**
    * Update the AI summary / narrative on a daily log.
    */
   async updateSummary(logId: string, summary: string): Promise<DailyLogServiceResult> {

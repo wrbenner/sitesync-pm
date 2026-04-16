@@ -1,6 +1,8 @@
 import { create } from 'zustand';
-import { supabase } from '../lib/supabase';
-import type { DailyLog, DailyLogEntry, DailyLogStatus } from '../types/database';
+import { dailyLogService } from '../services/dailyLogService';
+import type { DailyLog, DailyLogEntry } from '../types/entities';
+import type { DailyLogStatus } from '../types/database';
+import type { CaptureType } from '../services/dailyLogService';
 
 export interface DailyLogSummary {
   id: string;
@@ -21,10 +23,11 @@ interface DailyLogState {
   error: string | null;
 
   loadLogs: (projectId: string) => Promise<void>;
-  createLog: (projectId: string, date: string, weather: string, createdBy: string) => Promise<{ error: string | null }>;
+  loadTodayLog: (projectId: string) => Promise<{ error: string | null }>;
+  addCapture: (logId: string, type: CaptureType, data: Record<string, unknown>) => Promise<{ error: string | null }>;
+  approveLog: (logId: string) => Promise<{ error: string | null }>;
   updateLogStatus: (logId: string, status: DailyLogStatus) => Promise<{ error: string | null }>;
-  addEntry: (logId: string, entryType: DailyLogEntry['entry_type'], data: Record<string, unknown>) => Promise<{ error: string | null }>;
-  signAndSubmit: (logId: string, signatureUrl: string) => Promise<{ error: string | null }>;
+  refreshWeather: (logId: string, projectId: string) => Promise<{ error: string | null }>;
   getLogByDate: (date: string) => DailyLogSummary | undefined;
 }
 
@@ -37,77 +40,76 @@ export const useDailyLogStore = create<DailyLogState>()((set, get) => ({
 
   loadLogs: async (projectId) => {
     set({ loading: true, error: null });
-    try {
-      const { data, error } = await supabase
-        .from('daily_logs')
-        .select('*')
-        .eq('project_id', projectId)
-        .order('log_date', { ascending: false });
-
-      if (error) throw error;
-      const logs: DailyLogSummary[] = (data ?? []).map((d: any) => ({
-        id: d.id,
-        date: d.log_date,
-        workers: 0,
-        manHours: 0,
-        incidents: 0,
-        weather: d.weather_condition || 'N/A',
-        summary: d.ai_narrative || '',
-        status: d.status,
-      }));
-      set({ logs, loading: false });
-    } catch (e) {
-      set({ error: (e as Error).message, loading: false });
+    const { data, error } = await dailyLogService.listLogs(projectId);
+    if (error) {
+      set({ error, loading: false });
+      return;
     }
+    const logs: DailyLogSummary[] = (data ?? []).map((d) => ({
+      id: d.id,
+      date: d.log_date,
+      workers: 0,
+      manHours: 0,
+      incidents: 0,
+      weather: d.weather ?? 'N/A',
+      summary: d.ai_summary ?? '',
+      status: d.status as DailyLogStatus,
+    }));
+    set({ logs, loading: false });
   },
 
-  createLog: async (projectId, date, weather, createdBy) => {
-    const { error } = await supabase.from('daily_logs').insert({
-      project_id: projectId,
-      log_date: date,
-      weather_condition: weather,
-      created_by: createdBy,
-      status: 'draft',
-    });
+  loadTodayLog: async (projectId) => {
+    set({ loading: true, error: null });
+    const { data, error } = await dailyLogService.loadTodayLog(projectId);
+    if (error) {
+      set({ error, loading: false });
+      return { error };
+    }
+    set({ currentLog: data, loading: false });
 
-    if (error) return { error: error.message };
-    await get().loadLogs(projectId);
+    if (data) {
+      const { data: entryList } = await dailyLogService.loadEntries(data.id);
+      set({ entries: entryList ?? [] });
+    }
+
+    return { error: null };
+  },
+
+  addCapture: async (logId, type, data) => {
+    const { data: entry, error } = await dailyLogService.addCapture(logId, type, data);
+    if (error) return { error };
+    if (entry) {
+      set((s) => ({ entries: [...s.entries, entry] }));
+    }
+    return { error: null };
+  },
+
+  approveLog: async (logId) => {
+    const { error } = await dailyLogService.approveLog(logId);
+    if (error) return { error };
+    set((s) => ({
+      currentLog: s.currentLog?.id === logId ? { ...s.currentLog, status: 'approved' as DailyLogStatus } : s.currentLog,
+      logs: s.logs.map((l) => (l.id === logId ? { ...l, status: 'approved' as DailyLogStatus } : l)),
+    }));
     return { error: null };
   },
 
   updateLogStatus: async (logId, status) => {
-    const { error } = await supabase.from('daily_logs').update({ status, updated_at: new Date().toISOString() }).eq('id', logId);
-    if (!error) {
-      set((s) => ({
-        logs: s.logs.map((l) => (l.id === logId ? { ...l, status } : l)),
-      }));
+    if (status === 'approved') {
+      return get().approveLog(logId);
     }
-    return { error: error?.message ?? null };
+    const { error } = await dailyLogService.updateStatus(logId, status);
+    if (error) return { error };
+    set((s) => ({
+      currentLog: s.currentLog?.id === logId ? { ...s.currentLog, status } : s.currentLog,
+      logs: s.logs.map((l) => (l.id === logId ? { ...l, status } : l)),
+    }));
+    return { error: null };
   },
 
-  addEntry: async (logId, entryType, data) => {
-    const { error } = await supabase.from('daily_log_entries').insert({
-      daily_log_id: logId,
-      entry_type: entryType,
-      data,
-    });
-
-    return { error: error?.message ?? null };
-  },
-
-  signAndSubmit: async (logId, signatureUrl) => {
-    const { error } = await supabase.from('daily_logs').update({
-      status: 'submitted',
-      signature_url: signatureUrl,
-      updated_at: new Date().toISOString(),
-    }).eq('id', logId);
-
-    if (!error) {
-      set((s) => ({
-        logs: s.logs.map((l) => (l.id === logId ? { ...l, status: 'submitted' as DailyLogStatus } : l)),
-      }));
-    }
-    return { error: error?.message ?? null };
+  refreshWeather: async (logId, projectId) => {
+    const { error } = await dailyLogService.refreshWeather(logId, projectId);
+    return { error };
   },
 
   getLogByDate: (date) => {
