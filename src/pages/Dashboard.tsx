@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { PageContainer } from '../components/Primitives';
 import { MetricCardSkeleton } from '../components/ui/Skeletons';
-import { colors, spacing, typography, borderRadius, shadows } from '../styles/theme';
+import { colors, spacing, typography, borderRadius, shadows, focusRing } from '../styles/theme';
 import { fetchWeather, fetchWeatherForecast5Day, getWeatherImpact } from '../lib/weather';
 import type { WeatherData, WeatherDay } from '../lib/weather';
 import { duration, easing, easingArray } from '../styles/animations';
@@ -76,7 +76,8 @@ interface MetricCardProps {
   onClick?: () => void;
 }
 
-const MetricCard: React.FC<MetricCardProps> = ({ icon, label, value, sub, trend, trendLabel, color, onClick }) => (
+const MetricCard = React.memo<MetricCardProps>(function MetricCard({ icon, label, value, sub, trend, trendLabel, color, onClick }) {
+  return (
   <motion.div
     variants={staggerItem}
     transition={staggerTransition}
@@ -108,6 +109,20 @@ const MetricCard: React.FC<MetricCardProps> = ({ icon, label, value, sub, trend,
         const el = e.currentTarget as HTMLDivElement;
         el.style.transform = 'translateY(0)';
         el.style.boxShadow = shadows.card;
+      }
+    }}
+    onFocus={(e) => {
+      if (onClick) {
+        const el = e.currentTarget as HTMLDivElement;
+        el.style.outline = focusRing.outline;
+        el.style.outlineOffset = focusRing.outlineOffset;
+      }
+    }}
+    onBlur={(e) => {
+      if (onClick) {
+        const el = e.currentTarget as HTMLDivElement;
+        el.style.outline = 'none';
+        el.style.outlineOffset = '0';
       }
     }}
   >
@@ -162,11 +177,12 @@ const MetricCard: React.FC<MetricCardProps> = ({ icon, label, value, sub, trend,
       </div>
     )}
   </motion.div>
-);
+  );
+});
 
 // ── Progress Ring ───────────────────────────────────────
 
-const ProgressRing: React.FC<{ value: number; size?: number }> = ({ value, size = 80 }) => {
+const ProgressRing = React.memo<{ value: number; size?: number }>(({ value, size = 80 }) => {
   const r = (size / 2) - 5;
   const circumference = 2 * Math.PI * r;
   const offset = circumference * (1 - value / 100);
@@ -190,7 +206,7 @@ const ProgressRing: React.FC<{ value: number; size?: number }> = ({ value, size 
       </div>
     </div>
   );
-};
+});
 
 // ── Loading Skeleton ────────────────────────────────────
 
@@ -485,11 +501,17 @@ const SEVERITY_COLORS: Record<string, { bg: string; border: string; icon: string
   info: { bg: colors.statusInfoSubtle, border: colors.statusInfo, icon: colors.statusInfo },
 };
 
-const InsightRow: React.FC<{ insight: AIInsight; onClick?: () => void }> = ({ insight, onClick }) => {
+const InsightRow = React.memo<{ insight: AIInsight; onClick?: () => void }>(({ insight, onClick }) => {
   const sev = SEVERITY_COLORS[insight.severity] || SEVERITY_COLORS.info;
   return (
     <div
       onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      aria-label={onClick ? insight.title : undefined}
+      onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } } : undefined}
+      onFocus={onClick ? (e) => { const el = e.currentTarget as HTMLDivElement; el.style.outline = focusRing.outline; el.style.outlineOffset = focusRing.outlineOffset; } : undefined}
+      onBlur={onClick ? (e) => { const el = e.currentTarget as HTMLDivElement; el.style.outline = 'none'; el.style.outlineOffset = '0'; } : undefined}
       style={{
         display: 'flex',
         alignItems: 'flex-start',
@@ -561,7 +583,7 @@ const InsightRow: React.FC<{ insight: AIInsight; onClick?: () => void }> = ({ in
       {onClick && <ArrowRight size={14} color={colors.textTertiary} style={{ flexShrink: 0, marginTop: 2 }} />}
     </div>
   );
-};
+});
 
 const AIInsightsBanner: React.FC<{ insights: AIInsight[]; navigate: (path: string) => void }> = ({ insights, navigate }) => {
   // Show real insights first; if none, show onboarding placeholders so the banner is never empty
@@ -918,12 +940,11 @@ const DashboardInner: React.FC = () => {
     (metrics.punch_total ?? 0) === 0 &&
     (metrics.budget_total ?? 0) === 0);
 
-  const daysRemaining = useMemo(() =>
-    project?.target_completion
-      ? Math.max(0, Math.ceil((new Date(project.target_completion).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
-      : 0,
-    [project?.target_completion]
-  );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const now = useMemo(() => Date.now(), []);
+  const daysRemaining = project?.target_completion
+    ? Math.max(0, Math.ceil((new Date(project.target_completion).getTime() - now) / (1000 * 60 * 60 * 24)))
+    : 0;
 
   const missingWaivers = useMemo(() => {
     const approvedAppIds = (payApps ?? [])
@@ -942,19 +963,11 @@ const DashboardInner: React.FC = () => {
     })
   }, [payApps, lienWaivers]);
 
-  const projectStartDate = useMemo(() =>
-    project?.start_date
-      ? new Date(project.start_date)
-      : new Date(Date.now() - 247 * 24 * 60 * 60 * 1000),
-    [project?.start_date]
-  );
-
-  const dayNumber = useMemo(() => {
-    const elapsed = Date.now() - projectStartDate.getTime();
-    return Math.max(1, Math.ceil(elapsed / (1000 * 60 * 60 * 24)));
-  }, [projectStartDate]);
-
-  const totalDays = useMemo(() => dayNumber + daysRemaining, [dayNumber, daysRemaining]);
+  const projectStartDate = project?.start_date
+    ? new Date(project.start_date)
+    : new Date(now - 247 * 24 * 60 * 60 * 1000);
+  const dayNumber = Math.max(1, Math.ceil((now - projectStartDate.getTime()) / (1000 * 60 * 60 * 24)));
+  const totalDays = dayNumber + daysRemaining;
 
   const projectAddress = useMemo(() =>
     [project?.address, project?.city, project?.state].filter(Boolean).join(', ') || 'Dallas, TX',
@@ -1288,7 +1301,7 @@ const DashboardInner: React.FC = () => {
           marginBottom: spacing['5'],
           boxShadow: shadows.card,
           cursor: 'pointer',
-          transition: `transform 200ms ease, box-shadow 200ms ease`,
+          transition: `transform ${duration.normal}ms ${easing.standard}, box-shadow ${duration.normal}ms ${easing.standard}`,
         }}
         onMouseEnter={(e) => {
           const el = e.currentTarget as HTMLDivElement;
@@ -1300,10 +1313,20 @@ const DashboardInner: React.FC = () => {
           el.style.transform = 'translateY(0)';
           el.style.boxShadow = shadows.card;
         }}
+        onFocus={(e) => {
+          const el = e.currentTarget as HTMLDivElement;
+          el.style.outline = focusRing.outline;
+          el.style.outlineOffset = focusRing.outlineOffset;
+        }}
+        onBlur={(e) => {
+          const el = e.currentTarget as HTMLDivElement;
+          el.style.outline = 'none';
+          el.style.outlineOffset = '0';
+        }}
       >
         <div style={{
           width: 36, height: 36, borderRadius: borderRadius.base, flexShrink: 0,
-          background: `linear-gradient(135deg, ${colors.primaryOrange}, #FF9C42)`,
+          background: `linear-gradient(135deg, ${colors.primaryOrange}, ${colors.orangeGradientEnd})`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
           <Sparkles size={16} color={colors.white} />
@@ -1330,6 +1353,13 @@ const DashboardInner: React.FC = () => {
           initial={reducedMotion ? undefined : { opacity: 0, y: 8 }}
           animate={reducedMotion ? undefined : { opacity: 1, y: 0 }}
           transition={reducedMotion ? undefined : { ...staggerTransition, delay: 0.2 }}
+          role="button"
+          tabIndex={0}
+          aria-label="Review missing lien waivers"
+          onClick={() => navigate('/payment-applications')}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate('/payment-applications'); } }}
+          onFocus={(e) => { const el = e.currentTarget as HTMLDivElement; el.style.outline = focusRing.outline; el.style.outlineOffset = focusRing.outlineOffset; }}
+          onBlur={(e) => { const el = e.currentTarget as HTMLDivElement; el.style.outline = 'none'; el.style.outlineOffset = '0'; }}
           style={{
             display: 'flex', alignItems: 'flex-start', gap: spacing['3'],
             padding: spacing['4'],
@@ -1341,7 +1371,6 @@ const DashboardInner: React.FC = () => {
             boxShadow: shadows.card,
             cursor: 'pointer',
           }}
-          onClick={() => navigate('/payment-applications')}
         >
           <div style={{
             width: 36, height: 36, borderRadius: borderRadius.base, flexShrink: 0,
@@ -1401,10 +1430,17 @@ const DashboardInner: React.FC = () => {
             ].map((item) => (
               <div
                 key={item.path}
+                role="button"
+                tabIndex={0}
+                aria-label={item.label}
                 onClick={() => navigate(item.path)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(item.path); } }}
+                onFocus={(e) => { const el = e.currentTarget as HTMLDivElement; el.style.outline = focusRing.outline; el.style.outlineOffset = focusRing.outlineOffset; }}
+                onBlur={(e) => { const el = e.currentTarget as HTMLDivElement; el.style.outline = 'none'; el.style.outlineOffset = '0'; }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: spacing['3'],
                   padding: `${spacing['3']} ${spacing['4']}`,
+                  minHeight: spacing['12'],
                   borderRadius: borderRadius.base,
                   cursor: 'pointer',
                   transition: `background-color ${duration.fast}ms ${easing.standard}`,
