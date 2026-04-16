@@ -1,5 +1,11 @@
 # Organism Lessons — Accumulated Wisdom
 
+## PRIME DIRECTIVE (April 16, 2026)
+PERFECT WHAT EXISTS. Do NOT invent new features.
+Every cycle should make existing pages better — not add new ones.
+The goal: every page enterprise-grade, better than any platform out there.
+Only build infrastructure (service layers) when needed to support existing pages.
+
 > This file is the organism's long-term memory. It is updated automatically
 > after every 3 cycles by the reflect phase. The organism reads this before
 > every strategic decision.

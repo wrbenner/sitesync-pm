@@ -12,7 +12,7 @@ name: "Quality Swarm — Error Elimination"
 
 on:
   schedule:
-    - cron: "20 1,7,13,19 * * *"  # Every 6 hours at :20 past (Cycle A follow-up, after Strategic merges)
+    - cron: "40 2,6,10,14,18,22 * * *"  # Every 4 hours at :40 — follows Feature Hardening by 20min
   workflow_dispatch:
     inputs:
       target_reduction:

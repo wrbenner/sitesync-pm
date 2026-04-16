@@ -21,7 +21,7 @@ name: "Organism — Supreme Intelligence"
 
 on:
   schedule:
-    - cron: "0 0,6,12,18 * * *"  # Every 6 hours — 4 cycles per day (Cycle A lead)
+    - cron: "0 0,8,16 * * *"  # 3x/day — focused on perfecting what exists
   workflow_dispatch:
     inputs:
       focus:
@@ -191,36 +191,40 @@ jobs:
           ## Focus Override
           {"No override — choose highest leverage automatically" if focus == "auto" else f"User requested focus: {focus}"}
 
+          ## PRIME DIRECTIVE
+          PERFECT WHAT EXISTS. Do NOT invent new features.
+          The goal is to make every existing page and workflow enterprise-grade —
+          better than Procore, better than any platform out there.
+          Only build new service layers if they’re needed to make existing pages work properly.
+
           ## Cross-Tier Awareness
-          You are one of FOUR specialized tiers in a coordinated hierarchy:
-          1. YOU (Strategic Experiments) — service layers, architecture, features
-          2. Quality Swarm — fixing ESLint errors
-          3. Design Excellence — polishing pages to Apple quality
-          4. Feature Hardening — making features bulletproof
+          You are one of FOUR specialized tiers:
+          1. YOU — architecture, service layers, state machines, data integrity
+          2. Quality Swarm — ESLint errors (don’t duplicate)
+          3. Design Excellence — visual polish (don’t duplicate)
+          4. Feature Hardening — error handling, forms, loading states (don’t duplicate)
 
-          DO NOT duplicate their work:
-          - Don’t fix ESLint errors (Quality Swarm handles that)
-          - Don’t polish page UI (Design Excellence handles that)
-          - Don’t add error handling/loading states (Feature Hardening handles that)
-          - Focus on what ONLY you can do: service layers, architecture, state machines, store rewiring
+          YOUR UNIQUE JOB: the architecture underneath. Service layers, store rewiring,
+          state machine enforcement, data integrity, RLS policies, migration correctness.
+          Make the foundation so solid that the other tiers can polish on top of it.
 
-          LEARN FROM HISTORY — avoid repeating failures:
-          Look at the cycle history above. If an experiment title or approach appears in failed cycles,
-          choose a DIFFERENT approach. Don’t keep trying the same thing.
+          LEARN FROM HISTORY:
+          If an experiment failed in previous cycles, choose a DIFFERENT approach.
 
           ## Your Task
           Design exactly 3 experiments for this cycle. Each must be:
-          1. HIGH LEVERAGE — maximum impact on quality, UX, or architecture
+          1. HIGH LEVERAGE — maximum impact on making existing features enterprise-grade
           2. FEASIBLE — completable in {max_turns} Claude Code turns
           3. VERIFIABLE — tsc, eslint floor, and build must all pass
           4. COMPLEMENTARY — cover different areas to maximize cycle value
 
-          Priority order (override with focus if set):
-          1. Quality emergencies (ESLint/TS regressions — MUST be #1 if emergency exists)
-          2. Missing kernel service layers ({metrics['services_missing'] or 'all created'})
-          3. Page polish to enterprise/Apple quality
-          4. Test coverage for critical paths
-          5. Performance and bundle size improvements
+          Priority order:
+          1. Quality emergencies (ESLint/TS regressions)
+          2. Service layers for EXISTING pages that still use direct Supabase calls
+             ({metrics['services_missing'] or 'all created'} are missing)
+          3. Store rewiring — connect existing stores to service layers
+          4. State machine enforcement — ensure lifecycle transitions are validated
+          5. Test coverage for critical service paths
 
           For each experiment, provide:
           - description: Specific, actionable instructions for Claude Code. Name exact files,
