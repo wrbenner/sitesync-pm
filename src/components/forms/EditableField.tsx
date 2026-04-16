@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
-import { z } from 'zod'
+import { } from 'zod'
 import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme'
-import { Check, X, Pencil, Loader2 } from 'lucide-react'
+import {   Pencil, Loader2 } from 'lucide-react'
 
 // ── Inline Edit Cell ────────────────────────────────────
 // Click a cell to edit. Enter saves, Escape cancels. Tab moves to next.

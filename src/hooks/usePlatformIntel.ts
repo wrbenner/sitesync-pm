@@ -17,7 +17,6 @@ import type {
   ProjectType,
   RiskPrediction,
 } from '../types/platformIntel'
-import { BENCHMARK_LABELS } from '../types/platformIntel'
 
 // ── Benchmark Queries ─────────────────────────────────────────
 
@@ -88,7 +87,7 @@ export function useBenchmarkComparisons(projectType?: ProjectType, region?: stri
       ])
 
       const rfis = rfiResult.data ?? []
-      const tasks = taskResult.data ?? []
+
       const budget = budgetResult.data ?? []
 
       // Calculate your RFI turnaround
@@ -175,7 +174,7 @@ export function useSubcontractorProfiles(trade?: string, region?: string) {
     queryFn: async (): Promise<SubcontractorProfile[]> => {
       if (!isSupabaseConfigured) return []
 
-      let query = supabase
+      const query = supabase
         .from('subcontractor_ratings')
         .select('company_id, metrics, period')
         .order('created_at', { ascending: false })

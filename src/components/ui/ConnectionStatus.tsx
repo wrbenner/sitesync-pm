@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Wifi, WifiOff, RefreshCw, Clock, ChevronDown, Cloud, AlertTriangle } from 'lucide-react'
+import {  WifiOff, RefreshCw, Clock, ChevronDown, Cloud } from 'lucide-react'
 import { colors, spacing, typography, borderRadius, shadows, transitions, zIndex } from '../../styles/theme'
 import { useOfflineStatus } from '../../hooks/useOfflineStatus'
 import { supabase } from '../../lib/supabase'

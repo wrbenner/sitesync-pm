@@ -4,7 +4,7 @@ import { Grid, List, Upload as UploadIcon, FolderOpen, FileText, Image, Table, F
 import { Card, Btn, useToast, PageContainer } from '../components/Primitives';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import EmptyState from '../components/ui/EmptyState';
-import { TableSkeleton } from '../components/ui/Skeletons';
+
 import { UploadZone } from '../components/files/UploadZone';
 import { FilePreview } from '../components/files/FilePreview';
 import { DataTable, createColumnHelper } from '../components/shared/DataTable';
@@ -74,7 +74,7 @@ const getFileTypeIcon = (file: FileItem, size = 16): React.ReactElement => {
   return <FileIcon size={size} color={colors.textTertiary} />;
 };
 
-const _FilesPage: React.FC = () => {
+const FilesPage: React.FC = () => {
   const { addToast } = useToast();
   const projectId = useProjectId();
   const createFile = useCreateFile();
@@ -93,13 +93,13 @@ const _FilesPage: React.FC = () => {
   const metrics = useMemo(() => {
     const all = rawFiles || [];
     const totalFiles = all.length;
-    const drawings = all.filter((f: any) => f.category === 'drawing' || (f.file_type && String(f.file_type).includes('pdf'))).length;
+    const drawings = all.filter((f: unknown) => f.category === 'drawing' || (f.file_type && String(f.file_type).includes('pdf'))).length;
     const weekAgo = Date.now() - 7 * 86400000;
-    const recentUploads = all.filter((f: any) => {
+    const recentUploads = all.filter((f: unknown) => {
       const ts = f.uploaded_at || f.created_at;
       return ts && new Date(ts).getTime() > weekAgo;
     }).length;
-    const totalBytes = all.reduce((sum: number, f: any) => sum + (f.file_size_bytes || 0), 0);
+    const totalBytes = all.reduce((sum: number, f: unknown) => sum + (f.file_size_bytes || 0), 0);
     return { totalFiles, drawings, recentUploads, totalBytes };
   }, [rawFiles]);
 
@@ -844,6 +844,6 @@ const _FilesPage: React.FC = () => {
 
 export const Files: React.FC = () => (
   <ErrorBoundary message="Failed to load documents. Retry">
-    <_FilesPage />
+    <FilesPage />
   </ErrorBoundary>
 );

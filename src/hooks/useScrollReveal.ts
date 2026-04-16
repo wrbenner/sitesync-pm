@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState , startTransition} from 'react';
 
 /**
  * Returns a ref and a boolean indicating whether the element is in view.
@@ -14,7 +14,7 @@ export function useScrollReveal<T extends HTMLElement = HTMLDivElement>(threshol
 
     // Check reduced motion preference
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      setIsVisible(true);
+      setTimeout(() => setIsVisible(true), 0);
       return;
     }
 

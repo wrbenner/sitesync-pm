@@ -9,7 +9,6 @@ import { colors, spacing, typography, borderRadius, transitions, shadows, zIndex
 import { getDrawings, getDisciplineColor, getDrawingRevisionHistory } from '../api/endpoints/documents';
 import { useQuery } from '../hooks/useQuery';
 import { useProjectId } from '../hooks/useProjectId';
-import { usePermissions } from '../hooks/usePermissions';
 import { AIAnnotationIndicator } from '../components/ai/AIAnnotation';
 import { getAnnotationsForEntity } from '../data/aiAnnotations';
 import { DrawingViewer } from '../components/drawings/DrawingViewer';
@@ -72,10 +71,9 @@ const coordinationConflicts = [
   { id: 'c5', drawing1: 'M-401', rev1: 'Rev 1', drawing2: 'E-202', location: 'Roof drain area B7', discipline1: 'Mechanical', discipline2: 'Electrical', confidence: 0.68 },
 ];
 
-const _DrawingsPage: React.FC = () => {
+const DrawingsPage: React.FC = () => {
   const { addToast } = useToast();
-  const { hasPermission: _hasPermission } = usePermissions();
-  const projectId = useProjectId();
+    const projectId = useProjectId();
   const { data: drawings, loading, error, refetch } = useQuery(`drawings-${projectId}`, () => getDrawings(projectId!), { enabled: !!projectId });
   const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set());
   const [selectedDrawing, setSelectedDrawing] = useState<NonNullable<typeof drawings>[0] | null>(null);
@@ -86,9 +84,6 @@ const _DrawingsPage: React.FC = () => {
   const [analyzingId, setAnalyzingId] = useState<number | null>(null);
   const [analysisResults, setAnalysisResults] = useState<Record<number, DrawingAnalysis>>({});
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [_uploadFiles, setUploadFiles] = useState<File[]>([]);
-  const [_isDragging, setIsDragging] = useState(false);
-  const _fileInputRef = useRef<HTMLInputElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const [focusedIndex, setFocusedIndex] = useState(0);
   const sortedDrawingsRef = useRef<typeof sortedDrawings>([]);
@@ -1846,6 +1841,6 @@ const _DrawingsPage: React.FC = () => {
 
 export const Drawings: React.FC = () => (
   <ErrorBoundary message="Failed to load drawings. Retry">
-    <_DrawingsPage />
+    <DrawingsPage />
   </ErrorBoundary>
 );

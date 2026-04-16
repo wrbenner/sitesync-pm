@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect , startTransition} from 'react';
 import { Home, ClipboardList, Camera, BookOpen, MoreHorizontal, X, Search,
   ChevronRight, ArrowLeft, Bell, Check, QrCode } from 'lucide-react';
 import { QRScannerSheet } from '../workforce/QRCheckIn';
@@ -170,9 +170,11 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
 
   // Close sheets on route change
   useEffect(() => {
-    setMoreOpen(false);
-    setNotificationsOpen(false);
-    setCheckInOpen(false);
+    setTimeout(() => {
+      setMoreOpen(false);
+      setNotificationsOpen(false);
+      setCheckInOpen(false);
+    }, 0);
   }, [location.pathname]);
 
   return (

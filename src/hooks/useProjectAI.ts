@@ -72,7 +72,7 @@ function parseSuggestedPrompts(text: string): string[] {
       continue
     }
     if (inFollowUp) {
-      const cleaned = line.replace(/^[\d\.\-\*•]+\s*/, '').replace(/^\*\*/, '').replace(/\*\*$/, '').replace(/^"/, '').replace(/"$/, '').trim()
+      const cleaned = line.replace(/^[\d.\-*•]+\s*/, '').replace(/^\*\*/, '').replace(/\*\*$/, '').replace(/^"/, '').replace(/"$/, '').trim()
       if (cleaned.length > 10 && cleaned.length < 120) {
         prompts.push(cleaned)
       }
@@ -126,7 +126,6 @@ export function useProjectAI(pageContext?: string, entityContext?: string): UseP
 
   const { data: metricsData } = useProjectMetrics(projectId)
   const budgetData = useBudgetData()
-  const { data: rfisData } = useRFIs(projectId)
   const { data: submittalsData } = useSubmittals(projectId)
   const { data: scheduleData } = useSchedulePhases(projectId)
 

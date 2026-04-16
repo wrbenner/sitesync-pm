@@ -234,7 +234,7 @@ describe('Dev Bypass Security (Bug #1 Fix)', () => {
 describe('Module Permissions', () => {
   it('all module IDs map to valid permissions', () => {
     const validPermissions = new Set(Object.keys(PERMISSION_MATRIX))
-    for (const [moduleId, permission] of Object.entries(MODULE_PERMISSIONS)) {
+    for (const [, permission] of Object.entries(MODULE_PERMISSIONS)) {
       expect(validPermissions.has(permission)).toBe(true)
     }
   })
@@ -269,7 +269,7 @@ describe('Organization Scope Access Control', () => {
   beforeEach(async () => {
     const { supabase } = await import('../lib/supabase')
     vi.mocked(supabase.auth.getUser).mockResolvedValue({
-      data: { user: { id: AUTHED_USER_ID } as any },
+      data: { user: { id: AUTHED_USER_ID } as unknown },
       error: null,
     })
   })
@@ -281,7 +281,7 @@ describe('Organization Scope Access Control', () => {
       eq: vi.fn().mockReturnThis(),
       maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
     }
-    vi.mocked(supabase.from).mockReturnValue(mockBuilder as any)
+    vi.mocked(supabase.from).mockReturnValue(mockBuilder as unknown)
 
     const { assertOrganizationAccess } = await import('../api/middleware/organizationScope')
     const { ApiError } = await import('../api/errors')
@@ -300,7 +300,7 @@ describe('Organization Scope Access Control', () => {
       eq: vi.fn().mockReturnThis(),
       maybeSingle: vi.fn().mockResolvedValue({ data: { id: 'member-row-id' }, error: null }),
     }
-    vi.mocked(supabase.from).mockReturnValue(mockBuilder as any)
+    vi.mocked(supabase.from).mockReturnValue(mockBuilder as unknown)
 
     const { assertOrganizationAccess } = await import('../api/middleware/organizationScope')
 
@@ -311,7 +311,7 @@ describe('Organization Scope Access Control', () => {
     const { supabase } = await import('../lib/supabase')
     vi.mocked(supabase.auth.getUser).mockResolvedValue({
       data: { user: null },
-      error: { message: 'Not authenticated' } as any,
+      error: { message: 'Not authenticated' } as unknown,
     })
 
     const { assertOrganizationAccess } = await import('../api/middleware/organizationScope')
@@ -506,7 +506,7 @@ describe('Project Scope Access Control', () => {
   beforeEach(async () => {
     const { supabase } = await import('../lib/supabase')
     vi.mocked(supabase.auth.getUser).mockResolvedValue({
-      data: { user: { id: AUTHED_USER_ID } as any },
+      data: { user: { id: AUTHED_USER_ID } as unknown },
       error: null,
     })
   })
@@ -518,7 +518,7 @@ describe('Project Scope Access Control', () => {
       eq: vi.fn().mockReturnThis(),
       maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
     }
-    vi.mocked(supabase.from).mockReturnValue(mockBuilder as any)
+    vi.mocked(supabase.from).mockReturnValue(mockBuilder as unknown)
 
     const { assertProjectAccess } = await import('../api/middleware/projectScope')
     const { ApiError } = await import('../api/errors')
@@ -537,7 +537,7 @@ describe('Project Scope Access Control', () => {
       eq: vi.fn().mockReturnThis(),
       maybeSingle: vi.fn().mockResolvedValue({ data: { id: 'member-row-id' }, error: null }),
     }
-    vi.mocked(supabase.from).mockReturnValue(mockBuilder as any)
+    vi.mocked(supabase.from).mockReturnValue(mockBuilder as unknown)
 
     const { assertProjectAccess } = await import('../api/middleware/projectScope')
 
@@ -548,7 +548,7 @@ describe('Project Scope Access Control', () => {
     const { supabase } = await import('../lib/supabase')
     vi.mocked(supabase.auth.getUser).mockResolvedValue({
       data: { user: null },
-      error: { message: 'Not authenticated' } as any,
+      error: { message: 'Not authenticated' } as unknown,
     })
 
     const { assertProjectAccess } = await import('../api/middleware/projectScope')

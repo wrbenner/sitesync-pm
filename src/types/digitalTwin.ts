@@ -2,7 +2,6 @@
 // Type definitions for the real-time 3D data overlay system.
 // Each overlay layer maps project data onto the BIM model.
 
-import type * as THREE from 'three'
 
 // ── Overlay Layer IDs ─────────────────────────────────────────
 

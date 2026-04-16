@@ -3,7 +3,7 @@ import { assertProjectAccess, validateProjectId } from '../middleware/projectSco
 import type { PayApplication, CreatePayAppPayload, LienWaiverRow } from '../../types/api'
 import { autoGenerateLienWaivers } from './lienWaivers'
 
-const LIEN_WAIVER_TYPES = ['conditional_progress', 'unconditional_progress', 'conditional_final', 'unconditional_final'] as const
+
 type LienWaiverType = typeof LIEN_WAIVER_TYPES[number]
 
 /**

@@ -17,7 +17,7 @@ const tabs: { key: TabKey; label: string; icon: React.ElementType }[] = [
 
 // ── Waste Log Columns ──────────────────────────────────────
 
-const wasteCol = createColumnHelper<any>()
+const wasteCol = createColumnHelper<unknown>()
 const wasteColumns = [
   wasteCol.accessor('date', {
     header: 'Date',
@@ -110,7 +110,7 @@ export const Sustainability: React.FC = () => {
   // Group metrics by category
   const grouped = useMemo(() => {
     if (!metrics) return {}
-    const groups: Record<string, any[]> = {}
+    const groups: Record<string, unknown[]> = {}
     for (const m of metrics) {
       const cat = m.category || 'Other'
       if (!groups[cat]) groups[cat] = []
@@ -122,12 +122,12 @@ export const Sustainability: React.FC = () => {
   // Total score
   const totalScore = useMemo(() => {
     if (!metrics) return 0
-    return metrics.reduce((sum: number, m: any) => sum + (m.points_achieved || 0), 0)
+    return metrics.reduce((sum: number, m: unknown) => sum + (m.points_achieved || 0), 0)
   }, [metrics])
 
   const totalPossible = useMemo(() => {
     if (!metrics) return 0
-    return metrics.reduce((sum: number, m: any) => sum + (m.points_possible || 0), 0)
+    return metrics.reduce((sum: number, m: unknown) => sum + (m.points_possible || 0), 0)
   }, [metrics])
 
   const certLevel = getCertLevel(totalScore)
@@ -135,12 +135,12 @@ export const Sustainability: React.FC = () => {
   // Waste stats
   const totalWaste = useMemo(() => {
     if (!wasteLogs) return 0
-    return wasteLogs.reduce((sum: number, w: any) => sum + (w.weight_tons || 0), 0)
+    return wasteLogs.reduce((sum: number, w: unknown) => sum + (w.weight_tons || 0), 0)
   }, [wasteLogs])
 
   const diverted = useMemo(() => {
     if (!wasteLogs) return 0
-    return wasteLogs.filter((w: any) => w.disposition !== 'landfill').reduce((sum: number, w: any) => sum + (w.weight_tons || 0), 0)
+    return wasteLogs.filter((w: unknown) => w.disposition !== 'landfill').reduce((sum: number, w: unknown) => sum + (w.weight_tons || 0), 0)
   }, [wasteLogs])
 
   const diversionRate = totalWaste > 0 ? Math.round((diverted / totalWaste) * 100) : 0
@@ -245,8 +245,8 @@ export const Sustainability: React.FC = () => {
 
           {/* Category Breakdown */}
           {Object.entries(grouped).map(([category, items]) => {
-            const catPoints = items.reduce((s: number, m: any) => s + (m.points_achieved || 0), 0)
-            const catPossible = items.reduce((s: number, m: any) => s + (m.points_possible || 0), 0)
+            const catPoints = items.reduce((s: number, m: unknown) => s + (m.points_achieved || 0), 0)
+            const catPossible = items.reduce((s: number, m: unknown) => s + (m.points_possible || 0), 0)
             return (
               <Card key={category} padding={spacing['4']} >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing['3'] }}>
@@ -258,7 +258,7 @@ export const Sustainability: React.FC = () => {
                     {catPoints} / {catPossible} pts
                   </span>
                 </div>
-                {items.map((item: any) => {
+                {items.map((item: unknown) => {
                   const pct = item.points_possible > 0 ? Math.round((item.points_achieved / item.points_possible) * 100) : 0
                   return (
                     <div key={item.id} style={{

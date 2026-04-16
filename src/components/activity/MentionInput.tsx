@@ -57,7 +57,8 @@ export const MentionInput: React.FC<MentionInputProps> = ({
   }, [projectId]);
 
   useEffect(() => {
-    fetchMembers();
+    const timer = setTimeout(() => { fetchMembers(); }, 0);
+    return () => clearTimeout(timer);
   }, [fetchMembers]);
 
   const activePeople = projectId && dbMembers.length > 0 ? dbMembers : people;

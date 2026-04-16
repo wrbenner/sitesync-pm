@@ -76,7 +76,7 @@ async function executeStep(
 
 // ── Get Connected Integrations ────────────────────────────────
 
-async function getConnectedIntegrations(projectId: string): Promise<Set<string>> {
+async function getConnectedIntegrations(_projectId: string): Promise<Set<string>> {
   if (!isSupabaseConfigured) return new Set()
 
   const { data } = await supabase
@@ -286,7 +286,7 @@ async function runRFICreatedChain(
   if (connected.has('email_resend') && assignedTo) {
     steps.push(
       await executeStep('email', 'send_rfi_assignment', async () => {
-        const { sendRFIResponseEmail } = await import('../services/integrations/email')
+        await import('../services/integrations/email')
         // Send email to assigned party
       }),
     )
@@ -453,9 +453,9 @@ async function runPunchItemChain(
 // ── Slack helper for change orders (not in existing slack.ts) ─
 
 // This would be added to the Slack integration service
-async function sendSlackChangeOrderNotification(
-  _integrationId: string,
-  _data: Record<string, unknown>,
-): Promise<void> {
-  // Implementation would use the existing Slack webhook pattern
-}
+
+
+
+
+
+

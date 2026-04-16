@@ -197,14 +197,14 @@ const PunchListPage: React.FC = () => {
   const punchListRaw = punchListResult?.data ?? [];
 
   // Fetch team members for assignment
-  const { data: teamMembersResult } = useDirectoryContacts(projectId);
-  const _teamMembers = teamMembersResult?.data ?? [];
+
+
 
   const pageAlerts = getPredictiveAlertsForPage('punchlist');
 
   // Map API data to component shape
   const punchListItems: PunchItem[] = useMemo(() => {
-    return punchListRaw.map((p: any) => {
+    return punchListRaw.map((p: unknown) => {
       const photos = Array.isArray(p.photos) ? p.photos : [];
       return {
         id: p.id,
@@ -235,9 +235,9 @@ const PunchListPage: React.FC = () => {
 
   // Counts (memoized)
   const {
-    openCount, inProgressCount, subCompleteCount, verifiedCount, rejectedCount: _rejectedCount,
+    openCount, inProgressCount, subCompleteCount, verifiedCount,
     totalCount, completionPct, overdueCount,
-    criticalCount: _criticalCount, highCount: _highCount, mediumCount: _mediumCount, lowCount: _lowCount,
+
   } = useMemo(() => {
     let open = 0, inProgress = 0, subComplete = 0, verified = 0, rejected = 0, overdue = 0;
     let critical = 0, high = 0, medium = 0, low = 0;
@@ -468,7 +468,7 @@ const PunchListPage: React.FC = () => {
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: spacing['2'] }}>
               <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, fontWeight: typography.fontWeight.medium, lineHeight: typography.lineHeight.snug, flex: 1, display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
                 {info.getValue()}
-                {getAnnotationsForEntity('punch_item', item.id).map((ann: any) => (
+                {getAnnotationsForEntity('punch_item', item.id).map((ann: unknown) => (
                   <AIAnnotationIndicator key={ann.id} annotation={ann} inline />
                 ))}
               </span>
@@ -581,7 +581,7 @@ const PunchListPage: React.FC = () => {
         const trade = info.getValue()?.toLowerCase() ?? '';
         const item = info.row.original;
         let bg = 'transparent';
-        let label = item.responsible === 'gc' ? 'GC' : item.responsible === 'owner' ? 'Owner' : trade || 'Sub';
+        const label = item.responsible === 'gc' ? 'GC' : item.responsible === 'owner' ? 'Owner' : trade || 'Sub';
         const isSubTrade = trade.includes('electric') || trade.includes('plumb') || trade.includes('hvac') || trade.includes('drywall') || trade.includes('paint');
         let textColor = '#F5A623';
         if (item.responsible === 'gc') {

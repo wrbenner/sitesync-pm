@@ -2,12 +2,11 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { VirtualDataTable } from '../components/shared/VirtualDataTable';
 import { BulkActionBar } from '../components/shared/BulkActionBar';
 import { createColumnHelper } from '@tanstack/react-table';
-import { PageContainer, Card, Btn, StatusTag, PriorityTag, DetailPanel, RelatedItems, Skeleton, useToast } from '../components/Primitives';
-import EmptyState from '../components/ui/EmptyState';
+import { PageContainer, Card, Btn, StatusTag, PriorityTag, DetailPanel, RelatedItems, useToast } from '../components/Primitives';
 import { MetricCardSkeleton } from '../components/ui/Skeletons';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 import { useSubmittals } from '../hooks/queries';
-import { AlertTriangle, Calendar, Clock, ArrowRight, CheckCircle, ClipboardList, FileText, Paperclip, LayoutGrid, List, RefreshCw, Sparkles, UserCheck, Tag as TagIcon, Download } from 'lucide-react';
+import { AlertTriangle, Calendar, Clock, ArrowRight, CheckCircle, ClipboardList, Paperclip, LayoutGrid, List, RefreshCw, Sparkles, UserCheck, Tag as TagIcon, Download } from 'lucide-react';
 import { useAppNavigate, getRelatedItemsForSubmittal } from '../utils/connections';
 import { useCreateSubmittal, useUpdateSubmittal } from '../hooks/mutations';
 import { useSubmittalReviewers } from '../hooks/queries';
@@ -269,7 +268,7 @@ const SubmittalStatusTag: React.FC<{ status: string }> = ({ status }) => {
   );
 };
 
-function calcDaysInReview(sub: any): number | null {
+function calcDaysInReview(sub: unknown): number | null {
   const startStr = sub.submission_date || sub.submitted_at || sub.created_at;
   if (!startStr) return null;
   const start = new Date(startStr);
@@ -328,7 +327,7 @@ const MiniApprovalChain: React.FC<{ status: string }> = ({ status }) => {
   );
 };
 
-const subColHelper = createColumnHelper<any>();
+const subColHelper = createColumnHelper<unknown>();
 
 const SubmittalsPage: React.FC = () => {
   const { setPageContext } = useCopilotStore();
@@ -360,6 +359,276 @@ const SubmittalsPage: React.FC = () => {
     from: (s.subcontractor as string) || (s.created_by as string) || '',
     dueDate: (s.due_date as string) || '',
   })), [submittalsRaw]);
+
+  const allSubmittals = submittals || [];
+  const pageAlerts = getPredictiveAlertsForPage('submittals');
+  const openCount = useMemo(() => allSubmittals.filter((s: Record<string, unknown>) => s.status !== 'approved').length, [allSubmittals]);
+  const totalCount = allSubmittals.length;
+  const pendingReviewCount = useMemo(() => allSubmittals.filter((s: unknown) => s.status === 'submitted' || s.status === 'review_in_progress').length, [allSubmittals]);
+  const approvedCount = useMemo(() => allSubmittals.filter((s: unknown) => s.status === 'approved' || s.status === 'approved_as_noted').length, [allSubmittals]);
+  const overdueCount = useMemo(() => allSubmittals.filter((s: unknown) => {
+    const due = s.due_date || s.dueDate;
+    if (!due) return false;
+    return s.status !== 'approved' && s.status !== 'approved_as_noted' && new Date(due) < new Date();
+  }).length, [allSubmittals]);
+
+  const STATUS_FILTER_TABS: Array<{ label: string; value: string | null }> = [
+    { label: 'All', value: null },
+    { label: 'Pending', value: 'pending' },
+    { label: 'In Review', value: 'in_review' },
+    { label: 'Approved', value: 'approved' },
+    { label: 'Rejected', value: 'rejected' },
+    { label: 'Resubmit', value: 'revise_resubmit' },
+  ];
+
+  const filteredSubmittals = useMemo(() => {
+    if (!statusFilter) return allSubmittals;
+    if (statusFilter === 'in_review') return allSubmittals.filter((s: unknown) => s.status === 'submitted' || s.status === 'review_in_progress' || s.status === 'under_review');
+    return allSubmittals.filter((s: unknown) => s.status === statusFilter);
+  }, [allSubmittals, statusFilter]);
+
+  const subColumns = useMemo(() => [
+    subColHelper.accessor('submittalNumber', {
+      header: 'Submittal #',
+      size: 100,
+      cell: (info) => <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.orangeText }}>{info.getValue()}</span>,
+    }),
+    subColHelper.accessor('title', {
+      header: 'Title',
+      size: 360,
+      cell: (info) => {
+        const sub = info.row.original;
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, fontWeight: typography.fontWeight.medium, lineHeight: typography.lineHeight.snug }}>
+              {info.getValue()}
+              {getAnnotationsForEntity('submittal', sub.id).map((ann: unknown) => (
+                <AIAnnotationIndicator key={ann.id} annotation={ann} inline />
+              ))}
+            </span>
+            <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
+              {sub.spec_section && <span style={{ fontFamily: 'monospace', marginRight: spacing['2'] }}>{sub.spec_section}</span>}
+              {sub.lead_time_weeks != null && sub.lead_time_weeks > 0 && (() => {
+                const wks = sub.lead_time_weeks;
+                const c = wks > 12 ? colors.statusCritical : wks >= 8 ? colors.statusPending : colors.statusActive;
+                return <span style={{ color: c }}>{wks} wk lead</span>;
+              })()}
+            </span>
+          </div>
+        );
+      },
+    }),
+    subColHelper.accessor('from', {
+      header: 'From',
+      size: 150,
+      cell: (info) => <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{info.getValue()}</span>,
+    }),
+    subColHelper.accessor('priority', {
+      header: 'Priority',
+      size: 90,
+      cell: (info) => <PriorityTag priority={info.getValue() as 'low' | 'medium' | 'high' | 'critical'} />,
+    }),
+    subColHelper.accessor('status', {
+      header: 'Status',
+      size: 140,
+      cell: (info) => <SubmittalStatusTag status={info.getValue() as string} />,
+    }),
+    subColHelper.accessor('specification_section', {
+      header: 'Spec Section',
+      size: 110,
+      cell: (info) => {
+        const raw = info.getValue() as string | null;
+        const sub = info.row.original as Record<string, unknown>;
+        const val = formatCSICode(raw) || formatCSICode((sub.submittal_type as string | null) ?? null);
+        return val ? (
+          <span style={{ fontSize: typography.fontSize.sm, fontFamily: 'monospace', color: colors.textSecondary }}>{val}</span>
+        ) : (
+          <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>&mdash;</span>
+        );
+      },
+    }),
+    subColHelper.accessor((row: unknown) => {
+      const revisions = Array.isArray(row.submittal_revisions) ? row.submittal_revisions.length : null;
+      return revisions ?? row.revision_number ?? 0;
+    }, {
+      id: 'rev_number',
+      header: 'Revision',
+      size: 80,
+      cell: (info) => {
+        const val = info.getValue() as number;
+        return (
+          <span style={{
+            fontSize: typography.fontSize.sm,
+            fontWeight: val > 0 ? typography.fontWeight.semibold : typography.fontWeight.normal,
+            color: val > 0 ? colors.statusCritical : colors.textTertiary,
+            fontVariantNumeric: 'tabular-nums' as const,
+          }}>
+            {`Rev ${val}`}
+          </span>
+        );
+      },
+    }),
+    subColHelper.accessor((row: unknown) => row, {
+      id: 'lead_time',
+      header: 'Lead Time',
+      size: 130,
+      cell: (info) => {
+        const sub = info.getValue() as Record<string, unknown>;
+        const daysRemaining = calcBusinessDaysRemaining((sub.due_date as string) || (sub.dueDate as string));
+        if (daysRemaining === null) return <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>&mdash;</span>;
+        const overdue = daysRemaining < 0;
+        const color = overdue ? '#E74C3C' : daysRemaining <= 7 ? '#F5A623' : '#4EC896';
+        const label = overdue
+          ? `${Math.abs(daysRemaining)} days overdue`
+          : `${daysRemaining} days remaining`;
+        return (
+          <span style={{ fontSize: typography.fontSize.sm, color, fontWeight: typography.fontWeight.medium, fontVariantNumeric: 'tabular-nums' as const, whiteSpace: 'nowrap' }}>
+            {label}
+          </span>
+        );
+      },
+    }),
+    subColHelper.accessor('assigned_to', {
+      header: 'Current Reviewer',
+      size: 160,
+      cell: (info) => {
+        const val = info.getValue() as string | null;
+        if (!val) return <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>Unassigned</span>;
+        return (
+          <span style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#3B82F6', flexShrink: 0, display: 'inline-block' }} />
+            <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary }}>{val}</span>
+          </span>
+        );
+      },
+    }),
+    subColHelper.accessor('dueDate', {
+      header: 'Due',
+      size: 100,
+      cell: (info) => {
+        const sub = info.row.original;
+        return (
+          <span style={{ fontSize: typography.fontSize.sm, color: isOverdue(info.getValue()) && sub.status !== 'approved' ? colors.statusCritical : colors.textTertiary, fontVariantNumeric: 'tabular-nums' as const }}>
+            {new Date(info.getValue()).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+          </span>
+        );
+      },
+    }),
+    subColHelper.accessor('ball_in_court', {
+      header: 'Ball in Court',
+      size: 120,
+      cell: (info) => <BallInCourtBadge value={info.getValue() as string | null} />,
+    }),
+    subColHelper.accessor((row: unknown) => row, {
+      id: 'days_in_review',
+      header: 'Days in Review',
+      size: 120,
+      cell: (info) => {
+        const sub = info.getValue() as Record<string, unknown>;
+        const days = calcDaysInReview(sub);
+        if (days === null) return <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>&mdash;</span>;
+        const color = days > 14 ? '#E74C3C' : days > 7 ? '#F5A623' : colors.textSecondary;
+        return (
+          <span style={{ fontSize: typography.fontSize.sm, color, fontWeight: days > 14 ? typography.fontWeight.semibold : typography.fontWeight.normal, fontVariantNumeric: 'tabular-nums' as const, whiteSpace: 'nowrap' }}>
+            {days}d
+          </span>
+        );
+      },
+    }),
+    subColHelper.accessor('status', {
+      id: 'approval_chain',
+      header: 'Chain',
+      size: 80,
+      cell: (info) => <MiniApprovalChain status={info.getValue() as string} />,
+    }),
+  ], []);
+
+  const checkboxColumn = useMemo(() => subColHelper.display({
+    id: 'select',
+    size: 44,
+    header: () => (
+      <input
+        type="checkbox"
+        checked={selectedIds.size > 0 && selectedIds.size === allSubmittals.length}
+        ref={(el) => { if (el) el.indeterminate = selectedIds.size > 0 && selectedIds.size < allSubmittals.length; }}
+        onChange={(e) => {
+          if (e.target.checked) setSelectedIds(new Set(allSubmittals.map((s: unknown) => String(s.id))));
+          else setSelectedIds(new Set());
+        }}
+        onClick={(e) => e.stopPropagation()}
+        aria-label="Select all submittals"
+        style={{ cursor: 'pointer' }}
+      />
+    ),
+    cell: (info: unknown) => {
+      const id = String(info.row.original.id);
+      return (
+        <input
+          type="checkbox"
+          checked={selectedIds.has(id)}
+          onChange={() => {
+            setSelectedIds((prev) => {
+              const next = new Set(prev);
+              if (next.has(id)) next.delete(id);
+              else next.add(id);
+              return next;
+            });
+          }}
+          onClick={(e) => e.stopPropagation()}
+          aria-label={`Select submittal ${id}`}
+          style={{ cursor: 'pointer' }}
+        />
+      );
+    },
+  }), [selectedIds, allSubmittals]);
+
+  const allSubColumns = useMemo(() => [checkboxColumn, ...subColumns], [checkboxColumn, subColumns]);
+
+  const selected = allSubmittals.find((s: Record<string, unknown>) => s.id === selectedId) || null;
+  const timeline: Array<{ date: string; event: string; by: string; status: 'complete' | 'active' | 'pending' }> = [];
+
+  const kanbanColumns: KanbanColumn<unknown>[] = useMemo(() => [
+    { id: 'pending', label: 'Pending', color: colors.statusPending, items: allSubmittals.filter((s) => s.status === 'pending') },
+    { id: 'under_review', label: 'Under Review', color: colors.statusInfo, items: allSubmittals.filter((s) => s.status === 'under_review') },
+    { id: 'revise_resubmit', label: 'Revise & Resubmit', color: colors.statusCritical, items: allSubmittals.filter((s) => s.status === 'revise_resubmit') },
+    { id: 'approved', label: 'Approved', color: colors.statusActive, items: allSubmittals.filter((s) => s.status === 'approved') },
+  ], [allSubmittals]);
+
+  const approvalSteps: ApprovalStep[] = useMemo(() => selected ? [
+    { id: 1, role: 'Subcontractor', name: selected.from || 'Contractor', initials: 'SC', status: 'approved', date: 'Submitted', comment: 'Initial submission' },
+    { id: 2, role: 'General Contractor', name: 'GC Reviewer', initials: 'GC', status: 'approved', date: 'Reviewed' },
+    { id: 3, role: 'Architect', name: 'Architect', initials: 'AR', status: selected.status === 'approved' ? 'approved' : selected.status === 'revise_resubmit' ? 'rejected' : 'pending', date: selected.status === 'approved' ? 'Approved' : undefined, comment: selected.status === 'revise_resubmit' ? 'Revisions required' : undefined },
+    { id: 4, role: 'Owner', name: 'Owner', initials: 'OW', status: selected.status === 'approved' ? 'approved' : 'waiting' },
+  ] : [], [selected]);
+
+  const handleApprove = useCallback(() => {
+    addToast('success', `${selected?.submittalNumber} approved successfully`);
+    setSelectedId(null);
+  }, [selected, addToast]);
+
+  const handleReject = useCallback(() => {
+    addToast('error', `${selected?.submittalNumber} has been rejected`);
+    setSelectedId(null);
+  }, [selected, addToast]);
+
+  const handleRequestRevision = useCallback(() => {
+    addToast('warning', `Revision requested for ${selected?.submittalNumber}`);
+    setSelectedId(null);
+  }, [selected, addToast]);
+
+  const toggleBtnStyle = useCallback((active: boolean): React.CSSProperties => ({
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 32,
+    height: 32,
+    border: 'none',
+    cursor: 'pointer',
+    backgroundColor: active ? colors.primaryOrange : 'transparent',
+    color: active ? colors.white : colors.textTertiary,
+    transition: 'all 150ms ease',
+  }), []);
+
 
   if (loading) {
     return (
@@ -484,276 +753,6 @@ const SubmittalsPage: React.FC = () => {
     );
   }
 
-  const allSubmittals = submittals;
-
-  const pageAlerts = getPredictiveAlertsForPage('submittals');
-  const openCount = useMemo(() => allSubmittals.filter((s: Record<string, unknown>) => s.status !== 'approved').length, [allSubmittals]);
-
-  const totalCount = allSubmittals.length;
-  const pendingReviewCount = useMemo(() => allSubmittals.filter((s: any) => s.status === 'submitted' || s.status === 'review_in_progress').length, [allSubmittals]);
-  const approvedCount = useMemo(() => allSubmittals.filter((s: any) => s.status === 'approved' || s.status === 'approved_as_noted').length, [allSubmittals]);
-  const overdueCount = useMemo(() => allSubmittals.filter((s: any) => {
-    const due = s.due_date || s.dueDate;
-    if (!due) return false;
-    return s.status !== 'approved' && s.status !== 'approved_as_noted' && new Date(due) < new Date();
-  }).length, [allSubmittals]);
-
-  const STATUS_FILTER_TABS: Array<{ label: string; value: string | null }> = [
-    { label: 'All', value: null },
-    { label: 'Pending', value: 'pending' },
-    { label: 'In Review', value: 'in_review' },
-    { label: 'Approved', value: 'approved' },
-    { label: 'Rejected', value: 'rejected' },
-    { label: 'Resubmit', value: 'revise_resubmit' },
-  ];
-
-  const filteredSubmittals = useMemo(() => {
-    if (!statusFilter) return allSubmittals;
-    if (statusFilter === 'in_review') return allSubmittals.filter((s: any) => s.status === 'submitted' || s.status === 'review_in_progress' || s.status === 'under_review');
-    return allSubmittals.filter((s: any) => s.status === statusFilter);
-  }, [allSubmittals, statusFilter]);
-
-  const subColumns = useMemo(() => [
-    subColHelper.accessor('submittalNumber', {
-      header: 'Submittal #',
-      size: 100,
-      cell: (info) => <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.orangeText }}>{info.getValue()}</span>,
-    }),
-    subColHelper.accessor('title', {
-      header: 'Title',
-      size: 360,
-      cell: (info) => {
-        const sub = info.row.original;
-        return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, fontWeight: typography.fontWeight.medium, lineHeight: typography.lineHeight.snug }}>
-              {info.getValue()}
-              {getAnnotationsForEntity('submittal', sub.id).map((ann: any) => (
-                <AIAnnotationIndicator key={ann.id} annotation={ann} inline />
-              ))}
-            </span>
-            <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
-              {sub.spec_section && <span style={{ fontFamily: 'monospace', marginRight: spacing['2'] }}>{sub.spec_section}</span>}
-              {sub.lead_time_weeks != null && sub.lead_time_weeks > 0 && (() => {
-                const wks = sub.lead_time_weeks;
-                const c = wks > 12 ? colors.statusCritical : wks >= 8 ? colors.statusPending : colors.statusActive;
-                return <span style={{ color: c }}>{wks} wk lead</span>;
-              })()}
-            </span>
-          </div>
-        );
-      },
-    }),
-    subColHelper.accessor('from', {
-      header: 'From',
-      size: 150,
-      cell: (info) => <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{info.getValue()}</span>,
-    }),
-    subColHelper.accessor('priority', {
-      header: 'Priority',
-      size: 90,
-      cell: (info) => <PriorityTag priority={info.getValue() as 'low' | 'medium' | 'high' | 'critical'} />,
-    }),
-    subColHelper.accessor('status', {
-      header: 'Status',
-      size: 140,
-      cell: (info) => <SubmittalStatusTag status={info.getValue() as string} />,
-    }),
-    subColHelper.accessor('specification_section', {
-      header: 'Spec Section',
-      size: 110,
-      cell: (info) => {
-        const raw = info.getValue() as string | null;
-        const sub = info.row.original as Record<string, unknown>;
-        const val = formatCSICode(raw) || formatCSICode((sub.submittal_type as string | null) ?? null);
-        return val ? (
-          <span style={{ fontSize: typography.fontSize.sm, fontFamily: 'monospace', color: colors.textSecondary }}>{val}</span>
-        ) : (
-          <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>&mdash;</span>
-        );
-      },
-    }),
-    subColHelper.accessor((row: any) => {
-      const revisions = Array.isArray(row.submittal_revisions) ? row.submittal_revisions.length : null;
-      return revisions ?? row.revision_number ?? 0;
-    }, {
-      id: 'rev_number',
-      header: 'Revision',
-      size: 80,
-      cell: (info) => {
-        const val = info.getValue() as number;
-        return (
-          <span style={{
-            fontSize: typography.fontSize.sm,
-            fontWeight: val > 0 ? typography.fontWeight.semibold : typography.fontWeight.normal,
-            color: val > 0 ? colors.statusCritical : colors.textTertiary,
-            fontVariantNumeric: 'tabular-nums' as const,
-          }}>
-            {`Rev ${val}`}
-          </span>
-        );
-      },
-    }),
-    subColHelper.accessor((row: any) => row, {
-      id: 'lead_time',
-      header: 'Lead Time',
-      size: 130,
-      cell: (info) => {
-        const sub = info.getValue() as Record<string, unknown>;
-        const daysRemaining = calcBusinessDaysRemaining((sub.due_date as string) || (sub.dueDate as string));
-        if (daysRemaining === null) return <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>&mdash;</span>;
-        const overdue = daysRemaining < 0;
-        const color = overdue ? '#E74C3C' : daysRemaining <= 7 ? '#F5A623' : '#4EC896';
-        const label = overdue
-          ? `${Math.abs(daysRemaining)} days overdue`
-          : `${daysRemaining} days remaining`;
-        return (
-          <span style={{ fontSize: typography.fontSize.sm, color, fontWeight: typography.fontWeight.medium, fontVariantNumeric: 'tabular-nums' as const, whiteSpace: 'nowrap' }}>
-            {label}
-          </span>
-        );
-      },
-    }),
-    subColHelper.accessor('assigned_to', {
-      header: 'Current Reviewer',
-      size: 160,
-      cell: (info) => {
-        const val = info.getValue() as string | null;
-        if (!val) return <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>Unassigned</span>;
-        return (
-          <span style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#3B82F6', flexShrink: 0, display: 'inline-block' }} />
-            <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary }}>{val}</span>
-          </span>
-        );
-      },
-    }),
-    subColHelper.accessor('dueDate', {
-      header: 'Due',
-      size: 100,
-      cell: (info) => {
-        const sub = info.row.original;
-        return (
-          <span style={{ fontSize: typography.fontSize.sm, color: isOverdue(info.getValue()) && sub.status !== 'approved' ? colors.statusCritical : colors.textTertiary, fontVariantNumeric: 'tabular-nums' as const }}>
-            {new Date(info.getValue()).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-          </span>
-        );
-      },
-    }),
-    subColHelper.accessor('ball_in_court', {
-      header: 'Ball in Court',
-      size: 120,
-      cell: (info) => <BallInCourtBadge value={info.getValue() as string | null} />,
-    }),
-    subColHelper.accessor((row: any) => row, {
-      id: 'days_in_review',
-      header: 'Days in Review',
-      size: 120,
-      cell: (info) => {
-        const sub = info.getValue() as Record<string, unknown>;
-        const days = calcDaysInReview(sub);
-        if (days === null) return <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>&mdash;</span>;
-        const color = days > 14 ? '#E74C3C' : days > 7 ? '#F5A623' : colors.textSecondary;
-        return (
-          <span style={{ fontSize: typography.fontSize.sm, color, fontWeight: days > 14 ? typography.fontWeight.semibold : typography.fontWeight.normal, fontVariantNumeric: 'tabular-nums' as const, whiteSpace: 'nowrap' }}>
-            {days}d
-          </span>
-        );
-      },
-    }),
-    subColHelper.accessor('status', {
-      id: 'approval_chain',
-      header: 'Chain',
-      size: 80,
-      cell: (info) => <MiniApprovalChain status={info.getValue() as string} />,
-    }),
-  ], []);
-
-  const checkboxColumn = useMemo(() => subColHelper.display({
-    id: 'select',
-    size: 44,
-    header: () => (
-      <input
-        type="checkbox"
-        checked={selectedIds.size > 0 && selectedIds.size === allSubmittals.length}
-        ref={(el) => { if (el) el.indeterminate = selectedIds.size > 0 && selectedIds.size < allSubmittals.length; }}
-        onChange={(e) => {
-          if (e.target.checked) setSelectedIds(new Set(allSubmittals.map((s: any) => String(s.id))));
-          else setSelectedIds(new Set());
-        }}
-        onClick={(e) => e.stopPropagation()}
-        aria-label="Select all submittals"
-        style={{ cursor: 'pointer' }}
-      />
-    ),
-    cell: (info: any) => {
-      const id = String(info.row.original.id);
-      return (
-        <input
-          type="checkbox"
-          checked={selectedIds.has(id)}
-          onChange={() => {
-            setSelectedIds((prev) => {
-              const next = new Set(prev);
-              if (next.has(id)) next.delete(id);
-              else next.add(id);
-              return next;
-            });
-          }}
-          onClick={(e) => e.stopPropagation()}
-          aria-label={`Select submittal ${id}`}
-          style={{ cursor: 'pointer' }}
-        />
-      );
-    },
-  }), [selectedIds, allSubmittals]);
-
-  const allSubColumns = useMemo(() => [checkboxColumn, ...subColumns], [checkboxColumn, subColumns]);
-
-  const selected = allSubmittals.find((s: Record<string, unknown>) => s.id === selectedId) || null;
-  const timeline: Array<{ date: string; event: string; by: string; status: 'complete' | 'active' | 'pending' }> = [];
-
-  const kanbanColumns: KanbanColumn<any>[] = useMemo(() => [
-    { id: 'pending', label: 'Pending', color: colors.statusPending, items: allSubmittals.filter((s) => s.status === 'pending') },
-    { id: 'under_review', label: 'Under Review', color: colors.statusInfo, items: allSubmittals.filter((s) => s.status === 'under_review') },
-    { id: 'revise_resubmit', label: 'Revise & Resubmit', color: colors.statusCritical, items: allSubmittals.filter((s) => s.status === 'revise_resubmit') },
-    { id: 'approved', label: 'Approved', color: colors.statusActive, items: allSubmittals.filter((s) => s.status === 'approved') },
-  ], [allSubmittals]);
-
-  const approvalSteps: ApprovalStep[] = useMemo(() => selected ? [
-    { id: 1, role: 'Subcontractor', name: selected.from || 'Contractor', initials: 'SC', status: 'approved', date: 'Submitted', comment: 'Initial submission' },
-    { id: 2, role: 'General Contractor', name: 'GC Reviewer', initials: 'GC', status: 'approved', date: 'Reviewed' },
-    { id: 3, role: 'Architect', name: 'Architect', initials: 'AR', status: selected.status === 'approved' ? 'approved' : selected.status === 'revise_resubmit' ? 'rejected' : 'pending', date: selected.status === 'approved' ? 'Approved' : undefined, comment: selected.status === 'revise_resubmit' ? 'Revisions required' : undefined },
-    { id: 4, role: 'Owner', name: 'Owner', initials: 'OW', status: selected.status === 'approved' ? 'approved' : 'waiting' },
-  ] : [], [selected]);
-
-  const handleApprove = useCallback(() => {
-    addToast('success', `${selected?.submittalNumber} approved successfully`);
-    setSelectedId(null);
-  }, [selected, addToast]);
-
-  const handleReject = useCallback(() => {
-    addToast('error', `${selected?.submittalNumber} has been rejected`);
-    setSelectedId(null);
-  }, [selected, addToast]);
-
-  const handleRequestRevision = useCallback(() => {
-    addToast('warning', `Revision requested for ${selected?.submittalNumber}`);
-    setSelectedId(null);
-  }, [selected, addToast]);
-
-  const toggleBtnStyle = useCallback((active: boolean): React.CSSProperties => ({
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 32,
-    height: 32,
-    border: 'none',
-    cursor: 'pointer',
-    backgroundColor: active ? colors.primaryOrange : 'transparent',
-    color: active ? colors.white : colors.textTertiary,
-    transition: 'all 150ms ease',
-  }), []);
 
   return (
     <PageContainer
@@ -892,8 +891,8 @@ const SubmittalsPage: React.FC = () => {
       ) : (
         <KanbanBoard
           columns={kanbanColumns}
-          getKey={(sub: any) => sub.id}
-          renderCard={(sub: any) => (
+          getKey={(sub: unknown) => sub.id}
+          renderCard={(sub: unknown) => (
             <div
               style={{ padding: spacing.md, cursor: 'pointer' }}
               onClick={() => setSelectedId(sub.id)}
@@ -971,7 +970,7 @@ const SubmittalsPage: React.FC = () => {
             onClick: async (ids) => {
               const selected = allSubmittals.filter((s: Record<string, unknown>) => ids.includes(String(s.id)));
               const csv = ['Submittal #,Title,From,Priority,Status,Due Date',
-                ...selected.map((s: any) => `${s.submittalNumber},"${s.title}",${s.from},${s.priority},${s.status},${s.dueDate}`),
+                ...selected.map((s: unknown) => `${s.submittalNumber},"${s.title}",${s.from},${s.priority},${s.status},${s.dueDate}`),
               ].join('\n');
               const blob = new Blob([csv], { type: 'text/csv' });
               const url = URL.createObjectURL(blob);

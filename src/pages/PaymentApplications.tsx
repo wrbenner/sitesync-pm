@@ -1308,8 +1308,10 @@ const SOVEditorPanel = memo<{
     for (const item of sovData.lineItems) {
       initial[item.id] = { pct: item.current_pct_complete, materials: item.stored_materials }
     }
-    setEdits(initial)
-    setIsDirty(false)
+    setTimeout(() => {
+      setEdits(initial)
+      setIsDirty(false)
+    }, 0)
   }, [sovData])
 
   // Live G703 line items

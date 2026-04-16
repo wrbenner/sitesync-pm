@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react'
 import { Send, Loader2 } from 'lucide-react'
-import { colors, spacing, typography, borderRadius, transitions } from '../../../styles/theme'
+import { colors, spacing, typography, borderRadius } from '../../../styles/theme'
 import { Btn } from '../../Primitives'
 import { FormField, FormInput, FormTextarea, FormSelect } from '../../forms/FormPrimitives'
 import { toast } from 'sonner'

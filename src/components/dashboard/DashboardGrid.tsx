@@ -168,7 +168,7 @@ export const DashboardGrid: React.FC = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [tipDismissed, setTipDismissed] = useState(() => localStorage.getItem('sitesync-tip-dismissed') === 'true');
 
-  const handleLayoutChange = useCallback((_layout: any, allLayouts: any) => {
+  const handleLayoutChange = useCallback((_layout: unknown, allLayouts: unknown) => {
     setLayouts(allLayouts);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(allLayouts.lg || _layout));
   }, []);

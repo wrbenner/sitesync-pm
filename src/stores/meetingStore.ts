@@ -39,7 +39,7 @@ export const useMeetingStore = create<MeetingState>()((set, get) => ({
         .order('meeting_date', { ascending: false });
 
       if (error) throw error;
-      const meetings: MeetingWithDetails[] = (data ?? []).map((m: any) => ({
+      const meetings: MeetingWithDetails[] = (data ?? []).map((m: unknown) => ({
         ...m,
         attendee_count: m.attendee_count || 0,
         status: m.status || 'scheduled',

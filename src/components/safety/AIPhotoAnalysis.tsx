@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, memo } from 'react'
 import {
-  Camera, Upload, ShieldAlert, AlertTriangle, CheckCircle,
+  Camera, ShieldAlert, AlertTriangle, CheckCircle,
   Eye, Sparkles, Plus, X,
 } from 'lucide-react'
 import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme'
@@ -167,7 +167,7 @@ export const AIPhotoAnalysis: React.FC = () => {
   )
 
   const handleCreateObservation = useCallback(
-    (description: string, _severity: string) => {
+    (description: string) => {
       // In production, this would call the safety observation mutation
       toast.success(`Safety observation created: ${description.substring(0, 50)}...`)
     },

@@ -1,7 +1,7 @@
 // AIA G702/G703 Payment Application workflow state machine.
 // Manages the lifecycle: draft → submitted → gc_review → owner_review → approved → paid.
 
-import { setup, assign } from 'xstate'
+import { setup } from 'xstate'
 import { colors } from '../styles/theme'
 
 export type PaymentStatus = 'draft' | 'submitted' | 'gc_review' | 'owner_review' | 'approved' | 'rejected' | 'paid' | 'void'

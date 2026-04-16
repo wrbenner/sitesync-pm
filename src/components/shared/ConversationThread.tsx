@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef , startTransition} from 'react';
 import { Paperclip, Reply, FileText, Image, X, SmilePlus } from 'lucide-react';
 import { Avatar } from '../Primitives';
 import { MentionInput } from '../activity/MentionInput';
@@ -89,7 +89,7 @@ export const ConversationThread: React.FC<ConversationThreadProps> = ({
     messages.forEach((m) => {
       if (m.reactions && m.reactions.length > 0) seed[m.id] = m.reactions;
     });
-    setReactions(seed);
+    setTimeout(() => setReactions(seed), 0);
 
     // Then fetch live from DB
     Promise.all(

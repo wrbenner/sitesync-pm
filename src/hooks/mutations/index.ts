@@ -302,7 +302,7 @@ export function useUpdateDailyLog() {
 // ── Daily Log Entries ─────────────────────────────────────
 
 export function useCreateDailyLogEntry() {
-  const queryClient = useQueryClient()
+
   return useMutation({
     mutationFn: async (params: { data: Record<string, unknown>; projectId: string }) => {
       const { data, error } = await from('daily_log_entries').insert(params.data).select().single()
@@ -1017,7 +1017,7 @@ export function useReorderTasks() {
     onMutate: async ({ updates, projectId }) => {
       await queryClient.cancelQueries({ queryKey: ['tasks', projectId] })
       const previousTasks = queryClient.getQueryData(['tasks', projectId])
-      queryClient.setQueryData(['tasks', projectId], (old: any[]) => {
+      queryClient.setQueryData(['tasks', projectId], (old: unknown[]) => {
         if (!Array.isArray(old)) return old
         const orderMap = new Map(updates.map((u) => [u.id, u.sort_order]))
         return old.map((t) => orderMap.has(t.id) ? { ...t, sort_order: orderMap.get(t.id) } : t)

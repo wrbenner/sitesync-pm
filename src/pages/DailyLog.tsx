@@ -77,7 +77,7 @@ const DailyLogPage: React.FC = () => {
   const [compareMode, setCompareMode] = useState<'yesterday' | 'lastweek' | null>(null);
   const [expandedIncident, setExpandedIncident] = useState<string | null>(null);
   const [showQuickEntry, setShowQuickEntry] = useState(false);
-  const [_showCalendar, _setShowCalendar] = useState(false);
+  useState(false);
   const [activeView, setActiveView] = useState<'auto' | 'calendar' | 'log'>('auto');
   const [showCaptureBar, setShowCaptureBar] = useState(true);
   const [weather, setWeather] = useState<WeatherData | null>(null);
@@ -241,7 +241,7 @@ const DailyLogPage: React.FC = () => {
     dailyLogHistory.filter((l) => l.status === 'draft' || (!l.status && !l.approved)).map((l) => l.log_date?.split('T')[0])
   ), [dailyLogHistory]);
   // Legacy: combined set for any code still referencing loggedDates
-  const _loggedDates = useMemo(() => new Set([...approvedDates, ...submittedDates]), [approvedDates, submittedDates]);
+  useMemo(() => new Set([...approvedDates, ...submittedDates]), [approvedDates, submittedDates]);
 
   const aggMetrics = useMemo(() => {
     const now = new Date();
@@ -289,7 +289,7 @@ const DailyLogPage: React.FC = () => {
     };
   }, [dailyLogHistory]);
 
-  const handleQuickSave = useCallback((_data: QuickEntryData) => {
+  const handleQuickSave = useCallback((_: QuickEntryData) => {
     toast.success('Draft saved');
   }, []);
 
@@ -1624,7 +1624,7 @@ const DailyLogPage: React.FC = () => {
               </Card>
             ) : (
             <Card padding="0">
-              {filteredPreviousDays.map((log: any, index: number) => {
+              {filteredPreviousDays.map((log: unknown, index: number) => {
                 const logDate = new Date(log.log_date + 'T12:00:00');
                 const formatted = logDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
                 const isHovered = hoveredRow === log.id;

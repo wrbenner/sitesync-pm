@@ -2,7 +2,7 @@
 // These components render INSIDE the Three.js Canvas and provide
 // visual overlays for project data on top of the BIM model.
 
-import React, { useMemo, useRef, memo, useCallback } from 'react'
+import React, { useMemo, useRef, memo } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Html, Line } from '@react-three/drei'
 import * as THREE from 'three'

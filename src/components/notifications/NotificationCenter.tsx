@@ -358,7 +358,7 @@ interface NotificationBellProps {
 export const NotificationBell: React.FC<NotificationBellProps> = ({ onClick, isOpen }) => {
   const { user } = useAuth();
   const { data: notifications } = useNotifications(user?.id);
-  const unreadCount = (notifications || []).filter((n: any) => !n.read).length;
+  const unreadCount = (notifications || []).filter((n: unknown) => !n.read).length;
   const announceStatus = useUiStore(s => s.announceStatus);
   const prevUnreadRef = useRef<number | null>(null);
 
@@ -420,8 +420,8 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ onClose })
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
 
   const items = notifications || [];
-  const filtered = filter === 'unread' ? items.filter((n: any) => !n.read) : items;
-  const unreadCount = items.filter((n: any) => !n.read).length;
+  const filtered = filter === 'unread' ? items.filter((n: unknown) => !n.read) : items;
+  const unreadCount = items.filter((n: unknown) => !n.read).length;
 
   const handleMarkRead = (id: string) => {
     if (user?.id) markRead.mutate({ id, userId: user.id });
@@ -431,7 +431,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ onClose })
     if (user?.id) markAllRead.mutate(user.id);
   };
 
-  const handleClickNotification = (notification: any) => {
+  const handleClickNotification = (notification: unknown) => {
     handleMarkRead(notification.id);
     if (notification.link) {
       window.location.hash = `#${notification.link}`;
@@ -531,7 +531,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ onClose })
             </div>
           )}
 
-          {filtered.slice(0, 50).map((notification: any) => (
+          {filtered.slice(0, 50).map((notification: unknown) => (
             <div
               key={notification.id}
               onClick={() => handleClickNotification(notification)}

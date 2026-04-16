@@ -94,7 +94,7 @@ export async function triggerNotificationsForMutation(
   entityType: EntityType,
   projectId: string,
   action: 'create' | 'update' | 'delete',
-  entityData: Record<string, any>
+  entityData: Record<string, unknown>
 ): Promise<void> {
   try {
     switch (entityType) {

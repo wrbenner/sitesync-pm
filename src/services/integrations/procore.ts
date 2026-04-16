@@ -10,13 +10,6 @@ import {
   createIntegrationRecord,
 } from './base'
 
-interface ProcoreProject {
-  id: number
-  name: string
-  address: string
-  city: string
-  state_code: string
-}
 
 interface ProcoreRFI {
   id: number

@@ -53,7 +53,7 @@ interface G703PDFProps {
 }
 
 export const G703ContinuationPDF: React.FC<G703PDFProps> = ({
-  projectName, applicationNumber, periodTo, lineItems, summary,
+  projectName, applicationNumber, periodTo, lineItems
 }) => {
   // Calculate totals
   const totals = {

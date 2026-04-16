@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { AlertTriangle, ClipboardCheck, Award, Users, Plus, ShieldCheck, Shield, Wrench } from 'lucide-react'
-import { PageContainer, Card, Btn, Skeleton, MetricBox } from '../components/Primitives'
+import { PageContainer, Card, Btn, MetricBox } from '../components/Primitives'
 import { DataTable, createColumnHelper } from '../components/shared/DataTable'
 import { ExportButton } from '../components/shared/ExportButton'
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme'
@@ -34,66 +34,10 @@ function getSeverityStyle(severity: string | null): { fg: string; bg: string; la
 }
 
 
-const [] = [
-  {
-    id: 'ca1',
-    description: 'Install fall protection netting on Level 5 perimeter',
-    assigned_to: 'Dave Martinez',
-    due_date: '2026-04-05',
-    status: 'open',
-    severity: 'critical',
-    created_at: '2026-03-20',
-  },
-  {
-    id: 'ca2',
-    description: 'Replace damaged scaffold planks at Section B',
-    assigned_to: 'Jake Thompson',
-    due_date: '2026-04-01',
-    status: 'open',
-    severity: 'high',
-    created_at: '2026-03-25',
-  },
-  {
-    id: 'ca3',
-    description: 'Repair ground fault circuit interrupter on Level 1 panel',
-    assigned_to: 'Carlos Rivera',
-    due_date: '2026-04-10',
-    status: 'in_progress',
-    severity: 'high',
-    created_at: '2026-03-28',
-  },
-  {
-    id: 'ca4',
-    description: 'Restock first aid supplies in job trailer and Level 3 box',
-    assigned_to: 'Sarah Chen',
-    due_date: '2026-04-07',
-    status: 'in_progress',
-    severity: 'medium',
-    created_at: '2026-03-30',
-  },
-  {
-    id: 'ca5',
-    description: 'Clean up oil spill near loading dock entrance',
-    assigned_to: 'Bobby Kim',
-    due_date: '2026-03-28',
-    status: 'closed',
-    severity: 'medium',
-    created_at: '2026-03-22',
-  },
-  {
-    id: 'ca6',
-    description: 'Post updated emergency evacuation route signage on all levels',
-    assigned_to: 'Aisha Williams',
-    due_date: '2026-04-15',
-    status: 'open',
-    severity: 'low',
-    created_at: '2026-04-01',
-  },
-]
 
 // ── Column helpers ───────────────────────────────────────────
 
-const incidentCol = createColumnHelper<any>()
+const incidentCol = createColumnHelper<Record<string, unknown>>()
 const incidentColumns = [
   incidentCol.accessor('date', {
     header: 'Date',
@@ -171,7 +115,7 @@ const incidentColumns = [
   }),
 ]
 
-const inspectionCol = createColumnHelper<any>()
+const inspectionCol = createColumnHelper<Record<string, unknown>>()
 const inspectionColumns = [
   inspectionCol.accessor('date', {
     header: 'Date',
@@ -233,7 +177,7 @@ const inspectionColumns = [
   }),
 ]
 
-const talkCol = createColumnHelper<any>()
+const talkCol = createColumnHelper<Record<string, unknown>>()
 const talkColumns = [
   talkCol.accessor('date', {
     header: 'Date',
@@ -269,7 +213,7 @@ const talkColumns = [
   }),
 ]
 
-const certCol = createColumnHelper<any>()
+const certCol = createColumnHelper<Record<string, unknown>>()
 const certColumns = [
   certCol.accessor('worker_name', {
     header: 'Worker',
@@ -369,7 +313,7 @@ const certColumns = [
   }),
 ]
 
-const caCol = createColumnHelper<any>()
+const caCol = createColumnHelper<Record<string, unknown>>()
 const caColumns = [
   caCol.accessor('description', {
     header: 'Description',
@@ -536,10 +480,10 @@ export const Safety: React.FC = () => {
   const dailyLogs = dailyLogsResult?.data
 
   // Use mock incidents when API returns empty (prototype fallback)
-  const displayIncidents: any[] = (incidents || []).length > 0 ? (incidents || []) : []
+  const displayIncidents: unknown[] = (incidents || []).length > 0 ? (incidents || []) : []
 
   // Use mock corrective actions when API returns empty (prototype fallback)
-  const displayCAs: any[] = (correctiveActions || []).length > 0 ? (correctiveActions || []) : []
+  const displayCAs: unknown[] = (correctiveActions || []).length > 0 ? (correctiveActions || []) : []
 
   // ── Real-time subscriptions ────────────────────────────────
 
@@ -571,41 +515,41 @@ export const Safety: React.FC = () => {
   const recordableSeverities = ['medical_treatment', 'lost_time', 'fatality']
 
   const lastRecordableIncident = displayIncidents
-    .filter((i: any) => recordableSeverities.includes(i.severity))
-    .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())[0] ?? null
+    .filter((i: unknown) => recordableSeverities.includes(i.severity))
+    .sort((a: any, b: unknown) => new Date(b.date).getTime() - new Date(a.date).getTime())[0] ?? null
 
   const daysSinceIncident = lastRecordableIncident
     ? Math.floor((Date.now() - new Date(lastRecordableIncident.date).getTime()) / 86400000)
     : null
 
-  const computedHours = dailyLogs?.reduce((s: number, l: any) => s + (l.total_hours || 0), 0) ?? 0
+  const computedHours = dailyLogs?.reduce((s: number, l: unknown) => s + (l.total_hours || 0), 0) ?? 0
   // Default to 250000 hours for a realistic TRIR calculation in prototype
   const totalHoursWorked = computedHours > 0 ? computedHours : 250000
-  const recordableCount = displayIncidents.filter((i: any) => recordableSeverities.includes(i.severity)).length
+  const recordableCount = displayIncidents.filter((i: unknown) => recordableSeverities.includes(i.severity)).length
   const trirRaw = totalHoursWorked > 0 ? (recordableCount * 200000) / totalHoursWorked : null
   const trir = trirRaw !== null ? trirRaw.toFixed(2) : null
 
   const openCorrectiveActions = correctiveActions?.filter(
-    (ca: any) => ca.status !== 'closed' && ca.status !== 'verified'
+    (ca: unknown) => ca.status !== 'closed' && ca.status !== 'verified'
   ).length ?? 0
 
   const now = new Date()
 
-  const expiringCerts = certifications?.filter((c: any) => {
+  const expiringCerts = certifications?.filter((c: unknown) => {
     if (!c.expiration_date) return false
     const daysUntil = (new Date(c.expiration_date).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
     return daysUntil > 0 && daysUntil <= 30
   }).length ?? 0
 
-  const passCount = inspections?.filter((i: any) => i.status === 'passed').length ?? 0
-  const failCount = inspections?.filter((i: any) => i.status === 'failed').length ?? 0
+  const passCount = inspections?.filter((i: unknown) => i.status === 'passed').length ?? 0
+  const failCount = inspections?.filter((i: unknown) => i.status === 'failed').length ?? 0
 
   const weekStart = new Date(now)
   weekStart.setHours(0, 0, 0, 0)
   weekStart.setDate(now.getDate() - ((now.getDay() + 6) % 7))
   const weekEnd = new Date(weekStart)
   weekEnd.setDate(weekStart.getDate() + 7)
-  const inspectionsThisWeek = inspections?.filter((insp: any) => {
+  const inspectionsThisWeek = inspections?.filter((insp: unknown) => {
     if (!insp.date) return false
     const d = new Date(insp.date)
     return d >= weekStart && d < weekEnd

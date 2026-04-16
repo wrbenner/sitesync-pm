@@ -206,7 +206,7 @@ export const QRScannerSheet: React.FC<QRScannerSheetProps> = ({ onClose }) => {
 // ── QR Code Display (for gate/entrance) ───────────────────────
 
 const QRCodeDisplay = memo<{ projectId: string }>(({ projectId }) => {
-  const _payload = generateQRPayload(projectId)
+  generateQRPayload(projectId)
 
   // Simple SVG QR-like pattern (in production, use a real QR library)
   return (

@@ -362,55 +362,55 @@ export function normalizeTranscript(text: string, language: SupportedLanguage): 
 
 // ── AI Structured Extraction ──────────────────────────────────
 
-const EXTRACTION_PROMPT = `You are a construction field report parser for SiteSync AI. Extract structured data from voice transcripts spoken by superintendents and foremen on job sites.
 
-RULES:
-1. Identify ALL entities mentioned: daily log activities, RFI drafts, punch items, safety observations
-2. One transcript can generate MULTIPLE entities of different types
-3. Normalize locations: "level 3" → "Level 3", "east wing" → "East Wing"
-4. Convert spoken numbers: "eighty percent" → 80, "six guys" → 6
-5. Identify companies and crew names
-6. Extract weather if mentioned
-7. Flag safety concerns with high confidence
-8. If input is in Spanish, translate output to English but keep proper nouns
-9. For mixed language (Spanglish), extract meaning from both languages
-10. Construction slang: "mud" = drywall compound, "J-box" = junction box, "mudsill" = foundation plate
 
-Respond with ONLY valid JSON:
-{
-  "entities": [
-    {
-      "type": "daily_log | rfi_draft | punch_item | safety_observation | general_note",
-      "data": {
-        // For daily_log:
-        "activities": [{ "trade": "string", "location": "string", "description": "string", "progress": number|null }],
-        "crew": [{ "company": "string", "headcount": number, "trade": "string" }],
-        "weather": { "condition": "string", "temp_f": number } | null,
-        "equipment": ["string"] | null,
-        "materials": ["string"] | null,
-        // For rfi_draft:
-        "subject": "string",
-        "location": "string",
-        "question": "string",
-        "priority": "low|medium|high|critical",
-        "spec_section": "string" | null,
-        // For punch_item:
-        "title": "string",
-        "location": "string",
-        "trade": "string",
-        "priority": "low|medium|high|critical",
-        // For safety_observation:
-        "description": "string",
-        "location": "string",
-        "severity": "low|medium|high|critical",
-        "corrective_action": "string" | null
-      },
-      "confidence": 0.0-1.0,
-      "source": "quoted section of transcript that generated this entity"
-    }
-  ],
-  "detected_language": "en|es|mixed"
-}`
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 export async function extractFromTranscript(
   transcript: string,

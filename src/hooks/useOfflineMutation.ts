@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient, type UseMutationOptions } from '@tanstack/react-query'
+import { useMutation, useQueryClient} from '@tanstack/react-query'
 import { useIsOnline } from './useOfflineStatus'
 import { syncManager } from '../lib/syncManager'
 import { writeToCache, getOneFromCache, storeBaseVersion } from '../lib/offlineDb'

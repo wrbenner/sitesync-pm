@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { AlertTriangle, Pencil } from 'lucide-react'
+import {  Pencil } from 'lucide-react'
 import { colors, spacing, typography, borderRadius } from '../../styles/theme'
 import { usePresenceStore } from '../../stores/presenceStore'
 import { broadcastEditingStart, broadcastEditingStop } from '../../lib/realtime'

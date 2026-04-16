@@ -34,7 +34,8 @@ export function UserManagement() {
 
   // Load company members
   React.useEffect(() => {
-    loadMembers();
+    const timer = setTimeout(() => loadMembers(), 0);
+    return () => clearTimeout(timer);
   }, [company?.id]);
 
   const loadMembers = async () => {

@@ -42,18 +42,18 @@ export interface AIContextAnalysis {
 }
 
 // All functions return empty results. Real data comes from Supabase ai_insights table.
-export function getAnnotationsForEntity(_entityType: string, _entityId: number | string): AIAnnotation[] {
+export function getAnnotationsForEntity(): AIAnnotation[] {
   return [];
 }
 
-export function getAnnotationsForPage(_page: string): AIAnnotation[] {
+export function getAnnotationsForPage(): AIAnnotation[] {
   return [];
 }
 
-export function getPredictiveAlertsForPage(_page: string): PredictiveAlertData[] {
+export function getPredictiveAlertsForPage(): PredictiveAlertData[] {
   return [];
 }
 
-export function getContextAnalysisForPage(_page: string): AIContextAnalysis | undefined {
+export function getContextAnalysisForPage(): AIContextAnalysis | undefined {
   return undefined;
 }

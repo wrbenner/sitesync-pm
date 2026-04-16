@@ -48,6 +48,12 @@ export const EarnedValueDashboard: React.FC = () => {
     return () => { supabase.removeChannel(channel); };
   }, [activeProjectId, refetch]);
 
+  const gridCols = useMemo(() => {
+    if (window.innerWidth < 480) return '1fr';
+    if (window.innerWidth < 768) return 'repeat(2, 1fr)';
+    return 'repeat(3, 1fr)';
+  }, []);
+
   if (loading) {
     return (
       <div style={{ display: 'grid', gridTemplateColumns: METRIC_GRID, gap: spacing['3'] }}>
@@ -82,12 +88,6 @@ export const EarnedValueDashboard: React.FC = () => {
       </div>
     );
   }
-
-  const gridCols = useMemo(() => {
-    if (window.innerWidth < 480) return '1fr';
-    if (window.innerWidth < 768) return 'repeat(2, 1fr)';
-    return 'repeat(3, 1fr)';
-  }, []);
 
   const ev = computeEarnedValue(budgetItems, changeOrders, invoices, scheduleActivities);
   const { bcws, bcwp, acwp, spi, cpi, eac, etc, vac, scheduleVarianceDays, costVariance } = ev;

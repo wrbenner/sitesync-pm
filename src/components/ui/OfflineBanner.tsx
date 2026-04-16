@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef , startTransition} from 'react';
 import { WifiOff, RefreshCw, Check, AlertTriangle, Cloud, Clock, ChevronDown, ChevronUp, X } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
 import { useOfflineStatus } from '../../hooks/useOfflineStatus';
@@ -29,7 +29,7 @@ export const OfflineBanner: React.FC = () => {
   // Show green checkmark for 3 seconds after sync clears
   useEffect(() => {
     if (prevHadActivity.current && isOnline && !hasActivity) {
-      setJustSynced(true);
+      setTimeout(() => setJustSynced(true), 0);
       const timer = setTimeout(() => setJustSynced(false), 3000);
       prevHadActivity.current = false;
       return () => clearTimeout(timer);

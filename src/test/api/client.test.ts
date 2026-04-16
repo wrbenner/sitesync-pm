@@ -22,7 +22,7 @@ vi.mock('../../api/middleware/projectScope', () => ({
 
 vi.mock('../../lib/requestDedup', () => ({
   dedup: vi.fn((_key: string, fn: () => unknown) => fn()),
-  queryKey: vi.fn((_table: string, _filters: unknown) => 'test-key'),
+  queryKey: vi.fn((_: string, __: unknown) => 'test-key'),
 }))
 
 const PROJECT_A = '11111111-1111-4111-8111-111111111111'
@@ -45,11 +45,11 @@ describe('createScopedClient', () => {
     const { supabase } = await import('../../lib/supabase')
 
     const builder = getMockBuilder()
-    vi.mocked(supabase.from).mockReturnValue(builder as any)
+    vi.mocked(supabase.from).mockReturnValue(builder as unknown)
 
-    const scoped = createScopedClient(supabase as any, PROJECT_A)
+    const scoped = createScopedClient(supabase as unknown, PROJECT_A)
     // .eq() is injected after the terminal call so the QueryBuilder chain is not broken
-    scoped.from('rfis' as any).select('*' as any)
+    scoped.from('rfis' as unknown).select('*' as unknown)
 
     expect(supabase.from).toHaveBeenCalledWith('rfis')
     expect(builder.eq).toHaveBeenCalledWith('project_id', PROJECT_A)
@@ -59,7 +59,7 @@ describe('createScopedClient', () => {
     const { createScopedClient } = await import('../../api/client')
     const { supabase } = await import('../../lib/supabase')
 
-    const scoped = createScopedClient(supabase as any, PROJECT_A)
+    const scoped = createScopedClient(supabase as unknown, PROJECT_A)
     // auth should pass through unchanged
     expect(scoped.auth).toBe(supabase.auth)
   })
@@ -69,7 +69,7 @@ describe('projectScopedQuery tenant isolation', () => {
   beforeEach(async () => {
     vi.clearAllMocks()
     const dedup = await import('../../lib/requestDedup')
-    vi.mocked(dedup.dedup).mockImplementation((_key, fn) => fn() as any)
+    vi.mocked(dedup.dedup).mockImplementation((_key, fn) => fn() as unknown)
   })
 
   it('enforces project_id filter even when the query callback omits it', async () => {
@@ -82,17 +82,17 @@ describe('projectScopedQuery tenant isolation', () => {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
       is: vi.fn().mockReturnThis(),
-      then: undefined as any,
+      then: undefined as unknown,
     }
     // Make the builder thenable so await works
     const resolvedValue = { data: [{ id: 'row-1', project_id: PROJECT_A }], error: null }
     builder.then = (resolve: (v: typeof resolvedValue) => void) => resolve(resolvedValue)
 
-    vi.mocked(supabase.from).mockReturnValue(builder as any)
+    vi.mocked(supabase.from).mockReturnValue(builder as unknown)
 
     await projectScopedQuery('rfis', PROJECT_A, (client) => {
       // Deliberately omit .eq('project_id', ...) to simulate a naive caller
-      return client.from('rfis' as any).select('*') as any
+      return client.from('rfis' as unknown).select('*') as unknown
     })
 
     // The scoped client must have injected the filter before the callback could chain further
@@ -111,10 +111,10 @@ describe('projectScopedQuery tenant isolation', () => {
         resolve({ data: [], error: null }),
     }
 
-    vi.mocked(supabase.from).mockReturnValue(builder as any)
+    vi.mocked(supabase.from).mockReturnValue(builder as unknown)
 
     await projectScopedQuery('rfis', PROJECT_A, (client) =>
-      client.from('rfis' as any).select('*') as any
+      client.from('rfis' as unknown).select('*') as unknown
     )
 
     const eqCalls = vi.mocked(builder.eq).mock.calls

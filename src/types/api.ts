@@ -1,6 +1,6 @@
 import type { TableRow, InsertTables, UpdateTables } from './database'
 import type { ReasonCode } from '../machines/changeOrderMachine'
-import type { MappedSchedulePhase } from './entities'
+import type {} from './entities'
 
 // Row types (what you GET from the database)
 export type ActivityFeedRow = TableRow<'activity_feed'>
@@ -364,8 +364,8 @@ export interface CreateChangeOrderPayload {
 // CreateDailyLogPayload is an alias for DailyLogPayload
 export type CreateDailyLogPayload = DailyLogPayload
 
-// MappedSchedulePhase is defined in entities.ts and re-exported here for backwards compatibility
-export type { MappedSchedulePhase, ScheduleWorkType } from './entities'
+//is defined in entities.ts and re-exported here for backwards compatibility
+export type { ScheduleWorkType } from './entities'
 
 // Canonical schedule activity type used by the schedule module.
 // Standalone interface (snake_case) with CPM-computed critical path fields.

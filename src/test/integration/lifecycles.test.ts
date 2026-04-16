@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createActor } from 'xstate'
-import { rfiMachine, getValidTransitions, getNextStatus as getRFINext, getBallInCourt, getDaysOpen, createRfiActors } from '../../machines/rfiMachine'
-import { submittalMachine, getNextSubmittalStatus } from '../../machines/submittalMachine'
-import { taskMachine, getValidTaskTransitions, getNextTaskStatus } from '../../machines/taskMachine'
-import { dailyLogMachine, getNextDailyLogStatus } from '../../machines/dailyLogMachine'
+import { rfiMachine,getNextStatus as getRFINext, getBallInCourt, getDaysOpen, createRfiActors } from '../../machines/rfiMachine'
+import { submittalMachine} from '../../machines/submittalMachine'
+import { taskMachine,getNextTaskStatus } from '../../machines/taskMachine'
+import { dailyLogMachine} from '../../machines/dailyLogMachine'
 import { punchItemMachine } from '../../machines/punchItemMachine'
 import {
   getValidCOTransitions,
@@ -15,7 +15,7 @@ import { createRfi, updateRfi } from '../../api/endpoints/rfis'
 import { rfiFactory, taskFactory, punchItemFactory, budgetItemFactory, projectFactory } from '../factories'
 import { assertProjectBelongsToOrg } from '../../api/middleware/projectScope'
 import { getDrawings, getFiles } from '../../api/endpoints/documents'
-import { ApiError } from '../../api/errors'
+import {} from '../../api/errors'
 import { DRAWINGS_RLS_POLICY, FILES_RLS_POLICY } from '../../lib/rls'
 
 // ---------------------------------------------------------------------------
@@ -31,7 +31,7 @@ vi.mock('../../lib/supabase', () => ({
   supabase: {
     auth: { getUser: mockGetUser },
     from: vi.fn().mockImplementation(() => {
-      const chain: any = {}
+      const chain: unknown = {}
       chain.select = vi.fn().mockReturnValue(chain)
       chain.eq = vi.fn().mockReturnValue(chain)
       chain.maybeSingle = mockMaybySingle
@@ -57,8 +57,8 @@ const mockRfiRow = {
 }
 
 vi.mock('../../api/client', () => {
-  const makeChain = (resolvedRow: any = mockRfiRow) => {
-    const chain: any = {}
+  const makeChain = (resolvedRow: unknown = mockRfiRow) => {
+    const chain: unknown = {}
     chain.select = vi.fn().mockReturnValue(chain)
     chain.eq = vi.fn().mockReturnValue(chain)
     chain.in = vi.fn().mockReturnValue(chain)
@@ -75,7 +75,7 @@ vi.mock('../../api/client', () => {
     supabase: {
       from: vi.fn().mockImplementation(() => makeChain()),
     },
-    supabaseMutation: vi.fn().mockImplementation(async (fn: any) => {
+    supabaseMutation: vi.fn().mockImplementation(async (fn: unknown) => {
       const result = await fn({
         from: () => makeChain(),
       })
@@ -84,7 +84,7 @@ vi.mock('../../api/client', () => {
       if (error) throw error
       return data
     }),
-    transformSupabaseError: (e: any) => e,
+    transformSupabaseError: (e: unknown) => e,
     buildPaginatedQuery: vi.fn().mockResolvedValue({ data: [], total: 0, page: 1, pageSize: 50 }),
   }
 })
@@ -304,7 +304,6 @@ describe('Daily Log Lifecycle Integration', () => {
 
 describe('Punch Item Lifecycle Integration', () => {
   it('full lifecycle: open → work → resolve → verify', () => {
-    const punchItem = punchItemFactory.build()
     const actor = createActor(punchItemMachine)
     actor.start()
 
@@ -569,7 +568,7 @@ describe('RFI DB Persistence Lifecycle', () => {
       actors: createRfiActors(createFn, updateFn),
     })
     const actor = createActor(configuredMachine, {
-      input: { rfiId: 'rfi-test-id', projectId: PROJ_UUID } as any,
+      input: { rfiId: 'rfi-test-id', projectId: PROJ_UUID } as unknown,
     })
     actor.start()
 

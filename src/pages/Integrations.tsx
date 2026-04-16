@@ -74,7 +74,7 @@ export const Integrations: React.FC = () => {
   const [detailType, setDetailType] = useState<string | null>(null)
 
   // Build map of connected integrations
-  const connectedMap: Record<string, any> = {}
+  const connectedMap: Record<string, unknown> = {}
   if (integrations) {
     for (const i of integrations) {
       connectedMap[i.type] = i
@@ -382,7 +382,7 @@ const SyncHistoryPanel: React.FC<{
   type: string
   name: string
   onClose: () => void
-}> = ({ integrationId, type: _type, name, onClose }) => {
+}> = ({ integrationId, name, onClose }) => {
   const { data: syncLog, isLoading } = useIntegrationSyncLog(integrationId)
 
   return (

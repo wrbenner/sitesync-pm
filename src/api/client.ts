@@ -268,7 +268,6 @@ export function useInfiniteEntityQuery<T>(
   projectId: string,
   pageSize = 50
 ) {
-  const { useInfiniteQuery } = require('@tanstack/react-query') as typeof import('@tanstack/react-query')
   return useInfiniteQuery<{ data: T[]; nextCursor: string | null; hasMore: boolean }, Error>({
     queryKey: ['infinite', tableName, projectId, pageSize],
     queryFn: ({ pageParam }) =>

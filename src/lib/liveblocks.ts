@@ -15,9 +15,7 @@ type Presence = {
   color: string
 }
 
-type Storage = {
-  // Collaborative document content
-}
+type Storage = Record<string, never>
 
 // Markup event payload shared between DrawingViewer broadcast and remote apply
 export type DrawingMarkupPayload = {
@@ -34,7 +32,6 @@ type RoomEvent =
   | { type: 'MARKUP_ADD'; markup: DrawingMarkupPayload }
   | { type: 'MARKUP_DELETE'; id: number }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const {
   RoomProvider,
   useOthers,

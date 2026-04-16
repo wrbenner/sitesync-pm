@@ -18,7 +18,7 @@ const tabs: { key: TabKey; label: string; icon: React.ElementType }[] = [
 
 // ── Column helpers ───────────────────────────────────────────
 
-const rosterCol = createColumnHelper<any>()
+const rosterCol = createColumnHelper<unknown>()
 const rosterColumns = [
   rosterCol.accessor('name', {
     header: 'Name',
@@ -90,7 +90,7 @@ const rosterColumns = [
   }),
 ]
 
-const timeCol = createColumnHelper<any>()
+const timeCol = createColumnHelper<unknown>()
 const timeColumns = [
   timeCol.accessor('date', {
     header: 'Date',
@@ -155,15 +155,15 @@ export const Workforce: React.FC = () => {
   const { data: timeEntries, isLoading: loadingTime } = useTimeEntries(projectId)
 
   const totalWorkers = members?.length || 0
-  const activeToday = members?.filter((m: any) => m.status === 'active').length || 0
-  const totalRegularHrs = timeEntries?.reduce((s: number, e: any) => s + (e.regular_hours || 0), 0) || 0
-  const totalOTHrs = timeEntries?.reduce((s: number, e: any) => s + (e.overtime_hours || 0), 0) || 0
+  const activeToday = members?.filter((m: unknown) => m.status === 'active').length || 0
+  const totalRegularHrs = timeEntries?.reduce((s: number, e: unknown) => s + (e.regular_hours || 0), 0) || 0
+  const totalOTHrs = timeEntries?.reduce((s: number, e: unknown) => s + (e.overtime_hours || 0), 0) || 0
 
   const isLoading = loadingMembers || loadingTime
 
   // Group members by trade for forecast
   const tradeGroups: Record<string, number> = {}
-  members?.forEach((m: any) => {
+  members?.forEach((m: unknown) => {
     const trade = m.trade || 'Unassigned'
     tradeGroups[trade] = (tradeGroups[trade] || 0) + 1
   })

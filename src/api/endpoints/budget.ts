@@ -745,20 +745,20 @@ export async function getCostData(projectId: string): Promise<{
   const items = budgetResult.data ?? []
   const changeOrders = coResult.data ?? []
   const approvedChanges = changeOrders
-    .filter((co: any) => co.status === 'approved')
-    .reduce((sum: number, co: any) => sum + (co.cost_impact || 0), 0)
-  const originalBudget = items.reduce((sum: number, i: any) => sum + (i.original_amount || 0), 0)
+    .filter((co: unknown) => co.status === 'approved')
+    .reduce((sum: number, co: unknown) => sum + (co.cost_impact || 0), 0)
+  const originalBudget = items.reduce((sum: number, i: unknown) => sum + (i.original_amount || 0), 0)
   const revisedBudget = originalBudget + approvedChanges
-  const committedCost = items.reduce((sum: number, i: any) => sum + (i.committed || 0), 0)
-  const actualCost = items.reduce((sum: number, i: any) => sum + (i.spent_to_date || 0), 0)
-  const projectedFinalCost = items.reduce((sum: number, i: any) => sum + (i.forecast_final_cost || i.original_amount || 0), 0)
+  const committedCost = items.reduce((sum: number, i: unknown) => sum + (i.committed || 0), 0)
+  const actualCost = items.reduce((sum: number, i: unknown) => sum + (i.spent_to_date || 0), 0)
+  const projectedFinalCost = items.reduce((sum: number, i: unknown) => sum + (i.forecast_final_cost || i.original_amount || 0), 0)
   const varianceDollars = revisedBudget - projectedFinalCost
   const variancePercent = revisedBudget > 0 ? (varianceDollars / revisedBudget) * 100 : 0
-  const contingencyItem = items.find((i: any) => (i.csi_code || '').startsWith('01'))
+  const contingencyItem = items.find((i: unknown) => (i.csi_code || '').startsWith('01'))
   const contingencyOriginal = contingencyItem?.original_amount || 0
   const contingencyUsed = contingencyItem?.spent_to_date || 0
   const contingencyRemaining = contingencyOriginal - contingencyUsed
-  const lineItems = items.map((i: any) => ({
+  const lineItems = items.map((i: unknown) => ({
     id: i.id,
     csiCode: i.csi_code || '',
     description: i.description || '',

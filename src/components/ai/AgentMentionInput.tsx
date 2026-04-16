@@ -95,7 +95,6 @@ export const AgentMentionInput = memo<AgentMentionInputProps>(
 
     const insertAgent = useCallback(
       (domain: AgentDomain) => {
-        const agent = SPECIALIST_AGENTS[domain]
         const newValue = value.replace(/@\w*$/, `@${domain} `)
         setValue(newValue)
         setShowAgentMenu(false)

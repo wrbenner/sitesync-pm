@@ -1,11 +1,11 @@
 import React, { useMemo, memo } from 'react'
 import {
   ShieldCheck, TrendingUp, TrendingDown, Minus, AlertTriangle,
-  CheckCircle, XCircle, Award, ClipboardCheck, Eye, Users,
+  CheckCircle, Award, ClipboardCheck, Eye,
 } from 'lucide-react'
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme'
 import { calculateSafetyScore } from '../../lib/safetyScoring'
-import type { SafetyScoreInput, SafetyScore } from '../../lib/safetyScoring'
+import type { SafetyScoreInput } from '../../lib/safetyScoring'
 
 // ── Score Ring ────────────────────────────────────────────────
 
@@ -72,8 +72,8 @@ const ComponentRow = memo<{
   label: string
   score: number
   detail: string
-  weight: number
-}>(({ icon: Icon, label, score, detail, weight }) => {
+
+}>(({ icon: Icon, label, score, detail}) => {
   const barColor =
     score >= 80 ? colors.statusActive :
     score >= 60 ? colors.statusPending : colors.statusCritical

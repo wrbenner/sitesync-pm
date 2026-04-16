@@ -117,7 +117,7 @@ function typeBadge(value: string | null | undefined) {
 
 // ── Column definitions ───────────────────────────────────────
 
-const fleetCol = createColumnHelper<any>()
+const fleetCol = createColumnHelper<unknown>()
 const fleetColumns = [
   fleetCol.accessor('name', {
     header: 'Name',
@@ -169,7 +169,7 @@ const fleetColumns = [
   }),
 ]
 
-const utilizationCol = createColumnHelper<any>()
+const utilizationCol = createColumnHelper<unknown>()
 const utilizationColumns = [
   utilizationCol.accessor('name', {
     header: 'Name',
@@ -210,7 +210,7 @@ const utilizationColumns = [
   }),
 ]
 
-const maintCol = createColumnHelper<any>()
+const maintCol = createColumnHelper<unknown>()
 const maintenanceColumns = [
   maintCol.accessor('equipment_name', {
     header: 'Equipment',
@@ -265,23 +265,23 @@ export const EquipmentPage: React.FC = () => {
   const totalEquipment = equipment?.length || 0
 
   const activeCount = useMemo(() => {
-    return equipment?.filter((e: any) => e.status === 'active' || e.status === 'operational').length || 0
+    return equipment?.filter((e: unknown) => e.status === 'active' || e.status === 'operational').length || 0
   }, [equipment])
 
   const idleCount = useMemo(() => {
-    return equipment?.filter((e: any) => e.status === 'idle').length || 0
+    return equipment?.filter((e: unknown) => e.status === 'idle').length || 0
   }, [equipment])
 
   const maintenanceDue = useMemo(() => {
-    return equipment?.filter((e: any) => e.status === 'maintenance' || e.maintenance_due === true).length || 0
+    return equipment?.filter((e: unknown) => e.status === 'maintenance' || e.maintenance_due === true).length || 0
   }, [equipment])
 
   // Derive maintenance records from equipment data (each item with maintenance info)
   const maintenanceRecords = useMemo(() => {
     if (!equipment) return []
     return equipment
-      .filter((e: any) => e.next_maintenance_date || e.last_maintenance_date || e.status === 'maintenance')
-      .map((e: any) => ({
+      .filter((e: unknown) => e.next_maintenance_date || e.last_maintenance_date || e.status === 'maintenance')
+      .map((e: unknown) => ({
         equipment_name: e.name,
         type: e.maintenance_type || 'scheduled',
         description: e.maintenance_description || `Scheduled service for ${e.name}`,
@@ -294,18 +294,18 @@ export const EquipmentPage: React.FC = () => {
   // Utilization data sorted by hours
   const utilizationData = useMemo(() => {
     if (!equipment) return []
-    return [...equipment].sort((a: any, b: any) => (b.hours || 0) - (a.hours || 0))
+    return [...equipment].sort((a: unknown, b: unknown) => (b.hours || 0) - (a.hours || 0))
   }, [equipment])
 
   // Utilization summary
   const avgUtilization = useMemo(() => {
     if (!equipment || equipment.length === 0) return 0
-    const rates = equipment.map((e: any) => e.utilization_rate || 0)
+    const rates = equipment.map((e: unknown) => e.utilization_rate || 0)
     return Math.round(rates.reduce((sum: number, r: number) => sum + r, 0) / rates.length)
   }, [equipment])
 
   const totalHours = useMemo(() => {
-    return equipment?.reduce((sum: number, e: any) => sum + (e.hours || 0), 0) || 0
+    return equipment?.reduce((sum: number, e: unknown) => sum + (e.hours || 0), 0) || 0
   }, [equipment])
 
   // ── Tab actions ─────────────────────────────────────────────

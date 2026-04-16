@@ -1,4 +1,4 @@
-import { supabase, transformSupabaseError, supabaseMutation, buildPaginatedQuery } from '../client'
+import { supabase, transformSupabaseError, supabaseMutation } from '../client'
 import { assertProjectAccess, validateProjectId } from '../middleware/projectScope'
 import type { DailyLogRow, DailyLogEntryRow, FieldCaptureRow, PunchItemRow, DailyLogPayload, PaginationParams, PaginatedResult } from '../../types/api'
 import type { Json, Database } from '../../types/database'
@@ -199,14 +199,14 @@ export interface PunchListItem {
 }
 
 export const createDailyLog = async (projectId: string, payload: DailyLogPayload): Promise<DailyLogRow> => {
-  const { photos: _photos, ...dbPayload } = payload
+  const { ...dbPayload } = payload
   return supabaseMutation<DailyLogRow>(client =>
     client.from('daily_logs').insert({ ...dbPayload, project_id: projectId } as Database['public']['Tables']['daily_logs']['Insert']).select().single()
   )
 }
 
 export const updateDailyLog = async (id: string, payload: Partial<DailyLogPayload>): Promise<DailyLogRow> => {
-  const { photos: _photos, ...dbPayload } = payload
+  const { ...dbPayload } = payload
   return supabaseMutation<DailyLogRow>(client =>
     client.from('daily_logs').update(dbPayload as Database['public']['Tables']['daily_logs']['Update']).eq('id', id).select().single()
   )

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { z } from 'zod'
-import { FormModal, FormBody, FormFooter, FormField, FormInput, FormTextarea, FormSelect } from './FormPrimitives'
+import { FormModal, FormBody, FormField, FormInput, FormTextarea, FormSelect } from './FormPrimitives'
 import { colors, spacing, typography, borderRadius } from '../../styles/theme'
 import { Loader2 } from 'lucide-react'
 

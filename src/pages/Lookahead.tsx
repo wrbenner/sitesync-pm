@@ -40,7 +40,7 @@ export const Lookahead: React.FC = () => {
   const { data: lookaheadTasks = [], isLoading: tasksLoading, error: tasksError, refetch } = useLookaheadTasks(projectId);
 
   // State for creating new task
-  const [isCreating, setIsCreating] = useState(false);
+  const [ setIsCreating] = useState(false);
   const [weatherForecast, setWeatherForecast] = useState<WeatherDay[]>([]);
 
   React.useEffect(() => {
@@ -51,7 +51,7 @@ export const Lookahead: React.FC = () => {
   }, [projectId]);
 
   // Map crew data to name strings for the board
-  const crews = useMemo(() => crewData.map((c: any) => c.name as string), [crewData]);
+  const crews = useMemo(() => crewData.map((c: unknown) => c.name as string), [crewData]);
 
   // Map API tasks to LookaheadTask shape for the board
   const boardStartDate = useMemo(() => {
@@ -64,7 +64,7 @@ export const Lookahead: React.FC = () => {
   }, []);
 
   const mappedTasks: LookaheadTask[] = useMemo(() => {
-    return lookaheadTasks.map((t: any, idx: number) => {
+    return lookaheadTasks.map((t: unknown, idx: number) => {
       const taskStart = t.start_date ? new Date(t.start_date) : new Date();
       const taskEnd = t.end_date ? new Date(t.end_date) : taskStart;
       const diffMs = taskStart.getTime() - boardStartDate.getTime();

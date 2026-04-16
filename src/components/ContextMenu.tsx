@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, createContext, useContext, Component } from 'react';
+import React, { useState, useEffect, useRef, useCallback, createContext, useContext, Component , startTransition} from 'react';
 import { colors, spacing, typography, borderRadius, shadows, zIndex, transitions } from '../styles/theme';
 
 // ── Toast System ─────────────────────────────────────────
@@ -38,7 +38,7 @@ const TOAST_DURATION: Record<ToastSeverity, number | null> = {
   error: null,
 };
 
-function ToastEntry({ toast, onClose, isLast }: { toast: ToastItem; onClose: (id: string) => void; isLast: boolean }) {
+function ToastEntry({ toast, onClose }: { toast: ToastItem; onClose: (id: string) => void }) {
   const style = TOAST_SEVERITY_STYLES[toast.severity];
   const [dismissFocused, setDismissFocused] = useState(false);
   const [actionFocused, setActionFocused] = useState(false);
@@ -47,11 +47,11 @@ function ToastEntry({ toast, onClose, isLast }: { toast: ToastItem; onClose: (id
   const [isExiting, setIsExiting] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const remainingRef = useRef<number | null>(TOAST_DURATION[toast.severity]);
-  const startedAtRef = useRef<number>(Date.now());
+  const startedAtRef = useRef<number>(0);
   const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const fallbackRemainingRef = useRef<number>(60000);
-  const fallbackStartedAtRef = useRef<number>(Date.now());
+  const fallbackStartedAtRef = useRef<number>(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const [progressPct, setProgressPct] = useState(100);
   const [progressTransitionDuration, setProgressTransitionDuration] = useState(0);
@@ -518,11 +518,13 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ items, children }) => 
 
   useEffect(() => {
     if (open) {
-      setVisible(false);
-      setFocusedIndex(0);
-      requestAnimationFrame(() => {
-        setVisible(true);
-      });
+      setTimeout(() => {
+        setVisible(false);
+        setFocusedIndex(0);
+        requestAnimationFrame(() => {
+          setVisible(true);
+        });
+      }, 0);
     } else {
       setVisible(false);
       setFocusedIndex(-1);

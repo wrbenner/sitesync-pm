@@ -86,7 +86,7 @@ function escapeXml(s: string): string {
 export const msProjectProvider: IntegrationProvider = {
   type: 'ms_project',
 
-  async connect(projectId, _credentials) {
+  async connect(projectId) {
     // MS Project doesn't require external auth, just file import/export
     const { data: { user } } = await supabase.auth.getUser()
     const integrationId = await createIntegrationRecord('ms_project', projectId, {

@@ -16,7 +16,6 @@ import {
   cacheOfflineCapture,
   getUnsyncedCaptures,
   markCaptureSynced,
-  detectLanguage,
   normalizeTranscript,
 } from '../lib/voiceProcessor'
 import type {

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, memo } from 'react'
 import {
-  Sparkles, X, Bot, DollarSign, ShieldCheck, ClipboardCheck, Scale, FileSearch,
+  Sparkles, X, DollarSign, ShieldCheck, ClipboardCheck, Scale, FileSearch,
   Calendar, Users, Clock, Download, Clipboard, FileText,
 } from 'lucide-react'
 import { colors, spacing, typography, borderRadius, transitions, shadows } from '../../styles/theme'
@@ -138,7 +138,7 @@ export const CopilotPanel: React.FC = () => {
 
   const {
     messages,
-    input,
+
     setInput,
     sendMessage,
     isProcessing,
@@ -149,7 +149,7 @@ export const CopilotPanel: React.FC = () => {
     rejectAction,
     approveAllPending,
     rejectAllPending,
-    clearMessages,
+
     resetConversation,
     error,
     conversationId,

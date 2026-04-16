@@ -401,12 +401,12 @@ export const getAiInsightsMeta = async (
   }
 }
 
-export const getAiConversation = async (_projectId: string): Promise<[]> => {
+export const getAiConversation = async (): Promise<[]> => {
   // Conversations are managed client-side by useProjectAI
   return []
 }
 
-export const getVisionContent = async (_projectId: string): Promise<null> => {
+export const getVisionContent = async (): Promise<null> => {
   // Vision page uses static content
   return null
 }

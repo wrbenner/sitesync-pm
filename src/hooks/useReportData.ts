@@ -453,7 +453,7 @@ export function useScheduleReportData() {
   if (loading || !project.data) return { data: null, loading, error: null }
 
   const phaseList = phases.data ?? []
-  const taskList = tasks.data ?? []
+
   const now = new Date()
   const threeWeeksOut = new Date(now.getTime() + 21 * 24 * 60 * 60 * 1000)
 

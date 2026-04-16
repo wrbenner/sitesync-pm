@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { Cloud, Sun, Users, Wrench, HardHat, ShieldCheck, FileText, Camera, Mic,
-  ChevronLeft, ChevronRight, Send, Save, Check, Plus, Minus } from 'lucide-react';
+import {  Sun, Users, Wrench, HardHat, ShieldCheck, FileText, Camera, Mic,
+  ChevronLeft, ChevronRight, Send, Save, Plus, Minus } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
 import { useHaptics } from '../../hooks/useMobileCapture';
 

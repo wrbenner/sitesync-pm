@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo , startTransition} from 'react';
 import { MapPin, Users } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, shadows } from '../../../styles/theme';
 import { useProjectId } from '../../../hooks/useProjectId';
@@ -39,7 +39,9 @@ export const LiveSiteWidget: React.FC = React.memo(() => {
 
   // Sync when DB data arrives or changes
   useEffect(() => {
-    if (initialCrews.length > 0) setCrews(initialCrews);
+    if (initialCrews.length > 0) {
+      setTimeout(() => setCrews(initialCrews), 0);
+    }
   }, [initialCrews]);
 
   const arrivals = useMemo(() => {

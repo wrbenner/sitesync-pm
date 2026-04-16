@@ -25,7 +25,7 @@ export function computeScheduleScore(phases: Array<{ percent_complete: number | 
   if (phases.length === 0) return 100
   const onTrack = phases.filter(p => p.status !== 'at_risk' && p.status !== 'delayed').length
   const criticalDelayed = phases.filter(p => p.is_critical_path && (p.status === 'at_risk' || p.status === 'delayed')).length
-  let score = (onTrack / phases.length) * 100 - criticalDelayed * 15
+  const score = (onTrack / phases.length) * 100 - criticalDelayed * 15
   return Math.max(0, Math.min(100, Math.round(score)))
 }
 

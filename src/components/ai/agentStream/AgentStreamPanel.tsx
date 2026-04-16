@@ -4,7 +4,7 @@
 
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { Loader2, CheckCircle, AlertTriangle, Zap, MessageSquare, ChevronDown, ChevronUp } from 'lucide-react'
-import { Card, Btn, ProgressBar, Skeleton } from '../../Primitives'
+import { Card, Btn, ProgressBar } from '../../Primitives'
 import { PermissionGate } from '../../auth/PermissionGate'
 import { colors, spacing, typography, borderRadius } from '../../../styles/theme'
 import type { AgentStreamEventType } from '../../../schemas/agentStream'

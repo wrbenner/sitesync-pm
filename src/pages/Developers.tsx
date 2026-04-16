@@ -1,6 +1,6 @@
 import React, { useState, useCallback, memo } from 'react'
 import {
-  Key, Code, Webhook, BarChart3, Copy, Check, Plus, Trash2,
+  Key, Webhook, BarChart3, Copy, Check, Plus, Trash2,
   RefreshCw, Terminal,
   AlertTriangle, Clock, Zap, Globe, Shield, Package,
 } from 'lucide-react'
@@ -129,7 +129,6 @@ CodeBlock.displayName = 'CodeBlock'
 // ── API Key Card ──────────────────────────────────────────────
 
 const ApiKeyCard = memo<{ apiKey: Record<string, unknown> }>(({ apiKey }) => {
-  const [_showKey, _setShowKey] = useState(false)
   const prefix = apiKey.key_prefix as string
   const name = apiKey.name as string
   const lastUsed = apiKey.last_used_at as string | null

@@ -271,7 +271,7 @@ const TOOLTIP_CONTENT_STYLE: React.CSSProperties = {
 // ── Avatar ────────────────────────────────────────────────────────────────────
 
 const AVATAR_SIZE = 32;
-const AVATAR_OVERLAP = -8;
+
 
 interface AvatarProps {
   user: PresenceUserWithAction;

@@ -19,9 +19,6 @@ const SLIPPAGE_COL_WIDTH = 72;
 const FLOAT_COL_WIDTH = 84;
 const BASELINE_DATE_COL_WIDTH = 88;
 
-function toISO(ms: number): string {
-  return new Date(ms).toISOString().slice(0, 10);
-}
 
 export type GanttPhase = MappedSchedulePhase;
 
@@ -66,9 +63,9 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   const [riskTooltipPhase, setRiskTooltipPhase] = useState<string | null>(null);
   const [delayTooltipPhase, setDelayTooltipPhase] = useState<string | null>(null);
   const [localPhases, setLocalPhases] = useState<GanttPhase[]>(phases);
-  const [announcement, setAnnouncement] = useState('');
+  const [announcement] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [trackWidth, setTrackWidth] = useState(0);
+  const [, setTrackWidth] = useState(0);
 
   const probeRef = useRef<HTMLDivElement>(null);
   const trackWidthRef = useRef(0);

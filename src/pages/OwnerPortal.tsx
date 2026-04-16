@@ -39,7 +39,7 @@ function ProgressRing({ value, size = 160, stroke = 10 }: { value: number; size?
   )
 }
 
-function MilestoneTimeline({ phases }: { phases: any[] }) {
+function MilestoneTimeline({ phases }: { phases: unknown[] }) {
   if (!phases || phases.length === 0) {
     return <p style={{ color: colors.textTertiary, fontSize: typography.fontSize.sm }}>No schedule milestones available.</p>
   }
@@ -48,7 +48,7 @@ function MilestoneTimeline({ phases }: { phases: any[] }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-      {milestones.map((phase: any, i: number) => {
+      {milestones.map((phase: unknown, i: number) => {
         const isComplete = phase.progress_pct >= 100
         const isActive = phase.progress_pct > 0 && phase.progress_pct < 100
         const dotColor = isComplete ? colors.statusActive : isActive ? colors.primaryOrange : colors.borderDefault
@@ -93,10 +93,10 @@ export const OwnerPortal: React.FC = () => {
 
   const isLoading = projectLoading || phasesLoading || updatesLoading
 
-  const publishedUpdates = updates?.filter((u: any) => u.published) || []
+  const publishedUpdates = updates?.filter((u: unknown) => u.published) || []
   const latestUpdate = publishedUpdates.length > 0 ? publishedUpdates[0] : null
 
-  const avgProgress = phases?.length ? Math.round(phases.reduce((s: number, p: any) => s + (p.percent_complete || 0), 0) / phases.length) : 62
+  const avgProgress = phases?.length ? Math.round(phases.reduce((s: number, p: unknown) => s + (p.percent_complete || 0), 0) / phases.length) : 62
   const overallProgress = avgProgress
 
   if (isLoading) {

@@ -85,7 +85,7 @@ export const AIContextPanel: React.FC<AIContextPanelProps> = ({ currentPage }) =
 
             {/* Content */}
             <div style={{ flex: 1, overflow: 'auto', padding: `${spacing['4']} ${spacing['5']}` }}>
-              {(() => { const analysis: any = null; const annotations: any[] = []; return analysis ? (
+              {(() => { const analysis: unknown = null; const annotations: unknown[] = []; return analysis ? (
                 <>
                   {/* Summary */}
                   <p style={{ fontSize: typography.fontSize.body, color: colors.textPrimary, margin: 0, marginBottom: spacing['5'], lineHeight: typography.lineHeight.relaxed }}>
@@ -94,7 +94,7 @@ export const AIContextPanel: React.FC<AIContextPanelProps> = ({ currentPage }) =
 
                   {/* Metrics */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'], marginBottom: spacing['5'] }}>
-                    {analysis.insights.map((insight: any, i: number) => {
+                    {analysis.insights.map((insight: unknown, i: number) => {
                       const TrendIcon = insight.trend ? trendIcons[insight.trend as keyof typeof trendIcons] : null;
                       const valueColor = insight.severity ? (severityColors[insight.severity] || colors.textPrimary) : colors.textPrimary;
                       return (

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { FileCheck, AlertTriangle, Clock, CheckCircle } from 'lucide-react';
+import React, { useState, useEffect , startTransition} from 'react';
+import { FileCheck } from 'lucide-react';
 import { PageContainer, MetricBox, Skeleton, Btn } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, shadows, transitions, touchTarget } from '../styles/theme';
 import { supabase } from '../lib/supabase';
@@ -48,10 +48,10 @@ export function LienWaivers() {
 
   useEffect(() => {
     if (!projectId) {
-      setLoading(false);
+      setTimeout(() => setLoading(false), 0);
       return;
     }
-    setLoading(true);
+    setTimeout(() => setLoading(true), 0);
     supabase
       .from('lien_waivers')
       .select('*')

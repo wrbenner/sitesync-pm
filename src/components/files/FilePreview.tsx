@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef , startTransition} from 'react';
 import { X, Download, Share2, Clock, User, Tag, FileText, FolderOpen } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Btn } from '../Primitives';
@@ -41,7 +41,7 @@ export const FilePreview: React.FC<FilePreviewProps> = ({ file, onClose }) => {
   useEffect(() => {
     if (file && file.id !== prevFileIdRef.current) {
       prevFileIdRef.current = file.id;
-      setPreviewLoading(true);
+      setTimeout(() => setPreviewLoading(true), 0);
       const timer = setTimeout(() => setPreviewLoading(false), 600);
       return () => clearTimeout(timer);
     }

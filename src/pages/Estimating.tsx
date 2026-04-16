@@ -21,7 +21,7 @@ const fmtCurrency = (n: number) =>
 
 // ── Column helpers ───────────────────────────────────────────
 
-const estimateCol = createColumnHelper<any>()
+const estimateCol = createColumnHelper<unknown>()
 const estimateColumns = [
   estimateCol.accessor('name', {
     header: 'Name',
@@ -97,7 +97,7 @@ const estimateColumns = [
   }),
 ]
 
-const bidCol = createColumnHelper<any>()
+const bidCol = createColumnHelper<unknown>()
 const bidColumns = [
   bidCol.accessor('name', {
     header: 'Package Name',
@@ -163,7 +163,7 @@ const bidColumns = [
   }),
 ]
 
-const takeoffCol = createColumnHelper<any>()
+const takeoffCol = createColumnHelper<unknown>()
 const takeoffColumns = [
   takeoffCol.accessor('name', {
     header: 'Name',
@@ -226,19 +226,19 @@ export const Estimating: React.FC = () => {
   // ── KPIs ───────────────────────────────────────────────────
 
   const totalEstimateValue = useMemo(
-    () => estimates?.reduce((s: number, e: any) => s + (e.total_amount || 0), 0) || 0,
+    () => estimates?.reduce((s: number, e: unknown) => s + (e.total_amount || 0), 0) || 0,
     [estimates],
   )
   const activeEstimates = useMemo(
-    () => estimates?.filter((e: any) => e.status === 'draft' || e.status === 'in_review' || e.status === 'submitted').length || 0,
+    () => estimates?.filter((e: unknown) => e.status === 'draft' || e.status === 'in_review' || e.status === 'submitted').length || 0,
     [estimates],
   )
   const awardedCount = useMemo(
-    () => estimates?.filter((e: any) => e.status === 'awarded').length || 0,
+    () => estimates?.filter((e: unknown) => e.status === 'awarded').length || 0,
     [estimates],
   )
   const activeBids = useMemo(
-    () => bidPackages?.filter((b: any) => b.status !== 'awarded' && b.status !== 'draft').length || 0,
+    () => bidPackages?.filter((b: unknown) => b.status !== 'awarded' && b.status !== 'draft').length || 0,
     [bidPackages],
   )
 

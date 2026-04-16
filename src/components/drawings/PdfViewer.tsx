@@ -92,6 +92,16 @@ export function PdfViewer({ file, title, onClose }: PdfViewerProps) {
     }
   }, []);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'PageUp') { e.preventDefault(); prevPage(); }
+      if (e.key === 'PageDown') { e.preventDefault(); nextPage(); }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [numPages]);
+
   if (!file) return null;
 
   const zoomIn = () => setZoomLevel((z) => Math.min(z + 0.25, MAX_SCALE));
@@ -168,15 +178,7 @@ export function PdfViewer({ file, title, onClose }: PdfViewerProps) {
     setShowRFIModal(true);
   };
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'PageUp') { e.preventDefault(); prevPage(); }
-      if (e.key === 'PageDown') { e.preventDefault(); nextPage(); }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [numPages]);
+  // (keyboard nav effect moved before early return)
 
   // 44x44 minimum touch target for all toolbar buttons
   const toolbarBtnStyle: React.CSSProperties = {

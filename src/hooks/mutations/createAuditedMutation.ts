@@ -83,7 +83,6 @@ export function useAuditedMutation<TParams, TResult>(config: AuditedMutationConf
   const queryClient = useQueryClient()
   const { hasPermission } = usePermissions()
   const projectId = useProjectId()
-  const { user } = useAuth()
 
   return useMutation({
     // ── onMutate: Optimistic update ──────────────────

@@ -55,7 +55,7 @@ const getBicColor = (party: string): string => {
   return key ? BIC_COLORS[key] : colors.gray500;
 };
 
-const _deriveBic = (rfi: any): string | null => {
+const getBallInCourt = (rfi: { status: string; assigned_to: string | null; from?: string | null }): string | null => {
   const { status, assigned_to, from: originator } = rfi;
   if (status === 'open' && assigned_to) return assigned_to;
   if (status === 'under_review') return assigned_to || null;
@@ -63,7 +63,7 @@ const _deriveBic = (rfi: any): string | null => {
   return assigned_to || null;
 };
 
-const BallInCourtCell: React.FC<{ rfi: any }> = ({ rfi }) => {
+const BallInCourtCell: React.FC<{ rfi: unknown }> = ({ rfi }) => {
   const party = rfi.assigned_to || null;
   if (!party) {
     return (
@@ -85,7 +85,7 @@ const BallInCourtCell: React.FC<{ rfi: any }> = ({ rfi }) => {
 const formatDate = (dateStr: string) =>
   new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
-const rfiColHelper = createColumnHelper<any>();
+const rfiColHelper = createColumnHelper<unknown>();
 
 
 const MetaItem: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
@@ -121,16 +121,16 @@ const RFIsPage: React.FC = () => {
   const totalOpen = useMemo(() => rfis.filter((r: Record<string, unknown>) => r.status !== 'closed').length, [rfis]);
   const overdueCount = useMemo(() => rfis.filter((r: Record<string, unknown>) => r.status !== 'closed' && r.dueDate && isOverdue(r.dueDate as string)).length, [rfis]);
   const avgDaysToClose = useMemo(() => {
-    const closed = rfis.filter((r: any) => r.status === 'closed' && r.closed_at && r.created_at);
+    const closed = rfis.filter((r: unknown) => r.status === 'closed' && r.closed_at && r.created_at);
     if (!closed.length) return 0;
-    const total = closed.reduce((sum: number, r: any) => sum + Math.floor((new Date(r.closed_at).getTime() - new Date(r.created_at).getTime()) / 86400000), 0);
+    const total = closed.reduce((sum: number, r: unknown) => sum + Math.floor((new Date(r.closed_at).getTime() - new Date(r.created_at).getTime()) / 86400000), 0);
     return Math.round(total / closed.length);
   }, [rfis]);
   const closedThisWeek = useMemo(() => {
     const weekAgo = Date.now() - 7 * 86400000;
-    return rfis.filter((r: any) => r.status === 'closed' && r.closed_at && new Date(r.closed_at).getTime() >= weekAgo).length;
+    return rfis.filter((r: unknown) => r.status === 'closed' && r.closed_at && new Date(r.closed_at).getTime() >= weekAgo).length;
   }, [rfis]);
-  const [selectedRfi, setSelectedRfi] = useState<any>(null);
+  const [selectedRfi, setSelectedRfi] = useState<unknown>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -161,7 +161,7 @@ const RFIsPage: React.FC = () => {
 
   useEffect(() => {
     if (!announcedLoadRef.current) return;
-    const count = statusFilter === 'all' ? rfis.length : rfis.filter((r: any) => r.status === statusFilter).length;
+    const count = statusFilter === 'all' ? rfis.length : rfis.filter((r: unknown) => r.status === statusFilter).length;
     setAnnouncement(`Showing ${count} of ${rfis.length} RFIs`);
   }, [statusFilter, rfis]);
 
@@ -341,7 +341,7 @@ const RFIsPage: React.FC = () => {
         checked={selectedIds.size > 0 && selectedIds.size === rfis.length}
         ref={(el) => { if (el) el.indeterminate = selectedIds.size > 0 && selectedIds.size < rfis.length; }}
         onChange={(e) => {
-          if (e.target.checked) setSelectedIds(new Set(rfis.map((r: any) => String(r.id))));
+          if (e.target.checked) setSelectedIds(new Set(rfis.map((r: unknown) => String(r.id))));
           else setSelectedIds(new Set());
         }}
         onClick={(e) => e.stopPropagation()}
@@ -349,7 +349,7 @@ const RFIsPage: React.FC = () => {
         style={{ cursor: 'pointer' }}
       />
     ),
-    cell: (info: any) => {
+    cell: (info: unknown) => {
       const id = String(info.row.original.id);
       return (
         <input
@@ -372,6 +372,31 @@ const RFIsPage: React.FC = () => {
   }), [selectedIds, rfis]);
 
   const allRfiColumns = useMemo(() => [checkboxColumn, ...rfiColumns], [checkboxColumn, rfiColumns]);
+
+  const allRfis = rfis || [];
+
+  const STATUS_TABS = [
+    { key: 'all', label: 'All' },
+    { key: 'open', label: 'Open' },
+    { key: 'pending_response', label: 'Pending Response' },
+    { key: 'overdue', label: 'Overdue' },
+    { key: 'closed', label: 'Closed' },
+  ];
+
+  const filteredRfis = useMemo(() => {
+    if (statusFilter === 'all') return allRfis;
+    if (statusFilter === 'overdue') return allRfis.filter((r: unknown) => r.status !== 'closed' && r.dueDate && new Date(r.dueDate) < new Date());
+    if (statusFilter === 'pending_response') return allRfis.filter((r: unknown) => r.status === 'pending' || r.status === 'under_review');
+    return allRfis.filter((r: unknown) => r.status === statusFilter);
+  }, [allRfis, statusFilter]);
+
+  const kanbanColumns: KanbanColumn<unknown>[] = useMemo(() => [
+    { id: 'draft', label: 'In Draft', color: colors.textTertiary, items: [] },
+    { id: 'pending', label: 'Submitted', color: colors.statusPending, items: allRfis.filter((r) => r.status === 'pending') },
+    { id: 'under_review', label: 'Under Review', color: colors.statusInfo, items: [] },
+    { id: 'approved', label: 'Answered', color: colors.statusActive, items: allRfis.filter((r) => r.status === 'approved') },
+    { id: 'closed', label: 'Closed', color: colors.statusNeutral, items: [] },
+  ], [allRfis]);
 
   if (rfisLoading) {
     return (
@@ -460,30 +485,7 @@ const RFIsPage: React.FC = () => {
     );
   }
 
-  const allRfis = rfis || [];
-
-  const STATUS_TABS = [
-    { key: 'all', label: 'All' },
-    { key: 'open', label: 'Open' },
-    { key: 'pending_response', label: 'Pending Response' },
-    { key: 'overdue', label: 'Overdue' },
-    { key: 'closed', label: 'Closed' },
-  ];
-
-  const filteredRfis = useMemo(() => {
-    if (statusFilter === 'all') return allRfis;
-    if (statusFilter === 'overdue') return allRfis.filter((r: any) => r.status !== 'closed' && r.dueDate && new Date(r.dueDate) < new Date());
-    if (statusFilter === 'pending_response') return allRfis.filter((r: any) => r.status === 'pending' || r.status === 'under_review');
-    return allRfis.filter((r: any) => r.status === statusFilter);
-  }, [allRfis, statusFilter]);
-
-  const kanbanColumns: KanbanColumn<any>[] = useMemo(() => [
-    { id: 'draft', label: 'In Draft', color: colors.textTertiary, items: [] },
-    { id: 'pending', label: 'Submitted', color: colors.statusPending, items: allRfis.filter((r) => r.status === 'pending') },
-    { id: 'under_review', label: 'Under Review', color: colors.statusInfo, items: [] },
-    { id: 'approved', label: 'Answered', color: colors.statusActive, items: allRfis.filter((r) => r.status === 'approved') },
-    { id: 'closed', label: 'Closed', color: colors.statusNeutral, items: [] },
-  ], [allRfis]);
+  // (moved to before early returns)
 
   return (
     <PageContainer
@@ -565,9 +567,9 @@ const RFIsPage: React.FC = () => {
           >
             {STATUS_TABS.map((tab) => {
               const count = tab.key === 'all' ? allRfis.length
-                : tab.key === 'overdue' ? allRfis.filter((r: any) => r.status !== 'closed' && r.dueDate && new Date(r.dueDate) < new Date()).length
-                : tab.key === 'pending_response' ? allRfis.filter((r: any) => r.status === 'pending' || r.status === 'under_review').length
-                : allRfis.filter((r: any) => r.status === tab.key).length;
+                : tab.key === 'overdue' ? allRfis.filter((r: unknown) => r.status !== 'closed' && r.dueDate && new Date(r.dueDate) < new Date()).length
+                : tab.key === 'pending_response' ? allRfis.filter((r: unknown) => r.status === 'pending' || r.status === 'under_review').length
+                : allRfis.filter((r: unknown) => r.status === tab.key).length;
               const isSelected = statusFilter === tab.key;
               return (
                 <button

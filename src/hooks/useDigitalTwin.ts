@@ -3,7 +3,7 @@
 // Subscribes to Supabase Realtime for live updates to
 // task progress, RFIs, safety incidents, crew locations, and photos.
 
-import { useEffect, useCallback } from 'react'
+import { useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { useProjectId } from './useProjectId'

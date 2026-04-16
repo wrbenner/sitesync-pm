@@ -2,7 +2,7 @@
 // Worker check-in/out via QR code scan, manual entry, or geofence.
 // Tracks real-time headcount, late arrivals, and hours on site.
 
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import {  useCallback, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { useProjectId } from './useProjectId'

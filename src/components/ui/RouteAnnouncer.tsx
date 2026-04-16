@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState , startTransition} from 'react'
 import { useLocation } from 'react-router-dom'
 
 const pageNames: Record<string, string> = {
@@ -50,7 +50,7 @@ export const RouteAnnouncer: React.FC = () => {
 
   useEffect(() => {
     const name = pageNames[location.pathname] || 'Page'
-    setAnnouncement(`Navigated to ${name}`)
+    setTimeout(() => setAnnouncement(`Navigated to ${name}`), 0)
   }, [location.pathname])
 
   return (

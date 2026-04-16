@@ -17,7 +17,7 @@ const tabsList: { key: TabKey; label: string; icon: React.ElementType }[] = [
 
 // ── Warranty Columns ────────────────────────────────────────
 
-const warCol = createColumnHelper<any>()
+const warCol = createColumnHelper<unknown>()
 const warrantyColumns = [
   warCol.accessor('item_name', {
     header: 'Item',
@@ -110,7 +110,7 @@ const warrantyColumns = [
 
 // ── Claims Columns ──────────────────────────────────────────
 
-const claimCol = createColumnHelper<any>()
+const claimCol = createColumnHelper<unknown>()
 const claimColumns = [
   claimCol.accessor('claim_date', {
     header: 'Date',
@@ -201,24 +201,24 @@ export const Warranties: React.FC = () => {
   const isLoading = warLoading || claimsLoading
 
   const now = new Date()
-  const activeWarranties = warranties?.filter((w: any) => {
+  const activeWarranties = warranties?.filter((w: unknown) => {
     if (!w.expiration_date) return true
     return new Date(w.expiration_date) > now
   }).length || 0
 
-  const expiringSoon = warranties?.filter((w: any) => {
+  const expiringSoon = warranties?.filter((w: unknown) => {
     if (!w.expiration_date) return false
     const exp = new Date(w.expiration_date)
     const daysUntil = (exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
     return daysUntil > 0 && daysUntil <= 90
   }).length || 0
 
-  const expired = warranties?.filter((w: any) => {
+  const expired = warranties?.filter((w: unknown) => {
     if (!w.expiration_date) return false
     return new Date(w.expiration_date) <= now
   }).length || 0
 
-  const openClaims = claims?.filter((c: any) => c.status === 'open' || c.status === 'in_progress').length || 0
+  const openClaims = claims?.filter((c: unknown) => c.status === 'open' || c.status === 'in_progress').length || 0
 
   const handleAddWarranty = () => {
     toast.info('Submission requires backend configuration')

@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useRef, useEffect, KeyboardEvent as ReactKeyboardEvent } from 'react';
-import { X, Camera, Mic, QrCode, MapPin, Tag, Link2, Check, ChevronDown, Square, RefreshCw, Clock, Sparkles, AlertTriangle, BookOpen } from 'lucide-react';
+import React, { useState, useCallback, useRef, useEffect, KeyboardEvent as ReactKeyboardEvent , startTransition} from 'react';
+import { X, Camera, Mic, QrCode, MapPin, Tag, Link2, Check, Square, RefreshCw, Clock, Sparkles, AlertTriangle, BookOpen } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { colors, spacing, typography, borderRadius, shadows, transitions, zIndex } from '../../styles/theme';
 import { useMobileCapture, useHaptics } from '../../hooks/useMobileCapture';
@@ -63,7 +63,7 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
   const recorderRef = useRef<MediaRecorder | null>(null);
   const timerRef = useRef<number>(0);
   const waveRef = useRef<number>(0);
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<unknown>(null);
 
   // QR state
   const [qrData, setQrData] = useState<string | null>(null);
@@ -108,7 +108,7 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
   // Apply AI analysis results when ready
   useEffect(() => {
     if (analysisState === 'ready' && analysisResult) {
-      setCaption(analysisResult.summary);
+      startTransition(() => { setCaption(analysisResult.summary); });
       const allTags = [...new Set([
         ...analysisResult.suggestedTags,
         ...analysisResult.materials,

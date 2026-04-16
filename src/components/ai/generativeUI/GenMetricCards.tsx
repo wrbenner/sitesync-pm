@@ -1,6 +1,6 @@
 import React from 'react'
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
-import { colors, spacing, typography, borderRadius, shadows } from '../../../styles/theme'
+import { colors, spacing, typography, borderRadius } from '../../../styles/theme'
 import type { MetricCardsBlock } from './types'
 
 interface Props {

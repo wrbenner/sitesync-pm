@@ -17,7 +17,7 @@ const tabs: { key: TabKey; label: string; icon: React.ElementType }[] = [
 
 // ── Column helpers ───────────────────────────────────────────
 
-const permitCol = createColumnHelper<any>()
+const permitCol = createColumnHelper<unknown>()
 const permitColumns = [
   permitCol.accessor('type', {
     header: 'Type',
@@ -126,12 +126,12 @@ export const Permits: React.FC = () => {
   const { data: permits, isLoading } = usePermits(projectId)
 
   const totalPermits = permits?.length || 0
-  const activePermits = permits?.filter((p: any) => p.status === 'approved').length || 0
-  const pendingReview = permits?.filter((p: any) => p.status === 'under_review' || p.status === 'application_submitted').length || 0
+  const activePermits = permits?.filter((p: unknown) => p.status === 'approved').length || 0
+  const pendingReview = permits?.filter((p: unknown) => p.status === 'under_review' || p.status === 'application_submitted').length || 0
 
   // Count permits with upcoming inspections (use expiration within 60 days as proxy)
   const now = new Date()
-  const upcomingInspections = permits?.filter((p: any) => {
+  const upcomingInspections = permits?.filter((p: unknown) => {
     if (!p.expiration_date) return false
     const exp = new Date(p.expiration_date)
     const daysUntil = (exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
@@ -233,8 +233,8 @@ export const Permits: React.FC = () => {
         <>
           <SectionHeader title="Upcoming Inspections" />
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: spacing['4'], marginTop: spacing['3'] }}>
-            {permits && permits.filter((p: any) => p.status === 'approved').length > 0 ? (
-              permits.filter((p: any) => p.status === 'approved').map((permit: any) => (
+            {permits && permits.filter((p: unknown) => p.status === 'approved').length > 0 ? (
+              permits.filter((p: unknown) => p.status === 'approved').map((permit: unknown) => (
                 <Card key={permit.id} padding={spacing['4']}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'], marginBottom: spacing['3'] }}>
                     <div style={{

@@ -17,7 +17,7 @@ vi.mock('../../lib/supabase', () => ({
   supabase: {
     auth: { getUser: mockGetUser },
     from: vi.fn().mockImplementation(() => {
-      const chain: any = {}
+      const chain: unknown = {}
       chain.select = vi.fn().mockReturnValue(chain)
       chain.eq = vi.fn().mockReturnValue(chain)
       chain.maybeSingle = mockMaybySingle
@@ -247,7 +247,7 @@ describe('assertProjectAccess', () => {
       .mockResolvedValueOnce({ data: { id: 'member-1' }, error: null })
       .mockResolvedValue({ data: { organization_id: ORG_A_ID }, error: null })
 
-    const { supabase: sb } = await import('../../lib/supabase') as any
+    const { supabase: sb } = await import('../../lib/supabase') as unknown
     ;(sb.from as ReturnType<typeof vi.fn>).mockClear()
 
     await Promise.all(Array.from({ length: 10 }, () => assertProjectAccess(PROJ_ID)))

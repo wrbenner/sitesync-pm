@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo} from 'react';
 import { Columns, Layers, Sparkles, Clock, AlertTriangle, ChevronDown, ChevronRight, SlidersHorizontal } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
 import type { DrawingRevision } from '../../types/api';
@@ -8,9 +8,11 @@ const RECENT_MS = 48 * 60 * 60 * 1000;
 
 // RevisionBadge: amber when revision > 0, red when issued within 48h
 export const RevisionBadge: React.FC<{ revision: DrawingRevision }> = ({ revision }) => {
-  const isRecent = revision.issued_date
-    ? Date.now() - new Date(revision.issued_date).getTime() < RECENT_MS
-    : false;
+  const isRecent = useMemo(() =>
+    revision.issued_date
+      ? Date.now() - new Date(revision.issued_date).getTime() < RECENT_MS
+      : false,
+  [revision.issued_date]);
 
   const bg = isRecent
     ? colors.statusCriticalSubtle
@@ -141,7 +143,7 @@ interface VersionCompareProps {
 export const VersionCompare: React.FC<VersionCompareProps> = ({
   currentRev,
   previousRev,
-  drawingTitle: _drawingTitle,
+
   currentRevision = null,
   previousRevision = null,
   revisionHistory = [],

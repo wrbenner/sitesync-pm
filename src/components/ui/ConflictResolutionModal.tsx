@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback , startTransition} from 'react';
 import { AlertTriangle, Check, X, ArrowLeft, ArrowRight, GitMerge, Layers } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, shadows, zIndex, transitions } from '../../styles/theme';
 import {
@@ -39,7 +39,7 @@ export const ConflictResolutionModal: React.FC<ConflictResolutionModalProps> = (
     for (const f of conflictingFields) {
       initial[f] = 'local'; // default: prefer your own changes
     }
-    setFieldChoices(initial);
+    setTimeout(() => setFieldChoices(initial), 0);
   }, [currentIndex, current?.id]);
 
   const advanceOrClose = useCallback(

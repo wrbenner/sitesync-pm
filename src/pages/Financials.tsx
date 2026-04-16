@@ -26,7 +26,7 @@ const tabs: { key: TabKey; label: string; icon: React.ElementType }[] = [
 
 // ── Column helpers ───────────────────────────────────────────
 
-const costCol = createColumnHelper<any>()
+const costCol = createColumnHelper<unknown>()
 const costColumns = [
   costCol.accessor('date', {
     header: 'Date',
@@ -103,7 +103,7 @@ const costColumns = [
   }),
 ]
 
-const billingCol = createColumnHelper<any>()
+const billingCol = createColumnHelper<unknown>()
 const billingColumns = [
   billingCol.accessor('application_number', {
     header: 'App #',
@@ -174,7 +174,7 @@ const billingColumns = [
   }),
 ]
 
-const payableCol = createColumnHelper<any>()
+const payableCol = createColumnHelper<unknown>()
 const payableColumns = [
   payableCol.accessor('vendor', {
     header: 'Vendor',
@@ -253,7 +253,7 @@ const payableColumns = [
   }),
 ]
 
-const wipCol = createColumnHelper<any>()
+const wipCol = createColumnHelper<unknown>()
 const wipColumns = [
   wipCol.accessor('period_end', {
     header: 'Period End',
@@ -307,7 +307,7 @@ const wipColumns = [
   }),
 ]
 
-const retainageCol = createColumnHelper<any>()
+const retainageCol = createColumnHelper<unknown>()
 const retainageColumns = [
   retainageCol.accessor('contract_name', {
     header: 'Contract',
@@ -371,22 +371,22 @@ export const Financials: React.FC = () => {
   // ── KPIs ───────────────────────────────────────────────────
 
   const contractValue = contracts
-    ?.filter((c: any) => c.type === 'prime')
-    .reduce((s: number, c: any) => s + (c.original_value || 0), 0) || 0
+    ?.filter((c: unknown) => c.type === 'prime')
+    .reduce((s: number, c: unknown) => s + (c.original_value || 0), 0) || 0
 
   const billedToDate = payApps
-    ?.reduce((s: number, p: any) => s + (p.total_completed_and_stored || 0), 0) || 0
+    ?.reduce((s: number, p: unknown) => s + (p.total_completed_and_stored || 0), 0) || 0
 
   const costsToDate = jobCosts
-    ?.reduce((s: number, j: any) => s + (j.amount || 0), 0) || 0
+    ?.reduce((s: number, j: unknown) => s + (j.amount || 0), 0) || 0
 
   const retainageHeld = retainage
-    ?.filter((r: any) => r.type === 'held_by_owner')
-    .reduce((s: number, r: any) => s + (r.balance || 0), 0) || 0
+    ?.filter((r: unknown) => r.type === 'held_by_owner')
+    .reduce((s: number, r: unknown) => s + (r.balance || 0), 0) || 0
 
   const apOutstanding = invoices
-    ?.filter((i: any) => i.status !== 'paid')
-    .reduce((s: number, i: any) => s + (i.total || 0), 0) || 0
+    ?.filter((i: unknown) => i.status !== 'paid')
+    .reduce((s: number, i: unknown) => s + (i.total || 0), 0) || 0
 
   const grossMargin = billedToDate > 0
     ? ((billedToDate - costsToDate) / billedToDate) * 100
@@ -396,10 +396,10 @@ export const Financials: React.FC = () => {
   // Falls back to 0 (no trend shown) when fewer than 2 pay apps exist.
   const previousBilledToDate = (() => {
     if (!payApps || payApps.length < 2) return 0;
-    const sorted = [...payApps].sort((a: any, b: any) =>
+    const sorted = [...payApps].sort((a: unknown, b: unknown) =>
       new Date(a.period_to || 0).getTime() - new Date(b.period_to || 0).getTime()
     );
-    return sorted.slice(0, -1).reduce((s: number, p: any) => s + (p.total_completed_and_stored || 0), 0);
+    return sorted.slice(0, -1).reduce((s: number, p: unknown) => s + (p.total_completed_and_stored || 0), 0);
   })()
 
   // ── Tab actions ────────────────────────────────────────────
@@ -559,7 +559,7 @@ export const Financials: React.FC = () => {
             <SectionHeader title="Recent Pay Applications" />
             {payApps && payApps.length > 0 ? (
               <div style={{ marginTop: spacing['3'] }}>
-                {payApps.slice(0, 5).map((pa: any, idx: number) => (
+                {payApps.slice(0, 5).map((pa: unknown, idx: number) => (
                   <div
                     key={pa.id || idx}
                     style={{
@@ -598,9 +598,9 @@ export const Financials: React.FC = () => {
           {/* Outstanding Payables */}
           <Card padding={spacing['4']}>
             <SectionHeader title="Outstanding Payables" />
-            {invoices && invoices.filter((i: any) => i.status !== 'paid').length > 0 ? (
+            {invoices && invoices.filter((i: unknown) => i.status !== 'paid').length > 0 ? (
               <div style={{ marginTop: spacing['3'] }}>
-                {invoices.filter((i: any) => i.status !== 'paid').slice(0, 5).map((inv: any, idx: number) => (
+                {invoices.filter((i: unknown) => i.status !== 'paid').slice(0, 5).map((inv: unknown, idx: number) => (
                   <div
                     key={inv.id || idx}
                     style={{

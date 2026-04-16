@@ -5,7 +5,6 @@ import {
   FormModal,
   FormBody,
   FormRow,
-  FormFooter,
   FormField,
   FormInput,
   FormTextarea,

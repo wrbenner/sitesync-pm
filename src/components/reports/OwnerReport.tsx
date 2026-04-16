@@ -31,7 +31,6 @@ import {
   type OwnerReportData, type RiskFlag, type LookaheadItem,
 } from '../../services/reportService'
 import { useProjectId } from '../../hooks/useProjectId'
-import { useProject } from '../../hooks/queries'
 import { toast } from 'sonner'
 
 // ── Helpers ──────────────────────────────────────────────
@@ -65,7 +64,6 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
 
 export const OwnerReport: React.FC = () => {
   const projectId = useProjectId()
-  const { data: _project } = useProject(projectId)
   const [report, setReport] = useState<OwnerReportData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)

@@ -16,13 +16,6 @@ const s = StyleSheet.create({
   legendText: { fontSize: 7, color: colors.textSecondary },
 })
 
-const STATUS_COLORS: Record<string, string> = {
-  achieved: colors.statusActive, complete: colors.statusActive,
-  in_progress: colors.statusInfo,
-  late: colors.statusCritical, behind: colors.statusCritical,
-  upcoming: colors.statusPending, not_started: colors.textTertiary,
-  Critical: colors.statusCritical, Major: colors.statusPending, Minor: colors.statusInfo,
-}
 
 interface ScheduleReportProps {
   data: {

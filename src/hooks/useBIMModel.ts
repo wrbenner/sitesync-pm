@@ -2,7 +2,7 @@
 // Uses Web Workers for non-blocking IFC parsing.
 // Caches parsed geometry in IndexedDB for instant reload.
 
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useProjectId } from './useProjectId'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -295,7 +295,7 @@ export function useBIMViewer() {
 
 // ── IFC Parsing (web-ifc integration) ────────────────────
 
-async function parseIFCFile(file: File): Promise<BIMElement[]> {
+async function parseIFCFile(): Promise<BIMElement[]> {
   // In production, this would use web-ifc in a Web Worker:
   // const worker = new Worker(new URL('../workers/ifc-parser.ts', import.meta.url))
   // worker.postMessage({ file: await file.arrayBuffer() })

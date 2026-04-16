@@ -3,7 +3,6 @@ import { supabase } from '../lib/supabase'
 import { queryClient } from '../lib/queryClient'
 import { queryKeys } from '../api/queryKeys'
 import { useProjectId } from './useProjectId'
-import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js'
 
 // Map table names to their query key invalidation targets
 const TABLE_TO_QUERY_KEYS: Record<string, (projectId: string) => readonly unknown[]> = {
@@ -45,7 +44,7 @@ export function useRealtimeInvalidation() {
           table,
           filter: `project_id=eq.${projectId}`,
         },
-        (_payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
+        () => {
           const keyFn = TABLE_TO_QUERY_KEYS[table]
           if (keyFn) {
             queryClient.invalidateQueries({ queryKey: keyFn(projectId) })

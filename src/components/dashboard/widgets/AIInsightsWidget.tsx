@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo} from 'react';
 import { Sparkles, ChevronRight, AlertTriangle, TrendingDown, Shield, CheckCircle, RefreshCw, Clock } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { colors, spacing, typography, borderRadius, transitions } from '../../../styles/theme';
@@ -42,11 +42,13 @@ export const AIInsightsWidget: React.FC = React.memo(() => {
   const mostRecentCreatedAt = rawInsights.length > 0
     ? rawInsights.reduce((latest, i) => (i.createdAt > latest ? i.createdAt : latest), rawInsights[0].createdAt)
     : null;
-  const isStale = mostRecentCreatedAt
-    ? Date.now() - new Date(mostRecentCreatedAt).getTime() > STALENESS_THRESHOLD_MS
-    : false;
+  const isStale = useMemo(() =>
+    mostRecentCreatedAt
+      ? Date.now() - new Date(mostRecentCreatedAt).getTime() > STALENESS_THRESHOLD_MS
+      : false,
+  [mostRecentCreatedAt]);
 
-  const relativeTime = (iso: string): string => {
+  const relativeTime = useCallback((iso: string): string => {
     const ms = Date.now() - new Date(iso).getTime();
     const minutes = Math.floor(ms / 60000);
     if (minutes < 60) return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
@@ -54,7 +56,7 @@ export const AIInsightsWidget: React.FC = React.memo(() => {
     if (hours < 24) return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
     const days = Math.floor(hours / 24);
     return `${days} day${days !== 1 ? 's' : ''} ago`;
-  };
+  }, []);
 
   const handleRetry = () => {
     queryClient.removeQueries({ queryKey: ['ai_insights_meta', projectId] });

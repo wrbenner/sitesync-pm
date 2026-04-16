@@ -76,7 +76,7 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onClose, onSave })
           const tag = (e.target as HTMLElement).tagName;
           if (tag !== 'INPUT' && tag !== 'TEXTAREA') {
             e.preventDefault();
-            recording ? handleStop() : setRecording(true);
+            if (recording) { handleStop(); } else { setRecording(true); }
           }
         }
       }}

@@ -97,8 +97,6 @@ export function BudgetUpload({ open, onClose, onSuccess }: BudgetUploadProps) {
   const [fileName, setFileName] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
-  if (!open) return null;
-
   const handleFile = useCallback((file: File) => {
     setParsing(true);
     setError('');
@@ -210,6 +208,8 @@ export function BudgetUpload({ open, onClose, onSuccess }: BudgetUploadProps) {
     const file = e.dataTransfer.files[0];
     if (file) handleFile(file);
   }, [handleFile]);
+
+  if (!open) return null;
 
   const handleImport = async () => {
     if (!activeProject || parsedRows.length === 0) return;

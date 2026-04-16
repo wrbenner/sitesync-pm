@@ -21,15 +21,17 @@ export function ProjectSettings() {
 
   useEffect(() => {
     if (activeProject) {
-      setName(activeProject.name);
-      setAddress(activeProject.address ?? '');
-      setProjectType(activeProject.project_type ?? '');
-      setTotalValue(activeProject.total_value?.toString() ?? '');
-      setDescription(activeProject.description ?? '');
-      setStartDate(activeProject.start_date ?? '');
-      setEndDate(activeProject.scheduled_end_date ?? '');
+      setTimeout(() => {
+        setName(activeProject.name);
+        setAddress(activeProject.address ?? '');
+        setProjectType(activeProject.project_type ?? '');
+        setTotalValue(activeProject.total_value?.toString() ?? '');
+        setDescription(activeProject.description ?? '');
+        setStartDate(activeProject.start_date ?? '');
+        setEndDate(activeProject.scheduled_end_date ?? '');
       loadMembers(activeProject.id);
-    }
+    
+      }, 0);}
   }, [activeProject?.id]);
 
   const handleSave = async () => {

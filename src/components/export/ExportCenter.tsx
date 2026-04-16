@@ -1,5 +1,5 @@
 import React, { useState, lazy, Suspense, useMemo, useCallback } from 'react';
-import { Download, FileText, Table, Calendar, Check, X, ChevronRight, ChevronLeft, Clock, Sheet } from 'lucide-react';
+import { Download, FileText, Calendar, Check, X, ChevronRight, ChevronLeft, Clock, Sheet } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Btn, ProgressBar } from '../Primitives';
 import { colors, spacing, typography, borderRadius, shadows, zIndex, transitions } from '../../styles/theme';

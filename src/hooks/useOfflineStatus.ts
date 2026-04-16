@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useSyncExternalStore } from 'react'
-import { syncManager, type SyncManagerState } from '../lib/syncManager'
+import { syncManager} from '../lib/syncManager'
 
 // Subscribe to the SyncManager singleton for real-time offline/sync status
 export function useOfflineStatus() {

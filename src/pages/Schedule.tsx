@@ -26,7 +26,7 @@ function useMediaQuery(query: string): boolean {
   );
   useEffect(() => {
     const mq = window.matchMedia(query);
-    setMatches(mq.matches);
+    setTimeout(() => setMatches(mq.matches), 0);
     const handler = (e: MediaQueryListEvent) => setMatches(e.matches);
     mq.addEventListener('change', handler);
     return () => mq.removeEventListener('change', handler);
@@ -238,13 +238,13 @@ interface ScheduleImportModalProps {
   projectId?: string;
 }
 
-const ScheduleImportModal: React.FC<ScheduleImportModalProps> = ({ open, onClose, onImportComplete: _onImportComplete, projectId: _projectId }) => {
+const ScheduleImportModal: React.FC<ScheduleImportModalProps> = ({ open, onClose }) => {
   const [dragOver, setDragOver] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileType, setFileType] = useState<'xml' | 'xer' | 'mpp' | 'csv' | null>(null);
   const [parsing, setParsing] = useState(false);
   const [parsed, setParsed] = useState<ParsedActivity[] | null>(null);
-  const [_importing, setImporting] = useState(false);
+  const [ setImporting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const { addToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -614,7 +614,7 @@ export const Schedule: React.FC = () => {
   const [aiEdgeLoading, setAiEdgeLoading] = useState(false);
   const [weatherRecords, setWeatherRecords] = useState<Array<{ date: string; conditions: string | null }>>([]);
 
-  const _kpis = useMemo(() => computeScheduleKPIs(schedulePhases), [schedulePhases])
+  useMemo(() => computeScheduleKPIs(schedulePhases), [schedulePhases])
 
   const hasBaselineData = useMemo(
     () => schedulePhases.some(p => p.baselineStartDate != null && p.baselineEndDate != null),
@@ -805,7 +805,7 @@ export const Schedule: React.FC = () => {
     setTimeout(() => sendMessage(prompt), 100);
   }, [createConversation, setActiveConversation, sendMessage, navigate]);
 
-  const _GANTT_ROW_WIDTHS = ['70%', '55%', '85%', '40%', '90%', '60%', '75%', '45%'];
+
 
   if (error && !loading) {
     return (
@@ -1930,7 +1930,7 @@ export const Schedule: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody data-schedule-list>
-                      {schedulePhases.map((phase, _i) => {
+                      {schedulePhases.map((phase, _) => {
                         const statusLabel = (phase.status ?? 'not started').replace(/_/g, ' ');
                         const durationDays = Math.round((new Date(phase.endDate).getTime() - new Date(phase.startDate).getTime()) / 86400000);
                         const floatDays = phase.float_days ?? (phase as unknown as Record<string, unknown>).floatDays ?? 0;

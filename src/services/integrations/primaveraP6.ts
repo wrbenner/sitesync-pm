@@ -145,7 +145,7 @@ function extractRelationships(tables: Map<string, XERTable>): P6Relationship[] {
 export const primaveraP6Provider: IntegrationProvider = {
   type: 'primavera_p6',
 
-  async connect(projectId, _credentials) {
+  async connect(projectId) {
     // P6 is file-based, no external auth needed
     const { data: { user } } = await supabase.auth.getUser()
     const integrationId = await createIntegrationRecord('primavera_p6', projectId, {

@@ -24,11 +24,9 @@ import type {
   ChangeOrder,
   Meeting,
   DirectoryContact,
-  FileRecord,
   FieldCapture,
   SchedulePhase,
   Notification,
-  ActivityFeedItem,
   AIInsight,
   ProjectSnapshot,
 } from '../../types/database'

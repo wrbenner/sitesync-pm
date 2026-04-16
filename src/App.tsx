@@ -16,7 +16,7 @@ import { MobileLayout } from './components/layout/MobileLayout';
 import { OfflineBanner } from './components/ui/OfflineBanner';
 import { useUiStore, useAIAnnotationStore } from './stores';
 import { useCopilotStore } from './stores/copilotStore';
-import { colors, colorVars, layout, spacing, typography, borderRadius, transitions } from './styles/theme';
+import { colors, colorVars, spacing, typography, borderRadius } from './styles/theme';
 import { keyframes as animationKeyframes } from './styles/animations';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import type { Shortcut } from './hooks/useKeyboardShortcuts';
@@ -37,8 +37,8 @@ import { useOfflineStatus } from './hooks/useOfflineStatus';
 import { syncManager } from './lib/syncManager';
 import { OrganizationProvider } from './hooks/useOrganization';
 
-function lazyWithRetry(importFn: () => Promise<any>, retries = 3, delay = 1000) {
-  return lazy(() => new Promise<{ default: any }>((resolve, reject) => {
+function lazyWithRetry(importFn: () => Promise<unknown>, retries = 3, delay = 1000) {
+  return lazy(() => new Promise<{ default: unknown }>((resolve, reject) => {
     function attempt(retriesLeft: number) {
       importFn().then(resolve).catch((err: Error) => {
         if (retriesLeft > 0) {
@@ -455,8 +455,7 @@ function AppContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMobile, isTablet]);
   const { toggleContextPanel, contextPanelOpen } = useAIAnnotationStore();
-  const { openCopilot: _openCopilot, closeCopilot, isOpen: copilotOpen } = useCopilotStore();
-  const _sidebarWidth = sidebarCollapsed ? layout.sidebarCollapsed : layout.sidebarWidth;
+  const { openCopilot: closeCopilot, isOpen: copilotOpen } = useCopilotStore();
 
   const handleNavigate = (view: string) => {
     setActiveView(view);

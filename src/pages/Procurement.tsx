@@ -53,7 +53,7 @@ function statusBadge(value: string | null | undefined) {
 
 // ── Column definitions ───────────────────────────────────────
 
-const poCol = createColumnHelper<any>()
+const poCol = createColumnHelper<unknown>()
 const poColumns = [
   poCol.accessor('po_number', {
     header: 'PO #',
@@ -105,7 +105,7 @@ const poColumns = [
   }),
 ]
 
-const deliveryCol = createColumnHelper<any>()
+const deliveryCol = createColumnHelper<unknown>()
 const deliveryColumns = [
   deliveryCol.accessor('delivery_date', {
     header: 'Date',
@@ -141,7 +141,7 @@ const deliveryColumns = [
   }),
 ]
 
-const inventoryCol = createColumnHelper<any>()
+const inventoryCol = createColumnHelper<unknown>()
 const inventoryColumns = [
   inventoryCol.accessor('name', {
     header: 'Name',
@@ -201,19 +201,19 @@ export const Procurement: React.FC = () => {
   // ── KPIs ────────────────────────────────────────────────────
 
   const totalPOValue = useMemo(() => {
-    return pos?.reduce((sum: number, po: any) => sum + (po.total || 0), 0) || 0
+    return pos?.reduce((sum: number, po: unknown) => sum + (po.total || 0), 0) || 0
   }, [pos])
 
   const openOrders = useMemo(() => {
-    return pos?.filter((po: any) => po.status !== 'received' && po.status !== 'complete' && po.status !== 'cancelled').length || 0
+    return pos?.filter((po: unknown) => po.status !== 'received' && po.status !== 'complete' && po.status !== 'cancelled').length || 0
   }, [pos])
 
   const pendingDeliveries = useMemo(() => {
-    return deliveries?.filter((d: any) => d.status !== 'delivered' && d.status !== 'received').length || 0
+    return deliveries?.filter((d: unknown) => d.status !== 'delivered' && d.status !== 'received').length || 0
   }, [deliveries])
 
   const lowStockItems = useMemo(() => {
-    return inventory?.filter((item: any) => item.quantity != null && item.min_quantity != null && item.quantity < item.min_quantity).length || 0
+    return inventory?.filter((item: unknown) => item.quantity != null && item.min_quantity != null && item.quantity < item.min_quantity).length || 0
   }, [inventory])
 
   // ── Tab actions ─────────────────────────────────────────────

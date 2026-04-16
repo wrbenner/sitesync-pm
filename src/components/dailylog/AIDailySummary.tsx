@@ -25,8 +25,8 @@ export const AIDailySummary: React.FC<AIDailySummaryProps> = ({
   logDate,
   workSummary,
   crewCount,
-  weatherDescription: _weatherDescription,
-  safetyIncidents: _safetyIncidents,
+
+
   onSummaryGenerated,
 }) => {
   const [uiState, setUiState] = useState<UIState>('idle');

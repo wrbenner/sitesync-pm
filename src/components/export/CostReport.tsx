@@ -2,7 +2,7 @@
 import React from 'react'
 import { View, Text, StyleSheet } from '@react-pdf/renderer'
 import { colors, vizColors } from '../../styles/theme'
-import { PDFReport, PDFSection, PDFTable, pdfStyles } from './PDFTemplate'
+import { PDFReport, PDFSection, PDFTable } from './PDFTemplate'
 
 const s = StyleSheet.create({
   kpiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },

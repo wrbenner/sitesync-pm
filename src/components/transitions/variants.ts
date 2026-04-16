@@ -1,7 +1,7 @@
 // Reusable Framer Motion transition variants
 // All variants support reduced motion via the helper at the bottom.
 
-import type { Transition, Variant } from 'framer-motion'
+import type { Transition } from 'framer-motion'
 import { duration, easingArray } from '../../styles/animations'
 
 // ── Page Transitions ─────────────────────────────────────

@@ -123,7 +123,7 @@ export const teamsProvider: IntegrationProvider = {
     await updateIntegrationStatus(integrationId, 'disconnected')
   },
 
-  async sync(integrationId, _direction) {
+  async sync(integrationId) {
     const result: SyncResult = { success: true, recordsSynced: 0, recordsFailed: 0, errors: [] }
     await logSyncResult(integrationId, result, 'export')
     await updateIntegrationStatus(integrationId, 'connected')

@@ -13,7 +13,7 @@ interface RetryState<T> {
   error: Error | null;
   loading: boolean;
   retryCount: number;
-  execute: (...args: any[]) => Promise<T | null>;
+  execute: (...args: unknown[]) => Promise<T | null>;
   reset: () => void;
 }
 
@@ -22,7 +22,7 @@ interface RetryState<T> {
  * Useful for network requests that may fail transiently.
  */
 export function useRetry<T>(
-  fn: (...args: any[]) => Promise<T>,
+  fn: (...args: unknown[]) => Promise<T>,
   config: RetryConfig = {}
 ): RetryState<T> {
   const {
@@ -39,7 +39,7 @@ export function useRetry<T>(
   const abortRef = useRef(false);
 
   const execute = useCallback(
-    async (...args: any[]): Promise<T | null> => {
+    async (...args: unknown[]): Promise<T | null> => {
       setLoading(true);
       setError(null);
       abortRef.current = false;

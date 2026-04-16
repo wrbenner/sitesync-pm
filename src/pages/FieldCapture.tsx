@@ -65,38 +65,6 @@ function formatTimestamp(dateStr: string | null): string {
   );
 }
 
-function isToday(dateStr: string | null): boolean {
-  if (!dateStr) return false;
-  const d = new Date(dateStr);
-  const now = new Date();
-  return (
-    d.getFullYear() === now.getFullYear() &&
-    d.getMonth() === now.getMonth() &&
-    d.getDate() === now.getDate()
-  );
-}
-
-// ── Skeleton grid for loading state ────────────────────────
-
-const SkeletonGrid: React.FC = () => (
-  <>
-    <style>{`@keyframes fieldCapturePulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.8; } }`}</style>
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: spacing['3'] }}>
-      {Array.from({ length: 6 }).map((_, i) => (
-        <div
-          key={i}
-          style={{
-            backgroundColor: colors.surfaceInset,
-            borderRadius: borderRadius.xl,
-            aspectRatio: '4/3',
-            animation: 'fieldCapturePulse 1.5s ease-in-out infinite',
-            animationDelay: `${i * 0.1}s`,
-          }}
-        />
-      ))}
-    </div>
-  </>
-);
 
 // ── Post-capture overlay form ───────────────────────────────
 

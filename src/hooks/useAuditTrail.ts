@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { useState, useCallback } from 'react'
-import { supabase, fromTable } from '../lib/supabase'
+import {  fromTable } from '../lib/supabase'
 import { transformSupabaseError } from '../api/client'
 import { getEntityHistory } from '../api/endpoints/auditTrail'
 import type { AuditLogEntry } from '../api/endpoints/auditTrail'

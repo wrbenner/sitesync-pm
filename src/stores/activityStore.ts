@@ -32,7 +32,7 @@ export const useActivityStore = create<ActivityState>()((set, get) => ({
 
       if (error) throw error;
 
-      const activities: ActivityEntry[] = (data ?? []).map((row: any) => ({
+      const activities: ActivityEntry[] = (data ?? []).map((row: unknown) => ({
         id: row.id,
         type: row.activity_type ?? 'task',
         user: row.user_name ?? 'Unknown',

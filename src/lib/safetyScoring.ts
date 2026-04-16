@@ -60,8 +60,8 @@ export interface SafetyScore {
 
 const INDUSTRY_TRIR_AVERAGE = 3.1       // Construction industry TRIR
 const INDUSTRY_TRIR_BEST = 1.0          // Top quartile
-const INDUSTRY_CA_CLOSURE = 0.85        // 85% closure rate average
-const INDUSTRY_INSPECTION_PASS = 0.90   // 90% pass rate average
+
+
 
 // ── Weight Configuration ──────────────────────────────────────
 

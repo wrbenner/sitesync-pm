@@ -22,7 +22,7 @@ import { Treemap } from '../components/budget/Treemap';
 import { SCurve } from '../components/budget/SCurve';
 import { EarnedValueDashboard } from '../components/budget/EarnedValueDashboard';
 import { WaterfallChart } from '../components/budget/WaterfallChart';
-import { Download, AlertTriangle, ChevronRight, ArrowRight, DollarSign, Upload, Sparkles, RefreshCw, Pencil } from 'lucide-react';
+import { Download, AlertTriangle, ChevronRight, ArrowRight, DollarSign,  Sparkles, RefreshCw, Pencil } from 'lucide-react';
 import { computeDivisionFinancials, computeProjectFinancials, detectBudgetAnomalies } from '../lib/financialEngine';
 import { BudgetUpload } from '../components/budget/BudgetUpload';
 import EmptyState from '../components/ui/EmptyState';
@@ -293,6 +293,48 @@ const BudgetPage: React.FC = () => {
     }
   }, [divFocusedIndex]);
 
+  // Hooks must be called before any early return
+  const divisions = costData?.divisions ?? [];
+  const changeOrders = costData?.changeOrders ?? [];
+  const allChangeOrders = changeOrders;
+
+  const divisionFinancials = useMemo(
+    () => computeDivisionFinancials(divisions, changeOrders),
+    [divisions, changeOrders]
+  );
+  const projectFinancials = useMemo(
+    () => computeProjectFinancials(divisions, changeOrders, projectData?.totalValue ?? 0),
+    [divisions, changeOrders, projectData?.totalValue]
+  );
+  const budgetAnomalies = useMemo(
+    () => detectBudgetAnomalies(projectFinancials, divisionFinancials),
+    [projectFinancials, divisionFinancials]
+  );
+
+  const aiConfigured = aiService.isConfigured();
+  const { data: aiInsightsData, loading: aiInsightsLoading, refetch: refreshAiInsights } = useQuery(
+    `ai-insights-budget-${projectId}`,
+    () => getAiInsights(projectId!, { summary: projectFinancials, divisions: divisionFinancials }),
+    { enabled: aiConfigured && !projectFinancials.isEmpty && !!projectId },
+  );
+
+  const committed = useMemo(() => divisions.reduce((sum, d) => sum + d.committed, 0), [divisions]);
+  const spent = useMemo(() => divisions.reduce((sum, d) => sum + d.spent, 0), [divisions]);
+  const remaining = useMemo(() => (projectData?.totalValue ?? 0) - spent - committed, [projectData?.totalValue, spent, committed]);
+
+  const previousBilledToDate = useMemo(() => {
+    if (!payApps || payApps.length < 2) return 0;
+    const sorted = [...payApps].sort((a: unknown, b: unknown) =>
+      new Date(a.period_to || 0).getTime() - new Date(b.period_to || 0).getTime()
+    );
+    return sorted.slice(0, -1).reduce((s: number, p: unknown) => s + (p.total_completed_and_stored || 0), 0);
+  }, [payApps]);
+
+  const approvedTotal = useMemo(() => allChangeOrders.filter(co => co.status === 'approved').reduce((s, co) => s + co.amount, 0), [allChangeOrders]);
+
+  const consumed = approvedTotal;
+  const contingencyRemaining = useMemo(() => 3800000 - consumed, [consumed]);
+
   if (costLoading || projectLoading || !costData || !projectData) {
     return (
       <PageContainer title="Budget" subtitle="Loading...">
@@ -307,61 +349,7 @@ const BudgetPage: React.FC = () => {
   const isEmpty = costData.divisions.length === 0;
   const allBudgetZero = !isEmpty && costData.divisions.every(d => d.budget === 0);
   const pageAlerts = getPredictiveAlertsForPage('budget');
-
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  const divisionFinancials = useMemo(
-    () => computeDivisionFinancials(costData.divisions, costData.changeOrders),
-    [costData.divisions, costData.changeOrders]
-  );
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  const projectFinancials = useMemo(
-    () => computeProjectFinancials(costData.divisions, costData.changeOrders, projectData.totalValue),
-    [costData.divisions, costData.changeOrders, projectData.totalValue]
-  );
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  const budgetAnomalies = useMemo(
-    () => detectBudgetAnomalies(projectFinancials, divisionFinancials),
-    [projectFinancials, divisionFinancials]
-  );
   const criticalAnomalies = budgetAnomalies.filter(a => a.severity === 'critical');
-
-  const aiConfigured = aiService.isConfigured();
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  const { data: aiInsightsData, loading: aiInsightsLoading, refetch: refreshAiInsights } = useQuery(
-    `ai-insights-budget-${projectId}`,
-    () => getAiInsights(projectId!, { summary: projectFinancials, divisions: divisionFinancials }),
-    { enabled: aiConfigured && !projectFinancials.isEmpty && !!projectId },
-  );
-
-  const committed = useMemo(() => costData.divisions.reduce((sum, d) => sum + d.committed, 0), [costData.divisions]);
-  const spent = useMemo(() => costData.divisions.reduce((sum, d) => sum + d.spent, 0), [costData.divisions]);
-  const remaining = useMemo(() => projectData.totalValue - spent - committed, [projectData.totalValue, spent, committed]);
-
-  // Previous period spent: sum of all pay apps except the most recent (sorted by period end date).
-  // Used as a prior period proxy for trend indicators. Falls back to 0 (no trend) when no history exists.
-  const previousBilledToDate = useMemo(() => {
-    if (!payApps || payApps.length < 2) return 0;
-    const sorted = [...payApps].sort((a: any, b: any) =>
-      new Date(a.period_to || 0).getTime() - new Date(b.period_to || 0).getTime()
-    );
-    return sorted.slice(0, -1).reduce((s: number, p: any) => s + (p.total_completed_and_stored || 0), 0);
-  }, [payApps]);
-
-  // elapsedFraction: weighted average physical progress across divisions, used as schedule proxy
-  const _elapsedFraction = useMemo(() => {
-    const totalBudget = costData.divisions.reduce((s, d) => s + d.budget, 0);
-    if (totalBudget === 0) return 0;
-    return costData.divisions.reduce((s, d) => s + d.budget * (d.progress / 100), 0) / totalBudget;
-  }, [costData.divisions]);
-
-  // Change orders from real data only
-  const allChangeOrders = costData.changeOrders || [];
-
-  const approvedTotal = useMemo(() => allChangeOrders.filter(co => co.status === 'approved').reduce((s, co) => s + co.amount, 0), [allChangeOrders]);
-
-  // Fix 5: Contingency
-  const consumed = approvedTotal;
-  const contingencyRemaining = useMemo(() => 3800000 - consumed, [consumed]);
 
   const handleSaveEdit = () => {
     if (!editingCell || !projectId) { setEditingCell(null); return; }

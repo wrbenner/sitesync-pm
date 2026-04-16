@@ -1,7 +1,7 @@
 import React from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
 import { X } from 'lucide-react'
-import { colors, spacing, typography, borderRadius, shadows, zIndex, transitions, focusRing } from '../../styles/theme'
+import { colors, spacing, typography, borderRadius, shadows, zIndex, transitions } from '../../styles/theme'
 
 // ── Shared Form Modal Shell ──────────────────────────────
 

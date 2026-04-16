@@ -12,7 +12,7 @@ import {
 } from './base'
 
 const DRIVE_API = 'https://www.googleapis.com/drive/v3'
-const UPLOAD_API = 'https://www.googleapis.com/upload/drive/v3'
+
 
 // ── API Helpers ─────────────────────────────────────────
 

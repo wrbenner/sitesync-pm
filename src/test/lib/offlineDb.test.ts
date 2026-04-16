@@ -14,7 +14,6 @@ import {
   MAX_PENDING_MUTATIONS,
   MAX_RETRY_COUNT,
   PERMANENT_UPLOAD_ERRORS,
-  type PendingMutation,
 } from '../../lib/offlineDb'
 
 describe('Offline Database', () => {

@@ -11,7 +11,7 @@ import { toast } from 'sonner'
 
 // ── Column helpers ─────────────────────────────────────────
 
-const projectCol = createColumnHelper<any>()
+const projectCol = createColumnHelper<unknown>()
 const projectColumns = [
   projectCol.accessor('name', {
     header: 'Project Name',
@@ -79,7 +79,7 @@ const projectColumns = [
   }),
 ]
 
-const reportCol = createColumnHelper<any>()
+const reportCol = createColumnHelper<unknown>()
 const reportColumns = [
   reportCol.accessor('report_type', {
     header: 'Type',
@@ -203,8 +203,8 @@ interface PortfolioMetricsSectionProps {
 const PortfolioMetricsSection: React.FC<PortfolioMetricsSectionProps> = ({
   totalValue,
   activeCount,
-  currentPortfolioName,
-  latestReportLabel,
+
+
   loading,
 }) => {
   const { data: orgMetrics } = useOrgPortfolioMetrics(ORG_ID)
@@ -247,14 +247,14 @@ export const Portfolio: React.FC = () => {
   const { data: portfolioProjects, isPending: loading } = usePortfolioProjects(portfolioId)
   const { data: reports } = useExecutiveReports(portfolioId)
 
-  const projects = (portfolioProjects || []).map((pp: any) => pp.projects).filter(Boolean)
+  const projects = (portfolioProjects || []).map((pp: unknown) => pp.projects).filter(Boolean)
 
-  const projectIds: string[] = projects.map((p: any) => p.id as string)
+  const projectIds: string[] = projects.map((p: unknown) => p.id as string)
   const { metricsMap, isLoading: metricsLoading } = usePortfolioMetrics(projectIds)
 
-  const totalValue = projects.reduce((s: number, p: any) => s + (p.contract_value || 0), 0)
-  const activeCount = projects.filter((p: any) => p.status === 'active').length
-  const currentPortfolio = (portfolios || []).find((p: any) => p.id === portfolioId)
+  const totalValue = projects.reduce((s: number, p: unknown) => s + (p.contract_value || 0), 0)
+  const activeCount = projects.filter((p: unknown) => p.status === 'active').length
+  const currentPortfolio = (portfolios || []).find((p: unknown) => p.id === portfolioId)
   const latestReport = (reports || [])[0]
 
   return (
@@ -278,7 +278,7 @@ export const Portfolio: React.FC = () => {
               value={portfolioId}
               onChange={() => {}}
             >
-              {portfolios.map((p: any) => (
+              {portfolios.map((p: unknown) => (
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
             </select>
@@ -354,7 +354,7 @@ export const Portfolio: React.FC = () => {
             </Card>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: projects.length === 1 ? '1fr' : projects.length === 2 ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: spacing['4'] }}>
-              {projects.map((project: any) => {
+              {projects.map((project: unknown) => {
                 const statusColor = project.status === 'active' ? colors.statusActive
                   : project.status === 'completed' ? colors.statusInfo
                   : project.status === 'on_hold' ? colors.statusPending

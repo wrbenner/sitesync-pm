@@ -44,7 +44,7 @@ const VirtualRow = React.memo(function VirtualRow<T>({
   selected,
   style,
   index,
-  focused,
+
   ariaLabel,
   extraStyle,
 }: {

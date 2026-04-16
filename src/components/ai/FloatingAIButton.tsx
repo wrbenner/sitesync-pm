@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Sparkles, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
-import { colors, borderRadius, shadows, transitions, spacing, typography, zIndex as themeZIndex } from '../../styles/theme';
+import { colors, borderRadius, shadows, transitions, spacing, typography} from '../../styles/theme';
 import { useProjectId } from '../../hooks/useProjectId';
 import { useAIInsights } from '../../hooks/queries';
 import { useCopilotStore } from '../../stores/copilotStore';

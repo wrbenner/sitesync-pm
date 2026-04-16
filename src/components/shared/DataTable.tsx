@@ -59,7 +59,7 @@ export function Table<T>({
 
 interface DataTableProps<T> {
   data: T[];
-  columns: ColumnDef<T, any>[];
+  columns: ColumnDef<T, unknown>[];
   loading?: boolean;
   pageSize?: number;
   enablePagination?: boolean;
@@ -89,7 +89,7 @@ const MemoizedRow = React.memo(function MemoizedRow<T>({
   row: Row<T>;
   onClick?: (row: T) => void;
   selected: boolean;
-  columns: ColumnDef<T, any>[];
+  columns: ColumnDef<T, unknown>[];
   index: number;
   focused: boolean;
   rowId: string;
@@ -142,13 +142,13 @@ const MemoizedRow = React.memo(function MemoizedRow<T>({
   row: Row<T>;
   onClick?: (row: T) => void;
   selected: boolean;
-  columns: ColumnDef<T, any>[];
+  columns: ColumnDef<T, unknown>[];
   index: number;
   focused: boolean;
   rowId: string;
 }) => React.ReactElement;
 
-function exportToCsv<T>(table: ReturnType<typeof useReactTable<T>>, columns: ColumnDef<T, any>[]) {
+function exportToCsv<T>(table: ReturnType<typeof useReactTable<T>>, columns: ColumnDef<T, unknown>[]) {
   const headers = columns
     .map((c) => {
       const header = c.header;
@@ -200,7 +200,7 @@ export function DataTable<T>({
   // Tracks the last index the user clicked a checkbox on, for shift-click range selection.
   const lastCheckedRef = useRef<number | null>(null);
 
-  const checkboxColumn = useMemo<ColumnDef<T, any>>(() => ({
+  const checkboxColumn = useMemo<ColumnDef<T, unknown>>(() => ({
     id: '_select',
     size: 40,
     enableSorting: false,

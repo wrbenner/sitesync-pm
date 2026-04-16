@@ -9,7 +9,7 @@ import { useInsuranceCertificates } from '../hooks/queries'
 import { toast } from 'sonner'
 import { PermissionGate } from '../components/auth/PermissionGate'
 
-const columnHelper = createColumnHelper<any>()
+const columnHelper = createColumnHelper<unknown>()
 
 function getStatus(expirationDate: string | null) {
   if (!expirationDate) return 'unknown'
@@ -145,19 +145,19 @@ export const Insurance: React.FC = () => {
 
   const companies = useMemo(() => {
     if (!certificates) return []
-    const set = new Set(certificates.map((c: any) => c.company).filter(Boolean))
+    const set = new Set(certificates.map((c: unknown) => c.company).filter(Boolean))
     return Array.from(set).sort() as string[]
   }, [certificates])
 
   const policyTypes = useMemo(() => {
     if (!certificates) return []
-    const set = new Set(certificates.map((c: any) => c.policy_type).filter(Boolean))
+    const set = new Set(certificates.map((c: unknown) => c.policy_type).filter(Boolean))
     return Array.from(set).sort() as string[]
   }, [certificates])
 
   const filtered = useMemo(() => {
     if (!certificates) return []
-    return certificates.filter((c: any) => {
+    return certificates.filter((c: unknown) => {
       if (filterCompany && c.company !== filterCompany) return false
       if (filterType !== 'all' && c.policy_type !== filterType) return false
       if (filterStatus !== 'all') {
@@ -171,7 +171,7 @@ export const Insurance: React.FC = () => {
   const metrics = useMemo(() => {
     if (!certificates) return { total: 0, compliant: 0, expiring: 0, expired: 0 }
     let compliant = 0, expiring = 0, expired = 0
-    certificates.forEach((c: any) => {
+    certificates.forEach((c: unknown) => {
       const s = getStatus(c.expiration_date)
       if (s === 'valid') compliant++
       else if (s === 'expiring') expiring++

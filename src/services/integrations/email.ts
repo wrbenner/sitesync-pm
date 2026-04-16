@@ -157,7 +157,7 @@ export const emailProvider: IntegrationProvider = {
     await updateIntegrationStatus(integrationId, 'disconnected')
   },
 
-  async sync(integrationId, _direction) {
+  async sync(integrationId) {
     // Email is outbound only, no sync needed
     // This would be called to send pending email queue
     await updateIntegrationStatus(integrationId, 'syncing')
