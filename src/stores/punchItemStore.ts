@@ -1,3 +1,4 @@
+// TODO: Migrate to entityStore — see src/stores/entityStore.ts
 import { create } from 'zustand';
 import { punchItemService } from '../services/punchItemService';
 import type { PunchItem } from '../types/database';

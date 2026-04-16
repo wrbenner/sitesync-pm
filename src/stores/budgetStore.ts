@@ -1,3 +1,4 @@
+// TODO: Migrate to entityStore — see src/stores/entityStore.ts
 import { create } from 'zustand';
 import { supabase, fromTable } from '../lib/supabase';
 import type { BudgetDivision, BudgetLineItem, ChangeOrder, ChangeOrderStatus } from '../types/database';

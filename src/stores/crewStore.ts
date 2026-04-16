@@ -1,3 +1,4 @@
+// TODO: Migrate to entityStore — see src/stores/entityStore.ts
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
 import type { Crew } from '../types/database';

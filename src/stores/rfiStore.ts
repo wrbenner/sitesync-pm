@@ -1,3 +1,4 @@
+// TODO: Migrate to entityStore — see src/stores/entityStore.ts
 import { create } from 'zustand';
 import { rfiService } from '../services/rfiService';
 import type { ServiceError } from '../services/errors';
