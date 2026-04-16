@@ -28,7 +28,8 @@ import { EditingLockBanner } from '../components/ui/EditingLockBanner';
 
 const QuickRFIButton = lazy(() => import('../components/field/QuickRFIButton'));
 
-const isOverdue = (dateStr: string) => new Date(dateStr) < new Date();
+const isOverdue = (dateStr: string | null | undefined): boolean =>
+  !!dateStr && new Date(dateStr) < new Date();
 
 const containerVariants = {
   hidden: {},
@@ -56,8 +57,8 @@ const getBicColor = (party: string): string => {
 };
 
 
-const BallInCourtCell: React.FC<{ rfi: unknown }> = ({ rfi }) => {
-  const party = rfi.assigned_to || null;
+const BallInCourtCell: React.FC<{ rfi: Record<string, unknown> }> = ({ rfi }) => {
+  const party = (rfi.assigned_to as string | null) || null;
   if (!party) {
     return (
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
@@ -75,8 +76,13 @@ const BallInCourtCell: React.FC<{ rfi: unknown }> = ({ rfi }) => {
   );
 };
 
-const formatDate = (dateStr: string) =>
-  new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+const formatDate = (dateStr: string | null | undefined): string =>
+  dateStr ? new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'No date';
+
+const getInitials = (name: string | null | undefined): string => {
+  if (!name?.trim()) return '?';
+  return name.trim().split(' ').map((w) => w[0]).filter(Boolean).join('').slice(0, 2).toUpperCase();
+};
 
 const rfiColHelper = createColumnHelper<unknown>();
 
@@ -123,7 +129,7 @@ const RFIsPage: React.FC = () => {
     const weekAgo = Date.now() - 7 * 86400000;
     return rfis.filter((r: unknown) => r.status === 'closed' && r.closed_at && new Date(r.closed_at).getTime() >= weekAgo).length;
   }, [rfis]);
-  const [selectedRfi, setSelectedRfi] = useState<unknown>(null);
+  const [selectedRfi, setSelectedRfi] = useState<Record<string, unknown> | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -297,12 +303,17 @@ const RFIsPage: React.FC = () => {
       header: 'Days Open',
       size: 90,
       cell: (info) => {
-        const rfi = info.row.original;
+        const rfi = info.row.original as Record<string, unknown>;
+        const createdAt = rfi.created_at as string | null;
+        if (!createdAt) return <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>N/A</span>;
         let days: number;
         if (rfi.status === 'closed') {
-          days = Math.floor((new Date(rfi.closed_at || rfi.updated_at).getTime() - new Date(rfi.created_at).getTime()) / 86400000);
+          const closedAt = (rfi.closed_at || rfi.updated_at) as string | null;
+          days = closedAt
+            ? Math.max(0, Math.floor((new Date(closedAt).getTime() - new Date(createdAt).getTime()) / 86400000))
+            : 0;
         } else {
-          days = Math.floor((Date.now() - new Date(rfi.created_at).getTime()) / 86400000);
+          days = Math.max(0, Math.floor((Date.now() - new Date(createdAt).getTime()) / 86400000));
         }
         const dColor = days > 10 ? colors.statusCritical : days > 5 ? colors.statusPending : colors.statusActive;
         return <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: dColor, fontVariantNumeric: 'tabular-nums' as const }}>{days}</span>;
@@ -704,9 +715,11 @@ const RFIsPage: React.FC = () => {
             icon: <UserCheck size={14} />,
             variant: 'secondary',
             onClick: async (ids) => {
+              const newAssignee = window.prompt('Enter the name or company to reassign the ball in court to:');
+              if (!newAssignee?.trim()) return;
               try {
-                await Promise.all(ids.map((id) => updateRFI.mutateAsync({ id, updates: { assigned_to: 'Reassigned' }, projectId: projectId! })));
-                addToast('success', `${ids.length} RFI${ids.length > 1 ? 's' : ''} reassigned`);
+                await Promise.all(ids.map((id) => updateRFI.mutateAsync({ id, updates: { assigned_to: newAssignee.trim() }, projectId: projectId! })));
+                addToast('success', `${ids.length} RFI${ids.length > 1 ? 's' : ''} reassigned to ${newAssignee.trim()}`);
               } catch {
                 addToast('error', 'Failed to reassign RFIs. Please try again.');
               }
@@ -799,7 +812,7 @@ const RFIsPage: React.FC = () => {
             >
               <EditableDetailField
                 label="Priority"
-                value={selectedRfi.priority}
+                value={selectedRfi.priority as string}
                 editing={editingDetail}
                 type="select"
                 options={[
@@ -809,15 +822,19 @@ const RFIsPage: React.FC = () => {
                   { value: 'critical', label: 'Critical' },
                 ]}
                 onSave={async (val) => {
-                  await updateRFI.mutateAsync({ id: String(selectedRfi.id), updates: { priority: val }, projectId: projectId! });
-                  selectedRfi.priority = val;
-                  toast.success('Priority updated');
+                  try {
+                    await updateRFI.mutateAsync({ id: String(selectedRfi.id), updates: { priority: val }, projectId: projectId! });
+                    setSelectedRfi((prev) => prev ? { ...prev, priority: val } : prev);
+                    toast.success('Priority updated');
+                  } catch {
+                    toast.error('Failed to update priority');
+                  }
                 }}
                 displayContent={<PriorityTag priority={selectedRfi.priority as 'low' | 'medium' | 'high' | 'critical'} />}
               />
               <EditableDetailField
                 label="Status"
-                value={selectedRfi.status}
+                value={selectedRfi.status as string}
                 editing={editingDetail}
                 type="select"
                 options={[
@@ -827,62 +844,74 @@ const RFIsPage: React.FC = () => {
                   { value: 'closed', label: 'Closed' },
                 ]}
                 onSave={async (val) => {
-                  await handleStatusChange(String(selectedRfi.id), val);
-                  selectedRfi.status = val;
+                  try {
+                    await handleStatusChange(String(selectedRfi.id), val);
+                    setSelectedRfi((prev) => prev ? { ...prev, status: val } : prev);
+                  } catch {
+                    toast.error('Failed to update status');
+                  }
                 }}
                 displayContent={<StatusTag status={selectedRfi.status as 'pending' | 'approved' | 'under_review' | 'revise_resubmit' | 'complete' | 'active' | 'closed' | 'pending_approval'} />}
               />
               <EditableDetailField
                 label="Assigned To"
-                value={selectedRfi.to || ''}
+                value={(selectedRfi.to as string) || ''}
                 editing={editingDetail}
                 type="text"
                 onSave={async (val) => {
-                  await updateRFI.mutateAsync({ id: String(selectedRfi.id), updates: { assigned_to: val }, projectId: projectId! });
-                  selectedRfi.to = val;
-                  toast.success('Assignee updated');
+                  try {
+                    await updateRFI.mutateAsync({ id: String(selectedRfi.id), updates: { assigned_to: val }, projectId: projectId! });
+                    setSelectedRfi((prev) => prev ? { ...prev, to: val, assigned_to: val } : prev);
+                    toast.success('Assignee updated');
+                  } catch {
+                    toast.error('Failed to update assignee');
+                  }
                 }}
                 displayContent={
                   selectedRfi.to ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
-                      <Avatar initials={selectedRfi.to.split(' ').map((w: string) => w[0]).join('').slice(0, 2)} size={24} />
-                      <span>{selectedRfi.to}</span>
+                      <Avatar initials={getInitials(selectedRfi.to as string)} size={24} />
+                      <span>{selectedRfi.to as string}</span>
                     </div>
                   ) : undefined
                 }
               />
               <EditableDetailField
                 label="Due Date"
-                value={selectedRfi.dueDate?.slice(0, 10) || ''}
+                value={(selectedRfi.dueDate as string | undefined)?.slice(0, 10) || ''}
                 editing={editingDetail}
                 type="date"
                 onSave={async (val) => {
-                  await updateRFI.mutateAsync({ id: String(selectedRfi.id), updates: { due_date: val }, projectId: projectId! });
-                  selectedRfi.dueDate = val;
-                  toast.success('Due date updated');
+                  try {
+                    await updateRFI.mutateAsync({ id: String(selectedRfi.id), updates: { due_date: val }, projectId: projectId! });
+                    setSelectedRfi((prev) => prev ? { ...prev, dueDate: val } : prev);
+                    toast.success('Due date updated');
+                  } catch {
+                    toast.error('Failed to update due date');
+                  }
                 }}
                 displayContent={
                   <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
                     <Calendar size={14} style={{ color: colors.textTertiary }} />
                     <span style={{
-                      color: isOverdue(selectedRfi.dueDate) && selectedRfi.status !== 'approved' ? colors.statusCritical : colors.textPrimary,
-                      fontWeight: isOverdue(selectedRfi.dueDate) && selectedRfi.status !== 'approved' ? typography.fontWeight.medium : typography.fontWeight.normal,
+                      color: isOverdue(selectedRfi.dueDate as string) && selectedRfi.status !== 'approved' ? colors.statusCritical : colors.textPrimary,
+                      fontWeight: isOverdue(selectedRfi.dueDate as string) && selectedRfi.status !== 'approved' ? typography.fontWeight.medium : typography.fontWeight.normal,
                     }}>
-                      {formatDate(selectedRfi.dueDate)}
+                      {formatDate(selectedRfi.dueDate as string)}
                     </span>
                   </div>
                 }
               />
               <MetaItem label="From">
                 <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
-                  <Avatar initials={selectedRfi.from.split(' ').map((w: string) => w[0]).join('').slice(0, 2)} size={24} />
-                  <span>{selectedRfi.from}</span>
+                  <Avatar initials={getInitials(selectedRfi.from as string)} size={24} />
+                  <span>{(selectedRfi.from as string) || 'Unknown'}</span>
                 </div>
               </MetaItem>
               <MetaItem label="Submitted">
                 <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
                   <Clock size={14} style={{ color: colors.textTertiary }} />
-                  <span>{formatDate(selectedRfi.submitDate)}</span>
+                  <span>{formatDate(selectedRfi.submitDate as string)}</span>
                 </div>
               </MetaItem>
             </div>
@@ -892,19 +921,21 @@ const RFIsPage: React.FC = () => {
               <div style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.sm, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Description
               </div>
-              <p style={{ margin: 0, fontSize: typography.fontSize.base, color: colors.textSecondary, lineHeight: typography.lineHeight.relaxed }}>
-                Requesting clarification on the specification details referenced in the current drawing set.
-                The field team has identified a discrepancy between the architectural drawings and the structural
-                details that needs to be resolved before proceeding with installation. Please review the attached
-                markup and provide direction on the preferred approach. This item is blocking work on the affected
-                area and requires a timely response to maintain schedule.
-              </p>
+              {selectedRfi.description ? (
+                <p style={{ margin: 0, fontSize: typography.fontSize.base, color: colors.textSecondary, lineHeight: typography.lineHeight.relaxed }}>
+                  {selectedRfi.description as string}
+                </p>
+              ) : (
+                <p style={{ margin: 0, fontSize: typography.fontSize.base, color: colors.textTertiary, fontStyle: 'italic' }}>
+                  No description provided.
+                </p>
+              )}
             </div>
 
-            {/* Attachments hint */}
+            {/* Attachments */}
             <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, padding: spacing.md, backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.sm, border: `1px dashed ${colors.border}` }}>
               <Paperclip size={16} style={{ color: colors.textTertiary }} />
-              <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>2 attachments (markup sketch, spec reference)</span>
+              <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>No attachments</span>
             </div>
 
             {/* Response Timeline */}
@@ -912,47 +943,9 @@ const RFIsPage: React.FC = () => {
               <div style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.lg, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Response Timeline
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                {([] as Array<{initials: string; name: string; role: string; date: string; message: string; type: string}>).map((entry, idx) => (
-                  <div key={idx} style={{ display: 'flex', gap: spacing.md, position: 'relative' }}>
-                    {/* Timeline line */}
-                    {idx < ([] as Array<{initials: string; name: string; role: string; date: string; message: string; type: string}>).length - 1 && (
-                      <div
-                        style={{
-                          position: 'absolute',
-                          left: '17px',
-                          top: '40px',
-                          bottom: '-4px',
-                          width: '2px',
-                          backgroundColor: colors.borderLight,
-                        }}
-                      />
-                    )}
-                    {/* Avatar */}
-                    <div style={{ flexShrink: 0, paddingTop: '2px' }}>
-                      <Avatar initials={entry.initials} size={36} />
-                    </div>
-                    {/* Content */}
-                    <div style={{ flex: 1, paddingBottom: idx < ([] as Array<{initials: string; name: string; role: string; date: string; message: string; type: string}>).length - 1 ? spacing.xl : '0' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs, flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
-                          {entry.name}
-                        </span>
-                        <Tag
-                          label={entry.type === 'submitted' ? 'Submitted' : entry.type === 'comment' ? 'Comment' : 'Response'}
-                          color={entry.type === 'response' ? colors.tealSuccess : entry.type === 'submitted' ? colors.statusPending : colors.blue}
-                          backgroundColor={entry.type === 'response' ? 'rgba(78,200,150,0.1)' : entry.type === 'submitted' ? colors.statusPendingSubtle : 'rgba(59,130,246,0.1)'}
-                        />
-                      </div>
-                      <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, marginBottom: spacing.sm }}>
-                        {entry.role} · {entry.date}
-                      </div>
-                      <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textSecondary, lineHeight: typography.lineHeight.relaxed }}>
-                        {entry.message}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: `${spacing.lg} 0`, gap: spacing.sm }}>
+                <MessageSquare size={24} color={colors.textTertiary} />
+                <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>No responses yet. Use Submit Response to add one.</span>
               </div>
             </div>
 
@@ -997,9 +990,13 @@ const RFIsPage: React.FC = () => {
                     fullWidth
                     icon={<Send size={15} />}
                     onClick={async () => {
-                      await handleStatusChange(String(selectedRfi.id), 'approved');
-                      addToast('success', 'Response submitted successfully');
-                      setSelectedRfi(null);
+                      try {
+                        await handleStatusChange(String(selectedRfi.id), 'answered');
+                        addToast('success', 'Response submitted successfully');
+                        setSelectedRfi(null);
+                      } catch {
+                        addToast('error', 'Failed to submit response. Please try again.');
+                      }
                     }}
                   >
                     Submit Response
@@ -1087,6 +1084,10 @@ const RFIsPage: React.FC = () => {
               <textarea
                 value={aiDraftInput}
                 onChange={(e) => setAiDraftInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') { setShowAIDraftModal(false); setAiDraftInput(''); }
+                  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && aiDraftInput.trim() && !aiDraftLoading) { e.preventDefault(); handleAIDraft(); }
+                }}
                 placeholder="e.g. The structural drawing conflicts with the architectural plan on grid line C, the beam depth does not match"
                 rows={4}
                 disabled={aiDraftLoading}

@@ -107,7 +107,7 @@ export function useCreateRFI() {
       return { data, projectId: params.projectId }
     },
     optimistic: {
-      queryKey: (p) => ['rfis', p.projectId],
+      queryKey: (p) => ['rfis', p.projectId, 1, 50],
       updater: (old: unknown, p) => {
         const prev = old as { data?: unknown[]; total?: number } | undefined
         return {
@@ -142,7 +142,7 @@ export function useUpdateRFI() {
       return { projectId, id }
     },
     optimistic: {
-      queryKey: (p) => ['rfis', p.projectId],
+      queryKey: (p) => ['rfis', p.projectId, 1, 50],
       updater: (old: unknown, p) => {
         const prev = old as { data?: unknown[] } | undefined
         return {
