@@ -531,7 +531,7 @@ jobs:
     needs: build
     if: always() && !cancelled()
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     outputs:
       merged_branch: ${{ steps.merge.outputs.merged_branch }}
       merged_title: ${{ steps.merge.outputs.merged_title }}
@@ -652,6 +652,14 @@ jobs:
 
               try:
                   resp = json.loads(review_result.stdout)
+                  # Check for API error responses (auth, rate limit, etc.)
+                  if "error" in resp:
+                      error_msg = resp["error"].get("message", str(resp["error"]))
+                      print(f"   ⚠️  OpenAI API error: {error_msg}")
+                      build["review_score"] = 5.0
+                      build["review_summary"] = f"OpenAI API error: {error_msg[:200]}"
+                      scored.append(build)
+                      continue
                   review = json.loads(resp["choices"][0]["message"]["content"])
                   score = review["scores"]["overall"]
                   build["review_score"] = score
@@ -664,10 +672,21 @@ jobs:
                       build["review_score"] = max(1, score - 3)
                   print(f"   Score: {build['review_score']}/10 — {review.get('recommendation', '?')}")
                   print(f"   {review.get('summary', '')[:200]}")
+              except json.JSONDecodeError:
+                  print(f"   ⚠️  GPT-4o returned invalid JSON")
+                  print(f"   Response preview: {review_result.stdout[:500]}")
+                  build["review_score"] = 5.0
+                  build["review_summary"] = "Review returned invalid JSON"
+              except KeyError as e:
+                  print(f"   ⚠️  GPT-4o response missing key: {e}")
+                  print(f"   Response preview: {review_result.stdout[:500]}")
+                  build["review_score"] = 5.0
+                  build["review_summary"] = f"Review response missing: {e}"
               except Exception as e:
                   print(f"   ⚠️  GPT-4o review failed: {e}")
+                  print(f"   Response preview: {review_result.stdout[:300]}")
                   build["review_score"] = 5.0
-                  build["review_summary"] = f"Review API failed: {str(e)[:100]}"
+                  build["review_summary"] = f"Review failed: {str(e)[:100]}"
 
               scored.append(build)
 
@@ -696,9 +715,57 @@ jobs:
           merged_branch = ""
           merged_title = ""
 
+          def run_gh(*args):
+              """Run a gh CLI command and return (returncode, stdout, stderr)."""
+              result = subprocess.run(list(args), capture_output=True, text=True)
+              return result.returncode, result.stdout.strip(), result.stderr.strip()
+
+          def get_pr_state(pr_num):
+              """Get PR mergeable_state and check run details via GitHub API."""
+              # Get PR data (mergeable_state + head SHA in one call)
+              rc, out, _ = run_gh("gh", "api", f"repos/{owner}/{repo}/pulls/{pr_num}",
+                                  "--jq", "{state: .mergeable_state, sha: .head.sha}")
+              m_state = "unknown"
+              head_sha = ""
+              if rc == 0:
+                  try:
+                      pr_data = json.loads(out)
+                      m_state = pr_data.get("state", "unknown") or "unknown"
+                      head_sha = pr_data.get("sha", "")
+                  except:
+                      pass
+
+              # Get check runs for the head SHA
+              checks = []
+              if head_sha:
+                  rc2, out2, _ = run_gh("gh", "api",
+                      f"repos/{owner}/{repo}/commits/{head_sha}/check-runs",
+                      "--jq", "[.check_runs[] | {name: .name, status: .status, conclusion: .conclusion}]")
+                  if rc2 == 0:
+                      try:
+                          checks = json.loads(out2)
+                      except:
+                          pass
+
+              # Separate checks into categories
+              completed = [c for c in checks if c.get("status") == "completed"]
+              passed = [c for c in completed if c.get("conclusion") == "success"]
+              failed = [c for c in completed if c.get("conclusion") == "failure"]
+              in_progress = [c for c in checks if c.get("status") in ("in_progress", "queued")]
+
+              return {
+                  "mergeable_state": m_state,
+                  "total": len(checks),
+                  "passed": len(passed),
+                  "failed": len(failed),
+                  "in_progress": len(in_progress),
+                  "failed_names": [c["name"] for c in failed],
+                  "passed_names": [c["name"] for c in passed],
+              }
+
           for exp in ranked:
               if exp.get("review_recommendation") == "REJECT" and exp.get("review_score", 0) < 4:
-                  print(f"⏭️  Skipping #{exp['index']} — rejected by reviewer (score: {exp.get('review_score')})")
+                  print(f"\n⏭️  Skipping #{exp['index']} — rejected by reviewer (score: {exp.get('review_score')})")
                   continue
 
               branch = exp["branch"]
@@ -717,95 +784,114 @@ jobs:
           """
               for issue in exp.get("review_issues", []):
                   pr_body += f"- **[{issue.get('severity', '?')}]** {issue.get('description', 'N/A')}\n"
-
               if not exp.get("review_issues"):
                   pr_body += "None found.\n"
+              pr_body += "\n---\n*Generated by Organism Supreme Intelligence*"
 
-              pr_body += "\n---\n*Generated by Organism Supreme Intelligence — autonomous multi-model development*"
+              rc, pr_url, err = run_gh("gh", "pr", "create",
+                  "--repo", f"{owner}/{repo}", "--base", "main",
+                  "--head", branch, "--title", title, "--body", pr_body)
 
-              result = subprocess.run(
-                  ["gh", "pr", "create",
-                   "--repo", f"{owner}/{repo}",
-                   "--base", "main",
-                   "--head", branch,
-                   "--title", title,
-                   "--body", pr_body],
-                  capture_output=True, text=True
-              )
-
-              if result.returncode != 0:
-                  print(f"   ⚠️  PR creation failed: {result.stderr[:200]}")
+              if rc != 0:
+                  print(f"   ⚠️  PR creation failed: {err[:200]}")
                   continue
 
-              # Extract PR number
-              pr_url = result.stdout.strip()
               pr_number = pr_url.split("/")[-1]
               print(f"   Created PR #{pr_number}: {pr_url}")
 
-              # Wait for CI (poll every 30s for up to 15 minutes)
-              print("   ⏳ Waiting for CI gates...")
-              time.sleep(120)  # Initial wait for CI to start
+              # ── Wait for CI using GitHub API (not text matching) ────────
+              print("   ⏳ Waiting for CI gates (initial 90s for checks to register)...")
+              time.sleep(90)
 
-              ci_passed = False
-              for attempt in range(26):  # 13 more minutes of polling
-                  check_result = subprocess.run(
-                      ["gh", "pr", "checks", pr_number,
-                       "--repo", f"{owner}/{repo}"],
-                      capture_output=True, text=True
-                  )
+              pr_merged = False
+              ci_failed = False
+              for attempt in range(30):  # Up to 15 more minutes
+                  state = get_pr_state(pr_number)
+                  ms = state["mergeable_state"]
+                  print(f"   Attempt {attempt+1}: state={ms}, checks={state['passed']}✅/{state['failed']}❌/{state['in_progress']}⏳ of {state['total']}")
 
-                  output = check_result.stdout
-                  fails = output.count("fail")
-                  pending = output.count("pending")
-                  passes = output.count("pass")
-
-                  print(f"   Attempt {attempt + 1}: ✅{passes} ❌{fails} ⏳{pending}")
-
-                  if fails > 0:
-                      print(f"   ❌ CI failed for #{exp['index']}. Trying next experiment...")
-                      # Close the failed PR
-                      subprocess.run(
-                          ["gh", "pr", "close", pr_number,
-                           "--repo", f"{owner}/{repo}",
-                           "--comment", "CI failed. Organism will retry with next-best experiment."],
-                          capture_output=True, text=True
-                      )
-                      break
-
-                  if pending == 0 and passes > 0:
+                  # Case 1: PR is clean — all required checks passed
+                  if ms == "clean":
                       print(f"   ✅ All CI gates passed! Merging...")
-                      merge_result = subprocess.run(
-                          ["gh", "pr", "merge", pr_number,
-                           "--repo", f"{owner}/{repo}",
-                           "--merge",
-                           "--subject", f"{title} (#{pr_number})",
-                           "--admin"],
-                          capture_output=True, text=True
-                      )
-                      if merge_result.returncode == 0:
-                          merged = True
-                          merged_branch = branch
-                          merged_title = exp["title"]
+                      # Try normal merge first
+                      rc, out, err = run_gh("gh", "pr", "merge", pr_number,
+                          "--repo", f"{owner}/{repo}", "--merge",
+                          "--subject", f"{title} (#{pr_number})")
+                      if rc == 0:
+                          pr_merged = True
                           print(f"   🎉 Merged PR #{pr_number}!")
                       else:
-                          print(f"   ⚠️  Merge failed: {merge_result.stderr[:200]}")
+                          # Fallback: try with --admin
+                          print(f"   ⚠️  Normal merge failed ({err[:100]}), trying admin...")
+                          rc2, _, err2 = run_gh("gh", "pr", "merge", pr_number,
+                              "--repo", f"{owner}/{repo}", "--merge", "--admin",
+                              "--subject", f"{title} (#{pr_number})")
+                          if rc2 == 0:
+                              pr_merged = True
+                              print(f"   🎉 Merged PR #{pr_number} (admin)!")
+                          else:
+                              print(f"   ❌ Merge failed: {err2[:200]}")
                       break
 
+                  # Case 2: Checks explicitly failed
+                  if ms == "blocked" and state["failed"] > 0:
+                      print(f"   ❌ CI failed: {', '.join(state['failed_names'][:5])}")
+                      ci_failed = True
+                      break
+
+                  # Case 3: Blocked but no failures yet — checks still registering
+                  if ms == "blocked" and state["total"] < 3 and attempt < 8:
+                      time.sleep(30)
+                      continue
+
+                  # Case 4: Blocked with no progress after many attempts
+                  if ms == "blocked" and attempt >= 8:
+                      # Checks registered but not passing — likely a real block
+                      if state["in_progress"] > 0:
+                          time.sleep(30)
+                          continue  # Still running, give more time
+                      print(f"   ❌ PR blocked (state=blocked, {state['total']} checks, {state['failed']} failed)")
+                      ci_failed = True
+                      break
+
+                  # Case 5: Unstable or unknown — checks still running
+                  if ms in ("unstable", "unknown"):
+                      if state["in_progress"] > 0 or state["total"] < 3:
+                          time.sleep(30)
+                          continue
+                      # If no checks are in progress and we have enough checks, something is wrong
+                      if attempt > 15:
+                          print(f"   ⚠️  Stuck in {ms} state after {attempt+1} attempts")
+                          break
+                      time.sleep(30)
+                      continue
+
+                  # Case 6: Merge conflicts
+                  if ms == "dirty":
+                      print("   ❌ Merge conflicts — skipping")
+                      ci_failed = True
+                      break
+
+                  # Default: keep waiting
                   time.sleep(30)
               else:
-                  print("   ⏰ CI timed out. Leaving PR open for manual review.")
+                  print(f"   ⏰ Timed out waiting for CI ({attempt+1} attempts)")
 
-              if merged:
+              if pr_merged:
+                  merged = True
+                  merged_branch = branch
+                  merged_title = exp["title"]
                   break
+              else:
+                  # Close failed PR, try next experiment
+                  run_gh("gh", "pr", "close", pr_number,
+                      "--repo", f"{owner}/{repo}",
+                      "--comment", f"{'CI failed' if ci_failed else 'Timed out'}. Organism trying next-best experiment.")
 
           # Clean up losing branches
           for exp in ranked:
               if exp["branch"] != merged_branch:
-                  subprocess.run(
-                      ["gh", "api", f"repos/{owner}/{repo}/git/refs/heads/{exp['branch']}",
-                       "-X", "DELETE"],
-                      capture_output=True, text=True
-                  )
+                  run_gh("gh", "api", f"repos/{owner}/{repo}/git/refs/heads/{exp['branch']}", "-X", "DELETE")
 
           # Output results
           outcome = "merged" if merged else "no_merge"
