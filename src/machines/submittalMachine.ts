@@ -174,6 +174,70 @@ export function getLeadTimeUrgency(submitByDate: string | null): { color: string
   return { color: colors.statusActive, label: `${days} days until submit date`, urgent: false }
 }
 
+// ── Role-aware Transitions ───────────────────────────────
+
+/**
+ * Returns valid next states for a submittal given the current status and the
+ * caller's authoritative project role. Called by submittalService.transitionStatus()
+ * before writing to the database.
+ *
+ * Role hierarchy:
+ *   admin, project_manager  all valid transitions
+ *   gc, superintendent      submit, gc_review actions, close out
+ *   architect, engineer     architect_review actions
+ *   subcontractor           submit draft, resubmit after rejection
+ *   owner                   close approved submittals
+ */
+export function getValidSubmittalTransitionsForRole(
+  status: SubmittalState,
+  role: string,
+): SubmittalState[] {
+  const allTransitions: Record<SubmittalState, SubmittalState[]> = {
+    draft: ['submitted'],
+    submitted: ['gc_review', 'rejected'],
+    gc_review: ['architect_review', 'rejected', 'resubmit'],
+    architect_review: ['approved', 'rejected', 'resubmit'],
+    approved: ['closed'],
+    rejected: ['draft'],
+    resubmit: ['draft'],
+    closed: [],
+  }
+
+  if (role === 'admin' || role === 'project_manager') {
+    return allTransitions[status] ?? []
+  }
+
+  const roleMap: Partial<Record<string, Partial<Record<SubmittalState, SubmittalState[]>>>> = {
+    gc: {
+      draft: ['submitted'],
+      submitted: ['gc_review', 'rejected'],
+      gc_review: ['architect_review', 'rejected', 'resubmit'],
+      approved: ['closed'],
+    },
+    superintendent: {
+      draft: ['submitted'],
+      submitted: ['gc_review', 'rejected'],
+      gc_review: ['architect_review', 'rejected', 'resubmit'],
+    },
+    architect: {
+      architect_review: ['approved', 'rejected', 'resubmit'],
+    },
+    engineer: {
+      architect_review: ['approved', 'rejected', 'resubmit'],
+    },
+    subcontractor: {
+      draft: ['submitted'],
+      rejected: ['draft'],
+      resubmit: ['draft'],
+    },
+    owner: {
+      approved: ['closed'],
+    },
+  }
+
+  return roleMap[role]?.[status] ?? []
+}
+
 // ── CSI MasterFormat Divisions ───────────────────────────
 
 export const CSI_DIVISIONS = [
