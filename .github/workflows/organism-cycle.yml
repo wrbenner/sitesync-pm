@@ -140,28 +140,50 @@ jobs:
           git config user.email "organism[bot]@users.noreply.github.com"
           git checkout -b "${{ needs.perceive.outputs.branch }}"
 
-      - name: Execute experiment with Claude Code
+      - name: Execute experiment with Claude Code (all 4 AI providers available)
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
         run: |
           MAX_TURNS="${{ github.event.inputs.max_turns || '30' }}"
           
           claude -p "${{ needs.perceive.outputs.experiment }}
 
+YOU ARE THE SITESYNC ORGANISM. You are building the world's best construction management platform.
+
+READ FIRST:
+- .organism/DIRECTIVES.md — your mission and quality standards
+- .organism/vision/PRODUCT_VISION.md — the product vision (5 moments, 10 design principles)
+- DOMAIN_KERNEL_SPEC.md — the canonical domain model
+
+YOU HAVE ACCESS TO 4 AI PROVIDERS via environment variables:
+- ANTHROPIC_API_KEY (Claude) — for complex reasoning and code generation
+- OPENAI_API_KEY (GPT-4o) — for classification, structured JSON, embeddings, code review
+- GEMINI_API_KEY (Gemini) — for photo/image analysis, large document understanding
+- PERPLEXITY_API_KEY (Perplexity) — for real-time web search, building code lookup, competitor research
+
+Use these via curl to their REST APIs when you need capabilities beyond code generation:
+- Need to look up a building code? Call Perplexity.
+- Need to analyze a design pattern? Call OpenAI for structured analysis.
+- Need to understand an image or screenshot? Call Gemini.
+- Need deep reasoning about architecture? You already are Claude.
+
+You can also use supabase/functions/shared/aiRouter.ts as reference for the API call patterns.
+
 CRITICAL RULES:
-1. Read .organism/vision/PRODUCT_VISION.md for the product vision and design principles
-2. Read .organism/research/ for deep research on construction workflows, design patterns, competitors
-3. Read DOMAIN_KERNEL_SPEC.md for the canonical domain model
-4. Styling: inline styles with theme tokens from src/styles/theme.ts — NO CSS modules, NO Tailwind
-5. Use existing stores, services, hooks — don't reinvent
-6. Mobile-first — construction workers use phones on job sites
-7. Use framer-motion for animations (installed)
-8. Every component must be TypeScript-clean (npx tsc --noEmit must pass)
-9. ESLint errors must not increase (check npx eslint on your files)
-10. Do NOT modify: GOVERNANCE.md, CODEOWNERS, auth code, billing code, migrations
-11. When done, run: npx tsc --noEmit && npm run build to verify" \
+1. Styling: inline styles with theme tokens from src/styles/theme.ts — NO CSS modules, NO Tailwind
+2. Use existing stores, services, hooks — don't reinvent
+3. Mobile-first — construction workers use phones on job sites
+4. Use framer-motion for animations (installed)
+5. Every component must be TypeScript-clean (npx tsc --noEmit must pass)
+6. ESLint errors must not increase (check npx eslint on your files)
+7. Do NOT modify: GOVERNANCE.md, CODEOWNERS, auth code, billing code, migrations
+8. When done, run: npx tsc --noEmit && npm run build to verify
+9. Make it BEAUTIFUL. Apple-level polish. Linear-level speed. This is construction software that changes the world." \
             --max-turns "$MAX_TURNS" \
-            --allowedTools "Edit,Write,Read,Bash(npm*),Bash(npx*),Bash(git*),Bash(cat*),Bash(grep*),Bash(find*),Bash(ls*),Bash(head*),Bash(tail*),Bash(wc*)" \
+            --allowedTools "Edit,Write,Read,Bash(npm*),Bash(npx*),Bash(git*),Bash(cat*),Bash(grep*),Bash(find*),Bash(ls*),Bash(head*),Bash(tail*),Bash(wc*),Bash(curl*)" \
             --output-format json 2>&1 | tail -100
 
       - name: Verify build
