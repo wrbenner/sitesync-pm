@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { Loader2, Eye, EyeOff } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import { useAuth } from '../../hooks/useAuth'
 import { colors, spacing, typography, borderRadius, shadows, transitions, zIndex } from '../../styles/theme'
 
 function mapAuthError(message: string): string {
@@ -19,6 +20,7 @@ function mapAuthError(message: string): string {
 export const Login: React.FC = () => {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  const { signIn } = useAuth()
 
   // Tab state
   const [tab, setTab] = useState<'signin' | 'signup' | 'magic'>('signin')
@@ -61,10 +63,13 @@ export const Login: React.FC = () => {
     setError(null)
     setIsSubmitting(true)
     try {
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
-      if (signInError) {
-        setError(mapAuthError(signInError.message))
-      } else if (data.session) {
+      // Use useAuth hook's signIn — it updates shared auth state BEFORE we navigate.
+      // Direct supabase.auth.signInWithPassword() causes a race condition where
+      // ProtectedRoute checks auth before onAuthStateChange fires.
+      const result = await signIn(email, password)
+      if (result.error) {
+        setError(result.error)
+      } else {
         const returnTo = searchParams.get('returnTo')
         const destination = returnTo && returnTo.startsWith('/') ? returnTo : '/dashboard'
         navigate(destination)
