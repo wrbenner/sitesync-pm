@@ -99,18 +99,29 @@ export const submittalMachine = setup({
 
 // ── Valid Transitions ────────────────────────────────────
 
-export function getValidSubmittalTransitions(status: SubmittalState): string[] {
-  const transitions: Record<SubmittalState, string[]> = {
+/**
+ * Returns valid transition actions for a given status and user role.
+ * Admin/owner can reject from any active state.
+ * Role-specific actions: GC actions require gc_pm or admin/owner role.
+ * Architect actions require architect or admin/owner role.
+ */
+export function getValidSubmittalTransitions(status: SubmittalState, userRole: string = 'viewer'): string[] {
+  const isAdminOrOwner = userRole === 'admin' || userRole === 'owner'
+  const isGC = userRole === 'gc_pm' || userRole === 'project_manager' || isAdminOrOwner
+  const isArchitect = userRole === 'architect' || userRole === 'design' || isAdminOrOwner
+
+  const base: Record<SubmittalState, string[]> = {
     draft: ['Submit for Review'],
-    submitted: ['GC Approve', 'GC Reject'],
-    gc_review: ['Forward to Architect', 'GC Reject', 'Revise and Resubmit'],
-    architect_review: ['Architect Approve', 'Architect Reject', 'Revise and Resubmit'],
-    approved: ['Close Out'],
+    submitted: isGC ? ['GC Approve', 'GC Reject'] : [],
+    gc_review: isGC ? ['Forward to Architect', 'GC Reject', 'Revise and Resubmit'] : [],
+    architect_review: isArchitect ? ['Architect Approve', 'Architect Reject', 'Revise and Resubmit'] : [],
+    approved: isAdminOrOwner ? ['Close Out'] : [],
     rejected: ['Revise and Resubmit'],
     resubmit: ['Revise and Resubmit'],
     closed: [],
   }
-  return transitions[status] || []
+
+  return base[status] || []
 }
 
 // ── Next Status ──────────────────────────────────────────

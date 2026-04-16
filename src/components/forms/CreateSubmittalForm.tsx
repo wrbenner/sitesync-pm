@@ -49,9 +49,7 @@ export function CreateSubmittalForm({ open, onClose, onSuccess }: CreateSubmitta
       title: title.trim(),
       description: description.trim() || undefined,
       spec_section: specSection.trim() || undefined,
-      priority,
       due_date: dueDate || undefined,
-      created_by: profile.id,
     });
 
     if (createError) {
