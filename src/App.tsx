@@ -93,7 +93,7 @@ const Procurement = lazy(() => import('./pages/Procurement'));
 const EquipmentPage = lazy(() => import('./pages/Equipment'));
 const Portfolio = lazy(() => import('./pages/Portfolio'));
 const Financials = lazy(() => import('./pages/Financials'));
-const PaymentApplications = lazy(() => import('./pages/PaymentApplications'));
+const PaymentApplications = lazy(() => import('./pages/payment-applications'));
 const OwnerPortal = lazy(() => import('./pages/OwnerPortal'));
 const AIAgents = lazy(() => import('./pages/AIAgents'));
 const Workforce = lazy(() => import('./pages/Workforce'));

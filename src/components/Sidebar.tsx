@@ -127,7 +127,7 @@ const PAGE_PREFETCH_MAP: Record<string, () => void> = {
   budget:         () => import('../pages/Budget').catch(() => {}),
   'change-orders': () => import('../pages/ChangeOrders').catch(() => {}),
   financials:     () => import('../pages/Financials').catch(() => {}),
-  'pay-apps':     () => import('../pages/PaymentApplications').catch(() => {}),
+  'pay-apps':     () => import('../pages/payment-applications').catch(() => {}),
   drawings:       () => import('../pages/Drawings').catch(() => {}),
   rfis:           () => import('../pages/RFIs').catch(() => {}),
   submittals:     () => import('../pages/Submittals').catch(() => {}),
