@@ -121,9 +121,13 @@ const ROLE_LEVEL: Record<string, number> = {
   member: 2,
 };
 
+// Subcontractors can view/edit entities within their scope (daily logs, punch
+// items, submittals assigned to them) but cannot delete, manage users, or
+// change project settings. Aligned with ROLE_PERMISSIONS below: 'write' maps
+// to the 'edit' permission, which subcontractors hold.
 const ACTION_MIN_ROLE: Record<'read' | 'write' | 'admin', string> = {
   read: 'viewer',
-  write: 'superintendent',
+  write: 'subcontractor',
   admin: 'project_manager',
 };
 
@@ -203,7 +207,7 @@ export function scopedQuery(table: string) {
 //       FOR SELECT USING (
 //         project_id IS NULL AND
 //         organization_id IN (
-//           SELECT organization_id FROM organization_members WHERE user_id = auth.uid()
+//           SELECT organization_id FROM organization_members WHERE user_id = (select auth.uid())
 //         )
 //       );
 //
@@ -225,10 +229,13 @@ export function scopedQuery(table: string) {
 //   supabase/migrations/00052_drawings_files_rls.sql
 // ---------------------------------------------------------------------------
 
+// NOTE: auth.uid() is wrapped in (select auth.uid()) so Postgres caches it
+// per-statement instead of re-evaluating per-row. Without this, policies run
+// ~1,571× slower on large tables (11s vs 7ms). See LEARNINGS.md.
 export const DRAWINGS_RLS_POLICY = `
 CREATE POLICY "Project members can read drawings" ON drawings
   FOR SELECT USING (
-    auth.uid() IN (
+    (select auth.uid()) IN (
       SELECT user_id FROM project_members WHERE project_id = drawings.project_id
     )
   );
@@ -237,7 +244,7 @@ CREATE POLICY "Project members can read drawings" ON drawings
 export const FILES_RLS_POLICY = `
 CREATE POLICY "Project members can read files" ON files
   FOR SELECT USING (
-    auth.uid() IN (
+    (select auth.uid()) IN (
       SELECT user_id FROM project_members WHERE project_id = files.project_id
     )
   );
