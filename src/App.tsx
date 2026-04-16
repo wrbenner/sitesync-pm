@@ -75,7 +75,7 @@ const Submittals = lazy(() => import('./pages/Submittals').then((m) => ({ defaul
 const Schedule = lazyWithRetry(() => import('./pages/Schedule').then((m) => ({ default: m.Schedule })));
 const Budget = lazy(() => import('./pages/Budget').then((m) => ({ default: m.Budget })));
 const ChangeOrders = lazy(() => import('./pages/ChangeOrders').then((m) => ({ default: m.ChangeOrders })));
-const DailyLog = lazyWithRetry(() => import('./pages/DailyLog').then((m) => ({ default: m.DailyLog })));
+const DailyLog = lazyWithRetry(() => import('./pages/daily-log').then((m) => ({ default: m.DailyLog })));
 const FieldCapture = lazy(() => import('./pages/FieldCapture').then((m) => ({ default: m.FieldCapture })));
 const PunchList = lazyWithRetry(() => import('./pages/PunchList').then((m) => ({ default: m.PunchList })));
 const Crews = lazy(() => import('./pages/Crews').then((m) => ({ default: m.Crews })));
@@ -117,7 +117,7 @@ function usePrefetchRoutes(isAuthenticated: boolean) {
     const prefetch = () => {
       import('./pages/Dashboard');
       import('./pages/RFIs');
-      import('./pages/DailyLog');
+      import('./pages/daily-log');
     };
     if (typeof requestIdleCallback !== 'undefined') {
       const id = requestIdleCallback(prefetch);

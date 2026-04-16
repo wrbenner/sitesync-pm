@@ -136,7 +136,7 @@ const PAGE_PREFETCH_MAP: Record<string, () => void> = {
   equipment:      () => import('../pages/Equipment').catch(() => {}),
   permits:        () => import('../pages/Permits').catch(() => {}),
   'field-capture': () => import('../pages/FieldCapture').catch(() => {}),
-  'daily-log':    () => import('../pages/DailyLog').catch(() => {}),
+  'daily-log':    () => import('../pages/daily-log').catch(() => {}),
   'punch-list':   () => import('../pages/PunchList').catch(() => {}),
   crews:          () => import('../pages/Crews').catch(() => {}),
   workforce:      () => import('../pages/Workforce').catch(() => {}),
