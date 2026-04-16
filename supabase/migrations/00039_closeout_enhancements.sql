@@ -17,7 +17,7 @@ CREATE INDEX IF NOT EXISTS idx_closeout_items_trade ON closeout_items(project_id
 ALTER TABLE closeout_items ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS closeout_items_select ON closeout_items;
 CREATE POLICY closeout_items_select ON closeout_items FOR SELECT
-  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()));
+  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = (select auth.uid())));
 DROP POLICY IF EXISTS closeout_items_manage ON closeout_items;
 CREATE POLICY closeout_items_manage ON closeout_items FOR ALL
   USING (has_project_permission(project_id, 'project_manager'));
@@ -37,7 +37,7 @@ CREATE INDEX IF NOT EXISTS idx_warranties_expiry ON warranties(expiration_date) 
 ALTER TABLE warranties ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS warranties_select ON warranties;
 CREATE POLICY warranties_select ON warranties FOR SELECT
-  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()));
+  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = (select auth.uid())));
 DROP POLICY IF EXISTS warranties_manage ON warranties;
 CREATE POLICY warranties_manage ON warranties FOR ALL
   USING (has_project_permission(project_id, 'project_manager'));
@@ -65,7 +65,7 @@ CREATE INDEX idx_commissioning_project ON commissioning_items(project_id, status
 
 ALTER TABLE commissioning_items ENABLE ROW LEVEL SECURITY;
 CREATE POLICY commissioning_select ON commissioning_items FOR SELECT
-  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()));
+  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = (select auth.uid())));
 CREATE POLICY commissioning_manage ON commissioning_items FOR ALL
   USING (has_project_permission(project_id, 'superintendent'));
 

@@ -27,7 +27,7 @@ CREATE POLICY rfi_watchers_select ON rfi_watchers FOR SELECT
 CREATE POLICY rfi_watchers_insert ON rfi_watchers FOR INSERT
   WITH CHECK (is_project_role((SELECT project_id FROM rfis WHERE rfis.id = rfi_id), ARRAY['owner','admin','member']));
 CREATE POLICY rfi_watchers_delete ON rfi_watchers FOR DELETE
-  USING (user_id = auth.uid() OR is_project_role((SELECT project_id FROM rfis WHERE rfis.id = rfi_id), ARRAY['owner','admin']));
+  USING (user_id = (select auth.uid()) OR is_project_role((SELECT project_id FROM rfis WHERE rfis.id = rfi_id), ARRAY['owner','admin']));
 
 -- Trigger: auto update ball_in_court based on status
 CREATE OR REPLACE FUNCTION update_rfi_ball_in_court()

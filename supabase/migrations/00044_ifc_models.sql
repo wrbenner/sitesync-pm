@@ -21,13 +21,13 @@ CREATE INDEX idx_ifc_models_hash ON ifc_models(hash);
 ALTER TABLE ifc_models ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY ifc_models_select ON ifc_models FOR SELECT
-  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()));
+  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = (select auth.uid())));
 
 CREATE POLICY ifc_models_insert ON ifc_models FOR INSERT
-  WITH CHECK (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()));
+  WITH CHECK (project_id IN (SELECT project_id FROM project_members WHERE user_id = (select auth.uid())));
 
 CREATE POLICY ifc_models_delete ON ifc_models FOR DELETE
   USING (project_id IN (
     SELECT project_id FROM project_members
-    WHERE user_id = auth.uid() AND role IN ('owner', 'admin', 'project_manager')
+    WHERE user_id = (select auth.uid()) AND role IN ('owner', 'admin', 'project_manager')
   ));

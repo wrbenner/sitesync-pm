@@ -31,7 +31,7 @@ ALTER TABLE project_members ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS project_members_select ON project_members;
 CREATE POLICY project_members_select ON project_members FOR SELECT
-  USING (user_id = auth.uid() OR has_project_permission(project_id, 'viewer'));
+  USING (user_id = (select auth.uid()) OR has_project_permission(project_id, 'viewer'));
 
 DROP POLICY IF EXISTS project_members_insert ON project_members;
 CREATE POLICY project_members_insert ON project_members FOR INSERT
@@ -54,13 +54,13 @@ ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS projects_select ON projects;
 CREATE POLICY projects_select ON projects FOR SELECT
   USING (
-    id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid())
-    OR owner_id = auth.uid()
+    id IN (SELECT project_id FROM project_members WHERE user_id = (select auth.uid()))
+    OR owner_id = (select auth.uid())
   );
 
 DROP POLICY IF EXISTS projects_insert ON projects;
 CREATE POLICY projects_insert ON projects FOR INSERT
-  WITH CHECK (auth.uid() = owner_id);
+  WITH CHECK ((select auth.uid()) = owner_id);
 
 DROP POLICY IF EXISTS projects_update ON projects;
 CREATE POLICY projects_update ON projects FOR UPDATE

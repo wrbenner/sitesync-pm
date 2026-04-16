@@ -39,8 +39,8 @@ CREATE TABLE IF NOT EXISTS task_templates (
 );
 
 ALTER TABLE task_templates ENABLE ROW LEVEL SECURITY;
-CREATE POLICY task_templates_select ON task_templates FOR SELECT USING (is_global = true OR created_by = auth.uid());
-CREATE POLICY task_templates_insert ON task_templates FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+CREATE POLICY task_templates_select ON task_templates FOR SELECT USING (is_global = true OR created_by = (select auth.uid()));
+CREATE POLICY task_templates_insert ON task_templates FOR INSERT WITH CHECK ((select auth.uid()) IS NOT NULL);
 
 -- Seed common construction task templates
 INSERT INTO task_templates (name, description, phase, is_global, tasks) VALUES

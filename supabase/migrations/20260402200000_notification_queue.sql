@@ -25,13 +25,13 @@ ALTER TABLE notification_queue ENABLE ROW LEVEL SECURITY;
 
 DO $$ BEGIN
   CREATE POLICY 'nq_select_own' ON notification_queue
-    FOR SELECT USING (recipient_user_id = auth.uid());
+    FOR SELECT USING (recipient_user_id = (select auth.uid()));
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY 'nq_insert_members' ON notification_queue
     FOR INSERT WITH CHECK (project_id IN (
-      SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+      SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
     ));
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
@@ -55,7 +55,7 @@ ALTER TABLE notification_preferences ENABLE ROW LEVEL SECURITY;
 
 DO $$ BEGIN
   CREATE POLICY 'np_own' ON notification_preferences
-    FOR ALL USING (user_id = auth.uid());
+    FOR ALL USING (user_id = (select auth.uid()));
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 DO $$ BEGIN

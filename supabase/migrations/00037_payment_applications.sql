@@ -49,7 +49,7 @@ CREATE INDEX idx_payment_apps_status ON payment_applications(project_id, status)
 
 ALTER TABLE payment_applications ENABLE ROW LEVEL SECURITY;
 CREATE POLICY pay_apps_select ON payment_applications FOR SELECT
-  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()));
+  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = (select auth.uid())));
 CREATE POLICY pay_apps_insert ON payment_applications FOR INSERT
   WITH CHECK (has_project_permission(project_id, 'project_manager'));
 CREATE POLICY pay_apps_update ON payment_applications FOR UPDATE
@@ -99,7 +99,7 @@ CREATE INDEX idx_lien_waivers_app ON lien_waivers(application_id);
 
 ALTER TABLE lien_waivers ENABLE ROW LEVEL SECURITY;
 CREATE POLICY lien_waivers_select ON lien_waivers FOR SELECT
-  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()));
+  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = (select auth.uid())));
 CREATE POLICY lien_waivers_manage ON lien_waivers FOR ALL
   USING (has_project_permission(project_id, 'project_manager'));
 

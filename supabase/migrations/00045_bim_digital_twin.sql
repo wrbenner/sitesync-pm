@@ -96,35 +96,35 @@ ALTER TABLE crew_gps_locations ENABLE ROW LEVEL SECURITY;
 
 -- All BIM tables: project members can read
 CREATE POLICY bim_progress_select ON bim_element_progress FOR SELECT
-  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()));
+  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = (select auth.uid())));
 CREATE POLICY bim_rfi_select ON bim_rfi_elements FOR SELECT
-  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()));
+  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = (select auth.uid())));
 CREATE POLICY bim_safety_select ON bim_safety_zones FOR SELECT
-  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()));
+  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = (select auth.uid())));
 CREATE POLICY bim_4d_select ON bim_4d_sequence FOR SELECT
-  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()));
+  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = (select auth.uid())));
 CREATE POLICY gps_select ON crew_gps_locations FOR SELECT
-  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()));
+  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = (select auth.uid())));
 
 -- Insert: project members can write
 CREATE POLICY bim_progress_insert ON bim_element_progress FOR INSERT
-  WITH CHECK (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()));
+  WITH CHECK (project_id IN (SELECT project_id FROM project_members WHERE user_id = (select auth.uid())));
 CREATE POLICY bim_rfi_insert ON bim_rfi_elements FOR INSERT
-  WITH CHECK (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()));
+  WITH CHECK (project_id IN (SELECT project_id FROM project_members WHERE user_id = (select auth.uid())));
 CREATE POLICY bim_safety_insert ON bim_safety_zones FOR INSERT
-  WITH CHECK (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()));
+  WITH CHECK (project_id IN (SELECT project_id FROM project_members WHERE user_id = (select auth.uid())));
 CREATE POLICY bim_4d_insert ON bim_4d_sequence FOR INSERT
-  WITH CHECK (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()));
+  WITH CHECK (project_id IN (SELECT project_id FROM project_members WHERE user_id = (select auth.uid())));
 CREATE POLICY gps_insert ON crew_gps_locations FOR INSERT
-  WITH CHECK (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()));
+  WITH CHECK (project_id IN (SELECT project_id FROM project_members WHERE user_id = (select auth.uid())));
 
 -- Update: project members can update progress
 CREATE POLICY bim_progress_update ON bim_element_progress FOR UPDATE
-  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()));
+  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = (select auth.uid())));
 
 -- Delete: managers only
 CREATE POLICY bim_safety_delete ON bim_safety_zones FOR DELETE
   USING (project_id IN (
     SELECT project_id FROM project_members
-    WHERE user_id = auth.uid() AND role IN ('owner', 'admin', 'project_manager')
+    WHERE user_id = (select auth.uid()) AND role IN ('owner', 'admin', 'project_manager')
   ));

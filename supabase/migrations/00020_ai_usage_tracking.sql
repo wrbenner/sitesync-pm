@@ -17,7 +17,7 @@ CREATE INDEX idx_ai_usage_user_date ON ai_usage(user_id, created_at);
 
 ALTER TABLE ai_usage ENABLE ROW LEVEL SECURITY;
 CREATE POLICY ai_usage_select ON ai_usage FOR SELECT USING (is_project_member(project_id));
-CREATE POLICY ai_usage_insert ON ai_usage FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+CREATE POLICY ai_usage_insert ON ai_usage FOR INSERT WITH CHECK ((select auth.uid()) IS NOT NULL);
 
 -- Rate limit check function
 CREATE OR REPLACE FUNCTION check_ai_rate_limit(p_user_id uuid, p_limit int DEFAULT 100)

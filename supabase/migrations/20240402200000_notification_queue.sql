@@ -30,7 +30,7 @@ alter table notification_queue enable row level security;
 create policy "notification_queue_select_own"
   on notification_queue
   for select
-  using (recipient_user_id = auth.uid());
+  using (recipient_user_id = (select auth.uid()));
 
 -- any authenticated project member can enqueue a notification
 create policy "notification_queue_insert_authenticated"
@@ -61,5 +61,5 @@ alter table notification_preferences enable row level security;
 create policy "notification_preferences_own"
   on notification_preferences
   for all
-  using (user_id = auth.uid())
-  with check (user_id = auth.uid());
+  using (user_id = (select auth.uid()))
+  with check (user_id = (select auth.uid()));

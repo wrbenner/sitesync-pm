@@ -41,29 +41,29 @@ alter table notification_preferences enable row level security;
 
 do $$ begin
   create policy "notification_queue_select_own" on notification_queue
-    for select using (recipient_user_id = auth.uid());
+    for select using (recipient_user_id = (select auth.uid()));
 exception when duplicate_object then null; end $$;
 
 do $$ begin
   create policy "notification_queue_insert_project_members" on notification_queue
     for insert with check (
-      project_id in (select pm.project_id from project_members pm where pm.user_id = auth.uid())
+      project_id in (select pm.project_id from project_members pm where pm.user_id = (select auth.uid()))
     );
 exception when duplicate_object then null; end $$;
 
 do $$ begin
   create policy "notification_preferences_select_own" on notification_preferences
-    for select using (user_id = auth.uid());
+    for select using (user_id = (select auth.uid()));
 exception when duplicate_object then null; end $$;
 
 do $$ begin
   create policy "notification_preferences_insert_own" on notification_preferences
-    for insert with check (user_id = auth.uid());
+    for insert with check (user_id = (select auth.uid()));
 exception when duplicate_object then null; end $$;
 
 do $$ begin
   create policy "notification_preferences_update_own" on notification_preferences
-    for update using (user_id = auth.uid());
+    for update using (user_id = (select auth.uid()));
 exception when duplicate_object then null; end $$;
 
 create index if not exists idx_notification_queue_status on notification_queue(status, created_at);

@@ -168,7 +168,7 @@ ALTER TABLE insurance_certificates ENABLE ROW LEVEL SECURITY;
 CREATE POLICY portal_invitations_select ON portal_invitations FOR SELECT
   USING (
     is_project_member(project_id)
-    OR email = (SELECT email FROM auth.users WHERE id = auth.uid())
+    OR email = (SELECT email FROM auth.users WHERE id = (select auth.uid()))
   );
 
 CREATE POLICY portal_invitations_insert ON portal_invitations FOR INSERT
@@ -184,7 +184,7 @@ CREATE POLICY portal_invitations_delete ON portal_invitations FOR DELETE
 CREATE POLICY portal_users_select ON portal_users FOR SELECT
   USING (
     is_project_member(project_id)
-    OR user_id = auth.uid()
+    OR user_id = (select auth.uid())
   );
 
 CREATE POLICY portal_users_insert ON portal_users FOR INSERT
@@ -193,7 +193,7 @@ CREATE POLICY portal_users_insert ON portal_users FOR INSERT
 CREATE POLICY portal_users_update ON portal_users FOR UPDATE
   USING (
     is_project_member(project_id)
-    OR user_id = auth.uid()
+    OR user_id = (select auth.uid())
   );
 
 CREATE POLICY portal_users_delete ON portal_users FOR DELETE
@@ -204,7 +204,7 @@ CREATE POLICY owner_updates_select ON owner_updates FOR SELECT
   USING (
     is_project_member(project_id)
     OR (published = true AND project_id IN (
-      SELECT pu.project_id FROM portal_users pu WHERE pu.user_id = auth.uid()
+      SELECT pu.project_id FROM portal_users pu WHERE pu.user_id = (select auth.uid())
     ))
   );
 
@@ -222,7 +222,7 @@ CREATE POLICY sub_invoices_select ON subcontractor_invoices FOR SELECT
   USING (
     is_project_member(project_id)
     OR subcontractor_id IN (
-      SELECT pu.id FROM portal_users pu WHERE pu.user_id = auth.uid()
+      SELECT pu.id FROM portal_users pu WHERE pu.user_id = (select auth.uid())
     )
   );
 
@@ -230,7 +230,7 @@ CREATE POLICY sub_invoices_insert ON subcontractor_invoices FOR INSERT
   WITH CHECK (
     is_project_member(project_id)
     OR subcontractor_id IN (
-      SELECT pu.id FROM portal_users pu WHERE pu.user_id = auth.uid()
+      SELECT pu.id FROM portal_users pu WHERE pu.user_id = (select auth.uid())
     )
   );
 
@@ -238,7 +238,7 @@ CREATE POLICY sub_invoices_update ON subcontractor_invoices FOR UPDATE
   USING (
     is_project_member(project_id)
     OR subcontractor_id IN (
-      SELECT pu.id FROM portal_users pu WHERE pu.user_id = auth.uid()
+      SELECT pu.id FROM portal_users pu WHERE pu.user_id = (select auth.uid())
     )
   );
 
@@ -250,7 +250,7 @@ CREATE POLICY insurance_certs_select ON insurance_certificates FOR SELECT
   USING (
     is_project_member(project_id)
     OR company IN (
-      SELECT pu.company FROM portal_users pu WHERE pu.user_id = auth.uid()
+      SELECT pu.company FROM portal_users pu WHERE pu.user_id = (select auth.uid())
     )
   );
 
@@ -258,7 +258,7 @@ CREATE POLICY insurance_certs_insert ON insurance_certificates FOR INSERT
   WITH CHECK (
     is_project_member(project_id)
     OR company IN (
-      SELECT pu.company FROM portal_users pu WHERE pu.user_id = auth.uid()
+      SELECT pu.company FROM portal_users pu WHERE pu.user_id = (select auth.uid())
     )
   );
 
@@ -266,7 +266,7 @@ CREATE POLICY insurance_certs_update ON insurance_certificates FOR UPDATE
   USING (
     is_project_member(project_id)
     OR company IN (
-      SELECT pu.company FROM portal_users pu WHERE pu.user_id = auth.uid()
+      SELECT pu.company FROM portal_users pu WHERE pu.user_id = (select auth.uid())
     )
   );
 

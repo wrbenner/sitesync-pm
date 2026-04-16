@@ -628,7 +628,7 @@ CREATE POLICY projects_select ON projects FOR SELECT
     USING (is_project_member(id));
 
 CREATE POLICY projects_insert ON projects FOR INSERT
-    WITH CHECK (auth.uid() = owner_id);
+    WITH CHECK ((select auth.uid()) = owner_id);
 
 CREATE POLICY projects_update ON projects FOR UPDATE
     USING (is_project_role(id, ARRAY['owner', 'admin']));
@@ -643,7 +643,7 @@ CREATE POLICY projects_delete ON projects FOR DELETE
 CREATE POLICY project_members_select ON project_members FOR SELECT
     USING (
         is_project_member(project_id)
-        OR user_id = auth.uid()
+        OR user_id = (select auth.uid())
     );
 
 CREATE POLICY project_members_insert ON project_members FOR INSERT
@@ -851,7 +851,7 @@ CREATE POLICY meeting_action_items_delete ON meeting_action_items FOR DELETE
 -- -------------------------------------------------------------------------
 
 CREATE POLICY notifications_select ON notifications FOR SELECT
-    USING (user_id = auth.uid());
+    USING (user_id = (select auth.uid()));
 
 CREATE POLICY notifications_insert ON notifications FOR INSERT
     WITH CHECK (
@@ -860,10 +860,10 @@ CREATE POLICY notifications_insert ON notifications FOR INSERT
     );
 
 CREATE POLICY notifications_update ON notifications FOR UPDATE
-    USING (user_id = auth.uid());
+    USING (user_id = (select auth.uid()));
 
 CREATE POLICY notifications_delete ON notifications FOR DELETE
-    USING (user_id = auth.uid());
+    USING (user_id = (select auth.uid()));
 
 -- ---------------------------------------------------------------------------
 -- Done.

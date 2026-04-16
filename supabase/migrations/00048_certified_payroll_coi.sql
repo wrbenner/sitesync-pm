@@ -98,23 +98,23 @@ ALTER TABLE coi_extractions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE coi_requirements ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY payroll_select ON certified_payroll_reports FOR SELECT
-  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()));
+  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = (select auth.uid())));
 CREATE POLICY payroll_insert ON certified_payroll_reports FOR INSERT
-  WITH CHECK (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()));
+  WITH CHECK (project_id IN (SELECT project_id FROM project_members WHERE user_id = (select auth.uid())));
 
 CREATE POLICY payroll_emp_select ON certified_payroll_employees FOR SELECT
   USING (payroll_report_id IN (SELECT id FROM certified_payroll_reports WHERE project_id IN (
-    SELECT project_id FROM project_members WHERE user_id = auth.uid()
+    SELECT project_id FROM project_members WHERE user_id = (select auth.uid())
   )));
 
 CREATE POLICY coi_extract_select ON coi_extractions FOR SELECT
   USING (insurance_certificate_id IN (SELECT id FROM insurance_certificates WHERE project_id IN (
-    SELECT project_id FROM project_members WHERE user_id = auth.uid()
+    SELECT project_id FROM project_members WHERE user_id = (select auth.uid())
   )));
 
 CREATE POLICY coi_req_select ON coi_requirements FOR SELECT
-  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()));
+  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = (select auth.uid())));
 CREATE POLICY coi_req_manage ON coi_requirements FOR ALL
   USING (project_id IN (
-    SELECT project_id FROM project_members WHERE user_id = auth.uid() AND role IN ('owner', 'admin', 'project_manager')
+    SELECT project_id FROM project_members WHERE user_id = (select auth.uid()) AND role IN ('owner', 'admin', 'project_manager')
   ));

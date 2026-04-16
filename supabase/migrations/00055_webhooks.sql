@@ -69,7 +69,7 @@ CREATE POLICY "webhook_endpoints_org_access" ON webhook_endpoints
   USING (
     organization_id IN (
       SELECT organization_id FROM organization_members
-      WHERE user_id = auth.uid()
+      WHERE user_id = (select auth.uid())
     )
   );
 
@@ -85,7 +85,7 @@ DO $$ BEGIN
             SELECT id FROM webhook_endpoints
             WHERE organization_id IN (
               SELECT organization_id FROM organization_members
-              WHERE user_id = auth.uid()
+              WHERE user_id = (select auth.uid())
             )
           )
         )
@@ -99,7 +99,7 @@ CREATE POLICY "api_keys_org_access" ON api_keys
   USING (
     organization_id IN (
       SELECT organization_id FROM organization_members
-      WHERE user_id = auth.uid()
+      WHERE user_id = (select auth.uid())
     )
   );
 

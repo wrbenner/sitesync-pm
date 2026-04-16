@@ -28,13 +28,13 @@ CREATE INDEX IF NOT EXISTS idx_drawing_markups_layer ON drawing_markups(layer);
 
 ALTER TABLE drawing_markups ENABLE ROW LEVEL SECURITY;
 CREATE POLICY dm_select ON drawing_markups FOR SELECT
-  USING (is_project_member(project_id) AND (layer != 'personal' OR created_by = auth.uid()));
+  USING (is_project_member(project_id) AND (layer != 'personal' OR created_by = (select auth.uid())));
 CREATE POLICY dm_insert ON drawing_markups FOR INSERT
   WITH CHECK (is_project_role(project_id, ARRAY['owner','admin','member']));
 CREATE POLICY dm_update ON drawing_markups FOR UPDATE
-  USING (created_by = auth.uid() OR is_project_role(project_id, ARRAY['owner','admin']));
+  USING (created_by = (select auth.uid()) OR is_project_role(project_id, ARRAY['owner','admin']));
 CREATE POLICY dm_delete ON drawing_markups FOR DELETE
-  USING (created_by = auth.uid() OR is_project_role(project_id, ARRAY['owner','admin']));
+  USING (created_by = (select auth.uid()) OR is_project_role(project_id, ARRAY['owner','admin']));
 
 -- Transmittals
 CREATE TABLE IF NOT EXISTS transmittals (

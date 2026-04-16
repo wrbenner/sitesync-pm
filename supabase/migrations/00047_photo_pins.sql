@@ -74,33 +74,33 @@ ALTER TABLE progress_detection_results ENABLE ROW LEVEL SECURITY;
 ALTER TABLE photo_comparisons ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY photo_pins_select ON photo_pins FOR SELECT
-  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()));
+  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = (select auth.uid())));
 CREATE POLICY photo_pins_insert ON photo_pins FOR INSERT
-  WITH CHECK (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()));
+  WITH CHECK (project_id IN (SELECT project_id FROM project_members WHERE user_id = (select auth.uid())));
 CREATE POLICY photo_pins_delete ON photo_pins FOR DELETE
-  USING (uploaded_by = auth.uid() OR project_id IN (
-    SELECT project_id FROM project_members WHERE user_id = auth.uid() AND role IN ('owner', 'admin', 'project_manager')
+  USING (uploaded_by = (select auth.uid()) OR project_id IN (
+    SELECT project_id FROM project_members WHERE user_id = (select auth.uid()) AND role IN ('owner', 'admin', 'project_manager')
   ));
 
 CREATE POLICY photo_assoc_select ON photo_pin_associations FOR SELECT
   USING (photo_pin_id IN (SELECT id FROM photo_pins WHERE project_id IN (
-    SELECT project_id FROM project_members WHERE user_id = auth.uid()
+    SELECT project_id FROM project_members WHERE user_id = (select auth.uid())
   )));
 CREATE POLICY photo_assoc_insert ON photo_pin_associations FOR INSERT
   WITH CHECK (photo_pin_id IN (SELECT id FROM photo_pins WHERE project_id IN (
-    SELECT project_id FROM project_members WHERE user_id = auth.uid()
+    SELECT project_id FROM project_members WHERE user_id = (select auth.uid())
   )));
 
 CREATE POLICY progress_detect_select ON progress_detection_results FOR SELECT
   USING (photo_pin_id IN (SELECT id FROM photo_pins WHERE project_id IN (
-    SELECT project_id FROM project_members WHERE user_id = auth.uid()
+    SELECT project_id FROM project_members WHERE user_id = (select auth.uid())
   )));
 CREATE POLICY progress_detect_insert ON progress_detection_results FOR INSERT
   WITH CHECK (photo_pin_id IN (SELECT id FROM photo_pins WHERE project_id IN (
-    SELECT project_id FROM project_members WHERE user_id = auth.uid()
+    SELECT project_id FROM project_members WHERE user_id = (select auth.uid())
   )));
 
 CREATE POLICY comparisons_select ON photo_comparisons FOR SELECT
-  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()));
+  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = (select auth.uid())));
 CREATE POLICY comparisons_insert ON photo_comparisons FOR INSERT
-  WITH CHECK (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()));
+  WITH CHECK (project_id IN (SELECT project_id FROM project_members WHERE user_id = (select auth.uid())));

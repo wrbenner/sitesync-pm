@@ -26,26 +26,26 @@ ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 -- Users can read their own profile
 DROP POLICY IF EXISTS profiles_select_own ON profiles;
 CREATE POLICY profiles_select_own ON profiles FOR SELECT
-  USING (user_id = auth.uid());
+  USING (user_id = (select auth.uid()));
 
 -- Users in the same organization can see each other's profiles
 DROP POLICY IF EXISTS profiles_select_org ON profiles;
 CREATE POLICY profiles_select_org ON profiles FOR SELECT
   USING (
     organization_id IN (
-      SELECT organization_id FROM profiles WHERE user_id = auth.uid()
+      SELECT organization_id FROM profiles WHERE user_id = (select auth.uid())
     )
   );
 
 -- Users can insert their own profile
 DROP POLICY IF EXISTS profiles_insert_own ON profiles;
 CREATE POLICY profiles_insert_own ON profiles FOR INSERT
-  WITH CHECK (user_id = auth.uid());
+  WITH CHECK (user_id = (select auth.uid()));
 
 -- Users can update their own profile
 DROP POLICY IF EXISTS profiles_update_own ON profiles;
 CREATE POLICY profiles_update_own ON profiles FOR UPDATE
-  USING (user_id = auth.uid());
+  USING (user_id = (select auth.uid()));
 
 -- Index for fast user lookups
 CREATE INDEX IF NOT EXISTS idx_profiles_user_id ON profiles(user_id);
@@ -62,9 +62,9 @@ CREATE TRIGGER profiles_updated_at
 -- =============================================================================
 DROP POLICY IF EXISTS organizations_insert_authenticated ON organizations;
 CREATE POLICY organizations_insert_authenticated ON organizations FOR INSERT
-  WITH CHECK (auth.uid() IS NOT NULL);
+  WITH CHECK ((select auth.uid()) IS NOT NULL);
 
 -- Allow the creating user to insert themselves as owner of the new org
 DROP POLICY IF EXISTS org_members_insert_self ON organization_members;
 CREATE POLICY org_members_insert_self ON organization_members FOR INSERT
-  WITH CHECK (user_id = auth.uid());
+  WITH CHECK (user_id = (select auth.uid()));

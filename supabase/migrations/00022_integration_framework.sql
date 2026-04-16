@@ -20,9 +20,9 @@ CREATE INDEX idx_api_keys_org ON api_keys(organization_id);
 
 ALTER TABLE api_keys ENABLE ROW LEVEL SECURITY;
 CREATE POLICY api_keys_select ON api_keys FOR SELECT
-  USING (organization_id IN (SELECT organization_id FROM organization_members WHERE user_id = auth.uid()));
+  USING (organization_id IN (SELECT organization_id FROM organization_members WHERE user_id = (select auth.uid())));
 CREATE POLICY api_keys_insert ON api_keys FOR INSERT
-  WITH CHECK (organization_id IN (SELECT organization_id FROM organization_members WHERE user_id = auth.uid() AND role IN ('owner', 'admin')));
+  WITH CHECK (organization_id IN (SELECT organization_id FROM organization_members WHERE user_id = (select auth.uid()) AND role IN ('owner', 'admin')));
 
 -- Webhooks configuration
 CREATE TABLE IF NOT EXISTS webhooks (
@@ -45,13 +45,13 @@ CREATE INDEX idx_webhooks_project ON webhooks(project_id);
 
 ALTER TABLE webhooks ENABLE ROW LEVEL SECURITY;
 CREATE POLICY webhooks_select ON webhooks FOR SELECT
-  USING (organization_id IN (SELECT organization_id FROM organization_members WHERE user_id = auth.uid()));
+  USING (organization_id IN (SELECT organization_id FROM organization_members WHERE user_id = (select auth.uid())));
 CREATE POLICY webhooks_insert ON webhooks FOR INSERT
-  WITH CHECK (organization_id IN (SELECT organization_id FROM organization_members WHERE user_id = auth.uid() AND role IN ('owner', 'admin')));
+  WITH CHECK (organization_id IN (SELECT organization_id FROM organization_members WHERE user_id = (select auth.uid()) AND role IN ('owner', 'admin')));
 CREATE POLICY webhooks_update ON webhooks FOR UPDATE
-  USING (organization_id IN (SELECT organization_id FROM organization_members WHERE user_id = auth.uid() AND role IN ('owner', 'admin')));
+  USING (organization_id IN (SELECT organization_id FROM organization_members WHERE user_id = (select auth.uid()) AND role IN ('owner', 'admin')));
 CREATE POLICY webhooks_delete ON webhooks FOR DELETE
-  USING (organization_id IN (SELECT organization_id FROM organization_members WHERE user_id = auth.uid() AND role IN ('owner', 'admin')));
+  USING (organization_id IN (SELECT organization_id FROM organization_members WHERE user_id = (select auth.uid()) AND role IN ('owner', 'admin')));
 
 -- Webhook delivery log
 CREATE TABLE IF NOT EXISTS webhook_deliveries (

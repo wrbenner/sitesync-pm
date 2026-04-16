@@ -71,38 +71,38 @@ ALTER TABLE executive_reports ENABLE ROW LEVEL SECURITY;
 
 -- Portfolios: owner can do everything, members of contained projects can view
 CREATE POLICY portfolios_select ON portfolios FOR SELECT
-  USING (owner_id = auth.uid() OR id IN (
+  USING (owner_id = (select auth.uid()) OR id IN (
     SELECT pp.portfolio_id FROM portfolio_projects pp
     JOIN project_members pm ON pm.project_id = pp.project_id
-    WHERE pm.user_id = auth.uid()
+    WHERE pm.user_id = (select auth.uid())
   ));
-CREATE POLICY portfolios_insert ON portfolios FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
-CREATE POLICY portfolios_update ON portfolios FOR UPDATE USING (owner_id = auth.uid());
-CREATE POLICY portfolios_delete ON portfolios FOR DELETE USING (owner_id = auth.uid());
+CREATE POLICY portfolios_insert ON portfolios FOR INSERT WITH CHECK ((select auth.uid()) IS NOT NULL);
+CREATE POLICY portfolios_update ON portfolios FOR UPDATE USING (owner_id = (select auth.uid()));
+CREATE POLICY portfolios_delete ON portfolios FOR DELETE USING (owner_id = (select auth.uid()));
 
 -- Portfolio projects: portfolio owner can manage
 CREATE POLICY portfolio_projects_select ON portfolio_projects FOR SELECT
-  USING (portfolio_id IN (SELECT id FROM portfolios WHERE owner_id = auth.uid())
-    OR project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()));
+  USING (portfolio_id IN (SELECT id FROM portfolios WHERE owner_id = (select auth.uid()))
+    OR project_id IN (SELECT project_id FROM project_members WHERE user_id = (select auth.uid())));
 CREATE POLICY portfolio_projects_insert ON portfolio_projects FOR INSERT
-  WITH CHECK (portfolio_id IN (SELECT id FROM portfolios WHERE owner_id = auth.uid()));
+  WITH CHECK (portfolio_id IN (SELECT id FROM portfolios WHERE owner_id = (select auth.uid())));
 CREATE POLICY portfolio_projects_update ON portfolio_projects FOR UPDATE
-  USING (portfolio_id IN (SELECT id FROM portfolios WHERE owner_id = auth.uid()));
+  USING (portfolio_id IN (SELECT id FROM portfolios WHERE owner_id = (select auth.uid())));
 CREATE POLICY portfolio_projects_delete ON portfolio_projects FOR DELETE
-  USING (portfolio_id IN (SELECT id FROM portfolios WHERE owner_id = auth.uid()));
+  USING (portfolio_id IN (SELECT id FROM portfolios WHERE owner_id = (select auth.uid())));
 
 -- Organization settings: authenticated users can view, admins can edit
-CREATE POLICY org_settings_select ON organization_settings FOR SELECT USING (auth.uid() IS NOT NULL);
-CREATE POLICY org_settings_insert ON organization_settings FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
-CREATE POLICY org_settings_update ON organization_settings FOR UPDATE USING (auth.uid() IS NOT NULL);
+CREATE POLICY org_settings_select ON organization_settings FOR SELECT USING ((select auth.uid()) IS NOT NULL);
+CREATE POLICY org_settings_insert ON organization_settings FOR INSERT WITH CHECK ((select auth.uid()) IS NOT NULL);
+CREATE POLICY org_settings_update ON organization_settings FOR UPDATE USING ((select auth.uid()) IS NOT NULL);
 
 -- Executive reports: through portfolio
 CREATE POLICY exec_reports_select ON executive_reports FOR SELECT
-  USING (portfolio_id IN (SELECT id FROM portfolios WHERE owner_id = auth.uid())
+  USING (portfolio_id IN (SELECT id FROM portfolios WHERE owner_id = (select auth.uid()))
     OR portfolio_id IN (
       SELECT pp.portfolio_id FROM portfolio_projects pp
       JOIN project_members pm ON pm.project_id = pp.project_id
-      WHERE pm.user_id = auth.uid()
+      WHERE pm.user_id = (select auth.uid())
     ));
-CREATE POLICY exec_reports_insert ON executive_reports FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+CREATE POLICY exec_reports_insert ON executive_reports FOR INSERT WITH CHECK ((select auth.uid()) IS NOT NULL);
 

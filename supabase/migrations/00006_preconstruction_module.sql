@@ -399,7 +399,7 @@ CREATE POLICY cost_database_insert ON cost_database FOR INSERT
     WITH CHECK (
         EXISTS (
             SELECT 1 FROM project_members
-            WHERE user_id = auth.uid() AND role IN ('owner', 'admin')
+            WHERE user_id = (select auth.uid()) AND role IN ('owner', 'admin')
         )
     );
 
@@ -407,7 +407,7 @@ CREATE POLICY cost_database_update ON cost_database FOR UPDATE
     USING (
         EXISTS (
             SELECT 1 FROM project_members
-            WHERE user_id = auth.uid() AND role IN ('owner', 'admin')
+            WHERE user_id = (select auth.uid()) AND role IN ('owner', 'admin')
         )
     );
 
@@ -415,7 +415,7 @@ CREATE POLICY cost_database_delete ON cost_database FOR DELETE
     USING (
         EXISTS (
             SELECT 1 FROM project_members
-            WHERE user_id = auth.uid() AND role IN ('owner', 'admin')
+            WHERE user_id = (select auth.uid()) AND role IN ('owner', 'admin')
         )
     );
 

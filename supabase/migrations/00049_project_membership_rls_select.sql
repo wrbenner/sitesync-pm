@@ -10,7 +10,7 @@
 DROP POLICY IF EXISTS rfis_select ON rfis;
 CREATE POLICY rfis_select ON rfis FOR SELECT
   USING (project_id IN (
-    SELECT project_id FROM project_members WHERE user_id = auth.uid()
+    SELECT project_id FROM project_members WHERE user_id = (select auth.uid())
   ));
 
 -- ── submittals ───────────────────────────────────────────
@@ -18,7 +18,7 @@ CREATE POLICY rfis_select ON rfis FOR SELECT
 DROP POLICY IF EXISTS submittals_select ON submittals;
 CREATE POLICY submittals_select ON submittals FOR SELECT
   USING (project_id IN (
-    SELECT project_id FROM project_members WHERE user_id = auth.uid()
+    SELECT project_id FROM project_members WHERE user_id = (select auth.uid())
   ));
 
 -- ── budget_items ─────────────────────────────────────────
@@ -26,7 +26,7 @@ CREATE POLICY submittals_select ON submittals FOR SELECT
 DROP POLICY IF EXISTS budget_items_select ON budget_items;
 CREATE POLICY budget_items_select ON budget_items FOR SELECT
   USING (project_id IN (
-    SELECT project_id FROM project_members WHERE user_id = auth.uid()
+    SELECT project_id FROM project_members WHERE user_id = (select auth.uid())
   ));
 
 -- ── change_orders ────────────────────────────────────────
@@ -34,7 +34,7 @@ CREATE POLICY budget_items_select ON budget_items FOR SELECT
 DROP POLICY IF EXISTS change_orders_select ON change_orders;
 CREATE POLICY change_orders_select ON change_orders FOR SELECT
   USING (project_id IN (
-    SELECT project_id FROM project_members WHERE user_id = auth.uid()
+    SELECT project_id FROM project_members WHERE user_id = (select auth.uid())
   ));
 
 -- ── daily_logs ───────────────────────────────────────────
@@ -42,7 +42,7 @@ CREATE POLICY change_orders_select ON change_orders FOR SELECT
 DROP POLICY IF EXISTS daily_logs_select ON daily_logs;
 CREATE POLICY daily_logs_select ON daily_logs FOR SELECT
   USING (project_id IN (
-    SELECT project_id FROM project_members WHERE user_id = auth.uid()
+    SELECT project_id FROM project_members WHERE user_id = (select auth.uid())
   ));
 
 -- ── field_captures ───────────────────────────────────────
@@ -50,7 +50,7 @@ CREATE POLICY daily_logs_select ON daily_logs FOR SELECT
 DROP POLICY IF EXISTS field_captures_select ON field_captures;
 CREATE POLICY field_captures_select ON field_captures FOR SELECT
   USING (project_id IN (
-    SELECT project_id FROM project_members WHERE user_id = auth.uid()
+    SELECT project_id FROM project_members WHERE user_id = (select auth.uid())
   ));
 
 -- ── punch_items ──────────────────────────────────────────
@@ -58,7 +58,7 @@ CREATE POLICY field_captures_select ON field_captures FOR SELECT
 DROP POLICY IF EXISTS punch_items_select ON punch_items;
 CREATE POLICY punch_items_select ON punch_items FOR SELECT
   USING (project_id IN (
-    SELECT project_id FROM project_members WHERE user_id = auth.uid()
+    SELECT project_id FROM project_members WHERE user_id = (select auth.uid())
   ));
 
 -- ── crews ────────────────────────────────────────────────
@@ -66,7 +66,7 @@ CREATE POLICY punch_items_select ON punch_items FOR SELECT
 DROP POLICY IF EXISTS crews_select ON crews;
 CREATE POLICY crews_select ON crews FOR SELECT
   USING (project_id IN (
-    SELECT project_id FROM project_members WHERE user_id = auth.uid()
+    SELECT project_id FROM project_members WHERE user_id = (select auth.uid())
   ));
 
 -- ── directory_contacts ───────────────────────────────────
@@ -74,7 +74,7 @@ CREATE POLICY crews_select ON crews FOR SELECT
 DROP POLICY IF EXISTS directory_contacts_select ON directory_contacts;
 CREATE POLICY directory_contacts_select ON directory_contacts FOR SELECT
   USING (project_id IN (
-    SELECT project_id FROM project_members WHERE user_id = auth.uid()
+    SELECT project_id FROM project_members WHERE user_id = (select auth.uid())
   ));
 
 -- ── meetings ─────────────────────────────────────────────
@@ -82,7 +82,7 @@ CREATE POLICY directory_contacts_select ON directory_contacts FOR SELECT
 DROP POLICY IF EXISTS meetings_select ON meetings;
 CREATE POLICY meetings_select ON meetings FOR SELECT
   USING (project_id IN (
-    SELECT project_id FROM project_members WHERE user_id = auth.uid()
+    SELECT project_id FROM project_members WHERE user_id = (select auth.uid())
   ));
 
 -- ── schedule_phases ──────────────────────────────────────
@@ -90,7 +90,7 @@ CREATE POLICY meetings_select ON meetings FOR SELECT
 DROP POLICY IF EXISTS schedule_phases_select ON schedule_phases;
 CREATE POLICY schedule_phases_select ON schedule_phases FOR SELECT
   USING (project_id IN (
-    SELECT project_id FROM project_members WHERE user_id = auth.uid()
+    SELECT project_id FROM project_members WHERE user_id = (select auth.uid())
   ));
 
 -- ── drawings ─────────────────────────────────────────────
@@ -98,7 +98,7 @@ CREATE POLICY schedule_phases_select ON schedule_phases FOR SELECT
 DROP POLICY IF EXISTS drawings_select ON drawings;
 CREATE POLICY drawings_select ON drawings FOR SELECT
   USING (project_id IN (
-    SELECT project_id FROM project_members WHERE user_id = auth.uid()
+    SELECT project_id FROM project_members WHERE user_id = (select auth.uid())
   ));
 
 -- ── files ────────────────────────────────────────────────
@@ -106,7 +106,7 @@ CREATE POLICY drawings_select ON drawings FOR SELECT
 DROP POLICY IF EXISTS files_select ON files;
 CREATE POLICY files_select ON files FOR SELECT
   USING (project_id IN (
-    SELECT project_id FROM project_members WHERE user_id = auth.uid()
+    SELECT project_id FROM project_members WHERE user_id = (select auth.uid())
   ));
 
 -- ── activity_feed ────────────────────────────────────────
@@ -114,7 +114,7 @@ CREATE POLICY files_select ON files FOR SELECT
 DROP POLICY IF EXISTS activity_feed_select ON activity_feed;
 CREATE POLICY activity_feed_select ON activity_feed FOR SELECT
   USING (project_id IN (
-    SELECT project_id FROM project_members WHERE user_id = auth.uid()
+    SELECT project_id FROM project_members WHERE user_id = (select auth.uid())
   ));
 
 -- ── audit_log ────────────────────────────────────────────
@@ -126,7 +126,7 @@ DO $$ BEGIN
     EXECUTE $p$
       CREATE POLICY audit_log_select ON audit_log FOR SELECT
         USING (project_id IN (
-          SELECT project_id FROM project_members WHERE user_id = auth.uid()
+          SELECT project_id FROM project_members WHERE user_id = (select auth.uid())
         ))
     $p$;
   END IF;

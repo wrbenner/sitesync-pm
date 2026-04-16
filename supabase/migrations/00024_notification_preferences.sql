@@ -27,9 +27,9 @@ CREATE TABLE IF NOT EXISTS notification_preferences (
 CREATE INDEX idx_notification_prefs_user ON notification_preferences(user_id);
 
 ALTER TABLE notification_preferences ENABLE ROW LEVEL SECURITY;
-CREATE POLICY np_select ON notification_preferences FOR SELECT USING (user_id = auth.uid());
-CREATE POLICY np_insert ON notification_preferences FOR INSERT WITH CHECK (user_id = auth.uid());
-CREATE POLICY np_update ON notification_preferences FOR UPDATE USING (user_id = auth.uid());
+CREATE POLICY np_select ON notification_preferences FOR SELECT USING (user_id = (select auth.uid()));
+CREATE POLICY np_insert ON notification_preferences FOR INSERT WITH CHECK (user_id = (select auth.uid()));
+CREATE POLICY np_update ON notification_preferences FOR UPDATE USING (user_id = (select auth.uid()));
 
 CREATE TRIGGER set_notification_prefs_updated_at BEFORE UPDATE ON notification_preferences
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();

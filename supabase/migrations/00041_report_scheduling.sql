@@ -26,19 +26,19 @@ CREATE INDEX idx_report_templates_project ON report_templates(project_id);
 ALTER TABLE report_templates ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY report_templates_select ON report_templates FOR SELECT
-  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()));
+  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = (select auth.uid())));
 
 CREATE POLICY report_templates_insert ON report_templates FOR INSERT
-  WITH CHECK (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()));
+  WITH CHECK (project_id IN (SELECT project_id FROM project_members WHERE user_id = (select auth.uid())));
 
 CREATE POLICY report_templates_update ON report_templates FOR UPDATE
-  USING (created_by = auth.uid() OR project_id IN (
-    SELECT project_id FROM project_members WHERE user_id = auth.uid() AND role IN ('owner', 'admin')
+  USING (created_by = (select auth.uid()) OR project_id IN (
+    SELECT project_id FROM project_members WHERE user_id = (select auth.uid()) AND role IN ('owner', 'admin')
   ));
 
 CREATE POLICY report_templates_delete ON report_templates FOR DELETE
-  USING (created_by = auth.uid() OR project_id IN (
-    SELECT project_id FROM project_members WHERE user_id = auth.uid() AND role IN ('owner', 'admin')
+  USING (created_by = (select auth.uid()) OR project_id IN (
+    SELECT project_id FROM project_members WHERE user_id = (select auth.uid()) AND role IN ('owner', 'admin')
   ));
 
 -- Scheduled report delivery
@@ -67,17 +67,17 @@ CREATE INDEX idx_report_schedules_next_run ON report_schedules(next_run_at) WHER
 ALTER TABLE report_schedules ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY report_schedules_select ON report_schedules FOR SELECT
-  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()));
+  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = (select auth.uid())));
 
 CREATE POLICY report_schedules_insert ON report_schedules FOR INSERT
-  WITH CHECK (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid() AND role IN ('owner', 'admin', 'project_manager')));
+  WITH CHECK (project_id IN (SELECT project_id FROM project_members WHERE user_id = (select auth.uid()) AND role IN ('owner', 'admin', 'project_manager')));
 
 CREATE POLICY report_schedules_update ON report_schedules FOR UPDATE
-  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid() AND role IN ('owner', 'admin', 'project_manager')));
+  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = (select auth.uid()) AND role IN ('owner', 'admin', 'project_manager')));
 
 CREATE POLICY report_schedules_delete ON report_schedules FOR DELETE
-  USING (created_by = auth.uid() OR project_id IN (
-    SELECT project_id FROM project_members WHERE user_id = auth.uid() AND role IN ('owner', 'admin')
+  USING (created_by = (select auth.uid()) OR project_id IN (
+    SELECT project_id FROM project_members WHERE user_id = (select auth.uid()) AND role IN ('owner', 'admin')
   ));
 
 -- Report generation log
@@ -102,10 +102,10 @@ CREATE INDEX idx_report_runs_template ON report_runs(template_id);
 ALTER TABLE report_runs ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY report_runs_select ON report_runs FOR SELECT
-  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()));
+  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = (select auth.uid())));
 
 CREATE POLICY report_runs_insert ON report_runs FOR INSERT
-  WITH CHECK (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()));
+  WITH CHECK (project_id IN (SELECT project_id FROM project_members WHERE user_id = (select auth.uid())));
 
 -- Function to calculate next_run_at for a schedule
 CREATE OR REPLACE FUNCTION calculate_next_run(

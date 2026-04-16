@@ -40,19 +40,19 @@ ALTER TABLE organization_members ENABLE ROW LEVEL SECURITY;
 
 -- Organizations: members can view, owners can edit
 CREATE POLICY org_select ON organizations FOR SELECT
-  USING (id IN (SELECT organization_id FROM organization_members WHERE user_id = auth.uid()));
+  USING (id IN (SELECT organization_id FROM organization_members WHERE user_id = (select auth.uid())));
 CREATE POLICY org_insert ON organizations FOR INSERT
-  WITH CHECK (auth.uid() IS NOT NULL);
+  WITH CHECK ((select auth.uid()) IS NOT NULL);
 CREATE POLICY org_update ON organizations FOR UPDATE
-  USING (id IN (SELECT organization_id FROM organization_members WHERE user_id = auth.uid() AND role = 'owner'));
+  USING (id IN (SELECT organization_id FROM organization_members WHERE user_id = (select auth.uid()) AND role = 'owner'));
 
 -- Organization members
 CREATE POLICY org_members_select ON organization_members FOR SELECT
-  USING (organization_id IN (SELECT organization_id FROM organization_members om WHERE om.user_id = auth.uid()));
+  USING (organization_id IN (SELECT organization_id FROM organization_members om WHERE om.user_id = (select auth.uid())));
 CREATE POLICY org_members_insert ON organization_members FOR INSERT
-  WITH CHECK (organization_id IN (SELECT organization_id FROM organization_members om WHERE om.user_id = auth.uid() AND om.role IN ('owner', 'admin')));
+  WITH CHECK (organization_id IN (SELECT organization_id FROM organization_members om WHERE om.user_id = (select auth.uid()) AND om.role IN ('owner', 'admin')));
 CREATE POLICY org_members_delete ON organization_members FOR DELETE
-  USING (organization_id IN (SELECT organization_id FROM organization_members om WHERE om.user_id = auth.uid() AND om.role IN ('owner', 'admin')));
+  USING (organization_id IN (SELECT organization_id FROM organization_members om WHERE om.user_id = (select auth.uid()) AND om.role IN ('owner', 'admin')));
 
 -- Permission helper functions
 CREATE OR REPLACE FUNCTION get_user_project_role(p_project_id uuid)

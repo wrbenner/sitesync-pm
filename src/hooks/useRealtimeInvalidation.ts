@@ -26,8 +26,18 @@ const TABLE_TO_QUERY_KEYS: Record<string, (projectId: string) => readonly unknow
 
 const CRITICAL_TABLES = Object.keys(TABLE_TO_QUERY_KEYS)
 
-export function useRealtimeInvalidation() {
-  const projectId = useProjectId()
+/**
+ * Subscribe to Supabase realtime changes scoped to the active project.
+ *
+ * @param activeProjectId - Explicit project ID to scope subscriptions to.
+ *   When omitted, falls back to the value from `useProjectId()`. Passing it
+ *   explicitly from the call site makes the per-project scoping visible and
+ *   ensures the subscription is immediately torn down when the user switches
+ *   projects rather than waiting for the context to propagate.
+ */
+export function useRealtimeInvalidation(activeProjectId?: string) {
+  const ctxProjectId = useProjectId()
+  const projectId = activeProjectId ?? ctxProjectId
 
   useEffect(() => {
     if (!projectId) return

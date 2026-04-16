@@ -41,7 +41,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can view" ON weather_records
     FOR SELECT USING (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -50,7 +50,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can insert" ON weather_records
     FOR INSERT WITH CHECK (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -59,7 +59,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can update" ON weather_records
     FOR UPDATE USING (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -69,7 +69,7 @@ DO $$ BEGIN
     FOR DELETE USING (
       project_id IN (
         SELECT pm.project_id FROM project_members pm
-        WHERE pm.user_id = auth.uid()
+        WHERE pm.user_id = (select auth.uid())
           AND pm.role IN ('owner', 'admin', 'project_manager')
       )
     );
@@ -80,7 +80,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can view" ON equipment
     FOR SELECT USING (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -89,7 +89,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can insert" ON equipment
     FOR INSERT WITH CHECK (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -98,7 +98,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can update" ON equipment
     FOR UPDATE USING (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -108,7 +108,7 @@ DO $$ BEGIN
     FOR DELETE USING (
       project_id IN (
         SELECT pm.project_id FROM project_members pm
-        WHERE pm.user_id = auth.uid()
+        WHERE pm.user_id = (select auth.uid())
           AND pm.role IN ('owner', 'admin', 'project_manager')
       )
     );
@@ -119,7 +119,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can view" ON equipment_logs
     FOR SELECT USING (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -128,7 +128,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can insert" ON equipment_logs
     FOR INSERT WITH CHECK (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -137,7 +137,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can update" ON equipment_logs
     FOR UPDATE USING (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -147,7 +147,7 @@ DO $$ BEGIN
     FOR DELETE USING (
       project_id IN (
         SELECT pm.project_id FROM project_members pm
-        WHERE pm.user_id = auth.uid()
+        WHERE pm.user_id = (select auth.uid())
           AND pm.role IN ('owner', 'admin', 'project_manager')
       )
     );
@@ -158,7 +158,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can view" ON equipment_maintenance
     FOR SELECT USING (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -167,7 +167,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can insert" ON equipment_maintenance
     FOR INSERT WITH CHECK (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -176,7 +176,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can update" ON equipment_maintenance
     FOR UPDATE USING (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -186,7 +186,7 @@ DO $$ BEGIN
     FOR DELETE USING (
       project_id IN (
         SELECT pm.project_id FROM project_members pm
-        WHERE pm.user_id = auth.uid()
+        WHERE pm.user_id = (select auth.uid())
           AND pm.role IN ('owner', 'admin', 'project_manager')
       )
     );
@@ -197,7 +197,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can view" ON incidents
     FOR SELECT USING (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -206,7 +206,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can insert" ON incidents
     FOR INSERT WITH CHECK (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -215,7 +215,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can update" ON incidents
     FOR UPDATE USING (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -225,7 +225,7 @@ DO $$ BEGIN
     FOR DELETE USING (
       project_id IN (
         SELECT pm.project_id FROM project_members pm
-        WHERE pm.user_id = auth.uid()
+        WHERE pm.user_id = (select auth.uid())
           AND pm.role IN ('owner', 'admin', 'project_manager')
       )
     );
@@ -236,7 +236,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can view" ON safety_observations
     FOR SELECT USING (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -245,7 +245,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can insert" ON safety_observations
     FOR INSERT WITH CHECK (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -254,7 +254,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can update" ON safety_observations
     FOR UPDATE USING (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -264,7 +264,7 @@ DO $$ BEGIN
     FOR DELETE USING (
       project_id IN (
         SELECT pm.project_id FROM project_members pm
-        WHERE pm.user_id = auth.uid()
+        WHERE pm.user_id = (select auth.uid())
           AND pm.role IN ('owner', 'admin', 'project_manager')
       )
     );
@@ -275,7 +275,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can view" ON safety_inspections
     FOR SELECT USING (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -284,7 +284,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can insert" ON safety_inspections
     FOR INSERT WITH CHECK (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -293,7 +293,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can update" ON safety_inspections
     FOR UPDATE USING (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -303,7 +303,7 @@ DO $$ BEGIN
     FOR DELETE USING (
       project_id IN (
         SELECT pm.project_id FROM project_members pm
-        WHERE pm.user_id = auth.uid()
+        WHERE pm.user_id = (select auth.uid())
           AND pm.role IN ('owner', 'admin', 'project_manager')
       )
     );
@@ -314,7 +314,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can view" ON toolbox_talks
     FOR SELECT USING (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -323,7 +323,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can insert" ON toolbox_talks
     FOR INSERT WITH CHECK (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -332,7 +332,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can update" ON toolbox_talks
     FOR UPDATE USING (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -342,7 +342,7 @@ DO $$ BEGIN
     FOR DELETE USING (
       project_id IN (
         SELECT pm.project_id FROM project_members pm
-        WHERE pm.user_id = auth.uid()
+        WHERE pm.user_id = (select auth.uid())
           AND pm.role IN ('owner', 'admin', 'project_manager')
       )
     );
@@ -353,7 +353,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can view" ON toolbox_talk_attendees
     FOR SELECT USING (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -362,7 +362,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can insert" ON toolbox_talk_attendees
     FOR INSERT WITH CHECK (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -371,7 +371,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can update" ON toolbox_talk_attendees
     FOR UPDATE USING (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -381,7 +381,7 @@ DO $$ BEGIN
     FOR DELETE USING (
       project_id IN (
         SELECT pm.project_id FROM project_members pm
-        WHERE pm.user_id = auth.uid()
+        WHERE pm.user_id = (select auth.uid())
           AND pm.role IN ('owner', 'admin', 'project_manager')
       )
     );
@@ -392,7 +392,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can view" ON corrective_actions
     FOR SELECT USING (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -401,7 +401,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can insert" ON corrective_actions
     FOR INSERT WITH CHECK (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -410,7 +410,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can update" ON corrective_actions
     FOR UPDATE USING (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -420,7 +420,7 @@ DO $$ BEGIN
     FOR DELETE USING (
       project_id IN (
         SELECT pm.project_id FROM project_members pm
-        WHERE pm.user_id = auth.uid()
+        WHERE pm.user_id = (select auth.uid())
           AND pm.role IN ('owner', 'admin', 'project_manager')
       )
     );
@@ -431,7 +431,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can view" ON time_entries
     FOR SELECT USING (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -440,7 +440,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can insert" ON time_entries
     FOR INSERT WITH CHECK (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -449,7 +449,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can update" ON time_entries
     FOR UPDATE USING (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -459,7 +459,7 @@ DO $$ BEGIN
     FOR DELETE USING (
       project_id IN (
         SELECT pm.project_id FROM project_members pm
-        WHERE pm.user_id = auth.uid()
+        WHERE pm.user_id = (select auth.uid())
           AND pm.role IN ('owner', 'admin', 'project_manager')
       )
     );
@@ -470,7 +470,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can view" ON deliveries
     FOR SELECT USING (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -479,7 +479,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can insert" ON deliveries
     FOR INSERT WITH CHECK (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -488,7 +488,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can update" ON deliveries
     FOR UPDATE USING (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -498,7 +498,7 @@ DO $$ BEGIN
     FOR DELETE USING (
       project_id IN (
         SELECT pm.project_id FROM project_members pm
-        WHERE pm.user_id = auth.uid()
+        WHERE pm.user_id = (select auth.uid())
           AND pm.role IN ('owner', 'admin', 'project_manager')
       )
     );
@@ -509,7 +509,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can view" ON delivery_items
     FOR SELECT USING (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -518,7 +518,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can insert" ON delivery_items
     FOR INSERT WITH CHECK (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -527,7 +527,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can update" ON delivery_items
     FOR UPDATE USING (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -537,7 +537,7 @@ DO $$ BEGIN
     FOR DELETE USING (
       project_id IN (
         SELECT pm.project_id FROM project_members pm
-        WHERE pm.user_id = auth.uid()
+        WHERE pm.user_id = (select auth.uid())
           AND pm.role IN ('owner', 'admin', 'project_manager')
       )
     );
@@ -548,7 +548,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can view" ON material_inventory
     FOR SELECT USING (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -557,7 +557,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can insert" ON material_inventory
     FOR INSERT WITH CHECK (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -566,7 +566,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can update" ON material_inventory
     FOR UPDATE USING (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -576,7 +576,7 @@ DO $$ BEGIN
     FOR DELETE USING (
       project_id IN (
         SELECT pm.project_id FROM project_members pm
-        WHERE pm.user_id = auth.uid()
+        WHERE pm.user_id = (select auth.uid())
           AND pm.role IN ('owner', 'admin', 'project_manager')
       )
     );
@@ -587,7 +587,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can view" ON warranties
     FOR SELECT USING (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -596,7 +596,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can insert" ON warranties
     FOR INSERT WITH CHECK (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -605,7 +605,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can update" ON warranties
     FOR UPDATE USING (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -615,7 +615,7 @@ DO $$ BEGIN
     FOR DELETE USING (
       project_id IN (
         SELECT pm.project_id FROM project_members pm
-        WHERE pm.user_id = auth.uid()
+        WHERE pm.user_id = (select auth.uid())
           AND pm.role IN ('owner', 'admin', 'project_manager')
       )
     );
@@ -626,7 +626,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can view" ON warranty_claims
     FOR SELECT USING (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -635,7 +635,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can insert" ON warranty_claims
     FOR INSERT WITH CHECK (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -644,7 +644,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can update" ON warranty_claims
     FOR UPDATE USING (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -654,7 +654,7 @@ DO $$ BEGIN
     FOR DELETE USING (
       project_id IN (
         SELECT pm.project_id FROM project_members pm
-        WHERE pm.user_id = auth.uid()
+        WHERE pm.user_id = (select auth.uid())
           AND pm.role IN ('owner', 'admin', 'project_manager')
       )
     );
@@ -665,7 +665,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can view" ON commissioning_items
     FOR SELECT USING (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -674,7 +674,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can insert" ON commissioning_items
     FOR INSERT WITH CHECK (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -683,7 +683,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can update" ON commissioning_items
     FOR UPDATE USING (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -693,7 +693,7 @@ DO $$ BEGIN
     FOR DELETE USING (
       project_id IN (
         SELECT pm.project_id FROM project_members pm
-        WHERE pm.user_id = auth.uid()
+        WHERE pm.user_id = (select auth.uid())
           AND pm.role IN ('owner', 'admin', 'project_manager')
       )
     );
@@ -704,7 +704,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can view" ON sustainability_metrics
     FOR SELECT USING (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -713,7 +713,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can insert" ON sustainability_metrics
     FOR INSERT WITH CHECK (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -722,7 +722,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can update" ON sustainability_metrics
     FOR UPDATE USING (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -732,7 +732,7 @@ DO $$ BEGIN
     FOR DELETE USING (
       project_id IN (
         SELECT pm.project_id FROM project_members pm
-        WHERE pm.user_id = auth.uid()
+        WHERE pm.user_id = (select auth.uid())
           AND pm.role IN ('owner', 'admin', 'project_manager')
       )
     );
@@ -743,7 +743,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can view" ON waste_logs
     FOR SELECT USING (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -752,7 +752,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can insert" ON waste_logs
     FOR INSERT WITH CHECK (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -761,7 +761,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can update" ON waste_logs
     FOR UPDATE USING (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -771,7 +771,7 @@ DO $$ BEGIN
     FOR DELETE USING (
       project_id IN (
         SELECT pm.project_id FROM project_members pm
-        WHERE pm.user_id = auth.uid()
+        WHERE pm.user_id = (select auth.uid())
           AND pm.role IN ('owner', 'admin', 'project_manager')
       )
     );
@@ -782,7 +782,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can view" ON photo_pins
     FOR SELECT USING (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -791,7 +791,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can insert" ON photo_pins
     FOR INSERT WITH CHECK (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -800,7 +800,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can update" ON photo_pins
     FOR UPDATE USING (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -810,7 +810,7 @@ DO $$ BEGIN
     FOR DELETE USING (
       project_id IN (
         SELECT pm.project_id FROM project_members pm
-        WHERE pm.user_id = auth.uid()
+        WHERE pm.user_id = (select auth.uid())
           AND pm.role IN ('owner', 'admin', 'project_manager')
       )
     );
@@ -821,7 +821,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can view" ON photo_comparisons
     FOR SELECT USING (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -830,7 +830,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can insert" ON photo_comparisons
     FOR INSERT WITH CHECK (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -839,7 +839,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can update" ON photo_comparisons
     FOR UPDATE USING (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -849,7 +849,7 @@ DO $$ BEGIN
     FOR DELETE USING (
       project_id IN (
         SELECT pm.project_id FROM project_members pm
-        WHERE pm.user_id = auth.uid()
+        WHERE pm.user_id = (select auth.uid())
           AND pm.role IN ('owner', 'admin', 'project_manager')
       )
     );
@@ -860,7 +860,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can view" ON progress_detection_results
     FOR SELECT USING (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -869,7 +869,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can insert" ON progress_detection_results
     FOR INSERT WITH CHECK (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -878,7 +878,7 @@ DO $$ BEGIN
   CREATE POLICY "Project members can update" ON progress_detection_results
     FOR UPDATE USING (
       project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = auth.uid()
+        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -888,7 +888,7 @@ DO $$ BEGIN
     FOR DELETE USING (
       project_id IN (
         SELECT pm.project_id FROM project_members pm
-        WHERE pm.user_id = auth.uid()
+        WHERE pm.user_id = (select auth.uid())
           AND pm.role IN ('owner', 'admin', 'project_manager')
       )
     );

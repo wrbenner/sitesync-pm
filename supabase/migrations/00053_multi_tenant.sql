@@ -28,7 +28,7 @@ DROP POLICY IF EXISTS organizations_select ON organizations;
 CREATE POLICY organizations_select ON organizations FOR SELECT
   USING (
     id IN (
-      SELECT organization_id FROM organization_members WHERE user_id = auth.uid()
+      SELECT organization_id FROM organization_members WHERE user_id = (select auth.uid())
     )
   );
 
@@ -37,7 +37,7 @@ CREATE POLICY organizations_update ON organizations FOR UPDATE
   USING (
     id IN (
       SELECT organization_id FROM organization_members
-      WHERE user_id = auth.uid() AND role IN ('owner', 'admin')
+      WHERE user_id = (select auth.uid()) AND role IN ('owner', 'admin')
     )
   );
 
@@ -61,9 +61,9 @@ ALTER TABLE organization_members ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS org_members_select ON organization_members;
 CREATE POLICY org_members_select ON organization_members FOR SELECT
   USING (
-    user_id = auth.uid()
+    user_id = (select auth.uid())
     OR organization_id IN (
-      SELECT organization_id FROM organization_members WHERE user_id = auth.uid()
+      SELECT organization_id FROM organization_members WHERE user_id = (select auth.uid())
     )
   );
 
@@ -72,7 +72,7 @@ CREATE POLICY org_members_insert ON organization_members FOR INSERT
   WITH CHECK (
     organization_id IN (
       SELECT organization_id FROM organization_members
-      WHERE user_id = auth.uid() AND role IN ('owner', 'admin')
+      WHERE user_id = (select auth.uid()) AND role IN ('owner', 'admin')
     )
   );
 
@@ -81,7 +81,7 @@ CREATE POLICY org_members_delete ON organization_members FOR DELETE
   USING (
     organization_id IN (
       SELECT organization_id FROM organization_members
-      WHERE user_id = auth.uid() AND role IN ('owner', 'admin')
+      WHERE user_id = (select auth.uid()) AND role IN ('owner', 'admin')
     )
   );
 

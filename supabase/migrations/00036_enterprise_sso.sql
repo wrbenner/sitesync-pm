@@ -21,9 +21,9 @@ CREATE TABLE IF NOT EXISTS sso_configurations (
 
 ALTER TABLE sso_configurations ENABLE ROW LEVEL SECURITY;
 CREATE POLICY sso_config_select ON sso_configurations FOR SELECT
-  USING (organization_id IN (SELECT organization_id FROM organization_members WHERE user_id = auth.uid()));
+  USING (organization_id IN (SELECT organization_id FROM organization_members WHERE user_id = (select auth.uid())));
 CREATE POLICY sso_config_manage ON sso_configurations FOR ALL
-  USING (organization_id IN (SELECT organization_id FROM organization_members WHERE user_id = auth.uid() AND role = 'owner'));
+  USING (organization_id IN (SELECT organization_id FROM organization_members WHERE user_id = (select auth.uid()) AND role = 'owner'));
 
 -- Audit trail retention settings per organization
 ALTER TABLE organizations ADD COLUMN IF NOT EXISTS audit_retention_years int DEFAULT 7;
@@ -47,9 +47,9 @@ CREATE INDEX idx_encrypted_fields_entity ON encrypted_fields(entity_type, entity
 
 ALTER TABLE encrypted_fields ENABLE ROW LEVEL SECURITY;
 CREATE POLICY encrypted_fields_select ON encrypted_fields FOR SELECT
-  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()));
+  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = (select auth.uid())));
 CREATE POLICY encrypted_fields_manage ON encrypted_fields FOR ALL
-  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid() AND role IN ('owner', 'admin')));
+  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = (select auth.uid()) AND role IN ('owner', 'admin')));
 
 -- Compliance reports
 CREATE TABLE IF NOT EXISTS compliance_reports (
@@ -69,7 +69,7 @@ CREATE INDEX idx_compliance_reports_org ON compliance_reports(organization_id, c
 
 ALTER TABLE compliance_reports ENABLE ROW LEVEL SECURITY;
 CREATE POLICY compliance_reports_select ON compliance_reports FOR SELECT
-  USING (organization_id IN (SELECT organization_id FROM organization_members WHERE user_id = auth.uid() AND role IN ('owner', 'admin')));
+  USING (organization_id IN (SELECT organization_id FROM organization_members WHERE user_id = (select auth.uid()) AND role IN ('owner', 'admin')));
 
 -- Notification preferences (for weekly digest opt-out)
 CREATE TABLE IF NOT EXISTS notification_preferences (
@@ -86,7 +86,7 @@ CREATE TABLE IF NOT EXISTS notification_preferences (
 
 ALTER TABLE notification_preferences ENABLE ROW LEVEL SECURITY;
 CREATE POLICY notif_prefs_own ON notification_preferences FOR ALL
-  USING (user_id = auth.uid());
+  USING (user_id = (select auth.uid()));
 
 -- Triggers
 CREATE TRIGGER set_sso_config_updated_at BEFORE UPDATE ON sso_configurations

@@ -7,6 +7,6 @@ CREATE POLICY "projects_org_member_select"
     organization_id IN (
       SELECT organization_id
       FROM organization_members
-      WHERE user_id = auth.uid()
+      WHERE user_id = (select auth.uid())
     )
   );

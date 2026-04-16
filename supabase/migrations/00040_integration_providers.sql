@@ -25,8 +25,8 @@ ALTER TABLE integrations ENABLE ROW LEVEL SECURITY;
 DO $$ BEGIN
   CREATE POLICY integrations_select ON integrations FOR SELECT
     USING (
-      organization_id IN (SELECT organization_id FROM organization_members WHERE user_id = auth.uid())
-      OR project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid())
+      organization_id IN (SELECT organization_id FROM organization_members WHERE user_id = (select auth.uid()))
+      OR project_id IN (SELECT project_id FROM project_members WHERE user_id = (select auth.uid()))
     );
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
@@ -34,8 +34,8 @@ END $$;
 DO $$ BEGIN
   CREATE POLICY integrations_insert ON integrations FOR INSERT
     WITH CHECK (
-      organization_id IN (SELECT organization_id FROM organization_members WHERE user_id = auth.uid() AND role IN ('owner', 'admin'))
-      OR project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid() AND role IN ('owner', 'admin', 'project_manager'))
+      organization_id IN (SELECT organization_id FROM organization_members WHERE user_id = (select auth.uid()) AND role IN ('owner', 'admin'))
+      OR project_id IN (SELECT project_id FROM project_members WHERE user_id = (select auth.uid()) AND role IN ('owner', 'admin', 'project_manager'))
     );
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
@@ -43,8 +43,8 @@ END $$;
 DO $$ BEGIN
   CREATE POLICY integrations_update ON integrations FOR UPDATE
     USING (
-      organization_id IN (SELECT organization_id FROM organization_members WHERE user_id = auth.uid() AND role IN ('owner', 'admin'))
-      OR project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid() AND role IN ('owner', 'admin', 'project_manager'))
+      organization_id IN (SELECT organization_id FROM organization_members WHERE user_id = (select auth.uid()) AND role IN ('owner', 'admin'))
+      OR project_id IN (SELECT project_id FROM project_members WHERE user_id = (select auth.uid()) AND role IN ('owner', 'admin', 'project_manager'))
     );
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
@@ -52,7 +52,7 @@ END $$;
 DO $$ BEGIN
   CREATE POLICY integrations_delete ON integrations FOR DELETE
     USING (
-      organization_id IN (SELECT organization_id FROM organization_members WHERE user_id = auth.uid() AND role IN ('owner', 'admin'))
+      organization_id IN (SELECT organization_id FROM organization_members WHERE user_id = (select auth.uid()) AND role IN ('owner', 'admin'))
     );
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
@@ -64,8 +64,8 @@ DO $$ BEGIN
   CREATE POLICY integration_sync_log_select ON integration_sync_log FOR SELECT
     USING (
       integration_id IN (SELECT id FROM integrations WHERE
-        organization_id IN (SELECT organization_id FROM organization_members WHERE user_id = auth.uid())
-        OR project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid())
+        organization_id IN (SELECT organization_id FROM organization_members WHERE user_id = (select auth.uid()))
+        OR project_id IN (SELECT project_id FROM project_members WHERE user_id = (select auth.uid()))
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL;

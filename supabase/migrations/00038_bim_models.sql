@@ -26,7 +26,7 @@ CREATE INDEX idx_bim_models_project ON bim_models(project_id);
 
 ALTER TABLE bim_models ENABLE ROW LEVEL SECURITY;
 CREATE POLICY bim_models_select ON bim_models FOR SELECT
-  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()));
+  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = (select auth.uid())));
 CREATE POLICY bim_models_manage ON bim_models FOR ALL
   USING (has_project_permission(project_id, 'project_manager'));
 
@@ -91,11 +91,11 @@ CREATE INDEX idx_bim_markups_project ON bim_markups(project_id);
 
 ALTER TABLE bim_markups ENABLE ROW LEVEL SECURITY;
 CREATE POLICY bim_markups_select ON bim_markups FOR SELECT
-  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()));
+  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = (select auth.uid())));
 CREATE POLICY bim_markups_insert ON bim_markups FOR INSERT
   WITH CHECK (has_project_permission(project_id, 'superintendent'));
 CREATE POLICY bim_markups_update ON bim_markups FOR UPDATE
-  USING (created_by = auth.uid() OR has_project_permission(project_id, 'admin'));
+  USING (created_by = (select auth.uid()) OR has_project_permission(project_id, 'admin'));
 
 -- Clash Detection Results
 CREATE TABLE IF NOT EXISTS bim_clashes (

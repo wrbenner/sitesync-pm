@@ -34,7 +34,7 @@ create policy "project members can read budget line items"
     exists (
       select 1 from public.project_members pm
       where pm.project_id = budget_line_items.project_id
-        and pm.user_id = auth.uid()
+        and pm.user_id = (select auth.uid())
     )
   );
 
@@ -44,7 +44,7 @@ create policy "project members can insert budget line items"
     exists (
       select 1 from public.project_members pm
       where pm.project_id = budget_line_items.project_id
-        and pm.user_id = auth.uid()
+        and pm.user_id = (select auth.uid())
     )
   );
 
@@ -54,7 +54,7 @@ create policy "project members can update budget line items"
     exists (
       select 1 from public.project_members pm
       where pm.project_id = budget_line_items.project_id
-        and pm.user_id = auth.uid()
+        and pm.user_id = (select auth.uid())
     )
   );
 
@@ -64,6 +64,6 @@ create policy "project members can delete budget line items"
     exists (
       select 1 from public.project_members pm
       where pm.project_id = budget_line_items.project_id
-        and pm.user_id = auth.uid()
+        and pm.user_id = (select auth.uid())
     )
   );

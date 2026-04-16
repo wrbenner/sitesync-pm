@@ -24,7 +24,7 @@ ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Project members can read audit logs" ON audit_log
   FOR SELECT USING (
     project_id IN (
-      SELECT project_id FROM project_members WHERE user_id = auth.uid()
+      SELECT project_id FROM project_members WHERE user_id = (select auth.uid())
     )
   );
 

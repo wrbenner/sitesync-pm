@@ -31,7 +31,7 @@ CREATE POLICY audit_trail_select ON audit_trail FOR SELECT
   USING (is_project_member(project_id));
 
 CREATE POLICY audit_trail_insert ON audit_trail FOR INSERT
-  WITH CHECK (auth.uid() IS NOT NULL);
+  WITH CHECK ((select auth.uid()) IS NOT NULL);
 
 -- No UPDATE or DELETE policies — audit trail is immutable
 

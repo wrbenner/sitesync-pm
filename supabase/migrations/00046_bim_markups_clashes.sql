@@ -87,8 +87,8 @@ DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'markups_select' AND tablename = 'bim_markups') THEN
     CREATE POLICY markups_select ON bim_markups FOR SELECT
       USING (
-        project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid())
-        AND (visibility_public = true OR created_by = auth.uid() OR auth.uid() = ANY(shared_with))
+        project_id IN (SELECT project_id FROM project_members WHERE user_id = (select auth.uid()))
+        AND (visibility_public = true OR created_by = (select auth.uid()) OR (select auth.uid()) = ANY(shared_with))
       );
   END IF;
 END $$;
@@ -96,39 +96,39 @@ END $$;
 DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'markups_insert' AND tablename = 'bim_markups') THEN
     CREATE POLICY markups_insert ON bim_markups FOR INSERT
-      WITH CHECK (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()));
+      WITH CHECK (project_id IN (SELECT project_id FROM project_members WHERE user_id = (select auth.uid())));
   END IF;
 END $$;
 
 DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'markups_update' AND tablename = 'bim_markups') THEN
     CREATE POLICY markups_update ON bim_markups FOR UPDATE
-      USING (created_by = auth.uid());
+      USING (created_by = (select auth.uid()));
   END IF;
 END $$;
 
 DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'markups_delete' AND tablename = 'bim_markups') THEN
     CREATE POLICY markups_delete ON bim_markups FOR DELETE
-      USING (created_by = auth.uid() OR project_id IN (
+      USING (created_by = (select auth.uid()) OR project_id IN (
         SELECT project_id FROM project_members
-        WHERE user_id = auth.uid() AND role IN ('owner', 'admin', 'project_manager')
+        WHERE user_id = (select auth.uid()) AND role IN ('owner', 'admin', 'project_manager')
       ));
   END IF;
 END $$;
 
 -- Clash reports: project members can read, managers can write
 CREATE POLICY clash_select ON bim_clash_reports FOR SELECT
-  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()));
+  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = (select auth.uid())));
 
 CREATE POLICY clash_insert ON bim_clash_reports FOR INSERT
-  WITH CHECK (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()));
+  WITH CHECK (project_id IN (SELECT project_id FROM project_members WHERE user_id = (select auth.uid())));
 
 CREATE POLICY clash_update ON bim_clash_reports FOR UPDATE
-  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()));
+  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = (select auth.uid())));
 
 CREATE POLICY clash_delete ON bim_clash_reports FOR DELETE
   USING (project_id IN (
     SELECT project_id FROM project_members
-    WHERE user_id = auth.uid() AND role IN ('owner', 'admin', 'project_manager')
+    WHERE user_id = (select auth.uid()) AND role IN ('owner', 'admin', 'project_manager')
   ));

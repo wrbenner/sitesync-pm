@@ -23,7 +23,7 @@ GRANT EXECUTE ON FUNCTION get_my_org_ids() TO anon;
 DROP POLICY IF EXISTS org_members_select ON organization_members;
 CREATE POLICY org_members_select ON organization_members FOR SELECT
   USING (
-    user_id = auth.uid()
+    user_id = (select auth.uid())
     OR organization_id IN (SELECT get_my_org_ids())
   );
 
@@ -37,7 +37,7 @@ CREATE POLICY organizations_update ON organizations FOR UPDATE
   USING (
     id IN (
       SELECT organization_id FROM organization_members
-      WHERE user_id = auth.uid() AND role IN ('owner', 'admin')
+      WHERE user_id = (select auth.uid()) AND role IN ('owner', 'admin')
       -- Safe because this query is inside SECURITY DEFINER context via function
     )
   );

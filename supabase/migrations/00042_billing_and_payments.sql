@@ -66,9 +66,9 @@ CREATE INDEX idx_subscriptions_stripe ON subscriptions(stripe_customer_id);
 
 ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
 CREATE POLICY subscriptions_select ON subscriptions FOR SELECT
-  USING (organization_id IN (SELECT organization_id FROM organization_members WHERE user_id = auth.uid()));
+  USING (organization_id IN (SELECT organization_id FROM organization_members WHERE user_id = (select auth.uid())));
 CREATE POLICY subscriptions_update ON subscriptions FOR UPDATE
-  USING (organization_id IN (SELECT organization_id FROM organization_members WHERE user_id = auth.uid() AND role IN ('owner', 'admin')));
+  USING (organization_id IN (SELECT organization_id FROM organization_members WHERE user_id = (select auth.uid()) AND role IN ('owner', 'admin')));
 
 -- ── Usage Events ────────────────────────────────────────
 
@@ -98,9 +98,9 @@ CREATE INDEX idx_usage_events_period ON usage_events(organization_id, event_type
 
 ALTER TABLE usage_events ENABLE ROW LEVEL SECURITY;
 CREATE POLICY usage_events_select ON usage_events FOR SELECT
-  USING (organization_id IN (SELECT organization_id FROM organization_members WHERE user_id = auth.uid()));
+  USING (organization_id IN (SELECT organization_id FROM organization_members WHERE user_id = (select auth.uid())));
 CREATE POLICY usage_events_insert ON usage_events FOR INSERT
-  WITH CHECK (organization_id IN (SELECT organization_id FROM organization_members WHERE user_id = auth.uid()));
+  WITH CHECK (organization_id IN (SELECT organization_id FROM organization_members WHERE user_id = (select auth.uid())));
 
 -- Usage aggregation view (for billing dashboard)
 CREATE OR REPLACE VIEW usage_summary AS
@@ -146,9 +146,9 @@ CREATE INDEX idx_pay_tx_app ON payment_transactions(application_id);
 
 ALTER TABLE payment_transactions ENABLE ROW LEVEL SECURITY;
 CREATE POLICY pay_tx_select ON payment_transactions FOR SELECT
-  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()));
+  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = (select auth.uid())));
 CREATE POLICY pay_tx_insert ON payment_transactions FOR INSERT
-  WITH CHECK (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid() AND role IN ('owner', 'admin', 'project_manager')));
+  WITH CHECK (project_id IN (SELECT project_id FROM project_members WHERE user_id = (select auth.uid()) AND role IN ('owner', 'admin', 'project_manager')));
 
 -- ── Stripe Connected Accounts (Subcontractor Onboarding) ─
 
