@@ -85,6 +85,8 @@ const MetricCard: React.FC<MetricCardProps> = ({ icon, label, value, sub, trend,
     onClick={onClick}
     onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } } : undefined}
     aria-label={onClick ? label : undefined}
+    whileHover={{ y: -2, boxShadow: shadows.cardHover, transition: { duration: duration.normal / 1000, ease: easingArray.standard } }}
+    whileTap={onClick ? { scale: 0.99, transition: { duration: duration.fast / 1000 } } : undefined}
     style={{
       flex: '1 1 0',
       minWidth: 180,
@@ -94,25 +96,22 @@ const MetricCard: React.FC<MetricCardProps> = ({ icon, label, value, sub, trend,
       boxShadow: shadows.card,
       border: `1px solid ${colors.borderSubtle}`,
       cursor: onClick ? 'pointer' : 'default',
-      transition: `transform ${duration.normal}ms ${easing.standard}, box-shadow ${duration.normal}ms ${easing.standard}`,
-    }}
-    onMouseEnter={(e) => {
-      if (onClick) {
-        const el = e.currentTarget as HTMLDivElement;
-        el.style.transform = 'translateY(-2px)';
-        el.style.boxShadow = shadows.cardHover;
-      }
-    }}
-    onMouseLeave={(e) => {
-      if (onClick) {
-        const el = e.currentTarget as HTMLDivElement;
-        el.style.transform = 'translateY(0)';
-        el.style.boxShadow = shadows.card;
-      }
     }}
   >
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['3'] }}>
-      <span style={{ color: colors.textTertiary }}>{icon}</span>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['4'] }}>
+      <div style={{
+        width: 34,
+        height: 34,
+        borderRadius: borderRadius.md,
+        backgroundColor: colors.surfaceInset,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: color || colors.primaryOrange,
+        flexShrink: 0,
+      }}>
+        {icon}
+      </div>
       {onClick && <ArrowRight size={14} color={colors.textTertiary} />}
     </div>
     <p
@@ -131,6 +130,7 @@ const MetricCard: React.FC<MetricCardProps> = ({ icon, label, value, sub, trend,
     <p
       style={{
         fontSize: typography.fontSize.sm,
+        fontWeight: typography.fontWeight.medium,
         color: colors.textSecondary,
         margin: 0,
         marginTop: spacing['2'],
@@ -146,9 +146,9 @@ const MetricCard: React.FC<MetricCardProps> = ({ icon, label, value, sub, trend,
     {trend !== undefined && trendLabel && (
       <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], marginTop: spacing['2'] }}>
         {trend >= 0 ? (
-          <TrendingUp size={12} color={colors.statusActive} />
+          <TrendingUp size={11} color={colors.statusActive} />
         ) : (
-          <TrendingDown size={12} color={colors.statusCritical} />
+          <TrendingDown size={11} color={colors.statusCritical} />
         )}
         <span
           style={{
@@ -406,13 +406,10 @@ const WelcomeOnboarding: React.FC<{ onProjectCreated: () => void }> = ({ onProje
 
 const DashboardPage: React.FC = () => {
   const projectId = useProjectId();
-  const _navigate = useNavigate();
-  const _reducedMotion = useReducedMotion();
   const setActiveProject = useProjectContext((s) => s.setActiveProject);
 
   // Fetch all projects to detect "no projects" state
   const { data: allProjects, isPending: projectsLoading } = useProjects();
-  const [_projectCreated, setProjectCreated] = useState(0);
 
   // Auto-select first project if none selected
   useEffect(() => {
@@ -424,7 +421,7 @@ const DashboardPage: React.FC = () => {
   // Show onboarding if no projects exist
   if (projectsLoading) return <DashboardSkeleton />;
   if (!allProjects || allProjects.length === 0) {
-    return <WelcomeOnboarding onProjectCreated={() => setProjectCreated((c) => c + 1)} />;
+    return <WelcomeOnboarding onProjectCreated={() => {}} />;
   }
 
   return <DashboardInner />;
@@ -489,7 +486,10 @@ const InsightRow: React.FC<{ insight: AIInsight; onClick?: () => void }> = ({ in
   const sev = SEVERITY_COLORS[insight.severity] || SEVERITY_COLORS.info;
   return (
     <div
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
       onClick={onClick}
+      onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } } : undefined}
       style={{
         display: 'flex',
         alignItems: 'flex-start',
@@ -756,7 +756,7 @@ const DashboardInner: React.FC = () => {
   const { data: project, isError: projectError, error: projectErrorObj } = useProject(projectId);
   const { data: insightsData } = useAiInsightsMeta(projectId);
   // Single batched query against the project_metrics materialized view.
-  const { data: matViewMetrics, isPending: _metricsLoading, isError: _metricsError } = useProjectMetrics(projectId);
+  const { data: matViewMetrics } = useProjectMetrics(projectId);
   const { data: payApps } = usePayApplications(projectId);
   const { data: lienWaivers } = useLienWaivers(projectId);
 
@@ -839,6 +839,9 @@ const DashboardInner: React.FC = () => {
     return [...aiInsights, ...weatherConflictInsights];
   }, [insightsData?.insights, weatherConflictInsights]);
 
+  // Stable "now" timestamp — captured once at mount so useMemos stay pure
+  const [now] = useState(() => Date.now());
+
   // Timeout: never show skeleton for more than 5 seconds
   const [skeletonTimedOut, setSkeletonTimedOut] = useState(false);
   useEffect(() => {
@@ -918,11 +921,12 @@ const DashboardInner: React.FC = () => {
     (metrics.punch_total ?? 0) === 0 &&
     (metrics.budget_total ?? 0) === 0);
 
+  const targetCompletion = project?.target_completion ?? null;
   const daysRemaining = useMemo(() =>
-    project?.target_completion
-      ? Math.max(0, Math.ceil((new Date(project.target_completion).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    targetCompletion
+      ? Math.max(0, Math.ceil((new Date(targetCompletion).getTime() - now) / (1000 * 60 * 60 * 24)))
       : 0,
-    [project?.target_completion]
+    [targetCompletion, now]
   );
 
   const missingWaivers = useMemo(() => {
@@ -942,17 +946,18 @@ const DashboardInner: React.FC = () => {
     })
   }, [payApps, lienWaivers]);
 
+  const startDateStr = project?.start_date ?? null;
   const projectStartDate = useMemo(() =>
-    project?.start_date
-      ? new Date(project.start_date)
-      : new Date(Date.now() - 247 * 24 * 60 * 60 * 1000),
-    [project?.start_date]
+    startDateStr
+      ? new Date(startDateStr)
+      : new Date(now - 247 * 24 * 60 * 60 * 1000),
+    [startDateStr, now]
   );
 
   const dayNumber = useMemo(() => {
-    const elapsed = Date.now() - projectStartDate.getTime();
+    const elapsed = now - projectStartDate.getTime();
     return Math.max(1, Math.ceil(elapsed / (1000 * 60 * 60 * 24)));
-  }, [projectStartDate]);
+  }, [now, projectStartDate]);
 
   const totalDays = useMemo(() => dayNumber + daysRemaining, [dayNumber, daysRemaining]);
 
@@ -1050,17 +1055,35 @@ const DashboardInner: React.FC = () => {
           boxShadow: shadows.card,
           marginBottom: spacing['5'],
           border: `1px solid ${colors.borderSubtle}`,
+          borderLeft: `3px solid ${colors.primaryOrange}`,
+          overflow: 'hidden',
         }}
       >
-        <div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p
+            style={{
+              fontSize: typography.fontSize.label,
+              color: colors.primaryOrange,
+              margin: 0,
+              textTransform: 'uppercase',
+              letterSpacing: typography.letterSpacing.wider,
+              fontWeight: typography.fontWeight.semibold,
+              marginBottom: spacing['1'],
+            }}
+          >
+            Active Project
+          </p>
           <h1
             style={{
-              fontSize: typography.fontSize.heading,
-              fontWeight: typography.fontWeight.semibold,
+              fontSize: typography.fontSize.display,
+              fontWeight: typography.fontWeight.bold,
               color: colors.textPrimary,
               margin: 0,
-              letterSpacing: typography.letterSpacing.tight,
+              letterSpacing: typography.letterSpacing.tighter,
               lineHeight: typography.lineHeight.tight,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
             }}
           >
             {project?.name ?? 'Project Dashboard'}
@@ -1068,7 +1091,7 @@ const DashboardInner: React.FC = () => {
           <p
             style={{
               fontSize: typography.fontSize.sm,
-              color: colors.textSecondary,
+              color: colors.textTertiary,
               margin: 0,
               marginTop: spacing['1'],
             }}
@@ -1077,9 +1100,8 @@ const DashboardInner: React.FC = () => {
           </p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['6'] }}>
-          <ProgressRing value={animProgress} size={80} />
-          <div style={{ textAlign: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['6'], flexShrink: 0, marginLeft: spacing['6'] }}>
+          <div style={{ textAlign: 'right' }}>
             <p
               style={{
                 fontSize: typography.fontSize.label,
@@ -1090,24 +1112,26 @@ const DashboardInner: React.FC = () => {
                 fontWeight: typography.fontWeight.medium,
               }}
             >
-              Project Timeline
+              Timeline
             </p>
             <p
               style={{
-                fontSize: typography.fontSize['4xl'],
-                fontWeight: typography.fontWeight.semibold,
+                fontSize: typography.fontSize.display,
+                fontWeight: typography.fontWeight.bold,
                 color: colors.textPrimary,
                 margin: 0,
-                marginTop: spacing['1'],
+                marginTop: spacing['0.5'],
                 fontVariantNumeric: 'tabular-nums',
+                letterSpacing: typography.letterSpacing.tighter,
               }}
             >
               Day {dayNumber}
             </p>
-            <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0, marginTop: spacing['1'] }}>
-              of {totalDays} · {daysRemaining} remaining
+            <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0, marginTop: spacing['0.5'] }}>
+              of {totalDays} · {daysRemaining}d remaining
             </p>
           </div>
+          <ProgressRing value={animProgress} size={80} />
         </div>
       </motion.div>
 
@@ -1278,6 +1302,8 @@ const DashboardInner: React.FC = () => {
         onClick={() => navigate('/reports/owner')}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate('/reports/owner'); } }}
         aria-label="Generate Owner Report"
+        whileHover={{ y: -1, boxShadow: shadows.cardHover, transition: { duration: duration.normal / 1000, ease: easingArray.standard } }}
+        whileTap={{ scale: 0.995, transition: { duration: duration.fast / 1000 } }}
         style={{
           display: 'flex', alignItems: 'center', gap: spacing['4'],
           padding: spacing['4'],
@@ -1288,17 +1314,6 @@ const DashboardInner: React.FC = () => {
           marginBottom: spacing['5'],
           boxShadow: shadows.card,
           cursor: 'pointer',
-          transition: `transform 200ms ease, box-shadow 200ms ease`,
-        }}
-        onMouseEnter={(e) => {
-          const el = e.currentTarget as HTMLDivElement;
-          el.style.transform = 'translateY(-1px)';
-          el.style.boxShadow = shadows.cardHover;
-        }}
-        onMouseLeave={(e) => {
-          const el = e.currentTarget as HTMLDivElement;
-          el.style.transform = 'translateY(0)';
-          el.style.boxShadow = shadows.card;
         }}
       >
         <div style={{
@@ -1388,9 +1403,24 @@ const DashboardInner: React.FC = () => {
             boxShadow: shadows.card,
           }}
         >
-          <p style={{ margin: 0, marginBottom: spacing['4'], fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
-            Get started with your project
-          </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['4'] }}>
+            <div style={{
+              width: 28,
+              height: 28,
+              borderRadius: borderRadius.base,
+              backgroundColor: colors.orangeSubtle,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: colors.primaryOrange,
+              flexShrink: 0,
+            }}>
+              <Sparkles size={14} />
+            </div>
+            <p style={{ margin: 0, fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+              Get started with your project
+            </p>
+          </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'] }}>
             {[
               { label: 'Add schedule phases', path: '/schedule', icon: <Calendar size={14} /> },
@@ -1401,10 +1431,14 @@ const DashboardInner: React.FC = () => {
             ].map((item) => (
               <div
                 key={item.path}
+                role="button"
+                tabIndex={0}
                 onClick={() => navigate(item.path)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(item.path); } }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: spacing['3'],
                   padding: `${spacing['3']} ${spacing['4']}`,
+                  minHeight: spacing['12'],
                   borderRadius: borderRadius.base,
                   cursor: 'pointer',
                   transition: `background-color ${duration.fast}ms ${easing.standard}`,
@@ -1412,7 +1446,7 @@ const DashboardInner: React.FC = () => {
                 onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = colors.surfaceInset; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = 'transparent'; }}
               >
-                <Circle size={16} color={colors.borderStrong} />
+                <Circle size={16} color={colors.borderDefault} />
                 <span style={{ color: colors.textTertiary, display: 'flex' }}>{item.icon}</span>
                 <span style={{ flex: 1, fontSize: typography.fontSize.sm, color: colors.textSecondary }}>
                   {item.label}
