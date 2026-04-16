@@ -1,0 +1,29 @@
+name: "Organism — Cycle"
+on:
+  schedule:
+    - cron: "0 0,6,12,18 * * *" # Every 6 hours
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  cycle:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger organism cycle
+        run: |
+          RESPONSE=$(curl -s -w "\n%{http_code}" \
+            -X POST "${SUPABASE_URL}/functions/v1/organism-cycle" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json" \
+            -d "{\"trigger\": \"scheduled\", \"github_token\": \"${GITHUB_TOKEN}\"}")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          echo "$BODY" | head -50
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "::error::Organism cycle failed (HTTP $HTTP_CODE)"
+            exit 1
+          fi
+        env:
+          SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
