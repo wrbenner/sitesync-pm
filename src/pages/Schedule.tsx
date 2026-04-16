@@ -14,6 +14,7 @@ import { useCopilotStore } from '../stores/copilotStore';
 import { PredictiveAlertBanner } from '../components/ai/PredictiveAlert';
 import { getPredictiveAlertsForPage } from '../data/aiAnnotations';
 import { GanttChart } from '../components/schedule/GanttChart';
+import { CoordinationEngine } from '../components/schedule/CoordinationEngine';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { PermissionGate } from '../components/auth/PermissionGate';
 import { MobileScheduleView } from '../components/schedule/MobileScheduleView';
@@ -1503,6 +1504,9 @@ export const Schedule: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* ── Coordination Engine — Trade Conflict Detection ──── */}
+      <CoordinationEngine />
 
       {/* Timeline: Gantt on desktop/tablet, card list on mobile */}
       <div style={{ marginTop: spacing['5'] }}>
