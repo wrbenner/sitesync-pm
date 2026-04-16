@@ -28,7 +28,7 @@
 
 BEGIN;
 
--- 1. Widen CHECK to accept canonical event names
+-- 1. Widen CHECK to accept canonical event names (idempotent)
 ALTER TABLE audit_log DROP CONSTRAINT IF EXISTS audit_log_action_check;
 ALTER TABLE audit_log ADD CONSTRAINT audit_log_action_check
   CHECK (action IN (
