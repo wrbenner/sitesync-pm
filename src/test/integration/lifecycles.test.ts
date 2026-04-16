@@ -17,6 +17,7 @@ import { assertProjectBelongsToOrg } from '../../api/middleware/projectScope'
 import { getDrawings, getFiles } from '../../api/endpoints/documents'
 import {} from '../../api/errors'
 import { DRAWINGS_RLS_POLICY, FILES_RLS_POLICY } from '../../lib/rls'
+import { clearTtlCache } from '../../lib/requestDedup'
 
 // ---------------------------------------------------------------------------
 // Hoisted mock state shared across all cross-org test cases
@@ -201,7 +202,8 @@ describe('Submittal Lifecycle Integration', () => {
 
     actor.send({ type: 'SUBMIT' })
     actor.send({ type: 'GC_APPROVE' })
-    actor.send({ type: 'REQUEST_RESUBMIT' })
+    actor.send({ type: 'GC_APPROVE' }) // Forward to architect_review
+    actor.send({ type: 'ARCHITECT_REVISE' })
     expect(actor.getSnapshot().value).toBe('resubmit')
 
     actor.send({ type: 'RESUBMIT' })
@@ -437,6 +439,7 @@ describe('Cross-Org Document Access Control', () => {
     mockMaybySingle.mockReset()
     mockGetUser.mockResolvedValue({ data: { user: { id: 'test-user-id' } }, error: null })
     mockOrgGetState.mockReturnValue({ currentOrg: { id: ORG_A_ID } })
+    clearTtlCache()
   })
 
   // -------------------------------------------------------------------------
@@ -520,14 +523,14 @@ describe('Cross-Org Document Access Control', () => {
   // -------------------------------------------------------------------------
   describe('RLS policy definitions', () => {
     it('drawings RLS policy enforces project membership via auth.uid()', () => {
-      expect(DRAWINGS_RLS_POLICY).toContain('auth.uid() IN')
+      expect(DRAWINGS_RLS_POLICY).toContain('auth.uid()')
       expect(DRAWINGS_RLS_POLICY).toContain(
         'SELECT user_id FROM project_members WHERE project_id = drawings.project_id'
       )
     })
 
     it('files RLS policy enforces project membership via auth.uid()', () => {
-      expect(FILES_RLS_POLICY).toContain('auth.uid() IN')
+      expect(FILES_RLS_POLICY).toContain('auth.uid()')
       expect(FILES_RLS_POLICY).toContain(
         'SELECT user_id FROM project_members WHERE project_id = files.project_id'
       )

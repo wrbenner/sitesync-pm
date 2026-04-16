@@ -29,11 +29,18 @@ import { getAiInsights } from '../../api/endpoints/ai'
 const projectId = 'proj-123'
 
 function mockSupabaseChain(result: { data: unknown[] | null; error: unknown | null }) {
-  const chain = {
-    select: vi.fn().mockReturnThis(),
-    eq: vi.fn().mockReturnThis(),
-    order: vi.fn().mockResolvedValue(result),
-  }
+  const chain: Record<string, unknown> = {}
+  chain.select = vi.fn().mockReturnValue(chain)
+  chain.eq = vi.fn().mockReturnValue(chain)
+  chain.neq = vi.fn().mockReturnValue(chain)
+  chain.in = vi.fn().mockReturnValue(chain)
+  chain.lt = vi.fn().mockReturnValue(chain)
+  chain.lte = vi.fn().mockReturnValue(chain)
+  chain.gte = vi.fn().mockReturnValue(chain)
+  chain.limit = vi.fn().mockReturnValue(chain)
+  chain.order = vi.fn().mockReturnValue(chain)
+  chain.then = (resolve: (r: unknown) => unknown, reject?: (e: unknown) => unknown) =>
+    Promise.resolve(result).then(resolve, reject)
   ;(supabase.from as ReturnType<typeof vi.fn>).mockReturnValue(chain)
   return chain
 }

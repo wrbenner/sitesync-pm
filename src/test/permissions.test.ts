@@ -13,6 +13,12 @@ vi.mock('../lib/supabase', () => {
     },
   }
 })
+
+vi.mock('../stores/organizationStore', () => ({
+  useOrganizationStore: {
+    getState: vi.fn(() => ({ currentOrg: { id: '00000000-0000-4000-9000-000000000001' } })),
+  },
+}))
 import {
   PERMISSION_MATRIX,
   ROLE_LEVELS,
@@ -505,6 +511,8 @@ describe('Project Scope Access Control', () => {
 
   beforeEach(async () => {
     const { supabase } = await import('../lib/supabase')
+    const { clearTtlCache } = await import('../lib/requestDedup')
+    clearTtlCache()
     vi.mocked(supabase.auth.getUser).mockResolvedValue({
       data: { user: { id: AUTHED_USER_ID } as unknown },
       error: null,
@@ -535,7 +543,12 @@ describe('Project Scope Access Control', () => {
     const mockBuilder = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
-      maybeSingle: vi.fn().mockResolvedValue({ data: { id: 'member-row-id' }, error: null }),
+      maybeSingle: vi.fn()
+        .mockResolvedValueOnce({ data: { id: 'member-row-id' }, error: null })
+        .mockResolvedValueOnce({
+          data: { organization_id: '00000000-0000-4000-9000-000000000001' },
+          error: null,
+        }),
     }
     vi.mocked(supabase.from).mockReturnValue(mockBuilder as unknown)
 
