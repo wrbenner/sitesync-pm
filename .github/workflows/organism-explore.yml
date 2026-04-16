@@ -1,0 +1,160 @@
+name: "Organism — Explore"
+
+on:
+  schedule:
+    - cron: "0 2 * * 0"  # Weekly: Sunday at 2am UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  explore:
+    name: Explore external landscape
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Competitor scan via Perplexity
+        id: competitors
+        run: |
+          mkdir -p .agent
+
+          RESPONSE=$(curl -s -w "\n%{http_code}" https://api.perplexity.ai/chat/completions \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $PERPLEXITY_API_KEY" \
+            -d '{
+              "model": "sonar",
+              "messages": [
+                {
+                  "role": "system",
+                  "content": "You are a construction technology analyst. Provide concise, factual summaries of recent product updates. Format as JSON with fields: competitor, features (array of {name, description, relevance_to_sitesync}). relevance_to_sitesync should be low/medium/high."
+                },
+                {
+                  "role": "user",
+                  "content": "What new features did Procore, Autodesk Build, and Fieldwire ship in the last 7 days? Focus on construction project management, RFI workflows, certified payroll, subcontractor management, daily logs, and inspection features. Return as a JSON array."
+                }
+              ],
+              "max_tokens": 2048
+            }')
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+
+          if [ "$HTTP_CODE" = "200" ]; then
+            COMPETITOR_DATA=$(echo "$BODY" | jq -r '.choices[0].message.content')
+            echo "$COMPETITOR_DATA" > /tmp/competitor-scan.json
+            echo "success=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Perplexity competitor scan failed (HTTP $HTTP_CODE)"
+            echo '{"error": "API call failed", "http_code": "'"$HTTP_CODE"'"}' > /tmp/competitor-scan.json
+            echo "success=false" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
+
+      - name: Regulatory scan via Perplexity
+        id: regulatory
+        run: |
+          RESPONSE=$(curl -s -w "\n%{http_code}" https://api.perplexity.ai/chat/completions \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $PERPLEXITY_API_KEY" \
+            -d '{
+              "model": "sonar",
+              "messages": [
+                {
+                  "role": "system",
+                  "content": "You are a US construction regulatory analyst. Provide concise, factual summaries of recent regulatory changes. Format as JSON with fields: regulation, summary, effective_date, impact_on_construction_pm (low/medium/high), action_required (string)."
+                },
+                {
+                  "role": "user",
+                  "content": "What construction regulatory changes, building code updates, Davis-Bacon Act changes, prevailing wage updates, or OSHA rule changes were announced in the last 7 days in the United States? Include any state-level significant changes. Return as a JSON array."
+                }
+              ],
+              "max_tokens": 2048
+            }')
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+
+          if [ "$HTTP_CODE" = "200" ]; then
+            REGULATORY_DATA=$(echo "$BODY" | jq -r '.choices[0].message.content')
+            echo "$REGULATORY_DATA" > /tmp/regulatory-scan.json
+            echo "success=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Perplexity regulatory scan failed (HTTP $HTTP_CODE)"
+            echo '{"error": "API call failed", "http_code": "'"$HTTP_CODE"'"}' > /tmp/regulatory-scan.json
+            echo "success=false" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
+
+      - name: Technology scan via Gemini
+        id: tech
+        run: |
+          RESPONSE=$(curl -s -w "\n%{http_code}" \
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=$GEMINI_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "contents": [{
+                "parts": [{
+                  "text": "What are the most notable new open-source libraries, React/Next.js updates, Supabase features, or TypeScript improvements released in the last 7 days that would be relevant to a construction project management SaaS built with Next.js, Supabase, and TypeScript? Focus on: form libraries, real-time features, PDF generation, map/GIS tools, and workflow engines. Return as a JSON array with fields: technology, description, relevance (low/medium/high), adoption_effort (low/medium/high)."
+                }]
+              }],
+              "generationConfig": {
+                "maxOutputTokens": 2048,
+                "responseMimeType": "text/plain"
+              }
+            }')
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+
+          if [ "$HTTP_CODE" = "200" ]; then
+            TECH_DATA=$(echo "$BODY" | jq -r '.candidates[0].content.parts[0].text // "No content"')
+            echo "$TECH_DATA" > /tmp/tech-scan.json
+            echo "success=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Gemini tech scan failed (HTTP $HTTP_CODE)"
+            echo '{"error": "API call failed", "http_code": "'"$HTTP_CODE"'"}' > /tmp/tech-scan.json
+            echo "success=false" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+      - name: Compile exploration report
+        run: |
+          DATE_SLUG=$(date -u +%Y%m%d)
+          TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+          COMPETITOR=$(cat /tmp/competitor-scan.json 2>/dev/null || echo '{}')
+          REGULATORY=$(cat /tmp/regulatory-scan.json 2>/dev/null || echo '{}')
+          TECH=$(cat /tmp/tech-scan.json 2>/dev/null || echo '{}')
+
+          jq -n \
+            --arg ts "$TIMESTAMP" \
+            --arg competitor "$COMPETITOR" \
+            --arg regulatory "$REGULATORY" \
+            --arg tech "$TECH" \
+            '{
+              timestamp: $ts,
+              sources: {
+                competitor: {provider: "perplexity/sonar", data: $competitor},
+                regulatory: {provider: "perplexity/sonar", data: $regulatory},
+                technology: {provider: "gemini-2.0-flash", data: $tech}
+              }
+            }' > ".agent/exploration-${DATE_SLUG}.json"
+
+          # Also update a latest pointer
+          cp ".agent/exploration-${DATE_SLUG}.json" .agent/latest-exploration.json
+
+      - name: Commit exploration results
+        run: |
+          git config user.name "organism[bot]"
+          git config user.email "organism[bot]@users.noreply.github.com"
+          git add .agent/
+          git diff --cached --quiet && echo "No new exploration data" && exit 0
+          git commit -m "explore: weekly landscape scan $(date -u +%Y-%m-%d)"
+          git push
