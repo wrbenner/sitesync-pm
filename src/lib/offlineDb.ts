@@ -465,7 +465,11 @@ export async function processSyncQueue(
                 )
                 if (canAutoMerge) {
                   // Non-conflicting changes on both sides: apply merged result silently
-                  const { id: mergedId, updated_at: _ts, ...mergedUpdates } = merged as Record<string, unknown>
+                  const mergedRecord = merged as Record<string, unknown>
+                  const mergedId = mergedRecord.id
+                  const mergedUpdates = Object.fromEntries(
+                    Object.entries(mergedRecord).filter(([k]) => k !== 'id' && k !== 'updated_at')
+                  )
                   const { error } = await from.update(mergedUpdates).eq('id', mergedId as string)
                   if (error) throw error
                   // Keep local cache in sync with the merged record
@@ -514,7 +518,7 @@ export async function processSyncQueue(
 
       await offlineDb.pendingMutations.delete(m.id!)
       synced++
-    } catch (_err) {
+    } catch {
       // BUG #1 FIX: Retry with exponential backoff, not immediate failure
       const retryCount = (m.retryCount || 0) + 1
       if (retryCount >= MAX_RETRY_COUNT) {
@@ -609,7 +613,7 @@ export async function processUploadQueue(): Promise<{ uploaded: number; failed: 
       if (error) throw error
       await offlineDb.pendingUploads.delete(u.id!)
       uploaded++
-    } catch (_err) {
+    } catch (err) {
       const { permanent, statusCode } = classifyUploadError(err)
       const retryCount = (u.retryCount || 0) + 1
 
@@ -697,7 +701,7 @@ export async function cacheProjectData(
       await offlineDb.projects.put(data)
       totalCached++
     }
-  } catch (_err) {
+  } catch (err) {
     errors.push(`projects: ${(err as Error).message}`)
     tablesFailed++
   }
@@ -728,7 +732,7 @@ export async function cacheProjectData(
         if (cacheTable) await cacheTable.bulkPut(data)
         totalCached += data.length
       }
-    } catch (_err) {
+    } catch (err) {
       errors.push(`${supaTable}: ${(err as Error).message}`)
       tablesFailed++
     }

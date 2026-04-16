@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // Must be hoisted before any imports that pull in supabase
 vi.mock('../../lib/supabase', () => {
-  // const mockQueryBuilder = {
+  const mockQueryBuilder = {
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
     maybeSingle: vi.fn(),
@@ -21,16 +21,14 @@ vi.mock('../../api/middleware/projectScope', () => ({
 }))
 
 vi.mock('../../lib/requestDedup', () => ({
-  dedup: vi.fn((_key: string, fn: () => unknown) => fn()),
-  queryKey: vi.fn((_: string, __: unknown) => 'test-key'),
+  dedup: vi.fn((key: string, fn: () => unknown) => { void key; return fn() }),
+  queryKey: vi.fn((a: string, b: unknown) => { void a; void b; return 'test-key' }),
 }))
 
 const PROJECT_A = '11111111-1111-4111-8111-111111111111'
 const PROJECT_B = '22222222-2222-4222-8222-222222222222'
 
 describe('createScopedClient', () => {
-  let mockQueryBuilder: ReturnType<typeof getMockBuilder>
-
   function getMockBuilder() {
     return {
       select: vi.fn().mockReturnThis(),

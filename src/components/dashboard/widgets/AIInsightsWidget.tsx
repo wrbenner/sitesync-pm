@@ -1,4 +1,4 @@
-import React, { useState, useMemo} from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Sparkles, ChevronRight, AlertTriangle, TrendingDown, Shield, CheckCircle, RefreshCw, Clock } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { colors, spacing, typography, borderRadius, transitions } from '../../../styles/theme';
@@ -42,11 +42,16 @@ export const AIInsightsWidget: React.FC = React.memo(() => {
   const mostRecentCreatedAt = rawInsights.length > 0
     ? rawInsights.reduce((latest, i) => (i.createdAt > latest ? i.createdAt : latest), rawInsights[0].createdAt)
     : null;
-  const isStale = useMemo(() =>
-    mostRecentCreatedAt
-      ? Date.now() - new Date(mostRecentCreatedAt).getTime() > STALENESS_THRESHOLD_MS
-      : false,
-  [mostRecentCreatedAt]);
+  const nowMsRef = useRef(0);
+  const [isStale, setIsStale] = useState(false);
+  useEffect(() => {
+    const now = nowMsRef.current;
+    if (mostRecentCreatedAt) {
+      setIsStale(now - new Date(mostRecentCreatedAt).getTime() > STALENESS_THRESHOLD_MS);
+    } else {
+      setIsStale(false);
+    }
+  }, [mostRecentCreatedAt]);
 
   const relativeTime = useCallback((iso: string): string => {
     const ms = Date.now() - new Date(iso).getTime();

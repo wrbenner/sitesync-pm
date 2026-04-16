@@ -491,7 +491,7 @@ async function simulateMultiAgentResponse(
 
   // Generate responses from each agent
   for (const domain of targetAgents) {
-    const response = generateAgentResponse(domain, lower, pageContext)
+    const response = generateAgentResponse(domain, lower)
     store.addAgentMessage(domain, response.content, {
       toolCalls: response.toolCalls,
       suggestedActions: response.suggestedActions,
@@ -507,13 +507,13 @@ async function simulateMultiAgentResponse(
   // If multiple agents responded, add coordinator synthesis
   if (targetAgents.length > 1) {
     await new Promise((r) => setTimeout(r, 300))
-    store.addCoordinatorMessage(generateSynthesis(targetAgents, lower))
+    store.addCoordinatorMessage(generateSynthesis(targetAgents))
   }
 
   // Collect any suggested actions into a batch
   const allActions: AgentSuggestedAction[] = []
   for (const domain of targetAgents) {
-    const agentActions = generateAgentResponse(domain, lower, pageContext).suggestedActions
+    const agentActions = generateAgentResponse(domain, lower).suggestedActions
     if (agentActions) {
       allActions.push(...agentActions)
     }
@@ -565,7 +565,6 @@ function classifyIntent(lower: string): AgentDomain[] {
 function generateAgentResponse(
   domain: AgentDomain,
   query: string,
-  _pageContext?: string,
 ): {
   content: string
   toolCalls?: AgentConversationMessage['toolCalls']
@@ -772,7 +771,7 @@ function generateAgentResponse(
   return responses[domain]()
 }
 
-function generateSynthesis(agents: AgentDomain[], _query: string): string {
+function generateSynthesis(agents: AgentDomain[]): string {
   if (agents.length === 3 && agents.includes('schedule') && agents.includes('cost') && agents.includes('safety')) {
     return (
       '**Summary across all domains:**\n\n' +

@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 import { aiService } from '../lib/aiService'
 import { useProjectMetrics } from './useProjectMetrics'
 import { useBudgetData } from './useBudgetData'
-import { useRFIs, useSubmittals, useSchedulePhases } from './queries/index'
+import { useSubmittals, useSchedulePhases } from './queries/index'
 import type { AIMessage, AIContext, ProjectAIContext } from '../types/ai'
 
 export interface ToolResult {

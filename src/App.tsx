@@ -69,7 +69,7 @@ const ExportCenter = lazy(() => import('./components/export/ExportCenter').then(
 // Lazy loaded pages
 const Dashboard = lazyWithRetry(() => import('./pages/Dashboard').then((m) => ({ default: m.Dashboard })));
 const Tasks = lazy(() => import('./pages/Tasks').then((m) => ({ default: m.Tasks })));
-const Drawings = lazy(() => import('./pages/Drawings').then((m) => ({ default: m.Drawings })));
+const Drawings = lazy(() => import('./pages/drawings').then((m) => ({ default: m.Drawings })));
 const RFIs = lazyWithRetry(() => import('./pages/RFIs').then((m) => ({ default: m.RFIs })));
 const Submittals = lazy(() => import('./pages/Submittals').then((m) => ({ default: m.Submittals })));
 const Schedule = lazyWithRetry(() => import('./pages/Schedule').then((m) => ({ default: m.Schedule })));
@@ -81,13 +81,13 @@ const PunchList = lazyWithRetry(() => import('./pages/PunchList').then((m) => ({
 const Crews = lazy(() => import('./pages/Crews').then((m) => ({ default: m.Crews })));
 const Directory = lazy(() => import('./pages/Directory').then((m) => ({ default: m.Directory })));
 const Meetings = lazy(() => import('./pages/Meetings').then((m) => ({ default: m.Meetings })));
-const Files = lazy(() => import('./pages/Files').then((m) => ({ default: m.Files })));
+const Files = lazy(() => import('./pages/files').then((m) => ({ default: m.Files })));
 const AICopilot = lazy(() => import('./pages/AICopilot').then((m) => ({ default: m.AICopilot })));
 const Lookahead = lazy(() => import('./pages/Lookahead').then((m) => ({ default: m.Lookahead })));
 const Activity = lazy(() => import('./pages/Activity').then((m) => ({ default: m.Activity })));
 const AuditTrail = lazy(() => import('./pages/AuditTrail').then((m) => ({ default: m.AuditTrail })));
 const ProjectHealth = lazy(() => import('./pages/ProjectHealth').then((m) => ({ default: m.ProjectHealth })));
-const Safety = lazy(() => import('./pages/Safety').then((m) => ({ default: m.Safety })));
+const Safety = lazy(() => import('./pages/safety').then((m) => ({ default: m.Safety })));
 const Estimating = lazy(() => import('./pages/Estimating'));
 const Procurement = lazy(() => import('./pages/Procurement'));
 const EquipmentPage = lazy(() => import('./pages/Equipment'));

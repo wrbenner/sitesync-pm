@@ -37,10 +37,6 @@ function fieldsBlock(fields: Array<{ label: string; value: string }>): SlackBloc
   }
 }
 
-function dividerBlock(): SlackBlock {
-  return { type: 'divider' }
-}
-
 function contextBlock(text: string): SlackBlock {
   return {
     type: 'context',
@@ -159,7 +155,7 @@ export const slackProvider: IntegrationProvider = {
     await updateIntegrationStatus(integrationId, 'disconnected')
   },
 
-  async sync(integrationId, _direction) {
+  async sync(integrationId) {
     // Slack is event-driven, not sync-based
     const result: SyncResult = {
       success: true,

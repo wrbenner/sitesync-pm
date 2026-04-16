@@ -80,7 +80,7 @@ export function useBenchmarkComparisons(projectType?: ProjectType, region?: stri
       const { data: benchmarks } = await bmQuery.limit(50)
 
       // Fetch your project's metrics
-      const [rfiResult, taskResult, budgetResult] = await Promise.all([
+      const [rfiResult, , budgetResult] = await Promise.all([
         supabase.from('rfis').select('created_at, answered_at, status').eq('project_id', projectId),
         supabase.from('tasks').select('planned_end, actual_end, status, percent_complete').eq('project_id', projectId),
         supabase.from('budget_items').select('original_amount, actual_amount').eq('project_id', projectId),

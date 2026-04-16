@@ -6,7 +6,7 @@ import { ErrorBoundary } from '../components/ErrorBoundary';
 import PunchListSkeleton from '../components/field/PunchListSkeleton';
 import EmptyState from '../components/ui/EmptyState';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
-import { usePunchItems, useDirectoryContacts } from '../hooks/queries';
+import { usePunchItems } from '../hooks/queries';
 import { AlertTriangle, Camera, CheckCircle, CheckSquare, MessageSquare, RefreshCw, Search, Sparkles, XCircle } from 'lucide-react';
 import { usePermissions } from '../hooks/usePermissions';
 import { useAppNavigate, getRelatedItemsForPunchItem } from '../utils/connections';

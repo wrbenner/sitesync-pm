@@ -436,10 +436,11 @@ export async function getProgressPhotos(
 
 // ── PDF Export (placeholder) ─────────────────────────────
 
-export async function exportPDF(_: OwnerReportData): Promise<Blob> {
+export async function exportPDF(report?: OwnerReportData): Promise<Blob> {
   // Placeholder: in production this would use @react-pdf/renderer
   // to generate a polished PDF from the report data.
   // For now, returns an empty blob — the UI will show "Export PDF" button
   // and call this when the PDF pipeline is wired up.
+  void report
   return new Blob(['Owner Report PDF — generation coming soon'], { type: 'application/pdf' })
 }

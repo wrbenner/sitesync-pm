@@ -1,0 +1,477 @@
+import React, { useState, useRef, useCallback } from 'react';
+import { ErrorBoundary } from '../../components/ErrorBoundary';
+import { Upload, Sparkles } from 'lucide-react';
+import { aiService } from '../../lib/aiService';
+import type { DrawingAnalysis } from '../../types/ai';
+import type { DrawingRevision } from '../../types/api';
+import { PageContainer, Btn, useToast } from '../../components/Primitives';
+import { colors, spacing } from '../../styles/theme';
+import { getDrawings, getDrawingRevisionHistory } from '../../api/endpoints/documents';
+import { useQuery } from '../../hooks/useQuery';
+import { useProjectId } from '../../hooks/useProjectId';
+import { DrawingViewer } from '../../components/drawings/DrawingViewer';
+import { PdfViewer } from '../../components/drawings/PdfViewer';
+import { PermissionGate } from '../../components/auth/PermissionGate';
+import { supabase } from '../../lib/supabase';
+import { drawingService } from '../../services/drawingService';
+import { parseAiConflicts } from './types';
+import { DrawingList } from './DrawingList';
+import { DrawingDetail } from './DrawingDetail';
+import { DrawingUpload, RevisionUpload } from './DrawingUpload';
+import { VersionCompareModal, ComparisonModal } from './DrawingVersions';
+import { AiInsightsPanel } from './AiInsightsPanel';
+
+interface DrawingItem {
+  id: number;
+  title: string;
+  setNumber: string;
+  discipline: string;
+  disciplineColor?: string;
+  revision: string;
+  date: string;
+  status?: string;
+  sheetCount?: number;
+  currentRevision?: { revision_number: number; issued_date: string | null; issued_by?: string };
+  revisions: DrawingRevision[];
+}
+
+const DrawingsPage: React.FC = () => {
+  const { addToast } = useToast();
+  const projectId = useProjectId();
+  const { data: drawings, loading, error, refetch } = useQuery(`drawings-${projectId}`, () => getDrawings(projectId!), { enabled: !!projectId });
+
+  // ── Filter & sort ──────────────────────────────────────────
+  const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set());
+  const [sortField, setSortField] = useState<string>('setNumber');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+
+  // ── Selected drawing ───────────────────────────────────────
+  const [selectedDrawing, setSelectedDrawing] = useState<DrawingItem | null>(null);
+  const [viewerDrawing, setViewerDrawing] = useState<DrawingItem | null>(null);
+  const [focusedIndex, setFocusedIndex] = useState(0);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const sortedDrawingsRef = useRef<DrawingItem[]>([]);
+
+  // ── Revision state ─────────────────────────────────────────
+  const [viewingRevisionNum, setViewingRevisionNum] = useState<number | null>(null);
+  const [showVersionCompare, setShowVersionCompare] = useState(false);
+  const [compareRevAIdx, setCompareRevAIdx] = useState(0);
+  const [compareRevBIdx, setCompareRevBIdx] = useState(1);
+  const [viewRevPdfUrl, setViewRevPdfUrl] = useState<string | null>(null);
+  const [openRevDropdownId, setOpenRevDropdownId] = useState<string | null>(null);
+  const [rowRevHistory, setRowRevHistory] = useState<Record<string, DrawingRevision[]>>({});
+  const [rowRevHistoryLoading, setRowRevHistoryLoading] = useState<string | null>(null);
+  const [selectedRevisions, setSelectedRevisions] = useState<DrawingRevision[]>([]);
+  const [comparisonMode, setComparisonMode] = useState(false);
+  const [compareOpacity, setCompareOpacity] = useState(100);
+  const [compareDrawingTitle, setCompareDrawingTitle] = useState('');
+
+  // ── AI state ───────────────────────────────────────────────
+  const [showConflicts, setShowConflicts] = useState(false);
+  const [analyzingId, setAnalyzingId] = useState<number | null>(null);
+  const [analysisResults, setAnalysisResults] = useState<Record<number, DrawingAnalysis>>({});
+  const [showAiPanel, setShowAiPanel] = useState(false);
+  const [aiPanelLoading, setAiPanelLoading] = useState(false);
+  const [aiPanelConflicts, setAiPanelConflicts] = useState<Array<{ severity: 'high' | 'medium' | 'low'; description: string; sheets: string[] }>>([]);
+  const [aiPanelError, setAiPanelError] = useState<string | null>(null);
+  const [aiPanelAnalyzed, setAiPanelAnalyzed] = useState(false);
+
+  // ── Upload state ───────────────────────────────────────────
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadDiscipline, setUploadDiscipline] = useState('Architectural');
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgressText, setUploadProgressText] = useState('');
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [pageIsDragging, setPageIsDragging] = useState(false);
+  const [showRevUploadModal, setShowRevUploadModal] = useState(false);
+  const [revUploadFile, setRevUploadFile] = useState<File | null>(null);
+  const [revUploadNum, setRevUploadNum] = useState('');
+  const [revUploadDesc, setRevUploadDesc] = useState('');
+  const [isRevUploading, setIsRevUploading] = useState(false);
+
+  // ── Revision history for detail panel ─────────────────────
+  const { data: revisionHistory } = useQuery(
+    `revision-history-${selectedDrawing?.id ?? 'none'}`,
+    () => getDrawingRevisionHistory(String(selectedDrawing!.id)),
+    { enabled: !!selectedDrawing?.id },
+  );
+
+  React.useEffect(() => {
+    setViewingRevisionNum(null);
+    setShowVersionCompare(false);
+    setCompareRevAIdx(0);
+    setCompareRevBIdx(1);
+    setViewRevPdfUrl(null);
+  }, [selectedDrawing?.id]);
+
+  const allDrawings = drawings || [];
+  const filteredDrawings = activeFilters.size === 0 ? allDrawings : allDrawings.filter((d) => activeFilters.has(d.discipline));
+
+  const handleSort = useCallback((field: string) => {
+    setSortField((prev) => {
+      if (prev === field) setSortDir((d) => d === 'asc' ? 'desc' : 'asc');
+      else { setSortDir('asc'); }
+      return field;
+    });
+  }, []);
+
+  const sortedDrawings = [...filteredDrawings].sort((a, b) => {
+    const aVal = (a as Record<string, unknown>)[sortField];
+    const bVal = (b as Record<string, unknown>)[sortField];
+    if (aVal == null && bVal == null) return 0;
+    if (aVal == null) return 1;
+    if (bVal == null) return -1;
+    if (typeof aVal === 'string' && typeof bVal === 'string') return sortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+    return sortDir === 'asc' ? (aVal as number) - (bVal as number) : (bVal as number) - (aVal as number);
+  });
+  sortedDrawingsRef.current = sortedDrawings;
+
+  const handleGridKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    const total = sortedDrawingsRef.current.length;
+    if (total === 0) return;
+    if (e.key === 'ArrowDown' || e.key === 'j') {
+      e.preventDefault();
+      const next = Math.min(focusedIndex + 1, total - 1);
+      setFocusedIndex(next);
+      const rows = gridRef.current?.querySelectorAll<HTMLElement>('[role="listitem"]');
+      rows?.[next]?.focus();
+    } else if (e.key === 'ArrowUp' || e.key === 'k') {
+      e.preventDefault();
+      const prev = Math.max(focusedIndex - 1, 0);
+      setFocusedIndex(prev);
+      const rows = gridRef.current?.querySelectorAll<HTMLElement>('[role="listitem"]');
+      rows?.[prev]?.focus();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      const drawing = sortedDrawingsRef.current[focusedIndex];
+      if (drawing) setSelectedDrawing(drawing);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setSelectedDrawing(null);
+    }
+  }, [focusedIndex]);
+
+  const handleAnalyzeSheet = useCallback(async (e: React.MouseEvent, drawing: DrawingItem) => {
+    e.stopPropagation();
+    setAnalyzingId(drawing.id);
+    try {
+      const result = await aiService.analyzeDrawingSheet(String(drawing.id), '');
+      setAnalysisResults((prev) => ({ ...prev, [drawing.id]: result }));
+      addToast('success', `Analysis complete: ${result.drawingNumber} ${result.revision}`);
+    } catch {
+      addToast('error', 'Sheet analysis failed. Try again.');
+    } finally {
+      setAnalyzingId(null);
+    }
+  }, [addToast]);
+
+  const handleAiAnalyze = useCallback(async () => {
+    if (!selectedDrawing || !projectId) return;
+    setAiPanelLoading(true);
+    setAiPanelError(null);
+    setAiPanelConflicts([]);
+    setAiPanelAnalyzed(false);
+    try {
+      const sheetNumber = selectedDrawing.setNumber || selectedDrawing.title;
+      const { data, error: fnError } = await supabase.functions.invoke('ai-copilot', {
+        body: { project_id: projectId, message: `Analyze drawing ${sheetNumber} for coordination conflicts with other disciplines`, context: { entity_type: 'drawing', entity_id: String(selectedDrawing.id) } },
+      });
+      if (fnError) throw fnError;
+      const responseText: string = data?.response ?? data?.message ?? (typeof data === 'string' ? data : JSON.stringify(data));
+      setAiPanelConflicts(parseAiConflicts(responseText));
+      setAiPanelAnalyzed(true);
+    } catch {
+      setAiPanelError('AI analysis unavailable. Ensure the AI service is configured in project settings.');
+    } finally {
+      setAiPanelLoading(false);
+    }
+  }, [selectedDrawing, projectId]);
+
+  const handleFileReady = useCallback((file: File) => {
+    setPendingFiles((prev) => [...prev, file]);
+  }, []);
+
+  const handleUploadDrawings = async () => {
+    if (!projectId || pendingFiles.length === 0) return;
+    setIsUploading(true);
+    let completed = 0;
+    const total = pendingFiles.length;
+    for (const file of pendingFiles) {
+      setUploadProgressText(`Uploading sheet ${completed + 1} of ${total}...`);
+      const titleNoExt = file.name.replace(/\.[^.]+$/, '');
+      const sheetMatch = titleNoExt.match(/^([A-Z]{1,3}-?\d+)/i);
+      const sheetNumber = sheetMatch ? sheetMatch[1].toUpperCase() : titleNoExt.substring(0, 20);
+      const storagePath = `${projectId}/drawings/${Date.now()}-${file.name}`;
+      let fileUrl = storagePath;
+      try {
+        const { data: storageData } = await supabase.storage.from('drawings').upload(storagePath, file);
+        if (storageData?.path) fileUrl = storageData.path;
+      } catch { /* storage upload failed */ }
+      await drawingService.createDrawing({ project_id: projectId, title: titleNoExt, discipline: uploadDiscipline, sheet_number: sheetNumber, revision: '1', file_url: fileUrl });
+      completed++;
+    }
+    setIsUploading(false);
+    setUploadProgressText('');
+    setPendingFiles([]);
+    setShowUploadModal(false);
+    setUploadDiscipline('Architectural');
+    refetch();
+    addToast('success', `${completed} drawing${completed !== 1 ? 's' : ''} uploaded successfully.`);
+  };
+
+  const handleUploadRevision = async () => {
+    if (!projectId || !selectedDrawing || !revUploadNum) return;
+    setIsRevUploading(true);
+    let fileUrl: string | null = null;
+    if (revUploadFile) {
+      const path = `${projectId}/drawings/rev-${Date.now()}-${revUploadFile.name}`;
+      try {
+        const { data: storageData } = await supabase.storage.from('drawings').upload(path, revUploadFile);
+        if (storageData?.path) fileUrl = storageData.path;
+      } catch { /* storage upload failed */ }
+    }
+    await supabase.from('drawing_revisions').update({ superseded_at: new Date().toISOString() }).eq('drawing_id', String(selectedDrawing.id)).is('superseded_at', null);
+    await supabase.from('drawing_revisions').insert({ drawing_id: String(selectedDrawing.id), revision_number: Number(revUploadNum), issued_date: new Date().toISOString().slice(0, 10), change_description: revUploadDesc || null, file_url: fileUrl });
+    setIsRevUploading(false);
+    setShowRevUploadModal(false);
+    setRevUploadFile(null);
+    setRevUploadNum('');
+    setRevUploadDesc('');
+    refetch();
+    addToast('success', `Revision ${revUploadNum} uploaded for ${selectedDrawing.title}.`);
+  };
+
+  const handleRevDropdown = useCallback(async (e: React.MouseEvent, drawingId: string, drawingTitle: string, fallbackRevisions: DrawingRevision[]) => {
+    e.stopPropagation();
+    if (openRevDropdownId === drawingId) { setOpenRevDropdownId(null); return; }
+    setOpenRevDropdownId(drawingId);
+    if (!rowRevHistory[drawingId]) {
+      if (fallbackRevisions.length > 0) {
+        setRowRevHistory((prev) => ({ ...prev, [drawingId]: fallbackRevisions }));
+      } else {
+        setRowRevHistoryLoading(drawingId);
+        try {
+          const history = await getDrawingRevisionHistory(drawingId);
+          setRowRevHistory((prev) => ({ ...prev, [drawingId]: history }));
+        } catch { /* keep dropdown open with empty state */ } finally {
+          setRowRevHistoryLoading(null);
+        }
+      }
+    }
+    setCompareDrawingTitle(drawingTitle);
+  }, [openRevDropdownId, rowRevHistory]);
+
+  const handlePageDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    const hasFile = Array.from(e.dataTransfer.items).some((item) => item.kind === 'file');
+    if (hasFile) setPageIsDragging(true);
+  }, []);
+
+  const handlePageDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) setPageIsDragging(false);
+  }, []);
+
+  const handlePageDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setPageIsDragging(false);
+    const files = Array.from(e.dataTransfer.files).filter((f) => /\.(pdf|dwg|dxf)$/i.test(f.name));
+    if (files.length > 0) { setPendingFiles(files); setShowUploadModal(true); }
+  }, []);
+
+  return (
+    <PageContainer
+      title="Drawings"
+      actions={
+        <>
+          <Btn variant="secondary" size="md" icon={<Sparkles size={16} />} aria-label="Toggle AI insights panel" aria-pressed={showAiPanel} onClick={() => setShowAiPanel((v) => !v)}>
+            AI Insights
+          </Btn>
+          <PermissionGate permission="drawings.upload">
+            <Btn variant="primary" size="md" icon={<Upload size={16} />} aria-label="Upload new drawing" onClick={() => setShowUploadModal(true)}>
+              Upload Drawings
+            </Btn>
+          </PermissionGate>
+        </>
+      }
+    >
+      <h1 style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}>Drawings</h1>
+      <style>{`
+        @media(max-width:768px){
+          .drawings-layout{grid-template-columns:1fr!important;}
+          .drawing-table-header{display:none!important;}
+          .drawings-list{display:grid;grid-template-columns:1fr;gap:8px;padding:8px;}
+          .drawing-row-desktop{display:none!important;}
+          .drawing-row-mobile{display:flex!important;}
+        }
+        @media(min-width:769px){.drawing-row-mobile{display:none!important;}}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+        @keyframes spin{to{transform:rotate(360deg)}}
+        @keyframes slideInRight{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+        .drawing-row:focus-visible{outline:2px solid var(--color-primary,#F47820);outline-offset:-2px;}
+      `}</style>
+      <div
+        style={{ position: 'relative' }}
+        onDragOver={handlePageDragOver}
+        onDragLeave={handlePageDragLeave}
+        onDrop={handlePageDrop}
+      >
+        {pageIsDragging && (
+          <div style={{ position: 'absolute', inset: 0, zIndex: 50, backgroundColor: `${colors.primaryOrange}10`, border: `2px dashed ${colors.primaryOrange}`, borderRadius: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: spacing['3'], pointerEvents: 'none' }}>
+            <Upload size={48} color={colors.primaryOrange} />
+            <p style={{ fontSize: 20, fontWeight: 600, color: colors.primaryOrange, margin: 0 }}>Drop drawings here</p>
+            <p style={{ fontSize: 14, color: colors.primaryOrange, margin: 0, opacity: 0.7 }}>.pdf, .dwg, .dxf files accepted</p>
+          </div>
+        )}
+        <div className="drawings-layout" style={{ display: 'grid', gridTemplateColumns: selectedDrawing ? '1fr 380px' : '1fr', gap: spacing.xl }}>
+          <DrawingList
+            drawings={sortedDrawings}
+            loading={loading}
+            error={error}
+            refetch={refetch}
+            sortField={sortField}
+            sortDir={sortDir}
+            onSort={handleSort}
+            activeFilters={activeFilters}
+            setActiveFilters={setActiveFilters}
+            allDrawings={allDrawings}
+            focusedIndex={focusedIndex}
+            setFocusedIndex={setFocusedIndex}
+            gridRef={gridRef}
+            onSelectDrawing={setSelectedDrawing}
+            onViewDrawing={setViewerDrawing}
+            analyzingId={analyzingId}
+            analysisResults={analysisResults}
+            onAnalyzeSheet={handleAnalyzeSheet}
+            openRevDropdownId={openRevDropdownId}
+            rowRevHistory={rowRevHistory}
+            rowRevHistoryLoading={rowRevHistoryLoading}
+            onRevDropdown={handleRevDropdown}
+            setOpenRevDropdownId={setOpenRevDropdownId}
+            setViewRevPdfUrl={setViewRevPdfUrl}
+            setViewingRevisionNum={setViewingRevisionNum}
+            setViewerDrawing={setViewerDrawing}
+            setSelectedRevisions={setSelectedRevisions}
+            setComparisonMode={setComparisonMode}
+            setShowUploadModal={setShowUploadModal}
+            showConflicts={showConflicts}
+            setShowConflicts={setShowConflicts}
+            handleGridKeyDown={handleGridKeyDown}
+          />
+
+          {selectedDrawing && (
+            <DrawingDetail
+              drawing={selectedDrawing}
+              revisionHistory={revisionHistory}
+              viewingRevisionNum={viewingRevisionNum}
+              onClose={() => setSelectedDrawing(null)}
+              onOpenViewer={() => setViewerDrawing(selectedDrawing)}
+              onAiScan={() => addToast('info', 'AI Scan initiated for ' + selectedDrawing.setNumber)}
+              onUploadRevision={() => {
+                const nextRev = revisionHistory && revisionHistory.length > 0 ? String(revisionHistory[0].revision_number + 1) : '1';
+                setRevUploadNum(nextRev);
+                setRevUploadFile(null);
+                setRevUploadDesc('');
+                setShowRevUploadModal(true);
+              }}
+              onViewRevision={(rev) => {
+                if (rev.file_url) { setViewRevPdfUrl(rev.file_url); }
+                else {
+                  const isCurrent = !rev.superseded_at;
+                  setViewingRevisionNum(isCurrent ? null : rev.revision_number);
+                  if (!isCurrent) setViewerDrawing({ ...selectedDrawing, revision: `Rev ${rev.revision_number}` });
+                }
+              }}
+              onCompareVersions={() => setShowVersionCompare(true)}
+              setViewingRevisionNum={setViewingRevisionNum}
+            />
+          )}
+        </div>
+      </div>
+
+      {/* Viewers and modals */}
+      {viewerDrawing && <DrawingViewer drawing={viewerDrawing} onClose={() => setViewerDrawing(null)} />}
+
+      {viewRevPdfUrl && (
+        <PdfViewer
+          file={viewRevPdfUrl}
+          title={`${selectedDrawing?.title ?? 'Drawing'} — Rev ${viewingRevisionNum ?? 'Current'}`}
+          onClose={() => setViewRevPdfUrl(null)}
+        />
+      )}
+
+      {showVersionCompare && selectedDrawing && revisionHistory && revisionHistory.length >= 2 && (
+        <VersionCompareModal
+          drawing={selectedDrawing}
+          revisionHistory={revisionHistory}
+          compareRevAIdx={compareRevAIdx}
+          compareRevBIdx={compareRevBIdx}
+          setCompareRevAIdx={setCompareRevAIdx}
+          setCompareRevBIdx={setCompareRevBIdx}
+          onClose={() => setShowVersionCompare(false)}
+        />
+      )}
+
+      {openRevDropdownId !== null && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 199 }} onClick={() => setOpenRevDropdownId(null)} aria-hidden="true" />
+      )}
+
+      {comparisonMode && selectedRevisions.length === 2 && (
+        <ComparisonModal
+          compareDrawingTitle={compareDrawingTitle}
+          selectedRevisions={selectedRevisions as [DrawingRevision, DrawingRevision]}
+          compareOpacity={compareOpacity}
+          setCompareOpacity={setCompareOpacity}
+          onClose={() => setComparisonMode(false)}
+        />
+      )}
+
+      {showUploadModal && (
+        <DrawingUpload
+          pendingFiles={pendingFiles}
+          uploadDiscipline={uploadDiscipline}
+          setUploadDiscipline={setUploadDiscipline}
+          isUploading={isUploading}
+          uploadProgressText={uploadProgressText}
+          onClose={() => { setShowUploadModal(false); setPendingFiles([]); }}
+          onFileReady={handleFileReady}
+          onUpload={handleUploadDrawings}
+        />
+      )}
+
+      {showRevUploadModal && selectedDrawing && (
+        <RevisionUpload
+          drawingTitle={selectedDrawing.title}
+          drawingSetNumber={selectedDrawing.setNumber}
+          revUploadNum={revUploadNum}
+          setRevUploadNum={setRevUploadNum}
+          revUploadDesc={revUploadDesc}
+          setRevUploadDesc={setRevUploadDesc}
+          revUploadFile={revUploadFile}
+          setRevUploadFile={setRevUploadFile}
+          isRevUploading={isRevUploading}
+          onClose={() => setShowRevUploadModal(false)}
+          onUpload={handleUploadRevision}
+        />
+      )}
+
+      <AiInsightsPanel
+        isOpen={showAiPanel}
+        onClose={() => setShowAiPanel(false)}
+        loading={aiPanelLoading}
+        error={aiPanelError}
+        analyzed={aiPanelAnalyzed}
+        conflicts={aiPanelConflicts}
+        hasSelectedDrawing={!!selectedDrawing}
+        onAnalyze={handleAiAnalyze}
+      />
+    </PageContainer>
+  );
+};
+
+export const Drawings: React.FC = () => (
+  <ErrorBoundary message="Failed to load drawings. Retry">
+    <DrawingsPage />
+  </ErrorBoundary>
+);
+
+export default Drawings;

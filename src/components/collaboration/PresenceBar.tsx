@@ -632,19 +632,22 @@ const DrawingPresenceBarContent: React.FC = () => {
   const prevLengthRef = useRef<number>(0);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isReconnecting, setIsReconnecting] = useState(false);
+  const [nowMs] = useState(() => Date.now());
 
   useEffect(() => {
     try {
       if (others.length === 0 && prevLengthRef.current > 0) {
-        setIsReconnecting(true);
-        if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
-        reconnectTimerRef.current = setTimeout(() => setIsReconnecting(false), 5000);
+        setTimeout(() => {
+          setIsReconnecting(true);
+          if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+          reconnectTimerRef.current = setTimeout(() => setIsReconnecting(false), 5000);
+        }, 0);
       } else if (others.length > 0) {
         if (reconnectTimerRef.current) {
           clearTimeout(reconnectTimerRef.current);
           reconnectTimerRef.current = null;
         }
-        setIsReconnecting(false);
+        setTimeout(() => setIsReconnecting(false), 0);
       }
       prevLengthRef.current = others.length;
     } catch (err) {
@@ -688,7 +691,7 @@ const DrawingPresenceBarContent: React.FC = () => {
   for (const other of visible) {
     try {
       const p = asPresenceData(other.presence as unknown as Record<string, unknown>);
-      const lastSeen = p.lastSeen ?? Date.now();
+      const lastSeen = p.lastSeen ?? nowMs;
       safeVisible.push({
         connectionId: other.connectionId,
         lastSeen,
@@ -840,7 +843,7 @@ const DrawingPresenceBarContent: React.FC = () => {
                         return {
                           displayName: p.displayName || p.name || 'Someone',
                           role: p.role,
-                          lastSeen: p.lastSeen ?? Date.now(),
+                          lastSeen: p.lastSeen ?? nowMs,
                         };
                       })}
                     />
@@ -860,8 +863,8 @@ const DrawingPresenceBarContent: React.FC = () => {
 // render. The error boundary catches it silently (returns null) and marks
 // presence as initialized so downstream PresenceDots show their empty state.
 const SafePresenceBar: React.FC = () => {
-  const failedRef = useRef(false);
-  if (failedRef.current) return null;
+  const [failed] = useState(false);
+  if (failed) return null;
   return (
     <PresenceBarErrorBoundary>
       <DrawingPresenceBarContent />

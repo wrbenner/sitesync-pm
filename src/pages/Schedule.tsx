@@ -252,13 +252,16 @@ const ScheduleImportModal: React.FC<ScheduleImportModalProps> = ({ open, onClose
 
   useEffect(() => {
     if (!open) {
-      setSelectedFile(null);
-      setDragOver(false);
-      setFileType(null);
-      setParsing(false);
-      setParsed(null);
-      setImporting(false);
-      setUploadProgress(0);
+      const timer = setTimeout(() => {
+        setSelectedFile(null);
+        setDragOver(false);
+        setFileType(null);
+        setParsing(false);
+        setParsed(null);
+        setImporting(false);
+        setUploadProgress(0);
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [open]);
 
@@ -1930,7 +1933,7 @@ export const Schedule: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody data-schedule-list>
-                      {schedulePhases.map((phase, _) => {
+                      {schedulePhases.map((phase) => {
                         const statusLabel = (phase.status ?? 'not started').replace(/_/g, ' ');
                         const durationDays = Math.round((new Date(phase.endDate).getTime() - new Date(phase.startDate).getTime()) / 86400000);
                         const floatDays = phase.float_days ?? (phase as unknown as Record<string, unknown>).floatDays ?? 0;

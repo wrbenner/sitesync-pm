@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme'

@@ -76,7 +76,7 @@ async function executeStep(
 
 // ── Get Connected Integrations ────────────────────────────────
 
-async function getConnectedIntegrations(_: string): Promise<Set<string>> {
+async function getConnectedIntegrations(): Promise<Set<string>> {
   if (!isSupabaseConfigured) return new Set()
 
   const { data } = await supabase
@@ -95,7 +95,7 @@ export async function dispatchEcosystemEvent(
 ): Promise<ChainResult> {
   const startTime = Date.now()
   const steps: ChainStep[] = []
-  const connected = await getConnectedIntegrations(event.data.projectId)
+  const connected = await getConnectedIntegrations()
 
   switch (event.type) {
     case 'change_order.approved':

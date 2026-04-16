@@ -526,9 +526,12 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ items, children }) => 
         });
       }, 0);
     } else {
-      setVisible(false);
-      setFocusedIndex(-1);
-      triggerRef.current?.focus();
+      const timer = setTimeout(() => {
+        setVisible(false);
+        setFocusedIndex(-1);
+        triggerRef.current?.focus();
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [open]);
 

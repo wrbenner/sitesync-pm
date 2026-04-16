@@ -289,7 +289,7 @@ const DailyLogPage: React.FC = () => {
     };
   }, [dailyLogHistory]);
 
-  const handleQuickSave = useCallback((_data: QuickEntryData) => {
+  const handleQuickSave = useCallback(() => {
     toast.success('Draft saved');
   }, []);
 
