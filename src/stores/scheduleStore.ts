@@ -1,6 +1,10 @@
 import { create } from 'zustand';
-import { supabase } from '../lib/supabase';
+import { scheduleService } from '../services/scheduleService';
+import type { CreatePhaseInput } from '../services/scheduleService';
 import type { MappedSchedulePhase } from '../types/entities';
+import type { ScheduleStatus } from '../machines/scheduleMachine';
+
+// ── Demo data (shown when project has no phases yet) ─────────────────────────
 
 function makeDemoPhase(
   id: string,
@@ -82,6 +86,77 @@ const DEMO_PHASES: MappedSchedulePhase[] = [
   makeDemoPhase('demo-10', 'Commissioning and Closeout', '2027-01-04', '2027-02-27', 0, 'not_started', true),
 ];
 
+// ── Mapping ───────────────────────────────────────────────────────────────────
+
+function mapToMappedPhase(d: Record<string, unknown>): MappedSchedulePhase {
+  const startDate = (d['start_date'] as string | null) ?? '';
+  const endDate = (d['end_date'] as string | null) ?? '';
+  const baselineEnd = (d['baseline_end'] as string | null) ?? null;
+  const slippageDays = baselineEnd && endDate
+    ? Math.ceil((new Date(endDate).getTime() - new Date(baselineEnd).getTime()) / 86400000)
+    : 0;
+  const scheduleVarianceDays = baselineEnd && endDate
+    ? Math.ceil((new Date(baselineEnd).getTime() - new Date(endDate).getTime()) / 86400000)
+    : 0;
+  const pct = (d['percent_complete'] as number | null) ?? 0;
+  const isCritical = (d['is_critical_path'] as boolean | null) ?? false;
+
+  return {
+    id: d['id'] as string,
+    name: d['name'] as string,
+    project_id: d['project_id'] as string,
+    start_date: startDate || null,
+    end_date: endDate || null,
+    percent_complete: pct,
+    status: (d['status'] as string | null) ?? 'planned',
+    is_critical_path: isCritical,
+    float_days: (d['float_days'] as number | null) ?? 0,
+    baseline_start: (d['baseline_start'] as string | null) ?? null,
+    baseline_end: baselineEnd,
+    earned_value: (d['earned_value'] as number | null) ?? null,
+    assigned_crew_id: (d['assigned_crew_id'] as string | null) ?? null,
+    dependencies: (d['dependencies'] as string[] | null) ?? null,
+    depends_on: (d['depends_on'] as string | null) ?? null,
+    created_at: (d['created_at'] as string | null) ?? null,
+    updated_at: (d['updated_at'] as string | null) ?? null,
+    // Extended domain fields
+    baseline_start_date: null,
+    baseline_end_date: null,
+    baseline_percent_complete: null,
+    is_milestone: (d['is_milestone'] as boolean | null) ?? null,
+    predecessor_ids: (d['dependencies'] as string[] | null) ?? null,
+    work_type: null,
+    location: null,
+    assigned_trade: null,
+    planned_labor_hours: null,
+    actual_labor_hours: null,
+    baseline_finish: baselineEnd,
+    baseline_duration_days: null,
+    slippage_days: slippageDays,
+    is_critical: isCritical,
+    // Camelcase convenience
+    startDate,
+    endDate,
+    progress: pct,
+    critical: isCritical,
+    completed: pct >= 100 || d['status'] === 'completed',
+    baselineStartDate: (d['baseline_start'] as string | null) ?? null,
+    baselineEndDate: baselineEnd,
+    baselineProgress: 0,
+    slippageDays,
+    earnedValue: (d['earned_value'] as number | null) ?? 0,
+    isOnCriticalPath: isCritical,
+    floatDays: (d['float_days'] as number | null) ?? 0,
+    scheduleVarianceDays,
+    isMilestone: (d['is_milestone'] as boolean | null) ?? false,
+    predecessorIds: (d['dependencies'] as string[] | null) ?? [],
+    plannedLaborHours: 0,
+    actualLaborHours: 0,
+  };
+}
+
+// ── Store ─────────────────────────────────────────────────────────────────────
+
 export type SchedulePhase = MappedSchedulePhase;
 
 export interface ScheduleMetrics {
@@ -98,7 +173,11 @@ interface ScheduleState {
   error: string | null;
 
   loadSchedule: (projectId: string) => Promise<void>;
-  updatePhase: (id: string, updates: Partial<SchedulePhase>) => void;
+  createPhase: (input: CreatePhaseInput) => Promise<{ error: string | null }>;
+  updatePhase: (id: string, updates: Partial<CreatePhaseInput>) => Promise<{ error: string | null }>;
+  transitionStatus: (phaseId: string, newStatus: ScheduleStatus) => Promise<{ error: string | null }>;
+  deletePhase: (phaseId: string) => Promise<{ error: string | null }>;
+  updateDependencies: (phaseId: string, predecessorIds: string[]) => Promise<{ error: string | null }>;
 }
 
 const DEFAULT_METRICS: ScheduleMetrics = {
@@ -108,6 +187,16 @@ const DEFAULT_METRICS: ScheduleMetrics = {
   aiConfidenceLevel: null,
 };
 
+function deriveMetrics(phases: SchedulePhase[]): ScheduleMetrics {
+  const completedCount = phases.filter((p) => p.completed).length;
+  return {
+    daysBeforeSchedule: 0,
+    milestonesHit: completedCount,
+    milestoneTotal: phases.length,
+    aiConfidenceLevel: null,
+  };
+}
+
 export const useScheduleStore = create<ScheduleState>()((set) => ({
   phases: [],
   metrics: DEFAULT_METRICS,
@@ -116,81 +205,99 @@ export const useScheduleStore = create<ScheduleState>()((set) => ({
 
   loadSchedule: async (projectId) => {
     set({ loading: true, error: null });
-    try {
-      const { data, error } = await supabase
-        .from('schedule_phases')
-        .select('*')
-        .eq('project_id', projectId)
-        .order('start_date', { ascending: true });
+    const { data, error } = await scheduleService.loadPhases(projectId);
 
-      if (error) throw error;
-      const phases: SchedulePhase[] = (data ?? []).map((d): SchedulePhase => {
-        const startDate = d.start_date ?? '';
-        const endDate = d.end_date ?? '';
-        const baselineEnd = d.baseline_end ?? null;
-        const slippageDays = baselineEnd && endDate
-          ? Math.ceil((new Date(endDate).getTime() - new Date(baselineEnd).getTime()) / 86400000)
-          : 0;
-        const scheduleVarianceDays = baselineEnd && endDate
-          ? Math.ceil((new Date(baselineEnd).getTime() - new Date(endDate).getTime()) / 86400000)
-          : 0;
-        return {
-          ...d,
-          // Extended domain fields not yet in DB schema — default null
-          baseline_start_date: null,
-          baseline_end_date: null,
-          baseline_percent_complete: null,
-          is_milestone: null,
-          predecessor_ids: d.dependencies ?? null,
-          work_type: null,
-          location: null,
-          assigned_trade: null,
-          planned_labor_hours: null,
-          actual_labor_hours: null,
-          // Camelcase convenience
-          startDate,
-          endDate,
-          progress: d.percent_complete ?? 0,
-          critical: d.is_critical_path ?? false,
-          completed: (d.percent_complete ?? 0) >= 100 || d.status === 'completed',
-          baselineStartDate: d.baseline_start ?? null,
-          baselineEndDate: baselineEnd,
-          baselineProgress: 0,
-          slippageDays,
-          earnedValue: d.earned_value ?? 0,
-          // Computed
-          isOnCriticalPath: d.is_critical_path ?? false,
-          floatDays: d.float_days ?? 0,
-          scheduleVarianceDays,
-          // New domain camelCase
-          isMilestone: false,
-          predecessorIds: d.dependencies ?? [],
-          plannedLaborHours: 0,
-          actualLaborHours: 0,
-        };
-      });
-
-      const resolved = phases.length > 0 ? phases : DEMO_PHASES;
-      // Derive metrics from phases
-      const completedPhases = resolved.filter((p) => p.completed).length;
-      set({
-        phases: resolved,
-        metrics: {
-          daysBeforeSchedule: 0,
-          milestonesHit: completedPhases,
-          milestoneTotal: resolved.length,
-          aiConfidenceLevel: null,
-        },
-        loading: false,
-      });
-    } catch (e) {
-      set({ error: (e as Error).message, loading: false });
+    if (error) {
+      set({ error, loading: false });
+      return;
     }
+
+    const phases = ((data ?? []) as Record<string, unknown>[]).map(mapToMappedPhase);
+    const resolved = phases.length > 0 ? phases : DEMO_PHASES;
+
+    set({
+      phases: resolved,
+      metrics: deriveMetrics(resolved),
+      loading: false,
+    });
   },
 
-  updatePhase: (id: string, updates) => {
-    set((s) => ({
-      phases: s.phases.map((p) => (p.id === id ? { ...p, ...updates } : p)),
-    }));
+  createPhase: async (input) => {
+    const { data, error } = await scheduleService.createPhase(input);
+    if (error) return { error };
+    if (data) {
+      const mapped = mapToMappedPhase(data as Record<string, unknown>);
+      set((s) => ({
+        phases: [...s.phases, mapped],
+        metrics: deriveMetrics([...s.phases, mapped]),
+      }));
+    }
+    return { error: null };
   },
+
+  updatePhase: async (id, updates) => {
+    const { error } = await scheduleService.updatePhase(id, updates);
+    if (!error) {
+      set((s) => {
+        const phases = s.phases.map((p) =>
+          p.id === id ? { ...p, ...(updates as Partial<SchedulePhase>) } : p,
+        );
+        return { phases, metrics: deriveMetrics(phases) };
+      });
+    }
+    return { error };
+  },
+
+  transitionStatus: async (phaseId, newStatus) => {
+    const { error } = await scheduleService.transitionStatus(phaseId, newStatus);
+    if (!error) {
+      set((s) => {
+        const phases = s.phases.map((p) => {
+          if (p.id !== phaseId) return p;
+          const pct = newStatus === 'completed' ? 100 : p.percent_complete ?? 0;
+          return {
+            ...p,
+            status: newStatus,
+            percent_complete: pct,
+            progress: pct,
+            completed: newStatus === 'completed',
+          };
+        });
+        return { phases, metrics: deriveMetrics(phases) };
+      });
+    }
+    return { error };
+  },
+
+  deletePhase: async (phaseId) => {
+    const { error } = await scheduleService.deletePhase(phaseId);
+    if (!error) {
+      set((s) => {
+        const phases = s.phases.filter((p) => p.id !== phaseId);
+        return { phases, metrics: deriveMetrics(phases) };
+      });
+    }
+    return { error };
+  },
+
+  updateDependencies: async (phaseId, predecessorIds) => {
+    const { error } = await scheduleService.updateDependencies(phaseId, predecessorIds);
+    if (!error) {
+      set((s) => ({
+        phases: s.phases.map((p) =>
+          p.id === phaseId
+            ? { ...p, dependencies: predecessorIds, predecessorIds, depends_on: predecessorIds[0] ?? null }
+            : p,
+        ),
+      }));
+    }
+    return { error };
+  },
+
+  // Legacy synchronous helper kept for component backward compatibility.
+  // Prefer the async updatePhase() which persists to the database.
+  ...({} as Record<string, unknown>),
 }));
+
+// Re-export for backward compatibility with existing component imports
+export { useScheduleStore as default };
