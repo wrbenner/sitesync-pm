@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { PageContainer } from '../components/Primitives';
 import { MetricCardSkeleton } from '../components/ui/Skeletons';
-import { colors, spacing, typography, borderRadius, shadows } from '../styles/theme';
+import { colors, spacing, typography, borderRadius, shadows, focusRing } from '../styles/theme';
 import { fetchWeather, fetchWeatherForecast5Day, getWeatherImpact } from '../lib/weather';
 import type { WeatherData, WeatherDay } from '../lib/weather';
 import { duration, easing, easingArray } from '../styles/animations';
@@ -53,15 +53,15 @@ function formatPct(value: number): string {
 
 const staggerContainer = {
   initial: {},
-  animate: { transition: { staggerChildren: 0.06 } },
+  animate: { transition: { staggerChildren: 0.05 } },
 };
 
 const staggerItem = {
-  initial: { opacity: 0, y: 12 },
+  initial: { opacity: 0, y: 10 },
   animate: { opacity: 1, y: 0 },
 };
 
-const staggerTransition = { duration: duration.smooth / 1000, ease: easingArray.apple };
+const staggerTransition = { duration: duration.normal / 1000, ease: easingArray.apple };
 
 // ── Metric Card ─────────────────────────────────────────
 
@@ -76,97 +76,105 @@ interface MetricCardProps {
   onClick?: () => void;
 }
 
-const MetricCard: React.FC<MetricCardProps> = ({ icon, label, value, sub, trend, trendLabel, color, onClick }) => (
-  <motion.div
-    variants={staggerItem}
-    transition={staggerTransition}
-    role={onClick ? 'button' : undefined}
-    tabIndex={onClick ? 0 : undefined}
-    onClick={onClick}
-    onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } } : undefined}
-    aria-label={onClick ? label : undefined}
-    whileHover={{ y: -2, boxShadow: shadows.cardHover, transition: { duration: duration.normal / 1000, ease: easingArray.standard } }}
-    whileTap={onClick ? { scale: 0.99, transition: { duration: duration.fast / 1000 } } : undefined}
-    style={{
-      flex: '1 1 0',
-      minWidth: 180,
-      backgroundColor: colors.surfaceRaised,
-      borderRadius: borderRadius.lg,
-      padding: spacing['5'],
-      boxShadow: shadows.card,
-      border: `1px solid ${colors.borderSubtle}`,
-      cursor: onClick ? 'pointer' : 'default',
-    }}
-  >
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['4'] }}>
-      <div style={{
-        width: 34,
-        height: 34,
-        borderRadius: borderRadius.md,
-        backgroundColor: colors.surfaceInset,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: color || colors.primaryOrange,
-        flexShrink: 0,
-      }}>
-        {icon}
+const MetricCard: React.FC<MetricCardProps> = React.memo(({ icon, label, value, sub, trend, trendLabel, color, onClick }) => {
+  const [focused, setFocused] = useState(false);
+  return (
+    <motion.div
+      variants={staggerItem}
+      transition={staggerTransition}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } } : undefined}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      aria-label={onClick ? label : undefined}
+      whileHover={{ y: -2, boxShadow: shadows.cardHover, transition: { duration: duration.normal / 1000, ease: easingArray.standard } }}
+      whileTap={onClick ? { scale: 0.99, transition: { duration: duration.fast / 1000 } } : undefined}
+      style={{
+        flex: '1 1 0',
+        minWidth: 180,
+        backgroundColor: colors.surfaceRaised,
+        borderRadius: borderRadius.lg,
+        padding: spacing['5'],
+        boxShadow: shadows.card,
+        border: `1px solid ${colors.borderSubtle}`,
+        cursor: onClick ? 'pointer' : 'default',
+        outline: focused ? focusRing.outline : 'none',
+        outlineOffset: focusRing.outlineOffset,
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['4'] }}>
+        <div style={{
+          width: 40,
+          height: 40,
+          borderRadius: borderRadius.md,
+          backgroundColor: colors.surfaceInset,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: color || colors.primaryOrange,
+          flexShrink: 0,
+        }}>
+          {icon}
+        </div>
+        {onClick && <ArrowRight size={14} color={colors.textTertiary} />}
       </div>
-      {onClick && <ArrowRight size={14} color={colors.textTertiary} />}
-    </div>
-    <p
-      style={{
-        fontSize: typography.fontSize.heading,
-        fontWeight: typography.fontWeight.bold,
-        color: color || colors.textPrimary,
-        margin: 0,
-        letterSpacing: typography.letterSpacing.tighter,
-        lineHeight: typography.lineHeight.none,
-        fontVariantNumeric: 'tabular-nums',
-      }}
-    >
-      {value}
-    </p>
-    <p
-      style={{
-        fontSize: typography.fontSize.sm,
-        fontWeight: typography.fontWeight.medium,
-        color: colors.textSecondary,
-        margin: 0,
-        marginTop: spacing['2'],
-      }}
-    >
-      {label}
-    </p>
-    {sub && (
-      <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0, marginTop: spacing['1'] }}>
-        {sub}
+      <p
+        style={{
+          fontSize: typography.fontSize.heading,
+          fontWeight: typography.fontWeight.bold,
+          color: color || colors.textPrimary,
+          margin: 0,
+          letterSpacing: typography.letterSpacing.tighter,
+          lineHeight: typography.lineHeight.none,
+          fontVariantNumeric: 'tabular-nums',
+        }}
+      >
+        {value}
       </p>
-    )}
-    {trend !== undefined && trendLabel && (
-      <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], marginTop: spacing['2'] }}>
-        {trend >= 0 ? (
-          <TrendingUp size={11} color={colors.statusActive} />
-        ) : (
-          <TrendingDown size={11} color={colors.statusCritical} />
-        )}
-        <span
-          style={{
-            fontSize: typography.fontSize.caption,
-            fontWeight: typography.fontWeight.medium,
-            color: trend >= 0 ? colors.statusActive : colors.statusCritical,
-          }}
-        >
-          {trend >= 0 ? '+' : ''}{trend}% {trendLabel}
-        </span>
-      </div>
-    )}
-  </motion.div>
-);
+      <p
+        style={{
+          fontSize: typography.fontSize.sm,
+          fontWeight: typography.fontWeight.medium,
+          color: colors.textSecondary,
+          margin: 0,
+          marginTop: spacing['2'],
+        }}
+      >
+        {label}
+      </p>
+      {sub && (
+        <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0, marginTop: spacing['1'] }}>
+          {sub}
+        </p>
+      )}
+      {trend !== undefined && trendLabel && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], marginTop: spacing['2'] }}>
+          {trend >= 0 ? (
+            <TrendingUp size={11} color={colors.statusActive} />
+          ) : (
+            <TrendingDown size={11} color={colors.statusCritical} />
+          )}
+          <span
+            style={{
+              fontSize: typography.fontSize.caption,
+              fontWeight: typography.fontWeight.medium,
+              color: trend >= 0 ? colors.statusActive : colors.statusCritical,
+            }}
+          >
+            {trend >= 0 ? '+' : ''}{trend}% {trendLabel}
+          </span>
+        </div>
+      )}
+    </motion.div>
+  );
+});
+MetricCard.displayName = 'MetricCard';
 
 // ── Progress Ring ───────────────────────────────────────
 
-const ProgressRing: React.FC<{ value: number; size?: number }> = ({ value, size = 80 }) => {
+const ProgressRing = React.memo<{ value: number; size?: number }>(({ value, size = 80 }) => {
   const r = (size / 2) - 5;
   const circumference = 2 * Math.PI * r;
   const offset = circumference * (1 - value / 100);
@@ -177,7 +185,7 @@ const ProgressRing: React.FC<{ value: number; size?: number }> = ({ value, size 
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={colors.surfaceInset} strokeWidth="5" />
         <circle
           cx={size / 2} cy={size / 2} r={r} fill="none"
-          stroke={colors.primaryOrange} strokeWidth="5"
+          stroke={colors.brand400} strokeWidth="5"
           strokeDasharray={circumference} strokeDashoffset={offset}
           strokeLinecap="round"
           style={{ transition: `stroke-dashoffset ${duration.slow}ms ${easing.standard}` }}
@@ -190,7 +198,8 @@ const ProgressRing: React.FC<{ value: number; size?: number }> = ({ value, size 
       </div>
     </div>
   );
-};
+});
+ProgressRing.displayName = 'ProgressRing';
 
 // ── Loading Skeleton ────────────────────────────────────
 
@@ -199,7 +208,19 @@ function DashboardSkeleton() {
     <PageContainer>
       {/* Hero placeholder */}
       <div style={{
-        height: 120, borderRadius: borderRadius.xl, marginBottom: spacing['5'],
+        height: 104, borderRadius: borderRadius.xl, marginBottom: spacing['5'],
+        backgroundColor: colors.surfaceRaised, border: `1px solid ${colors.borderSubtle}`,
+        boxShadow: shadows.card,
+      }} />
+      {/* Weather strip placeholder */}
+      <div style={{
+        height: 60, borderRadius: borderRadius.lg, marginBottom: spacing['4'],
+        backgroundColor: colors.surfaceRaised, border: `1px solid ${colors.borderSubtle}`,
+        boxShadow: shadows.card,
+      }} />
+      {/* Insights panel placeholder */}
+      <div style={{
+        height: 88, borderRadius: borderRadius.xl, marginBottom: spacing['5'],
         backgroundColor: colors.surfaceRaised, border: `1px solid ${colors.borderSubtle}`,
         boxShadow: shadows.card,
       }} />
@@ -292,7 +313,7 @@ const WelcomeOnboarding: React.FC<{ onProjectCreated: () => void }> = ({ onProje
             alignItems: 'center',
             justifyContent: 'center',
             marginBottom: spacing['6'],
-            boxShadow: `0 8px 24px ${colors.primaryOrange}33`,
+            boxShadow: shadows.glow,
           }}
         >
           <HardHat size={40} color={colors.white} />
@@ -340,18 +361,18 @@ const WelcomeOnboarding: React.FC<{ onProjectCreated: () => void }> = ({ onProje
             fontWeight: typography.fontWeight.semibold,
             fontFamily: typography.fontFamily,
             cursor: 'pointer',
-            boxShadow: `0 4px 12px ${colors.primaryOrange}40`,
+            boxShadow: `0 4px 12px ${colors.brand400}66`,
             transition: `transform ${duration.fast}ms ${easing.standard}, box-shadow ${duration.fast}ms ${easing.standard}`,
           }}
           onMouseEnter={(e) => {
             const el = e.currentTarget;
             el.style.transform = 'translateY(-2px)';
-            el.style.boxShadow = `0 6px 20px ${colors.primaryOrange}50`;
+            el.style.boxShadow = `0 6px 20px ${colors.brand400}80`;
           }}
           onMouseLeave={(e) => {
             const el = e.currentTarget;
             el.style.transform = 'translateY(0)';
-            el.style.boxShadow = `0 4px 12px ${colors.primaryOrange}40`;
+            el.style.boxShadow = `0 4px 12px ${colors.brand400}66`;
           }}
         >
           <Plus size={20} />
@@ -482,7 +503,9 @@ const SEVERITY_COLORS: Record<string, { bg: string; border: string; icon: string
   info: { bg: colors.statusInfoSubtle, border: colors.statusInfo, icon: colors.statusInfo },
 };
 
-const InsightRow: React.FC<{ insight: AIInsight; onClick?: () => void }> = ({ insight, onClick }) => {
+const InsightRow: React.FC<{ insight: AIInsight; onClick?: () => void }> = React.memo(({ insight, onClick }) => {
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
   const sev = SEVERITY_COLORS[insight.severity] || SEVERITY_COLORS.info;
   return (
     <div
@@ -490,6 +513,10 @@ const InsightRow: React.FC<{ insight: AIInsight; onClick?: () => void }> = ({ in
       tabIndex={onClick ? 0 : undefined}
       onClick={onClick}
       onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } } : undefined}
+      onMouseEnter={onClick ? () => setHovered(true) : undefined}
+      onMouseLeave={onClick ? () => setHovered(false) : undefined}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
       style={{
         display: 'flex',
         alignItems: 'flex-start',
@@ -499,7 +526,11 @@ const InsightRow: React.FC<{ insight: AIInsight; onClick?: () => void }> = ({ in
         backgroundColor: sev.bg,
         borderRadius: borderRadius.base,
         cursor: onClick ? 'pointer' : 'default',
-        transition: `background-color ${duration.fast}ms ${easing.standard}`,
+        transition: `transform ${duration.fast}ms ${easing.standard}, box-shadow ${duration.fast}ms ${easing.standard}`,
+        transform: hovered ? 'translateY(-1px)' : 'translateY(0)',
+        boxShadow: hovered ? shadows.cardHover : 'none',
+        outline: focused ? focusRing.outline : 'none',
+        outlineOffset: focusRing.outlineOffset,
       }}
     >
       <AlertCircle size={16} color={sev.icon} style={{ flexShrink: 0, marginTop: 2 }} />
@@ -561,9 +592,10 @@ const InsightRow: React.FC<{ insight: AIInsight; onClick?: () => void }> = ({ in
       {onClick && <ArrowRight size={14} color={colors.textTertiary} style={{ flexShrink: 0, marginTop: 2 }} />}
     </div>
   );
-};
+});
+InsightRow.displayName = 'InsightRow';
 
-const AIInsightsBanner: React.FC<{ insights: AIInsight[]; navigate: (path: string) => void }> = ({ insights, navigate }) => {
+const AIInsightsBanner: React.FC<{ insights: AIInsight[]; navigate: (path: string) => void }> = React.memo(({ insights, navigate }) => {
   // Show real insights first; if none, show onboarding placeholders so the banner is never empty
   const realInsights = insights
     .filter((i) => !i.dismissed && !i.isPlaceholder)
@@ -662,7 +694,8 @@ const AIInsightsBanner: React.FC<{ insights: AIInsight[]; navigate: (path: strin
       </div>
     </motion.div>
   );
-};
+});
+AIInsightsBanner.displayName = 'AIInsightsBanner';
 
 // ── Deterministic Insights Fallback (metrics only, no AI) ──────
 
@@ -1318,7 +1351,7 @@ const DashboardInner: React.FC = () => {
       >
         <div style={{
           width: 36, height: 36, borderRadius: borderRadius.base, flexShrink: 0,
-          background: `linear-gradient(135deg, ${colors.primaryOrange}, #FF9C42)`,
+          background: `linear-gradient(135deg, ${colors.brand400}, ${colors.orangeGradientEnd})`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
           <Sparkles size={16} color={colors.white} />
