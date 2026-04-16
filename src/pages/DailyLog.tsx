@@ -22,6 +22,8 @@ import type { DailyLogPhoto } from '../components/dailylog/PhotoGrid';
 import { QuickEntry } from '../components/dailylog/QuickEntry';
 import type { QuickEntryData } from '../components/dailylog/QuickEntry';
 import { CalendarNav } from '../components/dailylog/CalendarNav';
+import { AutoDailyLog } from '../components/dailylog/AutoDailyLog';
+import { DailyLogCapture } from '../components/dailylog/DailyLogCapture';
 import { useProjectId } from '../hooks/useProjectId';
 import { useDailyLogs, useDailyLogEntries } from '../hooks/queries';
 import { useUpdateDailyLog, useCreateDailyLog, useSubmitDailyLog, useApproveDailyLog, useRejectDailyLog } from '../hooks/mutations';
@@ -78,7 +80,8 @@ const DailyLogPage: React.FC = () => {
   const [expandedIncident, setExpandedIncident] = useState<string | null>(null);
   const [showQuickEntry, setShowQuickEntry] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
-  const [activeView, setActiveView] = useState<'calendar' | 'log'>('log');
+  const [activeView, setActiveView] = useState<'auto' | 'calendar' | 'log'>('auto');
+  const [showCaptureBar, setShowCaptureBar] = useState(true);
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [weatherIsAuto, setWeatherIsAuto] = useState(false);
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0]);
@@ -794,7 +797,7 @@ const DailyLogPage: React.FC = () => {
 
       {/* View tabs */}
       <div style={{ display: 'flex', borderBottom: `1px solid ${colors.borderSubtle}`, marginBottom: spacing['5'], gap: 0 }}>
-        {([['log', 'Log Entry'], ['calendar', 'Calendar View']] as const).map(([view, label]) => (
+        {([['auto', 'Auto Log'], ['log', 'Manual Entry'], ['calendar', 'Calendar View']] as const).map(([view, label]) => (
           <button
             key={view}
             aria-pressed={activeView === view}
@@ -818,6 +821,11 @@ const DailyLogPage: React.FC = () => {
           </button>
         ))}
       </div>
+
+      {/* Auto daily log view */}
+      {activeView === 'auto' && (
+        <AutoDailyLog onCapturePress={() => setShowCaptureBar(true)} />
+      )}
 
       {/* Calendar view */}
       {activeView === 'calendar' && (
@@ -1800,6 +1808,13 @@ const DailyLogPage: React.FC = () => {
             </div>
           </div>
         </>
+      )}
+      {/* Floating capture bar for auto daily log */}
+      {activeView === 'auto' && (
+        <DailyLogCapture
+          logId={todayLogId ?? null}
+          visible={showCaptureBar}
+        />
       )}
     </PageContainer>
   );
