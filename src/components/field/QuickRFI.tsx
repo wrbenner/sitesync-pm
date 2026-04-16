@@ -5,10 +5,10 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Camera, Mic, MicOff, X, Check, Edit3, Send,
+  MicOff, X, Check, Edit3, Send,
   AlertTriangle, Loader2, ChevronDown, Clock,
 } from 'lucide-react';
-import { colors, spacing, typography, borderRadius, shadows, zIndex, touchTarget } from '../../styles/theme';
+import { colors, spacing, typography, borderRadius, zIndex, touchTarget } from '../../styles/theme';
 import { duration, easingArray } from '../../styles/animations';
 import { useVoiceCapture } from '../../hooks/useVoiceCapture';
 import { useHaptics } from '../../hooks/useMobileCapture';
@@ -279,7 +279,8 @@ const QuickRFI: React.FC<QuickRFIProps> = ({ open, onClose }) => {
       setProcessingStep(4);
       await notification('success');
       setPhase('review');
-    } catch (err) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (_err) {
       clearTimeout(stepTimer1);
       clearTimeout(stepTimer2);
       clearTimeout(stepTimer3);
@@ -787,7 +788,7 @@ const QuickRFI: React.FC<QuickRFIProps> = ({ open, onClose }) => {
                   <div style={{ height: 160, flexShrink: 0, position: 'relative' }}>
                     <img
                       src={photoDataUrl}
-                      alt="RFI Photo"
+                      alt="RFI field observation"
                       style={{
                         width: '100%',
                         height: '100%',
