@@ -444,6 +444,12 @@ jobs:
           9. ESLint errors MUST NOT increase above floor in .quality-floor.json
           10. npm run build MUST pass
 
+          FORBIDDEN — do NOT touch these:
+          - .github/ (workflow files)
+          - .organism/ (organism config)
+          - .agent/ (safety rules)
+          - .quality-floor.json (managed by CI)
+
           After completing your work, run these checks and fix any failures:
           1. npx tsc --noEmit
           2. Check ESLint: npx eslint src/ --format json | python3 -c 'import json,sys; d=json.load(sys.stdin); print("Errors:", sum(r["errorCount"] for r in d))'
@@ -503,6 +509,9 @@ jobs:
       - name: Push branch
         if: steps.exp.outputs.skip != 'true' && steps.verify.outputs.success == 'true'
         run: |
+          # Revert any changes Claude Code made to workflow files or .organism/
+          git checkout -- .github/ 2>/dev/null || true
+          git checkout -- .organism/ 2>/dev/null || true
           git add -A
           git diff --cached --quiet && echo "No changes produced" && exit 0
           git commit -m "[organism] ${{ steps.exp.outputs.title }}"
