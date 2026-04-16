@@ -69,11 +69,14 @@ jobs:
             fi
           fi
 
-          # 5. Check Supabase health (auth endpoint, not REST which requires auth)
-          SUPA_CODE=$(curl -s -o /dev/null -w "%{http_code}" -m 10 "https://hypxrmcppjfbtlwuoafc.supabase.co/auth/v1/health" 2>/dev/null)
-          echo "Supabase Auth: HTTP $SUPA_CODE"
+          # 5. Check Supabase reachability
+          SUPA_CODE=$(curl -s -o /dev/null -w "%{http_code}" -m 10 \
+            "https://hypxrmcppjfbtlwuoafc.supabase.co/auth/v1/settings" \
+            -H "apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5cHhybWNwcGpmYnRsd3VvYWZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTM1MjQsImV4cCI6MjA5MDI4OTUyNH0.gI_zodUcFN1z5a9k4GC5At4fsPYgWi-99C0ZNcVgmYA" \
+            2>/dev/null)
+          echo "Supabase: HTTP $SUPA_CODE"
           if [ "$SUPA_CODE" != "200" ]; then
-            ISSUES="$ISSUES\n- 🚨 Supabase Auth API returned HTTP $SUPA_CODE"
+            ISSUES="$ISSUES\n- 🚨 Supabase returned HTTP $SUPA_CODE"
             CRITICAL=true
           fi
 
