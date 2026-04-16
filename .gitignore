@@ -40,3 +40,4 @@ test-results/
 
 # Coverage reports
 coverage/
+.env
