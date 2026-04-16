@@ -1,5 +1,5 @@
 -- Organism state tables
-CREATE TABLE organism_cycles (
+CREATE TABLE IF NOT EXISTS organism_cycles (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   phase text NOT NULL CHECK (phase IN ('perceive', 'reason', 'build', 'verify', 'learn')),
   started_at timestamptz NOT NULL DEFAULT now(),
@@ -16,7 +16,7 @@ CREATE TABLE organism_cycles (
   models_used text[]
 );
 
-CREATE TABLE organism_experiments (
+CREATE TABLE IF NOT EXISTS organism_experiments (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   cycle_id uuid REFERENCES organism_cycles(id),
   title text NOT NULL,
@@ -35,7 +35,7 @@ CREATE TABLE organism_experiments (
   completed_at timestamptz
 );
 
-CREATE TABLE organism_learnings (
+CREATE TABLE IF NOT EXISTS organism_learnings (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   experiment_id uuid REFERENCES organism_experiments(id),
   category text NOT NULL CHECK (category IN ('pattern', 'anti_pattern', 'skill', 'insight')),
@@ -45,7 +45,7 @@ CREATE TABLE organism_learnings (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE TABLE organism_skills (
+CREATE TABLE IF NOT EXISTS organism_skills (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name text NOT NULL UNIQUE,
   description text NOT NULL,
@@ -67,7 +67,11 @@ ALTER TABLE organism_learnings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE organism_skills ENABLE ROW LEVEL SECURITY;
 
 -- Service role can do everything (the organism runs as service role)
+DROP POLICY IF EXISTS organism_cycles_service ON organism_cycles;
 CREATE POLICY organism_cycles_service ON organism_cycles FOR ALL USING (true);
+DROP POLICY IF EXISTS organism_experiments_service ON organism_experiments;
 CREATE POLICY organism_experiments_service ON organism_experiments FOR ALL USING (true);
+DROP POLICY IF EXISTS organism_learnings_service ON organism_learnings;
 CREATE POLICY organism_learnings_service ON organism_learnings FOR ALL USING (true);
+DROP POLICY IF EXISTS organism_skills_service ON organism_skills;
 CREATE POLICY organism_skills_service ON organism_skills FOR ALL USING (true);

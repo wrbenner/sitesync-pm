@@ -38,6 +38,7 @@
 BEGIN;
 
 -- 1. Kernel view: shows effective role for each project member
+DROP VIEW IF EXISTS v_project_members_kernel;
 CREATE OR REPLACE VIEW v_project_members_kernel AS
 SELECT
   id,
@@ -48,7 +49,7 @@ SELECT
     WHEN 'member' THEN 'viewer'  -- least-privilege mapping
     ELSE role
   END AS effective_role,
-  created_at
+  invited_at
 FROM project_members;
 
 COMMENT ON VIEW v_project_members_kernel IS
