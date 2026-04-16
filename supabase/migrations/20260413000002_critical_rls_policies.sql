@@ -53,6 +53,22 @@
 
 BEGIN;
 
+-- Drop existing policies first (idempotent — handles re-runs and pre-existing policies)
+DO $$ BEGIN
+  DROP POLICY IF EXISTS estimates_select ON estimates;
+  DROP POLICY IF EXISTS estimates_insert ON estimates;
+  DROP POLICY IF EXISTS estimates_update ON estimates;
+  DROP POLICY IF EXISTS estimates_delete ON estimates;
+  DROP POLICY IF EXISTS bid_packages_select ON bid_packages;
+  DROP POLICY IF EXISTS bid_packages_insert ON bid_packages;
+  DROP POLICY IF EXISTS bid_packages_update ON bid_packages;
+  DROP POLICY IF EXISTS bid_packages_delete ON bid_packages;
+  DROP POLICY IF EXISTS safety_certifications_select ON safety_certifications;
+  DROP POLICY IF EXISTS safety_certifications_insert ON safety_certifications;
+  DROP POLICY IF EXISTS safety_certifications_update ON safety_certifications;
+  DROP POLICY IF EXISTS safety_certifications_delete ON safety_certifications;
+END $$;
+
 -- ---------------------------------------------------------------------------
 -- 1. estimates — CRITICAL: bid/estimate values, competitive advantage
 --    SELECT/INSERT/UPDATE: owner, admin, project_manager
