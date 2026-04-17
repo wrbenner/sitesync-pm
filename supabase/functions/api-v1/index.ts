@@ -194,10 +194,10 @@ async function listRFIs(ctx: ApiKeyContext, match: RegExpMatchArray, _r: Request
   const { cursor, limit } = parsePagination(url)
   const expand = parseExpand(url)
 
-  let select = 'id, rfi_number, title, description, status, priority, assigned_to, due_date, created_at, updated_at'
+  let select = 'id, number, title, description, status, priority, assigned_to, due_date, created_at, updated_at'
   if (expand.includes('responses')) select += ', rfi_responses(*)'
 
-  let query = ctx.supabase.from('rfis').select(select).eq('project_id', projectId).order('rfi_number', { ascending: false }).limit(limit + 1)
+  let query = ctx.supabase.from('rfis').select(select).eq('project_id', projectId).order('number', { ascending: false }).limit(limit + 1)
   if (cursor) query = query.lt('id', cursor)
 
   const status = url.searchParams.get('status')
@@ -327,7 +327,7 @@ async function listSubmittals(ctx: ApiKeyContext, match: RegExpMatchArray, _r: R
   const projectId = param(match, 1)
   await verifyProjectAccess(ctx, projectId)
   const { cursor, limit } = parsePagination(url)
-  let query = ctx.supabase.from('submittals').select('id, submittal_number, title, status, due_date, created_at, updated_at').eq('project_id', projectId).order('submittal_number', { ascending: false }).limit(limit + 1)
+  let query = ctx.supabase.from('submittals').select('id, number, title, status, due_date, created_at, updated_at').eq('project_id', projectId).order('number', { ascending: false }).limit(limit + 1)
   if (cursor) query = query.lt('id', cursor)
   const { data, error } = await query
   if (error) throw new HttpError(500, 'Failed to fetch submittals')

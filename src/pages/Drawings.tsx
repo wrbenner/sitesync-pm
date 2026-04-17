@@ -20,30 +20,11 @@ import { UploadZone } from '../components/files/UploadZone';
 import { drawingService } from '../services/drawingService';
 
 
-const aiChanges: Record<number, number> = { 1: 3, 5: 2, 11: 4 };
+const aiChanges: Record<number, number> = {};
 
-const linkedItems: Record<number, { rfis: number; submittals: number }> = {
-  1: { rfis: 1, submittals: 0 },
-  3: { rfis: 1, submittals: 1 },
-  4: { rfis: 1, submittals: 1 },
-  5: { rfis: 1, submittals: 0 },
-  11: { rfis: 2, submittals: 1 },
-};
+const linkedItems: Record<number, { rfis: number; submittals: number }> = {};
 
-const lastViewed: Record<number, string> = {
-  1: '2h ago',
-  2: '1d ago',
-  3: '5h ago',
-  4: '3d ago',
-  5: '1h ago',
-  6: '2d ago',
-  7: 'Never',
-  8: 'Never',
-  9: '4d ago',
-  10: 'Never',
-  11: '30m ago',
-  12: '1d ago',
-};
+const lastViewed: Record<number, string> = {};
 
 const gridColumns = '60px 80px 1fr 120px 80px 100px 80px 70px 120px 100px 70px 90px';
 

@@ -3,7 +3,7 @@
   "_version": 2,
   "_updated": "2026-04-17T00:00:00Z",
   "_updatedBy": "barrel-split-eslint-fix",
-  "bundleSizeKB": 1869,
+  "bundleSizeKB": 1826,
   "coveragePercent": 43.2,
   "testCoverage": {
     "statements": 43.2,
@@ -22,7 +22,7 @@
   "tsIgnoreComments": 0,
   "longestResponseMs": 340,
   "pageCount": 40,
-  "testCount": 45,
+  "testCount": 1416,
   "migrationCount": 48,
   "_targets": {
     "_comment": "Where we want to be in 6 months \u2014 the organism moves floor values toward these targets",

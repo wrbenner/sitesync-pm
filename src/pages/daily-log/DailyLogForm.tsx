@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import { Users, Clock, ShieldCheck, Cloud, ChevronRight, Camera, Send, Sparkles, Calendar, X, Lock, AlertTriangle, RefreshCw, Truck, UserPlus, FileEdit, Mic } from 'lucide-react';
+import { Users, Clock, ShieldCheck, Cloud, ChevronRight, Camera, Send, Sparkles, Calendar, X, Lock, AlertTriangle, RefreshCw, Truck, UserPlus, FileEdit } from 'lucide-react';
 import { Card, Btn, SectionHeader, useToast } from '../../components/Primitives';
 import { colors, spacing, typography, borderRadius, transitions, shadows } from '../../styles/theme';
-import { toast } from 'sonner';
 import { AutoNarrative } from '../../components/dailylog/AutoNarrative';
 import { DayComparison } from '../../components/dailylog/DayComparison';
 import { PhotoGrid } from '../../components/dailylog/PhotoGrid';
@@ -523,24 +522,6 @@ export const DailyLogForm: React.FC<DailyLogFormProps> = (props) => {
                     minHeight: '56px',
                   }}
                 />
-                {!isLocked && (
-                  <button
-                    title="Voice input"
-                    aria-label="Voice input for work summary"
-                    onClick={() => toast.success('Voice input available in the next update')}
-                    style={{
-                      width: '56px', height: '56px', flexShrink: 0,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      backgroundColor: colors.surfaceInset,
-                      border: `1px solid ${colors.borderDefault}`,
-                      borderRadius: borderRadius.md,
-                      cursor: 'pointer',
-                      color: colors.textTertiary,
-                    }}
-                  >
-                    <Mic size={18} />
-                  </button>
-                )}
               </div>
             </div>
           )}
@@ -575,24 +556,6 @@ export const DailyLogForm: React.FC<DailyLogFormProps> = (props) => {
                 minHeight: '56px',
               }}
             />
-            {!isLocked && (
-              <button
-                title="Voice input"
-                aria-label="Voice input for issues and delays"
-                onClick={() => toast.success('Voice input available in the next update')}
-                style={{
-                  width: '56px', height: '56px', flexShrink: 0,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  backgroundColor: colors.surfaceInset,
-                  border: `1px solid ${colors.borderDefault}`,
-                  borderRadius: borderRadius.md,
-                  cursor: 'pointer',
-                  color: colors.textTertiary,
-                }}
-              >
-                <Mic size={18} />
-              </button>
-            )}
           </div>
         </Card>
 

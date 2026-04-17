@@ -7,7 +7,6 @@ import { ExportButton } from '../components/shared/ExportButton'
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
 import { useSafetyInspections, useIncidents, useToolboxTalks, useSafetyCertifications, useCorrectiveActions, useDailyLogs } from '../hooks/queries'
-import { toast } from 'sonner'
 import { supabase } from '../lib/supabase'
 
 type TabKey = 'incidents' | 'inspections' | 'toolbox' | 'certifications' | 'corrective_actions'
@@ -1037,18 +1036,6 @@ export const Safety: React.FC = () => {
                       </span>
                     )}
                   </span>
-                  <Btn
-                    variant="primary"
-                    onClick={() => {
-                      toast.info('Inspection saved. Backend required to persist.')
-                      setActiveTemplate(null)
-                      setChecklistResults({})
-                      setChecklistNotes({})
-                    }}
-                    style={{ minHeight: '56px' }}
-                  >
-                    Complete Inspection
-                  </Btn>
                 </div>
               </>
             )}

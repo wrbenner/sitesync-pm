@@ -6,6 +6,7 @@ import {
 import { MetricCardSkeleton } from '../components/ui/Skeletons';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../styles/theme';
 import { useMeetings } from '../hooks/queries';
+import { useProjectActionItems } from '../hooks/queries/meeting-enhancements';
 import { useProjectId } from '../hooks/useProjectId';
 import { PermissionGate } from '../components/auth/PermissionGate';
 import CreateMeetingModal from '../components/forms/CreateMeetingModal';
@@ -151,6 +152,7 @@ export const MeetingsPage: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   const { data: meetingsResult, isPending, error, refetch } = useMeetings(projectId);
+  const { data: actionItemsData } = useProjectActionItems(projectId);
   const allMeetings = (meetingsResult?.data ?? []) as unknown as MeetingListItem[];
 
   if (isPending) return <MeetingsSkeleton />;
@@ -178,7 +180,25 @@ export const MeetingsPage: React.FC = () => {
   const pastMeetings = allMeetings.filter((m) => m.status === 'completed');
   const displayedMeetings = activeTab === 'upcoming' ? upcomingMeetings : pastMeetings;
 
-  const allActionItems: ActionItem[] = [];
+  const allActionItems: ActionItem[] = (actionItemsData ?? []).map((ai) => {
+    const aiRow = ai as unknown as {
+      id: string;
+      description: string;
+      assigned_to: string | null;
+      due_date: string | null;
+      status: string;
+      meetings: { title?: string } | { title?: string }[] | null;
+    };
+    const meetingRef = Array.isArray(aiRow.meetings) ? aiRow.meetings[0] : aiRow.meetings;
+    return {
+      id: aiRow.id,
+      description: aiRow.description,
+      assignee: aiRow.assigned_to ?? 'Unassigned',
+      dueDate: aiRow.due_date ?? '',
+      status: aiRow.status,
+      meetingTitle: meetingRef?.title ?? '',
+    };
+  });
   const openActionItemsCount = allActionItems.filter((ai) => ai.status === 'open').length;
   const meetingsThisWeek = upcomingMeetings.length;
   const totalAttendees = allMeetings.reduce((sum, m) => sum + (m.attendees?.length ?? 0), 0);

@@ -52,3 +52,19 @@ export function useOpenActionItems(projectId: string | undefined) {
     enabled: !!projectId,
   })
 }
+
+export function useProjectActionItems(projectId: string | undefined) {
+  return useQuery({
+    queryKey: ['project_action_items', projectId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('meeting_action_items')
+        .select('id, description, assigned_to, due_date, status, meetings!inner(project_id, title)')
+        .eq('meetings.project_id', projectId!)
+        .order('due_date')
+      if (error) throw error
+      return data ?? []
+    },
+    enabled: !!projectId,
+  })
+}
