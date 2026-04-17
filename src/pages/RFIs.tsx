@@ -7,11 +7,11 @@ import { createColumnHelper } from '@tanstack/react-table';
 import { PageContainer, Card, Btn, StatusTag, PriorityTag, DetailPanel, Avatar, Tag, RelatedItems, useToast, MetricBox, EmptyState } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, shadows, zIndex } from '../styles/theme';
 import { useRFIs } from '../hooks/queries';
+import { useRFI } from '../hooks/queries/rfis';
 import { AlertTriangle, FileQuestion, FilterX, Plus, Clock, MessageSquare, Paperclip, Calendar, RefreshCw, Send, Sparkles, LayoutGrid, List, UserCheck, Flag, Download, XCircle, Wand2, Loader2, X } from 'lucide-react';
 import { useAppNavigate, getRelatedItemsForRfi } from '../utils/connections';
-import { useCreateRFI, useUpdateRFI } from '../hooks/mutations';
+import { useCreateRFI, useUpdateRFI, useCreateRFIResponse } from '../hooks/mutations';
 import { useProjectId } from '../hooks/useProjectId';
-import { useNavigate } from 'react-router-dom';
 import { useCopilotStore } from '../stores/copilotStore';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { PermissionGate } from '../components/auth/PermissionGate';
@@ -29,7 +29,11 @@ import { useReducedMotion } from '../hooks/useReducedMotion';
 
 const QuickRFIButton = lazy(() => import('../components/field/QuickRFIButton'));
 
-const isOverdue = (dateStr: string) => new Date(dateStr) < new Date();
+const isOverdue = (dateStr: string | null | undefined): boolean => {
+  if (!dateStr) return false;
+  const d = new Date(dateStr);
+  return !isNaN(d.getTime()) && d < new Date();
+};
 
 const containerVariants = {
   hidden: {},
@@ -95,8 +99,12 @@ const BallInCourtCell: React.FC<{ rfi: unknown }> = React.memo(({ rfi }) => {
   );
 });
 
-const formatDate = (dateStr: string) =>
-  new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+const formatDate = (dateStr: string | null | undefined): string => {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+};
 
 const rfiColHelper = createColumnHelper<unknown>();
 
@@ -135,14 +143,14 @@ const RFIsPage: React.FC = () => {
   const totalOpen = useMemo(() => rfis.filter((r: Record<string, unknown>) => r.status !== 'closed').length, [rfis]);
   const overdueCount = useMemo(() => rfis.filter((r: Record<string, unknown>) => r.status !== 'closed' && r.dueDate && isOverdue(r.dueDate as string)).length, [rfis]);
   const avgDaysToClose = useMemo(() => {
-    const closed = rfis.filter((r: unknown) => r.status === 'closed' && r.closed_at && r.created_at);
+    const closed = rfis.filter((r: unknown) => r.status === 'closed' && r.closed_date && r.created_at);
     if (!closed.length) return 0;
-    const total = closed.reduce((sum: number, r: unknown) => sum + Math.floor((new Date(r.closed_at).getTime() - new Date(r.created_at).getTime()) / 86400000), 0);
+    const total = closed.reduce((sum: number, r: unknown) => sum + Math.floor((new Date(r.closed_date as string).getTime() - new Date(r.created_at as string).getTime()) / 86400000), 0);
     return Math.round(total / closed.length);
   }, [rfis]);
   const closedThisWeek = useMemo(() => {
     const weekAgo = Date.now() - 7 * 86400000;
-    return rfis.filter((r: unknown) => r.status === 'closed' && r.closed_at && new Date(r.closed_at).getTime() >= weekAgo).length;
+    return rfis.filter((r: unknown) => r.status === 'closed' && r.closed_date && new Date(r.closed_date as string).getTime() >= weekAgo).length;
   }, [rfis]);
   const [selectedRfi, setSelectedRfi] = useState<unknown>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -180,9 +188,16 @@ const RFIsPage: React.FC = () => {
   }, [statusFilter, rfis]);
 
   const appNavigate = useAppNavigate();
-  const navigate = useNavigate();
   const createRFI = useCreateRFI();
   const updateRFI = useUpdateRFI();
+  const createRFIResponse = useCreateRFIResponse();
+
+  const [responseText, setResponseText] = useState('');
+  const [commentText, setCommentText] = useState('');
+  const [showCommentBox, setShowCommentBox] = useState(false);
+
+  const selectedRfiId = selectedRfi ? String(selectedRfi.id) : undefined;
+  const { data: rfiDetail } = useRFI(selectedRfiId);
 
   const handleStatusChange = useCallback(async (rfiId: string, newStatus: string) => {
     if (!projectId) {
@@ -197,11 +212,14 @@ const RFIsPage: React.FC = () => {
     }
   }, [updateRFI, projectId, addToast]);
 
-  // Reset AI suggestion when detail panel switches to a different RFI
+  // Reset AI suggestion and compose state when detail panel switches to a different RFI
   useEffect(() => {
     setAiSuggestion(null);
     setAiSuggestionLoading(false);
     setAiSuggestionError(false);
+    setResponseText('');
+    setCommentText('');
+    setShowCommentBox(false);
   }, [selectedRfi?.id]);
 
   const handleAIDraft = useCallback(async () => {
@@ -321,7 +339,7 @@ const RFIsPage: React.FC = () => {
         const rfi = info.row.original;
         let days: number;
         if (rfi.status === 'closed') {
-          days = Math.floor((new Date(rfi.closed_at || rfi.updated_at).getTime() - new Date(rfi.created_at).getTime()) / 86400000);
+          days = Math.floor((new Date((rfi.closed_date || rfi.updated_at) as string).getTime() - new Date(rfi.created_at as string).getTime()) / 86400000);
         } else {
           days = Math.floor((Date.now() - new Date(rfi.created_at).getTime()) / 86400000);
         }
@@ -673,7 +691,7 @@ const RFIsPage: React.FC = () => {
               columns={allRfiColumns}
               rowHeight={48}
               containerHeight={600}
-              onRowClick={(rfi) => navigate(`/projects/${projectId}/rfis/${rfi.id}`)}
+              onRowClick={(rfi) => { setSelectedRfi(rfi); setEditingDetail(false); }}
               selectedRowId={null}
               getRowId={(row) => String(row.id)}
               getRowAriaLabel={(rfi) => `RFI ${rfi.rfiNumber}: ${rfi.title}, status ${rfi.status}`}
@@ -896,7 +914,7 @@ const RFIsPage: React.FC = () => {
                 displayContent={
                   selectedRfi.to ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
-                      <Avatar initials={selectedRfi.to.split(' ').map((w: string) => w[0]).join('').slice(0, 2)} size={24} />
+                      <Avatar initials={selectedRfi.to.split(' ').filter(Boolean).map((w: string) => w[0]).join('').slice(0, 2) || '?'} size={24} />
                       <span>{selectedRfi.to}</span>
                     </div>
                   ) : undefined
@@ -927,8 +945,8 @@ const RFIsPage: React.FC = () => {
               />
               <MetaItem label="From">
                 <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
-                  <Avatar initials={selectedRfi.from.split(' ').map((w: string) => w[0]).join('').slice(0, 2)} size={24} />
-                  <span>{selectedRfi.from}</span>
+                  <Avatar initials={selectedRfi.from ? selectedRfi.from.split(' ').filter(Boolean).map((w: string) => w[0]).join('').slice(0, 2) || '?' : '?'} size={24} />
+                  <span>{selectedRfi.from || '—'}</span>
                 </div>
               </MetaItem>
               <MetaItem label="Submitted">
@@ -960,25 +978,60 @@ const RFIsPage: React.FC = () => {
               <div style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.lg, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Response Timeline
               </div>
-              <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2, ease: 'easeOut' }}
-                style={{
-                  display: 'flex', flexDirection: 'column', alignItems: 'center',
-                  gap: spacing['2'], padding: `${spacing['6']} ${spacing['4']}`,
-                  backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.md,
-                  border: `1px dashed ${colors.borderSubtle}`, textAlign: 'center',
-                }}
-              >
-                <MessageSquare size={20} color={colors.textTertiary} />
-                <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textTertiary }}>
-                  No responses yet
-                </p>
-                <p style={{ margin: 0, fontSize: typography.fontSize.caption, color: colors.textTertiary, lineHeight: typography.lineHeight.relaxed }}>
-                  Responses and comments will appear here as the RFI is worked
-                </p>
-              </motion.div>
+              {rfiDetail?.responses && rfiDetail.responses.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
+                  {rfiDetail.responses.map((resp) => (
+                    <div key={resp.id} style={{ padding: spacing['3'], backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.md, border: `1px solid ${colors.borderSubtle}` }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['2'] }}>
+                        <Avatar
+                          initials={(resp.author_id ?? 'U').slice(0, 2).toUpperCase()}
+                          size={24}
+                        />
+                        <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
+                          {resp.created_at ? formatDate(resp.created_at) : ''}
+                        </span>
+                      </div>
+                      <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textSecondary, lineHeight: typography.lineHeight.relaxed }}>
+                        {resp.content}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2, ease: 'easeOut' }}
+                  style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center',
+                    gap: spacing['2'], padding: `${spacing['6']} ${spacing['4']}`,
+                    backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.md,
+                    border: `1px dashed ${colors.borderSubtle}`, textAlign: 'center',
+                  }}
+                >
+                  <MessageSquare size={20} color={colors.textTertiary} />
+                  <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textTertiary }}>
+                    No responses yet
+                  </p>
+                  <p style={{ margin: 0, fontSize: typography.fontSize.caption, color: colors.textTertiary, lineHeight: typography.lineHeight.relaxed }}>
+                    Responses and comments will appear here as the RFI is worked
+                  </p>
+                </motion.div>
+              )}
+            </div>
+
+            {/* Response compose */}
+            <div>
+              <div style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.sm, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Compose Response
+              </div>
+              <textarea
+                value={responseText}
+                onChange={(e) => setResponseText(e.target.value)}
+                placeholder="Type your response here..."
+                rows={3}
+                style={{ width: '100%', padding: spacing['3'], border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.md, fontSize: typography.fontSize.sm, color: colors.textPrimary, backgroundColor: colors.surfacePage, resize: 'vertical' as const, fontFamily: typography.fontFamily, lineHeight: 1.5, boxSizing: 'border-box' as const, outline: 'none' }}
+              />
             </div>
 
             {/* AI Suggest Response */}
@@ -1021,26 +1074,81 @@ const RFIsPage: React.FC = () => {
                   <Btn
                     fullWidth
                     icon={<Send size={15} />}
+                    disabled={createRFIResponse.isPending}
                     onClick={async () => {
-                      await handleStatusChange(String(selectedRfi.id), 'answered');
-                      addToast('success', 'Response submitted successfully');
-                      setSelectedRfi(null);
+                      if (!projectId) { toast.error('No project selected'); return; }
+                      const text = responseText.trim() || aiSuggestion?.trim() || '';
+                      if (!text) { toast.error('Please enter a response before submitting'); return; }
+                      try {
+                        await createRFIResponse.mutateAsync({
+                          rfiId: String(selectedRfi.id),
+                          projectId,
+                          data: { rfi_id: String(selectedRfi.id), content: text },
+                        });
+                        await handleStatusChange(String(selectedRfi.id), 'answered');
+                        toast.success('Response submitted successfully');
+                        setResponseText('');
+                        setAiSuggestion(null);
+                        setSelectedRfi(null);
+                      } catch {
+                        toast.error('Failed to submit response. Please try again.');
+                      }
                     }}
                   >
-                    Submit Response
+                    {createRFIResponse.isPending ? 'Submitting...' : 'Submit Response'}
                   </Btn>
                 </PermissionGate>
               </div>
               <div style={{ flex: 1 }}>
                 <PermissionGate permission="rfis.respond">
-                  <Btn
-                    variant="secondary"
-                    fullWidth
-                    icon={<MessageSquare size={15} />}
-                    onClick={() => addToast('info', 'Comment box opening soon')}
-                  >
-                    Add Comment
-                  </Btn>
+                  {showCommentBox ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'] }}>
+                      <textarea
+                        value={commentText}
+                        onChange={(e) => setCommentText(e.target.value)}
+                        placeholder="Add a comment..."
+                        rows={2}
+                        autoFocus
+                        onKeyDown={(e) => { if (e.key === 'Escape') { setShowCommentBox(false); setCommentText(''); } }}
+                        style={{ width: '100%', padding: spacing['2'], border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.sm, fontSize: typography.fontSize.sm, color: colors.textPrimary, backgroundColor: colors.surfacePage, resize: 'none' as const, fontFamily: typography.fontFamily, boxSizing: 'border-box' as const, outline: 'none' }}
+                      />
+                      <div style={{ display: 'flex', gap: spacing['2'] }}>
+                        <Btn
+                          size="sm"
+                          disabled={!commentText.trim() || createRFIResponse.isPending}
+                          onClick={async () => {
+                            if (!projectId || !commentText.trim()) return;
+                            try {
+                              await createRFIResponse.mutateAsync({
+                                rfiId: String(selectedRfi.id),
+                                projectId,
+                                data: { rfi_id: String(selectedRfi.id), content: commentText.trim() },
+                              });
+                              toast.success('Comment added');
+                              setCommentText('');
+                              setShowCommentBox(false);
+                            } catch {
+                              toast.error('Failed to add comment. Please try again.');
+                            }
+                          }}
+                        >
+                          Post
+                        </Btn>
+                        <Btn size="sm" variant="secondary" onClick={() => { setShowCommentBox(false); setCommentText(''); }}>
+                          Cancel
+                        </Btn>
+                      </div>
+                    </div>
+                  ) : (
+                    <Btn
+                      variant="secondary"
+                      fullWidth
+                      icon={<MessageSquare size={15} />}
+                      onClick={() => setShowCommentBox(true)}
+                    >
+                      Add Comment
+                    </Btn>
+                  )}
                 </PermissionGate>
               </div>
             </div>

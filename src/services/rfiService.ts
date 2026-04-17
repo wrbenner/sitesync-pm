@@ -63,7 +63,7 @@ export const rfiService = {
       .select('*')
       .eq('project_id', projectId)
       .is('deleted_at', null)
-      .order('rfi_number', { ascending: false });
+      .order('number', { ascending: false });
 
     if (error) return fail(dbError(error.message, { projectId }));
     return ok((data ?? []) as RFI[]);
@@ -207,8 +207,8 @@ export const rfiService = {
 
     const { error: insertError } = await supabase.from('rfi_responses').insert({
       rfi_id: rfiId,
-      user_id: userId,
-      response_text: text,
+      author_id: userId,
+      content: text,
       attachments: attachments ?? null,
     });
 
