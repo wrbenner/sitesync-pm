@@ -29,7 +29,12 @@ import { useReducedMotion } from '../hooks/useReducedMotion';
 
 const QuickRFIButton = lazy(() => import('../components/field/QuickRFIButton'));
 
-const isOverdue = (dateStr: string) => new Date(dateStr) < new Date();
+const isOverdue = (dateStr: string | undefined | null) => {
+  if (!dateStr) return false;
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return false;
+  return d < new Date();
+};
 
 const containerVariants = {
   hidden: {},
@@ -95,8 +100,12 @@ const BallInCourtCell: React.FC<{ rfi: unknown }> = React.memo(({ rfi }) => {
   );
 });
 
-const formatDate = (dateStr: string) =>
-  new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+const formatDate = (dateStr: string | undefined | null) => {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+};
 
 const rfiColHelper = createColumnHelper<unknown>();
 
@@ -118,7 +127,7 @@ const RFIsPage: React.FC = () => {
   const { setPageContext } = useCopilotStore();
   useEffect(() => { setPageContext('rfis'); }, [setPageContext]);
   const { data: rfisResult, isPending: rfisLoading, error: rfisError, refetch } = useRFIs(projectId);
-  const rfisRaw = rfisResult?.data ?? [];
+  const rfisRaw = useMemo(() => rfisResult?.data ?? [], [rfisResult]);
 
   // Map API data to component shape
   const rfis = useMemo(() => rfisRaw.map((r: Record<string, unknown>) => ({
@@ -203,6 +212,19 @@ const RFIsPage: React.FC = () => {
     setAiSuggestionLoading(false);
     setAiSuggestionError(false);
   }, [selectedRfi?.id]);
+
+  // Escape key dismisses AI Draft modal (custom dialog, not Radix)
+  useEffect(() => {
+    if (!showAIDraftModal) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !aiDraftLoading) {
+        setShowAIDraftModal(false);
+        setAiDraftInput('');
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [showAIDraftModal, aiDraftLoading]);
 
   const handleAIDraft = useCallback(async () => {
     if (!aiDraftInput.trim()) return;
@@ -387,7 +409,7 @@ const RFIsPage: React.FC = () => {
 
   const allRfiColumns = useMemo(() => [checkboxColumn, ...rfiColumns], [checkboxColumn, rfiColumns]);
 
-  const allRfis = rfis || [];
+  const allRfis = rfis;
 
   const STATUS_TABS = [
     { key: 'all', label: 'All' },
@@ -937,10 +959,10 @@ const RFIsPage: React.FC = () => {
               </p>
             </div>
 
-            {/* Attachments hint */}
+            {/* Attachments */}
             <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, padding: spacing.md, backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.sm, border: `1px dashed ${colors.border}` }}>
               <Paperclip size={16} style={{ color: colors.textTertiary }} />
-              <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>2 attachments (markup sketch, spec reference)</span>
+              <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>No attachments</span>
             </div>
 
             {/* Response Timeline */}
@@ -1010,9 +1032,14 @@ const RFIsPage: React.FC = () => {
                     fullWidth
                     icon={<Send size={15} />}
                     onClick={async () => {
-                      await handleStatusChange(String(selectedRfi.id), 'answered');
-                      addToast('success', 'Response submitted successfully');
-                      setSelectedRfi(null);
+                      if (!projectId) { addToast('error', 'No project selected'); return; }
+                      try {
+                        await updateRFI.mutateAsync({ id: String(selectedRfi.id), updates: { status: 'answered' }, projectId });
+                        toast.success('Response submitted successfully');
+                        setSelectedRfi(null);
+                      } catch {
+                        toast.error('Failed to submit response. Please try again.');
+                      }
                     }}
                   >
                     Submit Response
@@ -1098,10 +1125,11 @@ const RFIsPage: React.FC = () => {
                   <X size={18} />
                 </motion.button>
               </div>
-              <label style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textSecondary, display: 'block', marginBottom: spacing['2'] }}>
+              <label htmlFor="ai-draft-textarea" style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textSecondary, display: 'block', marginBottom: spacing['2'] }}>
                 Describe the issue in your own words
               </label>
               <textarea
+                id="ai-draft-textarea"
                 value={aiDraftInput}
                 onChange={(e) => setAiDraftInput(e.target.value)}
                 placeholder="e.g. The structural drawing conflicts with the architectural plan on grid line C, the beam depth does not match"
