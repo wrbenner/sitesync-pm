@@ -29,6 +29,7 @@ import {
   computeG702FromRows,
   type DraftSOVRow,
 } from './types'
+import { useIsMobile } from '../../hooks/useWindowSize'
 
 const PDFDownloadLink = lazy(() =>
   import('@react-pdf/renderer').then((m) => ({ default: m.PDFDownloadLink })),
@@ -46,7 +47,8 @@ interface SOVEditorPanelProps {
 export const SOVEditorPanel = memo<SOVEditorPanelProps>(({ sovData, appStatus, projectId, onLiveDataChange }) => {
   const [edits, setEdits] = useState<Record<string, { pct: number; materials: number }>>({})
   const [isDirty, setIsDirty] = useState(false)
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)
+  // REACT-03 FIX: Shared hook replaces a per-page resize listener.
+  const isMobile = useIsMobile()
   const queryClient = useQueryClient()
   const isOnline = useIsOnline()
 
@@ -65,16 +67,6 @@ export const SOVEditorPanel = memo<SOVEditorPanelProps>(({ sovData, appStatus, p
       .subscribe()
     return () => { supabase.removeChannel(channel) }
   }, [projectId, sovData.applicationNumber, queryClient])
-
-  useEffect(() => {
-    let timer: ReturnType<typeof setTimeout>
-    const handleResize = () => {
-      clearTimeout(timer)
-      timer = setTimeout(() => setIsMobile(window.innerWidth < 768), 150)
-    }
-    window.addEventListener('resize', handleResize)
-    return () => { clearTimeout(timer); window.removeEventListener('resize', handleResize) }
-  }, [])
 
   useEffect(() => {
     const initial: Record<string, { pct: number; materials: number }> = {}

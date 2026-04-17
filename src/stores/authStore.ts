@@ -4,6 +4,10 @@ import { userService } from '../services/userService';
 import type { Profile, Organization } from '../types/database';
 import type { Session, User } from '@supabase/supabase-js';
 
+// BUG-H11 FIX: Keep a module-level reference to the auth subscription so we can
+// unsubscribe on teardown (e.g. signOut / HMR) and avoid leaked listeners.
+let authSubscription: { unsubscribe: () => void } | null = null;
+
 interface AuthState {
   session: Session | null;
   user: User | null;
@@ -14,6 +18,7 @@ interface AuthState {
   error: Error | null;
 
   initialize: () => Promise<void>;
+  teardown: () => void;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signUp: (email: string, password: string, firstName: string, lastName?: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
@@ -46,7 +51,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         await get().loadOrganization();
       }
 
-      supabase.auth.onAuthStateChange(async (_event, session) => {
+      // BUG-H11 FIX: Tear down any prior subscription before creating a new one
+      // (e.g. on re-initialize or HMR) and keep a reference for explicit cleanup.
+      if (authSubscription) {
+        authSubscription.unsubscribe();
+        authSubscription = null;
+      }
+      const { data } = supabase.auth.onAuthStateChange(async (_event, session) => {
         set({ session, user: session?.user ?? null });
         if (session?.user) {
           await get().loadProfile();
@@ -55,6 +66,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           set({ profile: null, organization: null });
         }
       });
+      authSubscription = data.subscription;
     } catch (error) {
       if (import.meta.env.DEV) console.error('Auth initialization failed:', error);
       set({ error: error instanceof Error ? error : new Error(String(error)) });
@@ -192,4 +204,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   clearError: () => set({ error: null }),
+
+  teardown: () => {
+    // BUG-H11 FIX: Allow callers to explicitly release the Supabase auth
+    // subscription (e.g. on logout or unmount).
+    if (authSubscription) {
+      authSubscription.unsubscribe();
+      authSubscription = null;
+    }
+  },
 }));

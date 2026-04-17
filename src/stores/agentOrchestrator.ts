@@ -97,8 +97,10 @@ export const useAgentOrchestrator = create<AgentOrchestratorState>()((set, get) 
   setInput: (val) => set({ input: val }),
 
   addUserMessage: (content) => {
+    // BUG-M10 FIX: crypto.randomUUID() avoids ID collisions when multiple
+    // messages are created in the same millisecond.
     const msg: AgentConversationMessage = {
-      id: `msg-${Date.now()}-user`,
+      id: `msg-${crypto.randomUUID()}-user`,
       role: 'user',
       content,
       timestamp: new Date(),
@@ -109,7 +111,7 @@ export const useAgentOrchestrator = create<AgentOrchestratorState>()((set, get) 
 
   addCoordinatorMessage: (content, routingInfo) => {
     const msg: AgentConversationMessage = {
-      id: `msg-${Date.now()}-coord`,
+      id: `msg-${crypto.randomUUID()}-coord`,
       role: 'coordinator',
       content,
       timestamp: new Date(),
@@ -127,7 +129,7 @@ export const useAgentOrchestrator = create<AgentOrchestratorState>()((set, get) 
   addAgentMessage: (domain, content, extras) => {
     const identity = SPECIALIST_AGENTS[domain]
     const msg: AgentConversationMessage = {
-      id: `msg-${Date.now()}-${domain}`,
+      id: `msg-${crypto.randomUUID()}-${domain}`,
       role: 'agent',
       content,
       timestamp: new Date(),
@@ -162,7 +164,7 @@ export const useAgentOrchestrator = create<AgentOrchestratorState>()((set, get) 
       let pendingBatch = s.pendingBatch
       if (pendingActions.length > 0) {
         pendingBatch = {
-          id: `batch-${Date.now()}`,
+          id: `batch-${crypto.randomUUID()}`,
           actions: pendingActions,
           status: 'pending',
           createdAt: new Date(),
@@ -210,7 +212,7 @@ export const useAgentOrchestrator = create<AgentOrchestratorState>()((set, get) 
         actionHistory: [
           ...s.actionHistory,
           {
-            id: `resolved-${Date.now()}`,
+            id: `resolved-${crypto.randomUUID()}`,
             actions: [action],
             status: 'approved' as ActionApprovalStatus,
             createdAt: s.pendingBatch.createdAt,
@@ -249,16 +251,21 @@ export const useAgentOrchestrator = create<AgentOrchestratorState>()((set, get) 
   approveAllPending: () => {
     const { pendingBatch } = get()
     if (!pendingBatch) return
-    for (const action of pendingBatch.actions) {
-      get().approveAction(action.id)
+    // BUG-H23 FIX: Copy the action IDs up front — approveAction mutates
+    // pendingBatch.actions via set(), and iterating the live array would skip entries.
+    const ids = pendingBatch.actions.map((a) => a.id)
+    for (const id of ids) {
+      get().approveAction(id)
     }
   },
 
   rejectAllPending: () => {
     const { pendingBatch } = get()
     if (!pendingBatch) return
-    for (const action of pendingBatch.actions) {
-      get().rejectAction(action.id)
+    // BUG-H23 FIX: See approveAllPending above.
+    const ids = pendingBatch.actions.map((a) => a.id)
+    for (const id of ids) {
+      get().rejectAction(id)
     }
   },
 

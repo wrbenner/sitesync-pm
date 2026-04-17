@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, memo, lazy, Suspense } from 'react'
+import React, { useState, useCallback, memo, lazy, Suspense } from 'react'
 import { FileText, CheckCircle, CreditCard, Download, Receipt } from 'lucide-react'
 import { toast } from 'sonner'
 import { Card, Btn } from '../../components/Primitives'
@@ -9,6 +9,7 @@ import { G702ApplicationPDF } from '../../components/export/G702ApplicationPDF'
 import { G703ContinuationPDF } from '../../components/export/G703ContinuationPDF'
 import { generatePayAppPdfFromData, type PayAppPdfData } from '../../services/pdf/paymentAppPdf'
 import { fmtCurrency, fmtDate } from './types'
+import { useIsMobile } from '../../hooks/useWindowSize'
 
 const PDFDownloadLink = lazy(() =>
   import('@react-pdf/renderer').then((m) => ({ default: m.PDFDownloadLink })),
@@ -27,17 +28,8 @@ export const G702Preview = memo<G702PreviewProps>(({
   app, liveG702, liveG703, onApprove, isApproving, hasPendingWaivers,
 }) => {
   const [isPdfExporting, setIsPdfExporting] = useState(false)
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)
-
-  useEffect(() => {
-    let timer: ReturnType<typeof setTimeout>
-    const handleResize = () => {
-      clearTimeout(timer)
-      timer = setTimeout(() => setIsMobile(window.innerWidth < 768), 150)
-    }
-    window.addEventListener('resize', handleResize)
-    return () => { clearTimeout(timer); window.removeEventListener('resize', handleResize) }
-  }, [])
+  // REACT-03 FIX: Shared hook replaces a per-page resize listener.
+  const isMobile = useIsMobile()
 
   const handleExportG702G703 = useCallback(async () => {
     setIsPdfExporting(true)

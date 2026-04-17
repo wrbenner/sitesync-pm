@@ -10,6 +10,9 @@ import type { Database } from '../types/database'
 import { transformSupabaseError } from './errors'
 import { assertProjectAccess } from './middleware/projectScope'
 import { dedup, queryKey } from '../lib/requestDedup'
+// BUG-H22 FIX: top-level ESM import replaces a prior CommonJS `require(...)`
+// call, which is invalid in this Vite/ESM build.
+import { useInfiniteQuery } from '@tanstack/react-query'
 
 type TableName = keyof Database['public']['Tables']
 type DbClient = typeof supabase

@@ -32,27 +32,34 @@ const MAX_BUFFER_SIZE = 100;
 
 /**
  * Initialize error tracking. Call once at app startup.
+ * Returns a teardown function that removes the global listeners (useful for
+ * test isolation and HMR reloads).
  */
-export function initErrorTracking() {
-  // Global unhandled error handler
-  window.addEventListener('error', (event) => {
+export function initErrorTracking(): () => void {
+  // REACT-05 FIX: Named handlers so they can be removed on teardown.
+  const errorHandler = (event: ErrorEvent) => {
     captureException(event.error || new Error(event.message), {
       action: 'unhandled_error',
       extra: { filename: event.filename, lineno: event.lineno, colno: event.colno },
     });
-  });
-
-  // Global unhandled promise rejection handler
-  window.addEventListener('unhandledrejection', (event) => {
+  };
+  const rejectionHandler = (event: PromiseRejectionEvent) => {
     const error = event.reason instanceof Error ? event.reason : new Error(String(event.reason));
     captureException(error, { action: 'unhandled_promise_rejection' });
-  });
+  };
+  window.addEventListener('error', errorHandler);
+  window.addEventListener('unhandledrejection', rejectionHandler);
 
   if (config.enabled) {
     console.info(`[ErrorTracking] Sentry DSN configured for ${config.environment}`);
   } else {
     console.info('[ErrorTracking] Running in local logging mode (no Sentry DSN configured)');
   }
+
+  return () => {
+    window.removeEventListener('error', errorHandler);
+    window.removeEventListener('unhandledrejection', rejectionHandler);
+  };
 }
 
 /**

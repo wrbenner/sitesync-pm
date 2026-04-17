@@ -29,10 +29,14 @@ function useMediaQuery(query: string): boolean {
   );
   useEffect(() => {
     const mq = window.matchMedia(query);
-    setTimeout(() => setMatches(mq.matches), 0);
+    // REACT-05 FIX: Track the deferred-sync setTimeout so it can't fire after unmount.
+    const syncHandle = setTimeout(() => setMatches(mq.matches), 0);
     const handler = (e: MediaQueryListEvent) => setMatches(e.matches);
     mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
+    return () => {
+      clearTimeout(syncHandle);
+      mq.removeEventListener('change', handler);
+    };
   }, [query]);
   return matches;
 }
@@ -58,9 +62,9 @@ const SchedulePage: React.FC = () => {
   useEffect(() => { setPageContext('schedule'); }, [setPageContext]);
 
   useEffect(() => {
+    // REACT-04 FIX: include loadSchedule in deps (removed prior eslint-disable).
     if (activeProject?.id) loadSchedule(activeProject.id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeProject?.id]);
+  }, [activeProject?.id, loadSchedule]);
 
   useEffect(() => {
     const projectId = activeProject?.id;
@@ -100,6 +104,9 @@ const SchedulePage: React.FC = () => {
   const [lastAnalyzed, setLastAnalyzed] = useState<Date | null>(null);
   const [minutesAgo, setMinutesAgo] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // REACT-05 FIX: Track pending setTimeout handles so they can be cleared on unmount.
+  const analysisTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const copilotTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [aiEdgeText, setAiEdgeText] = useState<string | null>(null);
   const [aiEdgeLoading, setAiEdgeLoading] = useState(false);
   const [weatherRecords, setWeatherRecords] = useState<Array<{ date: string; conditions: string | null }>>([]);
@@ -161,8 +168,11 @@ const SchedulePage: React.FC = () => {
 
   const runAnalysis = useCallback(() => {
     setAnalyzing(true);
-    // Simulate brief async analysis delay for UX feedback
-    setTimeout(() => {
+    // REACT-05 FIX: Cancel any previous pending analysis setTimeout; store the
+    // handle so unmount can clear it.
+    if (analysisTimeoutRef.current) clearTimeout(analysisTimeoutRef.current);
+    analysisTimeoutRef.current = setTimeout(() => {
+      analysisTimeoutRef.current = null;
       const results = predictScheduleRisks(schedulePhases, INITIAL_FORECAST);
       setRisks(results);
       setLastAnalyzed(new Date());
@@ -291,9 +301,21 @@ const SchedulePage: React.FC = () => {
     const convId = createConversation(`Recovery Plan: ${risk.title}`);
     setActiveConversation(convId);
     navigate('/copilot');
-    // Fire-and-forget the initial message after navigation
-    setTimeout(() => sendMessage(prompt), 100);
+    // REACT-05 FIX: Track handle so it can be cleared on unmount.
+    if (copilotTimeoutRef.current) clearTimeout(copilotTimeoutRef.current);
+    copilotTimeoutRef.current = setTimeout(() => {
+      copilotTimeoutRef.current = null;
+      sendMessage(prompt);
+    }, 100);
   }, [createConversation, setActiveConversation, sendMessage, navigate]);
+
+  // REACT-05 FIX: Clear any outstanding setTimeouts when the page unmounts.
+  useEffect(() => {
+    return () => {
+      if (analysisTimeoutRef.current) clearTimeout(analysisTimeoutRef.current);
+      if (copilotTimeoutRef.current) clearTimeout(copilotTimeoutRef.current);
+    };
+  }, []);
 
   if (error && !loading) {
     return <ScheduleErrorState error={error} />;

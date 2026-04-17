@@ -1,8 +1,9 @@
 import { useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import { queryClient } from '../lib/queryClient'
-import { subscribeToProject, subscribeToNotifications, subscribeToPresence, updatePresencePage, requestNotificationPermission } from '../lib/realtime'
+import { subscribeToProject, subscribeToNotifications, subscribeToPresence, updatePresencePage, requestNotificationPermission, setRealtimeNavigator } from '../lib/realtime'
 import type { PresenceUser } from '../lib/realtime'
 import { usePresenceStore } from '../stores/presenceStore'
 
@@ -140,6 +141,14 @@ export function unsubscribeAll(): void {
 // ── Original hooks (preserved) ────────────────────────────────────────────────
 
 export function useRealtimeSubscription(projectId: string | undefined, userId: string | undefined) {
+  // BUG-M08 FIX: Register a router-aware navigator for realtime toast "View"
+  // actions so they don't bypass React Router via window.location.hash.
+  const navigate = useNavigate()
+  useEffect(() => {
+    setRealtimeNavigator(navigate)
+    return () => setRealtimeNavigator(null)
+  }, [navigate])
+
   // Subscribe to project-scoped realtime updates
   useEffect(() => {
     if (!projectId) return

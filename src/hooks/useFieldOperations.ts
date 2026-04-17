@@ -24,6 +24,10 @@ export function useDailyLogs(projectId: string) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
+  // BUG-H17 FIX: Mirror state in a ref so mutation callbacks can read the latest
+  // value without listing the array in their deps (which caused infinite re-creation).
+  const logsRef = useRef<DailyLogRow[]>(logs)
+  logsRef.current = logs
 
   const refetch = useCallback(async () => {
     if (!projectId) return
@@ -104,7 +108,7 @@ export function useDailyLogs(projectId: string) {
 
   const updateLog = useCallback(
     async (id: string, updates: Partial<DailyLogInsert>) => {
-      const previous = logs.find((l) => l.id === id)
+      const previous = logsRef.current.find((l) => l.id === id)
       setLogs((prev) => prev.map((l) => (l.id === id ? { ...l, ...updates } : l)))
       try {
         const { data, error: updateError } = await supabase
@@ -122,7 +126,7 @@ export function useDailyLogs(projectId: string) {
         throw err
       }
     },
-    [logs],
+    [],
   )
 
   return { logs, isLoading, error, refetch, createLog, updateLog }
@@ -135,6 +139,9 @@ export function useIncidents(projectId: string) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
+  // BUG-H17 FIX: See useDailyLogs above for rationale.
+  const incidentsRef = useRef<IncidentRow[]>(incidents)
+  incidentsRef.current = incidents
 
   const refetch = useCallback(async () => {
     if (!projectId) return
@@ -204,7 +211,7 @@ export function useIncidents(projectId: string) {
 
   const updateIncident = useCallback(
     async (id: string, updates: IncidentUpdate) => {
-      const previous = incidents.find((i) => i.id === id)
+      const previous = incidentsRef.current.find((i) => i.id === id)
       setIncidents((prev) => prev.map((i) => (i.id === id ? { ...i, ...updates } : i)))
       try {
         const { data, error: updateError } = await supabase
@@ -222,7 +229,7 @@ export function useIncidents(projectId: string) {
         throw err
       }
     },
-    [incidents],
+    [],
   )
 
   return { incidents, isLoading, error, refetch, createIncident, updateIncident }
@@ -360,6 +367,9 @@ export function useCorrectiveActions(projectId: string) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
+  // BUG-H17 FIX: See useDailyLogs above for rationale.
+  const actionsRef = useRef<CorrectiveActionRow[]>(actions)
+  actionsRef.current = actions
 
   const refetch = useCallback(async () => {
     if (!projectId) return
@@ -430,7 +440,7 @@ export function useCorrectiveActions(projectId: string) {
 
   const updateAction = useCallback(
     async (id: string, updates: CorrectiveActionUpdate) => {
-      const previous = actions.find((a) => a.id === id)
+      const previous = actionsRef.current.find((a) => a.id === id)
       setActions((prev) => prev.map((a) => (a.id === id ? { ...a, ...updates } : a)))
       try {
         const { data, error: updateError } = await supabase
@@ -448,7 +458,7 @@ export function useCorrectiveActions(projectId: string) {
         throw err
       }
     },
-    [actions],
+    [],
   )
 
   return { actions, isLoading, error, refetch, createAction, updateAction }

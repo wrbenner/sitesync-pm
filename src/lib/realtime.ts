@@ -3,6 +3,24 @@ import { queryClient } from './queryClient'
 import { toast } from 'sonner'
 import { colors } from '../styles/theme'
 
+// BUG-M08 FIX: Allow a React Router-aware navigate function to be registered so
+// realtime toasts can use it instead of bypassing the router via
+// window.location.hash. Falls back to history.pushState if no navigator was registered.
+type NavigateFn = (path: string) => void
+let registeredNavigate: NavigateFn | null = null
+export function setRealtimeNavigator(fn: NavigateFn | null) {
+  registeredNavigate = fn
+}
+function routerNavigate(path: string) {
+  if (registeredNavigate) {
+    registeredNavigate(path)
+  } else if (typeof window !== 'undefined') {
+    // Fallback: pushState + popstate dispatch so React Router picks it up.
+    window.history.pushState({}, '', path)
+    window.dispatchEvent(new PopStateEvent('popstate'))
+  }
+}
+
 // All tables that support real-time project-scoped updates
 const PROJECT_TABLES = [
   'rfis', 'rfi_responses', 'submittals', 'submittal_approvals',
@@ -76,7 +94,7 @@ export function subscribeToProject(projectId: string, currentUserId?: string) {
             const label = title ? `${friendlyName} ${eventLabel}: ${title}` : `${friendlyName} ${eventLabel}`
             const link = (record.id as string) ? `/${table.replace('_', '-')}` : undefined
             toast.info(label, {
-              action: link ? { label: 'View', onClick: () => { window.location.hash = `#${link}` } } : undefined,
+              action: link ? { label: 'View', onClick: () => { routerNavigate(link) } } : undefined,
               duration: 4000,
             })
           }
@@ -119,7 +137,7 @@ export function subscribeToNotifications(userId: string) {
         const link = notification.link as string | undefined
         toast.info(notification.title as string, {
           description: (notification.body as string) || undefined,
-          action: link ? { label: 'View', onClick: () => { window.location.hash = `#${link}` } } : undefined,
+          action: link ? { label: 'View', onClick: () => { routerNavigate(link) } } : undefined,
           duration: 6000,
         })
       }

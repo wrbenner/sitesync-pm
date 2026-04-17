@@ -1,5 +1,5 @@
 import {
-  
+
   queueMutation,
   processSyncQueue,
   processUploadQueue,
@@ -47,14 +47,36 @@ class SyncManager {
   // BUG #5 FIX: Store bound handler references so removeEventListener can match them
   private readonly boundHandleOnline: () => void
   private readonly boundHandleOffline: () => void
+  private readonly boundHandleVisibility: () => void
 
   constructor() {
     this.boundHandleOnline = this.handleOnline.bind(this)
     this.boundHandleOffline = this.handleOffline.bind(this)
+    this.boundHandleVisibility = this.handleVisibilityChange.bind(this)
     window.addEventListener('online', this.boundHandleOnline)
     window.addEventListener('offline', this.boundHandleOffline)
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', this.boundHandleVisibility)
+    }
     this.refreshCounts()
     this.startPolling()
+  }
+
+  // BUG-M01 FIX: Pause polling when tab is hidden, resume (and refresh once)
+  // when it becomes visible again.
+  private handleVisibilityChange() {
+    if (typeof document === 'undefined') return
+    if (document.hidden) {
+      if (this.pollInterval) {
+        clearInterval(this.pollInterval)
+        this.pollInterval = null
+      }
+    } else {
+      if (!this.pollInterval) this.startPolling()
+      this.refreshCounts().catch((err) => {
+        if (import.meta.env.DEV) console.warn('SyncManager: Failed to refresh counts:', err)
+      })
+    }
   }
 
   private emit() {
@@ -92,25 +114,15 @@ class SyncManager {
   }
 
   private startPolling() {
+    if (this.pollInterval) return
     this.pollInterval = setInterval(() => {
-      // Skip polling when the tab is backgrounded — the user isn't looking at
-      // the sync indicator, and the next visibility change will refresh it.
+      // Skip polling when the tab is backgrounded — handleVisibilityChange will
+      // pause/resume the interval, but this guard protects races.
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
       this.refreshCounts().catch((err) => {
         if (import.meta.env.DEV) console.warn('SyncManager: Failed to refresh counts:', err)
       })
     }, 3000)
-    if (typeof document !== 'undefined') {
-      document.addEventListener('visibilitychange', this.handleVisibilityChange)
-    }
-  }
-
-  private handleVisibilityChange = () => {
-    if (document.visibilityState === 'visible') {
-      this.refreshCounts().catch((err) => {
-        if (import.meta.env.DEV) console.warn('SyncManager: Failed to refresh counts:', err)
-      })
-    }
   }
 
   async refreshCounts() {
@@ -213,9 +225,12 @@ class SyncManager {
     window.removeEventListener('online', this.boundHandleOnline)
     window.removeEventListener('offline', this.boundHandleOffline)
     if (typeof document !== 'undefined') {
-      document.removeEventListener('visibilitychange', this.handleVisibilityChange)
+      document.removeEventListener('visibilitychange', this.boundHandleVisibility)
     }
-    if (this.pollInterval) clearInterval(this.pollInterval)
+    if (this.pollInterval) {
+      clearInterval(this.pollInterval)
+      this.pollInterval = null
+    }
     this.listeners.clear()
   }
 }

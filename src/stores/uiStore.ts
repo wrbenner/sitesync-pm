@@ -41,6 +41,13 @@ interface UiState {
 
 let toastCounter = 0;
 
+// BUG-M21 FIX: Track outstanding timeout IDs so rapid successive calls don't
+// leak orphan timers and so toasts can be dismissed cleanly without their
+// auto-dismiss timeout firing later on an unrelated toast ID.
+let statusTimer: ReturnType<typeof setTimeout> | null = null;
+let alertTimer: ReturnType<typeof setTimeout> | null = null;
+const toastTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
 export const useUiStore = create<UiState>((set) => ({
   sidebarCollapsed: false,
   activeView: 'dashboard',
@@ -62,16 +69,35 @@ export const useUiStore = create<UiState>((set) => ({
   },
   announceStatus: (message) => {
     set({ a11yStatusMessage: message });
-    setTimeout(() => set({ a11yStatusMessage: '' }), 100);
+    if (statusTimer) clearTimeout(statusTimer);
+    statusTimer = setTimeout(() => {
+      statusTimer = null;
+      set({ a11yStatusMessage: '' });
+    }, 100);
   },
   announceAlert: (message) => {
     set({ a11yAlertMessage: message });
-    setTimeout(() => set({ a11yAlertMessage: '' }), 100);
+    if (alertTimer) clearTimeout(alertTimer);
+    alertTimer = setTimeout(() => {
+      alertTimer = null;
+      set({ a11yAlertMessage: '' });
+    }, 100);
   },
   addToast: (toast) => {
     const id = `toast-${Date.now()}-${(++toastCounter).toString(36)}`;
     set((s) => ({ toasts: [...s.toasts, { ...toast, id }] }));
-    setTimeout(() => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), 5000);
+    const handle = setTimeout(() => {
+      toastTimers.delete(id);
+      set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }));
+    }, 5000);
+    toastTimers.set(id, handle);
   },
-  dismissToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
+  dismissToast: (id) => {
+    const handle = toastTimers.get(id);
+    if (handle) {
+      clearTimeout(handle);
+      toastTimers.delete(id);
+    }
+    set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }));
+  },
 }));

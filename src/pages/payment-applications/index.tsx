@@ -19,6 +19,7 @@ import { PayAppList } from './PayAppList'
 import { PayAppDetail } from './PayAppDetail'
 import { LienWaiverPanel, CashFlowPanel } from './LienWaiverPanel'
 import { CreateEditPayAppDrawer } from './SOVEditor'
+import { useIsMobile } from '../../hooks/useWindowSize'
 
 const tabs: { key: TabKey; label: string; icon: React.ElementType }[] = [
   { key: 'applications', label: 'Pay Applications', icon: Receipt },
@@ -35,17 +36,8 @@ const PaymentApplicationsPage: React.FC = () => {
   const [markingWaiverId, setMarkingWaiverId] = useState<string | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [drawerEditApp, setDrawerEditApp] = useState<Record<string, unknown> | null>(null)
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)
-
-  useEffect(() => {
-    let timer: ReturnType<typeof setTimeout>
-    const handleResize = () => {
-      clearTimeout(timer)
-      timer = setTimeout(() => setIsMobile(window.innerWidth < 768), 150)
-    }
-    window.addEventListener('resize', handleResize)
-    return () => { clearTimeout(timer); window.removeEventListener('resize', handleResize) }
-  }, [])
+  // REACT-03 FIX: Shared hook replaces a per-page resize listener.
+  const isMobile = useIsMobile()
 
   const openCreateDrawer = useCallback(() => {
     setDrawerEditApp(null)

@@ -27,10 +27,11 @@ export const Crews: React.FC = () => {
   const [hoveredCrew, setHoveredCrew] = useState<string | null>(null);
 
   useEffect(() => {
+    // REACT-04 FIX: include loadCrews in deps.
     if (activeProject?.id) {
       loadCrews(activeProject.id);
     }
-  }, [activeProject?.id]);
+  }, [activeProject?.id, loadCrews]);
 
   // Derive color per crew from palette
   const getCrewColor = useMemo(() => {
