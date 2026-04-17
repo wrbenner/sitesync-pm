@@ -9,6 +9,7 @@ import { useContracts, usePayApplications, useJobCostEntries, useInvoicesPayable
 import { useBudgetRealtime } from '../hooks/queries/realtime'
 import { MetricFlash } from '../components/ui/RealtimeFlash'
 import { toast } from 'sonner'
+import { PermissionGate } from '../components/auth/PermissionGate'
 
 const fmtCurrency = (n: number | null) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n || 0)
 const fmtPct = (n: number | null) => `${(n || 0).toFixed(1)}%`
@@ -429,9 +430,11 @@ export const Financials: React.FC = () => {
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
           <ExportButton pdfFilename="SiteSync_Financials_Report" />
           {activeTab !== 'overview' && (
+            <PermissionGate permission="financials.edit">
             <Btn variant="primary" icon={<Plus size={16} />} onClick={handleAdd}>
               {addButtonLabel[activeTab]}
             </Btn>
+            </PermissionGate>
           )}
         </div>
       }

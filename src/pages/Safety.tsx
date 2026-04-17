@@ -739,29 +739,39 @@ export const Safety: React.FC = () => {
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
           <ExportButton pdfFilename="SiteSync_Safety_Report" />
           {activeTab === 'incidents' && (
+            <PermissionGate permission="safety.manage">
             <Btn variant="primary" icon={<Plus size={16} />} onClick={() => setShowIncidentModal(true)} style={{ minHeight: 56 }}>
               Report Incident
             </Btn>
+            </PermissionGate>
           )}
           {activeTab === 'inspections' && (
+            <PermissionGate permission="safety.manage">
             <Btn variant="primary" icon={<Plus size={16} />} onClick={() => toast.info('Form submission requires backend configuration')} style={{ minHeight: 56 }}>
               New Inspection
             </Btn>
+            </PermissionGate>
           )}
           {activeTab === 'toolbox' && (
+            <PermissionGate permission="safety.manage">
             <Btn variant="primary" icon={<Plus size={16} />} onClick={() => setShowTalkModal(true)} style={{ minHeight: 56 }}>
               New Talk
             </Btn>
+            </PermissionGate>
           )}
           {activeTab === 'certifications' && (
+            <PermissionGate permission="safety.manage">
             <Btn variant="primary" icon={<Plus size={16} />} onClick={() => toast.info('Form submission requires backend configuration')} style={{ minHeight: 56 }}>
               Add Certification
             </Btn>
+            </PermissionGate>
           )}
           {activeTab === 'corrective_actions' && (
+            <PermissionGate permission="safety.manage">
             <Btn variant="primary" icon={<Plus size={16} />} onClick={() => toast.info('Form submission requires backend configuration')} style={{ minHeight: 56 }}>
               Log Corrective Action
             </Btn>
+            </PermissionGate>
           )}
         </div>
       }
@@ -932,12 +942,16 @@ export const Safety: React.FC = () => {
                 Safety tracking not yet configured. Set up your safety program to track incidents, inspections, and certifications.
               </p>
               <div style={{ display: 'flex', gap: spacing['3'], flexWrap: 'wrap', justifyContent: 'center' }}>
+                <PermissionGate permission="safety.manage">
                 <Btn variant="primary" onClick={() => setShowIncidentModal(true)} style={{ minHeight: 56 }}>
                   Report First Incident
                 </Btn>
+                </PermissionGate>
+                <PermissionGate permission="safety.manage">
                 <Btn variant="secondary" onClick={() => toast.info('Form submission requires backend configuration')} style={{ minHeight: 56 }}>
                   Set Up Inspection Template
                 </Btn>
+                </PermissionGate>
               </div>
             </div>
           </Card>

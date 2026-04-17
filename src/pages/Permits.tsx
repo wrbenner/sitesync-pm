@@ -7,6 +7,7 @@ import { colors, spacing, typography, borderRadius, transitions } from '../style
 import { useProjectId } from '../hooks/useProjectId'
 import { usePermits } from '../hooks/queries'
 import { toast } from 'sonner'
+import { PermissionGate } from '../components/auth/PermissionGate'
 
 type TabKey = 'permits' | 'inspections'
 
@@ -149,9 +150,11 @@ export const Permits: React.FC = () => {
       actions={
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
           <ExportButton pdfFilename="SiteSync_Permits_Report" />
+          <PermissionGate permission="project.settings">
           <Btn variant="primary" icon={<Plus size={16} />} onClick={handleAdd}>
             New Permit
           </Btn>
+          </PermissionGate>
         </div>
       }
     >

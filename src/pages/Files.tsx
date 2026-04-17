@@ -207,7 +207,7 @@ const FilesPage: React.FC = () => {
         addToast('success', `Downloaded ${selected.length} file${selected.length !== 1 ? 's' : ''} as ZIP`);
       },
     },
-    {
+    ...(hasPermission('files.upload') ? [{
       label: 'Move to Folder',
       icon: <FolderInput size={14} />,
       variant: 'secondary' as const,
@@ -222,8 +222,8 @@ const FilesPage: React.FC = () => {
           setFolderPickerOpen(true);
         });
       },
-    },
-    {
+    }] : []),
+    ...(hasPermission('files.delete') ? [{
       label: 'Delete',
       icon: <Trash2 size={14} />,
       variant: 'danger' as const,
@@ -233,7 +233,7 @@ const FilesPage: React.FC = () => {
         // In a real app, call API to delete each file.
         addToast('success', `Deleted ${ids.length} item${ids.length !== 1 ? 's' : ''}`);
       },
-    },
+    }] : []),
     {
       label: 'Copy Link',
       icon: <Link2 size={14} />,
@@ -244,7 +244,7 @@ const FilesPage: React.FC = () => {
         addToast('success', `Copied ${ids.length} link${ids.length !== 1 ? 's' : ''} to clipboard`);
       },
     },
-  ], [files, addToast]);
+  ], [files, addToast, hasPermission]);
 
   // ── Keyboard navigation for list view ────────────────
   const listRef = useRef<HTMLDivElement>(null);
@@ -771,7 +771,7 @@ const FilesPage: React.FC = () => {
                   icon={FileText}
                   title="No files uploaded yet"
                   description="Upload project documents, drawings, and photos to keep everything organized in one place."
-                  action={{ label: 'Upload Files', onClick: () => setShowUpload(true) }}
+                  action={hasPermission('files.upload') ? { label: 'Upload Files', onClick: () => setShowUpload(true) } : undefined}
                 />
               )}
             </div>
@@ -788,7 +788,7 @@ const FilesPage: React.FC = () => {
                   icon={FileText}
                   title="No files uploaded yet"
                   description="Upload project documents, drawings, and photos to keep everything organized in one place."
-                  action={{ label: 'Upload Files', onClick: () => setShowUpload(true) }}
+                  action={hasPermission('files.upload') ? { label: 'Upload Files', onClick: () => setShowUpload(true) } : undefined}
                 />
               ) : (
                 <div

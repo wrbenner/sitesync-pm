@@ -974,6 +974,7 @@ const DrawingsPage: React.FC = () => {
                         </span>
                       </div>
                     ) : (
+                      <PermissionGate permission="ai.use">
                       <button
                         onClick={(e) => handleAnalyzeSheet(e, drawing)}
                         style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], padding: `4px ${spacing['2']}`, backgroundColor: `${colors.statusReview}10`, border: `1px solid ${colors.statusReview}30`, borderRadius: borderRadius.base, cursor: 'pointer', fontSize: typography.fontSize.caption, color: colors.statusReview, fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily, whiteSpace: 'nowrap' }}
@@ -982,6 +983,7 @@ const DrawingsPage: React.FC = () => {
                       >
                         <Sparkles size={10} /> Analyze
                       </button>
+                      </PermissionGate>
                     )}
                   </div>
                 </div>
@@ -996,12 +998,14 @@ const DrawingsPage: React.FC = () => {
                   <Upload size={40} color={colors.textTertiary} style={{ marginBottom: spacing['4'] }} />
                   <p style={{ fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>No drawings uploaded yet.</p>
                   <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0, marginBottom: spacing['5'], maxWidth: 420 }}>Upload your plans to enable digital markup, RFI linking, and AI coordination analysis.</p>
+                  <PermissionGate permission="drawings.upload">
                   <button
                     onClick={() => setShowUploadModal(true)}
                     style={{ backgroundColor: colors.primaryOrange, color: colors.white, borderRadius: borderRadius.lg, padding: `${spacing['3']} ${spacing['4']}`, border: 'none', cursor: 'pointer', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, fontFamily: typography.fontFamily, minHeight: '56px' }}
                   >
                     Upload Drawings
                   </button>
+                  </PermissionGate>
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: `${spacing['6']} ${spacing['4']}`, textAlign: 'center' }}>
@@ -1132,9 +1136,11 @@ const DrawingsPage: React.FC = () => {
                 <Btn variant="primary" size="md" fullWidth onClick={() => setViewerDrawing(selectedDrawing)}>
                   Open Viewer
                 </Btn>
+                <PermissionGate permission="ai.use">
                 <Btn variant="secondary" size="md" fullWidth onClick={() => addToast('info', 'AI Scan initiated for ' + selectedDrawing.setNumber)}>
                   AI Scan
                 </Btn>
+                </PermissionGate>
                 <PermissionGate permission="drawings.upload">
                   <Btn
                     variant="secondary"
@@ -1818,6 +1824,7 @@ const DrawingsPage: React.FC = () => {
 
           {/* Footer with Analyze button */}
           <div style={{ padding: spacing['4'], borderTop: `1px solid ${colors.borderSubtle}`, flexShrink: 0 }}>
+            <PermissionGate permission="ai.use">
             <Btn
               variant="primary"
               size="md"
@@ -1829,6 +1836,7 @@ const DrawingsPage: React.FC = () => {
             >
               {aiPanelLoading ? 'Analyzing...' : 'Analyze Drawing'}
             </Btn>
+            </PermissionGate>
             {!selectedDrawing && (
               <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0, marginTop: spacing['2'], textAlign: 'center' }}>
                 Select a drawing from the list first.

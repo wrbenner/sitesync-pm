@@ -389,8 +389,8 @@ const BudgetPage: React.FC = () => {
             icon={DollarSign}
             title="No budget has been set up yet"
             description="Import your schedule of values or add budget line items by CSI division to start tracking costs."
-            action={{ label: 'Import Budget', onClick: () => setUploadOpen(true) }}
-            secondaryAction={{ label: 'Add Line Item', onClick: () => addToast('info', 'Manual entry form available in the next update') }}
+            action={canEditBudget ? { label: 'Import Budget', onClick: () => setUploadOpen(true) } : undefined}
+            secondaryAction={canEditBudget ? { label: 'Add Line Item', onClick: () => addToast('info', 'Manual entry form available in the next update') } : undefined}
           />
         </div>
       ) : (<>

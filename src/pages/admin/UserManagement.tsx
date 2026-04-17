@@ -4,6 +4,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { supabase, fromTable } from '../../lib/supabase';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
 import type { Profile, UserRole } from '../../types/database';
+import { PermissionGate } from '../../components/auth/PermissionGate';
 
 const ROLE_LABELS: Record<UserRole, string> = {
   company_admin: 'Admin',
@@ -108,6 +109,7 @@ export function UserManagement() {
             {company?.name} &middot; {members.length} member{members.length !== 1 ? 's' : ''}
           </p>
         </div>
+        <PermissionGate permission="project.members">
         <button
           onClick={() => setShowInvite(!showInvite)}
           style={{
@@ -130,6 +132,7 @@ export function UserManagement() {
           <UserPlus size={16} />
           Invite Member
         </button>
+        </PermissionGate>
       </div>
 
       {/* Invite panel */}
@@ -217,6 +220,7 @@ export function UserManagement() {
                   ))}
                 </select>
               </div>
+              <PermissionGate permission="project.members">
               <button
                 onClick={handleInvite}
                 style={{
@@ -233,6 +237,7 @@ export function UserManagement() {
               >
                 Send Invite
               </button>
+              </PermissionGate>
             </div>
           )}
         </div>

@@ -13,6 +13,7 @@ import { useAgentOrchestrator } from '../stores/agentOrchestrator'
 import { SPECIALIST_AGENTS, AGENT_DOMAINS } from '../types/agents'
 import type { AgentDomain, AgentState } from '../types/agents'
 import { toast } from 'sonner'
+import { PermissionGate } from '../components/auth/PermissionGate'
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -273,6 +274,7 @@ const AgentCard = memo<AgentCardProps>(({ domain, agentState, dbActions, onToggl
 
       {/* Actions */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: spacing['2'] }}>
+        <PermissionGate permission="ai.use">
         <button
           onClick={() => onToggle(domain)}
           aria-label={isActive ? `Pause ${agent.name}` : `Resume ${agent.name}`}
@@ -310,6 +312,7 @@ const AgentCard = memo<AgentCardProps>(({ domain, agentState, dbActions, onToggl
             </>
           )}
         </button>
+        </PermissionGate>
       </div>
     </Card>
   )

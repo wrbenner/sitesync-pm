@@ -32,6 +32,7 @@ import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { PermissionGate } from '../components/auth/PermissionGate';
 
 const CreateProjectModal = lazy(() => import('../components/forms/CreateProjectModal'));
 const QuickRFIButton = lazy(() => import('../components/field/QuickRFIButton'));
@@ -339,6 +340,7 @@ const WelcomeOnboarding: React.FC<{ onProjectCreated: () => void }> = ({ onProje
           Create your first project to get started.
         </p>
 
+        <PermissionGate permission="project.settings">
         <button
           onClick={() => setShowModal(true)}
           style={{
@@ -372,6 +374,7 @@ const WelcomeOnboarding: React.FC<{ onProjectCreated: () => void }> = ({ onProje
           <Plus size={20} />
           Create Your First Project
         </button>
+        </PermissionGate>
 
         <motion.div
           style={{

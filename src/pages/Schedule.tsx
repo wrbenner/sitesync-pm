@@ -1617,6 +1617,7 @@ export const Schedule: React.FC = () => {
               marginBottom: 4,
             }}>
               <span style={{ fontSize: 18, fontWeight: 700, color: colors.textPrimary }}>Schedule</span>
+              <PermissionGate permission="schedule.edit">
               <button
                 onClick={() => setShowImportModal(true)}
                 style={{
@@ -1639,6 +1640,7 @@ export const Schedule: React.FC = () => {
                 <Upload size={14} />
                 Import
               </button>
+              </PermissionGate>
             </div>
             {/* Filter tabs — horizontally scrollable */}
             <div role="tablist" aria-label="Filter activities by status" style={{ overflowX: 'auto', whiteSpace: 'nowrap', marginBottom: 12, WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>

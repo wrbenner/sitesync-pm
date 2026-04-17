@@ -7,6 +7,7 @@ import { colors, spacing, typography, borderRadius, transitions, touchTarget } f
 import { useProjectId } from '../hooks/useProjectId'
 import { usePurchaseOrders, useDeliveries, useMaterialInventory } from '../hooks/queries'
 import { toast } from 'sonner'
+import { PermissionGate } from '../components/auth/PermissionGate'
 
 type TabKey = 'orders' | 'deliveries' | 'inventory'
 
@@ -237,9 +238,11 @@ export const Procurement: React.FC = () => {
       actions={
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
           <ExportButton pdfFilename="SiteSync_Procurement_Report" />
+          <PermissionGate permission="budget.edit">
           <Btn variant="primary" icon={<Plus size={16} />} onClick={handleAdd}>
             {addButtonLabel[activeTab]}
           </Btn>
+          </PermissionGate>
         </div>
       }
     >
