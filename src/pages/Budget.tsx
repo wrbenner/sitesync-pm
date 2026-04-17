@@ -1,10 +1,13 @@
 import React, { useState, useMemo, useRef, useEffect, useId } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import type { Variants } from 'framer-motion';
 import { useCopilotStore } from '../stores/copilotStore';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { PageContainer, Card, SectionHeader, MetricBox, StatusTag, DetailPanel, RelatedItems, Skeleton, useToast } from '../components/Primitives';
-import { MetricCardSkeleton, TableRowSkeleton } from '../components/ui/Skeletons';
+import { MetricCardSkeleton, TableSkeleton } from '../components/ui/Skeletons';
 import { Btn } from '../components/Primitives';
-import { colors, spacing, typography, borderRadius, touchTarget } from '../styles/theme';
+import { colors, spacing, typography, borderRadius, shadows, touchTarget } from '../styles/theme';
+import { useReducedMotion } from '../hooks/useReducedMotion';
 import { useQuery } from '../hooks/useQuery';
 import { fetchBudgetDivisions, getCostCodesByDivision } from '../api/endpoints/budget';
 import { usePayApplications } from '../hooks/queries';
@@ -41,6 +44,25 @@ const fmt = (n: number): string => {
   if (n >= 1000000) return `$${(n / 1000000).toFixed(1)}M`;
   if (n >= 1000) return `$${(n / 1000).toFixed(0)}K`;
   return `$${n.toLocaleString()}`;
+};
+
+const fadeUp: Variants = {
+  hidden: { opacity: 0, y: 14 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.18, ease: 'easeOut' as const } },
+};
+
+const staggerContainer: Variants = {
+  hidden: { opacity: 1 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.05 } },
+};
+
+const rowVariant: Variants = {
+  hidden: { opacity: 0, x: -6 },
+  visible: (i: number) => ({
+    opacity: 1,
+    x: 0,
+    transition: { duration: 0.14, ease: 'easeOut' as const, delay: i * 0.03 },
+  }),
 };
 
 type DivisionDrawerTab = 'cost-codes' | 'invoices' | 'change-orders';
@@ -260,12 +282,13 @@ const BudgetPage: React.FC = () => {
   const navigate = useNavigate();
   const { addToast } = useToast();
   const projectId = useProjectId();
+  const reducedMotion = useReducedMotion();
   const { setPageContext } = useCopilotStore();
   useEffect(() => { setPageContext('budget'); }, [setPageContext]);
   const updateCO = useUpdateChangeOrder();
   const { isFlashing } = useBudgetRealtime(projectId);
-  const { data: costData, loading: costLoading } = useQuery(`costData-${projectId}`, () => fetchBudgetDivisions(projectId!), { enabled: !!projectId });
-  const { data: projectData, loading: projectLoading } = useQuery(`projectData-${projectId}`, () => getProject(projectId!), { enabled: !!projectId });
+  const { data: costData, loading: costLoading, error: costError, refetch: refetchCost } = useQuery(`costData-${projectId}`, () => fetchBudgetDivisions(projectId!), { enabled: !!projectId });
+  const { data: projectData, loading: projectLoading, error: projectError, refetch: refetchProject } = useQuery(`projectData-${projectId}`, () => getProject(projectId!), { enabled: !!projectId });
   const { data: payApps } = usePayApplications(projectId);
   const [selectedCO, setSelectedCO] = useState<NonNullable<typeof costData>['changeOrders'][0] | null>(null);
   const [selectedDivision, setSelectedDivision] = useState<MappedDivision | null>(null);
@@ -324,10 +347,13 @@ const BudgetPage: React.FC = () => {
 
   const previousBilledToDate = useMemo(() => {
     if (!payApps || payApps.length < 2) return 0;
-    const sorted = [...payApps].sort((a: unknown, b: unknown) =>
-      new Date(a.period_to || 0).getTime() - new Date(b.period_to || 0).getTime()
-    );
-    return sorted.slice(0, -1).reduce((s: number, p: unknown) => s + (p.total_completed_and_stored || 0), 0);
+    type PayApp = { period_to?: string | null; total_completed_and_stored?: number | null };
+    const sorted = [...payApps].sort((a, b) => {
+      const pa = a as PayApp;
+      const pb = b as PayApp;
+      return new Date(pa.period_to ?? 0).getTime() - new Date(pb.period_to ?? 0).getTime();
+    });
+    return sorted.slice(0, -1).reduce((s: number, p) => s + ((p as PayApp).total_completed_and_stored ?? 0), 0);
   }, [payApps]);
 
   const approvedTotal = useMemo(() => allChangeOrders.filter(co => co.status === 'approved').reduce((s, co) => s + co.amount, 0), [allChangeOrders]);
@@ -337,18 +363,64 @@ const BudgetPage: React.FC = () => {
 
   if (costLoading || projectLoading || !costData || !projectData) {
     return (
-      <PageContainer title="Budget" subtitle="Loading...">
+      <PageContainer title="Budget" subtitle="Loading financial data...">
         <MetricCardSkeleton />
+        <div style={{ marginBottom: spacing['4'] }}>
+          <Skeleton height="12px" style={{ width: '40%', marginBottom: spacing['3'] }} />
+          <div style={{ height: spacing['3'], backgroundColor: colors.surfaceInset, borderRadius: borderRadius.full }} />
+        </div>
         <Card padding="0">
-          <TableRowSkeleton rows={8} />
+          <div style={{ padding: `${spacing['2']} ${spacing['4']}`, borderBottom: `1px solid ${colors.borderSubtle}`, backgroundColor: colors.surfaceInset, display: 'grid', gridTemplateColumns: 'minmax(150px, 2fr) 95px 140px 95px 115px 105px 24px', gap: spacing['2'] }}>
+            {[60, 50, 80, 50, 60, 60, 16].map((w, i) => <Skeleton key={i} height="10px" style={{ width: `${w}%` }} />)}
+          </div>
+          <TableSkeleton columns={7} rows={7} />
         </Card>
+      </PageContainer>
+    );
+  }
+
+  const hasError = !!(costError || projectError);
+  if (hasError) {
+    return (
+      <PageContainer title="Budget" subtitle="Could not load budget data">
+        <motion.div
+          initial={reducedMotion ? false : { opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2 }}
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: spacing['4'],
+            padding: `${spacing['12']} ${spacing['6']}`,
+            backgroundColor: colors.surfaceRaised,
+            borderRadius: borderRadius.xl,
+            border: `1px solid ${colors.borderDefault}`,
+            textAlign: 'center',
+          }}
+        >
+          <div style={{ width: 48, height: 48, borderRadius: borderRadius.xl, backgroundColor: colors.badgeRedBg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <AlertTriangle size={22} color={colors.statusCritical} />
+          </div>
+          <div>
+            <p style={{ margin: 0, marginBottom: spacing['1'], fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+              Unable to load budget
+            </p>
+            <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textSecondary, maxWidth: 360 }}>
+              {costError ?? projectError ?? 'An unexpected error occurred. Your data is safe — this is a temporary issue.'}
+            </p>
+          </div>
+          <Btn variant="primary" icon={<RefreshCw size={14} />} onClick={() => { void refetchCost(); void refetchProject(); }}>
+            Try Again
+          </Btn>
+        </motion.div>
       </PageContainer>
     );
   }
 
   const isEmpty = costData.divisions.length === 0;
   const allBudgetZero = !isEmpty && costData.divisions.every(d => d.budget === 0);
-  const pageAlerts = getPredictiveAlertsForPage('budget');
+  const pageAlerts = getPredictiveAlertsForPage();
   const criticalAnomalies = budgetAnomalies.filter(a => a.severity === 'critical');
 
   const handleSaveEdit = () => {
@@ -447,47 +519,69 @@ const BudgetPage: React.FC = () => {
 
       {/* Summary Metrics */}
       <div style={{ position: 'relative', marginBottom: spacing['4'] }}>
-        {isFlashing && (
-          <div
-            aria-live="polite"
-            aria-atomic="true"
-            style={{
-              position: 'absolute',
-              top: -8,
-              right: 0,
-              display: 'flex',
-              alignItems: 'center',
-              gap: spacing['1'],
-              padding: `2px ${spacing['2']}`,
-              backgroundColor: colors.primaryOrange,
-              borderRadius: borderRadius.full,
-              zIndex: 10,
-            }}
-          >
-            <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: colors.white, display: 'inline-block', flexShrink: 0 }} />
-            <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: colors.white, whiteSpace: 'nowrap' }}>
-              Budget updated just now
-            </span>
-          </div>
-        )}
-        <div
+        <AnimatePresence>
+          {isFlashing && (
+            <motion.div
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.15 }}
+              aria-live="polite"
+              aria-atomic="true"
+              style={{
+                position: 'absolute',
+                top: -8,
+                right: 0,
+                display: 'flex',
+                alignItems: 'center',
+                gap: spacing['1'],
+                padding: `2px ${spacing['2']}`,
+                backgroundColor: colors.primaryOrange,
+                borderRadius: borderRadius.full,
+                zIndex: 10,
+              }}
+            >
+              <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: colors.white, display: 'inline-block', flexShrink: 0 }} />
+              <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: colors.white, whiteSpace: 'nowrap' }}>
+                Budget updated just now
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        <motion.div
           role="group"
           aria-label="Budget summary metrics"
+          variants={staggerContainer}
+          initial={reducedMotion ? false : 'hidden'}
+          animate="visible"
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(4, 1fr)',
             gap: spacing.lg,
           }}
         >
-          <MetricFlash isFlashing={isFlashing}><MetricBox label="Total Project" value={projectData.totalValue} format="currency" /></MetricFlash>
-          <MetricFlash isFlashing={isFlashing}><MetricBox label="Spent to Date" value={spent} format="currency" previousValue={previousBilledToDate} /></MetricFlash>
-          <MetricFlash isFlashing={isFlashing}><MetricBox label="Committed" value={committed} format="currency" /></MetricFlash>
-          <MetricFlash isFlashing={isFlashing}><MetricBox label="Remaining" value={remaining} format="currency" colorOverride={remaining >= 0 ? 'success' : 'danger'} /></MetricFlash>
-        </div>
+          {([
+            { label: 'Total Project', value: projectData.totalValue, format: 'currency' as const },
+            { label: 'Spent to Date', value: spent, format: 'currency' as const, previousValue: previousBilledToDate },
+            { label: 'Committed', value: committed, format: 'currency' as const },
+            { label: 'Remaining', value: remaining, format: 'currency' as const, colorOverride: remaining >= 0 ? 'success' as const : 'danger' as const },
+          ]).map(({ label, value, format, previousValue, colorOverride }) => (
+            <motion.div key={label} variants={fadeUp}>
+              <MetricFlash isFlashing={isFlashing}>
+                <MetricBox label={label} value={value} format={format} previousValue={previousValue} colorOverride={colorOverride} />
+              </MetricFlash>
+            </motion.div>
+          ))}
+        </motion.div>
       </div>
 
-      {/* Fix 5: Contingency Drawdown */}
-      <div style={{ marginBottom: spacing['4'] }}>
+      {/* Contingency Drawdown */}
+      <motion.div
+        variants={fadeUp}
+        initial={reducedMotion ? false : 'hidden'}
+        animate="visible"
+        style={{ marginBottom: spacing['4'] }}
+      >
         <p style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.4px', margin: 0, marginBottom: spacing['2'] }}>Contingency Drawdown</p>
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
           <div role="progressbar" aria-label="Contingency drawdown" aria-valuenow={Math.round((consumed / 3800000) * 100)} aria-valuemin={0} aria-valuemax={100} style={{ flex: 1, height: 12, backgroundColor: colors.surfaceInset, borderRadius: borderRadius.full, overflow: 'hidden', display: 'flex' }}>
@@ -497,12 +591,15 @@ const BudgetPage: React.FC = () => {
             {fmt(contingencyRemaining)} of $3.8M remaining
           </span>
         </div>
-      </div>
+      </motion.div>
 
       {/* AI Insights Panel */}
       {aiConfigured ? (
         !aiInsightsLoading && (aiInsightsData?.insights ?? []).length > 0 ? (
-          <div
+          <motion.div
+            variants={fadeUp}
+            initial={reducedMotion ? false : 'hidden'}
+            animate="visible"
             style={{
               marginBottom: spacing['4'],
               backgroundColor: colors.surfaceRaised,
@@ -521,7 +618,7 @@ const BudgetPage: React.FC = () => {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
-                <Sparkles size={14} color={colors.primary} />
+                <Sparkles size={14} color={colors.primaryOrange} />
                 <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
                   AI Variance Analysis
                 </span>
@@ -585,7 +682,7 @@ const BudgetPage: React.FC = () => {
                     cursor: 'pointer',
                     padding: 0,
                     fontSize: typography.fontSize.caption,
-                    color: colors.primary,
+                    color: colors.primaryOrange,
                     fontFamily: typography.fontFamily,
                     whiteSpace: 'nowrap',
                     flexShrink: 0,
@@ -595,7 +692,7 @@ const BudgetPage: React.FC = () => {
                 </button>
               </div>
             ))}
-          </div>
+          </motion.div>
         ) : null
       ) : (
         <div
@@ -644,8 +741,18 @@ const BudgetPage: React.FC = () => {
         </button>
       </div>
 
+      <AnimatePresence mode="wait">
       {activeTab === 'overview' && (
-        <div role="tabpanel" id="budget-tab-overview" aria-label="Overview">
+        <motion.div
+          key="overview"
+          role="tabpanel"
+          id="budget-tab-overview"
+          aria-label="Overview"
+          initial={reducedMotion ? false : { opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.16, ease: 'easeOut' }}
+        >
           {/* Cost Distribution Treemap */}
           <SectionHeader title="Cost Distribution" action={<span style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], fontSize: typography.fontSize.caption, color: colors.orangeText, fontWeight: typography.fontWeight.medium, cursor: 'pointer' }}>Click to drill down <ChevronRight size={12} aria-hidden="true" /></span>} />
           <Card padding={spacing['5']}>
@@ -664,7 +771,7 @@ const BudgetPage: React.FC = () => {
                   <span key={h} style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: colors.textTertiary }}>{h}</span>
                 ))}
               </div>
-              <div
+              <motion.div
                 ref={divListRef}
                 role="grid"
                 aria-label="Division health rows"
@@ -688,7 +795,7 @@ const BudgetPage: React.FC = () => {
                 const isEditingSpent = editingCell?.divId === division.id && editingCell?.field === 'spent';
                 const isEditingProgress = editingCell?.divId === division.id && editingCell?.field === 'progress';
                 return (
-                  <div
+                  <motion.div
                     key={division.id}
                     id={`${divGridId}-row-${idx}`}
                     role="row"
@@ -699,6 +806,10 @@ const BudgetPage: React.FC = () => {
                     onKeyDown={(e) => { if (e.key === 'Enter' && !isEditingSpent && !isEditingProgress) { e.preventDefault(); setSelectedDivision(division); } }}
                     onMouseEnter={() => setHoveredDivId(division.id)}
                     onMouseLeave={() => setHoveredDivId(null)}
+                    variants={rowVariant}
+                    custom={idx}
+                    initial={reducedMotion ? false : 'hidden'}
+                    animate="visible"
                     style={{
                       display: 'grid',
                       gridTemplateColumns: 'minmax(150px, 2fr) 95px 140px 95px 115px 105px 24px',
@@ -718,7 +829,7 @@ const BudgetPage: React.FC = () => {
                       {isAtRisk && <AlertTriangle size={13} color={colors.chartRed} style={{ flexShrink: 0 }} />}
                       <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {division.name}
-                        {getAnnotationsForEntity('budget_division', division.id).map((ann) => (
+                        {getAnnotationsForEntity().map((ann) => (
                           <AIAnnotationIndicator key={ann.id} annotation={ann} inline />
                         ))}
                       </span>
@@ -845,10 +956,10 @@ const BudgetPage: React.FC = () => {
 
                     {/* Chevron */}
                     <ChevronRight size={14} color={colors.textTertiary} aria-hidden="true" />
-                  </div>
+                  </motion.div>
                 );
               })}
-              </div>
+              </motion.div>
             </Card>
           </div>
 
@@ -969,7 +1080,7 @@ const BudgetPage: React.FC = () => {
                     <span role="cell" style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: typeConfig.color }}>{typeConfig.shortLabel}</span>
                     <span role="cell" style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, display: 'inline-flex', alignItems: 'center', gap: spacing.xs }}>
                       {co.title}
-                      {getAnnotationsForEntity('change_order', co.id).map((ann) => (
+                      {getAnnotationsForEntity().map((ann) => (
                         <AIAnnotationIndicator key={ann.id} annotation={ann} inline />
                       ))}
                     </span>
@@ -998,19 +1109,29 @@ const BudgetPage: React.FC = () => {
               )}
             </Card>
           </div>
-        </div>
+        </motion.div>
       )}
 
       {activeTab === 'earned-value' && (
-        <div role="tabpanel" id="budget-tab-earned-value" aria-label="Earned Value">
+        <motion.div
+          key="earned-value"
+          role="tabpanel"
+          id="budget-tab-earned-value"
+          aria-label="Earned Value"
+          initial={reducedMotion ? false : { opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.16, ease: 'easeOut' }}
+        >
           <SectionHeader title="Earned Value Analysis" />
           <Card padding={spacing['5']}>
             <div role="img" aria-label="Earned value analysis dashboard showing budget performance indicators">
               <EarnedValueDashboard />
             </div>
           </Card>
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
 
       <Drawer open={!!selectedDivision} onClose={() => setSelectedDivision(null)} title={selectedDivision ? `${selectedDivision.name}${selectedDivision.csi_division ? ` · ${selectedDivision.csi_division}` : ''}` : ''}>
         {selectedDivision && projectId && (
