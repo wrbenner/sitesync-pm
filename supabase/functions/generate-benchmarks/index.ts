@@ -31,6 +31,16 @@ Deno.serve(async (req) => {
   const corsHeaders = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
 
   try {
+    // SECURITY: CRON-only endpoint. Require Bearer CRON_SECRET; fail closed when unset.
+    const authHeader = req.headers.get('Authorization')
+    const cronSecret = Deno.env.get('CRON_SECRET')
+    if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+      return new Response(JSON.stringify({ error: 'Unauthorized: CRON-only endpoint' }), {
+        status: 403,
+        headers: corsHeaders,
+      })
+    }
+
     // Use service role for aggregation (CRON job, not user-initiated)
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,

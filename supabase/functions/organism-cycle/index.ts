@@ -756,6 +756,17 @@ serve(async (req: Request) => {
   const startTime = Date.now()
   console.log('[organism] === ORGANISM CYCLE STARTING ===')
 
+  // Authentication: require Bearer ORGANISM_SECRET. Without this, anyone reaching
+  // this endpoint could trigger autonomous code changes (unauthenticated RCE).
+  const organismSecret = Deno.env.get('ORGANISM_SECRET')
+  const authHeader = req.headers.get('Authorization') ?? ''
+  if (!organismSecret || authHeader !== `Bearer ${organismSecret}`) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
+
   // Parse request body
   let body: Record<string, unknown> = {}
   try {

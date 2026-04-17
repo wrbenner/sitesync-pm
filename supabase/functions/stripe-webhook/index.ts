@@ -23,6 +23,10 @@ async function verifyStripeSignature(
 
   if (!timestamp || !v1Signature) return false
 
+  // Replay attack protection: reject signatures older than 5 minutes
+  const age = Math.floor(Date.now() / 1000) - parseInt(timestamp, 10)
+  if (Number.isNaN(age) || age < 0 || age > 300) return false
+
   const signedPayload = `${timestamp}.${payload}`
   const encoder = new TextEncoder()
   const key = await crypto.subtle.importKey(
@@ -35,7 +39,13 @@ async function verifyStripeSignature(
   const sig = await crypto.subtle.sign('HMAC', key, encoder.encode(signedPayload))
   const expected = Array.from(new Uint8Array(sig)).map((b) => b.toString(16).padStart(2, '0')).join('')
 
-  return expected === v1Signature
+  // Constant-time comparison
+  if (expected.length !== v1Signature.length) return false
+  let mismatch = 0
+  for (let i = 0; i < expected.length; i++) {
+    mismatch |= expected.charCodeAt(i) ^ v1Signature.charCodeAt(i)
+  }
+  return mismatch === 0
 }
 
 // ── Handler ─────────────────────────────────────────────

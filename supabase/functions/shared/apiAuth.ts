@@ -79,7 +79,16 @@ export async function authenticateApiKey(req: Request): Promise<ApiKeyContext> {
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('')
 
-  if (hashHex !== keyRecord.key_hash) {
+  // Constant-time comparison
+  const storedHash = String(keyRecord.key_hash ?? '')
+  if (hashHex.length !== storedHash.length) {
+    throw new HttpError(401, 'Invalid API key', 'authentication_error')
+  }
+  let mismatch = 0
+  for (let i = 0; i < hashHex.length; i++) {
+    mismatch |= hashHex.charCodeAt(i) ^ storedHash.charCodeAt(i)
+  }
+  if (mismatch !== 0) {
     throw new HttpError(401, 'Invalid API key', 'authentication_error')
   }
 

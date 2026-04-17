@@ -15,7 +15,7 @@ serve(async (req) => {
     // SECURITY: This function is CRON-only. Reject calls without the scheduler header.
     const authHeader = req.headers.get('Authorization')
     const cronSecret = Deno.env.get('CRON_SECRET')
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+    if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
       return new Response(JSON.stringify({ error: 'Unauthorized: CRON-only endpoint' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

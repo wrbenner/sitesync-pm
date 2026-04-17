@@ -53,6 +53,57 @@ const PROVIDER_CONFIGS: Record<string, OAuthProviderConfig> = {
   },
 }
 
+// ── Token Encryption (AES-GCM) ──────────────────────────
+// Tokens are encrypted at rest using a 32-byte key from OAUTH_ENCRYPTION_KEY
+// (base64). Each token uses a fresh 12-byte IV. Ciphertext format is
+// "v1:<base64-iv>:<base64-ciphertext>". Plain-text fallback is refused — if
+// the env key is missing we fail closed rather than store secrets in clear.
+
+async function getEncryptionKey(): Promise<CryptoKey> {
+  const b64 = Deno.env.get('OAUTH_ENCRYPTION_KEY')
+  if (!b64) {
+    throw new HttpError(500, 'OAUTH_ENCRYPTION_KEY is not configured')
+  }
+  const raw = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))
+  if (raw.length !== 32) {
+    throw new HttpError(500, 'OAUTH_ENCRYPTION_KEY must decode to 32 bytes')
+  }
+  return await crypto.subtle.importKey('raw', raw, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt'])
+}
+
+function toB64(bytes: Uint8Array): string {
+  let s = ''
+  for (const b of bytes) s += String.fromCharCode(b)
+  return btoa(s)
+}
+
+function fromB64(b64: string): Uint8Array {
+  return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))
+}
+
+async function encryptToken(plain: string | null | undefined): Promise<string | null> {
+  if (plain == null) return null
+  const key = await getEncryptionKey()
+  const iv = crypto.getRandomValues(new Uint8Array(12))
+  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(plain))
+  return `v1:${toB64(iv)}:${toB64(new Uint8Array(ct))}`
+}
+
+async function decryptToken(stored: string | null | undefined): Promise<string | null> {
+  if (!stored) return null
+  // Backwards compatibility: pre-encryption plain-text values.
+  if (!stored.startsWith('v1:')) return stored
+  const [, ivB64, ctB64] = stored.split(':')
+  if (!ivB64 || !ctB64) return null
+  const key = await getEncryptionKey()
+  const pt = await crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv: fromB64(ivB64) },
+    key,
+    fromB64(ctB64),
+  )
+  return new TextDecoder().decode(pt)
+}
+
 // ── Request Types ───────────────────────────────────────
 
 interface ExchangeRequest {
@@ -149,13 +200,15 @@ async function handleExchange(
     ? new Date(now.getTime() + tokens.expires_in * 1000).toISOString()
     : null
 
-  // Store tokens in integration config
+  // Store tokens in integration config. Access/refresh tokens are AES-GCM
+  // encrypted; scope/expiry/type remain plain metadata.
   const tokenData = {
-    accessToken: tokens.access_token,
-    refreshToken: tokens.refresh_token ?? null,
+    accessToken: await encryptToken(tokens.access_token),
+    refreshToken: await encryptToken(tokens.refresh_token ?? null),
     tokenExpiry: expiresAt,
     scope: tokens.scope ?? config.scopes.join(' '),
     tokenType: tokens.token_type ?? 'Bearer',
+    encrypted: true,
   }
 
   if (integrationId) {
@@ -222,7 +275,8 @@ async function handleRefresh(
   }
 
   const integrationConfig = integration.config as Record<string, string>
-  const refreshToken = integrationConfig?.refreshToken
+  const storedRefresh = integrationConfig?.refreshToken
+  const refreshToken = await decryptToken(storedRefresh)
 
   if (!refreshToken) {
     throw new HttpError(422, 'No refresh token available. Re-authorize the integration.')
@@ -262,13 +316,15 @@ async function handleRefresh(
     ? new Date(now.getTime() + tokens.expires_in * 1000).toISOString()
     : null
 
-  // Update stored tokens
+  // Update stored tokens (re-encrypt; some providers rotate refresh tokens)
+  const newRefreshPlain = tokens.refresh_token ?? refreshToken
   await supabase.from('integrations').update({
     config: {
       ...integrationConfig,
-      accessToken: tokens.access_token,
-      refreshToken: tokens.refresh_token ?? refreshToken, // Some providers rotate refresh tokens
+      accessToken: await encryptToken(tokens.access_token),
+      refreshToken: await encryptToken(newRefreshPlain),
       tokenExpiry: expiresAt,
+      encrypted: true,
     },
     status: 'connected',
     error_log: [],
