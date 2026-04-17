@@ -19,13 +19,15 @@ function makeChain() {
   const chain: Record<string, ReturnType<typeof vi.fn>> = {
     select: vi.fn(),
     eq: vi.fn(),
+    neq: vi.fn(),
+    is: vi.fn(),
     insert: vi.fn(),
     update: vi.fn(),
     delete: vi.fn(),
     order: vi.fn(),
     single: mockSingle,
   }
-  for (const key of ['select', 'eq', 'insert', 'update', 'delete', 'order']) {
+  for (const key of ['select', 'eq', 'neq', 'is', 'insert', 'update', 'delete', 'order']) {
     chain[key].mockReturnValue(chain)
   }
   return chain
@@ -85,7 +87,8 @@ describe('projectService.createProject', () => {
   beforeEach(() => vi.clearAllMocks())
 
   it('creates project and auto-adds creator as project_manager', async () => {
-    const project = { id: 'p-new', name: 'Tower A', company_id: 'co-1', status: 'active' }
+    session('u-1')
+    const project = { id: 'p-new', name: 'Tower A', organization_id: 'co-1', status: 'active' }
     mockSingle.mockResolvedValue({ data: project, error: null })
 
     let callCount = 0
@@ -101,7 +104,6 @@ describe('projectService.createProject', () => {
     const result = await projectService.createProject({
       name: 'Tower A',
       company_id: 'co-1',
-      created_by: 'u-1',
     })
 
     expect(result.error).toBeNull()
@@ -109,20 +111,13 @@ describe('projectService.createProject', () => {
     expect(callCount).toBe(2)
   })
 
-  it('sets completion_percentage to 0 and status to active', async () => {
-    const project = { id: 'p-1', status: 'active', completion_percentage: 0 }
+  it('sets status to active on creation', async () => {
+    session('u-1')
+    const project = { id: 'p-1', status: 'active' }
     mockSingle.mockResolvedValue({ data: project, error: null })
 
     let callCount = 0
-    mockFrom.mockImplementation(() => {
-      callCount++
-      const chain = makeChain()
-      if (callCount === 2) chain.insert.mockResolvedValue({ error: null })
-      return chain
-    })
-
     let insertArg: Record<string, unknown> | null = null
-    callCount = 0
     mockFrom.mockImplementation((table: string) => {
       callCount++
       const chain = makeChain()
@@ -137,20 +132,20 @@ describe('projectService.createProject', () => {
       return chain
     })
 
-    await projectService.createProject({ name: 'Test', company_id: 'co-1', created_by: 'u-1' })
+    await projectService.createProject({ name: 'Test', organization_id: 'co-1' })
 
     expect(insertArg?.status).toBe('active')
-    expect(insertArg?.completion_percentage).toBe(0)
+    expect(insertArg?.name).toBe('Test')
   })
 
   it('returns DatabaseError on insert failure', async () => {
+    session('u-1')
     mockSingle.mockResolvedValue({ data: null, error: { message: 'duplicate project name' } })
     mockFrom.mockReturnValue(makeChain())
 
     const result = await projectService.createProject({
       name: 'Dupe',
       company_id: 'co-1',
-      created_by: 'u-1',
     })
 
     expect(result.error?.category).toBe('DatabaseError')
