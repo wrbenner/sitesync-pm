@@ -11,7 +11,6 @@ const config: CapacitorConfig = {
       '*.sentry.io',
       '*.posthog.com',
       '*.liveblocks.io',
-      'api.anthropic.com',
       'api.openweathermap.org',
     ],
   },
