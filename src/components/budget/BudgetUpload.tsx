@@ -286,7 +286,7 @@ export function BudgetUpload({ open, onClose, onSuccess }: BudgetUploadProps) {
               Import Budget
             </h2>
           </div>
-          <button onClick={handleClose} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, border: 'none', borderRadius: borderRadius.base, backgroundColor: 'transparent', cursor: 'pointer', color: colors.textTertiary }}>
+          <button onClick={handleClose} aria-label="Close" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, border: 'none', borderRadius: borderRadius.base, backgroundColor: 'transparent', cursor: 'pointer', color: colors.textTertiary }}>
             <X size={18} />
           </button>
         </div>

@@ -292,8 +292,11 @@ export const LookaheadBoard: React.FC<LookaheadBoardProps> = ({
                         <div
                           key={task.id}
                           draggable
+                          role="button"
+                          tabIndex={0}
                           onDragStart={() => handleDragStart(task.id)}
                           onClick={() => setExpandedTask(expandedTask === task.id ? null : task.id)}
+                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpandedTask(expandedTask === task.id ? null : task.id); } }}
                           style={{
                             padding: `${spacing['1']} ${spacing['2']}`,
                             backgroundColor: `${rColor}0A`,

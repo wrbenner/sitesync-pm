@@ -126,7 +126,10 @@ export const Treemap: React.FC<TreemapProps> = ({ divisions }) => {
           return (
             <div
               key={div.id}
+              role="button"
+              tabIndex={0}
               onClick={() => setDrillDown(div.id)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setDrillDown(div.id); } }}
               aria-label={`${div.name}: ${fmt(div.budget)} budget, ${fmt(div.spent)} spent`}
               style={{
                 width: '100%', minHeight: '56px', borderRadius: borderRadius.md,
@@ -176,7 +179,10 @@ export const Treemap: React.FC<TreemapProps> = ({ divisions }) => {
         return (
           <div
             key={div.id}
+            role="button"
+            tabIndex={0}
             onClick={() => setDrillDown(div.id)}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setDrillDown(div.id); } }}
             aria-label={`${div.name}: ${fmt(div.budget)} budget, ${fmt(div.spent)} spent`}
             style={{
               flex: `1 1 ${flexBasis}%`,

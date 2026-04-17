@@ -185,7 +185,10 @@ export const AIPhotoAnalysis: React.FC = () => {
       {/* Upload area */}
       {!imagePreview && (
         <div
+          role="button"
+          tabIndex={0}
           onClick={() => fileInputRef.current?.click()}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click(); } }}
           style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center',
             justifyContent: 'center', gap: spacing['3'],

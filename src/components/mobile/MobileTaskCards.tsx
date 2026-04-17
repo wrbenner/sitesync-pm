@@ -165,10 +165,13 @@ const MobileTaskCard: React.FC<{
 
       {/* Card face */}
       <div
+        role="button"
+        tabIndex={0}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onClick={() => { if (Math.abs(offsetX) < 5) onTap(); }}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTap(); } }}
         style={{
           display: 'flex', alignItems: 'center', gap: spacing['3'],
           padding: spacing['4'],

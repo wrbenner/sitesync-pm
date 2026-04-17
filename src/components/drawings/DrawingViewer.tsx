@@ -695,7 +695,7 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
           >
             {showCompare ? 'Exit Compare' : 'Compare Versions'}
           </button>
-          <button onClick={onClose} style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.overlayWhiteThin, border: 'none', borderRadius: borderRadius.md, cursor: 'pointer', color: colors.white }}>
+          <button onClick={onClose} aria-label="Close drawing viewer" style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.overlayWhiteThin, border: 'none', borderRadius: borderRadius.md, cursor: 'pointer', color: colors.white }}>
             <X size={18} />
           </button>
         </div>

@@ -693,7 +693,10 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                       cursor: 'pointer',
                       userSelect: 'none',
                     }}
+                    role="button"
+                    tabIndex={0}
                     onClick={() => onPhaseClick?.(phase)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPhaseClick?.(phase); } }}
                   >
                     {/* Baseline ghost bar — visible when showBaseline is true and baseline data exists */}
                     {showBaseline && (() => {

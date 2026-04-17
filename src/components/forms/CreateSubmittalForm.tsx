@@ -145,6 +145,7 @@ export function CreateSubmittalForm({ open, onClose, onSuccess }: CreateSubmitta
           </div>
           <button
             onClick={handleClose}
+            aria-label="Close"
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               width: 32, height: 32, border: 'none', borderRadius: borderRadius.base,

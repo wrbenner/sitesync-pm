@@ -238,7 +238,10 @@ export const Tasks: React.FC = () => {
       <div
         key={task.id}
         draggable
+        role="button"
+        tabIndex={0}
         onClick={(e) => { if (e.shiftKey) { toggleSelect(task.id); } else { setSelectedTask(task); } }}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (e.shiftKey) { toggleSelect(task.id); } else { setSelectedTask(task); } } }}
         style={{
           backgroundColor: selectedIds.has(task.id) ? `${colors.primaryOrange}08` : colors.surfaceRaised,
           outline: selectedIds.has(task.id) ? `2px solid ${colors.primaryOrange}` : 'none',
@@ -426,7 +429,10 @@ export const Tasks: React.FC = () => {
         return (
           <div
             key={task.id}
+            role="button"
+            tabIndex={0}
             onClick={() => setSelectedTask(task)}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedTask(task); } }}
             style={{
               display: 'grid',
               gridTemplateColumns: '2fr 140px 120px 120px 100px 80px',

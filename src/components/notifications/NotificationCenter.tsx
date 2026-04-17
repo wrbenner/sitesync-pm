@@ -154,12 +154,21 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onNavigate }
 
             {/* Row */}
             <div
+              role="button"
+              tabIndex={0}
               onTouchStart={(e) => handleRowTouchStart(n.id, e)}
               onTouchMove={(e) => handleRowTouchMove(n.id, e)}
               onTouchEnd={() => handleRowTouchEnd(n.id)}
               onClick={() => {
                 markRead(n.id);
                 if (n.actionRoute) onNavigate?.(n.actionRoute);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  markRead(n.id);
+                  if (n.actionRoute) onNavigate?.(n.actionRoute);
+                }
               }}
               style={{
                 display: 'flex', alignItems: 'center', gap: spacing['3'],
@@ -269,6 +278,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ open, on
                 </button>
                 <button
                   onClick={onClose}
+                  aria-label="Close"
                   style={{
                     width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center',
                     backgroundColor: 'transparent', border: 'none',
@@ -298,7 +308,10 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ open, on
                     return (
                       <div
                         key={n.id}
+                        role="button"
+                        tabIndex={0}
                         onClick={() => markRead(n.id)}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); markRead(n.id); } }}
                         style={{
                           display: 'flex', alignItems: 'flex-start', gap: spacing['3'],
                           padding: `${spacing['3']} ${spacing['4']}`,
@@ -472,6 +485,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ onClose })
               <button
                 onClick={handleMarkAllRead}
                 title="Mark all as read"
+                aria-label="Mark all as read"
                 style={{
                   padding: spacing['1'], backgroundColor: 'transparent', border: 'none',
                   borderRadius: borderRadius.sm, cursor: 'pointer', color: colors.textTertiary,
@@ -486,6 +500,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ onClose })
             )}
             <button
               onClick={onClose}
+              aria-label="Close"
               style={{
                 padding: spacing['1'], backgroundColor: 'transparent', border: 'none',
                 borderRadius: borderRadius.sm, cursor: 'pointer', color: colors.textTertiary,
@@ -534,7 +549,10 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ onClose })
           {filtered.slice(0, 50).map((notification: unknown) => (
             <div
               key={notification.id}
+              role="button"
+              tabIndex={0}
               onClick={() => handleClickNotification(notification)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClickNotification(notification); } }}
               style={{
                 display: 'flex', alignItems: 'flex-start', gap: spacing['3'],
                 padding: `${spacing['3']} ${spacing['4']}`,

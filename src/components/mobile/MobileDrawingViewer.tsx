@@ -137,7 +137,7 @@ export const MobileDrawingViewer: React.FC<DrawingViewerProps> = ({ drawing, onC
         padding: `${spacing['2']} ${spacing['3']}`, flexShrink: 0,
         backgroundColor: colors.overlayDark, zIndex: zIndex.base as number + 5,
       }}>
-        <button onClick={onClose} style={{
+        <button onClick={onClose} aria-label="Close drawing" style={{
           width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center',
           backgroundColor: colors.overlayWhiteThin, border: 'none', borderRadius: borderRadius.full,
           cursor: 'pointer',

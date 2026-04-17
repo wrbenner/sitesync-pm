@@ -156,7 +156,10 @@ export const DocumentSearch: React.FC<DocumentSearchProps> = ({ onSelect, inputI
             results.map((result, i) => (
               <div
                 key={result.id}
+                role="button"
+                tabIndex={0}
                 onClick={() => onSelect?.(result)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect?.(result); } }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: spacing['3'],
                   padding: `${spacing['3']} ${spacing['4']}`,

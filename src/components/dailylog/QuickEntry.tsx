@@ -89,7 +89,7 @@ const AddRowBtn: React.FC<{ label: string; onClick: () => void }> = React.memo((
 AddRowBtn.displayName = 'AddRowBtn';
 
 const RemoveBtn: React.FC<{ onClick: () => void }> = React.memo(({ onClick }) => (
-  <button onClick={onClick} style={{
+  <button onClick={onClick} aria-label="Delete" style={{
     padding: spacing['2'], border: 'none', backgroundColor: 'transparent',
     cursor: 'pointer', color: colors.textTertiary, borderRadius: borderRadius.sm, flexShrink: 0,
   }}>

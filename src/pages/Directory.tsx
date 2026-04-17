@@ -316,8 +316,12 @@ export const Directory: React.FC = () => {
                       <tr
                         key={contact.id}
                         onClick={() => setSelectedContact(contact)}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedContact(contact); } }}
                         onMouseEnter={() => setHoveredRow(contact.id)}
                         onMouseLeave={() => setHoveredRow(null)}
+                        tabIndex={0}
+                        role="button"
+                        aria-label={`View details for ${contact.name}`}
                         style={{
                           backgroundColor: isHovered ? colors.surfaceHover : 'transparent',
                           cursor: 'pointer',

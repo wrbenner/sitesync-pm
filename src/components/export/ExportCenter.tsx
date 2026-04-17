@@ -209,7 +209,7 @@ export const ExportCenter: React.FC<ExportCenterProps> = ({ open, onClose }) => 
                   {step === 'select' ? 'Export Report' : step === 'configure' ? reportConfig?.label : 'Generating...'}
                 </h3>
               </div>
-              <button onClick={onClose} style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', border: 'none', borderRadius: borderRadius.base, cursor: 'pointer', color: colors.textTertiary }}>
+              <button onClick={onClose} aria-label="Close" style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', border: 'none', borderRadius: borderRadius.base, cursor: 'pointer', color: colors.textTertiary }}>
                 <X size={16} />
               </button>
             </div>

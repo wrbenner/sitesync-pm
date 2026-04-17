@@ -422,6 +422,7 @@ const QuickRFI: React.FC<QuickRFIProps> = ({ open, onClose }) => {
           {/* ── Close Button ──────────────────────────────────── */}
           <button
             onClick={handleClose}
+            aria-label="Close"
             style={{
               position: 'absolute',
               top: spacing['4'],
