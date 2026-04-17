@@ -22,6 +22,8 @@ import { ScheduleGantt } from './ScheduleGantt';
 import { ScheduleImportModal } from './ScheduleUpload';
 import { ScheduleErrorState, ScheduleLoadingState, ScheduleEmptyState } from './ScheduleStates';
 import { ScheduleHeaderActions, ScheduleSkipLink, ScheduleErrorBanner } from './ScheduleShellParts';
+import AddPhaseModal from '../../components/forms/AddPhaseModal';
+import { toast } from 'sonner';
 
 function useMediaQuery(query: string): boolean {
   const [matches, setMatches] = useState(() =>
@@ -85,6 +87,31 @@ const SchedulePage: React.FC = () => {
   const [recoveryExpanded, setRecoveryExpanded] = useState(false);
   const [scheduleAnnouncement, setScheduleAnnouncement] = useState('');
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showAddPhaseModal, setShowAddPhaseModal] = useState(false);
+
+  const handleAddPhase = useCallback(async (data: { name: string; start_date: string; end_date: string }) => {
+    const projectId = activeProject?.id;
+    if (!projectId) {
+      toast.error('No project selected');
+      throw new Error('No project selected');
+    }
+    const { error } = await supabase.from('schedule_phases').insert({
+      project_id: projectId,
+      name: data.name,
+      start_date: data.start_date,
+      end_date: data.end_date,
+      status: 'on_track',
+      progress: 0,
+    });
+    if (error) {
+      toast.error(error.message || 'Failed to create phase');
+      throw error;
+    }
+    toast.success('Phase created');
+    queryClient.invalidateQueries({ queryKey: ['schedule', projectId] });
+    queryClient.invalidateQueries({ queryKey: ['schedule_phases', projectId] });
+    loadSchedule(projectId);
+  }, [activeProject?.id, queryClient, loadSchedule]);
   const [mobileFilter, setMobileFilter] = useState<'all' | 'in_progress' | 'delayed' | 'critical_path'>('all');
 
   // dirtyPhaseIds: pass phase IDs currently being edited to get conflict toasts.
@@ -341,7 +368,7 @@ const SchedulePage: React.FC = () => {
     <PageContainer
       title="Schedule"
       subtitle={`${metrics.daysBeforeSchedule} days ahead \u00B7 ${metrics.milestonesHit}/${metrics.milestoneTotal} milestones`}
-      actions={<ScheduleHeaderActions onImport={() => setShowImportModal(true)} liveActive={liveActive} />}
+      actions={<ScheduleHeaderActions onImport={() => setShowImportModal(true)} onAddPhase={() => setShowAddPhaseModal(true)} liveActive={liveActive} />}
       aria-label="Project Schedule"
       role="main"
     >
@@ -431,6 +458,11 @@ const SchedulePage: React.FC = () => {
         onClose={() => setShowImportModal(false)}
         onImportComplete={() => { setShowImportModal(false); }}
         projectId={activeProject?.id}
+      />
+      <AddPhaseModal
+        open={showAddPhaseModal}
+        onClose={() => setShowAddPhaseModal(false)}
+        onSubmit={handleAddPhase}
       />
     </PageContainer>
   );

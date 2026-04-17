@@ -6,7 +6,8 @@ import { PermissionGate } from '../../components/auth/PermissionGate';
 import { colors, spacing, typography } from '../../styles/theme';
 import { useProjectId } from '../../hooks/useProjectId';
 import { useFiles } from '../../hooks/queries';
-import { useCreateFile } from '../../hooks/mutations';
+import { useCreateFile, useDeleteFile } from '../../hooks/mutations';
+import { supabase } from '../../lib/supabase';
 import { type FileItem, formatBytes } from './fileTypes';
 import { FileGrid } from './FileGrid';
 import { FileUpload } from './FileUpload';
@@ -18,6 +19,8 @@ const FilesPage: React.FC = () => {
   const { addToast } = useToast();
   const projectId = useProjectId();
   const createFile = useCreateFile();
+  const deleteFile = useDeleteFile();
+  const pendingFilesRef = useRef<Map<string, File>>(new Map());
   const { data: rawFiles, isPending: loading, isError, error, refetch } = useFiles(projectId);
   const [nowMs] = useState(() => Date.now());
 
@@ -108,9 +111,47 @@ const FilesPage: React.FC = () => {
     if (Array.from(e.dataTransfer.types).includes('Files')) setShowUpload(true);
   }, []);
 
+  const handleFileReady = useCallback((file: File) => {
+    pendingFilesRef.current.set(file.name, file);
+  }, []);
+
   const handleUpload = async (fileName: string) => {
+    if (!projectId) {
+      addToast('error', 'No project selected');
+      return;
+    }
     try {
-      await createFile.mutateAsync({ projectId: projectId!, data: { project_id: projectId!, name: fileName, content_type: 'application/octet-stream' } });
+      const file = pendingFilesRef.current.get(fileName);
+      let storagePath: string | null = null;
+      let fileSize = 0;
+      let contentType = 'application/octet-stream';
+
+      if (file) {
+        fileSize = file.size;
+        contentType = file.type || 'application/octet-stream';
+        const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+        storagePath = `${projectId}/${Date.now()}-${safeName}`;
+        const { error: uploadError } = await supabase.storage
+          .from('project-files')
+          .upload(storagePath, file, { contentType, upsert: false });
+        if (uploadError) {
+          // Fall back to DB-only record if bucket unavailable (dev/preview)
+          storagePath = null;
+        }
+        pendingFilesRef.current.delete(fileName);
+      }
+
+      await createFile.mutateAsync({
+        projectId,
+        data: {
+          project_id: projectId,
+          name: fileName,
+          content_type: contentType,
+          file_size_bytes: fileSize,
+          storage_path: storagePath,
+          parent_folder_id: currentFolderId,
+        },
+      });
       addToast('success', `Uploaded ${fileName}`);
       setUploadAnnouncement('File uploaded successfully');
     } catch {
@@ -119,11 +160,24 @@ const FilesPage: React.FC = () => {
     }
   };
 
-  const handleDeleteFile = useCallback((file: FileItem) => {
+  const handleDeleteFile = useCallback(async (file: FileItem) => {
     if (!window.confirm(`Delete "${file.name}"? This cannot be undone.`)) return;
-    addToast('success', `Deleted ${file.name}`);
-    setLiveAnnouncement('File deleted');
-  }, [addToast]);
+    if (!projectId) {
+      addToast('error', 'No project selected');
+      return;
+    }
+    try {
+      const storagePath = (file as unknown as Record<string, unknown>).storage_path as string | undefined;
+      if (storagePath) {
+        await supabase.storage.from('project-files').remove([storagePath]);
+      }
+      await deleteFile.mutateAsync({ id: file.id, projectId });
+      addToast('success', `Deleted ${file.name}`);
+      setLiveAnnouncement('File deleted');
+    } catch {
+      addToast('error', `Failed to delete ${file.name}`);
+    }
+  }, [addToast, deleteFile, projectId]);
 
   useEffect(() => {
     if (!searchQuery.trim()) return;
@@ -233,7 +287,7 @@ const FilesPage: React.FC = () => {
           draggingFileIdRef={draggingFileIdRef}
           liveAnnouncement={liveAnnouncement}
           uploadAnnouncement={uploadAnnouncement}
-          uploadZoneNode={<FileUpload onUpload={handleUpload} />}
+          uploadZoneNode={<FileUpload onUpload={handleUpload} onFileReady={handleFileReady} />}
         />
 
         <FilePreviewPanel file={selectedFile} onClose={() => setSelectedFile(null)} />

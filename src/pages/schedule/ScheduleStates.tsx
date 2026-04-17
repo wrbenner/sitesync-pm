@@ -1,9 +1,14 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { AlertCircle, CalendarDays } from 'lucide-react';
+import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 import { PageContainer } from '../../components/Primitives';
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
 import { PermissionGate } from '../../components/auth/PermissionGate';
 import { ScheduleImportModal } from './ScheduleUpload';
+import AddPhaseModal from '../../components/forms/AddPhaseModal';
+import { supabase } from '../../lib/supabase';
+import { useScheduleStore } from '../../stores/scheduleStore';
 
 interface ErrorStateProps {
   error: string | null;
@@ -107,57 +112,91 @@ interface EmptyStateProps {
   projectId?: string;
 }
 
-export const ScheduleEmptyState: React.FC<EmptyStateProps> = ({ showImportModal, setShowImportModal, projectId }) => (
-  <PageContainer title="Schedule" subtitle="">
-    <ScheduleImportModal
-      open={showImportModal}
-      onClose={() => setShowImportModal(false)}
-      onImportComplete={() => setShowImportModal(false)}
-      projectId={projectId}
-    />
-    <div role="status" aria-label="Build Your Project Schedule" style={{ maxWidth: '480px', margin: '80px auto', textAlign: 'center' }}>
-      <CalendarDays size={48} color={colors.textTertiary} style={{ marginBottom: '24px' }} />
-      <div style={{ fontSize: '18px', fontWeight: 600, color: colors.textPrimary, marginBottom: '12px' }}>
-        Build your schedule to track every phase from mobilization to closeout
-      </div>
-      <div style={{ fontSize: '14px', color: colors.textSecondary, marginBottom: '32px', lineHeight: typography.lineHeight.normal }}>
-        Import your P6 or MS Project schedule, or create phases manually
-      </div>
-      <PermissionGate permission="schedule.edit">
-        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-          <button
-            onClick={() => setShowImportModal(true)}
-            style={{
-              background: colors.primaryOrange,
-              color: colors.white,
-              border: 'none',
-              borderRadius: borderRadius.md,
-              padding: `${spacing.sm} ${spacing.lg}`,
-              fontSize: typography.fontSize.body,
-              fontWeight: typography.fontWeight.medium,
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-            }}
-          >
-            Import from P6/MS Project
-          </button>
-          <button
-            style={{
-              background: colors.white,
-              color: colors.textPrimary,
-              border: `1px solid ${colors.borderDefault}`,
-              borderRadius: borderRadius.md,
-              padding: `${spacing.sm} ${spacing.lg}`,
-              fontSize: typography.fontSize.body,
-              fontWeight: typography.fontWeight.medium,
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-            }}
-          >
-            Create First Phase
-          </button>
+export const ScheduleEmptyState: React.FC<EmptyStateProps> = ({ showImportModal, setShowImportModal, projectId }) => {
+  const [showAddPhase, setShowAddPhase] = useState(false);
+  const queryClient = useQueryClient();
+  const { loadSchedule } = useScheduleStore();
+
+  const handleAddPhase = useCallback(async (data: { name: string; start_date: string; end_date: string }) => {
+    if (!projectId) {
+      toast.error('No project selected');
+      throw new Error('No project selected');
+    }
+    const { error } = await supabase.from('schedule_phases').insert({
+      project_id: projectId,
+      name: data.name,
+      start_date: data.start_date,
+      end_date: data.end_date,
+      status: 'on_track',
+      progress: 0,
+    });
+    if (error) {
+      toast.error(error.message || 'Failed to create phase');
+      throw error;
+    }
+    toast.success('Phase created');
+    queryClient.invalidateQueries({ queryKey: ['schedule_phases', projectId] });
+    loadSchedule(projectId);
+  }, [projectId, queryClient, loadSchedule]);
+
+  return (
+    <PageContainer title="Schedule" subtitle="">
+      <ScheduleImportModal
+        open={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onImportComplete={() => setShowImportModal(false)}
+        projectId={projectId}
+      />
+      <AddPhaseModal
+        open={showAddPhase}
+        onClose={() => setShowAddPhase(false)}
+        onSubmit={handleAddPhase}
+      />
+      <div role="status" aria-label="Build Your Project Schedule" style={{ maxWidth: '480px', margin: '80px auto', textAlign: 'center' }}>
+        <CalendarDays size={48} color={colors.textTertiary} style={{ marginBottom: '24px' }} />
+        <div style={{ fontSize: '18px', fontWeight: 600, color: colors.textPrimary, marginBottom: '12px' }}>
+          Build your schedule to track every phase from mobilization to closeout
         </div>
-      </PermissionGate>
-    </div>
-  </PageContainer>
-);
+        <div style={{ fontSize: '14px', color: colors.textSecondary, marginBottom: '32px', lineHeight: typography.lineHeight.normal }}>
+          Import your P6 or MS Project schedule, or create phases manually
+        </div>
+        <PermissionGate permission="schedule.edit">
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+            <button
+              onClick={() => setShowImportModal(true)}
+              style={{
+                background: colors.primaryOrange,
+                color: colors.white,
+                border: 'none',
+                borderRadius: borderRadius.md,
+                padding: `${spacing.sm} ${spacing.lg}`,
+                fontSize: typography.fontSize.body,
+                fontWeight: typography.fontWeight.medium,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+              }}
+            >
+              Import from P6/MS Project
+            </button>
+            <button
+              onClick={() => setShowAddPhase(true)}
+              style={{
+                background: colors.white,
+                color: colors.textPrimary,
+                border: `1px solid ${colors.borderDefault}`,
+                borderRadius: borderRadius.md,
+                padding: `${spacing.sm} ${spacing.lg}`,
+                fontSize: typography.fontSize.body,
+                fontWeight: typography.fontWeight.medium,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+              }}
+            >
+              Create First Phase
+            </button>
+          </div>
+        </PermissionGate>
+      </div>
+    </PageContainer>
+  );
+};

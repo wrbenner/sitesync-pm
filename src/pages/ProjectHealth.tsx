@@ -18,7 +18,7 @@ import {
 
 interface HealthDimension {
   label: string;
-  score: number;
+  score: number | null;
   trend: 'up' | 'down' | 'flat';
   change: number;
   detail: string;
@@ -74,9 +74,9 @@ export const ProjectHealth: React.FC = () => {
       (p) => p.status === 'complete' || p.status === 'on_track' || p.status === 'in_progress'
     );
     const behindPhases = phases.filter((p) => p.status === 'behind' || p.status === 'at_risk');
-    const scheduleScore = phases.length > 0
+    const scheduleScore: number | null = phases.length > 0
       ? clamp(Math.round((onTrackPhases.length / phases.length) * 100), 0, 100)
-      : 85;
+      : null;
     const scheduleDetail = behindPhases.length > 0
       ? `${behindPhases.length} phase${behindPhases.length > 1 ? 's' : ''} behind or at risk out of ${phases.length} total.`
       : phases.length > 0
@@ -97,9 +97,9 @@ export const ProjectHealth: React.FC = () => {
     const totalOriginal = items.reduce((s, b) => s + (b.original_amount ?? 0), 0);
     const totalActual = items.reduce((s, b) => s + (b.actual_amount ?? 0), 0);
     const cpi = totalActual > 0 && totalOriginal > 0 ? totalOriginal / totalActual : 1;
-    const budgetScore = items.length > 0
+    const budgetScore: number | null = items.length > 0
       ? clamp(Math.round(Math.min(cpi, 1.2) / 1.2 * 100), 0, 100)
-      : 90;
+      : null;
     const overBudgetItems = items.filter(
       (b) => (b.actual_amount ?? 0) > (b.original_amount ?? 0) * 1.05
     );
@@ -121,9 +121,9 @@ export const ProjectHealth: React.FC = () => {
     const resolvedPunches = punches.filter(
       (p) => p.status === 'resolved' || p.status === 'verified'
     );
-    const qualityScore = punches.length > 0
+    const qualityScore: number | null = punches.length > 0
       ? clamp(Math.round((resolvedPunches.length / punches.length) * 100), 0, 100)
-      : 88;
+      : null;
     const openPunches = punches.length - resolvedPunches.length;
     const qualityDetail = punches.length > 0
       ? `${resolvedPunches.length} of ${punches.length} punch items resolved. ${openPunches} open.`
@@ -150,9 +150,9 @@ export const ProjectHealth: React.FC = () => {
     const totalHours = logs.reduce((s, l) => s + (l.total_hours ?? 0), 0);
     const incidentRate = totalHours > 0 ? (totalIncidents / totalHours) * 1000 : 0;
     // Perfect safety = 100, each incident per 1000 hrs knocks it down
-    const safetyScore = logs.length > 0
+    const safetyScore: number | null = logs.length > 0
       ? clamp(Math.round(100 - incidentRate * 20), 0, 100)
-      : 96;
+      : null;
     const safetyDetail = logs.length > 0
       ? `${totalIncidents} incident${totalIncidents !== 1 ? 's' : ''} across ${logs.length} daily logs. ${totalHours.toLocaleString()} total labor hours.`
       : 'No daily logs recorded yet.';
@@ -168,11 +168,9 @@ export const ProjectHealth: React.FC = () => {
       return new Date(r.due_date) < new Date();
     });
     const meetingList = meetingsResult?.data ?? [];
-    const commScore = rfiList.length > 0
+    const commScore: number | null = rfiList.length > 0
       ? clamp(Math.round(100 - (overdueRfis.length / Math.max(rfiList.length, 1)) * 100), 0, 100)
-      : meetingList.length > 0
-        ? 82
-        : 82;
+      : null;
     const commDetail = rfiList.length > 0
       ? `${overdueRfis.length} overdue RFI${overdueRfis.length !== 1 ? 's' : ''} out of ${rfiList.length} total. ${meetingList.length} meetings on record.`
       : 'No RFIs logged yet.';
@@ -187,9 +185,9 @@ export const ProjectHealth: React.FC = () => {
     // ── Documentation ──
     const fileList = files ?? [];
     const drawingList = drawings ?? [];
-    const docScore = (fileList.length > 0 || drawingList.length > 0)
+    const docScore: number | null = (fileList.length > 0 || drawingList.length > 0)
       ? clamp(Math.round(Math.min(100, 60 + drawingList.length * 2 + fileList.length * 0.5)), 0, 100)
-      : 90;
+      : null;
     const docDetail = (fileList.length > 0 || drawingList.length > 0)
       ? `${drawingList.length} drawings, ${fileList.length} files in the system.`
       : 'No files or drawings uploaded yet.';
@@ -197,34 +195,48 @@ export const ProjectHealth: React.FC = () => {
       ? `${drawingList.length} drawing sheets on file. ${fileList.length} documents stored in the file system. Daily logs have been submitted consistently.`
       : 'Documentation health is computed from drawing count, file count, and daily log consistency.';
 
+    const trendFor = (s: number | null): 'up' | 'down' | 'flat' =>
+      s == null ? 'flat' : s >= 85 ? 'up' : s >= 70 ? 'flat' : 'down';
+    const changeFor = (s: number | null, upV: number, downV: number): number =>
+      s == null ? 0 : s >= 85 ? upV : s >= 70 ? 0 : downV;
+
     const dims: HealthDimension[] = [
-      { label: 'Schedule Health', score: scheduleScore, trend: scheduleScore >= 85 ? 'up' : scheduleScore >= 70 ? 'flat' : 'down', change: scheduleScore >= 85 ? 2 : scheduleScore >= 70 ? 0 : -3, detail: scheduleDetail, fullDetail: scheduleFullDetail, route: '/schedule' },
-      { label: 'Budget Health', score: budgetScore, trend: budgetScore >= 85 ? 'up' : budgetScore >= 70 ? 'flat' : 'down', change: budgetScore >= 85 ? 1 : budgetScore >= 70 ? 0 : -2, detail: budgetDetail, fullDetail: budgetFullDetail, route: '/budget' },
-      { label: 'Quality', score: qualityScore, trend: qualityScore >= 80 ? 'up' : qualityScore >= 60 ? 'flat' : 'down', change: qualityScore >= 80 ? 2 : qualityScore >= 60 ? 0 : -1, detail: qualityDetail, fullDetail: qualityFullDetail, route: '/punch-list' },
-      { label: 'Safety', score: safetyScore, trend: safetyScore >= 90 ? 'up' : safetyScore >= 70 ? 'flat' : 'down', change: safetyScore >= 90 ? 1 : safetyScore >= 70 ? 0 : -2, detail: safetyDetail, fullDetail: safetyFullDetail, route: '/daily-log' },
-      { label: 'Communication', score: commScore, trend: commScore >= 85 ? 'up' : commScore >= 70 ? 'flat' : 'down', change: commScore >= 85 ? 1 : commScore >= 70 ? 0 : -2, detail: commDetail, fullDetail: commFullDetail, route: '/activity' },
-      { label: 'Documentation', score: docScore, trend: docScore >= 85 ? 'up' : docScore >= 70 ? 'flat' : 'down', change: docScore >= 85 ? 3 : docScore >= 70 ? 0 : -1, detail: docDetail, fullDetail: docFullDetail, route: '/files' },
+      { label: 'Schedule Health', score: scheduleScore, trend: trendFor(scheduleScore), change: changeFor(scheduleScore, 2, -3), detail: scheduleDetail, fullDetail: scheduleFullDetail, route: '/schedule' },
+      { label: 'Budget Health', score: budgetScore, trend: trendFor(budgetScore), change: changeFor(budgetScore, 1, -2), detail: budgetDetail, fullDetail: budgetFullDetail, route: '/budget' },
+      { label: 'Quality', score: qualityScore, trend: qualityScore == null ? 'flat' : qualityScore >= 80 ? 'up' : qualityScore >= 60 ? 'flat' : 'down', change: qualityScore == null ? 0 : qualityScore >= 80 ? 2 : qualityScore >= 60 ? 0 : -1, detail: qualityDetail, fullDetail: qualityFullDetail, route: '/punch-list' },
+      { label: 'Safety', score: safetyScore, trend: safetyScore == null ? 'flat' : safetyScore >= 90 ? 'up' : safetyScore >= 70 ? 'flat' : 'down', change: safetyScore == null ? 0 : safetyScore >= 90 ? 1 : safetyScore >= 70 ? 0 : -2, detail: safetyDetail, fullDetail: safetyFullDetail, route: '/daily-log' },
+      { label: 'Communication', score: commScore, trend: trendFor(commScore), change: changeFor(commScore, 1, -2), detail: commDetail, fullDetail: commFullDetail, route: '/activity' },
+      { label: 'Documentation', score: docScore, trend: trendFor(docScore), change: changeFor(docScore, 3, -1), detail: docDetail, fullDetail: docFullDetail, route: '/files' },
     ];
 
     // Weighted average: schedule 25%, budget 25%, quality 15%, safety 15%, comm 10%, docs 10%
+    // Only include dimensions that actually have data; re-weight proportionally.
     const weights = [0.25, 0.25, 0.15, 0.15, 0.10, 0.10];
-    const overall = Math.round(dims.reduce((s, d, i) => s + d.score * weights[i], 0));
+    const contributing = dims.map((d, i) => ({ score: d.score, weight: weights[i] })).filter((e) => e.score != null) as { score: number; weight: number }[];
+    const totalWeight = contributing.reduce((s, e) => s + e.weight, 0);
+    const overall: number | null = totalWeight > 0
+      ? Math.round(contributing.reduce((s, e) => s + e.score * (e.weight / totalWeight), 0))
+      : null;
 
     return { dimensions: dims, overallScore: overall };
   }, [schedulePhases, budgetItems, punchItemsResult, rfisResult, dailyLogsResult, meetingsResult, files, drawings]);
 
-  const percentile = Math.min(99, Math.max(1, overallScore - 5));
+  const percentile = overallScore != null ? Math.min(99, Math.max(1, overallScore - 5)) : 0;
 
 
   const aiExplanation = useMemo(() => {
-    const lowest = dimensions.reduce((a, b) => (a.score < b.score ? a : b));
-    const highest = dimensions.reduce((a, b) => (a.score > b.score ? a : b));
+    const rated = dimensions.filter((d) => d.score != null) as (HealthDimension & { score: number })[];
+    if (rated.length === 0 || overallScore == null) {
+      return 'No project data available yet. Health analysis will appear once schedule, budget, RFIs, punch items, or daily logs are added.';
+    }
+    const lowest = rated.reduce((a, b) => (a.score < b.score ? a : b));
+    const highest = rated.reduce((a, b) => (a.score > b.score ? a : b));
     return `Overall health score is ${overallScore}. Strongest area: ${highest.label} at ${highest.score}. Area needing the most attention: ${lowest.label} at ${lowest.score}. ${lowest.detail}`;
   }, [dimensions, overallScore]);
 
-  const scoreColor = getScoreColor(overallScore);
+  const scoreColor = overallScore != null ? getScoreColor(overallScore) : colors.textTertiary;
   const circumference = 2 * Math.PI * 70;
-  const offset = circumference - (overallScore / 100) * circumference;
+  const offset = overallScore != null ? circumference - (overallScore / 100) * circumference : circumference;
 
   if (isLoading) {
     return (
@@ -293,30 +305,46 @@ export const ProjectHealth: React.FC = () => {
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <div
               role="img"
-              aria-label={`Project health score: ${overallScore} out of 100`}
+              aria-label={overallScore != null ? `Project health score: ${overallScore} out of 100` : 'No health data available'}
               style={{ position: 'relative', width: 180, height: 180 }}
             >
               <svg width={180} height={180} style={{ transform: 'rotate(-90deg)' }} aria-hidden="true">
                 <circle cx={90} cy={90} r={70} fill="none" stroke={colors.surfaceInset} strokeWidth="12" />
-                <circle
-                  cx={90} cy={90} r={70} fill="none" stroke={scoreColor} strokeWidth="12"
-                  strokeDasharray={circumference} strokeDashoffset={offset}
-                  strokeLinecap="round"
-                />
+                {overallScore != null && (
+                  <circle
+                    cx={90} cy={90} r={70} fill="none" stroke={scoreColor} strokeWidth="12"
+                    strokeDasharray={circumference} strokeDashoffset={offset}
+                    strokeLinecap="round"
+                  />
+                )}
               </svg>
               <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                <span style={{ fontSize: '48px', fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, lineHeight: 1 }}>{overallScore}</span>
-                <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, marginTop: spacing['1'] }}>out of 100</span>
+                {overallScore != null ? (
+                  <>
+                    <span style={{ fontSize: '48px', fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, lineHeight: 1 }}>{overallScore}</span>
+                    <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, marginTop: spacing['1'] }}>out of 100</span>
+                  </>
+                ) : (
+                  <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, textAlign: 'center', padding: '0 12px' }}>No data available</span>
+                )}
               </div>
             </div>
 
             <div style={{ marginTop: spacing['4'], textAlign: 'center' }}>
-              <p style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: scoreColor, margin: 0 }}>
-                {overallScore >= 90 ? 'Excellent' : overallScore >= 75 ? 'Good' : overallScore >= 60 ? 'Fair' : 'Needs Attention'}
-              </p>
-              <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0, marginTop: spacing['1'] }}>
-                {percentile}{percentile % 10 === 1 && percentile !== 11 ? 'st' : percentile % 10 === 2 && percentile !== 12 ? 'nd' : percentile % 10 === 3 && percentile !== 13 ? 'rd' : 'th'} percentile for mixed use projects
-              </p>
+              {overallScore != null ? (
+                <>
+                  <p style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: scoreColor, margin: 0 }}>
+                    {overallScore >= 90 ? 'Excellent' : overallScore >= 75 ? 'Good' : overallScore >= 60 ? 'Fair' : 'Needs Attention'}
+                  </p>
+                  <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0, marginTop: spacing['1'] }}>
+                    {percentile}{percentile % 10 === 1 && percentile !== 11 ? 'st' : percentile % 10 === 2 && percentile !== 12 ? 'nd' : percentile % 10 === 3 && percentile !== 13 ? 'rd' : 'th'} percentile for mixed use projects
+                  </p>
+                </>
+              ) : (
+                <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0 }}>
+                  Add project data to compute health
+                </p>
+              )}
             </div>
           </div>
         </Card>
@@ -325,7 +353,8 @@ export const ProjectHealth: React.FC = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
           {dimensions.map((dim) => {
             const Icon = TrendIcons[dim.trend];
-            const color = getScoreColor(dim.score);
+            const hasScore = dim.score != null;
+            const color = hasScore ? getScoreColor(dim.score!) : colors.textTertiary;
             const tColor = trendColors[dim.trend];
             const isExpanded = expandedDim === dim.label;
             return (
@@ -333,7 +362,7 @@ export const ProjectHealth: React.FC = () => {
                 key={dim.label}
                 role="button"
                 tabIndex={0}
-                aria-label={`${dim.label}: score ${dim.score}. Go to ${dim.label} details`}
+                aria-label={hasScore ? `${dim.label}: score ${dim.score}. Go to ${dim.label} details` : `${dim.label}: no data. Go to ${dim.label} details`}
                 onClick={() => navigate(dim.route)}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(dim.route); } }}
                 style={{
@@ -346,8 +375,8 @@ export const ProjectHealth: React.FC = () => {
                 onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = shadows.sm; }}
               >
                 {/* Score */}
-                <div style={{ width: 48, height: 48, borderRadius: '50%', backgroundColor: getScoreBg(dim.score), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <span style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color }}>{dim.score}</span>
+                <div style={{ width: 48, height: 48, borderRadius: '50%', backgroundColor: hasScore ? getScoreBg(dim.score!) : colors.surfaceInset, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <span style={{ fontSize: hasScore ? typography.fontSize.title : typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color }}>{hasScore ? dim.score : 'N/A'}</span>
                 </div>
 
                 {/* Info */}
@@ -388,7 +417,7 @@ export const ProjectHealth: React.FC = () => {
 
                 {/* Mini bar */}
                 <div style={{ width: 60, height: 6, backgroundColor: colors.surfaceInset, borderRadius: 3, flexShrink: 0 }}>
-                  <div style={{ width: `${dim.score}%`, height: '100%', backgroundColor: color, borderRadius: 3, transition: `width ${transitions.smooth}` }} />
+                  <div style={{ width: hasScore ? `${dim.score}%` : '0%', height: '100%', backgroundColor: color, borderRadius: 3, transition: `width ${transitions.smooth}` }} />
                 </div>
 
                 <ChevronRight size={16} color={colors.textTertiary} style={{ flexShrink: 0 }} />

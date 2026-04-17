@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, Upload } from 'lucide-react';
+import { Calendar, Upload, Plus } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme';
 import { PermissionGate } from '../../components/auth/PermissionGate';
 
@@ -37,12 +37,38 @@ export const ScheduleLiveIndicator: React.FC<{ liveActive: boolean }> = ({ liveA
 
 interface ActionsProps {
   onImport: () => void;
+  onAddPhase?: () => void;
   liveActive: boolean;
 }
 
-export const ScheduleHeaderActions: React.FC<ActionsProps> = ({ onImport, liveActive }) => (
+export const ScheduleHeaderActions: React.FC<ActionsProps> = ({ onImport, onAddPhase, liveActive }) => (
   <div style={{ display: 'flex', alignItems: 'center', gap: spacing.md }}>
     <PermissionGate permission="schedule.edit">
+      {onAddPhase && (
+        <button
+          aria-label="Add schedule phase manually"
+          onClick={onAddPhase}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: spacing.sm,
+            padding: `0 ${spacing.lg}`,
+            height: '40px',
+            border: 'none',
+            borderRadius: borderRadius.md,
+            backgroundColor: colors.primaryOrange,
+            color: colors.white,
+            cursor: 'pointer',
+            fontSize: typography.fontSize.body,
+            fontWeight: typography.fontWeight.semibold,
+            fontFamily: 'inherit',
+            transition: transitions.quick,
+          }}
+        >
+          <Plus size={15} />
+          Add Phase
+        </button>
+      )}
       <button
         aria-label="Import schedule from Primavera P6 or Microsoft Project"
         onClick={onImport}
