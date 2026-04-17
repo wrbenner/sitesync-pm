@@ -4,7 +4,6 @@ import { render, screen } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 
-// ── Mocks ──────────────────────────────────────────────
 const rfisState = {
   data: { data: [] as unknown[] } as { data: unknown[] } | undefined,
   isPending: false,
@@ -25,11 +24,13 @@ vi.mock('../../lib/supabase', () => ({
 
 vi.mock('../../hooks/queries', () => ({
   useRFIs: () => rfisState,
+  useRFI: () => ({ data: null }),
 }))
 
 vi.mock('../../hooks/mutations', () => ({
   useCreateRFI: () => ({ mutateAsync: vi.fn() }),
   useUpdateRFI: () => ({ mutateAsync: vi.fn() }),
+  useCreateRFIResponse: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }))
 
 vi.mock('../../hooks/useProjectId', () => ({
@@ -58,6 +59,10 @@ vi.mock('../../components/forms/CreateRFIModal', () => ({
   default: () => null,
 }))
 
+vi.mock('../../components/forms/EditableField', () => ({
+  EditableDetailField: () => null,
+}))
+
 vi.mock('../../components/field/QuickRFIButton', () => ({
   default: () => null,
 }))
@@ -80,6 +85,10 @@ vi.mock('../../components/ai/AIAnnotation', () => ({
 
 vi.mock('../../components/ai/PredictiveAlert', () => ({
   PredictiveAlertBanner: () => null,
+}))
+
+vi.mock('sonner', () => ({
+  toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() },
 }))
 
 import { RFIs } from '../../pages/RFIs'
@@ -109,7 +118,6 @@ describe('RFIs page', () => {
     rfisState.isPending = true
     rfisState.data = undefined
     const { container } = render(wrap(<RFIs />))
-    // Loading state mounts skeleton/placeholder markup
     expect(container.firstChild).toBeTruthy()
   })
 
