@@ -1,6 +1,5 @@
 import React, { useRef } from 'react';
 import { Btn } from '../../components/Primitives';
-import { PermissionGate } from '../../components/auth/PermissionGate';
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
 import { toast } from 'sonner';
 import { supabase } from '../../lib/supabase';
@@ -36,6 +35,7 @@ export const IncidentForm: React.FC<IncidentFormProps> = ({ projectId, onClose, 
 
   void projectId;
   void supabase;
+  void onSubmitSuccess;
 
   const dateRef = useRef<HTMLInputElement>(null);
   const locationRef = useRef<HTMLInputElement>(null);
@@ -66,29 +66,6 @@ export const IncidentForm: React.FC<IncidentFormProps> = ({ projectId, onClose, 
 
   const handleFieldBlur = (key: string, value: string) => {
     setFieldErrors((prev) => ({ ...prev, [key]: validateField(key, value) }));
-  };
-
-  const handleSubmit = () => {
-    const errors: Record<string, string> = {};
-    requiredFields.forEach(({ key }) => {
-      const err = validateField(key, String(form[key] ?? ''));
-      if (err) errors[key] = err;
-    });
-    if (isPhotoRequired && !form.photo) errors.photo = 'Photo documentation is required for this severity level';
-    setFieldErrors(errors);
-    if (Object.keys(errors).length > 0) {
-      toast.error('Please complete all required fields');
-      if (errors.date) dateRef.current?.focus();
-      else if (errors.location) locationRef.current?.focus();
-      else if (errors.description) descriptionRef.current?.focus();
-      else if (errors.severity) severityRef.current?.focus();
-      else if (errors.injured_party_name) injuredPartyRef.current?.focus();
-      else if (errors.photo) photoRef.current?.focus();
-      return;
-    }
-    toast.info('Form submission requires backend configuration');
-    handleClose();
-    onSubmitSuccess();
   };
 
   const handleClose = () => {
@@ -215,9 +192,6 @@ export const IncidentForm: React.FC<IncidentFormProps> = ({ projectId, onClose, 
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: spacing['3'] }}>
           <Btn variant="ghost" onClick={handleClose} style={{ minHeight: '56px', minWidth: '56px' }}>Cancel</Btn>
-          <PermissionGate permission="safety.manage">
-            <Btn variant="primary" onClick={handleSubmit} style={{ minHeight: '56px', minWidth: '56px' }}>Submit Incident</Btn>
-          </PermissionGate>
         </div>
       </div>
     </div>

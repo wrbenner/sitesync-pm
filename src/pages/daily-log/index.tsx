@@ -18,6 +18,7 @@ import { useDailyLogs, useDailyLogEntries } from '../../hooks/queries';
 import { useUpdateDailyLog, useCreateDailyLog, useSubmitDailyLog, useApproveDailyLog, useRejectDailyLog } from '../../hooks/mutations';
 import { fetchWeather, formatWeatherSummary } from '../../lib/weather';
 import { supabase } from '../../lib/supabase';
+import { useAuthStore } from '../../stores/authStore';
 import type { WeatherData } from '../../lib/weather';
 import { PermissionGate } from '../../components/auth/PermissionGate';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -612,9 +613,12 @@ const DailyLogPage: React.FC = () => {
     }
   };
 
+  const authUserId = useAuthStore((s) => s.user?.id);
+
   const handleApprove = async () => {
+    if (!authUserId) { addToast('error', 'You must be signed in to approve'); return; }
     try {
-      await approveDailyLog.mutateAsync({ id: today.id, userId: 'current-user', projectId: projectId! });
+      await approveDailyLog.mutateAsync({ id: today.id, userId: authUserId, projectId: projectId! });
       addToast('success', 'Daily log approved');
     } catch {
       addToast('error', 'Failed to approve daily log');
@@ -623,8 +627,9 @@ const DailyLogPage: React.FC = () => {
 
   const handleReject = async () => {
     if (!rejectReason.trim()) { addToast('error', 'Please provide a reason for rejection'); return; }
+    if (!authUserId) { addToast('error', 'You must be signed in to reject'); return; }
     try {
-      await rejectDailyLog.mutateAsync({ id: today.id, comments: rejectReason, userId: 'current-user', projectId: projectId! });
+      await rejectDailyLog.mutateAsync({ id: today.id, comments: rejectReason, userId: authUserId, projectId: projectId! });
       setShowRejectModal(false);
       setRejectReason('');
       addToast('success', 'Daily log returned for revision');

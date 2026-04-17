@@ -119,7 +119,7 @@ export const Activity: React.FC = () => {
   const grouped = groupByTime(withGrouping);
 
   return (
-    <PageContainer title="Activity" subtitle="Everything happening on Meridian Tower">
+    <PageContainer title="Activity" subtitle="Everything happening on this project">
       {/* Post input */}
       <Card padding={spacing['4']}>
         <MentionInput

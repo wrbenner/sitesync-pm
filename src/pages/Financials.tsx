@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
-import { DollarSign, Receipt, FileText, TrendingUp, Wallet, Plus, Check, X, BookOpen } from 'lucide-react'
-import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton, EmptyState } from '../components/Primitives'
+import { DollarSign, Receipt, FileText, TrendingUp, Wallet, Check, X, BookOpen } from 'lucide-react'
+import { PageContainer, Card, SectionHeader, MetricBox, Skeleton, EmptyState } from '../components/Primitives'
 import { DataTable, createColumnHelper } from '../components/shared/DataTable'
 import { ExportButton } from '../components/shared/ExportButton'
 import { colors, spacing, typography, borderRadius, transitions, touchTarget } from '../styles/theme'
@@ -8,8 +8,6 @@ import { useProjectId } from '../hooks/useProjectId'
 import { useContracts, usePayApplications, useJobCostEntries, useInvoicesPayable, useWipReports, useRetainageLedger } from '../hooks/queries'
 import { useBudgetRealtime } from '../hooks/queries/realtime'
 import { MetricFlash } from '../components/ui/RealtimeFlash'
-import { toast } from 'sonner'
-import { PermissionGate } from '../components/auth/PermissionGate'
 
 const fmtCurrency = (n: number | null) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n || 0)
 const fmtPct = (n: number | null) => `${(n || 0).toFixed(1)}%`
@@ -403,21 +401,6 @@ export const Financials: React.FC = () => {
     return sorted.slice(0, -1).reduce((s: number, p: unknown) => s + (p.total_completed_and_stored || 0), 0);
   })()
 
-  // ── Tab actions ────────────────────────────────────────────
-
-  const addButtonLabel: Record<TabKey, string> = {
-    overview: '',
-    costs: 'New Cost Entry',
-    billing: 'New Pay App',
-    payables: 'New Invoice',
-    wip: 'New WIP Report',
-    retainage: 'New Entry',
-  }
-
-  const handleAdd = () => {
-    toast.info('Form submission requires backend configuration')
-  }
-
   // ── Render ─────────────────────────────────────────────────
 
   const isLoading = loadingContracts || loadingPayApps || loadingCosts || loadingInvoices || loadingWip || loadingRetainage
@@ -429,13 +412,6 @@ export const Financials: React.FC = () => {
       actions={
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
           <ExportButton pdfFilename="SiteSync_Financials_Report" />
-          {activeTab !== 'overview' && (
-            <PermissionGate permission="financials.edit">
-            <Btn variant="primary" icon={<Plus size={16} />} onClick={handleAdd}>
-              {addButtonLabel[activeTab]}
-            </Btn>
-            </PermissionGate>
-          )}
         </div>
       }
     >

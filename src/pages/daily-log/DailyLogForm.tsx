@@ -191,13 +191,6 @@ export const DailyLogForm: React.FC<DailyLogFormProps> = (props) => {
           </div>
         )}
 
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: spacing['3'], padding: `${spacing['3']} ${spacing['4']}`, backgroundColor: colors.statusReviewSubtle, borderRadius: borderRadius.md, borderLeft: `3px solid ${colors.statusReview}` }}>
-          <Sparkles size={14} color={colors.statusReview} style={{ marginTop: 2, flexShrink: 0 }} />
-          <p style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, margin: 0, lineHeight: 1.5 }}>
-            Productivity trending 8% above baseline this week. Concrete crew efficiency highest in project history.
-          </p>
-        </div>
-
         {weather && (
           <WeatherWidget weather={weather} weatherIsAuto={weatherIsAuto} isLocked={isLocked} onUpdate={onWeatherUpdate} />
         )}

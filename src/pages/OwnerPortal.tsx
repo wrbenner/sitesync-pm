@@ -96,8 +96,8 @@ export const OwnerPortal: React.FC = () => {
   const publishedUpdates = updates?.filter((u: unknown) => u.published) || []
   const latestUpdate = publishedUpdates.length > 0 ? publishedUpdates[0] : null
 
-  const avgProgress = phases?.length ? Math.round(phases.reduce((s: number, p: unknown) => s + (p.percent_complete || 0), 0) / phases.length) : 62
-  const overallProgress = avgProgress
+  const avgProgress: number | null = phases?.length ? Math.round(phases.reduce((s: number, p: unknown) => s + (p.percent_complete || 0), 0) / phases.length) : null
+  const overallProgress = avgProgress ?? 0
 
   if (isLoading) {
     return (
@@ -146,7 +146,7 @@ export const OwnerPortal: React.FC = () => {
 
       {/* Progress Ring */}
       <div style={{ marginBottom: spacing.xl }}>
-        <ProgressRing value={overallProgress} />
+        {avgProgress === null ? <Skeleton width="160px" height="160px" /> : <ProgressRing value={overallProgress} />}
       </div>
 
       {/* Content area */}

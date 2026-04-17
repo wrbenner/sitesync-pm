@@ -336,7 +336,7 @@ export const TopNav: React.FC<TopNavProps> = ({ activeView, onNavigate }) => {
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing.lg }}>
           <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
-            Meridian Tower
+            Project
           </span>
           <span style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary }}>
             Dallas, TX

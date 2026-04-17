@@ -642,30 +642,6 @@ export const Safety: React.FC = () => {
     setFieldErrors((prev) => ({ ...prev, [key]: validateField(key, value) }))
   }
 
-  const handleIncidentSubmit = () => {
-    const errors: Record<string, string> = {}
-    requiredFields.forEach(({ key }) => {
-      const err = validateField(key, String(incidentForm[key] ?? ''))
-      if (err) errors[key] = err
-    })
-    if (isPhotoRequired && !incidentForm.photo) {
-      errors.photo = 'Photo documentation is required for this severity level'
-    }
-    setFieldErrors(errors)
-    if (Object.keys(errors).length > 0) {
-      toast.error('Please complete all required fields')
-      if (errors.date) dateRef.current?.focus()
-      else if (errors.location) locationRef.current?.focus()
-      else if (errors.description) descriptionRef.current?.focus()
-      else if (errors.severity) severityRef.current?.focus()
-      else if (errors.injured_party_name) injuredPartyRef.current?.focus()
-      else if (errors.photo) photoRef.current?.focus()
-      return
-    }
-    toast.info('Form submission requires backend configuration')
-    handleCloseModal()
-  }
-
   const handleCloseModal = () => {
     setShowIncidentModal(false)
     setIncidentForm({ date: '', type: '', location: '', description: '', severity: '', injured_party_name: '', root_cause: '', ca_description: '', ca_assignee: '', ca_due_date: '', photo: null })
@@ -687,20 +663,6 @@ export const Safety: React.FC = () => {
 
   const handleRemoveAttendee = (name: string) => {
     setTalkForm((p) => ({ ...p, attendees: p.attendees.filter((a) => a !== name) }))
-  }
-
-  const handleTalkSubmit = () => {
-    const errs: Record<string, string> = {}
-    if (!talkForm.topic.trim()) errs.topic = 'Topic is required'
-    if (!talkForm.date.trim()) errs.date = 'Date is required'
-    if (!talkForm.presenter.trim()) errs.presenter = 'Presenter is required'
-    setTalkErrors(errs)
-    if (Object.keys(errs).length > 0) {
-      toast.error('Please complete all required fields')
-      return
-    }
-    toast.info('Form submission requires backend configuration')
-    handleCloseTalkModal()
   }
 
   const handleCloseTalkModal = () => {
@@ -745,31 +707,10 @@ export const Safety: React.FC = () => {
             </Btn>
             </PermissionGate>
           )}
-          {activeTab === 'inspections' && (
-            <PermissionGate permission="safety.manage">
-            <Btn variant="primary" icon={<Plus size={16} />} onClick={() => toast.info('Form submission requires backend configuration')} style={{ minHeight: 56 }}>
-              New Inspection
-            </Btn>
-            </PermissionGate>
-          )}
           {activeTab === 'toolbox' && (
             <PermissionGate permission="safety.manage">
             <Btn variant="primary" icon={<Plus size={16} />} onClick={() => setShowTalkModal(true)} style={{ minHeight: 56 }}>
               New Talk
-            </Btn>
-            </PermissionGate>
-          )}
-          {activeTab === 'certifications' && (
-            <PermissionGate permission="safety.manage">
-            <Btn variant="primary" icon={<Plus size={16} />} onClick={() => toast.info('Form submission requires backend configuration')} style={{ minHeight: 56 }}>
-              Add Certification
-            </Btn>
-            </PermissionGate>
-          )}
-          {activeTab === 'corrective_actions' && (
-            <PermissionGate permission="safety.manage">
-            <Btn variant="primary" icon={<Plus size={16} />} onClick={() => toast.info('Form submission requires backend configuration')} style={{ minHeight: 56 }}>
-              Log Corrective Action
             </Btn>
             </PermissionGate>
           )}
@@ -947,11 +888,6 @@ export const Safety: React.FC = () => {
                   Report First Incident
                 </Btn>
                 </PermissionGate>
-                <PermissionGate permission="safety.manage">
-                <Btn variant="secondary" onClick={() => toast.info('Form submission requires backend configuration')} style={{ minHeight: 56 }}>
-                  Set Up Inspection Template
-                </Btn>
-                </PermissionGate>
               </div>
             </div>
           </Card>
@@ -1122,8 +1058,6 @@ export const Safety: React.FC = () => {
             <Card>
               <EmptyState
                 message="No inspections recorded. Safety tracking not yet configured."
-                cta="Schedule First Inspection"
-                onCta={() => toast.info('Form submission requires backend configuration')}
               />
             </Card>
           ) : (
@@ -1168,8 +1102,6 @@ export const Safety: React.FC = () => {
           <Card>
             <EmptyState
               message="No toolbox talks recorded. Safety tracking not yet configured."
-              cta="Log First Toolbox Talk"
-              onCta={() => toast.info('Form submission requires backend configuration')}
             />
           </Card>
         ) : (
@@ -1191,8 +1123,6 @@ export const Safety: React.FC = () => {
           <Card>
             <EmptyState
               message="No certifications on file. Safety tracking not yet configured."
-              cta="Add First Certification"
-              onCta={() => toast.info('Form submission requires backend configuration')}
             />
           </Card>
         ) : (
@@ -1214,8 +1144,6 @@ export const Safety: React.FC = () => {
           <Card>
             <EmptyState
               message="No corrective actions on record. Corrective actions are created from safety inspections and incident investigations."
-              cta="Log Corrective Action"
-              onCta={() => toast.info('Form submission requires backend configuration')}
             />
           </Card>
         ) : (
@@ -1590,7 +1518,6 @@ export const Safety: React.FC = () => {
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: spacing['3'] }}>
               <Btn variant="ghost" onClick={handleCloseModal} style={{ minHeight: '56px', minWidth: '56px' }}>Cancel</Btn>
-              <PermissionGate permission="safety.manage"><Btn variant="primary" onClick={handleIncidentSubmit} style={{ minHeight: '56px', minWidth: '56px' }}>Submit Incident</Btn></PermissionGate>
             </div>
           </div>
         </div>
@@ -1781,7 +1708,6 @@ export const Safety: React.FC = () => {
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: spacing['3'] }}>
               <Btn variant="ghost" onClick={handleCloseTalkModal} style={{ minHeight: '56px' }}>Cancel</Btn>
-              <PermissionGate permission="safety.manage"><Btn variant="primary" onClick={handleTalkSubmit} style={{ minHeight: '56px' }}>Save Talk</Btn></PermissionGate>
             </div>
           </div>
         </div>

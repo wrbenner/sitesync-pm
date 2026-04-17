@@ -43,7 +43,7 @@ export const useCopilotStore = create<CopilotState>()((set, get) => ({
       {
         id: 'msg-welcome',
         role: 'assistant',
-        content: 'Good morning. I am your SiteSync AI Copilot for the Meridian Tower project. I have full context on your RFIs, submittals, budget, schedule, and field data. What would you like to know?',
+        content: 'Good morning. I am your SiteSync AI Copilot. I have full context on your RFIs, submittals, budget, schedule, and field data. What would you like to know?',
         timestamp: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
       },
     ],
@@ -127,7 +127,7 @@ export const useCopilotStore = create<CopilotState>()((set, get) => ({
           body: JSON.stringify({
             model: 'claude-sonnet-4-20250514',
             max_tokens: 1024,
-            system: 'You are SiteSync AI Copilot, an AI assistant for construction project management. You help with RFIs, submittals, budgets, schedules, and field operations for the Meridian Tower project (12 story mixed use, $47.5M budget, 62% complete). Be concise, practical, and speak like a construction professional. Never use hyphens in text. Use commas, periods, or restructure sentences instead.',
+            system: 'You are SiteSync AI Copilot, an AI assistant for construction project management. You help with RFIs, submittals, budgets, schedules, and field operations. Be concise, practical, and speak like a construction professional. Never use hyphens in text. Use commas, periods, or restructure sentences instead.',
             messages: apiMessages,
           }),
         });

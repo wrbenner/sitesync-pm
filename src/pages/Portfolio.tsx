@@ -8,6 +8,7 @@ import { usePortfolios, usePortfolioProjects, useExecutiveReports, useOrgPortfol
 import { usePortfolioMetrics } from '../hooks/useProjectMetrics'
 import { captureException } from '../lib/errorTracking'
 import { toast } from 'sonner'
+import { useAuthStore } from '../stores/authStore'
 
 // ── Column helpers ─────────────────────────────────────────
 
@@ -190,14 +191,13 @@ const ProjectCardError: React.FC<ProjectCardErrorProps> = () => (
 // Rendered inside an ErrorBoundary so a total metrics failure shows
 // a targeted error state rather than crashing the whole page.
 
-const ORG_ID = '11111111-1111-1111-1111-111111111111'
-
 interface PortfolioMetricsSectionProps {
   totalValue: number
   activeCount: number
   currentPortfolioName: string
   latestReportLabel: string
   loading: boolean
+  orgId: string | undefined
 }
 
 const PortfolioMetricsSection: React.FC<PortfolioMetricsSectionProps> = ({
@@ -206,8 +206,9 @@ const PortfolioMetricsSection: React.FC<PortfolioMetricsSectionProps> = ({
 
 
   loading,
+  orgId,
 }) => {
-  const { data: orgMetrics } = useOrgPortfolioMetrics(ORG_ID)
+  const { data: orgMetrics } = useOrgPortfolioMetrics(orgId ?? '')
   const warnings = orgMetrics?.warnings ?? []
 
   const rfiWarning = warnings.find((w) => w.includes('RFI'))
@@ -241,11 +242,12 @@ const PortfolioMetricsSection: React.FC<PortfolioMetricsSectionProps> = ({
 
 export const Portfolio: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('overview')
-  const portfolioId = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'
+  const orgId = useAuthStore((s) => s.profile?.organization_id) || undefined
 
-  const { data: portfolios } = usePortfolios(ORG_ID)
-  const { data: portfolioProjects, isPending: loading } = usePortfolioProjects(portfolioId)
-  const { data: reports } = useExecutiveReports(portfolioId)
+  const { data: portfolios } = usePortfolios(orgId ?? '')
+  const portfolioId = (portfolios && portfolios[0]?.id) as string | undefined
+  const { data: portfolioProjects, isPending: loading } = usePortfolioProjects(portfolioId ?? '')
+  const { data: reports } = useExecutiveReports(portfolioId ?? '')
 
   const projects = (portfolioProjects || []).map((pp: unknown) => pp.projects).filter(Boolean)
 
@@ -331,6 +333,7 @@ export const Portfolio: React.FC = () => {
           currentPortfolioName={currentPortfolio?.name || 'Default'}
           latestReportLabel={latestReport ? (latestReport.type || 'Available') : 'None'}
           loading={loading}
+          orgId={orgId}
         />
       </ErrorBoundary>
 

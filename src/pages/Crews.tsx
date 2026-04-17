@@ -38,7 +38,7 @@ export const Crews: React.FC = () => {
     return (id: string) => map.get(id) || colors.statusNeutral;
   }, [crews]);
 
-  // Derive initial positions spread across the map
+  // Placeholder layout (circle). No real GPS yet — positions are cosmetic.
   const initialPositions = useMemo(() => {
     const pos: Record<string, { x: number; y: number }> = {};
     crews.forEach((c, i) => {

@@ -1,12 +1,11 @@
 import React, { useState } from 'react'
-import { Users, Clock, Calendar, Plus } from 'lucide-react'
-import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton } from '../components/Primitives'
+import { Users, Clock, Calendar } from 'lucide-react'
+import { PageContainer, Card, SectionHeader, MetricBox, Skeleton } from '../components/Primitives'
 import { DataTable, createColumnHelper } from '../components/shared/DataTable'
 import { ExportButton } from '../components/shared/ExportButton'
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
 import { useWorkforceMembers, useTimeEntries } from '../hooks/queries'
-import { toast } from 'sonner'
 
 type TabKey = 'roster' | 'time' | 'forecast'
 
@@ -168,16 +167,6 @@ export const Workforce: React.FC = () => {
     tradeGroups[trade] = (tradeGroups[trade] || 0) + 1
   })
 
-  const addButtonLabel: Record<TabKey, string> = {
-    roster: 'Add Worker',
-    time: 'New Entry',
-    forecast: '',
-  }
-
-  const handleAdd = () => {
-    toast.info('Form submission requires backend configuration')
-  }
-
   return (
     <PageContainer
       title="Workforce"
@@ -185,11 +174,6 @@ export const Workforce: React.FC = () => {
       actions={
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
           <ExportButton pdfFilename="SiteSync_Workforce_Report" />
-          {activeTab !== 'forecast' && (
-            <Btn variant="primary" icon={<Plus size={16} />} onClick={handleAdd}>
-              {addButtonLabel[activeTab]}
-            </Btn>
-          )}
         </div>
       }
     >

@@ -37,12 +37,6 @@ function getScoreColor(score: number): string {
   return colors.statusCritical;
 }
 
-function getLineColor(score: number): string {
-  if (score > 70) return colors.statusActive;
-  if (score >= 50) return colors.statusPending;
-  return colors.statusCritical;
-}
-
 function getScoreBg(score: number): string {
   if (score >= 90) return colors.statusActiveSubtle;
   if (score >= 70) return colors.statusPendingSubtle;
@@ -56,7 +50,7 @@ const trendColors = { up: colors.statusActive, down: colors.statusCritical, flat
 export const ProjectHealth: React.FC = () => {
   const { addToast } = useToast();
   const navigate = useNavigate();
-  const [chartRef, chartInView] = useInView();
+  const [chartRef] = useInView();
   const [expandedDim, setExpandedDim] = useState<string | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
 
@@ -221,18 +215,6 @@ export const ProjectHealth: React.FC = () => {
 
   const percentile = Math.min(99, Math.max(1, overallScore - 5));
 
-  // Generate a simple historical approximation from the current score
-  const historicalScores = useMemo(() => {
-    const scores: number[] = [];
-    for (let i = 0; i < 20; i++) {
-      const variation = Math.sin(i * 0.5) * 3 + (i / 20) * (overallScore - 80);
-      scores.push(clamp(Math.round(80 + variation), 60, 100));
-    }
-    scores[scores.length - 1] = overallScore;
-    return scores;
-  }, [overallScore]);
-
-  const weekLabels = historicalScores.map((_, i) => `W${i + 1}`);
 
   const aiExplanation = useMemo(() => {
     const lowest = dimensions.reduce((a, b) => (a.score < b.score ? a : b));
@@ -243,17 +225,6 @@ export const ProjectHealth: React.FC = () => {
   const scoreColor = getScoreColor(overallScore);
   const circumference = 2 * Math.PI * 70;
   const offset = circumference - (overallScore / 100) * circumference;
-
-  const chartW = 100;
-  const chartH = 120;
-  const minScore = 70;
-  const maxScore = 100;
-  const stepX = chartW / (historicalScores.length - 1);
-  const yPos = (score: number) => chartH - ((score - minScore) / (maxScore - minScore)) * chartH;
-
-  const linePath = historicalScores
-    .map((s, i) => `${i === 0 ? 'M' : 'L'} ${i * stepX} ${yPos(s)}`)
-    .join(' ');
 
   if (isLoading) {
     return (
@@ -273,7 +244,7 @@ export const ProjectHealth: React.FC = () => {
   return (
     <PageContainer
       title="Project Health"
-      subtitle="Meridian Tower health score and diagnostics"
+      subtitle="Project health score and diagnostics"
       actions={
         <div style={{ position: 'relative' }}>
           <Btn variant="secondary" size="sm" icon={<Share2 size={14} />} onClick={() => setShareOpen(!shareOpen)}>
@@ -427,54 +398,13 @@ export const ProjectHealth: React.FC = () => {
         </div>
       </div>
 
-      {/* Score History chart */}
+      {/* Score History chart — requires persisted health snapshots */}
       <div style={{ marginTop: spacing['6'] }} ref={chartRef}>
-        <SectionHeader title="Score History" action={<span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Last 20 weeks</span>} />
+        <SectionHeader title="Score History" />
         <Card padding={spacing['5']}>
-          <svg
-            role="img"
-            aria-label="Project health score history chart"
-            viewBox={`-12 -10 ${chartW + 24} ${chartH + 28}`}
-            preserveAspectRatio="xMidYMid meet"
-            style={{ width: '100%', height: '200px', overflow: 'visible' }}
-          >
-            {/* Y-axis grid lines and labels */}
-            {[70, 80, 90, 100].map((score) => (
-              <React.Fragment key={score}>
-                <line x1={0} y1={yPos(score)} x2={chartW} y2={yPos(score)} stroke={colors.borderSubtle} strokeWidth="0.3" />
-                <text x={-4} y={yPos(score) + 1.5} textAnchor="end" fill={colors.textTertiary} fontSize="4" fontFamily={typography.fontFamily}>{score}</text>
-              </React.Fragment>
-            ))}
-
-            {/* Color zones */}
-            <rect x={0} y={yPos(100)} width={chartW} height={yPos(70) - yPos(100)} fill={`${colors.statusActive}06`} rx="1" />
-
-            {/* Line */}
-            {chartInView && (
-              <>
-                <path d={linePath} fill="none" stroke={colors.statusActive} strokeWidth="1.5" strokeLinecap="round" />
-                {historicalScores.map((score, i) => (
-                  <circle
-                    key={i}
-                    cx={i * stepX}
-                    cy={yPos(score)}
-                    r={i === historicalScores.length - 1 ? 3 : 2}
-                    fill={i === historicalScores.length - 1 ? colors.primaryOrange : getLineColor(score)}
-                    stroke={colors.surfaceRaised}
-                    strokeWidth="1"
-                  />
-                ))}
-              </>
-            )}
-
-            {/* X-axis labels (every 4th week) */}
-            {weekLabels.filter((_, i) => i % 4 === 0 || i === weekLabels.length - 1).map((label) => {
-              const idx = weekLabels.indexOf(label);
-              return (
-                <text key={label} x={idx * stepX} y={chartH + 12} textAnchor="middle" fill={colors.textTertiary} fontSize="4" fontFamily={typography.fontFamily}>{label}</text>
-              );
-            })}
-          </svg>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: spacing['8'], color: colors.textTertiary, fontSize: typography.fontSize.sm }}>
+            No history
+          </div>
         </Card>
       </div>
 

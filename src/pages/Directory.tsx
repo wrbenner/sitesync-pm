@@ -27,30 +27,9 @@ interface CompanyInfo {
   insuranceExpiry: string;
 }
 
-// ── Mock Data ─────────────────────────────────────────────────────────────────
-
-const CONTACTS: Contact[] = [
-  { id: '1', name: 'Marcus Rodriguez', company: 'Turner GC', role: 'Project Manager', trade: 'General Contractor', phone: '(415) 555-0101', email: 'mrodriguez@turnergc.com', status: 'active' },
-  { id: '2', name: 'Sandra Kim', company: 'Turner GC', role: 'Superintendent', trade: 'General Contractor', phone: '(415) 555-0102', email: 'skim@turnergc.com', status: 'active' },
-  { id: '3', name: 'James Okafor', company: 'Turner GC', role: 'Safety Officer', trade: 'General Contractor', phone: '(415) 555-0103', email: 'jokafor@turnergc.com', status: 'active' },
-  { id: '4', name: 'Priya Nair', company: 'MEP Solutions', role: 'MEP Engineer', trade: 'Mechanical', phone: '(510) 555-0201', email: 'pnair@mepsolutions.com', status: 'active' },
-  { id: '5', name: 'Derek Walsh', company: 'MEP Solutions', role: 'Plumbing Foreman', trade: 'Plumbing', phone: '(510) 555-0202', email: 'dwalsh@mepsolutions.com', status: 'active' },
-  { id: '6', name: 'Ana Flores', company: 'MEP Solutions', role: 'HVAC Technician', trade: 'Mechanical', phone: '(510) 555-0203', email: 'aflores@mepsolutions.com', status: 'inactive' },
-  { id: '7', name: 'Tom Bridger', company: 'Steel Fabricators Inc', role: 'Structural Foreman', trade: 'Structural Steel', phone: '(650) 555-0301', email: 'tbridger@steelfab.com', status: 'active' },
-  { id: '8', name: 'Kenji Tanaka', company: 'Steel Fabricators Inc', role: 'Iron Worker', trade: 'Structural Steel', phone: '(650) 555-0302', email: 'ktanaka@steelfab.com', status: 'active' },
-  { id: '9', name: 'Rosa Martinez', company: 'Pacific Concrete', role: 'Concrete Superintendent', trade: 'Concrete', phone: '(925) 555-0401', email: 'rmartinez@pacificconcrete.com', status: 'active' },
-  { id: '10', name: 'Bill Nguyen', company: 'Pacific Concrete', role: 'Quality Control', trade: 'Concrete', phone: '(925) 555-0402', email: 'bnguyen@pacificconcrete.com', status: 'active' },
-  { id: '11', name: 'Cheryl Simmons', company: 'Valley Electric', role: 'Electrical Foreman', trade: 'Electrical', phone: '(707) 555-0501', email: 'csimmons@valleyelectric.com', status: 'active' },
-  { id: '12', name: 'Ahmad Hassan', company: 'Valley Electric', role: 'Journeyman Electrician', trade: 'Electrical', phone: '(707) 555-0502', email: 'ahassan@valleyelectric.com', status: 'inactive' },
-];
-
-const COMPANIES: CompanyInfo[] = [
-  { name: 'Turner GC', trade: 'General Contractor', insuranceStatus: 'current', insuranceExpiry: 'Mar 15, 2027' },
-  { name: 'MEP Solutions', trade: 'Mechanical / Electrical / Plumbing', insuranceStatus: 'expiring', insuranceExpiry: 'May 1, 2026' },
-  { name: 'Steel Fabricators Inc', trade: 'Structural Steel', insuranceStatus: 'current', insuranceExpiry: 'Jan 10, 2027' },
-  { name: 'Pacific Concrete', trade: 'Concrete', insuranceStatus: 'missing', insuranceExpiry: '' },
-  { name: 'Valley Electric', trade: 'Electrical', insuranceStatus: 'expired', insuranceExpiry: 'Dec 31, 2025' },
-];
+// Directory data is not yet wired to a backend; show honest empty state.
+const CONTACTS: Contact[] = [];
+const COMPANIES: CompanyInfo[] = [];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -303,7 +282,7 @@ export const Directory: React.FC = () => {
             </div>
             <div>
               <p style={{ margin: 0, fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
-                Build your project directory.
+                No contacts
               </p>
               <p style={{ margin: `${spacing['2']} 0 0`, fontSize: typography.fontSize.body, color: colors.textSecondary, maxWidth: 360 }}>
                 Add every stakeholder so your team always knows who to call.

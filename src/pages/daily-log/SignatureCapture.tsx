@@ -8,7 +8,7 @@ interface SignatureCaptureProps {
   onSign: () => Promise<void> | void;
 }
 
-export const SignatureCapture: React.FC<SignatureCaptureProps> = ({ visible, signerName = 'Walker Benner', signerTitle = 'Project Manager', onSign }) => {
+export const SignatureCapture: React.FC<SignatureCaptureProps> = ({ visible, signerName = '', signerTitle = 'Project Manager', onSign }) => {
   if (!visible) return null;
   return (
     <SignaturePad

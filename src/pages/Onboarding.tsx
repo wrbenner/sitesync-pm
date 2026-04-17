@@ -160,7 +160,7 @@ const Step6Complete: React.FC<StepProps> = ({ onNext }) => {
       </div>
       <h1 style={{ fontSize: '32px', fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'], zIndex: 1 }}>Your Project is Ready!</h1>
       <p style={{ fontSize: typography.fontSize.title, color: colors.textSecondary, margin: 0, marginBottom: spacing['8'], maxWidth: '400px', lineHeight: typography.lineHeight.relaxed, zIndex: 1 }}>
-        Meridian Tower has been set up with AI powered insights. Your team will be notified shortly.
+        Your project has been set up with AI powered insights. Your team will be notified shortly.
       </p>
       <Btn size="lg" onClick={onNext} icon={<LayoutGrid size={16} />}>Go to Dashboard</Btn>
     </div>

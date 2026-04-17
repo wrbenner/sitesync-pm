@@ -1,12 +1,11 @@
 import React, { useState, useMemo } from 'react'
-import { Truck, Wrench, BarChart3, Plus, AlertTriangle, RefreshCw } from 'lucide-react'
+import { Truck, Wrench, BarChart3, AlertTriangle, RefreshCw } from 'lucide-react'
 import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton } from '../components/Primitives'
 import { DataTable, createColumnHelper } from '../components/shared/DataTable'
 import { ExportButton } from '../components/shared/ExportButton'
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
 import { useEquipment } from '../hooks/queries'
-import { toast } from 'sonner'
 
 type TabKey = 'fleet' | 'utilization' | 'maintenance'
 
@@ -308,18 +307,6 @@ export const EquipmentPage: React.FC = () => {
     return equipment?.reduce((sum: number, e: unknown) => sum + (e.hours || 0), 0) || 0
   }, [equipment])
 
-  // ── Tab actions ─────────────────────────────────────────────
-
-  const addButtonLabel: Record<TabKey, string> = {
-    fleet: 'Add Equipment',
-    utilization: 'Log Hours',
-    maintenance: 'Schedule Service',
-  }
-
-  const handleAdd = () => {
-    toast.info('Form submission requires backend configuration')
-  }
-
   // ── Render ──────────────────────────────────────────────────
 
   if (isError) {
@@ -346,9 +333,6 @@ export const EquipmentPage: React.FC = () => {
       actions={
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
           <ExportButton pdfFilename="SiteSync_Equipment_Report" />
-          <Btn variant="primary" icon={<Plus size={16} />} onClick={handleAdd}>
-            {addButtonLabel[activeTab]}
-          </Btn>
         </div>
       }
     >
@@ -421,9 +405,6 @@ export const EquipmentPage: React.FC = () => {
                 <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textTertiary, maxWidth: 320 }}>
                   No equipment tracked on this project yet. Add your first piece of equipment to start managing your fleet.
                 </p>
-                <Btn variant="primary" icon={<Plus size={16} />} onClick={handleAdd}>
-                  Add Equipment
-                </Btn>
               </div>
             ) : (
               <DataTable columns={fleetColumns} data={equipment || []} />
@@ -469,9 +450,6 @@ export const EquipmentPage: React.FC = () => {
                 <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textTertiary, maxWidth: 320 }}>
                   No maintenance records found. Schedule a service to keep your fleet running smoothly.
                 </p>
-                <Btn variant="primary" icon={<Plus size={16} />} onClick={handleAdd}>
-                  Schedule Service
-                </Btn>
               </div>
             ) : (
               <DataTable columns={maintenanceColumns} data={maintenanceRecords} />

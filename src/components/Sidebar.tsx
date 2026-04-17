@@ -12,7 +12,7 @@ import {
   Receipt, Milestone,
   X, MoreHorizontal,
 } from 'lucide-react';
-import { useUiStore } from '../stores';
+import { useUiStore, useAuthStore } from '../stores';
 import { motion } from 'framer-motion';
 import { colors, spacing, typography, borderRadius, transitions, layout, zIndex } from '../styles/theme';
 import { duration, easing } from '../styles/animations';
@@ -154,6 +154,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, mode, 
   const { themeMode, setThemeMode } = useUiStore();
   const toggleTheme = () => setThemeMode(themeMode === 'dark' ? 'light' : 'dark');
   const { canAccessModule, role, loading: permissionsLoading } = usePermissions();
+  const authProfile = useAuthStore((s) => s.profile);
+  const authUser = useAuthStore((s) => s.user);
+  const displayName = authProfile?.full_name || authUser?.email || '';
+  const displayInitials = (displayName.match(/\b\w/g) || []).slice(0, 2).join('').toUpperCase() || '?';
   const isOverlay = mode === 'overlay';
 
   const [isMobile, setIsMobile] = useState(() =>
@@ -566,7 +570,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, mode, 
           }}
         >
           <p style={{ fontSize: typography.fontSize.label, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>
-            Meridian Tower
+            Project
           </p>
           <ProgressBar value={62} height={3} color={colors.statusActive} bgColor={colors.borderDefault} />
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: spacing['1'] }}>
@@ -598,11 +602,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, mode, 
             flexShrink: 0,
           }}
         >
-          WB
+          {displayInitials}
         </div>
         <div style={{ flex: 1 }}>
-          <p style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, margin: 0 }}>Walker Benner</p>
-          <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0, textTransform: 'capitalize' }}>{role ? role.replace('_', ' ') : 'Project Manager'}</p>
+          <p style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, margin: 0 }}>{displayName || '\u2014'}</p>
+          <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0, textTransform: 'capitalize' }}>{role ? role.replace('_', ' ') : ''}</p>
         </div>
         <button
           onClick={toggleTheme}

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { Upload as UploadIcon, FilesIcon, FileImage, HardDrive, Sparkles } from 'lucide-react';
+import { Upload as UploadIcon, FilesIcon, FileImage, HardDrive } from 'lucide-react';
 import { Btn, useToast, PageContainer } from '../../components/Primitives';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { PermissionGate } from '../../components/auth/PermissionGate';
@@ -194,14 +194,6 @@ const FilesPage: React.FC = () => {
               <span style={{ fontSize: 28, fontWeight: typography.fontWeight.bold, color: colors.textPrimary, lineHeight: 1 }}>{value}</span>
             </div>
           ))}
-        </div>
-
-        {/* AI insight banner */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: spacing['3'], padding: `${spacing['3']} ${spacing['4']}`, marginBottom: spacing['4'], backgroundColor: colors.statusReviewSubtle, borderRadius: borderRadius.md, borderLeft: `3px solid ${colors.statusReview}` }}>
-          <Sparkles size={14} color={colors.statusReview} style={{ marginTop: 2, flexShrink: 0 }} />
-          <p style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, margin: 0, lineHeight: 1.5 }}>
-            Documentation coverage at 84%. Missing: updated MEP coordination drawings and revised fire protection submittals.
-          </p>
         </div>
 
         <FileGrid

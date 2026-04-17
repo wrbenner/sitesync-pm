@@ -7,6 +7,8 @@ import { formatWeatherSummary } from '../../lib/weather';
 import type { WeatherData } from '../../lib/weather';
 import type { ExtendedDailyLog } from './types';
 import type { DailyLogState } from '../../machines/dailyLogMachine';
+import { useProjectId } from '../../hooks/useProjectId';
+import { useProject } from '../../hooks/queries';
 
 interface DailyLogPDFExportProps {
   today: ExtendedDailyLog;
@@ -15,8 +17,10 @@ interface DailyLogPDFExportProps {
 }
 
 export const DailyLogPDFExport: React.FC<DailyLogPDFExportProps> = ({ today, weather, logStatus }) => {
+  const projectId = useProjectId();
+  const { data: project } = useProject(projectId);
   const pdfData: DailyLogPDFData = {
-    projectName: 'Current Project',
+    projectName: (project as { name?: string } | undefined)?.name || 'Project',
     logDate: today.log_date,
     workers_onsite: today.workers_onsite ?? 0,
     total_hours: today.total_hours ?? 0,

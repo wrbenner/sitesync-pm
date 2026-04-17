@@ -217,7 +217,6 @@ export const InspectionsTab: React.FC<InspectionsTabProps> = ({ inspections, pas
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: `${spacing['10']} ${spacing['6']}`, gap: spacing['4'], textAlign: 'center' }}>
             <ShieldCheck size={40} style={{ color: colors.textTertiary }} />
             <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textTertiary, maxWidth: 360 }}>No inspections recorded. Safety tracking not yet configured.</p>
-            <Btn variant="primary" onClick={() => toast.info('Form submission requires backend configuration')} style={{ minHeight: '56px' }}>Schedule First Inspection</Btn>
           </div>
         </Card>
       ) : (
@@ -254,7 +253,6 @@ export const CertificationsTab: React.FC<CertificationsTabProps> = ({ certificat
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: `${spacing['10']} ${spacing['6']}`, gap: spacing['4'], textAlign: 'center' }}>
           <ShieldCheck size={40} style={{ color: colors.textTertiary }} />
           <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textTertiary, maxWidth: 360 }}>No certifications on file. Safety tracking not yet configured.</p>
-          <Btn variant="primary" onClick={() => toast.info('Form submission requires backend configuration')} style={{ minHeight: '56px' }}>Add First Certification</Btn>
         </div>
       </Card>
     );
@@ -281,7 +279,6 @@ export const CorrectiveActionsTab: React.FC<CorrectiveActionsTabProps> = ({ corr
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: `${spacing['10']} ${spacing['6']}`, gap: spacing['4'], textAlign: 'center' }}>
           <ShieldCheck size={40} style={{ color: colors.textTertiary }} />
           <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textTertiary, maxWidth: 360 }}>No corrective actions on record. Corrective actions are created from safety inspections and incident investigations.</p>
-          <Btn variant="primary" onClick={() => toast.info('Form submission requires backend configuration')} style={{ minHeight: '56px' }}>Log Corrective Action</Btn>
         </div>
       </Card>
     );

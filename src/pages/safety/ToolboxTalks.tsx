@@ -1,10 +1,8 @@
 import React from 'react';
 import { Card, Btn } from '../../components/Primitives';
-import { PermissionGate } from '../../components/auth/PermissionGate';
 import { DataTable, createColumnHelper } from '../../components/shared/DataTable';
 import { ShieldCheck } from 'lucide-react';
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
-import { toast } from 'sonner';
 
 // ── Column definitions ────────────────────────────────────────
 
@@ -90,16 +88,6 @@ export const ToolboxTalkForm: React.FC<ToolboxTalkFormProps> = ({ onClose }) => 
     setForm((p) => ({ ...p, attendees: p.attendees.filter((a) => a !== name) }));
   };
 
-  const handleSubmit = () => {
-    const errs: Record<string, string> = {};
-    if (!form.topic.trim()) errs.topic = 'Topic is required';
-    if (!form.date.trim()) errs.date = 'Date is required';
-    if (!form.presenter.trim()) errs.presenter = 'Presenter is required';
-    setErrors(errs);
-    if (Object.keys(errs).length > 0) { toast.error('Please complete all required fields'); return; }
-    toast.info('Form submission requires backend configuration');
-    onClose();
-  };
 
   const inputStyle = (hasError: boolean): React.CSSProperties => ({
     width: '100%', boxSizing: 'border-box', padding: `${spacing['2']} ${spacing['3']}`,
@@ -171,9 +159,6 @@ export const ToolboxTalkForm: React.FC<ToolboxTalkFormProps> = ({ onClose }) => 
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: spacing['3'] }}>
           <Btn variant="ghost" onClick={onClose} style={{ minHeight: '56px' }}>Cancel</Btn>
-          <PermissionGate permission="safety.manage">
-            <Btn variant="primary" onClick={handleSubmit} style={{ minHeight: '56px' }}>Save Talk</Btn>
-          </PermissionGate>
         </div>
       </div>
     </div>
