@@ -1,6 +1,8 @@
 // Construction Project Analytics Engine
 // Computes health scores, predictions, and performance metrics from real data
 
+import { type Cents, toCents, fromCents, addCents, applyRateCents } from '../types/money'
+
 export interface HealthDimension {
   name: string
   score: number
@@ -82,12 +84,17 @@ export function computeProjectHealth(
 
   const overall = Math.round(dimensions.reduce((s, d) => s + d.score * d.weight, 0))
 
-  // Predictive: final cost
-  const totalBudget = budget.reduce((s, b) => s + (b.original_amount || 0), 0)
-  const totalSpent = budget.reduce((s, b) => s + (b.actual_amount || 0), 0)
+  // Predictive: final cost (computed in integer cents, converted back to dollars for the display-facing prediction field)
+  const ZERO = 0 as Cents
+  const totalBudgetCents = budget.reduce<Cents>((s, b) => addCents(s, toCents((b.original_amount || 0) * 100)), ZERO)
+  const totalSpentCents = budget.reduce<Cents>((s, b) => addCents(s, toCents((b.actual_amount || 0) * 100)), ZERO)
   const avgProgress = phases.length > 0 ? phases.reduce((s, p) => s + (p.percent_complete || 0), 0) / phases.length : 0
-  const costPerPercent = avgProgress > 0 ? totalSpent / avgProgress : 0
-  const predictedCost = costPerPercent > 0 ? costPerPercent * 100 : totalBudget
+  // predictedCost = (totalSpent / avgProgress) * 100 = totalSpent * (100 / avgProgress)
+  const predictedCostCents: Cents = avgProgress > 0
+    ? applyRateCents(totalSpentCents, 100 / avgProgress)
+    : totalBudgetCents
+  const predictedCost = fromCents(predictedCostCents) / 100
+  const totalBudget = fromCents(totalBudgetCents) / 100
 
   return {
     overall,

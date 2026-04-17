@@ -3,6 +3,7 @@
 
 import { setup } from 'xstate'
 import { colors } from '../styles/theme'
+import { type Cents, toCents, fromCents, addCents, subtractCents, applyRateCents } from '../types/money'
 
 export type PaymentStatus = 'draft' | 'submitted' | 'gc_review' | 'owner_review' | 'approved' | 'rejected' | 'paid' | 'void'
 export type LienWaiverStatus = 'pending' | 'conditional' | 'unconditional' | 'final' | 'waived'
@@ -163,17 +164,21 @@ export function calculateG702(
   originalContractSum: number,
   approvedChangeOrders: number,
 ): G702Data {
-  const netChangeOrders = approvedChangeOrders
-  const contractSumToDate = originalContractSum + netChangeOrders
+  // All money inputs are dollars; convert to integer cents for the math, convert back for the output shape.
+  const ZERO = 0 as Cents
+  const originalContractSumC = toCents(originalContractSum * 100)
+  const netChangeOrdersC = toCents(approvedChangeOrders * 100)
+  const previousCertificatesC = toCents(previousCertificates * 100)
+  const contractSumToDateC = addCents(originalContractSumC, netChangeOrdersC)
 
-  const totalCompletedAndStored = lineItems.reduce(
-    (sum, item) => sum + item.totalCompletedAndStored, 0
+  const totalCompletedAndStoredC = lineItems.reduce<Cents>(
+    (sum, item) => addCents(sum, toCents(item.totalCompletedAndStored * 100)), ZERO,
   )
 
-  const retainageAmount = Math.round(totalCompletedAndStored * (retainagePercent / 100) * 100) / 100
-  const totalEarnedLessRetainage = totalCompletedAndStored - retainageAmount
-  const currentPaymentDue = totalEarnedLessRetainage - previousCertificates
-  const balanceToFinish = contractSumToDate - totalCompletedAndStored
+  const retainageAmountC = applyRateCents(totalCompletedAndStoredC, retainagePercent / 100)
+  const totalEarnedLessRetainageC = subtractCents(totalCompletedAndStoredC, retainageAmountC)
+  const currentPaymentDueC = subtractCents(totalEarnedLessRetainageC, previousCertificatesC)
+  const balanceToFinishC = subtractCents(contractSumToDateC, totalCompletedAndStoredC)
 
   return {
     applicationNumber: 0,
@@ -181,15 +186,15 @@ export function calculateG702(
     projectName: '',
     contractorName: '',
     originalContractSum,
-    netChangeOrders,
-    contractSumToDate,
-    totalCompletedAndStored,
+    netChangeOrders: approvedChangeOrders,
+    contractSumToDate: fromCents(contractSumToDateC) / 100,
+    totalCompletedAndStored: fromCents(totalCompletedAndStoredC) / 100,
     retainagePercent,
-    retainageAmount,
-    totalEarnedLessRetainage,
+    retainageAmount: fromCents(retainageAmountC) / 100,
+    totalEarnedLessRetainage: fromCents(totalEarnedLessRetainageC) / 100,
     lessPreviousCertificates: previousCertificates,
-    currentPaymentDue,
-    balanceToFinish,
+    currentPaymentDue: fromCents(currentPaymentDueC) / 100,
+    balanceToFinish: fromCents(balanceToFinishC) / 100,
   }
 }
 
@@ -200,22 +205,27 @@ export function calculateG703LineItem(
   materialsStored: number,
   retainagePercent: number,
 ): Omit<G703LineItem, 'itemNumber' | 'costCode' | 'description'> {
-  const totalCompletedAndStored = previousCompleted + thisPeriod + materialsStored
-  const percentComplete = scheduledValue > 0
-    ? Math.round((totalCompletedAndStored / scheduledValue) * 10000) / 100
+  const scheduledC = toCents(scheduledValue * 100)
+  const prevC = toCents(previousCompleted * 100)
+  const thisC = toCents(thisPeriod * 100)
+  const matsC = toCents(materialsStored * 100)
+
+  const totalCompletedAndStoredC = addCents(addCents(prevC, thisC), matsC)
+  const percentComplete = scheduledC > 0
+    ? Math.round((fromCents(totalCompletedAndStoredC) / fromCents(scheduledC)) * 10000) / 100
     : 0
-  const balanceToFinish = scheduledValue - totalCompletedAndStored
-  const retainage = Math.round(totalCompletedAndStored * (retainagePercent / 100) * 100) / 100
+  const balanceToFinishC = subtractCents(scheduledC, totalCompletedAndStoredC)
+  const retainageC = applyRateCents(totalCompletedAndStoredC, retainagePercent / 100)
 
   return {
     scheduledValue,
     previousCompleted,
     thisPeriod,
     materialsStored,
-    totalCompletedAndStored,
+    totalCompletedAndStored: fromCents(totalCompletedAndStoredC) / 100,
     percentComplete,
-    balanceToFinish,
-    retainage,
+    balanceToFinish: fromCents(balanceToFinishC) / 100,
+    retainage: fromCents(retainageC) / 100,
   }
 }
 

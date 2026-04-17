@@ -234,7 +234,7 @@ export function compute13WeekCashFlow(
     (s, d) => addCents(s, toCents(Math.max(0, d.budget - d.committed))),
     ZERO_CENTS,
   )
-  const weeklyBurn = Math.round(totalUncommitted / 13) as Cents
+  const weeklyBurn = applyRateCents(totalUncommitted, 1 / 13)
 
   let cumulative: Cents = ZERO_CENTS
   const rows: WeeklyCashFlowRow[] = []
@@ -396,7 +396,7 @@ export function computeThirteenWeekCashFlow(
     (s, b) => addCents(s, toCents(b.committed_amount ?? 0)),
     ZERO_CENTS,
   )
-  const weeklyOutflow = Math.round(totalCommitted / 52) as Cents
+  const weeklyOutflow = applyRateCents(totalCommitted, 1 / 52)
 
   const approvedApps = payApps.filter(pa => pa.status === 'approved')
   const hasPaymentDates = approvedApps.some(pa => pa.approved_date != null)
@@ -427,7 +427,7 @@ export function computeThirteenWeekCashFlow(
     } else {
       // Distribute remaining approved billing evenly over weeks 1-8
       inflow = i < 8
-        ? (Math.round((totalApprovedBilling / 8) * netFactor) as Cents)
+        ? applyRateCents(totalApprovedBilling, netFactor / 8)
         : ZERO_CENTS
     }
 

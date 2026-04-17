@@ -1,6 +1,8 @@
 // Prediction Engine: Risk detection algorithms for construction projects
 // Each function returns structured predictions that can be stored as ai_insights
 
+import { type Cents, toCents, fromCents, addCents, subtractCents, applyRateCents } from '../types/money'
+
 export type RiskLevel = 'low' | 'medium' | 'high' | 'critical'
 
 // ── Schedule Risk Prediction ─────────────────────────────────
@@ -118,19 +120,33 @@ export function computeEarnedValue(
   projectProgressPercent: number,
   elapsedPercent: number, // percent of project timeline elapsed
 ): EarnedValueMetrics {
-  const BAC = budgetItems.reduce((s, b) => s + (b.original_amount || 0), 0)
-  const AC = budgetItems.reduce((s, b) => s + (b.actual_amount || 0), 0)
-  const PV = BAC * Math.min(1, elapsedPercent / 100)
-  const EV = BAC * Math.min(1, projectProgressPercent / 100)
+  const ZERO = 0 as Cents
+  const bacCents = budgetItems.reduce<Cents>((s, b) => addCents(s, toCents((b.original_amount || 0) * 100)), ZERO)
+  const acCents = budgetItems.reduce<Cents>((s, b) => addCents(s, toCents((b.actual_amount || 0) * 100)), ZERO)
+  const pvCents = applyRateCents(bacCents, Math.min(1, elapsedPercent / 100))
+  const evCents = applyRateCents(bacCents, Math.min(1, projectProgressPercent / 100))
 
-  const CPI = AC > 0 ? EV / AC : 1
-  const SPI = PV > 0 ? EV / PV : 1
-  const EAC = CPI > 0 ? BAC / CPI : BAC * 1.5
-  const ETC = Math.max(0, EAC - AC)
-  const VAC = BAC - EAC
-  const CV = EV - AC
-  const SV = EV - PV
-  const TCPI = (BAC - EV) > 0 ? (BAC - EV) / (BAC - AC) : 1
+  const CPI = acCents > 0 ? fromCents(evCents) / fromCents(acCents) : 1
+  const SPI = pvCents > 0 ? fromCents(evCents) / fromCents(pvCents) : 1
+  const eacCents = (CPI > 0 ? Math.round(fromCents(bacCents) / CPI) : Math.round(fromCents(bacCents) * 1.5)) as Cents
+  const etcCents = Math.max(0, fromCents(eacCents) - fromCents(acCents)) as Cents
+  const vacCents = subtractCents(bacCents, eacCents)
+  const cvCents = subtractCents(evCents, acCents)
+  const svCents = subtractCents(evCents, pvCents)
+  const remainingWork = subtractCents(bacCents, evCents)
+  const remainingBudget = subtractCents(bacCents, acCents)
+  const TCPI = remainingWork > 0 && remainingBudget !== 0 ? fromCents(remainingWork) / fromCents(remainingBudget) : 1
+
+  // Convert back to dollars for display-facing metric consumers
+  const BAC = fromCents(bacCents) / 100
+  const AC = fromCents(acCents) / 100
+  const PV = fromCents(pvCents) / 100
+  const EV = fromCents(evCents) / 100
+  const EAC = fromCents(eacCents) / 100
+  const ETC = fromCents(etcCents) / 100
+  const VAC = fromCents(vacCents) / 100
+  const CV = fromCents(cvCents) / 100
+  const SV = fromCents(svCents) / 100
 
   const alerts: string[] = []
   if (CPI < 0.95) alerts.push(`CPI at ${CPI.toFixed(2)}: project is over budget per unit of work`)
@@ -138,7 +154,7 @@ export function computeEarnedValue(
   if (SPI < 0.90) alerts.push(`SPI at ${SPI.toFixed(2)}: project is behind schedule`)
   if (SPI < 0.85) alerts.push(`SPI critically low at ${SPI.toFixed(2)}: schedule recovery plan needed`)
   if (TCPI > 1.15) alerts.push(`TCPI at ${TCPI.toFixed(2)}: required future efficiency is unrealistic`)
-  if (VAC < -BAC * 0.05) alerts.push(`Projected overrun of $${Math.round(Math.abs(VAC)).toLocaleString()} at completion`)
+  if (fromCents(vacCents) < -fromCents(bacCents) * 0.05) alerts.push(`Projected overrun of $${Math.round(Math.abs(VAC)).toLocaleString()} at completion`)
 
   return { BAC, PV, EV, AC, CPI, SPI, EAC, ETC, VAC, CV, SV, TCPI, alerts }
 }
