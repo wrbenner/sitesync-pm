@@ -33,12 +33,12 @@ const isOverdue = (dateStr: string) => new Date(dateStr) < new Date();
 
 const containerVariants = {
   hidden: {},
-  visible: { transition: { staggerChildren: 0.07 } },
+  visible: { transition: { staggerChildren: 0.03 } },
 };
 
 const itemVariants = {
-  hidden: { opacity: 0, y: 10 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.2, ease: 'easeOut' } },
+  hidden: { opacity: 0, y: 16 },
+  visible: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 420, damping: 32 } },
 };
 
 const BIC_COLORS: Record<string, string> = {
@@ -57,7 +57,7 @@ const getBicColor = (party: string): string => {
 };
 
 
-const BallInCourtCell: React.FC<{ rfi: unknown }> = ({ rfi }) => {
+const BallInCourtCell: React.FC<{ rfi: unknown }> = React.memo(({ rfi }) => {
   const party = rfi.assigned_to || null;
   if (!party) {
     return (
@@ -74,7 +74,7 @@ const BallInCourtCell: React.FC<{ rfi: unknown }> = ({ rfi }) => {
       <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary }}>{party}</span>
     </span>
   );
-};
+});
 
 const formatDate = (dateStr: string) =>
   new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -82,7 +82,7 @@ const formatDate = (dateStr: string) =>
 const rfiColHelper = createColumnHelper<unknown>();
 
 
-const MetaItem: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
+const MetaItem: React.FC<{ label: string; children: React.ReactNode }> = React.memo(({ label, children }) => (
   <div>
     <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, marginBottom: spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: typography.fontWeight.medium }}>
       {label}
@@ -91,7 +91,7 @@ const MetaItem: React.FC<{ label: string; children: React.ReactNode }> = ({ labe
       {children}
     </div>
   </div>
-);
+));
 
 const RFIsPage: React.FC = () => {
   const reducedMotion = useReducedMotion();
@@ -489,10 +489,10 @@ const RFIsPage: React.FC = () => {
       actions={
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
           <div style={{ display: 'flex', gap: spacing['1'], backgroundColor: colors.surfaceInset, borderRadius: borderRadius.full, padding: 2 }}>
-            <motion.button whileTap={{ scale: 0.97 }} className="rfi-interactive" aria-pressed={viewMode === 'table'} onClick={() => setViewMode('table')} style={{ display: 'flex', alignItems: 'center', padding: '6px 12px', border: 'none', borderRadius: borderRadius.full, backgroundColor: viewMode === 'table' ? colors.surfaceRaised : 'transparent', color: viewMode === 'table' ? colors.textPrimary : colors.textTertiary, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily, cursor: 'pointer', boxShadow: viewMode === 'table' ? shadows.sm : 'none', minHeight: 32 }}>
+            <motion.button whileTap={{ scale: 0.97 }} className="rfi-interactive" aria-pressed={viewMode === 'table'} onClick={() => setViewMode('table')} style={{ display: 'flex', alignItems: 'center', padding: '10px 14px', border: 'none', borderRadius: borderRadius.full, backgroundColor: viewMode === 'table' ? colors.surfaceRaised : 'transparent', color: viewMode === 'table' ? colors.textPrimary : colors.textTertiary, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily, cursor: 'pointer', boxShadow: viewMode === 'table' ? shadows.sm : 'none', minHeight: 44 }}>
               <List size={14} style={{ marginRight: 4 }} /> Table
             </motion.button>
-            <motion.button whileTap={{ scale: 0.97 }} className="rfi-interactive" aria-pressed={viewMode === 'kanban'} onClick={() => setViewMode('kanban')} style={{ display: 'flex', alignItems: 'center', padding: '6px 12px', border: 'none', borderRadius: borderRadius.full, backgroundColor: viewMode === 'kanban' ? colors.surfaceRaised : 'transparent', color: viewMode === 'kanban' ? colors.textPrimary : colors.textTertiary, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily, cursor: 'pointer', boxShadow: viewMode === 'kanban' ? shadows.sm : 'none', minHeight: 32 }}>
+            <motion.button whileTap={{ scale: 0.97 }} className="rfi-interactive" aria-pressed={viewMode === 'kanban'} onClick={() => setViewMode('kanban')} style={{ display: 'flex', alignItems: 'center', padding: '10px 14px', border: 'none', borderRadius: borderRadius.full, backgroundColor: viewMode === 'kanban' ? colors.surfaceRaised : 'transparent', color: viewMode === 'kanban' ? colors.textPrimary : colors.textTertiary, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily, cursor: 'pointer', boxShadow: viewMode === 'kanban' ? shadows.sm : 'none', minHeight: 44 }}>
               <LayoutGrid size={14} style={{ marginRight: 4 }} /> Kanban
             </motion.button>
           </div>
@@ -508,7 +508,7 @@ const RFIsPage: React.FC = () => {
                 fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily,
                 cursor: 'pointer', whiteSpace: 'nowrap' as const,
                 boxShadow: `0 0 0 1px ${colors.statusReviewSubtle}`,
-                minHeight: 36,
+                minHeight: 44,
               }}
             >
               <Wand2 size={14} />
@@ -522,7 +522,12 @@ const RFIsPage: React.FC = () => {
         </div>
       }
     >
-      <style>{`.rfi-interactive:focus-visible { outline: 2px solid #F47820; outline-offset: 2px; }`}</style>
+      <style>{`
+        .rfi-interactive:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+        .rfi-metric-grid { display: grid; grid-template-columns: repeat(4, 1fr); }
+        @media (max-width: 768px) { .rfi-metric-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 480px) { .rfi-metric-grid { grid-template-columns: repeat(2, 1fr); } }
+      `}</style>
       {pageAlerts.map((alert) => (
         <PredictiveAlertBanner key={alert.id} alert={alert} />
       ))}
@@ -534,15 +539,16 @@ const RFIsPage: React.FC = () => {
       {/* KPI metric cards */}
       <motion.div
         aria-label="RFI metrics"
-        style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'], marginBottom: spacing['4'] }}
+        className="rfi-metric-grid"
+        style={{ gap: spacing['4'], marginBottom: spacing['4'] }}
         variants={reducedMotion ? undefined : containerVariants}
         initial={reducedMotion ? undefined : 'hidden'}
         animate={reducedMotion ? undefined : 'visible'}
       >
-        <motion.div variants={reducedMotion ? undefined : itemVariants}><MetricBox label="Total Open" value={totalOpen} /></motion.div>
-        <motion.div variants={reducedMotion ? undefined : itemVariants}><MetricBox label="Overdue" value={overdueCount} colorOverride={overdueCount > 0 ? 'danger' : undefined} /></motion.div>
-        <motion.div variants={reducedMotion ? undefined : itemVariants}><MetricBox label="Avg Days to Close" value={avgDaysToClose} unit="days" /></motion.div>
-        <motion.div variants={reducedMotion ? undefined : itemVariants}><MetricBox label="Closed This Week" value={closedThisWeek} /></motion.div>
+        <motion.div variants={reducedMotion ? undefined : itemVariants} whileHover={reducedMotion ? undefined : { y: -2, transition: { duration: 0.15 } }}><MetricBox label="Total Open" value={totalOpen} /></motion.div>
+        <motion.div variants={reducedMotion ? undefined : itemVariants} whileHover={reducedMotion ? undefined : { y: -2, transition: { duration: 0.15 } }}><MetricBox label="Overdue" value={overdueCount} colorOverride={overdueCount > 0 ? 'danger' : undefined} /></motion.div>
+        <motion.div variants={reducedMotion ? undefined : itemVariants} whileHover={reducedMotion ? undefined : { y: -2, transition: { duration: 0.15 } }}><MetricBox label="Avg Days to Close" value={avgDaysToClose} unit="days" /></motion.div>
+        <motion.div variants={reducedMotion ? undefined : itemVariants} whileHover={reducedMotion ? undefined : { y: -2, transition: { duration: 0.15 } }}><MetricBox label="Closed This Week" value={closedThisWeek} /></motion.div>
       </motion.div>
 
       <AnimatePresence mode="wait" initial={false}>
@@ -587,6 +593,7 @@ const RFIsPage: React.FC = () => {
                     display: 'flex',
                     alignItems: 'center',
                     gap: spacing['1.5'],
+                    minHeight: 40,
                   }}
                 >
                   {tab.label}
@@ -914,48 +921,25 @@ const RFIsPage: React.FC = () => {
               <div style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.lg, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Response Timeline
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                {([] as Array<{initials: string; name: string; role: string; date: string; message: string; type: string}>).map((entry, idx) => (
-                  <div key={idx} style={{ display: 'flex', gap: spacing.md, position: 'relative' }}>
-                    {/* Timeline line */}
-                    {idx < ([] as Array<{initials: string; name: string; role: string; date: string; message: string; type: string}>).length - 1 && (
-                      <div
-                        style={{
-                          position: 'absolute',
-                          left: '17px',
-                          top: '40px',
-                          bottom: '-4px',
-                          width: '2px',
-                          backgroundColor: colors.borderLight,
-                        }}
-                      />
-                    )}
-                    {/* Avatar */}
-                    <div style={{ flexShrink: 0, paddingTop: '2px' }}>
-                      <Avatar initials={entry.initials} size={36} />
-                    </div>
-                    {/* Content */}
-                    <div style={{ flex: 1, paddingBottom: idx < ([] as Array<{initials: string; name: string; role: string; date: string; message: string; type: string}>).length - 1 ? spacing.xl : '0' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs, flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
-                          {entry.name}
-                        </span>
-                        <Tag
-                          label={entry.type === 'submitted' ? 'Submitted' : entry.type === 'comment' ? 'Comment' : 'Response'}
-                          color={entry.type === 'response' ? colors.tealSuccess : entry.type === 'submitted' ? colors.statusPending : colors.blue}
-                          backgroundColor={entry.type === 'response' ? 'rgba(78,200,150,0.1)' : entry.type === 'submitted' ? colors.statusPendingSubtle : 'rgba(59,130,246,0.1)'}
-                        />
-                      </div>
-                      <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, marginBottom: spacing.sm }}>
-                        {entry.role} · {entry.date}
-                      </div>
-                      <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textSecondary, lineHeight: typography.lineHeight.relaxed }}>
-                        {entry.message}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2, ease: 'easeOut' }}
+                style={{
+                  display: 'flex', flexDirection: 'column', alignItems: 'center',
+                  gap: spacing['2'], padding: `${spacing['6']} ${spacing['4']}`,
+                  backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.md,
+                  border: `1px dashed ${colors.borderSubtle}`, textAlign: 'center',
+                }}
+              >
+                <MessageSquare size={20} color={colors.textTertiary} />
+                <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textTertiary }}>
+                  No responses yet
+                </p>
+                <p style={{ margin: 0, fontSize: typography.fontSize.caption, color: colors.textTertiary, lineHeight: typography.lineHeight.relaxed }}>
+                  Responses and comments will appear here as the RFI is worked
+                </p>
+              </motion.div>
             </div>
 
             {/* AI Suggest Response */}
@@ -1062,10 +1046,10 @@ const RFIsPage: React.FC = () => {
             onClick={(e) => { if (e.target === e.currentTarget) { setShowAIDraftModal(false); setAiDraftInput(''); } }}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.96, y: 10 }}
+              initial={{ opacity: 0, scale: 0.95, y: 12 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96, y: 10 }}
-              transition={{ duration: 0.18, ease: 'easeOut' }}
+              exit={{ opacity: 0, scale: 0.95, y: 12 }}
+              transition={{ type: 'spring', stiffness: 380, damping: 28 }}
               style={{ backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.xl, padding: spacing['6'], width: '100%', maxWidth: 480, boxShadow: shadows.panel }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing['4'] }}>
