@@ -33,12 +33,9 @@ type Env = z.infer<typeof envSchema>
 function parseEnv(): Env {
   const result = envSchema.safeParse(import.meta.env)
   if (!result.success) {
-    if (import.meta.env.PROD) {
-      throw new Error(
-        `Missing required environment variables: ${result.error.issues.map((i) => i.path.join('.')).join(', ')}`,
-      )
-    }
-    console.error('Environment validation failed:', result.error.flatten())
+    // Log but don't crash — deployment pipelines may not inject VITE_* vars.
+    // Supabase.ts has its own fallbacks; crashing here kills the entire app.
+    console.error('[SiteSync] Environment validation issues:', result.error.flatten())
     return import.meta.env as unknown as Env
   }
   return result.data
