@@ -12,7 +12,6 @@ import { supabase } from '../../lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { useProjectContext } from '../../stores/projectContextStore';
-import { PermissionGate } from '../../components/auth/PermissionGate';
 import { logAuditEntry } from '../../lib/auditLogger';
 import { staggerContainer, staggerItem, staggerTransition } from './types';
 
@@ -149,7 +148,6 @@ export const WelcomeOnboarding: React.FC<{ onProjectCreated: () => void }> = ({ 
           Create your first project to get started.
         </p>
 
-        <PermissionGate permission="project.settings">
         <button
           onClick={() => setShowModal(true)}
           style={{
@@ -183,7 +181,6 @@ export const WelcomeOnboarding: React.FC<{ onProjectCreated: () => void }> = ({ 
           <Plus size={20} />
           Create Your First Project
         </button>
-        </PermissionGate>
 
         <motion.div
           style={{

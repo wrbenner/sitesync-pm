@@ -145,7 +145,7 @@ const MeetingCard: React.FC<{ meeting: MeetingListItem }> = ({ meeting }) => {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-export const MeetingsPage: React.FC = () => {
+export const Meetings: React.FC = () => {
   const projectId = useProjectId();
   const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
   const [showOpenOnly, setShowOpenOnly] = useState(true);

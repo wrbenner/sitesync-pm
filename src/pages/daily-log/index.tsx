@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useCopilotStore } from '../../stores/copilotStore';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { Users, Clock, ShieldCheck, Send, BarChart3, Zap, CalendarDays, Calendar, Lock, AlertTriangle, BookOpen, RefreshCw, FileEdit } from 'lucide-react';
-import { PageContainer, Card, Btn, useToast } from '../../components/Primitives';
+import { PageContainer, Card, Btn, useToast, EmptyState } from '../../components/Primitives';
 import CreateDailyLogModal from '../../components/forms/CreateDailyLogModal';
 import { colors, spacing, typography, borderRadius, transitions, tradeColors } from '../../styles/theme';
 import { toast } from 'sonner';
@@ -434,6 +434,18 @@ const DailyLogPage: React.FC = () => {
   }, []);
 
   const authUserId = useAuthStore((s) => s.user?.id);
+
+  if (!projectId) {
+    return (
+      <PageContainer title="Daily Log">
+        <EmptyState
+          icon={<BookOpen size={32} color={colors.textTertiary} />}
+          title="No project selected"
+          description="Select a project from the sidebar to view daily logs."
+        />
+      </PageContainer>
+    );
+  }
 
   if (isLoading) {
     return (

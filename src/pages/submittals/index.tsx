@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { PageContainer, Card, Btn } from '../../components/Primitives';
+import { PageContainer, Card, Btn, EmptyState } from '../../components/Primitives';
 import { MetricCardSkeleton } from '../../components/ui/Skeletons';
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
 import { useSubmittals, useSubmittalReviewers } from '../../hooks/queries';
@@ -88,6 +88,18 @@ const SubmittalsPage: React.FC = () => {
     transition: 'all 150ms ease',
   }), []);
 
+
+  if (!projectId) {
+    return (
+      <PageContainer title="Submittals">
+        <EmptyState
+          icon={<ClipboardList size={32} color={colors.textTertiary} />}
+          title="No project selected"
+          description="Select a project from the sidebar to view and manage submittals."
+        />
+      </PageContainer>
+    );
+  }
 
   if (loading) {
     return (

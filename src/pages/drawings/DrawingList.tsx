@@ -117,7 +117,8 @@ export const DrawingList: React.FC<DrawingListProps> = ({
         </div>
       </div>
 
-      {/* AI Insights Panel */}
+      {/* AI Insights Panel — only show when there are drawings to analyze */}
+      {sortedDrawings.length > 0 && (
       <div style={{ marginBottom: spacing['4'], backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.md, border: `1px solid ${colors.borderSubtle}`, overflow: 'hidden' }}>
         <div
           style={{ display: 'flex', alignItems: 'center', gap: spacing['3'], padding: `${spacing['3']} ${spacing['4']}`, cursor: 'pointer', borderBottom: showConflicts ? `1px solid ${colors.borderSubtle}` : 'none', transition: `background-color ${transitions.instant}` }}
@@ -161,6 +162,7 @@ export const DrawingList: React.FC<DrawingListProps> = ({
           </div>
         )}
       </div>
+      )}
 
       {/* Discipline filter pills */}
       <div style={{ position: 'sticky', top: 0, zIndex: 10, backgroundColor: '#ffffff', paddingTop: spacing['2'], paddingBottom: spacing['2'], marginBottom: spacing.xl }}>
