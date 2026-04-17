@@ -6,10 +6,10 @@ import { BulkActionBar } from '../components/shared/BulkActionBar';
 import { createColumnHelper } from '@tanstack/react-table';
 import { PageContainer, Card, Btn, StatusTag, PriorityTag, DetailPanel, Avatar, Tag, RelatedItems, useToast, MetricBox, EmptyState } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, shadows, zIndex } from '../styles/theme';
-import { useRFIs } from '../hooks/queries';
-import { AlertTriangle, FileQuestion, FilterX, Plus, Clock, MessageSquare, Paperclip, Calendar, RefreshCw, Send, Sparkles, LayoutGrid, List, UserCheck, Flag, Download, XCircle, Wand2, Loader2, X } from 'lucide-react';
+import { useRFIs, useRFI } from '../hooks/queries';
+import { AlertTriangle, FileQuestion, FilterX, Plus, Clock, MessageSquare, Calendar, RefreshCw, Send, Sparkles, LayoutGrid, List, UserCheck, Flag, Download, XCircle, Wand2, Loader2, X } from 'lucide-react';
 import { useAppNavigate, getRelatedItemsForRfi } from '../utils/connections';
-import { useCreateRFI, useUpdateRFI } from '../hooks/mutations';
+import { useCreateRFI, useUpdateRFI, useCreateRFIResponse } from '../hooks/mutations';
 import { useProjectId } from '../hooks/useProjectId';
 import { useNavigate } from 'react-router-dom';
 import { useCopilotStore } from '../stores/copilotStore';
@@ -76,8 +76,8 @@ const BicBadge: React.FC<{ party: string }> = React.memo(({ party }) => {
 });
 
 
-const BallInCourtCell: React.FC<{ rfi: unknown }> = React.memo(({ rfi }) => {
-  const party = rfi.assigned_to || null;
+const BallInCourtCell: React.FC<{ rfi: Record<string, unknown> }> = React.memo(({ rfi }) => {
+  const party = (rfi.assigned_to as string | null) || null;
   if (!party) {
     return (
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
@@ -135,16 +135,16 @@ const RFIsPage: React.FC = () => {
   const totalOpen = useMemo(() => rfis.filter((r: Record<string, unknown>) => r.status !== 'closed').length, [rfis]);
   const overdueCount = useMemo(() => rfis.filter((r: Record<string, unknown>) => r.status !== 'closed' && r.dueDate && isOverdue(r.dueDate as string)).length, [rfis]);
   const avgDaysToClose = useMemo(() => {
-    const closed = rfis.filter((r: unknown) => r.status === 'closed' && r.closed_at && r.created_at);
+    const closed = rfis.filter((r: Record<string, unknown>) => r.status === 'closed' && r.closed_date && r.created_at);
     if (!closed.length) return 0;
-    const total = closed.reduce((sum: number, r: unknown) => sum + Math.floor((new Date(r.closed_at).getTime() - new Date(r.created_at).getTime()) / 86400000), 0);
+    const total = closed.reduce((sum: number, r: Record<string, unknown>) => sum + Math.floor((new Date(r.closed_date as string).getTime() - new Date(r.created_at as string).getTime()) / 86400000), 0);
     return Math.round(total / closed.length);
   }, [rfis]);
   const closedThisWeek = useMemo(() => {
     const weekAgo = Date.now() - 7 * 86400000;
-    return rfis.filter((r: unknown) => r.status === 'closed' && r.closed_at && new Date(r.closed_at).getTime() >= weekAgo).length;
+    return rfis.filter((r: Record<string, unknown>) => r.status === 'closed' && r.closed_date && new Date(r.closed_date as string).getTime() >= weekAgo).length;
   }, [rfis]);
-  const [selectedRfi, setSelectedRfi] = useState<unknown>(null);
+  const [selectedRfi, setSelectedRfi] = useState<Record<string, unknown> | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -161,6 +161,10 @@ const RFIsPage: React.FC = () => {
   const [aiPrefill, setAiPrefill] = useState<Record<string, unknown> | null>(null);
   const [aiPrefillKey, setAiPrefillKey] = useState(0);
 
+  // Response text state (shared between manual entry and AI suggestion)
+  const [responseText, setResponseText] = useState('');
+  const [responseSubmitting, setResponseSubmitting] = useState(false);
+
   // AI Suggest Response state (detail panel)
   const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
   const [aiSuggestionLoading, setAiSuggestionLoading] = useState(false);
@@ -175,7 +179,7 @@ const RFIsPage: React.FC = () => {
 
   useEffect(() => {
     if (!announcedLoadRef.current) return;
-    const count = statusFilter === 'all' ? rfis.length : rfis.filter((r: unknown) => r.status === statusFilter).length;
+    const count = statusFilter === 'all' ? rfis.length : rfis.filter((r: Record<string, unknown>) => r.status === statusFilter).length;
     setAnnouncement(`Showing ${count} of ${rfis.length} RFIs`);
   }, [statusFilter, rfis]);
 
@@ -183,6 +187,12 @@ const RFIsPage: React.FC = () => {
   const navigate = useNavigate();
   const createRFI = useCreateRFI();
   const updateRFI = useUpdateRFI();
+  const createRFIResponse = useCreateRFIResponse();
+
+  // Fetch full detail (with responses) when an RFI is selected in the side panel
+  const selectedRfiId = selectedRfi ? String(selectedRfi.id) : undefined;
+  const { data: rfiDetail } = useRFI(selectedRfiId);
+  const rfiResponses = useMemo(() => rfiDetail?.responses ?? [], [rfiDetail]);
 
   const handleStatusChange = useCallback(async (rfiId: string, newStatus: string) => {
     if (!projectId) {
@@ -197,11 +207,13 @@ const RFIsPage: React.FC = () => {
     }
   }, [updateRFI, projectId, addToast]);
 
-  // Reset AI suggestion when detail panel switches to a different RFI
+  // Reset response state when detail panel switches to a different RFI
   useEffect(() => {
     setAiSuggestion(null);
     setAiSuggestionLoading(false);
     setAiSuggestionError(false);
+    setResponseText('');
+    setResponseSubmitting(false);
   }, [selectedRfi?.id]);
 
   const handleAIDraft = useCallback(async () => {
@@ -233,10 +245,12 @@ const RFIsPage: React.FC = () => {
     setAiSuggestionError(false);
     try {
       const { data, error } = await supabase.functions.invoke('ai-rfi-draft', {
-        body: { projectId, description: selectedRfi.description || selectedRfi.title },
+        body: { projectId, description: rfi.description || rfi.title },
       });
       if (error || !data) throw new Error('AI suggestion failed');
-      setAiSuggestion(data.response ?? data.description ?? '');
+      const suggestion = String(data.response ?? data.description ?? '');
+      setAiSuggestion(suggestion);
+      setResponseText(suggestion); // pre-fill the response textarea
     } catch {
       setAiSuggestionError(true);
       setAiSuggestion(null);
@@ -318,12 +332,12 @@ const RFIsPage: React.FC = () => {
       header: 'Days Open',
       size: 90,
       cell: (info) => {
-        const rfi = info.row.original;
+        const rfi = info.row.original as Record<string, unknown>;
         let days: number;
         if (rfi.status === 'closed') {
-          days = Math.floor((new Date(rfi.closed_at || rfi.updated_at).getTime() - new Date(rfi.created_at).getTime()) / 86400000);
+          days = Math.floor((new Date((rfi.closed_date || rfi.updated_at) as string).getTime() - new Date(rfi.created_at as string).getTime()) / 86400000);
         } else {
-          days = Math.floor((Date.now() - new Date(rfi.created_at).getTime()) / 86400000);
+          days = Math.floor((Date.now() - new Date(rfi.created_at as string).getTime()) / 86400000);
         }
         const dColor = days > 10 ? colors.statusCritical : days > 5 ? colors.statusPending : colors.statusActive;
         return <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: dColor, fontVariantNumeric: 'tabular-nums' as const }}>{days}</span>;
@@ -391,9 +405,9 @@ const RFIsPage: React.FC = () => {
 
   const STATUS_TABS = [
     { key: 'all', label: 'All' },
+    { key: 'draft', label: 'Draft' },
     { key: 'open', label: 'Open' },
-    { key: 'submitted', label: 'Submitted' },
-    { key: 'in_review', label: 'In Review' },
+    { key: 'under_review', label: 'Under Review' },
     { key: 'answered', label: 'Answered' },
     { key: 'overdue', label: 'Overdue' },
     { key: 'closed', label: 'Closed' },
@@ -401,14 +415,14 @@ const RFIsPage: React.FC = () => {
 
   const filteredRfis = useMemo(() => {
     if (statusFilter === 'all') return allRfis;
-    if (statusFilter === 'overdue') return allRfis.filter((r: unknown) => r.status !== 'closed' && r.dueDate && new Date(r.dueDate) < new Date());
-    return allRfis.filter((r: unknown) => r.status === statusFilter);
+    if (statusFilter === 'overdue') return allRfis.filter((r: Record<string, unknown>) => r.status !== 'closed' && r.dueDate && new Date(r.dueDate as string) < new Date());
+    return allRfis.filter((r: Record<string, unknown>) => r.status === statusFilter);
   }, [allRfis, statusFilter]);
 
   const kanbanColumns: KanbanColumn<unknown>[] = useMemo(() => [
-    { id: 'open', label: 'Open', color: colors.textTertiary, items: allRfis.filter((r) => r.status === 'open') },
-    { id: 'submitted', label: 'Submitted', color: colors.statusPending, items: allRfis.filter((r) => r.status === 'submitted') },
-    { id: 'in_review', label: 'In Review', color: colors.statusInfo, items: allRfis.filter((r) => r.status === 'in_review') },
+    { id: 'draft', label: 'Draft', color: colors.textTertiary, items: allRfis.filter((r) => r.status === 'draft') },
+    { id: 'open', label: 'Open', color: colors.statusInfo, items: allRfis.filter((r) => r.status === 'open') },
+    { id: 'under_review', label: 'Under Review', color: colors.statusPending, items: allRfis.filter((r) => r.status === 'under_review') },
     { id: 'answered', label: 'Answered', color: colors.statusActive, items: allRfis.filter((r) => r.status === 'answered') },
     { id: 'closed', label: 'Closed', color: colors.statusNeutral, items: allRfis.filter((r) => r.status === 'closed') },
   ], [allRfis]);
@@ -604,8 +618,8 @@ const RFIsPage: React.FC = () => {
           >
             {STATUS_TABS.map((tab) => {
               const count = tab.key === 'all' ? allRfis.length
-                : tab.key === 'overdue' ? allRfis.filter((r: unknown) => r.status !== 'closed' && r.dueDate && new Date(r.dueDate) < new Date()).length
-                : allRfis.filter((r: unknown) => r.status === tab.key).length;
+                : tab.key === 'overdue' ? allRfis.filter((r: Record<string, unknown>) => r.status !== 'closed' && r.dueDate && new Date(r.dueDate as string) < new Date()).length
+                : allRfis.filter((r: Record<string, unknown>) => r.status === tab.key).length;
               const isSelected = statusFilter === tab.key;
               return (
                 <button
@@ -777,9 +791,9 @@ const RFIsPage: React.FC = () => {
             icon: <Download size={14} />,
             variant: 'secondary',
             onClick: async (ids) => {
-              const selected = allRfis.filter((r) => ids.includes(String(r.id)));
+              const selected = allRfis.filter((r: Record<string, unknown>) => ids.includes(String(r.id)));
               const csv = ['RFI #,Title,From,Priority,Status,Due Date',
-                ...selected.map((r) => `${r.rfiNumber},"${r.title}",${r.from},${r.priority},${r.status},${r.dueDate}`),
+                ...selected.map((r: Record<string, unknown>) => `${r.rfiNumber},"${String(r.title ?? '')}",${r.from},${r.priority},${r.status},${r.dueDate}`),
               ].join('\n');
               const blob = new Blob([csv], { type: 'text/csv' });
               const url = URL.createObjectURL(blob);
@@ -949,101 +963,159 @@ const RFIsPage: React.FC = () => {
               </p>
             </div>
 
-            {/* Attachments hint */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, padding: spacing.md, backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.sm, border: `1px dashed ${colors.border}` }}>
-              <Paperclip size={16} style={{ color: colors.textTertiary }} />
-              <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>2 attachments (markup sketch, spec reference)</span>
-            </div>
-
             {/* Response Timeline */}
             <div>
               <div style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.lg, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Response Timeline
               </div>
-              <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2, ease: 'easeOut' }}
-                style={{
-                  display: 'flex', flexDirection: 'column', alignItems: 'center',
-                  gap: spacing['2'], padding: `${spacing['6']} ${spacing['4']}`,
-                  backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.md,
-                  border: `1px dashed ${colors.borderSubtle}`, textAlign: 'center',
-                }}
-              >
-                <MessageSquare size={20} color={colors.textTertiary} />
-                <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textTertiary }}>
-                  No responses yet
-                </p>
-                <p style={{ margin: 0, fontSize: typography.fontSize.caption, color: colors.textTertiary, lineHeight: typography.lineHeight.relaxed }}>
-                  Responses and comments will appear here as the RFI is worked
-                </p>
-              </motion.div>
+              {rfiResponses.length === 0 ? (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2, ease: 'easeOut' }}
+                  style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center',
+                    gap: spacing['2'], padding: `${spacing['6']} ${spacing['4']}`,
+                    backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.md,
+                    border: `1px dashed ${colors.borderSubtle}`, textAlign: 'center',
+                  }}
+                >
+                  <MessageSquare size={20} color={colors.textTertiary} />
+                  <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textTertiary }}>
+                    No responses yet
+                  </p>
+                  <p style={{ margin: 0, fontSize: typography.fontSize.caption, color: colors.textTertiary, lineHeight: typography.lineHeight.relaxed }}>
+                    Responses and comments will appear here as the RFI is worked
+                  </p>
+                </motion.div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
+                  {rfiResponses.map((response, idx) => (
+                    <motion.div
+                      key={response.id ?? idx}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.15, delay: idx * 0.04 }}
+                      style={{ padding: spacing['3'], backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.md, border: `1px solid ${colors.borderSubtle}` }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['2'] }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
+                          <Avatar initials={(response.author_id ?? 'U').slice(0, 2).toUpperCase()} size={22} />
+                          <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
+                            {response.author_id ? response.author_id.slice(0, 8) : 'Unknown'}
+                          </span>
+                        </div>
+                        <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
+                          {response.created_at ? formatDate(response.created_at) : ''}
+                        </span>
+                      </div>
+                      <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textPrimary, lineHeight: typography.lineHeight.relaxed }}>
+                        {response.content ?? (response as Record<string, unknown>).response_text as string ?? ''}
+                      </p>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {/* AI Suggest Response */}
-            {aiSuggestion !== null ? (
-              <div style={{ marginTop: spacing['4'], padding: spacing['3'], backgroundColor: `${colors.statusReview}06`, borderRadius: borderRadius.md, borderLeft: `3px solid ${colors.statusReview}` }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['2'] }}>
-                  <Sparkles size={12} color={colors.statusReview} />
-                  <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.statusReview, textTransform: 'uppercase' as const, letterSpacing: '0.4px' }}>AI Suggested Response</span>
+            {/* Response Input */}
+            <PermissionGate permission="rfis.respond">
+              <div style={{ borderTop: `1px solid ${colors.borderLight}`, paddingTop: spacing.md }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['2'] }}>
+                  <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>
+                    Your Response
+                  </span>
+                  <Btn
+                    variant="secondary"
+                    size="sm"
+                    icon={aiSuggestionLoading ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <Wand2 size={13} />}
+                    onClick={fetchAISuggestion}
+                    disabled={aiSuggestionLoading}
+                  >
+                    {aiSuggestionLoading ? 'Generating...' : 'AI Suggest'}
+                  </Btn>
                 </div>
+                {aiSuggestionError && (
+                  <div style={{ marginBottom: spacing['2'], padding: `${spacing['1']} ${spacing['2']}`, backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.sm, fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
+                    AI suggestions unavailable — type your response manually
+                  </div>
+                )}
+                {aiSuggestion && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], marginBottom: spacing['2'] }}>
+                    <Sparkles size={11} color={colors.statusReview} />
+                    <span style={{ fontSize: typography.fontSize.caption, color: colors.statusReview }}>AI suggestion pre-filled — review and edit before sending</span>
+                  </div>
+                )}
                 <textarea
-                  value={aiSuggestion}
-                  onChange={(e) => setAiSuggestion(e.target.value)}
+                  value={responseText}
+                  onChange={(e) => setResponseText(e.target.value)}
+                  placeholder="Type your response or use AI Suggest to generate a draft..."
                   rows={4}
-                  style={{ width: '100%', padding: spacing['2'], border: `1px solid rgba(139,92,246,0.2)`, borderRadius: borderRadius.sm, fontSize: typography.fontSize.sm, color: colors.textSecondary, backgroundColor: 'transparent', resize: 'vertical' as const, fontFamily: typography.fontFamily, lineHeight: 1.5, boxSizing: 'border-box' as const, outline: 'none' }}
+                  disabled={responseSubmitting}
+                  aria-label="Response text"
+                  style={{ width: '100%', padding: spacing['3'], border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.md, fontSize: typography.fontSize.sm, color: colors.textPrimary, backgroundColor: colors.surfacePage, resize: 'vertical' as const, fontFamily: typography.fontFamily, lineHeight: typography.lineHeight.relaxed, boxSizing: 'border-box' as const, outline: 'none' }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') { setResponseText(''); setAiSuggestion(null); }
+                  }}
                 />
-              </div>
-            ) : aiSuggestionError ? (
-              <div style={{ marginTop: spacing['4'], padding: spacing['3'], backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.md, display: 'flex', alignItems: 'center', gap: spacing['2'], border: `1px solid ${colors.borderSubtle}` }}>
-                <Sparkles size={12} color={colors.textTertiary} />
-                <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>AI suggestions temporarily unavailable</span>
-              </div>
-            ) : (
-              <div style={{ marginTop: spacing['4'] }}>
-                <Btn
-                  variant="secondary"
-                  size="sm"
-                  icon={aiSuggestionLoading ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Wand2 size={14} />}
-                  onClick={fetchAISuggestion}
-                  disabled={aiSuggestionLoading}
-                >
-                  {aiSuggestionLoading ? 'Fetching suggestion...' : 'AI Suggest Response'}
-                </Btn>
-              </div>
-            )}
-
-            {/* Action Buttons */}
-            <div style={{ display: 'flex', gap: spacing.md, paddingTop: spacing.md, borderTop: `1px solid ${colors.borderLight}` }}>
-              <div style={{ flex: 1 }}>
-                <PermissionGate permission="rfis.respond">
+                <div style={{ display: 'flex', gap: spacing.sm, marginTop: spacing.sm }}>
                   <Btn
                     fullWidth
-                    icon={<Send size={15} />}
+                    icon={responseSubmitting ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Send size={14} />}
+                    disabled={!responseText.trim() || responseSubmitting}
                     onClick={async () => {
-                      await handleStatusChange(String(selectedRfi.id), 'answered');
-                      addToast('success', 'Response submitted successfully');
-                      setSelectedRfi(null);
+                      if (!responseText.trim() || !projectId) return;
+                      const rfi = selectedRfi as Record<string, unknown>;
+                      setResponseSubmitting(true);
+                      try {
+                        await createRFIResponse.mutateAsync({
+                          data: { rfi_id: rfi.id, content: responseText, response_text: responseText },
+                          rfiId: String(rfi.id),
+                          projectId,
+                        });
+                        await handleStatusChange(String(rfi.id), 'answered');
+                        setResponseText('');
+                        setAiSuggestion(null);
+                        toast.success('Response submitted successfully');
+                      } catch {
+                        toast.error('Failed to submit response. Please try again.');
+                      } finally {
+                        setResponseSubmitting(false);
+                      }
                     }}
                   >
-                    Submit Response
+                    {responseSubmitting ? 'Submitting...' : 'Submit Response'}
                   </Btn>
-                </PermissionGate>
-              </div>
-              <div style={{ flex: 1 }}>
-                <PermissionGate permission="rfis.respond">
                   <Btn
                     variant="secondary"
                     fullWidth
-                    icon={<MessageSquare size={15} />}
-                    onClick={() => addToast('info', 'Comment box opening soon')}
+                    icon={responseSubmitting ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <MessageSquare size={14} />}
+                    disabled={!responseText.trim() || responseSubmitting}
+                    onClick={async () => {
+                      if (!responseText.trim() || !projectId) return;
+                      const rfi = selectedRfi as Record<string, unknown>;
+                      setResponseSubmitting(true);
+                      try {
+                        await createRFIResponse.mutateAsync({
+                          data: { rfi_id: rfi.id, content: responseText, response_text: responseText },
+                          rfiId: String(rfi.id),
+                          projectId,
+                        });
+                        setResponseText('');
+                        setAiSuggestion(null);
+                        toast.success('Comment added');
+                      } catch {
+                        toast.error('Failed to add comment. Please try again.');
+                      } finally {
+                        setResponseSubmitting(false);
+                      }
+                    }}
                   >
                     Add Comment
                   </Btn>
-                </PermissionGate>
+                </div>
               </div>
-            </div>
+            </PermissionGate>
 
             {/* Related Items */}
             <RelatedItems items={getRelatedItemsForRfi(selectedRfi.id)} onNavigate={appNavigate} />
