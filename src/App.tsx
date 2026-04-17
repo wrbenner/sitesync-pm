@@ -31,10 +31,8 @@ import { SkipToContent } from './components/ui/SkipToContent';
 import { RouteAnnouncer } from './components/ui/RouteAnnouncer';
 import { LiveRegion } from './components/ui/LiveRegion';
 import { ConflictResolutionModal } from './components/ui/ConflictResolutionModal';
-import { useServiceWorkerUpdate } from './hooks/useServiceWorkerUpdate';
 import { useProjectCache } from './hooks/useProjectCache';
 import { useOfflineStatus } from './hooks/useOfflineStatus';
-import { syncManager } from './lib/syncManager';
 import { OrganizationProvider } from './hooks/useOrganization';
 
 function lazyWithRetry(importFn: () => Promise<unknown>, retries = 3, delay = 1000) {
@@ -372,37 +370,12 @@ function AppContent() {
   const { user } = useAuth();
   usePrefetchRoutes(!!user);
   const { conflictCount } = useOfflineStatus();
-  const { needRefresh, offlineReady, updateServiceWorker } = useServiceWorkerUpdate();
   const [conflictModalOpen, setConflictModalOpen] = useState(false);
 
   // Auth pages render without the app shell (no sidebar, no offline banner)
   const isAuthPage = ['/login', '/signup', '/onboarding'].includes(location.pathname);
 
   useProjectCache(isAuthPage ? undefined : projectId);
-
-  // Listen for background sync completion from SW
-  useEffect(() => {
-    const handler = () => syncManager.refreshCounts();
-    window.addEventListener('background-sync-complete', handler);
-    return () => window.removeEventListener('background-sync-complete', handler);
-  }, []);
-
-  // Show SW update toast
-  useEffect(() => {
-    if (needRefresh) {
-      toast.info('A new version of SiteSync is available', {
-        duration: Infinity,
-        action: { label: 'Update Now', onClick: () => updateServiceWorker(true) },
-        id: 'sw-update',
-      });
-    }
-  }, [needRefresh, updateServiceWorker]);
-
-  useEffect(() => {
-    if (offlineReady) {
-      toast.success('SiteSync is ready for offline use');
-    }
-  }, [offlineReady]);
 
   // Auto-open conflict modal when conflicts appear
   useEffect(() => {
