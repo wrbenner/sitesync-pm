@@ -202,9 +202,29 @@ jobs:
 
           node /tmp/reset-regressions.js
 
-          git add organism-memory/task-registry.json organism-memory/regression-report.json
-          git commit -m "chore(organism): mark regressions as pending [RW-${{ github.run_number }}]" || true
-          git push origin HEAD || true
+          OWNER="${GITHUB_REPOSITORY%%/*}"
+          REPO="${GITHUB_REPOSITORY##*/}"
+          MSG="chore(organism): mark regressions as pending [RW-${{ github.run_number }}]"
+
+          CURRENT_SHA=$(gh api "repos/$OWNER/$REPO/contents/organism-memory/task-registry.json" --jq '.sha')
+          UPDATED_CONTENT=$(base64 -w 0 organism-memory/task-registry.json)
+          gh api "repos/$OWNER/$REPO/contents/organism-memory/task-registry.json" \
+            -X PUT \
+            -f message="$MSG" \
+            -f content="$UPDATED_CONTENT" \
+            -f sha="$CURRENT_SHA" || true
+
+          if [ -f organism-memory/regression-report.json ]; then
+            REPORT_SHA=$(gh api "repos/$OWNER/$REPO/contents/organism-memory/regression-report.json" --jq '.sha' 2>/dev/null || echo "")
+            REPORT_CONTENT=$(base64 -w 0 organism-memory/regression-report.json)
+            if [ -n "$REPORT_SHA" ]; then
+              gh api "repos/$OWNER/$REPO/contents/organism-memory/regression-report.json" \
+                -X PUT -f message="$MSG" -f content="$REPORT_CONTENT" -f sha="$REPORT_SHA" || true
+            else
+              gh api "repos/$OWNER/$REPO/contents/organism-memory/regression-report.json" \
+                -X PUT -f message="$MSG" -f content="$REPORT_CONTENT" || true
+            fi
+          fi
 
       - name: D5 — Update registry on success
         if: success()
@@ -220,6 +240,26 @@ jobs:
 
           node /tmp/update-success.js
 
-          git add organism-memory/task-registry.json organism-memory/regression-report.json 2>/dev/null || true
-          git commit -m "chore(organism): regression watch PASS [RW-${{ github.run_number }}]" || true
-          git push origin HEAD || true
+          OWNER="${GITHUB_REPOSITORY%%/*}"
+          REPO="${GITHUB_REPOSITORY##*/}"
+          MSG="chore(organism): regression watch PASS [RW-${{ github.run_number }}]"
+
+          CURRENT_SHA=$(gh api "repos/$OWNER/$REPO/contents/organism-memory/task-registry.json" --jq '.sha')
+          UPDATED_CONTENT=$(base64 -w 0 organism-memory/task-registry.json)
+          gh api "repos/$OWNER/$REPO/contents/organism-memory/task-registry.json" \
+            -X PUT \
+            -f message="$MSG" \
+            -f content="$UPDATED_CONTENT" \
+            -f sha="$CURRENT_SHA" || true
+
+          if [ -f organism-memory/regression-report.json ]; then
+            REPORT_SHA=$(gh api "repos/$OWNER/$REPO/contents/organism-memory/regression-report.json" --jq '.sha' 2>/dev/null || echo "")
+            REPORT_CONTENT=$(base64 -w 0 organism-memory/regression-report.json)
+            if [ -n "$REPORT_SHA" ]; then
+              gh api "repos/$OWNER/$REPO/contents/organism-memory/regression-report.json" \
+                -X PUT -f message="$MSG" -f content="$REPORT_CONTENT" -f sha="$REPORT_SHA" || true
+            else
+              gh api "repos/$OWNER/$REPO/contents/organism-memory/regression-report.json" \
+                -X PUT -f message="$MSG" -f content="$REPORT_CONTENT" || true
+            fi
+          fi

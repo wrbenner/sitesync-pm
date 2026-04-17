@@ -145,9 +145,15 @@ jobs:
           echo "attempts=$ATTEMPTS" >> "$GITHUB_OUTPUT"
 
           if [ "${DRY_RUN}" != "true" ]; then
-            git add organism-memory/task-registry.json
-            git commit -m "chore(organism): lock task $TASK_ID for workflow-builder" || true
-            git push origin HEAD || true
+            OWNER="${GITHUB_REPOSITORY%%/*}"
+            REPO="${GITHUB_REPOSITORY##*/}"
+            CURRENT_SHA=$(gh api "repos/$OWNER/$REPO/contents/organism-memory/task-registry.json" --jq '.sha')
+            UPDATED_CONTENT=$(base64 -w 0 organism-memory/task-registry.json)
+            gh api "repos/$OWNER/$REPO/contents/organism-memory/task-registry.json" \
+              -X PUT \
+              -f message="chore(organism): lock task $TASK_ID [WB-${{ github.run_number }}]" \
+              -f content="$UPDATED_CONTENT" \
+              -f sha="$CURRENT_SHA" || true
           fi
 
           echo "Task selected: $TASK_ID — $DESC"
@@ -418,12 +424,15 @@ jobs:
           ATTEMPTS="${{ steps.select-task.outputs.attempts }}" \
           node /tmp/update-registry.js
 
-          git fetch origin main
-          git checkout main
-          git pull origin main
-          git add organism-memory/task-registry.json
-          git commit -m "chore(organism): update registry after task ${{ steps.select-task.outputs.task_id }} [WB-${{ github.run_number }}]" || true
-          git push origin main || true
+          OWNER="${GITHUB_REPOSITORY%%/*}"
+          REPO="${GITHUB_REPOSITORY##*/}"
+          CURRENT_SHA=$(gh api "repos/$OWNER/$REPO/contents/organism-memory/task-registry.json" --jq '.sha')
+          UPDATED_CONTENT=$(base64 -w 0 organism-memory/task-registry.json)
+          gh api "repos/$OWNER/$REPO/contents/organism-memory/task-registry.json" \
+            -X PUT \
+            -f message="chore(organism): update registry after task ${{ steps.select-task.outputs.task_id }} [WB-${{ github.run_number }}]" \
+            -f content="$UPDATED_CONTENT" \
+            -f sha="$CURRENT_SHA" || true
 
       - name: D5 — Alert if task needs human
         if: always() && steps.select-task.outputs.task_id != 'NONE' && steps.select-task.outputs.attempts >= '2'

@@ -132,9 +132,15 @@ jobs:
           SCRIPT
 
           node /tmp/lock-integration.js
-          git add organism-memory/task-registry.json
-          git commit -m "chore(organism): lock integration $TARGET" || true
-          git push origin HEAD || true
+          OWNER="${GITHUB_REPOSITORY%%/*}"
+          REPO="${GITHUB_REPOSITORY##*/}"
+          CURRENT_SHA=$(gh api "repos/$OWNER/$REPO/contents/organism-memory/task-registry.json" --jq '.sha')
+          UPDATED_CONTENT=$(base64 -w 0 organism-memory/task-registry.json)
+          gh api "repos/$OWNER/$REPO/contents/organism-memory/task-registry.json" \
+            -X PUT \
+            -f message="chore(organism): lock integration $TARGET [IW-${{ github.run_number }}]" \
+            -f content="$UPDATED_CONTENT" \
+            -f sha="$CURRENT_SHA" || true
 
       - name: A1 — Claude analyzes integration context
         if: steps.select-integration.outputs.target != 'NONE'
@@ -245,10 +251,6 @@ jobs:
           BUILD: ${{ steps.verify.outputs.build }}
           PR_NUMBER: ${{ steps.create-pr.outputs.pr_number }}
         run: |
-          git fetch origin main
-          git checkout main
-          git pull origin main
-
           cat > /tmp/update-integration.js <<'SCRIPT'
           const fs = require('fs');
           const TARGET = process.env.TARGET;
@@ -272,6 +274,12 @@ jobs:
           SCRIPT
 
           node /tmp/update-integration.js
-          git add organism-memory/task-registry.json
-          git commit -m "chore(organism): mark integration $TARGET complete [IW-${{ github.run_number }}]" || true
-          git push origin main || true
+          OWNER="${GITHUB_REPOSITORY%%/*}"
+          REPO="${GITHUB_REPOSITORY##*/}"
+          CURRENT_SHA=$(gh api "repos/$OWNER/$REPO/contents/organism-memory/task-registry.json" --jq '.sha')
+          UPDATED_CONTENT=$(base64 -w 0 organism-memory/task-registry.json)
+          gh api "repos/$OWNER/$REPO/contents/organism-memory/task-registry.json" \
+            -X PUT \
+            -f message="chore(organism): mark integration $TARGET complete [IW-${{ github.run_number }}]" \
+            -f content="$UPDATED_CONTENT" \
+            -f sha="$CURRENT_SHA" || true
