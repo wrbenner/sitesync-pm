@@ -1,6 +1,56 @@
 import { supabase } from '../lib/supabase';
 import type { Organization, Profile } from '../types/database';
-import { type Result, ok, fail, dbError, permissionError } from './errors';
+import type { OrgRole, ProjectRole } from '../types/tenant';
+import {
+  type Result,
+  ok,
+  fail,
+  dbError,
+  permissionError,
+  notFoundError,
+} from './errors';
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+async function getCurrentUserId(): Promise<string | null> {
+  const { data } = await supabase.auth.getSession();
+  return data.session?.user?.id ?? null;
+}
+
+/**
+ * Resolve the user's authoritative org role from the database.
+ * Does NOT trust caller-supplied role values.
+ */
+async function resolveOrgRole(
+  organizationId: string,
+  userId: string | null,
+): Promise<OrgRole | null> {
+  if (!userId) return null;
+
+  const { data } = await supabase
+    .from('organization_members')
+    .select('role')
+    .eq('organization_id', organizationId)
+    .eq('user_id', userId)
+    .single();
+
+  return (data?.role as OrgRole) ?? null;
+}
+
+// ── Types ────────────────────────────────────────────────────────────────────
+
+export type UpdateProfileInput = Partial<
+  Pick<Profile, 'full_name' | 'phone' | 'company' | 'trade' | 'avatar_url' | 'notification_preferences'>
+>;
+
+export type OrgMemberWithProfile = {
+  id: string;
+  organization_id: string;
+  user_id: string;
+  role: OrgRole;
+  created_at: string | null;
+  profile?: Profile | null;
+};
 
 // ── Service ──────────────────────────────────────────────────────────────────
 
@@ -16,7 +66,7 @@ export const userService = {
       full_name: fullName,
       first_name: firstName,
       last_name: lastName ?? null,
-    });
+    } as Parameters<ReturnType<typeof supabase.from<'profiles'>>['insert']>[0]);
 
     if (error) return fail(dbError(error.message, { userId }));
     return { data: null, error: null };
@@ -33,10 +83,16 @@ export const userService = {
     return ok(data as Profile);
   },
 
-  async updateProfile(userId: string, updates: Partial<Profile>): Promise<Result> {
+  /**
+   * Update profile fields. Always records updated_at timestamp for provenance.
+   */
+  async updateProfile(userId: string, updates: UpdateProfileInput): Promise<Result> {
     const { error } = await supabase
       .from('profiles')
-      .update(updates)
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString(),
+      } as Parameters<ReturnType<typeof supabase.from<'profiles'>>['update']>[0])
       .eq('user_id', userId);
 
     if (error) return fail(dbError(error.message, { userId }));
@@ -80,9 +136,80 @@ export const userService = {
 
     await supabase
       .from('profiles')
-      .update({ organization_id: organization.id })
+      .update({ organization_id: organization.id } as Parameters<
+        ReturnType<typeof supabase.from<'profiles'>>['update']
+      >[0])
       .eq('user_id', userId);
 
     return ok(organization);
+  },
+
+  /**
+   * Get the current user's server-resolved org role.
+   * Returns null if the user is not an org member.
+   */
+  async getMyOrgRole(organizationId: string): Promise<Result<OrgRole | null>> {
+    const userId = await getCurrentUserId();
+    if (!userId) return fail(permissionError('Not authenticated'));
+
+    const role = await resolveOrgRole(organizationId, userId);
+    return ok(role);
+  },
+
+  /**
+   * Get a user's server-resolved project role.
+   * Returns null if the user is not a project member.
+   */
+  async getProjectRole(
+    projectId: string,
+    userId?: string,
+  ): Promise<Result<ProjectRole | null>> {
+    const uid = userId ?? (await getCurrentUserId());
+    if (!uid) return fail(permissionError('Not authenticated'));
+
+    const { data } = await supabase
+      .from('project_members')
+      .select('role')
+      .eq('project_id', projectId)
+      .eq('user_id', uid)
+      .single();
+
+    return ok((data?.role as ProjectRole) ?? null);
+  },
+
+  /**
+   * List all members of an organization with their profiles.
+   */
+  async listOrganizationMembers(
+    organizationId: string,
+  ): Promise<Result<OrgMemberWithProfile[]>> {
+    const userId = await getCurrentUserId();
+    if (!userId) return fail(permissionError('Not authenticated'));
+
+    const role = await resolveOrgRole(organizationId, userId);
+    if (!role) return fail(permissionError('User is not a member of this organization'));
+
+    const { data, error } = await supabase
+      .from('organization_members')
+      .select('*, profile:profiles(*)')
+      .eq('organization_id', organizationId)
+      .order('created_at', { ascending: true });
+
+    if (error) return fail(dbError(error.message, { organizationId }));
+    return ok((data ?? []) as unknown as OrgMemberWithProfile[]);
+  },
+
+  /**
+   * Fetch a profile by user ID. Returns NotFoundError if absent.
+   */
+  async getUserProfile(userId: string): Promise<Result<Profile>> {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+
+    if (error || !data) return fail(notFoundError('Profile', userId));
+    return ok(data as Profile);
   },
 };
