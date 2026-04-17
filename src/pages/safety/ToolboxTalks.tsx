@@ -3,6 +3,8 @@ import { Card, Btn } from '../../components/Primitives';
 import { DataTable, createColumnHelper } from '../../components/shared/DataTable';
 import { ShieldCheck } from 'lucide-react';
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
+import { supabase } from '../../lib/supabase';
+import { useProjectId } from '../../hooks/useProjectId';
 
 // ── Column definitions ────────────────────────────────────────
 
@@ -73,8 +75,39 @@ interface ToolboxTalkFormProps {
 }
 
 export const ToolboxTalkForm: React.FC<ToolboxTalkFormProps> = ({ onClose }) => {
+  const projectId = useProjectId();
   const [form, setForm] = React.useState<TalkFormState>({ topic: '', date: '', presenter: '', attendees: [], newAttendee: '' });
   const [errors, setErrors] = React.useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = React.useState(false);
+
+  const handleSubmit = async () => {
+    const errs: Record<string, string> = {};
+    if (!form.topic.trim()) errs.topic = 'Topic is required';
+    if (!form.date) errs.date = 'Date is required';
+    if (!form.presenter.trim()) errs.presenter = 'Presenter is required';
+    setErrors(errs);
+    if (Object.keys(errs).length > 0) return;
+    if (!projectId) { setErrors({ topic: 'No project selected' }); return; }
+
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.from('toolbox_talks').insert({
+        project_id: projectId,
+        title: form.topic,
+        topic: form.topic,
+        date: form.date,
+        presenter: form.presenter,
+        attendance_count: form.attendees.length,
+        attendees: form.attendees,
+      });
+      if (error) throw error;
+      onClose();
+    } catch (e) {
+      setErrors({ topic: e instanceof Error ? e.message : 'Failed to save' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const handleAddAttendee = () => {
     const name = form.newAttendee.trim();
@@ -159,6 +192,7 @@ export const ToolboxTalkForm: React.FC<ToolboxTalkFormProps> = ({ onClose }) => 
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: spacing['3'] }}>
           <Btn variant="ghost" onClick={onClose} style={{ minHeight: '56px' }}>Cancel</Btn>
+          <Btn variant="primary" onClick={handleSubmit} disabled={submitting} style={{ minHeight: '56px' }}>{submitting ? 'Saving...' : 'Save Talk'}</Btn>
         </div>
       </div>
     </div>

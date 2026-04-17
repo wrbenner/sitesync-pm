@@ -1,9 +1,71 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { Search, Users, Phone, Mail, Building } from 'lucide-react';
+import { Search, Users, Phone, Mail, Building, Plus } from 'lucide-react';
 import { PageContainer, Card, MetricBox, Avatar, Tag, Btn } from '../components/Primitives';
 import { Drawer } from '../components/Drawer';
 import { PermissionGate } from '../components/auth/PermissionGate';
 import { colors, spacing, typography, borderRadius, transitions, shadows } from '../styles/theme';
+import { useProjectId } from '../hooks/useProjectId';
+import { useDirectoryContacts } from '../hooks/queries/directory-contacts';
+import { supabase } from '../lib/supabase';
+import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
+
+interface ContactFormModalProps {
+  projectId: string;
+  onClose: () => void;
+  initial?: Partial<Contact> & { id?: string };
+}
+
+const ContactFormModal: React.FC<ContactFormModalProps> = ({ projectId, onClose, initial }) => {
+  const qc = useQueryClient();
+  const [form, setForm] = useState({
+    contact_name: initial?.name ?? '',
+    company: initial?.company ?? '',
+    role: initial?.role ?? '',
+    trade: initial?.trade ?? '',
+    phone: initial?.phone ?? '',
+    email: initial?.email ?? '',
+  });
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const editing = !!initial?.id;
+  const submit = async () => {
+    if (!form.contact_name.trim()) { setErr('Name required'); return; }
+    setSaving(true); setErr(null);
+    try {
+      const payload = { ...form, project_id: projectId };
+      if (editing) {
+        const { error } = await supabase.from('directory_contacts').update(payload).eq('id', initial!.id!);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('directory_contacts').insert(payload);
+        if (error) throw error;
+      }
+      toast.success(editing ? 'Contact updated' : 'Contact added');
+      qc.invalidateQueries({ queryKey: ['directory_contacts'] });
+      onClose();
+    } catch (e) { setErr(e instanceof Error ? e.message : 'Failed'); } finally { setSaving(false); }
+  };
+  const input: React.CSSProperties = { width: '100%', padding: '8px 12px', border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base, marginBottom: spacing['3'], fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box' };
+  return (
+    <div role="dialog" aria-modal="true" style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.45)' }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{ backgroundColor: '#fff', borderRadius: borderRadius.lg, padding: spacing['6'], width: '100%', maxWidth: 480 }}>
+        <h2 style={{ margin: 0, marginBottom: spacing['4'], fontSize: 18 }}>{editing ? 'Edit Contact' : 'Add Contact'}</h2>
+        {(['contact_name', 'company', 'role', 'trade', 'phone', 'email'] as const).map(k => (
+          <div key={k}>
+            <label style={{ fontSize: 13, fontWeight: 500, textTransform: 'capitalize' }}>{k.replace('_', ' ')}{k === 'contact_name' ? ' *' : ''}</label>
+            <input style={input} value={form[k]} onChange={(e) => setForm(p => ({ ...p, [k]: e.target.value }))} />
+          </div>
+        ))}
+        {err && <p style={{ color: colors.statusCritical, margin: 0, fontSize: 12 }}>{err}</p>}
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: spacing['3'] }}>
+          <Btn variant="ghost" onClick={onClose}>Cancel</Btn>
+          <Btn variant="primary" onClick={submit} disabled={saving}>{saving ? 'Saving...' : (editing ? 'Save' : 'Add Contact')}</Btn>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -27,8 +89,6 @@ interface CompanyInfo {
   insuranceExpiry: string;
 }
 
-// Directory data is not yet wired to a backend; show honest empty state.
-const CONTACTS: Contact[] = [];
 const COMPANIES: CompanyInfo[] = [];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -157,13 +217,38 @@ const TH: React.FC<{ children: React.ReactNode; width?: string }> = ({ children,
 // ── Main Component ────────────────────────────────────────────────────────────
 
 export const Directory: React.FC = () => {
+  const projectId = useProjectId();
+  const qc = useQueryClient();
+  const { data: contactsResult } = useDirectoryContacts(projectId);
+  const CONTACTS: Contact[] = useMemo(() => {
+    const rows = (contactsResult?.data ?? []) as unknown as Array<Record<string, unknown>>;
+    return rows.map((r) => ({
+      id: String(r.id),
+      name: String(r.contact_name ?? r.name ?? ''),
+      company: String(r.company ?? ''),
+      role: String(r.role ?? ''),
+      trade: String(r.trade ?? ''),
+      phone: String(r.phone ?? ''),
+      email: String(r.email ?? ''),
+      status: (r.status === 'inactive' ? 'inactive' : 'active') as 'active' | 'inactive',
+    }));
+  }, [contactsResult]);
+
   const [view, setView] = useState<'people' | 'companies'>('people');
   const [rawSearch, setRawSearch] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
+  const [showAdd, setShowAdd] = useState(false);
+  const [editing, setEditing] = useState<Contact | null>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Delete this contact?')) return;
+    const { error } = await supabase.from('directory_contacts').delete().eq('id', id);
+    if (error) toast.error(error.message); else { toast.success('Deleted'); qc.invalidateQueries({ queryKey: ['directory_contacts'] }); }
+  };
 
   const handleSearchChange = (val: string) => {
     setRawSearch(val);
@@ -182,7 +267,7 @@ export const Directory: React.FC = () => {
       c.trade.toLowerCase().includes(q) ||
       c.role.toLowerCase().includes(q)
     );
-  }, [searchQuery]);
+  }, [searchQuery, CONTACTS]);
 
   const filteredCompanies = useMemo(() => {
     if (!searchQuery.trim()) return COMPANIES;
@@ -208,7 +293,7 @@ export const Directory: React.FC = () => {
       actions={
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
           <ViewToggle view={view} onChange={setView} />
-          <PermissionGate permission="directory.manage"><Btn onClick={() => {}}>Add Contact</Btn></PermissionGate>
+          <PermissionGate permission="directory.manage"><Btn icon={<Plus size={14} />} onClick={() => setShowAdd(true)}>Add Contact</Btn></PermissionGate>
         </div>
       }
     >
@@ -288,7 +373,7 @@ export const Directory: React.FC = () => {
                 Add every stakeholder so your team always knows who to call.
               </p>
             </div>
-            <PermissionGate permission="directory.manage"><Btn onClick={() => {}}>Add First Contact</Btn></PermissionGate>
+            <PermissionGate permission="directory.manage"><Btn onClick={() => setShowAdd(true)}>Add First Contact</Btn></PermissionGate>
           </div>
         )}
 
@@ -485,7 +570,17 @@ export const Directory: React.FC = () => {
         title={selectedContact?.name ?? ''}
       >
         {selectedContact && <ContactDetailPanel contact={selectedContact} />}
+        {selectedContact && (
+          <PermissionGate permission="directory.manage">
+            <div style={{ display: 'flex', gap: 8, padding: spacing['4'] }}>
+              <Btn variant="secondary" onClick={() => { setEditing(selectedContact); setSelectedContact(null); }}>Edit</Btn>
+              <Btn variant="ghost" onClick={() => { handleDelete(selectedContact.id); setSelectedContact(null); }}>Delete</Btn>
+            </div>
+          </PermissionGate>
+        )}
       </Drawer>
+      {showAdd && projectId && <ContactFormModal projectId={projectId} onClose={() => setShowAdd(false)} />}
+      {editing && projectId && <ContactFormModal projectId={projectId} onClose={() => setEditing(null)} initial={editing} />}
     </PageContainer>
   );
 };

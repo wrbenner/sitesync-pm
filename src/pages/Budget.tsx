@@ -32,6 +32,8 @@ import EmptyState from '../components/ui/EmptyState';
 import { toast } from 'sonner';
 import { useProjectId } from '../hooks/useProjectId';
 import { useUpdateChangeOrder, useUpdateBudgetItem } from '../hooks/mutations';
+import { supabase } from '../lib/supabase';
+import { useQueryClient } from '@tanstack/react-query';
 import { PermissionGate } from '../components/auth/PermissionGate';
 import { usePermissions } from '../hooks/usePermissions';
 import { getCOTypeConfig, getCOStatusConfig } from '../machines/changeOrderMachine';
@@ -39,6 +41,49 @@ import type { ChangeOrderState } from '../machines/changeOrderMachine';
 import { useNavigate } from 'react-router-dom'
 import { useBudgetRealtime } from '../hooks/queries/realtime'
 import { MetricFlash } from '../components/ui/RealtimeFlash';
+
+interface AddBudgetLineItemModalProps { projectId: string; onClose: () => void; onCreated: () => void }
+const AddBudgetLineItemModal: React.FC<AddBudgetLineItemModalProps> = ({ projectId, onClose, onCreated }) => {
+  const [form, setForm] = useState({ description: '', csi_code: '', original_amount: '' });
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const submit = async () => {
+    if (!form.description.trim()) { setErr('Description required'); return; }
+    setSaving(true); setErr(null);
+    try {
+      const amt = parseFloat(form.original_amount) || 0;
+      const { error } = await supabase.from('budget_line_items').insert({
+        project_id: projectId,
+        description: form.description,
+        csi_code: form.csi_code || null,
+        original_amount: amt,
+        revised_budget: amt,
+      });
+      if (error) throw error;
+      toast.success('Line item added');
+      onCreated(); onClose();
+    } catch (e) { setErr(e instanceof Error ? e.message : 'Failed'); } finally { setSaving(false); }
+  };
+  const input: React.CSSProperties = { width: '100%', padding: '8px 12px', border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base, marginBottom: 12, fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box' };
+  return (
+    <div role="dialog" aria-modal="true" style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.45)' }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{ backgroundColor: '#fff', borderRadius: borderRadius.lg, padding: 24, width: '100%', maxWidth: 480 }}>
+        <h2 style={{ margin: 0, marginBottom: 16, fontSize: 18 }}>Add Budget Line Item</h2>
+        <label style={{ fontSize: 13, fontWeight: 500 }}>Description *</label>
+        <input style={input} value={form.description} onChange={(e) => setForm(p => ({ ...p, description: e.target.value }))} />
+        <label style={{ fontSize: 13, fontWeight: 500 }}>CSI Code / Division</label>
+        <input style={input} value={form.csi_code} onChange={(e) => setForm(p => ({ ...p, csi_code: e.target.value }))} placeholder="e.g. 03 30 00" />
+        <label style={{ fontSize: 13, fontWeight: 500 }}>Amount</label>
+        <input style={input} type="number" value={form.original_amount} onChange={(e) => setForm(p => ({ ...p, original_amount: e.target.value }))} />
+        {err && <p style={{ color: colors.statusCritical, margin: 0, fontSize: 12 }}>{err}</p>}
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
+          <Btn variant="ghost" onClick={onClose}>Cancel</Btn>
+          <Btn variant="primary" onClick={submit} disabled={saving}>{saving ? 'Saving...' : 'Add'}</Btn>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const fmt = (n: number): string => {
   if (n >= 1000000) return `$${(n / 1000000).toFixed(1)}M`;
@@ -294,6 +339,8 @@ const BudgetPage: React.FC = () => {
   const [selectedDivision, setSelectedDivision] = useState<MappedDivision | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'earned-value'>('overview');
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [addLineOpen, setAddLineOpen] = useState(false);
+  const qc = useQueryClient();
   const [hoveredDivId, setHoveredDivId] = useState<string | null>(null);
   const [editingCell, setEditingCell] = useState<{ divId: string; field: 'spent' | 'progress'; value: string } | null>(null);
   const { hasPermission } = usePermissions();
@@ -456,6 +503,13 @@ const BudgetPage: React.FC = () => {
       actions={<Btn variant="secondary" size="sm" icon={<Download size={14} />} onClick={() => addToast('info', 'Exporting budget data to CSV...')}>Export CSV</Btn>}
     >
       <BudgetUpload open={uploadOpen} onClose={() => setUploadOpen(false)} onSuccess={() => setUploadOpen(false)} />
+      {addLineOpen && projectId && (
+        <AddBudgetLineItemModal
+          projectId={projectId}
+          onClose={() => setAddLineOpen(false)}
+          onCreated={() => { void refetchCost(); qc.invalidateQueries({ queryKey: ['budget_divisions'] }); }}
+        />
+      )}
 
       {isEmpty ? (
         <div style={{ padding: spacing['6'], backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.xl, border: `1px solid ${colors.borderDefault}` }}>
@@ -464,7 +518,7 @@ const BudgetPage: React.FC = () => {
             title="No budget has been set up yet"
             description="Import your schedule of values or add budget line items by CSI division to start tracking costs."
             action={canEditBudget ? { label: 'Import Budget', onClick: () => setUploadOpen(true) } : undefined}
-            secondaryAction={canEditBudget ? { label: 'Add Line Item', onClick: () => addToast('info', 'Manual entry form available in the next update') } : undefined}
+            secondaryAction={canEditBudget ? { label: 'Add Line Item', onClick: () => setAddLineOpen(true) } : undefined}
           />
         </div>
       ) : (<>

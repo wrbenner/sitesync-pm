@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { BarChart3, MapPin, Award, AlertTriangle, RefreshCw, Users } from 'lucide-react';
+import { BarChart3, MapPin, Award, AlertTriangle, RefreshCw, Users, Plus } from 'lucide-react';
 import { PageContainer, Card, Btn, ProgressBar, Skeleton, SectionHeader, EmptyState } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme';
 import { useCrewStore } from '../stores/crewStore';
@@ -9,6 +9,54 @@ import { PredictiveAlertBanner } from '../components/ai/PredictiveAlert';
 import { getAnnotationsForEntity, getPredictiveAlertsForPage } from '../data/aiAnnotations';
 import { PermissionGate } from '../components/auth/PermissionGate';
 import { supabase } from '../lib/supabase';
+import { toast } from 'sonner';
+
+interface AddCrewModalProps { onClose: () => void; projectId: string; onCreated: () => void }
+const AddCrewModal: React.FC<AddCrewModalProps> = ({ onClose, projectId, onCreated }) => {
+  const [form, setForm] = useState({ name: '', trade: '', foreman: '', size: '' });
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const submit = async () => {
+    if (!form.name.trim()) { setErr('Name required'); return; }
+    setSaving(true); setErr(null);
+    try {
+      const { error } = await supabase.from('crews').insert({
+        project_id: projectId,
+        name: form.name,
+        trade: form.trade || null,
+        foreman: form.foreman || null,
+        size: form.size ? parseInt(form.size, 10) : 0,
+        status: 'active',
+      });
+      if (error) throw error;
+      toast.success('Crew added');
+      onCreated(); onClose();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Failed');
+    } finally { setSaving(false); }
+  };
+  const input: React.CSSProperties = { width: '100%', padding: '8px 12px', border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base, marginBottom: spacing.md, fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box' };
+  return (
+    <div role="dialog" aria-modal="true" style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.45)' }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{ backgroundColor: '#fff', borderRadius: borderRadius.lg, padding: spacing.xl, width: '100%', maxWidth: 480 }}>
+        <h2 style={{ margin: 0, marginBottom: spacing.lg, fontSize: 18 }}>Add Crew</h2>
+        <label style={{ fontSize: 13, fontWeight: 500 }}>Name *</label>
+        <input style={input} value={form.name} onChange={(e) => setForm(p => ({ ...p, name: e.target.value }))} />
+        <label style={{ fontSize: 13, fontWeight: 500 }}>Trade</label>
+        <input style={input} value={form.trade} onChange={(e) => setForm(p => ({ ...p, trade: e.target.value }))} />
+        <label style={{ fontSize: 13, fontWeight: 500 }}>Foreman</label>
+        <input style={input} value={form.foreman} onChange={(e) => setForm(p => ({ ...p, foreman: e.target.value }))} />
+        <label style={{ fontSize: 13, fontWeight: 500 }}>Size</label>
+        <input style={input} type="number" value={form.size} onChange={(e) => setForm(p => ({ ...p, size: e.target.value }))} />
+        {err && <p style={{ color: colors.statusCritical, margin: 0, fontSize: 12 }}>{err}</p>}
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: spacing.md }}>
+          <Btn variant="ghost" onClick={onClose}>Cancel</Btn>
+          <Btn variant="primary" onClick={submit} disabled={saving}>{saving ? 'Saving...' : 'Add Crew'}</Btn>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // Rotating palette for crew dot colors on map
 const CREW_COLOR_PALETTE = [
@@ -25,6 +73,7 @@ export const Crews: React.FC = () => {
   const { activeProject } = useProjectContext();
   const [activeTab, setActiveTab] = useState<'map' | 'cards' | 'performance'>('cards');
   const [hoveredCrew, setHoveredCrew] = useState<string | null>(null);
+  const [showAddCrew, setShowAddCrew] = useState(false);
 
   useEffect(() => {
     // REACT-04 FIX: include loadCrews in deps.
@@ -115,8 +164,11 @@ export const Crews: React.FC = () => {
           icon={<Users size={40} color={colors.textTertiary} />}
           title="No crews yet"
           description="Add crews to track workforce, productivity, and certifications across the project."
-          action={<PermissionGate permission="crews.create"><Btn variant="primary">Add Crew</Btn></PermissionGate>}
+          action={<PermissionGate permission="crews.create"><Btn variant="primary" onClick={() => setShowAddCrew(true)}>Add Crew</Btn></PermissionGate>}
         />
+        {showAddCrew && activeProject?.id && (
+          <AddCrewModal projectId={activeProject.id} onClose={() => setShowAddCrew(false)} onCreated={() => activeProject?.id && loadCrews(activeProject.id)} />
+        )}
       </PageContainer>
     );
   }
@@ -144,6 +196,7 @@ export const Crews: React.FC = () => {
     <PageContainer
       title="Crews"
       subtitle={`${activeCrews.length} active crews \u00B7 ${totalWorkers} workers on site`}
+      actions={<PermissionGate permission="crews.create"><Btn variant="primary" icon={<Plus size={14} />} onClick={() => setShowAddCrew(true)}>Add Crew</Btn></PermissionGate>}
     >
       {pageAlerts.map((alert) => (
         <PredictiveAlertBanner key={alert.id} alert={alert} />
@@ -541,6 +594,9 @@ export const Crews: React.FC = () => {
             </div>
           </Card>
         </div>
+      )}
+      {showAddCrew && activeProject?.id && (
+        <AddCrewModal projectId={activeProject.id} onClose={() => setShowAddCrew(false)} onCreated={() => activeProject?.id && loadCrews(activeProject.id)} />
       )}
     </PageContainer>
   );

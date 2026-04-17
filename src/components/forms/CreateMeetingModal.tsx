@@ -2,11 +2,12 @@ import React from 'react'
 import { EntityFormModal } from './EntityFormModal'
 import { meetingSchema } from './schemas'
 import type { FieldConfig } from './EntityFormModal'
+import { useCreateMeeting } from '../../hooks/mutations/meetings'
+import { toast } from 'sonner'
 
 interface CreateMeetingModalProps {
-  open: boolean
   onClose: () => void
-  onSubmit: (data: Record<string, unknown>) => Promise<void> | void
+  projectId: string
 }
 
 const fields: FieldConfig[] = [
@@ -25,18 +26,33 @@ const fields: FieldConfig[] = [
   { name: 'agenda', label: 'Agenda', type: 'textarea', placeholder: 'Meeting agenda items' },
 ]
 
-const CreateMeetingModal: React.FC<CreateMeetingModalProps> = ({ open, onClose, onSubmit }) => (
-  <EntityFormModal
-    open={open}
-    onClose={onClose}
-    onSubmit={onSubmit}
-    title="Create New Meeting"
-    schema={meetingSchema}
-    fields={fields}
-    defaults={{ type: 'oac', duration_minutes: '60' }}
-    submitLabel="Create Meeting"
-    draftKey="draft_meeting"
-  />
-)
+const CreateMeetingModal: React.FC<CreateMeetingModalProps> = ({ onClose, projectId }) => {
+  const createMeeting = useCreateMeeting()
+  const handleSubmit = async (data: Record<string, unknown>) => {
+    try {
+      await createMeeting.mutateAsync({
+        data: { ...data, project_id: projectId, status: 'scheduled' },
+        projectId,
+      })
+      toast.success('Meeting scheduled')
+      onClose()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to create meeting')
+    }
+  }
+  return (
+    <EntityFormModal
+      open={true}
+      onClose={onClose}
+      onSubmit={handleSubmit}
+      title="Create New Meeting"
+      schema={meetingSchema}
+      fields={fields}
+      defaults={{ type: 'oac', duration_minutes: '60' }}
+      submitLabel="Create Meeting"
+      draftKey="draft_meeting"
+    />
+  )
+}
 
 export default CreateMeetingModal

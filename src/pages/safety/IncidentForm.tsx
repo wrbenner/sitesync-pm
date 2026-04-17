@@ -31,10 +31,8 @@ interface IncidentFormProps {
 export const IncidentForm: React.FC<IncidentFormProps> = ({ projectId, onClose, onSubmitSuccess }) => {
   const [form, setForm] = React.useState<IncidentFormState>({ ...defaultForm });
   const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
-
-  void projectId;
-  void supabase;
-  void onSubmitSuccess;
+  const [submitting, setSubmitting] = React.useState(false);
+  const [submitError, setSubmitError] = React.useState<string | null>(null);
 
   const dateRef = useRef<HTMLInputElement>(null);
   const locationRef = useRef<HTMLInputElement>(null);
@@ -70,7 +68,62 @@ export const IncidentForm: React.FC<IncidentFormProps> = ({ projectId, onClose, 
   const handleClose = () => {
     setForm({ ...defaultForm });
     setFieldErrors({});
+    setSubmitError(null);
     onClose();
+  };
+
+  const handleSubmit = async () => {
+    const errs: Record<string, string> = {};
+    for (const f of requiredFields) {
+      const v = form[f.key];
+      if (typeof v === 'string' && !v.trim()) errs[f.key as string] = `${f.label} is required`;
+    }
+    if (isPhotoRequired && !form.photo) errs.photo = 'Photo documentation is required for this severity';
+    setFieldErrors(errs);
+    if (Object.keys(errs).length > 0) return;
+    if (!projectId) { setSubmitError('No project selected'); return; }
+
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      let photoUrl: string | null = null;
+      if (form.photo) {
+        const path = `incidents/${projectId}/${Date.now()}-${form.photo.name}`;
+        const { error: upErr } = await supabase.storage.from('field-captures').upload(path, form.photo);
+        if (!upErr) {
+          const { data: pub } = supabase.storage.from('field-captures').getPublicUrl(path);
+          photoUrl = pub?.publicUrl ?? null;
+        }
+      }
+      const { error } = await supabase.from('incidents').insert({
+        project_id: projectId,
+        date: form.date,
+        type: form.type,
+        location: form.location,
+        description: form.description,
+        severity: form.severity,
+        injured_party_name: form.injured_party_name,
+        root_cause: form.root_cause || null,
+        photo_url: photoUrl,
+      });
+      if (error) throw error;
+
+      if (form.ca_description.trim()) {
+        await supabase.from('corrective_actions').insert({
+          project_id: projectId,
+          description: form.ca_description,
+          assignee: form.ca_assignee || null,
+          due_date: form.ca_due_date || null,
+          status: 'open',
+        });
+      }
+      onSubmitSuccess();
+      handleClose();
+    } catch (e) {
+      setSubmitError(e instanceof Error ? e.message : 'Failed to save incident');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const inputStyle = (hasError: boolean): React.CSSProperties => ({
@@ -189,8 +242,10 @@ export const IncidentForm: React.FC<IncidentFormProps> = ({ projectId, onClose, 
           {fieldErrors.photo && <p style={{ color: colors.statusCritical, fontSize: 12, margin: '4px 0 0' }}>{fieldErrors.photo}</p>}
         </div>
 
+        {submitError && <p style={{ color: colors.statusCritical, fontSize: 12, margin: '0 0 12px' }}>{submitError}</p>}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: spacing['3'] }}>
           <Btn variant="ghost" onClick={handleClose} style={{ minHeight: '56px', minWidth: '56px' }}>Cancel</Btn>
+          <Btn variant="primary" onClick={handleSubmit} disabled={submitting} style={{ minHeight: '56px' }}>{submitting ? 'Saving...' : 'Save Incident'}</Btn>
         </div>
       </div>
     </div>

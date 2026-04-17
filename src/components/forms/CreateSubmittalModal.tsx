@@ -24,6 +24,7 @@ const fields: FieldConfig[] = [
   { name: 'subcontractor', label: 'Subcontractor', type: 'text', placeholder: 'Subcontractor or supplier name' },
   { name: 'due_date', label: 'Due Date', type: 'date' },
   { name: 'description', label: 'Description', type: 'textarea', placeholder: 'Describe the submittal contents and any special requirements' },
+  { name: 'related_rfi_id', label: 'Related RFI', type: 'text', placeholder: 'RFI ID (optional)' },
 ]
 
 const CreateSubmittalModal: React.FC<CreateSubmittalModalProps> = ({ open, onClose, onSubmit }) => (

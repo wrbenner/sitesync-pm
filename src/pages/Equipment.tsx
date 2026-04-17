@@ -1,6 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react'
-import { Truck, Wrench, BarChart3, AlertTriangle, RefreshCw, LogIn, LogOut, Calendar } from 'lucide-react'
+import { Truck, Wrench, BarChart3, AlertTriangle, RefreshCw, LogIn, LogOut, Calendar, Plus } from 'lucide-react'
 import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton } from '../components/Primitives'
+import { supabase } from '../lib/supabase'
+import { toast } from 'sonner'
 import { DataTable, createColumnHelper } from '../components/shared/DataTable'
 import { ExportButton } from '../components/shared/ExportButton'
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme'
@@ -295,6 +297,7 @@ export const EquipmentPage: React.FC = () => {
   } = useEquipmentStore()
 
   const [activeTab, setActiveTab] = useState<TabKey>('fleet')
+  const [addOpen, setAddOpen] = useState(false)
 
   useEffect(() => {
     if (projectId) {
@@ -406,6 +409,7 @@ export const EquipmentPage: React.FC = () => {
           <Btn variant="ghost" size="sm" icon={<RefreshCw size={14} />} onClick={handleRefresh}>
             Refresh
           </Btn>
+          <Btn variant="primary" size="sm" icon={<Plus size={14} />} onClick={() => setAddOpen(true)}>Add Equipment</Btn>
           <ExportButton pdfFilename="SiteSync_Equipment_Report" />
         </div>
       }
@@ -569,7 +573,58 @@ export const EquipmentPage: React.FC = () => {
           </div>
         </Card>
       )}
+      {addOpen && projectId && (
+        <AddEquipmentModal projectId={projectId} onClose={() => setAddOpen(false)} onCreated={() => loadEquipment(projectId)} />
+      )}
     </PageContainer>
+  )
+}
+
+interface AddEquipmentModalProps { projectId: string; onClose: () => void; onCreated: () => void }
+const AddEquipmentModal: React.FC<AddEquipmentModalProps> = ({ projectId, onClose, onCreated }) => {
+  const [form, setForm] = useState({ name: '', type: '', serial_number: '', status: 'idle' })
+  const [saving, setSaving] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+  const submit = async () => {
+    if (!form.name.trim()) { setErr('Name required'); return; }
+    setSaving(true); setErr(null);
+    try {
+      const { error } = await supabase.from('equipment').insert({
+        project_id: projectId,
+        name: form.name,
+        type: form.type || null,
+        serial_number: form.serial_number || null,
+        status: form.status,
+      })
+      if (error) throw error
+      toast.success('Equipment added')
+      onCreated(); onClose();
+    } catch (e) { setErr(e instanceof Error ? e.message : 'Failed'); } finally { setSaving(false); }
+  }
+  const input: React.CSSProperties = { width: '100%', padding: '8px 12px', border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base, marginBottom: 12, fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box' };
+  return (
+    <div role="dialog" aria-modal="true" style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.45)' }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{ backgroundColor: '#fff', borderRadius: borderRadius.lg, padding: 24, width: '100%', maxWidth: 480 }}>
+        <h2 style={{ margin: 0, marginBottom: 16, fontSize: 18 }}>Add Equipment</h2>
+        <label style={{ fontSize: 13, fontWeight: 500 }}>Name *</label>
+        <input style={input} value={form.name} onChange={(e) => setForm(p => ({ ...p, name: e.target.value }))} />
+        <label style={{ fontSize: 13, fontWeight: 500 }}>Type</label>
+        <input style={input} value={form.type} onChange={(e) => setForm(p => ({ ...p, type: e.target.value }))} placeholder="e.g. crane, excavator" />
+        <label style={{ fontSize: 13, fontWeight: 500 }}>Serial Number</label>
+        <input style={input} value={form.serial_number} onChange={(e) => setForm(p => ({ ...p, serial_number: e.target.value }))} />
+        <label style={{ fontSize: 13, fontWeight: 500 }}>Status</label>
+        <select style={input} value={form.status} onChange={(e) => setForm(p => ({ ...p, status: e.target.value }))}>
+          <option value="idle">Idle</option>
+          <option value="active">Active</option>
+          <option value="maintenance">Maintenance</option>
+        </select>
+        {err && <p style={{ color: colors.statusCritical, margin: 0, fontSize: 12 }}>{err}</p>}
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
+          <Btn variant="ghost" onClick={onClose}>Cancel</Btn>
+          <Btn variant="primary" onClick={submit} disabled={saving}>{saving ? 'Saving...' : 'Add'}</Btn>
+        </div>
+      </div>
+    </div>
   )
 }
 

@@ -7,6 +7,7 @@ import { useFieldCaptures } from '../../hooks/queries';
 import { useCreateFieldCapture } from '../../hooks/mutations';
 import { useSyncStatus } from '../../hooks/useSyncStatus';
 import { saveToIDB, type OverlayMeta } from './types';
+import { supabase } from '../../lib/supabase';
 import { PhotoOverlay, CaptureButtons } from './CaptureUpload';
 import { EmptyState, PhotoGrid, MapViewContainer } from './CaptureGrid';
 import {
@@ -33,6 +34,7 @@ const FieldCaptureInner: React.FC = () => {
 
   // Post-capture overlay state
   const [overlayDataUrl, setOverlayDataUrl] = useState<string | null>(null);
+  const [overlayFile, setOverlayFile] = useState<File | null>(null);
   const [overlayLocation, setOverlayLocation] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -118,6 +120,7 @@ const FieldCaptureInner: React.FC = () => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setOverlayFile(file);
 
     const reader = new FileReader();
     reader.onload = ev => {
@@ -170,9 +173,19 @@ const FieldCaptureInner: React.FC = () => {
 
     setIsSaving(true);
     try {
-      await createFieldCapture.mutateAsync({ projectId, data: capturePayload });
+      let fileUrl: string | null = overlayDataUrl;
+      if (overlayFile) {
+        const path = `${projectId}/${Date.now()}-${overlayFile.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+        const { error: upErr } = await supabase.storage.from('field-captures').upload(path, overlayFile, { upsert: false });
+        if (!upErr) {
+          const { data: pub } = supabase.storage.from('field-captures').getPublicUrl(path);
+          fileUrl = pub?.publicUrl ?? fileUrl;
+        }
+      }
+      await createFieldCapture.mutateAsync({ projectId, data: { ...capturePayload, file_url: fileUrl } });
       addToast('success', 'Photo saved');
       setOverlayDataUrl(null);
+      setOverlayFile(null);
       setOverlayLocation(null);
     } catch {
       addToast('error', 'Failed to save photo');
@@ -183,6 +196,7 @@ const FieldCaptureInner: React.FC = () => {
 
   const handleOverlayCancel = () => {
     setOverlayDataUrl(null);
+    setOverlayFile(null);
     setOverlayLocation(null);
   };
 

@@ -23,6 +23,7 @@ const fields: FieldConfig[] = [
   { name: 'spec_section', label: 'Spec Section', type: 'text', placeholder: 'e.g. 05 12 00', row: 2 },
   { name: 'drawing_reference', label: 'Drawing Reference', type: 'text', placeholder: 'e.g. A 001, S 201', row: 2 },
   { name: 'due_date', label: 'Due Date', type: 'date' },
+  { name: 'related_submittal_id', label: 'Related Submittal', type: 'text', placeholder: 'Submittal ID (optional)' },
 ]
 
 const CreateRFIModal: React.FC<CreateRFIModalProps> = ({ open, onClose, onSubmit, initialValues }) => (

@@ -5,6 +5,8 @@ import { ShieldCheck } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme';
 import { toast } from 'sonner';
 import { CHECKLIST_TEMPLATES, type TemplateKey } from './safetyTypes';
+import { supabase } from '../../lib/supabase';
+import { useProjectId } from '../../hooks/useProjectId';
 
 // ── Inspection columns ────────────────────────────────────────
 
@@ -147,9 +149,42 @@ interface InspectionsTabProps {
 }
 
 export const InspectionsTab: React.FC<InspectionsTabProps> = ({ inspections, passCount, failCount }) => {
+  const projectId = useProjectId();
   const [activeTemplate, setActiveTemplate] = React.useState<TemplateKey | null>(null);
   const [checklistResults, setChecklistResults] = React.useState<Record<string, 'pass' | 'fail' | 'na' | null>>({});
   const [checklistNotes, setChecklistNotes] = React.useState<Record<string, string>>({});
+  const [saving, setSaving] = React.useState(false);
+
+  const handleSaveInspection = async () => {
+    if (!activeTemplate || !projectId) { toast.error('No project or template selected'); return; }
+    setSaving(true);
+    try {
+      const tmpl = CHECKLIST_TEMPLATES[activeTemplate];
+      const total = tmpl.items.length;
+      const failed = Object.values(checklistResults).filter((r) => r === 'fail').length;
+      const passed = Object.values(checklistResults).filter((r) => r === 'pass').length;
+      const score = total > 0 ? Math.round((passed / total) * 100) : 0;
+      const status = failed > 0 ? 'failed' : 'passed';
+      const findings = tmpl.items.map((item, idx) => ({
+        item, result: checklistResults[idx] ?? null, note: checklistNotes[idx] ?? '',
+      }));
+      const { error } = await supabase.from('safety_inspections').insert({
+        project_id: projectId,
+        date: new Date().toISOString().slice(0, 10),
+        type: tmpl.label,
+        status,
+        score,
+        findings,
+      });
+      if (error) throw error;
+      toast.success('Inspection saved');
+      setActiveTemplate(null); setChecklistResults({}); setChecklistNotes({});
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to save inspection');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <>
@@ -205,7 +240,7 @@ export const InspectionsTab: React.FC<InspectionsTabProps> = ({ inspections, pas
                 {Object.values(checklistResults).filter(Boolean).length} of {CHECKLIST_TEMPLATES[activeTemplate].items.length} items reviewed
                 {Object.values(checklistResults).filter((r) => r === 'fail').length > 0 && <span style={{ marginLeft: spacing['2'], color: colors.statusCritical, fontWeight: typography.fontWeight.medium }}>{Object.values(checklistResults).filter((r) => r === 'fail').length} failed</span>}
               </span>
-              <Btn variant="primary" onClick={() => { toast.info('Inspection saved. Backend required to persist.'); setActiveTemplate(null); setChecklistResults({}); setChecklistNotes({}); }} style={{ minHeight: '56px' }}>Complete Inspection</Btn>
+              <Btn variant="primary" onClick={handleSaveInspection} disabled={saving} style={{ minHeight: '56px' }}>{saving ? 'Saving...' : 'Complete Inspection'}</Btn>
             </div>
           </>
         )}

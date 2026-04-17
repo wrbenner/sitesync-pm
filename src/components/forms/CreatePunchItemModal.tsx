@@ -39,6 +39,7 @@ const fields: FieldConfig[] = [
     { value: 'project_manager', label: 'Project Manager' },
     { value: 'owners_rep', label: "Owner's Rep" },
   ]},
+  { name: 'drawing_id', label: 'Drawing Sheet', type: 'text', placeholder: 'Drawing sheet ID or reference (optional)' },
 ]
 
 const CreatePunchItemModal: React.FC<CreatePunchItemModalProps> = ({ open, onClose, onSubmit }) => (

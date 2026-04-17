@@ -22,6 +22,7 @@ export const rfiSchema = z.object({
   spec_section: z.string().default(''),
   drawing_reference: z.string().default(''),
   due_date: z.string().default(''),
+  related_submittal_id: z.string().default(''),
 })
 
 export type RFIFormValues = z.infer<typeof rfiSchema>
@@ -35,6 +36,7 @@ export const submittalSchema = z.object({
   subcontractor: z.string().default(''),
   due_date: z.string().default(''),
   description: z.string().default(''),
+  related_rfi_id: z.string().default(''),
 })
 
 export type SubmittalFormValues = z.infer<typeof submittalSchema>
@@ -50,6 +52,7 @@ export const punchItemSchema = z.object({
   priority: z.enum(['low', 'medium', 'high', 'critical']).default('medium'),
   due_date: z.string().default(''),
   description: z.string().default(''),
+  drawing_id: z.string().default(''),
 })
 
 export type PunchItemFormValues = z.infer<typeof punchItemSchema>
