@@ -48,13 +48,13 @@ export default defineConfig(({ mode }) => {
             if (id.includes('/@supabase/')) return 'vendor-supabase'
             // Heavy libs (lazy loaded per page)
             if (id.includes('/three/') || id.includes('/@react-three/')) return 'vendor-three'
-            if (id.includes('/@react-pdf/') || id.includes('/pdfjs-dist/')) return 'vendor-pdf'
-            if (id.includes('/maplibre-gl/') || id.includes('/react-map-gl/')) return 'vendor-maps'
+            // Split the PDF stack: generator (@react-pdf/renderer + pdf-lib) vs viewer (pdfjs-dist + react-pdf)
+            if (id.includes('/@react-pdf/') || id.includes('/pdf-lib/')) return 'vendor-pdf-gen'
+            if (id.includes('/pdfjs-dist/') || id.includes('/react-pdf/')) return 'vendor-pdf-viewer'
             if (id.includes('/@tiptap/') || id.includes('/prosemirror') || id.includes('/yjs/')) return 'vendor-editor'
             if (id.includes('/recharts/') || id.includes('/d3-')) return 'vendor-charts'
             if (id.includes('/@dnd-kit/')) return 'vendor-dndkit'
             if (id.includes('/@liveblocks/')) return 'vendor-liveblocks'
-            if (id.includes('/tesseract/')) return 'vendor-ocr'
             if (id.includes('/@sentry/')) return 'vendor-sentry'
             if (id.includes('/xlsx/')) return 'vendor-xlsx'
             if (id.includes('/posthog/')) return 'vendor-posthog'
