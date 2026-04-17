@@ -6,7 +6,7 @@ import { ErrorBoundary } from '../components/ErrorBoundary';
 import { PageContainer, Card, SectionHeader, MetricBox, StatusTag, DetailPanel, RelatedItems, Skeleton, useToast } from '../components/Primitives';
 import { MetricCardSkeleton, TableSkeleton } from '../components/ui/Skeletons';
 import { Btn } from '../components/Primitives';
-import { colors, spacing, typography, borderRadius, shadows, touchTarget } from '../styles/theme';
+import { colors, spacing, typography, borderRadius, shadows, touchTarget, zIndex, transitions } from '../styles/theme';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import { useQuery } from '../hooks/useQuery';
 import { fetchBudgetDivisions, getCostCodesByDivision } from '../api/endpoints/budget';
@@ -64,24 +64,137 @@ const AddBudgetLineItemModal: React.FC<AddBudgetLineItemModalProps> = ({ project
       onCreated(); onClose();
     } catch (e) { setErr(e instanceof Error ? e.message : 'Failed'); } finally { setSaving(false); }
   };
-  const input: React.CSSProperties = { width: '100%', padding: '8px 12px', border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base, marginBottom: 12, fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box' };
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    height: touchTarget.comfortable,
+    padding: `0 ${spacing['3']}`,
+    border: `1px solid ${colors.borderDefault}`,
+    borderRadius: borderRadius.md,
+    marginBottom: spacing['4'],
+    fontSize: typography.fontSize.body,
+    fontFamily: typography.fontFamily,
+    boxSizing: 'border-box',
+    color: colors.textPrimary,
+    backgroundColor: colors.surfacePage,
+    outline: 'none',
+    transition: transitions.quick,
+    display: 'block',
+  };
+
+  const labelStyle: React.CSSProperties = {
+    display: 'block',
+    fontSize: typography.fontSize.label,
+    fontWeight: typography.fontWeight.medium,
+    color: colors.textSecondary,
+    marginBottom: spacing['1'],
+    textTransform: 'uppercase',
+    letterSpacing: typography.letterSpacing.wider,
+  };
+
+  const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    e.target.style.borderColor = colors.primaryOrange;
+    e.target.style.boxShadow = `0 0 0 3px ${colors.orangeSubtle}`;
+  };
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    e.target.style.borderColor = colors.borderDefault;
+    e.target.style.boxShadow = 'none';
+  };
+
   return (
-    <div role="dialog" aria-modal="true" style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.45)' }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{ backgroundColor: '#fff', borderRadius: borderRadius.lg, padding: 24, width: '100%', maxWidth: 480 }}>
-        <h2 style={{ margin: 0, marginBottom: 16, fontSize: 18 }}>Add Budget Line Item</h2>
-        <label style={{ fontSize: 13, fontWeight: 500 }}>Description *</label>
-        <input style={input} value={form.description} onChange={(e) => setForm(p => ({ ...p, description: e.target.value }))} />
-        <label style={{ fontSize: 13, fontWeight: 500 }}>CSI Code / Division</label>
-        <input style={input} value={form.csi_code} onChange={(e) => setForm(p => ({ ...p, csi_code: e.target.value }))} placeholder="e.g. 03 30 00" />
-        <label style={{ fontSize: 13, fontWeight: 500 }}>Amount</label>
-        <input style={input} type="number" value={form.original_amount} onChange={(e) => setForm(p => ({ ...p, original_amount: e.target.value }))} />
-        {err && <p style={{ color: colors.statusCritical, margin: 0, fontSize: 12 }}>{err}</p>}
-        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
+    <motion.div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Add Budget Line Item"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.15 }}
+      style={{
+        position: 'fixed', inset: 0, zIndex: zIndex.modal,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        backgroundColor: colors.overlayScrim,
+        padding: spacing['4'],
+      }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.96, y: 6 }}
+        transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+        style={{
+          backgroundColor: colors.surfaceRaised,
+          borderRadius: borderRadius.xl,
+          padding: spacing['6'],
+          width: '100%',
+          maxWidth: 480,
+          boxShadow: shadows.panel,
+          border: `1px solid ${colors.borderDefault}`,
+        }}
+      >
+        <h2 style={{
+          margin: 0, marginBottom: spacing['5'],
+          fontSize: typography.fontSize.subtitle,
+          fontWeight: typography.fontWeight.semibold,
+          color: colors.textPrimary,
+          lineHeight: typography.lineHeight.tight,
+        }}>Add Budget Line Item</h2>
+
+        <label htmlFor="bliDesc" style={labelStyle}>Description *</label>
+        <input
+          id="bliDesc"
+          style={inputStyle}
+          value={form.description}
+          onChange={(e) => setForm(p => ({ ...p, description: e.target.value }))}
+          placeholder="e.g. Structural Concrete"
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+        />
+
+        <label htmlFor="bliCsi" style={labelStyle}>CSI Code / Division</label>
+        <input
+          id="bliCsi"
+          style={inputStyle}
+          value={form.csi_code}
+          onChange={(e) => setForm(p => ({ ...p, csi_code: e.target.value }))}
+          placeholder="e.g. 03 30 00"
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+        />
+
+        <label htmlFor="bliAmount" style={labelStyle}>Amount</label>
+        <input
+          id="bliAmount"
+          type="number"
+          style={inputStyle}
+          value={form.original_amount}
+          onChange={(e) => setForm(p => ({ ...p, original_amount: e.target.value }))}
+          placeholder="0.00"
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+        />
+
+        <AnimatePresence>
+          {err && (
+            <motion.p
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.15 }}
+              style={{ color: colors.statusCritical, margin: `0 0 ${spacing['3']}`, fontSize: typography.fontSize.sm }}
+            >
+              {err}
+            </motion.p>
+          )}
+        </AnimatePresence>
+
+        <div style={{ display: 'flex', gap: spacing['2'], justifyContent: 'flex-end', marginTop: spacing['2'] }}>
           <Btn variant="ghost" onClick={onClose}>Cancel</Btn>
           <Btn variant="primary" onClick={submit} disabled={saving}>{saving ? 'Saving...' : 'Add'}</Btn>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };
 
@@ -128,7 +241,7 @@ function invoiceStatusDot(status: string | null): string {
   }
 }
 
-const DivisionDrawerContent: React.FC<{ division: MappedDivision; projectId: string }> = ({ division, projectId }) => {
+const DivisionDrawerContent = React.memo<{ division: MappedDivision; projectId: string }>(({ division, projectId }) => {
   const [activeTab, setActiveTab] = useState<DivisionDrawerTab>('cost-codes');
   const { data, loading } = useQuery(
     `division-detail-${division.id}`,
@@ -232,7 +345,10 @@ const DivisionDrawerContent: React.FC<{ division: MappedDivision; projectId: str
       {/* Cost Codes tab */}
       {data && activeTab === 'cost-codes' && (
         data.costCodes.length === 0 ? (
-          <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0 }}>No cost entries recorded.</p>
+          <div style={{ padding: `${spacing['8']} ${spacing['4']}`, textAlign: 'center' }}>
+            <p style={{ margin: 0, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textSecondary }}>No cost entries yet</p>
+            <p style={{ margin: `${spacing['1']} 0 0`, fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Cost codes will appear here as invoices are processed</p>
+          </div>
         ) : (
           <div style={{ border: `1px solid ${colors.borderSubtle}`, borderRadius: borderRadius.base, overflow: 'hidden' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '90px 1fr 80px 70px 100px 85px', padding: `${spacing['2']} ${spacing['3']}`, borderBottom: `1px solid ${colors.borderSubtle}`, backgroundColor: colors.surfaceInset }}>
@@ -260,7 +376,10 @@ const DivisionDrawerContent: React.FC<{ division: MappedDivision; projectId: str
       {/* Invoices tab */}
       {data && activeTab === 'invoices' && (
         data.invoices.length === 0 ? (
-          <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0 }}>No invoices recorded for this division.</p>
+          <div style={{ padding: `${spacing['8']} ${spacing['4']}`, textAlign: 'center' }}>
+            <p style={{ margin: 0, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textSecondary }}>No invoices recorded</p>
+            <p style={{ margin: `${spacing['1']} 0 0`, fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Invoices tied to this division will appear here</p>
+          </div>
         ) : (
           <div style={{ border: `1px solid ${colors.borderSubtle}`, borderRadius: borderRadius.base, overflow: 'hidden' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '85px 1fr 80px 80px 90px 85px', padding: `${spacing['2']} ${spacing['3']}`, borderBottom: `1px solid ${colors.borderSubtle}`, backgroundColor: colors.surfaceInset }}>
@@ -291,7 +410,10 @@ const DivisionDrawerContent: React.FC<{ division: MappedDivision; projectId: str
       {/* Change Orders tab */}
       {data && activeTab === 'change-orders' && (
         data.changeOrders.length === 0 ? (
-          <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0 }}>No change orders linked to this division.</p>
+          <div style={{ padding: `${spacing['8']} ${spacing['4']}`, textAlign: 'center' }}>
+            <p style={{ margin: 0, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textSecondary }}>No change orders</p>
+            <p style={{ margin: `${spacing['1']} 0 0`, fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Change orders affecting this division will appear here</p>
+          </div>
         ) : (
           <div style={{ border: `1px solid ${colors.borderSubtle}`, borderRadius: borderRadius.base, overflow: 'hidden' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr 90px 110px', padding: `${spacing['2']} ${spacing['3']}`, borderBottom: `1px solid ${colors.borderSubtle}`, backgroundColor: colors.surfaceInset }}>
@@ -320,7 +442,7 @@ const DivisionDrawerContent: React.FC<{ division: MappedDivision; projectId: str
       )}
     </div>
   );
-};
+});
 
 const BudgetPage: React.FC = () => {
   const appNavigate = useAppNavigate();
@@ -342,6 +464,7 @@ const BudgetPage: React.FC = () => {
   const [addLineOpen, setAddLineOpen] = useState(false);
   const qc = useQueryClient();
   const [hoveredDivId, setHoveredDivId] = useState<string | null>(null);
+  const [hoveredCOId, setHoveredCOId] = useState<string | null>(null);
   const [editingCell, setEditingCell] = useState<{ divId: string; field: 'spent' | 'progress'; value: string } | null>(null);
   const { hasPermission } = usePermissions();
   const canEditBudget = hasPermission('budget.edit');
@@ -503,13 +626,16 @@ const BudgetPage: React.FC = () => {
       actions={<Btn variant="secondary" size="sm" icon={<Download size={14} />} onClick={() => addToast('info', 'Exporting budget data to CSV...')}>Export CSV</Btn>}
     >
       <BudgetUpload open={uploadOpen} onClose={() => setUploadOpen(false)} onSuccess={() => setUploadOpen(false)} />
-      {addLineOpen && projectId && (
-        <AddBudgetLineItemModal
-          projectId={projectId}
-          onClose={() => setAddLineOpen(false)}
-          onCreated={() => { void refetchCost(); qc.invalidateQueries({ queryKey: ['budget_divisions'] }); }}
-        />
-      )}
+      <AnimatePresence>
+        {addLineOpen && projectId && (
+          <AddBudgetLineItemModal
+            key="add-budget-line-modal"
+            projectId={projectId}
+            onClose={() => setAddLineOpen(false)}
+            onCreated={() => { void refetchCost(); qc.invalidateQueries({ queryKey: ['budget_divisions'] }); }}
+          />
+        )}
+      </AnimatePresence>
 
       {isEmpty ? (
         <div style={{ padding: spacing['6'], backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.xl, border: `1px solid ${colors.borderDefault}` }}>
@@ -612,7 +738,7 @@ const BudgetPage: React.FC = () => {
           animate="visible"
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(4, 1fr)',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
             gap: spacing.lg,
           }}
         >
@@ -631,23 +757,25 @@ const BudgetPage: React.FC = () => {
         </motion.div>
       </div>
 
-      {/* Contingency Drawdown */}
-      <motion.div
-        variants={fadeUp}
-        initial={reducedMotion ? false : 'hidden'}
-        animate="visible"
-        style={{ marginBottom: spacing['4'] }}
-      >
-        <p style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.4px', margin: 0, marginBottom: spacing['2'] }}>Contingency Drawdown</p>
-        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
-          <div role="progressbar" aria-label="Contingency drawdown" aria-valuenow={contingencyPct} aria-valuemin={0} aria-valuemax={100} style={{ flex: 1, height: 12, backgroundColor: colors.surfaceInset, borderRadius: borderRadius.full, overflow: 'hidden', display: 'flex' }}>
-            <div style={{ width: `${contingencyPct}%`, height: '100%', backgroundColor: colors.statusPending, borderRadius: borderRadius.full }} />
+      {/* Contingency Drawdown — only shown when a contingency budget has been set */}
+      {contingencyBudget > 0 && (
+        <motion.div
+          variants={fadeUp}
+          initial={reducedMotion ? false : 'hidden'}
+          animate="visible"
+          style={{ marginBottom: spacing['4'] }}
+        >
+          <p style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.4px', margin: 0, marginBottom: spacing['2'] }}>Contingency Drawdown</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
+            <div role="progressbar" aria-label="Contingency drawdown" aria-valuenow={contingencyPct} aria-valuemin={0} aria-valuemax={100} style={{ flex: 1, height: 12, backgroundColor: colors.surfaceInset, borderRadius: borderRadius.full, overflow: 'hidden', display: 'flex' }}>
+              <div style={{ width: `${contingencyPct}%`, height: '100%', backgroundColor: colors.statusPending, borderRadius: borderRadius.full }} />
+            </div>
+            <span style={{ fontSize: typography.fontSize.caption, color: colors.textSecondary, whiteSpace: 'nowrap', flexShrink: 0 }}>
+              {fmt(contingencyRemaining)} of {fmt(contingencyBudget)} remaining
+            </span>
           </div>
-          <span style={{ fontSize: typography.fontSize.caption, color: colors.textSecondary, whiteSpace: 'nowrap', flexShrink: 0 }}>
-            {fmt(contingencyRemaining)} of {fmt(contingencyBudget)} remaining
-          </span>
-        </div>
-      </motion.div>
+        </motion.div>
+      )}
 
       {/* AI Insights Panel */}
       {aiConfigured ? (
@@ -757,11 +885,15 @@ const BudgetPage: React.FC = () => {
             padding: `${spacing['3']} ${spacing['4']}`,
             backgroundColor: colors.surfaceInset,
             borderRadius: borderRadius.base,
-            fontSize: typography.fontSize.sm,
-            color: colors.textTertiary,
+            display: 'flex',
+            alignItems: 'center',
+            gap: spacing['2'],
           }}
         >
-          AI analysis unavailable — configure OpenAI key in Settings
+          <Sparkles size={13} color={colors.textTertiary} style={{ flexShrink: 0 }} />
+          <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>
+            AI variance analysis unavailable — configure an OpenAI key in Settings to enable
+          </span>
         </div>
       )}
 
@@ -1043,10 +1175,16 @@ const BudgetPage: React.FC = () => {
                   </div>
                 }
               />
-              <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'] }}>
+              <motion.div
+                variants={staggerContainer}
+                initial={reducedMotion ? false : 'hidden'}
+                animate="visible"
+                style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'] }}
+              >
                 {budgetAnomalies.map((anomaly, i) => (
-                  <div
+                  <motion.div
                     key={i}
+                    variants={fadeUp}
                     style={{
                       display: 'flex',
                       alignItems: 'flex-start',
@@ -1081,9 +1219,9 @@ const BudgetPage: React.FC = () => {
                     }}>
                       {anomaly.variancePct.toFixed(0)}%
                     </span>
-                  </div>
+                  </motion.div>
                 ))}
-              </div>
+              </motion.div>
             </div>
           )}
 
@@ -1125,13 +1263,29 @@ const BudgetPage: React.FC = () => {
                 const coStatus = co.status as ChangeOrderState || 'draft';
                 const typeConfig = getCOTypeConfig(coType);
                 const statusConfig = getCOStatusConfig(coStatus);
+                const coKey = String(co.id);
+                const isHoveredCO = hoveredCOId === coKey;
                 return (
-                  <div role="row" tabIndex={0} key={co.id} onClick={() => setSelectedCO(co)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedCO(co); } }} style={{
-                    display: 'grid', gridTemplateColumns: '80px 60px 1fr 120px 140px',
-                    padding: `${spacing.lg} ${spacing.xl}`,
-                    borderBottom: i < allChangeOrders.length - 1 ? `1px solid ${colors.borderLight}` : 'none',
-                    alignItems: 'center', cursor: 'pointer',
-                  }}>
+                  <div
+                    role="row"
+                    tabIndex={0}
+                    key={co.id}
+                    onClick={() => setSelectedCO(co)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedCO(co); } }}
+                    onMouseEnter={() => setHoveredCOId(coKey)}
+                    onMouseLeave={() => setHoveredCOId(null)}
+                    style={{
+                      display: 'grid', gridTemplateColumns: '80px 60px 1fr 120px 140px',
+                      padding: `${spacing.lg} ${spacing.xl}`,
+                      borderBottom: i < allChangeOrders.length - 1 ? `1px solid ${colors.borderLight}` : 'none',
+                      alignItems: 'center', cursor: 'pointer',
+                      backgroundColor: isHoveredCO ? colors.surfaceHover : 'transparent',
+                      transition: `background-color ${transitions.quick}`,
+                      outline: 'none',
+                    }}
+                    onFocus={(e) => { e.currentTarget.style.outline = `2px solid ${colors.primaryOrange}`; e.currentTarget.style.outlineOffset = '-2px'; }}
+                    onBlur={(e) => { e.currentTarget.style.outline = 'none'; }}
+                  >
                     <span role="cell" style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>{co.coNumber}</span>
                     <span role="cell" style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: typeConfig.color }}>{typeConfig.shortLabel}</span>
                     <span role="cell" style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, display: 'inline-flex', alignItems: 'center', gap: spacing.xs }}>
