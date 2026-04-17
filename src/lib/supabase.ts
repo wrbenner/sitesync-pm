@@ -3,17 +3,17 @@ import type { Session } from '@supabase/supabase-js'
 import type { Database, Profile } from '../types/database'
 import { UserRole } from '../types/database'
 
-// Supabase config: env vars are injected at build time by Vite.
-// Fallbacks exist because deployment pipelines (Vercel) may not always
-// have VITE_* vars configured. The anon key is designed to be public —
-// RLS policies enforce all access control server-side.
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://hypxrmcppjfbtlwuoafc.supabase.co'
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5cHhybWNwcGpmYnRsd3VvYWZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI5NzMzNTMsImV4cCI6MjA1ODU0OTM1M30.gNMsHHCEYTkMMAuaJUBWJyXVDol76LkFh3DQ_MpGBnQ'
-if (!import.meta.env.VITE_SUPABASE_URL) {
-  console.warn('[SiteSync] VITE_SUPABASE_URL not set — using default. Configure in your deployment environment.')
-}
-if (!import.meta.env.VITE_SUPABASE_ANON_KEY) {
-  console.warn('[SiteSync] VITE_SUPABASE_ANON_KEY not set — using default. Configure in your deployment environment.')
+// Supabase config: env vars are injected at build time by Vite. No fallbacks —
+// baking credentials into the bundle (and git history) is a security risk even
+// for the anon key, because it hard-codes which project the build connects to
+// and prevents rotation. Deployments MUST set these explicitly.
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error(
+    '[SiteSync] Missing required env vars: VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY. ' +
+    'Configure these in your deployment environment before building.',
+  )
 }
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {

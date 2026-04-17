@@ -31,8 +31,8 @@ kill-session
 
 # Session context files (generated, not source)
 
-# Engine logs (historical records, not source)
-engine-logs/*.log
+# Engine logs (historical records, not source — snapshots may contain secrets)
+engine-logs/
 
 # Playwright test output
 playwright-report/
