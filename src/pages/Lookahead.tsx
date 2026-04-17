@@ -41,7 +41,7 @@ export const Lookahead: React.FC = () => {
   const { data: lookaheadTasks = [], isLoading: tasksLoading, error: tasksError, refetch } = useLookaheadTasks(projectId);
 
   // State for creating new task
-  const [ setIsCreating] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const [weatherForecast, setWeatherForecast] = useState<WeatherDay[]>([]);
 
   React.useEffect(() => {
@@ -252,6 +252,15 @@ export const Lookahead: React.FC = () => {
           onConstraintToggle={handleConstraintToggle}
         />
       </Card>
+
+      {isCreating && (
+        <Card padding={spacing['4']}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: spacing['3'] }}>
+            <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textPrimary }}>Task creation coming soon.</p>
+            <Btn variant="secondary" size="sm" onClick={() => setIsCreating(false)}>Close</Btn>
+          </div>
+        </Card>
+      )}
     </PageContainer>
   );
 };

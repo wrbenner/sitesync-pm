@@ -480,11 +480,9 @@ export const Safety: React.FC = () => {
   const { data: dailyLogsResult } = useDailyLogs(projectId)
   const dailyLogs = dailyLogsResult?.data
 
-  // Use mock incidents when API returns empty (prototype fallback)
-  const displayIncidents: unknown[] = (incidents || []).length > 0 ? (incidents || []) : []
+  const displayIncidents: unknown[] = incidents || []
 
-  // Use mock corrective actions when API returns empty (prototype fallback)
-  const displayCAs: unknown[] = (correctiveActions || []).length > 0 ? (correctiveActions || []) : []
+  const displayCAs: unknown[] = correctiveActions || []
 
   // ── Real-time subscriptions ────────────────────────────────
 
@@ -520,7 +518,7 @@ export const Safety: React.FC = () => {
     .sort((a: any, b: unknown) => new Date(b.date).getTime() - new Date(a.date).getTime())[0] ?? null
 
   const daysSinceIncident = lastRecordableIncident
-    ? Math.floor((0 /* TODO: move to state */ - new Date(lastRecordableIncident.date).getTime()) / 86400000)
+    ? Math.floor((Date.now() - new Date(lastRecordableIncident.date).getTime()) / 86400000)
     : null
 
   const computedHours = dailyLogs?.reduce((s: number, l: unknown) => s + (l.total_hours || 0), 0) ?? 0

@@ -220,6 +220,9 @@ const NotificationSettings: React.FC = () => {
         if (typeof row.digest_time === 'string' && row.digest_time) {
           setDigestTime(row.digest_time);
         }
+        if (typeof row.timezone === 'string' && row.timezone) {
+          setTimezone(row.timezone);
+        }
       }
 
       setLoading(false);
@@ -283,6 +286,25 @@ const NotificationSettings: React.FC = () => {
       }
     },
     [user],
+  );
+
+  const handleTimezoneChange = useCallback(
+    async (tz: string) => {
+      if (!user) return;
+      const previous = timezone;
+      setTimezone(tz);
+
+      const { error } = await supabase.from('notification_preferences').upsert(
+        { user_id: user.id, timezone: tz },
+        { onConflict: 'user_id' },
+      );
+
+      if (error) {
+        toast.error('Failed to save timezone.');
+        setTimezone(previous);
+      }
+    },
+    [user, timezone],
   );
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -604,7 +626,7 @@ const NotificationSettings: React.FC = () => {
                   </label>
                   <select
                     value={timezone}
-                    onChange={(e) => setTimezone(e.target.value)}
+                    onChange={(e) => handleTimezoneChange(e.target.value)}
                     style={{
                       width: '100%',
                       height: 40,

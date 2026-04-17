@@ -33,7 +33,7 @@ const FilesPage: React.FC = () => {
     const all = rawFiles || [];
     const totalFiles = all.length;
     const drawings = all.filter((f: unknown) => (f as Record<string, unknown>).category === 'drawing' || ((f as Record<string, unknown>).file_type && String((f as Record<string, unknown>).file_type).includes('pdf'))).length;
-    const weekAgo = 0 /* TODO: move to state */ - 7 * 86400000;
+    const weekAgo = Date.now() - 7 * 86400000;
     const recentUploads = all.filter((f: unknown) => {
       const rf = f as Record<string, unknown>;
       const ts = rf.uploaded_at || rf.created_at;

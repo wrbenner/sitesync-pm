@@ -71,13 +71,13 @@ export const Safety: React.FC = () => {
     .sort((a: unknown, b: unknown) => new Date((b as Record<string, unknown>).date as string).getTime() - new Date((a as Record<string, unknown>).date as string).getTime())[0] ?? null;
 
   const daysSinceIncident = lastRecordableIncident
-    ? Math.floor((0 /* TODO: move to state */ - new Date((lastRecordableIncident as Record<string, unknown>).date as string).getTime()) / 86400000)
+    ? Math.floor((Date.now() - new Date((lastRecordableIncident as Record<string, unknown>).date as string).getTime()) / 86400000)
     : null;
 
   const computedHours = dailyLogs?.reduce((s: number, l: unknown) => s + ((l as Record<string, unknown>).total_hours as number || 0), 0) ?? 0;
-  const totalHoursWorked = computedHours > 0 ? computedHours : 250000;
+  const totalHoursWorked = computedHours > 0 ? computedHours : null;
   const recordableCount = displayIncidents.filter((i: unknown) => recordableSeverities.includes((i as Record<string, unknown>).severity as string)).length;
-  const trirRaw = totalHoursWorked > 0 ? (recordableCount * 200000) / totalHoursWorked : null;
+  const trirRaw = totalHoursWorked !== null && totalHoursWorked > 0 ? (recordableCount * 200000) / totalHoursWorked : null;
   const trir = trirRaw !== null ? trirRaw.toFixed(2) : null;
 
   const openCorrectiveActions = correctiveActions?.filter((ca: unknown) => (ca as Record<string, unknown>).status !== 'closed' && (ca as Record<string, unknown>).status !== 'verified').length ?? 0;
