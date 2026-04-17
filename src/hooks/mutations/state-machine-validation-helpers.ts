@@ -1,17 +1,6 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
-import posthog from '../../lib/analytics'
-import { useAuditedMutation, createOnError } from './createAuditedMutation'
-import { invalidateEntity } from '../../api/invalidation'
-import { toast } from 'sonner'
-import Sentry from '../../lib/sentry'
-import {
-  rfiSchema, submittalSchema, punchItemSchema,
-  taskSchema, changeOrderSchema, meetingSchema, dailyLogSchema,
-} from '../../components/forms/schemas'
-import { useOfflineMutation } from '../useOfflineMutation'
-import { createDailyLog, updateDailyLog } from '../../api/endpoints/field'
-import type { DailyLogPayload } from '../../types/api'
+
+
 import { getValidTransitions } from '../../machines/rfiMachine'
 import { getValidSubmittalStatusTransitions } from '../../machines/submittalMachine'
 import { getValidTaskTransitions } from '../../services/taskService'
@@ -22,11 +11,6 @@ import type { PunchItemState } from '../../machines/punchItemMachine'
 import type { DailyLogState } from '../../machines/dailyLogMachine'
 import type { RfiStatus } from '../../types/database'
 import type { SubmittalStatus } from '../../types/submittal'
-
-import type { Database } from '../../types/database'
-type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
-// Dynamic table access helper. Tables may include those added by migration but not yet in generated types.
-const from = (table: AnyTableName) => supabase.from(table as keyof Database['public']['Tables'])
 
 // ── State machine validation helpers ─────────────────────
 
@@ -47,7 +31,7 @@ async function resolveUserRole(projectId: string): Promise<string> {
   }
 }
 
-async function validateRfiStatusTransition(
+export async function validateRfiStatusTransition(
   rfiId: string,
   projectId: string,
   newStatus: string,
@@ -77,7 +61,7 @@ async function validateRfiStatusTransition(
   }
 }
 
-async function validateSubmittalStatusTransition(
+export async function validateSubmittalStatusTransition(
   submittalId: string,
   projectId: string,
   newStatus: string,
@@ -97,7 +81,7 @@ async function validateSubmittalStatusTransition(
   }
 }
 
-async function validateTaskStatusTransition(
+export async function validateTaskStatusTransition(
   taskId: string,
   projectId: string,
   newStatus: string,
@@ -114,7 +98,7 @@ async function validateTaskStatusTransition(
   }
 }
 
-async function validatePunchItemStatusTransition(
+export async function validatePunchItemStatusTransition(
   punchItemId: string,
   _projectId: string,
   newStatus: string,
@@ -142,7 +126,7 @@ async function validatePunchItemStatusTransition(
   }
 }
 
-async function validateDailyLogStatusTransition(
+export async function validateDailyLogStatusTransition(
   logId: string,
   projectId: string,
   newStatus: string,

@@ -281,7 +281,7 @@ const QuickRFI: React.FC<QuickRFIProps> = ({ open, onClose }) => {
       setProcessingStep(4);
       await notification('success');
       setPhase('review');
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+     
     } catch (_err) {
       clearTimeout(stepTimer1);
       clearTimeout(stepTimer2);

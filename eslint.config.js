@@ -46,6 +46,17 @@ export default defineConfig([
       // TypeScript any: real issue, tracked as warning while we add types.
       '@typescript-eslint/no-explicit-any': 'warn',
       //
+      // Unused vars: ignore leading-underscore names (intentional discards).
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+          destructuredArrayIgnorePattern: '^_',
+        },
+      ],
+      //
       // React Refresh: dev convenience, not a production bug.
       'react-refresh/only-export-components': 'warn',
     },

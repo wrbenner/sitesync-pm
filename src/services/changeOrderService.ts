@@ -192,7 +192,7 @@ export const changeOrderService = {
     updates: Partial<ChangeOrder>,
   ): Promise<Result> {
     const userId = await getCurrentUserId();
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+     
     const { status: _status, ...safeUpdates } = updates as Record<string, unknown>;
 
     const { error } = await supabase

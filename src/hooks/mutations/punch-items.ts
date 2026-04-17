@@ -1,27 +1,8 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
-import posthog from '../../lib/analytics'
-import { useAuditedMutation, createOnError } from './createAuditedMutation'
-import { invalidateEntity } from '../../api/invalidation'
-import { toast } from 'sonner'
-import Sentry from '../../lib/sentry'
-import {
-  rfiSchema, submittalSchema, punchItemSchema,
-  taskSchema, changeOrderSchema, meetingSchema, dailyLogSchema,
+import { useAuditedMutation } from './createAuditedMutation'
+import { punchItemSchema,
 } from '../../components/forms/schemas'
-import { useOfflineMutation } from '../useOfflineMutation'
-import { createDailyLog, updateDailyLog } from '../../api/endpoints/field'
-import type { DailyLogPayload } from '../../types/api'
-import { getValidTransitions } from '../../machines/rfiMachine'
-import { getValidSubmittalStatusTransitions } from '../../machines/submittalMachine'
-import { getValidTaskTransitions } from '../../services/taskService'
-import { getValidPunchTransitions } from '../../machines/punchItemMachine'
-import { getValidDailyLogTransitions } from '../../services/dailyLogService'
-import type { TaskState } from '../../machines/taskMachine'
-import type { PunchItemState } from '../../machines/punchItemMachine'
-import type { DailyLogState } from '../../machines/dailyLogMachine'
-import type { RfiStatus } from '../../types/database'
-import type { SubmittalStatus } from '../../types/submittal'
+import { validatePunchItemStatusTransition } from './state-machine-validation-helpers'
 
 import type { Database } from '../../types/database'
 type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)

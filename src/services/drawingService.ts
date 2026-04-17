@@ -151,7 +151,7 @@ export const drawingService = {
    * Update drawing fields (non-status). Use transitionStatus() for status changes.
    */
   async updateDrawing(drawingId: string, updates: Partial<Drawing>): Promise<Result> {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+     
     const { status: _status, uploaded_by: _uploaded_by, ...safeUpdates } = updates as Record<
       string,
       unknown

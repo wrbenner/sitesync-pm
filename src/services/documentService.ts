@@ -399,7 +399,7 @@ export const documentService = {
     updates: Partial<Omit<DocumentRecord, 'id' | 'project_id' | 'document_status' | 'created_by' | 'created_at'>>,
   ): Promise<Result> {
     const userId = await getCurrentUserId();
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+     
     const { document_status: _s, created_by: _c, created_at: _ca, ...safeUpdates } =
       updates as Record<string, unknown>;
 

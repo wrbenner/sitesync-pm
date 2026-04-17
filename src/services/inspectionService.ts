@@ -138,7 +138,7 @@ export const inspectionService = {
    */
   async updateInspection(inspectionId: string, updates: Partial<Inspection>): Promise<Result> {
     const userId = await getCurrentUserId();
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+     
     const { status: _status, ...safeUpdates } = updates as Record<string, unknown>;
 
     const { error } = await supabase

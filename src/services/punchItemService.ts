@@ -179,7 +179,7 @@ export const punchItemService = {
     updates: Partial<PunchItem>,
   ): Promise<PunchItemServiceResult> {
     // Strip status to prevent bypassing lifecycle machine
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+     
     const { status: _status, ...safeUpdates } = updates as Record<string, unknown>;
 
     const { error } = await supabase

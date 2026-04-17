@@ -152,7 +152,7 @@ export const paymentService = {
     payApplicationId: string,
     updates: Record<string, unknown>,
   ): Promise<Result> {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+     
     const { status: _status, ...safeUpdates } = updates;
 
     const { error } = await supabase
