@@ -32,7 +32,8 @@ interface PunchListState {
   updateItemStatus: (id: string, status: PunchItemStatus) => Promise<{ error: string | null }>;
   updateItem: (id: string, updates: Partial<PunchListItem>) => Promise<{ error: string | null }>;
   deleteItem: (id: string) => Promise<{ error: string | null }>;
-  addComment: (itemId: string, author: string, initials: string, text: string) => void;
+  addComment: (itemId: string, author: string, initials: string, text: string) => Promise<{ error: string | null }>;
+  loadComments: (itemId: string) => Promise<void>;
   getComments: (itemId: string) => PunchComment[];
   getSummary: () => { total: number; open: number; inProgress: number; complete: number; verified: number; critical: number; high: number };
 }
@@ -132,9 +133,8 @@ export const usePunchListStore = create<PunchListState>()((set, get) => ({
     return { error: error?.message ?? null };
   },
 
-  addComment: (itemId, author, initials, text) => {
-    // Comments are stored locally for now; punch_item_comments table can be added later
-    const comment: PunchComment = {
+  addComment: async (itemId, author, initials, text) => {
+    const optimistic: PunchComment = {
       id: `pc-${Date.now()}`,
       punch_item_id: itemId,
       author,
@@ -145,7 +145,49 @@ export const usePunchListStore = create<PunchListState>()((set, get) => ({
     set((s) => ({
       comments: {
         ...s.comments,
-        [itemId]: [...(s.comments[itemId] ?? []), comment],
+        [itemId]: [...(s.comments[itemId] ?? []), optimistic],
+      },
+    }));
+    const { data, error } = await fromTable('punch_item_comments')
+      .insert({
+        punch_item_id: itemId,
+        author,
+        initials,
+        text,
+      })
+      .select()
+      .single();
+    if (error) {
+      set((s) => ({
+        comments: {
+          ...s.comments,
+          [itemId]: (s.comments[itemId] ?? []).filter((c) => c.id !== optimistic.id),
+        },
+      }));
+      return { error: error.message };
+    }
+    if (data) {
+      set((s) => ({
+        comments: {
+          ...s.comments,
+          [itemId]: (s.comments[itemId] ?? []).map((c) => (c.id === optimistic.id ? (data as PunchComment) : c)),
+        },
+      }));
+    }
+    return { error: null };
+  },
+
+  loadComments: async (itemId) => {
+    const { data, error } = await supabase
+      .from('punch_item_comments')
+      .select('*')
+      .eq('punch_item_id', itemId)
+      .order('created_at', { ascending: true });
+    if (error) return;
+    set((s) => ({
+      comments: {
+        ...s.comments,
+        [itemId]: (data ?? []) as PunchComment[],
       },
     }));
   },

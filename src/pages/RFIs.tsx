@@ -56,6 +56,25 @@ const getBicColor = (party: string): string => {
   return key ? BIC_COLORS[key] : colors.gray500;
 };
 
+const deriveBic = (rfi: Record<string, unknown>): string => {
+  const assigned = (rfi.assigned_to as string) || (rfi.to as string) || '';
+  if (assigned) return assigned;
+  const status = String(rfi.status ?? '').toLowerCase();
+  if (status === 'closed' || status === 'answered') return 'Resolved';
+  if (status === 'in_review' || status === 'under_review' || status === 'submitted') return 'Architect';
+  return 'GC';
+};
+
+const BicBadge: React.FC<{ party: string }> = React.memo(({ party }) => {
+  const color = getBicColor(party);
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 6px', borderRadius: borderRadius.full, backgroundColor: `${color}15`, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color }}>
+      <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: color, flexShrink: 0, display: 'inline-block' }} />
+      {party}
+    </span>
+  );
+});
+
 
 const BallInCourtCell: React.FC<{ rfi: unknown }> = React.memo(({ rfi }) => {
   const party = rfi.assigned_to || null;
@@ -274,11 +293,7 @@ const RFIsPage: React.FC = () => {
         const overdue = rfi.dueDate && new Date(rfi.dueDate) < new Date() && rfi.status !== 'closed';
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            {info.getValue() === 'pending' ? (
-              <span role="status" aria-label={`Status: ${info.getValue()}`} style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.statusInfoBright, backgroundColor: colors.statusInfoSubtle, padding: '2px 8px', borderRadius: borderRadius.full, display: 'inline-block' }}>Pending</span>
-            ) : (
-              <span role="status" aria-label={`Status: ${info.getValue()}`}><StatusTag status={info.getValue() as 'pending' | 'approved' | 'under_review' | 'revise_resubmit' | 'complete' | 'active' | 'closed' | 'pending_approval'} /></span>
-            )}
+            <span role="status" aria-label={`Status: ${info.getValue()}`}><StatusTag status={info.getValue() as 'pending' | 'approved' | 'under_review' | 'revise_resubmit' | 'complete' | 'active' | 'closed' | 'pending_approval'} /></span>
             {overdue && (
               <Tag label="OVERDUE" color={colors.statusCritical} backgroundColor={colors.statusCriticalSubtle} />
             )}
@@ -373,7 +388,9 @@ const RFIsPage: React.FC = () => {
   const STATUS_TABS = [
     { key: 'all', label: 'All' },
     { key: 'open', label: 'Open' },
-    { key: 'pending_response', label: 'Pending Response' },
+    { key: 'submitted', label: 'Submitted' },
+    { key: 'in_review', label: 'In Review' },
+    { key: 'answered', label: 'Answered' },
     { key: 'overdue', label: 'Overdue' },
     { key: 'closed', label: 'Closed' },
   ];
@@ -381,16 +398,15 @@ const RFIsPage: React.FC = () => {
   const filteredRfis = useMemo(() => {
     if (statusFilter === 'all') return allRfis;
     if (statusFilter === 'overdue') return allRfis.filter((r: unknown) => r.status !== 'closed' && r.dueDate && new Date(r.dueDate) < new Date());
-    if (statusFilter === 'pending_response') return allRfis.filter((r: unknown) => r.status === 'pending' || r.status === 'under_review');
     return allRfis.filter((r: unknown) => r.status === statusFilter);
   }, [allRfis, statusFilter]);
 
   const kanbanColumns: KanbanColumn<unknown>[] = useMemo(() => [
-    { id: 'draft', label: 'In Draft', color: colors.textTertiary, items: [] },
-    { id: 'pending', label: 'Submitted', color: colors.statusPending, items: allRfis.filter((r) => r.status === 'pending') },
-    { id: 'under_review', label: 'Under Review', color: colors.statusInfo, items: [] },
-    { id: 'approved', label: 'Answered', color: colors.statusActive, items: allRfis.filter((r) => r.status === 'approved') },
-    { id: 'closed', label: 'Closed', color: colors.statusNeutral, items: [] },
+    { id: 'open', label: 'Open', color: colors.textTertiary, items: allRfis.filter((r) => r.status === 'open') },
+    { id: 'submitted', label: 'Submitted', color: colors.statusPending, items: allRfis.filter((r) => r.status === 'submitted') },
+    { id: 'in_review', label: 'In Review', color: colors.statusInfo, items: allRfis.filter((r) => r.status === 'in_review') },
+    { id: 'answered', label: 'Answered', color: colors.statusActive, items: allRfis.filter((r) => r.status === 'answered') },
+    { id: 'closed', label: 'Closed', color: colors.statusNeutral, items: allRfis.filter((r) => r.status === 'closed') },
   ], [allRfis]);
 
   if (rfisLoading) {
@@ -569,7 +585,6 @@ const RFIsPage: React.FC = () => {
             {STATUS_TABS.map((tab) => {
               const count = tab.key === 'all' ? allRfis.length
                 : tab.key === 'overdue' ? allRfis.filter((r: unknown) => r.status !== 'closed' && r.dueDate && new Date(r.dueDate) < new Date()).length
-                : tab.key === 'pending_response' ? allRfis.filter((r: unknown) => r.status === 'pending' || r.status === 'under_review').length
                 : allRfis.filter((r: unknown) => r.status === tab.key).length;
               const isSelected = statusFilter === tab.key;
               return (
@@ -684,9 +699,10 @@ const RFIsPage: React.FC = () => {
               onClick={() => setSelectedRfi(rfi)}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedRfi(rfi); } }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['2'] }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['2'], flexWrap: 'wrap' as const }}>
                 <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.orangeText }}>{rfi.rfiNumber}</span>
                 <PriorityTag priority={rfi.priority} />
+                <BicBadge party={deriveBic(rfi)} />
               </div>
               <p style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>{rfi.title}</p>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -819,7 +835,7 @@ const RFIsPage: React.FC = () => {
                 ]}
                 onSave={async (val) => {
                   await updateRFI.mutateAsync({ id: String(selectedRfi.id), updates: { priority: val }, projectId: projectId! });
-                  selectedRfi.priority = val;
+                  setSelectedRfi((prev: unknown) => prev ? { ...prev, priority: val } : prev);
                   toast.success('Priority updated');
                 }}
                 displayContent={<PriorityTag priority={selectedRfi.priority as 'low' | 'medium' | 'high' | 'critical'} />}
@@ -831,13 +847,14 @@ const RFIsPage: React.FC = () => {
                 type="select"
                 options={[
                   { value: 'open', label: 'Open' },
-                  { value: 'under_review', label: 'Under Review' },
+                  { value: 'submitted', label: 'Submitted' },
+                  { value: 'in_review', label: 'In Review' },
                   { value: 'answered', label: 'Answered' },
                   { value: 'closed', label: 'Closed' },
                 ]}
                 onSave={async (val) => {
                   await handleStatusChange(String(selectedRfi.id), val);
-                  selectedRfi.status = val;
+                  setSelectedRfi((prev: unknown) => prev ? { ...prev, status: val } : prev);
                 }}
                 displayContent={<StatusTag status={selectedRfi.status as 'pending' | 'approved' | 'under_review' | 'revise_resubmit' | 'complete' | 'active' | 'closed' | 'pending_approval'} />}
               />
@@ -848,7 +865,7 @@ const RFIsPage: React.FC = () => {
                 type="text"
                 onSave={async (val) => {
                   await updateRFI.mutateAsync({ id: String(selectedRfi.id), updates: { assigned_to: val }, projectId: projectId! });
-                  selectedRfi.to = val;
+                  setSelectedRfi((prev: unknown) => prev ? { ...prev, to: val, assigned_to: val } : prev);
                   toast.success('Assignee updated');
                 }}
                 displayContent={
@@ -867,15 +884,15 @@ const RFIsPage: React.FC = () => {
                 type="date"
                 onSave={async (val) => {
                   await updateRFI.mutateAsync({ id: String(selectedRfi.id), updates: { due_date: val }, projectId: projectId! });
-                  selectedRfi.dueDate = val;
+                  setSelectedRfi((prev: unknown) => prev ? { ...prev, dueDate: val, due_date: val } : prev);
                   toast.success('Due date updated');
                 }}
                 displayContent={
                   <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
                     <Calendar size={14} style={{ color: colors.textTertiary }} />
                     <span style={{
-                      color: isOverdue(selectedRfi.dueDate) && selectedRfi.status !== 'approved' ? colors.statusCritical : colors.textPrimary,
-                      fontWeight: isOverdue(selectedRfi.dueDate) && selectedRfi.status !== 'approved' ? typography.fontWeight.medium : typography.fontWeight.normal,
+                      color: isOverdue(selectedRfi.dueDate) && selectedRfi.status !== 'answered' && selectedRfi.status !== 'closed' ? colors.statusCritical : colors.textPrimary,
+                      fontWeight: isOverdue(selectedRfi.dueDate) && selectedRfi.status !== 'answered' && selectedRfi.status !== 'closed' ? typography.fontWeight.medium : typography.fontWeight.normal,
                     }}>
                       {formatDate(selectedRfi.dueDate)}
                     </span>
@@ -901,12 +918,8 @@ const RFIsPage: React.FC = () => {
               <div style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.sm, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Description
               </div>
-              <p style={{ margin: 0, fontSize: typography.fontSize.base, color: colors.textSecondary, lineHeight: typography.lineHeight.relaxed }}>
-                Requesting clarification on the specification details referenced in the current drawing set.
-                The field team has identified a discrepancy between the architectural drawings and the structural
-                details that needs to be resolved before proceeding with installation. Please review the attached
-                markup and provide direction on the preferred approach. This item is blocking work on the affected
-                area and requires a timely response to maintain schedule.
+              <p style={{ margin: 0, fontSize: typography.fontSize.base, color: selectedRfi.description ? colors.textSecondary : colors.textTertiary, lineHeight: typography.lineHeight.relaxed, fontStyle: selectedRfi.description ? 'normal' : 'italic' }}>
+                {selectedRfi.description || 'No description provided.'}
               </p>
             </div>
 
@@ -983,7 +996,7 @@ const RFIsPage: React.FC = () => {
                     fullWidth
                     icon={<Send size={15} />}
                     onClick={async () => {
-                      await handleStatusChange(String(selectedRfi.id), 'approved');
+                      await handleStatusChange(String(selectedRfi.id), 'answered');
                       addToast('success', 'Response submitted successfully');
                       setSelectedRfi(null);
                     }}

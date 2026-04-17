@@ -69,7 +69,15 @@ export const useDirectoryStore = create<DirectoryState>()((set, get) => ({
   },
 
   updateEntry: async (id, updates) => {
-    const { error } = await fromTable('directory').update(updates).eq('id', id);
+    const dbUpdates: Record<string, unknown> = {};
+    if (updates.company !== undefined) dbUpdates.company = updates.company;
+    if (updates.role !== undefined) dbUpdates.role = updates.role;
+    if (updates.contactName !== undefined) dbUpdates.contact_name = updates.contactName;
+    if (updates.phone !== undefined) dbUpdates.phone = updates.phone;
+    if (updates.email !== undefined) dbUpdates.email = updates.email;
+    if (updates.project_id !== undefined) dbUpdates.project_id = updates.project_id;
+
+    const { error } = await fromTable('directory').update(dbUpdates).eq('id', id);
     if (!error) {
       set((s) => ({
         entries: s.entries.map((e) => (e.id === id ? { ...e, ...updates } : e)),

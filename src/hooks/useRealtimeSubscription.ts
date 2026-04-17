@@ -95,7 +95,7 @@ export function subscribeToProjectTables(
 const PROJECT_REALTIME_TABLES = [
   'rfis',
   'submittals',
-  'punch_list_items',
+  'punch_items',
   'daily_logs',
   'change_orders',
   'schedule_phases',
