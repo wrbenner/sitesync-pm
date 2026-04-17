@@ -76,6 +76,7 @@ export function useRFIs(projectId: string | undefined, pagination?: PaginationPa
         .from('rfis')
         .select('*', { count: 'exact' })
         .eq('project_id', projectId!)
+        .is('deleted_at', null)
         .order('rfi_number', { ascending: false })
         .range(from, to)
       if (error) throw error

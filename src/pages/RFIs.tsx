@@ -6,10 +6,10 @@ import { BulkActionBar } from '../components/shared/BulkActionBar';
 import { createColumnHelper } from '@tanstack/react-table';
 import { PageContainer, Card, Btn, StatusTag, PriorityTag, DetailPanel, Avatar, Tag, RelatedItems, useToast, MetricBox } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, shadows, zIndex } from '../styles/theme';
-import { useRFIs } from '../hooks/queries';
+import { useRFIs, useRFI } from '../hooks/queries';
 import { AlertTriangle, FileQuestion, FilterX, Plus, Clock, MessageSquare, Paperclip, Calendar, RefreshCw, Send, Sparkles, LayoutGrid, List, UserCheck, Flag, Download, XCircle, Wand2, Loader2, X } from 'lucide-react';
 import { useAppNavigate, getRelatedItemsForRfi } from '../utils/connections';
-import { useCreateRFI, useUpdateRFI } from '../hooks/mutations';
+import { useCreateRFI, useUpdateRFI, useCreateRFIResponse } from '../hooks/mutations';
 import { useProjectId } from '../hooks/useProjectId';
 import { useNavigate } from 'react-router-dom';
 import { useCopilotStore } from '../stores/copilotStore';
@@ -29,7 +29,7 @@ import { useReducedMotion } from '../hooks/useReducedMotion';
 
 const QuickRFIButton = lazy(() => import('../components/field/QuickRFIButton'));
 
-const isOverdue = (dateStr: string) => new Date(dateStr) < new Date();
+const isOverdue = (dateStr: string | undefined | null) => !!dateStr && new Date(dateStr) < new Date();
 
 const containerVariants = {
   hidden: {},
@@ -76,8 +76,12 @@ const BallInCourtCell: React.FC<{ rfi: unknown }> = ({ rfi }) => {
   );
 };
 
-const formatDate = (dateStr: string) =>
-  new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+const formatDate = (dateStr: string | undefined | null) => {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+};
 
 const rfiColHelper = createColumnHelper<unknown>();
 
@@ -125,7 +129,7 @@ const RFIsPage: React.FC = () => {
     const weekAgo = Date.now() - 7 * 86400000;
     return rfis.filter((r: unknown) => r.status === 'closed' && r.closed_at && new Date(r.closed_at).getTime() >= weekAgo).length;
   }, [rfis]);
-  const [selectedRfi, setSelectedRfi] = useState<unknown>(null);
+  const [selectedRfi, setSelectedRfi] = useState<Record<string, unknown> | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -134,6 +138,10 @@ const RFIsPage: React.FC = () => {
   const [announcement, setAnnouncement] = useState('');
   const announcedLoadRef = useRef(false);
   const { addToast } = useToast();
+
+  // Response text state (detail panel)
+  const [responseText, setResponseText] = useState('');
+  const [responseSubmitting, setResponseSubmitting] = useState(false);
 
   // AI Draft modal state
   const [showAIDraftModal, setShowAIDraftModal] = useState(false);
@@ -156,7 +164,7 @@ const RFIsPage: React.FC = () => {
 
   useEffect(() => {
     if (!announcedLoadRef.current) return;
-    const count = statusFilter === 'all' ? rfis.length : rfis.filter((r: unknown) => r.status === statusFilter).length;
+    const count = statusFilter === 'all' ? rfis.length : rfis.filter((r: Record<string, unknown>) => r.status === statusFilter).length;
     setAnnouncement(`Showing ${count} of ${rfis.length} RFIs`);
   }, [statusFilter, rfis]);
 
@@ -164,21 +172,27 @@ const RFIsPage: React.FC = () => {
   const navigate = useNavigate();
   const createRFI = useCreateRFI();
   const updateRFI = useUpdateRFI();
+  const createRFIResponse = useCreateRFIResponse();
+
+  // Load full RFI detail (with responses) when panel is open
+  const { data: selectedRfiDetail } = useRFI(selectedRfi ? String(selectedRfi.id) : undefined);
 
   const handleStatusChange = useCallback(async (rfiId: string, newStatus: string) => {
     try {
       await updateRFI.mutateAsync({ id: rfiId, updates: { status: newStatus }, projectId: projectId! });
+      setSelectedRfi((prev) => prev ? { ...prev, status: newStatus } : prev);
       addToast('success', 'Status updated');
     } catch {
       addToast('error', 'Failed to update status');
     }
   }, [updateRFI, projectId, addToast]);
 
-  // Reset AI suggestion when detail panel switches to a different RFI
+  // Reset AI suggestion and response text when detail panel switches to a different RFI
   useEffect(() => {
     setAiSuggestion(null);
     setAiSuggestionLoading(false);
     setAiSuggestionError(false);
+    setResponseText('');
   }, [selectedRfi?.id]);
 
   const handleAIDraft = useCallback(async () => {
@@ -221,6 +235,28 @@ const RFIsPage: React.FC = () => {
       setAiSuggestionLoading(false);
     }
   }, [selectedRfi, projectId]);
+
+  const handleSubmitResponse = useCallback(async () => {
+    if (!selectedRfi || !responseText.trim()) return;
+    setResponseSubmitting(true);
+    try {
+      await createRFIResponse.mutateAsync({
+        data: {
+          rfi_id: String(selectedRfi.id),
+          response_text: responseText.trim(),
+        },
+        rfiId: String(selectedRfi.id),
+        projectId: projectId!,
+      });
+      setResponseText('');
+      setSelectedRfi((prev) => prev ? { ...prev, status: 'answered' } : prev);
+      toast.success('Response submitted successfully');
+    } catch {
+      toast.error('Failed to submit response. Please try again.');
+    } finally {
+      setResponseSubmitting(false);
+    }
+  }, [selectedRfi, responseText, createRFIResponse, projectId]);
 
   const pageAlerts = getPredictiveAlertsForPage('rfis');
 
@@ -386,11 +422,11 @@ const RFIsPage: React.FC = () => {
   }, [allRfis, statusFilter]);
 
   const kanbanColumns: KanbanColumn<unknown>[] = useMemo(() => [
-    { id: 'draft', label: 'In Draft', color: colors.textTertiary, items: [] },
-    { id: 'pending', label: 'Submitted', color: colors.statusPending, items: allRfis.filter((r) => r.status === 'pending') },
-    { id: 'under_review', label: 'Under Review', color: colors.statusInfo, items: [] },
-    { id: 'approved', label: 'Answered', color: colors.statusActive, items: allRfis.filter((r) => r.status === 'approved') },
-    { id: 'closed', label: 'Closed', color: colors.statusNeutral, items: [] },
+    { id: 'draft', label: 'Draft', color: colors.textTertiary, items: allRfis.filter((r) => r.status === 'draft') },
+    { id: 'open', label: 'Open', color: colors.statusPending, items: allRfis.filter((r) => r.status === 'open') },
+    { id: 'under_review', label: 'Under Review', color: colors.statusInfo, items: allRfis.filter((r) => r.status === 'under_review') },
+    { id: 'answered', label: 'Answered', color: colors.statusActive, items: allRfis.filter((r) => r.status === 'answered') },
+    { id: 'closed', label: 'Closed', color: colors.statusNeutral, items: allRfis.filter((r) => r.status === 'closed') },
   ], [allRfis]);
 
   if (rfisLoading) {
@@ -801,7 +837,7 @@ const RFIsPage: React.FC = () => {
             >
               <EditableDetailField
                 label="Priority"
-                value={selectedRfi.priority}
+                value={String(selectedRfi.priority ?? 'medium')}
                 editing={editingDetail}
                 type="select"
                 options={[
@@ -812,14 +848,14 @@ const RFIsPage: React.FC = () => {
                 ]}
                 onSave={async (val) => {
                   await updateRFI.mutateAsync({ id: String(selectedRfi.id), updates: { priority: val }, projectId: projectId! });
-                  selectedRfi.priority = val;
+                  setSelectedRfi((prev) => prev ? { ...prev, priority: val } : prev);
                   toast.success('Priority updated');
                 }}
                 displayContent={<PriorityTag priority={selectedRfi.priority as 'low' | 'medium' | 'high' | 'critical'} />}
               />
               <EditableDetailField
                 label="Status"
-                value={selectedRfi.status}
+                value={String(selectedRfi.status ?? 'open')}
                 editing={editingDetail}
                 type="select"
                 options={[
@@ -830,61 +866,66 @@ const RFIsPage: React.FC = () => {
                 ]}
                 onSave={async (val) => {
                   await handleStatusChange(String(selectedRfi.id), val);
-                  selectedRfi.status = val;
                 }}
                 displayContent={<StatusTag status={selectedRfi.status as 'pending' | 'approved' | 'under_review' | 'revise_resubmit' | 'complete' | 'active' | 'closed' | 'pending_approval'} />}
               />
               <EditableDetailField
                 label="Assigned To"
-                value={selectedRfi.to || ''}
+                value={String(selectedRfi.to ?? '')}
                 editing={editingDetail}
                 type="text"
                 onSave={async (val) => {
                   await updateRFI.mutateAsync({ id: String(selectedRfi.id), updates: { assigned_to: val }, projectId: projectId! });
-                  selectedRfi.to = val;
+                  setSelectedRfi((prev) => prev ? { ...prev, to: val } : prev);
                   toast.success('Assignee updated');
                 }}
                 displayContent={
                   selectedRfi.to ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
-                      <Avatar initials={selectedRfi.to.split(' ').map((w: string) => w[0]).join('').slice(0, 2)} size={24} />
-                      <span>{selectedRfi.to}</span>
+                      <Avatar initials={String(selectedRfi.to).split(' ').map((w) => w[0]).filter(Boolean).join('').slice(0, 2) || '?'} size={24} />
+                      <span>{String(selectedRfi.to)}</span>
                     </div>
                   ) : undefined
                 }
               />
               <EditableDetailField
                 label="Due Date"
-                value={selectedRfi.dueDate?.slice(0, 10) || ''}
+                value={selectedRfi.dueDate ? String(selectedRfi.dueDate).slice(0, 10) : ''}
                 editing={editingDetail}
                 type="date"
                 onSave={async (val) => {
                   await updateRFI.mutateAsync({ id: String(selectedRfi.id), updates: { due_date: val }, projectId: projectId! });
-                  selectedRfi.dueDate = val;
+                  setSelectedRfi((prev) => prev ? { ...prev, dueDate: val } : prev);
                   toast.success('Due date updated');
                 }}
                 displayContent={
                   <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
                     <Calendar size={14} style={{ color: colors.textTertiary }} />
                     <span style={{
-                      color: isOverdue(selectedRfi.dueDate) && selectedRfi.status !== 'approved' ? colors.statusCritical : colors.textPrimary,
-                      fontWeight: isOverdue(selectedRfi.dueDate) && selectedRfi.status !== 'approved' ? typography.fontWeight.medium : typography.fontWeight.normal,
+                      color: isOverdue(selectedRfi.dueDate as string) && selectedRfi.status !== 'closed' ? colors.statusCritical : colors.textPrimary,
+                      fontWeight: isOverdue(selectedRfi.dueDate as string) && selectedRfi.status !== 'closed' ? typography.fontWeight.medium : typography.fontWeight.normal,
                     }}>
-                      {formatDate(selectedRfi.dueDate)}
+                      {formatDate(selectedRfi.dueDate as string)}
                     </span>
                   </div>
                 }
               />
               <MetaItem label="From">
                 <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
-                  <Avatar initials={selectedRfi.from.split(' ').map((w: string) => w[0]).join('').slice(0, 2)} size={24} />
-                  <span>{selectedRfi.from}</span>
+                  {selectedRfi.from ? (
+                    <>
+                      <Avatar initials={String(selectedRfi.from).split(' ').map((w) => w[0]).filter(Boolean).join('').slice(0, 2) || '?'} size={24} />
+                      <span>{String(selectedRfi.from)}</span>
+                    </>
+                  ) : (
+                    <span style={{ color: colors.textTertiary, fontStyle: 'italic' }}>Unknown</span>
+                  )}
                 </div>
               </MetaItem>
               <MetaItem label="Submitted">
                 <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
                   <Clock size={14} style={{ color: colors.textTertiary }} />
-                  <span>{formatDate(selectedRfi.submitDate)}</span>
+                  <span>{formatDate(selectedRfi.submitDate as string)}</span>
                 </div>
               </MetaItem>
             </div>
@@ -894,19 +935,21 @@ const RFIsPage: React.FC = () => {
               <div style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.sm, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Description
               </div>
-              <p style={{ margin: 0, fontSize: typography.fontSize.base, color: colors.textSecondary, lineHeight: typography.lineHeight.relaxed }}>
-                Requesting clarification on the specification details referenced in the current drawing set.
-                The field team has identified a discrepancy between the architectural drawings and the structural
-                details that needs to be resolved before proceeding with installation. Please review the attached
-                markup and provide direction on the preferred approach. This item is blocking work on the affected
-                area and requires a timely response to maintain schedule.
-              </p>
+              {selectedRfi.description ? (
+                <p style={{ margin: 0, fontSize: typography.fontSize.base, color: colors.textSecondary, lineHeight: typography.lineHeight.relaxed }}>
+                  {String(selectedRfi.description)}
+                </p>
+              ) : (
+                <p style={{ margin: 0, fontSize: typography.fontSize.base, color: colors.textTertiary, fontStyle: 'italic' }}>
+                  No description provided
+                </p>
+              )}
             </div>
 
             {/* Attachments hint */}
             <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, padding: spacing.md, backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.sm, border: `1px dashed ${colors.border}` }}>
               <Paperclip size={16} style={{ color: colors.textTertiary }} />
-              <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>2 attachments (markup sketch, spec reference)</span>
+              <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>Attachments coming soon</span>
             </div>
 
             {/* Response Timeline */}
@@ -914,48 +957,48 @@ const RFIsPage: React.FC = () => {
               <div style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.lg, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Response Timeline
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                {([] as Array<{initials: string; name: string; role: string; date: string; message: string; type: string}>).map((entry, idx) => (
-                  <div key={idx} style={{ display: 'flex', gap: spacing.md, position: 'relative' }}>
-                    {/* Timeline line */}
-                    {idx < ([] as Array<{initials: string; name: string; role: string; date: string; message: string; type: string}>).length - 1 && (
-                      <div
-                        style={{
-                          position: 'absolute',
-                          left: '17px',
-                          top: '40px',
-                          bottom: '-4px',
-                          width: '2px',
-                          backgroundColor: colors.borderLight,
-                        }}
-                      />
-                    )}
-                    {/* Avatar */}
-                    <div style={{ flexShrink: 0, paddingTop: '2px' }}>
-                      <Avatar initials={entry.initials} size={36} />
+              {(() => {
+                const responses = (selectedRfiDetail?.responses ?? []) as Array<Record<string, unknown>>;
+                if (!responses.length) {
+                  return (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, padding: `${spacing['3']} 0`, color: colors.textTertiary }}>
+                      <MessageSquare size={16} />
+                      <span style={{ fontSize: typography.fontSize.sm }}>No responses yet</span>
                     </div>
-                    {/* Content */}
-                    <div style={{ flex: 1, paddingBottom: idx < ([] as Array<{initials: string; name: string; role: string; date: string; message: string; type: string}>).length - 1 ? spacing.xl : '0' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs, flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
-                          {entry.name}
-                        </span>
-                        <Tag
-                          label={entry.type === 'submitted' ? 'Submitted' : entry.type === 'comment' ? 'Comment' : 'Response'}
-                          color={entry.type === 'response' ? colors.tealSuccess : entry.type === 'submitted' ? colors.statusPending : colors.blue}
-                          backgroundColor={entry.type === 'response' ? 'rgba(78,200,150,0.1)' : entry.type === 'submitted' ? colors.statusPendingSubtle : 'rgba(59,130,246,0.1)'}
-                        />
-                      </div>
-                      <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, marginBottom: spacing.sm }}>
-                        {entry.role} · {entry.date}
-                      </div>
-                      <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textSecondary, lineHeight: typography.lineHeight.relaxed }}>
-                        {entry.message}
-                      </p>
-                    </div>
+                  );
+                }
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                    {responses.map((entry, idx) => {
+                      const initials = String(entry.user_id ?? '').slice(0, 2).toUpperCase() || '?';
+                      return (
+                        <div key={String(entry.id ?? idx)} style={{ display: 'flex', gap: spacing.md, position: 'relative' }}>
+                          {idx < responses.length - 1 && (
+                            <div style={{ position: 'absolute', left: '17px', top: '40px', bottom: '-4px', width: '2px', backgroundColor: colors.borderLight }} />
+                          )}
+                          <div style={{ flexShrink: 0, paddingTop: '2px' }}>
+                            <Avatar initials={initials} size={36} />
+                          </div>
+                          <div style={{ flex: 1, paddingBottom: idx < responses.length - 1 ? spacing.xl : '0' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs, flexWrap: 'wrap' }}>
+                              <span style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+                                {String(entry.user_id ?? 'Unknown')}
+                              </span>
+                              <Tag label="Response" color={colors.tealSuccess} backgroundColor="rgba(78,200,150,0.1)" />
+                            </div>
+                            <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, marginBottom: spacing.sm }}>
+                              {formatDate(entry.created_at as string)}
+                            </div>
+                            <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textSecondary, lineHeight: typography.lineHeight.relaxed }}>
+                              {String(entry.response_text ?? '')}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                ))}
-              </div>
+                );
+              })()}
             </div>
 
             {/* AI Suggest Response */}
@@ -991,36 +1034,38 @@ const RFIsPage: React.FC = () => {
               </div>
             )}
 
-            {/* Action Buttons */}
-            <div style={{ display: 'flex', gap: spacing.md, paddingTop: spacing.md, borderTop: `1px solid ${colors.borderLight}` }}>
-              <div style={{ flex: 1 }}>
-                <PermissionGate permission="rfis.respond">
+            {/* Response Input + Submit */}
+            <PermissionGate permission="rfis.respond">
+              <div style={{ borderTop: `1px solid ${colors.borderLight}`, paddingTop: spacing.md }}>
+                <div style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.sm }}>
+                  Add Response
+                </div>
+                <textarea
+                  value={responseText}
+                  onChange={(e) => setResponseText(e.target.value)}
+                  placeholder="Type your response..."
+                  rows={3}
+                  disabled={responseSubmitting}
+                  aria-label="Response text"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && responseText.trim()) {
+                      e.preventDefault();
+                      void handleSubmitResponse();
+                    }
+                  }}
+                  style={{ width: '100%', padding: spacing['3'], border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.md, fontSize: typography.fontSize.sm, color: colors.textPrimary, backgroundColor: colors.surfacePage, resize: 'none' as const, fontFamily: typography.fontFamily, boxSizing: 'border-box' as const, outline: 'none', lineHeight: 1.5 }}
+                />
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: spacing.sm }}>
                   <Btn
-                    fullWidth
-                    icon={<Send size={15} />}
-                    onClick={async () => {
-                      await handleStatusChange(String(selectedRfi.id), 'approved');
-                      addToast('success', 'Response submitted successfully');
-                      setSelectedRfi(null);
-                    }}
+                    icon={responseSubmitting ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Send size={14} />}
+                    disabled={!responseText.trim() || responseSubmitting}
+                    onClick={handleSubmitResponse}
                   >
-                    Submit Response
+                    {responseSubmitting ? 'Submitting...' : 'Submit Response'}
                   </Btn>
-                </PermissionGate>
+                </div>
               </div>
-              <div style={{ flex: 1 }}>
-                <PermissionGate permission="rfis.respond">
-                  <Btn
-                    variant="secondary"
-                    fullWidth
-                    icon={<MessageSquare size={15} />}
-                    onClick={() => addToast('info', 'Comment box opening soon')}
-                  >
-                    Add Comment
-                  </Btn>
-                </PermissionGate>
-              </div>
-            </div>
+            </PermissionGate>
 
             {/* Related Items */}
             <RelatedItems items={getRelatedItemsForRfi(selectedRfi.id)} onNavigate={appNavigate} />
