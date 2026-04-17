@@ -1,0 +1,216 @@
+{
+  "schema_version": 2,
+  "last_updated": "2026-04-17T00:00:00Z",
+  "overall_progress": {
+    "total_tasks": 96,
+    "done": 0,
+    "in_progress": 0,
+    "needs_human": 0,
+    "pending": 96
+  },
+  "pages": {
+    "rfis": {
+      "functional_score": 0,
+      "tasks": [
+        { "id": "rfis-1", "description": "RFI list page with real Supabase query and empty state", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('rfis').select(", "files": ["src/pages/RFIs.tsx"] },
+        { "id": "rfis-2", "description": "New RFI modal with full form and INSERT mutation", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": "supabase.from('rfis').insert(", "files": ["src/pages/RFIs.tsx"] },
+        { "id": "rfis-3", "description": "RFI list filters (Status, Assignee, Priority, Date) stored in URL params", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": "useSearchParams", "files": ["src/pages/RFIs.tsx"] },
+        { "id": "rfis-4", "description": "RFI detail view with linked drawing and submittal names", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('rfis').select('*, drawings(name), submittals(title)')", "files": ["src/pages/RFIs.tsx"] },
+        { "id": "rfis-5", "description": "Edit RFI with pre-populated form and UPDATE mutation", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('rfis').update(", "files": ["src/pages/RFIs.tsx"] },
+        { "id": "rfis-6", "description": "Status transition buttons with timestamps and ball-in-court updates", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": "ball_in_court", "files": ["src/pages/RFIs.tsx"] },
+        { "id": "rfis-7", "description": "Add RFI response thread with INSERT into rfi_responses", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('rfi_responses').insert(", "files": ["src/pages/RFIs.tsx"] },
+        { "id": "rfis-8", "description": "Link Drawing picker modal that stores drawing_id on RFI", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('rfis').update({drawing_id:", "files": ["src/pages/RFIs.tsx"] },
+        { "id": "rfis-9", "description": "Link Submittal picker modal that stores submittal_id on RFI", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('rfis').update({submittal_id:", "files": ["src/pages/RFIs.tsx"] },
+        { "id": "rfis-10", "description": "Delete RFI with confirmation dialog and DELETE call", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('rfis').delete(", "files": ["src/pages/RFIs.tsx"] },
+        { "id": "rfis-11", "description": "Ball-in-court auto-update logic on status transitions", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": "ball_in_court", "files": ["src/pages/RFIs.tsx"] },
+        { "id": "rfis-12", "description": "Export RFI to PDF with status history", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": "window.print", "files": ["src/pages/RFIs.tsx"] }
+      ]
+    },
+    "submittals": {
+      "functional_score": 0,
+      "tasks": [
+        { "id": "submittals-1", "description": "Submittal list with real Supabase query and empty state", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('submittals').select(", "files": ["src/pages/Submittals.tsx"] },
+        { "id": "submittals-2", "description": "New Submittal form with full fields and INSERT mutation", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('submittals').insert(", "files": ["src/pages/Submittals.tsx"] },
+        { "id": "submittals-3", "description": "Submittal list filters (Status, Spec Section, Type, Reviewer)", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": "filter", "files": ["src/pages/Submittals.tsx"] },
+        { "id": "submittals-4", "description": "Submittal detail view with all fields and revision history", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('submittals').select(", "files": ["src/pages/Submittals.tsx"] },
+        { "id": "submittals-5", "description": "Edit submittal with UPDATE mutation", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('submittals').update(", "files": ["src/pages/Submittals.tsx"] },
+        { "id": "submittals-6", "description": "Submittal status transitions with timestamps", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": "submittal", "files": ["src/pages/Submittals.tsx"] },
+        { "id": "submittals-7", "description": "Attach file uploads to Supabase Storage", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".storage.from(", "files": ["src/pages/Submittals.tsx"] },
+        { "id": "submittals-8", "description": "Reviewer comments via submittal_reviews table", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('submittal_reviews').insert(", "files": ["src/pages/Submittals.tsx"] },
+        { "id": "submittals-9", "description": "Stamp functionality for approve/reject status update", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": "stamp", "files": ["src/pages/Submittals.tsx"] },
+        { "id": "submittals-10", "description": "Delete submittal with confirmation", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('submittals').delete(", "files": ["src/pages/Submittals.tsx"] }
+      ]
+    },
+    "tasks": {
+      "functional_score": 0,
+      "tasks": [
+        { "id": "tasks-1", "description": "Task list with overdue flags and empty state", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('tasks').select(", "files": ["src/pages/Tasks.tsx"] },
+        { "id": "tasks-2", "description": "New Task form with INSERT mutation", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('tasks').insert(", "files": ["src/pages/Tasks.tsx"] },
+        { "id": "tasks-3", "description": "Task list filters and grouped view by Status", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": "filter", "files": ["src/pages/Tasks.tsx"] },
+        { "id": "tasks-4", "description": "Task detail with all fields", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('tasks').select(", "files": ["src/pages/Tasks.tsx"] },
+        { "id": "tasks-5", "description": "Inline status edit from list", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('tasks').update(", "files": ["src/pages/Tasks.tsx"] },
+        { "id": "tasks-6", "description": "Edit task form with UPDATE mutation", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('tasks').update(", "files": ["src/pages/Tasks.tsx"] },
+        { "id": "tasks-7", "description": "Comments section with task_comments INSERT", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('task_comments').insert(", "files": ["src/pages/Tasks.tsx"] },
+        { "id": "tasks-8", "description": "Delete task with confirmation", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('tasks').delete(", "files": ["src/pages/Tasks.tsx"] }
+      ]
+    },
+    "daily_logs": {
+      "functional_score": 0,
+      "tasks": [
+        { "id": "daily_logs-1", "description": "Daily log list ordered by date with empty state", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('daily_logs').select(", "files": ["src/pages/DailyLog.tsx"] },
+        { "id": "daily_logs-2", "description": "New daily log form with INSERT mutation", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('daily_logs').insert(", "files": ["src/pages/DailyLog.tsx"] },
+        { "id": "daily_logs-3", "description": "Crew sub-section persisting to daily_log_crew", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('daily_log_crew').insert(", "files": ["src/pages/DailyLog.tsx"] },
+        { "id": "daily_logs-4", "description": "Equipment and materials sub-sections persisting to their tables", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('daily_log_equipment')", "files": ["src/pages/DailyLog.tsx"] },
+        { "id": "daily_logs-5", "description": "Daily log detail with all sections displayed", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('daily_logs').select('*, daily_log_crew(*)", "files": ["src/pages/DailyLog.tsx"] },
+        { "id": "daily_logs-6", "description": "Edit log with child row replacement", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('daily_log_crew').delete(", "files": ["src/pages/DailyLog.tsx"] },
+        { "id": "daily_logs-7", "description": "Daily log status transitions with approved_by", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": "approved_by", "files": ["src/pages/DailyLog.tsx"] },
+        { "id": "daily_logs-8", "description": "Photo attachment upload to Supabase Storage", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".storage.from(", "files": ["src/pages/DailyLog.tsx"] },
+        { "id": "daily_logs-9", "description": "Print / export daily log to PDF", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": "print", "files": ["src/pages/DailyLog.tsx"] }
+      ]
+    },
+    "punch_list": {
+      "functional_score": 0,
+      "tasks": [
+        { "id": "punch_list-1", "description": "Punch item list with columns and empty state", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('punch_items').select(", "files": ["src/pages/PunchList.tsx"] },
+        { "id": "punch_list-2", "description": "New Punch Item form with INSERT mutation", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('punch_items').insert(", "files": ["src/pages/PunchList.tsx"] },
+        { "id": "punch_list-3", "description": "Punch list filters (Status, Assignee, Trade, Priority)", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": "filter", "files": ["src/pages/PunchList.tsx"] },
+        { "id": "punch_list-4", "description": "Punch item detail with photo thumbnails", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('punch_items').select(", "files": ["src/pages/PunchList.tsx"] },
+        { "id": "punch_list-5", "description": "Attach photo upload to Supabase Storage", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".storage.from(", "files": ["src/pages/PunchList.tsx"] },
+        { "id": "punch_list-6", "description": "Edit punch item with UPDATE mutation", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('punch_items').update(", "files": ["src/pages/PunchList.tsx"] },
+        { "id": "punch_list-7", "description": "Punch item status transitions", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": "punch_items", "files": ["src/pages/PunchList.tsx"] },
+        { "id": "punch_list-8", "description": "Bulk status update across multiple items", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": "Promise.all", "files": ["src/pages/PunchList.tsx"] },
+        { "id": "punch_list-9", "description": "Delete with confirmation and export to PDF/CSV", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('punch_items').delete(", "files": ["src/pages/PunchList.tsx"] }
+      ]
+    },
+    "schedule": {
+      "functional_score": 0,
+      "tasks": [
+        { "id": "schedule-1", "description": "Add Phase form creates schedule_phases row", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('schedule_phases').insert(", "files": ["src/pages/Schedule.tsx"] },
+        { "id": "schedule-2", "description": "Add Task to Phase creates schedule_tasks row", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('schedule_tasks').insert(", "files": ["src/pages/Schedule.tsx"] },
+        { "id": "schedule-3", "description": "Gantt chart renders from real Supabase data", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('schedule_phases').select(", "files": ["src/pages/Schedule.tsx"] },
+        { "id": "schedule-4", "description": "Gantt bars clickable with edit panel", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": "schedule_tasks", "files": ["src/pages/Schedule.tsx"] },
+        { "id": "schedule-5", "description": "Edit schedule task with UPDATE mutation", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('schedule_tasks').update(", "files": ["src/pages/Schedule.tsx"] },
+        { "id": "schedule-6", "description": "Set Baseline captures dates with variance display", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": "baseline", "files": ["src/pages/Schedule.tsx"] },
+        { "id": "schedule-7", "description": "Drag-to-reschedule updates Supabase dates", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": "onDragEnd", "files": ["src/pages/Schedule.tsx"] },
+        { "id": "schedule-8", "description": "Percent complete fill on bar and export Gantt to PDF", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": "percent_complete", "files": ["src/pages/Schedule.tsx"] }
+      ]
+    },
+    "drawings": {
+      "functional_score": 0,
+      "tasks": [
+        { "id": "drawings-1", "description": "Drawing list filterable and searchable", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('drawings').select(", "files": ["src/pages/Drawings.tsx"] },
+        { "id": "drawings-2", "description": "Upload Drawing button with Supabase Storage + INSERT", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('drawings').insert(", "files": ["src/pages/Drawings.tsx"] },
+        { "id": "drawings-3", "description": "Drawing detail renders PDF in-browser", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": "file_url", "files": ["src/pages/Drawings.tsx"] },
+        { "id": "drawings-4", "description": "Upload new revision with previous_revision_id FK", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": "previous_revision_id", "files": ["src/pages/Drawings.tsx"] },
+        { "id": "drawings-5", "description": "Revision history panel", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": "previous_revision_id", "files": ["src/pages/Drawings.tsx"] },
+        { "id": "drawings-6", "description": "Markup tool inserts into drawing_markups", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('drawing_markups').insert(", "files": ["src/pages/Drawings.tsx"] },
+        { "id": "drawings-7", "description": "Link to RFI picker stores drawing_id on RFI", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('rfis').update({drawing_id:", "files": ["src/pages/Drawings.tsx"] },
+        { "id": "drawings-8", "description": "Soft delete (archive flag)", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": "archived", "files": ["src/pages/Drawings.tsx"] }
+      ]
+    },
+    "documents": {
+      "functional_score": 0,
+      "tasks": [
+        { "id": "documents-1", "description": "File list/grid with folder tree navigation", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('documents').select(", "files": ["src/pages/Files.tsx"] },
+        { "id": "documents-2", "description": "New folder creation with nestable parent_folder_id", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('document_folders').insert(", "files": ["src/pages/Files.tsx"] },
+        { "id": "documents-3", "description": "Upload file to Supabase Storage + INSERT", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('documents').insert(", "files": ["src/pages/Files.tsx"] },
+        { "id": "documents-4", "description": "File preview inline for PDFs and images", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": "file_url", "files": ["src/pages/Files.tsx"] },
+        { "id": "documents-5", "description": "Upload new version preserved in document_versions", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('document_versions').insert(", "files": ["src/pages/Files.tsx"] },
+        { "id": "documents-6", "description": "Rename/move/soft-delete documents", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('documents').update(", "files": ["src/pages/Files.tsx"] },
+        { "id": "documents-7", "description": "Search files by name within project", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".ilike('name',", "files": ["src/pages/Files.tsx"] }
+      ]
+    },
+    "safety": {
+      "functional_score": 0,
+      "tasks": [
+        { "id": "safety-1", "description": "Safety incident list with empty state", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('safety_incidents').select(", "files": ["src/pages/Safety.tsx"] },
+        { "id": "safety-2", "description": "Report Incident form with INSERT mutation", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('safety_incidents').insert(", "files": ["src/pages/Safety.tsx"] },
+        { "id": "safety-3", "description": "Incident detail, edit, and status transitions", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('safety_incidents').update(", "files": ["src/pages/Safety.tsx"] },
+        { "id": "safety-4", "description": "Inspection list and new inspection form", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('safety_inspections').insert(", "files": ["src/pages/Safety.tsx"] },
+        { "id": "safety-5", "description": "Inspection checklist items with pass/fail/N/A", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('inspection_items').insert(", "files": ["src/pages/Safety.tsx"] },
+        { "id": "safety-6", "description": "Inspection detail and edit", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('safety_inspections').update(", "files": ["src/pages/Safety.tsx"] },
+        { "id": "safety-7", "description": "Toolbox Talk list and new form", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('toolbox_talks').insert(", "files": ["src/pages/Safety.tsx"] },
+        { "id": "safety-8", "description": "Certification list and new form", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('certifications').insert(", "files": ["src/pages/Safety.tsx"] },
+        { "id": "safety-9", "description": "Expiring certifications highlighted", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": "expiry_date", "files": ["src/pages/Safety.tsx"] },
+        { "id": "safety-10", "description": "OSHA 300 log flag in incident list", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": "osha_recordable", "files": ["src/pages/Safety.tsx"] }
+      ]
+    },
+    "meetings": {
+      "functional_score": 0,
+      "tasks": [
+        { "id": "meetings-1", "description": "Meeting list with empty state", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('meetings').select(", "files": ["src/pages/Meetings.tsx"] },
+        { "id": "meetings-2", "description": "New Meeting form with INSERT mutation", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('meetings').insert(", "files": ["src/pages/Meetings.tsx"] },
+        { "id": "meetings-3", "description": "Meeting agenda builder inserts items", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('meeting_agenda_items').insert(", "files": ["src/pages/Meetings.tsx"] },
+        { "id": "meetings-4", "description": "Minutes editable per agenda item", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('meeting_agenda_items').update(", "files": ["src/pages/Meetings.tsx"] },
+        { "id": "meetings-5", "description": "Add action item per agenda item", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('meeting_action_items').insert(", "files": ["src/pages/Meetings.tsx"] },
+        { "id": "meetings-6", "description": "Meeting status transitions and export minutes to PDF", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": "meetings", "files": ["src/pages/Meetings.tsx"] },
+        { "id": "meetings-7", "description": "Cross-meeting action items view", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('meeting_action_items').select(", "files": ["src/pages/Meetings.tsx"] }
+      ]
+    },
+    "budget": {
+      "functional_score": 0,
+      "tasks": [
+        { "id": "budget-1", "description": "Budget line item list with totals row", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('budget_line_items').select(", "files": ["src/pages/Budget.tsx"] },
+        { "id": "budget-2", "description": "Add line item form with INSERT mutation", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('budget_line_items').insert(", "files": ["src/pages/Budget.tsx"] },
+        { "id": "budget-3", "description": "Edit and delete line item", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('budget_line_items').update(", "files": ["src/pages/Budget.tsx"] },
+        { "id": "budget-4", "description": "Budget summary card computed from live data", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": "budget_summary", "files": ["src/pages/Budget.tsx"] },
+        { "id": "budget-5", "description": "Change order list and new CO form", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('change_orders').insert(", "files": ["src/pages/Budget.tsx"] },
+        { "id": "budget-6", "description": "CO status transitions update revised_budget", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('change_orders').update(", "files": ["src/pages/Budget.tsx"] },
+        { "id": "budget-7", "description": "Log cost form with cost_entries INSERT", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('cost_entries').insert(", "files": ["src/pages/Budget.tsx"] },
+        { "id": "budget-8", "description": "Variance column per line item", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": "variance", "files": ["src/pages/Budget.tsx"] }
+      ]
+    },
+    "payment_applications": {
+      "functional_score": 0,
+      "tasks": [
+        { "id": "pay_apps-1", "description": "Pay application list with empty state", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('payment_applications').select(", "files": ["src/pages/PaymentApplications.tsx"] },
+        { "id": "pay_apps-2", "description": "New Pay Application form with INSERT", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('payment_applications').insert(", "files": ["src/pages/PaymentApplications.tsx"] },
+        { "id": "pay_apps-3", "description": "SOV auto-populated from budget_line_items", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('pay_app_line_items')", "files": ["src/pages/PaymentApplications.tsx"] },
+        { "id": "pay_apps-4", "description": "G702 summary computed with retainage", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": "retainage", "files": ["src/pages/PaymentApplications.tsx"] },
+        { "id": "pay_apps-5", "description": "Status transitions and export G702/G703 PDF", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": "payment_applications", "files": ["src/pages/PaymentApplications.tsx"] },
+        { "id": "pay_apps-6", "description": "Lien waiver section with upload/generate", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": "lien_waiver", "files": ["src/pages/PaymentApplications.tsx"] }
+      ]
+    },
+    "directory": {
+      "functional_score": 0,
+      "tasks": [
+        { "id": "directory-1", "description": "Company list with insurance status", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('companies').select(", "files": ["src/pages/Directory.tsx"] },
+        { "id": "directory-2", "description": "Add Company form with INSERT mutation", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('companies').insert(", "files": ["src/pages/Directory.tsx"] },
+        { "id": "directory-3", "description": "Company detail, edit, delete", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('companies').update(", "files": ["src/pages/Directory.tsx"] },
+        { "id": "directory-4", "description": "Contact list with search", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('contacts').select(", "files": ["src/pages/Directory.tsx"] },
+        { "id": "directory-5", "description": "Add Contact form with INSERT mutation", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('contacts').insert(", "files": ["src/pages/Directory.tsx"] },
+        { "id": "directory-6", "description": "Contact detail with associated entities", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('contacts').update(", "files": ["src/pages/Directory.tsx"] }
+      ]
+    },
+    "field_capture": {
+      "functional_score": 0,
+      "tasks": [
+        { "id": "field_capture-1", "description": "Photo gallery with thumbnail grid", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('field_photos').select(", "files": ["src/pages/FieldCapture.tsx"] },
+        { "id": "field_capture-2", "description": "Upload Photo to Supabase Storage + INSERT", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('field_photos').insert(", "files": ["src/pages/FieldCapture.tsx"] },
+        { "id": "field_capture-3", "description": "GPS EXIF metadata stored on record", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": "gps_lat", "files": ["src/pages/FieldCapture.tsx"] },
+        { "id": "field_capture-4", "description": "Photo detail with metadata and GPS map pin", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": "field_photos", "files": ["src/pages/FieldCapture.tsx"] },
+        { "id": "field_capture-5", "description": "Edit caption and tags with UPDATE", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".from('field_photos').update(", "files": ["src/pages/FieldCapture.tsx"] },
+        { "id": "field_capture-6", "description": "Link photo to entity (RFI, Punch Item, etc)", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": "entity_type", "files": ["src/pages/FieldCapture.tsx"] },
+        { "id": "field_capture-7", "description": "Filters (Date, Tag, Uploader, Linked entity)", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": "filter", "files": ["src/pages/FieldCapture.tsx"] },
+        { "id": "field_capture-8", "description": "Delete photo from Storage and database", "status": "pending", "pr": null, "pr_url": null, "locked_by": null, "locked_at": null, "completed_at": null, "attempts": 0, "failure_reason": null, "verification_grep": ".storage.from(", "files": ["src/pages/FieldCapture.tsx"] }
+      ]
+    }
+  },
+  "integrations": {
+    "activity_feed_wired": { "status": "pending", "pr": null, "prereqs": [] },
+    "dashboard_metrics_wired": { "status": "pending", "pr": null, "prereqs": [] },
+    "rfi_drawing_link": { "status": "pending", "pr": null, "prereqs": ["rfis", "drawings"] },
+    "punch_drawing_pin": { "status": "pending", "pr": null, "prereqs": ["punch_list", "drawings"] },
+    "rfi_submittal_link": { "status": "pending", "pr": null, "prereqs": ["rfis", "submittals"] },
+    "task_schedule_link": { "status": "pending", "pr": null, "prereqs": ["tasks", "schedule"] },
+    "change_order_budget_link": { "status": "pending", "pr": null, "prereqs": ["budget"] },
+    "pay_app_sov_link": { "status": "pending", "pr": null, "prereqs": ["payment_applications", "budget"] },
+    "meeting_task_link": { "status": "pending", "pr": null, "prereqs": ["meetings", "tasks"] },
+    "safety_daily_log_link": { "status": "pending", "pr": null, "prereqs": ["safety", "daily_logs"] }
+  },
+  "regression_watch": {
+    "last_run": null,
+    "pages_watched": [],
+    "last_result": "PASS"
+  }
+}

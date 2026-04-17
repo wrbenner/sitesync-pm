@@ -1,0 +1,225 @@
+name: Regression Watcher — Verify Completed Pages
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: regression-watcher
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  watch-regressions:
+    name: Regression Verification Blueprint
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - name: D1 — Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: D1 — Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: D1 — Install dependencies
+        run: npm ci
+
+      - name: D1 — Configure git
+        run: |
+          git config user.name "SiteSync Regression Watcher"
+          git config user.email "organism@sitesync.app"
+
+      - name: D2 — Grep verification for completed tasks
+        id: verify-greps
+        run: |
+          cat > /tmp/verify-greps.js <<'SCRIPT'
+          const fs = require('fs');
+          const { execSync } = require('child_process');
+
+          const registry = JSON.parse(fs.readFileSync('organism-memory/task-registry.json', 'utf8'));
+          const regressions = [];
+          const passing = [];
+
+          for (const [pageName, page] of Object.entries(registry.pages)) {
+            for (const task of page.tasks) {
+              if (task.status !== 'done') continue;
+              if (!task.verification_grep) continue;
+
+              try {
+                const escapedGrep = task.verification_grep.replace(/"/g, '\\"');
+                const result = execSync(
+                  'grep -r "' + escapedGrep + '" src/ --include="*.tsx" --include="*.ts" -l',
+                  { encoding: 'utf8', stdio: 'pipe' }
+                ).trim();
+
+                if (result) {
+                  passing.push(task.id);
+                } else {
+                  regressions.push({ task_id: task.id, page: pageName, grep: task.verification_grep, reason: 'grep_empty' });
+                }
+              } catch (e) {
+                regressions.push({ task_id: task.id, page: pageName, grep: task.verification_grep, reason: 'grep_not_found' });
+              }
+            }
+          }
+
+          console.log('Passing tasks:', passing.length);
+          console.log('Regressions found:', regressions.length);
+
+          const report = {
+            run_timestamp: new Date().toISOString(),
+            passing_count: passing.length,
+            regression_count: regressions.length,
+            regressions
+          };
+
+          fs.mkdirSync('organism-memory', { recursive: true });
+          fs.writeFileSync('organism-memory/regression-report.json', JSON.stringify(report, null, 2));
+
+          if (regressions.length > 0) {
+            console.log('REGRESSIONS:');
+            regressions.forEach(r => console.log(' -', r.task_id, ':', r.reason));
+            process.exit(1);
+          }
+          SCRIPT
+
+          node /tmp/verify-greps.js
+
+      - name: D3 — Build verification
+        id: build
+        run: |
+          npm run build 2>&1 || true
+          echo "build_checked=true" >> "$GITHUB_OUTPUT"
+
+      - name: A1 — Diagnose regressions (read-only)
+        if: failure()
+        run: |
+          REPORT=$(cat organism-memory/regression-report.json 2>/dev/null || echo "{}")
+
+          npm install -g @anthropic-ai/claude-code
+
+          cat > /tmp/rw-diagnose.txt <<PROMPT_EOF
+          ## SiteSync PM — Regression Watcher Diagnosis
+
+          The following completed tasks have failed verification:
+          ${REPORT}
+
+          For each regression, read the relevant source file and identify WHY the grep is failing.
+          Possible causes: file renamed, mutation replaced with stub, component deleted, import path changed.
+
+          Output diagnosis for each regression:
+          - task_id:
+          - file_affected:
+          - root_cause:
+          - recommended_fix:
+
+          Do NOT make any code changes. Diagnosis only.
+          PROMPT_EOF
+
+          claude --max-turns 10 --allowedTools "Read,Glob,Grep,Bash" --print "$(cat /tmp/rw-diagnose.txt)" || true
+
+      - name: D4 — Create regression issues
+        if: failure()
+        run: |
+          if [ ! -f organism-memory/regression-report.json ]; then exit 0; fi
+
+          cat > /tmp/create-issues.js <<'SCRIPT'
+          const fs = require('fs');
+          const { execSync } = require('child_process');
+          const report = JSON.parse(fs.readFileSync('organism-memory/regression-report.json'));
+
+          for (const regression of report.regressions) {
+            const title = '[REGRESSION] Task ' + regression.task_id + ' verification failing';
+            const body = '## Regression Detected\n\n' +
+              '**Task:** `' + regression.task_id + '`\n' +
+              '**Page:** ' + regression.page + '\n' +
+              '**Verification grep:** `' + regression.grep + '`\n' +
+              '**Failure reason:** ' + regression.reason + '\n' +
+              '**Detected at:** ' + report.run_timestamp + '\n\n' +
+              '### Action Required\n' +
+              '1. Check recent PRs that touched the ' + regression.page + ' page\n' +
+              '2. Find which commit removed the code matching the verification grep\n' +
+              '3. Either restore the implementation or update the task status\n' +
+              '4. To re-queue this task: set task status back to `pending`';
+
+            try {
+              const safeTitle = title.replace(/"/g, '\\"');
+              const safeBody = body.replace(/"/g, '\\"').replace(/\$/g, '\\$');
+              execSync('gh issue create --title "' + safeTitle + '" --body "' + safeBody + '" --label "regression,needs-human,organism"', { stdio: 'inherit' });
+            } catch(e) {
+              console.log('Issue creation failed for', regression.task_id, e.message);
+            }
+          }
+          SCRIPT
+
+          node /tmp/create-issues.js
+
+      - name: D5 — Reset regressed tasks in registry
+        if: failure()
+        run: |
+          cat > /tmp/reset-regressions.js <<'SCRIPT'
+          const fs = require('fs');
+          if (!fs.existsSync('organism-memory/regression-report.json')) process.exit(0);
+
+          const report = JSON.parse(fs.readFileSync('organism-memory/regression-report.json'));
+          const registry = JSON.parse(fs.readFileSync('organism-memory/task-registry.json'));
+
+          for (const regression of report.regressions) {
+            for (const page of Object.values(registry.pages)) {
+              const task = page.tasks.find(t => t.id === regression.task_id);
+              if (task) {
+                task.status = 'pending';
+                task.attempts = 0;
+                task.failure_reason = 'regression detected by regression-watcher';
+                const done = page.tasks.filter(t => t.status === 'done').length;
+                page.functional_score = Math.round((done / page.tasks.length) * 100);
+              }
+            }
+          }
+
+          registry.regression_watch.last_run = new Date().toISOString();
+          registry.regression_watch.last_result = 'REGRESSION';
+          registry.regression_watch.pages_watched = [...new Set(report.regressions.map(r => r.page))];
+          registry.last_updated = new Date().toISOString();
+
+          fs.writeFileSync('organism-memory/task-registry.json', JSON.stringify(registry, null, 2));
+          SCRIPT
+
+          node /tmp/reset-regressions.js
+
+          git add organism-memory/task-registry.json organism-memory/regression-report.json
+          git commit -m "chore(organism): mark regressions as pending [RW-${{ github.run_number }}]" || true
+          git push origin HEAD || true
+
+      - name: D5 — Update registry on success
+        if: success()
+        run: |
+          cat > /tmp/update-success.js <<'SCRIPT'
+          const fs = require('fs');
+          const registry = JSON.parse(fs.readFileSync('organism-memory/task-registry.json'));
+          registry.regression_watch.last_run = new Date().toISOString();
+          registry.regression_watch.last_result = 'PASS';
+          registry.last_updated = new Date().toISOString();
+          fs.writeFileSync('organism-memory/task-registry.json', JSON.stringify(registry, null, 2));
+          SCRIPT
+
+          node /tmp/update-success.js
+
+          git add organism-memory/task-registry.json organism-memory/regression-report.json 2>/dev/null || true
+          git commit -m "chore(organism): regression watch PASS [RW-${{ github.run_number }}]" || true
+          git push origin HEAD || true

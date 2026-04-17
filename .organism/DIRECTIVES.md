@@ -1,3 +1,20 @@
+# PRIME DIRECTIVE — April 17, 2026
+
+FUNCTIONALITY FIRST. Every tier's primary goal is making user workflows work end-to-end.
+
+The organism exists to make SiteSync PM a fully functional enterprise construction management platform.
+A page is NOT done until a user can: create an entity, see it in a list, open its detail view,
+edit it, change its status, and delete it — all with real Supabase data.
+
+Quality, polish, testing, and design come AFTER all 14 pages are functionally complete.
+
+## Rules:
+1. Every mutation MUST hit Supabase — no console.log stubs, no toast-only buttons
+2. Every query MUST return real data — no hardcoded arrays, no mock fallbacks
+3. Every form MUST validate and submit — no uncontrolled inputs, no dead buttons
+4. Cross-page links MUST work — RFIs link to drawings, punch items pin to drawings, etc.
+5. The task registry at organism-memory/task-registry.json is the source of truth
+
 # ORGANISM DIRECTIVES
 # Read this FIRST on every cycle. This is your mission.
 

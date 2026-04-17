@@ -16,8 +16,9 @@
 name: "Design Excellence — Page Polish"
 
 on:
-  schedule:
-    - cron: "0 1,5,9,13,17,21 * * *"  # Every 4 hours — PRIMARY tier for enterprise polish
+  # SUSPENDED: Re-enable when functional_score > 80% across all pages
+  # schedule:
+  #   - cron: "0 1,5,9,13,17,21 * * *"  # Every 4 hours — PRIMARY tier for enterprise polish
   workflow_dispatch:
     inputs:
       target_page:

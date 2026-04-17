@@ -159,7 +159,12 @@ jobs:
           python3 << 'PYEOF'
           import os
           page = os.environ.get("PAGE", "RFIs")
-          prompt = f"""You are the Feature Hardening agent. Your job is NOT to make pages pretty —
+          prompt = f"""PRIME DIRECTIVE: Your job is to make every interactive element ACTUALLY WORK.
+          Every button must trigger a real Supabase mutation. Every form must submit.
+          Every list must show real data. No stubs. No toast-only buttons. No mock data.
+          DO NOT focus on error handling or edge cases — focus on making the happy path work first.
+
+          You are the Feature Hardening agent. Your job is NOT to make pages pretty —
           that's Design Excellence's job. Your job is to make every feature on the {page} page
           BULLETPROOF. Enterprise quality means it never breaks, no matter what the user does.
 
