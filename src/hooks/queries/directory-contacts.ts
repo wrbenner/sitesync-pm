@@ -26,3 +26,29 @@ export function useDirectoryContacts(projectId: string | undefined, pagination?:
     enabled: !!projectId,
   })
 }
+
+// ── Companies ─────────────────────────────────────────────
+
+export interface CompanyRow {
+  id: string
+  project_id: string
+  name: string
+  trade: string | null
+  insurance_status: 'current' | 'expiring' | 'expired' | 'missing' | null
+  insurance_expiry: string | null
+}
+
+export function useCompanies(projectId: string | undefined) {
+  return useQuery({
+    queryKey: ['companies', projectId],
+    queryFn: async (): Promise<CompanyRow[]> => {
+      const { data, error } = await supabase
+        .from('companies').select('id, project_id, name, trade, insurance_status, insurance_expiry')
+        .eq('project_id', projectId!)
+        .order('name', { ascending: true })
+      if (error) throw error
+      return (data ?? []) as CompanyRow[]
+    },
+    enabled: !!projectId,
+  })
+}

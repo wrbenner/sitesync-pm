@@ -5,7 +5,7 @@ import { Drawer } from '../components/Drawer';
 import { PermissionGate } from '../components/auth/PermissionGate';
 import { colors, spacing, typography, borderRadius, transitions, shadows } from '../styles/theme';
 import { useProjectId } from '../hooks/useProjectId';
-import { useDirectoryContacts } from '../hooks/queries/directory-contacts';
+import { useDirectoryContacts, useCompanies } from '../hooks/queries/directory-contacts';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
@@ -88,8 +88,6 @@ interface CompanyInfo {
   insuranceStatus: InsuranceStatus;
   insuranceExpiry: string;
 }
-
-const COMPANIES: CompanyInfo[] = [];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -220,6 +218,7 @@ export const Directory: React.FC = () => {
   const projectId = useProjectId();
   const qc = useQueryClient();
   const { data: contactsResult } = useDirectoryContacts(projectId);
+  const { data: companiesData } = useCompanies(projectId);
   const CONTACTS: Contact[] = useMemo(() => {
     const rows = (contactsResult?.data ?? []) as unknown as Array<Record<string, unknown>>;
     return rows.map((r) => ({
@@ -233,6 +232,15 @@ export const Directory: React.FC = () => {
       status: (r.status === 'inactive' ? 'inactive' : 'active') as 'active' | 'inactive',
     }));
   }, [contactsResult]);
+
+  const companies: CompanyInfo[] = useMemo(() => {
+    return (companiesData ?? []).map((r) => ({
+      name: r.name,
+      trade: r.trade ?? '',
+      insuranceStatus: (r.insurance_status ?? 'missing') as InsuranceStatus,
+      insuranceExpiry: r.insurance_expiry ?? '',
+    }));
+  }, [companiesData]);
 
   const [view, setView] = useState<'people' | 'companies'>('people');
   const [rawSearch, setRawSearch] = useState('');
@@ -270,26 +278,26 @@ export const Directory: React.FC = () => {
   }, [searchQuery, CONTACTS]);
 
   const filteredCompanies = useMemo(() => {
-    if (!searchQuery.trim()) return COMPANIES;
+    if (!searchQuery.trim()) return companies;
     const q = searchQuery.toLowerCase();
-    return COMPANIES.filter(c =>
+    return companies.filter(c =>
       c.name.toLowerCase().includes(q) ||
       c.trade.toLowerCase().includes(q)
     );
-  }, [searchQuery]);
+  }, [searchQuery, companies]);
 
   // Metrics
   const totalContacts = CONTACTS.length;
-  const activeCompanies = COMPANIES.filter(c => c.insuranceStatus === 'current').length;
-  const expiringCerts = COMPANIES.filter(c => c.insuranceStatus === 'expiring').length;
-  const missingInsurance = COMPANIES.filter(c => c.insuranceStatus === 'missing' || c.insuranceStatus === 'expired').length;
+  const activeCompanies = companies.filter(c => c.insuranceStatus === 'current').length;
+  const expiringCerts = companies.filter(c => c.insuranceStatus === 'expiring').length;
+  const missingInsurance = companies.filter(c => c.insuranceStatus === 'missing' || c.insuranceStatus === 'expired').length;
 
   const isEmpty = view === 'people' ? filteredContacts.length === 0 : filteredCompanies.length === 0;
 
   return (
     <PageContainer
       title="Directory"
-      subtitle={`${totalContacts} contacts across ${COMPANIES.length} companies`}
+      subtitle={`${totalContacts} contacts across ${companies.length} companies`}
       actions={
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
           <ViewToggle view={view} onChange={setView} />
