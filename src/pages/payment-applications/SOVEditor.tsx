@@ -1,9 +1,12 @@
 import React, { useState, useMemo, useEffect, useCallback, memo, lazy, Suspense } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
-  FileText, AlertTriangle, Send, Plus, Scale, Receipt, X, Save,
+  FileText, AlertTriangle, Send, Plus, Scale, Receipt, X, Save, WifiOff,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { supabase } from '../../lib/supabase'
+import { syncManager } from '../../lib/syncManager'
+import { useIsOnline } from '../../hooks/useOfflineStatus'
 import { Card, Btn, Skeleton, EmptyState } from '../../components/Primitives'
 import { PermissionGate } from '../../components/auth/PermissionGate'
 import { colors, spacing, typography, borderRadius, shadows, touchTarget } from '../../styles/theme'
@@ -45,6 +48,23 @@ export const SOVEditorPanel = memo<SOVEditorPanelProps>(({ sovData, appStatus, p
   const [isDirty, setIsDirty] = useState(false)
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)
   const queryClient = useQueryClient()
+  const isOnline = useIsOnline()
+
+  useEffect(() => {
+    if (!projectId) return
+    const channel = supabase
+      .channel(`pay-apps-${projectId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'pay_applications', filter: `project_id=eq.${projectId}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['pay_app_sov', projectId, sovData.applicationNumber] })
+          queryClient.invalidateQueries({ queryKey: ['pay_applications', projectId] })
+        },
+      )
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [projectId, sovData.applicationNumber, queryClient])
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>
@@ -124,6 +144,19 @@ export const SOVEditorPanel = memo<SOVEditorPanelProps>(({ sovData, appStatus, p
           ? (totalCompleted / item.scheduled_value) * 100 : 0
         return { id: item.id, this_period_completed: thisAmt, materials_stored: materials, total_completed: totalCompleted, percent_complete: percentComplete }
       })
+      if (!navigator.onLine) {
+        await syncManager.queueOfflineMutation('pay_applications', 'update', {
+          id: sovData.payAppId,
+          total_completed_and_stored: liveG702.totalCompletedAndStored,
+          retainage: liveG702.retainageAmount,
+          total_earned_less_retainage: liveG702.totalEarnedLessRetainage,
+          current_payment_due: liveG702.currentPaymentDue,
+          balance_to_finish: liveG702.balanceToFinish,
+          status: submit ? 'in_review' : undefined,
+          line_items: updates,
+        })
+        return { queuedOffline: true }
+      }
       await saveSOVProgress(
         sovData.payAppId,
         updates,
@@ -136,12 +169,17 @@ export const SOVEditorPanel = memo<SOVEditorPanelProps>(({ sovData, appStatus, p
         },
         submit,
       )
+      return { queuedOffline: false }
     },
-    onSuccess: (_, { submit }) => {
+    onSuccess: (result, { submit }) => {
       queryClient.invalidateQueries({ queryKey: ['pay_app_sov', projectId, sovData.applicationNumber] })
       queryClient.invalidateQueries({ queryKey: ['pay_applications', projectId] })
       setIsDirty(false)
-      toast.success(submit ? 'Application submitted for review' : 'SOV progress saved')
+      if (result?.queuedOffline) {
+        toast.info('Saved offline \u2014 will sync when connected')
+      } else {
+        toast.success(submit ? 'Application submitted for review' : 'SOV progress saved')
+      }
     },
     onError: () => toast.error('Failed to save SOV progress'),
   })
@@ -198,6 +236,11 @@ export const SOVEditorPanel = memo<SOVEditorPanelProps>(({ sovData, appStatus, p
         {isDirty && (
           <span style={{ fontSize: typography.fontSize.caption, color: colors.statusPending, backgroundColor: colors.statusPendingSubtle, padding: `1px ${spacing.sm}`, borderRadius: borderRadius.full }}>
             Unsaved changes
+          </span>
+        )}
+        {!isOnline && (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: spacing['1'], fontSize: typography.fontSize.caption, color: colors.statusCritical, backgroundColor: colors.statusCriticalSubtle, padding: `1px ${spacing.sm}`, borderRadius: borderRadius.full }}>
+            <WifiOff size={11} /> Offline
           </span>
         )}
       </div>

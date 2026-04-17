@@ -8,6 +8,7 @@ import { AIAnnotationIndicator } from '../components/ai/AIAnnotation';
 import { PredictiveAlertBanner } from '../components/ai/PredictiveAlert';
 import { getAnnotationsForEntity, getPredictiveAlertsForPage } from '../data/aiAnnotations';
 import { PermissionGate } from '../components/auth/PermissionGate';
+import { supabase } from '../lib/supabase';
 
 // Rotating palette for crew dot colors on map
 const CREW_COLOR_PALETTE = [
@@ -55,8 +56,22 @@ export const Crews: React.FC = () => {
     setDotPositions(initialPositions);
   }, [initialPositions]);
 
-  // Crew positions are static until real GPS tracking is integrated.
-  // Future: subscribe to crew_locations table via Supabase Realtime.
+  // Subscribe to crew_locations changes for live GPS updates.
+  useEffect(() => {
+    const pid = activeProject?.id;
+    if (!pid) return;
+    const channel = supabase
+      .channel(`crew-locations-${pid}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'crew_locations', filter: `project_id=eq.${pid}` },
+        () => {
+          loadCrews(pid);
+        },
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [activeProject?.id, loadCrews]);
 
   if (loading) {
     return (

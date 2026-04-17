@@ -1,5 +1,6 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Briefcase, Plus, FileText, BarChart3, AlertTriangle } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
 import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton } from '../components/Primitives'
 import { DataTable, createColumnHelper } from '../components/shared/DataTable'
 import { ErrorBoundary } from '../components/ErrorBoundary'
@@ -9,6 +10,7 @@ import { usePortfolioMetrics } from '../hooks/useProjectMetrics'
 import { captureException } from '../lib/errorTracking'
 import { toast } from 'sonner'
 import { useAuthStore } from '../stores/authStore'
+import { supabase } from '../lib/supabase'
 
 // ── Column helpers ─────────────────────────────────────────
 
@@ -243,11 +245,27 @@ const PortfolioMetricsSection: React.FC<PortfolioMetricsSectionProps> = ({
 export const Portfolio: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('overview')
   const orgId = useAuthStore((s) => s.profile?.organization_id) || undefined
+  const queryClient = useQueryClient()
 
   const { data: portfolios } = usePortfolios(orgId ?? '')
   const portfolioId = (portfolios && portfolios[0]?.id) as string | undefined
   const { data: portfolioProjects, isPending: loading } = usePortfolioProjects(portfolioId ?? '')
   const { data: reports } = useExecutiveReports(portfolioId ?? '')
+
+  useEffect(() => {
+    if (!portfolioId) return
+    const channel = supabase
+      .channel(`portfolio-${portfolioId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'projects' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['portfolio_projects', portfolioId] })
+        },
+      )
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [portfolioId, queryClient])
 
   const projects = (portfolioProjects || []).map((pp: unknown) => pp.projects).filter(Boolean)
 

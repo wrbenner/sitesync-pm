@@ -18,6 +18,9 @@ import { useDailyLogs, useDailyLogEntries } from '../../hooks/queries';
 import { useUpdateDailyLog, useCreateDailyLog, useSubmitDailyLog, useApproveDailyLog, useRejectDailyLog } from '../../hooks/mutations';
 import { fetchWeather, formatWeatherSummary } from '../../lib/weather';
 import { supabase } from '../../lib/supabase';
+import { syncManager } from '../../lib/syncManager';
+import { useIsOnline } from '../../hooks/useOfflineStatus';
+import { WifiOff } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import type { WeatherData } from '../../lib/weather';
 import { PermissionGate } from '../../components/auth/PermissionGate';
@@ -77,6 +80,7 @@ const DailyLogPage: React.FC = () => {
   const [aiSummaryGenerated, setAiSummaryGenerated] = useState(false);
 
   const { hasPermission } = usePermissions();
+  const isOnline = useIsOnline();
 
   const manpowerSeeded = React.useRef(false);
   const [manpowerRows, setManpowerRows] = useState<ManpowerRow[]>([]);
@@ -605,6 +609,20 @@ const DailyLogPage: React.FC = () => {
   };
 
   const handleSubmit = async () => {
+    if (!navigator.onLine) {
+      try {
+        await syncManager.queueOfflineMutation('daily_logs', 'update', {
+          id: today.id,
+          status: 'submitted',
+          is_submitted: true,
+          submitted_at: new Date().toISOString(),
+        });
+        toast.info('Saved offline \u2014 will sync when connected');
+      } catch {
+        addToast('error', 'Failed to queue daily log submission');
+      }
+      return;
+    }
     try {
       await submitDailyLog.mutateAsync({ id: today.id, projectId: projectId! });
       addToast('success', 'Daily log submitted for approval');
@@ -686,6 +704,25 @@ const DailyLogPage: React.FC = () => {
       </div>
     }>
       <style>{`@keyframes pulse-dl { 0%,100% { opacity: 0.3; } 50% { opacity: 0.7; } }`}</style>
+      {!isOnline && (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            display: 'flex', alignItems: 'center', gap: spacing['2'],
+            padding: `${spacing['2']} ${spacing['4']}`,
+            backgroundColor: colors.statusPendingSubtle,
+            border: `1px solid ${colors.statusPending}`,
+            borderRadius: borderRadius.md,
+            marginBottom: spacing['4'],
+          }}
+        >
+          <WifiOff size={14} color={colors.statusPending} />
+          <span style={{ fontSize: typography.fontSize.sm, color: colors.statusPending, fontWeight: typography.fontWeight.medium }}>
+            You're offline — changes will sync when connected.
+          </span>
+        </div>
+      )}
       {logError && (
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'], padding: `${spacing['3']} ${spacing['4']}`, backgroundColor: colors.statusCriticalSubtle, border: `1px solid ${colors.statusCritical}40`, borderRadius: borderRadius.lg, marginBottom: spacing['4'] }}>
           <AlertTriangle size={16} color={colors.statusCritical} style={{ flexShrink: 0 }} />

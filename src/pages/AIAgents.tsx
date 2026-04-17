@@ -1,4 +1,6 @@
-import React, { useState, useMemo, useCallback, memo } from 'react'
+import React, { useState, useMemo, useCallback, memo, useEffect } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { supabase } from '../lib/supabase'
 import {
   Bot, Play, Pause, Activity, Shield,
   Calendar, DollarSign, ShieldCheck, ClipboardCheck, Scale, FileSearch,
@@ -517,9 +519,28 @@ const TOOL_REGISTRY: Record<
 export const AIAgents: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('overview')
   const projectId = useProjectId()
+  const queryClient = useQueryClient()
   const { isLoading: loadingAgents } = useAIAgents(projectId)
   const { data: dbActions, isLoading: loadingActions } = useAIAgentActions(projectId)
   const { agentStates, setAgentStatus } = useAgentOrchestrator()
+
+  useEffect(() => {
+    if (!projectId) return
+    const channel = supabase
+      .channel(`ai-agents-${projectId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'ai_agents', filter: `project_id=eq.${projectId}` },
+        () => { queryClient.invalidateQueries({ queryKey: ['ai_agents', projectId] }) },
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'ai_agent_actions', filter: `project_id=eq.${projectId}` },
+        () => { queryClient.invalidateQueries({ queryKey: ['ai_agent_actions', projectId] }) },
+      )
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [projectId, queryClient])
 
   // Compute metrics from DB + local state
   const totalActiveAgents = useMemo(
