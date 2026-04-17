@@ -8,6 +8,7 @@ import { MetricCardSkeleton, TableSkeleton } from '../components/ui/Skeletons';
 import { Btn } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, shadows, touchTarget } from '../styles/theme';
 import { useReducedMotion } from '../hooks/useReducedMotion';
+import { useIsMobile } from '../hooks/useWindowSize';
 import { useQuery } from '../hooks/useQuery';
 import { fetchBudgetDivisions, getCostCodesByDivision } from '../api/endpoints/budget';
 import { usePayApplications } from '../hooks/queries';
@@ -25,7 +26,7 @@ import { Treemap } from '../components/budget/Treemap';
 import { SCurve } from '../components/budget/SCurve';
 import { EarnedValueDashboard } from '../components/budget/EarnedValueDashboard';
 import { WaterfallChart } from '../components/budget/WaterfallChart';
-import { Download, AlertTriangle, ChevronRight, ArrowRight, DollarSign,  Sparkles, RefreshCw, Pencil } from 'lucide-react';
+import { Download, AlertTriangle, ChevronRight, ArrowRight, DollarSign, Sparkles, RefreshCw, Pencil, FileText, Receipt, GitBranch } from 'lucide-react';
 import { computeDivisionFinancials, computeProjectFinancials, detectBudgetAnomalies } from '../lib/financialEngine';
 const BudgetUpload = React.lazy(() => import('../components/budget/BudgetUpload').then(m => ({ default: m.BudgetUpload })));
 import EmptyState from '../components/ui/EmptyState';
@@ -48,12 +49,12 @@ const fmt = (n: number): string => {
 
 const fadeUp: Variants = {
   hidden: { opacity: 0, y: 14 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.18, ease: 'easeOut' as const } },
+  visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 380, damping: 30 } },
 };
 
 const staggerContainer: Variants = {
   hidden: { opacity: 1 },
-  visible: { opacity: 1, transition: { staggerChildren: 0.05 } },
+  visible: { opacity: 1, transition: { staggerChildren: 0.03 } },
 };
 
 const rowVariant: Variants = {
@@ -61,7 +62,7 @@ const rowVariant: Variants = {
   visible: (i: number) => ({
     opacity: 1,
     x: 0,
-    transition: { duration: 0.14, ease: 'easeOut' as const, delay: i * 0.03 },
+    transition: { type: 'spring', stiffness: 350, damping: 30, delay: i * 0.03 },
   }),
 };
 
@@ -83,7 +84,7 @@ function invoiceStatusDot(status: string | null): string {
   }
 }
 
-const DivisionDrawerContent: React.FC<{ division: MappedDivision; projectId: string }> = ({ division, projectId }) => {
+const DivisionDrawerContent: React.FC<{ division: MappedDivision; projectId: string }> = React.memo(({ division, projectId }) => {
   const [activeTab, setActiveTab] = useState<DivisionDrawerTab>('cost-codes');
   const { data, loading } = useQuery(
     `division-detail-${division.id}`,
@@ -187,7 +188,11 @@ const DivisionDrawerContent: React.FC<{ division: MappedDivision; projectId: str
       {/* Cost Codes tab */}
       {data && activeTab === 'cost-codes' && (
         data.costCodes.length === 0 ? (
-          <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0 }}>No cost entries recorded.</p>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: `${spacing['8']} ${spacing['4']}`, textAlign: 'center' }}>
+            <FileText size={28} color={colors.textTertiary} style={{ marginBottom: spacing['2'] }} />
+            <p style={{ margin: 0, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textSecondary }}>No cost entries</p>
+            <p style={{ margin: 0, marginTop: spacing['1'], fontSize: typography.fontSize.caption, color: colors.textTertiary }}>No cost entries have been recorded for this division</p>
+          </div>
         ) : (
           <div style={{ border: `1px solid ${colors.borderSubtle}`, borderRadius: borderRadius.base, overflow: 'hidden' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '90px 1fr 80px 70px 100px 85px', padding: `${spacing['2']} ${spacing['3']}`, borderBottom: `1px solid ${colors.borderSubtle}`, backgroundColor: colors.surfaceInset }}>
@@ -215,7 +220,11 @@ const DivisionDrawerContent: React.FC<{ division: MappedDivision; projectId: str
       {/* Invoices tab */}
       {data && activeTab === 'invoices' && (
         data.invoices.length === 0 ? (
-          <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0 }}>No invoices recorded for this division.</p>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: `${spacing['8']} ${spacing['4']}`, textAlign: 'center' }}>
+            <Receipt size={28} color={colors.textTertiary} style={{ marginBottom: spacing['2'] }} />
+            <p style={{ margin: 0, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textSecondary }}>No invoices</p>
+            <p style={{ margin: 0, marginTop: spacing['1'], fontSize: typography.fontSize.caption, color: colors.textTertiary }}>No invoices have been recorded for this division</p>
+          </div>
         ) : (
           <div style={{ border: `1px solid ${colors.borderSubtle}`, borderRadius: borderRadius.base, overflow: 'hidden' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '85px 1fr 80px 80px 90px 85px', padding: `${spacing['2']} ${spacing['3']}`, borderBottom: `1px solid ${colors.borderSubtle}`, backgroundColor: colors.surfaceInset }}>
@@ -246,7 +255,11 @@ const DivisionDrawerContent: React.FC<{ division: MappedDivision; projectId: str
       {/* Change Orders tab */}
       {data && activeTab === 'change-orders' && (
         data.changeOrders.length === 0 ? (
-          <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0 }}>No change orders linked to this division.</p>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: `${spacing['8']} ${spacing['4']}`, textAlign: 'center' }}>
+            <GitBranch size={28} color={colors.textTertiary} style={{ marginBottom: spacing['2'] }} />
+            <p style={{ margin: 0, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textSecondary }}>No change orders</p>
+            <p style={{ margin: 0, marginTop: spacing['1'], fontSize: typography.fontSize.caption, color: colors.textTertiary }}>No change orders are linked to this division</p>
+          </div>
         ) : (
           <div style={{ border: `1px solid ${colors.borderSubtle}`, borderRadius: borderRadius.base, overflow: 'hidden' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr 90px 110px', padding: `${spacing['2']} ${spacing['3']}`, borderBottom: `1px solid ${colors.borderSubtle}`, backgroundColor: colors.surfaceInset }}>
@@ -275,7 +288,7 @@ const DivisionDrawerContent: React.FC<{ division: MappedDivision; projectId: str
       )}
     </div>
   );
-};
+});
 
 const BudgetPage: React.FC = () => {
   const appNavigate = useAppNavigate();
@@ -283,6 +296,7 @@ const BudgetPage: React.FC = () => {
   const { addToast } = useToast();
   const projectId = useProjectId();
   const reducedMotion = useReducedMotion();
+  const isMobile = useIsMobile();
   const { setPageContext } = useCopilotStore();
   useEffect(() => { setPageContext('budget'); }, [setPageContext]);
   const updateCO = useUpdateChangeOrder();
@@ -295,6 +309,7 @@ const BudgetPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'earned-value'>('overview');
   const [uploadOpen, setUploadOpen] = useState(false);
   const [hoveredDivId, setHoveredDivId] = useState<string | null>(null);
+  const [hoveredCOId, setHoveredCOId] = useState<string | null>(null);
   const [editingCell, setEditingCell] = useState<{ divId: string; field: 'spent' | 'progress'; value: string } | null>(null);
   const { hasPermission } = usePermissions();
   const canEditBudget = hasPermission('budget.edit');
@@ -440,6 +455,7 @@ const BudgetPage: React.FC = () => {
 
   const pillBase: React.CSSProperties = {
     padding: `${spacing['1']} ${spacing['3']}`,
+    minHeight: touchTarget.comfortable,
     borderRadius: borderRadius.full,
     border: 'none',
     cursor: 'pointer',
@@ -558,7 +574,7 @@ const BudgetPage: React.FC = () => {
           animate="visible"
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(4, 1fr)',
+            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
             gap: spacing.lg,
           }}
         >
@@ -587,7 +603,12 @@ const BudgetPage: React.FC = () => {
         <p style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.4px', margin: 0, marginBottom: spacing['2'] }}>Contingency Drawdown</p>
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
           <div role="progressbar" aria-label="Contingency drawdown" aria-valuenow={contingencyPct} aria-valuemin={0} aria-valuemax={100} style={{ flex: 1, height: 12, backgroundColor: colors.surfaceInset, borderRadius: borderRadius.full, overflow: 'hidden', display: 'flex' }}>
-            <div style={{ width: `${contingencyPct}%`, height: '100%', backgroundColor: colors.statusPending, borderRadius: borderRadius.full }} />
+            <motion.div
+              initial={reducedMotion ? false : { width: '0%' }}
+              animate={{ width: `${contingencyPct}%` }}
+              transition={{ type: 'spring', stiffness: 50, damping: 15 }}
+              style={{ height: '100%', backgroundColor: colors.statusPending, borderRadius: borderRadius.full }}
+            />
           </div>
           <span style={{ fontSize: typography.fontSize.caption, color: colors.textSecondary, whiteSpace: 'nowrap', flexShrink: 0 }}>
             {fmt(contingencyRemaining)} of {fmt(contingencyBudget)} remaining
@@ -635,6 +656,7 @@ const BudgetPage: React.FC = () => {
                   border: 'none',
                   cursor: 'pointer',
                   padding: `${spacing['1']} ${spacing['2']}`,
+                  minHeight: touchTarget.min,
                   borderRadius: borderRadius.sm,
                   fontSize: typography.fontSize.caption,
                   color: colors.textTertiary,
@@ -820,10 +842,12 @@ const BudgetPage: React.FC = () => {
                       borderLeft: isAtRisk ? `3px solid ${colors.chartRed}` : '3px solid transparent',
                       borderBottom: idx < costData.divisions.length - 1 ? `1px solid ${colors.borderSubtle}` : 'none',
                       backgroundColor: isAtRisk ? colors.statusCriticalSubtle : isHovered ? colors.surfaceHover : 'transparent',
+                      transform: isHovered ? 'translateY(-1px)' : 'none',
+                      boxShadow: isHovered ? shadows.cardHover : 'none',
                       cursor: 'pointer',
                       outline: isFocused ? `2px solid ${colors.primaryOrange}` : 'none',
                       outlineOffset: '-2px',
-                      transition: 'background-color 0.1s ease',
+                      transition: 'background-color 0.12s ease, transform 0.15s ease, box-shadow 0.15s ease',
                     }}
                   >
                     {/* Division name */}
@@ -1072,11 +1096,19 @@ const BudgetPage: React.FC = () => {
                 const typeConfig = getCOTypeConfig(coType);
                 const statusConfig = getCOStatusConfig(coStatus);
                 return (
-                  <div role="row" tabIndex={0} key={co.id} onClick={() => setSelectedCO(co)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedCO(co); } }} style={{
+                  <div role="row" tabIndex={0} key={co.id}
+                    onClick={() => setSelectedCO(co)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedCO(co); } }}
+                    onMouseEnter={() => setHoveredCOId(String(co.id))}
+                    onMouseLeave={() => setHoveredCOId(null)}
+                    style={{
                     display: 'grid', gridTemplateColumns: '80px 60px 1fr 120px 140px',
                     padding: `${spacing.lg} ${spacing.xl}`,
+                    minHeight: touchTarget.comfortable,
                     borderBottom: i < allChangeOrders.length - 1 ? `1px solid ${colors.borderLight}` : 'none',
                     alignItems: 'center', cursor: 'pointer',
+                    backgroundColor: hoveredCOId === String(co.id) ? colors.surfaceHover : 'transparent',
+                    transition: 'background-color 0.12s ease',
                   }}>
                     <span role="cell" style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>{co.coNumber}</span>
                     <span role="cell" style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: typeConfig.color }}>{typeConfig.shortLabel}</span>
