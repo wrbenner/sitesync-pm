@@ -1,3 +1,0 @@
-The build passes cleanly. Both `Crews.tsx` and `Directory.tsx` exist and are correctly wired up in `App.tsx` and `Sidebar.tsx`. There are no errors — only expected bundle size warnings.
-
-The build succeeds with no errors. Both the crew management UI (`/crews`) and team directory page (`/directory`) exist as full implementations and are properly routed and linked in the sidebar. Nothing is missing.

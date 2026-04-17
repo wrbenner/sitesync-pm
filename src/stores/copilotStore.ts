@@ -36,21 +36,8 @@ interface CopilotState {
 }
 
 export const useCopilotStore = create<CopilotState>()((set, get) => ({
-  conversations: [{
-    id: 'conv-default',
-    title: 'Project Briefing',
-    messages: [
-      {
-        id: 'msg-welcome',
-        role: 'assistant',
-        content: 'Good morning. I am your SiteSync AI Copilot. I have full context on your RFIs, submittals, budget, schedule, and field data. What would you like to know?',
-        timestamp: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
-      },
-    ],
-    created_at: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
-    updated_at: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
-  }],
-  activeConversationId: 'conv-default',
+  conversations: [],
+  activeConversationId: null,
   isTyping: false,
   apiKey: null,
   isOpen: false,

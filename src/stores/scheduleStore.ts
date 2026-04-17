@@ -9,86 +9,6 @@ import type { CreatePhaseInput } from '../services/scheduleService';
 import type { MappedSchedulePhase } from '../types/entities';
 import type { ScheduleStatus } from '../machines/scheduleMachine';
 
-// ── Demo data (shown when project has no phases yet) ─────────────────────────
-
-function makeDemoPhase(
-  id: string,
-  name: string,
-  startDate: string,
-  endDate: string,
-  progress: number,
-  status: string,
-  isCritical: boolean,
-  baselineEnd?: string,
-): MappedSchedulePhase {
-  const slippageDays = baselineEnd && endDate
-    ? Math.ceil((new Date(endDate).getTime() - new Date(baselineEnd).getTime()) / 86400000)
-    : 0;
-  return {
-    id,
-    name,
-    project_id: 'demo',
-    start_date: startDate,
-    end_date: endDate,
-    percent_complete: progress,
-    status,
-    is_critical_path: isCritical,
-    float_days: isCritical ? 0 : 5,
-    baseline_start: startDate,
-    baseline_end: baselineEnd ?? endDate,
-    earned_value: null,
-    assigned_crew_id: null,
-    dependencies: null,
-    depends_on: null,
-    created_at: null,
-    updated_at: null,
-    baseline_start_date: startDate,
-    baseline_end_date: baselineEnd ?? endDate,
-    baseline_percent_complete: null,
-    is_milestone: false,
-    predecessor_ids: null,
-    work_type: null,
-    location: null,
-    assigned_trade: null,
-    planned_labor_hours: null,
-    actual_labor_hours: null,
-    baseline_finish: baselineEnd ?? endDate,
-    baseline_duration_days: null,
-    slippage_days: slippageDays,
-    is_critical: isCritical,
-    startDate,
-    endDate,
-    progress,
-    critical: isCritical,
-    completed: progress >= 100 || status === 'completed',
-    baselineStartDate: startDate,
-    baselineEndDate: baselineEnd ?? endDate,
-    baselineProgress: 0,
-    slippageDays,
-    earnedValue: 0,
-    isOnCriticalPath: isCritical,
-    floatDays: isCritical ? 0 : 5,
-    scheduleVarianceDays: -slippageDays,
-    isMilestone: false,
-    predecessorIds: [],
-    plannedLaborHours: 0,
-    actualLaborHours: 0,
-  };
-}
-
-const DEMO_PHASES: MappedSchedulePhase[] = [
-  makeDemoPhase('demo-1', 'Mobilization and Site Prep', '2026-01-06', '2026-02-14', 100, 'completed', false),
-  makeDemoPhase('demo-2', 'Foundation and Excavation', '2026-02-03', '2026-04-11', 85, 'in_progress', true, '2026-04-04'),
-  makeDemoPhase('demo-3', 'Underground Utilities', '2026-02-17', '2026-03-28', 100, 'completed', false),
-  makeDemoPhase('demo-4', 'Structural Steel', '2026-04-14', '2026-07-11', 15, 'in_progress', true),
-  makeDemoPhase('demo-5', 'Concrete Superstructure', '2026-05-26', '2026-08-29', 0, 'not_started', true),
-  makeDemoPhase('demo-6', 'Mechanical Rough-In', '2026-07-06', '2026-09-26', 0, 'not_started', false),
-  makeDemoPhase('demo-7', 'Electrical Rough-In', '2026-07-06', '2026-10-03', 0, 'not_started', false),
-  makeDemoPhase('demo-8', 'Exterior Facade', '2026-08-17', '2026-11-07', 0, 'not_started', true),
-  makeDemoPhase('demo-9', 'Interior Finishes', '2026-10-12', '2027-01-09', 0, 'not_started', false),
-  makeDemoPhase('demo-10', 'Commissioning and Closeout', '2027-01-04', '2027-02-27', 0, 'not_started', true),
-];
-
 function mapToMappedPhase(d: Record<string, unknown>): MappedSchedulePhase {
   const startDate = (d['start_date'] as string | null) ?? '';
   const endDate = (d['end_date'] as string | null) ?? '';
@@ -224,7 +144,7 @@ export function useScheduleStore<T = ScheduleHookState>(
       const { data, error } = await scheduleService.loadPhases(projectId);
       if (error) throw new Error(error);
       const mapped = ((data ?? []) as Record<string, unknown>[]).map(mapToMappedPhase);
-      return mapped.length > 0 ? mapped : DEMO_PHASES;
+      return mapped;
     },
     enabled: !!projectId,
   });

@@ -1,9 +1,0 @@
-The instruction refers to a "target file" but none was specified. It looks like the engine has stalled mid-run.
-
-What would you like me to work on? Based on the monitor report, the highest-impact options are:
-
-1. **Investigate why auth-rbac, scheduling, field-operations, and core-workflows are declining** (scores in freefall from 30+ down to 17-24)
-2. **Look at a specific page or file** that's showing an empty state
-3. **Something else entirely**
-
-What's the task?

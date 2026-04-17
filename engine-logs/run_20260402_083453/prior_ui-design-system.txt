@@ -1,4 +1,0 @@
-UNRESOLVED FROM CYCLE 1:
-- [not_fixed] ui-design-system-C1-001: No matching commit found
-- [not_fixed] ui-design-system-C1-002: No matching commit found
-- [not_fixed] ui-design-system-C1-003: No matching commit found

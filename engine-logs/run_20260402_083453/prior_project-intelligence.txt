@@ -1,4 +1,0 @@
-UNRESOLVED FROM CYCLE 1:
-- [partial] project-intelligence-C1-001: Related file in same directory modified but no direct commit for this issue
-- [partial] project-intelligence-C1-002: Related file in same directory modified but no direct commit for this issue
-- [partial] project-intelligence-C1-003: Related file in same directory modified but no direct commit for this issue

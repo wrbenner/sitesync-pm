@@ -1,7 +1,0 @@
-Build succeeds. Here's what was added to `DrawingViewer.tsx`:
-
-1. **`fabricContainerRef`** — a `<div>` placed inside the inner (transformed) drawing div as an absolute overlay
-2. **Init `useEffect`** — creates a `FabricCanvas` on mount, sized to the outer container, styles the fabric wrapper to fill the space, listens to `path:created`/`object:removed` to track undo state, and disposes on unmount
-3. **Tool `useEffect`** — toggles `canvas.isDrawingMode` and attaches a `PencilBrush` (color `#F47820`, width 3) whenever the `draw` tool is active
-4. **`handleUndo`** — now first removes the most recent fabric path before falling back to React markup state undo
-5. **`canUndo`** — now also true when there are fabric objects, so the undo/save buttons activate correctly during freehand drawing

@@ -28,36 +28,8 @@ interface NotificationState {
 
 export const useNotificationStore = create<NotificationState>((set, get) => ({
   _realtimeChannel: null,
-  notifications: [
-    {
-      id: 'n-1',
-      type: 'warning',
-      title: 'Steel Delivery Delay',
-      message: 'Phoenix supplier delayed 2 weeks. Review recovery options.',
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-      read: false,
-      actionRoute: 'tasks',
-    },
-    {
-      id: 'n-2',
-      type: 'info',
-      title: 'RFI-004 Response Received',
-      message: 'Structural engineer responded to curtain wall interface detail.',
-      timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000),
-      read: false,
-      actionRoute: 'rfis',
-    },
-    {
-      id: 'n-3',
-      type: 'success',
-      title: 'SUB-001 Approved',
-      message: 'Structural Steel Shop Drawings approved by architect.',
-      timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000),
-      read: true,
-      actionRoute: 'submittals',
-    },
-  ],
-  unreadCount: 2,
+  notifications: [],
+  unreadCount: 0,
 
   addNotification: (n) =>
     set((s) => {

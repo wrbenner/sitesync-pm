@@ -359,7 +359,9 @@ const BudgetPage: React.FC = () => {
   const approvedTotal = useMemo(() => allChangeOrders.filter(co => co.status === 'approved').reduce((s, co) => s + co.amount, 0), [allChangeOrders]);
 
   const consumed = approvedTotal;
-  const contingencyRemaining = useMemo(() => 3800000 - consumed, [consumed]);
+  const contingencyBudget = 0;
+  const contingencyRemaining = useMemo(() => contingencyBudget - consumed, [consumed]);
+  const contingencyPct = contingencyBudget > 0 ? Math.min(100, Math.round((consumed / contingencyBudget) * 100)) : 0;
 
   if (costLoading || projectLoading || !costData || !projectData) {
     return (
@@ -584,11 +586,11 @@ const BudgetPage: React.FC = () => {
       >
         <p style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.4px', margin: 0, marginBottom: spacing['2'] }}>Contingency Drawdown</p>
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
-          <div role="progressbar" aria-label="Contingency drawdown" aria-valuenow={Math.round((consumed / 3800000) * 100)} aria-valuemin={0} aria-valuemax={100} style={{ flex: 1, height: 12, backgroundColor: colors.surfaceInset, borderRadius: borderRadius.full, overflow: 'hidden', display: 'flex' }}>
-            <div style={{ width: `${(consumed / 3800000) * 100}%`, height: '100%', backgroundColor: colors.statusPending, borderRadius: borderRadius.full }} />
+          <div role="progressbar" aria-label="Contingency drawdown" aria-valuenow={contingencyPct} aria-valuemin={0} aria-valuemax={100} style={{ flex: 1, height: 12, backgroundColor: colors.surfaceInset, borderRadius: borderRadius.full, overflow: 'hidden', display: 'flex' }}>
+            <div style={{ width: `${contingencyPct}%`, height: '100%', backgroundColor: colors.statusPending, borderRadius: borderRadius.full }} />
           </div>
           <span style={{ fontSize: typography.fontSize.caption, color: colors.textSecondary, whiteSpace: 'nowrap', flexShrink: 0 }}>
-            {fmt(contingencyRemaining)} of $3.8M remaining
+            {fmt(contingencyRemaining)} of {fmt(contingencyBudget)} remaining
           </span>
         </div>
       </motion.div>

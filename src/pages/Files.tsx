@@ -56,13 +56,8 @@ const getGradient = (file: FileItem): string => {
   return fileGradients[ext] || fileGradients.default;
 };
 
-const getApprovalStatus = (file: FileItem): { label: string; color: string } | null => {
-  if (file.type === 'folder') return null;
-  if (file.name.includes('Structural') || file.name.includes('Calculations'))
-    return { label: 'Approved', color: colors.statusActive };
-  if (file.name.includes('MEP') || file.name.includes('Spec'))
-    return { label: 'Pending Review', color: colors.statusPending };
-  return { label: 'Draft', color: colors.textTertiary };
+const getApprovalStatus = (_file: FileItem): { label: string; color: string } | null => {
+  return null;
 };
 
 const getFileTypeIcon = (file: FileItem, size = 16): React.ReactElement => {

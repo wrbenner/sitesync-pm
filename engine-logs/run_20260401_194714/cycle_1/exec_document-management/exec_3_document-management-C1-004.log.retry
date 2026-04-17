@@ -1,4 +1,0 @@
-Build passes. Done — two changes made to `src/pages/Drawings.tsx`:
-
-1. **Outer layout grid** (`drawings-layout` class + media query): collapses to single column at ≤768px, so the detail panel stacks below instead of pushing the table off-screen.
-2. **Table wrapper** (`overflow-x: auto`): the fixed 11-column grid scrolls horizontally on narrow viewports rather than clipping.

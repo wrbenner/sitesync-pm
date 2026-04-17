@@ -1,9 +1,0 @@
-Build passes. Here's what was changed and why:
-
-**`src/pages/Files.tsx`** — two additions:
-
-1. `handlePageDragEnter` callback (line ~255): detects when external files are dragged over the page (`dataTransfer.types` includes `'Files'`) and auto-reveals the upload zone, so users don't have to click "Upload" first.
-
-2. Wrapped the page content in `<div onDragEnter={handlePageDragEnter}>` so the entire page surface is a drag target.
-
-The UploadZone and folder navigation were already fully implemented — the only genuine UX gap was that dragging files onto a collapsed upload panel did nothing.

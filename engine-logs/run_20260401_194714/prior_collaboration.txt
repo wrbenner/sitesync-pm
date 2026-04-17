@@ -1,3 +1,0 @@
-UNRESOLVED FROM CYCLE 1:
-- [partial] collaboration-C1-002: Related file in same directory modified
-- [partial] collaboration-C1-003: Related file in same directory modified

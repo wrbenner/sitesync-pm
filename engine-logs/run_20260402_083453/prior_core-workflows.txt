@@ -1,5 +1,0 @@
-UNRESOLVED FROM CYCLE 1:
-- [not_fixed] core-workflows-C1-001: No matching commit found
-- [partial] core-workflows-C1-002: Related file in same directory modified but no direct commit for this issue
-- [partial] core-workflows-C1-003: Related file in same directory modified but no direct commit for this issue
-- [partial] core-workflows-C1-004: Related file in same directory modified but no direct commit for this issue

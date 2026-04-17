@@ -15,7 +15,7 @@ interface SitePhoto {
   aiTags: string[];
 }
 
-const defaultImage = 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=400';
+const defaultImage = '';
 
 function formatTimeAgo(dateStr: string | null): string {
   if (!dateStr) return '';

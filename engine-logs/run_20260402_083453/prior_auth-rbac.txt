@@ -1,2 +1,0 @@
-UNRESOLVED FROM CYCLE 1:
-- [not_fixed] auth-rbac-C1-001: No matching commit found
