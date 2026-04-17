@@ -1,5 +1,29 @@
 import type { ConflictRecord } from '../types/sync'
 
+function deepEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true
+  if (a === null || b === null) return a === b
+  if (typeof a !== typeof b) return false
+  if (typeof a !== 'object') return false
+  if (Array.isArray(a)) {
+    if (!Array.isArray(b) || a.length !== b.length) return false
+    for (let i = 0; i < a.length; i++) {
+      if (!deepEqual(a[i], b[i])) return false
+    }
+    return true
+  }
+  if (Array.isArray(b)) return false
+  const ao = a as Record<string, unknown>
+  const bo = b as Record<string, unknown>
+  const aKeys = Object.keys(ao)
+  if (aKeys.length !== Object.keys(bo).length) return false
+  for (const k of aKeys) {
+    if (!Object.prototype.hasOwnProperty.call(bo, k)) return false
+    if (!deepEqual(ao[k], bo[k])) return false
+  }
+  return true
+}
+
 /**
  * Three-way merge: compare local and server changes against the base version.
  *
@@ -22,16 +46,16 @@ export function detectConflicts(
   for (const key of allKeys) {
     if (key === 'updated_at' || key === 'id') continue
 
-    const baseVal = JSON.stringify(base[key])
-    const localVal = JSON.stringify(local[key])
-    const serverVal = JSON.stringify(server[key])
+    const localEqServer = deepEqual(local[key], server[key])
+    const localEqBase = deepEqual(local[key], base[key])
+    const serverEqBase = deepEqual(server[key], base[key])
 
-    if (localVal === serverVal) continue // both sides agree, no conflict
+    if (localEqServer) continue // both sides agree, no conflict
 
-    if (localVal !== baseVal && serverVal === baseVal) {
+    if (!localEqBase && serverEqBase) {
       // Only local changed: take local
       merged[key] = local[key]
-    } else if (serverVal !== baseVal && localVal === baseVal) {
+    } else if (!serverEqBase && localEqBase) {
       // Only server changed: take server (already in merged)
     } else {
       // Both changed to different values: real conflict
@@ -98,7 +122,7 @@ export function checkStaleSubmission(
   // Fast path: server hasn't changed at all
   const serverChanged = Object.keys(serverState).some(
     (k) => k !== 'updated_at' && k !== 'id' &&
-      JSON.stringify(serverState[k]) !== JSON.stringify(beforeState[k]),
+      !deepEqual(serverState[k], beforeState[k]),
   )
   if (!serverChanged) {
     return { isStale: false, canAutoMerge: true, conflictingFields: [], merged: { ...localEdits } }

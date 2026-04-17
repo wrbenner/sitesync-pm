@@ -58,7 +58,7 @@ export const G702Preview = memo<G702PreviewProps>(({
               description: l.description,
               scheduledValue: l.scheduledValue,
               previousCompleted: l.previousCompleted,
-              thisPeroid: l.thisPeroid,
+              thisPeriod: l.thisPeriod,
               materialsStored: l.materialsStored,
               totalCompletedAndStored: l.totalCompletedAndStored,
               percentComplete: l.percentComplete,

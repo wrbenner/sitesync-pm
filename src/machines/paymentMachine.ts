@@ -148,7 +148,7 @@ export interface G703LineItem {
   description: string
   scheduledValue: number
   previousCompleted: number
-  thisPeroid: number
+  thisPeriod: number
   materialsStored: number
   totalCompletedAndStored: number
   percentComplete: number
@@ -196,11 +196,11 @@ export function calculateG702(
 export function calculateG703LineItem(
   scheduledValue: number,
   previousCompleted: number,
-  thisPeroid: number,
+  thisPeriod: number,
   materialsStored: number,
   retainagePercent: number,
 ): Omit<G703LineItem, 'itemNumber' | 'costCode' | 'description'> {
-  const totalCompletedAndStored = previousCompleted + thisPeroid + materialsStored
+  const totalCompletedAndStored = previousCompleted + thisPeriod + materialsStored
   const percentComplete = scheduledValue > 0
     ? Math.round((totalCompletedAndStored / scheduledValue) * 10000) / 100
     : 0
@@ -210,7 +210,7 @@ export function calculateG703LineItem(
   return {
     scheduledValue,
     previousCompleted,
-    thisPeroid,
+    thisPeriod,
     materialsStored,
     totalCompletedAndStored,
     percentComplete,

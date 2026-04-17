@@ -469,7 +469,7 @@ export const CreateEditPayAppDrawer = memo<CreateEditPayAppDrawerProps>(({
         description: row.description || `Line Item ${i + 1}`,
         scheduledValue: sv,
         previousCompleted: prevAmt,
-        thisPeroid: workThisPeriod,
+        thisPeriod: workThisPeriod,
         materialsStored: mats,
         totalCompletedAndStored: totalCompleted,
         percentComplete: sv > 0 ? (totalCompleted / sv) * 100 : 0,

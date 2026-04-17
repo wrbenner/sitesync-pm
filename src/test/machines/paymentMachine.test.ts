@@ -113,7 +113,7 @@ describe('Payment Application State Machine', () => {
         description: 'Concrete',
         scheduledValue: 200000,
         previousCompleted: 100000,
-        thisPeroid: 50000,
+        thisPeriod: 50000,
         materialsStored: 0,
         totalCompletedAndStored: 150000,
         percentComplete: 75,

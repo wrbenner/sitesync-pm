@@ -402,7 +402,7 @@ export interface PayAppPdfData {
     description: string
     scheduledValue: number
     previousCompleted: number
-    thisPeroid: number
+    thisPeriod: number
     materialsStored: number
     totalCompletedAndStored: number
     percentComplete: number
@@ -552,7 +552,7 @@ export async function generatePayAppPdfFromData(data: PayAppPdfData): Promise<Bl
 
     const totSV = sovLines.reduce((s, l) => s + l.scheduledValue, 0)
     const totPrev = sovLines.reduce((s, l) => s + l.previousCompleted, 0)
-    const totThis = sovLines.reduce((s, l) => s + l.thisPeroid, 0)
+    const totThis = sovLines.reduce((s, l) => s + l.thisPeriod, 0)
     const totStored = sovLines.reduce((s, l) => s + l.materialsStored, 0)
     const totTotal = sovLines.reduce((s, l) => s + l.totalCompletedAndStored, 0)
     const totBal = sovLines.reduce((s, l) => s + l.balanceToFinish, 0)
@@ -595,7 +595,7 @@ export async function generatePayAppPdfFromData(data: PayAppPdfData): Promise<Bl
           sl.description,
           fmtDollars(toCents(sl.scheduledValue)),
           fmtDollars(toCents(sl.previousCompleted)),
-          fmtDollars(toCents(sl.thisPeroid)),
+          fmtDollars(toCents(sl.thisPeriod)),
           fmtDollars(toCents(sl.materialsStored)),
           fmtDollars(toCents(sl.totalCompletedAndStored)),
           fmtPct(sl.percentComplete),
@@ -726,7 +726,7 @@ export async function generatePayAppPdf(
       description: item.description,
       scheduledValue: item.scheduledValue,
       previousCompleted: prevCents / 100,
-      thisPeroid: result.workThisPeriod,
+      thisPeriod: result.workThisPeriod,
       materialsStored: item.storedMaterials,
       totalCompletedAndStored: result.totalCompletedAndStored,
       percentComplete: pctComplete,

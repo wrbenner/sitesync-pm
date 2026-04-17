@@ -59,7 +59,7 @@ export const G703ContinuationPDF: React.FC<G703PDFProps> = ({
   const totals = {
     scheduledValue: lineItems.reduce((s, i) => s + i.scheduledValue, 0),
     previousCompleted: lineItems.reduce((s, i) => s + i.previousCompleted, 0),
-    thisPeriod: lineItems.reduce((s, i) => s + i.thisPeroid, 0),
+    thisPeriod: lineItems.reduce((s, i) => s + i.thisPeriod, 0),
     materialsStored: lineItems.reduce((s, i) => s + i.materialsStored, 0),
     totalCompleted: lineItems.reduce((s, i) => s + i.totalCompletedAndStored, 0),
     balanceToFinish: lineItems.reduce((s, i) => s + i.balanceToFinish, 0),
@@ -104,7 +104,7 @@ export const G703ContinuationPDF: React.FC<G703PDFProps> = ({
               <Text style={[styles.cellLeft, { width: COL.desc }]} numberOfLines={2}>{item.description}</Text>
               <Text style={[styles.cell, { width: COL.scheduled }]}>{fmt(item.scheduledValue)}</Text>
               <Text style={[styles.cell, { width: COL.prevCompleted }]}>{fmt(item.previousCompleted)}</Text>
-              <Text style={[styles.cell, { width: COL.thisPeriod }]}>{fmt(item.thisPeroid)}</Text>
+              <Text style={[styles.cell, { width: COL.thisPeriod }]}>{fmt(item.thisPeriod)}</Text>
               <Text style={[styles.cell, { width: COL.materials }]}>{fmt(item.materialsStored)}</Text>
               <Text style={[styles.cell, { width: COL.totalCompleted }]}>{fmt(item.totalCompletedAndStored)}</Text>
               <Text style={[styles.cell, { width: COL.percent }]}>{fmtPct(item.percentComplete)}</Text>
