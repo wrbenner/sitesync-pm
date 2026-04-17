@@ -204,6 +204,24 @@ async function batchFetchEntityLabels(
     )
   }
 
+  if (grouped['safety_incident']?.length) {
+    fetches.push(
+      supabase
+        .from('incidents')
+        .select('id, description, type')
+        .eq('project_id', projectId)
+        .in('id', grouped['safety_incident'])
+        .then(({ data }) => {
+          for (const row of data ?? []) {
+            const label = row.description || `Safety Incident (${row.type})`
+            labelMap.set(row.id, label)
+            setCachedEntityLabel(`${projectId}:safety_incident:${row.id}`, label)
+          }
+        })
+        .catch((err: unknown) => { if (import.meta.env.DEV) console.warn('[ActivityFeed] Failed to fetch entity labels for type:', err instanceof Error ? err.message : String(err)) }),
+    )
+  }
+
   await Promise.allSettled(fetches)
   return labelMap
 }
@@ -348,6 +366,18 @@ async function fetchEntityLabel(entityType: string, entityId: string, projectId:
         .eq('project_id', projectId)
         .single()
       if (data) return data.title
+    } catch {
+      return ''
+    }
+  } else if (entityType === 'safety_incident') {
+    try {
+      const { data } = await supabase
+        .from('incidents')
+        .select('description, type')
+        .eq('id', entityId)
+        .eq('project_id', projectId)
+        .single()
+      if (data) return data.description || `Safety Incident (${data.type})`
     } catch {
       return ''
     }

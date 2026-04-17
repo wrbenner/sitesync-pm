@@ -17,6 +17,11 @@ import posthog from '../../lib/analytics'
 import Sentry from '../../lib/sentry'
 import { invalidateEntity, type EntityType } from '../../api/invalidation'
 import { logAuditEntry } from '../../lib/auditLogger'
+import { insertActivityEvent } from '../../lib/activityEvent'
+
+const ACTIVITY_FEED_ENTITY_TYPES = new Set([
+  'rfi', 'submittal', 'task', 'punch_item', 'daily_log', 'meeting',
+])
 
 // ── Types ────────────────────────────────────────────────
 
@@ -167,6 +172,14 @@ export function useAuditedMutation<TParams, TResult>(config: AuditedMutationConf
           project_id: projectId,
           ...config.getAnalyticsProps?.(params),
         })
+      }
+
+      if (projectId && ACTIVITY_FEED_ENTITY_TYPES.has(config.entityType as EntityType)) {
+        const entityId = config.getEntityId?.(params, result)
+          ?? (result as { data?: { id?: string } })?.data?.id
+          ?? (result as { id?: string })?.id
+        const entityTitle = config.getEntityTitle?.(params)
+        insertActivityEvent(projectId, config.entityType, entityId, entityTitle, config.action).catch(() => {})
       }
 
       config.onSuccess?.(result, params)
