@@ -4,6 +4,7 @@ import { Loader2, Eye, EyeOff } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { colors, spacing, typography, borderRadius, shadows, transitions, zIndex } from '../../styles/theme'
+import { loginSchema, signupSchema, magicLinkSchema, resetPasswordSchema } from '../../schemas/auth'
 
 function mapAuthError(message: string): string {
   const msg = message.toLowerCase()
@@ -61,12 +62,23 @@ export const Login: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+    setEmailError(null)
+    setPasswordError(null)
+
+    const parsed = loginSchema.safeParse({ email, password })
+    if (!parsed.success) {
+      const errs = parsed.error.flatten().fieldErrors
+      if (errs.email?.[0]) setEmailError(errs.email[0])
+      if (errs.password?.[0]) setPasswordError(errs.password[0])
+      return
+    }
+
     setIsSubmitting(true)
     try {
       // Use useAuth hook's signIn — it updates shared auth state BEFORE we navigate.
       // Direct supabase.auth.signInWithPassword() causes a race condition where
       // ProtectedRoute checks auth before onAuthStateChange fires.
-      const result = await signIn(email, password)
+      const result = await signIn(parsed.data.email, parsed.data.password)
       if (result.error) {
         setError(result.error)
       } else {
@@ -82,32 +94,35 @@ export const Login: React.FC = () => {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
     setSignupError(null)
+    setSignupEmailError(null)
+    setSignupPasswordError(null)
+    setSignupConfirmError(null)
 
-    // Validate before submitting
-    let hasError = false
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(signupEmail)) {
-      setSignupEmailError('Please enter a valid email address')
-      hasError = true
+    const parsed = signupSchema.safeParse({
+      email: signupEmail,
+      password: signupPassword,
+      confirmPassword: signupConfirmPassword,
+      firstName: signupFirstName,
+      lastName: signupLastName,
+      organization: 'pending', // Login tab signup has no org field; use bottom tab
+    })
+    if (!parsed.success) {
+      const errs = parsed.error.flatten().fieldErrors
+      if (errs.email?.[0]) setSignupEmailError(errs.email[0])
+      if (errs.password?.[0]) setSignupPasswordError(errs.password[0])
+      if (errs.confirmPassword?.[0]) setSignupConfirmError(errs.confirmPassword[0])
+      return
     }
-    if (signupPassword.length < 8) {
-      setSignupPasswordError('Password must be at least 8 characters')
-      hasError = true
-    }
-    if (signupPassword !== signupConfirmPassword) {
-      setSignupConfirmError('Passwords do not match')
-      hasError = true
-    }
-    if (hasError) return
 
     setSignupSubmitting(true)
     try {
       const { data, error: signUpError } = await supabase.auth.signUp({
-        email: signupEmail,
-        password: signupPassword,
+        email: parsed.data.email,
+        password: parsed.data.password,
         options: {
           data: {
-            first_name: signupFirstName.trim(),
-            last_name: signupLastName.trim(),
+            first_name: parsed.data.firstName.trim(),
+            last_name: parsed.data.lastName.trim(),
           },
         },
       })
@@ -129,9 +144,16 @@ export const Login: React.FC = () => {
   const handleMagicLink = async (e: React.FormEvent) => {
     e.preventDefault()
     setMagicError(null)
+
+    const parsed = magicLinkSchema.safeParse({ email: magicEmail })
+    if (!parsed.success) {
+      setMagicError(parsed.error.flatten().fieldErrors.email?.[0] ?? 'Invalid email')
+      return
+    }
+
     setMagicLoading(true)
     try {
-      const { error: otpError } = await supabase.auth.signInWithOtp({ email: magicEmail })
+      const { error: otpError } = await supabase.auth.signInWithOtp({ email: parsed.data.email })
       if (otpError) {
         setMagicError(mapAuthError(otpError.message))
       } else {
@@ -145,9 +167,16 @@ export const Login: React.FC = () => {
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault()
     setResetError(null)
+
+    const parsed = resetPasswordSchema.safeParse({ email: resetEmail })
+    if (!parsed.success) {
+      setResetError(parsed.error.flatten().fieldErrors.email?.[0] ?? 'Invalid email')
+      return
+    }
+
     setResetLoading(true)
 
-    const { error: err } = await supabase.auth.resetPasswordForEmail(resetEmail)
+    const { error: err } = await supabase.auth.resetPasswordForEmail(parsed.data.email)
 
     if (err) {
       setResetError(mapAuthError(err.message))

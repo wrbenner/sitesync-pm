@@ -1,5 +1,17 @@
 import { z } from 'zod'
 
+// Re-export canonical schemas from src/schemas/ (single source of truth).
+// The EntityFormModal-specific schemas below use more permissive defaults
+// because the modal binds to uncontrolled inputs that start as ''.
+export { createRFISchema } from '../../schemas/rfi'
+export { createSubmittalSchema } from '../../schemas/submittal'
+export { createTaskSchema } from '../../schemas/task'
+export { createChangeOrderSchema } from '../../schemas/changeOrder'
+export { createMeetingSchema } from '../../schemas/meeting'
+export { createPunchItemSchema } from '../../schemas/punchItem'
+export { createIncidentSchema } from '../../schemas/incident'
+export { createDailyLogSchema } from '../../schemas/dailyLog'
+
 // ── RFI Schema ──────────────────────────────────────────
 
 export const rfiSchema = z.object({

@@ -25,6 +25,7 @@ import type { DailyLogState } from '../../machines/dailyLogMachine';
 import type { ExtendedDailyLog, ManpowerRow } from './types';
 import { DailyLogForm } from './DailyLogForm';
 import { DailyLogPDFExport } from './DailyLogPDFExport';
+import { createDailyLogSchema, crewHoursEntrySchema } from '../../schemas/dailyLog';
 
 const DailyLogPage: React.FC = () => {
   const { addToast } = useToast();
@@ -243,6 +244,29 @@ const DailyLogPage: React.FC = () => {
 
   const handleQuickSubmit = useCallback(async (data: QuickEntryData) => {
     try {
+      // Validate crew hours with Zod (non-negative, max 24/day)
+      for (const entry of data.crew_entries) {
+        const parsed = crewHoursEntrySchema.safeParse({
+          crew_name: entry.company ?? entry.trade ?? 'Crew',
+          trade: entry.trade ?? '',
+          workers: entry.headcount,
+          hours: entry.hours,
+        });
+        if (!parsed.success) {
+          const msg = parsed.error.issues[0]?.message ?? 'Invalid crew hours entry';
+          addToast('error', msg);
+          return;
+        }
+      }
+      const parsedLog = createDailyLogSchema.safeParse({
+        date: selectedDate,
+        weather_summary: data.weather ? formatWeatherSummary(data.weather) : '',
+        work_summary: data.workPerformed ?? '',
+      });
+      if (!parsedLog.success) {
+        addToast('error', parsedLog.error.issues[0]?.message ?? 'Invalid daily log');
+        return;
+      }
       const totalWorkers = data.crew_entries.reduce((s, w) => s + w.headcount, 0);
       const totalHours = data.crew_entries.reduce((s, w) => s + w.hours, 0);
       await createDailyLog.mutateAsync({

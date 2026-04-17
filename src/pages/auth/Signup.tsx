@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme'
+import { signupSchema } from '../../schemas/auth'
 
 function mapSignupError(message: string): { text: string; linkToLogin?: boolean } {
   const msg = message.toLowerCase()
@@ -77,16 +78,32 @@ export const Signup: React.FC = () => {
     e.preventDefault()
     setSubmitError(null)
 
-    const ok = [
-      validateFirstName(firstName),
-      validateLastName(lastName),
-      validateEmail(email),
-      validatePassword(password),
-      validateConfirmPassword(confirmPassword),
-      validateCompany(company),
-    ].every(Boolean)
-
-    if (!ok) return
+    const parsed = signupSchema.safeParse({
+      firstName,
+      lastName,
+      email,
+      password,
+      confirmPassword,
+      organization: company,
+      jobTitle,
+    })
+    if (!parsed.success) {
+      const errs = parsed.error.flatten().fieldErrors
+      if (errs.firstName?.[0]) setFirstNameError(errs.firstName[0])
+      if (errs.lastName?.[0]) setLastNameError(errs.lastName[0])
+      if (errs.email?.[0]) setEmailError(errs.email[0])
+      if (errs.password?.[0]) setPasswordError(errs.password[0])
+      if (errs.confirmPassword?.[0]) setConfirmPasswordError(errs.confirmPassword[0])
+      if (errs.organization?.[0]) setCompanyError(errs.organization[0])
+      // Fall back on legacy per-field validators for any remaining UX cases
+      validateFirstName(firstName)
+      validateLastName(lastName)
+      validateEmail(email)
+      validatePassword(password)
+      validateConfirmPassword(confirmPassword)
+      validateCompany(company)
+      return
+    }
 
     setIsSubmitting(true)
     try {
