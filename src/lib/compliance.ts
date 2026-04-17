@@ -32,30 +32,44 @@ export interface ComplianceMetrics {
 
 // ── Report Generation ────────────────────────────────────
 
+const PAGE_SIZE = 1000
+const MAX_PAGES = 200 // hard ceiling to prevent runaway queries (~200k rows)
+
 export async function generateComplianceReport(
   organizationId: string,
   projectId: string | null,
   reportType: ComplianceReportType,
   startDate: string,
-  endDate: string
+  endDate: string,
+  onProgress?: (entriesLoaded: number) => void,
 ): Promise<ComplianceReport> {
-  // Fetch audit entries for the date range
-  let query = supabase
-    .from('audit_trail')
-    .select('*')
-    .gte('created_at', startDate)
-    .lte('created_at', endDate)
-    .order('created_at', { ascending: true })
-    .limit(10000)
+  // Paginate through audit entries for the date range — avoids silent 10k row truncation
+  const entries: AuditEntry[] = []
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const from = page * PAGE_SIZE
+    const to = from + PAGE_SIZE - 1
 
-  if (projectId) {
-    query = query.eq('project_id', projectId)
+    let query = supabase
+      .from('audit_trail')
+      .select('*')
+      .gte('created_at', startDate)
+      .lte('created_at', endDate)
+      .order('created_at', { ascending: true })
+      .range(from, to)
+
+    if (projectId) {
+      query = query.eq('project_id', projectId)
+    }
+
+    const { data, error } = await query
+    if (error) throw new Error(`Failed to fetch audit data: ${error.message}`)
+
+    const batch = (data ?? []) as AuditEntry[]
+    entries.push(...batch)
+    onProgress?.(entries.length)
+
+    if (batch.length < PAGE_SIZE) break
   }
-
-  const { data: auditEntries, error } = await query
-  if (error) throw new Error(`Failed to fetch audit data: ${error.message}`)
-
-  const entries = (auditEntries ?? []) as AuditEntry[]
 
   // Compute metrics
   const metrics = computeComplianceMetrics(entries)

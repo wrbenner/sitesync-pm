@@ -185,8 +185,12 @@ const RFIsPage: React.FC = () => {
   const updateRFI = useUpdateRFI();
 
   const handleStatusChange = useCallback(async (rfiId: string, newStatus: string) => {
+    if (!projectId) {
+      addToast('error', 'No project selected');
+      return;
+    }
     try {
-      await updateRFI.mutateAsync({ id: rfiId, updates: { status: newStatus }, projectId: projectId! });
+      await updateRFI.mutateAsync({ id: rfiId, updates: { status: newStatus }, projectId });
       addToast('success', 'Status updated');
     } catch {
       addToast('error', 'Failed to update status');
@@ -480,10 +484,14 @@ const RFIsPage: React.FC = () => {
           open={showCreateModal}
           onClose={() => setShowCreateModal(false)}
           onSubmit={async (data) => {
+            if (!projectId) {
+              toast.error('No project selected');
+              return;
+            }
             try {
               await createRFI.mutateAsync({
-                projectId: projectId!,
-                data: { ...data, project_id: projectId! },
+                projectId,
+                data: { ...data, project_id: projectId },
               });
               toast.success('RFI created successfully');
             } catch (err) {
@@ -729,8 +737,9 @@ const RFIsPage: React.FC = () => {
             icon: <UserCheck size={14} />,
             variant: 'secondary',
             onClick: async (ids) => {
+              if (!projectId) { addToast('error', 'No project selected'); return; }
               try {
-                await Promise.all(ids.map((id) => updateRFI.mutateAsync({ id, updates: { assigned_to: 'Reassigned' }, projectId: projectId! })));
+                await Promise.all(ids.map((id) => updateRFI.mutateAsync({ id, updates: { assigned_to: 'Reassigned' }, projectId })));
                 addToast('success', `${ids.length} RFI${ids.length > 1 ? 's' : ''} reassigned`);
               } catch {
                 addToast('error', 'Failed to reassign RFIs. Please try again.');
@@ -742,8 +751,9 @@ const RFIsPage: React.FC = () => {
             icon: <Flag size={14} />,
             variant: 'secondary',
             onClick: async (ids) => {
+              if (!projectId) { addToast('error', 'No project selected'); return; }
               try {
-                await Promise.all(ids.map((id) => updateRFI.mutateAsync({ id, updates: { priority: 'high' }, projectId: projectId! })));
+                await Promise.all(ids.map((id) => updateRFI.mutateAsync({ id, updates: { priority: 'high' }, projectId })));
                 addToast('success', `Priority updated for ${ids.length} RFI${ids.length > 1 ? 's' : ''}`);
               } catch {
                 addToast('error', 'Failed to update priority. Please try again.');
@@ -773,8 +783,9 @@ const RFIsPage: React.FC = () => {
             confirm: true,
             confirmMessage: `Close ${selectedIds.size} selected RFI${selectedIds.size > 1 ? 's' : ''}? This cannot be undone.`,
             onClick: async (ids) => {
+              if (!projectId) { addToast('error', 'No project selected'); return; }
               try {
-                await Promise.all(ids.map((id) => updateRFI.mutateAsync({ id, updates: { status: 'closed' }, projectId: projectId! })));
+                await Promise.all(ids.map((id) => updateRFI.mutateAsync({ id, updates: { status: 'closed' }, projectId })));
                 addToast('success', `${ids.length} RFI${ids.length > 1 ? 's' : ''} closed`);
               } catch {
                 addToast('error', 'Failed to close RFIs. Please try again.');
@@ -834,7 +845,8 @@ const RFIsPage: React.FC = () => {
                   { value: 'critical', label: 'Critical' },
                 ]}
                 onSave={async (val) => {
-                  await updateRFI.mutateAsync({ id: String(selectedRfi.id), updates: { priority: val }, projectId: projectId! });
+                  if (!projectId) { toast.error('No project selected'); return; }
+                  await updateRFI.mutateAsync({ id: String(selectedRfi.id), updates: { priority: val }, projectId });
                   setSelectedRfi((prev: unknown) => prev ? { ...prev, priority: val } : prev);
                   toast.success('Priority updated');
                 }}
@@ -864,7 +876,8 @@ const RFIsPage: React.FC = () => {
                 editing={editingDetail}
                 type="text"
                 onSave={async (val) => {
-                  await updateRFI.mutateAsync({ id: String(selectedRfi.id), updates: { assigned_to: val }, projectId: projectId! });
+                  if (!projectId) { toast.error('No project selected'); return; }
+                  await updateRFI.mutateAsync({ id: String(selectedRfi.id), updates: { assigned_to: val }, projectId });
                   setSelectedRfi((prev: unknown) => prev ? { ...prev, to: val, assigned_to: val } : prev);
                   toast.success('Assignee updated');
                 }}
@@ -883,7 +896,8 @@ const RFIsPage: React.FC = () => {
                 editing={editingDetail}
                 type="date"
                 onSave={async (val) => {
-                  await updateRFI.mutateAsync({ id: String(selectedRfi.id), updates: { due_date: val }, projectId: projectId! });
+                  if (!projectId) { toast.error('No project selected'); return; }
+                  await updateRFI.mutateAsync({ id: String(selectedRfi.id), updates: { due_date: val }, projectId });
                   setSelectedRfi((prev: unknown) => prev ? { ...prev, dueDate: val, due_date: val } : prev);
                   toast.success('Due date updated');
                 }}
@@ -1031,10 +1045,14 @@ const RFIsPage: React.FC = () => {
         onClose={() => { setShowCreateModal(false); setAiPrefill(null); }}
         initialValues={aiPrefill ?? undefined}
         onSubmit={async (data) => {
+          if (!projectId) {
+            toast.error('No project selected');
+            return;
+          }
           try {
             await createRFI.mutateAsync({
-              projectId: projectId!,
-              data: { ...data, project_id: projectId! },
+              projectId,
+              data: { ...data, project_id: projectId },
             });
             toast.success('RFI created successfully');
           } catch (err) {

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import { useProjectId } from './useProjectId'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { useAgentOrchestrator } from '../stores/agentOrchestrator'
@@ -246,31 +247,39 @@ export function useMultiAgentChat(
         } = await supabase.auth.getSession()
 
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-        const response = await fetch(
-          `${supabaseUrl}/functions/v1/agent-orchestrator`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-            },
-            body: JSON.stringify({
-              message: cleanText,
-              mentionedAgent,
-              conversationHistory: conversationRef.current.slice(-20).map((m) => ({
-                role: m.role,
-                content: m.content,
-                agentDomain: m.agentDomain,
-              })),
-              projectContext: {
-                projectId,
-                userId: session?.user?.id,
-                page: pageContext || 'general',
-                entityContext: entityContext || '',
+        const controller = new AbortController()
+        const timeout = setTimeout(() => controller.abort(), 30000)
+        let response: Response
+        try {
+          response = await fetch(
+            `${supabaseUrl}/functions/v1/agent-orchestrator`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY}`,
               },
-            }),
-          },
-        )
+              body: JSON.stringify({
+                message: cleanText,
+                mentionedAgent,
+                conversationHistory: conversationRef.current.slice(-20).map((m) => ({
+                  role: m.role,
+                  content: m.content,
+                  agentDomain: m.agentDomain,
+                })),
+                projectContext: {
+                  projectId,
+                  userId: session?.user?.id,
+                  page: pageContext || 'general',
+                  entityContext: entityContext || '',
+                },
+              }),
+              signal: controller.signal,
+            },
+          )
+        } finally {
+          clearTimeout(timeout)
+        }
 
         if (!response.ok) {
           if (response.status === 429) {
@@ -282,25 +291,14 @@ export function useMultiAgentChat(
         const data: OrchestratorResponse = await response.json()
         store.handleOrchestratorResponse(data)
       } catch (err) {
-        // Graceful fallback: if the edge function is unavailable,
-        // use the local multi-agent simulation instead of showing an error.
-        // This ensures the AI Copilot always works during demos.
-        const errMsg = (err as Error).message || ''
-        const isEdgeFunctionDown = errMsg.includes('orchestrator error') ||
-          errMsg.includes('Failed to fetch') ||
-          errMsg.includes('NetworkError') ||
-          errMsg.includes('503') ||
-          errMsg.includes('404')
-
-        if (isEdgeFunctionDown) {
-          store.setError(null)
-          await simulateMultiAgentResponse(cleanText, mentionedAgent, pageContext, store)
-          return
-        }
+        const errMsg = (err as Error).name === 'AbortError'
+          ? 'Request timed out after 30 seconds'
+          : (err as Error).message || 'Unknown error'
 
         store.setProcessing(false)
         store.setActiveAgents([])
         store.setError(errMsg)
+        toast.error(`AI Copilot error: ${errMsg}`)
         store.addCoordinatorMessage(
           `I encountered an error: ${errMsg}. Please try again.`,
         )

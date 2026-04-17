@@ -364,16 +364,45 @@ function fallbackWeatherForDate(): WeatherForDate {
  * Results are cached in localStorage keyed by `weather:{date}:{lat}:{lon}` so
  * re-opening the modal is instant and does not burn network requests.
  */
+const CACHE_TTL_MS = 60 * 60 * 1000 // 1 hour
+
+interface CachedEntry<T> { cachedAt: number; value: T }
+
+function readCache<T>(key: string): T | null {
+  const raw = localStorage.getItem(key)
+  if (!raw) return null
+  try {
+    const parsed = JSON.parse(raw) as CachedEntry<T> | T
+    if (parsed && typeof parsed === 'object' && 'cachedAt' in parsed && 'value' in parsed) {
+      const entry = parsed as CachedEntry<T>
+      if (Date.now() - entry.cachedAt > CACHE_TTL_MS) {
+        localStorage.removeItem(key)
+        return null
+      }
+      return entry.value
+    }
+    // Legacy cache entry without TTL wrapper — treat as expired
+    localStorage.removeItem(key)
+    return null
+  } catch {
+    localStorage.removeItem(key)
+    return null
+  }
+}
+
+function writeCache<T>(key: string, value: T): void {
+  const entry: CachedEntry<T> = { cachedAt: Date.now(), value }
+  try { localStorage.setItem(key, JSON.stringify(entry)) } catch { /* quota exceeded */ }
+}
+
 export async function fetchWeatherForDate(
   lat: number,
   lon: number,
   date: string,
 ): Promise<WeatherForDate> {
   const cacheKey = `weather:${date}:${lat.toFixed(4)}:${lon.toFixed(4)}`
-  const cached = localStorage.getItem(cacheKey)
-  if (cached) {
-    try { return JSON.parse(cached) as WeatherForDate } catch { /* corrupt cache, re-fetch */ }
-  }
+  const cached = readCache<WeatherForDate>(cacheKey)
+  if (cached) return cached
 
   try {
     const params = new URLSearchParams({
@@ -414,7 +443,7 @@ export async function fetchWeatherForDate(
       precipitation_inches: Math.round((d.precipitation_sum?.[0] ?? 0) * 100) / 100,
       source: 'open-meteo',
     }
-    localStorage.setItem(cacheKey, JSON.stringify(result))
+    writeCache(cacheKey, result)
     return result
   } catch {
     return fallbackWeatherForDate()
@@ -436,10 +465,8 @@ export async function fetchWeatherForecast5Day(lat: number, lon: number): Promis
   const endDate = dates[4]
 
   const cacheKey = `forecast5:${startDate}:${lat.toFixed(3)}:${lon.toFixed(3)}`
-  const cached = localStorage.getItem(cacheKey)
-  if (cached) {
-    try { return JSON.parse(cached) as WeatherDay[] } catch { /* corrupt, re-fetch */ }
-  }
+  const cached = readCache<WeatherDay[]>(cacheKey)
+  if (cached) return cached
 
   const fallback = (): WeatherDay[] => dates.map(date => ({
     date, temp_high: 75, temp_low: 55, conditions: 'Clear', icon: '☀️', precip_probability: 10,
@@ -493,7 +520,7 @@ export async function fetchWeatherForecast5Day(lat: number, lon: number): Promis
       }
     })
 
-    localStorage.setItem(cacheKey, JSON.stringify(result))
+    writeCache(cacheKey, result)
     return result
   } catch {
     return fallback()

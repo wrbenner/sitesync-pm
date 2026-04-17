@@ -13,6 +13,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { useProjectContext } from '../../stores/projectContextStore';
 import { PermissionGate } from '../../components/auth/PermissionGate';
+import { logAuditEntry } from '../../lib/auditLogger';
 import { staggerContainer, staggerItem, staggerTransition } from './types';
 
 const CreateProjectModal = lazy(() => import('../../components/forms/CreateProjectModal'));
@@ -55,6 +56,23 @@ export const WelcomeOnboarding: React.FC<{ onProjectCreated: () => void }> = ({ 
         role: 'project_manager',
         accepted_at: new Date().toISOString(),
       });
+    }
+
+    // Audit trail: project creation is a governance event
+    if (newProject) {
+      logAuditEntry({
+        projectId: newProject.id,
+        entityType: 'project',
+        entityId: newProject.id,
+        action: 'create',
+        afterState: {
+          name: newProject.name,
+          status: newProject.status,
+          owner_id: newProject.owner_id,
+          project_type: newProject.project_type,
+          contract_value: newProject.contract_value,
+        },
+      }).catch(() => {})
     }
 
     // Set as active project and refresh queries

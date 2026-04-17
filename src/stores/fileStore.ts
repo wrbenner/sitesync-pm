@@ -143,15 +143,24 @@ export const useFileStore = create<FileState>()((set, get) => ({
 
       const drawings = (data ?? []) as LocalDrawing[];
 
-      // Load sheets for each drawing
-      for (const drawing of drawings) {
-        const { data: sheets } = await supabase
+      // Batch-load sheets for all drawings in one query (avoid N+1)
+      if (drawings.length > 0) {
+        const drawingIds = drawings.map((d) => d.id);
+        const { data: allSheets } = await supabase
           .from('drawing_sheets')
           .select('*')
-          .eq('drawing_id', drawing.id)
+          .in('drawing_id', drawingIds)
           .order('sheet_number');
 
-        drawing.sheets = (sheets ?? []) as LocalDrawingSheet[];
+        const sheetsByDrawing = new Map<string, LocalDrawingSheet[]>();
+        for (const sheet of (allSheets ?? []) as LocalDrawingSheet[]) {
+          const list = sheetsByDrawing.get(sheet.drawing_id) ?? [];
+          list.push(sheet);
+          sheetsByDrawing.set(sheet.drawing_id, list);
+        }
+        for (const drawing of drawings) {
+          drawing.sheets = sheetsByDrawing.get(drawing.id) ?? [];
+        }
       }
 
       set({ drawings, loading: false });
