@@ -198,15 +198,28 @@ export function authenticateCron(req: Request): SupabaseClient {
 
 // ── Project Membership ───────────────────────────────────────
 
-type ProjectRole = 'viewer' | 'field_user' | 'foreman' | 'project_manager' | 'admin' | 'owner'
+// Canonical ProjectRole — must stay in sync with src/types/database.ts
+type ProjectRole =
+  | 'owner'
+  | 'admin'
+  | 'project_manager'
+  | 'superintendent'
+  | 'project_engineer'
+  | 'foreman'
+  | 'field_user'
+  | 'subcontractor'
+  | 'viewer'
 
 const ROLE_HIERARCHY: Record<ProjectRole, number> = {
   viewer: 0,
-  field_user: 1,
-  foreman: 2,
-  project_manager: 3,
-  admin: 4,
-  owner: 5,
+  subcontractor: 1,
+  field_user: 2,
+  foreman: 3,
+  project_engineer: 4,
+  superintendent: 5,
+  project_manager: 6,
+  admin: 7,
+  owner: 8,
 }
 
 export async function verifyProjectMembership(

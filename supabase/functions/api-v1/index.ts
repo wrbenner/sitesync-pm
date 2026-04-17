@@ -158,9 +158,10 @@ async function verifyProjectAccess(ctx: ApiKeyContext, projectId: string): Promi
   // Verify the API key's organization owns this project
   const { data, error } = await ctx.supabase
     .from('projects')
-    .select('id')
+    .select('id, organization_id')
     .eq('id', projectId)
-    .single()
+    .eq('organization_id', ctx.organizationId)
+    .maybeSingle()
   if (error || !data) throw new HttpError(404, 'Project not found')
 }
 
@@ -170,7 +171,7 @@ async function verifyProjectAccess(ctx: ApiKeyContext, projectId: string): Promi
 async function listProjects(ctx: ApiKeyContext, _m: RegExpMatchArray, _r: Request, url: URL) {
   requireScope(ctx, 'read')
   const { cursor, limit } = parsePagination(url)
-  let query = ctx.supabase.from('projects').select('id, name, address, city, state, status, contract_value, start_date, target_completion, created_at, updated_at').order('created_at', { ascending: false }).limit(limit + 1)
+  let query = ctx.supabase.from('projects').select('id, name, address, city, state, status, contract_value, start_date, target_completion, created_at, updated_at').eq('organization_id', ctx.organizationId).order('created_at', { ascending: false }).limit(limit + 1)
   if (cursor) query = query.lt('id', cursor)
   const { data, error } = await query
   if (error) throw new HttpError(500, 'Failed to fetch projects')
@@ -180,7 +181,7 @@ async function listProjects(ctx: ApiKeyContext, _m: RegExpMatchArray, _r: Reques
 async function getProject(ctx: ApiKeyContext, match: RegExpMatchArray, _r: Request, url: URL) {
   requireScope(ctx, 'read')
   const projectId = param(match, 1)
-  const { data, error } = await ctx.supabase.from('projects').select('*').eq('id', projectId).single()
+  const { data, error } = await ctx.supabase.from('projects').select('*').eq('id', projectId).eq('organization_id', ctx.organizationId).maybeSingle()
   if (error || !data) throw new HttpError(404, 'Project not found')
   return jsonResponse(data)
 }
@@ -234,6 +235,7 @@ async function getRFI(ctx: ApiKeyContext, match: RegExpMatchArray, _r: Request, 
   requireScope(ctx, 'read:rfis')
   const projectId = param(match, 1)
   const rfiId = param(match, 2)
+  await verifyProjectAccess(ctx, projectId)
   const expand = parseExpand(url)
   let select = '*'
   if (expand.includes('responses')) select = '*, rfi_responses(*)'
@@ -247,6 +249,7 @@ async function updateRFI(ctx: ApiKeyContext, match: RegExpMatchArray, req: Reque
   requireScope(ctx, 'write:rfis')
   const projectId = param(match, 1)
   const rfiId = param(match, 2)
+  await verifyProjectAccess(ctx, projectId)
   const body = await parseBody(req)
 
   const allowed = ['title', 'description', 'status', 'priority', 'assigned_to', 'due_date']
@@ -296,6 +299,7 @@ async function getTask(ctx: ApiKeyContext, match: RegExpMatchArray, _r: Request,
   requireScope(ctx, 'read:tasks')
   const projectId = param(match, 1)
   const taskId = param(match, 2)
+  await verifyProjectAccess(ctx, projectId)
   const { data, error } = await ctx.supabase.from('tasks').select('*').eq('id', taskId).eq('project_id', projectId).single()
   if (error || !data) throw new HttpError(404, 'Task not found')
   return jsonResponse(data)
@@ -305,6 +309,7 @@ async function updateTask(ctx: ApiKeyContext, match: RegExpMatchArray, req: Requ
   requireScope(ctx, 'write:tasks')
   const projectId = param(match, 1)
   const taskId = param(match, 2)
+  await verifyProjectAccess(ctx, projectId)
   const body = await parseBody(req)
   const allowed = ['title', 'description', 'status', 'priority', 'assigned_to', 'due_date', 'percent_complete']
   const updates: Record<string, unknown> = {}
