@@ -1,0 +1,605 @@
+import { supabase } from '../lib/supabase';
+import type { ProjectRole } from '../types/tenant';
+import { ROLE_HIERARCHY } from '../types/tenant';
+import type { Database } from '../types/database';
+import {
+  type Result,
+  ok,
+  fail,
+  dbError,
+  permissionError,
+  notFoundError,
+  validationError,
+  conflictError,
+} from './errors';
+import {
+  getMemberLifecycleState,
+  getValidMemberTransitions,
+  canAssignRole,
+  getDefaultPermissions,
+  type MemberLifecycleState,
+} from '../machines/projectMemberMachine';
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+async function getCurrentUserId(): Promise<string | null> {
+  const { data } = await supabase.auth.getSession();
+  return data.session?.user?.id ?? null;
+}
+
+/**
+ * Resolve the caller's authoritative project role from the database.
+ * NEVER trusts caller-supplied role values.
+ */
+async function resolveProjectRole(
+  projectId: string,
+  userId: string | null,
+): Promise<ProjectRole | null> {
+  if (!userId) return null;
+
+  const { data } = await supabase
+    .from('project_members')
+    .select('role')
+    .eq('project_id', projectId)
+    .eq('user_id', userId)
+    .single();
+
+  return (data?.role as ProjectRole) ?? null;
+}
+
+const MANAGER_LEVEL = ROLE_HIERARCHY['project_manager']; // 5
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+type ProjectMemberRow = Database['public']['Tables']['project_members']['Row'];
+
+export type ProjectMemberWithState = ProjectMemberRow & {
+  lifecycleState: MemberLifecycleState;
+  profile?: {
+    full_name: string | null;
+    avatar_url: string | null;
+    email: string | null;
+  } | null;
+};
+
+export type InviteMemberInput = {
+  project_id: string;
+  user_id: string;
+  role: ProjectRole;
+  company?: string;
+  trade?: string;
+  permissions?: Record<string, boolean>;
+};
+
+export type AddMemberDirectInput = {
+  project_id: string;
+  user_id: string;
+  role: ProjectRole;
+  company?: string;
+  trade?: string;
+  permissions?: Record<string, boolean>;
+};
+
+export type UpdateMemberInput = {
+  role?: ProjectRole;
+  company?: string;
+  trade?: string;
+};
+
+// ── Service ───────────────────────────────────────────────────────────────────
+
+export const projectMemberService = {
+  /**
+   * Load all non-removed members of a project with lifecycle state derived
+   * from DB columns. Requires the caller to be a project member.
+   */
+  async loadMembers(projectId: string): Promise<Result<ProjectMemberWithState[]>> {
+    const userId = await getCurrentUserId();
+    if (!userId) return fail(permissionError('Not authenticated'));
+
+    const role = await resolveProjectRole(projectId, userId);
+    if (!role) return fail(permissionError('User is not a member of this project'));
+
+    const { data, error } = await supabase
+      .from('project_members')
+      .select('*')
+      .eq('project_id', projectId)
+      .order('invited_at', { ascending: true });
+
+    if (error) return fail(dbError(error.message, { projectId }));
+
+    const rows = (data ?? []) as ProjectMemberRow[];
+    const members: ProjectMemberWithState[] = rows
+      .map((row) => ({
+        ...row,
+        lifecycleState: getMemberLifecycleState({
+          invited_at: row.invited_at,
+          accepted_at: row.accepted_at,
+          permissions: row.permissions as Record<string, unknown> | null,
+        }),
+      }))
+      .filter((m) => m.lifecycleState !== 'removed');
+
+    return ok(members);
+  },
+
+  /**
+   * Invite an existing user to a project. Sets invited_at; the user must call
+   * acceptInvitation() to become active. Email notification is triggered via
+   * Supabase edge function after the record is created.
+   *
+   * IMPORTANT: Caller's role is resolved from the database.
+   */
+  async inviteMember(input: InviteMemberInput): Promise<Result<ProjectMemberWithState>> {
+    const currentUserId = await getCurrentUserId();
+    if (!currentUserId) return fail(permissionError('Not authenticated'));
+
+    const callerRole = await resolveProjectRole(input.project_id, currentUserId);
+    if (!callerRole || (ROLE_HIERARCHY[callerRole] ?? 0) < MANAGER_LEVEL) {
+      return fail(permissionError('Only project managers and above can invite members'));
+    }
+
+    if (!canAssignRole(callerRole, input.role)) {
+      return fail(
+        permissionError(
+          `Role '${callerRole}' cannot assign role '${input.role}': insufficient privilege level`,
+        ),
+      );
+    }
+
+    const { data: existing } = await supabase
+      .from('project_members')
+      .select('id, invited_at, accepted_at, permissions')
+      .eq('project_id', input.project_id)
+      .eq('user_id', input.user_id)
+      .single();
+
+    if (existing) {
+      const existingState = getMemberLifecycleState({
+        invited_at: existing.invited_at,
+        accepted_at: existing.accepted_at,
+        permissions: existing.permissions as Record<string, unknown> | null,
+      });
+      if (existingState !== 'removed') {
+        return fail(
+          conflictError('User is already a member or has a pending invitation', {
+            user_id: input.user_id,
+            project_id: input.project_id,
+            existingState,
+          }),
+        );
+      }
+    }
+
+    const mergedPermissions = {
+      ...getDefaultPermissions(input.role),
+      ...(input.permissions ?? {}),
+    };
+
+    const now = new Date().toISOString();
+
+    const { data, error } = await supabase
+      .from('project_members')
+      .insert({
+        project_id: input.project_id,
+        user_id: input.user_id,
+        role: input.role,
+        company: input.company ?? null,
+        trade: input.trade ?? null,
+        permissions: mergedPermissions,
+        invited_at: now,
+        accepted_at: null,
+      })
+      .select()
+      .single();
+
+    if (error) return fail(dbError(error.message, { project_id: input.project_id, user_id: input.user_id }));
+
+    const row = data as ProjectMemberRow;
+
+    await projectMemberService._triggerInvitationEmail(row.id, input.project_id, input.user_id);
+
+    return ok({
+      ...row,
+      lifecycleState: 'invited' as MemberLifecycleState,
+    });
+  },
+
+  /**
+   * Add a member directly without an invitation flow (immediately active).
+   * Use this for bulk imports or when the user is already known.
+   *
+   * IMPORTANT: Caller's role is resolved from the database.
+   */
+  async addMember(input: AddMemberDirectInput): Promise<Result<ProjectMemberWithState>> {
+    const currentUserId = await getCurrentUserId();
+    if (!currentUserId) return fail(permissionError('Not authenticated'));
+
+    const callerRole = await resolveProjectRole(input.project_id, currentUserId);
+    if (!callerRole || (ROLE_HIERARCHY[callerRole] ?? 0) < MANAGER_LEVEL) {
+      return fail(permissionError('Only project managers and above can add members'));
+    }
+
+    if (!canAssignRole(callerRole, input.role)) {
+      return fail(
+        permissionError(
+          `Role '${callerRole}' cannot assign role '${input.role}': insufficient privilege level`,
+        ),
+      );
+    }
+
+    const { data: existing } = await supabase
+      .from('project_members')
+      .select('id, invited_at, accepted_at, permissions')
+      .eq('project_id', input.project_id)
+      .eq('user_id', input.user_id)
+      .single();
+
+    if (existing) {
+      const existingState = getMemberLifecycleState({
+        invited_at: existing.invited_at,
+        accepted_at: existing.accepted_at,
+        permissions: existing.permissions as Record<string, unknown> | null,
+      });
+      if (existingState !== 'removed') {
+        return fail(
+          conflictError('User is already a member of this project', {
+            user_id: input.user_id,
+            project_id: input.project_id,
+          }),
+        );
+      }
+    }
+
+    const mergedPermissions = {
+      ...getDefaultPermissions(input.role),
+      ...(input.permissions ?? {}),
+    };
+
+    const now = new Date().toISOString();
+
+    const { data, error } = await supabase
+      .from('project_members')
+      .insert({
+        project_id: input.project_id,
+        user_id: input.user_id,
+        role: input.role,
+        company: input.company ?? null,
+        trade: input.trade ?? null,
+        permissions: mergedPermissions,
+        invited_at: now,
+        accepted_at: now,
+      })
+      .select()
+      .single();
+
+    if (error) return fail(dbError(error.message, { project_id: input.project_id, user_id: input.user_id }));
+
+    const row = data as ProjectMemberRow;
+    return ok({ ...row, lifecycleState: 'active' as MemberLifecycleState });
+  },
+
+  /**
+   * Accept a project invitation. Sets accepted_at on the member record.
+   * Only the invited user may accept their own invitation.
+   */
+  async acceptInvitation(memberId: string): Promise<Result<ProjectMemberWithState>> {
+    const userId = await getCurrentUserId();
+    if (!userId) return fail(permissionError('Not authenticated'));
+
+    const { data: member, error: fetchError } = await supabase
+      .from('project_members')
+      .select('*')
+      .eq('id', memberId)
+      .single();
+
+    if (fetchError || !member) return fail(notFoundError('ProjectMember', memberId));
+
+    const row = member as ProjectMemberRow;
+
+    if (row.user_id !== userId) {
+      return fail(permissionError('Only the invited user can accept their own invitation'));
+    }
+
+    const currentState = getMemberLifecycleState({
+      invited_at: row.invited_at,
+      accepted_at: row.accepted_at,
+      permissions: row.permissions as Record<string, unknown> | null,
+    });
+
+    if (currentState !== 'invited') {
+      return fail(
+        validationError(
+          `Cannot accept: member is in '${currentState}' state, must be 'invited'`,
+          { currentState, memberId },
+        ),
+      );
+    }
+
+    const now = new Date().toISOString();
+
+    const { error } = await supabase
+      .from('project_members')
+      .update({ accepted_at: now })
+      .eq('id', memberId);
+
+    if (error) return fail(dbError(error.message, { memberId }));
+
+    return ok({ ...row, accepted_at: now, lifecycleState: 'active' as MemberLifecycleState });
+  },
+
+  /**
+   * Assign a new role to a project member.
+   * Caller must outrank both the member's current role and the new role.
+   * IMPORTANT: Caller's role is resolved from the database.
+   */
+  async assignRole(memberId: string, newRole: ProjectRole): Promise<Result> {
+    const userId = await getCurrentUserId();
+    if (!userId) return fail(permissionError('Not authenticated'));
+
+    const { data: member, error: fetchError } = await supabase
+      .from('project_members')
+      .select('project_id, role, invited_at, accepted_at, permissions')
+      .eq('id', memberId)
+      .single();
+
+    if (fetchError || !member) return fail(notFoundError('ProjectMember', memberId));
+
+    const row = member as Pick<ProjectMemberRow, 'project_id' | 'role' | 'invited_at' | 'accepted_at' | 'permissions'>;
+
+    const callerRole = await resolveProjectRole(row.project_id, userId);
+    if (!callerRole) return fail(permissionError('User is not a member of this project'));
+
+    if (!canAssignRole(callerRole, row.role as ProjectRole)) {
+      return fail(
+        permissionError(
+          `Cannot change role: your role '${callerRole}' does not outrank the member's current role '${row.role}'`,
+        ),
+      );
+    }
+
+    if (!canAssignRole(callerRole, newRole)) {
+      return fail(
+        permissionError(
+          `Cannot assign role '${newRole}': your role '${callerRole}' does not outrank it`,
+        ),
+      );
+    }
+
+    const currentState = getMemberLifecycleState({
+      invited_at: row.invited_at,
+      accepted_at: row.accepted_at,
+      permissions: row.permissions as Record<string, unknown> | null,
+    });
+
+    if (currentState === 'removed') {
+      return fail(validationError('Cannot change the role of a removed member', { memberId }));
+    }
+
+    const updatedPermissions = {
+      ...(row.permissions as Record<string, unknown> | null ?? {}),
+      ...getDefaultPermissions(newRole),
+    };
+
+    const { error } = await supabase
+      .from('project_members')
+      .update({ role: newRole, permissions: updatedPermissions })
+      .eq('id', memberId);
+
+    if (error) return fail(dbError(error.message, { memberId, newRole }));
+    return { data: null, error: null };
+  },
+
+  /**
+   * Transition a member's lifecycle state (suspend, reactivate, remove, restore).
+   * Enforces the state machine via getValidMemberTransitions.
+   * IMPORTANT: Caller's role is resolved from the database.
+   */
+  async transitionMemberState(
+    memberId: string,
+    newState: MemberLifecycleState,
+    reason?: string,
+  ): Promise<Result> {
+    const userId = await getCurrentUserId();
+    if (!userId) return fail(permissionError('Not authenticated'));
+
+    const { data: member, error: fetchError } = await supabase
+      .from('project_members')
+      .select('project_id, role, invited_at, accepted_at, permissions')
+      .eq('id', memberId)
+      .single();
+
+    if (fetchError || !member) return fail(notFoundError('ProjectMember', memberId));
+
+    const row = member as Pick<ProjectMemberRow, 'project_id' | 'role' | 'invited_at' | 'accepted_at' | 'permissions'>;
+
+    const callerRole = await resolveProjectRole(row.project_id, userId);
+    if (!callerRole) return fail(permissionError('User is not a member of this project'));
+
+    const currentState = getMemberLifecycleState({
+      invited_at: row.invited_at,
+      accepted_at: row.accepted_at,
+      permissions: row.permissions as Record<string, unknown> | null,
+    });
+
+    const validTransitions = getValidMemberTransitions(currentState, callerRole);
+    if (!validTransitions.includes(newState)) {
+      return fail(
+        validationError(
+          `Invalid transition: ${currentState} → ${newState} (role: ${callerRole}). Valid: ${validTransitions.join(', ') || 'none'}`,
+          { currentState, newState, callerRole, validTransitions },
+        ),
+      );
+    }
+
+    const existingPermissions = (row.permissions as Record<string, unknown> | null) ?? {};
+    const updatedPermissions: Record<string, unknown> = { ...existingPermissions };
+
+    if (newState === 'active') {
+      delete updatedPermissions['_memberStatus'];
+      delete updatedPermissions['_suspendedReason'];
+      delete updatedPermissions['_removedReason'];
+
+      const now = new Date().toISOString();
+      const { error } = await supabase
+        .from('project_members')
+        .update({ permissions: updatedPermissions, accepted_at: now })
+        .eq('id', memberId);
+
+      if (error) return fail(dbError(error.message, { memberId, newState }));
+    } else {
+      updatedPermissions['_memberStatus'] = newState;
+      if (reason) {
+        updatedPermissions[newState === 'suspended' ? '_suspendedReason' : '_removedReason'] = reason;
+      }
+
+      const { error } = await supabase
+        .from('project_members')
+        .update({ permissions: updatedPermissions })
+        .eq('id', memberId);
+
+      if (error) return fail(dbError(error.message, { memberId, newState }));
+    }
+
+    return { data: null, error: null };
+  },
+
+  /**
+   * Update non-role fields on a member record (company, trade).
+   * Status and role changes must go through their dedicated methods.
+   */
+  async updateMember(memberId: string, updates: UpdateMemberInput): Promise<Result> {
+    const userId = await getCurrentUserId();
+    if (!userId) return fail(permissionError('Not authenticated'));
+
+    const { data: member, error: fetchError } = await supabase
+      .from('project_members')
+      .select('project_id, role')
+      .eq('id', memberId)
+      .single();
+
+    if (fetchError || !member) return fail(notFoundError('ProjectMember', memberId));
+
+    const row = member as Pick<ProjectMemberRow, 'project_id' | 'role'>;
+
+    const callerRole = await resolveProjectRole(row.project_id, userId);
+    if (!callerRole || (ROLE_HIERARCHY[callerRole] ?? 0) < MANAGER_LEVEL) {
+      return fail(permissionError('Only project managers and above can update member details'));
+    }
+
+    const { role: _role, ...safeUpdates } = updates as Record<string, unknown>;
+    void _role;
+
+    const { error } = await supabase
+      .from('project_members')
+      .update(safeUpdates)
+      .eq('id', memberId);
+
+    if (error) return fail(dbError(error.message, { memberId }));
+    return { data: null, error: null };
+  },
+
+  /**
+   * Override the custom permission set for a member.
+   * Caller must be project_manager or above.
+   * System keys (prefixed with _) are preserved and cannot be overwritten here.
+   */
+  async updatePermissions(
+    memberId: string,
+    permissions: Record<string, boolean>,
+  ): Promise<Result> {
+    const userId = await getCurrentUserId();
+    if (!userId) return fail(permissionError('Not authenticated'));
+
+    const { data: member, error: fetchError } = await supabase
+      .from('project_members')
+      .select('project_id, permissions')
+      .eq('id', memberId)
+      .single();
+
+    if (fetchError || !member) return fail(notFoundError('ProjectMember', memberId));
+
+    const row = member as Pick<ProjectMemberRow, 'project_id' | 'permissions'>;
+
+    const callerRole = await resolveProjectRole(row.project_id, userId);
+    if (!callerRole || (ROLE_HIERARCHY[callerRole] ?? 0) < MANAGER_LEVEL) {
+      return fail(permissionError('Only project managers and above can update member permissions'));
+    }
+
+    const existing = (row.permissions as Record<string, unknown> | null) ?? {};
+    const systemKeys: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(existing)) {
+      if (k.startsWith('_')) systemKeys[k] = v;
+    }
+
+    const merged = { ...permissions, ...systemKeys };
+
+    const { error } = await supabase
+      .from('project_members')
+      .update({ permissions: merged })
+      .eq('id', memberId);
+
+    if (error) return fail(dbError(error.message, { memberId }));
+    return { data: null, error: null };
+  },
+
+  /**
+   * Get the server-resolved project role for the current session user.
+   */
+  async getMyProjectRole(projectId: string): Promise<Result<ProjectRole | null>> {
+    const userId = await getCurrentUserId();
+    if (!userId) return fail(permissionError('Not authenticated'));
+
+    const role = await resolveProjectRole(projectId, userId);
+    return ok(role);
+  },
+
+  /**
+   * Load a single member record with lifecycle state.
+   */
+  async getMember(memberId: string): Promise<Result<ProjectMemberWithState>> {
+    const userId = await getCurrentUserId();
+    if (!userId) return fail(permissionError('Not authenticated'));
+
+    const { data, error } = await supabase
+      .from('project_members')
+      .select('*')
+      .eq('id', memberId)
+      .single();
+
+    if (error || !data) return fail(notFoundError('ProjectMember', memberId));
+
+    const row = data as ProjectMemberRow;
+
+    const callerRole = await resolveProjectRole(row.project_id, userId);
+    if (!callerRole) return fail(permissionError('User is not a member of this project'));
+
+    return ok({
+      ...row,
+      lifecycleState: getMemberLifecycleState({
+        invited_at: row.invited_at,
+        accepted_at: row.accepted_at,
+        permissions: row.permissions as Record<string, unknown> | null,
+      }),
+    });
+  },
+
+  /**
+   * Internal: trigger the invitation email edge function.
+   * Failures are non-fatal — the member record is already created.
+   */
+  async _triggerInvitationEmail(
+    memberId: string,
+    projectId: string,
+    userId: string,
+  ): Promise<void> {
+    try {
+      await supabase.functions.invoke('send-invitation-email', {
+        body: { memberId, projectId, userId },
+      });
+    } catch {
+      // Non-fatal: log but do not surface to caller
+      console.warn('[projectMemberService] invitation email trigger failed', { memberId, projectId, userId });
+    }
+  },
+};
