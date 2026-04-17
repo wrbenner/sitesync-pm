@@ -160,7 +160,14 @@ export const ScheduleEmptyState: React.FC<EmptyStateProps> = ({ showImportModal,
         <div style={{ fontSize: '14px', color: colors.textSecondary, marginBottom: '32px', lineHeight: typography.lineHeight.normal }}>
           Import your P6 or MS Project schedule, or create phases manually
         </div>
-        <PermissionGate permission="schedule.edit">
+        <PermissionGate
+          permission="schedule.edit"
+          fallback={
+            <div role="note" title="Your role doesn't allow editing the schedule. Request access from your admin." style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, fontStyle: 'italic' }}>
+              Contact your project admin to add phases or import a schedule.
+            </div>
+          }
+        >
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
             <button
               onClick={() => setShowImportModal(true)}

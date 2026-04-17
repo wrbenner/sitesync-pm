@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, Calendar, MapPin, AlertTriangle, RefreshCw } from 'lucide-react';
 import {
-  PageContainer, Tag, Btn, MetricBox, Skeleton,
+  PageContainer, Tag, Btn, MetricBox, Skeleton, EmptyState,
 } from '../components/Primitives';
 import { MetricCardSkeleton } from '../components/ui/Skeletons';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../styles/theme';
@@ -155,6 +155,18 @@ export const Meetings: React.FC = () => {
   const { data: actionItemsData } = useProjectActionItems(projectId);
   const allMeetings = (meetingsResult?.data ?? []) as unknown as MeetingListItem[];
 
+  if (!projectId) {
+    return (
+      <PageContainer title="Meetings">
+        <EmptyState
+          icon={<Calendar size={32} color={colors.textTertiary} />}
+          title="No project selected"
+          description="Select a project from the sidebar to view meetings."
+        />
+      </PageContainer>
+    );
+  }
+
   if (isPending) return <MeetingsSkeleton />;
 
   if (error) {
@@ -254,7 +266,14 @@ export const Meetings: React.FC = () => {
     <PageContainer
       title="Meetings"
       actions={
-        <PermissionGate permission="meetings.create">
+        <PermissionGate
+          permission="meetings.create"
+          fallback={
+            <span title="Your role doesn't allow scheduling meetings. Request access from your admin.">
+              <Btn icon={<Plus size={14} />} disabled>Schedule Meeting</Btn>
+            </span>
+          }
+        >
           <Btn icon={<Plus size={14} />} onClick={() => setShowCreateModal(true)}>
             Schedule Meeting
           </Btn>
@@ -351,7 +370,14 @@ export const Meetings: React.FC = () => {
             >
               Set up your recurring OAC meeting or schedule a one off to keep the team aligned.
             </p>
-            <PermissionGate permission="meetings.create">
+            <PermissionGate
+              permission="meetings.create"
+              fallback={
+                <span title="Your role doesn't allow scheduling meetings. Request access from your admin.">
+                  <Btn icon={<Plus size={14} />} disabled>Schedule Meeting</Btn>
+                </span>
+              }
+            >
               <Btn icon={<Plus size={14} />} onClick={() => setShowCreateModal(true)}>
                 Schedule Meeting
               </Btn>

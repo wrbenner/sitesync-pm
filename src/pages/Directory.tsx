@@ -293,7 +293,7 @@ export const Directory: React.FC = () => {
       actions={
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
           <ViewToggle view={view} onChange={setView} />
-          <PermissionGate permission="directory.manage"><Btn icon={<Plus size={14} />} onClick={() => setShowAdd(true)}>Add Contact</Btn></PermissionGate>
+          <PermissionGate permission="directory.manage" fallback={<span title="Your role doesn't allow adding contacts. Request access from your admin."><Btn icon={<Plus size={14} />} disabled>Add Contact</Btn></span>}><Btn icon={<Plus size={14} />} onClick={() => setShowAdd(true)}>Add Contact</Btn></PermissionGate>
         </div>
       }
     >
@@ -373,7 +373,7 @@ export const Directory: React.FC = () => {
                 Add every stakeholder so your team always knows who to call.
               </p>
             </div>
-            <PermissionGate permission="directory.manage"><Btn onClick={() => setShowAdd(true)}>Add First Contact</Btn></PermissionGate>
+            <PermissionGate permission="directory.manage" fallback={<span title="Your role doesn't allow adding contacts. Request access from your admin."><Btn disabled>Add First Contact</Btn></span>}><Btn onClick={() => setShowAdd(true)}>Add First Contact</Btn></PermissionGate>
           </div>
         )}
 

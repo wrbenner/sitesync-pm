@@ -273,7 +273,35 @@ export const CaptureButtons: React.FC<CaptureButtonsProps> = ({ onCaptureClick }
       .fc-fab { display: none; }
       @media (min-width: 768px) { .fc-fab { display: flex; position: fixed; top: 20px; right: 36px; height: 56px; border-radius: 10px; padding: 0 20px; z-index: 100; } }
     `}</style>
-    <PermissionGate permission="field_capture.create">
+    <PermissionGate
+      permission="field_capture.create"
+      fallback={
+        <button
+          className="fc-capture-btn"
+          aria-label="Capture requires additional permissions"
+          title="Your role doesn't allow capturing photos. Request access from your admin."
+          disabled
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: spacing['2'],
+            backgroundColor: colors.primaryOrange,
+            color: colors.white,
+            border: 'none',
+            cursor: 'not-allowed',
+            opacity: 0.5,
+            fontSize: typography.fontSize.title,
+            fontWeight: typography.fontWeight.semibold,
+            fontFamily: typography.fontFamily,
+            marginBottom: spacing['5'],
+          }}
+        >
+          <Camera size={22} />
+          Capture
+        </button>
+      }
+    >
       <button
         className="fc-capture-btn"
         aria-label="Capture new field photo"

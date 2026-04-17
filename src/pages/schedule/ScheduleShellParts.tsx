@@ -43,8 +43,36 @@ interface ActionsProps {
 
 export const ScheduleHeaderActions: React.FC<ActionsProps> = ({ onImport, onAddPhase, liveActive }) => (
   <div style={{ display: 'flex', alignItems: 'center', gap: spacing.md }}>
-    <PermissionGate permission="schedule.edit">
-      {onAddPhase && (
+    {onAddPhase && (
+      <PermissionGate
+        permission="schedule.edit"
+        fallback={
+          <button
+            aria-label="Add phase requires additional permissions"
+            title="Your role doesn't allow editing the schedule. Request access from your admin."
+            disabled
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: spacing.sm,
+              padding: `0 ${spacing.lg}`,
+              height: '40px',
+              border: 'none',
+              borderRadius: borderRadius.md,
+              backgroundColor: colors.primaryOrange,
+              color: colors.white,
+              cursor: 'not-allowed',
+              opacity: 0.5,
+              fontSize: typography.fontSize.body,
+              fontWeight: typography.fontWeight.semibold,
+              fontFamily: 'inherit',
+            }}
+          >
+            <Plus size={15} />
+            Add Phase
+          </button>
+        }
+      >
         <button
           aria-label="Add schedule phase manually"
           onClick={onAddPhase}
@@ -68,7 +96,9 @@ export const ScheduleHeaderActions: React.FC<ActionsProps> = ({ onImport, onAddP
           <Plus size={15} />
           Add Phase
         </button>
-      )}
+      </PermissionGate>
+    )}
+    <PermissionGate permission="schedule.edit">
       <button
         aria-label="Import schedule from Primavera P6 or Microsoft Project"
         onClick={onImport}

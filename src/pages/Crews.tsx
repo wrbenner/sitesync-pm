@@ -164,7 +164,7 @@ export const Crews: React.FC = () => {
           icon={<Users size={40} color={colors.textTertiary} />}
           title="No crews yet"
           description="Add crews to track workforce, productivity, and certifications across the project."
-          action={<PermissionGate permission="crews.create"><Btn variant="primary" onClick={() => setShowAddCrew(true)}>Add Crew</Btn></PermissionGate>}
+          action={<PermissionGate permission="crews.manage" fallback={<span title="Your role doesn't allow adding crews. Request access from your admin."><Btn variant="primary" icon={<Plus size={14} />} disabled>Add Crew</Btn></span>}><Btn variant="primary" onClick={() => setShowAddCrew(true)}>Add Crew</Btn></PermissionGate>}
         />
         {showAddCrew && activeProject?.id && (
           <AddCrewModal projectId={activeProject.id} onClose={() => setShowAddCrew(false)} onCreated={() => activeProject?.id && loadCrews(activeProject.id)} />
@@ -196,7 +196,7 @@ export const Crews: React.FC = () => {
     <PageContainer
       title="Crews"
       subtitle={`${activeCrews.length} active crews \u00B7 ${totalWorkers} workers on site`}
-      actions={<PermissionGate permission="crews.create"><Btn variant="primary" icon={<Plus size={14} />} onClick={() => setShowAddCrew(true)}>Add Crew</Btn></PermissionGate>}
+      actions={<PermissionGate permission="crews.manage" fallback={<span title="Your role doesn't allow adding crews. Request access from your admin."><Btn variant="primary" icon={<Plus size={14} />} disabled>Add Crew</Btn></span>}><Btn variant="primary" icon={<Plus size={14} />} onClick={() => setShowAddCrew(true)}>Add Crew</Btn></PermissionGate>}
     >
       {pageAlerts.map((alert) => (
         <PredictiveAlertBanner key={alert.id} alert={alert} />
