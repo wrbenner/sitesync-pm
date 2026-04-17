@@ -111,7 +111,7 @@ jobs:
           echo "All integrations complete, in progress, or prerequisites not met."
           exit 0
 
-      - name: D1 — Create branch and lock integration
+      - name: D1 — Create branch (lock is local-only)
         id: create-branch
         if: steps.select-integration.outputs.target != 'NONE'
         env:
@@ -121,26 +121,9 @@ jobs:
           git checkout -b "$BRANCH"
           echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
 
-          cat > /tmp/lock-integration.js <<'SCRIPT'
-          const fs = require('fs');
-          const TARGET = process.env.TARGET;
-          const registry = JSON.parse(fs.readFileSync('organism-memory/task-registry.json', 'utf8'));
-          registry.integrations[TARGET].status = 'in_progress';
-          registry.integrations[TARGET].locked_at = new Date().toISOString();
-          registry.last_updated = new Date().toISOString();
-          fs.writeFileSync('organism-memory/task-registry.json', JSON.stringify(registry, null, 2));
-          SCRIPT
-
-          node /tmp/lock-integration.js
-          OWNER="${GITHUB_REPOSITORY%%/*}"
-          REPO="${GITHUB_REPOSITORY##*/}"
-          CURRENT_SHA=$(gh api "repos/$OWNER/$REPO/contents/organism-memory/task-registry.json" --jq '.sha')
-          UPDATED_CONTENT=$(base64 -w 0 organism-memory/task-registry.json)
-          gh api "repos/$OWNER/$REPO/contents/organism-memory/task-registry.json" \
-            -X PUT \
-            -f message="chore(organism): lock integration $TARGET [IW-${{ github.run_number }}]" \
-            -f content="$UPDATED_CONTENT" \
-            -f sha="$CURRENT_SHA" || true
+          # Lock is local-only. The concurrency group prevents parallel runs,
+          # so pushing the lock to main is unnecessary (branch protection would block it).
+          # The integration registry update lands on the feature branch + PR instead.
 
       - name: A1 — Claude analyzes integration context
         if: steps.select-integration.outputs.target != 'NONE'
@@ -196,7 +179,15 @@ jobs:
           1. Do NOT change CSS.
           2. Do NOT refactor working code.
           3. All data through Supabase.
-          4. Commit: git add -A && git commit -m "feat(integration): wire ${TARGET} [IW-${RUN_ID}]"
+
+          After making code changes, ALSO update organism-memory/task-registry.json:
+          - Set registry.integrations['${TARGET}'].status = "done".
+          - Set registry.integrations['${TARGET}'].completed_at to the current ISO-8601 timestamp (new Date().toISOString()).
+          - Delete registry.integrations['${TARGET}'].locked_at.
+          - Save with JSON.stringify(registry, null, 2).
+          This must be part of the same commit as your code changes so branch protection on main does not block it.
+
+          Commit: git add -A && git commit -m "feat(integration): wire ${TARGET} [IW-${RUN_ID}]"
           PROMPT_EOF
 
           claude --max-turns 35 --allowedTools "Bash,Read,Write,Edit,Glob,Grep" --print "$(cat /tmp/iw-impl.txt)" || true
@@ -211,7 +202,52 @@ jobs:
             echo "build=FAIL" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: D3 — Create PR
+      - name: D3 — Ensure integration registry update is in branch commit
+        if: steps.select-integration.outputs.target != 'NONE' && steps.verify.outputs.build == 'PASS'
+        env:
+          TARGET: ${{ steps.select-integration.outputs.target }}
+          BUILD: ${{ steps.verify.outputs.build }}
+        run: |
+          cat > /tmp/update-integration.js <<'SCRIPT'
+          const fs = require('fs');
+          const TARGET = process.env.TARGET;
+          const BUILD = process.env.BUILD;
+
+          const registry = JSON.parse(fs.readFileSync('organism-memory/task-registry.json', 'utf8'));
+          const integration = registry.integrations[TARGET];
+          if (!integration) { console.log('Integration not found'); process.exit(0); }
+
+          if (BUILD === 'PASS') {
+            integration.status = 'done';
+            if (!integration.completed_at) integration.completed_at = new Date().toISOString();
+          } else {
+            integration.status = 'pending';
+          }
+          delete integration.locked_at;
+          registry.last_updated = new Date().toISOString();
+          fs.writeFileSync('organism-memory/task-registry.json', JSON.stringify(registry, null, 2));
+
+          console.log('Registry reconciled — integration', TARGET, 'status:', integration.status);
+          SCRIPT
+
+          node /tmp/update-integration.js
+
+          # If Claude Code already staged/committed the registry update, nothing to do.
+          # Otherwise, amend the registry changes onto the latest commit on this branch
+          # so code + registry land on main atomically when the PR auto-merges.
+          if git diff --quiet organism-memory/task-registry.json && git diff --cached --quiet organism-memory/task-registry.json; then
+            echo "Registry already up-to-date in branch commit — no amend needed."
+          else
+            echo "Amending registry update onto latest branch commit."
+            git add organism-memory/task-registry.json
+            if git log -1 --pretty=%s | grep -q .; then
+              git commit --amend --no-edit
+            else
+              git commit -m "chore(organism): mark integration ${TARGET:-target} complete"
+            fi
+          fi
+
+      - name: D4 — Create PR and enable auto-merge
         id: create-pr
         if: steps.select-integration.outputs.target != 'NONE' && steps.verify.outputs.build == 'PASS'
         run: |
@@ -243,43 +279,3 @@ jobs:
           if [ -n "$PR_NUMBER" ]; then
             gh pr merge "$PR_NUMBER" --auto --squash --delete-branch || true
           fi
-
-      - name: D4 — Update registry
-        if: always() && steps.select-integration.outputs.target != 'NONE'
-        env:
-          TARGET: ${{ steps.select-integration.outputs.target }}
-          BUILD: ${{ steps.verify.outputs.build }}
-          PR_NUMBER: ${{ steps.create-pr.outputs.pr_number }}
-        run: |
-          cat > /tmp/update-integration.js <<'SCRIPT'
-          const fs = require('fs');
-          const TARGET = process.env.TARGET;
-          const BUILD = process.env.BUILD;
-          const PR_NUMBER = process.env.PR_NUMBER;
-
-          const registry = JSON.parse(fs.readFileSync('organism-memory/task-registry.json', 'utf8'));
-          const integration = registry.integrations[TARGET];
-          if (!integration) process.exit(0);
-
-          if (BUILD === 'PASS') {
-            integration.status = 'done';
-            integration.pr = PR_NUMBER || null;
-            integration.completed_at = new Date().toISOString();
-          } else {
-            integration.status = 'pending';
-          }
-          delete integration.locked_at;
-          registry.last_updated = new Date().toISOString();
-          fs.writeFileSync('organism-memory/task-registry.json', JSON.stringify(registry, null, 2));
-          SCRIPT
-
-          node /tmp/update-integration.js
-          OWNER="${GITHUB_REPOSITORY%%/*}"
-          REPO="${GITHUB_REPOSITORY##*/}"
-          CURRENT_SHA=$(gh api "repos/$OWNER/$REPO/contents/organism-memory/task-registry.json" --jq '.sha')
-          UPDATED_CONTENT=$(base64 -w 0 organism-memory/task-registry.json)
-          gh api "repos/$OWNER/$REPO/contents/organism-memory/task-registry.json" \
-            -X PUT \
-            -f message="chore(organism): mark integration $TARGET complete [IW-${{ github.run_number }}]" \
-            -f content="$UPDATED_CONTENT" \
-            -f sha="$CURRENT_SHA" || true

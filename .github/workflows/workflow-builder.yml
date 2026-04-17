@@ -144,17 +144,9 @@ jobs:
           echo "verification_grep=$VGREP" >> "$GITHUB_OUTPUT"
           echo "attempts=$ATTEMPTS" >> "$GITHUB_OUTPUT"
 
-          if [ "${DRY_RUN}" != "true" ]; then
-            OWNER="${GITHUB_REPOSITORY%%/*}"
-            REPO="${GITHUB_REPOSITORY##*/}"
-            CURRENT_SHA=$(gh api "repos/$OWNER/$REPO/contents/organism-memory/task-registry.json" --jq '.sha')
-            UPDATED_CONTENT=$(base64 -w 0 organism-memory/task-registry.json)
-            gh api "repos/$OWNER/$REPO/contents/organism-memory/task-registry.json" \
-              -X PUT \
-              -f message="chore(organism): lock task $TASK_ID [WB-${{ github.run_number }}]" \
-              -f content="$UPDATED_CONTENT" \
-              -f sha="$CURRENT_SHA" || true
-          fi
+          # Lock is local-only. The concurrency group prevents parallel runs,
+          # so pushing the lock to main is unnecessary (and blocked by branch protection).
+          # The registry update for this task lands on the feature branch + PR instead.
 
           echo "Task selected: $TASK_ID — $DESC"
 
@@ -233,7 +225,15 @@ jobs:
           6. Implement this ONE task completely.
           7. Complete when this grep passes: grep -r "${VGREP}" src/
 
-          After implementing, commit with:
+          After making code changes, ALSO update organism-memory/task-registry.json:
+          - Find the task with id '${TASK_ID}' in registry.pages[*].tasks.
+          - Set status = "done".
+          - Set completed_at to the current ISO-8601 timestamp (e.g. new Date().toISOString()).
+          - Increment attempts by 1 (default 0 if missing).
+          - Save the file with JSON.stringify(registry, null, 2).
+          This MUST be part of the same commit as your code changes so branch protection on main doesn't block it.
+
+          Then commit with:
           git add -A && git commit -m "feat(${PAGE}): ${DESC} [${TASK_ID}]"
           PROMPT_EOF
 
@@ -306,6 +306,85 @@ jobs:
             echo "build=FAIL" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: D3 — Ensure registry update is in branch commit
+        id: registry-in-branch
+        if: >
+          steps.select-task.outputs.task_id != 'NONE' &&
+          steps.read-context.outputs.already_done != 'true' &&
+          steps.build-check.outputs.build == 'PASS'
+        run: |
+          cat > /tmp/update-registry.js <<'SCRIPT'
+          const fs = require('fs');
+          const TASK_ID = process.env.TASK_ID;
+          const PAGE = process.env.PAGE;
+          const BUILD = process.env.BUILD;
+          const VERIFICATION = process.env.VERIFICATION;
+          const ATTEMPTS = parseInt(process.env.ATTEMPTS || '1');
+
+          const registry = JSON.parse(fs.readFileSync('organism-memory/task-registry.json', 'utf8'));
+          const page = registry.pages[PAGE];
+          if (!page) { console.log('Page not found'); process.exit(0); }
+
+          const task = page.tasks.find(t => t.id === TASK_ID);
+          if (!task) { console.log('Task not found'); process.exit(0); }
+
+          const buildPass = BUILD === 'PASS';
+          const verifyPass = VERIFICATION === 'PASS';
+
+          task.locked_by = null;
+          task.locked_at = null;
+
+          if (buildPass && verifyPass) {
+            task.status = 'done';
+            if (!task.completed_at) task.completed_at = new Date().toISOString();
+          } else if (ATTEMPTS >= 2) {
+            task.status = 'needs_human';
+            task.failure_reason = 'verification=' + VERIFICATION + ', build=' + BUILD;
+          } else {
+            task.status = 'pending';
+          }
+
+          const done = page.tasks.filter(t => t.status === 'done').length;
+          page.functional_score = Math.round((done / page.tasks.length) * 100);
+
+          const allTasks = Object.values(registry.pages).flatMap(p => p.tasks);
+          registry.overall_progress = {
+            total_tasks: allTasks.length,
+            done: allTasks.filter(t => t.status === 'done').length,
+            in_progress: allTasks.filter(t => t.status === 'in_progress').length,
+            needs_human: allTasks.filter(t => t.status === 'needs_human').length,
+            pending: allTasks.filter(t => t.status === 'pending').length
+          };
+
+          registry.last_updated = new Date().toISOString();
+          fs.writeFileSync('organism-memory/task-registry.json', JSON.stringify(registry, null, 2));
+
+          console.log('Registry reconciled — task', TASK_ID, 'status:', task.status);
+          console.log('Page', PAGE, 'functional score:', page.functional_score + '%');
+          SCRIPT
+
+          TASK_ID="${{ steps.select-task.outputs.task_id }}" \
+          PAGE="${{ steps.select-task.outputs.page }}" \
+          BUILD="${{ steps.build-check.outputs.build }}" \
+          VERIFICATION="${{ steps.verify-impl.outputs.verification }}" \
+          ATTEMPTS="${{ steps.select-task.outputs.attempts }}" \
+          node /tmp/update-registry.js
+
+          # If Claude Code already staged/committed the registry update, nothing to do.
+          # Otherwise, amend the registry changes onto the latest commit on this branch
+          # so code + registry land on main atomically when the PR auto-merges.
+          if git diff --quiet organism-memory/task-registry.json && git diff --cached --quiet organism-memory/task-registry.json; then
+            echo "Registry already up-to-date in branch commit — no amend needed."
+          else
+            echo "Amending registry update onto latest branch commit."
+            git add organism-memory/task-registry.json
+            if git log -1 --pretty=%s | grep -q .; then
+              git commit --amend --no-edit
+            else
+              git commit -m "chore(organism): update task registry for ${TASK_ID:-task}"
+            fi
+          fi
+
       - name: D4 — Create pull request
         id: create-pr
         if: >
@@ -354,85 +433,6 @@ jobs:
             --auto \
             --squash \
             --delete-branch || true
-
-      - name: D5 — Update task registry
-        if: always() && steps.select-task.outputs.task_id != 'NONE'
-        run: |
-          cat > /tmp/update-registry.js <<'SCRIPT'
-          const fs = require('fs');
-          const TASK_ID = process.env.TASK_ID;
-          const PAGE = process.env.PAGE;
-          const PR_NUMBER = process.env.PR_NUMBER;
-          const PR_URL = process.env.PR_URL;
-          const BUILD = process.env.BUILD;
-          const VERIFICATION = process.env.VERIFICATION;
-          const ALREADY_DONE = process.env.ALREADY_DONE;
-          const ATTEMPTS = parseInt(process.env.ATTEMPTS || '1');
-
-          const registry = JSON.parse(fs.readFileSync('organism-memory/task-registry.json', 'utf8'));
-          const page = registry.pages[PAGE];
-          if (!page) process.exit(0);
-
-          const task = page.tasks.find(t => t.id === TASK_ID);
-          if (!task) process.exit(0);
-
-          task.locked_by = null;
-          task.locked_at = null;
-
-          const buildPass = BUILD === 'PASS';
-          const verifyPass = VERIFICATION === 'PASS';
-          const alreadyDone = ALREADY_DONE === 'true';
-
-          if (alreadyDone || (buildPass && verifyPass)) {
-            task.status = 'done';
-            task.pr = PR_NUMBER || null;
-            task.pr_url = PR_URL || null;
-            task.completed_at = new Date().toISOString();
-          } else if (ATTEMPTS >= 2) {
-            task.status = 'needs_human';
-            task.failure_reason = 'verification=' + VERIFICATION + ', build=' + BUILD;
-          } else {
-            task.status = 'pending';
-          }
-
-          const done = page.tasks.filter(t => t.status === 'done').length;
-          page.functional_score = Math.round((done / page.tasks.length) * 100);
-
-          const allTasks = Object.values(registry.pages).flatMap(p => p.tasks);
-          registry.overall_progress = {
-            total_tasks: allTasks.length,
-            done: allTasks.filter(t => t.status === 'done').length,
-            in_progress: allTasks.filter(t => t.status === 'in_progress').length,
-            needs_human: allTasks.filter(t => t.status === 'needs_human').length,
-            pending: allTasks.filter(t => t.status === 'pending').length
-          };
-
-          registry.last_updated = new Date().toISOString();
-          fs.writeFileSync('organism-memory/task-registry.json', JSON.stringify(registry, null, 2));
-
-          console.log('Updated task', TASK_ID, 'to status:', task.status);
-          console.log('Page', PAGE, 'functional score:', page.functional_score + '%');
-          SCRIPT
-
-          TASK_ID="${{ steps.select-task.outputs.task_id }}" \
-          PAGE="${{ steps.select-task.outputs.page }}" \
-          PR_NUMBER="${{ steps.create-pr.outputs.pr_number }}" \
-          PR_URL="${{ steps.create-pr.outputs.pr_url }}" \
-          BUILD="${{ steps.build-check.outputs.build }}" \
-          VERIFICATION="${{ steps.verify-impl.outputs.verification }}" \
-          ALREADY_DONE="${{ steps.read-context.outputs.already_done }}" \
-          ATTEMPTS="${{ steps.select-task.outputs.attempts }}" \
-          node /tmp/update-registry.js
-
-          OWNER="${GITHUB_REPOSITORY%%/*}"
-          REPO="${GITHUB_REPOSITORY##*/}"
-          CURRENT_SHA=$(gh api "repos/$OWNER/$REPO/contents/organism-memory/task-registry.json" --jq '.sha')
-          UPDATED_CONTENT=$(base64 -w 0 organism-memory/task-registry.json)
-          gh api "repos/$OWNER/$REPO/contents/organism-memory/task-registry.json" \
-            -X PUT \
-            -f message="chore(organism): update registry after task ${{ steps.select-task.outputs.task_id }} [WB-${{ github.run_number }}]" \
-            -f content="$UPDATED_CONTENT" \
-            -f sha="$CURRENT_SHA" || true
 
       - name: D5 — Alert if task needs human
         if: always() && steps.select-task.outputs.task_id != 'NONE' && steps.select-task.outputs.attempts >= '2'
