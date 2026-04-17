@@ -2,7 +2,6 @@ import { supabase } from '../lib/supabase';
 import type { ChangeOrder } from '../types/database';
 import type { Database } from '../types/database';
 import {
-  getValidCOTransitionsForRole,
   type ChangeOrderState,
   type ChangeOrderType,
   type ReasonCode,
@@ -14,9 +13,9 @@ import {
   dbError,
   permissionError,
   notFoundError,
-  validationError,
   conflictError,
 } from './errors';
+import { validateStatusTransition } from './shared/stateMachineValidator';
 
 type COInsert = Database['public']['Tables']['change_orders']['Insert'];
 type COInsertAugmented = COInsert & {
@@ -146,15 +145,8 @@ export const changeOrderService = {
     }
 
     const currentStatus = co.status as ChangeOrderState;
-    const validTargets = getValidCOTransitionsForRole(currentStatus, role);
-    if (!validTargets.includes(newStatus)) {
-      return fail(
-        validationError(
-          `Invalid transition: ${currentStatus} \u2192 ${newStatus} (role: ${role}). Valid: ${validTargets.join(', ')}`,
-          { currentStatus, newStatus, role, validTargets },
-        ),
-      );
-    }
+    const transitionError = validateStatusTransition('change_order', currentStatus, newStatus, role);
+    if (transitionError) return fail(transitionError);
 
     const now = new Date().toISOString();
     const updates: Record<string, unknown> = {

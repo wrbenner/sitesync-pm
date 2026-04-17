@@ -2,7 +2,6 @@ import { supabase } from '../lib/supabase';
 import type { Submittal } from '../types/database';
 import type { SubmittalApproval } from '../types/entities';
 import type { SubmittalStatus, CreateSubmittalInput } from '../types/submittal';
-import { getValidSubmittalStatusTransitions } from '../machines/submittalMachine';
 import {
   type Result,
   ok,
@@ -10,8 +9,8 @@ import {
   dbError,
   permissionError,
   notFoundError,
-  validationError,
 } from './errors';
+import { validateStatusTransition } from './shared/stateMachineValidator';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -115,15 +114,8 @@ export const submittalService = {
     }
 
     const currentStatus = submittal.status as SubmittalStatus;
-    const validTransitions = getValidSubmittalStatusTransitions(currentStatus, role);
-    if (!validTransitions.includes(newStatus)) {
-      return fail(
-        validationError(
-          `Invalid transition: ${currentStatus} to ${newStatus} (role: ${role}). Valid: ${validTransitions.join(', ')}`,
-          { currentStatus, newStatus, role, validTransitions },
-        ),
-      );
-    }
+    const transitionError = validateStatusTransition('submittal', currentStatus, newStatus, role);
+    if (transitionError) return fail(transitionError);
 
     const updates: Record<string, unknown> = {
       status: newStatus,

@@ -1,7 +1,7 @@
 import { supabase } from '../lib/supabase';
 import type { RFI, RFIResponse, Priority } from '../types/database';
 import type { RfiStatus } from '../types/database';
-import { getValidTransitions, getBallInCourt } from '../machines/rfiMachine';
+import { getBallInCourt } from '../machines/rfiMachine';
 import {
   type Result,
   ok,
@@ -9,8 +9,8 @@ import {
   dbError,
   permissionError,
   notFoundError,
-  validationError,
 } from './errors';
+import { validateStatusTransition } from './shared/stateMachineValidator';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -119,15 +119,8 @@ export const rfiService = {
     }
 
     const currentStatus = rfi.status as RfiStatus;
-    const validTransitions = getValidTransitions(currentStatus, role);
-    if (!validTransitions.includes(newStatus)) {
-      return fail(
-        validationError(
-          `Invalid transition: ${currentStatus} \u2192 ${newStatus} (role: ${role}). Valid: ${validTransitions.join(', ')}`,
-          { currentStatus, newStatus, role, validTransitions },
-        ),
-      );
-    }
+    const transitionError = validateStatusTransition('rfi', currentStatus, newStatus, role);
+    if (transitionError) return fail(transitionError);
 
     const updates: Record<string, unknown> = {
       status: newStatus,

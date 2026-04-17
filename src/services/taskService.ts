@@ -1,13 +1,14 @@
 import { supabase } from '../lib/supabase';
 import type { TaskState } from '../machines/taskMachine';
+import { getValidTaskStatusTransitions } from '../machines/taskMachine';
 import {
   type Result,
   dbError,
   fail,
   notFoundError,
   permissionError,
-  validationError,
 } from './errors';
+import { validateStatusTransition } from './shared/stateMachineValidator';
 
 async function getCurrentUserId(): Promise<string | null> {
   const { data } = await supabase.auth.getSession();
@@ -26,35 +27,6 @@ async function resolveProjectRole(
     .eq('user_id', userId)
     .single();
   return data?.role ?? null;
-}
-
-/**
- * Transition map for tasks, derived from taskMachine.
- *
- *   todo         → in_progress / done      (non-viewer)
- *   in_progress  → in_review / done        (non-viewer)
- *   in_review    → done / in_progress      (gc/owner/admin — approve or send back)
- *   done         → todo                    (gc/owner/admin — reopen)
- */
-function getValidTaskTransitions(
-  status: TaskState,
-  role: string,
-): TaskState[] {
-  const isReviewer = ['project_manager', 'superintendent', 'admin', 'owner'].includes(role);
-  const nonViewer = role !== 'viewer';
-
-  switch (status) {
-    case 'todo':
-      return nonViewer ? ['in_progress', 'done'] : [];
-    case 'in_progress':
-      return nonViewer ? ['in_review', 'done'] : [];
-    case 'in_review':
-      return isReviewer ? ['done', 'in_progress'] : [];
-    case 'done':
-      return isReviewer ? ['todo'] : [];
-    default:
-      return [];
-  }
 }
 
 export const taskService = {
@@ -79,15 +51,8 @@ export const taskService = {
     }
 
     const currentStatus = (task.status ?? 'todo') as TaskState;
-    const valid = getValidTaskTransitions(currentStatus, role);
-    if (!valid.includes(newStatus)) {
-      return fail(
-        validationError(
-          `Invalid task transition: ${currentStatus} → ${newStatus} (role: ${role}). Valid: ${valid.join(', ') || '(none)'}`,
-          { currentStatus, newStatus, role, valid },
-        ),
-      );
-    }
+    const transitionError = validateStatusTransition('task', currentStatus, newStatus, role);
+    if (transitionError) return fail(transitionError);
 
     const updates: Record<string, unknown> = {
       status: newStatus,
@@ -124,4 +89,4 @@ export const taskService = {
   },
 };
 
-export { getValidTaskTransitions };
+export { getValidTaskStatusTransitions as getValidTaskTransitions };

@@ -71,6 +71,32 @@ export function getNextTaskStatus(currentStatus: TaskState, action: string): Tas
   return map[currentStatus]?.[action] || null
 }
 
+// Role-gated status transitions for server-side validation
+/**
+ * Returns valid target TaskStates for a given current status and user role.
+ * Used by stateMachineValidator and taskService for server-side lifecycle enforcement.
+ */
+export function getValidTaskStatusTransitions(
+  status: TaskState,
+  role: string = 'viewer',
+): TaskState[] {
+  const isReviewer = ['project_manager', 'superintendent', 'admin', 'owner'].includes(role)
+  const nonViewer = role !== 'viewer'
+
+  switch (status) {
+    case 'todo':
+      return nonViewer ? ['in_progress', 'done'] : []
+    case 'in_progress':
+      return nonViewer ? ['in_review', 'done'] : []
+    case 'in_review':
+      return isReviewer ? ['done', 'in_progress'] : []
+    case 'done':
+      return isReviewer ? ['todo'] : []
+    default:
+      return []
+  }
+}
+
 // Status display config
 export function getTaskStatusConfig(status: TaskState) {
   const config: Record<TaskState, { label: string; color: string; bg: string }> = {

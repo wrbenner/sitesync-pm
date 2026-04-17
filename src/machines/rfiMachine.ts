@@ -173,6 +173,37 @@ export function getDaysOpen(createdAt: string | null): number {
   return Math.max(0, Math.ceil((Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60 * 24)))
 }
 
+// ── Status Transitions (server-side validation) ──────────
+
+/**
+ * Returns valid target RFI statuses for a given current status and user role.
+ * Used by stateMachineValidator and rfiService for server-side lifecycle enforcement.
+ *
+ * Only admin/owner can void. All roles that can edit (non-viewer) can use base transitions.
+ */
+export function getValidRfiStatusTransitions(
+  status: RFIState,
+  role: string = 'viewer',
+): RFIState[] {
+  const isAdminOrOwner = role === 'admin' || role === 'owner'
+  const canEdit = ['owner', 'admin', 'project_manager', 'superintendent', 'foreman', 'member'].includes(role)
+
+  const base: Record<RFIState, RFIState[]> = {
+    draft: ['open'],
+    open: ['under_review', 'closed'],
+    under_review: ['answered', 'closed'],
+    answered: ['closed', 'open'],
+    closed: ['open'],
+    void: [],
+  }
+
+  const result: RFIState[] = canEdit ? [...(base[status] ?? [])] : []
+  if (isAdminOrOwner && status !== 'void') {
+    result.push('void')
+  }
+  return result
+}
+
 // ── Status Display ───────────────────────────────────────
 
 export function getRFIStatusConfig(status: RFIState) {

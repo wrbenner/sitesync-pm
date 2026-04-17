@@ -85,6 +85,39 @@ export function getNextPunchStatus(currentStatus: PunchItemState, action: string
   return map[currentStatus]?.[action] || null
 }
 
+// ── Role-Gated Status Transitions (for server-side validation) ───────────────
+
+/**
+ * Returns valid target PunchItemStates for a given current status and user role.
+ * Used by stateMachineValidator for server-side lifecycle enforcement.
+ *
+ * Role gates:
+ *   viewer              — no transitions
+ *   non-viewer          — can start work, mark resolved, reopen from in_progress
+ *   verifier (superintendent, project_manager, admin, owner) — all including verify
+ */
+export function getValidPunchStatusTransitions(
+  status: PunchItemState,
+  role: string = 'viewer',
+): PunchItemState[] {
+  const isVerifier = ['superintendent', 'project_manager', 'admin', 'owner'].includes(role)
+  const nonViewer = role !== 'viewer'
+
+  switch (status) {
+    case 'open':
+      if (!nonViewer) return []
+      return isVerifier ? ['in_progress', 'verified'] : ['in_progress']
+    case 'in_progress':
+      return nonViewer ? ['resolved', 'open'] : []
+    case 'resolved':
+      return isVerifier ? ['verified', 'open'] : []
+    case 'verified':
+      return isVerifier ? ['in_progress'] : []
+    default:
+      return []
+  }
+}
+
 // ── Status Display ────────────────────────────────────────
 
 export function getPunchStatusConfig(status: PunchItemState) {
