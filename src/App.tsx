@@ -67,17 +67,17 @@ const ExportCenter = lazy(() => import('./components/export/ExportCenter').then(
 
 // TODO: Consider grouping related pages (RFIs + Submittals + ChangeOrders) into a single chunk using webpackChunkName or Vite manual chunks for frequently co-visited pages
 // Lazy loaded pages
-const Dashboard = lazyWithRetry(() => import('./pages/Dashboard').then((m) => ({ default: m.Dashboard })));
+const Dashboard = lazyWithRetry(() => import('./pages/dashboard').then((m) => ({ default: m.Dashboard })));
 const Tasks = lazy(() => import('./pages/Tasks').then((m) => ({ default: m.Tasks })));
 const Drawings = lazy(() => import('./pages/drawings').then((m) => ({ default: m.Drawings })));
 const RFIs = lazyWithRetry(() => import('./pages/RFIs').then((m) => ({ default: m.RFIs })));
-const Submittals = lazy(() => import('./pages/Submittals').then((m) => ({ default: m.Submittals })));
-const Schedule = lazyWithRetry(() => import('./pages/Schedule').then((m) => ({ default: m.Schedule })));
+const Submittals = lazy(() => import('./pages/submittals').then((m) => ({ default: m.Submittals })));
+const Schedule = lazyWithRetry(() => import('./pages/schedule').then((m) => ({ default: m.Schedule })));
 const Budget = lazy(() => import('./pages/Budget').then((m) => ({ default: m.Budget })));
 const ChangeOrders = lazy(() => import('./pages/ChangeOrders').then((m) => ({ default: m.ChangeOrders })));
 const DailyLog = lazyWithRetry(() => import('./pages/daily-log').then((m) => ({ default: m.DailyLog })));
-const FieldCapture = lazy(() => import('./pages/FieldCapture').then((m) => ({ default: m.FieldCapture })));
-const PunchList = lazyWithRetry(() => import('./pages/PunchList').then((m) => ({ default: m.PunchList })));
+const FieldCapture = lazy(() => import('./pages/field-capture').then((m) => ({ default: m.FieldCapture })));
+const PunchList = lazyWithRetry(() => import('./pages/punch-list').then((m) => ({ default: m.PunchList })));
 const Crews = lazy(() => import('./pages/Crews').then((m) => ({ default: m.Crews })));
 const Directory = lazy(() => import('./pages/Directory').then((m) => ({ default: m.Directory })));
 const Meetings = lazy(() => import('./pages/Meetings').then((m) => ({ default: m.Meetings })));
@@ -115,7 +115,7 @@ function usePrefetchRoutes(isAuthenticated: boolean) {
   useEffect(() => {
     if (!isAuthenticated) return;
     const prefetch = () => {
-      import('./pages/Dashboard');
+      import('./pages/dashboard');
       import('./pages/RFIs');
       import('./pages/daily-log');
     };
