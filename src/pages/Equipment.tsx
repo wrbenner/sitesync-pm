@@ -1,105 +1,71 @@
-import React, { useState, useMemo } from 'react'
-import { Truck, Wrench, BarChart3, AlertTriangle, RefreshCw } from 'lucide-react'
+import React, { useState, useMemo, useEffect } from 'react'
+import { Truck, Wrench, BarChart3, AlertTriangle, RefreshCw, LogIn, LogOut, Calendar } from 'lucide-react'
 import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton } from '../components/Primitives'
 import { DataTable, createColumnHelper } from '../components/shared/DataTable'
 import { ExportButton } from '../components/shared/ExportButton'
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
-import { useEquipment } from '../hooks/queries'
+import { useEquipmentStore } from '../stores/equipmentStore'
+import type { Equipment, EquipmentMaintenance } from '../services/equipmentService'
+import { getEquipmentStatusConfig, getMaintenanceStatusConfig } from '../machines/equipmentMachine'
 
 type TabKey = 'fleet' | 'utilization' | 'maintenance'
 
 const tabs: { key: TabKey; label: string; icon: React.ElementType }[] = [
-  { key: 'fleet', label: 'Fleet', icon: Truck },
-  { key: 'utilization', label: 'Utilization', icon: BarChart3 },
-  { key: 'maintenance', label: 'Maintenance', icon: Wrench },
+  { key: 'fleet',       label: 'Fleet',       icon: Truck     },
+  { key: 'utilization', label: 'Utilization',  icon: BarChart3 },
+  { key: 'maintenance', label: 'Maintenance',  icon: Wrench    },
 ]
 
-// ── Helpers ──────────────────────────────────────────────────
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatCurrency(value: number | null | undefined): string {
   if (value == null) return '$0.00'
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value)
 }
 
-function statusBadge(value: string | null | undefined) {
-  const v = (value || '').toLowerCase()
-  let color = colors.statusNeutral
-  let bg = colors.statusNeutralSubtle
-  if (v === 'active' || v === 'operational') {
-    color = colors.statusActive
-    bg = colors.statusActiveSubtle
-  } else if (v === 'idle') {
-    color = colors.statusPending
-    bg = colors.statusPendingSubtle
-  } else if (v === 'maintenance' || v === 'down') {
-    color = colors.statusCritical
-    bg = colors.statusCriticalSubtle
-  } else if (v === 'transit' || v === 'in_transit') {
-    color = colors.statusInfo
-    bg = colors.statusInfoSubtle
-  } else if (v === 'off_site') {
-    color = colors.statusNeutral
-    bg = colors.statusNeutralSubtle
-  }
-  const label = v ? v.charAt(0).toUpperCase() + v.slice(1).replace(/_/g, ' ') : ''
+function StatusBadge({ status }: { status: string | null | undefined }) {
+  const key = (status ?? 'idle').toLowerCase().replace(/\s+/g, '_')
+  const cfg = getEquipmentStatusConfig(key as Parameters<typeof getEquipmentStatusConfig>[0])
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: spacing.xs,
       padding: `2px ${spacing.sm}`, borderRadius: borderRadius.full,
       fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
-      color, backgroundColor: bg,
+      color: cfg.color, backgroundColor: cfg.bg,
     }}>
-      <div style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: color }} />
-      {label}
+      <div style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: cfg.color }} />
+      {cfg.label}
     </span>
   )
 }
 
-function maintenanceStatusBadge(value: string | null | undefined) {
-  const v = (value || '').toLowerCase()
+function MaintenanceBadge({ status }: { status: string | null | undefined }) {
+  const key = (status ?? 'scheduled').toLowerCase() as Parameters<typeof getMaintenanceStatusConfig>[0]
+  const cfg = getMaintenanceStatusConfig(key)
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: spacing.xs,
+      padding: `2px ${spacing.sm}`, borderRadius: borderRadius.full,
+      fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
+      color: cfg.color, backgroundColor: cfg.bg,
+    }}>
+      <div style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: cfg.color }} />
+      {cfg.label}
+    </span>
+  )
+}
+
+function TypeBadge({ value }: { value: string | null | undefined }) {
+  const v = (value ?? '').toLowerCase()
   let color = colors.statusInfo
   let bg = colors.statusInfoSubtle
-  if (v === 'completed' || v === 'complete') {
-    color = colors.statusActive
-    bg = colors.statusActiveSubtle
-  } else if (v === 'scheduled' || v === 'pending') {
-    color = colors.statusPending
-    bg = colors.statusPendingSubtle
-  } else if (v === 'overdue') {
-    color = colors.statusCritical
-    bg = colors.statusCriticalSubtle
-  } else if (v === 'in_progress') {
-    color = colors.statusInfo
-    bg = colors.statusInfoSubtle
-  }
-  const label = v ? v.charAt(0).toUpperCase() + v.slice(1).replace(/_/g, ' ') : ''
-  return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: spacing.xs,
-      padding: `2px ${spacing.sm}`, borderRadius: borderRadius.full,
-      fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
-      color, backgroundColor: bg,
-    }}>
-      <div style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: color }} />
-      {label}
-    </span>
-  )
-}
-
-function typeBadge(value: string | null | undefined) {
-  const v = (value || '').toLowerCase()
-  let color = colors.statusInfo
-  let bg = colors.statusInfoSubtle
-  if (v === 'heavy' || v === 'crane') {
-    color = colors.statusReview
-    bg = colors.statusReviewSubtle
-  } else if (v === 'vehicle' || v === 'truck') {
-    color = colors.statusActive
-    bg = colors.statusActiveSubtle
-  } else if (v === 'tool' || v === 'hand_tool') {
-    color = colors.statusPending
-    bg = colors.statusPendingSubtle
+  if (v === 'crane' || v === 'excavator' || v === 'loader') {
+    color = colors.statusReview; bg = colors.statusReviewSubtle
+  } else if (v === 'dump_truck' || v === 'forklift') {
+    color = colors.statusActive; bg = colors.statusActiveSubtle
+  } else if (v === 'saw' || v === 'welder') {
+    color = colors.statusPending; bg = colors.statusPendingSubtle
   }
   const label = v ? v.charAt(0).toUpperCase() + v.slice(1).replace(/_/g, ' ') : ''
   return (
@@ -114,51 +80,63 @@ function typeBadge(value: string | null | undefined) {
   )
 }
 
-// ── Column definitions ───────────────────────────────────────
+// ── Column definitions ────────────────────────────────────────────────────────
 
-const fleetCol = createColumnHelper<unknown>()
+const fleetCol = createColumnHelper<Equipment>()
 const fleetColumns = [
   fleetCol.accessor('name', {
     header: 'Name',
-    cell: (info) => <span style={{ fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>{info.getValue()}</span>,
+    cell: (info) => (
+      <span style={{ fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>
+        {info.getValue()}
+      </span>
+    ),
   }),
   fleetCol.accessor('type', {
     header: 'Type',
-    cell: (info) => typeBadge(info.getValue()),
+    cell: (info) => <TypeBadge value={info.getValue()} />,
   }),
-  fleetCol.accessor('make_model', {
+  fleetCol.accessor('make', {
     header: 'Make/Model',
     cell: (info) => {
       const row = info.row.original
-      const make = row.make || ''
-      const model = row.model || ''
-      return <span style={{ color: colors.textSecondary }}>{make} {model}</span>
+      return (
+        <span style={{ color: colors.textSecondary }}>
+          {[row.make, row.model].filter(Boolean).join(' ') || '—'}
+        </span>
+      )
     },
   }),
   fleetCol.accessor('status', {
     header: 'Status',
-    cell: (info) => statusBadge(info.getValue()),
+    cell: (info) => <StatusBadge status={info.getValue()} />,
   }),
-  fleetCol.accessor('hours', {
+  fleetCol.accessor('hours_meter', {
     header: 'Hours',
     cell: (info) => (
       <span style={{ fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>
-        {info.getValue() != null ? `${Number(info.getValue()).toLocaleString()} hrs` : 'N/A'}
+        {info.getValue() != null ? `${Number(info.getValue()).toLocaleString()} hrs` : '—'}
       </span>
     ),
   }),
-  fleetCol.accessor('location', {
+  fleetCol.accessor('current_location', {
     header: 'Location',
-    cell: (info) => <span style={{ color: colors.textSecondary }}>{info.getValue()}</span>,
+    cell: (info) => (
+      <span style={{ color: colors.textSecondary }}>{info.getValue() ?? '—'}</span>
+    ),
   }),
   fleetCol.accessor('ownership', {
     header: 'Ownership',
     cell: (info) => {
-      const v = info.getValue() as string | null
-      return <span style={{ color: colors.textSecondary }}>{v ? v.charAt(0).toUpperCase() + v.slice(1) : ''}</span>
+      const v = info.getValue()
+      return (
+        <span style={{ color: colors.textSecondary }}>
+          {v ? v.charAt(0).toUpperCase() + v.slice(1) : '—'}
+        </span>
+      )
     },
   }),
-  fleetCol.accessor('daily_rate', {
+  fleetCol.accessor('rental_rate_daily', {
     header: 'Daily Rate',
     cell: (info) => (
       <span style={{ fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>
@@ -168,21 +146,25 @@ const fleetColumns = [
   }),
 ]
 
-const utilizationCol = createColumnHelper<unknown>()
+const utilizationCol = createColumnHelper<Equipment>()
 const utilizationColumns = [
   utilizationCol.accessor('name', {
     header: 'Name',
-    cell: (info) => <span style={{ fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>{info.getValue()}</span>,
+    cell: (info) => (
+      <span style={{ fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>
+        {info.getValue()}
+      </span>
+    ),
   }),
   utilizationCol.accessor('type', {
     header: 'Type',
-    cell: (info) => typeBadge(info.getValue()),
+    cell: (info) => <TypeBadge value={info.getValue()} />,
   }),
   utilizationCol.accessor('status', {
     header: 'Status',
-    cell: (info) => statusBadge(info.getValue()),
+    cell: (info) => <StatusBadge status={info.getValue()} />,
   }),
-  utilizationCol.accessor('hours', {
+  utilizationCol.accessor('hours_meter', {
     header: 'Total Hours',
     cell: (info) => (
       <span style={{ fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
@@ -190,55 +172,61 @@ const utilizationColumns = [
       </span>
     ),
   }),
-  utilizationCol.accessor('utilization_rate', {
-    header: 'Utilization',
-    cell: (info) => {
-      const rate = info.getValue() as number | null
-      if (rate == null) return <span style={{ color: colors.textTertiary }}>N/A</span>
-      const color = rate >= 70 ? colors.statusActive : rate >= 40 ? colors.statusPending : colors.statusCritical
-      return <span style={{ fontWeight: typography.fontWeight.semibold, color }}>{rate}%</span>
-    },
-  }),
-  utilizationCol.accessor('daily_rate', {
+  utilizationCol.accessor('rental_rate_daily', {
     header: 'Daily Rate',
     cell: (info) => (
-      <span style={{ color: colors.textSecondary }}>
-        {formatCurrency(info.getValue())}
-      </span>
+      <span style={{ color: colors.textSecondary }}>{formatCurrency(info.getValue())}</span>
     ),
   }),
 ]
 
-const maintCol = createColumnHelper<unknown>()
+type MaintenanceRow = EquipmentMaintenance & { equipment_name?: string }
+
+const maintCol = createColumnHelper<MaintenanceRow>()
 const maintenanceColumns = [
   maintCol.accessor('equipment_name', {
     header: 'Equipment',
-    cell: (info) => <span style={{ fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>{info.getValue()}</span>,
+    cell: (info) => (
+      <span style={{ fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>
+        {info.getValue() ?? '—'}
+      </span>
+    ),
   }),
   maintCol.accessor('type', {
     header: 'Type',
     cell: (info) => {
-      const v = info.getValue() as string | null
-      return <span style={{ color: colors.textSecondary }}>{v ? v.charAt(0).toUpperCase() + v.slice(1).replace(/_/g, ' ') : ''}</span>
+      const v = info.getValue()
+      return (
+        <span style={{ color: colors.textSecondary }}>
+          {v ? v.charAt(0).toUpperCase() + v.slice(1).replace(/_/g, ' ') : '—'}
+        </span>
+      )
     },
   }),
   maintCol.accessor('description', {
     header: 'Description',
     cell: (info) => (
-      <span style={{ color: colors.textSecondary, maxWidth: 280, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+      <span style={{
+        color: colors.textSecondary,
+        maxWidth: 280,
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+        display: 'block',
+      }}>
         {info.getValue()}
       </span>
     ),
   }),
   maintCol.accessor('status', {
     header: 'Status',
-    cell: (info) => maintenanceStatusBadge(info.getValue()),
+    cell: (info) => <MaintenanceBadge status={info.getValue()} />,
   }),
   maintCol.accessor('scheduled_date', {
-    header: 'Scheduled Date',
+    header: 'Scheduled',
     cell: (info) => (
       <span style={{ color: colors.textSecondary }}>
-        {info.getValue() ? new Date(info.getValue()).toLocaleDateString() : ''}
+        {info.getValue() ? new Date(info.getValue()!).toLocaleDateString() : '—'}
       </span>
     ),
   }),
@@ -252,74 +240,157 @@ const maintenanceColumns = [
   }),
 ]
 
-// ── Main Component ───────────────────────────────────────────
+// ── Actions row ───────────────────────────────────────────────────────────────
+
+function CheckoutCheckinActions({
+  equipment,
+  onCheckin,
+  onCheckout,
+}: {
+  equipment: Equipment
+  onCheckin: (id: string) => void
+  onCheckout: (id: string) => void
+}) {
+  if (equipment.status === 'active') {
+    return (
+      <Btn
+        variant="secondary"
+        size="sm"
+        icon={<LogIn size={13} />}
+        onClick={() => onCheckin(equipment.id)}
+      >
+        Check In
+      </Btn>
+    )
+  }
+  if (equipment.status === 'idle') {
+    return (
+      <Btn
+        variant="primary"
+        size="sm"
+        icon={<LogOut size={13} />}
+        onClick={() => onCheckout(equipment.id)}
+      >
+        Check Out
+      </Btn>
+    )
+  }
+  return null
+}
+
+// ── Main Component ────────────────────────────────────────────────────────────
 
 export const EquipmentPage: React.FC = () => {
   const projectId = useProjectId()
-  const { data: equipment, isPending: loading, isError, error, refetch } = useEquipment(projectId)
+  const {
+    equipment,
+    maintenanceRecords,
+    loading,
+    maintenanceLoading,
+    error,
+    loadEquipment,
+    loadMaintenanceRecords,
+    checkin,
+    checkout,
+  } = useEquipmentStore()
+
   const [activeTab, setActiveTab] = useState<TabKey>('fleet')
 
-  // ── KPIs ────────────────────────────────────────────────────
+  useEffect(() => {
+    if (projectId) {
+      loadEquipment(projectId)
+      loadMaintenanceRecords(projectId)
+    }
+  }, [projectId, loadEquipment, loadMaintenanceRecords])
 
-  const totalEquipment = equipment?.length || 0
+  const handleRefresh = () => {
+    if (projectId) {
+      loadEquipment(projectId)
+      loadMaintenanceRecords(projectId)
+    }
+  }
 
-  const activeCount = useMemo(() => {
-    return equipment?.filter((e: unknown) => e.status === 'active' || e.status === 'operational').length || 0
-  }, [equipment])
+  const handleCheckin = async (equipmentId: string) => {
+    await checkin(equipmentId)
+  }
 
-  const idleCount = useMemo(() => {
-    return equipment?.filter((e: unknown) => e.status === 'idle').length || 0
-  }, [equipment])
+  const handleCheckout = async (equipmentId: string) => {
+    if (!projectId) return
+    await checkout(equipmentId, { target_project_id: projectId })
+  }
 
-  const maintenanceDue = useMemo(() => {
-    return equipment?.filter((e: unknown) => e.status === 'maintenance' || e.maintenance_due === true).length || 0
-  }, [equipment])
+  // ── KPIs ──────────────────────────────────────────────────────────────────
 
-  // Derive maintenance records from equipment data (each item with maintenance info)
-  const maintenanceRecords = useMemo(() => {
-    if (!equipment) return []
-    return equipment
-      .filter((e: unknown) => e.next_maintenance_date || e.last_maintenance_date || e.status === 'maintenance')
-      .map((e: unknown) => ({
-        equipment_name: e.name,
-        type: e.maintenance_type || 'scheduled',
-        description: e.maintenance_description || `Scheduled service for ${e.name}`,
-        status: e.maintenance_status || (e.status === 'maintenance' ? 'in_progress' : 'scheduled'),
-        scheduled_date: e.next_maintenance_date || e.last_maintenance_date,
-        cost: e.maintenance_cost || null,
-      }))
-  }, [equipment])
+  const totalEquipment = equipment.length
 
-  // Utilization data sorted by hours
-  const utilizationData = useMemo(() => {
-    if (!equipment) return []
-    return [...equipment].sort((a: unknown, b: unknown) => (b.hours || 0) - (a.hours || 0))
-  }, [equipment])
+  const activeCount = useMemo(
+    () => equipment.filter((e) => e.status === 'active').length,
+    [equipment],
+  )
 
-  // Utilization summary
-  const avgUtilization = useMemo(() => {
-    if (!equipment || equipment.length === 0) return 0
-    const rates = equipment.map((e: unknown) => e.utilization_rate || 0)
-    return Math.round(rates.reduce((sum: number, r: number) => sum + r, 0) / rates.length)
-  }, [equipment])
+  const idleCount = useMemo(
+    () => equipment.filter((e) => e.status === 'idle').length,
+    [equipment],
+  )
 
-  const totalHours = useMemo(() => {
-    return equipment?.reduce((sum: number, e: unknown) => sum + (e.hours || 0), 0) || 0
-  }, [equipment])
+  const maintenanceDue = useMemo(
+    () => equipment.filter((e) => e.status === 'maintenance').length,
+    [equipment],
+  )
 
-  // ── Render ──────────────────────────────────────────────────
+  const totalHours = useMemo(
+    () => equipment.reduce((sum, e) => sum + (e.hours_meter ?? 0), 0),
+    [equipment],
+  )
 
-  if (isError) {
+  const utilizationData = useMemo(
+    () => [...equipment].sort((a, b) => (b.hours_meter ?? 0) - (a.hours_meter ?? 0)),
+    [equipment],
+  )
+
+  // ── Fleet columns with actions ─────────────────────────────────────────────
+
+  const fleetColumnsWithActions = useMemo(() => [
+    ...fleetColumns,
+    fleetCol.display({
+      id: 'actions',
+      header: '',
+      cell: (info) => (
+        <CheckoutCheckinActions
+          equipment={info.row.original}
+          onCheckin={handleCheckin}
+          onCheckout={handleCheckout}
+        />
+      ),
+    }),
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ], [projectId])
+
+  // ── Render ────────────────────────────────────────────────────────────────
+
+  if (error) {
     return (
       <PageContainer title="Equipment" subtitle="Unable to load">
         <Card padding={spacing['6']}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['4'], padding: spacing['6'], textAlign: 'center' }}>
+          <div style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center',
+            gap: spacing['4'], padding: spacing['6'], textAlign: 'center',
+          }}>
             <AlertTriangle size={40} color={colors.statusCritical} />
             <div>
-              <p style={{ fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>Failed to load equipment</p>
-              <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: 0 }}>{(error as Error)?.message || 'Unable to fetch equipment data'}</p>
+              <p style={{
+                fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.semibold,
+                color: colors.textPrimary, margin: 0, marginBottom: spacing['2'],
+              }}>
+                Failed to load equipment
+              </p>
+              <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: 0 }}>
+                {error}
+              </p>
             </div>
-            <Btn variant="primary" size="sm" icon={<RefreshCw size={14} />} onClick={() => refetch()}>Try Again</Btn>
+            <Btn variant="primary" size="sm" icon={<RefreshCw size={14} />} onClick={handleRefresh}>
+              Try Again
+            </Btn>
           </div>
         </Card>
       </PageContainer>
@@ -332,16 +403,29 @@ export const EquipmentPage: React.FC = () => {
       subtitle="Fleet management, utilization tracking, and maintenance scheduling"
       actions={
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
+          <Btn variant="ghost" size="sm" icon={<RefreshCw size={14} />} onClick={handleRefresh}>
+            Refresh
+          </Btn>
           <ExportButton pdfFilename="SiteSync_Equipment_Report" />
         </div>
       }
     >
       {/* KPI Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: spacing['4'], marginBottom: spacing['2xl'] }}>
-        <MetricBox label="Total Equipment" value={totalEquipment} />
-        <MetricBox label="Active" value={activeCount} change={1} changeLabel="operational" />
-        <MetricBox label="Idle" value={idleCount} change={idleCount > 0 ? -1 : 0} />
-        <MetricBox label="Maintenance Due" value={maintenanceDue} change={maintenanceDue > 0 ? -1 : 1} changeLabel={maintenanceDue > 0 ? 'needs service' : 'all clear'} />
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+        gap: spacing['4'],
+        marginBottom: spacing['2xl'],
+      }}>
+        <MetricBox label="Total Equipment" value={loading ? '—' : totalEquipment} />
+        <MetricBox label="Active" value={loading ? '—' : activeCount} change={1} changeLabel="operational" />
+        <MetricBox label="Idle" value={loading ? '—' : idleCount} change={idleCount > 0 ? -1 : 0} />
+        <MetricBox
+          label="Maintenance Due"
+          value={loading ? '—' : maintenanceDue}
+          change={maintenanceDue > 0 ? -1 : 1}
+          changeLabel={maintenanceDue > 0 ? 'needs service' : 'all clear'}
+        />
       </div>
 
       {/* Tab Switcher */}
@@ -380,7 +464,7 @@ export const EquipmentPage: React.FC = () => {
                 minHeight: '56px',
               }}
             >
-              {React.createElement(Icon, { size: 14 })}
+              <Icon size={14} />
               {tab.label}
             </button>
           )
@@ -399,15 +483,18 @@ export const EquipmentPage: React.FC = () => {
         <Card padding={spacing['4']}>
           <SectionHeader title="Equipment Fleet" />
           <div style={{ marginTop: spacing['3'] }}>
-            {(equipment || []).length === 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: `${spacing['10']} ${spacing['6']}`, gap: spacing['3'], textAlign: 'center' }}>
+            {equipment.length === 0 ? (
+              <div style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center',
+                padding: `${spacing['10']} ${spacing['6']}`, gap: spacing['3'], textAlign: 'center',
+              }}>
                 <Truck size={40} style={{ color: colors.textTertiary }} />
                 <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textTertiary, maxWidth: 320 }}>
                   No equipment tracked on this project yet. Add your first piece of equipment to start managing your fleet.
                 </p>
               </div>
             ) : (
-              <DataTable columns={fleetColumns} data={equipment || []} />
+              <DataTable columns={fleetColumnsWithActions} data={equipment} />
             )}
           </div>
         </Card>
@@ -416,16 +503,23 @@ export const EquipmentPage: React.FC = () => {
       {/* Utilization Tab */}
       {activeTab === 'utilization' && !loading && (
         <>
-          {/* Summary stats */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: spacing['4'], marginBottom: spacing['4'] }}>
-            <MetricBox label="Avg Utilization" value={`${avgUtilization}%`} change={avgUtilization >= 60 ? 1 : -1} />
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: spacing['4'],
+            marginBottom: spacing['4'],
+          }}>
             <MetricBox label="Total Hours Logged" value={totalHours.toLocaleString()} />
+            <MetricBox label="Active Units" value={activeCount} />
           </div>
           <Card padding={spacing['4']}>
             <SectionHeader title="Utilization by Equipment" />
             <div style={{ marginTop: spacing['3'] }}>
               {utilizationData.length === 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: `${spacing['10']} ${spacing['6']}`, gap: spacing['3'], textAlign: 'center' }}>
+                <div style={{
+                  display: 'flex', flexDirection: 'column', alignItems: 'center',
+                  padding: `${spacing['10']} ${spacing['6']}`, gap: spacing['3'], textAlign: 'center',
+                }}>
                   <BarChart3 size={40} style={{ color: colors.textTertiary }} />
                   <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textTertiary, maxWidth: 320 }}>
                     No utilization data available. Add equipment and log hours to see tracking here.
@@ -440,19 +534,37 @@ export const EquipmentPage: React.FC = () => {
       )}
 
       {/* Maintenance Tab */}
-      {activeTab === 'maintenance' && !loading && (
+      {activeTab === 'maintenance' && (
         <Card padding={spacing['4']}>
-          <SectionHeader title="Maintenance Schedule" />
+          <SectionHeader
+            title="Maintenance Schedule"
+            action={
+              <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
+                {maintenanceLoading && (
+                  <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
+                    Loading...
+                  </span>
+                )}
+                <Calendar size={16} style={{ color: colors.textTertiary }} />
+              </div>
+            }
+          />
           <div style={{ marginTop: spacing['3'] }}>
-            {maintenanceRecords.length === 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: `${spacing['10']} ${spacing['6']}`, gap: spacing['3'], textAlign: 'center' }}>
+            {!maintenanceLoading && maintenanceRecords.length === 0 ? (
+              <div style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center',
+                padding: `${spacing['10']} ${spacing['6']}`, gap: spacing['3'], textAlign: 'center',
+              }}>
                 <Wrench size={40} style={{ color: colors.textTertiary }} />
                 <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textTertiary, maxWidth: 320 }}>
                   No maintenance records found. Schedule a service to keep your fleet running smoothly.
                 </p>
               </div>
             ) : (
-              <DataTable columns={maintenanceColumns} data={maintenanceRecords} />
+              <DataTable
+                columns={maintenanceColumns}
+                data={maintenanceRecords as MaintenanceRow[]}
+              />
             )}
           </div>
         </Card>
