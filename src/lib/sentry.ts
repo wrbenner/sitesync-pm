@@ -7,7 +7,7 @@ Sentry.init({
   dsn: import.meta.env.VITE_SENTRY_DSN || '',
   environment: import.meta.env.MODE,
   enabled: import.meta.env.PROD,
-  release: `sitesync@${__APP_VERSION__}`,
+  release: `sitesync@${typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev'}`,
 
   integrations: [
     Sentry.browserTracingIntegration(),

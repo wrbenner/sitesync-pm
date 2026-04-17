@@ -7,7 +7,8 @@ import { useAuth } from './useAuth'
 
 // ── Types ────────────────────────────────────────────────
 
-export type ProjectRole = 'owner' | 'admin' | 'project_manager' | 'superintendent' | 'subcontractor' | 'viewer'
+export type { ProjectRole } from '../types/database'
+import type { ProjectRole } from '../types/database'
 
 export type Permission =
   | 'dashboard.view' | 'tasks.view' | 'tasks.create' | 'tasks.edit' | 'tasks.delete' | 'tasks.assign'
@@ -33,11 +34,20 @@ export type Permission =
 // ── Role Hierarchy ───────────────────────────────────────
 
 export const ROLE_LEVELS: Record<ProjectRole, number> = {
-  owner: 6,
-  admin: 5,
-  project_manager: 4,
-  superintendent: 3,
+  owner: 7,
+  project_executive: 7,
+  admin: 6,
+  project_manager: 5,
+  superintendent: 4,
+  foreman: 3,
+  project_engineer: 3,
+  field_engineer: 3,
+  safety_manager: 3,
   subcontractor: 2,
+  architect: 2,
+  owner_rep: 2,
+  member: 2,
+  field_user: 2,
   viewer: 1,
 }
 

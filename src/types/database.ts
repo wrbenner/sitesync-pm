@@ -1,4 +1,23 @@
-import type { ProjectRole } from './tenant'
+// ── Canonical ProjectRole ────────────────────────────────
+// Single source of truth for project member roles. All other modules
+// (tenant.ts, entities.ts, usePermissions.ts) re-export from here.
+export type ProjectRole =
+  | 'owner'
+  | 'admin'
+  | 'project_manager'
+  | 'superintendent'
+  | 'project_engineer'
+  | 'foreman'
+  | 'field_user'
+  | 'subcontractor'
+  | 'viewer'
+  // Legacy roles retained for compatibility with existing services/machines
+  | 'project_executive'
+  | 'safety_manager'
+  | 'field_engineer'
+  | 'owner_rep'
+  | 'architect'
+  | 'member'
 
 export type Json =
   | string

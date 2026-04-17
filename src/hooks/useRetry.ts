@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { captureException } from '../lib/errorTracking';
 
 interface RetryConfig {
@@ -98,7 +98,7 @@ export function useRetry<T>(
 export function useOnlineStatus(): boolean {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
-  useState(() => {
+  useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
 
@@ -109,7 +109,7 @@ export function useOnlineStatus(): boolean {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  });
+  }, []);
 
   return isOnline;
 }
