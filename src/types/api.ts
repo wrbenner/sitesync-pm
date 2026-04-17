@@ -24,6 +24,13 @@ export type DrawingRow = TableRow<'drawings'> & { discipline?: string | null }
 export type FieldCaptureRow = TableRow<'field_captures'>
 export type FileRow = TableRow<'files'> & {
   parent_folder_id: string | null
+  // Columns added by 20260417000001_document_service_layer.sql
+  document_status: 'draft' | 'submitted' | 'approved' | 'rejected' | 'archived' | 'void' | null
+  created_by: string | null
+  updated_by: string | null
+  updated_at: string | null
+  deleted_at: string | null
+  deleted_by: string | null
 }
 export type MeetingRow = TableRow<'meetings'>
 export type ProjectRow = TableRow<'projects'>
