@@ -32,7 +32,7 @@ export class RateLimitError extends Error {
 // ── CORS Headers ──────────────────────────────────────────────
 
 export const apiCorsHeaders: Record<string, string> = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') || 'https://sitesync-pm.vercel.app',
   'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-API-Key, X-Idempotency-Key, X-API-Version',
   'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
   'Access-Control-Expose-Headers': 'X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset, X-API-Version, X-Request-Id',

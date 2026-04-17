@@ -184,5 +184,12 @@ export function useAuth(): AuthState {
   const isAuthenticated = !!session
   const isSessionValid = !!session && !!session.expires_at && session.expires_at > Math.floor(Date.now() / 1000)
 
+  // Enforce session expiry: if we have a user but the session has expired, sign out.
+  useEffect(() => {
+    if (user && session && !isSessionValid) {
+      supabase.auth.signOut()
+    }
+  }, [user, session, isSessionValid])
+
   return { user, session, loading, error, signIn, signUp, signOut, resetPassword, isAuthenticated, isSessionValid }
 }

@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useProjectId } from './useProjectId'
 import { useAuth } from './useAuth'
+import { isDevBypassActive } from '../lib/devBypass'
 
 // ── Types ────────────────────────────────────────────────
 
@@ -172,15 +173,6 @@ export const MODULE_PERMISSIONS: Record<string, Permission> = {
 }
 
 // ── Dev Mode Detection ───────────────────────────────────
-
-// BUG #1 FIX: Dev bypass requires EXPLICIT opt-in, uses viewer (not owner), and NEVER activates in production.
-// Vite replaces import.meta.env.DEV with `false` in production builds, making this block dead code in prod.
-function isDevBypassActive(): boolean {
-  if (!import.meta.env.DEV) return false // Production: NEVER bypass
-  if (import.meta.env.VITE_SUPABASE_URL) return false // Has real Supabase: no bypass needed
-  if (import.meta.env.VITE_DEV_BYPASS !== 'true') return false // Must explicitly opt in
-  return true
-}
 
 const DEV_BYPASS_ROLE: ProjectRole = 'viewer' // Never grant elevated access in dev mode
 

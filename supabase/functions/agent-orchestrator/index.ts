@@ -13,6 +13,7 @@ import {
   verifyProjectMembership,
   isValidUuid,
   sanitizeText,
+  escapeIlike,
   HttpError,
 } from '../shared/auth.ts'
 
@@ -377,7 +378,7 @@ async function executeToolCall(
         .select('*')
         .eq('project_id', projectId)
       if (input.status) query = query.eq('status', input.status)
-      if (input.assignee) query = query.ilike('assigned_to', `%${input.assignee}%`)
+      if (input.assignee) query = query.ilike('assigned_to', `%${escapeIlike(String(input.assignee))}%`)
       const { data, error } = await query.limit(50)
       if (error) return { error: error.message }
       return { count: data?.length || 0, tasks: data || [] }
@@ -434,7 +435,7 @@ async function executeToolCall(
         .eq('project_id', projectId)
       if (input.status) query = query.eq('status', input.status)
       if (input.priority) query = query.eq('priority', input.priority)
-      if (input.location) query = query.ilike('location', `%${input.location}%`)
+      if (input.location) query = query.ilike('location', `%${escapeIlike(String(input.location))}%`)
       const { data, error } = await query.limit(50)
       if (error) return { error: error.message }
       return { count: data?.length || 0, punch_items: data || [] }
@@ -456,7 +457,7 @@ async function executeToolCall(
         .from('directory_contacts')
         .select('*')
         .eq('project_id', projectId)
-      if (input.company) query = query.ilike('company', `%${input.company}%`)
+      if (input.company) query = query.ilike('company', `%${escapeIlike(String(input.company))}%`)
       const { data, error } = await query
       if (error) return { error: error.message }
       return { count: data?.length || 0, contacts: data || [] }
@@ -467,7 +468,7 @@ async function executeToolCall(
         .from('files')
         .select('*')
         .eq('project_id', projectId)
-        .ilike('name', `%${input.query || ''}%`)
+        .ilike('name', `%${escapeIlike(String(input.query || ''))}%`)
         .limit(20)
       if (error) return { error: error.message }
       return { count: data?.length || 0, documents: data || [] }
@@ -509,12 +510,14 @@ async function synthesizeResponses(
 
 // ── Main Handler ──────────────────────────────────────────────
 
+const ALLOWED_ORIGIN = Deno.env.get('ALLOWED_ORIGIN') || 'https://sitesync-pm.vercel.app'
+
 Deno.serve(async (req) => {
   // CORS
   if (req.method === 'OPTIONS') {
     return new Response(null, {
       headers: {
-        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
         'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
         'Access-Control-Allow-Methods': 'POST, OPTIONS',
       },
@@ -527,7 +530,7 @@ Deno.serve(async (req) => {
     if (!authHeader) {
       return new Response(JSON.stringify({ error: 'Missing authorization' }), {
         status: 401,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': ALLOWED_ORIGIN },
       })
     }
 
@@ -542,7 +545,7 @@ Deno.serve(async (req) => {
     if (!anthropicKey) {
       return new Response(JSON.stringify({ error: 'AI service not configured' }), {
         status: 500,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': ALLOWED_ORIGIN },
       })
     }
 
@@ -553,7 +556,7 @@ Deno.serve(async (req) => {
     if (authError || !user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': ALLOWED_ORIGIN },
       })
     }
 
@@ -564,7 +567,7 @@ Deno.serve(async (req) => {
     if (!projectId || !isValidUuid(projectId)) {
       return new Response(JSON.stringify({ error: 'Valid projectContext.projectId is required' }), {
         status: 400,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': ALLOWED_ORIGIN },
       })
     }
 
@@ -604,7 +607,7 @@ Deno.serve(async (req) => {
       )
 
       return new Response(JSON.stringify({ success: true, result }), {
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': ALLOWED_ORIGIN },
       })
     }
 
@@ -614,7 +617,7 @@ Deno.serve(async (req) => {
     if (!message) {
       return new Response(JSON.stringify({ error: 'Message is required' }), {
         status: 400,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': ALLOWED_ORIGIN },
       })
     }
 
@@ -753,7 +756,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(JSON.stringify(orchestratorResponse), {
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': ALLOWED_ORIGIN },
     })
   } catch (err) {
     console.error('Agent orchestrator error:', err)
@@ -761,7 +764,7 @@ Deno.serve(async (req) => {
       JSON.stringify({ error: 'Internal server error', details: (err as Error).message }),
       {
         status: 500,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': ALLOWED_ORIGIN },
       },
     )
   }

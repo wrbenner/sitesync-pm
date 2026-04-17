@@ -6,6 +6,7 @@ import type { Permission } from '../../hooks/usePermissions'
 import { colors, spacing, typography, zIndex, borderRadius } from '../../styles/theme'
 import { MODULE_PERMISSIONS } from '../../hooks/usePermissions'
 import { ShieldAlert } from 'lucide-react'
+import { isDevBypassActive } from '../../lib/devBypass'
 
 interface Props {
   children: React.ReactNode
@@ -30,17 +31,6 @@ const DevBanner: React.FC = () => (
     Development Mode — Authentication bypassed (VITE_DEV_BYPASS=true). Connect Supabase for real auth.
   </div>
 )
-
-// Dev bypass requires ALL conditions to be explicitly true.
-function isDevBypassActive(): boolean {
-  if (import.meta.env.PROD !== false) return false
-  if (import.meta.env.DEV !== true) return false
-  if (import.meta.env.VITE_DEV_BYPASS !== 'true') return false
-  if (import.meta.env.VITE_SUPABASE_URL) return false
-  if (import.meta.env.VITE_SUPABASE_ANON_KEY) return false
-  console.warn('Auth bypass active — do not use in production')
-  return true
-}
 
 const SkeletonLoader: React.FC<{ ariaLabel: string }> = ({ ariaLabel }) => {
   const mql = window.matchMedia('(max-width: 767px)')

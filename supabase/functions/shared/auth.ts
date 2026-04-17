@@ -109,6 +109,12 @@ export function sanitizeText(value: string, maxLength = 5000): string {
     .trim()
 }
 
+// Escape special SQL LIKE/ILIKE pattern characters so user-supplied input
+// cannot be used to craft unintended match patterns.
+export function escapeIlike(input: string): string {
+  return input.replace(/[%_\\]/g, '\\$&')
+}
+
 export function sanitizeForPrompt(value: string, maxLength = 10000): string {
   return value
     .slice(0, maxLength)

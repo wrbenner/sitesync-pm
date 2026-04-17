@@ -8,6 +8,7 @@ import {
   requireUuid,
   sanitizeForPrompt,
   sanitizeText,
+  escapeIlike,
   parseJsonBody,
   errorResponse,
   HttpError,
@@ -18,6 +19,17 @@ import {
 const MAX_MESSAGES = 50
 const MAX_TOOL_ROUNDS = 5
 const DAILY_RATE_LIMIT = 50
+
+// ── HTML Sanitization ────────────────────────────────────
+// Strip scripts, dangerous embed tags, and inline event handlers from
+// AI-generated output before returning to the client.
+function sanitizeHtml(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<(iframe|object|embed|svg|img)[^>]*on\w+=[^>]*>/gi, '')
+    .replace(/\s*on\w+\s*=\s*["'][^"']*["']/gi, '')
+    .replace(/<(iframe|object|embed)\b[^>]*>/gi, '')
+}
 
 // Tool permissions: which minimum role is required to use each tool
 const TOOL_PERMISSIONS: Record<string, string> = {
@@ -182,7 +194,7 @@ async function executeTool(
       let query = supabase.from('rfis').select('id, rfi_number, title, status, priority, assigned_to, due_date, created_at').eq('project_id', projectId)
       if (toolInput.status) query = query.eq('status', toolInput.status)
       if (toolInput.priority) query = query.eq('priority', toolInput.priority)
-      if (toolInput.assigned_to) query = query.ilike('assigned_to', `%${sanitizeText(toolInput.assigned_to)}%`)
+      if (toolInput.assigned_to) query = query.ilike('assigned_to', `%${escapeIlike(sanitizeText(toolInput.assigned_to))}%`)
       if (toolInput.overdue) query = query.lt('due_date', today).not('status', 'in', '("closed","answered","void")')
       const { data, error } = await query.order('created_at', { ascending: false }).limit(limit)
       if (error) return { error: error.message }
@@ -296,7 +308,7 @@ async function executeTool(
     }
 
     case 'search_everything': {
-      const q = `%${sanitizeText(toolInput.query)}%`
+      const q = `%${escapeIlike(sanitizeText(toolInput.query))}%`
       const [rfis, tasks, submittals] = await Promise.all([
         supabase.from('rfis').select('id, rfi_number, title, status').eq('project_id', projectId).ilike('title', q).limit(5),
         supabase.from('tasks').select('id, title, status').eq('project_id', projectId).ilike('title', q).limit(5),
@@ -492,8 +504,8 @@ GENERATIVE UI TYPES (return as tool result with ui_type field):
       model: 'claude-sonnet-4-20250514',
     }).then(() => {})
 
-    // Sanitize output
-    const sanitizedResponse = finalResponse.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
+    // Sanitize output: strip scripts, dangerous tags, event handlers
+    const sanitizedResponse = sanitizeHtml(finalResponse)
 
     return new Response(
       JSON.stringify({ content: sanitizedResponse, tool_results: toolResults }),

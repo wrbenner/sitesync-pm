@@ -18,17 +18,19 @@ function getCurrentQuarter(): string {
   return `${now.getFullYear()}-Q${q}`
 }
 
+const ALLOWED_ORIGIN = Deno.env.get('ALLOWED_ORIGIN') || 'https://sitesync-pm.vercel.app'
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, {
       headers: {
-        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
         'Access-Control-Allow-Headers': 'authorization, content-type',
       },
     })
   }
 
-  const corsHeaders = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+  const corsHeaders = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': ALLOWED_ORIGIN }
 
   try {
     // SECURITY: CRON-only endpoint. Require Bearer CRON_SECRET; fail closed when unset.

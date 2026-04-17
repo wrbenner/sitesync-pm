@@ -105,12 +105,14 @@ Respond with ONLY valid JSON:
   "detected_language": "en|es|mixed"
 }`
 
+const ALLOWED_ORIGIN = Deno.env.get('ALLOWED_ORIGIN') || 'https://sitesync-pm.vercel.app'
+
 Deno.serve(async (req) => {
   // CORS
   if (req.method === 'OPTIONS') {
     return new Response(null, {
       headers: {
-        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
         'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
         'Access-Control-Allow-Methods': 'POST, OPTIONS',
       },
@@ -119,7 +121,7 @@ Deno.serve(async (req) => {
 
   const corsHeaders = {
     'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
   }
 
   try {
@@ -297,7 +299,7 @@ Deno.serve(async (req) => {
     console.error('Voice extract error:', err)
     return new Response(
       JSON.stringify({ error: 'Internal server error', details: (err as Error).message }),
-      { status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } },
+      { status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': ALLOWED_ORIGIN } },
     )
   }
 })
