@@ -93,11 +93,24 @@ class SyncManager {
 
   private startPolling() {
     this.pollInterval = setInterval(() => {
-      // Error handling in polling callback
+      // Skip polling when the tab is backgrounded — the user isn't looking at
+      // the sync indicator, and the next visibility change will refresh it.
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
       this.refreshCounts().catch((err) => {
         if (import.meta.env.DEV) console.warn('SyncManager: Failed to refresh counts:', err)
       })
     }, 3000)
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', this.handleVisibilityChange)
+    }
+  }
+
+  private handleVisibilityChange = () => {
+    if (document.visibilityState === 'visible') {
+      this.refreshCounts().catch((err) => {
+        if (import.meta.env.DEV) console.warn('SyncManager: Failed to refresh counts:', err)
+      })
+    }
   }
 
   async refreshCounts() {
@@ -199,6 +212,9 @@ class SyncManager {
     // BUG #5 FIX: Use bound references that match the ones passed to addEventListener
     window.removeEventListener('online', this.boundHandleOnline)
     window.removeEventListener('offline', this.boundHandleOffline)
+    if (typeof document !== 'undefined') {
+      document.removeEventListener('visibilitychange', this.handleVisibilityChange)
+    }
     if (this.pollInterval) clearInterval(this.pollInterval)
     this.listeners.clear()
   }

@@ -199,12 +199,21 @@ export function computeEarnedValue(
   const vac = subtractCents(bac, eac)
   const costVariance = subtractCents(bcwp, acwp)
 
+  // Schedule variance (days) per activity: baseline_finish vs actual_finish (or current finish_date).
+  // Positive = behind schedule, negative = ahead. Averaged across activities with a baseline.
+  const MS_PER_DAY = 86_400_000
+  const variances = scheduleActivities
+    .map(a => {
+      if (!a.baseline_finish) return null
+      const baseline = new Date(a.baseline_finish).getTime()
+      const actual = new Date(a.actual_finish ?? a.finish_date).getTime()
+      if (isNaN(baseline) || isNaN(actual)) return null
+      return (actual - baseline) / MS_PER_DAY
+    })
+    .filter((v): v is number => v !== null)
   const scheduleVarianceDays =
-    scheduleActivities.length > 0
-      ? Math.round(
-          scheduleActivities.reduce((s, a) => s + a.scheduleVarianceDays, 0) /
-            scheduleActivities.length,
-        )
+    variances.length > 0
+      ? Math.round(variances.reduce((s, v) => s + v, 0) / variances.length)
       : 0
 
   return { bcws, bcwp, acwp, spi, cpi, eac, etc, vac, scheduleVarianceDays, costVariance }

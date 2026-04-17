@@ -59,13 +59,12 @@ export const useOrganizationStore = create<OrganizationState>()(
     }),
     {
       name: 'sitesync-org-context',
-      // Only persist the selected org ID, not the full list (re-fetched on load)
+      // Persist the full current org so rehydrated consumers get a complete object.
+      // The organizations list is still re-fetched on auth load.
       partialize: (state) => ({
-        currentOrg: state.currentOrg ? { id: state.currentOrg.id } : null,
+        currentOrg: state.currentOrg,
       }),
       merge: (persisted, current) => {
-        // On rehydration we only have the org id. Full org data comes from API.
-        // Keep the persisted id so we can restore the selection after fetch.
         const p = persisted as Partial<OrganizationState>
         return {
           ...current,

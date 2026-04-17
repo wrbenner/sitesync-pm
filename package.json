@@ -3,6 +3,11 @@
   "private": true,
   "version": "1.0.0-alpha.1",
   "type": "module",
+  "sideEffects": [
+    "*.css",
+    "./src/lib/i18n.ts",
+    "./src/lib/sentry.ts"
+  ],
   "engines": {
     "node": ">=20"
   },
