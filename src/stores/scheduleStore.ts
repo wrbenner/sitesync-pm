@@ -5,9 +5,10 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { scheduleService } from '../services/scheduleService';
-import type { CreatePhaseInput } from '../services/scheduleService';
+import type { CreatePhaseInput, GanttTask } from '../services/scheduleService';
 import type { MappedSchedulePhase } from '../types/entities';
 import type { ScheduleStatus } from '../machines/scheduleMachine';
+import type { TaskLifecycleStatus } from '../machines/scheduleStateMachine';
 
 function mapToMappedPhase(d: Record<string, unknown>): MappedSchedulePhase {
   const startDate = (d['start_date'] as string | null) ?? '';
@@ -107,10 +108,18 @@ interface ScheduleHookState {
   error: string | null;
   loadSchedule: (projectId: string) => Promise<void>;
   createPhase: (input: CreatePhaseInput) => Promise<{ error: string | null }>;
+  createPhaseWithDependencies: (
+    input: CreatePhaseInput,
+    predecessorIds: string[],
+  ) => Promise<{ error: string | null }>;
   updatePhase: (id: string, updates: Partial<CreatePhaseInput>) => Promise<{ error: string | null }>;
   transitionStatus: (phaseId: string, newStatus: ScheduleStatus) => Promise<{ error: string | null }>;
+  transitionTaskStatus: (phaseId: string, newTaskStatus: TaskLifecycleStatus) => Promise<{ error: string | null }>;
+  approvePhase: (phaseId: string) => Promise<{ error: string | null }>;
   deletePhase: (phaseId: string) => Promise<{ error: string | null }>;
   updateDependencies: (phaseId: string, predecessorIds: string[]) => Promise<{ error: string | null }>;
+  reorderPhases: (projectId: string, orderedIds: string[]) => Promise<{ error: string | null }>;
+  getGanttData: (projectId: string) => Promise<{ data: GanttTask[] | null; error: string | null }>;
 }
 
 // Tracks the most recently-requested project so legacy `loadSchedule(id)` calls
@@ -170,6 +179,15 @@ export function useScheduleStore<T = ScheduleHookState>(
     return { error };
   }, [invalidate]);
 
+  const createPhaseWithDependencies = useCallback(async (
+    input: CreatePhaseInput,
+    predecessorIds: string[],
+  ) => {
+    const { error } = await scheduleService.createPhaseWithDependencies(input, predecessorIds);
+    if (!error) invalidate();
+    return { error };
+  }, [invalidate]);
+
   const updatePhase = useCallback(async (id: string, updates: Partial<CreatePhaseInput>) => {
     const { error } = await scheduleService.updatePhase(id, updates);
     if (!error) invalidate();
@@ -178,6 +196,21 @@ export function useScheduleStore<T = ScheduleHookState>(
 
   const transitionStatus = useCallback(async (phaseId: string, newStatus: ScheduleStatus) => {
     const { error } = await scheduleService.transitionStatus(phaseId, newStatus);
+    if (!error) invalidate();
+    return { error };
+  }, [invalidate]);
+
+  const transitionTaskStatus = useCallback(async (
+    phaseId: string,
+    newTaskStatus: TaskLifecycleStatus,
+  ) => {
+    const { error } = await scheduleService.transitionTaskStatus(phaseId, newTaskStatus);
+    if (!error) invalidate();
+    return { error };
+  }, [invalidate]);
+
+  const approvePhase = useCallback(async (phaseId: string) => {
+    const { error } = await scheduleService.approvePhase(phaseId);
     if (!error) invalidate();
     return { error };
   }, [invalidate]);
@@ -194,6 +227,43 @@ export function useScheduleStore<T = ScheduleHookState>(
     return { error };
   }, [invalidate]);
 
+  /**
+   * Optimistic reorder: immediately reorders phases in the React Query cache,
+   * then persists to the server.  Rolls back to the previous order on failure.
+   */
+  const reorderPhases = useCallback(async (pid: string, orderedIds: string[]) => {
+    const cacheKey = ['schedule_phases_mapped', pid];
+
+    // Snapshot current state for rollback
+    const previous = queryClient.getQueryData<SchedulePhase[]>(cacheKey);
+
+    if (previous) {
+      const idToPhase = new Map(previous.map((p) => [p.id, p]));
+      const reordered = orderedIds
+        .map((id) => idToPhase.get(id))
+        .filter((p): p is SchedulePhase => p !== undefined);
+
+      // Optimistically apply the new order
+      queryClient.setQueryData(cacheKey, reordered);
+    }
+
+    const { error } = await scheduleService.reorderPhases(pid, orderedIds);
+
+    if (error) {
+      // Conflict resolution: roll back to server state
+      if (previous) queryClient.setQueryData(cacheKey, previous);
+      return { error };
+    }
+
+    // Sync with server to pick up any concurrent changes
+    await queryClient.invalidateQueries({ queryKey: cacheKey });
+    return { error: null };
+  }, [queryClient]);
+
+  const getGanttData = useCallback(async (pid: string) => {
+    return scheduleService.getGanttData(pid);
+  }, []);
+
   const state: ScheduleHookState = {
     phases,
     metrics,
@@ -201,10 +271,15 @@ export function useScheduleStore<T = ScheduleHookState>(
     error: query.error ? (query.error as Error).message : null,
     loadSchedule,
     createPhase,
+    createPhaseWithDependencies,
     updatePhase,
     transitionStatus,
+    transitionTaskStatus,
+    approvePhase,
     deletePhase,
     updateDependencies,
+    reorderPhases,
+    getGanttData,
   };
 
   return selector ? selector(state) : (state as unknown as T);
