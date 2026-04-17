@@ -5,7 +5,6 @@ import { ExportButton } from '../../components/shared/ExportButton';
 import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme';
 import { useProjectId } from '../../hooks/useProjectId';
 import { useSafetyInspections, useIncidents, useToolboxTalks, useSafetyCertifications, useCorrectiveActions, useDailyLogs } from '../../hooks/queries';
-import { toast } from 'sonner';
 import { supabase } from '../../lib/supabase';
 import type { TabKey } from './safetyTypes';
 import { SafetyMetrics } from './SafetyMetrics';
@@ -26,6 +25,7 @@ const recordableSeverities = ['medical_treatment', 'lost_time', 'fatality'];
 
 export const Safety: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('incidents');
+  const [nowMs] = useState(() => Date.now());
   const [showIncidentModal, setShowIncidentModal] = useState(false);
   const [showTalkModal, setShowTalkModal] = useState(false);
   const [windowWidth, setWindowWidth] = useState(() => window.innerWidth);
@@ -71,7 +71,7 @@ export const Safety: React.FC = () => {
     .sort((a: unknown, b: unknown) => new Date((b as Record<string, unknown>).date as string).getTime() - new Date((a as Record<string, unknown>).date as string).getTime())[0] ?? null;
 
   const daysSinceIncident = lastRecordableIncident
-    ? Math.floor((Date.now() - new Date((lastRecordableIncident as Record<string, unknown>).date as string).getTime()) / 86400000)
+    ? Math.floor((nowMs - new Date((lastRecordableIncident as Record<string, unknown>).date as string).getTime()) / 86400000)
     : null;
 
   const computedHours = dailyLogs?.reduce((s: number, l: unknown) => s + ((l as Record<string, unknown>).total_hours as number || 0), 0) ?? 0;

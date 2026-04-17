@@ -3,7 +3,7 @@ import { Upload as UploadIcon, FilesIcon, FileImage, HardDrive } from 'lucide-re
 import { Btn, useToast, PageContainer } from '../../components/Primitives';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { PermissionGate } from '../../components/auth/PermissionGate';
-import { colors, spacing, typography, borderRadius } from '../../styles/theme';
+import { colors, spacing, typography } from '../../styles/theme';
 import { useProjectId } from '../../hooks/useProjectId';
 import { useFiles } from '../../hooks/queries';
 import { useCreateFile } from '../../hooks/mutations';
@@ -19,6 +19,7 @@ const FilesPage: React.FC = () => {
   const projectId = useProjectId();
   const createFile = useCreateFile();
   const { data: rawFiles, isPending: loading, isError, error, refetch } = useFiles(projectId);
+  const [nowMs] = useState(() => Date.now());
 
   const files = useMemo(() =>
     (rawFiles || []).map(f => ({
@@ -33,7 +34,7 @@ const FilesPage: React.FC = () => {
     const all = rawFiles || [];
     const totalFiles = all.length;
     const drawings = all.filter((f: unknown) => (f as Record<string, unknown>).category === 'drawing' || ((f as Record<string, unknown>).file_type && String((f as Record<string, unknown>).file_type).includes('pdf'))).length;
-    const weekAgo = Date.now() - 7 * 86400000;
+    const weekAgo = nowMs - 7 * 86400000;
     const recentUploads = all.filter((f: unknown) => {
       const rf = f as Record<string, unknown>;
       const ts = rf.uploaded_at || rf.created_at;
@@ -41,7 +42,7 @@ const FilesPage: React.FC = () => {
     }).length;
     const totalBytes = all.reduce((sum: number, f: unknown) => sum + ((f as Record<string, unknown>).file_size_bytes as number || 0), 0);
     return { totalFiles, drawings, recentUploads, totalBytes };
-  }, [rawFiles]);
+  }, [rawFiles, nowMs]);
 
   // ── State ──────────────────────────────────────────────────
   const [liveAnnouncement, setLiveAnnouncement] = useState('');

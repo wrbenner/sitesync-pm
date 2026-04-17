@@ -1,7 +1,6 @@
 import React, { useRef } from 'react';
 import { Btn } from '../../components/Primitives';
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
-import { toast } from 'sonner';
 import { supabase } from '../../lib/supabase';
 
 interface IncidentFormState {

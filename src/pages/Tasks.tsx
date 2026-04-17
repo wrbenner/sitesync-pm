@@ -79,6 +79,7 @@ interface MappedTask {
 }
 
 export const Tasks: React.FC = () => {
+  const [nowMs] = useState(() => Date.now());
   const projectId = useProjectId();
   const { data: tasksResult, isPending: loading, error: tasksError, refetch } = useTasks(projectId);
   const tasksRaw = tasksResult?.data ?? [];
@@ -172,7 +173,7 @@ export const Tasks: React.FC = () => {
   }, [filteredTasks]);
 
   const formatDue = (dateStr: string) => {
-    const days = Math.ceil((new Date(dateStr).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    const days = Math.ceil((new Date(dateStr).getTime() - nowMs) / (1000 * 60 * 60 * 24));
     if (days < 0) return { text: `${Math.abs(days)}d overdue`, color: colors.white, bg: colors.statusCritical };
     if (days === 0) return { text: 'Due today', color: colors.white, bg: colors.statusPending };
     if (days <= 2) return { text: `${days}d left`, color: colors.statusPending, bg: `${colors.statusPending}14` };

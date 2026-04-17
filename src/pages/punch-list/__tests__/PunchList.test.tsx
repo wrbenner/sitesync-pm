@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 
 // ── Mocks ──────────────────────────────────────────────
-const permissionsState = { hasPermission: (_: string) => true }
+const permissionsState = { hasPermission: (p?: string): boolean => { void p; return true } }
 const punchItemsState = {
   data: { data: [] as unknown[] } as { data: unknown[] } | undefined,
   isLoading: false,

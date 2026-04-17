@@ -73,7 +73,7 @@ export const Reports: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<TabId>('standard')
   const [exportOpen, setExportOpen] = useState(false)
-  const [selectedType, setSelectedType] = useState<string | null>(null)
+  const [, setSelectedType] = useState<string | null>(null)
 
   // Metrics
   const totalReports = REPORT_TYPES.length + (customReports?.length ?? 0)

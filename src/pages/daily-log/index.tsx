@@ -433,6 +433,8 @@ const DailyLogPage: React.FC = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  const authUserId = useAuthStore((s) => s.user?.id);
+
   if (isLoading) {
     return (
       <PageContainer title="Daily Log" subtitle="Loading...">
@@ -630,8 +632,6 @@ const DailyLogPage: React.FC = () => {
       addToast('error', 'Failed to submit daily log');
     }
   };
-
-  const authUserId = useAuthStore((s) => s.user?.id);
 
   const handleApprove = async () => {
     if (!authUserId) { addToast('error', 'You must be signed in to approve'); return; }
