@@ -27,6 +27,7 @@ export default defineConfig({
         'src/lib/**',
         'src/components/**',
         'src/stores/**',
+        'src/pages/**',
       ],
       exclude: [
         'src/test/**',
@@ -35,6 +36,9 @@ export default defineConfig({
         '**/*.test.*',
         '**/index.ts',
       ],
+      // Thresholds kept conservative until CI measures the real baseline
+      // with Phase A tests running. Ratchet up once the number stabilizes.
+      // Roadmap target: 65/55/60/65.
       thresholds: {
         statements: 43,
         branches: 35,
