@@ -83,7 +83,10 @@ export const Specifications: React.FC = () => {
       title="Specifications"
       subtitle="CSI MasterFormat sections linked to submittals and RFIs"
       actions={
-        <PermissionGate permission="project.settings">
+        <PermissionGate
+          permission="project.settings"
+          fallback={<span title="Your role doesn't allow adding spec sections. Request access from your admin."><Btn variant="primary" icon={<Plus size={16} />} disabled>New Spec</Btn></span>}
+        >
           <Btn variant="primary" icon={<Plus size={16} />} onClick={() => setModalOpen(true)}>New Spec</Btn>
         </PermissionGate>
       }

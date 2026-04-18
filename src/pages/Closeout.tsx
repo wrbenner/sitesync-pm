@@ -103,7 +103,10 @@ export const Closeout: React.FC = () => {
       title="Closeout"
       subtitle="Warranties, O&M manuals, lien waivers, and project handover items"
       actions={
-        <PermissionGate permission="project.settings">
+        <PermissionGate
+          permission="project.settings"
+          fallback={<span title="Your role doesn't allow adding closeout items. Request access from your admin."><Btn variant="primary" icon={<Plus size={16} />} disabled>New Item</Btn></span>}
+        >
           <Btn variant="primary" icon={<Plus size={16} />} onClick={() => setModalOpen(true)}>New Item</Btn>
         </PermissionGate>
       }

@@ -97,7 +97,10 @@ export const Transmittals: React.FC = () => {
       title="Transmittals"
       subtitle="Documents sent to and from subs, architects, and owners"
       actions={
-        <PermissionGate permission="project.settings">
+        <PermissionGate
+          permission="project.settings"
+          fallback={<span title="Your role doesn't allow creating transmittals. Request access from your admin."><Btn variant="primary" icon={<Plus size={16} />} disabled>New Transmittal</Btn></span>}
+        >
           <Btn variant="primary" icon={<Plus size={16} />} onClick={() => setModalOpen(true)}>New Transmittal</Btn>
         </PermissionGate>
       }

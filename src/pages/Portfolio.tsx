@@ -220,7 +220,7 @@ const PortfolioMetricsSection: React.FC<PortfolioMetricsSectionProps> = ({
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'], marginBottom: spacing['6'] }}>
       <MetricBox
         label="Total Contract Value"
-        value={loading ? '...' : fmtCurrency(totalValue)}
+        value={loading ? '...' : (totalValue > 0 ? fmtCurrency(totalValue) : 'N/A')}
       />
       <MetricBox
         label="Active Projects"
@@ -247,10 +247,15 @@ export const Portfolio: React.FC = () => {
   const orgId = useAuthStore((s) => s.profile?.organization_id) || undefined
   const queryClient = useQueryClient()
 
-  const { data: portfolios } = usePortfolios(orgId ?? '')
+  const { data: portfolios, isPending: portfoliosLoading } = usePortfolios(orgId ?? '')
   const portfolioId = (portfolios && portfolios[0]?.id) as string | undefined
-  const { data: portfolioProjects, isPending: loading } = usePortfolioProjects(portfolioId ?? '')
+  const { data: portfolioProjects, isPending: projectsPending } = usePortfolioProjects(portfolioId ?? '')
   const { data: reports } = useExecutiveReports(portfolioId ?? '')
+
+  // Only show loading when we're actually fetching. If there's no portfolio
+  // (org has none yet), the projects query stays disabled and "isPending"
+  // is misleading — treat that case as "loaded with zero projects".
+  const loading = portfoliosLoading || (!!portfolioId && projectsPending)
 
   useEffect(() => {
     if (!portfolioId) return

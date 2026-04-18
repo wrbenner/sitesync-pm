@@ -315,13 +315,13 @@ const PunchListPage: React.FC = () => {
       <PageContainer
         title="Punch List"
         subtitle="No items"
-        actions={<PermissionGate permission="punch_list.create"><Btn onClick={() => setShowCreateModal(true)}>New Item</Btn></PermissionGate>}
+        actions={<PermissionGate permission="punch_list.create" fallback={<span title="Your role doesn't allow creating punch items. Request access from your admin."><Btn disabled>New Item</Btn></span>}><Btn onClick={() => setShowCreateModal(true)}>New Item</Btn></PermissionGate>}
       >
         <EmptyState
           icon={CheckSquare}
           title="No punch list items. Your project is looking clean!"
           description="Items will appear here as deficiencies are identified during inspections."
-          action={{ label: 'Add Punch Item', onClick: () => setShowCreateModal(true) }}
+          action={hasPermission('punch_list.create') ? { label: 'Add Punch Item', onClick: () => setShowCreateModal(true) } : undefined}
         />
       </PageContainer>
     );
@@ -331,7 +331,7 @@ const PunchListPage: React.FC = () => {
     <PageContainer
       title="Punch List"
       subtitle={`${openCount} open \u00b7 ${subCompleteCount} pending verification \u00b7 ${verifiedCount} verified`}
-      actions={<PermissionGate permission="punch_list.create"><Btn onClick={() => setShowCreateModal(true)}>New Item</Btn></PermissionGate>}
+      actions={<PermissionGate permission="punch_list.create" fallback={<span title="Your role doesn't allow creating punch items. Request access from your admin."><Btn disabled>New Item</Btn></span>}><Btn onClick={() => setShowCreateModal(true)}>New Item</Btn></PermissionGate>}
     >
       {/* Screen reader live region for status change announcements */}
       <div

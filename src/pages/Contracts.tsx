@@ -154,7 +154,10 @@ export const Contracts: React.FC = () => {
       title="Contracts"
       subtitle="Prime contracts, subcontracts, PSAs, and purchase orders"
       actions={
-        <PermissionGate permission="project.settings">
+        <PermissionGate
+          permission="project.settings"
+          fallback={<span title="Your role doesn't allow creating contracts. Request access from your admin."><Btn variant="primary" icon={<Plus size={16} />} disabled>New Contract</Btn></span>}
+        >
           <Btn variant="primary" icon={<Plus size={16} />} onClick={() => setModalOpen(true)}>New Contract</Btn>
         </PermissionGate>
       }
