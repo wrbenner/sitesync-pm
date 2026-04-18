@@ -593,10 +593,10 @@ const RFIsPage: React.FC = () => {
       actions={
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
           <div style={{ display: 'flex', gap: spacing['1'], backgroundColor: colors.surfaceInset, borderRadius: borderRadius.full, padding: 2 }}>
-            <motion.button whileTap={{ scale: 0.97 }} className="rfi-interactive" aria-pressed={viewMode === 'table'} onClick={() => setViewMode('table')} style={{ display: 'flex', alignItems: 'center', padding: '10px 14px', border: 'none', borderRadius: borderRadius.full, backgroundColor: viewMode === 'table' ? colors.surfaceRaised : 'transparent', color: viewMode === 'table' ? colors.textPrimary : colors.textTertiary, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily, cursor: 'pointer', boxShadow: viewMode === 'table' ? shadows.sm : 'none', minHeight: 44 }}>
+            <motion.button whileTap={{ scale: 0.97 }} className="rfi-interactive" aria-pressed={viewMode === 'table'} onClick={() => setViewMode('table')} style={{ display: 'flex', alignItems: 'center', padding: '10px 14px', border: 'none', borderRadius: borderRadius.full, backgroundColor: viewMode === 'table' ? colors.surfaceRaised : 'transparent', color: viewMode === 'table' ? colors.textPrimary : colors.textTertiary, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily, cursor: 'pointer', boxShadow: viewMode === 'table' ? shadows.sm : 'none', minHeight: 56 }}>
               <List size={14} style={{ marginRight: 4 }} /> Table
             </motion.button>
-            <motion.button whileTap={{ scale: 0.97 }} className="rfi-interactive" aria-pressed={viewMode === 'kanban'} onClick={() => setViewMode('kanban')} style={{ display: 'flex', alignItems: 'center', padding: '10px 14px', border: 'none', borderRadius: borderRadius.full, backgroundColor: viewMode === 'kanban' ? colors.surfaceRaised : 'transparent', color: viewMode === 'kanban' ? colors.textPrimary : colors.textTertiary, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily, cursor: 'pointer', boxShadow: viewMode === 'kanban' ? shadows.sm : 'none', minHeight: 44 }}>
+            <motion.button whileTap={{ scale: 0.97 }} className="rfi-interactive" aria-pressed={viewMode === 'kanban'} onClick={() => setViewMode('kanban')} style={{ display: 'flex', alignItems: 'center', padding: '10px 14px', border: 'none', borderRadius: borderRadius.full, backgroundColor: viewMode === 'kanban' ? colors.surfaceRaised : 'transparent', color: viewMode === 'kanban' ? colors.textPrimary : colors.textTertiary, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily, cursor: 'pointer', boxShadow: viewMode === 'kanban' ? shadows.sm : 'none', minHeight: 56 }}>
               <LayoutGrid size={14} style={{ marginRight: 4 }} /> Kanban
             </motion.button>
           </div>
@@ -613,7 +613,7 @@ const RFIsPage: React.FC = () => {
                 fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily,
                 cursor: 'pointer', whiteSpace: 'nowrap' as const,
                 boxShadow: `0 0 0 1px ${colors.statusReviewSubtle}`,
-                minHeight: 44,
+                minHeight: 56,
               }}
             >
               <Wand2 size={14} />

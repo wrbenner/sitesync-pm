@@ -111,6 +111,31 @@ function detectImport(src: string): boolean {
   )
 }
 
+/**
+ * Returns the count of interactive elements with minHeight < 56 that are
+ * NOT paired with a justifying comment. CLAUDE.md mandates 56px minimum
+ * for gloved industrial use; this detector finds 44 / 48 / 40 etc. that
+ * are likely violations and counts them for reporting (not blocking).
+ *
+ * Returns 0 if the file contains no sub-56 minHeight values.
+ */
+function countSmallTouchTargets(src: string): number {
+  // Match `minHeight: <number less than 56>` or `minHeight: '<n>px'` with n<56
+  const numeric = /minHeight:\s*(\d+)(?!\w)/g
+  const stringPx = /minHeight:\s*['"](\d+)px['"]/g
+  let violations = 0
+  let m: RegExpExecArray | null
+  while ((m = numeric.exec(src)) !== null) {
+    const v = Number(m[1])
+    if (v > 0 && v < 56) violations += 1
+  }
+  while ((m = stringPx.exec(src)) !== null) {
+    const v = Number(m[1])
+    if (v > 0 && v < 56) violations += 1
+  }
+  return violations
+}
+
 // ── Mutation presence ────────────────────────────────────────
 
 function hookExports(moduleRelPath: string): Set<string> {
@@ -191,6 +216,17 @@ export function runStaticAudit(): AuditReport {
       if (contract.expected.has_search) actual.has_search = detectSearch(src)
       if (contract.expected.has_export) actual.has_export = detectExport(src)
       if (contract.expected.has_import) actual.has_import = detectImport(src)
+
+      // Touch-target compliance (CLAUDE.md mandates ≥56px for gloved use).
+      // Reports as a P3 finding when violations exist; does not fail audit.
+      const smallTouchTargets = countSmallTouchTargets(src)
+      if (smallTouchTargets > 0) {
+        findings.push({
+          severity: 'P3',
+          code: 'SMALL_TOUCH_TARGETS',
+          message: `${smallTouchTargets} interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)`,
+        })
+      }
 
       // Compare actual vs expected
       for (const [flag, expected] of Object.entries(contract.expected)) {

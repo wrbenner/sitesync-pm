@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { PageContainer, Card, useToast } from '../components/Primitives';
+import { PageContainer, Card, Skeleton, useToast } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme';
 import { ActivityCard } from '../components/activity/ActivityCard';
 import type { ActivityItem } from '../components/activity/ActivityCard';
@@ -100,7 +100,7 @@ export const Activity: React.FC = () => {
   const { addToast } = useToast();
   const navigate = useNavigate();
   const projectId = useProjectId();
-  const { data: rawActivities } = useRealtimeActivityFeed(projectId);
+  const { data: rawActivities, isPending } = useRealtimeActivityFeed(projectId);
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [following, setFollowing] = useState<Set<string>>(new Set(['rfi', 'task']));
   const [readItems, setReadItems] = useState<Set<string>>(new Set());
@@ -226,6 +226,15 @@ export const Activity: React.FC = () => {
       </div>
 
       {/* Activity stream grouped by time */}
+      {isPending && grouped.length === 0 ? (
+        <Card padding={spacing['4']}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
+            {[1, 2, 3, 4, 5].map((i) => (
+              <Skeleton key={i} width="100%" height="48px" />
+            ))}
+          </div>
+        </Card>
+      ) : null}
       <Card padding="0">
         {grouped.map(group => (
           <div key={group.label}>
