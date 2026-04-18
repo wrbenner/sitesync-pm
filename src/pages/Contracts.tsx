@@ -5,7 +5,7 @@ import { DataTable, createColumnHelper } from '../components/shared/DataTable'
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
 import { useContracts } from '../hooks/queries/financials'
-import { useCreateContract } from '../hooks/queries/enterprise-modules'
+import { useCreateContract, useDeleteContract, useUpdateContract } from '../hooks/queries/enterprise-modules'
 import { useAuth } from '../hooks/useAuth'
 import { toast } from 'sonner'
 import { PermissionGate } from '../components/auth/PermissionGate'
@@ -32,7 +32,7 @@ interface Contract {
 }
 
 const col = createColumnHelper<Contract>()
-const columns = [
+const baseColumns = [
   col.accessor('contract_type', {
     header: 'Type',
     cell: (info) => {
@@ -97,6 +97,82 @@ export const Contracts: React.FC = () => {
   const { user } = useAuth()
   const { data: contracts, isLoading } = useContracts(projectId ?? undefined)
   const createContract = useCreateContract()
+  const updateContract = useUpdateContract()
+  const deleteContract = useDeleteContract()
+
+  const handleDeleteContract = async (contract: Contract) => {
+    if (!projectId) return
+    if (!window.confirm(`Delete "${contract.title}"? This cannot be undone.`)) return
+    try {
+      await deleteContract.mutateAsync({ id: contract.id, projectId })
+      toast.success('Contract deleted')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete contract')
+    }
+  }
+
+  const handleUpdateContractStatus = async (contract: Contract, status: string) => {
+    if (!projectId) return
+    try {
+      await updateContract.mutateAsync({ id: contract.id, projectId, updates: { status } })
+      toast.success('Contract updated')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update contract')
+    }
+  }
+
+  const columns = useMemo(
+    () => [
+      ...baseColumns,
+      col.display({
+        id: 'actions',
+        header: '',
+        cell: (info) => {
+          const contract = info.row.original
+          return (
+            <div style={{ display: 'flex', gap: spacing.xs, justifyContent: 'flex-end' }}>
+              <select
+                value={contract.status}
+                onChange={(e) => handleUpdateContractStatus(contract, e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                aria-label="Change contract status"
+                data-testid="edit-contract-status"
+                style={{
+                  padding: `2px ${spacing.xs}`,
+                  border: `1px solid ${colors.borderLight}`,
+                  borderRadius: borderRadius.base,
+                  backgroundColor: colors.surfaceRaised,
+                  fontSize: typography.fontSize.caption,
+                  fontFamily: typography.fontFamily,
+                  cursor: 'pointer',
+                }}
+              >
+                <option value="draft">Draft</option>
+                <option value="pending_signature">Pending Signature</option>
+                <option value="active">Active</option>
+                <option value="completed">Completed</option>
+                <option value="terminated">Terminated</option>
+              </select>
+              <PermissionGate permission="project.settings">
+                <Btn
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => handleDeleteContract(contract)}
+                  disabled={deleteContract.isPending}
+                  aria-label={`Delete ${contract.title}`}
+                  data-testid="delete-contract-button"
+                >
+                  Delete
+                </Btn>
+              </PermissionGate>
+            </div>
+          )
+        },
+      }),
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [deleteContract.isPending, projectId],
+  )
 
   const [form, setForm] = useState({
     contract_type: 'subcontract',
@@ -158,7 +234,7 @@ export const Contracts: React.FC = () => {
           permission="project.settings"
           fallback={<span title="Your role doesn't allow creating contracts. Request access from your admin."><Btn variant="primary" icon={<Plus size={16} />} disabled>New Contract</Btn></span>}
         >
-          <Btn variant="primary" icon={<Plus size={16} />} onClick={() => setModalOpen(true)}>New Contract</Btn>
+          <Btn variant="primary" icon={<Plus size={16} />} onClick={() => setModalOpen(true)} data-testid="create-contract-button">New Contract</Btn>
         </PermissionGate>
       }
     >

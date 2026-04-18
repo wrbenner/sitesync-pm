@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-04-18T17:54:27.561Z",
+  "generatedAt": "2026-04-18T18:01:41.900Z",
   "totalRoutes": 55,
-  "passingRoutes": 52,
+  "passingRoutes": 53,
   "averageScore": 100,
   "results": [
     {
@@ -961,26 +961,28 @@
         "expected": {
           "has_list": true,
           "has_create": true,
-          "has_edit": true
+          "has_edit": true,
+          "has_delete": true,
+          "has_filters": true
         },
+        "hooksModule": "src/hooks/queries/enterprise-modules.ts",
         "permissionModule": "contracts",
-        "status": "stub",
-        "knownIssues": [
-          "Create exists but no Update/Delete/Detail — skeleton only"
-        ]
+        "status": "production"
       },
       "actual": {
         "has_list": true,
         "has_create": true,
-        "has_edit": true
+        "has_edit": true,
+        "has_delete": true,
+        "has_filters": true
       },
       "mutations": {
-        "createPresent": false,
-        "updatePresent": false,
-        "deletePresent": false
+        "createPresent": true,
+        "updatePresent": true,
+        "deletePresent": true
       },
       "findings": [],
-      "score": -1
+      "score": 100
     },
     {
       "contract": {
