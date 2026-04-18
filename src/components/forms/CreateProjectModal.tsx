@@ -9,7 +9,7 @@ const projectSchema = z.object({
   city: z.string().optional(),
   state: z.string().optional(),
   project_type: z.string().optional(),
-  contract_value: z.number().optional(),
+  contract_value: z.coerce.number().optional(),
   start_date: z.string().optional(),
   target_completion: z.string().optional(),
   description: z.string().optional(),
