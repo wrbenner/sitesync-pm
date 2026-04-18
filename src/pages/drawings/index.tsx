@@ -20,6 +20,9 @@ import { DrawingDetail } from './DrawingDetail';
 import { DrawingUpload, RevisionUpload } from './DrawingUpload';
 import { VersionCompareModal, ComparisonModal } from './DrawingVersions';
 import { AiInsightsPanel } from './AiInsightsPanel';
+import { RevisionOverlay } from '../../components/drawings/RevisionOverlay';
+import { AnnotationListPanel } from '../../components/drawings/AnnotationListPanel';
+import { useAIAnnotationStore } from '../../stores';
 
 interface DrawingItem {
   id: number;
@@ -75,6 +78,19 @@ const DrawingsPage: React.FC = () => {
   const [aiPanelConflicts, setAiPanelConflicts] = useState<Array<{ severity: 'high' | 'medium' | 'low'; description: string; sheets: string[] }>>([]);
   const [aiPanelError, setAiPanelError] = useState<string | null>(null);
   const [aiPanelAnalyzed, setAiPanelAnalyzed] = useState(false);
+
+  // ── Annotation engine state ────────────────────────────────
+  const [showRevisionOverlay, setShowRevisionOverlay] = useState(false);
+  const [showAnnotationPanel, setShowAnnotationPanel] = useState(false);
+  const annotationsStore = useAIAnnotationStore();
+
+  const handleCreateRFIFromAnnotation = useCallback(() => {
+    if (!selectedDrawing) {
+      addToast('error', 'Select a drawing first to create an RFI from annotations.');
+      return;
+    }
+    addToast('info', `RFI draft prefilled from ${selectedDrawing.setNumber}. Open the RFIs page to finish.`);
+  }, [selectedDrawing, addToast]);
 
   // ── Upload state ───────────────────────────────────────────
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -283,6 +299,23 @@ const DrawingsPage: React.FC = () => {
       title="Drawings"
       actions={
         <>
+          <Btn
+            variant="secondary"
+            size="md"
+            aria-label="View annotations"
+            onClick={() => setShowAnnotationPanel(true)}
+          >
+            Annotations
+          </Btn>
+          <Btn
+            variant="secondary"
+            size="md"
+            aria-label="Open revision overlay"
+            disabled={!selectedDrawing || !revisionHistory || revisionHistory.length < 2}
+            onClick={() => setShowRevisionOverlay(true)}
+          >
+            Revision Overlay
+          </Btn>
           <Btn variant="secondary" size="md" icon={<Sparkles size={16} />} aria-label="Toggle AI insights panel" aria-pressed={showAiPanel} onClick={() => setShowAiPanel((v) => !v)}>
             AI Insights
           </Btn>
@@ -389,7 +422,47 @@ const DrawingsPage: React.FC = () => {
       </div>
 
       {/* Viewers and modals */}
-      {viewerDrawing && <DrawingViewer drawing={viewerDrawing} onClose={() => setViewerDrawing(null)} />}
+      {viewerDrawing && (
+        <DrawingViewer
+          drawing={viewerDrawing}
+          onClose={() => setViewerDrawing(null)}
+          onCreateRFI={handleCreateRFIFromAnnotation}
+        />
+      )}
+
+      {showRevisionOverlay && selectedDrawing && revisionHistory && revisionHistory.length >= 2 && (
+        <div
+          role="dialog"
+          aria-label="Revision overlay"
+          style={{ position: 'fixed', inset: 0, zIndex: 200, backgroundColor: colors.overlayBackdrop, padding: spacing.lg, overflowY: 'auto' }}
+        >
+          <div style={{ maxWidth: 1400, margin: '0 auto', backgroundColor: colors.surfacePage, borderRadius: 12, padding: spacing.md }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
+              <h2 style={{ margin: 0, color: colors.textPrimary, fontSize: 20 }}>
+                Revision Overlay — {selectedDrawing.setNumber}
+              </h2>
+              <Btn variant="secondary" size="md" onClick={() => setShowRevisionOverlay(false)} aria-label="Close revision overlay">Close</Btn>
+            </div>
+            <RevisionOverlay
+              oldRevisionUrl={revisionHistory[1]?.file_url || null}
+              newRevisionUrl={revisionHistory[0]?.file_url || null}
+              oldLabel={`Rev ${revisionHistory[1]?.revision_number ?? 'old'}`}
+              newLabel={`Rev ${revisionHistory[0]?.revision_number ?? 'new'}`}
+            />
+          </div>
+        </div>
+      )}
+
+      <AnnotationListPanel
+        open={showAnnotationPanel}
+        annotations={annotationsStore.annotations}
+        selectedId={annotationsStore.selectedAnnotationId}
+        onClose={() => setShowAnnotationPanel(false)}
+        onSelect={annotationsStore.selectAnnotation}
+        onDelete={annotationsStore.deleteAnnotation}
+        loading={annotationsStore.isLoading}
+        error={annotationsStore.error}
+      />
 
       {viewRevPdfUrl && (
         <PdfViewer

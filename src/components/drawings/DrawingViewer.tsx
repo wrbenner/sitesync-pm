@@ -28,6 +28,7 @@ interface DrawingViewerProps {
   drawing: { id?: string; setNumber: string; title: string; discipline: string; revision: string };
   onClose: () => void;
   onSave?: (json: object) => void;
+  onCreateRFI?: () => void;
   annotations?: object;
   isEditable?: boolean;
 }
@@ -101,6 +102,7 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
   onClose,
   presenceUser,
   onSave,
+  onCreateRFI,
   annotations,
   isEditable = false,
 }) => {
@@ -912,6 +914,7 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
                       canUndo={markups.length > 0 || fabricObjectCount > 0}
                       onSave={handleSaveMarkups}
                       isSaving={isSaving}
+                      onCreateRFI={onCreateRFI}
                     />
                   </div>
                 )}
@@ -925,6 +928,7 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
                   canUndo={markups.length > 0 || fabricObjectCount > 0}
                   onSave={handleSaveMarkups}
                   isSaving={isSaving}
+                  onCreateRFI={onCreateRFI}
                 />
               </div>
             )}
