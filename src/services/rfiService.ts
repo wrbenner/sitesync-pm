@@ -11,6 +11,7 @@ import {
   notFoundError,
   validationError,
 } from './errors';
+import { withRetry, withOfflineFallback, withOfflineQueue } from './connectionService';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -57,39 +58,63 @@ export type RfiServiceResult<T = void> = Result<T>;
 // ── Service ──────────────────────────────────────────────────────────────────
 
 export const rfiService = {
+  /**
+   * Load RFIs for a project. Falls back to cached data when offline or on
+   * transient network failure.
+   */
   async loadRfis(projectId: string): Promise<Result<RFI[]>> {
-    const { data, error } = await supabase
-      .from('rfis')
-      .select('*')
-      .eq('project_id', projectId)
-      .is('deleted_at', null)
-      .order('rfi_number', { ascending: false });
+    return withOfflineFallback<RFI>(
+      async () => {
+        const { data, error } = await supabase
+          .from('rfis')
+          .select('*')
+          .eq('project_id', projectId)
+          .is('deleted_at', null)
+          .order('rfi_number', { ascending: false });
 
-    if (error) return fail(dbError(error.message, { projectId }));
-    return ok((data ?? []) as RFI[]);
+        if (error) return fail(dbError(error.message, { projectId }));
+        return ok((data ?? []) as RFI[]);
+      },
+      'rfis',
+      projectId,
+    );
   },
 
+  /**
+   * Create a new RFI. Queues the mutation offline when there is no connection.
+   */
   async createRfi(input: CreateRfiInput): Promise<Result<RFI>> {
     const userId = await getCurrentUserId();
 
-    const { data, error } = await supabase.from('rfis')
-      .insert({
-        project_id: input.project_id,
-        title: input.title,
-        description: input.description ?? null,
-        status: 'draft' as RfiStatus,
-        priority: input.priority,
-        created_by: userId,
-        assigned_to: input.assigned_to ?? null,
-        due_date: input.due_date ?? null,
-        ball_in_court_id: input.assigned_to ?? null,
-        linked_drawing_id: input.linked_drawing_id ?? null,
-      })
-      .select()
-      .single();
+    const payload: Record<string, unknown> = {
+      id: crypto.randomUUID(),
+      project_id: input.project_id,
+      title: input.title,
+      description: input.description ?? null,
+      status: 'draft' as RfiStatus,
+      priority: input.priority,
+      created_by: userId,
+      assigned_to: input.assigned_to ?? null,
+      due_date: input.due_date ?? null,
+      ball_in_court_id: input.assigned_to ?? null,
+      linked_drawing_id: input.linked_drawing_id ?? null,
+    };
 
-    if (error) return fail(dbError(error.message, { project_id: input.project_id }));
-    return ok(data as RFI);
+    const onlineFn = async (): Promise<Result<RFI>> => {
+      const { data, error } = await supabase
+        .from('rfis')
+        .insert(payload)
+        .select()
+        .single();
+      if (error) return fail(dbError(error.message, { project_id: input.project_id }));
+      return ok(data as RFI);
+    };
+
+    const result = await withOfflineQueue('rfis', 'insert', payload, onlineFn as () => Promise<Result>);
+    if (result.error) return fail(result.error);
+    // When offline, return the optimistic payload as the created RFI
+    if (!result.data) return ok(payload as unknown as RFI);
+    return result as Result<RFI>;
   },
 
   /**
@@ -102,92 +127,125 @@ export const rfiService = {
     rfiId: string,
     newStatus: RfiStatus,
   ): Promise<Result> {
-    const { data: rfi, error: fetchError } = await supabase
-      .from('rfis')
-      .select('status, created_by, assigned_to, project_id')
-      .eq('id', rfiId)
-      .single();
+    return withRetry(async () => {
+      const { data: rfi, error: fetchError } = await supabase
+        .from('rfis')
+        .select('status, created_by, assigned_to, project_id')
+        .eq('id', rfiId)
+        .single();
 
-    if (fetchError || !rfi) {
-      return fail(notFoundError('RFI', rfiId));
-    }
+      if (fetchError || !rfi) {
+        return fail(notFoundError('RFI', rfiId));
+      }
 
-    const userId = await getCurrentUserId();
-    const role = await resolveProjectRole(rfi.project_id, userId);
-    if (!role) {
-      return fail(permissionError('User is not a member of this project'));
-    }
+      const userId = await getCurrentUserId();
+      const role = await resolveProjectRole(rfi.project_id, userId);
+      if (!role) {
+        return fail(permissionError('User is not a member of this project'));
+      }
 
-    const currentStatus = rfi.status as RfiStatus;
-    const validTransitions = getValidTransitions(currentStatus, role);
-    if (!validTransitions.includes(newStatus)) {
-      return fail(
-        validationError(
-          `Invalid transition: ${currentStatus} \u2192 ${newStatus} (role: ${role}). Valid: ${validTransitions.join(', ')}`,
-          { currentStatus, newStatus, role, validTransitions },
-        ),
-      );
-    }
+      const currentStatus = rfi.status as RfiStatus;
+      const validTransitions = getValidTransitions(currentStatus, role);
+      if (!validTransitions.includes(newStatus)) {
+        return fail(
+          validationError(
+            `Invalid transition: ${currentStatus} \u2192 ${newStatus} (role: ${role}). Valid: ${validTransitions.join(', ')}`,
+            { currentStatus, newStatus, role, validTransitions },
+          ),
+        );
+      }
 
-    const updates: Record<string, unknown> = {
-      status: newStatus,
-      ball_in_court: getBallInCourt(newStatus, rfi.created_by, rfi.assigned_to),
-    };
+      const updates: Record<string, unknown> = {
+        status: newStatus,
+        ball_in_court: getBallInCourt(newStatus, rfi.created_by, rfi.assigned_to),
+      };
 
-    if (newStatus === 'closed') {
-      updates.closed_date = new Date().toISOString();
-    }
+      if (newStatus === 'closed') {
+        updates.closed_date = new Date().toISOString();
+      }
 
-    const { error } = await supabase
-      .from('rfis')
-      .update(updates)
-      .eq('id', rfiId);
+      const { error } = await supabase
+        .from('rfis')
+        .update(updates)
+        .eq('id', rfiId);
 
-    if (error) return fail(dbError(error.message, { rfiId, newStatus }));
-    return { data: null, error: null };
+      if (error) return fail(dbError(error.message, { rfiId, newStatus }));
+      return { data: null, error: null };
+    });
   },
 
   /**
    * Update RFI fields (non-status). Use transitionStatus() for status changes.
+   * Queues the update offline when there is no connection.
    */
   async updateRfi(rfiId: string, updates: Partial<RFI>): Promise<Result> {
     const userId = await getCurrentUserId();
-     
     const { status: _status, ...safeUpdates } = updates as Record<string, unknown>;
+    const payload = { ...safeUpdates, id: rfiId, updated_by: userId };
 
-    const { error } = await supabase
-      .from('rfis')
-      .update({ ...safeUpdates, updated_by: userId })
-      .eq('id', rfiId);
-
-    if (error) return fail(dbError(error.message, { rfiId }));
-    return { data: null, error: null };
+    return withOfflineQueue(
+      'rfis',
+      'update',
+      payload,
+      async () => {
+        const { error } = await supabase
+          .from('rfis')
+          .update({ ...safeUpdates, updated_by: userId })
+          .eq('id', rfiId);
+        if (error) return fail(dbError(error.message, { rfiId }));
+        return { data: null, error: null };
+      },
+    );
   },
 
+  /**
+   * Soft-delete an RFI. Queues the deletion offline when there is no connection.
+   */
   async deleteRfi(rfiId: string): Promise<Result> {
     const userId = await getCurrentUserId();
+    const payload = {
+      id: rfiId,
+      deleted_at: new Date().toISOString(),
+      deleted_by: userId,
+    };
 
-    const { error } = await supabase
-      .from('rfis')
-      .update({
-        deleted_at: new Date().toISOString(),
-        deleted_by: userId,
-      })
-      .eq('id', rfiId);
-
-    if (error) return fail(dbError(error.message, { rfiId }));
-    return { data: null, error: null };
+    return withOfflineQueue(
+      'rfis',
+      'update',
+      payload,
+      async () => {
+        const { error } = await supabase
+          .from('rfis')
+          .update({
+            deleted_at: new Date().toISOString(),
+            deleted_by: userId,
+          })
+          .eq('id', rfiId);
+        if (error) return fail(dbError(error.message, { rfiId }));
+        return { data: null, error: null };
+      },
+    );
   },
 
+  /**
+   * Load RFI responses. Falls back to an empty array when offline
+   * (responses are not cached to Dexie).
+   */
   async loadResponses(rfiId: string): Promise<Result<RFIResponse[]>> {
-    const { data, error } = await supabase
-      .from('rfi_responses')
-      .select('*')
-      .eq('rfi_id', rfiId)
-      .order('created_at');
+    if (!navigator.onLine) {
+      return ok([]);
+    }
 
-    if (error) return fail(dbError(error.message, { rfiId }));
-    return ok((data ?? []) as RFIResponse[]);
+    return withRetry(async () => {
+      const { data, error } = await supabase
+        .from('rfi_responses')
+        .select('*')
+        .eq('rfi_id', rfiId)
+        .order('created_at');
+
+      if (error) return fail(dbError(error.message, { rfiId }));
+      return ok((data ?? []) as RFIResponse[]);
+    });
   },
 
   /**
