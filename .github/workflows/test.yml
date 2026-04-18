@@ -1,0 +1,54 @@
+name: Test + Audit
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  test:
+    name: Vitest + tsc + audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript check
+        run: npx tsc --noEmit
+
+      - name: Vitest run with coverage
+        run: npx vitest run --coverage --reporter=default --reporter=junit --outputFile=./vitest-junit.xml
+
+      - name: Static audit
+        run: npx tsx scripts/audit.ts
+
+      - name: Page-test drift guard
+        run: |
+          npx tsx scripts/generate-page-tests.ts
+          if [[ -n "$(git status --porcelain src/test/pages/smoke)" ]]; then
+            echo "::error::Generated smoke tests are out of date. Run: npx tsx scripts/generate-page-tests.ts"
+            git diff src/test/pages/smoke
+            exit 1
+          fi
+
+      - name: Report coverage on PR
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: davelosert/vitest-coverage-report-action@v2
+        with:
+          json-summary-path: ./coverage/coverage-summary.json
+          json-final-path: ./coverage/coverage-final.json
+        continue-on-error: true
