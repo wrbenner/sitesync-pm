@@ -20,8 +20,8 @@
 name: "Organism — Supreme Intelligence"
 
 on:
-  schedule:
-    - cron: "0 0,8,16 * * *"  # 3x/day — focused on perfecting what exists
+  # schedule:
+  #   - cron: "0 0,8,16 * * *"  # DISABLED — user requested halt, API was being burned on PRs that auto-closed
   workflow_dispatch:
     inputs:
       focus:

@@ -8,8 +8,8 @@
 name: "Production Monitor — Live App Health"
 
 on:
-  schedule:
-    - cron: "0 * * * *"  # Every hour
+  # schedule:
+  #   - cron: "0 * * * *"  # DISABLED — user requested halt
   workflow_dispatch: {}
 
 permissions:

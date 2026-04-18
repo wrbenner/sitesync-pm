@@ -20,9 +20,9 @@ on:
         required: false
         default: "10"
 
-  # Scheduled weekly run — Sunday 6 PM CDT (23:00 UTC)
-  schedule:
-    - cron: "0 23 * * 0"
+  # Scheduled weekly run — DISABLED (user requested halt)
+  # schedule:
+  #   - cron: "0 23 * * 0"
 
 jobs:
   # ─────────────────────────────────────────────────────────────────────────────
