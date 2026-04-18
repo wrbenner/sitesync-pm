@@ -27,6 +27,7 @@ vi.mock('../../lib/supabase', () => ({
 vi.mock('../../hooks/queries', () => ({
   useRFIs: () => rfisState,
   useRFI: () => ({ data: null }),
+  useProject: () => ({ data: { name: 'Test Project' } }),
 }))
 
 const mockMutateAsync = vi.fn().mockResolvedValue({})
@@ -34,6 +35,7 @@ const mockMutateAsync = vi.fn().mockResolvedValue({})
 vi.mock('../../hooks/mutations', () => ({
   useCreateRFI: () => ({ mutateAsync: mockMutateAsync }),
   useUpdateRFI: () => ({ mutateAsync: mockMutateAsync }),
+  useDeleteRFI: () => ({ mutateAsync: mockMutateAsync, isPending: false }),
   useCreateRFIResponse: () => ({ mutateAsync: mockMutateAsync, isPending: false }),
 }))
 
@@ -77,8 +79,14 @@ vi.mock('../../components/field/QuickRFIButton', () => ({
   default: () => null,
 }))
 
+// Capture onRowClick so tests can simulate table row clicks
+let capturedOnRowClick: ((row: unknown) => void) | undefined
+
 vi.mock('../../components/shared/VirtualDataTable', () => ({
-  VirtualDataTable: () => <div data-testid="rfi-data-table" />,
+  VirtualDataTable: (props: { onRowClick?: (row: unknown) => void }) => {
+    capturedOnRowClick = props.onRowClick
+    return <div data-testid="rfi-data-table" />
+  },
 }))
 
 // Capture onMoveItem so tests can trigger kanban drag-and-drop
@@ -301,6 +309,124 @@ describe('RFIs page', () => {
     fireEvent.click(screen.getByRole('button', { name: /kanban/i }))
     await waitFor(() => expect(capturedOnMoveItem).toBeDefined())
     expect(typeof capturedOnMoveItem).toBe('function')
+  })
+
+  // ── Detail panel via table row click ──────────────────────
+
+  it('clicking a table row opens the detail panel with RFI title', async () => {
+    rfisState.data = { data: [sampleRfi] }
+    capturedOnRowClick = undefined
+    render(wrap(<RFIs />))
+
+    await waitFor(() => expect(capturedOnRowClick).toBeDefined())
+
+    act(() => {
+      capturedOnRowClick!({ ...sampleRfi, rfiNumber: 'RFI-001', from: 'Architect', to: 'GC', submitDate: '2026-04-01', dueDate: '2026-05-01' })
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('Foundation detail clarification')).toBeTruthy()
+    })
+  })
+
+  it('detail panel delete button calls deleteRFI mutation after confirmation', async () => {
+    rfisState.data = { data: [sampleRfi] }
+    capturedOnRowClick = undefined
+    render(wrap(<RFIs />))
+
+    await waitFor(() => expect(capturedOnRowClick).toBeDefined())
+
+    act(() => {
+      capturedOnRowClick!({ ...sampleRfi, rfiNumber: 'RFI-001', from: 'Architect', to: 'GC', submitDate: '2026-04-01', dueDate: '2026-05-01' })
+    })
+
+    const deleteBtn = await screen.findByRole('button', { name: /delete this rfi/i })
+    expect(deleteBtn).toBeTruthy()
+
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    mockMutateAsync.mockResolvedValue({})
+
+    fireEvent.click(deleteBtn)
+
+    await waitFor(() => {
+      expect(mockMutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'rfi-1', projectId: 'test-project-id' }),
+      )
+    })
+
+    confirmSpy.mockRestore()
+  })
+
+  it('detail panel submit response calls createRFIResponse mutation', async () => {
+    rfisState.data = { data: [sampleRfi] }
+    capturedOnRowClick = undefined
+    render(wrap(<RFIs />))
+
+    await waitFor(() => expect(capturedOnRowClick).toBeDefined())
+
+    act(() => {
+      capturedOnRowClick!({ ...sampleRfi, rfiNumber: 'RFI-001', from: 'Architect', to: 'GC', submitDate: '2026-04-01', dueDate: '2026-05-01' })
+    })
+
+    const textarea = await screen.findByLabelText(/response text/i)
+    fireEvent.change(textarea, { target: { value: 'The beam depth is correct per revision.' } })
+
+    const submitBtn = screen.getByRole('button', { name: /submit response/i })
+    expect(submitBtn).not.toBeDisabled()
+    mockMutateAsync.mockResolvedValue({})
+    fireEvent.click(submitBtn)
+
+    await waitFor(() => {
+      expect(mockMutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          rfiId: 'rfi-1',
+          projectId: 'test-project-id',
+          data: expect.objectContaining({ content: 'The beam depth is correct per revision.' }),
+        }),
+      )
+    })
+  })
+
+  it('submit response button is disabled when textarea is empty', async () => {
+    rfisState.data = { data: [sampleRfi] }
+    capturedOnRowClick = undefined
+    render(wrap(<RFIs />))
+
+    await waitFor(() => expect(capturedOnRowClick).toBeDefined())
+
+    act(() => {
+      capturedOnRowClick!({ ...sampleRfi, rfiNumber: 'RFI-001', from: 'Architect', to: 'GC', submitDate: '2026-04-01', dueDate: '2026-05-01' })
+    })
+
+    await waitFor(() => screen.findByRole('button', { name: /submit response/i }))
+    expect(screen.getByRole('button', { name: /submit response/i })).toBeDisabled()
+  })
+
+  it('AI Draft RFI button opens the AI draft modal', async () => {
+    rfisState.data = { data: [sampleRfi] }
+    render(wrap(<RFIs />))
+
+    const aiDraftBtn = screen.getByRole('button', { name: /draft an rfi with ai assistance/i })
+    fireEvent.click(aiDraftBtn)
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog', { name: /ai draft rfi/i })).toBeTruthy()
+    })
+  })
+
+  it('AI Draft modal can be closed with Cancel', async () => {
+    rfisState.data = { data: [sampleRfi] }
+    render(wrap(<RFIs />))
+
+    fireEvent.click(screen.getByRole('button', { name: /draft an rfi with ai assistance/i }))
+    await waitFor(() => screen.getByRole('dialog', { name: /ai draft rfi/i }))
+
+    const cancelBtn = screen.getByRole('button', { name: /^cancel$/i })
+    fireEvent.click(cancelBtn)
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: /ai draft rfi/i })).toBeNull()
+    })
   })
 })
 

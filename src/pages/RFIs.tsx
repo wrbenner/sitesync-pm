@@ -13,7 +13,7 @@ import { AlertTriangle, FileQuestion, FilterX, Plus, Clock, MessageSquare, Calen
 import { useAppNavigate, getRelatedItemsForRfi } from '../utils/connections';
 import { useCreateRFI, useUpdateRFI, useDeleteRFI, useCreateRFIResponse } from '../hooks/mutations';
 import { useProjectId } from '../hooks/useProjectId';
-import { useNavigate } from 'react-router-dom';
+
 import { useCopilotStore } from '../stores/copilotStore';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { PermissionGate } from '../components/auth/PermissionGate';
@@ -213,7 +213,6 @@ const RFIsPage: React.FC = () => {
   }, [statusFilter, rfis]);
 
   const appNavigate = useAppNavigate();
-  const navigate = useNavigate();
   const createRFI = useCreateRFI();
   const updateRFI = useUpdateRFI();
   const deleteRFI = useDeleteRFI();
@@ -742,7 +741,7 @@ const RFIsPage: React.FC = () => {
               columns={allRfiColumns}
               rowHeight={48}
               containerHeight={600}
-              onRowClick={(rfi) => navigate(`/projects/${projectId}/rfis/${rfi.id}`)}
+              onRowClick={(rfi) => setSelectedRfi(rfi)}
               selectedRowId={null}
               getRowId={(row) => String(row.id)}
               getRowAriaLabel={(rfi) => `RFI ${rfi.rfiNumber}: ${rfi.title}, status ${rfi.status}`}
