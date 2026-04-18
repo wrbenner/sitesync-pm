@@ -67,6 +67,66 @@ const ContactFormModal: React.FC<ContactFormModalProps> = ({ projectId, onClose,
   );
 };
 
+interface CompanyFormModalProps {
+  projectId: string;
+  onClose: () => void;
+}
+
+const CompanyFormModal: React.FC<CompanyFormModalProps> = ({ projectId, onClose }) => {
+  const qc = useQueryClient();
+  const [form, setForm] = useState({
+    name: '',
+    trade: '',
+    insurance_status: 'missing' as 'current' | 'expiring' | 'expired' | 'missing',
+    insurance_expiry: '',
+  });
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const submit = async () => {
+    if (!form.name.trim()) { setErr('Company name required'); return; }
+    setSaving(true); setErr(null);
+    try {
+      const { error } = await supabase.from('companies').insert({
+        project_id: projectId,
+        name: form.name.trim(),
+        trade: form.trade.trim() || null,
+        insurance_status: form.insurance_status,
+        insurance_expiry: form.insurance_expiry || null,
+      });
+      if (error) throw error;
+      toast.success('Company added');
+      qc.invalidateQueries({ queryKey: ['companies'] });
+      onClose();
+    } catch (e) { setErr(e instanceof Error ? e.message : 'Failed'); } finally { setSaving(false); }
+  };
+  const input: React.CSSProperties = { width: '100%', padding: '8px 12px', border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base, marginBottom: spacing['3'], fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box' };
+  return (
+    <div role="dialog" aria-modal="true" style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.45)' }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{ backgroundColor: '#fff', borderRadius: borderRadius.lg, padding: spacing['6'], width: '100%', maxWidth: 480 }}>
+        <h2 style={{ margin: 0, marginBottom: spacing['4'], fontSize: 18 }}>Add Company</h2>
+        <label style={{ fontSize: 13, fontWeight: 500 }}>Company Name *</label>
+        <input style={input} value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} />
+        <label style={{ fontSize: 13, fontWeight: 500 }}>Trade</label>
+        <input style={input} value={form.trade} onChange={e => setForm(p => ({ ...p, trade: e.target.value }))} />
+        <label style={{ fontSize: 13, fontWeight: 500 }}>Insurance Status</label>
+        <select style={{ ...input, appearance: 'auto' }} value={form.insurance_status} onChange={e => setForm(p => ({ ...p, insurance_status: e.target.value as typeof form.insurance_status }))}>
+          <option value="current">Current</option>
+          <option value="expiring">Expiring Soon</option>
+          <option value="expired">Expired</option>
+          <option value="missing">Not on File</option>
+        </select>
+        <label style={{ fontSize: 13, fontWeight: 500 }}>Insurance Expiry Date</label>
+        <input type="date" style={input} value={form.insurance_expiry} onChange={e => setForm(p => ({ ...p, insurance_expiry: e.target.value }))} />
+        {err && <p style={{ color: colors.statusCritical, margin: 0, fontSize: 12 }}>{err}</p>}
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: spacing['3'] }}>
+          <Btn variant="ghost" onClick={onClose}>Cancel</Btn>
+          <Btn variant="primary" onClick={submit} disabled={saving}>{saving ? 'Saving...' : 'Add Company'}</Btn>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface Contact {
@@ -249,6 +309,7 @@ export const Directory: React.FC = () => {
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
+  const [showAddCompany, setShowAddCompany] = useState(false);
   const [editing, setEditing] = useState<Contact | null>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -301,7 +362,11 @@ export const Directory: React.FC = () => {
       actions={
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
           <ViewToggle view={view} onChange={setView} />
-          <PermissionGate permission="directory.manage" fallback={<span title="Your role doesn't allow adding contacts. Request access from your admin."><Btn icon={<Plus size={14} />} disabled>Add Contact</Btn></span>}><Btn icon={<Plus size={14} />} onClick={() => setShowAdd(true)}>Add Contact</Btn></PermissionGate>
+          {view === 'companies' ? (
+            <PermissionGate permission="directory.manage" fallback={<span title="Your role doesn't allow adding companies. Request access from your admin."><Btn icon={<Plus size={14} />} disabled>Add Company</Btn></span>}><Btn icon={<Plus size={14} />} onClick={() => setShowAddCompany(true)}>Add Company</Btn></PermissionGate>
+          ) : (
+            <PermissionGate permission="directory.manage" fallback={<span title="Your role doesn't allow adding contacts. Request access from your admin."><Btn icon={<Plus size={14} />} disabled>Add Contact</Btn></span>}><Btn icon={<Plus size={14} />} onClick={() => setShowAdd(true)}>Add Contact</Btn></PermissionGate>
+          )}
         </div>
       }
     >
@@ -589,6 +654,7 @@ export const Directory: React.FC = () => {
       </Drawer>
       {showAdd && projectId && <ContactFormModal projectId={projectId} onClose={() => setShowAdd(false)} />}
       {editing && projectId && <ContactFormModal projectId={projectId} onClose={() => setEditing(null)} initial={editing} />}
+      {showAddCompany && projectId && <CompanyFormModal projectId={projectId} onClose={() => setShowAddCompany(false)} />}
     </PageContainer>
   );
 };
