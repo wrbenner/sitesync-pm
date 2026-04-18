@@ -4562,11 +4562,13 @@ export type Database = {
           drawing_reference: string | null
           due_date: string | null
           id: string
+          is_auto_generated: boolean | null
           number: number
           priority: string | null
           project_id: string
           response_due_date: string | null
           schedule_impact: string | null
+          source_discrepancy_id: string | null
           spec_section: string | null
           status: string | null
           title: string
@@ -4583,11 +4585,13 @@ export type Database = {
           drawing_reference?: string | null
           due_date?: string | null
           id?: string
+          is_auto_generated?: boolean | null
           number?: number
           priority?: string | null
           project_id: string
           response_due_date?: string | null
           schedule_impact?: string | null
+          source_discrepancy_id?: string | null
           spec_section?: string | null
           status?: string | null
           title: string
@@ -4604,11 +4608,13 @@ export type Database = {
           drawing_reference?: string | null
           due_date?: string | null
           id?: string
+          is_auto_generated?: boolean | null
           number?: number
           priority?: string | null
           project_id?: string
           response_due_date?: string | null
           schedule_impact?: string | null
+          source_discrepancy_id?: string | null
           spec_section?: string | null
           status?: string | null
           title?: string

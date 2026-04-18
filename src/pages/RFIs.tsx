@@ -286,6 +286,12 @@ const RFIsPage: React.FC = () => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, fontWeight: typography.fontWeight.medium, lineHeight: typography.lineHeight.snug }}>
               {info.getValue()}
+              {rfi.is_auto_generated && (
+                <span title="Auto-generated from drawing discrepancy" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, marginLeft: spacing['2'], padding: '1px 6px', backgroundColor: `${colors.primaryOrange}15`, color: colors.primaryOrange, borderRadius: borderRadius.full, fontSize: 10, fontWeight: typography.fontWeight.semibold, verticalAlign: 'middle', letterSpacing: 0.3 }}>
+                  <Sparkles size={10} color={colors.primaryOrange} />
+                  AUTO
+                </span>
+              )}
               {(rfi.ai_generated || getAnnotationsForEntity('rfi', rfi.id).length > 0) && (
                 <span title={rfi.ai_generated ? 'AI assisted' : (getAnnotationsForEntity('rfi', rfi.id)[0]?.insight || 'AI assisted')} style={{ display: 'inline-flex', alignItems: 'center', gap: 2, marginLeft: spacing['2'], padding: '1px 5px', backgroundColor: `${colors.statusReview}10`, borderRadius: borderRadius.full, verticalAlign: 'middle' }}>
                   <Sparkles size={10} color="#8B5CF6" />
@@ -745,6 +751,12 @@ const RFIsPage: React.FC = () => {
                 <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.orangeText }}>{rfi.rfiNumber}</span>
                 <PriorityTag priority={rfi.priority} />
                 <BicBadge party={deriveBic(rfi)} />
+                {rfi.is_auto_generated && (
+                  <span title="Auto-generated from drawing discrepancy" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '1px 6px', backgroundColor: `${colors.primaryOrange}15`, color: colors.primaryOrange, borderRadius: borderRadius.full, fontSize: 10, fontWeight: typography.fontWeight.semibold, letterSpacing: 0.3 }}>
+                    <Sparkles size={10} color={colors.primaryOrange} />
+                    AUTO
+                  </span>
+                )}
               </div>
               <p style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>{rfi.title}</p>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

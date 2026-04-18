@@ -206,6 +206,68 @@ export interface RevisionDiffResult {
   notes: string
 }
 
+// ── Phase 3: Drawing Intelligence Engine ────────────────────
+
+export type DrawingPairStatus =
+  | 'pending'
+  | 'detecting_edges'
+  | 'edges_detected'
+  | 'analyzing'
+  | 'completed'
+  | 'failed'
+
+export interface DetectedEdge {
+  x: number
+  y: number
+  w: number
+  h: number
+  confidence?: number
+  label?: string | null
+}
+
+export interface DetectedEdges {
+  arch: DetectedEdge[]
+  struct: DetectedEdge[]
+}
+
+export interface DrawingPair {
+  id: string
+  project_id: string
+  arch_drawing_id: string | null
+  struct_drawing_id: string | null
+  arch_page_number: number | null
+  struct_page_number: number | null
+  arch_classification_id: string | null
+  struct_classification_id: string | null
+  pairing_confidence: number | null
+  pairing_method: string
+  pairing_reason: string | null
+  status: DrawingPairStatus
+  overlap_image_url: string | null
+  detected_edges: DetectedEdges | null
+  discrepancies: unknown
+  created_at: string
+  updated_at: string
+}
+
+export type DiscrepancySeverity = 'high' | 'medium' | 'low'
+
+export interface DrawingDiscrepancy {
+  id: string
+  pair_id: string | null
+  project_id: string
+  description: string
+  arch_dimension: string | null
+  struct_dimension: string | null
+  location_on_drawing: { x?: number; y?: number; w?: number; h?: number } | null
+  severity: DiscrepancySeverity | null
+  confidence: number | null
+  auto_rfi_id: string | null
+  user_confirmed: boolean
+  is_false_positive: boolean
+  created_at: string
+}
+
 export type GenerativeUIBlock =
   | { type: 'metric_cards'; data: Array<{ label: string; value: string | number; trend?: 'up' | 'down' }> }
   | { type: 'data_table'; columns: string[]; rows: Array<Record<string, unknown>> }

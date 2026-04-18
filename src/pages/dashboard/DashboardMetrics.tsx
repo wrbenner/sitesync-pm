@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import {
   Calendar, DollarSign, HelpCircle, Shield, Users,
   TrendingUp, TrendingDown, ArrowRight,
-  ClipboardList,
+  ClipboardList, AlertTriangle,
 } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, shadows, focusRing } from '../../styles/theme';
 import { duration, easing, easingArray } from '../../styles/animations';
@@ -154,6 +154,13 @@ ProgressRing.displayName = 'ProgressRing';
 
 // ── Metric Strip ────────────────────────────────────────
 
+interface DiscrepancyData {
+  total: number;
+  high: number;
+  medium: number;
+  low: number;
+}
+
 interface DashboardMetricsProps {
   scheduleHealth: ScheduleHealth;
   budgetData: BudgetData;
@@ -163,6 +170,7 @@ interface DashboardMetricsProps {
   animSafety: number;
   animFieldActivity: number;
   punchData: PunchData;
+  discrepancyData?: DiscrepancyData;
   metrics: ProjectMetrics | undefined;
   reducedMotion: boolean;
   navigate: (path: string) => void;
@@ -177,6 +185,7 @@ export const DashboardMetrics: React.FC<DashboardMetricsProps> = ({
   animSafety,
   animFieldActivity,
   punchData,
+  discrepancyData,
   metrics,
   reducedMotion,
   navigate,
@@ -253,6 +262,26 @@ export const DashboardMetrics: React.FC<DashboardMetricsProps> = ({
         trendLabel="completion rate"
         onClick={() => navigate('/punch-list')}
       />
+      {discrepancyData && discrepancyData.total > 0 && (
+        <MetricCard
+          icon={<AlertTriangle size={20} />}
+          label="Drawing Discrepancies"
+          value={String(discrepancyData.total)}
+          sub={
+            discrepancyData.high > 0
+              ? `${discrepancyData.high} high • ${discrepancyData.medium} med • ${discrepancyData.low} low`
+              : `${discrepancyData.medium} med • ${discrepancyData.low} low`
+          }
+          color={
+            discrepancyData.high > 0
+              ? colors.statusCritical
+              : discrepancyData.medium > 0
+                ? colors.statusPending
+                : colors.statusActive
+          }
+          onClick={() => navigate('/drawings')}
+        />
+      )}
     </motion.div>
   );
 };

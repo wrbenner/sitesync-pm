@@ -14,6 +14,7 @@ import {
   useAiInsightsMeta, useSchedulePhases,
 } from '../../hooks/queries';
 import { useProjectMetrics } from '../../hooks/useProjectMetrics';
+import { useProjectDiscrepancies } from '../../hooks/useDrawingIntelligence';
 import { useAnimatedNumber } from '../../hooks/useAnimatedNumber';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { DashboardGrid } from '../../components/dashboard/DashboardGrid';
@@ -143,6 +144,7 @@ const DashboardInner: React.FC = () => {
   const { data: matViewMetrics } = useProjectMetrics(projectId);
   const { data: payApps } = usePayApplications(projectId);
   const { data: lienWaivers } = useLienWaivers(projectId);
+  const { data: discrepancies = [] } = useProjectDiscrepancies(projectId);
 
   // Fallback: live counts when materialized view has no data for this project
   const { data: liveMetrics } = useLiveMetricsFallback(projectId, !!matViewMetrics);
@@ -284,6 +286,14 @@ const DashboardInner: React.FC = () => {
     open: metrics?.rfis_open ?? 0,
     overdue: metrics?.rfis_overdue ?? 0,
   }), [metrics?.rfis_open, metrics?.rfis_overdue]);
+
+  const discrepancyData = useMemo(() => {
+    const active = discrepancies.filter((d) => !d.is_false_positive);
+    const high = active.filter((d) => d.severity === 'high').length;
+    const medium = active.filter((d) => d.severity === 'medium').length;
+    const low = active.filter((d) => d.severity === 'low').length;
+    return { total: active.length, high, medium, low };
+  }, [discrepancies]);
 
   const safetyScore = useMemo(() => {
     const incidents = metrics?.safety_incidents_this_month ?? 0;
@@ -469,6 +479,7 @@ const DashboardInner: React.FC = () => {
         animSafety={animSafety}
         animFieldActivity={animFieldActivity}
         punchData={punchData}
+        discrepancyData={discrepancyData}
         metrics={metrics}
         reducedMotion={reducedMotion}
         navigate={navigate}

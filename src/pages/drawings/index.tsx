@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
-import { Upload, Sparkles } from 'lucide-react';
+import { Upload, Sparkles, ScanSearch } from 'lucide-react';
 import { aiService } from '../../lib/aiService';
 import type { DrawingAnalysis } from '../../types/ai';
 import type { DrawingRevision } from '../../types/api';
@@ -24,6 +24,12 @@ import { RevisionOverlay } from '../../components/drawings/RevisionOverlay';
 import { AnnotationListPanel } from '../../components/drawings/AnnotationListPanel';
 import { useAIAnnotationStore } from '../../stores';
 import { useDrawingProcessing } from '../../hooks/useDrawingProcessing';
+import {
+  useDrawingIntelligence,
+  useDiscrepanciesForDrawing,
+} from '../../hooks/useDrawingIntelligence';
+import { ClashDetectionPanel } from '../../components/drawings/ClashDetectionPanel';
+import { AnalysisProgress } from '../../components/drawings/AnalysisProgress';
 import type { DrawingClassification, DrawingDiscipline } from '../../types/ai';
 
 interface DrawingItem {
@@ -240,6 +246,30 @@ const DrawingsPage: React.FC = () => {
   // ── AI classification pipeline ─────────────────────────────
   const processing = useDrawingProcessing(projectId);
   const classifyMutation = processing.classify;
+
+  // ── Drawing intelligence (Phase 3: clash detection) ───────
+  const intelligence = useDrawingIntelligence(projectId ?? undefined);
+  const { data: drawingDiscrepancies = [], isLoading: discrepanciesLoading } =
+    useDiscrepanciesForDrawing(
+      selectedDrawing ? String(selectedDrawing.id) : undefined,
+      projectId ?? undefined,
+    );
+  const [showAnalysisPanel, setShowAnalysisPanel] = useState(false);
+
+  const handleAnalyzeDrawingSet = useCallback(async () => {
+    if (!projectId) return;
+    setShowAnalysisPanel(true);
+    try {
+      await intelligence.analyzeDrawingSet();
+      addToast('success', `Analysis complete — ${intelligence.state.discrepancyCount} discrepancies detected`);
+    } catch {
+      addToast('error', 'Drawing analysis failed.');
+    }
+  }, [projectId, intelligence, addToast]);
+
+  const handleCreateRFIFromDiscrepancy = useCallback(() => {
+    addToast('info', 'A draft RFI will be created from this discrepancy. Open RFIs to edit.');
+  }, [addToast]);
 
   const triggerClassification = useCallback(
     async (drawingId: string, pageImageUrl: string) => {
@@ -505,6 +535,18 @@ const DrawingsPage: React.FC = () => {
             AI Insights
           </Btn>
           <PermissionGate permission="drawings.upload">
+            <Btn
+              variant="secondary"
+              size="md"
+              icon={<ScanSearch size={16} />}
+              aria-label="Analyze drawing set for clashes"
+              disabled={intelligence.state.stage !== 'idle' && intelligence.state.stage !== 'complete' && intelligence.state.stage !== 'failed'}
+              onClick={handleAnalyzeDrawingSet}
+            >
+              Analyze Drawing Set
+            </Btn>
+          </PermissionGate>
+          <PermissionGate permission="drawings.upload">
             <Btn variant="primary" size="md" icon={<Upload size={16} />} aria-label="Upload new drawing" onClick={() => setShowUploadModal(true)}>
               Upload Drawings
             </Btn>
@@ -577,12 +619,21 @@ const DrawingsPage: React.FC = () => {
           />
 
           {selectedDrawing && (
-            <div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.md }}>
               <ClassificationBadge
                 classification={processing.byDrawing(String(selectedDrawing.id))}
                 status={processing.statusByDrawing(String(selectedDrawing.id))}
                 classifying={classifyMutation.isPending}
               />
+              {projectId && drawingDiscrepancies.length > 0 && (
+                <ClashDetectionPanel
+                  projectId={projectId}
+                  drawingId={String(selectedDrawing.id)}
+                  discrepancies={drawingDiscrepancies}
+                  loading={discrepanciesLoading}
+                  onCreateRFI={handleCreateRFIFromDiscrepancy}
+                />
+              )}
               <DrawingDetail
               drawing={selectedDrawing}
               revisionHistory={revisionHistory}
@@ -716,6 +767,14 @@ const DrawingsPage: React.FC = () => {
           isRevUploading={isRevUploading}
           onClose={() => setShowRevUploadModal(false)}
           onUpload={handleUploadRevision}
+        />
+      )}
+
+      {showAnalysisPanel && intelligence.state.stage !== 'idle' && (
+        <AnalysisProgress
+          state={intelligence.state}
+          floating
+          onClose={() => setShowAnalysisPanel(false)}
         />
       )}
 
