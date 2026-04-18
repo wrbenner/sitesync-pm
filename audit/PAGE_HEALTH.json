@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-18T19:10:34.903Z",
+  "generatedAt": "2026-04-18T19:18:49.506Z",
   "totalRoutes": 55,
   "passingRoutes": 55,
   "averageScore": 100,
@@ -55,7 +55,13 @@
         "updatePresent": false,
         "deletePresent": false
       },
-      "findings": [],
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
       "score": 100
     },
     {
@@ -82,7 +88,13 @@
         "updatePresent": true,
         "deletePresent": true
       },
-      "findings": [],
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
       "score": 100
     },
     {
@@ -143,7 +155,13 @@
         "updatePresent": false,
         "deletePresent": false
       },
-      "findings": [],
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
       "score": 100
     },
     {
@@ -180,7 +198,13 @@
         "updatePresent": true,
         "deletePresent": true
       },
-      "findings": [],
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
       "score": 100
     },
     {
@@ -220,7 +244,13 @@
         "updatePresent": true,
         "deletePresent": true
       },
-      "findings": [],
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
       "score": 100
     },
     {
@@ -296,7 +326,13 @@
         "updatePresent": true,
         "deletePresent": true
       },
-      "findings": [],
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
       "score": 100
     },
     {
@@ -376,7 +412,13 @@
         "updatePresent": true,
         "deletePresent": true
       },
-      "findings": [],
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "1 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
       "score": 100
     },
     {
@@ -412,7 +454,13 @@
         "updatePresent": true,
         "deletePresent": true
       },
-      "findings": [],
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
       "score": 100
     },
     {
@@ -448,7 +496,13 @@
         "updatePresent": true,
         "deletePresent": true
       },
-      "findings": [],
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
       "score": 100
     },
     {
@@ -484,7 +538,13 @@
         "updatePresent": true,
         "deletePresent": true
       },
-      "findings": [],
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
       "score": 100
     },
     {
@@ -543,7 +603,13 @@
         "updatePresent": false,
         "deletePresent": false
       },
-      "findings": [],
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
       "score": 100
     },
     {
@@ -578,7 +644,13 @@
         "updatePresent": false,
         "deletePresent": true
       },
-      "findings": [],
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
       "score": 100
     },
     {
@@ -603,7 +675,13 @@
         "updatePresent": false,
         "deletePresent": false
       },
-      "findings": [],
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
       "score": 100
     },
     {
@@ -628,7 +706,13 @@
         "updatePresent": false,
         "deletePresent": false
       },
-      "findings": [],
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
       "score": 100
     },
     {
@@ -766,7 +850,13 @@
         "updatePresent": false,
         "deletePresent": false
       },
-      "findings": [],
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
       "score": 100
     },
     {
@@ -789,7 +879,13 @@
         "updatePresent": false,
         "deletePresent": false
       },
-      "findings": [],
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
       "score": 100
     },
     {
@@ -812,7 +908,13 @@
         "updatePresent": false,
         "deletePresent": false
       },
-      "findings": [],
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
       "score": 100
     },
     {
@@ -835,7 +937,13 @@
         "updatePresent": false,
         "deletePresent": false
       },
-      "findings": [],
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
       "score": 100
     },
     {
@@ -860,7 +968,13 @@
         "updatePresent": false,
         "deletePresent": false
       },
-      "findings": [],
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
       "score": 100
     },
     {
@@ -885,7 +999,13 @@
         "updatePresent": false,
         "deletePresent": false
       },
-      "findings": [],
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
       "score": 100
     },
     {
@@ -919,7 +1039,13 @@
         "updatePresent": true,
         "deletePresent": true
       },
-      "findings": [],
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
       "score": 100
     },
     {
@@ -951,7 +1077,13 @@
         "updatePresent": true,
         "deletePresent": true
       },
-      "findings": [],
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
       "score": 100
     },
     {
@@ -983,7 +1115,13 @@
         "updatePresent": true,
         "deletePresent": true
       },
-      "findings": [],
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
       "score": 100
     },
     {
@@ -1008,7 +1146,13 @@
         "updatePresent": false,
         "deletePresent": false
       },
-      "findings": [],
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
       "score": 100
     },
     {
@@ -1033,7 +1177,13 @@
         "updatePresent": false,
         "deletePresent": false
       },
-      "findings": [],
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
       "score": 100
     },
     {
@@ -1056,7 +1206,13 @@
         "updatePresent": false,
         "deletePresent": false
       },
-      "findings": [],
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
       "score": 100
     },
     {
@@ -1133,7 +1289,13 @@
         "updatePresent": false,
         "deletePresent": false
       },
-      "findings": [],
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
       "score": 100
     },
     {
@@ -1158,7 +1320,13 @@
         "updatePresent": false,
         "deletePresent": false
       },
-      "findings": [],
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
       "score": 100
     },
     {
@@ -1181,7 +1349,13 @@
         "updatePresent": false,
         "deletePresent": false
       },
-      "findings": [],
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
       "score": 100
     },
     {
@@ -1199,7 +1373,13 @@
         "updatePresent": false,
         "deletePresent": false
       },
-      "findings": [],
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
       "score": 100
     },
     {
@@ -1218,7 +1398,13 @@
         "updatePresent": false,
         "deletePresent": false
       },
-      "findings": [],
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
       "score": 100
     },
     {
@@ -1241,7 +1427,13 @@
         "updatePresent": false,
         "deletePresent": false
       },
-      "findings": [],
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
       "score": 100
     },
     {
@@ -1266,7 +1458,13 @@
         "updatePresent": false,
         "deletePresent": false
       },
-      "findings": [],
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
       "score": 100
     },
     {
@@ -1293,7 +1491,13 @@
         "updatePresent": false,
         "deletePresent": false
       },
-      "findings": [],
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
       "score": 100
     },
     {
@@ -1316,7 +1520,13 @@
         "updatePresent": false,
         "deletePresent": false
       },
-      "findings": [],
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
       "score": 100
     },
     {
@@ -1341,7 +1551,13 @@
         "updatePresent": false,
         "deletePresent": false
       },
-      "findings": [],
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
       "score": 100
     },
     {
@@ -1366,7 +1582,13 @@
         "updatePresent": false,
         "deletePresent": false
       },
-      "findings": [],
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
       "score": 100
     },
     {
@@ -1391,7 +1613,13 @@
         "updatePresent": false,
         "deletePresent": false
       },
-      "findings": [],
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
       "score": 100
     },
     {
@@ -1410,7 +1638,13 @@
         "updatePresent": false,
         "deletePresent": false
       },
-      "findings": [],
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
       "score": 100
     },
     {
@@ -1429,7 +1663,13 @@
         "updatePresent": false,
         "deletePresent": false
       },
-      "findings": [],
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
       "score": 100
     },
     {
