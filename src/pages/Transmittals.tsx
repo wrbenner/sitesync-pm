@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Send, Plus, FileText } from 'lucide-react'
+import { Send, Plus } from 'lucide-react'
 import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton, Modal, InputField, EmptyState } from '../components/Primitives'
 import { DataTable, createColumnHelper } from '../components/shared/DataTable'
 import { colors, spacing, typography, borderRadius } from '../styles/theme'
