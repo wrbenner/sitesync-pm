@@ -29,8 +29,9 @@ const SubmittalsPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
-  const hasActiveFilters = statusFilter !== null;
-  const clearFilters = () => setStatusFilter(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const hasActiveFilters = statusFilter !== null || searchQuery.trim() !== '';
+  const clearFilters = () => { setStatusFilter(null); setSearchQuery(''); };
   const navigate = useNavigate();
   const projectId = useProjectId();
   const createSubmittal = useCreateSubmittal();
@@ -90,10 +91,25 @@ const SubmittalsPage: React.FC = () => {
   ];
 
   const filteredSubmittals = useMemo(() => {
-    if (!statusFilter) return allSubmittals;
-    if (statusFilter === 'in_review') return allSubmittals.filter((s) => s.status === 'submitted' || s.status === 'review_in_progress' || s.status === 'under_review');
-    return allSubmittals.filter((s) => s.status === statusFilter);
-  }, [allSubmittals, statusFilter]);
+    let rows = allSubmittals;
+    if (statusFilter === 'in_review') {
+      rows = rows.filter((s) => s.status === 'submitted' || s.status === 'review_in_progress' || s.status === 'under_review');
+    } else if (statusFilter) {
+      rows = rows.filter((s) => s.status === statusFilter);
+    }
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      rows = rows.filter((s) => {
+        const rec = s as Record<string, unknown>;
+        return (
+          String(rec.title ?? '').toLowerCase().includes(q) ||
+          String(rec.submittal_number ?? '').toLowerCase().includes(q) ||
+          String(rec.spec_section ?? '').toLowerCase().includes(q)
+        );
+      });
+    }
+    return rows;
+  }, [allSubmittals, statusFilter, searchQuery]);
 
   const selected = allSubmittals.find((s) => s.id === selectedId) || null;
 
@@ -320,6 +336,27 @@ const SubmittalsPage: React.FC = () => {
             <div style={{ fontSize: '1.75rem', fontWeight: typography.fontWeight.bold, color, lineHeight: 1 }}>{value}</div>
           </div>
         ))}
+      </div>
+
+      {/* Search */}
+      <div style={{ marginBottom: spacing['3'] }}>
+        <input
+          type="search"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search submittals by title, number, or spec section…"
+          aria-label="Search submittals"
+          data-testid="search-submittals"
+          style={{
+            width: '100%',
+            maxWidth: 480,
+            padding: `${spacing['2']} ${spacing['3']}`,
+            border: `1px solid ${colors.borderDefault}`,
+            borderRadius: borderRadius.md,
+            fontSize: typography.fontSize.sm,
+            fontFamily: typography.fontFamily,
+          }}
+        />
       </div>
 
       {/* Status Filter Tabs */}

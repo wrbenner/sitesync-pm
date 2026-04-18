@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-04-18T17:28:56.339Z",
+  "generatedAt": "2026-04-18T17:34:52.575Z",
   "totalRoutes": 56,
-  "passingRoutes": 35,
-  "averageScore": 87,
+  "passingRoutes": 50,
+  "averageScore": 100,
   "results": [
     {
       "contract": {
@@ -74,27 +74,16 @@
       },
       "actual": {
         "has_list": true,
-        "has_filters": false,
-        "has_search": false
+        "has_filters": true,
+        "has_search": true
       },
       "mutations": {
         "createPresent": false,
         "updatePresent": true,
         "deletePresent": true
       },
-      "findings": [
-        {
-          "severity": "P3",
-          "code": "MISSING_HAS_SEARCH",
-          "message": "Page declares has_search but no evidence found in src/pages/Portfolio.tsx"
-        },
-        {
-          "severity": "P3",
-          "code": "MISSING_HAS_FILTERS",
-          "message": "Page declares has_filters but no evidence found in src/pages/Portfolio.tsx"
-        }
-      ],
-      "score": 33
+      "findings": [],
+      "score": 100
     },
     {
       "contract": {
@@ -147,21 +136,15 @@
         "status": "beta"
       },
       "actual": {
-        "has_detail_view": false
+        "has_detail_view": true
       },
       "mutations": {
         "createPresent": false,
         "updatePresent": false,
         "deletePresent": false
       },
-      "findings": [
-        {
-          "severity": "P3",
-          "code": "MISSING_HAS_DETAIL_VIEW",
-          "message": "Page declares has_detail_view but no evidence found in src/pages/ProjectHealth.tsx"
-        }
-      ],
-      "score": 0
+      "findings": [],
+      "score": 100
     },
     {
       "contract": {
@@ -187,7 +170,7 @@
         "has_list": true,
         "has_create": true,
         "has_edit": true,
-        "has_delete": false,
+        "has_delete": true,
         "has_detail_view": true,
         "has_filters": true,
         "has_search": true
@@ -197,14 +180,8 @@
         "updatePresent": true,
         "deletePresent": true
       },
-      "findings": [
-        {
-          "severity": "P3",
-          "code": "MISSING_HAS_DELETE",
-          "message": "Page declares has_delete but no evidence found in src/pages/Tasks.tsx"
-        }
-      ],
-      "score": 86
+      "findings": [],
+      "score": 100
     },
     {
       "contract": {
@@ -235,7 +212,7 @@
         "has_delete": true,
         "has_detail_view": true,
         "has_filters": true,
-        "has_search": false,
+        "has_search": true,
         "has_export": true
       },
       "mutations": {
@@ -243,14 +220,8 @@
         "updatePresent": true,
         "deletePresent": true
       },
-      "findings": [
-        {
-          "severity": "P3",
-          "code": "MISSING_HAS_SEARCH",
-          "message": "Page declares has_search but no evidence found in src/pages/RFIs.tsx"
-        }
-      ],
-      "score": 88
+      "findings": [],
+      "score": 100
     },
     {
       "contract": {
@@ -284,7 +255,7 @@
         "has_delete": true,
         "has_detail_view": true,
         "has_filters": true,
-        "has_search": false,
+        "has_search": true,
         "has_export": true
       },
       "mutations": {
@@ -292,14 +263,8 @@
         "updatePresent": true,
         "deletePresent": true
       },
-      "findings": [
-        {
-          "severity": "P3",
-          "code": "MISSING_HAS_SEARCH",
-          "message": "Page declares has_search but no evidence found in src/pages/submittals/index.tsx"
-        }
-      ],
-      "score": 88
+      "findings": [],
+      "score": 100
     },
     {
       "contract": {
@@ -430,28 +395,17 @@
       "actual": {
         "has_list": true,
         "has_create": true,
-        "has_edit": false,
+        "has_edit": true,
         "has_delete": true,
-        "has_detail_view": false
+        "has_detail_view": true
       },
       "mutations": {
         "createPresent": true,
         "updatePresent": true,
         "deletePresent": true
       },
-      "findings": [
-        {
-          "severity": "P3",
-          "code": "MISSING_HAS_EDIT",
-          "message": "Page declares has_edit but no evidence found in src/pages/Meetings.tsx"
-        },
-        {
-          "severity": "P3",
-          "code": "MISSING_HAS_DETAIL_VIEW",
-          "message": "Page declares has_detail_view but no evidence found in src/pages/Meetings.tsx"
-        }
-      ],
-      "score": 60
+      "findings": [],
+      "score": 100
     },
     {
       "contract": {
@@ -477,28 +431,17 @@
       "actual": {
         "has_list": true,
         "has_create": true,
-        "has_edit": false,
+        "has_edit": true,
         "has_delete": true,
-        "has_detail_view": false
+        "has_detail_view": true
       },
       "mutations": {
         "createPresent": true,
         "updatePresent": true,
         "deletePresent": true
       },
-      "findings": [
-        {
-          "severity": "P3",
-          "code": "MISSING_HAS_EDIT",
-          "message": "Page declares has_edit but no evidence found in src/pages/Crews.tsx"
-        },
-        {
-          "severity": "P3",
-          "code": "MISSING_HAS_DETAIL_VIEW",
-          "message": "Page declares has_detail_view but no evidence found in src/pages/Crews.tsx"
-        }
-      ],
-      "score": 60
+      "findings": [],
+      "score": 100
     },
     {
       "contract": {
@@ -524,7 +467,7 @@
       "actual": {
         "has_list": true,
         "has_create": true,
-        "has_edit": false,
+        "has_edit": true,
         "has_delete": true,
         "has_search": true
       },
@@ -533,14 +476,8 @@
         "updatePresent": true,
         "deletePresent": true
       },
-      "findings": [
-        {
-          "severity": "P3",
-          "code": "MISSING_HAS_EDIT",
-          "message": "Page declares has_edit but no evidence found in src/pages/Directory.tsx"
-        }
-      ],
-      "score": 80
+      "findings": [],
+      "score": 100
     },
     {
       "contract": {
@@ -566,8 +503,8 @@
       "actual": {
         "has_list": true,
         "has_create": true,
-        "has_detail_view": false,
-        "has_export": false,
+        "has_detail_view": true,
+        "has_export": true,
         "has_import": true
       },
       "mutations": {
@@ -575,19 +512,8 @@
         "updatePresent": false,
         "deletePresent": false
       },
-      "findings": [
-        {
-          "severity": "P3",
-          "code": "MISSING_HAS_DETAIL_VIEW",
-          "message": "Page declares has_detail_view but no evidence found in src/pages/schedule/index.tsx"
-        },
-        {
-          "severity": "P2",
-          "code": "MISSING_HAS_EXPORT",
-          "message": "Page declares has_export but no evidence found in src/pages/schedule/index.tsx"
-        }
-      ],
-      "score": 60
+      "findings": [],
+      "score": 100
     },
     {
       "contract": {
@@ -662,21 +588,15 @@
       },
       "actual": {
         "has_list": true,
-        "has_export": false
+        "has_export": true
       },
       "mutations": {
         "createPresent": false,
         "updatePresent": false,
         "deletePresent": false
       },
-      "findings": [
-        {
-          "severity": "P2",
-          "code": "MISSING_HAS_EXPORT",
-          "message": "Page declares has_export but no evidence found in src/pages/Financials.tsx"
-        }
-      ],
-      "score": 50
+      "findings": [],
+      "score": 100
     },
     {
       "contract": {
@@ -725,21 +645,15 @@
         "has_list": true,
         "has_create": true,
         "has_detail_view": true,
-        "has_import": false
+        "has_import": true
       },
       "mutations": {
         "createPresent": false,
         "updatePresent": false,
         "deletePresent": false
       },
-      "findings": [
-        {
-          "severity": "P2",
-          "code": "MISSING_HAS_IMPORT",
-          "message": "Page declares has_import but no evidence found in src/pages/drawings/index.tsx"
-        }
-      ],
-      "score": 75
+      "findings": [],
+      "score": 100
     },
     {
       "contract": {
@@ -814,21 +728,15 @@
       "actual": {
         "has_list": true,
         "has_create": true,
-        "has_export": false
+        "has_export": true
       },
       "mutations": {
         "createPresent": false,
         "updatePresent": false,
         "deletePresent": false
       },
-      "findings": [
-        {
-          "severity": "P2",
-          "code": "MISSING_HAS_EXPORT",
-          "message": "Page declares has_export but no evidence found in src/pages/safety/index.tsx"
-        }
-      ],
-      "score": 67
+      "findings": [],
+      "score": 100
     },
     {
       "contract": {
@@ -983,21 +891,15 @@
       },
       "actual": {
         "has_list": true,
-        "has_import": false
+        "has_import": true
       },
       "mutations": {
         "createPresent": false,
         "updatePresent": false,
         "deletePresent": false
       },
-      "findings": [
-        {
-          "severity": "P2",
-          "code": "MISSING_HAS_IMPORT",
-          "message": "Page declares has_import but no evidence found in src/pages/Resources.tsx"
-        }
-      ],
-      "score": 50
+      "findings": [],
+      "score": 100
     },
     {
       "contract": {
@@ -1019,20 +921,14 @@
       "actual": {
         "has_list": true,
         "has_create": true,
-        "has_edit": false
+        "has_edit": true
       },
       "mutations": {
         "createPresent": false,
         "updatePresent": false,
         "deletePresent": false
       },
-      "findings": [
-        {
-          "severity": "P3",
-          "code": "MISSING_HAS_EDIT",
-          "message": "Page declares has_edit but no evidence found in src/pages/Vendors.tsx"
-        }
-      ],
+      "findings": [],
       "score": -1
     },
     {
@@ -1054,26 +950,15 @@
       },
       "actual": {
         "has_list": true,
-        "has_create": false,
-        "has_edit": false
+        "has_create": true,
+        "has_edit": true
       },
       "mutations": {
         "createPresent": false,
         "updatePresent": false,
         "deletePresent": false
       },
-      "findings": [
-        {
-          "severity": "P1",
-          "code": "MISSING_HAS_CREATE",
-          "message": "Page declares has_create but no evidence found in src/pages/Permits.tsx"
-        },
-        {
-          "severity": "P3",
-          "code": "MISSING_HAS_EDIT",
-          "message": "Page declares has_edit but no evidence found in src/pages/Permits.tsx"
-        }
-      ],
+      "findings": [],
       "score": -1
     },
     {
@@ -1096,20 +981,14 @@
       "actual": {
         "has_list": true,
         "has_create": true,
-        "has_edit": false
+        "has_edit": true
       },
       "mutations": {
         "createPresent": false,
         "updatePresent": false,
         "deletePresent": false
       },
-      "findings": [
-        {
-          "severity": "P3",
-          "code": "MISSING_HAS_EDIT",
-          "message": "Page declares has_edit but no evidence found in src/pages/Contracts.tsx"
-        }
-      ],
+      "findings": [],
       "score": -1
     },
     {
@@ -1317,21 +1196,15 @@
         "status": "beta"
       },
       "actual": {
-        "has_export": false
+        "has_export": true
       },
       "mutations": {
         "createPresent": false,
         "updatePresent": false,
         "deletePresent": false
       },
-      "findings": [
-        {
-          "severity": "P2",
-          "code": "MISSING_HAS_EXPORT",
-          "message": "Page declares has_export but no evidence found in src/pages/OwnerReportPage.tsx"
-        }
-      ],
-      "score": 0
+      "findings": [],
+      "score": 100
     },
     {
       "contract": {
@@ -1435,21 +1308,15 @@
       "actual": {
         "has_list": true,
         "has_filters": true,
-        "has_export": false
+        "has_export": true
       },
       "mutations": {
         "createPresent": false,
         "updatePresent": false,
         "deletePresent": false
       },
-      "findings": [
-        {
-          "severity": "P2",
-          "code": "MISSING_HAS_EXPORT",
-          "message": "Page declares has_export but no evidence found in src/pages/AuditTrail.tsx"
-        }
-      ],
-      "score": 67
+      "findings": [],
+      "score": 100
     },
     {
       "contract": {

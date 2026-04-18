@@ -32,6 +32,25 @@ function read(relPath: string): string | null {
   return fs.readFileSync(p, 'utf8')
 }
 
+/** Read the page file plus every sibling .tsx in the same directory so
+ *  detector matches can find helpers co-located with the page (e.g.
+ *  src/pages/schedule/ScheduleShellParts.tsx imported by index.tsx). */
+function readPageWithSiblings(pageRelPath: string): string {
+  const direct = read(pageRelPath) ?? ''
+  const dir = path.dirname(path.join(REPO_ROOT, pageRelPath))
+  if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) return direct
+  try {
+    const siblings = fs
+      .readdirSync(dir)
+      .filter((name) => name.endsWith('.tsx') || name.endsWith('.ts'))
+      .filter((name) => path.join(dir, name) !== path.join(REPO_ROOT, pageRelPath))
+      .map((name) => fs.readFileSync(path.join(dir, name), 'utf8'))
+    return [direct, ...siblings].join('\n/* ── sibling ── */\n')
+  } catch {
+    return direct
+  }
+}
+
 // ── Detectors ────────────────────────────────────────────────
 
 function detectList(src: string): boolean {
@@ -150,7 +169,11 @@ export function runStaticAudit(): AuditReport {
 
   // 2. Per-page static scan
   for (const contract of PAGE_REGISTRY) {
-    const src = read(contract.pageFile)
+    const directSrc = read(contract.pageFile)
+    // Scan page file plus sibling files in the same directory — pages under
+    // src/pages/<entity>/index.tsx commonly delegate helpers to co-located
+    // modules (ScheduleShellParts, SubmittalDetail, etc.).
+    const src = directSrc == null ? null : readPageWithSiblings(contract.pageFile)
     const actual: ActualFlags = {}
     const findings: Finding[] = []
 
