@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, Calendar, MapPin, AlertTriangle, RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   PageContainer, Tag, Btn, MetricBox, Skeleton, EmptyState,
 } from '../components/Primitives';
@@ -7,10 +8,12 @@ import { MetricCardSkeleton } from '../components/ui/Skeletons';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../styles/theme';
 import { useMeetings } from '../hooks/queries';
 import { useDeleteMeeting } from '../hooks/mutations';
+import { useCreateMeeting } from '../hooks/mutations/meetings';
 import { useProjectActionItems } from '../hooks/queries/meeting-enhancements';
 import { useProjectId } from '../hooks/useProjectId';
 import { PermissionGate } from '../components/auth/PermissionGate';
 import CreateMeetingModal from '../components/forms/CreateMeetingModal';
+import type { MeetingFormValues } from '../components/forms/schemas';
 
 // ── Type helpers ──────────────────────────────────────────────────────────────
 
@@ -180,6 +183,15 @@ export const Meetings: React.FC = () => {
 
   const { data: meetingsResult, isPending, error, refetch } = useMeetings(projectId);
   const deleteMeeting = useDeleteMeeting();
+  const createMeeting = useCreateMeeting();
+
+  const handleCreateMeeting = async (data: MeetingFormValues) => {
+    await createMeeting.mutateAsync({
+      data: { ...data, project_id: projectId, status: 'scheduled' },
+      projectId: projectId!,
+    });
+    toast.success('Meeting scheduled');
+  };
 
   const handleDeleteMeeting = async (meeting: MeetingListItem) => {
     if (!projectId) return;
@@ -566,7 +578,11 @@ export const Meetings: React.FC = () => {
       </div>
 
       {showCreateModal && projectId && (
-        <CreateMeetingModal onClose={() => setShowCreateModal(false)} projectId={projectId} />
+        <CreateMeetingModal
+          onClose={() => setShowCreateModal(false)}
+          projectId={projectId}
+          onSubmit={handleCreateMeeting}
+        />
       )}
     </PageContainer>
   );
