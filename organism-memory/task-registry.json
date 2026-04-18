@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "last_updated": "2026-04-18T13:52:53.760Z",
+  "last_updated": "2026-04-18T14:09:15.584Z",
   "overall_progress": {
     "total_tasks": 205,
     "done": 140,
@@ -1973,7 +1973,7 @@
         },
         {
           "id": "contracts-3",
-          "description": "Status transition buttons (draft \u2192 executed \u2192 closed)",
+          "description": "Status transition buttons (draft → executed → closed)",
           "status": "done",
           "pr": null,
           "pr_url": null,
@@ -3439,9 +3439,10 @@
   },
   "integrations": {
     "activity_feed_wired": {
-      "status": "pending",
+      "status": "done",
       "pr": null,
-      "prereqs": []
+      "prereqs": [],
+      "completed_at": "2026-04-18T00:00:00.000Z"
     },
     "dashboard_metrics_wired": {
       "status": "pending",

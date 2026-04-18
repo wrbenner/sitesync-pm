@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import posthog from '../../lib/analytics'
 import { createOnError } from './createAuditedMutation'
+import { insertActivity } from '../../api/endpoints/activity'
 
 
 
@@ -72,12 +73,21 @@ export function useCreateIncident() {
       if (error) throw error
       return { data, projectId: params.projectId }
     },
-    onSuccess: (result: { projectId: string }) => {
+    onSuccess: (result: { data: Record<string, unknown>; projectId: string }) => {
       queryClient.invalidateQueries({ queryKey: ['incidents', result.projectId] })
       queryClient.invalidateQueries({ queryKey: ['safety_overview', result.projectId] }) // FIX #7
       queryClient.invalidateQueries({ queryKey: ['daily_logs', result.projectId] }) // Incidents affect daily logs
       queryClient.invalidateQueries({ queryKey: ['project_snapshots', result.projectId] })
       posthog.capture('incident_reported', { project_id: result.projectId })
+      // Insert activity feed entry (fire-and-forget)
+      const incident = result.data as { id?: string; incident_number?: number; type?: string }
+      insertActivity(result.projectId, {
+        type: 'incident',
+        title: incident.incident_number != null
+          ? `Incident #${incident.incident_number}${incident.type ? ` - ${incident.type}` : ''}`
+          : 'Safety incident reported',
+        metadata: { entity_id: incident.id, action: 'create' },
+      }).catch(() => {})
     },
     onError: createOnError('create_incident'),
   })

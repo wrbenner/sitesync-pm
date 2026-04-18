@@ -204,6 +204,24 @@ async function batchFetchEntityLabels(
     )
   }
 
+  if (grouped['incident']?.length) {
+    fetches.push(
+      supabase
+        .from('incidents')
+        .select('id, incident_number, type')
+        .eq('project_id', projectId)
+        .in('id', grouped['incident'])
+        .then(({ data }) => {
+          for (const row of data ?? []) {
+            const label = `Incident #${row.incident_number}${row.type ? ` - ${row.type}` : ''}`
+            labelMap.set(row.id, label)
+            setCachedEntityLabel(`${projectId}:incident:${row.id}`, label)
+          }
+        })
+        .catch((err: unknown) => { if (import.meta.env.DEV) console.warn('[ActivityFeed] Failed to fetch entity labels for type:', err instanceof Error ? err.message : String(err)) }),
+    )
+  }
+
   await Promise.allSettled(fetches)
   return labelMap
 }
@@ -351,6 +369,18 @@ async function fetchEntityLabel(entityType: string, entityId: string, projectId:
     } catch {
       return ''
     }
+  } else if (entityType === 'incident') {
+    try {
+      const { data } = await supabase
+        .from('incidents')
+        .select('incident_number, type')
+        .eq('id', entityId)
+        .eq('project_id', projectId)
+        .single()
+      if (data) return `Incident #${data.incident_number}${data.type ? ` - ${data.type}` : ''}`
+    } catch {
+      return ''
+    }
   } else {
     return entityId
   }
@@ -362,9 +392,10 @@ export async function insertActivity(
   payload: { type: string; title: string; body?: string; metadata?: Record<string, unknown> },
 ): Promise<string> {
   await assertProjectAccess(projectId)
+  const { data: authData } = await supabase.auth.getUser()
   const { data, error } = await supabase
     .from('activity_feed')
-    .insert({ project_id: projectId, ...payload })
+    .insert({ project_id: projectId, user_id: authData?.user?.id ?? null, ...payload })
     .select('id')
     .single()
   if (error) throw transformSupabaseError(error)
