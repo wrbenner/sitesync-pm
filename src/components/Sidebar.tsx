@@ -12,6 +12,7 @@ import {
   Receipt, Milestone, Clock,
   X, MoreHorizontal,
   BookOpenCheck, CheckCircle2, FileSignature, Map as MapIcon,
+  Leaf, GitBranch,
 } from 'lucide-react';
 import { useUiStore, useAuthStore } from '../stores';
 import { motion } from 'framer-motion';
@@ -114,11 +115,18 @@ const sections = [
     ],
   },
   {
+    label: 'Sustainability',
+    items: [
+      { id: 'carbon', label: 'Carbon & LEED', icon: Leaf },
+    ],
+  },
+  {
     label: 'Enterprise',
     items: [
       { id: 'audit-trail', label: 'Audit Trail', icon: ScrollText },
       { id: 'integrations', label: 'Integrations', icon: Plug },
       { id: 'reports', label: 'Reports', icon: BarChart3 },
+      { id: 'settings/workflows', label: 'Approval Workflows', icon: GitBranch },
     ],
   },
 ];
@@ -163,6 +171,8 @@ const PAGE_PREFETCH_MAP: Record<string, () => void> = {
   deliveries:        () => import('../pages/Deliveries').catch(() => {}),
   wiki:              () => import('../pages/Wiki').catch(() => {}),
   'site-map':        () => import('../pages/SiteMap').catch(() => {}),
+  carbon:            () => import('../pages/CarbonDashboard').catch(() => {}),
+  'settings/workflows': () => import('../pages/Settings/WorkflowSettings').catch(() => {}),
   transmittals:   () => import('../pages/Transmittals').catch(() => {}),
   closeout:       () => import('../pages/Closeout').catch(() => {}),
   'field-capture': () => import('../pages/field-capture').catch(() => {}),

@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { TrendingUp, TrendingDown, Minus, Sparkles, ChevronRight, Share2, FileText, Link, Send } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { PageContainer, Card, SectionHeader, Btn, useToast, Skeleton } from '../components/Primitives';
+import { ProjectRiskSummary } from '../components/risk/ProjectRiskSummary';
 import { colors, spacing, typography, borderRadius, transitions, shadows } from '../styles/theme';
 import { useInView } from '../hooks/useInView';
 import { useProjectId } from '../hooks/useProjectId';
@@ -299,6 +300,9 @@ export const ProjectHealth: React.FC = () => {
         </div>
       }
     >
+      <div style={{ marginBottom: spacing['6'] }}>
+        <ProjectRiskSummary />
+      </div>
       <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: spacing['6'] }}>
         {/* Score ring */}
         <Card padding={spacing['6']}>
