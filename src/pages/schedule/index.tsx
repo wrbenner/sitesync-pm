@@ -19,6 +19,7 @@ import { computeScheduleKPIs } from '../../lib/criticalPath';
 import { ScheduleKPIs } from './ScheduleKPIs';
 import { ScheduleCoordination } from './ScheduleCoordination';
 import { ScheduleGantt } from './ScheduleGantt';
+import { ScheduleAIRiskPanel } from './ScheduleAIRiskPanel';
 import { ScheduleImportModal } from './ScheduleUpload';
 import { ScheduleErrorState, ScheduleLoadingState, ScheduleEmptyState } from './ScheduleStates';
 import { ScheduleHeaderActions, ScheduleSkipLink, ScheduleErrorBanner } from './ScheduleShellParts';
@@ -426,6 +427,11 @@ const SchedulePage: React.FC = () => {
 
       {/* ── Coordination Engine — Trade Conflict Detection ──── */}
       <CoordinationEngine />
+
+      {/* ── Enhanced AI Schedule Risk analysis ──── */}
+      <div style={{ marginTop: spacing['5'] }}>
+        <ScheduleAIRiskPanel schedulePhases={schedulePhases} />
+      </div>
 
       {/* Timeline: Gantt on desktop/tablet, card list on mobile */}
       <div style={{ marginTop: spacing['5'] }}>

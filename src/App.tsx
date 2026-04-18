@@ -104,6 +104,9 @@ const Contracts = lazy(() => import('./pages/Contracts').then((m) => ({ default:
 const Transmittals = lazy(() => import('./pages/Transmittals').then((m) => ({ default: m.Transmittals })));
 const Closeout = lazy(() => import('./pages/Closeout').then((m) => ({ default: m.Closeout })));
 const Specifications = lazy(() => import('./pages/Specifications').then((m) => ({ default: m.Specifications })));
+const Preconstruction = lazy(() => import('./pages/Preconstruction').then((m) => ({ default: m.Preconstruction })));
+const Resources = lazy(() => import('./pages/Resources').then((m) => ({ default: m.Resources })));
+const Vendors = lazy(() => import('./pages/Vendors').then((m) => ({ default: m.Vendors })));
 const Onboarding = lazy(() => import('./pages/Onboarding').then((m) => ({ default: m.Onboarding })));
 const NotFound = lazy(() => import('./pages/errors/NotFound').then((m) => ({ default: m.NotFound })));
 
@@ -358,6 +361,9 @@ function AppRoutes() {
             <Route path="/transmittals" element={<PageSuspense><ProtectedRoute moduleId="transmittals" moduleName="Transmittals"><Transmittals /></ProtectedRoute></PageSuspense>} />
             <Route path="/closeout" element={<PageSuspense><ProtectedRoute moduleId="closeout" moduleName="Closeout"><Closeout /></ProtectedRoute></PageSuspense>} />
             <Route path="/specifications" element={<PageSuspense><ProtectedRoute moduleId="specifications" moduleName="Specifications"><Specifications /></ProtectedRoute></PageSuspense>} />
+            <Route path="/preconstruction" element={<PageSuspense><ProtectedRoute moduleId="preconstruction" moduleName="Preconstruction"><Preconstruction /></ProtectedRoute></PageSuspense>} />
+            <Route path="/resources" element={<PageSuspense><ProtectedRoute moduleId="resources" moduleName="Resources"><Resources /></ProtectedRoute></PageSuspense>} />
+            <Route path="/vendors" element={<PageSuspense><ProtectedRoute moduleId="vendors" moduleName="Vendors"><Vendors /></ProtectedRoute></PageSuspense>} />
             <Route path="/onboarding" element={<PageSuspense><Onboarding /></PageSuspense>} />
             <Route path="*" element={<PageSuspense><NotFound /></PageSuspense>} />
           </Routes>
