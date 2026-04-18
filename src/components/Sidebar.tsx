@@ -18,9 +18,7 @@ import { useUiStore, useAuthStore } from '../stores';
 import { motion } from 'framer-motion';
 import { colors, spacing, typography, borderRadius, transitions, layout, zIndex } from '../styles/theme';
 import { duration, easing } from '../styles/animations';
-import { ProgressBar } from './Primitives';
 import { usePermissions } from '../hooks/usePermissions';
-import { useProjectId } from '../hooks/useProjectId';
 import { SidebarPresenceDot } from './collaboration/PresenceBar';
 import { AgentStatusBadge } from './ai/agentStream';
 
@@ -194,7 +192,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, mode, 
   const { themeMode, setThemeMode } = useUiStore();
   const toggleTheme = () => setThemeMode(themeMode === 'dark' ? 'light' : 'dark');
   const { canAccessModule, role, loading: permissionsLoading } = usePermissions();
-  const projectId = useProjectId();
   const authProfile = useAuthStore((s) => s.profile);
   const authUser = useAuthStore((s) => s.user);
   const displayName = authProfile?.full_name || authUser?.email || '';
@@ -603,27 +600,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, mode, 
         })}
       </nav>
 
-      {/* Project context — only show when a project is actually selected */}
-      {projectId && (
-        <div style={{ borderTop: `1px solid ${colors.borderSubtle}`, padding: spacing['4'] }}>
-          <div
-            style={{
-              backgroundColor: colors.surfaceInset,
-              borderRadius: borderRadius.md,
-              padding: `${spacing['3']} ${spacing['4']}`,
-            }}
-          >
-            <p style={{ fontSize: typography.fontSize.label, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>
-              Project
-            </p>
-            <ProgressBar value={62} height={3} color={colors.statusActive} bgColor={colors.borderDefault} />
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: spacing['1'] }}>
-              <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>62% complete</span>
-              <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>154d left</span>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Active Agents (shown only when agents are running) */}
       <div style={{ borderTop: `1px solid ${colors.borderSubtle}`, padding: `${spacing['3']} ${spacing['4']}` }}>

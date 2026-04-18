@@ -206,9 +206,9 @@ export function usePermissions(): PermissionsResult {
         .select('role')
         .eq('project_id', projectId)
         .eq('user_id', user.id)
-        .single()
+        .maybeSingle()
       if (error) return null
-      return data?.role as ProjectRole || null
+      return (data?.role as ProjectRole) || null
     },
     enabled: !!projectId && !!user?.id,
     staleTime: 30_000, // 30 seconds (was 5 minutes)

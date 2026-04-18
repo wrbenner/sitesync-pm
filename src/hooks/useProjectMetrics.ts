@@ -7,7 +7,7 @@ const PROJECT_STALE_TIME = 300_000        // 5 minutes
 const PROJECT_REFETCH_INTERVAL = 300_000  // 5 minutes
 
 export function useProjectMetrics(projectId: string | undefined) {
-  return useQuery<ProjectMetrics>({
+  return useQuery<ProjectMetrics | null>({
     queryKey: queryKeys.metrics.project(projectId!),
     queryFn: () => getProjectMetrics(projectId!),
     enabled: Boolean(projectId),

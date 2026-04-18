@@ -60,14 +60,20 @@ export const useProjectContext = create<ProjectContextState>()(
         const project = projects.find((p) => p.id === projectId) ?? null;
         set({ activeProjectId: projectId, activeProject: project });
         if (projectId) {
-          get().loadMembers(projectId);
+          get().loadMembers(projectId).catch(() => {
+            // Swallow — members list is non-critical; never crash the UI
+          });
         }
       },
 
       loadMembers: async (projectId) => {
-        const { data, error } = await projectService.loadMembers(projectId);
-        if (!error && data) {
-          set({ members: data });
+        try {
+          const { data, error } = await projectService.loadMembers(projectId);
+          if (!error && data) {
+            set({ members: data });
+          }
+        } catch {
+          // Never propagate — callers rely on this being safe
         }
       },
 

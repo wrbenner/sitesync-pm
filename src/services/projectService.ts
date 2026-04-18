@@ -32,7 +32,7 @@ async function resolveProjectRole(
     .select('role')
     .eq('project_id', projectId)
     .eq('user_id', userId)
-    .single();
+    .maybeSingle();
 
   return (data?.role as ProjectRole) ?? null;
 }

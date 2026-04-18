@@ -3,13 +3,14 @@ import { transformSupabaseError } from '../errors'
 import type { ProjectMetrics } from '../../types/api'
 import { computeProjectHealthScore, computeAiConfidenceLevel } from '../../lib/healthScoring'
 
-export async function getProjectMetrics(projectId: string): Promise<ProjectMetrics> {
+export async function getProjectMetrics(projectId: string): Promise<ProjectMetrics | null> {
   const { data, error } = await supabase
     .from('project_metrics')
     .select('*')
     .eq('project_id', projectId)
-    .single()
+    .maybeSingle()
   if (error) throw transformSupabaseError(error)
+  if (!data) return null
   const metrics = data as ProjectMetrics
   return {
     ...metrics,
