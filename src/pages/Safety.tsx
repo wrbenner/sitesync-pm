@@ -7,6 +7,8 @@ import { ExportButton } from '../components/shared/ExportButton'
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
 import { useSafetyInspections, useIncidents, useToolboxTalks, useSafetyCertifications, useCorrectiveActions, useDailyLogs } from '../hooks/queries'
+import { useCreateIncident, useCreateSafetyInspection, useCreateCorrectiveAction, useUpdateCorrectiveAction } from '../hooks/mutations'
+import { toast } from 'sonner'
 import { supabase } from '../lib/supabase'
 
 type TabKey = 'incidents' | 'inspections' | 'toolbox' | 'certifications' | 'corrective_actions'
@@ -480,6 +482,11 @@ export const Safety: React.FC = () => {
   const { data: dailyLogsResult } = useDailyLogs(projectId)
   const dailyLogs = dailyLogsResult?.data
 
+  const createIncident = useCreateIncident()
+  const createSafetyInspection = useCreateSafetyInspection()
+  const createCorrectiveAction = useCreateCorrectiveAction()
+  const updateCorrectiveAction = useUpdateCorrectiveAction()
+
   const displayIncidents: unknown[] = incidents || []
 
   const displayCAs: unknown[] = correctiveActions || []
@@ -648,6 +655,52 @@ export const Safety: React.FC = () => {
     setFieldErrors({})
   }
 
+  const handleIncidentSubmit = async () => {
+    const errors: Record<string, string> = {}
+    requiredFields.forEach(({ key, label }) => {
+      if (!incidentForm[key]?.toString().trim()) errors[key] = `${label} is required`
+    })
+    if (isPhotoRequired && !incidentForm.photo) errors.photo = 'Photo is required for this severity level'
+    if (Object.values(errors).some(Boolean)) {
+      setFieldErrors(errors)
+      return
+    }
+    try {
+      const result = await createIncident.mutateAsync({
+        data: {
+          project_id: projectId,
+          date: incidentForm.date,
+          type: incidentForm.type,
+          location: incidentForm.location,
+          description: incidentForm.description,
+          severity: incidentForm.severity,
+          injured_party_name: incidentForm.injured_party_name,
+          root_cause: incidentForm.root_cause || null,
+          investigation_status: 'open',
+        },
+        projectId: projectId!,
+      })
+      if (incidentForm.ca_description.trim()) {
+        await createCorrectiveAction.mutateAsync({
+          data: {
+            project_id: projectId,
+            incident_id: (result.data as Record<string, unknown>)?.id,
+            description: incidentForm.ca_description,
+            assigned_to: incidentForm.ca_assignee || null,
+            due_date: incidentForm.ca_due_date || null,
+            status: 'open',
+            severity: 'medium',
+          },
+          projectId: projectId!,
+        })
+      }
+      toast.success('Incident reported successfully')
+      handleCloseModal()
+    } catch {
+      toast.error('Failed to report incident')
+    }
+  }
+
   // ── Toolbox talk handlers ──────────────────────────────────
 
   const handleAddAttendee = () => {
@@ -669,6 +722,40 @@ export const Safety: React.FC = () => {
     setShowTalkModal(false)
     setTalkForm({ topic: '', date: '', presenter: '', attendees: [], newAttendee: '' })
     setTalkErrors({})
+  }
+
+  const handleSaveInspection = async () => {
+    if (!activeTemplate || !projectId) return
+    const items = CHECKLIST_TEMPLATES[activeTemplate].items
+    const reviewed = Object.values(checklistResults).filter(Boolean)
+    if (reviewed.length === 0) {
+      toast.error('Complete at least one checklist item before saving')
+      return
+    }
+    const passedCount = Object.values(checklistResults).filter((r) => r === 'pass').length
+    const failedCount = Object.values(checklistResults).filter((r) => r === 'fail').length
+    const score = Math.round((passedCount / items.length) * 100)
+    const status = failedCount > 0 ? 'failed' : 'passed'
+    try {
+      await createSafetyInspection.mutateAsync({
+        data: {
+          project_id: projectId,
+          type: CHECKLIST_TEMPLATES[activeTemplate].label,
+          date: new Date().toISOString().split('T')[0],
+          status,
+          score,
+          checklist_results: checklistResults,
+          checklist_notes: checklistNotes,
+        },
+        projectId,
+      })
+      toast.success('Inspection saved')
+      setActiveTemplate(null)
+      setChecklistResults({})
+      setChecklistNotes({})
+    } catch {
+      toast.error('Failed to save inspection')
+    }
   }
 
   // ── Window width ───────────────────────────────────────────
@@ -1036,6 +1123,11 @@ export const Safety: React.FC = () => {
                       </span>
                     )}
                   </span>
+                  <PermissionGate permission="safety.manage">
+                    <Btn variant="primary" onClick={handleSaveInspection} disabled={createSafetyInspection.isPending} style={{ minHeight: '56px' }}>
+                      {createSafetyInspection.isPending ? 'Saving…' : 'Save Inspection'}
+                    </Btn>
+                  </PermissionGate>
                 </div>
               </>
             )}
@@ -1179,7 +1271,40 @@ export const Safety: React.FC = () => {
             <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
               <Card>
                 <DataTable
-                  columns={caColumns}
+                  columns={[...caColumns, caCol.display({
+                    id: 'ca_status_action',
+                    header: '',
+                    cell: (info) => {
+                      const row = info.row.original
+                      const status = (row.status as string) || 'open'
+                      if (status === 'closed' || status === 'verified') return null
+                      const nextStatus = status === 'open' ? 'in_progress' : 'closed'
+                      const label = status === 'open' ? 'Start' : 'Close'
+                      return (
+                        <PermissionGate permission="safety.manage">
+                          <Btn
+                            variant="ghost"
+                            onClick={async () => {
+                              try {
+                                await updateCorrectiveAction.mutateAsync({
+                                  id: row.id as string,
+                                  updates: { status: nextStatus },
+                                  projectId: projectId!,
+                                })
+                                toast.success('Status updated')
+                              } catch {
+                                toast.error('Failed to update status')
+                              }
+                            }}
+                            disabled={updateCorrectiveAction.isPending}
+                            style={{ minHeight: '40px', fontSize: typography.fontSize.caption }}
+                          >
+                            {label}
+                          </Btn>
+                        </PermissionGate>
+                      )
+                    },
+                  })]}
                   data={displayCAs}
                   enableSorting
                 />
@@ -1506,6 +1631,9 @@ export const Safety: React.FC = () => {
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: spacing['3'] }}>
               <Btn variant="ghost" onClick={handleCloseModal} style={{ minHeight: '56px', minWidth: '56px' }}>Cancel</Btn>
+              <Btn variant="primary" onClick={handleIncidentSubmit} disabled={createIncident.isPending || createCorrectiveAction.isPending} style={{ minHeight: '56px' }}>
+                {createIncident.isPending ? 'Saving…' : 'Submit Report'}
+              </Btn>
             </div>
           </div>
         </div>
