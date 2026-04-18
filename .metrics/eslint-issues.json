@@ -1,65 +1,61 @@
 {
   "totals": {
-    "errors": 1036,
-    "warnings": 52,
-    "fixable_errors": 3,
-    "fixable_warnings": 9,
-    "files": 188
+    "errors": 0,
+    "warnings": 474,
+    "fixable_errors": 0,
+    "fixable_warnings": 8,
+    "files": 104
   },
   "files": [
     {
       "file": "src/pages/Drawings.tsx",
-      "errors": 95,
-      "warnings": 0,
+      "errors": 0,
+      "warnings": 30,
       "fixable_errors": 0,
       "fixable_warnings": 0,
       "top_rules": [
-        {
-          "rule": "react-hooks/rules-of-hooks",
-          "count": 54
-        },
         {
           "rule": "jsx-a11y/click-events-have-key-events",
           "count": 13
         },
         {
-          "rule": "@typescript-eslint/no-unused-vars",
-          "count": 11
+          "rule": "jsx-a11y/no-static-element-interactions",
+          "count": 9
+        },
+        {
+          "rule": "jsx-a11y/no-noninteractive-element-interactions",
+          "count": 7
         }
       ]
     },
     {
-      "file": "src/pages/Files.tsx",
-      "errors": 41,
-      "warnings": 1,
+      "file": "src/pages/Budget.tsx",
+      "errors": 0,
+      "warnings": 19,
       "fixable_errors": 0,
       "fixable_warnings": 0,
       "top_rules": [
         {
-          "rule": "react-hooks/rules-of-hooks",
-          "count": 35
+          "rule": "react-hooks/exhaustive-deps",
+          "count": 6
         },
         {
-          "rule": "@typescript-eslint/no-explicit-any",
+          "rule": "jsx-a11y/click-events-have-key-events",
+          "count": 4
+        },
+        {
+          "rule": "jsx-a11y/label-has-associated-control",
           "count": 3
-        },
-        {
-          "rule": "@typescript-eslint/no-unused-vars",
-          "count": 1
         }
       ]
     },
     {
       "file": "src/pages/Safety.tsx",
-      "errors": 37,
-      "warnings": 1,
+      "errors": 0,
+      "warnings": 19,
       "fixable_errors": 0,
       "fixable_warnings": 0,
       "top_rules": [
-        {
-          "rule": "@typescript-eslint/no-explicit-any",
-          "count": 17
-        },
         {
           "rule": "jsx-a11y/label-has-associated-control",
           "count": 13
@@ -67,128 +63,6 @@
         {
           "rule": "jsx-a11y/click-events-have-key-events",
           "count": 2
-        }
-      ]
-    },
-    {
-      "file": "src/pages/Submittals.tsx",
-      "errors": 34,
-      "warnings": 1,
-      "fixable_errors": 0,
-      "fixable_warnings": 0,
-      "top_rules": [
-        {
-          "rule": "@typescript-eslint/no-explicit-any",
-          "count": 17
-        },
-        {
-          "rule": "react-hooks/rules-of-hooks",
-          "count": 14
-        },
-        {
-          "rule": "@typescript-eslint/no-unused-vars",
-          "count": 3
-        }
-      ]
-    },
-    {
-      "file": "src/pages/RFIs.tsx",
-      "errors": 27,
-      "warnings": 3,
-      "fixable_errors": 0,
-      "fixable_warnings": 0,
-      "top_rules": [
-        {
-          "rule": "@typescript-eslint/no-explicit-any",
-          "count": 17
-        },
-        {
-          "rule": "@typescript-eslint/no-unused-vars",
-          "count": 5
-        },
-        {
-          "rule": "react-hooks/exhaustive-deps",
-          "count": 3
-        }
-      ]
-    },
-    {
-      "file": "src/pages/DailyLog.tsx",
-      "errors": 18,
-      "warnings": 7,
-      "fixable_errors": 0,
-      "fixable_warnings": 0,
-      "top_rules": [
-        {
-          "rule": "@typescript-eslint/no-unused-vars",
-          "count": 8
-        },
-        {
-          "rule": "react-hooks/exhaustive-deps",
-          "count": 7
-        },
-        {
-          "rule": "jsx-a11y/label-has-associated-control",
-          "count": 5
-        }
-      ]
-    },
-    {
-      "file": "src/pages/PunchList.tsx",
-      "errors": 24,
-      "warnings": 1,
-      "fixable_errors": 1,
-      "fixable_warnings": 0,
-      "top_rules": [
-        {
-          "rule": "@typescript-eslint/no-unused-vars",
-          "count": 11
-        },
-        {
-          "rule": "jsx-a11y/click-events-have-key-events",
-          "count": 3
-        },
-        {
-          "rule": "jsx-a11y/no-static-element-interactions",
-          "count": 3
-        }
-      ]
-    },
-    {
-      "file": "src/pages/Budget.tsx",
-      "errors": 23,
-      "warnings": 1,
-      "fixable_errors": 0,
-      "fixable_warnings": 0,
-      "top_rules": [
-        {
-          "rule": "react-hooks/rules-of-hooks",
-          "count": 7
-        },
-        {
-          "rule": "@typescript-eslint/no-unused-vars",
-          "count": 5
-        },
-        {
-          "rule": "@typescript-eslint/no-explicit-any",
-          "count": 3
-        }
-      ]
-    },
-    {
-      "file": "src/components/schedule/GanttChart.tsx",
-      "errors": 22,
-      "warnings": 1,
-      "fixable_errors": 0,
-      "fixable_warnings": 0,
-      "top_rules": [
-        {
-          "rule": "jsx-a11y/scope",
-          "count": 12
-        },
-        {
-          "rule": "@typescript-eslint/no-unused-vars",
-          "count": 3
         },
         {
           "rule": "jsx-a11y/no-noninteractive-element-interactions",
@@ -197,81 +71,30 @@
       ]
     },
     {
-      "file": "src/pages/PaymentApplications.tsx",
-      "errors": 21,
-      "warnings": 1,
+      "file": "src/components/schedule/GanttChart.tsx",
+      "errors": 0,
+      "warnings": 18,
       "fixable_errors": 0,
       "fixable_warnings": 0,
       "top_rules": [
         {
-          "rule": "@typescript-eslint/no-unused-vars",
-          "count": 8
+          "rule": "jsx-a11y/scope",
+          "count": 12
         },
         {
-          "rule": "jsx-a11y/label-has-associated-control",
-          "count": 7
-        },
-        {
-          "rule": "react-hooks/purity",
-          "count": 2
-        }
-      ]
-    },
-    {
-      "file": "src/pages/Financials.tsx",
-      "errors": 20,
-      "warnings": 0,
-      "fixable_errors": 0,
-      "fixable_warnings": 0,
-      "top_rules": [
-        {
-          "rule": "@typescript-eslint/no-explicit-any",
-          "count": 20
-        }
-      ]
-    },
-    {
-      "file": "src/pages/Schedule.tsx",
-      "errors": 19,
-      "warnings": 1,
-      "fixable_errors": 0,
-      "fixable_warnings": 0,
-      "top_rules": [
-        {
-          "rule": "@typescript-eslint/no-unused-vars",
-          "count": 15
-        },
-        {
-          "rule": "react-hooks/set-state-in-effect",
+          "rule": "jsx-a11y/no-noninteractive-element-interactions",
           "count": 2
         },
         {
-          "rule": "jsx-a11y/click-events-have-key-events",
-          "count": 1
-        }
-      ]
-    },
-    {
-      "file": "src/test/api/client.test.ts",
-      "errors": 16,
-      "warnings": 0,
-      "fixable_errors": 0,
-      "fixable_warnings": 0,
-      "top_rules": [
-        {
-          "rule": "@typescript-eslint/no-explicit-any",
-          "count": 13
-        },
-        {
-          "rule": "@typescript-eslint/no-unused-vars",
-          "count": 3
+          "rule": "jsx-a11y/no-noninteractive-tabindex",
+          "count": 2
         }
       ]
     },
     {
       "file": "src/components/Primitives.tsx",
-      "errors": 15,
-      "warnings": 0,
+      "errors": 0,
+      "warnings": 15,
       "fixable_errors": 0,
       "fixable_warnings": 0,
       "top_rules": [
@@ -290,30 +113,30 @@
       ]
     },
     {
-      "file": "src/components/notifications/NotificationCenter.tsx",
-      "errors": 14,
-      "warnings": 0,
+      "file": "src/pages/drawings/DrawingList.tsx",
+      "errors": 0,
+      "warnings": 14,
       "fixable_errors": 0,
       "fixable_warnings": 0,
       "top_rules": [
         {
-          "rule": "@typescript-eslint/no-explicit-any",
+          "rule": "jsx-a11y/click-events-have-key-events",
           "count": 5
         },
         {
-          "rule": "jsx-a11y/click-events-have-key-events",
-          "count": 4
+          "rule": "jsx-a11y/no-static-element-interactions",
+          "count": 5
         },
         {
-          "rule": "jsx-a11y/no-static-element-interactions",
-          "count": 4
+          "rule": "jsx-a11y/no-noninteractive-element-interactions",
+          "count": 3
         }
       ]
     },
     {
       "file": "src/components/ui/ConflictResolutionModal.tsx",
-      "errors": 13,
-      "warnings": 1,
+      "errors": 0,
+      "warnings": 13,
       "fixable_errors": 0,
       "fixable_warnings": 0,
       "top_rules": [
@@ -326,25 +149,76 @@
           "count": 6
         },
         {
-          "rule": "react-hooks/set-state-in-effect",
+          "rule": "react-hooks/exhaustive-deps",
           "count": 1
         }
       ]
     },
     {
-      "file": "src/pages/ChangeOrders.tsx",
-      "errors": 11,
-      "warnings": 2,
+      "file": "src/pages/safety/IncidentForm.tsx",
+      "errors": 0,
+      "warnings": 12,
       "fixable_errors": 0,
       "fixable_warnings": 0,
       "top_rules": [
         {
           "rule": "jsx-a11y/label-has-associated-control",
-          "count": 8
+          "count": 10
         },
         {
-          "rule": "react-hooks/exhaustive-deps",
+          "rule": "jsx-a11y/click-events-have-key-events",
+          "count": 1
+        },
+        {
+          "rule": "jsx-a11y/no-noninteractive-element-interactions",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "src/components/forms/CreateSubmittalForm.tsx",
+      "errors": 0,
+      "warnings": 11,
+      "fixable_errors": 0,
+      "fixable_warnings": 0,
+      "top_rules": [
+        {
+          "rule": "jsx-a11y/label-has-associated-control",
+          "count": 6
+        },
+        {
+          "rule": "jsx-a11y/click-events-have-key-events",
           "count": 2
+        },
+        {
+          "rule": "jsx-a11y/no-static-element-interactions",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "file": "src/pages/submittals/types.tsx",
+      "errors": 0,
+      "warnings": 11,
+      "fixable_errors": 0,
+      "fixable_warnings": 0,
+      "top_rules": [
+        {
+          "rule": "react-refresh/only-export-components",
+          "count": 11
+        }
+      ]
+    },
+    {
+      "file": "src/pages/daily-log/index.tsx",
+      "errors": 0,
+      "warnings": 9,
+      "fixable_errors": 0,
+      "fixable_warnings": 0,
+      "top_rules": [
+        {
+          "rule": "react-hooks/exhaustive-deps",
+          "count": 7
         },
         {
           "rule": "jsx-a11y/no-autofocus",
@@ -353,313 +227,9 @@
       ]
     },
     {
-      "file": "src/pages/Dashboard.tsx",
-      "errors": 13,
-      "warnings": 0,
-      "fixable_errors": 0,
-      "fixable_warnings": 0,
-      "top_rules": [
-        {
-          "rule": "@typescript-eslint/no-unused-vars",
-          "count": 6
-        },
-        {
-          "rule": "react-hooks/purity",
-          "count": 3
-        },
-        {
-          "rule": "jsx-a11y/click-events-have-key-events",
-          "count": 2
-        }
-      ]
-    },
-    {
-      "file": "src/pages/Marketplace.tsx",
-      "errors": 13,
-      "warnings": 0,
-      "fixable_errors": 0,
-      "fixable_warnings": 0,
-      "top_rules": [
-        {
-          "rule": "@typescript-eslint/no-unused-vars",
-          "count": 9
-        },
-        {
-          "rule": "jsx-a11y/click-events-have-key-events",
-          "count": 2
-        },
-        {
-          "rule": "jsx-a11y/no-static-element-interactions",
-          "count": 1
-        }
-      ]
-    },
-    {
-      "file": "src/pages/Equipment.tsx",
-      "errors": 12,
-      "warnings": 0,
-      "fixable_errors": 0,
-      "fixable_warnings": 0,
-      "top_rules": [
-        {
-          "rule": "@typescript-eslint/no-explicit-any",
-          "count": 12
-        }
-      ]
-    },
-    {
-      "file": "src/test/integration/lifecycles.test.ts",
-      "errors": 12,
-      "warnings": 0,
-      "fixable_errors": 0,
-      "fixable_warnings": 0,
-      "top_rules": [
-        {
-          "rule": "@typescript-eslint/no-unused-vars",
-          "count": 6
-        },
-        {
-          "rule": "@typescript-eslint/no-explicit-any",
-          "count": 6
-        }
-      ]
-    },
-    {
-      "file": "src/components/forms/CreateRFIForm.tsx",
-      "errors": 11,
-      "warnings": 0,
-      "fixable_errors": 0,
-      "fixable_warnings": 0,
-      "top_rules": [
-        {
-          "rule": "jsx-a11y/label-has-associated-control",
-          "count": 6
-        },
-        {
-          "rule": "jsx-a11y/click-events-have-key-events",
-          "count": 2
-        },
-        {
-          "rule": "jsx-a11y/no-static-element-interactions",
-          "count": 2
-        }
-      ]
-    },
-    {
-      "file": "src/components/forms/CreateSubmittalForm.tsx",
-      "errors": 11,
-      "warnings": 0,
-      "fixable_errors": 0,
-      "fixable_warnings": 0,
-      "top_rules": [
-        {
-          "rule": "jsx-a11y/label-has-associated-control",
-          "count": 6
-        },
-        {
-          "rule": "jsx-a11y/click-events-have-key-events",
-          "count": 2
-        },
-        {
-          "rule": "jsx-a11y/no-static-element-interactions",
-          "count": 2
-        }
-      ]
-    },
-    {
-      "file": "src/pages/Portfolio.tsx",
-      "errors": 11,
-      "warnings": 0,
-      "fixable_errors": 0,
-      "fixable_warnings": 0,
-      "top_rules": [
-        {
-          "rule": "@typescript-eslint/no-explicit-any",
-          "count": 9
-        },
-        {
-          "rule": "@typescript-eslint/no-unused-vars",
-          "count": 2
-        }
-      ]
-    },
-    {
-      "file": "src/App.tsx",
-      "errors": 10,
-      "warnings": 0,
-      "fixable_errors": 0,
-      "fixable_warnings": 0,
-      "top_rules": [
-        {
-          "rule": "@typescript-eslint/no-unused-vars",
-          "count": 6
-        },
-        {
-          "rule": "@typescript-eslint/no-explicit-any",
-          "count": 2
-        },
-        {
-          "rule": "jsx-a11y/no-redundant-roles",
-          "count": 2
-        }
-      ]
-    },
-    {
-      "file": "src/components/ai/CopilotPanel.tsx",
-      "errors": 9,
-      "warnings": 1,
-      "fixable_errors": 0,
-      "fixable_warnings": 1,
-      "top_rules": [
-        {
-          "rule": "@typescript-eslint/no-unused-vars",
-          "count": 3
-        },
-        {
-          "rule": "jsx-a11y/click-events-have-key-events",
-          "count": 2
-        },
-        {
-          "rule": "jsx-a11y/no-static-element-interactions",
-          "count": 2
-        }
-      ]
-    },
-    {
-      "file": "src/components/field/QuickCapture.tsx",
-      "errors": 10,
-      "warnings": 0,
-      "fixable_errors": 0,
-      "fixable_warnings": 0,
-      "top_rules": [
-        {
-          "rule": "jsx-a11y/label-has-associated-control",
-          "count": 6
-        },
-        {
-          "rule": "react-hooks/set-state-in-effect",
-          "count": 2
-        },
-        {
-          "rule": "@typescript-eslint/no-unused-vars",
-          "count": 1
-        }
-      ]
-    },
-    {
-      "file": "src/pages/Sustainability.tsx",
-      "errors": 10,
-      "warnings": 0,
-      "fixable_errors": 0,
-      "fixable_warnings": 0,
-      "top_rules": [
-        {
-          "rule": "@typescript-eslint/no-explicit-any",
-          "count": 10
-        }
-      ]
-    },
-    {
-      "file": "src/pages/Tasks.tsx",
-      "errors": 10,
-      "warnings": 0,
-      "fixable_errors": 0,
-      "fixable_warnings": 0,
-      "top_rules": [
-        {
-          "rule": "jsx-a11y/label-has-associated-control",
-          "count": 4
-        },
-        {
-          "rule": "jsx-a11y/click-events-have-key-events",
-          "count": 2
-        },
-        {
-          "rule": "jsx-a11y/no-static-element-interactions",
-          "count": 2
-        }
-      ]
-    },
-    {
-      "file": "src/components/Sidebar.tsx",
-      "errors": 9,
-      "warnings": 0,
-      "fixable_errors": 0,
-      "fixable_warnings": 0,
-      "top_rules": [
-        {
-          "rule": "@typescript-eslint/no-unused-vars",
-          "count": 7
-        },
-        {
-          "rule": "jsx-a11y/click-events-have-key-events",
-          "count": 1
-        },
-        {
-          "rule": "jsx-a11y/no-static-element-interactions",
-          "count": 1
-        }
-      ]
-    },
-    {
-      "file": "src/components/safety/AIPhotoAnalysis.tsx",
-      "errors": 9,
-      "warnings": 0,
-      "fixable_errors": 0,
-      "fixable_warnings": 0,
-      "top_rules": [
-        {
-          "rule": "@typescript-eslint/no-unused-vars",
-          "count": 6
-        },
-        {
-          "rule": "jsx-a11y/click-events-have-key-events",
-          "count": 1
-        },
-        {
-          "rule": "jsx-a11y/interactive-supports-focus",
-          "count": 1
-        }
-      ]
-    },
-    {
-      "file": "src/components/shared/DataTable.tsx",
-      "errors": 8,
-      "warnings": 1,
-      "fixable_errors": 0,
-      "fixable_warnings": 1,
-      "top_rules": [
-        {
-          "rule": "@typescript-eslint/no-explicit-any",
-          "count": 5
-        },
-        {
-          "rule": "react-refresh/only-export-components",
-          "count": 1
-        },
-        {
-          "rule": "jsx-a11y/no-static-element-interactions",
-          "count": 1
-        }
-      ]
-    },
-    {
-      "file": "src/pages/Developers.tsx",
-      "errors": 9,
-      "warnings": 0,
-      "fixable_errors": 0,
-      "fixable_warnings": 0,
-      "top_rules": [
-        {
-          "rule": "@typescript-eslint/no-unused-vars",
-          "count": 9
-        }
-      ]
-    },
-    {
-      "file": "src/pages/admin/ProjectSettings.tsx",
-      "errors": 8,
-      "warnings": 1,
+      "file": "src/pages/payment-applications/SOVEditor.tsx",
+      "errors": 0,
+      "warnings": 9,
       "fixable_errors": 0,
       "fixable_warnings": 0,
       "top_rules": [
@@ -668,91 +238,19 @@
           "count": 7
         },
         {
-          "rule": "react-hooks/set-state-in-effect",
-          "count": 1
-        },
-        {
-          "rule": "react-hooks/exhaustive-deps",
-          "count": 1
-        }
-      ]
-    },
-    {
-      "file": "src/test/permissions.test.ts",
-      "errors": 9,
-      "warnings": 0,
-      "fixable_errors": 0,
-      "fixable_warnings": 0,
-      "top_rules": [
-        {
-          "rule": "@typescript-eslint/no-explicit-any",
-          "count": 8
-        },
-        {
-          "rule": "@typescript-eslint/no-unused-vars",
-          "count": 1
-        }
-      ]
-    },
-    {
-      "file": "src/api/endpoints/budget.ts",
-      "errors": 8,
-      "warnings": 0,
-      "fixable_errors": 0,
-      "fixable_warnings": 0,
-      "top_rules": [
-        {
-          "rule": "@typescript-eslint/no-explicit-any",
-          "count": 8
-        }
-      ]
-    },
-    {
-      "file": "src/components/budget/BudgetUpload.tsx",
-      "errors": 8,
-      "warnings": 0,
-      "fixable_errors": 0,
-      "fixable_warnings": 0,
-      "top_rules": [
-        {
           "rule": "jsx-a11y/click-events-have-key-events",
-          "count": 3
+          "count": 1
         },
         {
           "rule": "jsx-a11y/no-static-element-interactions",
-          "count": 3
-        },
-        {
-          "rule": "react-hooks/rules-of-hooks",
-          "count": 2
-        }
-      ]
-    },
-    {
-      "file": "src/components/collaboration/PresenceBar.tsx",
-      "errors": 7,
-      "warnings": 1,
-      "fixable_errors": 0,
-      "fixable_warnings": 1,
-      "top_rules": [
-        {
-          "rule": "jsx-a11y/no-interactive-element-to-noninteractive-role",
-          "count": 3
-        },
-        {
-          "rule": "react-hooks/purity",
-          "count": 2
-        },
-        {
-          "rule": "@typescript-eslint/no-unused-vars",
           "count": 1
         }
       ]
     },
     {
       "file": "src/components/dailylog/PhotoGrid.tsx",
-      "errors": 8,
-      "warnings": 0,
+      "errors": 0,
+      "warnings": 8,
       "fixable_errors": 0,
       "fixable_warnings": 0,
       "top_rules": [
@@ -767,14 +265,136 @@
       ]
     },
     {
-      "file": "src/components/workforce/QRCheckIn.tsx",
-      "errors": 8,
-      "warnings": 0,
+      "file": "src/pages/Directory.tsx",
+      "errors": 0,
+      "warnings": 8,
       "fixable_errors": 0,
       "fixable_warnings": 0,
       "top_rules": [
         {
-          "rule": "@typescript-eslint/no-unused-vars",
+          "rule": "jsx-a11y/label-has-associated-control",
+          "count": 4
+        },
+        {
+          "rule": "jsx-a11y/click-events-have-key-events",
+          "count": 2
+        },
+        {
+          "rule": "jsx-a11y/no-noninteractive-element-interactions",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "file": "src/pages/admin/ProjectSettings.tsx",
+      "errors": 0,
+      "warnings": 8,
+      "fixable_errors": 0,
+      "fixable_warnings": 0,
+      "top_rules": [
+        {
+          "rule": "jsx-a11y/label-has-associated-control",
+          "count": 7
+        },
+        {
+          "rule": "react-hooks/exhaustive-deps",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "src/pages/drawings/DrawingUpload.tsx",
+      "errors": 0,
+      "warnings": 8,
+      "fixable_errors": 0,
+      "fixable_warnings": 0,
+      "top_rules": [
+        {
+          "rule": "jsx-a11y/click-events-have-key-events",
+          "count": 4
+        },
+        {
+          "rule": "jsx-a11y/no-noninteractive-element-interactions",
+          "count": 2
+        },
+        {
+          "rule": "jsx-a11y/no-static-element-interactions",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "file": "src/pages/drawings/DrawingVersions.tsx",
+      "errors": 0,
+      "warnings": 8,
+      "fixable_errors": 0,
+      "fixable_warnings": 0,
+      "top_rules": [
+        {
+          "rule": "jsx-a11y/click-events-have-key-events",
+          "count": 4
+        },
+        {
+          "rule": "jsx-a11y/no-noninteractive-element-interactions",
+          "count": 2
+        },
+        {
+          "rule": "jsx-a11y/no-static-element-interactions",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "file": "src/pages/schedule/ScheduleUpload.tsx",
+      "errors": 0,
+      "warnings": 8,
+      "fixable_errors": 0,
+      "fixable_warnings": 0,
+      "top_rules": [
+        {
+          "rule": "react-refresh/only-export-components",
+          "count": 6
+        },
+        {
+          "rule": "jsx-a11y/click-events-have-key-events",
+          "count": 1
+        },
+        {
+          "rule": "jsx-a11y/no-static-element-interactions",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "src/components/ai/CopilotPanel.tsx",
+      "errors": 0,
+      "warnings": 7,
+      "fixable_errors": 0,
+      "fixable_warnings": 1,
+      "top_rules": [
+        {
+          "rule": "jsx-a11y/click-events-have-key-events",
+          "count": 2
+        },
+        {
+          "rule": "jsx-a11y/no-static-element-interactions",
+          "count": 2
+        },
+        {
+          "rule": "jsx-a11y/no-noninteractive-element-interactions",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "src/pages/daily-log/DailyLogForm.tsx",
+      "errors": 0,
+      "warnings": 7,
+      "fixable_errors": 0,
+      "fixable_warnings": 0,
+      "top_rules": [
+        {
+          "rule": "jsx-a11y/label-has-associated-control",
           "count": 5
         },
         {
@@ -788,35 +408,188 @@
       ]
     },
     {
-      "file": "src/pages/FieldCapture.tsx",
-      "errors": 6,
-      "warnings": 2,
+      "file": "src/pages/punch-list/PunchListTable.tsx",
+      "errors": 0,
+      "warnings": 7,
       "fixable_errors": 0,
       "fixable_warnings": 0,
       "top_rules": [
         {
-          "rule": "@typescript-eslint/no-unused-vars",
-          "count": 2
+          "rule": "jsx-a11y/click-events-have-key-events",
+          "count": 3
         },
         {
-          "rule": "react-hooks/exhaustive-deps",
-          "count": 2
+          "rule": "jsx-a11y/no-static-element-interactions",
+          "count": 3
         },
         {
-          "rule": "jsx-a11y/img-redundant-alt",
+          "rule": "jsx-a11y/no-autofocus",
           "count": 1
         }
       ]
     },
     {
-      "file": "src/components/ContextMenu.tsx",
-      "errors": 7,
-      "warnings": 0,
+      "file": "src/components/ai/AIAnnotation.tsx",
+      "errors": 0,
+      "warnings": 6,
       "fixable_errors": 0,
       "fixable_warnings": 0,
       "top_rules": [
         {
-          "rule": "react-hooks/purity",
+          "rule": "jsx-a11y/click-events-have-key-events",
+          "count": 3
+        },
+        {
+          "rule": "jsx-a11y/no-static-element-interactions",
+          "count": 3
+        }
+      ]
+    },
+    {
+      "file": "src/components/budget/BudgetUpload.tsx",
+      "errors": 0,
+      "warnings": 6,
+      "fixable_errors": 0,
+      "fixable_warnings": 0,
+      "top_rules": [
+        {
+          "rule": "jsx-a11y/click-events-have-key-events",
+          "count": 3
+        },
+        {
+          "rule": "jsx-a11y/no-static-element-interactions",
+          "count": 3
+        }
+      ]
+    },
+    {
+      "file": "src/components/field/QuickCapture.tsx",
+      "errors": 0,
+      "warnings": 6,
+      "fixable_errors": 0,
+      "fixable_warnings": 0,
+      "top_rules": [
+        {
+          "rule": "jsx-a11y/label-has-associated-control",
+          "count": 6
+        }
+      ]
+    },
+    {
+      "file": "src/components/forms/AddContactModal.tsx",
+      "errors": 0,
+      "warnings": 6,
+      "fixable_errors": 0,
+      "fixable_warnings": 0,
+      "top_rules": [
+        {
+          "rule": "jsx-a11y/label-has-associated-control",
+          "count": 6
+        }
+      ]
+    },
+    {
+      "file": "src/pages/Crews.tsx",
+      "errors": 0,
+      "warnings": 6,
+      "fixable_errors": 0,
+      "fixable_warnings": 0,
+      "top_rules": [
+        {
+          "rule": "jsx-a11y/label-has-associated-control",
+          "count": 4
+        },
+        {
+          "rule": "jsx-a11y/click-events-have-key-events",
+          "count": 1
+        },
+        {
+          "rule": "jsx-a11y/no-noninteractive-element-interactions",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "src/pages/Equipment.tsx",
+      "errors": 0,
+      "warnings": 6,
+      "fixable_errors": 0,
+      "fixable_warnings": 0,
+      "top_rules": [
+        {
+          "rule": "jsx-a11y/label-has-associated-control",
+          "count": 4
+        },
+        {
+          "rule": "jsx-a11y/click-events-have-key-events",
+          "count": 1
+        },
+        {
+          "rule": "jsx-a11y/no-noninteractive-element-interactions",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "src/pages/Tasks.tsx",
+      "errors": 0,
+      "warnings": 6,
+      "fixable_errors": 0,
+      "fixable_warnings": 0,
+      "top_rules": [
+        {
+          "rule": "jsx-a11y/label-has-associated-control",
+          "count": 4
+        },
+        {
+          "rule": "react-hooks/exhaustive-deps",
+          "count": 1
+        },
+        {
+          "rule": "jsx-a11y/no-autofocus",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "src/pages/auth/Register.tsx",
+      "errors": 0,
+      "warnings": 6,
+      "fixable_errors": 0,
+      "fixable_warnings": 0,
+      "top_rules": [
+        {
+          "rule": "jsx-a11y/label-has-associated-control",
+          "count": 5
+        },
+        {
+          "rule": "jsx-a11y/no-autofocus",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "src/pages/submittals/index.tsx",
+      "errors": 0,
+      "warnings": 6,
+      "fixable_errors": 0,
+      "fixable_warnings": 0,
+      "top_rules": [
+        {
+          "rule": "react-hooks/exhaustive-deps",
+          "count": 6
+        }
+      ]
+    },
+    {
+      "file": "src/components/CommandPalette.tsx",
+      "errors": 0,
+      "warnings": 5,
+      "fixable_errors": 0,
+      "fixable_warnings": 0,
+      "top_rules": [
+        {
+          "rule": "jsx-a11y/click-events-have-key-events",
           "count": 2
         },
         {
@@ -824,24 +597,24 @@
           "count": 1
         },
         {
-          "rule": "@typescript-eslint/no-unused-vars",
+          "rule": "jsx-a11y/no-noninteractive-element-interactions",
           "count": 1
         }
       ]
     },
     {
-      "file": "src/components/drawings/BIMViewer.tsx",
-      "errors": 7,
-      "warnings": 0,
+      "file": "src/components/drawings/DrawingViewer.tsx",
+      "errors": 0,
+      "warnings": 5,
       "fixable_errors": 0,
-      "fixable_warnings": 0,
+      "fixable_warnings": 1,
       "top_rules": [
         {
-          "rule": "@typescript-eslint/no-unused-vars",
-          "count": 5
+          "rule": "jsx-a11y/no-noninteractive-element-interactions",
+          "count": 1
         },
         {
-          "rule": "jsx-a11y/click-events-have-key-events",
+          "rule": "jsx-a11y/no-noninteractive-tabindex",
           "count": 1
         },
         {
@@ -851,15 +624,49 @@
       ]
     },
     {
-      "file": "src/components/drawings/DrawingViewer.tsx",
-      "errors": 6,
-      "warnings": 1,
+      "file": "src/components/forms/CreateCrewModal.tsx",
+      "errors": 0,
+      "warnings": 5,
       "fixable_errors": 0,
-      "fixable_warnings": 1,
+      "fixable_warnings": 0,
       "top_rules": [
         {
-          "rule": "@typescript-eslint/no-unused-vars",
+          "rule": "jsx-a11y/label-has-associated-control",
+          "count": 5
+        }
+      ]
+    },
+    {
+      "file": "src/components/layout/MobileLayout.tsx",
+      "errors": 0,
+      "warnings": 5,
+      "fixable_errors": 0,
+      "fixable_warnings": 0,
+      "top_rules": [
+        {
+          "rule": "jsx-a11y/click-events-have-key-events",
           "count": 2
+        },
+        {
+          "rule": "jsx-a11y/no-static-element-interactions",
+          "count": 2
+        },
+        {
+          "rule": "jsx-a11y/no-autofocus",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "src/components/shared/VirtualDataTable.tsx",
+      "errors": 0,
+      "warnings": 5,
+      "fixable_errors": 0,
+      "fixable_warnings": 0,
+      "top_rules": [
+        {
+          "rule": "react-hooks/exhaustive-deps",
+          "count": 1
         },
         {
           "rule": "jsx-a11y/no-noninteractive-element-interactions",
@@ -872,92 +679,257 @@
       ]
     },
     {
-      "file": "src/pages/Estimating.tsx",
-      "errors": 7,
-      "warnings": 0,
-      "fixable_errors": 0,
-      "fixable_warnings": 0,
-      "top_rules": [
-        {
-          "rule": "@typescript-eslint/no-explicit-any",
-          "count": 7
-        }
-      ]
-    },
-    {
-      "file": "src/pages/Permits.tsx",
-      "errors": 7,
-      "warnings": 0,
-      "fixable_errors": 0,
-      "fixable_warnings": 0,
-      "top_rules": [
-        {
-          "rule": "@typescript-eslint/no-explicit-any",
-          "count": 7
-        }
-      ]
-    },
-    {
-      "file": "src/pages/Procurement.tsx",
-      "errors": 7,
-      "warnings": 0,
-      "fixable_errors": 0,
-      "fixable_warnings": 0,
-      "top_rules": [
-        {
-          "rule": "@typescript-eslint/no-explicit-any",
-          "count": 7
-        }
-      ]
-    },
-    {
-      "file": "src/components/ai/AIAnnotation.tsx",
-      "errors": 6,
-      "warnings": 0,
-      "fixable_errors": 0,
-      "fixable_warnings": 0,
-      "top_rules": [
-        {
-          "rule": "jsx-a11y/click-events-have-key-events",
-          "count": 3
-        },
-        {
-          "rule": "jsx-a11y/no-static-element-interactions",
-          "count": 3
-        }
-      ]
-    },
-    {
-      "file": "src/components/dashboard/DashboardGrid.tsx",
-      "errors": 6,
-      "warnings": 0,
-      "fixable_errors": 0,
-      "fixable_warnings": 0,
-      "top_rules": [
-        {
-          "rule": "jsx-a11y/click-events-have-key-events",
-          "count": 2
-        },
-        {
-          "rule": "jsx-a11y/no-static-element-interactions",
-          "count": 2
-        },
-        {
-          "rule": "@typescript-eslint/no-explicit-any",
-          "count": 2
-        }
-      ]
-    },
-    {
-      "file": "src/components/forms/AddContactModal.tsx",
-      "errors": 6,
-      "warnings": 0,
+      "file": "src/pages/safety/ToolboxTalks.tsx",
+      "errors": 0,
+      "warnings": 5,
       "fixable_errors": 0,
       "fixable_warnings": 0,
       "top_rules": [
         {
           "rule": "jsx-a11y/label-has-associated-control",
-          "count": 6
+          "count": 3
+        },
+        {
+          "rule": "jsx-a11y/click-events-have-key-events",
+          "count": 1
+        },
+        {
+          "rule": "jsx-a11y/no-noninteractive-element-interactions",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "src/components/collaboration/EditConflictGuard.tsx",
+      "errors": 0,
+      "warnings": 4,
+      "fixable_errors": 0,
+      "fixable_warnings": 1,
+      "top_rules": [
+        {
+          "rule": "react-refresh/only-export-components",
+          "count": 1
+        },
+        {
+          "rule": "react-hooks/exhaustive-deps",
+          "count": 1
+        },
+        {
+          "rule": "jsx-a11y/no-noninteractive-element-interactions",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "src/components/collaboration/PresenceBar.tsx",
+      "errors": 0,
+      "warnings": 4,
+      "fixable_errors": 0,
+      "fixable_warnings": 1,
+      "top_rules": [
+        {
+          "rule": "jsx-a11y/no-interactive-element-to-noninteractive-role",
+          "count": 3
+        }
+      ]
+    },
+    {
+      "file": "src/components/dailylog/QuickEntry.tsx",
+      "errors": 0,
+      "warnings": 4,
+      "fixable_errors": 0,
+      "fixable_warnings": 0,
+      "top_rules": [
+        {
+          "rule": "jsx-a11y/label-has-associated-control",
+          "count": 4
+        }
+      ]
+    },
+    {
+      "file": "src/components/dailylog/WeatherCard.tsx",
+      "errors": 0,
+      "warnings": 4,
+      "fixable_errors": 0,
+      "fixable_warnings": 0,
+      "top_rules": [
+        {
+          "rule": "jsx-a11y/label-has-associated-control",
+          "count": 4
+        }
+      ]
+    },
+    {
+      "file": "src/components/dashboard/DashboardGrid.tsx",
+      "errors": 0,
+      "warnings": 4,
+      "fixable_errors": 0,
+      "fixable_warnings": 0,
+      "top_rules": [
+        {
+          "rule": "jsx-a11y/click-events-have-key-events",
+          "count": 2
+        },
+        {
+          "rule": "jsx-a11y/no-static-element-interactions",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "file": "src/components/forms/FormPrimitives.tsx",
+      "errors": 0,
+      "warnings": 4,
+      "fixable_errors": 0,
+      "fixable_warnings": 0,
+      "top_rules": [
+        {
+          "rule": "react-refresh/only-export-components",
+          "count": 4
+        }
+      ]
+    },
+    {
+      "file": "src/components/mobile/MobileDailyLog.tsx",
+      "errors": 0,
+      "warnings": 4,
+      "fixable_errors": 0,
+      "fixable_warnings": 0,
+      "top_rules": [
+        {
+          "rule": "jsx-a11y/label-has-associated-control",
+          "count": 4
+        }
+      ]
+    },
+    {
+      "file": "src/components/shared/DataTable.tsx",
+      "errors": 0,
+      "warnings": 4,
+      "fixable_errors": 0,
+      "fixable_warnings": 1,
+      "top_rules": [
+        {
+          "rule": "react-refresh/only-export-components",
+          "count": 1
+        },
+        {
+          "rule": "jsx-a11y/no-static-element-interactions",
+          "count": 1
+        },
+        {
+          "rule": "jsx-a11y/no-noninteractive-tabindex",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "src/pages/RFIs.tsx",
+      "errors": 0,
+      "warnings": 4,
+      "fixable_errors": 0,
+      "fixable_warnings": 0,
+      "top_rules": [
+        {
+          "rule": "react-hooks/exhaustive-deps",
+          "count": 3
+        },
+        {
+          "rule": "jsx-a11y/label-has-associated-control",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "src/pages/auth/Login.tsx",
+      "errors": 0,
+      "warnings": 4,
+      "fixable_errors": 0,
+      "fixable_warnings": 0,
+      "top_rules": [
+        {
+          "rule": "jsx-a11y/click-events-have-key-events",
+          "count": 2
+        },
+        {
+          "rule": "jsx-a11y/no-static-element-interactions",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "file": "src/components/ContextMenu.tsx",
+      "errors": 0,
+      "warnings": 3,
+      "fixable_errors": 0,
+      "fixable_warnings": 0,
+      "top_rules": [
+        {
+          "rule": "react-refresh/only-export-components",
+          "count": 1
+        },
+        {
+          "rule": "jsx-a11y/no-static-element-interactions",
+          "count": 1
+        },
+        {
+          "rule": "jsx-a11y/no-noninteractive-tabindex",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "src/components/TopBar.tsx",
+      "errors": 0,
+      "warnings": 3,
+      "fixable_errors": 0,
+      "fixable_warnings": 0,
+      "top_rules": [
+        {
+          "rule": "jsx-a11y/no-autofocus",
+          "count": 1
+        },
+        {
+          "rule": "jsx-a11y/click-events-have-key-events",
+          "count": 1
+        },
+        {
+          "rule": "jsx-a11y/no-static-element-interactions",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "src/components/forms/CreateDailyLogModal.tsx",
+      "errors": 0,
+      "warnings": 3,
+      "fixable_errors": 0,
+      "fixable_warnings": 1,
+      "top_rules": [
+        {
+          "rule": "jsx-a11y/click-events-have-key-events",
+          "count": 1
+        },
+        {
+          "rule": "jsx-a11y/no-static-element-interactions",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "src/components/shared/CommandPalette.tsx",
+      "errors": 0,
+      "warnings": 3,
+      "fixable_errors": 0,
+      "fixable_warnings": 1,
+      "top_rules": [
+        {
+          "rule": "jsx-a11y/click-events-have-key-events",
+          "count": 1
+        },
+        {
+          "rule": "jsx-a11y/no-static-element-interactions",
+          "count": 1
         }
       ]
     }
