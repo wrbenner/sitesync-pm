@@ -14,12 +14,14 @@ function main(): void {
   const report = runStaticAudit()
   const { mdPath, jsonPath } = writeReport(report)
 
+  // Stubs are tracked separately — don't count their findings toward P0/P1 totals.
+  const actionable = report.results.filter((r) => r.contract.status !== 'stub')
   const p0Count =
     report.globalFindings.filter((f) => f.severity === 'P0').length +
-    report.results.reduce((n, r) => n + r.findings.filter((f) => f.severity === 'P0').length, 0)
+    actionable.reduce((n, r) => n + r.findings.filter((f) => f.severity === 'P0').length, 0)
   const p1Count =
     report.globalFindings.filter((f) => f.severity === 'P1').length +
-    report.results.reduce((n, r) => n + r.findings.filter((f) => f.severity === 'P1').length, 0)
+    actionable.reduce((n, r) => n + r.findings.filter((f) => f.severity === 'P1').length, 0)
 
   // eslint-disable-next-line no-console
   console.log(

@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-04-18T16:54:18.907Z",
+  "generatedAt": "2026-04-18T17:00:25.485Z",
   "totalRoutes": 56,
-  "passingRoutes": 33,
-  "averageScore": 85,
+  "passingRoutes": 34,
+  "averageScore": 86,
   "results": [
     {
       "contract": {
@@ -232,7 +232,7 @@
         "has_list": true,
         "has_create": true,
         "has_edit": true,
-        "has_delete": false,
+        "has_delete": true,
         "has_detail_view": true,
         "has_filters": true,
         "has_search": false,
@@ -246,16 +246,11 @@
       "findings": [
         {
           "severity": "P3",
-          "code": "MISSING_HAS_DELETE",
-          "message": "Page declares has_delete but no evidence found in src/pages/RFIs.tsx"
-        },
-        {
-          "severity": "P3",
           "code": "MISSING_HAS_SEARCH",
           "message": "Page declares has_search but no evidence found in src/pages/RFIs.tsx"
         }
       ],
-      "score": 75
+      "score": 88
     },
     {
       "contract": {
@@ -286,7 +281,7 @@
         "has_list": true,
         "has_create": true,
         "has_edit": true,
-        "has_delete": false,
+        "has_delete": true,
         "has_detail_view": true,
         "has_filters": true,
         "has_search": false,
@@ -300,16 +295,11 @@
       "findings": [
         {
           "severity": "P3",
-          "code": "MISSING_HAS_DELETE",
-          "message": "Page declares has_delete but no evidence found in src/pages/submittals/index.tsx"
-        },
-        {
-          "severity": "P3",
           "code": "MISSING_HAS_SEARCH",
           "message": "Page declares has_search but no evidence found in src/pages/submittals/index.tsx"
         }
       ],
-      "score": 75
+      "score": 88
     },
     {
       "contract": {
@@ -409,7 +399,7 @@
         "has_list": true,
         "has_create": true,
         "has_edit": true,
-        "has_delete": false,
+        "has_delete": true,
         "has_detail_view": true,
         "has_filters": true,
         "has_export": true
@@ -419,14 +409,8 @@
         "updatePresent": true,
         "deletePresent": true
       },
-      "findings": [
-        {
-          "severity": "P3",
-          "code": "MISSING_HAS_DELETE",
-          "message": "Page declares has_delete but no evidence found in src/pages/punch-list/index.tsx"
-        }
-      ],
-      "score": 86
+      "findings": [],
+      "score": 100
     },
     {
       "contract": {
@@ -845,7 +829,7 @@
       },
       "actual": {
         "has_list": true,
-        "has_create": false,
+        "has_create": true,
         "has_export": false
       },
       "mutations": {
@@ -855,17 +839,12 @@
       },
       "findings": [
         {
-          "severity": "P1",
-          "code": "MISSING_HAS_CREATE",
-          "message": "Page declares has_create but no evidence found in src/pages/safety/index.tsx"
-        },
-        {
           "severity": "P2",
           "code": "MISSING_HAS_EXPORT",
           "message": "Page declares has_export but no evidence found in src/pages/safety/index.tsx"
         }
       ],
-      "score": 33
+      "score": 67
     },
     {
       "contract": {

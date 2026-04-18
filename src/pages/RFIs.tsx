@@ -11,7 +11,7 @@ import { exportRFILogXlsx } from '../lib/exportXlsx';
 import { ExportButton } from '../components/shared/ExportButton';
 import { AlertTriangle, FileQuestion, FilterX, Plus, Clock, MessageSquare, Calendar, RefreshCw, Send, Sparkles, LayoutGrid, List, UserCheck, Flag, Download, XCircle, Wand2, Loader2, X } from 'lucide-react';
 import { useAppNavigate, getRelatedItemsForRfi } from '../utils/connections';
-import { useCreateRFI, useUpdateRFI, useCreateRFIResponse } from '../hooks/mutations';
+import { useCreateRFI, useUpdateRFI, useDeleteRFI, useCreateRFIResponse } from '../hooks/mutations';
 import { useProjectId } from '../hooks/useProjectId';
 import { useNavigate } from 'react-router-dom';
 import { useCopilotStore } from '../stores/copilotStore';
@@ -216,7 +216,22 @@ const RFIsPage: React.FC = () => {
   const navigate = useNavigate();
   const createRFI = useCreateRFI();
   const updateRFI = useUpdateRFI();
+  const deleteRFI = useDeleteRFI();
   const createRFIResponse = useCreateRFIResponse();
+
+  const handleDeleteRFI = useCallback(async () => {
+    if (!selectedRfi || !projectId) return;
+    const rfiId = String(selectedRfi.id);
+    const rfiLabel = (selectedRfi.title as string) || `RFI ${rfiId.slice(0, 8)}`;
+    if (!window.confirm(`Delete "${rfiLabel}"? This cannot be undone.`)) return;
+    try {
+      await deleteRFI.mutateAsync({ id: rfiId, projectId });
+      toast.success('RFI deleted');
+      setSelectedRfi(null);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete RFI');
+    }
+  }, [selectedRfi, projectId, deleteRFI]);
 
   // Fetch full detail (with responses) when an RFI is selected in the side panel
   const selectedRfiId = selectedRfi ? String(selectedRfi.id) : undefined;
@@ -890,6 +905,18 @@ const RFIsPage: React.FC = () => {
                   onClick={() => setEditingDetail(!editingDetail)}
                 >
                   {editingDetail ? 'Done' : 'Edit'}
+                </Btn>
+              </PermissionGate>
+              <PermissionGate permission="rfis.delete">
+                <Btn
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleDeleteRFI}
+                  disabled={deleteRFI.isPending}
+                  aria-label="Delete this RFI"
+                  data-testid="delete-rfi-button"
+                >
+                  {deleteRFI.isPending ? 'Deleting…' : 'Delete'}
                 </Btn>
               </PermissionGate>
             </div>

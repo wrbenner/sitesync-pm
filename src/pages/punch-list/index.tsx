@@ -12,7 +12,7 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { getPredictiveAlertsForPage } from '../../data/aiAnnotations';
 import { toast } from 'sonner';
 import { useProjectId } from '../../hooks/useProjectId';
-import { useCreatePunchItem, useUpdatePunchItem } from '../../hooks/mutations';
+import { useCreatePunchItem, useUpdatePunchItem, useDeletePunchItem } from '../../hooks/mutations';
 import CreatePunchItemModal from '../../components/forms/CreatePunchItemModal';
 import { PermissionGate } from '../../components/auth/PermissionGate';
 import { useCopilotStore } from '../../stores/copilotStore';
@@ -52,6 +52,7 @@ const PunchListPage: React.FC = () => {
   const projectId = useProjectId();
   const createPunchItem = useCreatePunchItem();
   const updatePunchItem = useUpdatePunchItem();
+  const deletePunchItem = useDeletePunchItem();
 
   // Fetch punch list items from API
   const { data: punchListResult, isLoading: loading, error: punchError, refetch } = usePunchItems(projectId);
@@ -420,6 +421,7 @@ const PunchListPage: React.FC = () => {
         isMobile={isMobile}
         comments={comments}
         updatePunchItem={updatePunchItem}
+        deletePunchItem={deletePunchItem}
         projectId={projectId}
         handleMarkInProgress={handleMarkInProgress}
         handleMarkSubComplete={handleMarkSubComplete}

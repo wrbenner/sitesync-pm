@@ -89,9 +89,11 @@ function renderMarkdown(report: AuditReport): string {
   }
   lines.push('')
 
-  // Prioritized fixes
+  // Prioritized fixes — stubs are listed separately in the "Stub pages" section
+  // and don't pollute the actionable P0/P1/P2/P3 buckets.
   const buckets: Record<Severity, string[]> = { P0: [], P1: [], P2: [], P3: [] }
   for (const r of report.results) {
+    if (r.contract.status === 'stub') continue
     for (const f of r.findings) {
       buckets[f.severity].push(`- \`${r.contract.route}\` (${f.code}): ${f.message}`)
     }

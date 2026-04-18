@@ -31,6 +31,10 @@ interface PunchListDetailProps {
   updatePunchItem: {
     mutateAsync: (args: { id: string; updates: Record<string, unknown>; projectId: string }) => Promise<unknown>;
   };
+  deletePunchItem?: {
+    mutateAsync: (args: { id: string; projectId: string }) => Promise<unknown>;
+    isPending: boolean;
+  };
   projectId: string | null;
   handleMarkInProgress: () => void;
   handleMarkSubComplete: () => void;
@@ -51,6 +55,7 @@ export const PunchListDetail: React.FC<PunchListDetailProps> = ({
   isMobile,
   comments,
   updatePunchItem,
+  deletePunchItem,
   projectId,
   handleMarkInProgress,
   handleMarkSubComplete,
@@ -59,6 +64,19 @@ export const PunchListDetail: React.FC<PunchListDetailProps> = ({
   handleAddPhoto,
 }) => {
   const appNavigate = useAppNavigate();
+
+  const handleDelete = React.useCallback(async () => {
+    if (!selected || !projectId || !deletePunchItem) return;
+    const label = selected.description || `Punch item ${selected.itemNumber}`;
+    if (!window.confirm(`Delete "${label}"? This cannot be undone.`)) return;
+    try {
+      await deletePunchItem.mutateAsync({ id: String(selected.id), projectId });
+      toast.success('Punch item deleted');
+      onClose();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete punch item');
+    }
+  }, [selected, projectId, deletePunchItem, onClose]);
 
   return (
     <DetailPanel
@@ -84,6 +102,20 @@ export const PunchListDetail: React.FC<PunchListDetailProps> = ({
                   {editingDetail ? 'Done' : 'Edit'}
                 </Btn>
               </PermissionGate>
+              {deletePunchItem && (
+                <PermissionGate permission="punch_list.delete">
+                  <Btn
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleDelete}
+                    disabled={deletePunchItem.isPending}
+                    aria-label="Delete this punch item"
+                    data-testid="delete-punch-item-button"
+                  >
+                    {deletePunchItem.isPending ? 'Deleting…' : 'Delete'}
+                  </Btn>
+                </PermissionGate>
+              )}
             </div>
             <EditingLockBanner entityType="punch item" entityId={String(selected.id)} isEditing={editingDetail} />
             <div style={{ display: 'flex', gap: spacing.sm, flexWrap: 'wrap', alignItems: 'center' }}>

@@ -47,6 +47,8 @@ function detectCreate(src: string, contract: PageContract): boolean {
   if (/useCreate\w+\(/.test(src)) return true
   // Inline supabase insert (Budget.tsx pattern) — still counts as "has create UI"
   if (/\.from\(['"][\w_]+['"]\)\s*\.insert/.test(src)) return true
+  // Form/Modal components with onClose handlers (Safety's IncidentForm pattern)
+  if (/<\w+(?:Form|Modal|Dialog)\b[^>]*onClose=/.test(src)) return true
   return false
 }
 

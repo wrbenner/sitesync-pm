@@ -6,7 +6,7 @@ import { useSubmittals, useSubmittalReviewers, useProject } from '../../hooks/qu
 import { exportSubmittalLogXlsx } from '../../lib/exportXlsx';
 import { ExportButton } from '../../components/shared/ExportButton';
 import { AlertTriangle, ClipboardList, LayoutGrid, List, RefreshCw } from 'lucide-react';
-import { useCreateSubmittal, useUpdateSubmittal } from '../../hooks/mutations';
+import { useCreateSubmittal, useUpdateSubmittal, useDeleteSubmittal } from '../../hooks/mutations';
 import { useProjectId } from '../../hooks/useProjectId';
 import { useNavigate } from 'react-router-dom';
 import { PermissionGate } from '../../components/auth/PermissionGate';
@@ -35,6 +35,7 @@ const SubmittalsPage: React.FC = () => {
   const projectId = useProjectId();
   const createSubmittal = useCreateSubmittal();
   const updateSubmittal = useUpdateSubmittal();
+  const deleteSubmittal = useDeleteSubmittal();
   const { data: submittalsResult, isPending: loading, error: submittalsError, refetch } = useSubmittals(projectId);
   const { data: project } = useProject(projectId);
 
@@ -374,6 +375,8 @@ const SubmittalsPage: React.FC = () => {
         onClose={() => setSelectedId(null)}
         projectId={projectId}
         updateSubmittalMutateAsync={updateSubmittal.mutateAsync}
+        deleteSubmittalMutateAsync={deleteSubmittal.mutateAsync}
+        deletePending={deleteSubmittal.isPending}
       />
 
       <CreateSubmittalModal
