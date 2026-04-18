@@ -100,6 +100,10 @@ const Integrations = lazy(() => import('./pages/Integrations'));
 const Reports = lazy(() => import('./pages/Reports'));
 const OwnerReportPage = lazy(() => import('./pages/OwnerReportPage'));
 const LienWaivers = lazy(() => import('./pages/LienWaivers').then((m) => ({ default: m.LienWaivers })));
+const Contracts = lazy(() => import('./pages/Contracts').then((m) => ({ default: m.Contracts })));
+const Transmittals = lazy(() => import('./pages/Transmittals').then((m) => ({ default: m.Transmittals })));
+const Closeout = lazy(() => import('./pages/Closeout').then((m) => ({ default: m.Closeout })));
+const Specifications = lazy(() => import('./pages/Specifications').then((m) => ({ default: m.Specifications })));
 const Onboarding = lazy(() => import('./pages/Onboarding').then((m) => ({ default: m.Onboarding })));
 const NotFound = lazy(() => import('./pages/errors/NotFound').then((m) => ({ default: m.NotFound })));
 
@@ -350,6 +354,10 @@ function AppRoutes() {
             <Route path="/reports" element={<PageSuspense><ProtectedRoute moduleId="reports" moduleName="Reports"><Reports /></ProtectedRoute></PageSuspense>} />
             <Route path="/reports/owner" element={<PageSuspense><ProtectedRoute moduleId="reports" moduleName="Reports"><OwnerReportPage /></ProtectedRoute></PageSuspense>} />
             <Route path="/lien-waivers" element={<PageSuspense><ProtectedRoute moduleId="lien-waivers" moduleName="Lien Waivers"><LienWaivers /></ProtectedRoute></PageSuspense>} />
+            <Route path="/contracts" element={<PageSuspense><ProtectedRoute moduleId="contracts" moduleName="Contracts"><Contracts /></ProtectedRoute></PageSuspense>} />
+            <Route path="/transmittals" element={<PageSuspense><ProtectedRoute moduleId="transmittals" moduleName="Transmittals"><Transmittals /></ProtectedRoute></PageSuspense>} />
+            <Route path="/closeout" element={<PageSuspense><ProtectedRoute moduleId="closeout" moduleName="Closeout"><Closeout /></ProtectedRoute></PageSuspense>} />
+            <Route path="/specifications" element={<PageSuspense><ProtectedRoute moduleId="specifications" moduleName="Specifications"><Specifications /></ProtectedRoute></PageSuspense>} />
             <Route path="/onboarding" element={<PageSuspense><Onboarding /></PageSuspense>} />
             <Route path="*" element={<PageSuspense><NotFound /></PageSuspense>} />
           </Routes>

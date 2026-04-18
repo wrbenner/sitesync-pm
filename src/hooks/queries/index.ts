@@ -2,6 +2,7 @@
 // Prefer direct imports from individual files when possible for better tree-shaking.
 
 export * from './projects'
+export * from './enterprise-modules'
 export * from './rfis'
 export * from './submittals'
 export * from './punch-items'

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Canvas as FabricCanvas, PencilBrush, Circle as FabricCircle, Line as FabricLine, IText as FabricIText, Rect as FabricRect } from 'fabric';
+import { parseScaleRatio, formatFeetInches } from './measurementUtils';
 import { colors, vizColors } from '../../styles/theme';
 import type { AnnotationShape } from './AnnotationHistory';
 
@@ -13,6 +14,10 @@ interface AnnotationCanvasProps {
   activeTool: AnnotationTool;
   activeColor: string;
   scale?: number;
+  /** Drawing scale ratio string (e.g. "1/4\"=1'-0\"" or "1:100"). Used to compute real-world dimensions for the measure tool. */
+  scaleRatio?: string | null;
+  /** Pixels-per-inch of the rendered PDF page (defaults to 72 — standard PDF at 1x zoom). */
+  pdfDpi?: number;
   isEditable?: boolean;
   currentUserId?: string;
   selectedId?: string | null;
@@ -36,6 +41,8 @@ export const AnnotationCanvas: React.FC<AnnotationCanvasProps> = ({
   activeTool,
   activeColor,
   scale = 1,
+  scaleRatio = null,
+  pdfDpi = 72,
   isEditable = true,
   currentUserId = 'anonymous',
   selectedId = null,
@@ -46,8 +53,17 @@ export const AnnotationCanvas: React.FC<AnnotationCanvasProps> = ({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const fabricRef = useRef<FabricCanvas | null>(null);
   const shapeInProgress = useRef<FabricRect | FabricCircle | FabricLine | null>(null);
+  const measureLabel = useRef<FabricIText | null>(null);
   const shapeOrigin = useRef<{ x: number; y: number } | null>(null);
   const [hasError, setHasError] = useState(false);
+
+  const scaleParsed = parseScaleRatio(scaleRatio);
+  const pixelsToInchesRef = useRef<(px: number) => number>(() => 0);
+  pixelsToInchesRef.current = (px: number) => {
+    if (!scaleParsed) return 0;
+    const paperInches = px / (pdfDpi * scale);
+    return paperInches * scaleParsed.realPerPaper;
+  };
 
   const reportError = useCallback((msg: string) => {
     setHasError(true);
@@ -266,16 +282,42 @@ export const AnnotationCanvas: React.FC<AnnotationCanvasProps> = ({
         });
         shapeInProgress.current = line;
         fc.add(line);
+        if (scaleParsed) {
+          const label = new FabricIText('', {
+            left: p.x + 8,
+            top: p.y - 20,
+            fill: activeColor,
+            fontSize: 13,
+            fontWeight: 'bold',
+            fontFamily: 'sans-serif',
+            backgroundColor: 'rgba(255,255,255,0.9)',
+            selectable: false,
+            evented: false,
+          });
+          measureLabel.current = label;
+          fc.add(label);
+        }
       });
       fc.on('mouse:move', (opt) => {
         if (!shapeInProgress.current || !shapeOrigin.current) return;
         const p = fc.getPointer(opt.e as MouseEvent);
         (shapeInProgress.current as FabricLine).set({ x2: p.x, y2: p.y });
+        if (measureLabel.current && scaleParsed) {
+          const dx = p.x - shapeOrigin.current.x;
+          const dy = p.y - shapeOrigin.current.y;
+          const pxDist = Math.sqrt(dx * dx + dy * dy);
+          const inches = pixelsToInchesRef.current(pxDist);
+          measureLabel.current.set({ text: formatFeetInches(inches) + ' (measured)', left: p.x + 8, top: p.y - 20 });
+        }
         fc.renderAll();
       });
       fc.on('mouse:up', (opt) => {
         if (!shapeOrigin.current) return;
         const p = fc.getPointer(opt.e as MouseEvent);
+        const dx = p.x - shapeOrigin.current.x;
+        const dy = p.y - shapeOrigin.current.y;
+        const pxDist = Math.sqrt(dx * dx + dy * dy);
+        const realInches = scaleParsed ? pixelsToInchesRef.current(pxDist) : 0;
         addShape({
           id: genId(),
           type: 'measure',
@@ -289,9 +331,11 @@ export const AnnotationCanvas: React.FC<AnnotationCanvasProps> = ({
           pageNumber,
           createdBy: currentUserId,
           createdAt: new Date().toISOString(),
+          text: scaleParsed ? formatFeetInches(realInches) : undefined,
         });
         shapeInProgress.current = null;
         shapeOrigin.current = null;
+        measureLabel.current = null;
       });
     }
   }, [activeTool, activeColor, isEditable, pageNumber, currentUserId, onAnnotationAdd]);

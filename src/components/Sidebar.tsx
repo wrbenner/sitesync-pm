@@ -11,6 +11,7 @@ import {
   TrendingUp, FileDiff, Send, HardHat, Repeat2,
   Receipt, Milestone,
   X, MoreHorizontal,
+  BookOpenCheck, CheckCircle2, FileSignature,
 } from 'lucide-react';
 import { useUiStore, useAuthStore } from '../stores';
 import { motion } from 'framer-motion';
@@ -69,6 +70,8 @@ const sections = [
       { id: 'procurement', label: 'Procurement', icon: Package },
       { id: 'equipment', label: 'Equipment', icon: Truck },
       { id: 'permits', label: 'Permits', icon: ClipboardCheck },
+      { id: 'contracts', label: 'Contracts', icon: FileSignature },
+      { id: 'specifications', label: 'Specifications', icon: BookOpenCheck },
     ],
   },
   {
@@ -94,6 +97,13 @@ const sections = [
     label: 'Documents',
     items: [
       { id: 'files', label: 'Files', icon: FileText },
+      { id: 'transmittals', label: 'Transmittals', icon: Send },
+    ],
+  },
+  {
+    label: 'Closeout',
+    items: [
+      { id: 'closeout', label: 'Closeout', icon: CheckCircle2 },
     ],
   },
   {
@@ -136,6 +146,10 @@ const PAGE_PREFETCH_MAP: Record<string, () => void> = {
   procurement:    () => import('../pages/Procurement').catch(() => {}),
   equipment:      () => import('../pages/Equipment').catch(() => {}),
   permits:        () => import('../pages/Permits').catch(() => {}),
+  contracts:      () => import('../pages/Contracts').catch(() => {}),
+  specifications: () => import('../pages/Specifications').catch(() => {}),
+  transmittals:   () => import('../pages/Transmittals').catch(() => {}),
+  closeout:       () => import('../pages/Closeout').catch(() => {}),
   'field-capture': () => import('../pages/field-capture').catch(() => {}),
   'daily-log':    () => import('../pages/daily-log').catch(() => {}),
   'punch-list':   () => import('../pages/punch-list').catch(() => {}),

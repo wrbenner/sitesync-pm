@@ -32,6 +32,7 @@ import { DashboardMetrics } from './DashboardMetrics';
 import { DashboardWeather } from './DashboardWeather';
 import { AIInsightsBanner, DeterministicInsightsBanner } from './DashboardAI';
 import { DashboardHero, OwnerReportCard, MissingWaiversAlert, OnboardingChecklist } from './DashboardBriefing';
+import { ProactiveAlerts } from '../../components/ai/ProactiveAlerts';
 
 const QuickRFIButton = lazy(() => import('../../components/field/QuickRFIButton'));
 
@@ -484,6 +485,9 @@ const DashboardInner: React.FC = () => {
         reducedMotion={reducedMotion}
         navigate={navigate}
       />
+
+      {/* ── Proactive AI Alerts ───────────────────────────── */}
+      <ProactiveAlerts projectId={projectId} onNavigate={(path) => navigate(path)} />
 
       {/* ── Owner Report Quick Access ─────────────────────── */}
       <OwnerReportCard navigate={navigate} reducedMotion={reducedMotion} />

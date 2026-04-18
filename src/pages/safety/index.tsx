@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AlertTriangle, ClipboardCheck, Award, Users, Plus, Wrench } from 'lucide-react';
+import { AlertTriangle, ClipboardCheck, Award, Users, Plus, Wrench, HardHat } from 'lucide-react';
 import { PageContainer, Card, Btn } from '../../components/Primitives';
 import { ExportButton } from '../../components/shared/ExportButton';
 import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme';
@@ -12,6 +12,7 @@ import { IncidentList } from './IncidentList';
 import { IncidentForm } from './IncidentForm';
 import { ToolboxTalksList, ToolboxTalkForm } from './ToolboxTalks';
 import { InspectionsTab, CertificationsTab, CorrectiveActionsTab } from './InspectionsAndCerts';
+import { PreTaskPlansTab } from './PreTaskPlans';
 
 const tabs: { key: TabKey; label: string; icon: React.ElementType }[] = [
   { key: 'incidents', label: 'Incidents', icon: AlertTriangle },
@@ -19,6 +20,7 @@ const tabs: { key: TabKey; label: string; icon: React.ElementType }[] = [
   { key: 'toolbox', label: 'Toolbox Talks', icon: Users },
   { key: 'certifications', label: 'Certifications', icon: Award },
   { key: 'corrective_actions', label: 'Corrective Actions', icon: Wrench },
+  { key: 'ptp', label: 'Pre-Task Plans', icon: HardHat },
 ];
 
 const recordableSeverities = ['medical_treatment', 'lost_time', 'fatality'];
@@ -197,6 +199,7 @@ export const Safety: React.FC = () => {
           {activeTab === 'toolbox' && <ToolboxTalksList talks={talks || []} onNewTalk={() => setShowTalkModal(true)} />}
           {activeTab === 'certifications' && <CertificationsTab certifications={certifications || []} />}
           {activeTab === 'corrective_actions' && <CorrectiveActionsTab correctiveActions={displayCAs} />}
+          {activeTab === 'ptp' && <PreTaskPlansTab />}
         </>
       )}
 
