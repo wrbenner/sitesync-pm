@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-04-18T18:01:41.900Z",
+  "generatedAt": "2026-04-18T18:08:43.806Z",
   "totalRoutes": 55,
-  "passingRoutes": 53,
+  "passingRoutes": 55,
   "averageScore": 100,
   "results": [
     {
@@ -931,26 +931,28 @@
         "expected": {
           "has_list": true,
           "has_create": true,
-          "has_edit": true
+          "has_edit": true,
+          "has_delete": true,
+          "has_export": true
         },
+        "hooksModule": "src/hooks/queries/permits.ts",
         "permissionModule": "permits",
-        "status": "stub",
-        "knownIssues": [
-          "Zero mutation hooks for permits — page is a list-only stub"
-        ]
+        "status": "production"
       },
       "actual": {
         "has_list": true,
         "has_create": true,
-        "has_edit": true
+        "has_edit": true,
+        "has_delete": true,
+        "has_export": true
       },
       "mutations": {
-        "createPresent": false,
-        "updatePresent": false,
-        "deletePresent": false
+        "createPresent": true,
+        "updatePresent": true,
+        "deletePresent": true
       },
       "findings": [],
-      "score": -1
+      "score": 100
     },
     {
       "contract": {
@@ -1070,42 +1072,25 @@
           "has_detail_view": true,
           "has_export": true
         },
+        "createModal": "CreateEditPayAppDrawer",
+        "hooksModule": "src/hooks/queries/financials.ts",
         "permissionModule": "pay-apps",
-        "status": "stub",
-        "knownIssues": [
-          "Zero mutation hooks for pay-apps despite full UI shell"
-        ]
+        "status": "production"
       },
       "actual": {
         "has_list": true,
-        "has_create": false,
-        "has_edit": false,
+        "has_create": true,
+        "has_edit": true,
         "has_detail_view": true,
-        "has_export": false
+        "has_export": true
       },
       "mutations": {
-        "createPresent": false,
-        "updatePresent": false,
-        "deletePresent": false
+        "createPresent": true,
+        "updatePresent": true,
+        "deletePresent": true
       },
-      "findings": [
-        {
-          "severity": "P1",
-          "code": "MISSING_HAS_CREATE",
-          "message": "Page declares has_create but no evidence found in src/pages/payment-applications/index.tsx"
-        },
-        {
-          "severity": "P3",
-          "code": "MISSING_HAS_EDIT",
-          "message": "Page declares has_edit but no evidence found in src/pages/payment-applications/index.tsx"
-        },
-        {
-          "severity": "P2",
-          "code": "MISSING_HAS_EXPORT",
-          "message": "Page declares has_export but no evidence found in src/pages/payment-applications/index.tsx"
-        }
-      ],
-      "score": -1
+      "findings": [],
+      "score": 100
     },
     {
       "contract": {
@@ -1121,9 +1106,9 @@
       },
       "actual": {},
       "mutations": {
-        "createPresent": false,
-        "updatePresent": false,
-        "deletePresent": false
+        "createPresent": true,
+        "updatePresent": true,
+        "deletePresent": true
       },
       "findings": [],
       "score": 100

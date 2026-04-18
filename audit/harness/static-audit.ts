@@ -72,7 +72,7 @@ function detectCreate(src: string, contract: PageContract): boolean {
 }
 
 function detectEdit(src: string): boolean {
-  return /useUpdate\w+\(|<EditableField|EditableDetailField/.test(src)
+  return /useUpdate\w+\(|<EditableField|EditableDetailField|openEditDrawer|openEdit\w+Modal|setEditing\w+|handleEdit\b/.test(src)
 }
 
 function detectDelete(src: string): boolean {
@@ -100,7 +100,7 @@ function detectSearch(src: string): boolean {
 }
 
 function detectExport(src: string): boolean {
-  return /ExportCenter|exportXlsx|exportToCSV|exportRFILogXlsx|exportSubmittalLogXlsx|exportPunchListXlsx|exportBudgetXlsx|exportDailyLogXlsx/.test(
+  return /ExportCenter|exportXlsx|exportTo(?:Xlsx|Csv|CSV)|exportRFILogXlsx|exportSubmittalLogXlsx|exportPunchListXlsx|exportBudgetXlsx|exportDailyLogXlsx|PDFDownloadLink|G702Preview|<ExportButton\b|DailyLogPDFExport/.test(
     src,
   )
 }

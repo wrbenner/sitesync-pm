@@ -1,19 +1,63 @@
-import React, { useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { ClipboardCheck, Calendar, Plus, FileText } from 'lucide-react'
 import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton } from '../components/Primitives'
 import { DataTable, createColumnHelper } from '../components/shared/DataTable'
 import { ExportButton } from '../components/shared/ExportButton'
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
-import { usePermits } from '../hooks/queries'
+import { usePermits, useCreatePermit, useDeletePermit } from '../hooks/queries/permits'
 import { toast } from 'sonner'
 import { PermissionGate } from '../components/auth/PermissionGate'
+import { EntityFormModal, type FieldConfig } from '../components/forms/EntityFormModal'
+import { z } from 'zod'
 
 type TabKey = 'permits' | 'inspections'
 
 const tabs: { key: TabKey; label: string; icon: React.ElementType }[] = [
   { key: 'permits', label: 'Permits', icon: ClipboardCheck },
   { key: 'inspections', label: 'Inspections', icon: Calendar },
+]
+
+// ── Permit Create Form ───────────────────────────────────────
+
+const permitSchema = z.object({
+  type: z.string().min(1, 'Permit type is required'),
+  permit_number: z.string().optional(),
+  jurisdiction: z.string().optional(),
+  status: z.string().optional(),
+  applied_date: z.string().optional(),
+  expiration_date: z.string().optional(),
+  fee: z.coerce.number().optional(),
+  notes: z.string().optional(),
+})
+
+const permitFields: FieldConfig[] = [
+  { name: 'type', label: 'Permit Type', type: 'select', required: true, options: [
+    { value: 'building', label: 'Building' },
+    { value: 'electrical', label: 'Electrical' },
+    { value: 'mechanical', label: 'Mechanical' },
+    { value: 'plumbing', label: 'Plumbing' },
+    { value: 'fire', label: 'Fire' },
+    { value: 'demolition', label: 'Demolition' },
+    { value: 'grading', label: 'Grading' },
+    { value: 'environmental', label: 'Environmental' },
+    { value: 'occupancy', label: 'Occupancy' },
+    { value: 'other', label: 'Other' },
+  ]},
+  { name: 'permit_number', label: 'Permit #', type: 'text', placeholder: 'e.g. BP-2026-12345', row: 1 },
+  { name: 'jurisdiction', label: 'Jurisdiction', type: 'text', placeholder: 'e.g. City of Dallas', row: 1 },
+  { name: 'status', label: 'Status', type: 'select', row: 2, options: [
+    { value: 'not_applied', label: 'Not Applied' },
+    { value: 'application_submitted', label: 'Application Submitted' },
+    { value: 'under_review', label: 'Under Review' },
+    { value: 'approved', label: 'Approved' },
+    { value: 'denied', label: 'Denied' },
+    { value: 'expired', label: 'Expired' },
+  ]},
+  { name: 'fee', label: 'Fee ($)', type: 'currency', row: 2 },
+  { name: 'applied_date', label: 'Applied Date', type: 'date', row: 3 },
+  { name: 'expiration_date', label: 'Expiration Date', type: 'date', row: 3 },
+  { name: 'notes', label: 'Notes', type: 'textarea', placeholder: 'Conditions, scope, inspector notes…' },
 ]
 
 // ── Column helpers ───────────────────────────────────────────
@@ -123,8 +167,11 @@ const permitColumns = [
 
 export const Permits: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('permits')
+  const [modalOpen, setModalOpen] = useState(false)
   const projectId = useProjectId()
   const { data: permits, isLoading } = usePermits(projectId)
+  const createPermit = useCreatePermit()
+  const deletePermit = useDeletePermit()
 
   const totalPermits = permits?.length || 0
   const activePermits = permits?.filter((p: unknown) => p.status === 'approved').length || 0
@@ -140,8 +187,61 @@ export const Permits: React.FC = () => {
   }).length || 0
 
   const handleAdd = () => {
-    toast.info('Submission requires backend configuration')
+    if (!projectId) {
+      toast.error('Select a project first')
+      return
+    }
+    setModalOpen(true)
   }
+
+  const handleCreate = async (data: Record<string, unknown>) => {
+    if (!projectId) return
+    try {
+      await createPermit.mutateAsync({ projectId, data })
+      toast.success('Permit created')
+      setModalOpen(false)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to create permit')
+    }
+  }
+
+  const handleDelete = async (permit: Record<string, unknown>) => {
+    if (!projectId) return
+    const label = (permit.permit_number as string) || (permit.type as string) || 'this permit'
+    if (!window.confirm(`Delete "${label}"? This cannot be undone.`)) return
+    try {
+      await deletePermit.mutateAsync({ id: String(permit.id), projectId })
+      toast.success('Permit deleted')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete permit')
+    }
+  }
+
+  const permitColumnsWithActions = useMemo(
+    () => [
+      ...permitColumns,
+      permitCol.display({
+        id: 'actions',
+        header: '',
+        cell: (info) => (
+          <PermissionGate permission="project.settings">
+            <Btn
+              size="sm"
+              variant="ghost"
+              onClick={() => handleDelete(info.row.original as Record<string, unknown>)}
+              disabled={deletePermit.isPending}
+              aria-label="Delete this permit"
+              data-testid="delete-permit-button"
+            >
+              Delete
+            </Btn>
+          </PermissionGate>
+        ),
+      }),
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [deletePermit.isPending, projectId],
+  )
 
   return (
     <PageContainer
@@ -151,7 +251,7 @@ export const Permits: React.FC = () => {
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
           <ExportButton pdfFilename="SiteSync_Permits_Report" />
           <PermissionGate permission="project.settings">
-          <Btn variant="primary" icon={<Plus size={16} />} onClick={handleAdd}>
+          <Btn variant="primary" icon={<Plus size={16} />} onClick={handleAdd} data-testid="create-permit-button">
             New Permit
           </Btn>
           </PermissionGate>
@@ -221,7 +321,7 @@ export const Permits: React.FC = () => {
           <SectionHeader title="All Permits" />
           {permits && permits.length > 0 ? (
             <div style={{ marginTop: spacing['3'] }}>
-              <DataTable columns={permitColumns} data={permits} />
+              <DataTable columns={permitColumnsWithActions} data={permits} />
             </div>
           ) : (
             <p style={{ color: colors.textTertiary, fontSize: typography.fontSize.sm, margin: `${spacing['3']} 0 0` }}>
@@ -278,6 +378,19 @@ export const Permits: React.FC = () => {
           </div>
         </>
       )}
+
+      <EntityFormModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSubmit={handleCreate}
+        title="New Permit"
+        schema={permitSchema}
+        fields={permitFields}
+        defaults={{ status: 'not_applied' }}
+        submitLabel="Create Permit"
+        submittingLabel="Creating…"
+        draftKey="draft_permit"
+      />
     </PageContainer>
   )
 }
