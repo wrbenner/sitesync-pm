@@ -5,8 +5,8 @@ name: Workflow Builder — Intelligent Product-Aware v3
 # tells Claude Code to WIRE existing hooks (not build new ones).
 
 on:
-  schedule:
-    - cron: '*/45 * * * *'
+  # schedule:
+  #   - cron: '*/45 * * * *'  # DISABLED — user requested halt
   workflow_dispatch:
     inputs:
       target_page:

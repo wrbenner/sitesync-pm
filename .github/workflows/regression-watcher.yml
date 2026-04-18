@@ -1,8 +1,8 @@
 name: Regression Watcher — Verify Completed Pages
 
 on:
-  schedule:
-    - cron: '0 */6 * * *'
+  # schedule:
+  #   - cron: '0 */6 * * *'  # DISABLED — user requested halt
   workflow_dispatch:
 
 concurrency:
