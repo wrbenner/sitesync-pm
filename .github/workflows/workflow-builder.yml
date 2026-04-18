@@ -1,16 +1,20 @@
-name: Workflow Builder — Blueprint Task Runner
+name: Workflow Builder — Intelligent Product-Aware v3
+
+# v3: Reasons about the product holistically. Auto-generates product state JSON,
+# picks the highest-impact unwired page from a hardcoded priority list, and
+# tells Claude Code to WIRE existing hooks (not build new ones).
 
 on:
   schedule:
-    - cron: '0 * * * *'
+    - cron: '*/45 * * * *'
   workflow_dispatch:
     inputs:
-      task_id:
-        description: 'Force a specific task ID (e.g. rfis-2). Leave blank for auto-select.'
+      target_page:
+        description: 'Force a specific page (e.g. Safety.tsx). Leave blank for auto-select.'
         required: false
         default: ''
       dry_run:
-        description: 'Print selected task without running (true/false)'
+        description: 'Print selected page without running (true/false)'
         required: false
         default: 'false'
 
@@ -24,526 +28,285 @@ permissions:
   issues: write
 
 jobs:
-  blueprint-run:
-    name: Blueprint — Select Task + Run + PR
+  wire-page:
+    name: Select + Wire + PR
     runs-on: ubuntu-latest
     timeout-minutes: 50
 
     env:
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
-      - name: D1 — Checkout
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
-      - name: D1 — Setup Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
 
-      - name: D1 — Install dependencies
+      - name: Install dependencies
         run: npm ci
 
-      - name: D1 — Configure git
+      - name: Configure git
         run: |
           git config user.name "SiteSync Workflow Builder"
           git config user.email "organism@sitesync.app"
 
-      - name: D1 — Select and lock task
-        id: select-task
+      - name: Generate product state
+        id: product-state
+        run: |
+          chmod +x scripts/product-state.sh
+          bash scripts/product-state.sh /tmp/product-state.json > /dev/null
+          echo "Product state generated. Pages tracked:"
+          python3 -c "import json; d=json.load(open('/tmp/product-state.json')); [print(' ', p['priority'], p['page'], p['status']) for p in d['unwired_pages']]"
+
+      - name: Select target page (top-down by priority)
+        id: select
         env:
-          FORCED_TASK: ${{ inputs.task_id }}
-          DRY_RUN: ${{ inputs.dry_run }}
+          FORCED: ${{ inputs.target_page }}
         run: |
-          cat > /tmp/select-task.js <<'SCRIPT'
-          const fs = require('fs');
-          const path = 'organism-memory/task-registry.json';
+          python3 <<'PY'
+          import json, os
+          forced = os.environ.get("FORCED", "").strip()
+          state = json.load(open("/tmp/product-state.json"))
+          target = None
+          if forced:
+              for p in state["unwired_pages"]:
+                  if p["page"] == forced:
+                      target = p
+                      break
+          if target is None:
+              # Pick the first unwired page in priority order (top-down)
+              for p in state["unwired_pages"]:
+                  if p["status"] == "unwired":
+                      target = p
+                      break
+          if target is None:
+              print("No unwired pages — nothing to do.")
+              with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+                  f.write("page=NONE\n")
+              raise SystemExit(0)
+          print(f"Selected: {target['page']} (priority {target['priority']})")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write(f"page={target['page']}\n")
+              f.write(f"file={target['file']}\n")
+              f.write(f"domain={target['domain']}\n")
+              f.write(f"mutations={','.join(target['available_mutation_hooks'])}\n")
+              f.write(f"queries={','.join(target['available_query_hooks'])}\n")
+          PY
 
-          if (!fs.existsSync(path)) {
-            console.log(JSON.stringify({ task_id: 'NONE', reason: 'no registry' }));
-            process.exit(0);
-          }
+      - name: Skip if nothing to do
+        if: steps.select.outputs.page == 'NONE' || inputs.dry_run == 'true'
+        run: echo "No target or dry-run; exiting." && exit 0
 
-          const registry = JSON.parse(fs.readFileSync(path, 'utf8'));
-          const forcedTask = process.env.FORCED_TASK || '';
-          const LOCK_TIMEOUT_MS = 60 * 60 * 1000;
-          const now = Date.now();
-
-          let selectedTask = null;
-          let selectedPage = null;
-
-          if (forcedTask) {
-            for (const [pageName, page] of Object.entries(registry.pages)) {
-              const task = page.tasks.find(t => t.id === forcedTask);
-              if (task) { selectedTask = task; selectedPage = pageName; break; }
-            }
-          } else {
-            const candidates = [];
-            for (const [pageName, page] of Object.entries(registry.pages)) {
-              const pageLocked = page.tasks.some(t => {
-                if (!t.locked_by || !t.locked_at) return false;
-                return (now - new Date(t.locked_at).getTime()) < LOCK_TIMEOUT_MS;
-              });
-              if (pageLocked) continue;
-
-              for (let i = 0; i < page.tasks.length; i++) {
-                const task = page.tasks[i];
-                if (task.status !== 'pending') continue;
-                candidates.push({ task, pageName, pageScore: page.functional_score, taskIndex: i });
-              }
-            }
-            candidates.sort((a, b) => a.pageScore !== b.pageScore ? a.pageScore - b.pageScore : a.taskIndex - b.taskIndex);
-            if (candidates[0]) { selectedTask = candidates[0].task; selectedPage = candidates[0].pageName; }
-          }
-
-          if (!selectedTask) {
-            console.log(JSON.stringify({ task_id: 'NONE', reason: 'all done or locked' }));
-            process.exit(0);
-          }
-
-          if (process.env.DRY_RUN !== 'true') {
-            selectedTask.locked_by = 'workflow-builder';
-            selectedTask.locked_at = new Date().toISOString();
-            selectedTask.status = 'in_progress';
-            selectedTask.attempts = (selectedTask.attempts || 0) + 1;
-            registry.last_updated = new Date().toISOString();
-            fs.writeFileSync(path, JSON.stringify(registry, null, 2));
-          }
-
-          console.log(JSON.stringify({
-            task_id: selectedTask.id,
-            page: selectedPage,
-            description: selectedTask.description,
-            verification_grep: selectedTask.verification_grep,
-            attempts: selectedTask.attempts || 1
-          }));
-          SCRIPT
-
-          RESULT=$(node /tmp/select-task.js)
-          echo "Selection result: $RESULT"
-
-          TASK_ID=$(echo "$RESULT" | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); console.log(d.task_id)")
-          echo "task_id=$TASK_ID" >> "$GITHUB_OUTPUT"
-
-          if [ "$TASK_ID" = "NONE" ]; then exit 0; fi
-
-          PAGE=$(echo "$RESULT" | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); console.log(d.page)")
-          DESC=$(echo "$RESULT" | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); console.log(d.description)")
-          VGREP=$(echo "$RESULT" | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); console.log(d.verification_grep)")
-          ATTEMPTS=$(echo "$RESULT" | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); console.log(d.attempts)")
-
-          echo "page=$PAGE" >> "$GITHUB_OUTPUT"
-          echo "description=$DESC" >> "$GITHUB_OUTPUT"
-          echo "verification_grep=$VGREP" >> "$GITHUB_OUTPUT"
-          echo "attempts=$ATTEMPTS" >> "$GITHUB_OUTPUT"
-
-          # Lock is local-only. The concurrency group prevents parallel runs,
-          # so pushing the lock to main is unnecessary (and blocked by branch protection).
-          # The registry update for this task lands on the feature branch + PR instead.
-
-          echo "Task selected: $TASK_ID — $DESC"
-
-      - name: Skip if no task
-        if: steps.select-task.outputs.task_id == 'NONE' || inputs.dry_run == 'true'
+      - name: Create feature branch
+        if: steps.select.outputs.page != 'NONE' && inputs.dry_run != 'true'
+        id: branch
         run: |
-          echo "No pending task found or dry run. Exiting cleanly."
-          exit 0
-
-      - name: D1 — Read curated context
-        id: read-context
-        if: steps.select-task.outputs.task_id != 'NONE'
-        run: |
-          PAGE="${{ steps.select-task.outputs.page }}"
-
-          RELEVANT_FILES=$(find src -type f \( -name "*.tsx" -o -name "*.ts" \) 2>/dev/null | \
-            grep -i "$PAGE\|$(echo $PAGE | sed 's/_/-/g')" | \
-            head -20 | tr '\n' ' ')
-
-          HOOK_FILES=$(find src -type f -name "use*.ts" 2>/dev/null | grep -i "$PAGE" | head -5 | tr '\n' ' ')
-
-          echo "relevant_files=$RELEVANT_FILES $HOOK_FILES" >> "$GITHUB_OUTPUT"
-
-          VGREP="${{ steps.select-task.outputs.verification_grep }}"
-          if grep -r "$VGREP" src/ --include="*.tsx" --include="*.ts" -q 2>/dev/null; then
-            echo "already_done=true" >> "$GITHUB_OUTPUT"
-            echo "Task verification already passes — may already be implemented"
-          else
-            echo "already_done=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: "D1b — Short-circuit — mark already-implemented task done and PR the registry"
-        id: short-circuit
-        if: steps.select-task.outputs.task_id != 'NONE' && steps.read-context.outputs.already_done == 'true'
-        run: |
-          TASK_ID="${{ steps.select-task.outputs.task_id }}"
-          PAGE="${{ steps.select-task.outputs.page }}"
-          DESC="${{ steps.select-task.outputs.description }}"
-          BRANCH="task/${TASK_ID}-already-done-${{ github.run_number }}"
-
-          git checkout -b "$BRANCH"
-
-          cat > /tmp/short-circuit-registry.js <<'SCRIPT'
-          const fs = require('fs');
-          const TASK_ID = process.env.TASK_ID;
-          const PAGE = process.env.PAGE;
-          const path = 'organism-memory/task-registry.json';
-          const registry = JSON.parse(fs.readFileSync(path, 'utf8'));
-          const page = registry.pages[PAGE];
-          if (!page) { console.log('Page not found:', PAGE); process.exit(1); }
-          const task = page.tasks.find(t => t.id === TASK_ID);
-          if (!task) { console.log('Task not found:', TASK_ID); process.exit(1); }
-
-          task.status = 'done';
-          task.locked_by = null;
-          task.locked_at = null;
-          if (!task.completed_at) task.completed_at = new Date().toISOString();
-
-          const done = page.tasks.filter(t => t.status === 'done').length;
-          page.functional_score = Math.round((done / page.tasks.length) * 100);
-
-          const allTasks = Object.values(registry.pages).flatMap(p => p.tasks);
-          registry.overall_progress = {
-            total_tasks: allTasks.length,
-            done: allTasks.filter(t => t.status === 'done').length,
-            in_progress: allTasks.filter(t => t.status === 'in_progress').length,
-            needs_human: allTasks.filter(t => t.status === 'needs_human').length,
-            pending: allTasks.filter(t => t.status === 'pending').length
-          };
-          registry.last_updated = new Date().toISOString();
-          fs.writeFileSync(path, JSON.stringify(registry, null, 2));
-          console.log('Marked', TASK_ID, 'done (already implemented). Page score:', page.functional_score + '%');
-          SCRIPT
-
-          TASK_ID="$TASK_ID" PAGE="$PAGE" node /tmp/short-circuit-registry.js
-
-          if git diff --quiet organism-memory/task-registry.json; then
-            echo "No registry change (task was already marked done). Skipping PR."
-            echo "pr_created=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          git add organism-memory/task-registry.json
-          git commit -m "chore(organism): mark ${TASK_ID} done — already implemented in codebase"
-          git push origin "$BRANCH"
-
-          cat > /tmp/sc-pr-body.md <<PRBODY_EOF
-          Automated PR — Workflow Builder (short-circuit)
-
-          Task: ${TASK_ID}
-          Page: ${PAGE}
-          Description: ${DESC}
-
-          Verification grep already passes against the current codebase — the task was
-          implemented by earlier work. This PR only updates the task registry to reflect
-          that, so the Workflow Builder stops re-selecting it.
-
-          Verification grep: ${{ steps.select-task.outputs.verification_grep }}
-
-          Auto-generated by Workflow Builder run #${{ github.run_number }}
-          PRBODY_EOF
-
-          PR_URL=$(gh pr create \
-            --title "chore(${PAGE}): mark ${TASK_ID} done — already implemented" \
-            --body "$(cat /tmp/sc-pr-body.md)" \
-            --base main \
-            --head "$BRANCH" \
-            --label "organism,workflow-builder,registry-sync" 2>&1 || echo "")
-
-          echo "pr_url=$PR_URL"
-          PR_NUMBER=$(echo "$PR_URL" | grep -oE '[0-9]+$' || echo "")
-          echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
-          echo "pr_created=true" >> "$GITHUB_OUTPUT"
-
-          if [ -n "$PR_NUMBER" ]; then
-            gh pr merge --admin "$PR_NUMBER" --admin --auto --squash --delete-branch || true
-          fi
-
-      - name: D1 — Create feature branch
-        id: create-branch
-        if: steps.select-task.outputs.task_id != 'NONE' && steps.read-context.outputs.already_done != 'true'
-        run: |
-          TASK_ID="${{ steps.select-task.outputs.task_id }}"
-          BRANCH="task/$TASK_ID-run-${{ github.run_number }}"
+          SLUG=$(echo "${{ steps.select.outputs.page }}" | tr '[:upper:].' '[:lower:]-' | sed 's/-tsx$//')
+          BRANCH="organism/wire-${SLUG}-${{ github.run_number }}"
           git push origin --delete "$BRANCH" 2>/dev/null || true
           git checkout -b "$BRANCH"
           echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
 
-      - name: A1 — Claude Code implements task
-        id: claude-run
-        if: steps.select-task.outputs.task_id != 'NONE' && steps.read-context.outputs.already_done != 'true'
+      - name: Install Claude Code
+        if: steps.select.outputs.page != 'NONE' && inputs.dry_run != 'true'
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Claude Code wires hooks to page
+        if: steps.select.outputs.page != 'NONE' && inputs.dry_run != 'true'
         run: |
-          TASK_ID="${{ steps.select-task.outputs.task_id }}"
-          PAGE="${{ steps.select-task.outputs.page }}"
-          DESC="${{ steps.select-task.outputs.description }}"
-          VGREP="${{ steps.select-task.outputs.verification_grep }}"
-          RELEVANT_FILES="${{ steps.read-context.outputs.relevant_files }}"
-          RUN_ID="${{ github.run_number }}"
+          PAGE="${{ steps.select.outputs.page }}"
+          FILE="${{ steps.select.outputs.file }}"
+          DOMAIN="${{ steps.select.outputs.domain }}"
+          MUTATIONS="${{ steps.select.outputs.mutations }}"
+          QUERIES="${{ steps.select.outputs.queries }}"
 
-          npm install -g @anthropic-ai/claude-code
+          PRODUCT_STATE=$(cat /tmp/product-state.json)
 
-          cat > /tmp/wb-prompt.txt <<PROMPT_EOF
-          ## SiteSync PM — Workflow Builder Task: ${TASK_ID}
+          cat > /tmp/wire-prompt.txt <<PROMPT_EOF
+          You are a senior full-stack engineer who lives in this product.
 
-          Task: ${DESC}
-          Page: ${PAGE}
-          Run: ${RUN_ID}
+          PRODUCT STATE (auto-generated):
+          $PRODUCT_STATE
 
-          Context files to read first (read ONLY these):
-          ${RELEVANT_FILES:-src/lib/supabase.ts}
+          YOUR TASK: Make src/pages/... ${FILE} fully functional by WIRING existing hooks.
 
-          Also read:
-          - src/lib/supabase.ts
-          - organism-memory/task-registry.json
+          TARGET PAGE: ${FILE}
+          DOMAIN: ${DOMAIN}
 
-          Your ONLY job this run: ${DESC}
+          Available mutation hooks you MUST wire (located in src/hooks/mutations/${DOMAIN}.ts or similar):
+          ${MUTATIONS:-(none listed — look in src/hooks/mutations/ for this domain)}
 
-          Non-negotiable rules:
-          1. Do NOT change CSS, colors, fonts, or spacing.
-          2. Do NOT fix ESLint errors unless they block compilation.
-          3. Do NOT write new unit tests.
-          4. Every mutation MUST call supabase.from('table').insert/update/delete.
-          5. Every query MUST read from Supabase.
-          6. Implement this ONE task completely.
-          7. Complete when this grep passes: grep -r "${VGREP}" src/
+          Available query hooks (located in src/hooks/queries/${DOMAIN}.ts or similar):
+          ${QUERIES:-(none listed — look in src/hooks/queries/ for this domain)}
 
-          After making code changes, ALSO update organism-memory/task-registry.json:
-          - Find the task with id '${TASK_ID}' in registry.pages[*].tasks.
-          - Set status = "done".
-          - Set completed_at to the current ISO-8601 timestamp (e.g. new Date().toISOString()).
-          - Increment attempts by 1 (default 0 if missing).
-          - Save the file with JSON.stringify(registry, null, 2).
-          This MUST be part of the same commit as your code changes so branch protection on main doesn't block it.
+          KEY INSIGHT: The hooks ALREADY EXIST in src/hooks/mutations/ and src/hooks/queries/.
+          Your job is not to build them — it is to IMPORT them and WIRE them into the page's
+          forms, buttons, and lists. This is a WIRING problem, not a building problem.
 
-          Then commit with:
-          git add -A && git commit -m "feat(${PAGE}): ${DESC} [${TASK_ID}]"
+          For EVERY form/create-button on this page:
+          1. Import the appropriate mutation hook from src/hooks/mutations/${DOMAIN}.ts
+          2. Call the hook at the top of the component: const { mutateAsync, isPending } = useCreateX()
+          3. In the form onSubmit handler, call await mutateAsync(formValues)
+          4. Invalidate queries on success (the mutation hook usually does this, but verify)
+          5. Show a toast on success/error using 'sonner' (import { toast } from 'sonner')
+          6. Disable the submit button while isPending
+          7. Close the dialog/reset form on success
+
+          For EVERY list/table on this page:
+          1. Import the appropriate query hook from src/hooks/queries/${DOMAIN}.ts
+          2. Use the real data: const { data, isLoading, error } = useX()
+          3. Handle loading state (skeleton or spinner)
+          4. Handle error state (friendly message)
+          5. Handle empty state (helpful CTA)
+          6. Remove any hardcoded mock data arrays in the component
+
+          HARD RULES:
+          - Do NOT create new hooks if they already exist in src/hooks/mutations or src/hooks/queries.
+          - Do NOT use inline supabase.from() calls when a hook exists for the domain.
+          - Do NOT change CSS, colors, fonts, spacing, or layout.
+          - Do NOT touch .github/, .organism/, .agent/, or .quality-floor.json.
+          - Do NOT write new unit tests.
+          - Do NOT fix unrelated ESLint errors.
+          - Keep changes SCOPED to ${FILE}. You may touch small helper components it imports if needed.
+
+          APPROACH:
+          1. Read ${FILE} completely.
+          2. Read the relevant mutation file src/hooks/mutations/${DOMAIN}.ts to see signatures.
+          3. Read the relevant query file src/hooks/queries/${DOMAIN}.ts to see signatures.
+          4. Identify every form, dialog, and list in the page.
+          5. Wire each one. If a form doesn't have a corresponding hook, leave it alone — don't invent.
+          6. Verify: npx tsc --noEmit passes.
+          7. Commit with: git add -A && git commit -m "feat(${DOMAIN}): wire ${PAGE} to existing hooks"
           PROMPT_EOF
 
-          claude --max-turns 25 --allowedTools "Bash,Read,Write,Edit,Glob,Grep" --print "$(cat /tmp/wb-prompt.txt)" || true
+          claude --max-turns 40 --allowedTools "Bash,Read,Write,Edit,Glob,Grep" --print "$(cat /tmp/wire-prompt.txt)" || true
 
-      - name: D2 — Verify mutation/query hook exists
-        id: verify-impl
-        if: steps.select-task.outputs.task_id != 'NONE' && steps.read-context.outputs.already_done != 'true'
+      - name: Verify — typecheck
+        id: typecheck
+        if: steps.select.outputs.page != 'NONE' && inputs.dry_run != 'true'
         run: |
-          VGREP="${{ steps.select-task.outputs.verification_grep }}"
-          if grep -r "$VGREP" src/ --include="*.tsx" --include="*.ts" -q 2>/dev/null; then
-            echo "verification=PASS" >> "$GITHUB_OUTPUT"
-            echo "PASS: verification grep found"
+          if npx tsc --noEmit 2>&1 | tee /tmp/tsc.log; then
+            echo "result=PASS" >> "$GITHUB_OUTPUT"
           else
-            echo "verification=FAIL" >> "$GITHUB_OUTPUT"
-            echo "FAIL: grep '$VGREP' not found in src/"
+            echo "result=FAIL" >> "$GITHUB_OUTPUT"
+            head -40 /tmp/tsc.log || true
           fi
 
-          if npx tsc --noEmit 2>&1; then
-            echo "typecheck=PASS" >> "$GITHUB_OUTPUT"
+      - name: Verify — build
+        id: build
+        if: steps.select.outputs.page != 'NONE' && inputs.dry_run != 'true'
+        run: |
+          if npm run build 2>&1 | tail -30; then
+            echo "result=PASS" >> "$GITHUB_OUTPUT"
           else
-            echo "typecheck=FAIL" >> "$GITHUB_OUTPUT"
-            npx tsc --noEmit 2>&1 | head -30 > /tmp/tsc-errors.txt || true
-            cat /tmp/tsc-errors.txt || true
+            echo "result=FAIL" >> "$GITHUB_OUTPUT"
           fi
 
-          NEW_MOCKS=$(git diff --name-only HEAD 2>/dev/null | xargs grep -l "const mock[A-Z]\|const sample[A-Z]\|const dummy[A-Z]" 2>/dev/null || true)
-          if [ -n "$NEW_MOCKS" ]; then
-            echo "new_mocks=FOUND" >> "$GITHUB_OUTPUT"
-            echo "WARNING: new mock data found in: $NEW_MOCKS"
-          else
-            echo "new_mocks=NONE" >> "$GITHUB_OUTPUT"
+      - name: Verify — mutation hook imports present
+        id: grep-check
+        if: steps.select.outputs.page != 'NONE' && inputs.dry_run != 'true'
+        run: |
+          FILE="${{ steps.select.outputs.file }}"
+          MUTATIONS="${{ steps.select.outputs.mutations }}"
+          IMPORTED=0
+          TOTAL=0
+          if [ -n "$MUTATIONS" ]; then
+            IFS=',' read -ra ARR <<< "$MUTATIONS"
+            for h in "${ARR[@]}"; do
+              TOTAL=$((TOTAL + 1))
+              if grep -q "$h" "$FILE" 2>/dev/null; then
+                IMPORTED=$((IMPORTED + 1))
+                echo "  ✅ $h imported"
+              else
+                echo "  ❌ $h NOT imported"
+              fi
+            done
           fi
+          echo "imported=$IMPORTED" >> "$GITHUB_OUTPUT"
+          echo "total=$TOTAL" >> "$GITHUB_OUTPUT"
 
-      - name: A2 — Retry fix if D2 failed
+      - name: Retry once if typecheck failed
         if: >
-          steps.select-task.outputs.task_id != 'NONE' &&
-          steps.read-context.outputs.already_done != 'true' &&
-          (steps.verify-impl.outputs.verification == 'FAIL' ||
-           steps.verify-impl.outputs.typecheck == 'FAIL')
+          steps.select.outputs.page != 'NONE' && inputs.dry_run != 'true' &&
+          steps.typecheck.outputs.result == 'FAIL'
         run: |
-          TASK_ID="${{ steps.select-task.outputs.task_id }}"
-          VGREP="${{ steps.select-task.outputs.verification_grep }}"
-          TSC_ERRORS=$(cat /tmp/tsc-errors.txt 2>/dev/null || echo "no errors file")
+          TSC_ERR=$(cat /tmp/tsc.log | head -60)
+          cat > /tmp/retry.txt <<RP_EOF
+          The previous wiring attempt caused TypeScript errors. Fix ONLY the type
+          errors below. Do not introduce new features.
 
-          cat > /tmp/wb-retry-prompt.txt <<PROMPT_EOF
-          ## SiteSync PM — Workflow Builder RETRY: ${TASK_ID}
+          TSC errors:
+          $TSC_ERR
 
-          The previous implementation attempt failed. Fix ONLY the listed issues.
-
-          Verification: ${{ steps.verify-impl.outputs.verification }}
-          Expected grep: grep -r "${VGREP}" src/
-          TypeScript: ${{ steps.verify-impl.outputs.typecheck }}
-          Errors: ${TSC_ERRORS}
-          New mocks: ${{ steps.verify-impl.outputs.new_mocks }}
-
-          Fix the above issues. Do not introduce new changes.
-          When fixed: git add -A && git commit -m "fix(retry): ${TASK_ID}"
-          PROMPT_EOF
-
-          claude --max-turns 15 --allowedTools "Bash,Read,Write,Edit,Glob,Grep" --print "$(cat /tmp/wb-retry-prompt.txt)" || true
-
-      - name: D3 — Build verification
-        id: build-check
-        if: steps.select-task.outputs.task_id != 'NONE' && steps.read-context.outputs.already_done != 'true'
-        run: |
-          if npm run build 2>&1; then
-            echo "build=PASS" >> "$GITHUB_OUTPUT"
-          else
-            echo "build=FAIL" >> "$GITHUB_OUTPUT"
+          Run: npx tsc --noEmit to verify.
+          Commit with: git add -A && git commit -m "fix(wire): resolve type errors"
+          RP_EOF
+          claude --max-turns 15 --allowedTools "Bash,Read,Write,Edit,Glob,Grep" --print "$(cat /tmp/retry.txt)" || true
+          if npx tsc --noEmit 2>&1 | tail -30; then
+            echo "Retry typecheck passed."
           fi
 
-      - name: D3 — Ensure registry update is in branch commit
-        id: registry-in-branch
+      - name: Create PR and auto-merge
+        id: pr
         if: >
-          steps.select-task.outputs.task_id != 'NONE' &&
-          steps.read-context.outputs.already_done != 'true' &&
-          steps.build-check.outputs.build == 'PASS'
+          steps.select.outputs.page != 'NONE' && inputs.dry_run != 'true' &&
+          steps.build.outputs.result == 'PASS'
         run: |
-          cat > /tmp/update-registry.js <<'SCRIPT'
-          const fs = require('fs');
-          const TASK_ID = process.env.TASK_ID;
-          const PAGE = process.env.PAGE;
-          const BUILD = process.env.BUILD;
-          const VERIFICATION = process.env.VERIFICATION;
-          const ATTEMPTS = parseInt(process.env.ATTEMPTS || '1');
+          PAGE="${{ steps.select.outputs.page }}"
+          DOMAIN="${{ steps.select.outputs.domain }}"
+          BRANCH="${{ steps.branch.outputs.branch }}"
 
-          const registry = JSON.parse(fs.readFileSync('organism-memory/task-registry.json', 'utf8'));
-          const page = registry.pages[PAGE];
-          if (!page) { console.log('Page not found'); process.exit(0); }
-
-          const task = page.tasks.find(t => t.id === TASK_ID);
-          if (!task) { console.log('Task not found'); process.exit(0); }
-
-          const buildPass = BUILD === 'PASS';
-          const verifyPass = VERIFICATION === 'PASS';
-
-          task.locked_by = null;
-          task.locked_at = null;
-
-          if (buildPass && verifyPass) {
-            task.status = 'done';
-            if (!task.completed_at) task.completed_at = new Date().toISOString();
-          } else if (ATTEMPTS >= 2) {
-            task.status = 'needs_human';
-            task.failure_reason = 'verification=' + VERIFICATION + ', build=' + BUILD;
-          } else {
-            task.status = 'pending';
-          }
-
-          const done = page.tasks.filter(t => t.status === 'done').length;
-          page.functional_score = Math.round((done / page.tasks.length) * 100);
-
-          const allTasks = Object.values(registry.pages).flatMap(p => p.tasks);
-          registry.overall_progress = {
-            total_tasks: allTasks.length,
-            done: allTasks.filter(t => t.status === 'done').length,
-            in_progress: allTasks.filter(t => t.status === 'in_progress').length,
-            needs_human: allTasks.filter(t => t.status === 'needs_human').length,
-            pending: allTasks.filter(t => t.status === 'pending').length
-          };
-
-          registry.last_updated = new Date().toISOString();
-          fs.writeFileSync('organism-memory/task-registry.json', JSON.stringify(registry, null, 2));
-
-          console.log('Registry reconciled — task', TASK_ID, 'status:', task.status);
-          console.log('Page', PAGE, 'functional score:', page.functional_score + '%');
-          SCRIPT
-
-          TASK_ID="${{ steps.select-task.outputs.task_id }}" \
-          PAGE="${{ steps.select-task.outputs.page }}" \
-          BUILD="${{ steps.build-check.outputs.build }}" \
-          VERIFICATION="${{ steps.verify-impl.outputs.verification }}" \
-          ATTEMPTS="${{ steps.select-task.outputs.attempts }}" \
-          node /tmp/update-registry.js
-
-          # If Claude Code already staged/committed the registry update, nothing to do.
-          # Otherwise, amend the registry changes onto the latest commit on this branch
-          # so code + registry land on main atomically when the PR auto-merges.
-          if git diff --quiet organism-memory/task-registry.json && git diff --cached --quiet organism-memory/task-registry.json; then
-            echo "Registry already up-to-date in branch commit — no amend needed."
-          else
-            echo "Amending registry update onto latest branch commit."
-            git add organism-memory/task-registry.json
-            if git log -1 --pretty=%s | grep -q .; then
-              git commit --amend --no-edit
-            else
-              git commit -m "chore(organism): update task registry for ${TASK_ID:-task}"
-            fi
+          if git diff --quiet HEAD~0..HEAD 2>/dev/null && [ -z "$(git log main..HEAD --oneline 2>/dev/null)" ]; then
+            echo "No new commits — Claude Code made no changes. Skipping PR."
+            exit 0
           fi
 
-      - name: D4 — Create pull request
-        id: create-pr
-        if: >
-          steps.select-task.outputs.task_id != 'NONE' &&
-          steps.read-context.outputs.already_done != 'true' &&
-          steps.build-check.outputs.build == 'PASS'
-        run: |
-          TASK_ID="${{ steps.select-task.outputs.task_id }}"
-          PAGE="${{ steps.select-task.outputs.page }}"
-          DESC="${{ steps.select-task.outputs.description }}"
-          BRANCH="${{ steps.create-branch.outputs.branch }}"
+          git push -u origin "$BRANCH" --force-with-lease
 
-          git push --force-with-lease origin "$BRANCH"
+          cat > /tmp/pr-body.md <<PRBODY
+          ## Workflow Builder v3 — wired existing hooks to ${PAGE}
 
-          cat > /tmp/pr-body.md <<PRBODY_EOF
-          Automated PR — Workflow Builder
+          **Target page**: \`${{ steps.select.outputs.file }}\`
+          **Domain**: ${DOMAIN}
 
-          Task: ${TASK_ID}
-          Page: ${PAGE}
-          Description: ${DESC}
+          **Mutation hooks available for wiring**: ${{ steps.select.outputs.mutations }}
+          **Query hooks available for wiring**: ${{ steps.select.outputs.queries }}
 
-          Verification:
-          - Mutation/query grep: ${{ steps.select-task.outputs.verification_grep }}
-          - TypeScript: ${{ steps.verify-impl.outputs.typecheck }}
-          - Build: ${{ steps.build-check.outputs.build }}
+          ### Verification
+          - TypeScript: ${{ steps.typecheck.outputs.result }}
+          - Build: ${{ steps.build.outputs.result }}
+          - Mutation hooks imported: ${{ steps.grep-check.outputs.imported }} / ${{ steps.grep-check.outputs.total }}
 
-          Auto-generated by Workflow Builder run #${{ github.run_number }}
-          PRBODY_EOF
-          PR_BODY=$(cat /tmp/pr-body.md)
+          Auto-generated by Workflow Builder v3 run #${{ github.run_number }}
+          PRBODY
 
           PR_URL=$(gh pr create \
-            --title "feat(${PAGE}): ${DESC} [${TASK_ID}]" \
-            --body "$PR_BODY" \
+            --title "feat(${DOMAIN}): wire ${PAGE} to existing hooks" \
+            --body "$(cat /tmp/pr-body.md)" \
             --base main \
             --head "$BRANCH" \
             --label "organism,workflow-builder" 2>&1 || echo "")
-
-          echo "pr_url=$PR_URL" >> "$GITHUB_OUTPUT"
+          echo "pr_url=$PR_URL"
           PR_NUMBER=$(echo "$PR_URL" | grep -oE '[0-9]+$' || echo "")
-          echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
-
-      - name: D4 — Enable auto-merge
-        continue-on-error: true
-        if: steps.create-pr.outputs.pr_number != ''
-        run: |
-          gh pr merge --admin ${{ steps.create-pr.outputs.pr_number }} \
-            --auto \
-            --squash \
-            --delete-branch || true
-
-      - name: D5 — Alert if task needs human
-        if: always() && steps.select-task.outputs.task_id != 'NONE' && steps.select-task.outputs.attempts >= '2'
-        run: |
-          if [ "${{ steps.build-check.outputs.build }}" != "PASS" ] || [ "${{ steps.verify-impl.outputs.verification }}" != "PASS" ]; then
-            cat > /tmp/issue-body.md <<ISSUE_EOF
-            Task Escalation
-
-            Task: ${{ steps.select-task.outputs.task_id }}
-            Description: ${{ steps.select-task.outputs.description }}
-            Attempts: ${{ steps.select-task.outputs.attempts }}
-
-            Failure details:
-            - Verification grep: ${{ steps.verify-impl.outputs.verification }}
-            - TypeScript: ${{ steps.verify-impl.outputs.typecheck }}
-            - Build: ${{ steps.build-check.outputs.build }}
-
-            This task has been marked as needs_human and will not be retried automatically.
-            ISSUE_EOF
-
-            gh issue create \
-              --title "[NEEDS_HUMAN] Task ${{ steps.select-task.outputs.task_id }} failed after 2 attempts" \
-              --body "$(cat /tmp/issue-body.md)" \
-              --label "needs-human,organism" || true
+          if [ -n "$PR_NUMBER" ]; then
+            echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+            gh pr merge --admin "$PR_NUMBER" --auto --squash --delete-branch || true
           fi
+
+      - name: Escalate if verification failed
+        if: >
+          always() && steps.select.outputs.page != 'NONE' && inputs.dry_run != 'true' &&
+          (steps.build.outputs.result == 'FAIL' || steps.typecheck.outputs.result == 'FAIL')
+        run: |
+          gh issue create \
+            --title "[workflow-builder] wiring ${{ steps.select.outputs.page }} failed" \
+            --body "Build=${{ steps.build.outputs.result }} TSC=${{ steps.typecheck.outputs.result }} Run #${{ github.run_number }}" \
+            --label "needs-human,organism" || true

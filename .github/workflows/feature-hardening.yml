@@ -54,85 +54,40 @@ jobs:
       - name: Install dependencies
         run: npm ci --silent 2>/dev/null
 
-      - name: Select page to harden
+      - name: Generate product state
+        run: |
+          chmod +x scripts/product-state.sh
+          bash scripts/product-state.sh /tmp/product-state.json > /dev/null
+          echo "Product state generated."
+
+      - name: Select page to harden (bottom-up — inverse of Workflow Builder)
         id: select
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           TARGET: ${{ github.event.inputs.target_page || 'auto' }}
         run: |
           python3 << 'PYEOF'
-          import json, os, subprocess
+          import json, os
 
           target = os.environ.get("TARGET", "auto")
-
-          # Read shared memory — what have all tiers done?
-          hardened_pages = []
-          all_activity = []
-          try:
-              with open(".organism/memory/cycle-log.jsonl") as f:
-                  for line in f:
-                      try:
-                          entry = json.loads(line)
-                          if entry.get("tier") == "feature-hardening" and entry.get("success"):
-                              hardened_pages.append(entry.get("page", ""))
-                          all_activity.append(f"{entry.get('tier','?')}: {entry.get('page', entry.get('merged_title', 'N/A'))}")
-                      except:
-                          pass
-          except:
-              pass
-
-          hardened = "\n".join(set(hardened_pages)) if hardened_pages else "None yet"
-          context = "\n".join(all_activity[-10:]) if all_activity else "No history"
+          state = json.load(open("/tmp/product-state.json"))
 
           if target != "auto":
-              page = target
-              print(f"🎯 Target: {page} (manual)")
+              # Keep the page name as-is for manual targeting
+              page_name = target
+              # Strip .tsx suffix for display (matches old behavior)
+              page = page_name.replace(".tsx", "")
           else:
-              # Check which pages have service layers (higher priority — they have real data flows)
-              has_service = []
-              for svc in ["rfi", "submittal", "changeOrder", "punchItem", "dailyLog", "schedule", "inspection"]:
-                  result = subprocess.run(["test", "-f", f"src/services/{svc}Service.ts"], capture_output=True)
-                  if result.returncode == 0:
-                      has_service.append(svc)
-
-              payload = json.dumps({
-                  "model": "claude-sonnet-4-20250514",
-                  "max_tokens": 200,
-                  "messages": [{"role": "user", "content": f"""Pick ONE page from src/pages/ to harden for enterprise-grade functionality.
-
-          Pages with service layers (highest priority — real data flows): {', '.join(has_service)}
-
-          Already hardened (skip these): {hardened}
-
-          Recent tier activity: {context}
-
-          Priority order:
-          1. The MOST RECENTLY polished page by Design Excellence (harden what was just made beautiful)
-             Look at the recent activity — find the latest design-excellence entry and pick THAT page
-          2. Pages with service layers (real data flows to harden)
-          3. Pages with the most user interactions
-
-          Focus on pages that HANDLE DATA (forms, filters, state changes), not static pages.
-
-          Output ONLY the page name (e.g., "RFIs" or "Budget"), nothing else."""}]
-              })
-
-              result = subprocess.run(
-                  ["curl", "-s", "-m", "30",
-                   "https://api.anthropic.com/v1/messages",
-                   "-H", f"x-api-key: {os.environ['ANTHROPIC_API_KEY']}",
-                   "-H", "anthropic-version: 2023-06-01",
-                   "-H", "content-type: application/json",
-                   "-d", payload],
-                  capture_output=True, text=True)
-
-              try:
-                  resp = json.loads(result.stdout)
-                  page = resp["content"][0]["text"].strip().strip('"').strip("'")
-                  print(f"🎯 Selected: {page}")
-              except:
-                  page = "RFIs"
-                  print(f"⚠️  Defaulting to: {page}")
+              # Feature Hardening picks from the BOTTOM of the priority list so it
+              # works on different pages than the Workflow Builder (which goes top-down).
+              # This maximizes parallelism — two pages get attention per cycle.
+              unwired = [p for p in state["unwired_pages"] if p["status"] == "unwired"]
+              if not unwired:
+                  # Fall back to any page in the priority list
+                  unwired = state["unwired_pages"]
+              # Pick bottom-most (highest priority number = lowest in the list)
+              target_page = sorted(unwired, key=lambda p: -p["priority"])[0]
+              page = target_page["page"].replace(".tsx", "")
+              print(f"🎯 Selected (bottom-up): {page} — priority {target_page['priority']}")
 
           with open(os.environ["GITHUB_OUTPUT"], "a") as f:
               f.write(f"page={page}\n")
