@@ -43,10 +43,11 @@ async function resolveProjectRole(
 
 export const drawingService = {
   /**
-   * Load all non-archived drawings for a project.
-   * Archived drawings are the soft-delete state.
+   * Load all non-archived drawings for a project (soft-delete via status).
+   * The drawings table uses status='archived' as the soft-delete sentinel;
+   * there is no deleted_at column on this table.
    */
-  async loadDrawings(projectId: string): Promise<Result<Drawing[]>> {
+  async getDrawings(projectId: string): Promise<Result<Drawing[]>> {
     const { data, error } = await supabase
       .from('drawings')
       .select('*')
@@ -56,6 +57,25 @@ export const drawingService = {
 
     if (error) return fail(dbError(error.message, { projectId }));
     return ok((data ?? []) as Drawing[]);
+  },
+
+  /** @deprecated Use getDrawings */
+  async loadDrawings(projectId: string): Promise<Result<Drawing[]>> {
+    return drawingService.getDrawings(projectId);
+  },
+
+  /** Fetch a single non-archived drawing by id. */
+  async getDrawing(drawingId: string): Promise<Result<Drawing>> {
+    const { data, error } = await supabase
+      .from('drawings')
+      .select('*')
+      .eq('id', drawingId)
+      .neq('status', 'archived')
+      .single();
+
+    if (error) return fail(dbError(error.message, { drawingId }));
+    if (!data) return fail(notFoundError('Drawing', drawingId));
+    return ok(data as Drawing);
   },
 
   /**
