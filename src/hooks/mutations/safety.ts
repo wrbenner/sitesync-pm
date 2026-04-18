@@ -70,14 +70,26 @@ export function useCreateIncident() {
     mutationFn: async (params: { data: Record<string, unknown>; projectId: string }) => {
       const { data, error } = await from('incidents').insert(params.data).select().single()
       if (error) throw error
-      return { data, projectId: params.projectId }
+      return { data: data as Record<string, unknown>, projectId: params.projectId }
     },
-    onSuccess: (result: { projectId: string }) => {
+    onSuccess: (result: { data: Record<string, unknown>; projectId: string }) => {
       queryClient.invalidateQueries({ queryKey: ['incidents', result.projectId] })
       queryClient.invalidateQueries({ queryKey: ['safety_overview', result.projectId] }) // FIX #7
       queryClient.invalidateQueries({ queryKey: ['daily_logs', result.projectId] }) // Incidents affect daily logs
       queryClient.invalidateQueries({ queryKey: ['project_snapshots', result.projectId] })
       posthog.capture('incident_reported', { project_id: result.projectId })
+      // Insert activity feed event (fire-and-forget)
+      const incidentType = (result.data.type as string | undefined) ?? 'safety'
+      const incidentNum = result.data.incident_number
+      const title = `${incidentType.replace('_', ' ')} incident${incidentNum != null ? ` #${incidentNum}` : ''}`
+      from('activity_feed').insert({
+        project_id: result.projectId,
+        type: 'safety_incident',
+        title,
+        metadata: { entity_id: result.data.id ?? null, action: 'create' },
+      }).then(() => {
+        queryClient.invalidateQueries({ queryKey: ['activity_feed', result.projectId] })
+      }).catch(() => {})
     },
     onError: createOnError('create_incident'),
   })

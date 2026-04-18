@@ -17,6 +17,11 @@ import posthog from '../../lib/analytics'
 import Sentry from '../../lib/sentry'
 import { invalidateEntity, type EntityType } from '../../api/invalidation'
 import { logAuditEntry } from '../../lib/auditLogger'
+import { supabase } from '../../lib/supabase'
+
+const ACTIVITY_TRACKED_ENTITIES = new Set<string>([
+  'rfi', 'submittal', 'daily_log', 'punch_item', 'task', 'meeting',
+])
 
 // ── Types ────────────────────────────────────────────────
 
@@ -170,6 +175,25 @@ export function useAuditedMutation<TParams, TResult>(config: AuditedMutationConf
       }
 
       config.onSuccess?.(result, params)
+
+      // Insert activity feed event (fire-and-forget)
+      if (projectId && ACTIVITY_TRACKED_ENTITIES.has(config.entityType as string)) {
+        const r = result as Record<string, unknown>
+        const rData = r?.data as Record<string, unknown> | undefined
+        const entityId: string | undefined =
+          config.getEntityId?.(params, result) ??
+          (typeof r?.id === 'string' ? r.id : undefined) ??
+          (typeof rData?.id === 'string' ? rData.id : undefined)
+        const title = config.getEntityTitle?.(params) ?? String(config.entityType)
+        supabase.from('activity_feed').insert({
+          project_id: projectId,
+          type: config.entityType,
+          title,
+          metadata: { entity_id: entityId ?? null, action: config.action },
+        }).then(() => {
+          queryClient.invalidateQueries({ queryKey: ['activity_feed', projectId] })
+        }).catch(() => {})
+      }
     },
 
     // ── onError: Rollback + toast + Sentry ───────────
