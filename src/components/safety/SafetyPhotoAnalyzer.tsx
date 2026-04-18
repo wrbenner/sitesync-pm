@@ -1,6 +1,6 @@
 import React, { useCallback, useRef, useState } from 'react';
 import { Camera, Upload, Loader2, ShieldAlert, AlertTriangle, CheckCircle, Plus, X, Sparkles, FileText } from 'lucide-react';
-import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
+import { colors, spacing, typography, borderRadius } from '../../styles/theme';
 import { Btn, Card } from '../Primitives';
 import { useProjectId } from '../../hooks/useProjectId';
 import { supabase } from '../../lib/supabase';
