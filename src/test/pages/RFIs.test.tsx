@@ -27,6 +27,7 @@ vi.mock('../../lib/supabase', () => ({
 vi.mock('../../hooks/queries', () => ({
   useRFIs: () => rfisState,
   useRFI: () => ({ data: null }),
+  useProject: () => ({ data: { id: 'test-project', name: 'Test Project' } }),
 }))
 
 const mockMutateAsync = vi.fn().mockResolvedValue({})
@@ -34,6 +35,7 @@ const mockMutateAsync = vi.fn().mockResolvedValue({})
 vi.mock('../../hooks/mutations', () => ({
   useCreateRFI: () => ({ mutateAsync: mockMutateAsync }),
   useUpdateRFI: () => ({ mutateAsync: mockMutateAsync }),
+  useDeleteRFI: () => ({ mutateAsync: mockMutateAsync, isPending: false }),
   useCreateRFIResponse: () => ({ mutateAsync: mockMutateAsync, isPending: false }),
 }))
 
@@ -97,6 +99,14 @@ vi.mock('../../components/shared/PresenceAvatars', () => ({
 
 vi.mock('../../components/shared/BulkActionBar', () => ({
   BulkActionBar: () => null,
+}))
+
+vi.mock('../../components/shared/ExportButton', () => ({
+  ExportButton: () => null,
+}))
+
+vi.mock('../../lib/exportXlsx', () => ({
+  exportRFILogXlsx: vi.fn(),
 }))
 
 vi.mock('../../components/ai/AIAnnotation', () => ({

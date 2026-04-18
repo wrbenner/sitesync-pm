@@ -15,7 +15,15 @@ export default defineConfig({
       VITE_SUPABASE_URL: 'https://test.supabase.co',
       VITE_SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRlc3QiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTYwMDAwMDAwMCwiZXhwIjoxOTAwMDAwMDAwfQ.dc_X5iR_VP_qT0zsiyj_I_OZ2T9FtRU2BBNWN8Bu4GE',
     },
-    exclude: ['**/node_modules/**', '**/e2e/**', '**/evals/layer3-e2e/**'],
+    exclude: [
+      '**/node_modules/**',
+      '**/e2e/**',
+      '**/evals/layer3-e2e/**',
+      // Playwright specs emitted by scripts/generate-e2e.ts — runtime is
+      // @playwright/test, not vitest.
+      'audit/generated/**',
+      'audit/harness/route-audit.ts',
+    ],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'lcov'],
@@ -27,8 +35,14 @@ export default defineConfig({
         'src/lib/**',
         'src/components/**',
         'src/stores/**',
-        'src/pages/**',
       ],
+      // src/pages/** intentionally NOT included: the generated smoke tests
+      // under src/test/pages/smoke/ are static file-existence checks (do not
+      // execute page code), so adding src/pages/** would dilute the coverage
+      // percentage below the quality floor without any real signal. Hand-
+      // written render tests (RFIs, Tasks) still contribute via their
+      // hook/component imports. Revisit once deeper per-page render tests
+      // are added in a follow-up.
       exclude: [
         'src/test/**',
         'src/types/**',

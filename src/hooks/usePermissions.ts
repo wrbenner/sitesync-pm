@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { colors } from '../styles/theme'
-import { useEffect } from 'react'
+import { useEffect, useId } from 'react'
 import { supabase } from '../lib/supabase'
 import { useProjectId } from './useProjectId'
 import { useAuth } from './useAuth'
@@ -195,6 +195,11 @@ export function usePermissions(): PermissionsResult {
   const projectId = useProjectId()
   const { user } = useAuth()
   const queryClient = useQueryClient()
+  // Unique per hook instance — every consumer (PermissionGate, every audited
+  // mutation hook, every page) calls usePermissions, and supabase.channel(name)
+  // returns the EXISTING channel for a duplicate name. Calling .on() on an
+  // already-subscribed channel throws and crashes every page on mount.
+  const instanceId = useId()
 
   // BUG #3 FIX: Reduce staleTime from 5 minutes to 30 seconds
   const { data: membership, isLoading } = useQuery({
@@ -220,7 +225,7 @@ export function usePermissions(): PermissionsResult {
     if (!projectId || !user?.id) return
 
     const channel = supabase
-      .channel(`permissions:${projectId}:${user.id}`)
+      .channel(`permissions:${projectId}:${user.id}:${instanceId}`)
       .on(
         'postgres_changes',
         {
@@ -242,7 +247,7 @@ export function usePermissions(): PermissionsResult {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [projectId, user?.id, queryClient])
+  }, [projectId, user?.id, queryClient, instanceId])
 
   const role: ProjectRole = membership ?? 'viewer'
 

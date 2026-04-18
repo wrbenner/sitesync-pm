@@ -23,11 +23,21 @@ vi.mock('../../../lib/supabase', () => ({
 
 vi.mock('../../../hooks/queries', () => ({
   usePunchItems: () => punchItemsState,
+  useProject: () => ({ data: { id: 'test-project-id', name: 'Test Project' } }),
+}))
+
+vi.mock('../../../components/shared/ExportButton', () => ({
+  ExportButton: () => null,
+}))
+
+vi.mock('../../../lib/exportXlsx', () => ({
+  exportPunchListXlsx: vi.fn(),
 }))
 
 vi.mock('../../../hooks/mutations', () => ({
   useCreatePunchItem: () => ({ mutateAsync: vi.fn() }),
   useUpdatePunchItem: () => ({ mutateAsync: vi.fn() }),
+  useDeletePunchItem: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }))
 
 vi.mock('../../../hooks/useProjectId', () => ({
