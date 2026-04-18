@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "last_updated": "2026-04-18T13:52:53.760Z",
+  "last_updated": "2026-04-18T18:42:27.992Z",
   "overall_progress": {
     "total_tasks": 205,
     "done": 140,
@@ -1973,7 +1973,7 @@
         },
         {
           "id": "contracts-3",
-          "description": "Status transition buttons (draft \u2192 executed \u2192 closed)",
+          "description": "Status transition buttons (draft → executed → closed)",
           "status": "done",
           "pr": null,
           "pr_url": null,
@@ -3513,7 +3513,7 @@
     }
   },
   "regression_watch": {
-    "last_run": null,
+    "last_run": "2026-04-18T18:42:27.991Z",
     "pages_watched": [],
     "last_result": "PASS"
   }
