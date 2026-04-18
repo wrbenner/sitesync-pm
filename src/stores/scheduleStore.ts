@@ -3,7 +3,6 @@
 // (phases, metrics, loadSchedule, updatePhase) so call sites stay unchanged.
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
-import { supabase } from '../lib/supabase';
 import { scheduleService } from '../services/scheduleService';
 import type { CreatePhaseInput } from '../services/scheduleService';
 import type { MappedSchedulePhase } from '../types/entities';
@@ -128,8 +127,8 @@ function useActiveScheduleProjectId(): string | null {
 
 /**
  * Backwards-compatible hook. Reads phases via React Query (single source of
- * truth); mutations invalidate the cache. The `loadSchedule(projectId)` method
- * is retained for legacy call sites — it simply (re)points the active query.
+ * truth); mutations optimistically update the cache then invalidate on success.
+ * The `loadSchedule(projectId)` method is retained for legacy call sites.
  */
 export function useScheduleStore<T = ScheduleHookState>(
   selector?: (s: ScheduleHookState) => T,
@@ -165,34 +164,124 @@ export function useScheduleStore<T = ScheduleHookState>(
   }, [queryClient]);
 
   const createPhase = useCallback(async (input: CreatePhaseInput) => {
+    const queryKey = ['schedule_phases_mapped', activeProjectId];
+    const snapshot = queryClient.getQueryData<SchedulePhase[]>(queryKey);
+
+    // Optimistic: add a temporary placeholder so the UI reacts immediately
+    const tempPhase = mapToMappedPhase({
+      id: `temp-${Date.now()}`,
+      project_id: input.project_id,
+      name: input.name,
+      start_date: input.start_date ?? null,
+      end_date: input.end_date ?? null,
+      baseline_start: input.baseline_start ?? null,
+      baseline_end: input.baseline_end ?? null,
+      percent_complete: input.percent_complete ?? 0,
+      status: 'planned',
+      is_critical_path: input.is_critical_path ?? false,
+      float_days: input.float_days ?? null,
+      depends_on: input.depends_on ?? null,
+      assigned_crew_id: input.assigned_crew_id ?? null,
+      created_at: new Date().toISOString(),
+      updated_at: null,
+      is_milestone: input.is_milestone ?? false,
+      dependencies: null,
+      earned_value: null,
+    });
+
+    if (snapshot) {
+      queryClient.setQueryData(queryKey, [...snapshot, tempPhase]);
+    }
+
     const { error } = await scheduleService.createPhase(input);
-    if (!error) invalidate();
+
+    if (error) {
+      if (snapshot) queryClient.setQueryData(queryKey, snapshot);
+    } else {
+      invalidate();
+    }
     return { error };
-  }, [invalidate]);
+  }, [invalidate, queryClient]);
 
   const updatePhase = useCallback(async (id: string, updates: Partial<CreatePhaseInput>) => {
+    const queryKey = ['schedule_phases_mapped', activeProjectId];
+    const snapshot = queryClient.getQueryData<SchedulePhase[]>(queryKey);
+
+    if (snapshot) {
+      queryClient.setQueryData(queryKey, snapshot.map((p) =>
+        p.id === id ? { ...p, ...updates } : p,
+      ));
+    }
+
     const { error } = await scheduleService.updatePhase(id, updates);
-    if (!error) invalidate();
+
+    if (error) {
+      if (snapshot) queryClient.setQueryData(queryKey, snapshot);
+    } else {
+      invalidate();
+    }
     return { error };
-  }, [invalidate]);
+  }, [invalidate, queryClient]);
 
   const transitionStatus = useCallback(async (phaseId: string, newStatus: ScheduleStatus) => {
+    const queryKey = ['schedule_phases_mapped', activeProjectId];
+    const snapshot = queryClient.getQueryData<SchedulePhase[]>(queryKey);
+
+    if (snapshot) {
+      queryClient.setQueryData(queryKey, snapshot.map((p) =>
+        p.id === phaseId ? { ...p, status: newStatus } : p,
+      ));
+    }
+
     const { error } = await scheduleService.transitionStatus(phaseId, newStatus);
-    if (!error) invalidate();
+
+    if (error) {
+      if (snapshot) queryClient.setQueryData(queryKey, snapshot);
+    } else {
+      invalidate();
+    }
     return { error };
-  }, [invalidate]);
+  }, [invalidate, queryClient]);
 
   const deletePhase = useCallback(async (phaseId: string) => {
+    const queryKey = ['schedule_phases_mapped', activeProjectId];
+    const snapshot = queryClient.getQueryData<SchedulePhase[]>(queryKey);
+
+    if (snapshot) {
+      queryClient.setQueryData(queryKey, snapshot.filter((p) => p.id !== phaseId));
+    }
+
     const { error } = await scheduleService.deletePhase(phaseId);
-    if (!error) invalidate();
+
+    if (error) {
+      if (snapshot) queryClient.setQueryData(queryKey, snapshot);
+    } else {
+      invalidate();
+    }
     return { error };
-  }, [invalidate]);
+  }, [invalidate, queryClient]);
 
   const updateDependencies = useCallback(async (phaseId: string, predecessorIds: string[]) => {
+    const queryKey = ['schedule_phases_mapped', activeProjectId];
+    const snapshot = queryClient.getQueryData<SchedulePhase[]>(queryKey);
+
+    if (snapshot) {
+      queryClient.setQueryData(queryKey, snapshot.map((p) =>
+        p.id === phaseId
+          ? { ...p, predecessorIds, dependencies: predecessorIds, depends_on: predecessorIds[0] ?? null }
+          : p,
+      ));
+    }
+
     const { error } = await scheduleService.updateDependencies(phaseId, predecessorIds);
-    if (!error) invalidate();
+
+    if (error) {
+      if (snapshot) queryClient.setQueryData(queryKey, snapshot);
+    } else {
+      invalidate();
+    }
     return { error };
-  }, [invalidate]);
+  }, [invalidate, queryClient]);
 
   const state: ScheduleHookState = {
     phases,
@@ -209,8 +298,5 @@ export function useScheduleStore<T = ScheduleHookState>(
 
   return selector ? selector(state) : (state as unknown as T);
 }
-
-// Silence unused-import warnings in case downstream refactors remove callers.
-void supabase;
 
 export { useScheduleStore as default };

@@ -121,30 +121,32 @@ export const useDocumentStore = create<DocumentState>()((set, get) => ({
   },
 
   transitionStatus: async (documentId, newStatus) => {
-    const { error } = await documentService.transitionStatus(documentId, newStatus);
-    if (error) {
-      set({ error: error.userMessage, errorDetails: error });
-      return { error: error.userMessage };
-    }
+    const prev = get().documents;
     set((s) => ({
       documents: s.documents.map((d) =>
         d.id === documentId ? { ...d, document_status: newStatus } : d,
       ),
     }));
+    const { error } = await documentService.transitionStatus(documentId, newStatus);
+    if (error) {
+      set({ documents: prev, error: error.userMessage, errorDetails: error });
+      return { error: error.userMessage };
+    }
     return { error: null };
   },
 
   updateDocument: async (documentId, updates) => {
-    const { error } = await documentService.updateDocument(documentId, updates);
-    if (error) {
-      set({ error: error.userMessage, errorDetails: error });
-      return { error: error.userMessage };
-    }
+    const prev = get().documents;
     set((s) => ({
       documents: s.documents.map((d) =>
         d.id === documentId ? { ...d, ...updates } : d,
       ),
     }));
+    const { error } = await documentService.updateDocument(documentId, updates);
+    if (error) {
+      set({ documents: prev, error: error.userMessage, errorDetails: error });
+      return { error: error.userMessage };
+    }
     return { error: null };
   },
 

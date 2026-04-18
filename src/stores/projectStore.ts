@@ -104,23 +104,32 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   },
 
   updateProject: async (projectId, updates) => {
-    const { error } = await projectService.updateProject(projectId, updates);
-    if (error) return { error: error.userMessage };
+    const prev = get().projects;
     set((s) => ({
       projects: s.projects.map((p) =>
         p.id === projectId ? { ...p, ...updates } : p,
       ),
     }));
+    const { error } = await projectService.updateProject(projectId, updates);
+    if (error) {
+      set({ projects: prev });
+      return { error: error.userMessage };
+    }
     return { error: null };
   },
 
   deleteProject: async (projectId) => {
-    const { error } = await projectService.deleteProject(projectId);
-    if (error) return { error: error.userMessage };
+    const prev = get().projects;
+    const prevActive = get().activeProject;
     set((s) => ({
       projects: s.projects.filter((p) => p.id !== projectId),
-      activeProject: get().activeProject?.id === projectId ? null : get().activeProject,
+      activeProject: s.activeProject?.id === projectId ? null : s.activeProject,
     }));
+    const { error } = await projectService.deleteProject(projectId);
+    if (error) {
+      set({ projects: prev, activeProject: prevActive });
+      return { error: error.userMessage };
+    }
     return { error: null };
   },
 
@@ -142,20 +151,28 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   },
 
   updateMemberRole: async (memberId, role) => {
-    const { error } = await projectService.updateMemberRole(memberId, role);
-    if (error) return { error: error.userMessage };
+    const prev = get().members;
     set((s) => ({
       members: s.members.map((m) =>
         m.id === memberId ? { ...m, role } : m,
       ),
     }));
+    const { error } = await projectService.updateMemberRole(memberId, role);
+    if (error) {
+      set({ members: prev });
+      return { error: error.userMessage };
+    }
     return { error: null };
   },
 
   removeMember: async (memberId) => {
-    const { error } = await projectService.removeMember(memberId);
-    if (error) return { error: error.userMessage };
+    const prev = get().members;
     set((s) => ({ members: s.members.filter((m) => m.id !== memberId) }));
+    const { error } = await projectService.removeMember(memberId);
+    if (error) {
+      set({ members: prev });
+      return { error: error.userMessage };
+    }
     return { error: null };
   },
 
