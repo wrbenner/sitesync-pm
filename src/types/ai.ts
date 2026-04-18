@@ -101,6 +101,111 @@ export interface DrawingAnalysis {
   conflicts: CoordinationConflict[]
 }
 
+export type DrawingDiscipline =
+  | 'architectural'
+  | 'structural'
+  | 'mechanical'
+  | 'electrical'
+  | 'plumbing'
+  | 'mep'
+  | 'civil'
+  | 'interior_design'
+  | 'unclassified'
+
+export type DrawingClassificationStatus = 'pending' | 'processing' | 'completed' | 'failed'
+
+export interface DrawingPairingTokens {
+  areaToken?: string | null
+  sectionToken?: string | null
+}
+
+export interface DrawingViewportBlock {
+  title?: string | null
+  scale?: string | null
+  floorId?: string | null
+}
+
+export interface DrawingViewportDetails {
+  hasMultipleDesigns?: boolean
+  designBlocks?: DrawingViewportBlock[]
+}
+
+export interface DrawingDesignDescription {
+  sheetNumber?: string | null
+  drawingTitle?: string | null
+  projectName?: string | null
+  projectAddress?: string | null
+  buildingName?: string | null
+  buildingType?: string | null
+  buildingBlock?: string | null
+  floorLevel?: string | null
+  levelNumber?: number | null
+  discipline?: string | null
+  planType?: string | null
+  hasDimensions?: boolean | null
+  planTypeConfidence?: number | null
+  levelConfidence?: number | null
+  notes?: string | null
+  scaleText?: string | null
+  scaleRatio?: number | null
+}
+
+export interface DrawingClassification {
+  id: string
+  drawing_id: string | null
+  project_id: string | null
+  sheet_number: string | null
+  drawing_title: string | null
+  building_name: string | null
+  floor_level: string | null
+  discipline: DrawingDiscipline | null
+  plan_type: string | null
+  scale_text: string | null
+  scale_ratio: number | null
+  design_description: DrawingDesignDescription | null
+  viewport_details: DrawingViewportDetails | null
+  pairing_tokens: DrawingPairingTokens | null
+  classification_confidence: number | null
+  processing_status: DrawingClassificationStatus
+  processed_at: string | null
+  ai_cost_cents: number
+  created_at: string
+}
+
+export interface ClassifyDrawingResult {
+  classification_id: string
+  drawing_id: string
+  discipline: DrawingDiscipline
+  plan_type: string | null
+  sheet_number: string | null
+  drawing_title: string | null
+  scale_text: string | null
+  scale_ratio: number | null
+  confidence: number | null
+  ai_cost_cents: number
+  status: DrawingClassificationStatus
+}
+
+export interface RevisionDiffScaleInfo {
+  scale_ratio: number | null
+  scale_text: string
+  confidence: number
+  method: string
+}
+
+export interface RevisionDiffResult {
+  drawing_id: string
+  project_id: string
+  old_revision: { url: string; label: string; scale: RevisionDiffScaleInfo }
+  new_revision: { url: string; label: string; scale: RevisionDiffScaleInfo }
+  scale_correction: { scaling_factor: number; notes: string }
+  blend_mode: 'screen'
+  colors: { old: string; new: string }
+  threshold: number
+  web_scale_factor: number
+  notes: string
+}
+
 export type GenerativeUIBlock =
   | { type: 'metric_cards'; data: Array<{ label: string; value: string | number; trend?: 'up' | 'down' }> }
   | { type: 'data_table'; columns: string[]; rows: Array<Record<string, unknown>> }

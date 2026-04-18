@@ -23,6 +23,8 @@ import { AiInsightsPanel } from './AiInsightsPanel';
 import { RevisionOverlay } from '../../components/drawings/RevisionOverlay';
 import { AnnotationListPanel } from '../../components/drawings/AnnotationListPanel';
 import { useAIAnnotationStore } from '../../stores';
+import { useDrawingProcessing } from '../../hooks/useDrawingProcessing';
+import type { DrawingClassification, DrawingDiscipline } from '../../types/ai';
 
 interface DrawingItem {
   id: number;
@@ -37,6 +39,157 @@ interface DrawingItem {
   currentRevision?: { revision_number: number; issued_date: string | null; issued_by?: string };
   revisions: DrawingRevision[];
 }
+
+const DISCIPLINE_BADGE_COLOR: Record<DrawingDiscipline, string> = {
+  architectural: '#3B82F6',
+  structural: '#E74C3C',
+  mechanical: '#F47820',
+  electrical: '#F5A623',
+  plumbing: '#4EC896',
+  mep: '#8B5CF6',
+  civil: '#10B981',
+  interior_design: '#DB2777',
+  unclassified: '#6B7280',
+};
+
+const DISCIPLINE_LABEL: Record<DrawingDiscipline, string> = {
+  architectural: 'Architectural',
+  structural: 'Structural',
+  mechanical: 'Mechanical',
+  electrical: 'Electrical',
+  plumbing: 'Plumbing',
+  mep: 'MEP',
+  civil: 'Civil',
+  interior_design: 'Interior',
+  unclassified: 'Unclassified',
+};
+
+const ClassificationBadge: React.FC<{
+  classification: DrawingClassification | null;
+  status: string | null;
+  classifying: boolean;
+}> = ({ classification, status, classifying }) => {
+  if (classifying || status === 'processing' || status === 'pending') {
+    return (
+      <div
+        aria-live="polite"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          padding: spacing.md,
+          marginBottom: spacing.md,
+          borderRadius: 8,
+          backgroundColor: `${colors.primaryOrange}14`,
+          border: `1px solid ${colors.primaryOrange}55`,
+          color: colors.textPrimary,
+          fontSize: 13,
+        }}
+      >
+        <Sparkles size={16} color={colors.primaryOrange} />
+        <span>AI classification in progress…</span>
+      </div>
+    );
+  }
+
+  if (status === 'failed') {
+    return (
+      <div
+        style={{
+          padding: spacing.md,
+          marginBottom: spacing.md,
+          borderRadius: 8,
+          backgroundColor: '#F443361A',
+          border: '1px solid #F4433655',
+          color: colors.textPrimary,
+          fontSize: 13,
+        }}
+      >
+        AI classification failed. Re-upload to retry.
+      </div>
+    );
+  }
+
+  if (!classification) {
+    return null;
+  }
+
+  const discipline = (classification.discipline ?? 'unclassified') as DrawingDiscipline;
+  const color = DISCIPLINE_BADGE_COLOR[discipline] ?? DISCIPLINE_BADGE_COLOR.unclassified;
+  const label = DISCIPLINE_LABEL[discipline] ?? DISCIPLINE_LABEL.unclassified;
+  const planType = classification.plan_type ?? null;
+  const scaleText = classification.scale_text ?? null;
+
+  return (
+    <div
+      style={{
+        padding: spacing.md,
+        marginBottom: spacing.md,
+        borderRadius: 8,
+        backgroundColor: colors.surfaceRaised,
+        border: `1px solid ${colors.borderSubtle}`,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 8,
+      }}
+    >
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+        <span
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '4px 10px',
+            borderRadius: 999,
+            backgroundColor: `${color}22`,
+            color,
+            fontSize: 12,
+            fontWeight: 600,
+            textTransform: 'uppercase',
+            letterSpacing: 0.4,
+          }}
+        >
+          <Sparkles size={12} />
+          {label}
+        </span>
+        {planType && (
+          <span
+            style={{
+              padding: '4px 10px',
+              borderRadius: 999,
+              backgroundColor: colors.surfacePage,
+              color: colors.textSecondary,
+              fontSize: 12,
+              fontWeight: 500,
+              textTransform: 'capitalize',
+            }}
+          >
+            {planType}
+          </span>
+        )}
+        {scaleText && (
+          <span
+            style={{
+              padding: '4px 10px',
+              borderRadius: 999,
+              backgroundColor: colors.surfacePage,
+              color: colors.textSecondary,
+              fontSize: 12,
+              fontWeight: 500,
+            }}
+          >
+            Scale {scaleText}
+          </span>
+        )}
+      </div>
+      {classification.drawing_title && (
+        <div style={{ fontSize: 12, color: colors.textSecondary }}>
+          {classification.drawing_title}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const DrawingsPage: React.FC = () => {
   const { addToast } = useToast();
@@ -83,6 +236,22 @@ const DrawingsPage: React.FC = () => {
   const [showRevisionOverlay, setShowRevisionOverlay] = useState(false);
   const [showAnnotationPanel, setShowAnnotationPanel] = useState(false);
   const annotationsStore = useAIAnnotationStore();
+
+  // ── AI classification pipeline ─────────────────────────────
+  const processing = useDrawingProcessing(projectId);
+  const classifyMutation = processing.classify;
+
+  const triggerClassification = useCallback(
+    async (drawingId: string, pageImageUrl: string) => {
+      if (!projectId) return;
+      try {
+        await classifyMutation.mutateAsync({ projectId, drawingId, pageImageUrl });
+      } catch {
+        addToast('error', 'AI classification failed. The drawing is still uploaded.');
+      }
+    },
+    [projectId, classifyMutation, addToast],
+  );
 
   const handleCreateRFIFromAnnotation = useCallback(() => {
     if (!selectedDrawing) {
@@ -212,6 +381,7 @@ const DrawingsPage: React.FC = () => {
     setIsUploading(true);
     let completed = 0;
     const total = pendingFiles.length;
+    const classificationTargets: Array<{ drawingId: string; pageImageUrl: string }> = [];
     for (const file of pendingFiles) {
       setUploadProgressText(`Uploading sheet ${completed + 1} of ${total}...`);
       const titleNoExt = file.name.replace(/\.[^.]+$/, '');
@@ -219,11 +389,20 @@ const DrawingsPage: React.FC = () => {
       const sheetNumber = sheetMatch ? sheetMatch[1].toUpperCase() : titleNoExt.substring(0, 20);
       const storagePath = `${projectId}/drawings/${Date.now()}-${file.name}`;
       let fileUrl = storagePath;
+      let publicUrl: string | null = null;
       try {
         const { data: storageData } = await supabase.storage.from('drawings').upload(storagePath, file);
-        if (storageData?.path) fileUrl = storageData.path;
+        if (storageData?.path) {
+          fileUrl = storageData.path;
+          const { data: urlData } = supabase.storage.from('drawings').getPublicUrl(storageData.path);
+          publicUrl = urlData?.publicUrl ?? null;
+        }
       } catch { /* storage upload failed */ }
-      await drawingService.createDrawing({ project_id: projectId, title: titleNoExt, discipline: uploadDiscipline, sheet_number: sheetNumber, revision: '1', file_url: fileUrl });
+      const created = await drawingService.createDrawing({ project_id: projectId, title: titleNoExt, discipline: uploadDiscipline, sheet_number: sheetNumber, revision: '1', file_url: fileUrl });
+      const createdId = created.data?.id;
+      if (createdId && publicUrl) {
+        classificationTargets.push({ drawingId: createdId, pageImageUrl: publicUrl });
+      }
       completed++;
     }
     setIsUploading(false);
@@ -233,6 +412,12 @@ const DrawingsPage: React.FC = () => {
     setUploadDiscipline('Architectural');
     refetch();
     addToast('success', `${completed} drawing${completed !== 1 ? 's' : ''} uploaded successfully.`);
+    if (classificationTargets.length > 0) {
+      addToast('info', 'AI classification started in the background.');
+      void Promise.all(
+        classificationTargets.map((t) => triggerClassification(t.drawingId, t.pageImageUrl)),
+      );
+    }
   };
 
   const handleUploadRevision = async () => {
@@ -392,7 +577,13 @@ const DrawingsPage: React.FC = () => {
           />
 
           {selectedDrawing && (
-            <DrawingDetail
+            <div>
+              <ClassificationBadge
+                classification={processing.byDrawing(String(selectedDrawing.id))}
+                status={processing.statusByDrawing(String(selectedDrawing.id))}
+                classifying={classifyMutation.isPending}
+              />
+              <DrawingDetail
               drawing={selectedDrawing}
               revisionHistory={revisionHistory}
               viewingRevisionNum={viewingRevisionNum}
@@ -417,6 +608,7 @@ const DrawingsPage: React.FC = () => {
               onCompareVersions={() => setShowVersionCompare(true)}
               setViewingRevisionNum={setViewingRevisionNum}
             />
+            </div>
           )}
         </div>
       </div>
