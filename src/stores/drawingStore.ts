@@ -2,7 +2,16 @@ import { create } from 'zustand';
 import { drawingService } from '../services/drawingService';
 import { getNextStatus } from '../machines/drawingMachine';
 import type { Drawing } from '../types/database';
-import type { DrawingMarkup, DrawingStatus, CreateDrawingInput, CreateMarkupInput } from '../types/drawing';
+import type {
+  DrawingMarkup,
+  DrawingVersion,
+  DrawingStatus,
+  CreateDrawingInput,
+  CreateMarkupInput,
+  CreateAnnotationInput,
+  UpdateAnnotationInput,
+  UploadDrawingInput,
+} from '../types/drawing';
 import type { ServiceError } from '../services/errors';
 import { useEntityStore, useEntityActions, useEntityStoreRoot } from './entityStore';
 
@@ -16,11 +25,13 @@ export { useEntityStore as useDrawingEntityStore, useEntityActions as useDrawing
 interface DrawingState {
   drawings: Drawing[];
   markups: Record<string, DrawingMarkup[]>;
+  versions: Record<string, DrawingVersion[]>;
   loading: boolean;
   error: string | null;
   errorDetails: ServiceError | null;
 
   loadDrawings: (projectId: string) => Promise<void>;
+  uploadDrawing: (projectId: string, file: File, meta?: UploadDrawingInput) => Promise<{ drawing: Drawing | null; error: string | null }>;
   createDrawing: (input: CreateDrawingInput) => Promise<{ drawing: Drawing | null; error: string | null }>;
   transitionStatus: (drawingId: string, action: string) => Promise<{ error: string | null }>;
   updateDrawing: (drawingId: string, updates: Partial<Drawing>) => Promise<{ error: string | null }>;
@@ -29,6 +40,10 @@ interface DrawingState {
   createMarkup: (input: CreateMarkupInput) => Promise<{ markup: DrawingMarkup | null; error: string | null }>;
   updateMarkup: (markupId: string, updates: Partial<Pick<DrawingMarkup, 'data' | 'note' | 'layer' | 'type'>>) => Promise<{ error: string | null }>;
   deleteMarkup: (markupId: string, drawingId: string) => Promise<{ error: string | null }>;
+  addAnnotation: (input: CreateAnnotationInput) => Promise<{ annotation: DrawingMarkup | null; error: string | null }>;
+  updateAnnotation: (annotationId: string, updates: UpdateAnnotationInput) => Promise<{ error: string | null }>;
+  deleteAnnotation: (annotationId: string, drawingId: string) => Promise<{ error: string | null }>;
+  getDrawingVersions: (drawingId: string) => Promise<{ versions: DrawingVersion[]; error: string | null }>;
   linkMarkupToRfi: (markupId: string, rfiId: string) => Promise<{ error: string | null }>;
   linkMarkupToPunchItem: (markupId: string, punchItemId: string) => Promise<{ error: string | null }>;
   unlinkMarkup: (markupId: string) => Promise<{ error: string | null }>;
@@ -38,6 +53,7 @@ interface DrawingState {
 export const useDrawingStore = create<DrawingState>()((set, get) => ({
   drawings: [],
   markups: {},
+  versions: {},
   loading: false,
   error: null,
   errorDetails: null,
@@ -54,6 +70,24 @@ export const useDrawingStore = create<DrawingState>()((set, get) => ({
       set({ drawings: items, loading: false });
       useEntityStoreRoot.getState()._setSlice('drawings', { items, loading: false, error: null });
     }
+  },
+
+  uploadDrawing: async (projectId, file, meta) => {
+    const { data, error } = await drawingService.uploadDrawing(projectId, file, meta);
+    if (error) return { drawing: null, error: error.userMessage };
+    if (data) {
+      set((s) => ({ drawings: [data, ...s.drawings] }));
+      useEntityStoreRoot.setState((s) => ({
+        slices: {
+          ...s.slices,
+          drawings: {
+            ...s.slices['drawings'],
+            items: [data, ...(s.slices['drawings']?.items ?? [])],
+          },
+        },
+      }));
+    }
+    return { drawing: data, error: null };
   },
 
   createDrawing: async (input) => {
@@ -265,6 +299,62 @@ export const useDrawingStore = create<DrawingState>()((set, get) => ({
       ),
     }));
     return { error: null };
+  },
+
+  addAnnotation: async (input) => {
+    const { data, error } = await drawingService.addAnnotation(input);
+    if (error) return { annotation: null, error: error.userMessage };
+    if (data) {
+      set((s) => ({
+        markups: {
+          ...s.markups,
+          [input.drawing_id]: [...(s.markups[input.drawing_id] ?? []), data],
+        },
+      }));
+    }
+    return { annotation: data, error: null };
+  },
+
+  updateAnnotation: async (annotationId, updates) => {
+    const { error } = await drawingService.updateAnnotation(annotationId, updates);
+    if (error) return { error: error.userMessage };
+    set((s) => ({
+      markups: Object.fromEntries(
+        Object.entries(s.markups).map(([drawingId, list]) => [
+          drawingId,
+          list.map((m) => (m.id === annotationId ? { ...m, ...updates } : m)),
+        ]),
+      ),
+    }));
+    return { error: null };
+  },
+
+  deleteAnnotation: async (annotationId, drawingId) => {
+    const previous = get().markups[drawingId] ?? [];
+    set((s) => ({
+      markups: {
+        ...s.markups,
+        [drawingId]: (s.markups[drawingId] ?? []).filter((m) => m.id !== annotationId),
+      },
+    }));
+    const { error } = await drawingService.deleteAnnotation(annotationId);
+    if (error) {
+      set((s) => ({
+        markups: { ...s.markups, [drawingId]: previous },
+        error: error.userMessage,
+        errorDetails: error,
+      }));
+      return { error: error.userMessage };
+    }
+    return { error: null };
+  },
+
+  getDrawingVersions: async (drawingId) => {
+    const { data, error } = await drawingService.getDrawingVersions(drawingId);
+    if (error) return { versions: [], error: error.userMessage };
+    const versions = data ?? [];
+    set((s) => ({ versions: { ...s.versions, [drawingId]: versions } }));
+    return { versions, error: null };
   },
 
   clearError: () => set({ error: null, errorDetails: null }),

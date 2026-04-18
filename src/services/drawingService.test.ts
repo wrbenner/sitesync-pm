@@ -377,3 +377,298 @@ describe('drawingService markup methods', () => {
     expect(chain.delete).toHaveBeenCalled();
   });
 });
+
+// ── uploadDrawing ─────────────────────────────────────────────────────────────
+
+describe('drawingService.uploadDrawing', () => {
+  const mockFile = new File(['pdf-content'], 'A-100.pdf', { type: 'application/pdf' });
+
+  beforeEach(() => {
+    // Mock supabase.storage
+    (mockSupabase as unknown as Record<string, unknown>).storage = {
+      from: vi.fn().mockReturnValue({
+        upload: vi.fn().mockResolvedValue({ error: null }),
+        getPublicUrl: vi.fn().mockReturnValue({
+          data: { publicUrl: 'https://cdn.example.com/drawings/proj-1/A-100.pdf' },
+        }),
+      }),
+    };
+  });
+
+  it('uploads file and creates drawing record in draft status', async () => {
+    const created = { id: 'd-upload', status: 'draft', file_url: 'https://cdn.example.com/drawings/proj-1/A-100.pdf' };
+    const chain = {
+      insert: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: created, error: null }),
+    };
+    mockSupabase.from.mockReturnValue(chain);
+
+    const result = await drawingService.uploadDrawing('proj-1', mockFile, { title: 'A-100 Floor Plan', sheet_number: 'A-100' });
+    expect(result.error).toBeNull();
+    const insertArg = chain.insert.mock.calls[0][0];
+    expect(insertArg.status).toBe('draft');
+    expect(insertArg.project_id).toBe('proj-1');
+    expect(insertArg.sheet_number).toBe('A-100');
+    expect(insertArg.uploaded_by).toBe('user-1');
+  });
+
+  it('returns error when storage upload fails', async () => {
+    (mockSupabase as unknown as Record<string, unknown>).storage = {
+      from: vi.fn().mockReturnValue({
+        upload: vi.fn().mockResolvedValue({ error: { message: 'bucket not found' } }),
+        getPublicUrl: vi.fn(),
+      }),
+    };
+
+    const result = await drawingService.uploadDrawing('proj-1', mockFile);
+    expect(result.data).toBeNull();
+    expect(result.error?.category).toBe('DatabaseError');
+    expect(result.error?.message).toContain('File upload failed');
+  });
+
+  it('uses filename as title when no title provided in meta', async () => {
+    const chain = {
+      insert: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: { id: 'd-1' }, error: null }),
+    };
+    mockSupabase.from.mockReturnValue(chain);
+
+    await drawingService.uploadDrawing('proj-1', mockFile);
+    const insertArg = chain.insert.mock.calls[0][0];
+    expect(insertArg.title).toBe('A-100.pdf');
+  });
+});
+
+// ── addAnnotation ─────────────────────────────────────────────────────────────
+
+describe('drawingService.addAnnotation', () => {
+  it('inserts annotation with created_by and extended fields', async () => {
+    const created = { id: 'ann-1', created_by: 'user-1', type: 'rectangle' };
+    const chain = {
+      insert: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: created, error: null }),
+    };
+    mockSupabase.from.mockReturnValue(chain);
+
+    const result = await drawingService.addAnnotation({
+      drawing_id: 'd-1',
+      project_id: 'proj-1',
+      annotation_type: 'rectangle',
+      coordinates: { x: 10, y: 20, width: 100, height: 50 },
+      color: '#FF0000',
+      page_number: 2,
+      note: 'Check dimension',
+    });
+
+    expect(result.error).toBeNull();
+    const insertArg = chain.insert.mock.calls[0][0];
+    expect(insertArg.created_by).toBe('user-1');
+    expect(insertArg.type).toBe('rectangle');
+    expect(insertArg.note).toBe('Check dimension');
+    expect(insertArg.color).toBe('#FF0000');
+    expect(insertArg.page_number).toBe(2);
+  });
+
+  it('defaults color to brand orange when not provided', async () => {
+    const chain = {
+      insert: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: { id: 'ann-1' }, error: null }),
+    };
+    mockSupabase.from.mockReturnValue(chain);
+
+    await drawingService.addAnnotation({
+      drawing_id: 'd-1',
+      project_id: 'proj-1',
+      coordinates: { x: 0, y: 0 },
+    });
+
+    const insertArg = chain.insert.mock.calls[0][0];
+    expect(insertArg.color).toBe('#F47820');
+  });
+
+  it('returns db error on insert failure', async () => {
+    const chain = {
+      insert: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: null, error: { message: 'rls violation' } }),
+    };
+    mockSupabase.from.mockReturnValue(chain);
+
+    const result = await drawingService.addAnnotation({
+      drawing_id: 'd-1',
+      project_id: 'proj-1',
+      coordinates: {},
+    });
+    expect(result.data).toBeNull();
+    expect(result.error?.category).toBe('DatabaseError');
+  });
+});
+
+// ── updateAnnotation ──────────────────────────────────────────────────────────
+
+describe('drawingService.updateAnnotation', () => {
+  it('updates note and layer', async () => {
+    const chain = {
+      update: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockResolvedValue({ error: null }),
+    };
+    mockSupabase.from.mockReturnValue(chain);
+
+    const result = await drawingService.updateAnnotation('ann-1', {
+      note: 'Revised note',
+      layer: 'structural',
+    });
+    expect(result.error).toBeNull();
+    const updateArg = chain.update.mock.calls[0][0];
+    expect(updateArg.note).toBe('Revised note');
+    expect(updateArg.layer).toBe('structural');
+    expect(updateArg.updated_at).toBeDefined();
+  });
+
+  it('syncs annotation_type to both type and annotation_type columns', async () => {
+    const chain = {
+      update: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockResolvedValue({ error: null }),
+    };
+    mockSupabase.from.mockReturnValue(chain);
+
+    await drawingService.updateAnnotation('ann-1', { annotation_type: 'pin' });
+
+    const updateArg = chain.update.mock.calls[0][0];
+    expect(updateArg.type).toBe('pin');
+    expect(updateArg.annotation_type).toBe('pin');
+  });
+
+  it('returns db error on failure', async () => {
+    const chain = {
+      update: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockResolvedValue({ error: { message: 'write failed' } }),
+    };
+    mockSupabase.from.mockReturnValue(chain);
+
+    const result = await drawingService.updateAnnotation('ann-1', { note: 'x' });
+    expect(result.error?.category).toBe('DatabaseError');
+  });
+});
+
+// ── deleteAnnotation ──────────────────────────────────────────────────────────
+
+describe('drawingService.deleteAnnotation', () => {
+  it('hard-deletes the annotation', async () => {
+    const chain = {
+      delete: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockResolvedValue({ error: null }),
+    };
+    mockSupabase.from.mockReturnValue(chain);
+
+    const result = await drawingService.deleteAnnotation('ann-1');
+    expect(result.error).toBeNull();
+    expect(chain.delete).toHaveBeenCalled();
+  });
+
+  it('returns db error when delete fails', async () => {
+    const chain = {
+      delete: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockResolvedValue({ error: { message: 'constraint violation' } }),
+    };
+    mockSupabase.from.mockReturnValue(chain);
+
+    const result = await drawingService.deleteAnnotation('ann-1');
+    expect(result.error?.category).toBe('DatabaseError');
+  });
+});
+
+// ── getDrawingVersions ────────────────────────────────────────────────────────
+
+describe('drawingService.getDrawingVersions', () => {
+  it('returns all revisions with same sheet_number ordered by _versionIndex', async () => {
+    const versions = [
+      { id: 'd-1', sheet_number: 'A-100', project_id: 'proj-1', revision: 'A', created_at: '2026-01-01' },
+      { id: 'd-2', sheet_number: 'A-100', project_id: 'proj-1', revision: 'B', created_at: '2026-02-01' },
+    ];
+    let firstFetch = true;
+    mockSupabase.from.mockImplementation(() => {
+      if (firstFetch) {
+        firstFetch = false;
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({
+            data: { project_id: 'proj-1', sheet_number: 'A-100' },
+            error: null,
+          }),
+        };
+      }
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockResolvedValue({ data: versions, error: null }),
+      };
+    });
+
+    const result = await drawingService.getDrawingVersions('d-2');
+    expect(result.error).toBeNull();
+    expect(result.data).toHaveLength(2);
+    expect(result.data![0]._versionIndex).toBe(1);
+    expect(result.data![1]._versionIndex).toBe(2);
+  });
+
+  it('returns not found error when drawing does not exist', async () => {
+    mockSupabase.from.mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: null, error: { message: 'missing' } }),
+    });
+
+    const result = await drawingService.getDrawingVersions('d-999');
+    expect(result.error?.category).toBe('NotFoundError');
+  });
+
+  it('falls back to previous_revision_id chain when sheet_number is null', async () => {
+    let callCount = 0;
+    mockSupabase.from.mockImplementation(() => {
+      callCount += 1;
+      if (callCount === 1) {
+        // Initial fetch: no sheet_number
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({
+            data: { project_id: 'proj-1', sheet_number: null },
+            error: null,
+          }),
+        };
+      }
+      if (callCount === 2) {
+        // Chain: current drawing with a previous_revision_id
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({
+            data: { id: 'd-2', previous_revision_id: 'd-1', title: 'Rev B' },
+            error: null,
+          }),
+        };
+      }
+      // Chain: root drawing with no previous
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({
+          data: { id: 'd-1', previous_revision_id: null, title: 'Rev A' },
+          error: null,
+        }),
+      };
+    });
+
+    const result = await drawingService.getDrawingVersions('d-2');
+    expect(result.error).toBeNull();
+    expect(result.data).toHaveLength(2);
+    expect(result.data![0]._versionIndex).toBe(1);
+    expect(result.data![1]._versionIndex).toBe(2);
+  });
+});
