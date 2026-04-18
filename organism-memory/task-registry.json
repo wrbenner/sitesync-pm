@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "last_updated": "2026-04-18T01:33:38.574Z",
+  "last_updated": "2026-04-18T12:54:55.394Z",
   "overall_progress": {
     "total_tasks": 116,
     "done": 60,
@@ -2013,7 +2013,7 @@
     }
   },
   "regression_watch": {
-    "last_run": null,
+    "last_run": "2026-04-18T12:54:55.394Z",
     "pages_watched": [],
     "last_result": "PASS"
   }
