@@ -11,7 +11,9 @@ import type {
 export function useRFIs(projectId: string | undefined, pagination?: PaginationParams) {
   const { page = 1, pageSize = 50 } = pagination ?? {}
   return useQuery({
-    queryKey: ['rfis', projectId, page, pageSize],
+    // Key matches queryKeys.rfis.all(projectId) so invalidateEntity('rfi') and
+    // optimistic updates in useCreateRFI / useUpdateRFI resolve to the same cache entry.
+    queryKey: ['rfis', projectId],
     queryFn: async (): Promise<PaginatedResult<RFI>> => {
       const from = (page - 1) * pageSize
       const to = from + pageSize - 1
@@ -19,6 +21,7 @@ export function useRFIs(projectId: string | undefined, pagination?: PaginationPa
         .from('rfis')
         .select('*', { count: 'exact' })
         .eq('project_id', projectId!)
+        .is('deleted_at', null)
         .order('number', { ascending: false })
         .range(from, to)
       if (error) throw error

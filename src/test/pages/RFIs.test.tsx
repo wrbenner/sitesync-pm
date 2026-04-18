@@ -95,8 +95,14 @@ vi.mock('../../components/shared/PresenceAvatars', () => ({
   PresenceAvatars: () => null,
 }))
 
+// Capture bulk actions so tests can invoke them directly
+let capturedBulkActions: Array<{ label: string; onClick: (ids: string[]) => Promise<void> }> = []
+
 vi.mock('../../components/shared/BulkActionBar', () => ({
-  BulkActionBar: () => null,
+  BulkActionBar: (props: { actions?: Array<{ label: string; onClick: (ids: string[]) => Promise<void> }> }) => {
+    capturedBulkActions = props.actions ?? []
+    return null
+  },
 }))
 
 vi.mock('../../components/ai/AIAnnotation', () => ({
@@ -301,6 +307,83 @@ describe('RFIs page', () => {
     fireEvent.click(screen.getByRole('button', { name: /kanban/i }))
     await waitFor(() => expect(capturedOnMoveItem).toBeDefined())
     expect(typeof capturedOnMoveItem).toBe('function')
+  })
+
+  // ── Bulk actions ──────────────────────────────────────────
+
+  it('bulk "Mark as Closed" calls updateRFI for each selected id', async () => {
+    capturedBulkActions = []
+    rfisState.data = { data: [sampleRfi, { ...sampleRfi, id: 'rfi-2', number: 2 }] }
+    render(wrap(<RFIs />))
+
+    await waitFor(() => expect(capturedBulkActions.length).toBeGreaterThan(0))
+
+    const closeAction = capturedBulkActions.find((a) => a.label === 'Mark as Closed')
+    expect(closeAction).toBeDefined()
+
+    mockMutateAsync.mockResolvedValue({})
+    await act(async () => {
+      await closeAction!.onClick(['rfi-1', 'rfi-2'])
+    })
+
+    expect(mockMutateAsync).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'rfi-1', updates: expect.objectContaining({ status: 'closed' }) }),
+    )
+    expect(mockMutateAsync).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'rfi-2', updates: expect.objectContaining({ status: 'closed' }) }),
+    )
+  })
+
+  it('bulk "Change Priority" calls updateRFI with high priority for each id', async () => {
+    capturedBulkActions = []
+    rfisState.data = { data: [sampleRfi] }
+    render(wrap(<RFIs />))
+
+    await waitFor(() => expect(capturedBulkActions.length).toBeGreaterThan(0))
+
+    const priorityAction = capturedBulkActions.find((a) => a.label === 'Change Priority')
+    expect(priorityAction).toBeDefined()
+
+    mockMutateAsync.mockResolvedValue({})
+    await act(async () => {
+      await priorityAction!.onClick(['rfi-1'])
+    })
+
+    expect(mockMutateAsync).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'rfi-1', updates: expect.objectContaining({ priority: 'high' }) }),
+    )
+  })
+
+  it('bulk "Export Selected" triggers a CSV download without calling mutateAsync', async () => {
+    capturedBulkActions = []
+    rfisState.data = { data: [sampleRfi] }
+    mockMutateAsync.mockClear()
+
+    // Stub URL.createObjectURL (jsdom doesn't support it)
+    const createObjUrl = vi.fn().mockReturnValue('blob:mock')
+    const revokeObjUrl = vi.fn()
+    // Save original and override only the needed methods
+    const origCreate = URL.createObjectURL
+    const origRevoke = URL.revokeObjectURL
+    URL.createObjectURL = createObjUrl
+    URL.revokeObjectURL = revokeObjUrl
+
+    render(wrap(<RFIs />))
+    await waitFor(() => expect(capturedBulkActions.length).toBeGreaterThan(0))
+
+    const exportAction = capturedBulkActions.find((a) => a.label === 'Export Selected')
+    expect(exportAction).toBeDefined()
+
+    await act(async () => {
+      await exportAction!.onClick(['rfi-1'])
+    })
+
+    // createObjectURL should have been called with a Blob to create the download URL
+    expect(createObjUrl).toHaveBeenCalledWith(expect.any(Blob))
+    expect(mockMutateAsync).not.toHaveBeenCalled()
+
+    URL.createObjectURL = origCreate
+    URL.revokeObjectURL = origRevoke
   })
 })
 

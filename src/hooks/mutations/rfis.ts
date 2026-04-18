@@ -10,8 +10,12 @@ import { validateRfiStatusTransition } from './state-machine-validation-helpers'
 
 import type { Database } from '../../types/database'
 type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
-// Dynamic table access helper. Tables may include those added by migration but not yet in generated types.
 const from = (table: AnyTableName) => supabase.from(table as keyof Database['public']['Tables'])
+
+async function getCurrentUserId(): Promise<string | null> {
+  const { data } = await supabase.auth.getSession()
+  return data.session?.user?.id ?? null
+}
 
 // ── RFIs (Permission-checked + Audited) ──────────────────
 
@@ -24,7 +28,12 @@ export function useCreateRFI() {
     getEntityTitle: (p) => (p.data.title as string) || undefined,
     getNewValue: (p) => p.data,
     mutationFn: async (params) => {
-      const { data, error } = await from('rfis').insert(params.data).select().single()
+      const userId = await getCurrentUserId()
+      const { data, error } = await from('rfis').insert({
+        ...params.data,
+        status: (params.data as Record<string, unknown>).status ?? 'draft',
+        created_by: userId,
+      }).select().single()
       if (error) throw error
       return { data, projectId: params.projectId }
     },
@@ -76,6 +85,7 @@ export function useUpdateRFI() {
         }
       },
     },
+    invalidateKeys: (p) => [['rfis', 'detail', p.id]],
     analyticsEvent: 'rfi_updated',
     getAnalyticsProps: (p) => ({ project_id: p.projectId }),
     errorMessage: 'Failed to update RFI',
@@ -89,7 +99,11 @@ export function useDeleteRFI() {
     entityType: 'rfi',
     getEntityId: (p) => p.id,
     mutationFn: async ({ id, projectId }) => {
-      const { error } = await from('rfis').delete().eq('id', id)
+      const userId = await getCurrentUserId()
+      const { error } = await from('rfis').update({
+        deleted_at: new Date().toISOString(),
+        deleted_by: userId,
+      }).eq('id', id)
       if (error) throw error
       return { projectId }
     },
@@ -103,7 +117,11 @@ export function useCreateRFIResponse() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (params: { data: Record<string, unknown>; rfiId: string; projectId: string }) => {
-      const { data, error } = await from('rfi_responses').insert(params.data).select().single()
+      const userId = await getCurrentUserId()
+      const { data, error } = await from('rfi_responses').insert({
+        ...params.data,
+        author_id: userId,
+      }).select().single()
       if (error) throw error
       return { data, rfiId: params.rfiId, projectId: params.projectId }
     },
