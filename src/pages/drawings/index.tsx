@@ -30,6 +30,8 @@ import {
 } from '../../hooks/useDrawingIntelligence';
 import { ClashDetectionPanel } from '../../components/drawings/ClashDetectionPanel';
 import { AnalysisProgress } from '../../components/drawings/AnalysisProgress';
+import { DiscrepancyDetailModal } from '../../components/drawings/DiscrepancyDetailModal';
+import type { DrawingDiscrepancy } from '../../types/ai';
 import { useLogCorrection } from '../../hooks/useAITrainingCorrections';
 import type { DrawingClassification, DrawingDiscipline } from '../../types/ai';
 
@@ -376,6 +378,7 @@ const DrawingsPage: React.FC = () => {
   const [openRevDropdownId, setOpenRevDropdownId] = useState<string | null>(null);
   const [rowRevHistory, setRowRevHistory] = useState<Record<string, DrawingRevision[]>>({});
   const [rowRevHistoryLoading, setRowRevHistoryLoading] = useState<string | null>(null);
+  const [detailDiscrepancy, setDetailDiscrepancy] = useState<DrawingDiscrepancy | null>(null);
   const [selectedRevisions, setSelectedRevisions] = useState<DrawingRevision[]>([]);
   const [comparisonMode, setComparisonMode] = useState(false);
   const [compareOpacity, setCompareOpacity] = useState(100);
@@ -787,6 +790,7 @@ const DrawingsPage: React.FC = () => {
                   discrepancies={drawingDiscrepancies}
                   loading={discrepanciesLoading}
                   onCreateRFI={handleCreateRFIFromDiscrepancy}
+                  onViewDetail={(d) => setDetailDiscrepancy(d)}
                 />
               )}
               <DrawingDetail
@@ -942,6 +946,15 @@ const DrawingsPage: React.FC = () => {
         conflicts={aiPanelConflicts}
         hasSelectedDrawing={!!selectedDrawing}
         onAnalyze={handleAiAnalyze}
+      />
+      <DiscrepancyDetailModal
+        open={detailDiscrepancy !== null}
+        discrepancy={detailDiscrepancy}
+        onClose={() => setDetailDiscrepancy(null)}
+        onCreateRFI={(d) => {
+          setDetailDiscrepancy(null);
+          handleCreateRFIFromDiscrepancy(d);
+        }}
       />
     </PageContainer>
   );
