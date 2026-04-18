@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
+import { queryKeys } from '../../api/queryKeys'
 import type { PaginationParams, PaginatedResult } from '../../types/api'
 import type {
   RFI,
@@ -11,7 +12,7 @@ import type {
 export function useRFIs(projectId: string | undefined, pagination?: PaginationParams) {
   const { page = 1, pageSize = 50 } = pagination ?? {}
   return useQuery({
-    queryKey: ['rfis', projectId, page, pageSize],
+    queryKey: queryKeys.rfis.all(projectId!),
     queryFn: async (): Promise<PaginatedResult<RFI>> => {
       const from = (page - 1) * pageSize
       const to = from + pageSize - 1

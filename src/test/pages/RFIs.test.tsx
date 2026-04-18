@@ -82,7 +82,15 @@ vi.mock('../../components/shared/VirtualDataTable', () => ({
 }))
 
 vi.mock('../../components/shared/KanbanBoard', () => ({
-  KanbanBoard: () => <div data-testid="rfi-kanban" />,
+  KanbanBoard: ({ columns, renderCard }: { columns: Array<{ items: unknown[] }>; renderCard: (item: unknown) => React.ReactNode }) => (
+    <div data-testid="rfi-kanban">
+      {columns.flatMap((col) => col.items).map((item, i) => (
+        <div key={i} data-testid={`kanban-card-${i}`}>
+          {renderCard(item)}
+        </div>
+      ))}
+    </div>
+  ),
 }))
 
 vi.mock('../../components/shared/PresenceAvatars', () => ({
@@ -256,6 +264,68 @@ describe('RFIs page', () => {
     render(wrap(<RFIs />))
     fireEvent.click(screen.getByRole('button', { name: /create first rfi/i }))
     expect(screen.getByTestId('create-rfi-modal')).toBeTruthy()
+  })
+
+  // ── AI Draft modal ────────────────────────────────────────
+
+  it('opens AI Draft modal when AI Draft RFI button is clicked', () => {
+    rfisState.data = { data: [sampleRfi] }
+    render(wrap(<RFIs />))
+    // Button has aria-label "Draft an RFI with AI assistance"
+    fireEvent.click(screen.getByRole('button', { name: /draft an rfi with ai assistance/i }))
+    expect(screen.getByRole('dialog', { name: /AI Draft RFI/i })).toBeTruthy()
+  })
+
+  it('closes AI Draft modal when Cancel is clicked', async () => {
+    rfisState.data = { data: [sampleRfi] }
+    render(wrap(<RFIs />))
+    fireEvent.click(screen.getByRole('button', { name: /draft an rfi with ai assistance/i }))
+    expect(screen.getByRole('dialog', { name: /AI Draft RFI/i })).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: /^Cancel$/i }))
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: /AI Draft RFI/i })).toBeNull()
+    })
+  })
+
+  it('disables Generate RFI button when description is empty', () => {
+    rfisState.data = { data: [sampleRfi] }
+    render(wrap(<RFIs />))
+    fireEvent.click(screen.getByRole('button', { name: /draft an rfi with ai assistance/i }))
+    const generateBtn = screen.getByRole('button', { name: /Generate RFI/i })
+    expect((generateBtn as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  // ── Detail panel via kanban ───────────────────────────────
+
+  it('opens detail panel when a kanban card title is clicked', async () => {
+    rfisState.data = { data: [sampleRfi] }
+    render(wrap(<RFIs />))
+    fireEvent.click(screen.getByRole('button', { name: /kanban/i }))
+    await waitFor(() => expect(screen.getByTestId('rfi-kanban')).toBeTruthy())
+    // Click the card title text — click bubbles up to the motion.div onClick handler
+    fireEvent.click(screen.getByText('Foundation detail clarification'))
+    await waitFor(() => {
+      // Detail panel shows the RFI number as title and the Edit button
+      expect(screen.getByRole('button', { name: /^Edit$/i })).toBeTruthy()
+    })
+  })
+
+  it('submits response and calls createRFIResponse mutation', async () => {
+    rfisState.data = { data: [sampleRfi] }
+    render(wrap(<RFIs />))
+    fireEvent.click(screen.getByRole('button', { name: /kanban/i }))
+    await waitFor(() => expect(screen.getByTestId('rfi-kanban')).toBeTruthy())
+    fireEvent.click(screen.getByText('Foundation detail clarification'))
+    await waitFor(() => expect(screen.getByLabelText(/response text/i)).toBeTruthy())
+    const textarea = screen.getByLabelText(/response text/i)
+    fireEvent.change(textarea, { target: { value: 'The foundation detail should follow spec section 03 30 00.' } })
+    const submitBtn = screen.getByRole('button', { name: /submit response/i })
+    fireEvent.click(submitBtn)
+    await waitFor(() => {
+      expect(mockMutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({ rfiId: 'rfi-1', projectId: 'test-project-id' }),
+      )
+    })
   })
 })
 

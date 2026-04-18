@@ -126,17 +126,16 @@ const RFIsPage: React.FC = () => {
   const { setPageContext } = useCopilotStore();
   useEffect(() => { setPageContext('rfis'); }, [setPageContext]);
   const { data: rfisResult, isPending: rfisLoading, error: rfisError, refetch } = useRFIs(projectId);
-  const rfisRaw = rfisResult?.data ?? [];
 
   // Map API data to component shape
-  const rfis = useMemo(() => rfisRaw.map((r: Record<string, unknown>) => ({
+  const rfis = useMemo(() => (rfisResult?.data ?? []).map((r: Record<string, unknown>) => ({
     ...r,
     rfiNumber: r.number ? `RFI-${String(r.number).padStart(3, '0')}` : String(r.id ?? '').slice(0, 8),
     from: (r.created_by as string) || '',
     to: (r.assigned_to as string) || '',
     submitDate: typeof r.created_at === 'string' ? r.created_at.slice(0, 10) : '',
     dueDate: (r.due_date as string) || '',
-  })), [rfisRaw]);
+  })), [rfisResult?.data]);
 
   // Derive metrics from data
   const openCount = useMemo(() => rfis.filter((r: Record<string, unknown>) => r.status === 'open').length, [rfis]);
@@ -181,9 +180,9 @@ const RFIsPage: React.FC = () => {
   useEffect(() => {
     if (!rfisLoading && !announcedLoadRef.current) {
       announcedLoadRef.current = true;
-      setAnnouncement(`${rfisRaw.length} RFIs loaded`);
+      setAnnouncement(`${rfis.length} RFIs loaded`);
     }
-  }, [rfisLoading, rfisRaw.length]);
+  }, [rfisLoading, rfis.length]);
 
   useEffect(() => {
     if (!announcedLoadRef.current) return;
@@ -415,8 +414,6 @@ const RFIsPage: React.FC = () => {
 
   const allRfiColumns = useMemo(() => [checkboxColumn, ...rfiColumns], [checkboxColumn, rfiColumns]);
 
-  const allRfis = rfis || [];
-
   const STATUS_TABS = [
     { key: 'all', label: 'All' },
     { key: 'draft', label: 'Draft' },
@@ -428,18 +425,18 @@ const RFIsPage: React.FC = () => {
   ];
 
   const filteredRfis = useMemo(() => {
-    if (statusFilter === 'all') return allRfis;
-    if (statusFilter === 'overdue') return allRfis.filter((r: Record<string, unknown>) => r.status !== 'closed' && r.dueDate && new Date(r.dueDate as string) < new Date());
-    return allRfis.filter((r: Record<string, unknown>) => r.status === statusFilter);
-  }, [allRfis, statusFilter]);
+    if (statusFilter === 'all') return rfis;
+    if (statusFilter === 'overdue') return rfis.filter((r: Record<string, unknown>) => r.status !== 'closed' && r.dueDate && new Date(r.dueDate as string) < new Date());
+    return rfis.filter((r: Record<string, unknown>) => r.status === statusFilter);
+  }, [rfis, statusFilter]);
 
   const kanbanColumns: KanbanColumn<unknown>[] = useMemo(() => [
-    { id: 'draft', label: 'Draft', color: colors.textTertiary, items: allRfis.filter((r) => r.status === 'draft') },
-    { id: 'open', label: 'Open', color: colors.statusInfo, items: allRfis.filter((r) => r.status === 'open') },
-    { id: 'under_review', label: 'Under Review', color: colors.statusPending, items: allRfis.filter((r) => r.status === 'under_review') },
-    { id: 'answered', label: 'Answered', color: colors.statusActive, items: allRfis.filter((r) => r.status === 'answered') },
-    { id: 'closed', label: 'Closed', color: colors.statusNeutral, items: allRfis.filter((r) => r.status === 'closed') },
-  ], [allRfis]);
+    { id: 'draft', label: 'Draft', color: colors.textTertiary, items: rfis.filter((r) => r.status === 'draft') },
+    { id: 'open', label: 'Open', color: colors.statusInfo, items: rfis.filter((r) => r.status === 'open') },
+    { id: 'under_review', label: 'Under Review', color: colors.statusPending, items: rfis.filter((r) => r.status === 'under_review') },
+    { id: 'answered', label: 'Answered', color: colors.statusActive, items: rfis.filter((r) => r.status === 'answered') },
+    { id: 'closed', label: 'Closed', color: colors.statusNeutral, items: rfis.filter((r) => r.status === 'closed') },
+  ], [rfis]);
 
   if (!projectId) {
     return (
@@ -631,9 +628,9 @@ const RFIsPage: React.FC = () => {
             style={{ display: 'flex', gap: 0, padding: `${spacing['2']} ${spacing['4']}`, borderBottom: `1px solid ${colors.borderSubtle}`, overflowX: 'auto' }}
           >
             {STATUS_TABS.map((tab) => {
-              const count = tab.key === 'all' ? allRfis.length
-                : tab.key === 'overdue' ? allRfis.filter((r: Record<string, unknown>) => r.status !== 'closed' && r.dueDate && new Date(r.dueDate as string) < new Date()).length
-                : allRfis.filter((r: Record<string, unknown>) => r.status === tab.key).length;
+              const count = tab.key === 'all' ? rfis.length
+                : tab.key === 'overdue' ? rfis.filter((r: Record<string, unknown>) => r.status !== 'closed' && r.dueDate && new Date(r.dueDate as string) < new Date()).length
+                : rfis.filter((r: Record<string, unknown>) => r.status === tab.key).length;
               const isSelected = statusFilter === tab.key;
               return (
                 <button
@@ -712,7 +709,7 @@ const RFIsPage: React.FC = () => {
               loading={rfisLoading}
               emptyMessage="No RFIs match your filters"
               onRowToggleSelectByIndex={(i) => {
-                const id = String(allRfis[i]?.id);
+                const id = String(rfis[i]?.id);
                 if (!id) return;
                 setSelectedIds((prev) => {
                   const next = new Set(prev);
@@ -811,7 +808,7 @@ const RFIsPage: React.FC = () => {
             icon: <Download size={14} />,
             variant: 'secondary',
             onClick: async (ids) => {
-              const selected = allRfis.filter((r: Record<string, unknown>) => ids.includes(String(r.id)));
+              const selected = rfis.filter((r: Record<string, unknown>) => ids.includes(String(r.id)));
               const csv = ['RFI #,Title,From,Priority,Status,Due Date',
                 ...selected.map((r: Record<string, unknown>) => `${r.rfiNumber},"${String(r.title ?? '')}",${r.from},${r.priority},${r.status},${r.dueDate}`),
               ].join('\n');
@@ -904,9 +901,9 @@ const RFIsPage: React.FC = () => {
                 editing={editingDetail}
                 type="select"
                 options={[
+                  { value: 'draft', label: 'Draft' },
                   { value: 'open', label: 'Open' },
-                  { value: 'submitted', label: 'Submitted' },
-                  { value: 'in_review', label: 'In Review' },
+                  { value: 'under_review', label: 'Under Review' },
                   { value: 'answered', label: 'Answered' },
                   { value: 'closed', label: 'Closed' },
                 ]}
@@ -1202,10 +1199,11 @@ const RFIsPage: React.FC = () => {
                   <X size={18} />
                 </motion.button>
               </div>
-              <label style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textSecondary, display: 'block', marginBottom: spacing['2'] }}>
+              <label htmlFor="ai-draft-description" style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textSecondary, display: 'block', marginBottom: spacing['2'] }}>
                 Describe the issue in your own words
               </label>
               <textarea
+                id="ai-draft-description"
                 value={aiDraftInput}
                 onChange={(e) => setAiDraftInput(e.target.value)}
                 placeholder="e.g. The structural drawing conflicts with the architectural plan on grid line C, the beam depth does not match"
