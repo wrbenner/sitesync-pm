@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, Calendar, MapPin, AlertTriangle, RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   PageContainer, Tag, Btn, MetricBox, Skeleton, EmptyState,
 } from '../components/Primitives';
@@ -7,6 +8,7 @@ import { MetricCardSkeleton } from '../components/ui/Skeletons';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../styles/theme';
 import { useMeetings } from '../hooks/queries';
 import { useProjectActionItems } from '../hooks/queries/meeting-enhancements';
+import { useCreateMeeting } from '../hooks/mutations/meetings';
 import { useProjectId } from '../hooks/useProjectId';
 import { PermissionGate } from '../components/auth/PermissionGate';
 import CreateMeetingModal from '../components/forms/CreateMeetingModal';
@@ -153,6 +155,20 @@ export const Meetings: React.FC = () => {
 
   const { data: meetingsResult, isPending, error, refetch } = useMeetings(projectId);
   const { data: actionItemsData } = useProjectActionItems(projectId);
+  const createMeeting = useCreateMeeting();
+
+  const handleCreateMeeting = async (data: Record<string, unknown>) => {
+    try {
+      await createMeeting.mutateAsync({
+        data: { ...data, project_id: projectId!, status: 'scheduled' },
+        projectId: projectId!,
+      });
+      toast.success('Meeting scheduled');
+      setShowCreateModal(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to create meeting');
+    }
+  };
   const allMeetings = (meetingsResult?.data ?? []) as unknown as MeetingListItem[];
 
   if (!projectId) {
@@ -522,7 +538,12 @@ export const Meetings: React.FC = () => {
       </div>
 
       {showCreateModal && projectId && (
-        <CreateMeetingModal onClose={() => setShowCreateModal(false)} projectId={projectId} />
+        <CreateMeetingModal
+          onClose={() => setShowCreateModal(false)}
+          projectId={projectId}
+          onSubmit={handleCreateMeeting}
+          isPending={createMeeting.isPending}
+        />
       )}
     </PageContainer>
   );
