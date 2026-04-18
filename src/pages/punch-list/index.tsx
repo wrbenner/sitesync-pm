@@ -321,7 +321,7 @@ const PunchListPage: React.FC = () => {
           icon={CheckSquare}
           title="No punch list items. Your project is looking clean!"
           description="Items will appear here as deficiencies are identified during inspections."
-          action={hasPermission('punch_list.create') ? { label: 'Add Punch Item', onClick: () => setShowCreateModal(true) } : undefined}
+          action={{ label: 'Add Punch Item', onClick: () => hasPermission('punch_list.create') && setShowCreateModal(true) }}
         />
       </PageContainer>
     );

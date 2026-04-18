@@ -1,12 +1,12 @@
 {
   "schema_version": 2,
-  "last_updated": "2026-04-18T01:33:38.574Z",
+  "last_updated": "2026-04-18T13:52:53.760Z",
   "overall_progress": {
-    "total_tasks": 116,
-    "done": 60,
+    "total_tasks": 205,
+    "done": 140,
     "in_progress": 0,
     "needs_human": 0,
-    "pending": 56
+    "pending": 65
   },
   "pages": {
     "rfis": {
@@ -1932,6 +1932,1506 @@
           "verification_grep": ".storage.from(",
           "files": [
             "src/pages/FieldCapture.tsx"
+          ]
+        }
+      ]
+    },
+    "contracts": {
+      "functional_score": 50,
+      "tasks": [
+        {
+          "id": "contracts-1",
+          "description": "Create contract form with INSERT mutation",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.755Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "useCreateContract",
+          "files": [
+            "src/pages/Contracts.tsx"
+          ]
+        },
+        {
+          "id": "contracts-2",
+          "description": "Edit contract with UPDATE mutation",
+          "status": "pending",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": null,
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": ".update(",
+          "files": [
+            "src/pages/Contracts.tsx"
+          ]
+        },
+        {
+          "id": "contracts-3",
+          "description": "Status transition buttons (draft \u2192 executed \u2192 closed)",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.755Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "status",
+          "files": [
+            "src/pages/Contracts.tsx"
+          ]
+        },
+        {
+          "id": "contracts-4",
+          "description": "Link contract to vendor via vendor_id",
+          "status": "pending",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": null,
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "vendor_id",
+          "files": [
+            "src/pages/Contracts.tsx"
+          ]
+        },
+        {
+          "id": "contracts-5",
+          "description": "Export contract as PDF",
+          "status": "pending",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": null,
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "pdf",
+          "files": [
+            "src/pages/Contracts.tsx"
+          ]
+        },
+        {
+          "id": "contracts-6",
+          "description": "Display contract list with filters",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.755Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "useContracts",
+          "files": [
+            "src/pages/Contracts.tsx"
+          ]
+        }
+      ]
+    },
+    "transmittals": {
+      "functional_score": 67,
+      "tasks": [
+        {
+          "id": "transmittals-1",
+          "description": "Create transmittal form with INSERT mutation",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.755Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "useCreateTransmittal",
+          "files": [
+            "src/pages/Transmittals.tsx"
+          ]
+        },
+        {
+          "id": "transmittals-2",
+          "description": "Add line items to transmittal",
+          "status": "pending",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": null,
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "line_items",
+          "files": [
+            "src/pages/Transmittals.tsx"
+          ]
+        },
+        {
+          "id": "transmittals-3",
+          "description": "Send/acknowledge workflow",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.755Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "acknowledge",
+          "files": [
+            "src/pages/Transmittals.tsx"
+          ]
+        },
+        {
+          "id": "transmittals-4",
+          "description": "Export transmittal as PDF",
+          "status": "pending",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": null,
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "pdf",
+          "files": [
+            "src/pages/Transmittals.tsx"
+          ]
+        },
+        {
+          "id": "transmittals-5",
+          "description": "Transmittal list with status filter",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.755Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "useTransmittals",
+          "files": [
+            "src/pages/Transmittals.tsx"
+          ]
+        },
+        {
+          "id": "transmittals-6",
+          "description": "Auto-increment transmittal number",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.755Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "transmittal_number",
+          "files": [
+            "src/pages/Transmittals.tsx"
+          ]
+        }
+      ]
+    },
+    "closeout": {
+      "functional_score": 100,
+      "tasks": [
+        {
+          "id": "closeout-1",
+          "description": "Create closeout item form with INSERT mutation",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.755Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "useCreateCloseoutItem",
+          "files": [
+            "src/pages/Closeout.tsx"
+          ]
+        },
+        {
+          "id": "closeout-2",
+          "description": "Checklist completion status tracking",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.755Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "useUpdateCloseoutStatus",
+          "files": [
+            "src/pages/Closeout.tsx"
+          ]
+        },
+        {
+          "id": "closeout-3",
+          "description": "Warranty expiration alerts",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.755Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "expiration_date",
+          "files": [
+            "src/pages/Closeout.tsx"
+          ]
+        },
+        {
+          "id": "closeout-4",
+          "description": "Group items by type (warranty / manual / as-built)",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.755Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "item_type",
+          "files": [
+            "src/pages/Closeout.tsx"
+          ]
+        },
+        {
+          "id": "closeout-5",
+          "description": "Responsible party assignment",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.755Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "responsible_party",
+          "files": [
+            "src/pages/Closeout.tsx"
+          ]
+        },
+        {
+          "id": "closeout-6",
+          "description": "Closeout list query",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.755Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "useCloseoutItems",
+          "files": [
+            "src/pages/Closeout.tsx"
+          ]
+        }
+      ]
+    },
+    "specifications": {
+      "functional_score": 83,
+      "tasks": [
+        {
+          "id": "specifications-1",
+          "description": "Create specification section form",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.755Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "useCreateSpecification",
+          "files": [
+            "src/pages/Specifications.tsx"
+          ]
+        },
+        {
+          "id": "specifications-2",
+          "description": "Link specification to submittals",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.755Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "submittals",
+          "files": [
+            "src/pages/Specifications.tsx"
+          ]
+        },
+        {
+          "id": "specifications-3",
+          "description": "Link specification to RFIs",
+          "status": "pending",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": null,
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "rfis",
+          "files": [
+            "src/pages/Specifications.tsx"
+          ]
+        },
+        {
+          "id": "specifications-4",
+          "description": "Search specifications by CSI division",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.755Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "division",
+          "files": [
+            "src/pages/Specifications.tsx"
+          ]
+        },
+        {
+          "id": "specifications-5",
+          "description": "Section number and title fields",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.756Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "section_number",
+          "files": [
+            "src/pages/Specifications.tsx"
+          ]
+        },
+        {
+          "id": "specifications-6",
+          "description": "Specifications list query",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.756Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "useSpecifications",
+          "files": [
+            "src/pages/Specifications.tsx"
+          ]
+        }
+      ]
+    },
+    "preconstruction": {
+      "functional_score": 100,
+      "tasks": [
+        {
+          "id": "preconstruction-1",
+          "description": "Create bid package form",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.756Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "useCreatePreconBidPackage",
+          "files": [
+            "src/pages/Preconstruction.tsx"
+          ]
+        },
+        {
+          "id": "preconstruction-2",
+          "description": "Add bid submissions to package",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.756Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "useCreatePreconBidSubmission",
+          "files": [
+            "src/pages/Preconstruction.tsx"
+          ]
+        },
+        {
+          "id": "preconstruction-3",
+          "description": "Bid comparison table view",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.756Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "comparison",
+          "files": [
+            "src/pages/Preconstruction.tsx"
+          ]
+        },
+        {
+          "id": "preconstruction-4",
+          "description": "Award workflow (convert winning bid to contract)",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.756Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "useCreateContract",
+          "files": [
+            "src/pages/Preconstruction.tsx"
+          ]
+        },
+        {
+          "id": "preconstruction-5",
+          "description": "Bid package status tracking",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.756Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "bid_package_id",
+          "files": [
+            "src/pages/Preconstruction.tsx"
+          ]
+        },
+        {
+          "id": "preconstruction-6",
+          "description": "Submissions list with bid amounts",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.756Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "bid_amount",
+          "files": [
+            "src/pages/Preconstruction.tsx"
+          ]
+        }
+      ]
+    },
+    "resources": {
+      "functional_score": 100,
+      "tasks": [
+        {
+          "id": "resources-1",
+          "description": "Add labor rate form with INSERT mutation",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.756Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "useCreateLaborRate",
+          "files": [
+            "src/pages/Resources.tsx"
+          ]
+        },
+        {
+          "id": "resources-2",
+          "description": "Add material rate form with INSERT mutation",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.756Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "useCreateMaterialRate",
+          "files": [
+            "src/pages/Resources.tsx"
+          ]
+        },
+        {
+          "id": "resources-3",
+          "description": "Add equipment rate form with INSERT mutation",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.756Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "useCreateEquipmentRate",
+          "files": [
+            "src/pages/Resources.tsx"
+          ]
+        },
+        {
+          "id": "resources-4",
+          "description": "Cost calculator combining labor/material/equipment",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.756Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "hourly_rate",
+          "files": [
+            "src/pages/Resources.tsx"
+          ]
+        },
+        {
+          "id": "resources-5",
+          "description": "Davis-Bacon prevailing wage import",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.756Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "davis",
+          "files": [
+            "src/pages/Resources.tsx"
+          ]
+        },
+        {
+          "id": "resources-6",
+          "description": "Rate source attribution (manual / davis_bacon / rs_means)",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.757Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "source",
+          "files": [
+            "src/pages/Resources.tsx"
+          ]
+        }
+      ]
+    },
+    "vendors": {
+      "functional_score": 83,
+      "tasks": [
+        {
+          "id": "vendors-1",
+          "description": "Add vendor form with INSERT mutation",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.757Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "useCreateVendor",
+          "files": [
+            "src/pages/Vendors.tsx"
+          ]
+        },
+        {
+          "id": "vendors-2",
+          "description": "Vendor evaluation form with INSERT mutation",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.757Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "useCreateVendorEvaluation",
+          "files": [
+            "src/pages/Vendors.tsx"
+          ]
+        },
+        {
+          "id": "vendors-3",
+          "description": "Risk assessment display on vendor row",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.757Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "risk",
+          "files": [
+            "src/pages/Vendors.tsx"
+          ]
+        },
+        {
+          "id": "vendors-4",
+          "description": "Link vendor to contracts",
+          "status": "pending",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": null,
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "useCreateContract",
+          "files": [
+            "src/pages/Vendors.tsx"
+          ]
+        },
+        {
+          "id": "vendors-5",
+          "description": "Vendor list query",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.757Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "useVendors",
+          "files": [
+            "src/pages/Vendors.tsx"
+          ]
+        },
+        {
+          "id": "vendors-6",
+          "description": "Vendor evaluation history view",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.757Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "useVendorEvaluations",
+          "files": [
+            "src/pages/Vendors.tsx"
+          ]
+        }
+      ]
+    },
+    "cost_management": {
+      "functional_score": 100,
+      "tasks": [
+        {
+          "id": "cost_management-1",
+          "description": "Create cost code form",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.757Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "useCreateCostCode",
+          "files": [
+            "src/pages/CostManagement.tsx"
+          ]
+        },
+        {
+          "id": "cost_management-2",
+          "description": "Add cost transaction form",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.757Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "useCreateCostTransaction",
+          "files": [
+            "src/pages/CostManagement.tsx"
+          ]
+        },
+        {
+          "id": "cost_management-3",
+          "description": "Variance dashboard (budget vs actual)",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.757Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "variance",
+          "files": [
+            "src/pages/CostManagement.tsx"
+          ]
+        },
+        {
+          "id": "cost_management-4",
+          "description": "AI-powered cost forecast",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.757Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "forecast",
+          "files": [
+            "src/pages/CostManagement.tsx"
+          ]
+        },
+        {
+          "id": "cost_management-5",
+          "description": "Cost codes list",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.757Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "useCostCodes",
+          "files": [
+            "src/pages/CostManagement.tsx"
+          ]
+        },
+        {
+          "id": "cost_management-6",
+          "description": "Link transaction to cost code",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.757Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "cost_code_id",
+          "files": [
+            "src/pages/CostManagement.tsx"
+          ]
+        }
+      ]
+    },
+    "time_tracking": {
+      "functional_score": 67,
+      "tasks": [
+        {
+          "id": "time_tracking-1",
+          "description": "Log time entry form with INSERT mutation",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.757Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "useCreateTimeEntry",
+          "files": [
+            "src/pages/TimeTracking.tsx"
+          ]
+        },
+        {
+          "id": "time_tracking-2",
+          "description": "Weekly timesheet view",
+          "status": "pending",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": null,
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "weekly",
+          "files": [
+            "src/pages/TimeTracking.tsx"
+          ]
+        },
+        {
+          "id": "time_tracking-3",
+          "description": "Approval workflow for time entries",
+          "status": "pending",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": null,
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "approval",
+          "files": [
+            "src/pages/TimeTracking.tsx"
+          ]
+        },
+        {
+          "id": "time_tracking-4",
+          "description": "CSV export of time entries",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.757Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "csv",
+          "files": [
+            "src/pages/TimeTracking.tsx"
+          ]
+        },
+        {
+          "id": "time_tracking-5",
+          "description": "Time entries list query",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.757Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "useTimeEntries",
+          "files": [
+            "src/pages/TimeTracking.tsx"
+          ]
+        },
+        {
+          "id": "time_tracking-6",
+          "description": "Link time entry to cost code",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.757Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "cost_code_id",
+          "files": [
+            "src/pages/TimeTracking.tsx"
+          ]
+        }
+      ]
+    },
+    "deliveries": {
+      "functional_score": 100,
+      "tasks": [
+        {
+          "id": "deliveries-1",
+          "description": "Create delivery form with INSERT mutation",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.757Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "useCreateDelivery",
+          "files": [
+            "src/pages/Deliveries.tsx"
+          ]
+        },
+        {
+          "id": "deliveries-2",
+          "description": "Log receipt (mark delivered with actual_date)",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.757Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "actual_date",
+          "files": [
+            "src/pages/Deliveries.tsx"
+          ]
+        },
+        {
+          "id": "deliveries-3",
+          "description": "Calendar view of upcoming deliveries",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.757Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "calendar",
+          "files": [
+            "src/pages/Deliveries.tsx"
+          ]
+        },
+        {
+          "id": "deliveries-4",
+          "description": "Impact analysis (on-time %)",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.757Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "onTime",
+          "files": [
+            "src/pages/Deliveries.tsx"
+          ]
+        },
+        {
+          "id": "deliveries-5",
+          "description": "Deliveries list query",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.757Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "useDeliveries",
+          "files": [
+            "src/pages/Deliveries.tsx"
+          ]
+        },
+        {
+          "id": "deliveries-6",
+          "description": "Status transitions (expected / delivered / cancelled)",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.758Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "status",
+          "files": [
+            "src/pages/Deliveries.tsx"
+          ]
+        }
+      ]
+    },
+    "wiki": {
+      "functional_score": 100,
+      "tasks": [
+        {
+          "id": "wiki-1",
+          "description": "Create wiki page form with INSERT mutation",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.758Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "useCreateWikiPage",
+          "files": [
+            "src/pages/Wiki.tsx"
+          ]
+        },
+        {
+          "id": "wiki-2",
+          "description": "Edit wiki page content",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.758Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "useUpdateWikiPage",
+          "files": [
+            "src/pages/Wiki.tsx"
+          ]
+        },
+        {
+          "id": "wiki-3",
+          "description": "Wiki page templates",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.758Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "template",
+          "files": [
+            "src/pages/Wiki.tsx"
+          ]
+        },
+        {
+          "id": "wiki-4",
+          "description": "Search wiki pages",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.758Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "search",
+          "files": [
+            "src/pages/Wiki.tsx"
+          ]
+        },
+        {
+          "id": "wiki-5",
+          "description": "AI summarize wiki page",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.758Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "summarize",
+          "files": [
+            "src/pages/Wiki.tsx"
+          ]
+        },
+        {
+          "id": "wiki-6",
+          "description": "Wiki pages list query",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.758Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "useWikiPages",
+          "files": [
+            "src/pages/Wiki.tsx"
+          ]
+        }
+      ]
+    },
+    "site_map": {
+      "functional_score": 100,
+      "tasks": [
+        {
+          "id": "site_map-1",
+          "description": "Place pins on map (click to drop)",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.758Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "site_map_pins",
+          "files": [
+            "src/pages/SiteMap.tsx"
+          ]
+        },
+        {
+          "id": "site_map-2",
+          "description": "Upload custom site plan image as base layer",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.758Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "upload",
+          "files": [
+            "src/pages/SiteMap.tsx"
+          ]
+        },
+        {
+          "id": "site_map-3",
+          "description": "Layer toggle (GPS vs site plan)",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.758Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "layer",
+          "files": [
+            "src/pages/SiteMap.tsx"
+          ]
+        },
+        {
+          "id": "site_map-4",
+          "description": "Link pin to entity (RFI, punch item, safety incident)",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.758Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "entity",
+          "files": [
+            "src/pages/SiteMap.tsx"
+          ]
+        },
+        {
+          "id": "site_map-5",
+          "description": "Realtime pin sync across devices",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.758Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "realtime",
+          "files": [
+            "src/pages/SiteMap.tsx"
+          ]
+        },
+        {
+          "id": "site_map-6",
+          "description": "Filter pins by type",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.758Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "filter",
+          "files": [
+            "src/pages/SiteMap.tsx"
+          ]
+        }
+      ]
+    },
+    "carbon_dashboard": {
+      "functional_score": 100,
+      "tasks": [
+        {
+          "id": "carbon_dashboard-1",
+          "description": "Add carbon entry with carbon_factor_id and quantity",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.759Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "project_carbon_entries",
+          "files": [
+            "src/pages/CarbonDashboard.tsx"
+          ]
+        },
+        {
+          "id": "carbon_dashboard-2",
+          "description": "LEED credit tracking",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.759Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "leed",
+          "files": [
+            "src/pages/CarbonDashboard.tsx"
+          ]
+        },
+        {
+          "id": "carbon_dashboard-3",
+          "description": "Material alternatives with lower carbon impact",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.759Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "alternative",
+          "files": [
+            "src/pages/CarbonDashboard.tsx"
+          ]
+        },
+        {
+          "id": "carbon_dashboard-4",
+          "description": "Carbon factors catalog",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.759Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "carbon_factors",
+          "files": [
+            "src/pages/CarbonDashboard.tsx"
+          ]
+        },
+        {
+          "id": "carbon_dashboard-5",
+          "description": "LEED level calculation from points",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.759Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "leedLevel",
+          "files": [
+            "src/pages/CarbonDashboard.tsx"
+          ]
+        },
+        {
+          "id": "carbon_dashboard-6",
+          "description": "Embodied carbon calculation per unit",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.759Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "embodied_carbon_kg_per_unit",
+          "files": [
+            "src/pages/CarbonDashboard.tsx"
+          ]
+        }
+      ]
+    },
+    "project_brain": {
+      "functional_score": 100,
+      "tasks": [
+        {
+          "id": "project_brain-1",
+          "description": "Index project documents for retrieval",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.759Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "index",
+          "files": [
+            "src/components/ai/ProjectBrain.tsx"
+          ]
+        },
+        {
+          "id": "project_brain-2",
+          "description": "Q&A interface with user question input",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.759Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "question",
+          "files": [
+            "src/components/ai/ProjectBrain.tsx"
+          ]
+        },
+        {
+          "id": "project_brain-3",
+          "description": "Citation display for answers",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.759Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "citation",
+          "files": [
+            "src/components/ai/ProjectBrain.tsx"
+          ]
+        },
+        {
+          "id": "project_brain-4",
+          "description": "ProjectBrain floating panel UI",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.759Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "ProjectBrain",
+          "files": [
+            "src/components/ai/ProjectBrain.tsx"
+          ]
+        },
+        {
+          "id": "project_brain-5",
+          "description": "Document indexing progress feedback",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.759Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "Failed to index",
+          "files": [
+            "src/components/ai/ProjectBrain.tsx"
+          ]
+        }
+      ]
+    },
+    "approval_workflows": {
+      "functional_score": 100,
+      "tasks": [
+        {
+          "id": "approval_workflows-1",
+          "description": "Create approval template form",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.759Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "useSaveApprovalTemplate",
+          "files": [
+            "src/components/workflows/ApprovalWorkflowBuilder.tsx"
+          ]
+        },
+        {
+          "id": "approval_workflows-2",
+          "description": "Configure approval steps (sequential / parallel)",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.759Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "steps",
+          "files": [
+            "src/components/workflows/ApprovalWorkflowBuilder.tsx"
+          ]
+        },
+        {
+          "id": "approval_workflows-3",
+          "description": "ApprovalStatusBar on entity detail pages",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.759Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "ApprovalStatusBar",
+          "files": [
+            "src/components/workflows/ApprovalStatusBar.tsx",
+            "src/components/workflows/ApprovalPanel.tsx"
+          ]
+        },
+        {
+          "id": "approval_workflows-4",
+          "description": "List approval templates by entity type",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.759Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "useApprovalTemplates",
+          "files": [
+            "src/components/workflows/ApprovalWorkflowBuilder.tsx"
+          ]
+        },
+        {
+          "id": "approval_workflows-5",
+          "description": "Approve / reject actions on step",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.759Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "approve",
+          "files": [
+            "src/components/workflows/ApprovalStatusBar.tsx"
+          ]
+        },
+        {
+          "id": "approval_workflows-6",
+          "description": "Integration into entity pages via ApprovalPanel",
+          "status": "done",
+          "pr": null,
+          "pr_url": null,
+          "locked_by": null,
+          "locked_at": null,
+          "completed_at": "2026-04-18T13:52:53.759Z",
+          "attempts": 0,
+          "failure_reason": null,
+          "verification_grep": "ApprovalPanel",
+          "files": [
+            "src/components/workflows/ApprovalPanel.tsx"
           ]
         }
       ]

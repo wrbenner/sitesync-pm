@@ -15,6 +15,7 @@ cd "$ROOT"
 OUT_FILE="${1:-/tmp/product-state.json}"
 
 # Priority pages (highest impact → lowest). Format: NAME|PATH|DOMAIN|MUTATION_HOOKS|QUERY_HOOKS
+# All 36 pages tracked by the organism registry.
 read -r -d '' PAGES <<'EOF' || true
 Safety.tsx|src/pages/Safety.tsx|safety|useCreateIncident,useCreateSafetyInspection,useCreateCorrectiveAction,useUpdateCorrectiveAction|useIncidents,useSafetyInspections
 Meetings.tsx|src/pages/Meetings.tsx|meetings|useCreateMeeting|useMeetings
@@ -26,6 +27,32 @@ PunchListDetail.tsx|src/pages/punch-list/PunchListDetail.tsx|punch-items|useUpda
 DrawingDetail.tsx|src/pages/drawings/DrawingDetail.tsx|drawings||useDrawings
 CaptureUpload.tsx|src/pages/field-capture/CaptureUpload.tsx|field-captures|useCreateFieldCapture|useFieldCaptures
 FileGrid.tsx|src/pages/files/FileGrid.tsx|files|useCreateFile,useDeleteFile|useFiles
+RFIs.tsx|src/pages/RFIs.tsx|rfis|useCreateRFI,useUpdateRFI|useRFIs
+Submittals.tsx|src/pages/submittals/index.tsx|submittals|useCreateSubmittal,useUpdateSubmittal|useSubmittals
+Tasks.tsx|src/pages/Tasks.tsx|tasks|useCreateTask,useUpdateTask|useTasks
+Budget.tsx|src/pages/Budget.tsx|budget|useCreateBudgetLine,useUpdateBudgetLine|useBudgetLines
+Schedule.tsx|src/pages/schedule/index.tsx|schedule|useCreateScheduleActivity,useUpdateScheduleActivity|useScheduleActivities
+Directory.tsx|src/pages/Directory.tsx|directory|useCreateContact,useUpdateContact|useContacts
+Contracts.tsx|src/pages/Contracts.tsx|contracts|useCreateContract,useUpdateContract|useContracts
+Transmittals.tsx|src/pages/Transmittals.tsx|transmittals|useCreateTransmittal|useTransmittals
+Closeout.tsx|src/pages/Closeout.tsx|closeout|useCreateCloseoutItem,useUpdateCloseoutStatus|useCloseoutItems
+Specifications.tsx|src/pages/Specifications.tsx|specifications|useCreateSpecification|useSpecifications
+Preconstruction.tsx|src/pages/Preconstruction.tsx|preconstruction|useCreatePreconBidPackage,useCreatePreconBidSubmission|usePreconBidPackages
+Resources.tsx|src/pages/Resources.tsx|resources|useCreateLaborRate,useCreateMaterialRate,useCreateEquipmentRate|useLaborRates,useMaterialRates,useEquipmentRates
+Vendors.tsx|src/pages/Vendors.tsx|vendors|useCreateVendor,useCreateVendorEvaluation|useVendors,useVendorEvaluations
+CostManagement.tsx|src/pages/CostManagement.tsx|cost-management|useCreateCostCode,useCreateCostTransaction|useCostCodes,useCostTransactions
+TimeTracking.tsx|src/pages/TimeTracking.tsx|time-tracking|useCreateTimeEntry|useTimeEntries
+Deliveries.tsx|src/pages/Deliveries.tsx|deliveries|useCreateDelivery|useDeliveries
+Wiki.tsx|src/pages/Wiki.tsx|wiki|useCreateWikiPage,useUpdateWikiPage|useWikiPages
+SiteMap.tsx|src/pages/SiteMap.tsx|site-map||
+CarbonDashboard.tsx|src/pages/CarbonDashboard.tsx|carbon||
+ProjectBrain.tsx|src/components/ai/ProjectBrain.tsx|project-brain||
+ApprovalWorkflowBuilder.tsx|src/components/workflows/ApprovalWorkflowBuilder.tsx|approval-workflows|useSaveApprovalTemplate|useApprovalTemplates
+Portfolio.tsx|src/pages/Portfolio.tsx|portfolio||usePortfolioProjects
+ChangeOrders.tsx|src/pages/ChangeOrders.tsx|change-orders|useCreateChangeOrder|useChangeOrders
+LienWaivers.tsx|src/pages/LienWaivers.tsx|lien-waivers|useCreateLienWaiver|useLienWaivers
+Reports.tsx|src/pages/Reports.tsx|reports||
+ProjectHealth.tsx|src/pages/ProjectHealth.tsx|project-health||
 EOF
 
 echo "{" > "$OUT_FILE"
