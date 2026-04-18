@@ -17,6 +17,11 @@ import posthog from '../../lib/analytics'
 import Sentry from '../../lib/sentry'
 import { invalidateEntity, type EntityType } from '../../api/invalidation'
 import { logAuditEntry } from '../../lib/auditLogger'
+import { insertActivity } from '../../api/endpoints/activity'
+
+const ACTIVITY_FEED_ENTITY_TYPES = new Set<string>([
+  'rfi', 'submittal', 'daily_log', 'punch_item', 'task', 'meeting',
+])
 
 // ── Types ────────────────────────────────────────────────
 
@@ -167,6 +172,30 @@ export function useAuditedMutation<TParams, TResult>(config: AuditedMutationConf
           project_id: projectId,
           ...config.getAnalyticsProps?.(params),
         })
+      }
+
+      // Insert activity feed entry for tracked entity types (fire and forget).
+      // Realtime subscription on activity_feed will push the new entry to all clients.
+      if (projectId && ACTIVITY_FEED_ENTITY_TYPES.has(config.entityType as string)) {
+        const r = result as Record<string, unknown>
+        const entityId =
+          config.getEntityId?.(params, result) ??
+          ((r.data as Record<string, unknown> | undefined)?.id as string | undefined) ??
+          (typeof r.id === 'string' ? r.id : undefined)
+        const entityTitle = config.getEntityTitle?.(params) ?? (config.entityType as string)
+        const actionStr = config.action as string
+        const verb = actionStr.startsWith('create')
+          ? 'created'
+          : actionStr.startsWith('update')
+          ? 'updated'
+          : actionStr.startsWith('delete')
+          ? 'deleted'
+          : actionStr
+        insertActivity(projectId, {
+          type: config.entityType as string,
+          title: entityTitle,
+          metadata: { entity_id: entityId, action: verb },
+        }).catch(() => {})
       }
 
       config.onSuccess?.(result, params)

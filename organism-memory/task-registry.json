@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "last_updated": "2026-04-18T01:33:38.574Z",
+  "last_updated": "2026-04-18T03:55:14.219Z",
   "overall_progress": {
     "total_tasks": 116,
     "done": 60,
@@ -1939,9 +1939,10 @@
   },
   "integrations": {
     "activity_feed_wired": {
-      "status": "pending",
+      "status": "done",
       "pr": null,
-      "prereqs": []
+      "prereqs": [],
+      "completed_at": "2026-04-18T00:00:00.000Z"
     },
     "dashboard_metrics_wired": {
       "status": "pending",
