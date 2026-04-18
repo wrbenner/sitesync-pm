@@ -156,8 +156,6 @@ export function runStaticAudit(): AuditReport {
     }
   }
   for (const r of registeredRoutes) {
-    // Duplicate Crews entry is intentional; skip strict check for it
-    if (r === '/crews') continue
     if (!routePaths.has(r) && r !== '*') {
       globalFindings.push({
         severity: 'P1',

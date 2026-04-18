@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-04-18T17:34:52.575Z",
-  "totalRoutes": 56,
-  "passingRoutes": 50,
+  "generatedAt": "2026-04-18T17:48:26.751Z",
+  "totalRoutes": 55,
+  "passingRoutes": 51,
   "averageScore": 100,
   "results": [
     {
@@ -272,24 +272,32 @@
         "pageFile": "src/pages/ChangeOrders.tsx",
         "title": "Change Orders",
         "entity": "change-order",
-        "expected": {},
+        "expected": {
+          "has_list": true,
+          "has_create": true,
+          "has_delete": true,
+          "has_filters": true,
+          "has_search": true
+        },
         "createModal": "CreateChangeOrderModal",
         "hooksModule": "src/hooks/mutations/change-orders.ts",
         "permissionModule": "change-orders",
-        "status": "stub",
-        "knownIssues": [
-          "Page file is a 23-line stub — real CRUD lives in Budget.tsx/Financials.tsx",
-          "Mutation hooks exist: useCreate/useUpdate/useDeleteChangeOrder + approve/reject/promote/submit"
-        ]
+        "status": "production"
       },
-      "actual": {},
+      "actual": {
+        "has_list": true,
+        "has_create": true,
+        "has_delete": true,
+        "has_filters": true,
+        "has_search": true
+      },
       "mutations": {
         "createPresent": true,
         "updatePresent": true,
         "deletePresent": true
       },
       "findings": [],
-      "score": -1
+      "score": 100
     },
     {
       "contract": {
@@ -737,27 +745,6 @@
       },
       "findings": [],
       "score": 100
-    },
-    {
-      "contract": {
-        "route": "/crews",
-        "pageFile": "src/pages/Crews.tsx",
-        "title": "Crews (duplicate entry)",
-        "entity": "crew",
-        "expected": {},
-        "status": "stub",
-        "knownIssues": [
-          "Route listed twice in App.tsx — first entry is canonical"
-        ]
-      },
-      "actual": {},
-      "mutations": {
-        "createPresent": true,
-        "updatePresent": true,
-        "deletePresent": true
-      },
-      "findings": [],
-      "score": -1
     },
     {
       "contract": {

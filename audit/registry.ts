@@ -214,17 +214,17 @@ export const PAGE_REGISTRY: PageContract[] = [
     pageFile: 'src/pages/ChangeOrders.tsx',
     title: 'Change Orders',
     entity: 'change-order',
-    // Expected capabilities are aspirational — the hooks exist but the page
-    // is a placeholder and the budget/financials pages currently do CO CRUD.
-    expected: {},
+    expected: {
+      has_list: true,
+      has_create: true,
+      has_delete: true,
+      has_filters: true,
+      has_search: true,
+    },
     createModal: 'CreateChangeOrderModal',
     hooksModule: 'src/hooks/mutations/change-orders.ts',
     permissionModule: 'change-orders',
-    status: 'stub',
-    knownIssues: [
-      'Page file is a 23-line stub — real CRUD lives in Budget.tsx/Financials.tsx',
-      'Mutation hooks exist: useCreate/useUpdate/useDeleteChangeOrder + approve/reject/promote/submit',
-    ],
+    status: 'production',
   },
   {
     route: '/daily-log',
@@ -437,15 +437,6 @@ export const PAGE_REGISTRY: PageContract[] = [
     exportReportType: 'safety',
     permissionModule: 'safety',
     status: 'beta',
-  },
-  {
-    route: '/crews',
-    pageFile: 'src/pages/Crews.tsx',
-    title: 'Crews (duplicate entry)',
-    entity: 'crew',
-    expected: {},
-    status: 'stub',
-    knownIssues: ['Route listed twice in App.tsx — first entry is canonical'],
   },
   {
     route: '/workforce',
