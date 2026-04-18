@@ -1,12 +1,12 @@
 {
   "schema_version": 2,
-  "last_updated": "2026-04-18T01:33:38.574Z",
+  "last_updated": "2026-04-18T01:41:46.783Z",
   "overall_progress": {
     "total_tasks": 116,
-    "done": 60,
+    "done": 61,
     "in_progress": 0,
     "needs_human": 0,
-    "pending": 56
+    "pending": 55
   },
   "pages": {
     "rfis": {
@@ -1069,18 +1069,18 @@
       ]
     },
     "documents": {
-      "functional_score": 29,
+      "functional_score": 43,
       "tasks": [
         {
           "id": "documents-1",
           "description": "File list/grid with folder tree navigation",
-          "status": "pending",
+          "status": "done",
           "pr": null,
           "pr_url": null,
           "locked_by": null,
           "locked_at": null,
-          "completed_at": null,
-          "attempts": 0,
+          "completed_at": "2026-04-18T01:41:46.783Z",
+          "attempts": 1,
           "failure_reason": null,
           "verification_grep": ".from('documents').select(",
           "files": [

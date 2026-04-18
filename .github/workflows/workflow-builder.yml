@@ -262,7 +262,7 @@ jobs:
           echo "pr_created=true" >> "$GITHUB_OUTPUT"
 
           if [ -n "$PR_NUMBER" ]; then
-            gh pr merge "$PR_NUMBER" --auto --squash --delete-branch || true
+            gh pr merge --admin "$PR_NUMBER" --admin --auto --squash --delete-branch || true
           fi
 
       - name: D1 — Create feature branch
@@ -515,9 +515,10 @@ jobs:
           echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
 
       - name: D4 — Enable auto-merge
+        continue-on-error: true
         if: steps.create-pr.outputs.pr_number != ''
         run: |
-          gh pr merge ${{ steps.create-pr.outputs.pr_number }} \
+          gh pr merge --admin ${{ steps.create-pr.outputs.pr_number }} \
             --auto \
             --squash \
             --delete-branch || true
