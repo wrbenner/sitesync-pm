@@ -7,8 +7,9 @@ import {
   parseAgentMention,
   stripAgentMention,
   SPECIALIST_AGENTS,
-  
+
 } from '../types/agents'
+import { getRouteContext, routeFromPath, contextToPromptBlock } from '../lib/routeContext'
 import type {
   AgentDomain,
   AgentConversationMessage,
@@ -267,12 +268,20 @@ export function useMultiAgentChat(
                   content: m.content,
                   agentDomain: m.agentDomain,
                 })),
-                projectContext: {
-                  projectId,
-                  userId: session?.user?.id,
-                  page: pageContext || 'general',
-                  entityContext: entityContext || '',
-                },
+                projectContext: await (async () => {
+                  const routeKey = pageContext
+                    ? routeFromPath(`/${pageContext}`)
+                    : routeFromPath(typeof window !== 'undefined' ? window.location.pathname : '/')
+                  const routeCtx = await getRouteContext(routeKey, projectId).catch(() => null)
+                  return {
+                    projectId,
+                    userId: session?.user?.id,
+                    page: pageContext || 'general',
+                    entityContext: entityContext || '',
+                    routeContext: routeCtx,
+                    routeContextPrompt: routeCtx ? contextToPromptBlock(routeCtx) : null,
+                  }
+                })(),
               }),
               signal: controller.signal,
             },
