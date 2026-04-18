@@ -10,6 +10,7 @@ import { getAnnotationsForEntity, getPredictiveAlertsForPage } from '../data/aiA
 import { PermissionGate } from '../components/auth/PermissionGate';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
+import { useDeleteCrew } from '../hooks/mutations';
 
 interface AddCrewModalProps { onClose: () => void; projectId: string; onCreated: () => void }
 const AddCrewModal: React.FC<AddCrewModalProps> = ({ onClose, projectId, onCreated }) => {
@@ -71,6 +72,19 @@ const CREW_COLOR_PALETTE = [
 export const Crews: React.FC = () => {
   const { crews, loading, error: crewError, loadCrews } = useCrewStore();
   const { activeProject } = useProjectContext();
+  const deleteCrew = useDeleteCrew();
+
+  const handleDeleteCrew = async (crew: { id: string; name: string }) => {
+    if (!activeProject?.id) return;
+    if (!window.confirm(`Delete crew "${crew.name}"? This cannot be undone.`)) return;
+    try {
+      await deleteCrew.mutateAsync({ id: crew.id, projectId: activeProject.id });
+      toast.success('Crew deleted');
+      loadCrews(activeProject.id);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete crew');
+    }
+  };
   const [activeTab, setActiveTab] = useState<'map' | 'cards' | 'performance'>('cards');
   const [hoveredCrew, setHoveredCrew] = useState<string | null>(null);
   const [showAddCrew, setShowAddCrew] = useState(false);
@@ -512,6 +526,21 @@ export const Crews: React.FC = () => {
                         </p>
                       </div>
                     )}
+
+                    <PermissionGate permission="crews.manage">
+                      <div style={{ marginTop: spacing.md, display: 'flex', justifyContent: 'flex-end' }}>
+                        <Btn
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleDeleteCrew(crew)}
+                          disabled={deleteCrew.isPending}
+                          aria-label={`Delete crew ${crew.name}`}
+                          data-testid="delete-crew-button"
+                        >
+                          {deleteCrew.isPending ? 'Deleting…' : 'Delete'}
+                        </Btn>
+                      </div>
+                    </PermissionGate>
                   </div>
                 </Card>
               );

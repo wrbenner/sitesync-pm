@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-04-18T17:00:25.485Z",
+  "generatedAt": "2026-04-18T17:28:56.339Z",
   "totalRoutes": 56,
-  "passingRoutes": 34,
-  "averageScore": 86,
+  "passingRoutes": 35,
+  "averageScore": 87,
   "results": [
     {
       "contract": {
@@ -353,7 +353,7 @@
         "has_list": true,
         "has_create": true,
         "has_edit": true,
-        "has_delete": false,
+        "has_delete": true,
         "has_detail_view": true,
         "has_export": true
       },
@@ -362,14 +362,8 @@
         "updatePresent": true,
         "deletePresent": true
       },
-      "findings": [
-        {
-          "severity": "P3",
-          "code": "MISSING_HAS_DELETE",
-          "message": "Page declares has_delete but no evidence found in src/pages/daily-log/index.tsx"
-        }
-      ],
-      "score": 83
+      "findings": [],
+      "score": 100
     },
     {
       "contract": {
@@ -437,7 +431,7 @@
         "has_list": true,
         "has_create": true,
         "has_edit": false,
-        "has_delete": false,
+        "has_delete": true,
         "has_detail_view": false
       },
       "mutations": {
@@ -453,16 +447,11 @@
         },
         {
           "severity": "P3",
-          "code": "MISSING_HAS_DELETE",
-          "message": "Page declares has_delete but no evidence found in src/pages/Meetings.tsx"
-        },
-        {
-          "severity": "P3",
           "code": "MISSING_HAS_DETAIL_VIEW",
           "message": "Page declares has_detail_view but no evidence found in src/pages/Meetings.tsx"
         }
       ],
-      "score": 40
+      "score": 60
     },
     {
       "contract": {
@@ -489,7 +478,7 @@
         "has_list": true,
         "has_create": true,
         "has_edit": false,
-        "has_delete": false,
+        "has_delete": true,
         "has_detail_view": false
       },
       "mutations": {
@@ -505,16 +494,11 @@
         },
         {
           "severity": "P3",
-          "code": "MISSING_HAS_DELETE",
-          "message": "Page declares has_delete but no evidence found in src/pages/Crews.tsx"
-        },
-        {
-          "severity": "P3",
           "code": "MISSING_HAS_DETAIL_VIEW",
           "message": "Page declares has_detail_view but no evidence found in src/pages/Crews.tsx"
         }
       ],
-      "score": 40
+      "score": 60
     },
     {
       "contract": {

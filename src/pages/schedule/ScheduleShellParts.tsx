@@ -1,7 +1,9 @@
 import React from 'react';
-import { Calendar, Upload, Plus } from 'lucide-react';
+import { Calendar, Upload, Plus, Download } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme';
 import { PermissionGate } from '../../components/auth/PermissionGate';
+import { exportToXlsx } from '../../lib/exportXlsx';
+import { toast } from 'sonner';
 
 export const ScheduleLiveIndicator: React.FC<{ liveActive: boolean }> = ({ liveActive }) => {
   if (!liveActive) return null;
@@ -35,13 +37,50 @@ export const ScheduleLiveIndicator: React.FC<{ liveActive: boolean }> = ({ liveA
   );
 };
 
+interface SchedulePhaseExport {
+  name: string;
+  status: string;
+  start_date: string;
+  end_date: string;
+  percent_complete: number;
+  is_critical_path: boolean;
+}
+
 interface ActionsProps {
   onImport: () => void;
   onAddPhase?: () => void;
   liveActive: boolean;
+  projectName?: string;
+  phases?: SchedulePhaseExport[];
 }
 
-export const ScheduleHeaderActions: React.FC<ActionsProps> = ({ onImport, onAddPhase, liveActive }) => (
+function handleExportSchedule(projectName: string, phases: SchedulePhaseExport[]) {
+  if (!phases.length) {
+    toast.info('Nothing to export — schedule is empty.');
+    return;
+  }
+  exportToXlsx({
+    filename: `${projectName}_Schedule`,
+    sheets: [
+      {
+        name: 'Schedule',
+        headers: ['Phase', 'Status', 'Start', 'End', '% Complete', 'Critical Path'],
+        rows: phases.map((p) => [
+          p.name,
+          p.status,
+          p.start_date,
+          p.end_date,
+          Number(p.percent_complete ?? 0),
+          p.is_critical_path ? 'Yes' : 'No',
+        ]),
+        columnWidths: [32, 14, 12, 12, 12, 14],
+      },
+    ],
+  });
+  toast.success('Schedule exported');
+}
+
+export const ScheduleHeaderActions: React.FC<ActionsProps> = ({ onImport, onAddPhase, liveActive, projectName, phases }) => (
   <div style={{ display: 'flex', alignItems: 'center', gap: spacing.md }}>
     {onAddPhase && (
       <PermissionGate
@@ -126,6 +165,32 @@ export const ScheduleHeaderActions: React.FC<ActionsProps> = ({ onImport, onAddP
         Import Schedule
       </button>
     </PermissionGate>
+    <button
+      aria-label="Export schedule as XLSX"
+      onClick={() => handleExportSchedule(projectName ?? 'Project', phases ?? [])}
+      data-testid="export-schedule-button"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: spacing.sm,
+        padding: `0 ${spacing.lg}`,
+        height: '40px',
+        border: `1px solid ${colors.borderDefault}`,
+        borderRadius: borderRadius.md,
+        backgroundColor: colors.white,
+        cursor: 'pointer',
+        fontSize: typography.fontSize.body,
+        fontWeight: typography.fontWeight.medium,
+        color: colors.textPrimary,
+        fontFamily: 'inherit',
+        transition: transitions.quick,
+      }}
+      onMouseEnter={e => (e.currentTarget.style.backgroundColor = colors.surfaceHover)}
+      onMouseLeave={e => (e.currentTarget.style.backgroundColor = colors.white)}
+    >
+      <Download size={15} />
+      Export
+    </button>
     <ScheduleLiveIndicator liveActive={liveActive} />
   </div>
 );
