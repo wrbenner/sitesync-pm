@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-04-18T17:48:26.751Z",
+  "generatedAt": "2026-04-18T17:54:27.561Z",
   "totalRoutes": 55,
-  "passingRoutes": 51,
+  "passingRoutes": 52,
   "averageScore": 100,
   "results": [
     {
@@ -897,26 +897,30 @@
         "expected": {
           "has_list": true,
           "has_create": true,
-          "has_edit": true
+          "has_edit": true,
+          "has_delete": true,
+          "has_filters": true,
+          "has_search": true
         },
+        "hooksModule": "src/hooks/queries/vendors.ts",
         "permissionModule": "vendors",
-        "status": "stub",
-        "knownIssues": [
-          "Create hook exists (queries/vendors.ts) but no Update/Delete"
-        ]
+        "status": "production"
       },
       "actual": {
         "has_list": true,
         "has_create": true,
-        "has_edit": true
+        "has_edit": true,
+        "has_delete": true,
+        "has_filters": true,
+        "has_search": true
       },
       "mutations": {
-        "createPresent": false,
-        "updatePresent": false,
-        "deletePresent": false
+        "createPresent": true,
+        "updatePresent": true,
+        "deletePresent": true
       },
       "findings": [],
-      "score": -1
+      "score": 100
     },
     {
       "contract": {

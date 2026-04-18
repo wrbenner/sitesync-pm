@@ -61,6 +61,39 @@ export function useCreateVendor() {
   })
 }
 
+export function useUpdateVendor() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (params: { id: string; updates: Partial<Vendor> }) => {
+      const { data, error } = await supabase
+        .from('vendors')
+        .update(params.updates)
+        .eq('id', params.id)
+        .select()
+        .single()
+      if (error) throw error
+      return data as Vendor
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['vendors'] })
+    },
+  })
+}
+
+export function useDeleteVendor() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (params: { id: string }) => {
+      const { error } = await supabase.from('vendors').delete().eq('id', params.id)
+      if (error) throw error
+      return { id: params.id }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['vendors'] })
+    },
+  })
+}
+
 export function useVendorEvaluations(vendorId: string | undefined) {
   return useQuery({
     queryKey: ['vendor_evaluations', vendorId],
