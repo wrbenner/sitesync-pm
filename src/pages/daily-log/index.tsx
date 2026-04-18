@@ -14,7 +14,9 @@ import type { QuickEntryData } from '../../components/dailylog/QuickEntry';
 import type { CrewHoursEntry as CrewHoursEntryType } from '../../components/dailylog/CrewHoursSummary';
 import type { DailyLogPhoto } from '../../components/dailylog/PhotoGrid';
 import { useProjectId } from '../../hooks/useProjectId';
-import { useDailyLogs, useDailyLogEntries } from '../../hooks/queries';
+import { useDailyLogs, useDailyLogEntries, useProject } from '../../hooks/queries';
+import { exportDailyLogXlsx } from '../../lib/exportXlsx';
+import { ExportButton } from '../../components/shared/ExportButton';
 import { useUpdateDailyLog, useCreateDailyLog, useSubmitDailyLog, useApproveDailyLog, useRejectDailyLog } from '../../hooks/mutations';
 import { fetchWeather, formatWeatherSummary } from '../../lib/weather';
 import { supabase } from '../../lib/supabase';
@@ -37,8 +39,26 @@ const DailyLogPage: React.FC = () => {
   const { setPageContext } = useCopilotStore();
   useEffect(() => { setPageContext('daily-log'); }, [setPageContext]);
   const { data: dailyLogData, isPending: loading, error: logError, refetch } = useDailyLogs(projectId);
+  const { data: project } = useProject(projectId);
   const updateDailyLog = useUpdateDailyLog();
   const createDailyLog = useCreateDailyLog();
+
+  const handleExportXlsx = useCallback(() => {
+    const projectName = project?.name ?? 'Project';
+    const raw = dailyLogData?.data ?? [];
+    const rows = raw.map((l) => {
+      const rec = l as Record<string, unknown>;
+      return {
+        date: (rec.log_date as string) ?? (rec.date as string) ?? '',
+        workers: Number(rec.workers_onsite ?? rec.total_workers ?? 0),
+        manHours: Number(rec.man_hours ?? 0),
+        incidents: Number(rec.incidents ?? 0),
+        weather: (rec.weather as string) ?? '',
+        summary: (rec.summary as string) ?? (rec.work_performed as string) ?? '',
+      };
+    });
+    exportDailyLogXlsx(projectName, rows);
+  }, [project?.name, dailyLogData?.data]);
   const submitDailyLog = useSubmitDailyLog();
   const approveDailyLog = useApproveDailyLog();
   const rejectDailyLog = useRejectDailyLog();
@@ -472,7 +492,12 @@ const DailyLogPage: React.FC = () => {
       <PageContainer
         title="Daily Log"
         subtitle="No entries"
-        actions={<PermissionGate permission="daily_log.create"><Btn onClick={() => setShowCreateModal(true)} data-testid="create-daily-log-button">New Entry</Btn></PermissionGate>}
+        actions={
+          <div style={{ display: 'flex', gap: spacing['2'], alignItems: 'center' }}>
+            <ExportButton onExportXLSX={handleExportXlsx} pdfFilename="SiteSync_Daily_Log_Summary" />
+            <PermissionGate permission="daily_log.create"><Btn onClick={() => setShowCreateModal(true)} data-testid="create-daily-log-button">New Entry</Btn></PermissionGate>
+          </div>
+        }
       >
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'], marginBottom: spacing['6'] }}>
           {[

@@ -2,7 +2,9 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { PageContainer, Card, Btn, EmptyState } from '../../components/Primitives';
 import { MetricCardSkeleton } from '../../components/ui/Skeletons';
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
-import { useSubmittals, useSubmittalReviewers } from '../../hooks/queries';
+import { useSubmittals, useSubmittalReviewers, useProject } from '../../hooks/queries';
+import { exportSubmittalLogXlsx } from '../../lib/exportXlsx';
+import { ExportButton } from '../../components/shared/ExportButton';
 import { AlertTriangle, ClipboardList, LayoutGrid, List, RefreshCw } from 'lucide-react';
 import { useCreateSubmittal, useUpdateSubmittal } from '../../hooks/mutations';
 import { useProjectId } from '../../hooks/useProjectId';
@@ -34,6 +36,25 @@ const SubmittalsPage: React.FC = () => {
   const createSubmittal = useCreateSubmittal();
   const updateSubmittal = useUpdateSubmittal();
   const { data: submittalsResult, isPending: loading, error: submittalsError, refetch } = useSubmittals(projectId);
+  const { data: project } = useProject(projectId);
+
+  const handleExportXlsx = useCallback(() => {
+    const projectName = project?.name ?? 'Project';
+    const rows = (submittalsResult?.data ?? []).map((s) => {
+      const rec = s as Record<string, unknown>;
+      return {
+        number: String(rec.submittal_number ?? rec.number ?? rec.id ?? ''),
+        title: (rec.title as string) ?? '',
+        specSection: (rec.spec_section as string) ?? '',
+        subcontractor: (rec.subcontractor as string) ?? (rec.assigned_to as string) ?? '',
+        status: (rec.status as string) ?? '',
+        revision: String(rec.revision ?? ''),
+        leadTime: String(rec.lead_time ?? ''),
+        dueDate: (rec.due_date as string) ?? '',
+      };
+    });
+    exportSubmittalLogXlsx(projectName, rows);
+  }, [project?.name, submittalsResult?.data]);
   const selectedIdStr = selectedId != null ? String(selectedId) : undefined;
   const { data: reviewersData = [] } = useSubmittalReviewers(selectedIdStr);
   const submittalsRaw = submittalsResult?.data ?? [];
@@ -171,7 +192,12 @@ const SubmittalsPage: React.FC = () => {
       <PageContainer
         title="Submittals"
         subtitle="No items"
-        actions={<PermissionGate permission="submittals.create"><Btn onClick={() => setShowCreateModal(true)} data-testid="create-submittal-button">New Submittal</Btn></PermissionGate>}
+        actions={
+          <div style={{ display: 'flex', gap: spacing['2'], alignItems: 'center' }}>
+            <ExportButton onExportXLSX={handleExportXlsx} pdfFilename="SiteSync_Submittal_Log" />
+            <PermissionGate permission="submittals.create"><Btn onClick={() => setShowCreateModal(true)} data-testid="create-submittal-button">New Submittal</Btn></PermissionGate>
+          </div>
+        }
       >
         <div style={{
           display: 'flex',

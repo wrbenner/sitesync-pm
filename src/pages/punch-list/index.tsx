@@ -4,7 +4,9 @@ import { ErrorBoundary } from '../../components/ErrorBoundary';
 import PunchListSkeleton from '../../components/field/PunchListSkeleton';
 import EmptyState from '../../components/ui/EmptyState';
 import { colors, spacing, typography } from '../../styles/theme';
-import { usePunchItems } from '../../hooks/queries';
+import { usePunchItems, useProject } from '../../hooks/queries';
+import { exportPunchListXlsx } from '../../lib/exportXlsx';
+import { ExportButton } from '../../components/shared/ExportButton';
 import { AlertTriangle, CheckSquare, RefreshCw, Camera } from 'lucide-react';
 import { usePermissions } from '../../hooks/usePermissions';
 import { getPredictiveAlertsForPage } from '../../data/aiAnnotations';
@@ -54,6 +56,24 @@ const PunchListPage: React.FC = () => {
   // Fetch punch list items from API
   const { data: punchListResult, isLoading: loading, error: punchError, refetch } = usePunchItems(projectId);
   const punchListRaw = punchListResult?.data ?? [];
+  const { data: project } = useProject(projectId);
+
+  const handleExportXlsx = useCallback(() => {
+    const projectName = project?.name ?? 'Project';
+    const rows = punchListRaw.map((p) => {
+      const rec = p as Record<string, unknown>;
+      return {
+        number: String(rec.number ?? rec.id ?? ''),
+        area: (rec.location as string) ?? (rec.area as string) ?? '',
+        description: (rec.title as string) ?? (rec.description as string) ?? '',
+        assignedTo: (rec.assigned_to as string) ?? '',
+        priority: (rec.priority as string) ?? '',
+        status: (rec.status as string) ?? '',
+        dueDate: (rec.due_date as string) ?? '',
+      };
+    });
+    exportPunchListXlsx(projectName, rows);
+  }, [project?.name, punchListRaw]);
 
   const pageAlerts = getPredictiveAlertsForPage('punchlist');
 
@@ -315,7 +335,12 @@ const PunchListPage: React.FC = () => {
       <PageContainer
         title="Punch List"
         subtitle="No items"
-        actions={<PermissionGate permission="punch_list.create" fallback={<span title="Your role doesn't allow creating punch items. Request access from your admin."><Btn disabled>New Item</Btn></span>}><Btn onClick={() => setShowCreateModal(true)} data-testid="create-punch-item-button">New Item</Btn></PermissionGate>}
+        actions={
+          <div style={{ display: 'flex', gap: spacing['2'], alignItems: 'center' }}>
+            <ExportButton onExportXLSX={handleExportXlsx} pdfFilename="SiteSync_Punch_List" />
+            <PermissionGate permission="punch_list.create" fallback={<span title="Your role doesn't allow creating punch items. Request access from your admin."><Btn disabled>New Item</Btn></span>}><Btn onClick={() => setShowCreateModal(true)} data-testid="create-punch-item-button">New Item</Btn></PermissionGate>
+          </div>
+        }
       >
         <EmptyState
           icon={CheckSquare}

@@ -6,7 +6,9 @@ import { BulkActionBar } from '../components/shared/BulkActionBar';
 import { createColumnHelper } from '@tanstack/react-table';
 import { PageContainer, Card, Btn, StatusTag, PriorityTag, DetailPanel, Avatar, Tag, RelatedItems, useToast, MetricBox, EmptyState } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, shadows, zIndex } from '../styles/theme';
-import { useRFIs, useRFI } from '../hooks/queries';
+import { useRFIs, useRFI, useProject } from '../hooks/queries';
+import { exportRFILogXlsx } from '../lib/exportXlsx';
+import { ExportButton } from '../components/shared/ExportButton';
 import { AlertTriangle, FileQuestion, FilterX, Plus, Clock, MessageSquare, Calendar, RefreshCw, Send, Sparkles, LayoutGrid, List, UserCheck, Flag, Download, XCircle, Wand2, Loader2, X } from 'lucide-react';
 import { useAppNavigate, getRelatedItemsForRfi } from '../utils/connections';
 import { useCreateRFI, useUpdateRFI, useCreateRFIResponse } from '../hooks/mutations';
@@ -127,6 +129,25 @@ const RFIsPage: React.FC = () => {
   useEffect(() => { setPageContext('rfis'); }, [setPageContext]);
   const { data: rfisResult, isPending: rfisLoading, error: rfisError, refetch } = useRFIs(projectId);
   const rfisRaw = rfisResult?.data ?? [];
+  const { data: project } = useProject(projectId);
+
+  const handleExportXlsx = React.useCallback(() => {
+    const projectName = project?.name ?? 'Project';
+    const rows = rfisRaw.map((r) => {
+      const rec = r as Record<string, unknown>;
+      return {
+        number: rec.number ? `RFI-${String(rec.number).padStart(3, '0')}` : String(rec.id ?? '').slice(0, 8),
+        title: (rec.title as string) ?? '',
+        priority: (rec.priority as string) ?? '',
+        status: (rec.status as string) ?? '',
+        from: (rec.created_by as string) ?? '',
+        assignedTo: (rec.assigned_to as string) ?? '',
+        dueDate: (rec.due_date as string) ?? '',
+        createdAt: typeof rec.created_at === 'string' ? rec.created_at.slice(0, 10) : '',
+      };
+    });
+    exportRFILogXlsx(projectName, rows);
+  }, [project?.name, rfisRaw]);
 
   // Map API data to component shape
   const rfis = useMemo(() => rfisRaw.map((r: Record<string, unknown>) => ({
@@ -564,6 +585,7 @@ const RFIsPage: React.FC = () => {
               <LayoutGrid size={14} style={{ marginRight: 4 }} /> Kanban
             </motion.button>
           </div>
+          <ExportButton onExportXLSX={handleExportXlsx} pdfFilename="SiteSync_RFI_Log" />
           <PermissionGate permission="rfis.create">
             <button
               onClick={() => setShowAIDraftModal(true)}

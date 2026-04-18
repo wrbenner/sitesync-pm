@@ -55,19 +55,27 @@ function detectEdit(src: string): boolean {
 }
 
 function detectDelete(src: string): boolean {
-  return /useDelete\w+\(|\.from\(['"][\w_]+['"]\)\s*\.delete\(/.test(src)
+  return /useDelete\w+\(|\.from\(['"][\w_]+['"]\)\s*\.delete\(|onDelete\s*=|handleDelete\b/.test(src)
 }
 
 function detectDetailView(src: string): boolean {
-  return /<DetailPanel|useParams\(\)|detailDrawer|selectedId|selectedRow|selected\w+Id/.test(src)
+  return /<DetailPanel|useParams\(\)|detailDrawer|selectedId|selectedRow|selected\w+Id|setSelected\w+/.test(
+    src,
+  )
 }
 
 function detectFilters(src: string): boolean {
-  return /<FilterBar|<TabBar|filterStatus|filterPriority|<Filter\b/.test(src)
+  // Catch both `filterStatus` and `statusFilter` idioms, plus explicit
+  // FilterBar / TabBar / Filter components.
+  return /<FilterBar|<TabBar|<Filter\b|[Ff]ilter[A-Z]\w*|\w+Filter\s*[=,)]|setStatusFilter|setPriorityFilter/.test(
+    src,
+  )
 }
 
 function detectSearch(src: string): boolean {
-  return /placeholder=["'][^"']*[Ss]earch|<Search\s|searchQuery|setSearchQuery/.test(src)
+  return /placeholder=["'][^"']*[Ss]earch|<Search\s|searchQuery|setSearchQuery|searchTerm|setSearchTerm/.test(
+    src,
+  )
 }
 
 function detectExport(src: string): boolean {
