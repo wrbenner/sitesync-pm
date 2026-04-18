@@ -1,24 +1,19 @@
 {
   "totals": {
-    "mock_data": 0,
-    "hardcoded_colors": 402,
-    "files": 46
+    "mock_data": 1,
+    "hardcoded_colors": 347,
+    "files": 57
   },
   "files": [
-    {
-      "file": "src/pages/Submittals.tsx",
-      "mock_data": 0,
-      "hardcoded_colors": 54
-    },
     {
       "file": "src/components/schedule/GanttChart.tsx",
       "mock_data": 0,
       "hardcoded_colors": 43
     },
     {
-      "file": "src/pages/Schedule.tsx",
+      "file": "src/components/reports/OwnerReport.tsx",
       "mock_data": 0,
-      "hardcoded_colors": 33
+      "hardcoded_colors": 35
     },
     {
       "file": "src/components/schedule/MobileScheduleView.tsx",
@@ -26,19 +21,9 @@
       "hardcoded_colors": 25
     },
     {
-      "file": "src/pages/RFIs.tsx",
-      "mock_data": 0,
-      "hardcoded_colors": 22
-    },
-    {
       "file": "src/components/export/DailyLogPDF.tsx",
       "mock_data": 0,
       "hardcoded_colors": 19
-    },
-    {
-      "file": "src/pages/PunchList.tsx",
-      "mock_data": 0,
-      "hardcoded_colors": 18
     },
     {
       "file": "src/components/Primitives.tsx",
@@ -51,14 +36,19 @@
       "hardcoded_colors": 15
     },
     {
-      "file": "src/pages/Safety.tsx",
-      "mock_data": 0,
-      "hardcoded_colors": 15
-    },
-    {
       "file": "src/components/export/SafetyReport.tsx",
       "mock_data": 0,
       "hardcoded_colors": 13
+    },
+    {
+      "file": "src/components/reports/ScaleAuditReport.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 10
+    },
+    {
+      "file": "src/components/reports/DiscrepancyReport.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 10
     },
     {
       "file": "src/components/collaboration/PresenceBar.tsx",
@@ -71,6 +61,16 @@
       "hardcoded_colors": 9
     },
     {
+      "file": "src/pages/drawings/index.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 9
+    },
+    {
+      "file": "src/components/reports/ProgressTimeline.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 8
+    },
+    {
       "file": "src/components/forms/CreateDailyLogModal.tsx",
       "mock_data": 0,
       "hardcoded_colors": 8
@@ -79,6 +79,11 @@
       "file": "src/api/endpoints/documents.ts",
       "mock_data": 0,
       "hardcoded_colors": 8
+    },
+    {
+      "file": "src/components/reports/DrawingAnalysisReport.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 7
     },
     {
       "file": "src/components/export/BudgetReport.tsx",
@@ -91,17 +96,17 @@
       "hardcoded_colors": 7
     },
     {
-      "file": "src/pages/DailyLog.tsx",
-      "mock_data": 0,
-      "hardcoded_colors": 7
-    },
-    {
-      "file": "src/pages/Drawings.tsx",
-      "mock_data": 0,
-      "hardcoded_colors": 7
-    },
-    {
       "file": "src/components/export/DailyLogReport.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 6
+    },
+    {
+      "file": "src/pages/drawings/DrawingList.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 6
+    },
+    {
+      "file": "src/pages/safety/InspectionsAndCerts.tsx",
       "mock_data": 0,
       "hardcoded_colors": 6
     },
@@ -121,32 +126,32 @@
       "hardcoded_colors": 5
     },
     {
-      "file": "src/components/drawings/BIMViewer.tsx",
-      "mock_data": 0,
-      "hardcoded_colors": 4
-    },
-    {
       "file": "src/components/dailylog/QuickEntry.tsx",
       "mock_data": 0,
       "hardcoded_colors": 4
     },
     {
-      "file": "src/pages/ChangeOrders.tsx",
+      "file": "src/pages/drawings/DrawingDetail.tsx",
       "mock_data": 0,
       "hardcoded_colors": 4
     },
     {
-      "file": "src/pages/FieldCapture.tsx",
+      "file": "src/pages/files/index.tsx",
       "mock_data": 0,
-      "hardcoded_colors": 3
+      "hardcoded_colors": 4
     },
     {
-      "file": "src/pages/Files.tsx",
+      "file": "src/pages/safety/index.tsx",
       "mock_data": 0,
       "hardcoded_colors": 3
     },
     {
       "file": "src/components/schedule/LookaheadBoard.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 2
+    },
+    {
+      "file": "src/components/schedule/ConflictCard.tsx",
       "mock_data": 0,
       "hardcoded_colors": 2
     },
@@ -171,6 +176,11 @@
       "hardcoded_colors": 2
     },
     {
+      "file": "src/components/drawings/AnnotationCanvas.tsx",
+      "mock_data": 1,
+      "hardcoded_colors": 1
+    },
+    {
       "file": "src/components/drawings/DrawingViewer.tsx",
       "mock_data": 0,
       "hardcoded_colors": 2
@@ -181,17 +191,22 @@
       "hardcoded_colors": 2
     },
     {
+      "file": "src/stores/aiAnnotationStore.ts",
+      "mock_data": 0,
+      "hardcoded_colors": 2
+    },
+    {
+      "file": "src/pages/schedule/ScheduleGantt.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 2
+    },
+    {
       "file": "src/pages/Settings/NotificationSettings.tsx",
       "mock_data": 0,
       "hardcoded_colors": 2
     },
     {
       "file": "src/pages/auth/Signup.tsx",
-      "mock_data": 0,
-      "hardcoded_colors": 2
-    },
-    {
-      "file": "src/pages/auth/Login.tsx",
       "mock_data": 0,
       "hardcoded_colors": 2
     },
@@ -211,7 +226,17 @@
       "hardcoded_colors": 1
     },
     {
+      "file": "src/components/field/QuickRFI.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 1
+    },
+    {
       "file": "src/components/drawings/MarkupToolbar.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 1
+    },
+    {
+      "file": "src/components/drawings/RevisionOverlay.tsx",
       "mock_data": 0,
       "hardcoded_colors": 1
     },
@@ -232,6 +257,36 @@
     },
     {
       "file": "src/components/export/CostReport.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 1
+    },
+    {
+      "file": "src/pages/RFIs.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 1
+    },
+    {
+      "file": "src/pages/Files.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 1
+    },
+    {
+      "file": "src/pages/safety/IncidentForm.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 1
+    },
+    {
+      "file": "src/pages/field-capture/CaptureSync.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 1
+    },
+    {
+      "file": "src/pages/files/fileTypes.ts",
+      "mock_data": 0,
+      "hardcoded_colors": 1
+    },
+    {
+      "file": "src/pages/daily-log/index.tsx",
       "mock_data": 0,
       "hardcoded_colors": 1
     }
