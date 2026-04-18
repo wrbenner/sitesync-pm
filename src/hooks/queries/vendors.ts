@@ -1,5 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
+import { useAuditedMutation } from '../mutations/createAuditedMutation'
+import { vendorSchema } from '../../components/forms/schemas'
 
 export type Vendor = {
   id: string
@@ -48,23 +50,34 @@ export function useVendors(projectId: string | undefined) {
 }
 
 export function useCreateVendor() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async (payload: Partial<Vendor> & { company_name: string }) => {
+  return useAuditedMutation<Partial<Vendor> & { company_name: string }, Vendor>({
+    permission: 'directory.manage',
+    schema: vendorSchema.partial().required({ company_name: true }),
+    action: 'create',
+    entityType: 'vendor',
+    getEntityTitle: (p) => p.company_name,
+    getAfterState: (p) => p as Record<string, unknown>,
+    mutationFn: async (payload) => {
       const { data, error } = await supabase.from('vendors').insert(payload).select().single()
       if (error) throw error
       return data as Vendor
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['vendors'] })
-    },
+    invalidateKeys: () => [['vendors']],
+    analyticsEvent: 'vendor_created',
+    errorMessage: 'Failed to create vendor',
   })
 }
 
 export function useUpdateVendor() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async (params: { id: string; updates: Partial<Vendor> }) => {
+  return useAuditedMutation<{ id: string; updates: Partial<Vendor> }, Vendor>({
+    permission: 'directory.manage',
+    schema: vendorSchema.partial(),
+    schemaKey: 'updates',
+    action: 'update',
+    entityType: 'vendor',
+    getEntityId: (p) => p.id,
+    getAfterState: (p) => p.updates as Record<string, unknown>,
+    mutationFn: async (params) => {
       const { data, error } = await supabase
         .from('vendors')
         .update(params.updates)
@@ -74,23 +87,26 @@ export function useUpdateVendor() {
       if (error) throw error
       return data as Vendor
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['vendors'] })
-    },
+    invalidateKeys: () => [['vendors']],
+    analyticsEvent: 'vendor_updated',
+    errorMessage: 'Failed to update vendor',
   })
 }
 
 export function useDeleteVendor() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async (params: { id: string }) => {
+  return useAuditedMutation<{ id: string }, { id: string }>({
+    permission: 'directory.manage',
+    action: 'delete',
+    entityType: 'vendor',
+    getEntityId: (p) => p.id,
+    mutationFn: async (params) => {
       const { error } = await supabase.from('vendors').delete().eq('id', params.id)
       if (error) throw error
       return { id: params.id }
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['vendors'] })
-    },
+    invalidateKeys: () => [['vendors']],
+    analyticsEvent: 'vendor_deleted',
+    errorMessage: 'Failed to delete vendor',
   })
 }
 

@@ -9,7 +9,7 @@ import { usePermits, useCreatePermit, useDeletePermit } from '../hooks/queries/p
 import { toast } from 'sonner'
 import { PermissionGate } from '../components/auth/PermissionGate'
 import { EntityFormModal, type FieldConfig } from '../components/forms/EntityFormModal'
-import { z } from 'zod'
+import { permitSchema } from '../components/forms/schemas'
 
 type TabKey = 'permits' | 'inspections'
 
@@ -19,17 +19,6 @@ const tabs: { key: TabKey; label: string; icon: React.ElementType }[] = [
 ]
 
 // ── Permit Create Form ───────────────────────────────────────
-
-const permitSchema = z.object({
-  type: z.string().min(1, 'Permit type is required'),
-  permit_number: z.string().optional(),
-  jurisdiction: z.string().optional(),
-  status: z.string().optional(),
-  applied_date: z.string().optional(),
-  expiration_date: z.string().optional(),
-  fee: z.coerce.number().optional(),
-  notes: z.string().optional(),
-})
 
 const permitFields: FieldConfig[] = [
   { name: 'type', label: 'Permit Type', type: 'select', required: true, options: [

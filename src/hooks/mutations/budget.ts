@@ -1,7 +1,6 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
-import posthog from '../../lib/analytics'
-import { createOnError } from './createAuditedMutation'
+import { useAuditedMutation } from './createAuditedMutation'
+import { budgetLineItemSchema } from '../../components/forms/schemas'
 
 import type { Database } from '../../types/database'
 type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
@@ -18,35 +17,43 @@ const from = (table: AnyTableName) => supabase.from(table as keyof Database['pub
 // schemas and call sites.
 
 export function useCreateBudgetItem() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: async (params: { data: Record<string, unknown>; projectId: string }) => {
+  return useAuditedMutation<{ data: Record<string, unknown>; projectId: string }, { data: Record<string, unknown>; projectId: string }>({
+    permission: 'budget.edit',
+    schema: budgetLineItemSchema,
+    action: 'create',
+    entityType: 'budget_line_item',
+    getEntityTitle: (p) => (p.data.description as string) || undefined,
+    getAfterState: (p) => p.data,
+    mutationFn: async (params) => {
       const payload = { ...params.data, project_id: params.projectId }
       const { data, error } = await from('budget_line_items').insert(payload).select().single()
       if (error) throw error
       return { data, projectId: params.projectId }
     },
-    onSuccess: (result: { projectId: string }) => {
-      queryClient.invalidateQueries({ queryKey: [`costData-${result.projectId}`] })
-      queryClient.invalidateQueries({ queryKey: ['earned_value', result.projectId] })
-      posthog.capture('budget_item_created', { project_id: result.projectId })
-    },
-    onError: createOnError('create_budget_item'),
+    invalidateKeys: (p) => [
+      [`costData-${p.projectId}`],
+      ['earned_value', p.projectId],
+    ],
+    analyticsEvent: 'budget_item_created',
+    getAnalyticsProps: (p) => ({ project_id: p.projectId }),
+    errorMessage: 'Failed to create budget line item',
   })
 }
 
 export function useDeleteBudgetItem() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: async (params: { id: string; projectId: string }) => {
+  return useAuditedMutation<{ id: string; projectId: string }, { projectId: string }>({
+    permission: 'budget.edit',
+    action: 'delete',
+    entityType: 'budget_line_item',
+    getEntityId: (p) => p.id,
+    mutationFn: async (params) => {
       const { error } = await from('budget_line_items').delete().eq('id', params.id)
       if (error) throw error
       return { projectId: params.projectId }
     },
-    onSuccess: (result: { projectId: string }) => {
-      queryClient.invalidateQueries({ queryKey: [`costData-${result.projectId}`] })
-      posthog.capture('budget_item_deleted', { project_id: result.projectId })
-    },
-    onError: createOnError('delete_budget_item'),
+    invalidateKeys: (p) => [[`costData-${p.projectId}`]],
+    analyticsEvent: 'budget_item_deleted',
+    getAnalyticsProps: (p) => ({ project_id: p.projectId }),
+    errorMessage: 'Failed to delete budget line item',
   })
 }

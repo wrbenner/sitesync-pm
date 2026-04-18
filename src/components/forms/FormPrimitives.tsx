@@ -19,7 +19,6 @@ export const FormModal: React.FC<FormModalProps> = ({ open, onClose, title, widt
       <Dialog.Overlay style={overlayStyle}>
         <Dialog.Content
           style={{ ...contentStyle, width }}
-          onOpenAutoFocus={(e) => e.preventDefault()}
           aria-describedby={undefined}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['5'] }}>

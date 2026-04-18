@@ -6,9 +6,11 @@ import { getValidSubmittalStatusTransitions } from '../../machines/submittalMach
 import { getValidTaskTransitions } from '../../services/taskService'
 import { getValidPunchTransitions } from '../../machines/punchItemMachine'
 import { getValidDailyLogTransitions } from '../../services/dailyLogService'
+import { getValidCOTransitionsForRole } from '../../machines/changeOrderMachine'
 import type { TaskState } from '../../machines/taskMachine'
 import type { PunchItemState } from '../../machines/punchItemMachine'
 import type { DailyLogState } from '../../machines/dailyLogMachine'
+import type { ChangeOrderState } from '../../machines/changeOrderMachine'
 import type { RfiStatus } from '../../types/database'
 import type { SubmittalStatus } from '../../types/submittal'
 
@@ -139,6 +141,23 @@ export async function validateDailyLogStatusTransition(
   if (!valid.includes(newStatus as DailyLogState)) {
     throw new Error(
       `Invalid daily log status transition: ${current} → ${newStatus} (role: ${userRole}). Valid: ${valid.join(', ') || '(none)'}`,
+    )
+  }
+}
+
+export async function validateChangeOrderStatusTransition(
+  coId: string,
+  projectId: string,
+  newStatus: string,
+): Promise<void> {
+  const { data: co } = await supabase.from('change_orders').select('status').eq('id', coId).single()
+  if (!co) return
+  const userRole = await resolveUserRole(projectId)
+  const current = ((co as { status?: string | null }).status ?? 'draft') as ChangeOrderState
+  const valid = getValidCOTransitionsForRole(current, userRole)
+  if (!valid.includes(newStatus as ChangeOrderState)) {
+    throw new Error(
+      `Invalid change order status transition: ${current} → ${newStatus} (role: ${userRole}). Valid: ${valid.join(', ') || '(none)'}`,
     )
   }
 }

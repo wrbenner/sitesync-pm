@@ -176,3 +176,113 @@ export const fieldCaptureSchema = z.object({
 })
 
 export type FieldCaptureFormValues = z.infer<typeof fieldCaptureSchema>
+
+// ── Permit Schema ──────────────────────────────────────
+
+export const permitSchema = z.object({
+  type: z.string().min(1, 'Permit type is required'),
+  permit_number: z.string().default(''),
+  jurisdiction: z.string().default(''),
+  status: z.enum([
+    'not_applied',
+    'application_submitted',
+    'under_review',
+    'approved',
+    'denied',
+    'expired',
+  ]).default('not_applied'),
+  applied_date: z.string().default(''),
+  expiration_date: z.string().default(''),
+  fee: z.coerce.number().optional(),
+  notes: z.string().default(''),
+})
+
+export type PermitFormValues = z.infer<typeof permitSchema>
+
+// ── Contract Schema ────────────────────────────────────
+
+export const contractSchema = z.object({
+  title: z.string().min(1, 'Title is required').max(200, 'Title must be under 200 characters'),
+  contract_type: z.enum(['prime', 'subcontract', 'psa', 'purchase_order']).default('subcontract'),
+  counterparty_name: z.string().min(1, 'Counterparty is required'),
+  contract_amount: z.coerce.number().default(0),
+  start_date: z.string().default(''),
+  end_date: z.string().default(''),
+  retention_percentage: z.coerce.number().min(0).max(100).default(10),
+  scope_of_work: z.string().default(''),
+  insurance_required: z.boolean().default(true),
+  bonding_required: z.boolean().default(false),
+  status: z.enum([
+    'draft',
+    'pending_signature',
+    'active',
+    'completed',
+    'terminated',
+  ]).default('draft'),
+})
+
+export type ContractFormValues = z.infer<typeof contractSchema>
+
+// ── Vendor Schema ──────────────────────────────────────
+
+export const vendorSchema = z.object({
+  company_name: z.string().min(1, 'Company name is required').max(200, 'Company name must be under 200 characters'),
+  contact_name: z.string().default(''),
+  email: z.string().email('Invalid email address').or(z.literal('')).default(''),
+  phone: z.string().default(''),
+  trade: z.string().default(''),
+  license_number: z.string().default(''),
+  insurance_expiry: z.string().default(''),
+  bonding_capacity: z.coerce.number().optional(),
+  status: z.enum(['active', 'probation', 'suspended', 'blacklisted']).default('active'),
+  notes: z.string().default(''),
+})
+
+export type VendorFormValues = z.infer<typeof vendorSchema>
+
+// ── Pay Application Schema ─────────────────────────────
+
+export const payApplicationSchema = z.object({
+  contract_id: z.string().min(1, 'Contract is required'),
+  application_number: z.coerce.number().int().positive().optional(),
+  period_from: z.string().default(''),
+  period_to: z.string().min(1, 'Period end date is required'),
+  original_contract_sum: z.coerce.number().optional(),
+  net_change_orders: z.coerce.number().optional(),
+  total_completed_and_stored: z.coerce.number().optional(),
+  retainage: z.coerce.number().optional(),
+  total_earned_less_retainage: z.coerce.number().optional(),
+  less_previous_certificates: z.coerce.number().optional(),
+  current_payment_due: z.coerce.number().optional(),
+  balance_to_finish: z.coerce.number().optional(),
+})
+
+export type PayApplicationFormValues = z.infer<typeof payApplicationSchema>
+
+// ── Project Schema (for Update) ───────────────────────
+
+export const projectSchema = z.object({
+  name: z.string().min(1, 'Project name is required').max(200, 'Project name must be under 200 characters'),
+  address: z.string().default(''),
+  city: z.string().default(''),
+  state: z.string().default(''),
+  project_type: z.string().default(''),
+  contract_value: z.coerce.number().optional(),
+  start_date: z.string().default(''),
+  target_completion: z.string().default(''),
+  description: z.string().default(''),
+  status: z.enum(['active', 'on_hold', 'complete', 'archived']).default('active'),
+})
+
+export type ProjectFormValues = z.infer<typeof projectSchema>
+
+// ── Budget Line Item Schema ────────────────────────────
+
+export const budgetLineItemSchema = z.object({
+  description: z.string().min(1, 'Description is required'),
+  csi_code: z.string().default(''),
+  original_amount: z.coerce.number().default(0),
+  revised_budget: z.coerce.number().optional(),
+})
+
+export type BudgetLineItemFormValues = z.infer<typeof budgetLineItemSchema>
