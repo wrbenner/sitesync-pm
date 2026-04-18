@@ -29,7 +29,11 @@ import { useReducedMotion } from '../hooks/useReducedMotion';
 
 const QuickRFIButton = lazy(() => import('../components/field/QuickRFIButton'));
 
-const isOverdue = (dateStr: string) => new Date(dateStr) < new Date();
+const isOverdue = (dateStr: string | null | undefined): boolean => {
+  if (!dateStr) return false;
+  const d = new Date(dateStr);
+  return !isNaN(d.getTime()) && d < new Date();
+};
 
 const containerVariants = {
   hidden: {},
@@ -95,8 +99,12 @@ const BallInCourtCell: React.FC<{ rfi: Record<string, unknown> }> = React.memo((
   );
 });
 
-const formatDate = (dateStr: string) =>
-  new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+const formatDate = (dateStr: string | null | undefined): string => {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+};
 
 const rfiColHelper = createColumnHelper<unknown>();
 
@@ -245,7 +253,7 @@ const RFIsPage: React.FC = () => {
     setAiSuggestionError(false);
     try {
       const { data, error } = await supabase.functions.invoke('ai-rfi-draft', {
-        body: { projectId, description: rfi.description || rfi.title },
+        body: { projectId, description: (selectedRfi.description as string) || (selectedRfi.title as string) },
       });
       if (error || !data) throw new Error('AI suggestion failed');
       const suggestion = String(data.response ?? data.description ?? '');
@@ -1069,7 +1077,7 @@ const RFIsPage: React.FC = () => {
                       setResponseSubmitting(true);
                       try {
                         await createRFIResponse.mutateAsync({
-                          data: { rfi_id: rfi.id, content: responseText, response_text: responseText },
+                          data: { rfi_id: rfi.id, content: responseText },
                           rfiId: String(rfi.id),
                           projectId,
                         });
@@ -1097,7 +1105,7 @@ const RFIsPage: React.FC = () => {
                       setResponseSubmitting(true);
                       try {
                         await createRFIResponse.mutateAsync({
-                          data: { rfi_id: rfi.id, content: responseText, response_text: responseText },
+                          data: { rfi_id: rfi.id, content: responseText },
                           rfiId: String(rfi.id),
                           projectId,
                         });

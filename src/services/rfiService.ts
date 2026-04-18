@@ -131,8 +131,7 @@ export const rfiService = {
 
     const updates: Record<string, unknown> = {
       status: newStatus,
-      updated_by: userId,
-      ball_in_court_id: getBallInCourt(newStatus, rfi.created_by, rfi.assigned_to),
+      ball_in_court: getBallInCourt(newStatus, rfi.created_by, rfi.assigned_to),
     };
 
     if (newStatus === 'closed') {
@@ -207,8 +206,8 @@ export const rfiService = {
 
     const { error: insertError } = await supabase.from('rfi_responses').insert({
       rfi_id: rfiId,
-      user_id: userId,
-      response_text: text,
+      author_id: userId,
+      content: text,
       attachments: attachments ?? null,
     });
 
