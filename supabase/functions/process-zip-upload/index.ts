@@ -1,15 +1,15 @@
-// ── process-zip-upload Edge Function ─────────────────────────
-// Adapted from sitesyncai-backend extraction.service. Takes a ZIP
-// file that's already been uploaded to `project-files` storage,
-// extracts each entry, auto-classifies PDFs, organizes by discipline,
-// skips duplicates by SHA-256, and inserts `documents` rows.
+// ── process-zip-upload Edge Function ──────────────────────
+// Accepts a ZIP file previously uploaded to `project-files` storage,
+// extracts PDFs and images, uploads each extracted file back to the bucket,
+// and inserts one `documents` row per extracted file.
 //
-// Uses JSR jsr:@zip-js/zip-js equivalent via esm.sh since Deno runtime.
+// Supports nested ZIPs (one level deep) and tracks progress by updating
+// `zip_upload_jobs.progress_pct` so the client can poll.
+//
+// Adapted from sitesyncai-backend/src/extraction/extraction.service.ts.
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-// zip.js runs in Deno via the browser build
-import * as zip from 'https://esm.sh/@zip.js/zip.js@2.7.45?target=deno'
+import JSZip from 'https://esm.sh/jszip@3.10.1'
 import {
   authenticateRequest,
   handleCors,
@@ -17,40 +17,47 @@ import {
   parseJsonBody,
   HttpError,
   errorResponse,
+  verifyProjectMembership,
+  requireUuid,
 } from '../shared/auth.ts'
 
-interface RequestBody {
+interface ProcessZipRequest {
   project_id: string
-  /** Storage path to the ZIP in `project-files` bucket */
-  zip_path: string
-  /** Destination bucket for extracted files (default `project-files`) */
-  dest_bucket?: string
-  /** Optional user-chosen prefix under the bucket (default is derived from discipline) */
-  dest_prefix?: string
-  /** If true, call classify-drawing for each PDF */
-  auto_classify?: boolean
+  storage_path: string // e.g. "project-xxx/uploads/drawings-2026-04-18.zip"
+  job_id?: string
+  bucket?: string // default: project-files
+  document_type?: string // default: drawing
 }
 
-// Discipline detection from common sheet prefixes
-const DISC_RX: Array<[RegExp, string]> = [
-  [/^A[-\s]?\d/i, 'Architectural'],
-  [/^S[-\s]?\d/i, 'Structural'],
-  [/^M[-\s]?\d/i, 'Mechanical'],
-  [/^E[-\s]?\d/i, 'Electrical'],
-  [/^P[-\s]?\d/i, 'Plumbing'],
-  [/^C[-\s]?\d/i, 'Civil'],
-  [/^L[-\s]?\d/i, 'Landscape'],
-  [/^FP[-\s]?\d/i, 'FireProtection'],
-]
+const IMAGE_EXT = ['.png', '.jpg', '.jpeg', '.tif', '.tiff', '.webp']
+const DRAWING_EXT = ['.pdf', ...IMAGE_EXT]
 
-function disciplineFor(name: string): string {
-  for (const [rx, d] of DISC_RX) if (rx.test(name)) return d
-  return 'Uncategorized'
+function extOf(name: string): string {
+  const idx = name.lastIndexOf('.')
+  return idx === -1 ? '' : name.slice(idx).toLowerCase()
 }
 
-async function sha256Hex(data: Uint8Array): Promise<string> {
-  const hash = await crypto.subtle.digest('SHA-256', data)
-  return Array.from(new Uint8Array(hash)).map((b) => b.toString(16).padStart(2, '0')).join('')
+function contentTypeFor(ext: string): string {
+  switch (ext) {
+    case '.pdf':
+      return 'application/pdf'
+    case '.png':
+      return 'image/png'
+    case '.jpg':
+    case '.jpeg':
+      return 'image/jpeg'
+    case '.tif':
+    case '.tiff':
+      return 'image/tiff'
+    case '.webp':
+      return 'image/webp'
+    default:
+      return 'application/octet-stream'
+  }
+}
+
+function sanitizeName(name: string): string {
+  return name.replace(/[^\w.\-]+/g, '_').replace(/_+/g, '_').slice(0, 128)
 }
 
 serve(async (req) => {
@@ -63,136 +70,167 @@ serve(async (req) => {
   }
 
   try {
-    await authenticateRequest(req)
-    const body = await parseJsonBody<RequestBody>(req)
-    if (!body.project_id) throw new HttpError(400, 'project_id required', 'validation_error')
-    if (!body.zip_path) throw new HttpError(400, 'zip_path required', 'validation_error')
+    const { user, supabase } = await authenticateRequest(req)
+    const body = await parseJsonBody<ProcessZipRequest>(req)
+    requireUuid(body.project_id, 'project_id')
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
-    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    if (!supabaseUrl || !serviceKey) {
-      throw new HttpError(500, 'Storage credentials missing', 'config_error')
+    if (!body.storage_path) {
+      throw new HttpError(400, 'storage_path is required', 'validation_error')
     }
-    const supabase = createClient(supabaseUrl, serviceKey)
 
-    const destBucket = body.dest_bucket ?? 'project-files'
-    const autoClassify = body.auto_classify ?? true
+    await verifyProjectMembership(supabase, user.id, body.project_id)
 
-    // Download ZIP
-    const { data: zipBlob, error: dlErr } = await supabase.storage
-      .from('project-files').download(body.zip_path)
-    if (dlErr || !zipBlob) throw new HttpError(404, `ZIP not found: ${dlErr?.message}`, 'not_found')
+    const bucket = body.bucket ?? 'project-files'
+    const docType = body.document_type ?? 'drawing'
+    const jobId = body.job_id ?? null
 
-    // Existing hashes for duplicate skip
-    const { data: existingDocs } = await supabase
-      .from('documents')
-      .select('sha256')
-      .eq('project_id', body.project_id)
-      .not('sha256', 'is', null)
-    const existingHashes = new Set<string>((existingDocs ?? []).map((r) => r.sha256 as string))
-
-    // Extract entries
-    const reader = new zip.ZipReader(new zip.BlobReader(zipBlob))
-    const entries = await reader.getEntries()
-
-    const results: Array<{ name: string; status: 'uploaded' | 'duplicate' | 'skipped' | 'error'; error?: string; path?: string; document_id?: string }> = []
-
-    for (const entry of entries) {
-      if (entry.directory) continue
-      const lower = entry.filename.toLowerCase()
-      const isPdf = lower.endsWith('.pdf')
-      const isImg = /\.(jpg|jpeg|png|webp)$/i.test(lower)
-      if (!isPdf && !isImg) {
-        results.push({ name: entry.filename, status: 'skipped', error: 'Unsupported type' })
-        continue
-      }
-      if (!entry.getData) {
-        results.push({ name: entry.filename, status: 'error', error: 'No data accessor' })
-        continue
-      }
-      const writer = new zip.Uint8ArrayWriter()
-      const buf = (await entry.getData(writer)) as Uint8Array
-      const hash = await sha256Hex(buf)
-      if (existingHashes.has(hash)) {
-        results.push({ name: entry.filename, status: 'duplicate' })
-        continue
-      }
-
-      const base = entry.filename.split('/').pop() ?? entry.filename
-      const discipline = isPdf ? disciplineFor(base) : 'Photos'
-      const prefix = body.dest_prefix ?? `projects/${body.project_id}/${discipline}`
-      const safeName = base.replace(/[^A-Za-z0-9._-]+/g, '_')
-      const destPath = `${prefix}/${Date.now()}-${safeName}`
-
-      const { error: upErr } = await supabase.storage.from(destBucket).upload(destPath, buf, {
-        contentType: isPdf ? 'application/pdf' : 'image/jpeg',
-        upsert: false,
-      })
-      if (upErr) {
-        results.push({ name: entry.filename, status: 'error', error: upErr.message })
-        continue
-      }
-
-      const { data: doc, error: insErr } = await supabase.from('documents').insert({
-        project_id: body.project_id,
-        name: base,
-        storage_path: destPath,
-        bucket: destBucket,
-        size_bytes: buf.byteLength,
-        mime_type: isPdf ? 'application/pdf' : 'image/jpeg',
-        sha256: hash,
-        discipline,
-      }).select('id').single()
-
-      if (insErr) {
-        results.push({ name: entry.filename, status: 'error', error: insErr.message, path: destPath })
-        continue
-      }
-      existingHashes.add(hash)
-
-      // Fire-and-forget classify-drawing for PDFs
-      if (isPdf && autoClassify && doc?.id) {
-        fetch(`${supabaseUrl}/functions/v1/classify-drawing`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${serviceKey}`,
-          },
-          body: JSON.stringify({
-            project_id: body.project_id,
-            document_id: doc.id,
-            storage_path: destPath,
-          }),
-        }).catch(() => { /* best-effort */ })
-      }
-
-      // Broadcast progress via Realtime
+    const updateJob = async (patch: Record<string, unknown>) => {
+      if (!jobId) return
       try {
-        await supabase.channel(`zip-upload:${body.project_id}`).send({
-          type: 'broadcast',
-          event: 'progress',
-          payload: { zip_path: body.zip_path, processed: results.length + 1, current: base, discipline },
+        await supabase.from('zip_upload_jobs').update(patch).eq('id', jobId)
+      } catch {
+        /* ignore — job tracking is best-effort */
+      }
+    }
+
+    await updateJob({ status: 'downloading', progress_pct: 5 })
+
+    // 1. Download the ZIP
+    const { data: blob, error: dlError } = await supabase.storage
+      .from(bucket)
+      .download(body.storage_path)
+    if (dlError || !blob) {
+      throw new HttpError(400, `Failed to download ZIP: ${dlError?.message ?? 'no data'}`)
+    }
+
+    const buf = new Uint8Array(await blob.arrayBuffer())
+
+    // 2. Parse ZIP
+    await updateJob({ status: 'extracting', progress_pct: 15 })
+    const zip = await JSZip.loadAsync(buf)
+
+    interface ExtractedEntry {
+      path: string // full path inside zip
+      name: string // base name
+      ext: string
+      data: Uint8Array
+    }
+    const entries: ExtractedEntry[] = []
+
+    const gather = async (z: JSZip, prefix: string) => {
+      const fileNames = Object.keys(z.files)
+      for (const fn of fileNames) {
+        const entry = z.files[fn]
+        if (entry.dir) continue
+        const ext = extOf(fn)
+        // Recurse into nested ZIPs (one level)
+        if (ext === '.zip' && prefix === '') {
+          const nestedBuf = await entry.async('uint8array')
+          try {
+            const nested = await JSZip.loadAsync(nestedBuf)
+            await gather(nested, fn + '/')
+          } catch {
+            // skip unreadable nested zip
+          }
+          continue
+        }
+        if (!DRAWING_EXT.includes(ext)) continue
+        const data = await entry.async('uint8array')
+        const base = sanitizeName(fn.split('/').pop() ?? 'file')
+        entries.push({ path: prefix + fn, name: base, ext, data })
+      }
+    }
+
+    await gather(zip, '')
+
+    if (entries.length === 0) {
+      await updateJob({ status: 'completed', progress_pct: 100, error: 'No drawing files found in ZIP' })
+      return new Response(
+        JSON.stringify({ success: true, extracted_count: 0, documents: [] }),
+        { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } },
+      )
+    }
+
+    // 3. Upload extracted files + insert document rows
+    await updateJob({ status: 'uploading', progress_pct: 30, total_files: entries.length })
+
+    interface InsertedDoc {
+      id: string
+      file_name: string
+      storage_path: string
+    }
+    const inserted: InsertedDoc[] = []
+    const failures: Array<{ file: string; error: string }> = []
+    const timestamp = Date.now()
+
+    for (let i = 0; i < entries.length; i++) {
+      const e = entries[i]
+      const storagePath = `${body.project_id}/zip-extract/${timestamp}/${i}-${e.name}`
+
+      try {
+        const { error: upErr } = await supabase.storage
+          .from(bucket)
+          .upload(storagePath, e.data, {
+            contentType: contentTypeFor(e.ext),
+            upsert: false,
+          })
+        if (upErr) {
+          failures.push({ file: e.path, error: upErr.message })
+          continue
+        }
+
+        const { data: doc, error: insErr } = await supabase
+          .from('documents')
+          .insert({
+            project_id: body.project_id,
+            file_name: e.name,
+            storage_path: storagePath,
+            document_type: docType,
+            file_size: e.data.byteLength,
+            uploaded_by: user.id,
+            source: 'zip_extract',
+            metadata: { original_path: e.path, job_id: jobId },
+          })
+          .select('id, file_name, storage_path')
+          .single()
+
+        if (insErr) {
+          failures.push({ file: e.path, error: insErr.message })
+          continue
+        }
+
+        inserted.push(doc as InsertedDoc)
+      } catch (err) {
+        failures.push({
+          file: e.path,
+          error: err instanceof Error ? err.message : 'Unknown error',
         })
-      } catch { /* ignore */ }
+      }
 
-      results.push({ name: entry.filename, status: 'uploaded', path: destPath, document_id: doc?.id })
+      // Progress: 30% → 95%
+      const pct = 30 + Math.round(((i + 1) / entries.length) * 65)
+      if (i % 3 === 0 || i === entries.length - 1) {
+        await updateJob({ progress_pct: pct, processed_files: i + 1 })
+      }
     }
 
-    await reader.close()
-
-    const summary = {
-      total: results.length,
-      uploaded: results.filter((r) => r.status === 'uploaded').length,
-      duplicates: results.filter((r) => r.status === 'duplicate').length,
-      skipped: results.filter((r) => r.status === 'skipped').length,
-      errors: results.filter((r) => r.status === 'error').length,
-      results,
-    }
-
-    return new Response(JSON.stringify(summary), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    await updateJob({
+      status: 'completed',
+      progress_pct: 100,
+      processed_files: inserted.length,
+      failed_files: failures.length,
     })
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        extracted_count: inserted.length,
+        failed_count: failures.length,
+        documents: inserted,
+        failures,
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } },
+    )
   } catch (err) {
     return errorResponse(err, corsHeaders)
   }

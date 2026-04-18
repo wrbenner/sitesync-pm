@@ -1,41 +1,34 @@
-// ── Live Analysis Theater ─────────────────────────────────────
-// Enhanced port of sitesyncai-web ProcessingStatusView + AnalysisStatusFab.
-// Full-screen experience with animated stats, mini-previews per sheet,
-// connecting lines between stages, and a minimizable FAB.
-
 import React, { useEffect, useRef, useState } from 'react'
-import {
-  Check, CircleDashed, Loader2, XCircle, Minimize2, Maximize2,
-  Layers, Link as LinkIcon, Scan, GitCompare, AlertTriangle, Volume2, VolumeX,
-} from 'lucide-react'
-import { colors, spacing, typography, borderRadius, shadows, zIndex } from '../../styles/theme'
+import { Check, CircleDashed, Loader2, XCircle, Minus, RefreshCcw, Activity } from 'lucide-react'
+import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme'
 import type { AnalysisStage, PipelineState } from '../../hooks/useDrawingIntelligence'
 
 interface AnalysisProgressProps {
   state: PipelineState
   floating?: boolean
   onClose?: () => void
-  /** Optional per-sheet preview stream: callers push { sheet, thumbnail, discipline } as classify completes */
-  sheetPreviews?: Array<{ id: string; sheet: string; thumbnail?: string; discipline: string }>
+  onRetry?: () => void
 }
 
 interface StageDef {
   id: AnalysisStage
   label: string
-  icon: React.ElementType
-  description: string
+  // Rough expected duration in seconds — used for ETA calc.
+  expectedSec: number
 }
 
 const STAGES: StageDef[] = [
-  { id: 'classifying', label: 'Classifying', icon: Layers, description: 'Identifying discipline and sheet type' },
-  { id: 'pairing', label: 'Pairing', icon: LinkIcon, description: 'Matching related sheets across revisions' },
-  { id: 'detecting_edges', label: 'Detecting Edges', icon: Scan, description: 'Vectorizing geometry for comparison' },
-  { id: 'generating_overlap', label: 'Overlaying', icon: GitCompare, description: 'Generating diff visualization' },
-  { id: 'analyzing_discrepancies', label: 'Analyzing', icon: AlertTriangle, description: 'Ranking discrepancies by severity' },
-  { id: 'complete', label: 'Complete', icon: Check, description: 'Analysis ready' },
+  { id: 'classifying', label: 'Classifying', expectedSec: 8 },
+  { id: 'pairing', label: 'Pairing', expectedSec: 6 },
+  { id: 'detecting_edges', label: 'Detecting edges', expectedSec: 12 },
+  { id: 'generating_overlap', label: 'Generating overlay', expectedSec: 10 },
+  { id: 'analyzing_discrepancies', label: 'Analyzing discrepancies', expectedSec: 14 },
+  { id: 'complete', label: 'Complete', expectedSec: 0 },
 ]
 
-function stageStatus(current: AnalysisStage, stage: AnalysisStage): 'done' | 'active' | 'pending' | 'failed' {
+type StageStatus = 'done' | 'active' | 'pending' | 'failed'
+
+function stageStatus(current: AnalysisStage, stage: AnalysisStage): StageStatus {
   if (current === 'failed') {
     const currentIdx = STAGES.findIndex((s) => s.id === stage)
     return currentIdx === 0 ? 'failed' : 'pending'
@@ -49,289 +42,317 @@ function stageStatus(current: AnalysisStage, stage: AnalysisStage): 'done' | 'ac
   return 'pending'
 }
 
-// ── Animated number — counts up to target ─────────────────────
-function useCountUp(target: number, ms = 600): number {
-  const [val, setVal] = useState(target)
-  const prev = useRef(target)
-  useEffect(() => {
-    const from = prev.current
-    const start = performance.now()
-    let raf = 0
-    const tick = (t: number) => {
-      const progress = Math.min(1, (t - start) / ms)
-      setVal(Math.round(from + (target - from) * progress))
-      if (progress < 1) raf = requestAnimationFrame(tick)
-      else prev.current = target
-    }
-    raf = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf)
-  }, [target, ms])
-  return val
-}
-
-// ── Audio feedback (Web Audio API) ────────────────────────────
-const SOUND_PREF_KEY = 'analysis-theater-sound'
-
-function useStageSound(enabled: boolean, currentStage: AnalysisStage) {
-  const prevRef = useRef<AnalysisStage>(currentStage)
-  useEffect(() => {
-    if (!enabled) return
-    if (prevRef.current !== currentStage) {
-      prevRef.current = currentStage
-      if (currentStage === 'idle') return
-      try {
-        const AC = (window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext)
-        if (!AC) return
-        const ctx = new AC()
-        const osc = ctx.createOscillator()
-        const gain = ctx.createGain()
-        osc.connect(gain)
-        gain.connect(ctx.destination)
-        osc.type = 'sine'
-        osc.frequency.value = currentStage === 'complete' ? 880 : currentStage === 'failed' ? 220 : 660
-        gain.gain.setValueAtTime(0.0001, ctx.currentTime)
-        gain.gain.exponentialRampToValueAtTime(0.08, ctx.currentTime + 0.01)
-        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.25)
-        osc.start()
-        osc.stop(ctx.currentTime + 0.3)
-      } catch {
-        // ignore — audio not available
-      }
-    }
-  }, [currentStage, enabled])
+function formatSec(s: number): string {
+  if (s < 1) return '<1s'
+  if (s < 60) return `${Math.round(s)}s`
+  return `${Math.floor(s / 60)}m ${Math.round(s % 60)}s`
 }
 
 export const AnalysisProgress: React.FC<AnalysisProgressProps> = ({
   state,
   floating = false,
   onClose,
-  sheetPreviews = [],
+  onRetry,
 }) => {
   const { stage, totalPairs, processedPairs, discrepancyCount, autoRfiCount, error } = state
 
+  const [durations, setDurations] = useState<Record<string, number>>({})
   const [minimized, setMinimized] = useState(false)
-  const [soundOn, setSoundOn] = useState<boolean>(() => {
-    try { return localStorage.getItem(SOUND_PREF_KEY) === '1' } catch { return false }
-  })
-  useEffect(() => { try { localStorage.setItem(SOUND_PREF_KEY, soundOn ? '1' : '0') } catch { /* ignore */ } }, [soundOn])
+  const stageStartRef = useRef<{ id: AnalysisStage; at: number } | null>(null)
+  const startAtRef = useRef<number | null>(null)
 
-  useStageSound(soundOn, stage)
+  // Track transitions to record durations & compute ETA
+  useEffect(() => {
+    const now = Date.now()
+    if (!startAtRef.current && stage !== 'idle') startAtRef.current = now
+    const prev = stageStartRef.current
+    if (!prev || prev.id !== stage) {
+      if (prev) {
+        const elapsed = (now - prev.at) / 1000
+        setDurations((d) => ({ ...d, [prev.id]: elapsed }))
+      }
+      stageStartRef.current = { id: stage, at: now }
+    }
+  }, [stage])
 
-  const sheetsCount = useCountUp(sheetPreviews.length)
-  const pairsCount = useCountUp(processedPairs)
-  const discrepCount = useCountUp(discrepancyCount)
-  const rfiCount = useCountUp(autoRfiCount)
+  // ETA — sum expected durations of remaining stages (current + after),
+  // subtract elapsed in current stage.
+  const currentIdx = STAGES.findIndex((s) => s.id === stage)
+  const remainingSec = (() => {
+    if (stage === 'complete' || stage === 'failed' || stage === 'idle') return 0
+    let total = 0
+    for (let i = currentIdx; i < STAGES.length - 1; i++) {
+      total += STAGES[i].expectedSec
+    }
+    const elapsedInStage = stageStartRef.current
+      ? (Date.now() - stageStartRef.current.at) / 1000
+      : 0
+    return Math.max(0, total - elapsedInStage)
+  })()
 
-  const activeIdx = Math.max(0, STAGES.findIndex((s) => s.id === stage))
-  const overallPct = stage === 'complete' ? 100
-    : stage === 'failed' ? 0
-    : Math.round(((activeIdx + (totalPairs > 0 ? processedPairs / totalPairs : 0)) / STAGES.length) * 100)
+  // Tick for smooth ETA countdown
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    if (stage === 'complete' || stage === 'failed' || stage === 'idle') return
+    const t = window.setInterval(() => setTick((n) => n + 1), 1000)
+    return () => window.clearInterval(t)
+  }, [stage])
 
-  // ── Minimized FAB ────────────────────────────────────────────
-  if (minimized) {
+  const pairProgressPct = totalPairs > 0 ? Math.round((processedPairs / totalPairs) * 100) : 0
+
+  // Minimized floating "pill" view
+  if (floating && minimized) {
     return (
       <button
         onClick={() => setMinimized(false)}
         aria-label="Expand analysis progress"
         style={{
-          position: 'fixed', right: 24, bottom: 24, zIndex: zIndex.modal,
-          width: 220, height: 56, padding: `0 ${spacing['3']}`,
-          background: colors.primaryOrange, color: 'white',
-          border: 'none', borderRadius: borderRadius.full,
-          boxShadow: shadows.lg, cursor: 'pointer',
-          display: 'flex', alignItems: 'center', gap: spacing['2'],
+          position: 'fixed',
+          right: spacing.lg,
+          bottom: spacing.lg,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          padding: '8px 14px',
+          background: colors.surfaceRaised,
+          border: `1px solid ${colors.borderSubtle}`,
+          borderRadius: borderRadius.full,
+          boxShadow: shadows.panel,
+          cursor: 'pointer',
+          fontSize: typography.fontSize.sm,
+          color: colors.textPrimary,
+          zIndex: 300,
         }}
       >
-        <Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} />
-        <div style={{ flex: 1, textAlign: 'left' }}>
-          <div style={{ fontSize: typography.fontSize.caption, opacity: 0.85 }}>Analyzing</div>
-          <div style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold }}>{overallPct}%</div>
-        </div>
-        <Maximize2 size={16} />
+        {stage === 'failed' ? (
+          <XCircle size={14} color={colors.statusCritical} />
+        ) : stage === 'complete' ? (
+          <Check size={14} color={colors.statusActive} />
+        ) : (
+          <Loader2 size={14} color={colors.primaryOrange} style={{ animation: 'ap-spin 1s linear infinite' }} />
+        )}
+        <span>
+          {stage === 'complete' ? 'Analysis complete' : stage === 'failed' ? 'Analysis failed' : `${STAGES[currentIdx]?.label ?? 'Working'}…`}
+        </span>
       </button>
     )
   }
 
   const wrapperStyle: React.CSSProperties = floating
     ? {
-        position: 'fixed', right: 24, bottom: 24, width: 420, zIndex: zIndex.modal,
-        backgroundColor: colors.surfaceRaised, border: `1px solid ${colors.borderSubtle}`,
-        borderRadius: borderRadius.lg, padding: spacing['4'], boxShadow: shadows.lg,
+        position: 'fixed',
+        right: spacing.lg,
+        bottom: spacing.lg,
+        width: 340,
+        zIndex: 300,
+        backgroundColor: colors.surfaceRaised,
+        border: `1px solid ${colors.borderSubtle}`,
+        borderRadius: borderRadius.xl,
+        padding: spacing.md,
+        boxShadow: shadows.panel,
       }
     : {
-        backgroundColor: colors.surfaceRaised, border: `1px solid ${colors.borderSubtle}`,
-        borderRadius: borderRadius.lg, padding: spacing['4'],
+        backgroundColor: colors.surfaceRaised,
+        border: `1px solid ${colors.borderSubtle}`,
+        borderRadius: borderRadius.xl,
+        padding: spacing.md,
       }
 
   return (
     <div role="status" aria-live="polite" style={wrapperStyle}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['3'] }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.bold, color: colors.textPrimary }}>
+      <style>{`@keyframes ap-spin { from { transform: rotate(0) } to { transform: rotate(360deg) } }
+      @keyframes ap-fade { from { opacity: 0; transform: translateY(-4px) } to { opacity: 1; transform: translateY(0) } }`}</style>
+
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: spacing.sm,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Activity size={16} color={colors.primaryOrange} />
+          <span style={{ fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
             Drawing Analysis
-          </div>
-          <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
-            {STAGES[activeIdx]?.description ?? 'Preparing…'}
-          </div>
+          </span>
         </div>
-        <button
-          onClick={() => setSoundOn((v) => !v)}
-          aria-label={soundOn ? 'Mute' : 'Unmute'}
-          title={soundOn ? 'Sound on' : 'Sound off'}
-          style={{
-            width: 32, height: 32, minWidth: 32, background: 'transparent',
-            border: 'none', cursor: 'pointer', color: colors.textSecondary,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}
-        >
-          {soundOn ? <Volume2 size={16} /> : <VolumeX size={16} />}
-        </button>
-        <button
-          onClick={() => setMinimized(true)}
-          aria-label="Minimize"
-          style={{
-            width: 32, height: 32, minWidth: 32, background: 'transparent',
-            border: 'none', cursor: 'pointer', color: colors.textSecondary,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}
-        >
-          <Minimize2 size={16} />
-        </button>
-        {onClose && (
-          <button onClick={onClose} aria-label="Close"
-            style={{
-              width: 32, height: 32, minWidth: 32, background: 'transparent',
-              border: 'none', cursor: 'pointer', color: colors.textSecondary, fontSize: 16,
-            }}
-          >✕</button>
-        )}
+        <div style={{ display: 'flex', gap: 4 }}>
+          {floating && (
+            <button
+              onClick={() => setMinimized(true)}
+              aria-label="Minimize progress panel"
+              style={iconBtn}
+            >
+              <Minus size={14} color={colors.textSecondary} />
+            </button>
+          )}
+          {onClose && (
+            <button onClick={onClose} aria-label="Dismiss progress panel" style={iconBtn}>
+              ✕
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Overall progress bar */}
-      <div style={{ height: 8, background: colors.surfaceInset, borderRadius: 4, overflow: 'hidden', marginBottom: spacing['3'] }}>
-        <div style={{
-          height: '100%', width: `${overallPct}%`,
-          background: stage === 'failed' ? colors.statusCritical : colors.primaryOrange,
-          transition: 'width 0.4s',
-        }} />
-      </div>
+      <ul
+        style={{
+          listStyle: 'none',
+          padding: 0,
+          margin: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 6,
+        }}
+      >
+        {STAGES.map((s) => {
+          const status = stageStatus(stage, s.id)
+          const icon =
+            status === 'done' ? (
+              <Check size={16} color={colors.statusActive} />
+            ) : status === 'active' ? (
+              <Loader2
+                size={16}
+                color={colors.primaryOrange}
+                style={{ animation: 'ap-spin 1s linear infinite' }}
+              />
+            ) : status === 'failed' ? (
+              <XCircle size={16} color={colors.statusCritical} />
+            ) : (
+              <CircleDashed size={16} color={colors.textTertiary} />
+            )
 
-      {/* Stage stepper with connecting lines */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 0, marginBottom: spacing['3'] }}>
-        {STAGES.map((s, i) => {
-          const st = stageStatus(stage, s.id)
-          const Icon = s.icon
-          const iconColor =
-            st === 'done' ? colors.statusActive :
-            st === 'active' ? colors.primaryOrange :
-            st === 'failed' ? colors.statusCritical :
-            colors.textTertiary
+          const labelColor =
+            status === 'active' || status === 'done' ? colors.textPrimary : colors.textSecondary
+          const dur = durations[s.id]
+
           return (
-            <div key={s.id} style={{ display: 'flex', gap: spacing['3'], position: 'relative' }}>
-              {/* Connecting line */}
-              {i < STAGES.length - 1 && (
-                <div style={{
-                  position: 'absolute', left: 11, top: 24, bottom: -8, width: 2,
-                  background: st === 'done' ? colors.statusActive : colors.borderSubtle,
-                }} />
+            <li
+              key={s.id}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                fontSize: typography.fontSize.sm,
+                color: labelColor,
+                transition: transitions.smooth,
+                animation: status === 'active' ? 'ap-fade 260ms ease-out' : undefined,
+              }}
+            >
+              {icon}
+              <span style={{ flex: 1 }}>{s.label}</span>
+              {dur !== undefined && status === 'done' && (
+                <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
+                  {formatSec(dur)}
+                </span>
               )}
-              {/* Icon */}
-              <div style={{
-                width: 24, height: 24, borderRadius: '50%',
-                background: st === 'active' ? colors.orangeSubtle : 'transparent',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1,
-                flexShrink: 0,
-              }}>
-                {st === 'done' ? <Check size={14} color={iconColor} />
-                  : st === 'active' ? <Loader2 size={14} color={iconColor} style={{ animation: 'spin 1s linear infinite' }} />
-                  : st === 'failed' ? <XCircle size={14} color={iconColor} />
-                  : <CircleDashed size={14} color={iconColor} />}
-              </div>
-              {/* Label */}
-              <div style={{ flex: 1, paddingBottom: spacing['3'] }}>
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: spacing['2'],
-                  fontSize: typography.fontSize.body,
-                  color: st === 'pending' ? colors.textTertiary : colors.textPrimary,
-                  fontWeight: st === 'active' ? typography.fontWeight.semibold : typography.fontWeight.normal,
-                }}>
-                  <Icon size={14} color={iconColor} />
-                  {s.label}
-                </div>
-                <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, marginTop: 2 }}>
-                  {s.description}
-                </div>
-              </div>
-            </div>
+            </li>
           )
         })}
-      </div>
+      </ul>
 
-      {/* Live stats grid */}
-      <div style={{
-        display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['2'],
-        padding: spacing['3'], background: colors.surfaceInset, borderRadius: borderRadius.base,
-      }}>
-        <StatTile label="Sheets" value={sheetsCount} accent={colors.primaryOrange} />
-        <StatTile label="Pairs" value={pairsCount} total={totalPairs} accent={colors.statusInfo} />
-        <StatTile label="Issues" value={discrepCount} accent={colors.statusWarning} />
-        <StatTile label="RFIs" value={rfiCount} accent={colors.statusActive} />
-      </div>
-
-      {/* Sheet preview strip */}
-      {sheetPreviews.length > 0 && (
-        <div style={{
-          marginTop: spacing['3'], display: 'flex', gap: spacing['2'], overflowX: 'auto',
-          paddingBottom: spacing['2'],
-        }}>
-          {sheetPreviews.slice(-12).map((p) => (
-            <div key={p.id} style={{
-              flexShrink: 0, width: 80, borderRadius: borderRadius.sm, overflow: 'hidden',
-              border: `1px solid ${colors.borderSubtle}`, background: colors.surfacePage,
-              animation: 'fadeIn 0.3s ease-out',
-            }}>
-              {p.thumbnail ? (
-                <img src={p.thumbnail} alt={p.sheet} width={80} height={100} style={{ display: 'block', objectFit: 'cover' }} />
-              ) : (
-                <div style={{ width: 80, height: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: colors.surfaceInset }}>
-                  <Layers size={24} color={colors.textTertiary} />
-                </div>
-              )}
-              <div style={{
-                padding: `${spacing['1']} ${spacing['2']}`,
-                fontSize: 10, fontWeight: typography.fontWeight.semibold,
-                background: colors.orangeSubtle, color: colors.orangeText,
-                textAlign: 'center',
-              }}>
-                {p.discipline}
-              </div>
-            </div>
-          ))}
+      {totalPairs > 0 && (
+        <div
+          style={{
+            marginTop: spacing.sm,
+            fontSize: typography.fontSize.label,
+            color: colors.textSecondary,
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span>
+              Pairs: {processedPairs} / {totalPairs}
+            </span>
+            <span>{pairProgressPct}%</span>
+          </div>
+          <div
+            style={{
+              marginTop: 4,
+              height: 4,
+              background: colors.surfaceInset,
+              borderRadius: borderRadius.full,
+              overflow: 'hidden',
+            }}
+          >
+            <div
+              style={{
+                width: `${pairProgressPct}%`,
+                height: '100%',
+                background: colors.primaryOrange,
+                transition: transitions.smooth,
+              }}
+            />
+          </div>
+          {discrepancyCount > 0 && (
+            <div style={{ marginTop: 4 }}>Discrepancies: {discrepancyCount}</div>
+          )}
+          {autoRfiCount > 0 && <div>Auto-drafted RFIs: {autoRfiCount}</div>}
         </div>
       )}
 
-      {stage === 'failed' && error && (
-        <div style={{
-          marginTop: spacing['3'], padding: spacing['2'], fontSize: typography.fontSize.caption,
-          color: colors.statusCritical, background: colors.statusCriticalSubtle, borderRadius: borderRadius.sm,
-        }}>
-          {error}
+      {stage !== 'complete' && stage !== 'failed' && stage !== 'idle' && remainingSec > 0 && (
+        <div
+          style={{
+            marginTop: spacing.sm,
+            fontSize: typography.fontSize.caption,
+            color: colors.textTertiary,
+          }}
+        >
+          ETA ~ {formatSec(remainingSec)}
+        </div>
+      )}
+
+      {stage === 'failed' && (
+        <div
+          style={{
+            marginTop: spacing.sm,
+            padding: spacing.sm,
+            borderRadius: borderRadius.base,
+            background: colors.errorBannerBg,
+            color: colors.statusCritical,
+            fontSize: typography.fontSize.sm,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 6,
+          }}
+        >
+          <div>{error ?? 'Analysis failed.'}</div>
+          {onRetry && (
+            <button
+              onClick={onRetry}
+              style={{
+                alignSelf: 'flex-start',
+                padding: '4px 10px',
+                border: `1px solid ${colors.statusCritical}`,
+                background: 'transparent',
+                color: colors.statusCritical,
+                borderRadius: borderRadius.sm,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                fontSize: typography.fontSize.label,
+              }}
+            >
+              <RefreshCcw size={12} /> Retry
+            </button>
+          )}
         </div>
       )}
     </div>
   )
 }
 
-const StatTile: React.FC<{ label: string; value: number; total?: number; accent: string }> = ({ label, value, total, accent }) => (
-  <div style={{ textAlign: 'center' }}>
-    <div style={{ fontSize: typography.fontSize.heading, fontWeight: typography.fontWeight.bold, color: accent, lineHeight: 1 }}>
-      {value}{total !== undefined && total > 0 ? <span style={{ fontSize: typography.fontSize.body, color: colors.textTertiary }}> / {total}</span> : null}
-    </div>
-    <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-      {label}
-    </div>
-  </div>
-)
+const iconBtn: React.CSSProperties = {
+  background: 'transparent',
+  border: 'none',
+  cursor: 'pointer',
+  color: colors.textSecondary,
+  padding: 2,
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  borderRadius: borderRadius.sm,
+}
 
 export default AnalysisProgress

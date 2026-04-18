@@ -15,6 +15,7 @@ interface ClashDetectionPanelProps {
   discrepancies: DrawingDiscrepancy[]
   loading?: boolean
   onCreateRFI?: (d: DrawingDiscrepancy) => void
+  onViewDetail?: (d: DrawingDiscrepancy) => void
   onClose?: () => void
 }
 
@@ -36,6 +37,7 @@ export const ClashDetectionPanel: React.FC<ClashDetectionPanelProps> = ({
   discrepancies,
   loading,
   onCreateRFI,
+  onViewDetail,
   onClose,
 }) => {
   const confirmMutation = useConfirmDiscrepancy()
@@ -211,6 +213,16 @@ export const ClashDetectionPanel: React.FC<ClashDetectionPanelProps> = ({
               </div>
 
               <div style={{ display: 'flex', gap: spacing.sm, flexWrap: 'wrap' }}>
+                {onViewDetail && (
+                  <Btn
+                    variant="ghost"
+                    size="sm"
+                    aria-label="View discrepancy detail"
+                    onClick={() => onViewDetail(d)}
+                  >
+                    View Detail
+                  </Btn>
+                )}
                 {!d.auto_rfi_id && onCreateRFI && (
                   <Btn
                     variant="primary"

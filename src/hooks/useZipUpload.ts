@@ -1,88 +1,157 @@
-// ── useZipUpload ─────────────────────────────────────────────
-// Mutation hook that uploads a ZIP to storage and invokes the
-// process-zip-upload edge function. Subscribes to Supabase Realtime
-// for per-file progress events.
-
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { supabase } from '../lib/supabase'
 
-interface UploadResultItem {
-  name: string
-  status: 'uploaded' | 'duplicate' | 'skipped' | 'error'
-  error?: string
-  path?: string
-  document_id?: string
+export interface ZipUploadJob {
+  id: string
+  status: 'queued' | 'downloading' | 'extracting' | 'uploading' | 'completed' | 'failed'
+  progress_pct: number
+  total_files: number | null
+  processed_files: number | null
+  failed_files: number | null
+  error: string | null
 }
 
-export interface ZipUploadSummary {
-  total: number
-  uploaded: number
-  duplicates: number
-  skipped: number
-  errors: number
-  results: UploadResultItem[]
-}
-
-export interface ZipUploadInput {
+interface StartUploadArgs {
   projectId: string
   file: File
-  destBucket?: string
-  destPrefix?: string
-  autoClassify?: boolean
+  documentType?: string
+  bucket?: string
 }
 
-export interface ZipProgressEvent {
-  zip_path: string
-  processed: number
-  current: string
-  discipline: string
+interface StartUploadResult {
+  jobId: string | null
+  storagePath: string
+}
+
+async function uploadZipToStorage(args: StartUploadArgs): Promise<StartUploadResult> {
+  const bucket = args.bucket ?? 'project-files'
+  const timestamp = Date.now()
+  const safeName = args.file.name.replace(/[^\w.\-]+/g, '_').slice(0, 100)
+  const storagePath = `${args.projectId}/zip-uploads/${timestamp}-${safeName}`
+
+  const { error: upErr } = await supabase.storage
+    .from(bucket)
+    .upload(storagePath, args.file, {
+      contentType: 'application/zip',
+      upsert: false,
+    })
+  if (upErr) throw new Error(`Upload failed: ${upErr.message}`)
+
+  // Create a tracking job row (optional — table may not exist in every env).
+  let jobId: string | null = null
+  try {
+    const { data, error } = await supabase
+      .from('zip_upload_jobs')
+      .insert({
+        project_id: args.projectId,
+        status: 'queued',
+        progress_pct: 0,
+        storage_path: storagePath,
+        original_name: args.file.name,
+      })
+      .select('id')
+      .single()
+    if (!error && data) jobId = (data as { id: string }).id
+  } catch {
+    /* table not available in this env — that's fine */
+  }
+
+  return { jobId, storagePath }
 }
 
 export function useZipUpload() {
-  const qc = useQueryClient()
+  const queryClient = useQueryClient()
+  const [currentJobId, setCurrentJobId] = useState<string | null>(null)
+  const [job, setJob] = useState<ZipUploadJob | null>(null)
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  return useMutation<ZipUploadSummary, Error, ZipUploadInput>({
-    mutationFn: async ({ projectId, file, destBucket, destPrefix, autoClassify = true }) => {
-      const path = `zips/${projectId}/${Date.now()}-${file.name.replace(/[^A-Za-z0-9._-]+/g, '_')}`
-      const { error: upErr } = await supabase.storage.from('project-files').upload(path, file, {
-        cacheControl: '3600', upsert: false,
-      })
-      if (upErr) throw new Error(`Upload failed: ${upErr.message}`)
+  const clearPoll = () => {
+    if (pollTimerRef.current) {
+      window.clearInterval(pollTimerRef.current)
+      pollTimerRef.current = null
+    }
+  }
+
+  useEffect(() => () => clearPoll(), [])
+
+  const startPolling = useCallback((jobId: string) => {
+    clearPoll()
+    pollTimerRef.current = window.setInterval(async () => {
+      try {
+        const { data, error } = await supabase
+          .from('zip_upload_jobs')
+          .select(
+            'id, status, progress_pct, total_files, processed_files, failed_files, error',
+          )
+          .eq('id', jobId)
+          .single()
+        if (error) return
+        const j = data as ZipUploadJob
+        setJob(j)
+        if (j.status === 'completed' || j.status === 'failed') {
+          clearPoll()
+          queryClient.invalidateQueries({ queryKey: ['documents'] })
+          queryClient.invalidateQueries({ queryKey: ['drawings'] })
+          if (j.status === 'completed') {
+            toast.success(`ZIP extracted — ${j.processed_files ?? 0} files`)
+          } else {
+            toast.error(`ZIP extraction failed${j.error ? `: ${j.error}` : ''}`)
+          }
+        }
+      } catch {
+        /* swallow — retry on next interval */
+      }
+    }, 2000)
+  }, [queryClient])
+
+  const mutation = useMutation<ZipUploadJob | { success: boolean }, Error, StartUploadArgs>({
+    mutationFn: async (args) => {
+      setUploadProgress(10)
+      const { jobId, storagePath } = await uploadZipToStorage(args)
+      setUploadProgress(40)
+      if (jobId) setCurrentJobId(jobId)
 
       const { data, error } = await supabase.functions.invoke('process-zip-upload', {
         body: {
-          project_id: projectId,
-          zip_path: path,
-          dest_bucket: destBucket,
-          dest_prefix: destPrefix,
-          auto_classify: autoClassify,
+          project_id: args.projectId,
+          storage_path: storagePath,
+          job_id: jobId,
+          document_type: args.documentType,
+          bucket: args.bucket,
         },
       })
       if (error) throw new Error(error.message)
-      return data as ZipUploadSummary
+
+      setUploadProgress(100)
+
+      if (jobId) startPolling(jobId)
+
+      return data ?? { success: true }
     },
-    onSuccess: (_res, vars) => {
-      qc.invalidateQueries({ queryKey: ['documents', vars.projectId] })
-      qc.invalidateQueries({ queryKey: ['drawing_classifications', 'project', vars.projectId] })
+    onError: (err) => {
+      toast.error(err.message || 'ZIP upload failed')
+      setUploadProgress(0)
+      clearPoll()
     },
   })
-}
 
-/** Subscribe to per-file progress broadcasts from process-zip-upload. */
-export function useZipUploadProgress(projectId: string | undefined) {
-  const [events, setEvents] = useState<ZipProgressEvent[]>([])
+  const reset = useCallback(() => {
+    setCurrentJobId(null)
+    setJob(null)
+    setUploadProgress(0)
+    clearPoll()
+  }, [])
 
-  useEffect(() => {
-    if (!projectId) return
-    const channel = supabase.channel(`zip-upload:${projectId}`)
-    channel.on('broadcast', { event: 'progress' }, (payload) => {
-      const p = (payload.payload ?? payload) as ZipProgressEvent
-      setEvents((prev) => [...prev, p])
-    }).subscribe()
-    return () => { supabase.removeChannel(channel) }
-  }, [projectId])
-
-  const clear = useCallback(() => setEvents([]), [])
-  return { events, clear, latest: events[events.length - 1] }
+  return {
+    upload: mutation.mutateAsync,
+    isUploading: mutation.isPending,
+    uploadProgress,
+    job,
+    jobId: currentJobId,
+    error: mutation.error,
+    reset,
+  }
 }

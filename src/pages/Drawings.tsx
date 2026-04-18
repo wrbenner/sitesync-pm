@@ -1,6 +1,9 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useMemo } from 'react';
 import { ErrorBoundary } from '../components/ErrorBoundary';
-import { Upload, X, Sparkles, FileText, AlertTriangle, AlertCircle, CheckCircle2, Loader2, ChevronRight, ChevronDown } from 'lucide-react';
+import { Upload, X, Sparkles, FileText, AlertTriangle, AlertCircle, CheckCircle2, Loader2, ChevronRight, ChevronDown, FileDown } from 'lucide-react';
+import { ReportGenerationModal, type ReportGenerationOptions } from '../components/reports/ReportGenerationModal';
+import { ProcessingPipeline } from '../components/drawings/ProcessingPipeline';
+import type { PipelineState } from '../hooks/useDrawingIntelligence';
 import { aiService } from '../lib/aiService';
 import type { DrawingAnalysis } from '../types/ai';
 import type { DrawingRevision } from '../types/api';
@@ -86,6 +89,36 @@ const DrawingsPage: React.FC = () => {
   const [openRevDropdownId, setOpenRevDropdownId] = useState<string | null>(null);
   const [rowRevHistory, setRowRevHistory] = useState<Record<string, DrawingRevision[]>>({});
   const [rowRevHistoryLoading, setRowRevHistoryLoading] = useState<string | null>(null);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [showPipeline, setShowPipeline] = useState(false);
+  const pipelineState = useMemo<PipelineState>(
+    () => ({
+      stage: isUploading ? 'classifying' : 'idle',
+      totalPairs: 0,
+      processedPairs: 0,
+      discrepancyCount: 0,
+      autoRfiCount: 0,
+      error: null,
+    }),
+    [isUploading],
+  );
+  const reportDrawings = useMemo(
+    () =>
+      (drawings ?? []).map((d) => ({
+        id: String(d.id),
+        sheet_number: d.setNumber ?? null,
+        discipline: d.discipline ?? null,
+      })),
+    [drawings],
+  );
+  const handleGenerateReport = useCallback(
+    async (opts: ReportGenerationOptions) => {
+      const scope =
+        opts.drawingIds === 'all' ? 'all drawings' : `${opts.drawingIds.length} drawings`;
+      addToast('success', `${opts.reportType} report queued for ${scope}`);
+    },
+    [addToast],
+  );
   const [selectedRevisions, setSelectedRevisions] = useState<DrawingRevision[]>([]);
   const [comparisonMode, setComparisonMode] = useState(false);
   const [compareOpacity, setCompareOpacity] = useState(100);
@@ -205,6 +238,7 @@ const DrawingsPage: React.FC = () => {
   const handleUploadDrawings = async () => {
     if (!projectId || pendingFiles.length === 0) return;
     setIsUploading(true);
+    setShowPipeline(true);
     let completed = 0;
     const total = pendingFiles.length;
     for (const file of pendingFiles) {
@@ -333,6 +367,15 @@ const DrawingsPage: React.FC = () => {
             onClick={() => setShowAiPanel((v) => !v)}
           >
             AI Insights
+          </Btn>
+          <Btn
+            variant="secondary"
+            size="md"
+            icon={<FileDown size={16} />}
+            aria-label="Generate drawings report"
+            onClick={() => setShowReportModal(true)}
+          >
+            Generate Report
           </Btn>
           <PermissionGate permission="drawings.upload">
             <Btn variant="primary" size="md" icon={<Upload size={16} />} aria-label="Upload new drawing" onClick={() => setShowUploadModal(true)}>
@@ -1825,6 +1868,23 @@ const DrawingsPage: React.FC = () => {
             )}
           </div>
         </div>
+      )}
+
+      <ReportGenerationModal
+        open={showReportModal}
+        projectName="Project Drawings"
+        drawings={reportDrawings}
+        onClose={() => setShowReportModal(false)}
+        onGenerate={handleGenerateReport}
+      />
+
+      {showPipeline && projectId && (
+        <ProcessingPipeline
+          projectId={projectId}
+          state={pipelineState}
+          floating
+          onClose={() => setShowPipeline(false)}
+        />
       )}
     </PageContainer>
   );
