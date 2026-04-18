@@ -1,10 +1,22 @@
-// TODO: Migrate to entityStore — see src/stores/entityStore.ts
+// MIGRATED to entityStore — see src/stores/entityStore.ts
+// This file is kept for backward-compatibility; all imports continue to work.
 import { create } from 'zustand';
 import { changeOrderService } from '../services/changeOrderService';
 import type { ServiceError } from '../services/errors';
 import type { ChangeOrder } from '../types/database';
 import type { ChangeOrderState } from '../machines/changeOrderMachine';
 import type { CreateChangeOrderInput } from '../services/changeOrderService';
+import { useEntityStore, useEntityActions, useEntityStoreRoot } from './entityStore';
+
+// ── Re-exports of generic entity hooks ────────────────────────────────────────
+// New code should prefer useEntityStore("change_orders") and useEntityActions("change_orders").
+
+export { useEntityStore as useChangeOrderEntityStore, useEntityActions as useChangeOrderEntityActions };
+
+// ── Legacy store (backward-compat shim) ───────────────────────────────────────
+// Keeps the exact same shape so every existing import continues to compile
+// and behave correctly. Generic CRUD is delegated to entityStore where possible;
+// change-order-specific logic (service calls, transitionStatus, promoteType) stays here.
 
 interface ChangeOrderStoreState {
   changeOrders: ChangeOrder[];
@@ -28,13 +40,18 @@ export const useChangeOrderStore = create<ChangeOrderStoreState>()((set) => ({
   errorDetails: null,
 
   loadChangeOrders: async (projectId) => {
+    // Mirror into entityStore so new code reading useEntityStore("change_orders") stays in sync
+    useEntityStoreRoot.getState().initSlice('change_orders');
     set({ loading: true, error: null, errorDetails: null });
     const { data, error } = await changeOrderService.loadChangeOrders(projectId);
     if (error) {
       // Preserve existing changeOrders so UI stays populated on transient errors
       set({ error: error.userMessage, errorDetails: error, loading: false });
+      useEntityStoreRoot.getState()._setSlice('change_orders', { error: error.userMessage, loading: false });
     } else {
-      set({ changeOrders: data ?? [], loading: false });
+      const items = data ?? [];
+      set({ changeOrders: items, loading: false });
+      useEntityStoreRoot.getState()._setSlice('change_orders', { items, loading: false, error: null });
     }
   },
 
@@ -43,6 +60,16 @@ export const useChangeOrderStore = create<ChangeOrderStoreState>()((set) => ({
     if (error) return { error: error.userMessage, changeOrder: null };
     if (data) {
       set((s) => ({ changeOrders: [data, ...s.changeOrders] }));
+      // Mirror into entityStore
+      useEntityStoreRoot.setState((s) => ({
+        slices: {
+          ...s.slices,
+          change_orders: {
+            ...s.slices['change_orders'],
+            items: [data, ...(s.slices['change_orders']?.items ?? [])],
+          },
+        },
+      }));
     }
     return { error: null, changeOrder: data };
   },
@@ -55,6 +82,17 @@ export const useChangeOrderStore = create<ChangeOrderStoreState>()((set) => ({
         co.id === coId ? { ...co, ...updates } : co
       ),
     }));
+    useEntityStoreRoot.setState((s) => ({
+      slices: {
+        ...s.slices,
+        change_orders: {
+          ...s.slices['change_orders'],
+          items: (s.slices['change_orders']?.items ?? []).map((co) =>
+            co.id === coId ? { ...co, ...updates } : co,
+          ),
+        },
+      },
+    }));
     return { error: null };
   },
 
@@ -66,6 +104,17 @@ export const useChangeOrderStore = create<ChangeOrderStoreState>()((set) => ({
         co.id === coId ? { ...co, status } : co
       ),
     }));
+    useEntityStoreRoot.setState((s) => ({
+      slices: {
+        ...s.slices,
+        change_orders: {
+          ...s.slices['change_orders'],
+          items: (s.slices['change_orders']?.items ?? []).map((co) =>
+            co.id === coId ? { ...co, status } : co,
+          ),
+        },
+      },
+    }));
     return { error: null };
   },
 
@@ -73,6 +122,15 @@ export const useChangeOrderStore = create<ChangeOrderStoreState>()((set) => ({
     const { error } = await changeOrderService.deleteChangeOrder(coId);
     if (error) return { error: error.userMessage };
     set((s) => ({ changeOrders: s.changeOrders.filter((co) => co.id !== coId) }));
+    useEntityStoreRoot.setState((s) => ({
+      slices: {
+        ...s.slices,
+        change_orders: {
+          ...s.slices['change_orders'],
+          items: (s.slices['change_orders']?.items ?? []).filter((co) => co.id !== coId),
+        },
+      },
+    }));
     return { error: null };
   },
 
@@ -81,6 +139,16 @@ export const useChangeOrderStore = create<ChangeOrderStoreState>()((set) => ({
     if (error) return { error: error.userMessage, changeOrder: null };
     if (data) {
       set((s) => ({ changeOrders: [data, ...s.changeOrders] }));
+      // Mirror into entityStore
+      useEntityStoreRoot.setState((s) => ({
+        slices: {
+          ...s.slices,
+          change_orders: {
+            ...s.slices['change_orders'],
+            items: [data, ...(s.slices['change_orders']?.items ?? [])],
+          },
+        },
+      }));
     }
     return { error: null, changeOrder: data };
   },
