@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { ensureOrganizationMembership } from '../lib/ensureOrganizationMembership';
 import type { Project, ProjectMember } from '../types/entities';
 import type { ProjectRole } from '../types/tenant';
 import {
@@ -100,7 +101,16 @@ export const projectService = {
    */
   async createProject(input: CreateProjectInput): Promise<Result<Project>> {
     const userId = await getCurrentUserId();
-    const organizationId = input.organization_id ?? input.company_id ?? '';
+    let organizationId = input.organization_id ?? input.company_id ?? '';
+
+    // Self-heal: if no org supplied, ensure the user has one (and is a member of it).
+    if (!organizationId && userId) {
+      const resolved = await ensureOrganizationMembership(userId);
+      if (resolved) organizationId = resolved;
+    } else if (organizationId && userId) {
+      // Ensure org membership row exists for this user on the supplied org.
+      await ensureOrganizationMembership(userId);
+    }
 
     const { data, error } = await supabase
       .from('projects')

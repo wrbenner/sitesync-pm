@@ -13,6 +13,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { useProjectContext } from '../../stores/projectContextStore';
 import { logAuditEntry } from '../../lib/auditLogger';
+import { ensureOrganizationMembership } from '../../lib/ensureOrganizationMembership';
 import { staggerContainer, staggerItem, staggerTransition } from './types';
 
 const CreateProjectModal = lazy(() => import('../../components/forms/CreateProjectModal'));
@@ -24,10 +25,19 @@ export const WelcomeOnboarding: React.FC<{ onProjectCreated: () => void }> = ({ 
   const reducedMotion = useReducedMotion();
 
   const handleSubmit = async (data: Record<string, unknown>) => {
+    // Ensure the user has an active organization and is a member of it.
+    // Self-heals users whose onboarding never created an org membership row.
+    const orgId = user?.id ? await ensureOrganizationMembership(user.id) : null;
+    if (!orgId) {
+      toast.error('Failed to create project: no active organization. Please sign out and back in.');
+      return;
+    }
+
     const { data: newProject, error } = await supabase
       .from('projects')
       .insert({
         name: data.name as string,
+        organization_id: orgId,
         address: (data.address as string) || null,
         city: (data.city as string) || null,
         state: (data.state as string) || null,

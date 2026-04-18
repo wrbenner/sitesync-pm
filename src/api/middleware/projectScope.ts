@@ -44,7 +44,24 @@ export async function assertProjectAccess(projectId: string): Promise<void> {
         .then(({ data }) => data),
     )
     if (!memberData) {
-      throw new ApiError('You do not have access to this project', 403, 'FORBIDDEN')
+      // Self-heal: if the user is the project owner but has no project_members row,
+      // auto-create it. Covers projects created before the auto-add logic existed.
+      const { data: ownerRow } = await supabase
+        .from('projects')
+        .select('owner_id')
+        .eq('id', projectId)
+        .maybeSingle()
+      if (ownerRow && (ownerRow as { owner_id: string | null }).owner_id === user.id) {
+        await supabase.from('project_members').insert({
+          project_id: projectId,
+          user_id: user.id,
+          role: 'project_manager',
+          accepted_at: new Date().toISOString(),
+        })
+        // Continue — membership now exists.
+      } else {
+        throw new ApiError('You do not have access to this project', 403, 'FORBIDDEN')
+      }
     }
 
     // Cross-org guard: ensure project belongs to caller's active organization.
