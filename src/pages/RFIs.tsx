@@ -215,6 +215,10 @@ const RFIsPage: React.FC = () => {
     }
   }, [updateRFI, projectId, addToast]);
 
+  const handleKanbanMove = useCallback(async (itemId: string | number, _fromColumn: string, toColumn: string) => {
+    await handleStatusChange(String(itemId), toColumn);
+  }, [handleStatusChange]);
+
   // Reset response state when detail panel switches to a different RFI
   useEffect(() => {
     setAiSuggestion(null);
@@ -736,6 +740,7 @@ const RFIsPage: React.FC = () => {
         <KanbanBoard
           columns={kanbanColumns}
           getKey={(rfi) => rfi.id}
+          onMoveItem={handleKanbanMove}
           renderCard={(rfi) => (
             <motion.div
               whileHover={{ y: -2, boxShadow: shadows.cardHover }}
@@ -1093,7 +1098,8 @@ const RFIsPage: React.FC = () => {
                           rfiId: String(rfi.id),
                           projectId,
                         });
-                        await handleStatusChange(String(rfi.id), 'answered');
+                        await updateRFI.mutateAsync({ id: String(rfi.id), updates: { status: 'answered' }, projectId });
+                        setSelectedRfi((prev: unknown) => prev ? { ...prev, status: 'answered' } : prev);
                         setResponseText('');
                         setAiSuggestion(null);
                         toast.success('Response submitted successfully');
@@ -1211,6 +1217,13 @@ const RFIsPage: React.FC = () => {
                 placeholder="e.g. The structural drawing conflicts with the architectural plan on grid line C, the beam depth does not match"
                 rows={4}
                 disabled={aiDraftLoading}
+                aria-label="Describe the issue for AI drafting"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && aiDraftInput.trim() && !aiDraftLoading) {
+                    e.preventDefault();
+                    handleAIDraft();
+                  }
+                }}
                 style={{ width: '100%', padding: spacing['3'], border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.md, fontSize: typography.fontSize.sm, color: colors.textPrimary, backgroundColor: colors.surfacePage, resize: 'none' as const, fontFamily: typography.fontFamily, boxSizing: 'border-box' as const, outline: 'none' }}
               />
               {aiDraftLoading && (
