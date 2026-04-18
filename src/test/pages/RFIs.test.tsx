@@ -1,6 +1,6 @@
 import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 
@@ -81,8 +81,14 @@ vi.mock('../../components/shared/VirtualDataTable', () => ({
   VirtualDataTable: () => <div data-testid="rfi-data-table" />,
 }))
 
+// Capture onMoveItem so tests can trigger kanban drag-and-drop
+let capturedOnMoveItem: ((id: string | number, from: string, to: string) => void) | undefined
+
 vi.mock('../../components/shared/KanbanBoard', () => ({
-  KanbanBoard: () => <div data-testid="rfi-kanban" />,
+  KanbanBoard: (props: { onMoveItem?: (id: string | number, from: string, to: string) => void }) => {
+    capturedOnMoveItem = props.onMoveItem
+    return <div data-testid="rfi-kanban" />
+  },
 }))
 
 vi.mock('../../components/shared/PresenceAvatars', () => ({
@@ -256,6 +262,45 @@ describe('RFIs page', () => {
     render(wrap(<RFIs />))
     fireEvent.click(screen.getByRole('button', { name: /create first rfi/i }))
     expect(screen.getByTestId('create-rfi-modal')).toBeTruthy()
+  })
+
+  // ── Kanban drag-and-drop ──────────────────────────────────
+
+  it('wires kanban onMoveItem to call updateRFI mutation with new status', async () => {
+    capturedOnMoveItem = undefined
+    rfisState.data = { data: [sampleRfi] }
+    render(wrap(<RFIs />))
+
+    // Switch to kanban view so KanbanBoard renders and captures onMoveItem
+    fireEvent.click(screen.getByRole('button', { name: /kanban/i }))
+    await waitFor(() => {
+      expect(screen.getByTestId('rfi-kanban')).toBeTruthy()
+      expect(capturedOnMoveItem).toBeDefined()
+    })
+
+    // Simulate dragging rfi-1 from 'open' to 'answered'
+    await act(async () => {
+      capturedOnMoveItem!('rfi-1', 'open', 'answered')
+    })
+
+    await waitFor(() => {
+      expect(mockMutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'rfi-1',
+          updates: expect.objectContaining({ status: 'answered' }),
+          projectId: 'test-project-id',
+        }),
+      )
+    })
+  })
+
+  it('passes onMoveItem to kanban board (drag-and-drop is not a no-op)', async () => {
+    rfisState.data = { data: [sampleRfi] }
+    capturedOnMoveItem = undefined
+    render(wrap(<RFIs />))
+    fireEvent.click(screen.getByRole('button', { name: /kanban/i }))
+    await waitFor(() => expect(capturedOnMoveItem).toBeDefined())
+    expect(typeof capturedOnMoveItem).toBe('function')
   })
 })
 
