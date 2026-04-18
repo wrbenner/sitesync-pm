@@ -54,3 +54,20 @@ export function useUpdateSubmittal() {
     errorMessage: 'Failed to update submittal',
   })
 }
+
+export function useDeleteSubmittal() {
+  return useAuditedMutation<{ id: string; projectId: string }, { projectId: string }>({
+    permission: 'submittals.delete',
+    action: 'delete_submittal',
+    entityType: 'submittal',
+    getEntityId: (p) => p.id,
+    mutationFn: async ({ id, projectId }) => {
+      const { error } = await from('submittals').delete().eq('id', id)
+      if (error) throw error
+      return { projectId }
+    },
+    analyticsEvent: 'submittal_deleted',
+    getAnalyticsProps: (p) => ({ project_id: p.projectId }),
+    errorMessage: 'Failed to delete submittal',
+  })
+}

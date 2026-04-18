@@ -27,3 +27,33 @@ export function useCreateDirectoryContact() {
     onError: createOnError('create_directory_contact'),
   })
 }
+
+export function useUpdateDirectoryContact() {
+  return useMutation({
+    mutationFn: async (params: { id: string; updates: Record<string, unknown>; projectId: string }) => {
+      const { error } = await from('directory_contacts').update(params.updates).eq('id', params.id)
+      if (error) throw error
+      return { projectId: params.projectId }
+    },
+    onSuccess: (result: { projectId: string }) => {
+      invalidateEntity('contact', result.projectId)
+      posthog.capture('directory_contact_updated', { project_id: result.projectId })
+    },
+    onError: createOnError('update_directory_contact'),
+  })
+}
+
+export function useDeleteDirectoryContact() {
+  return useMutation({
+    mutationFn: async (params: { id: string; projectId: string }) => {
+      const { error } = await from('directory_contacts').delete().eq('id', params.id)
+      if (error) throw error
+      return { projectId: params.projectId }
+    },
+    onSuccess: (result: { projectId: string }) => {
+      invalidateEntity('contact', result.projectId)
+      posthog.capture('directory_contact_deleted', { project_id: result.projectId })
+    },
+    onError: createOnError('delete_directory_contact'),
+  })
+}

@@ -6,10 +6,11 @@ import { useProjectId } from '../hooks/useProjectId'
 import { useAuth } from '../hooks/useAuth'
 import { toast } from 'sonner'
 import {
-  useVendors, useCreateVendor,
+  useVendors, useCreateVendor, useUpdateVendor, useDeleteVendor,
   useVendorEvaluations, useCreateVendorEvaluation,
   type Vendor,
 } from '../hooks/queries/vendors'
+import { PermissionGate } from '../components/auth/PermissionGate'
 
 const STATUS_COLORS: Record<Vendor['status'], { c: string; bg: string }> = {
   active: { c: colors.statusActive, bg: colors.statusActiveSubtle },
@@ -34,6 +35,29 @@ export const Vendors: React.FC = () => {
   const { user } = useAuth()
   const { data: vendors, isLoading } = useVendors(projectId ?? undefined)
   const createVendor = useCreateVendor()
+  const updateVendor = useUpdateVendor()
+  const deleteVendor = useDeleteVendor()
+
+  const handleDelete = async (vendor: Vendor, e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!window.confirm(`Delete "${vendor.company_name}"? This cannot be undone.`)) return
+    try {
+      await deleteVendor.mutateAsync({ id: vendor.id })
+      toast.success('Vendor deleted')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete vendor')
+    }
+  }
+
+  const handleStatusChange = async (vendor: Vendor, status: Vendor['status'], e: React.MouseEvent | React.ChangeEvent) => {
+    e.stopPropagation()
+    try {
+      await updateVendor.mutateAsync({ id: vendor.id, updates: { status } })
+      toast.success('Vendor updated')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update vendor')
+    }
+  }
 
   const [modalOpen, setModalOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -132,7 +156,7 @@ export const Vendors: React.FC = () => {
       actions={
         <div style={{ display: 'flex', gap: spacing['2'] }}>
           <Btn variant="secondary" icon={<Sparkles size={16} />} onClick={() => setRiskOpen(true)}>Vendor Risk Assessment</Btn>
-          <Btn variant="primary" icon={<Plus size={16} />} onClick={() => setModalOpen(true)}>Add Vendor</Btn>
+          <Btn variant="primary" icon={<Plus size={16} />} onClick={() => setModalOpen(true)} data-testid="create-vendor-button">Add Vendor</Btn>
         </div>
       }
     >
@@ -186,11 +210,32 @@ export const Vendors: React.FC = () => {
                           <div style={{ fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>{v.company_name}</div>
                           <div style={{ color: colors.textSecondary, fontSize: typography.fontSize.caption }}>{v.trade || '—'}</div>
                         </div>
-                        <span style={{
-                          padding: `2px ${spacing.sm}`, borderRadius: borderRadius.full,
-                          fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
-                          color: palette.c, backgroundColor: palette.bg,
-                        }}>{v.status}</span>
+                        <PermissionGate permission="directory.manage" fallback={
+                          <span style={{
+                            padding: `2px ${spacing.sm}`, borderRadius: borderRadius.full,
+                            fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
+                            color: palette.c, backgroundColor: palette.bg,
+                          }}>{v.status}</span>
+                        }>
+                          <select
+                            value={v.status}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(e) => handleStatusChange(v, e.target.value as Vendor['status'], e)}
+                            aria-label="Change vendor status"
+                            data-testid="edit-vendor-status"
+                            style={{
+                              padding: `2px ${spacing.sm}`, borderRadius: borderRadius.full,
+                              fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
+                              color: palette.c, backgroundColor: palette.bg,
+                              border: 'none', cursor: 'pointer',
+                            }}
+                          >
+                            <option value="active">active</option>
+                            <option value="probation">probation</option>
+                            <option value="suspended">suspended</option>
+                            <option value="blacklisted">blacklisted</option>
+                          </select>
+                        </PermissionGate>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
                         <Stars value={v.performance_score} />
@@ -203,6 +248,20 @@ export const Vendors: React.FC = () => {
                         Insurance: {v.insurance_expiry ? `exp ${new Date(v.insurance_expiry).toLocaleDateString()}` : '—'}
                       </div>
                       {v.email && <div style={{ fontSize: typography.fontSize.caption, color: colors.textSecondary }}>{v.email}</div>}
+                      <PermissionGate permission="directory.manage">
+                        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                          <Btn
+                            size="sm"
+                            variant="ghost"
+                            onClick={(e) => handleDelete(v, e)}
+                            disabled={deleteVendor.isPending}
+                            aria-label={`Delete ${v.company_name}`}
+                            data-testid="delete-vendor-button"
+                          >
+                            {deleteVendor.isPending ? 'Deleting…' : 'Delete'}
+                          </Btn>
+                        </div>
+                      </PermissionGate>
                     </div>
                   )
                 })}

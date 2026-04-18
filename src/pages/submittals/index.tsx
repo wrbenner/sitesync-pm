@@ -2,9 +2,11 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { PageContainer, Card, Btn, EmptyState } from '../../components/Primitives';
 import { MetricCardSkeleton } from '../../components/ui/Skeletons';
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
-import { useSubmittals, useSubmittalReviewers } from '../../hooks/queries';
+import { useSubmittals, useSubmittalReviewers, useProject } from '../../hooks/queries';
+import { exportSubmittalLogXlsx } from '../../lib/exportXlsx';
+import { ExportButton } from '../../components/shared/ExportButton';
 import { AlertTriangle, ClipboardList, LayoutGrid, List, RefreshCw } from 'lucide-react';
-import { useCreateSubmittal, useUpdateSubmittal } from '../../hooks/mutations';
+import { useCreateSubmittal, useUpdateSubmittal, useDeleteSubmittal } from '../../hooks/mutations';
 import { useProjectId } from '../../hooks/useProjectId';
 import { useNavigate } from 'react-router-dom';
 import { PermissionGate } from '../../components/auth/PermissionGate';
@@ -27,13 +29,34 @@ const SubmittalsPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
-  const hasActiveFilters = statusFilter !== null;
-  const clearFilters = () => setStatusFilter(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const hasActiveFilters = statusFilter !== null || searchQuery.trim() !== '';
+  const clearFilters = () => { setStatusFilter(null); setSearchQuery(''); };
   const navigate = useNavigate();
   const projectId = useProjectId();
   const createSubmittal = useCreateSubmittal();
   const updateSubmittal = useUpdateSubmittal();
+  const deleteSubmittal = useDeleteSubmittal();
   const { data: submittalsResult, isPending: loading, error: submittalsError, refetch } = useSubmittals(projectId);
+  const { data: project } = useProject(projectId);
+
+  const handleExportXlsx = useCallback(() => {
+    const projectName = project?.name ?? 'Project';
+    const rows = (submittalsResult?.data ?? []).map((s) => {
+      const rec = s as Record<string, unknown>;
+      return {
+        number: String(rec.submittal_number ?? rec.number ?? rec.id ?? ''),
+        title: (rec.title as string) ?? '',
+        specSection: (rec.spec_section as string) ?? '',
+        subcontractor: (rec.subcontractor as string) ?? (rec.assigned_to as string) ?? '',
+        status: (rec.status as string) ?? '',
+        revision: String(rec.revision ?? ''),
+        leadTime: String(rec.lead_time ?? ''),
+        dueDate: (rec.due_date as string) ?? '',
+      };
+    });
+    exportSubmittalLogXlsx(projectName, rows);
+  }, [project?.name, submittalsResult?.data]);
   const selectedIdStr = selectedId != null ? String(selectedId) : undefined;
   const { data: reviewersData = [] } = useSubmittalReviewers(selectedIdStr);
   const submittalsRaw = submittalsResult?.data ?? [];
@@ -68,10 +91,25 @@ const SubmittalsPage: React.FC = () => {
   ];
 
   const filteredSubmittals = useMemo(() => {
-    if (!statusFilter) return allSubmittals;
-    if (statusFilter === 'in_review') return allSubmittals.filter((s) => s.status === 'submitted' || s.status === 'review_in_progress' || s.status === 'under_review');
-    return allSubmittals.filter((s) => s.status === statusFilter);
-  }, [allSubmittals, statusFilter]);
+    let rows = allSubmittals;
+    if (statusFilter === 'in_review') {
+      rows = rows.filter((s) => s.status === 'submitted' || s.status === 'review_in_progress' || s.status === 'under_review');
+    } else if (statusFilter) {
+      rows = rows.filter((s) => s.status === statusFilter);
+    }
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      rows = rows.filter((s) => {
+        const rec = s as Record<string, unknown>;
+        return (
+          String(rec.title ?? '').toLowerCase().includes(q) ||
+          String(rec.submittal_number ?? '').toLowerCase().includes(q) ||
+          String(rec.spec_section ?? '').toLowerCase().includes(q)
+        );
+      });
+    }
+    return rows;
+  }, [allSubmittals, statusFilter, searchQuery]);
 
   const selected = allSubmittals.find((s) => s.id === selectedId) || null;
 
@@ -171,7 +209,12 @@ const SubmittalsPage: React.FC = () => {
       <PageContainer
         title="Submittals"
         subtitle="No items"
-        actions={<PermissionGate permission="submittals.create"><Btn onClick={() => setShowCreateModal(true)}>New Submittal</Btn></PermissionGate>}
+        actions={
+          <div style={{ display: 'flex', gap: spacing['2'], alignItems: 'center' }}>
+            <ExportButton onExportXLSX={handleExportXlsx} pdfFilename="SiteSync_Submittal_Log" />
+            <PermissionGate permission="submittals.create"><Btn onClick={() => setShowCreateModal(true)} data-testid="create-submittal-button">New Submittal</Btn></PermissionGate>
+          </div>
+        }
       >
         <div style={{
           display: 'flex',
@@ -295,6 +338,27 @@ const SubmittalsPage: React.FC = () => {
         ))}
       </div>
 
+      {/* Search */}
+      <div style={{ marginBottom: spacing['3'] }}>
+        <input
+          type="search"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search submittals by title, number, or spec section…"
+          aria-label="Search submittals"
+          data-testid="search-submittals"
+          style={{
+            width: '100%',
+            maxWidth: 480,
+            padding: `${spacing['2']} ${spacing['3']}`,
+            border: `1px solid ${colors.borderDefault}`,
+            borderRadius: borderRadius.md,
+            fontSize: typography.fontSize.sm,
+            fontFamily: typography.fontFamily,
+          }}
+        />
+      </div>
+
       {/* Status Filter Tabs */}
       <div style={{ display: 'flex', gap: spacing['1'], marginBottom: spacing['4'], borderBottom: `1px solid ${colors.borderLight}`, paddingBottom: 0 }}>
         {STATUS_FILTER_TABS.map(({ label, value }) => {
@@ -348,6 +412,8 @@ const SubmittalsPage: React.FC = () => {
         onClose={() => setSelectedId(null)}
         projectId={projectId}
         updateSubmittalMutateAsync={updateSubmittal.mutateAsync}
+        deleteSubmittalMutateAsync={deleteSubmittal.mutateAsync}
+        deletePending={deleteSubmittal.isPending}
       />
 
       <CreateSubmittalModal

@@ -6,10 +6,12 @@ import { BulkActionBar } from '../components/shared/BulkActionBar';
 import { createColumnHelper } from '@tanstack/react-table';
 import { PageContainer, Card, Btn, StatusTag, PriorityTag, DetailPanel, Avatar, Tag, RelatedItems, useToast, MetricBox, EmptyState } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, shadows, zIndex } from '../styles/theme';
-import { useRFIs, useRFI } from '../hooks/queries';
+import { useRFIs, useRFI, useProject } from '../hooks/queries';
+import { exportRFILogXlsx } from '../lib/exportXlsx';
+import { ExportButton } from '../components/shared/ExportButton';
 import { AlertTriangle, FileQuestion, FilterX, Plus, Clock, MessageSquare, Calendar, RefreshCw, Send, Sparkles, LayoutGrid, List, UserCheck, Flag, Download, XCircle, Wand2, Loader2, X } from 'lucide-react';
 import { useAppNavigate, getRelatedItemsForRfi } from '../utils/connections';
-import { useCreateRFI, useUpdateRFI, useCreateRFIResponse } from '../hooks/mutations';
+import { useCreateRFI, useUpdateRFI, useDeleteRFI, useCreateRFIResponse } from '../hooks/mutations';
 import { useProjectId } from '../hooks/useProjectId';
 import { useNavigate } from 'react-router-dom';
 import { useCopilotStore } from '../stores/copilotStore';
@@ -127,6 +129,25 @@ const RFIsPage: React.FC = () => {
   useEffect(() => { setPageContext('rfis'); }, [setPageContext]);
   const { data: rfisResult, isPending: rfisLoading, error: rfisError, refetch } = useRFIs(projectId);
   const rfisRaw = rfisResult?.data ?? [];
+  const { data: project } = useProject(projectId);
+
+  const handleExportXlsx = React.useCallback(() => {
+    const projectName = project?.name ?? 'Project';
+    const rows = rfisRaw.map((r) => {
+      const rec = r as Record<string, unknown>;
+      return {
+        number: rec.number ? `RFI-${String(rec.number).padStart(3, '0')}` : String(rec.id ?? '').slice(0, 8),
+        title: (rec.title as string) ?? '',
+        priority: (rec.priority as string) ?? '',
+        status: (rec.status as string) ?? '',
+        from: (rec.created_by as string) ?? '',
+        assignedTo: (rec.assigned_to as string) ?? '',
+        dueDate: (rec.due_date as string) ?? '',
+        createdAt: typeof rec.created_at === 'string' ? rec.created_at.slice(0, 10) : '',
+      };
+    });
+    exportRFILogXlsx(projectName, rows);
+  }, [project?.name, rfisRaw]);
 
   // Map API data to component shape
   const rfis = useMemo(() => rfisRaw.map((r: Record<string, unknown>) => ({
@@ -195,7 +216,22 @@ const RFIsPage: React.FC = () => {
   const navigate = useNavigate();
   const createRFI = useCreateRFI();
   const updateRFI = useUpdateRFI();
+  const deleteRFI = useDeleteRFI();
   const createRFIResponse = useCreateRFIResponse();
+
+  const handleDeleteRFI = useCallback(async () => {
+    if (!selectedRfi || !projectId) return;
+    const rfiId = String(selectedRfi.id);
+    const rfiLabel = (selectedRfi.title as string) || `RFI ${rfiId.slice(0, 8)}`;
+    if (!window.confirm(`Delete "${rfiLabel}"? This cannot be undone.`)) return;
+    try {
+      await deleteRFI.mutateAsync({ id: rfiId, projectId });
+      toast.success('RFI deleted');
+      setSelectedRfi(null);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete RFI');
+    }
+  }, [selectedRfi, projectId, deleteRFI]);
 
   // Fetch full detail (with responses) when an RFI is selected in the side panel
   const selectedRfiId = selectedRfi ? String(selectedRfi.id) : undefined;
@@ -519,7 +555,7 @@ const RFIsPage: React.FC = () => {
             When questions arise in the field, create an RFI to get a documented answer
           </p>
           <PermissionGate permission="rfis.create">
-            <Btn onClick={() => setShowCreateModal(true)}>
+            <Btn onClick={() => setShowCreateModal(true)} data-testid="create-rfi-button-empty">
               Create First RFI
             </Btn>
           </PermissionGate>
@@ -564,6 +600,7 @@ const RFIsPage: React.FC = () => {
               <LayoutGrid size={14} style={{ marginRight: 4 }} /> Kanban
             </motion.button>
           </div>
+          <ExportButton onExportXLSX={handleExportXlsx} pdfFilename="SiteSync_RFI_Log" />
           <PermissionGate permission="rfis.create">
             <button
               onClick={() => setShowAIDraftModal(true)}
@@ -582,7 +619,7 @@ const RFIsPage: React.FC = () => {
               <Wand2 size={14} />
               AI Draft RFI
             </button>
-            <Btn onClick={() => setShowCreateModal(true)} aria-label="Create new Request for Information">
+            <Btn onClick={() => setShowCreateModal(true)} aria-label="Create new Request for Information" data-testid="create-rfi-button">
               <Plus size={16} style={{ marginRight: spacing.xs }} />
               New RFI
             </Btn>
@@ -868,6 +905,18 @@ const RFIsPage: React.FC = () => {
                   onClick={() => setEditingDetail(!editingDetail)}
                 >
                   {editingDetail ? 'Done' : 'Edit'}
+                </Btn>
+              </PermissionGate>
+              <PermissionGate permission="rfis.delete">
+                <Btn
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleDeleteRFI}
+                  disabled={deleteRFI.isPending}
+                  aria-label="Delete this RFI"
+                  data-testid="delete-rfi-button"
+                >
+                  {deleteRFI.isPending ? 'Deleting…' : 'Delete'}
                 </Btn>
               </PermissionGate>
             </div>

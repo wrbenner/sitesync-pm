@@ -14,8 +14,10 @@ import type { QuickEntryData } from '../../components/dailylog/QuickEntry';
 import type { CrewHoursEntry as CrewHoursEntryType } from '../../components/dailylog/CrewHoursSummary';
 import type { DailyLogPhoto } from '../../components/dailylog/PhotoGrid';
 import { useProjectId } from '../../hooks/useProjectId';
-import { useDailyLogs, useDailyLogEntries } from '../../hooks/queries';
-import { useUpdateDailyLog, useCreateDailyLog, useSubmitDailyLog, useApproveDailyLog, useRejectDailyLog } from '../../hooks/mutations';
+import { useDailyLogs, useDailyLogEntries, useProject } from '../../hooks/queries';
+import { exportDailyLogXlsx } from '../../lib/exportXlsx';
+import { ExportButton } from '../../components/shared/ExportButton';
+import { useUpdateDailyLog, useCreateDailyLog, useDeleteDailyLog, useSubmitDailyLog, useApproveDailyLog, useRejectDailyLog } from '../../hooks/mutations';
 import { fetchWeather, formatWeatherSummary } from '../../lib/weather';
 import { supabase } from '../../lib/supabase';
 import { syncManager } from '../../lib/syncManager';
@@ -37,8 +39,27 @@ const DailyLogPage: React.FC = () => {
   const { setPageContext } = useCopilotStore();
   useEffect(() => { setPageContext('daily-log'); }, [setPageContext]);
   const { data: dailyLogData, isPending: loading, error: logError, refetch } = useDailyLogs(projectId);
+  const { data: project } = useProject(projectId);
   const updateDailyLog = useUpdateDailyLog();
+  const deleteDailyLog = useDeleteDailyLog();
   const createDailyLog = useCreateDailyLog();
+
+  const handleExportXlsx = useCallback(() => {
+    const projectName = project?.name ?? 'Project';
+    const raw = dailyLogData?.data ?? [];
+    const rows = raw.map((l) => {
+      const rec = l as Record<string, unknown>;
+      return {
+        date: (rec.log_date as string) ?? (rec.date as string) ?? '',
+        workers: Number(rec.workers_onsite ?? rec.total_workers ?? 0),
+        manHours: Number(rec.man_hours ?? 0),
+        incidents: Number(rec.incidents ?? 0),
+        weather: (rec.weather as string) ?? '',
+        summary: (rec.summary as string) ?? (rec.work_performed as string) ?? '',
+      };
+    });
+    exportDailyLogXlsx(projectName, rows);
+  }, [project?.name, dailyLogData?.data]);
   const submitDailyLog = useSubmitDailyLog();
   const approveDailyLog = useApproveDailyLog();
   const rejectDailyLog = useRejectDailyLog();
@@ -472,7 +493,12 @@ const DailyLogPage: React.FC = () => {
       <PageContainer
         title="Daily Log"
         subtitle="No entries"
-        actions={<PermissionGate permission="daily_log.create"><Btn onClick={() => setShowCreateModal(true)}>New Entry</Btn></PermissionGate>}
+        actions={
+          <div style={{ display: 'flex', gap: spacing['2'], alignItems: 'center' }}>
+            <ExportButton onExportXLSX={handleExportXlsx} pdfFilename="SiteSync_Daily_Log_Summary" />
+            <PermissionGate permission="daily_log.create"><Btn onClick={() => setShowCreateModal(true)} data-testid="create-daily-log-button">New Entry</Btn></PermissionGate>
+          </div>
+        }
       >
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'], marginBottom: spacing['6'] }}>
           {[
@@ -668,6 +694,23 @@ const DailyLogPage: React.FC = () => {
     }
   };
 
+  const handleDelete = async () => {
+    if (!today.id || !projectId) return;
+    // Only draft logs are safe to delete — submitted/approved logs have legal weight.
+    if (logStatus !== 'draft') {
+      addToast('error', 'Only draft logs can be deleted. Return to draft first.');
+      return;
+    }
+    if (!window.confirm(`Delete the ${selectedDate} daily log? This cannot be undone.`)) return;
+    try {
+      await deleteDailyLog.mutateAsync({ id: today.id as string, projectId });
+      addToast('success', 'Daily log deleted');
+      await refetch();
+    } catch (err) {
+      addToast('error', err instanceof Error ? err.message : 'Failed to delete daily log');
+    }
+  };
+
   return (
     <PageContainer title="Daily Log" subtitle={todayFormatted} actions={
       <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
@@ -694,7 +737,23 @@ const DailyLogPage: React.FC = () => {
           )}
         </div>
         {logStatus === 'draft' && !isLocked && (
-          <PermissionGate permission="daily_log.submit"><Btn size="sm" icon={<Lock size={14} />} onClick={handleSubmit}>Submit and Lock</Btn></PermissionGate>
+          <>
+            <PermissionGate permission="daily_log.submit"><Btn size="sm" icon={<Lock size={14} />} onClick={handleSubmit}>Submit and Lock</Btn></PermissionGate>
+            {today.id ? (
+              <PermissionGate permission="daily_log.edit">
+                <Btn
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleDelete}
+                  disabled={deleteDailyLog.isPending}
+                  aria-label="Delete this daily log"
+                  data-testid="delete-daily-log-button"
+                >
+                  {deleteDailyLog.isPending ? 'Deleting…' : 'Delete'}
+                </Btn>
+              </PermissionGate>
+            ) : null}
+          </>
         )}
         {isSubmittedOnly && (
           <>

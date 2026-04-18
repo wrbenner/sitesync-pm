@@ -369,7 +369,22 @@ const SchedulePage: React.FC = () => {
     <PageContainer
       title="Schedule"
       subtitle={`${metrics.daysBeforeSchedule} days ahead \u00B7 ${metrics.milestonesHit}/${metrics.milestoneTotal} milestones`}
-      actions={<ScheduleHeaderActions onImport={() => setShowImportModal(true)} onAddPhase={() => setShowAddPhaseModal(true)} liveActive={liveActive} />}
+      actions={
+        <ScheduleHeaderActions
+          onImport={() => setShowImportModal(true)}
+          onAddPhase={() => setShowAddPhaseModal(true)}
+          liveActive={liveActive}
+          projectName={activeProject?.name}
+          phases={schedulePhases.map((p) => ({
+            name: p.name ?? '',
+            status: p.status ?? '',
+            start_date: p.start_date ?? '',
+            end_date: p.end_date ?? '',
+            percent_complete: Number(p.percent_complete ?? 0),
+            is_critical_path: Boolean(p.is_critical_path),
+          }))}
+        />
+      }
       aria-label="Project Schedule"
       role="main"
     >

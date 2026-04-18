@@ -67,9 +67,12 @@ const DashboardPage: React.FC = () => {
   // Fetch all projects to detect "no projects" state
   const { data: allProjects, isPending: projectsLoading } = useProjects();
 
-  // Auto-select first project if none selected
+  // Auto-select first project if none selected, OR if the persisted projectId
+  // points to a project the user can no longer see (deleted, archived, RLS).
   useEffect(() => {
-    if (!projectId && allProjects && allProjects.length > 0) {
+    if (!allProjects || allProjects.length === 0) return;
+    const stillExists = projectId && allProjects.some((p) => p.id === projectId);
+    if (!stillExists) {
       setActiveProject(allProjects[0].id);
     }
   }, [projectId, allProjects, setActiveProject]);

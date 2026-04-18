@@ -1,6 +1,7 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
-import { getPayApplications } from '../../api/endpoints/payApplications'
+import { getPayApplications, createPayApplication, upsertPayApplication, submitPayApplication, approvePayApplication } from '../../api/endpoints/payApplications'
+import type { CreatePayAppPayload } from '../../types/api'
 
 
 
@@ -23,6 +24,69 @@ export function usePayApplications(projectId: string | undefined) {
     queryKey: ['pay_applications', projectId],
     queryFn: () => getPayApplications(projectId!),
     enabled: !!projectId,
+  })
+}
+
+export function useCreatePayApplication() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (params: { projectId: string; payload: CreatePayAppPayload }) => {
+      return await createPayApplication(params.projectId, params.payload)
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ['pay_applications', vars.projectId] })
+    },
+  })
+}
+
+export function useUpdatePayApplication() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (params: { projectId: string; payload: Parameters<typeof upsertPayApplication>[1] }) => {
+      return await upsertPayApplication(params.projectId, params.payload)
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ['pay_applications', vars.projectId] })
+    },
+  })
+}
+
+export function useSubmitPayApplication() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (params: { projectId: string; id: string }) => {
+      return await submitPayApplication(params.projectId, params.id)
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ['pay_applications', vars.projectId] })
+    },
+  })
+}
+
+export function useApprovePayApplication() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (params: { projectId: string; id: string }) => {
+      return await approvePayApplication(params.projectId, params.id)
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ['pay_applications', vars.projectId] })
+      qc.invalidateQueries({ queryKey: ['lien_waivers', vars.projectId] })
+    },
+  })
+}
+
+export function useDeletePayApplication() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (params: { projectId: string; id: string }) => {
+      const { error } = await supabase.from('pay_applications').delete().eq('id', params.id).eq('project_id', params.projectId)
+      if (error) throw error
+      return { id: params.id, projectId: params.projectId }
+    },
+    onSuccess: (result) => {
+      qc.invalidateQueries({ queryKey: ['pay_applications', result.projectId] })
+    },
   })
 }
 

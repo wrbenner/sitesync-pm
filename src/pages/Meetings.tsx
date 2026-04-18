@@ -6,6 +6,7 @@ import {
 import { MetricCardSkeleton } from '../components/ui/Skeletons';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../styles/theme';
 import { useMeetings } from '../hooks/queries';
+import { useDeleteMeeting } from '../hooks/mutations';
 import { useProjectActionItems } from '../hooks/queries/meeting-enhancements';
 import { useProjectId } from '../hooks/useProjectId';
 import { PermissionGate } from '../components/auth/PermissionGate';
@@ -76,7 +77,11 @@ const MeetingsSkeleton: React.FC = () => (
 
 // ── Meeting card ──────────────────────────────────────────────────────────────
 
-const MeetingCard: React.FC<{ meeting: MeetingListItem }> = ({ meeting }) => {
+const MeetingCard: React.FC<{
+  meeting: MeetingListItem;
+  onDelete?: (meeting: MeetingListItem) => void;
+  deletePending?: boolean;
+}> = ({ meeting, onDelete, deletePending }) => {
   const tc = typeColors(meeting.type);
   const [hovered, setHovered] = useState(false);
 
@@ -139,6 +144,28 @@ const MeetingCard: React.FC<{ meeting: MeetingListItem }> = ({ meeting }) => {
         color={meeting.status === 'scheduled' ? colors.statusInfo : colors.statusActive}
         backgroundColor={meeting.status === 'scheduled' ? colors.statusInfoSubtle : colors.statusActiveSubtle}
       />
+      {onDelete && (
+        <PermissionGate permission="meetings.delete">
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(meeting); }}
+            disabled={deletePending}
+            aria-label={`Delete meeting: ${meeting.title}`}
+            data-testid="delete-meeting-button"
+            style={{
+              padding: `${spacing.sm} ${spacing.md}`,
+              border: 'none',
+              background: 'transparent',
+              color: colors.textTertiary,
+              cursor: deletePending ? 'not-allowed' : 'pointer',
+              fontSize: typography.fontSize.sm,
+              fontFamily: typography.fontFamily,
+              borderRadius: borderRadius.md,
+            }}
+          >
+            {deletePending ? 'Deleting…' : 'Delete'}
+          </button>
+        </PermissionGate>
+      )}
     </div>
   );
 };
@@ -152,6 +179,18 @@ export const Meetings: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   const { data: meetingsResult, isPending, error, refetch } = useMeetings(projectId);
+  const deleteMeeting = useDeleteMeeting();
+
+  const handleDeleteMeeting = async (meeting: MeetingListItem) => {
+    if (!projectId) return;
+    if (!window.confirm(`Delete "${meeting.title}"? This cannot be undone.`)) return;
+    try {
+      await deleteMeeting.mutateAsync({ id: String(meeting.id), projectId });
+      await refetch();
+    } catch {
+      // onError in the hook already surfaces a toast
+    }
+  };
   const { data: actionItemsData } = useProjectActionItems(projectId);
   const allMeetings = (meetingsResult?.data ?? []) as unknown as MeetingListItem[];
 
@@ -274,7 +313,7 @@ export const Meetings: React.FC = () => {
             </span>
           }
         >
-          <Btn icon={<Plus size={14} />} onClick={() => setShowCreateModal(true)}>
+          <Btn icon={<Plus size={14} />} onClick={() => setShowCreateModal(true)} data-testid="create-meeting-button">
             Schedule Meeting
           </Btn>
         </PermissionGate>
@@ -387,7 +426,12 @@ export const Meetings: React.FC = () => {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.md }}>
           {displayedMeetings.map((m) => (
-            <MeetingCard key={m.id} meeting={m} />
+            <MeetingCard
+              key={m.id}
+              meeting={m}
+              onDelete={handleDeleteMeeting}
+              deletePending={deleteMeeting.isPending}
+            />
           ))}
         </div>
       )}

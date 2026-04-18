@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { AlertTriangle, ClipboardCheck, Award, Users, Plus, Wrench, HardHat } from 'lucide-react';
 import { PageContainer, Card, Btn } from '../../components/Primitives';
 import { ExportButton } from '../../components/shared/ExportButton';
+import { exportToXlsx } from '../../lib/exportXlsx';
 import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme';
 import { useProjectId } from '../../hooks/useProjectId';
 import { useSafetyInspections, useIncidents, useToolboxTalks, useSafetyCertifications, useCorrectiveActions, useDailyLogs } from '../../hooks/queries';
@@ -124,7 +125,78 @@ export const Safety: React.FC = () => {
       subtitle="Site safety management, inspections, incidents, and compliance tracking"
       actions={
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
-          <ExportButton pdfFilename="SiteSync_Safety_Report" />
+          <ExportButton
+            pdfFilename="SiteSync_Safety_Report"
+            onExportXLSX={() => {
+              const incidentRows = displayIncidents.map((i) => {
+                const rec = i as Record<string, unknown>;
+                return [
+                  (rec.date as string) ?? '',
+                  (rec.description as string) ?? '',
+                  (rec.severity as string) ?? '',
+                  (rec.reported_by as string) ?? '',
+                  (rec.status as string) ?? '',
+                ];
+              });
+              const inspectionRows = (inspections ?? []).map((i) => {
+                const rec = i as Record<string, unknown>;
+                return [
+                  (rec.inspection_date as string) ?? '',
+                  (rec.inspection_type as string) ?? '',
+                  (rec.inspector_name as string) ?? '',
+                  (rec.status as string) ?? '',
+                  Number(rec.score ?? 0),
+                ];
+              });
+              const talkRows = (talks ?? []).map((t) => {
+                const rec = t as Record<string, unknown>;
+                return [
+                  (rec.date as string) ?? '',
+                  (rec.topic as string) ?? '',
+                  (rec.presenter as string) ?? '',
+                  Number(rec.attendees ?? 0),
+                ];
+              });
+              const certRows = (certifications ?? []).map((c) => {
+                const rec = c as Record<string, unknown>;
+                return [
+                  (rec.worker_name as string) ?? '',
+                  (rec.certification_name as string) ?? '',
+                  (rec.expiration_date as string) ?? '',
+                  (rec.status as string) ?? '',
+                ];
+              });
+              exportToXlsx({
+                filename: 'SiteSync_Safety_Report',
+                sheets: [
+                  {
+                    name: 'Incidents',
+                    headers: ['Date', 'Description', 'Severity', 'Reported By', 'Status'],
+                    rows: incidentRows,
+                    columnWidths: [14, 40, 14, 20, 14],
+                  },
+                  {
+                    name: 'Inspections',
+                    headers: ['Date', 'Type', 'Inspector', 'Status', 'Score'],
+                    rows: inspectionRows,
+                    columnWidths: [14, 20, 20, 14, 10],
+                  },
+                  {
+                    name: 'Toolbox Talks',
+                    headers: ['Date', 'Topic', 'Presenter', 'Attendees'],
+                    rows: talkRows,
+                    columnWidths: [14, 36, 20, 12],
+                  },
+                  {
+                    name: 'Certifications',
+                    headers: ['Worker', 'Certification', 'Expires', 'Status'],
+                    rows: certRows,
+                    columnWidths: [20, 28, 14, 14],
+                  },
+                ],
+              });
+            }}
+          />
           {activeTab === 'incidents' && <Btn variant="primary" icon={<Plus size={16} />} onClick={() => setShowIncidentModal(true)} style={{ minHeight: 56 }}>Report Incident</Btn>}
           {activeTab === 'toolbox' && <Btn variant="primary" icon={<Plus size={16} />} onClick={() => setShowTalkModal(true)} style={{ minHeight: 56 }}>New Talk</Btn>}
         </div>

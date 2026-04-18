@@ -157,3 +157,21 @@ export function useRejectChangeOrder() {
     errorMessage: 'Failed to reject change order',
   })
 }
+
+export function useDeleteChangeOrder() {
+  return useAuditedMutation<{ id: string; projectId: string }, { projectId: string }>({
+    permission: 'change_orders.delete',
+    action: 'delete_change_order',
+    entityType: 'change_order',
+    getEntityId: (p) => p.id,
+    mutationFn: async ({ id, projectId }) => {
+      const { error } = await from('change_orders').delete().eq('id', id)
+      if (error) throw error
+      return { projectId }
+    },
+    invalidateKeys: () => [['costData']],
+    analyticsEvent: 'change_order_deleted',
+    getAnalyticsProps: (p) => ({ project_id: p.projectId }),
+    errorMessage: 'Failed to delete change order',
+  })
+}

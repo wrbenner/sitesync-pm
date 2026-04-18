@@ -19,6 +19,8 @@ interface SubmittalDetailProps {
   onClose: () => void;
   projectId: string | undefined;
   updateSubmittalMutateAsync: (args: { id: string; updates: Record<string, unknown>; projectId: string }) => Promise<unknown>;
+  deleteSubmittalMutateAsync?: (args: { id: string; projectId: string }) => Promise<unknown>;
+  deletePending?: boolean;
 }
 
 export const SubmittalDetail: React.FC<SubmittalDetailProps> = ({
@@ -27,6 +29,8 @@ export const SubmittalDetail: React.FC<SubmittalDetailProps> = ({
   onClose,
   projectId,
   updateSubmittalMutateAsync,
+  deleteSubmittalMutateAsync,
+  deletePending = false,
 }) => {
   const { addToast } = useToast();
   const appNavigate = useAppNavigate();
@@ -61,6 +65,20 @@ export const SubmittalDetail: React.FC<SubmittalDetailProps> = ({
     onClose();
   };
 
+  const handleDelete = useCallback(async () => {
+    if (!selected || !projectId || !deleteSubmittalMutateAsync) return;
+    const id = String(selected.id);
+    const label = (selected.title as string) || (selected.submittalNumber as string) || `Submittal ${id.slice(0, 8)}`;
+    if (!window.confirm(`Delete "${label}"? This cannot be undone.`)) return;
+    try {
+      await deleteSubmittalMutateAsync({ id, projectId });
+      toast.success('Submittal deleted');
+      onClose();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete submittal');
+    }
+  }, [selected, projectId, deleteSubmittalMutateAsync, onClose]);
+
   const dueDate = selected?.dueDate as string | undefined;
 
   return (
@@ -87,6 +105,20 @@ export const SubmittalDetail: React.FC<SubmittalDetailProps> = ({
                   {editingDetail ? 'Done' : 'Edit'}
                 </Btn>
               </PermissionGate>
+              {deleteSubmittalMutateAsync && (
+                <PermissionGate permission="submittals.delete">
+                  <Btn
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleDelete}
+                    disabled={deletePending}
+                    aria-label="Delete this submittal"
+                    data-testid="delete-submittal-button"
+                  >
+                    {deletePending ? 'Deleting…' : 'Delete'}
+                  </Btn>
+                </PermissionGate>
+              )}
             </div>
             <EditingLockBanner entityType="submittal" entityId={String(selected.id)} isEditing={editingDetail} />
             <div style={{ display: 'flex', gap: spacing.sm, flexWrap: 'wrap' }}>

@@ -782,7 +782,7 @@ export const Tasks: React.FC = () => {
       actions={
         <div style={{ display: 'flex', gap: spacing.sm }}>
           <Btn variant="ghost" size="md" icon={<LayoutTemplate size={16} />} onClick={() => setShowTemplates(true)}>Templates</Btn>
-          <PermissionGate permission="tasks.create"><Btn variant="primary" size="md" icon={<Plus size={16} />} onClick={() => setShowNewTask(true)}>New Task</Btn></PermissionGate>
+          <PermissionGate permission="tasks.create"><Btn variant="primary" size="md" icon={<Plus size={16} />} onClick={() => setShowNewTask(true)} data-testid="create-task-button">New Task</Btn></PermissionGate>
         </div>
       }
     >

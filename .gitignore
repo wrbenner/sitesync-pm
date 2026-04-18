@@ -41,3 +41,6 @@ test-results/
 # Coverage reports
 coverage/
 .env
+
+# Audit harness generated specs (regenerate with `npm run audit:gen`)
+audit/generated/
