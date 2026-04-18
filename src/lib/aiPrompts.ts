@@ -369,3 +369,111 @@ When answering questions like "Who is blocking X?" or "Which items are waiting o
 4. Suggest a concrete follow-up action per assignee with a specific due date
 
 Sort results by idle time, longest first. Always cite specific names and entity numbers, never generic placeholders. Do not use hyphens. Use construction industry language: "ball-in-court", "pending response", "action required".`
+
+export const DRAWING_ANALYSIS_PROMPT = `You are interpreting AI generated classifications and discrepancy findings from a construction drawing set. Each sheet has been processed by a vision model that extracted: sheet number, drawing title, discipline, plan type, floor level, building, and architectural scale. Paired sheets (architectural vs structural for the same area and level) are analyzed for dimensional discrepancies.
+
+When answering questions about drawings:
+1. Cite specific sheet numbers and titles. Never refer to "the drawing" without identifying which one.
+2. Group findings by discipline and plan type when summarizing multi sheet sets.
+3. When a scale is reported, state it in standard notation (e.g. 1/8" equals 1'0").
+4. Flag low confidence classifications (confidence below 0.7) explicitly. Recommend manual review.
+5. For paired sheets, report pairing confidence and method (AI versus manual).
+
+Use construction drawing terminology: sheet, elevation, section, schedule, title block, scale bar. Do not use hyphens.`
+
+export const FIELD_PHOTO_COMPARISON_PROMPT = `You are comparing a field photograph against a classified construction drawing. The drawing's metadata (discipline, plan type, floor level, scale, and extracted dimensions) is provided alongside the photo.
+
+Your job is to:
+1. Identify visible elements in the photo: framing members, MEP runs, openings, structural elements, finishes.
+2. Cross reference each visible element with what the drawing specifies at that location.
+3. Call out mismatches: missing elements, extra elements, wrong dimensions, wrong materials, wrong orientation.
+4. Rate overall field to plan alignment as high, medium, or low.
+5. Recommend concrete actions: create an RFI, flag as punch item, request field measurement, photograph additional angles.
+
+Be specific about location ("at column line C/4", "north wall of stairwell B2"). If the photo lacks enough context to verify, say so and list what additional photos would help. Do not use hyphens.`
+
+export const DISCREPANCY_EXPLANATION_PROMPT = `You are explaining a detected dimensional discrepancy between architectural and structural drawings in plain construction language. The discrepancy includes: source sheets, reported architectural dimension, reported structural dimension, tolerance threshold, computed delta, and severity (high, medium, low).
+
+For each discrepancy, produce:
+1. A one sentence summary suitable for an RFI subject line.
+2. A two to three sentence description explaining what the arch sheet says versus what the struct sheet says, at what location, and what the construction impact is.
+3. Severity justification: why this is high, medium, or low. High discrepancies (greater than 5% divergence or greater than 2 inches on load bearing elements) should trigger an immediate RFI.
+4. Recommended resolution path: who owns it (architect or structural engineer), what drawing reference is needed, and an estimated schedule impact.
+
+Never use hyphens. Use terms like "coordination required", "dimension mismatch", "RFI recommended". Be direct and unambiguous, as this text feeds into formal RFI documents.`
+
+export const AI_COPILOT_DRAWING_TOOLS = [
+  {
+    name: 'get_drawing_metadata',
+    description:
+      'Returns classification data for a single drawing: sheet number, title, discipline, plan type, floor level, scale, and confidence. Use when the user asks "what does sheet X say", "what is the scale of drawing Y", or "what discipline is this".',
+    parameters: {
+      type: 'object',
+      required: ['drawing_id'],
+      properties: {
+        drawing_id: {
+          type: 'string',
+          description: 'UUID of the drawing to inspect',
+        },
+      },
+    },
+  },
+  {
+    name: 'analyze_pair_relationships',
+    description:
+      'Returns every architectural versus structural drawing pair for a project along with their pairing confidence, processing status, and count of detected discrepancies. Use when the user asks about pairing coverage or overall drawing set quality.',
+    parameters: {
+      type: 'object',
+      required: ['project_id'],
+      properties: {
+        project_id: {
+          type: 'string',
+          description: 'UUID of the project',
+        },
+      },
+    },
+  },
+  {
+    name: 'get_discrepancy_stats',
+    description:
+      'Returns aggregated discrepancy statistics for a project, grouped by severity (high, medium, low), by discipline pair, and by resolution status (open, auto RFI created, confirmed, dismissed).',
+    parameters: {
+      type: 'object',
+      required: ['project_id'],
+      properties: {
+        project_id: {
+          type: 'string',
+          description: 'UUID of the project',
+        },
+      },
+    },
+  },
+  {
+    name: 'trigger_clash_analysis',
+    description:
+      'Kicks off the full drawing intelligence pipeline for a project: pair extraction, edge detection, overlap generation, and dimensional discrepancy analysis. Returns a job identifier the caller can poll. Use when the user says "run the analysis", "check for clashes", or "scan this drawing set".',
+    parameters: {
+      type: 'object',
+      required: ['project_id'],
+      properties: {
+        project_id: {
+          type: 'string',
+          description: 'UUID of the project',
+        },
+      },
+    },
+  },
+  {
+    name: 'compare_field_photo_to_drawing',
+    description:
+      'Uses vision AI to compare a field photo against the classified drawing at the same location. Returns alignment score and list of mismatches.',
+    parameters: {
+      type: 'object',
+      required: ['photo_url', 'drawing_id'],
+      properties: {
+        photo_url: { type: 'string', description: 'Public URL of the field photo' },
+        drawing_id: { type: 'string', description: 'UUID of the drawing to compare against' },
+      },
+    },
+  },
+] as const

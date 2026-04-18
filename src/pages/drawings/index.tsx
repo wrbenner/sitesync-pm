@@ -30,6 +30,7 @@ import {
 } from '../../hooks/useDrawingIntelligence';
 import { ClashDetectionPanel } from '../../components/drawings/ClashDetectionPanel';
 import { AnalysisProgress } from '../../components/drawings/AnalysisProgress';
+import { useLogCorrection } from '../../hooks/useAITrainingCorrections';
 import type { DrawingClassification, DrawingDiscipline } from '../../types/ai';
 
 interface DrawingItem {
@@ -70,11 +71,39 @@ const DISCIPLINE_LABEL: Record<DrawingDiscipline, string> = {
   unclassified: 'Unclassified',
 };
 
+const DISCIPLINE_OPTIONS: DrawingDiscipline[] = [
+  'architectural',
+  'structural',
+  'mechanical',
+  'electrical',
+  'plumbing',
+  'mep',
+  'civil',
+  'interior_design',
+  'unclassified',
+];
+
+const PLAN_TYPE_OPTIONS = [
+  'floor_plan',
+  'foundation',
+  'framing',
+  'roof',
+  'elevation',
+  'section',
+  'detail',
+  'schedule',
+  'site',
+] as const;
+
 const ClassificationBadge: React.FC<{
   classification: DrawingClassification | null;
   status: string | null;
   classifying: boolean;
-}> = ({ classification, status, classifying }) => {
+  drawingId?: string | number | null;
+  projectId?: string | null;
+}> = ({ classification, status, classifying, drawingId, projectId }) => {
+  const [editOpen, setEditOpen] = useState(false);
+  const logCorrection = useLogCorrection();
   if (classifying || status === 'processing' || status === 'pending') {
     return (
       <div
@@ -191,6 +220,130 @@ const ClassificationBadge: React.FC<{
       {classification.drawing_title && (
         <div style={{ fontSize: 12, color: colors.textSecondary }}>
           {classification.drawing_title}
+        </div>
+      )}
+      {classification.id && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => setEditOpen((v) => !v)}
+            aria-label="Correct AI classification"
+            style={{
+              minHeight: 56,
+              padding: '6px 12px',
+              borderRadius: 6,
+              backgroundColor: 'transparent',
+              border: `1px solid ${colors.borderSubtle}`,
+              color: colors.textSecondary,
+              fontSize: 12,
+              cursor: 'pointer',
+            }}
+          >
+            {editOpen ? 'Cancel' : 'Correct classification'}
+          </button>
+          {logCorrection.isPending && (
+            <span style={{ fontSize: 11, color: colors.textTertiary }}>Saving…</span>
+          )}
+          {logCorrection.isSuccess && !editOpen && (
+            <span style={{ fontSize: 11, color: colors.statusActive }}>Correction logged</span>
+          )}
+        </div>
+      )}
+      {editOpen && classification.id && (
+        <div
+          style={{
+            marginTop: 8,
+            padding: 12,
+            backgroundColor: colors.surfacePage,
+            border: `1px solid ${colors.borderSubtle}`,
+            borderRadius: 6,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 8,
+          }}
+        >
+          <label style={{ fontSize: 11, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: 0.6 }}>
+            Discipline
+          </label>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {DISCIPLINE_OPTIONS.map((disc) => (
+              <button
+                key={disc}
+                type="button"
+                aria-label={`Set discipline to ${disc}`}
+                onClick={() => {
+                  logCorrection.mutate({
+                    correctionType: 'classification',
+                    projectId: projectId ?? null,
+                    drawingId: drawingId != null ? String(drawingId) : null,
+                    sourceTable: 'drawing_classifications',
+                    sourceRecordId: classification.id,
+                    originalValue: {
+                      discipline: classification.discipline,
+                      plan_type: classification.plan_type,
+                    },
+                    correctedValue: { discipline: disc },
+                  });
+                  setEditOpen(false);
+                }}
+                style={{
+                  minHeight: 56,
+                  padding: '6px 10px',
+                  borderRadius: 999,
+                  fontSize: 12,
+                  fontWeight: disc === discipline ? 600 : 400,
+                  border: `1px solid ${disc === discipline ? colors.primaryOrange : colors.borderSubtle}`,
+                  backgroundColor: disc === discipline ? `${colors.primaryOrange}22` : 'transparent',
+                  color: colors.textPrimary,
+                  cursor: 'pointer',
+                  textTransform: 'capitalize',
+                }}
+              >
+                {DISCIPLINE_LABEL[disc]}
+              </button>
+            ))}
+          </div>
+          <label style={{ fontSize: 11, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: 0.6 }}>
+            Plan type
+          </label>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {PLAN_TYPE_OPTIONS.map((pt) => (
+              <button
+                key={pt}
+                type="button"
+                aria-label={`Set plan type to ${pt}`}
+                onClick={() => {
+                  logCorrection.mutate({
+                    correctionType: 'classification',
+                    projectId: projectId ?? null,
+                    drawingId: drawingId != null ? String(drawingId) : null,
+                    sourceTable: 'drawing_classifications',
+                    sourceRecordId: classification.id,
+                    originalValue: {
+                      discipline: classification.discipline,
+                      plan_type: classification.plan_type,
+                    },
+                    correctedValue: { plan_type: pt },
+                  });
+                  setEditOpen(false);
+                }}
+                style={{
+                  minHeight: 56,
+                  padding: '6px 10px',
+                  borderRadius: 999,
+                  fontSize: 12,
+                  fontWeight: pt === planType ? 600 : 400,
+                  border: `1px solid ${pt === planType ? colors.primaryOrange : colors.borderSubtle}`,
+                  backgroundColor: pt === planType ? `${colors.primaryOrange}22` : 'transparent',
+                  color: colors.textPrimary,
+                  cursor: 'pointer',
+                  textTransform: 'capitalize',
+                }}
+              >
+                {pt.replace('_', ' ')}
+              </button>
+            ))}
+          </div>
         </div>
       )}
     </div>
@@ -624,6 +777,8 @@ const DrawingsPage: React.FC = () => {
                 classification={processing.byDrawing(String(selectedDrawing.id))}
                 status={processing.statusByDrawing(String(selectedDrawing.id))}
                 classifying={classifyMutation.isPending}
+                drawingId={selectedDrawing.id}
+                projectId={projectId}
               />
               {projectId && drawingDiscrepancies.length > 0 && (
                 <ClashDetectionPanel

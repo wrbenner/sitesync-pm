@@ -7,6 +7,7 @@ import {
   useConfirmDiscrepancy,
   useDismissDiscrepancy,
 } from '../../hooks/useDrawingIntelligence'
+import { useLogCorrection } from '../../hooks/useAITrainingCorrections'
 
 interface ClashDetectionPanelProps {
   projectId: string
@@ -39,6 +40,7 @@ export const ClashDetectionPanel: React.FC<ClashDetectionPanelProps> = ({
 }) => {
   const confirmMutation = useConfirmDiscrepancy()
   const dismissMutation = useDismissDiscrepancy()
+  const logCorrection = useLogCorrection()
 
   const active = discrepancies.filter((d) => !d.is_false_positive)
 
@@ -226,11 +228,20 @@ export const ClashDetectionPanel: React.FC<ClashDetectionPanelProps> = ({
                   icon={<Check size={14} />}
                   aria-label="Confirm discrepancy"
                   disabled={d.user_confirmed || confirmMutation.isPending}
-                  onClick={() =>
+                  onClick={() => {
                     confirmMutation.mutate({ id: d.id, projectId, drawingId })
-                  }
+                    logCorrection.mutate({
+                      correctionType: 'discrepancy',
+                      projectId,
+                      drawingId: drawingId ?? null,
+                      sourceTable: 'drawing_discrepancies',
+                      sourceRecordId: d.id,
+                      originalValue: { severity: d.severity, user_confirmed: false, is_false_positive: false },
+                      correctedValue: { user_confirmed: true, is_false_positive: false, label: 'correct' },
+                    })
+                  }}
                 >
-                  Confirm
+                  Correct
                 </Btn>
                 <Btn
                   variant="secondary"
@@ -238,9 +249,18 @@ export const ClashDetectionPanel: React.FC<ClashDetectionPanelProps> = ({
                   icon={<X size={14} />}
                   aria-label="Dismiss as false positive"
                   disabled={d.is_false_positive || dismissMutation.isPending}
-                  onClick={() =>
+                  onClick={() => {
                     dismissMutation.mutate({ id: d.id, projectId, drawingId })
-                  }
+                    logCorrection.mutate({
+                      correctionType: 'discrepancy',
+                      projectId,
+                      drawingId: drawingId ?? null,
+                      sourceTable: 'drawing_discrepancies',
+                      sourceRecordId: d.id,
+                      originalValue: { severity: d.severity, user_confirmed: false, is_false_positive: false },
+                      correctedValue: { is_false_positive: true, label: 'false_positive' },
+                    })
+                  }}
                 >
                   Dismiss
                 </Btn>

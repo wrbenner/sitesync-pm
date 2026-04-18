@@ -2,8 +2,9 @@ import React, { useState, useRef, useEffect, useCallback, memo } from 'react'
 import {
   Sparkles, Clock, Download, Clipboard, Share2, FileText,
   Calendar, DollarSign, ShieldCheck, ClipboardCheck, Scale, FileSearch,
-  Bot, ChevronRight, Users,
+  Bot, ChevronRight, Users, Layers, AlertTriangle,
 } from 'lucide-react'
+import { AI_COPILOT_DRAWING_TOOLS } from '../lib/aiPrompts'
 import { PageContainer, useToast } from '../components/Primitives'
 import { colors, spacing, typography, borderRadius, transitions, shadows } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
@@ -149,6 +150,33 @@ const PRESET_PROMPTS = [
     agentCount: 3,
   },
 ]
+
+const DRAWING_PROMPTS = [
+  {
+    label: 'Run clash analysis on this drawing set',
+    icon: Layers,
+    description: 'Trigger the full drawing intelligence pipeline',
+    agentCount: 1,
+    tool: 'trigger_clash_analysis',
+  },
+  {
+    label: 'Show discrepancy stats by severity',
+    icon: AlertTriangle,
+    description: 'Aggregate open clashes across all paired sheets',
+    agentCount: 1,
+    tool: 'get_discrepancy_stats',
+  },
+  {
+    label: 'Summarize drawing pair coverage',
+    icon: FileSearch,
+    description: 'Pairing confidence and analysis status per pair',
+    agentCount: 1,
+    tool: 'analyze_pair_relationships',
+  },
+] as const
+
+// Exported so hooks and diagnostics can reference the canonical tool list
+export const DRAWING_TOOL_SPECS = AI_COPILOT_DRAWING_TOOLS
 
 const COLLABORATION_PROMPTS = [
   {
@@ -722,6 +750,93 @@ export const AICopilot: React.FC = () => {
                     )
                   })}
                 </div>
+
+                {/* Drawing intelligence prompts: shown when arriving from the drawings page */}
+                {contextPage === 'drawings' && (
+                  <div style={{ maxWidth: 560, width: '100%' }}>
+                    <p
+                      style={{
+                        fontSize: typography.fontSize.caption,
+                        fontWeight: typography.fontWeight.semibold,
+                        color: colors.textTertiary,
+                        textTransform: 'uppercase',
+                        letterSpacing: typography.letterSpacing.wider,
+                        margin: 0,
+                        marginBottom: spacing['2'],
+                      }}
+                    >
+                      Drawing Intelligence
+                    </p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'] }}>
+                      {DRAWING_PROMPTS.map((prompt) => {
+                        const Icon = prompt.icon
+                        return (
+                          <button
+                            key={prompt.label}
+                            onClick={() => handleSendMessage(prompt.label)}
+                            aria-label={prompt.label}
+                            style={{
+                              padding: `${spacing['3']} ${spacing['4']}`,
+                              minHeight: 56,
+                              textAlign: 'left',
+                              backgroundColor: colors.surfaceRaised,
+                              border: `1px solid ${colors.borderSubtle}`,
+                              borderRadius: borderRadius.lg,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: spacing['3'],
+                              transition: `all ${transitions.quick}`,
+                              fontFamily: typography.fontFamily,
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: 32,
+                                height: 32,
+                                borderRadius: borderRadius.base,
+                                backgroundColor: colors.statusReview,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexShrink: 0,
+                              }}
+                            >
+                              <Icon size={15} color={colors.white} />
+                            </div>
+                            <div>
+                              <p
+                                style={{
+                                  fontSize: typography.fontSize.sm,
+                                  fontWeight: typography.fontWeight.medium,
+                                  color: colors.textPrimary,
+                                  margin: 0,
+                                  marginBottom: spacing['0.5'],
+                                }}
+                              >
+                                {prompt.label}
+                              </p>
+                              <p
+                                style={{
+                                  fontSize: typography.fontSize.caption,
+                                  color: colors.textTertiary,
+                                  margin: 0,
+                                }}
+                              >
+                                {prompt.description}
+                              </p>
+                            </div>
+                            <ChevronRight
+                              size={14}
+                              color={colors.textTertiary}
+                              style={{ marginLeft: 'auto', flexShrink: 0 }}
+                            />
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 {/* Collaboration prompts: shown when arriving from RFIs or submittals */}
                 {(contextPage === 'rfis' || contextPage === 'submittals') && (
