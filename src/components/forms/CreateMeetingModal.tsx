@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 interface CreateMeetingModalProps {
   onClose: () => void
   projectId: string
+  mutateAsync?: (params: { data: Record<string, unknown>; projectId: string }) => Promise<unknown>
 }
 
 const fields: FieldConfig[] = [
@@ -26,11 +27,12 @@ const fields: FieldConfig[] = [
   { name: 'agenda', label: 'Agenda', type: 'textarea', placeholder: 'Meeting agenda items' },
 ]
 
-const CreateMeetingModal: React.FC<CreateMeetingModalProps> = ({ onClose, projectId }) => {
-  const createMeeting = useCreateMeeting()
+const CreateMeetingModal: React.FC<CreateMeetingModalProps> = ({ onClose, projectId, mutateAsync: externalMutateAsync }) => {
+  const ownMutation = useCreateMeeting()
+  const doMutate = externalMutateAsync ?? ownMutation.mutateAsync
   const handleSubmit = async (data: Record<string, unknown>) => {
     try {
-      await createMeeting.mutateAsync({
+      await doMutate({
         data: { ...data, project_id: projectId, status: 'scheduled' },
         projectId,
       })

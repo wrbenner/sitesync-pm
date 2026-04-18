@@ -7,6 +7,7 @@ import { MetricCardSkeleton } from '../components/ui/Skeletons';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../styles/theme';
 import { useMeetings } from '../hooks/queries';
 import { useProjectActionItems } from '../hooks/queries/meeting-enhancements';
+import { useCreateMeeting } from '../hooks/mutations/meetings';
 import { useProjectId } from '../hooks/useProjectId';
 import { PermissionGate } from '../components/auth/PermissionGate';
 import CreateMeetingModal from '../components/forms/CreateMeetingModal';
@@ -151,6 +152,7 @@ export const Meetings: React.FC = () => {
   const [showOpenOnly, setShowOpenOnly] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
+  const { mutateAsync: createMeetingAsync, isPending: isCreating } = useCreateMeeting();
   const { data: meetingsResult, isPending, error, refetch } = useMeetings(projectId);
   const { data: actionItemsData } = useProjectActionItems(projectId);
   const allMeetings = (meetingsResult?.data ?? []) as unknown as MeetingListItem[];
@@ -274,7 +276,7 @@ export const Meetings: React.FC = () => {
             </span>
           }
         >
-          <Btn icon={<Plus size={14} />} onClick={() => setShowCreateModal(true)}>
+          <Btn icon={<Plus size={14} />} onClick={() => setShowCreateModal(true)} disabled={isCreating}>
             Schedule Meeting
           </Btn>
         </PermissionGate>
@@ -378,7 +380,7 @@ export const Meetings: React.FC = () => {
                 </span>
               }
             >
-              <Btn icon={<Plus size={14} />} onClick={() => setShowCreateModal(true)}>
+              <Btn icon={<Plus size={14} />} onClick={() => setShowCreateModal(true)} disabled={isCreating}>
                 Schedule Meeting
               </Btn>
             </PermissionGate>
@@ -522,7 +524,11 @@ export const Meetings: React.FC = () => {
       </div>
 
       {showCreateModal && projectId && (
-        <CreateMeetingModal onClose={() => setShowCreateModal(false)} projectId={projectId} />
+        <CreateMeetingModal
+          onClose={() => setShowCreateModal(false)}
+          projectId={projectId}
+          mutateAsync={createMeetingAsync}
+        />
       )}
     </PageContainer>
   );
