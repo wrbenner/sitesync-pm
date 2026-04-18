@@ -21,15 +21,20 @@ function makeChain() {
     eq: vi.fn(),
     neq: vi.fn(),
     is: vi.fn(),
+    limit: vi.fn(),
+    maybeSingle: vi.fn(),
     insert: vi.fn(),
     update: vi.fn(),
     delete: vi.fn(),
     order: vi.fn(),
     single: mockSingle,
   }
-  for (const key of ['select', 'eq', 'neq', 'is', 'insert', 'update', 'delete', 'order']) {
+  for (const key of ['select', 'eq', 'neq', 'is', 'insert', 'update', 'delete', 'order', 'limit']) {
     chain[key].mockReturnValue(chain)
   }
+  // maybeSingle resolves to the same shape mockSingle does — used by
+  // ensureOrganizationMembership which probes for an existing org.
+  chain.maybeSingle.mockResolvedValue({ data: null, error: null })
   return chain
 }
 
@@ -91,15 +96,10 @@ describe('projectService.createProject', () => {
     const project = { id: 'p-new', name: 'Tower A', organization_id: 'co-1', status: 'active' }
     mockSingle.mockResolvedValue({ data: project, error: null })
 
-    let callCount = 0
-    mockFrom.mockImplementation(() => {
-      callCount++
-      const chain = makeChain()
-      if (callCount === 2) {
-        chain.insert.mockResolvedValue({ error: null })
-      }
-      return chain
-    })
+    // createProject also calls ensureOrganizationMembership, which probes
+    // organization_members + may touch organizations. Every chain returns
+    // the chain (awaitable no-op) and maybeSingle/single resolve benignly.
+    mockFrom.mockImplementation(() => makeChain())
 
     const result = await projectService.createProject({
       name: 'Tower A',
@@ -108,7 +108,9 @@ describe('projectService.createProject', () => {
 
     expect(result.error).toBeNull()
     expect(result.data?.id).toBe('p-new')
-    expect(callCount).toBe(2)
+    const fromArgs = mockFrom.mock.calls.map((c) => c[0])
+    expect(fromArgs).toContain('projects')
+    expect(fromArgs).toContain('project_members')
   })
 
   it('sets status to active on creation', async () => {
@@ -116,32 +118,28 @@ describe('projectService.createProject', () => {
     const project = { id: 'p-1', status: 'active' }
     mockSingle.mockResolvedValue({ data: project, error: null })
 
-    let callCount = 0
-    let insertArg: Record<string, unknown> | null = null
+    let projectsInsertArg: Record<string, unknown> | null = null
     mockFrom.mockImplementation((table: string) => {
-      callCount++
       const chain = makeChain()
-      if (callCount === 1) {
-        chain.insert.mockImplementation((v: Record<string, unknown>) => {
-          if (table === 'projects') insertArg = v
-          return chain
-        })
-      } else {
-        chain.insert.mockResolvedValue({ error: null })
-      }
+      chain.insert.mockImplementation((v: Record<string, unknown>) => {
+        if (table === 'projects' && !projectsInsertArg) {
+          projectsInsertArg = v
+        }
+        return chain
+      })
       return chain
     })
 
     await projectService.createProject({ name: 'Test', organization_id: 'co-1' })
 
-    expect(insertArg?.status).toBe('active')
-    expect(insertArg?.name).toBe('Test')
+    expect(projectsInsertArg?.status).toBe('active')
+    expect(projectsInsertArg?.name).toBe('Test')
   })
 
   it('returns DatabaseError on insert failure', async () => {
     session('u-1')
     mockSingle.mockResolvedValue({ data: null, error: { message: 'duplicate project name' } })
-    mockFrom.mockReturnValue(makeChain())
+    mockFrom.mockImplementation(() => makeChain())
 
     const result = await projectService.createProject({
       name: 'Dupe',

@@ -1,8 +1,5 @@
-import { useMutation } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
-import posthog from '../../lib/analytics'
-import { useAuditedMutation, createOnError } from './createAuditedMutation'
-import { invalidateEntity } from '../../api/invalidation'
+import { useAuditedMutation } from './createAuditedMutation'
 import {
   taskSchema,
 } from '../../components/forms/schemas'
@@ -58,16 +55,18 @@ export function useUpdateTask() {
 }
 
 export function useDeleteTask() {
-  return useMutation({
-    mutationFn: async ({ id, projectId }: { id: string; projectId: string }) => {
+  return useAuditedMutation<{ id: string; projectId: string }, { projectId: string }>({
+    permission: 'tasks.delete',
+    action: 'delete',
+    entityType: 'task',
+    getEntityId: (p) => p.id,
+    mutationFn: async ({ id, projectId }) => {
       const { error } = await from('tasks').delete().eq('id', id)
       if (error) throw error
       return { projectId }
     },
-    onSuccess: (result: { projectId: string }) => {
-      invalidateEntity('task', result.projectId)
-      posthog.capture('task_deleted', { project_id: result.projectId })
-    },
-    onError: createOnError('delete_task'),
+    analyticsEvent: 'task_deleted',
+    getAnalyticsProps: (p) => ({ project_id: p.projectId }),
+    errorMessage: 'Failed to delete task',
   })
 }
