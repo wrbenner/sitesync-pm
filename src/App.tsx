@@ -111,6 +111,8 @@ const CostManagement = lazy(() => import('./pages/CostManagement'));
 const TimeTracking = lazy(() => import('./pages/TimeTracking'));
 const Deliveries = lazy(() => import('./pages/Deliveries'));
 const Wiki = lazy(() => import('./pages/Wiki'));
+const SiteMap = lazy(() => import('./pages/SiteMap'));
+const ProjectBrain = lazy(() => import('./components/ai/ProjectBrain').then((m) => ({ default: m.ProjectBrain })));
 const Onboarding = lazy(() => import('./pages/Onboarding').then((m) => ({ default: m.Onboarding })));
 const NotFound = lazy(() => import('./pages/errors/NotFound').then((m) => ({ default: m.NotFound })));
 
@@ -372,6 +374,7 @@ function AppRoutes() {
             <Route path="/time-tracking" element={<PageSuspense><ProtectedRoute moduleId="time-tracking" moduleName="Time Tracking"><TimeTracking /></ProtectedRoute></PageSuspense>} />
             <Route path="/deliveries" element={<PageSuspense><ProtectedRoute moduleId="deliveries" moduleName="Deliveries"><Deliveries /></ProtectedRoute></PageSuspense>} />
             <Route path="/wiki" element={<PageSuspense><ProtectedRoute moduleId="wiki" moduleName="Wiki"><Wiki /></ProtectedRoute></PageSuspense>} />
+            <Route path="/site-map" element={<PageSuspense><ProtectedRoute moduleId="site-map" moduleName="Site Map"><SiteMap /></ProtectedRoute></PageSuspense>} />
             <Route path="/onboarding" element={<PageSuspense><Onboarding /></PageSuspense>} />
             <Route path="*" element={<PageSuspense><NotFound /></PageSuspense>} />
           </Routes>
@@ -492,6 +495,7 @@ function AppContent() {
         </ErrorBoundary>
       </ChunkLoadErrorBoundary>
       <Suspense fallback={null}><FloatingAIButton /></Suspense>
+      {user && <Suspense fallback={null}><ProjectBrain /></Suspense>}
       {copilotOpen && <aside role="complementary" aria-label="AI Assistant"><Suspense fallback={null}><CopilotPanel /></Suspense></aside>}
       <ConflictResolutionModal open={conflictModalOpen} onClose={() => setConflictModalOpen(false)} />
     </MobileLayout>

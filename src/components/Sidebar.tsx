@@ -11,7 +11,7 @@ import {
   TrendingUp, FileDiff, Send, HardHat, Repeat2,
   Receipt, Milestone, Clock,
   X, MoreHorizontal,
-  BookOpenCheck, CheckCircle2, FileSignature,
+  BookOpenCheck, CheckCircle2, FileSignature, Map as MapIcon,
 } from 'lucide-react';
 import { useUiStore, useAuthStore } from '../stores';
 import { motion } from 'framer-motion';
@@ -79,12 +79,12 @@ const sections = [
       { id: 'deliveries', label: 'Deliveries', icon: Truck },
     ],
   },
-  {
-    label: 'Field',
+  {    label: 'Field',
     items: [
       { id: 'field-capture', label: 'Field Capture', icon: HardHat },
       { id: 'daily-log', label: 'Daily Log', icon: BookOpen },
       { id: 'punch-list', label: 'Punch List', icon: CheckSquare },
+      { id: 'site-map', label: 'Site Map', icon: MapIcon },
       { id: 'crews', label: 'Crews', icon: Users },
       { id: 'workforce', label: 'Workforce', icon: HardHat },
       { id: 'time-tracking', label: 'Time Tracking', icon: Clock },
@@ -162,6 +162,7 @@ const PAGE_PREFETCH_MAP: Record<string, () => void> = {
   'time-tracking':   () => import('../pages/TimeTracking').catch(() => {}),
   deliveries:        () => import('../pages/Deliveries').catch(() => {}),
   wiki:              () => import('../pages/Wiki').catch(() => {}),
+  'site-map':        () => import('../pages/SiteMap').catch(() => {}),
   transmittals:   () => import('../pages/Transmittals').catch(() => {}),
   closeout:       () => import('../pages/Closeout').catch(() => {}),
   'field-capture': () => import('../pages/field-capture').catch(() => {}),

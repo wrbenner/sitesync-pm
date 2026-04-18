@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { AlertTriangle, ClipboardCheck, Award, Users, Plus, ShieldCheck, Shield, Wrench } from 'lucide-react'
-import { PageContainer, Card, Btn, MetricBox } from '../components/Primitives'
+import { AlertTriangle, ClipboardCheck, Award, Users, Plus, ShieldCheck, Shield, Wrench, Sparkles } from 'lucide-react'
+import { PageContainer, Card, Btn, MetricBox, Modal } from '../components/Primitives'
+import { SafetyPhotoAnalyzer } from '../components/safety/SafetyPhotoAnalyzer'
 import { PermissionGate } from '../components/auth/PermissionGate'
 import { DataTable, createColumnHelper } from '../components/shared/DataTable'
 import { ExportButton } from '../components/shared/ExportButton'
@@ -587,6 +588,7 @@ export const Safety: React.FC = () => {
   // ── Incident form state ────────────────────────────────────
 
   const [showIncidentModal, setShowIncidentModal] = useState(false)
+  const [showAiScanModal, setShowAiScanModal] = useState(false)
   const [incidentForm, setIncidentForm] = useState({
     date: '',
     type: '',
@@ -787,6 +789,9 @@ export const Safety: React.FC = () => {
       actions={
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
           <ExportButton pdfFilename="SiteSync_Safety_Report" />
+          <Btn variant="secondary" icon={<Sparkles size={16} />} onClick={() => setShowAiScanModal(true)} style={{ minHeight: 56 }}>
+            AI Safety Scan
+          </Btn>
           {activeTab === 'incidents' && (
             <PermissionGate permission="safety.manage">
             <Btn variant="primary" icon={<Plus size={16} />} onClick={() => setShowIncidentModal(true)} style={{ minHeight: 56 }}>
@@ -1828,6 +1833,21 @@ export const Safety: React.FC = () => {
           </div>
         </div>
       )}
+
+      <Modal open={showAiScanModal} onClose={() => setShowAiScanModal(false)} title="AI Safety Scan" width="720px">
+        <SafetyPhotoAnalyzer
+          onClose={() => setShowAiScanModal(false)}
+          onCreateObservation={(v, photoUrl) => {
+            setIncidentForm((f) => ({
+              ...f,
+              description: `[AI-detected ${v.severity} violation – ${v.category}]\n${v.description}\n\nOSHA: ${v.osha_reference}\nCorrective action: ${v.corrective_action}\n\nPhoto: ${photoUrl}`,
+            }))
+            setShowAiScanModal(false)
+            setShowIncidentModal(true)
+            toast.info('Incident form pre-filled from AI analysis')
+          }}
+        />
+      </Modal>
     </PageContainer>
   )
 }

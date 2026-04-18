@@ -16,6 +16,7 @@ import type { ExtendedDailyLog, ManpowerRow, IncidentForm } from './types';
 import { CrewHoursEntry } from './CrewHoursEntry';
 import { WeatherWidget } from './WeatherWidget';
 import { SignatureCapture } from './SignatureCapture';
+import { VoiceRecorder } from '../../components/voice/VoiceRecorder';
 
 interface DailyLogFormProps {
   today: ExtendedDailyLog;
@@ -419,6 +420,42 @@ export const DailyLogForm: React.FC<DailyLogFormProps> = (props) => {
             </div>
           )}
         </Card>
+
+        {!isLocked && (
+          <Card>
+            <SectionHeader title="Speak Your Daily Log" />
+            <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: `0 0 ${spacing['3']} 0` }}>
+              Tap the mic and narrate your day. We'll transcribe and structure it into the form fields.
+            </p>
+            <VoiceRecorder
+              kind="daily_log"
+              label="Voice daily log"
+              onStructured={(structured, transcript) => {
+                const s = (structured || {}) as Record<string, unknown>;
+                const activities = Array.isArray(s.activities) ? s.activities : [];
+                const summaryParts: string[] = [];
+                if (typeof s.summary === 'string' && s.summary) summaryParts.push(s.summary);
+                activities.forEach((a) => {
+                  const obj = a as Record<string, unknown>;
+                  const desc = typeof obj.description === 'string' ? obj.description : '';
+                  const loc = typeof obj.location === 'string' ? obj.location : '';
+                  if (desc) summaryParts.push(`• ${desc}${loc ? ` (${loc})` : ''}`);
+                });
+                const newSummary = summaryParts.join('\n') || transcript;
+                setWorkSummary((prev) => prev ? `${prev}\n\n${newSummary}` : newSummary);
+                if (aiSummaryGenerated) setAiSummaryGenerated(false);
+                const issues = Array.isArray(s.issues) ? s.issues : [];
+                if (issues.length > 0) {
+                  const issueText = issues.map((i) => {
+                    const io = i as Record<string, unknown>;
+                    return `• ${io.description || ''}`;
+                  }).join('\n');
+                  setIssuesDelays(issueText);
+                }
+              }}
+            />
+          </Card>
+        )}
 
         <Card>
           <SectionHeader
