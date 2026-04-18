@@ -494,7 +494,9 @@ function AppContent() {
       {user && <AuthenticatedProviders activeView={activeView} />}
       <OfflineBanner />
       <ChunkLoadErrorBoundary>
-        <ErrorBoundary fallback={<ErrorFallback />}>
+        {/* key={pathname} resets the boundary on navigation so a crash on one page
+            doesn't lock the user out of every other page. */}
+        <ErrorBoundary key={location.pathname} fallback={<ErrorFallback />}>
           <AppRoutes />
         </ErrorBoundary>
       </ChunkLoadErrorBoundary>
@@ -537,7 +539,9 @@ function AppContent() {
         >
           <OfflineBanner />
           <ChunkLoadErrorBoundary>
-            <ErrorBoundary>
+            {/* key={pathname} resets the boundary on navigation so a crash on one page
+                doesn't lock the user out of every other page. */}
+            <ErrorBoundary key={location.pathname}>
               <AppRoutes />
             </ErrorBoundary>
           </ChunkLoadErrorBoundary>

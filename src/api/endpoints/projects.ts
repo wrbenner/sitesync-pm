@@ -71,11 +71,19 @@ async function fetchScheduleMetrics(projectId: string): Promise<{
 export async function getProject(projectId: string): Promise<EnrichedProject> {
   if (!projectId) throw new ApiError('projectId is required to load project data', 400, 'MISSING_PROJECT_ID', 'No project selected.')
   const [projectResult, { completionPercentage }] = await Promise.all([
-    supabase.from('projects').select('*').eq('id', projectId).single(),
+    supabase.from('projects').select('*').eq('id', projectId).maybeSingle(),
     fetchScheduleMetrics(projectId),
   ])
   if (projectResult.error) throw transformSupabaseError(projectResult.error)
   const data = projectResult.data
+  if (!data) {
+    throw new ApiError(
+      `Project ${projectId} not found or not accessible`,
+      404,
+      'PROJECT_NOT_FOUND',
+      'Project not found.',
+    )
+  }
   return {
     ...data,
     totalValue: data.contract_value || 0,
@@ -94,17 +102,25 @@ export async function getMetrics(projectId: string): Promise<ProjectMetricsResul
   if (!projectId) throw new ApiError('projectId is required to load project data', 400, 'MISSING_PROJECT_ID', 'No project selected.')
 
   const [projectResult, metricsResult, scheduleMetrics, costData] = await Promise.all([
-    supabase.from('projects').select('*').eq('id', projectId).single(),
-    supabase.from('project_metrics').select('*').eq('project_id', projectId).single(),
+    supabase.from('projects').select('*').eq('id', projectId).maybeSingle(),
+    supabase.from('project_metrics').select('*').eq('project_id', projectId).maybeSingle(),
     fetchScheduleMetrics(projectId),
     fetchBudgetDivisions(projectId).catch(() => null),
   ])
 
   if (projectResult.error) throw transformSupabaseError(projectResult.error)
-  if (metricsResult.error) throw transformSupabaseError(metricsResult.error)
+  // metrics view may legitimately be empty for new projects — degrade gracefully.
 
   const project = projectResult.data
-  const metrics = metricsResult.data as ProjectMetrics
+  if (!project) {
+    throw new ApiError(
+      `Project ${projectId} not found or not accessible`,
+      404,
+      'PROJECT_NOT_FOUND',
+      'Project not found.',
+    )
+  }
+  const metrics = (metricsResult.data ?? null) as ProjectMetrics | null
   const contractValue = project.contract_value || 0
 
   // COMPUTED: source = financialEngine
@@ -117,23 +133,23 @@ export async function getMetrics(projectId: string): Promise<ProjectMetricsResul
   const { scheduleVarianceDays, completionPercentage } = scheduleMetrics
 
   const daysBeforeSchedule = project.target_completion
-    ? Math.ceil((new Date(project.target_completion).getTime() - Date.now()) / 86400000) - (metrics.planned_duration_days ?? 0)
+    ? Math.ceil((new Date(project.target_completion).getTime() - Date.now()) / 86400000) - (metrics?.planned_duration_days ?? 0)
     : 0
 
   return {
-    progress: metrics.overall_progress,
-    budgetSpent: metrics.budget_spent,
-    budgetTotal: metrics.budget_total || contractValue,
-    crewsActive: metrics.crews_active,
-    workersOnSite: metrics.workers_onsite,
-    rfiOpen: metrics.rfis_open,
-    rfiOverdue: metrics.rfis_overdue,
-    punchListOpen: metrics.punch_open,
-    aiHealthScore: computeProjectHealthScore(metrics),
+    progress: metrics?.overall_progress ?? 0,
+    budgetSpent: metrics?.budget_spent ?? 0,
+    budgetTotal: metrics?.budget_total || contractValue,
+    crewsActive: metrics?.crews_active ?? 0,
+    workersOnSite: metrics?.workers_onsite ?? 0,
+    rfiOpen: metrics?.rfis_open ?? 0,
+    rfiOverdue: metrics?.rfis_overdue ?? null,
+    punchListOpen: metrics?.punch_open ?? null,
+    aiHealthScore: metrics ? computeProjectHealthScore(metrics) : null,
     daysBeforeSchedule,
-    milestonesHit: metrics.milestones_completed,
-    milestoneTotal: metrics.milestones_total,
-    aiConfidenceLevel: computeAiConfidenceLevel(metrics),
+    milestonesHit: metrics?.milestones_completed ?? 0,
+    milestoneTotal: metrics?.milestones_total ?? 0,
+    aiConfidenceLevel: metrics ? computeAiConfidenceLevel(metrics) : null,
     // COMPUTED: source = financialEngine
     budgetVariance,
     // COMPUTED: source = financialEngine
