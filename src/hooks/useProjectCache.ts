@@ -64,15 +64,20 @@ export function useProjectCache(projectId: string | undefined) {
     if (!projectId || cachingRef.current) return
 
     const maybeCache = async () => {
-      const lastCacheStr = await getSyncMetadata(`lastSync:${projectId}`)
-      if (lastCacheStr) {
-        const elapsed = Date.now() - new Date(lastCacheStr).getTime()
-        if (elapsed < 5 * 60 * 1000) return // cached within 5 min
-      }
+      try {
+        const lastCacheStr = await getSyncMetadata(`lastSync:${projectId}`)
+        if (lastCacheStr) {
+          const elapsed = Date.now() - new Date(lastCacheStr).getTime()
+          if (elapsed < 5 * 60 * 1000) return
+        }
 
-      cachingRef.current = true
-      await syncManager.cacheProject(projectId)
-      cachingRef.current = false
+        cachingRef.current = true
+        await syncManager.cacheProject(projectId)
+      } catch (err) {
+        if (import.meta.env.DEV) console.warn('[useProjectCache] cache error:', err)
+      } finally {
+        cachingRef.current = false
+      }
     }
 
     maybeCache()

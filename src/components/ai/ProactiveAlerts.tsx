@@ -30,45 +30,63 @@ function useProactiveAlerts(projectId: string | undefined) {
       const inSevenDays = new Date(now.getTime() + 7 * 86400000);
       const inThirtyDays = new Date(now.getTime() + 30 * 86400000);
 
-      const [submittalsRes, rfisRes, certsRes, budgetRes] = await Promise.all([
-        supabase.from('submittals')
-          .select('id, title, due_date, status')
-          .eq('project_id', projectId)
-          .in('status', ['pending', 'under_review'])
-          .lte('due_date', inSevenDays.toISOString())
-          .gte('due_date', now.toISOString()),
-        supabase.from('rfis')
-          .select('id, rfi_number, title, created_at, status')
-          .eq('project_id', projectId)
-          .eq('status', 'open'),
-        supabase.from('safety_certifications')
-          .select('id, certification_name, worker_name, expiration_date')
-          .eq('project_id', projectId)
-          .lte('expiration_date', inThirtyDays.toISOString().split('T')[0])
-          .gte('expiration_date', now.toISOString().split('T')[0]),
-        supabase.from('budget_items')
-          .select('id, division_code, budgeted_amount, actual_amount, category')
-          .eq('project_id', projectId),
+      const safeRun = async <T,>(fn: () => Promise<{ data: T | null; error: unknown }>): Promise<T[]> => {
+        try {
+          const res = await fn();
+          if (res.error) {
+            if (import.meta.env.DEV) console.warn('[ProactiveAlerts] query error:', res.error);
+            return [];
+          }
+          return Array.isArray(res.data) ? (res.data as T[]) : [];
+        } catch (err) {
+          if (import.meta.env.DEV) console.warn('[ProactiveAlerts] query threw:', err);
+          return [];
+        }
+      };
+
+      const [submittalsData, rfisData, certsData, budgetData] = await Promise.all([
+        safeRun<{ id: string; title: string; due_date: string; status: string }>(() =>
+          supabase.from('submittals')
+            .select('id, title, due_date, status')
+            .eq('project_id', projectId)
+            .in('status', ['pending', 'under_review'])
+            .lte('due_date', inSevenDays.toISOString())
+            .gte('due_date', now.toISOString())),
+        safeRun<{ id: string; rfi_number: string | null; title: string | null; created_at: string; status: string | null }>(() =>
+          supabase.from('rfis')
+            .select('id, rfi_number, title, created_at, status')
+            .eq('project_id', projectId)
+            .eq('status', 'open')),
+        safeRun<{ id: string; certification_name: string; worker_name: string; expiration_date: string }>(() =>
+          supabase.from('safety_certifications')
+            .select('id, certification_name, worker_name, expiration_date')
+            .eq('project_id', projectId)
+            .lte('expiration_date', inThirtyDays.toISOString().split('T')[0])
+            .gte('expiration_date', now.toISOString().split('T')[0])),
+        safeRun<{ id: string; division_code?: string; category?: string; budgeted_amount?: number; actual_amount?: number }>(() =>
+          supabase.from('budget_items')
+            .select('id, division_code, budgeted_amount, actual_amount, category')
+            .eq('project_id', projectId)),
       ]);
 
       const alerts: ProactiveAlert[] = [];
 
       // Submittals due this week
-      const submittalsDueSoon = submittalsRes.data?.length ?? 0;
+      const submittalsDueSoon = submittalsData.length;
       if (submittalsDueSoon > 0) {
         alerts.push({
           id: 'submittals_due_week',
           severity: submittalsDueSoon > 3 ? 'warning' : 'info',
           icon: Clock,
           title: `${submittalsDueSoon} submittal${submittalsDueSoon === 1 ? '' : 's'} due this week`,
-          description: submittalsRes.data!.slice(0, 3).map((s: { title: string }) => s.title).join(', ') + (submittalsDueSoon > 3 ? '…' : ''),
+          description: submittalsData.slice(0, 3).map((s) => s.title).join(', ') + (submittalsDueSoon > 3 ? '…' : ''),
           navigateTo: '/submittals',
         });
       }
 
       // Stale open RFIs (>14 days old)
       const avgResponseDays = 7;
-      const staleRfis = (rfisRes.data ?? []).filter((r: { created_at: string }) => {
+      const staleRfis = rfisData.filter((r) => {
         const age = (now.getTime() - new Date(r.created_at).getTime()) / 86400000;
         return age > 14;
       });
@@ -87,11 +105,11 @@ function useProactiveAlerts(projectId: string | undefined) {
 
       // Budget variance by division
       const byDivision: Record<string, { budgeted: number; actual: number; label: string }> = {};
-      for (const b of budgetRes.data ?? []) {
-        const key = (b as { division_code?: string }).division_code ?? (b as { category?: string }).category ?? 'Other';
+      for (const b of budgetData) {
+        const key = b.division_code ?? b.category ?? 'Other';
         if (!byDivision[key]) byDivision[key] = { budgeted: 0, actual: 0, label: key };
-        byDivision[key].budgeted += Number((b as { budgeted_amount?: number }).budgeted_amount ?? 0);
-        byDivision[key].actual += Number((b as { actual_amount?: number }).actual_amount ?? 0);
+        byDivision[key].budgeted += Number(b.budgeted_amount ?? 0);
+        byDivision[key].actual += Number(b.actual_amount ?? 0);
       }
       for (const key of Object.keys(byDivision)) {
         const { budgeted, actual, label } = byDivision[key];
@@ -110,14 +128,14 @@ function useProactiveAlerts(projectId: string | undefined) {
       }
 
       // Certifications expiring
-      const expiringCount = certsRes.data?.length ?? 0;
+      const expiringCount = certsData.length;
       if (expiringCount > 0) {
         alerts.push({
           id: 'certs_expiring',
           severity: expiringCount > 3 ? 'warning' : 'info',
           icon: Award,
           title: `${expiringCount} certification${expiringCount === 1 ? '' : 's'} expire within 30 days`,
-          description: certsRes.data!.slice(0, 3).map((c: { worker_name: string; certification_name: string }) => `${c.worker_name} — ${c.certification_name}`).join(', ') + (expiringCount > 3 ? '…' : ''),
+          description: certsData.slice(0, 3).map((c) => `${c.worker_name} — ${c.certification_name}`).join(', ') + (expiringCount > 3 ? '…' : ''),
           navigateTo: '/safety',
         });
       }

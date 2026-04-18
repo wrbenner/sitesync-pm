@@ -256,6 +256,26 @@ export class ErrorBoundary extends React.Component<Props, State> {
                 Go to Dashboard
               </a>
             </div>
+            {import.meta.env.DEV && this.state.error && (
+              <pre
+                style={{
+                  fontSize: 12,
+                  maxHeight: 240,
+                  overflow: 'auto',
+                  textAlign: 'left',
+                  padding: 16,
+                  width: '100%',
+                  backgroundColor: colors.surfaceInset,
+                  borderRadius: 6,
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                }}
+              >
+                {this.state.error.message}
+                {'\n\n'}
+                {this.state.error.stack}
+              </pre>
+            )}
           </div>
         </div>
       );

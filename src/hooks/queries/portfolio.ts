@@ -13,7 +13,6 @@ export function useOrgPortfolioMetrics(orgId: string | undefined) {
     enabled: !!orgId,
     staleTime: 60_000,
     retry: 1,
-    throwOnError: true,
   })
 }
 

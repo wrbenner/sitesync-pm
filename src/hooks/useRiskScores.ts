@@ -27,15 +27,33 @@ export function useRiskScores(projectId: string | null | undefined) {
     enabled: !!projectId,
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
-      const [rfiRes, budgetRes, scheduleRes, incidentRes, inspRes] = await Promise.all([
-        fromTable('rfis').select('id,title,created_at,status,priority').eq('project_id', projectId!).limit(200),
-        fromTable('budget_line_items').select('id,code,description,budget,actual,committed').eq('project_id', projectId!).limit(200),
-        fromTable('schedule_activities').select('id,name,percent_complete,planned_start,planned_finish').eq('project_id', projectId!).limit(200),
-        fromTable('safety_incidents').select('id,incident_date').eq('project_id', projectId!).order('incident_date', { ascending: false }).limit(1),
-        fromTable('safety_inspections').select('id,status,inspection_date').eq('project_id', projectId!).limit(200),
+      const safeRun = async <T,>(fn: () => Promise<{ data: unknown; error: unknown }>): Promise<T[]> => {
+        try {
+          const res = await fn()
+          if (res.error) {
+            if (import.meta.env.DEV) console.warn('[useRiskScores] query error:', res.error)
+            return []
+          }
+          return Array.isArray(res.data) ? (res.data as T[]) : []
+        } catch (err) {
+          if (import.meta.env.DEV) console.warn('[useRiskScores] query threw:', err)
+          return []
+        }
+      }
+
+      const [rfis, budgets, activities, incidents, inspections] = await Promise.all([
+        safeRun<{ id: string; title: string | null; created_at: string; status: string | null; priority: string | null }>(() =>
+          fromTable('rfis').select('id,title,created_at,status,priority').eq('project_id', projectId!).limit(200)),
+        safeRun<{ id: string; code: string | null; description: string | null; budget: number; actual: number; committed: number }>(() =>
+          fromTable('budget_line_items').select('id,code,description,budget,actual,committed').eq('project_id', projectId!).limit(200)),
+        safeRun<{ id: string; name: string; percent_complete: number; planned_start: string | null; planned_finish: string | null }>(() =>
+          fromTable('schedule_activities').select('id,name,percent_complete,planned_start,planned_finish').eq('project_id', projectId!).limit(200)),
+        safeRun<{ incident_date: string }>(() =>
+          fromTable('safety_incidents').select('id,incident_date').eq('project_id', projectId!).order('incident_date', { ascending: false }).limit(1)),
+        safeRun<{ status: string | null; inspection_date: string }>(() =>
+          fromTable('safety_inspections').select('id,status,inspection_date').eq('project_id', projectId!).limit(200)),
       ])
 
-      const rfis = (rfiRes.data as Array<{ id: string; title: string | null; created_at: string; status: string | null; priority: string | null }> | null) ?? []
       const rfiScored: ScoredEntity[] = rfis
         .filter((r) => r.status !== 'closed' && r.status !== 'approved')
         .map((r) => ({
@@ -53,7 +71,6 @@ export function useRiskScores(projectId: string | null | undefined) {
           }),
         }))
 
-      const budgets = (budgetRes.data as Array<{ id: string; code: string | null; description: string | null; budget: number; actual: number; committed: number }> | null) ?? []
       const budgetScored: ScoredEntity[] = budgets
         .filter((b) => (b.budget ?? 0) > 0)
         .map((b) => ({
@@ -71,7 +88,6 @@ export function useRiskScores(projectId: string | null | undefined) {
           }),
         }))
 
-      const activities = (scheduleRes.data as Array<{ id: string; name: string; percent_complete: number; planned_start: string | null; planned_finish: string | null }> | null) ?? []
       const now = Date.now()
       const scheduleScored: ScoredEntity[] = activities.map((a) => {
         const start = a.planned_start ? new Date(a.planned_start).getTime() : now
@@ -94,12 +110,11 @@ export function useRiskScores(projectId: string | null | undefined) {
         }
       })
 
-      const lastIncident = (incidentRes.data as Array<{ incident_date: string }> | null)?.[0]
+      const lastIncident = incidents[0]
       const daysSinceIncident = lastIncident
         ? Math.max(0, Math.floor((Date.now() - new Date(lastIncident.incident_date).getTime()) / 86400000))
         : 365
 
-      const inspections = (inspRes.data as Array<{ status: string | null; inspection_date: string }> | null) ?? []
       const thirty = Date.now() - 30 * 86400000
       const recent = inspections.filter((i) => new Date(i.inspection_date).getTime() >= thirty)
       const completed = recent.filter((i) => i.status === 'completed' || i.status === 'passed').length
