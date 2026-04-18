@@ -15,6 +15,14 @@ import {
   HttpError,
   errorResponse,
 } from '../shared/auth.ts'
+import {
+  getInviteHtml,
+  getReportHtml,
+  getDiscrepancyAlertHtml,
+  type InviteEmailData,
+  type ReportEmailData,
+  type DiscrepancyAlertEmailData,
+} from './templates.ts'
 
 const RESEND_API_BASE = 'https://api.resend.com'
 
@@ -23,6 +31,9 @@ type TemplateName =
   | 'payment_receipt'
   | 'drawing_analysis_complete'
   | 'discrepancy_alert'
+  | 'invite'
+  | 'report'
+  | 'discrepancy_alert_branded'
   | 'custom'
 
 interface EmailAttachment {
@@ -117,6 +128,32 @@ function renderTemplate(
          <p>Review before issuing RFIs to the architect or structural engineer.</p>
          ${data.report_url ? `<p><a href="${data.report_url}" style="color:#F47820;">View report</a></p>` : ''}`,
       ),
+    }
+  }
+
+  if (template === 'invite') {
+    const d = data as unknown as InviteEmailData
+    const org = d.organizationName ?? 'SiteSync PM'
+    return {
+      subject: `You're invited to ${org}`,
+      html: getInviteHtml(d),
+    }
+  }
+
+  if (template === 'report') {
+    const d = data as unknown as ReportEmailData
+    return {
+      subject: `Report ready: ${d.reportTitle} — ${d.projectName}`,
+      html: getReportHtml(d),
+    }
+  }
+
+  if (template === 'discrepancy_alert_branded') {
+    const d = data as unknown as DiscrepancyAlertEmailData
+    const sevLabel = d.severity.charAt(0).toUpperCase() + d.severity.slice(1)
+    return {
+      subject: `${sevLabel} discrepancy detected on ${d.projectName}`,
+      html: getDiscrepancyAlertHtml(d),
     }
   }
 
