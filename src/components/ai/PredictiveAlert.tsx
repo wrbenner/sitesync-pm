@@ -208,12 +208,15 @@ export const PageInsightBanners: React.FC<{ page: string }> = ({ page }) => {
   const projectId = useProjectId();
   const { data: insights } = useAIInsights(projectId, page);
   const queryClient = useQueryClient();
+  // Unique per mount — deterministic channel names collide when the same
+  // hook is used by >1 component (see usePermissions for context).
+  const instanceId = React.useId();
 
   React.useEffect(() => {
     if (!projectId) return;
 
     const channel = supabase
-      .channel(`ai_insights_${projectId}`)
+      .channel(`ai_insights_${projectId}_${instanceId}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'ai_insights', filter: `project_id=eq.${projectId}` },
@@ -227,7 +230,7 @@ export const PageInsightBanners: React.FC<{ page: string }> = ({ page }) => {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [projectId, queryClient]);
+  }, [projectId, queryClient, instanceId]);
 
   if (!insights || insights.length === 0) return null;
 

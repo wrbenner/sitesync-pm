@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect } from 'react'
+import { useEffect, useId } from 'react'
 import { supabase } from '../../lib/supabase'
 import { getAiInsights } from '../../api/endpoints/ai'
 import type {
@@ -10,11 +10,15 @@ import type {
 
 export function useAIInsights(projectId: string | undefined, page?: string | null) {
   const queryClient = useQueryClient()
+  // Unique per hook instance — supabase.channel(name) returns an existing
+  // channel for a duplicate name, and calling .on() on an already-subscribed
+  // channel throws. Multiple components call this hook per page.
+  const instanceId = useId()
 
   useEffect(() => {
     if (!projectId) return
     const channel = supabase
-      .channel(`ai_insights:${projectId}`)
+      .channel(`ai_insights:${projectId}:${instanceId}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'ai_insights', filter: `project_id=eq.${projectId}` },
@@ -22,7 +26,7 @@ export function useAIInsights(projectId: string | undefined, page?: string | nul
       )
       .subscribe()
     return () => { supabase.removeChannel(channel) }
-  }, [projectId, queryClient])
+  }, [projectId, queryClient, instanceId])
 
   return useQuery({
     queryKey: ['ai_insights', projectId, page ?? null],
