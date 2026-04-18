@@ -5,7 +5,7 @@ import {
 } from '../components/Primitives';
 import { MetricCardSkeleton } from '../components/ui/Skeletons';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../styles/theme';
-import { useMeetings } from '../hooks/queries';
+import { useMeetings } from '../hooks/queries/meetings';
 import { useProjectActionItems } from '../hooks/queries/meeting-enhancements';
 import { useProjectId } from '../hooks/useProjectId';
 import { PermissionGate } from '../components/auth/PermissionGate';
