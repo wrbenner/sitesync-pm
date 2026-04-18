@@ -1,7 +1,8 @@
 import { supabase } from '../lib/supabase';
 import type { PunchItem } from '../types/database';
 import type { PunchItemState } from '../machines/punchItemMachine';
-import { getValidPunchTransitions, getNextPunchStatus } from '../machines/punchItemMachine';
+import { getValidPunchTargetStates, getNextPunchStatus } from '../machines/punchItemMachine';
+import { validateTransition, logTransition } from './stateMachineUtils';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -133,19 +134,21 @@ export const punchItemService = {
       return { data: null, error: 'User is not a member of this project' };
     }
 
-    // 3. Validate action against lifecycle machine
+    // 3. Resolve next status from action, then validate the state transition
     const currentStatus = (item.status ?? 'open') as PunchItemState;
-    const validActions = getValidPunchTransitions(currentStatus);
-    if (!validActions.includes(action)) {
+    const newStatus = getNextPunchStatus(currentStatus, action);
+    if (!newStatus) {
+      const validTargets = getValidPunchTargetStates(currentStatus);
       return {
         data: null,
-        error: `Invalid action: "${action}" from status "${currentStatus}" (role: ${role}). Valid: ${validActions.join(', ')}`,
+        error: `Invalid action: "${action}" from status "${currentStatus}" (role: ${role}). Valid targets: [${validTargets.join(', ')}]`,
       };
     }
 
-    const newStatus = getNextPunchStatus(currentStatus, action);
-    if (!newStatus) {
-      return { data: null, error: `Could not resolve next status for action: ${action}` };
+    const validTargets = getValidPunchTargetStates(currentStatus);
+    const transitionError = validateTransition('punch_item', currentStatus, newStatus, validTargets);
+    if (transitionError) {
+      return { data: null, error: transitionError.message };
     }
 
     // 4. Execute transition with provenance and lifecycle timestamps
@@ -167,6 +170,17 @@ export const punchItemService = {
       .eq('id', punchItemId);
 
     if (error) return { data: null, error: error.message };
+
+    await logTransition({
+      entityType: 'punch_items',
+      entityId: punchItemId,
+      projectId: item.project_id,
+      userId,
+      currentState: currentStatus,
+      newState: newStatus,
+      role,
+    });
+
     return { data: null, error: null };
   },
 

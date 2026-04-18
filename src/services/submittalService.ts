@@ -3,6 +3,7 @@ import type { Submittal } from '../types/database';
 import type { SubmittalApproval } from '../types/entities';
 import type { SubmittalStatus, CreateSubmittalInput } from '../types/submittal';
 import { getValidSubmittalStatusTransitions } from '../machines/submittalMachine';
+import { validateTransition, logTransition } from './stateMachineUtils';
 import {
   type Result,
   ok,
@@ -10,7 +11,6 @@ import {
   dbError,
   permissionError,
   notFoundError,
-  validationError,
 } from './errors';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -115,15 +115,9 @@ export const submittalService = {
     }
 
     const currentStatus = submittal.status as SubmittalStatus;
-    const validTransitions = getValidSubmittalStatusTransitions(currentStatus, role);
-    if (!validTransitions.includes(newStatus)) {
-      return fail(
-        validationError(
-          `Invalid transition: ${currentStatus} to ${newStatus} (role: ${role}). Valid: ${validTransitions.join(', ')}`,
-          { currentStatus, newStatus, role, validTransitions },
-        ),
-      );
-    }
+    const validTargets = getValidSubmittalStatusTransitions(currentStatus, role);
+    const transitionError = validateTransition('submittal', currentStatus, newStatus, validTargets);
+    if (transitionError) return fail(transitionError);
 
     const updates: Record<string, unknown> = {
       status: newStatus,
@@ -144,6 +138,17 @@ export const submittalService = {
       .eq('id', submittalId);
 
     if (error) return fail(dbError(error.message, { submittalId, newStatus }));
+
+    await logTransition({
+      entityType: 'submittals',
+      entityId: submittalId,
+      projectId: submittal.project_id,
+      userId,
+      currentState: currentStatus,
+      newState: newStatus,
+      role,
+    });
+
     return { data: null, error: null };
   },
 

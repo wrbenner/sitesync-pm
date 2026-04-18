@@ -99,6 +99,34 @@ export const rfiMachine = setup({
   },
 })
 
+// ── Valid Target States (state-to-state, for service-layer validation) ────────
+
+/**
+ * Returns valid target RFIState values for a given current state and role.
+ * Used by rfiService.transitionStatus() for lifecycle enforcement.
+ * Role groups: admin/owner can void from any non-final state.
+ */
+export function getValidRfiTargetStates(status: RFIState, userRole: string = 'viewer'): RFIState[] {
+  const isAdminOrOwner = userRole === 'admin' || userRole === 'owner'
+
+  const base: Record<RFIState, RFIState[]> = {
+    draft: ['open'],
+    open: ['under_review', 'closed'],
+    under_review: ['answered', 'closed'],
+    answered: ['closed', 'open'],
+    closed: ['open'],
+    void: [],
+  }
+
+  const result: RFIState[] = [...(base[status] || [])]
+
+  if (isAdminOrOwner && status !== 'void') {
+    result.push('void')
+  }
+
+  return result
+}
+
 // ── Valid Transitions ────────────────────────────────────
 
 // BUG #4 FIX: Accept userRole parameter. Void only available to admin/owner.

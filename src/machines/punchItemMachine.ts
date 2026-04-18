@@ -50,6 +50,22 @@ export const punchItemMachine = setup({
   },
 })
 
+// ── Valid Target States (state-to-state, for service-layer validation) ────────
+
+/**
+ * Returns valid target PunchItemState values for a given current state.
+ * Used by punchItemService.transitionStatus() via validateTransition().
+ */
+export function getValidPunchTargetStates(status: PunchItemState): PunchItemState[] {
+  const map: Record<PunchItemState, PunchItemState[]> = {
+    open: ['in_progress', 'verified'],
+    in_progress: ['resolved', 'open'],
+    resolved: ['verified', 'open'],
+    verified: ['in_progress'],
+  }
+  return map[status] || []
+}
+
 // ── Valid Transitions ─────────────────────────────────────
 
 export function getValidPunchTransitions(status: PunchItemState): string[] {

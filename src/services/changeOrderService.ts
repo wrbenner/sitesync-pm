@@ -7,6 +7,7 @@ import {
   type ChangeOrderType,
   type ReasonCode,
 } from '../machines/changeOrderMachine';
+import { validateTransition, logTransition } from './stateMachineUtils';
 import {
   type Result,
   ok,
@@ -14,7 +15,6 @@ import {
   dbError,
   permissionError,
   notFoundError,
-  validationError,
   conflictError,
 } from './errors';
 
@@ -147,14 +147,8 @@ export const changeOrderService = {
 
     const currentStatus = co.status as ChangeOrderState;
     const validTargets = getValidCOTransitionsForRole(currentStatus, role);
-    if (!validTargets.includes(newStatus)) {
-      return fail(
-        validationError(
-          `Invalid transition: ${currentStatus} \u2192 ${newStatus} (role: ${role}). Valid: ${validTargets.join(', ')}`,
-          { currentStatus, newStatus, role, validTargets },
-        ),
-      );
-    }
+    const transitionError = validateTransition('change_order', currentStatus, newStatus, validTargets);
+    if (transitionError) return fail(transitionError);
 
     const now = new Date().toISOString();
     const updates: Record<string, unknown> = {
@@ -181,6 +175,17 @@ export const changeOrderService = {
       .eq('id', coId);
 
     if (error) return fail(dbError(error.message, { coId, newStatus }));
+
+    await logTransition({
+      entityType: 'change_orders',
+      entityId: coId,
+      projectId: co.project_id,
+      userId,
+      currentState: currentStatus,
+      newState: newStatus,
+      role,
+    });
+
     return { data: null, error: null };
   },
 

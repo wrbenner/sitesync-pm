@@ -1,7 +1,8 @@
 import { supabase } from '../lib/supabase';
 import type { RFI, RFIResponse, Priority } from '../types/database';
 import type { RfiStatus } from '../types/database';
-import { getValidTransitions, getBallInCourt } from '../machines/rfiMachine';
+import { getValidRfiTargetStates, getBallInCourt } from '../machines/rfiMachine';
+import { validateTransition, logTransition } from './stateMachineUtils';
 import {
   type Result,
   ok,
@@ -9,7 +10,6 @@ import {
   dbError,
   permissionError,
   notFoundError,
-  validationError,
 } from './errors';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -119,15 +119,9 @@ export const rfiService = {
     }
 
     const currentStatus = rfi.status as RfiStatus;
-    const validTransitions = getValidTransitions(currentStatus, role);
-    if (!validTransitions.includes(newStatus)) {
-      return fail(
-        validationError(
-          `Invalid transition: ${currentStatus} \u2192 ${newStatus} (role: ${role}). Valid: ${validTransitions.join(', ')}`,
-          { currentStatus, newStatus, role, validTransitions },
-        ),
-      );
-    }
+    const validTargets = getValidRfiTargetStates(currentStatus, role);
+    const transitionError = validateTransition('rfi', currentStatus, newStatus, validTargets);
+    if (transitionError) return fail(transitionError);
 
     const updates: Record<string, unknown> = {
       status: newStatus,
@@ -144,6 +138,17 @@ export const rfiService = {
       .eq('id', rfiId);
 
     if (error) return fail(dbError(error.message, { rfiId, newStatus }));
+
+    await logTransition({
+      entityType: 'rfis',
+      entityId: rfiId,
+      projectId: rfi.project_id,
+      userId,
+      currentState: currentStatus,
+      newState: newStatus,
+      role,
+    });
+
     return { data: null, error: null };
   },
 
