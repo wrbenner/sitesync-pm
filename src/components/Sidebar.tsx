@@ -7,9 +7,9 @@ import {
   Activity, Heart, Shield,
   Calculator, Package, Truck,
   Sun, Moon, Bot, ClipboardCheck,
-  Plug, BarChart3, ScrollText, 
+  Plug, BarChart3, ScrollText,
   TrendingUp, FileDiff, Send, HardHat, Repeat2,
-  Receipt, Milestone,
+  Receipt, Milestone, Clock,
   X, MoreHorizontal,
   BookOpenCheck, CheckCircle2, FileSignature,
 } from 'lucide-react';
@@ -75,6 +75,8 @@ const sections = [
       { id: 'preconstruction', label: 'Preconstruction', icon: Calculator },
       { id: 'resources', label: 'Resources', icon: Package },
       { id: 'vendors', label: 'Vendors', icon: Users },
+      { id: 'cost-management', label: 'Cost Management', icon: DollarSign },
+      { id: 'deliveries', label: 'Deliveries', icon: Truck },
     ],
   },
   {
@@ -85,6 +87,7 @@ const sections = [
       { id: 'punch-list', label: 'Punch List', icon: CheckSquare },
       { id: 'crews', label: 'Crews', icon: Users },
       { id: 'workforce', label: 'Workforce', icon: HardHat },
+      { id: 'time-tracking', label: 'Time Tracking', icon: Clock },
       { id: 'safety', label: 'Safety', icon: Shield },
     ],
   },
@@ -101,6 +104,7 @@ const sections = [
     items: [
       { id: 'files', label: 'Files', icon: FileText },
       { id: 'transmittals', label: 'Transmittals', icon: Send },
+      { id: 'wiki', label: 'Wiki', icon: BookOpen },
     ],
   },
   {
@@ -154,6 +158,10 @@ const PAGE_PREFETCH_MAP: Record<string, () => void> = {
   preconstruction: () => import('../pages/Preconstruction').catch(() => {}),
   resources:      () => import('../pages/Resources').catch(() => {}),
   vendors:        () => import('../pages/Vendors').catch(() => {}),
+  'cost-management': () => import('../pages/CostManagement').catch(() => {}),
+  'time-tracking':   () => import('../pages/TimeTracking').catch(() => {}),
+  deliveries:        () => import('../pages/Deliveries').catch(() => {}),
+  wiki:              () => import('../pages/Wiki').catch(() => {}),
   transmittals:   () => import('../pages/Transmittals').catch(() => {}),
   closeout:       () => import('../pages/Closeout').catch(() => {}),
   'field-capture': () => import('../pages/field-capture').catch(() => {}),

@@ -107,6 +107,10 @@ const Specifications = lazy(() => import('./pages/Specifications').then((m) => (
 const Preconstruction = lazy(() => import('./pages/Preconstruction').then((m) => ({ default: m.Preconstruction })));
 const Resources = lazy(() => import('./pages/Resources').then((m) => ({ default: m.Resources })));
 const Vendors = lazy(() => import('./pages/Vendors').then((m) => ({ default: m.Vendors })));
+const CostManagement = lazy(() => import('./pages/CostManagement'));
+const TimeTracking = lazy(() => import('./pages/TimeTracking'));
+const Deliveries = lazy(() => import('./pages/Deliveries'));
+const Wiki = lazy(() => import('./pages/Wiki'));
 const Onboarding = lazy(() => import('./pages/Onboarding').then((m) => ({ default: m.Onboarding })));
 const NotFound = lazy(() => import('./pages/errors/NotFound').then((m) => ({ default: m.NotFound })));
 
@@ -364,6 +368,10 @@ function AppRoutes() {
             <Route path="/preconstruction" element={<PageSuspense><ProtectedRoute moduleId="preconstruction" moduleName="Preconstruction"><Preconstruction /></ProtectedRoute></PageSuspense>} />
             <Route path="/resources" element={<PageSuspense><ProtectedRoute moduleId="resources" moduleName="Resources"><Resources /></ProtectedRoute></PageSuspense>} />
             <Route path="/vendors" element={<PageSuspense><ProtectedRoute moduleId="vendors" moduleName="Vendors"><Vendors /></ProtectedRoute></PageSuspense>} />
+            <Route path="/cost-management" element={<PageSuspense><ProtectedRoute moduleId="cost-management" moduleName="Cost Management"><CostManagement /></ProtectedRoute></PageSuspense>} />
+            <Route path="/time-tracking" element={<PageSuspense><ProtectedRoute moduleId="time-tracking" moduleName="Time Tracking"><TimeTracking /></ProtectedRoute></PageSuspense>} />
+            <Route path="/deliveries" element={<PageSuspense><ProtectedRoute moduleId="deliveries" moduleName="Deliveries"><Deliveries /></ProtectedRoute></PageSuspense>} />
+            <Route path="/wiki" element={<PageSuspense><ProtectedRoute moduleId="wiki" moduleName="Wiki"><Wiki /></ProtectedRoute></PageSuspense>} />
             <Route path="/onboarding" element={<PageSuspense><Onboarding /></PageSuspense>} />
             <Route path="*" element={<PageSuspense><NotFound /></PageSuspense>} />
           </Routes>

@@ -217,6 +217,145 @@ export function calculateCriticalPath(tasks: CPMTask[]): Map<string, CPMResult> 
   return results
 }
 
+// ── Extended CPM with FS/FF/SS/SF + lag (schedule_phases.predecessor_ids) ──
+export type DependencyType = 'FS' | 'FF' | 'SS' | 'SF'
+
+export interface CPMTaskExt {
+  id: string
+  startDate?: string | null
+  endDate?: string | null
+  durationDays?: number | null
+  predecessorIds?: string[] | null
+  dependencyType?: DependencyType | null
+  lagDays?: number | null
+}
+
+export interface CPMResultExt {
+  id: string
+  earlyStart: number
+  earlyFinish: number
+  lateStart: number
+  lateFinish: number
+  floatDays: number
+  isCritical: boolean
+  durationDays: number
+}
+
+function extDuration(t: CPMTaskExt): number {
+  if (t.durationDays && t.durationDays > 0) return t.durationDays
+  if (t.startDate && t.endDate) {
+    const ms = new Date(t.endDate).getTime() - new Date(t.startDate).getTime()
+    return Math.max(1, Math.round(ms / 86400000))
+  }
+  return 1
+}
+
+export function computeCriticalPathExt(tasks: CPMTaskExt[]): Map<string, CPMResultExt> {
+  const taskMap = new Map(tasks.map((t) => [t.id, t]))
+  const results = new Map<string, CPMResultExt>()
+
+  tasks.forEach((t) => {
+    const d = extDuration(t)
+    results.set(t.id, {
+      id: t.id,
+      earlyStart: 0,
+      earlyFinish: d,
+      lateStart: 0,
+      lateFinish: 0,
+      floatDays: 0,
+      isCritical: false,
+      durationDays: d,
+    })
+  })
+
+  // Kahn topological sort
+  const inDegree = new Map<string, number>()
+  const childrenOf = new Map<string, string[]>()
+  tasks.forEach((t) => {
+    const preds = (t.predecessorIds ?? []).filter((p) => taskMap.has(p))
+    inDegree.set(t.id, preds.length)
+    preds.forEach((p) => {
+      if (!childrenOf.has(p)) childrenOf.set(p, [])
+      childrenOf.get(p)!.push(t.id)
+    })
+  })
+  const queue: string[] = []
+  inDegree.forEach((deg, id) => { if (deg === 0) queue.push(id) })
+  const sorted: string[] = []
+  while (queue.length) {
+    const id = queue.shift()!
+    sorted.push(id)
+    ;(childrenOf.get(id) ?? []).forEach((child) => {
+      inDegree.set(child, (inDegree.get(child) ?? 0) - 1)
+      if (inDegree.get(child) === 0) queue.push(child)
+    })
+  }
+  if (sorted.length < tasks.length) {
+    tasks.forEach((t) => { if (!sorted.includes(t.id)) sorted.push(t.id) })
+  }
+
+  // Forward pass
+  sorted.forEach((id) => {
+    const t = taskMap.get(id)!
+    const r = results.get(id)!
+    const preds = (t.predecessorIds ?? []).map((p) => results.get(p)).filter((p): p is CPMResultExt => !!p)
+    if (preds.length === 0) return
+    const lag = t.lagDays ?? 0
+    const dep = t.dependencyType ?? 'FS'
+    let earliest = 0
+    preds.forEach((p) => {
+      let candidate = 0
+      if (dep === 'FS') candidate = p.earlyFinish + lag
+      else if (dep === 'SS') candidate = p.earlyStart + lag
+      else if (dep === 'FF') candidate = p.earlyFinish + lag - r.durationDays
+      else if (dep === 'SF') candidate = p.earlyStart + lag - r.durationDays
+      if (candidate > earliest) earliest = candidate
+    })
+    r.earlyStart = Math.max(r.earlyStart, earliest)
+    r.earlyFinish = r.earlyStart + r.durationDays
+  })
+
+  let projectFinish = 0
+  results.forEach((r) => { if (r.earlyFinish > projectFinish) projectFinish = r.earlyFinish })
+
+  results.forEach((r) => {
+    r.lateFinish = projectFinish
+    r.lateStart = projectFinish - r.durationDays
+  })
+
+  // Backward pass
+  ;[...sorted].reverse().forEach((id) => {
+    const r = results.get(id)!
+    const successors = childrenOf.get(id) ?? []
+    if (successors.length === 0) return
+    let latest = Infinity
+    successors.forEach((sId) => {
+      const sTask = taskMap.get(sId)
+      const sRes = results.get(sId)
+      if (!sTask || !sRes) return
+      const lag = sTask.lagDays ?? 0
+      const dep = sTask.dependencyType ?? 'FS'
+      let candidate = Infinity
+      if (dep === 'FS') candidate = sRes.lateStart - lag
+      else if (dep === 'SS') candidate = sRes.lateStart - lag + r.durationDays
+      else if (dep === 'FF') candidate = sRes.lateFinish - lag
+      else if (dep === 'SF') candidate = sRes.lateFinish - lag + r.durationDays
+      if (candidate < latest) latest = candidate
+    })
+    if (latest !== Infinity) {
+      r.lateFinish = latest
+      r.lateStart = latest - r.durationDays
+    }
+  })
+
+  results.forEach((r) => {
+    r.floatDays = Math.max(0, r.lateStart - r.earlyStart)
+    r.isCritical = r.floatDays === 0
+  })
+
+  return results
+}
+
 // Helper: convert tasks from DB format to CPM format
 export function tasksToCPM(tasks: Array<{
   id: string

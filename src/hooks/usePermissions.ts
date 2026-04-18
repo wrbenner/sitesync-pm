@@ -170,6 +170,10 @@ export const MODULE_PERMISSIONS: Record<string, Permission> = {
   sustainability: 'reports.view',
   warranties: 'reports.view',
   portfolio: 'dashboard.view',
+  'cost-management': 'budget.view',
+  'time-tracking': 'crews.view',
+  deliveries: 'procurement.view',
+  wiki: 'files.view',
 }
 
 // ── Dev Mode Detection ───────────────────────────────────
