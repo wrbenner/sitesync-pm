@@ -1,7 +1,9 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { getPayApplications, createPayApplication, upsertPayApplication, submitPayApplication, approvePayApplication } from '../../api/endpoints/payApplications'
 import type { CreatePayAppPayload } from '../../types/api'
+import { useAuditedMutation } from '../mutations/createAuditedMutation'
+import { payApplicationSchema } from '../../components/forms/schemas'
 
 
 
@@ -28,65 +30,92 @@ export function usePayApplications(projectId: string | undefined) {
 }
 
 export function useCreatePayApplication() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async (params: { projectId: string; payload: CreatePayAppPayload }) => {
+  return useAuditedMutation<{ projectId: string; payload: CreatePayAppPayload }, unknown>({
+    permission: 'financials.edit',
+    schema: payApplicationSchema,
+    schemaKey: 'payload',
+    action: 'create',
+    entityType: 'pay_application',
+    getAfterState: (p) => p.payload as unknown as Record<string, unknown>,
+    mutationFn: async (params) => {
       return await createPayApplication(params.projectId, params.payload)
     },
-    onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: ['pay_applications', vars.projectId] })
-    },
+    invalidateKeys: (p) => [['pay_applications', p.projectId]],
+    analyticsEvent: 'pay_application_created',
+    getAnalyticsProps: (p) => ({ project_id: p.projectId }),
+    errorMessage: 'Failed to create pay application',
   })
 }
 
 export function useUpdatePayApplication() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async (params: { projectId: string; payload: Parameters<typeof upsertPayApplication>[1] }) => {
+  return useAuditedMutation<{ projectId: string; payload: Parameters<typeof upsertPayApplication>[1] }, unknown>({
+    permission: 'financials.edit',
+    schema: payApplicationSchema.partial(),
+    schemaKey: 'payload',
+    action: 'update',
+    entityType: 'pay_application',
+    getEntityId: (p) => p.payload.id,
+    getAfterState: (p) => p.payload as unknown as Record<string, unknown>,
+    mutationFn: async (params) => {
       return await upsertPayApplication(params.projectId, params.payload)
     },
-    onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: ['pay_applications', vars.projectId] })
-    },
+    invalidateKeys: (p) => [['pay_applications', p.projectId]],
+    analyticsEvent: 'pay_application_updated',
+    getAnalyticsProps: (p) => ({ project_id: p.projectId }),
+    errorMessage: 'Failed to update pay application',
   })
 }
 
 export function useSubmitPayApplication() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async (params: { projectId: string; id: string }) => {
+  return useAuditedMutation<{ projectId: string; id: string }, unknown>({
+    permission: 'financials.edit',
+    action: 'submit',
+    entityType: 'pay_application',
+    getEntityId: (p) => p.id,
+    mutationFn: async (params) => {
       return await submitPayApplication(params.projectId, params.id)
     },
-    onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: ['pay_applications', vars.projectId] })
-    },
+    invalidateKeys: (p) => [['pay_applications', p.projectId]],
+    analyticsEvent: 'pay_application_submitted',
+    getAnalyticsProps: (p) => ({ project_id: p.projectId }),
+    errorMessage: 'Failed to submit pay application',
   })
 }
 
 export function useApprovePayApplication() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async (params: { projectId: string; id: string }) => {
+  return useAuditedMutation<{ projectId: string; id: string }, unknown>({
+    permission: 'budget.approve',
+    action: 'approve',
+    entityType: 'pay_application',
+    getEntityId: (p) => p.id,
+    mutationFn: async (params) => {
       return await approvePayApplication(params.projectId, params.id)
     },
-    onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: ['pay_applications', vars.projectId] })
-      qc.invalidateQueries({ queryKey: ['lien_waivers', vars.projectId] })
-    },
+    invalidateKeys: (p) => [
+      ['pay_applications', p.projectId],
+      ['lien_waivers', p.projectId],
+    ],
+    analyticsEvent: 'pay_application_approved',
+    getAnalyticsProps: (p) => ({ project_id: p.projectId }),
+    errorMessage: 'Failed to approve pay application',
   })
 }
 
 export function useDeletePayApplication() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async (params: { projectId: string; id: string }) => {
+  return useAuditedMutation<{ projectId: string; id: string }, { id: string; projectId: string }>({
+    permission: 'financials.edit',
+    action: 'delete',
+    entityType: 'pay_application',
+    getEntityId: (p) => p.id,
+    mutationFn: async (params) => {
       const { error } = await supabase.from('pay_applications').delete().eq('id', params.id).eq('project_id', params.projectId)
       if (error) throw error
       return { id: params.id, projectId: params.projectId }
     },
-    onSuccess: (result) => {
-      qc.invalidateQueries({ queryKey: ['pay_applications', result.projectId] })
-    },
+    invalidateKeys: (p) => [['pay_applications', p.projectId]],
+    analyticsEvent: 'pay_application_deleted',
+    getAnalyticsProps: (p) => ({ project_id: p.projectId }),
+    errorMessage: 'Failed to delete pay application',
   })
 }
 

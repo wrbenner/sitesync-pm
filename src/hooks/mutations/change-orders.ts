@@ -1,10 +1,8 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
-import posthog from '../../lib/analytics'
-import { useAuditedMutation, createOnError } from './createAuditedMutation'
-import { invalidateEntity } from '../../api/invalidation'
+import { useAuditedMutation } from './createAuditedMutation'
 import { changeOrderSchema,
 } from '../../components/forms/schemas'
+import { validateChangeOrderStatusTransition } from './state-machine-validation-helpers'
 
 import type { Database } from '../../types/database'
 type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
@@ -37,11 +35,15 @@ export function useUpdateChangeOrder() {
     permission: 'change_orders.edit',
     schema: changeOrderSchema.partial(),
     schemaKey: 'updates',
-    action: 'update_change_order',
+    action: 'update',
     entityType: 'change_order',
     getEntityId: (p) => p.id,
-    getNewValue: (p) => p.updates,
+    getAfterState: (p) => p.updates,
     mutationFn: async ({ id, updates, projectId }) => {
+      // State-machine gate: any status change must pass role-aware transition rules.
+      if (typeof updates.status === 'string') {
+        await validateChangeOrderStatusTransition(id, projectId, updates.status)
+      }
       const { error } = await from('change_orders').update(updates).eq('id', id)
       if (error) throw error
       return { projectId, id }
@@ -53,14 +55,16 @@ export function useUpdateChangeOrder() {
 }
 
 export function usePromoteChangeOrder() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: async ({ sourceId, projectId, nextType }: { sourceId: string; projectId: string; nextType: 'cor' | 'co' }) => {
-      // Fetch the source CO
+  return useAuditedMutation<{ sourceId: string; projectId: string; nextType: 'cor' | 'co' }, { data: unknown; projectId: string }>({
+    permission: 'change_orders.promote',
+    action: 'update',
+    entityType: 'change_order',
+    getEntityId: (p) => p.sourceId,
+    getAuditMetadata: (p) => ({ nextType: p.nextType }),
+    mutationFn: async ({ sourceId, projectId, nextType }) => {
       const { data: source, error: fetchError } = await supabase.from('change_orders').select('*').eq('id', sourceId).single()
       if (fetchError) throw fetchError
       const src = source as Record<string, unknown>
-      // Create new CO at the next pipeline stage
       const { data: promoted, error: createError } = await from('change_orders').insert({
         project_id: projectId,
         type: nextType,
@@ -78,24 +82,25 @@ export function usePromoteChangeOrder() {
         requested_by: src.requested_by,
       }).select().single()
       if (createError) throw createError
-      // Mark source as promoted
       await from('change_orders').update({ promoted_at: new Date().toISOString() }).eq('id', sourceId)
       return { data: promoted, projectId }
     },
-    onSuccess: (result: { projectId: string }) => {
-      invalidateEntity('change_order', result.projectId)
-      queryClient.invalidateQueries({ queryKey: ['costData'] })
-      queryClient.invalidateQueries({ queryKey: ['earned_value', result.projectId] })
-      posthog.capture('change_order_promoted', { project_id: result.projectId })
-    },
-    onError: createOnError('promote_change_order'),
+    invalidateKeys: (p) => [['costData'], ['earned_value', p.projectId]],
+    analyticsEvent: 'change_order_promoted',
+    getAnalyticsProps: (p) => ({ project_id: p.projectId }),
+    errorMessage: 'Failed to promote change order',
   })
 }
 
 export function useSubmitChangeOrder() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: async ({ id, userId, projectId }: { id: string; userId: string; projectId: string }) => {
+  return useAuditedMutation<{ id: string; userId: string; projectId: string }, { projectId: string }>({
+    permission: 'change_orders.create',
+    action: 'submit',
+    entityType: 'change_order',
+    getEntityId: (p) => p.id,
+    mutationFn: async ({ id, userId, projectId }) => {
+      // State-machine gate: only allow draft → pending_review for eligible roles.
+      await validateChangeOrderStatusTransition(id, projectId, 'pending_review')
       const { error } = await from('change_orders').update({
         status: 'pending_review',
         submitted_by: userId,
@@ -104,12 +109,10 @@ export function useSubmitChangeOrder() {
       if (error) throw error
       return { projectId }
     },
-    onSuccess: (result: { projectId: string }) => {
-      invalidateEntity('change_order', result.projectId)
-      queryClient.invalidateQueries({ queryKey: ['costData'] })
-      posthog.capture('change_order_submitted', { project_id: result.projectId })
-    },
-    onError: createOnError('submit_change_order'),
+    invalidateKeys: () => [['costData']],
+    analyticsEvent: 'change_order_submitted',
+    getAnalyticsProps: (p) => ({ project_id: p.projectId }),
+    errorMessage: 'Failed to submit change order',
   })
 }
 

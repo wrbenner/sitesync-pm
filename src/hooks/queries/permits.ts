@@ -1,5 +1,7 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
+import { useAuditedMutation } from '../mutations/createAuditedMutation'
+import { permitSchema } from '../../components/forms/schemas'
 
 
 
@@ -18,53 +20,68 @@ export function usePermits(projectId: string | undefined) {
 }
 
 export function useCreatePermit() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async (params: { projectId: string; data: Record<string, unknown> }) => {
+  return useAuditedMutation<{ projectId: string; data: Record<string, unknown> }, { projectId: string; data: unknown }>({
+    permission: 'project.settings',
+    schema: permitSchema,
+    action: 'create',
+    entityType: 'permit',
+    getEntityTitle: (p) => (p.data.permit_number as string) || (p.data.type as string) || undefined,
+    getAfterState: (p) => p.data,
+    mutationFn: async (params) => {
       const { data, error } = await supabase
         .from('permits')
         .insert({ ...params.data, project_id: params.projectId })
         .select()
         .single()
       if (error) throw error
-      return data
+      return { projectId: params.projectId, data }
     },
-    onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: ['permits', vars.projectId] })
-    },
+    invalidateKeys: (p) => [['permits', p.projectId]],
+    analyticsEvent: 'permit_created',
+    getAnalyticsProps: (p) => ({ project_id: p.projectId }),
+    errorMessage: 'Failed to create permit',
   })
 }
 
 export function useUpdatePermit() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async (params: { id: string; projectId: string; updates: Record<string, unknown> }) => {
-      const { data, error } = await supabase
+  return useAuditedMutation<{ id: string; projectId: string; updates: Record<string, unknown> }, { projectId: string; id: string }>({
+    permission: 'project.settings',
+    schema: permitSchema.partial(),
+    schemaKey: 'updates',
+    action: 'update',
+    entityType: 'permit',
+    getEntityId: (p) => p.id,
+    getAfterState: (p) => p.updates,
+    mutationFn: async (params) => {
+      const { error } = await supabase
         .from('permits')
         .update(params.updates)
         .eq('id', params.id)
-        .select()
-        .single()
       if (error) throw error
-      return data
+      return { projectId: params.projectId, id: params.id }
     },
-    onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: ['permits', vars.projectId] })
-    },
+    invalidateKeys: (p) => [['permits', p.projectId]],
+    analyticsEvent: 'permit_updated',
+    getAnalyticsProps: (p) => ({ project_id: p.projectId }),
+    errorMessage: 'Failed to update permit',
   })
 }
 
 export function useDeletePermit() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async (params: { id: string; projectId: string }) => {
+  return useAuditedMutation<{ id: string; projectId: string }, { id: string; projectId: string }>({
+    permission: 'project.settings',
+    action: 'delete',
+    entityType: 'permit',
+    getEntityId: (p) => p.id,
+    mutationFn: async (params) => {
       const { error } = await supabase.from('permits').delete().eq('id', params.id)
       if (error) throw error
       return { id: params.id, projectId: params.projectId }
     },
-    onSuccess: (result) => {
-      qc.invalidateQueries({ queryKey: ['permits', result.projectId] })
-    },
+    invalidateKeys: (p) => [['permits', p.projectId]],
+    analyticsEvent: 'permit_deleted',
+    getAnalyticsProps: (p) => ({ project_id: p.projectId }),
+    errorMessage: 'Failed to delete permit',
   })
 }
 
