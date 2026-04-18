@@ -58,21 +58,33 @@ export const AnalysisProgress: React.FC<AnalysisProgressProps> = ({
 
   const [durations, setDurations] = useState<Record<string, number>>({})
   const [minimized, setMinimized] = useState(false)
-  const stageStartRef = useRef<{ id: AnalysisStage; at: number } | null>(null)
+  const [stageStart, setStageStart] = useState<{ id: AnalysisStage; at: number } | null>(null)
   const startAtRef = useRef<number | null>(null)
 
-  // Track transitions to record durations & compute ETA
+  // Track transitions to record durations & compute ETA.
+  // Stage is an external pipeline state; this effect syncs local timing to transitions.
   useEffect(() => {
     const now = Date.now()
     if (!startAtRef.current && stage !== 'idle') startAtRef.current = now
-    const prev = stageStartRef.current
-    if (!prev || prev.id !== stage) {
-      if (prev) {
-        const elapsed = (now - prev.at) / 1000
-        setDurations((d) => ({ ...d, [prev.id]: elapsed }))
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setStageStart((prev) => {
+      if (!prev || prev.id !== stage) {
+        if (prev) {
+          const elapsed = (now - prev.at) / 1000
+          setDurations((d) => ({ ...d, [prev.id]: elapsed }))
+        }
+        return { id: stage, at: now }
       }
-      stageStartRef.current = { id: stage, at: now }
-    }
+      return prev
+    })
+  }, [stage])
+
+  // Tick for smooth ETA countdown — holds current Date.now() timestamp
+  const [nowTick, setNowTick] = useState(() => Date.now())
+  useEffect(() => {
+    if (stage === 'complete' || stage === 'failed' || stage === 'idle') return
+    const t = window.setInterval(() => setNowTick(Date.now()), 1000)
+    return () => window.clearInterval(t)
   }, [stage])
 
   // ETA — sum expected durations of remaining stages (current + after),
@@ -84,19 +96,11 @@ export const AnalysisProgress: React.FC<AnalysisProgressProps> = ({
     for (let i = currentIdx; i < STAGES.length - 1; i++) {
       total += STAGES[i].expectedSec
     }
-    const elapsedInStage = stageStartRef.current
-      ? (Date.now() - stageStartRef.current.at) / 1000
+    const elapsedInStage = stageStart
+      ? (nowTick - stageStart.at) / 1000
       : 0
     return Math.max(0, total - elapsedInStage)
   })()
-
-  // Tick for smooth ETA countdown
-  const [, setTick] = useState(0)
-  useEffect(() => {
-    if (stage === 'complete' || stage === 'failed' || stage === 'idle') return
-    const t = window.setInterval(() => setTick((n) => n + 1), 1000)
-    return () => window.clearInterval(t)
-  }, [stage])
 
   const pairProgressPct = totalPairs > 0 ? Math.round((processedPairs / totalPairs) * 100) : 0
 

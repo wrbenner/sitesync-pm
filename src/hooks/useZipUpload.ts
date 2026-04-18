@@ -28,7 +28,7 @@ interface StartUploadResult {
 async function uploadZipToStorage(args: StartUploadArgs): Promise<StartUploadResult> {
   const bucket = args.bucket ?? 'project-files'
   const timestamp = Date.now()
-  const safeName = args.file.name.replace(/[^\w.\-]+/g, '_').slice(0, 100)
+  const safeName = args.file.name.replace(/[^\w.-]+/g, '_').slice(0, 100)
   const storagePath = `${args.projectId}/zip-uploads/${timestamp}-${safeName}`
 
   const { error: upErr } = await supabase.storage

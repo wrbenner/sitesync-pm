@@ -5,9 +5,9 @@
 
 import React, { useState, useRef, useEffect, useCallback, useMemo, memo } from 'react'
 import {
-  Sparkles, Mic, MicOff, Send, X, Minimize2, Maximize2,
+  Sparkles, Mic, MicOff, Send, Minimize2, Maximize2,
   PanelRight, PanelBottom, ExternalLink, Wand2, Zap,
-  FileSearch, AlertTriangle, FileText, BarChart3, Loader2,
+  AlertTriangle, FileText, BarChart3, Loader2,
 } from 'lucide-react'
 import { colors, spacing, typography, borderRadius, transitions, shadows, zIndex } from '../../styles/theme'
 import { supabase } from '../../lib/supabase'
@@ -108,7 +108,11 @@ const QUICK_ACTIONS = [
 function useVoiceInput(onTranscript: (text: string) => void) {
   const recognitionRef = useRef<unknown>(null)
   const [listening, setListening] = useState(false)
-  const [supported, setSupported] = useState(false)
+  const [supported] = useState(() => {
+    if (typeof window === 'undefined') return false
+    const w = window as unknown as { SpeechRecognition?: unknown; webkitSpeechRecognition?: unknown }
+    return Boolean(w.SpeechRecognition ?? w.webkitSpeechRecognition)
+  })
 
   useEffect(() => {
     const w = window as unknown as { SpeechRecognition?: unknown; webkitSpeechRecognition?: unknown }
@@ -123,7 +127,6 @@ function useVoiceInput(onTranscript: (text: string) => void) {
       onerror: ((e: unknown) => void) | null
     })
     if (!Ctor) return
-    setSupported(true)
     const r = new Ctor()
     r.continuous = false
     r.interimResults = false
@@ -248,7 +251,7 @@ export function AICommandCenter() {
     try { return (localStorage.getItem(DOCK_STORAGE_KEY) as DockPosition) || 'right' } catch { return 'right' }
   })
   const [collapsed, setCollapsed] = useState(false)
-  const [size, setSize] = useState<{ w: number; h: number }>(() => {
+  const [size, _setSize] = useState<{ w: number; h: number }>(() => {
     try { const s = localStorage.getItem(SIZE_STORAGE_KEY); return s ? JSON.parse(s) : { w: 440, h: 640 } } catch { return { w: 440, h: 640 } }
   })
   const [input, setInput] = useState('')

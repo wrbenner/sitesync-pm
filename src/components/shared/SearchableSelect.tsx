@@ -71,10 +71,11 @@ export function SearchableSelect<T extends string | number>(props: SearchableSel
 
   useOutsideClick(rootRef, () => setOpen(false))
 
-  // Async loading
+  // Async loading — syncing to external async data source; setState is required.
   useEffect(() => {
     if (!loadOptions || !open) return
     let cancelled = false
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true)
     const t = window.setTimeout(() => {
       loadOptions(query)
@@ -169,6 +170,7 @@ export function SearchableSelect<T extends string | number>(props: SearchableSel
 
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setActiveIdx(-1)
       window.setTimeout(() => searchRef.current?.focus(), 20)
     }

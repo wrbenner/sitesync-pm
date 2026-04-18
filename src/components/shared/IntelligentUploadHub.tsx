@@ -283,6 +283,7 @@ const FileRow = memo<{ rec: UploadRecord; onRemove: (id: string) => void }>(({ r
           width: 48, height: 64, borderRadius: borderRadius.sm,
           background: colors.surfaceInset, display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
+          {/* eslint-disable-next-line react-hooks/static-components -- Icon is a stable lucide-react component reference, not dynamically created */}
           <Icon size={24} color={colors.textTertiary} />
         </div>
       )}

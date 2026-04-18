@@ -152,9 +152,12 @@ export const ProcessingPipeline: React.FC<ProcessingPipelineProps> = ({
   }, [projectId])
 
   // Record start/complete timestamps as the stage advances.
+  // Stage changes are external events (realtime pipeline state); this effect
+  // synchronizes our local timestamp map with those transitions.
   useEffect(() => {
     const activeKey = STAGE_TO_STEP[state.stage]
     const now = new Date().toISOString()
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setStepTimes((prev) => {
       const next = { ...prev }
       if (!next[activeKey]) next[activeKey] = { startedAt: now }
