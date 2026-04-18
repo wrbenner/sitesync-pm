@@ -232,7 +232,7 @@ describe('RFIs page', () => {
   it('opens create modal when New RFI is clicked', () => {
     rfisState.data = { data: [sampleRfi] }
     render(wrap(<RFIs />))
-    const newBtn = screen.getByRole('button', { name: /new rfi/i })
+    const newBtn = screen.getByRole('button', { name: /create new request for information/i })
     fireEvent.click(newBtn)
     expect(screen.getByTestId('create-rfi-modal')).toBeTruthy()
   })
@@ -240,7 +240,7 @@ describe('RFIs page', () => {
   it('calls createRFI mutation when modal is submitted', async () => {
     rfisState.data = { data: [sampleRfi] }
     render(wrap(<RFIs />))
-    fireEvent.click(screen.getByRole('button', { name: /new rfi/i }))
+    fireEvent.click(screen.getByRole('button', { name: /create new request for information/i }))
     fireEvent.click(screen.getByRole('button', { name: /^Submit$/i }))
     await waitFor(() => {
       expect(mockMutateAsync).toHaveBeenCalledWith(

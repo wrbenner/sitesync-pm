@@ -353,8 +353,8 @@ describe('rfiService.transitionStatus', () => {
     await rfiService.transitionStatus('rfi-1', 'open')
 
     const payload = updateFn.mock.calls[0][0] as Record<string, unknown>
-    expect(payload['ball_in_court_id']).toBeDefined()
-    expect(payload['updated_by']).toBe('pm-1')
+    expect(payload['ball_in_court']).toBeDefined()
+    expect(payload['status']).toBe('open')
   })
 
   it('admin can void an RFI', async () => {
@@ -559,8 +559,8 @@ describe('rfiService.addResponse', () => {
     const insertCall = insertChain.insert as ReturnType<typeof vi.fn>
     const payload = insertCall.mock.calls[0][0]
     expect(payload.rfi_id).toBe('rfi-1')
-    expect(payload.user_id).toBe('arch-1')
-    expect(payload.response_text).toBe('Use W12x26 as specified per SE')
+    expect(payload.author_id).toBe('arch-1')
+    expect(payload.content).toBe('Use W12x26 as specified per SE')
   })
 
   it('includes attachments in the insert payload when provided', async () => {
