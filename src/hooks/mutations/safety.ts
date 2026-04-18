@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import posthog from '../../lib/analytics'
 import { createOnError } from './createAuditedMutation'
+import { logActivityFeed } from '../../lib/activityFeedLogger'
 
 
 
@@ -20,11 +21,18 @@ export function useCreateCorrectiveAction() {
       if (error) throw error
       return { data, projectId: params.projectId }
     },
-    onSuccess: (result: { projectId: string }) => {
+    onSuccess: (result: { data: Record<string, unknown>; projectId: string }) => {
       queryClient.invalidateQueries({ queryKey: ['corrective_actions', result.projectId] })
       queryClient.invalidateQueries({ queryKey: ['safety_overview', result.projectId] }) // FIX #7: cross-invalidate
       queryClient.invalidateQueries({ queryKey: ['project_snapshots', result.projectId] })
       posthog.capture('corrective_action_created', { project_id: result.projectId })
+      logActivityFeed({
+        projectId: result.projectId,
+        entityType: 'safety_incident',
+        entityId: result.data?.id as string | undefined,
+        entityTitle: result.data?.title as string | undefined,
+        action: 'create_corrective_action',
+      }).catch(() => {})
     },
     onError: createOnError('create_corrective_action'),
   })
@@ -36,11 +44,17 @@ export function useUpdateCorrectiveAction() {
     mutationFn: async ({ id, updates, projectId }: { id: string; updates: Record<string, unknown>; projectId: string }) => {
       const { error } = await from('corrective_actions').update(updates).eq('id', id)
       if (error) throw error
-      return { projectId }
+      return { id, projectId }
     },
-    onSuccess: (result: { projectId: string }) => {
+    onSuccess: (result: { id: string; projectId: string }) => {
       queryClient.invalidateQueries({ queryKey: ['corrective_actions', result.projectId] })
       posthog.capture('corrective_action_updated', { project_id: result.projectId })
+      logActivityFeed({
+        projectId: result.projectId,
+        entityType: 'safety_incident',
+        entityId: result.id,
+        action: 'update_corrective_action',
+      }).catch(() => {})
     },
     onError: createOnError('update_corrective_action'),
   })
@@ -54,11 +68,18 @@ export function useCreateSafetyInspection() {
       if (error) throw error
       return { data, projectId: params.projectId }
     },
-    onSuccess: (result: { projectId: string }) => {
+    onSuccess: (result: { data: Record<string, unknown>; projectId: string }) => {
       queryClient.invalidateQueries({ queryKey: ['safety_inspections', result.projectId] })
       queryClient.invalidateQueries({ queryKey: ['safety_overview', result.projectId] }) // FIX #7
       queryClient.invalidateQueries({ queryKey: ['corrective_actions', result.projectId] })
       posthog.capture('safety_inspection_created', { project_id: result.projectId })
+      logActivityFeed({
+        projectId: result.projectId,
+        entityType: 'safety_incident',
+        entityId: result.data?.id as string | undefined,
+        entityTitle: result.data?.title as string | undefined,
+        action: 'create_safety_inspection',
+      }).catch(() => {})
     },
     onError: createOnError('create_safety_inspection'),
   })
@@ -72,12 +93,19 @@ export function useCreateIncident() {
       if (error) throw error
       return { data, projectId: params.projectId }
     },
-    onSuccess: (result: { projectId: string }) => {
+    onSuccess: (result: { data: Record<string, unknown>; projectId: string }) => {
       queryClient.invalidateQueries({ queryKey: ['incidents', result.projectId] })
       queryClient.invalidateQueries({ queryKey: ['safety_overview', result.projectId] }) // FIX #7
       queryClient.invalidateQueries({ queryKey: ['daily_logs', result.projectId] }) // Incidents affect daily logs
       queryClient.invalidateQueries({ queryKey: ['project_snapshots', result.projectId] })
       posthog.capture('incident_reported', { project_id: result.projectId })
+      logActivityFeed({
+        projectId: result.projectId,
+        entityType: 'safety_incident',
+        entityId: result.data?.id as string | undefined,
+        entityTitle: result.data?.title as string | undefined,
+        action: 'create_incident',
+      }).catch(() => {})
     },
     onError: createOnError('create_incident'),
   })
