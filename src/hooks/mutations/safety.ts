@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import posthog from '../../lib/analytics'
 import { createOnError } from './createAuditedMutation'
+import { logActivityEntry } from '../../lib/activityLogger'
 
 
 
@@ -72,12 +73,20 @@ export function useCreateIncident() {
       if (error) throw error
       return { data, projectId: params.projectId }
     },
-    onSuccess: (result: { projectId: string }) => {
+    onSuccess: (result: { data: Record<string, unknown>; projectId: string }) => {
       queryClient.invalidateQueries({ queryKey: ['incidents', result.projectId] })
       queryClient.invalidateQueries({ queryKey: ['safety_overview', result.projectId] }) // FIX #7
       queryClient.invalidateQueries({ queryKey: ['daily_logs', result.projectId] }) // Incidents affect daily logs
       queryClient.invalidateQueries({ queryKey: ['project_snapshots', result.projectId] })
+      queryClient.invalidateQueries({ queryKey: ['activity_feed', result.projectId] })
       posthog.capture('incident_reported', { project_id: result.projectId })
+      logActivityEntry({
+        projectId: result.projectId,
+        entityType: 'safety_incident',
+        entityTitle: (result.data?.title as string) || 'Safety Incident',
+        action: 'created',
+        entityId: result.data?.id as string | undefined,
+      }).catch(() => {})
     },
     onError: createOnError('create_incident'),
   })

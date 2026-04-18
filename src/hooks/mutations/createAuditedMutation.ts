@@ -17,6 +17,7 @@ import posthog from '../../lib/analytics'
 import Sentry from '../../lib/sentry'
 import { invalidateEntity, type EntityType } from '../../api/invalidation'
 import { logAuditEntry } from '../../lib/auditLogger'
+import { logActivityEntry } from '../../lib/activityLogger'
 
 // ── Types ────────────────────────────────────────────────
 
@@ -170,6 +171,19 @@ export function useAuditedMutation<TParams, TResult>(config: AuditedMutationConf
       }
 
       config.onSuccess?.(result, params)
+
+      // Fire-and-forget activity feed insertion
+      if (projectId) {
+        const entityId = config.getEntityId?.(params, result)
+        const entityTitle = config.getEntityTitle?.(params) ?? String(config.entityType)
+        logActivityEntry({
+          projectId,
+          entityType: String(config.entityType),
+          entityTitle,
+          action: String(config.action),
+          entityId,
+        }).catch(() => {})
+      }
     },
 
     // ── onError: Rollback + toast + Sentry ───────────

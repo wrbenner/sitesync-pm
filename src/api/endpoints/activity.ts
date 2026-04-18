@@ -204,6 +204,23 @@ async function batchFetchEntityLabels(
     )
   }
 
+  if (grouped['safety_incident']?.length) {
+    fetches.push(
+      supabase
+        .from('incidents')
+        .select('id, title')
+        .eq('project_id', projectId)
+        .in('id', grouped['safety_incident'])
+        .then(({ data }) => {
+          for (const row of data ?? []) {
+            labelMap.set(row.id, row.title)
+            setCachedEntityLabel(`${projectId}:safety_incident:${row.id}`, row.title)
+          }
+        })
+        .catch((err: unknown) => { if (import.meta.env.DEV) console.warn('[ActivityFeed] safety_incident label fetch failed:', err instanceof Error ? err.message : String(err)) }),
+    )
+  }
+
   await Promise.allSettled(fetches)
   return labelMap
 }
@@ -351,8 +368,20 @@ async function fetchEntityLabel(entityType: string, entityId: string, projectId:
     } catch {
       return ''
     }
+  } else if (entityType === 'safety_incident') {
+    try {
+      const { data } = await supabase
+        .from('incidents')
+        .select('title')
+        .eq('id', entityId)
+        .eq('project_id', projectId)
+        .single()
+      if (data) return data.title
+    } catch {
+      return ''
+    }
   } else {
-    return entityId
+    return ''
   }
   return ''
 }
