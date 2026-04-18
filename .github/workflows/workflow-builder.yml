@@ -271,6 +271,7 @@ jobs:
         run: |
           TASK_ID="${{ steps.select-task.outputs.task_id }}"
           BRANCH="task/$TASK_ID-run-${{ github.run_number }}"
+          git push origin --delete "$BRANCH" 2>/dev/null || true
           git checkout -b "$BRANCH"
           echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
 
@@ -484,7 +485,7 @@ jobs:
           DESC="${{ steps.select-task.outputs.description }}"
           BRANCH="${{ steps.create-branch.outputs.branch }}"
 
-          git push origin "$BRANCH"
+          git push --force-with-lease origin "$BRANCH"
 
           cat > /tmp/pr-body.md <<PRBODY_EOF
           Automated PR — Workflow Builder
