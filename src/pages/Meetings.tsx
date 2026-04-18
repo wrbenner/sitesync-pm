@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, Calendar, MapPin, AlertTriangle, RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   PageContainer, Tag, Btn, MetricBox, Skeleton, EmptyState,
 } from '../components/Primitives';
@@ -10,6 +11,7 @@ import { useProjectActionItems } from '../hooks/queries/meeting-enhancements';
 import { useProjectId } from '../hooks/useProjectId';
 import { PermissionGate } from '../components/auth/PermissionGate';
 import CreateMeetingModal from '../components/forms/CreateMeetingModal';
+import { useCreateMeeting } from '../hooks/mutations/meetings';
 
 // ── Type helpers ──────────────────────────────────────────────────────────────
 
@@ -153,7 +155,16 @@ export const Meetings: React.FC = () => {
 
   const { data: meetingsResult, isPending, error, refetch } = useMeetings(projectId);
   const { data: actionItemsData } = useProjectActionItems(projectId);
+  const createMeeting = useCreateMeeting();
   const allMeetings = (meetingsResult?.data ?? []) as unknown as MeetingListItem[];
+
+  const handleMeetingCreate = async (data: Record<string, unknown>) => {
+    await createMeeting.mutateAsync({
+      data: { ...data, project_id: projectId, status: 'scheduled' },
+      projectId: projectId!,
+    });
+    toast.success('Meeting scheduled');
+  };
 
   if (!projectId) {
     return (
@@ -274,7 +285,7 @@ export const Meetings: React.FC = () => {
             </span>
           }
         >
-          <Btn icon={<Plus size={14} />} onClick={() => setShowCreateModal(true)}>
+          <Btn icon={<Plus size={14} />} onClick={() => setShowCreateModal(true)} disabled={createMeeting.isPending}>
             Schedule Meeting
           </Btn>
         </PermissionGate>
@@ -378,7 +389,7 @@ export const Meetings: React.FC = () => {
                 </span>
               }
             >
-              <Btn icon={<Plus size={14} />} onClick={() => setShowCreateModal(true)}>
+              <Btn icon={<Plus size={14} />} onClick={() => setShowCreateModal(true)} disabled={createMeeting.isPending}>
                 Schedule Meeting
               </Btn>
             </PermissionGate>
@@ -522,7 +533,7 @@ export const Meetings: React.FC = () => {
       </div>
 
       {showCreateModal && projectId && (
-        <CreateMeetingModal onClose={() => setShowCreateModal(false)} projectId={projectId} />
+        <CreateMeetingModal onClose={() => setShowCreateModal(false)} onSubmit={handleMeetingCreate} />
       )}
     </PageContainer>
   );
