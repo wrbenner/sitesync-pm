@@ -60,8 +60,8 @@ async function generateSpecCandidates(
   userNeed: string,
   numCandidates: number
 ): Promise<FeatureCandidate[]> {
-  const spec = readFileSync('SPEC.md', 'utf-8');
-  const decisions = existsSync('DECISIONS.md') ? readFileSync('DECISIONS.md', 'utf-8') : '';
+  const _spec = readFileSync('SPEC.md', 'utf-8');
+  const _decisions = existsSync('DECISIONS.md') ? readFileSync('DECISIONS.md', 'utf-8') : '';
   const learnings = existsSync('LEARNINGS.md') ? readFileSync('LEARNINGS.md', 'utf-8').slice(0, 2000) : '';
 
   const prompt = `You are evolving a feature spec for SiteSync PM (construction project management).

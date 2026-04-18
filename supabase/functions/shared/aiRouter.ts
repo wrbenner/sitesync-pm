@@ -442,7 +442,7 @@ async function callProvider(
   provider: AIProvider,
   model: string,
   request: AIRequest,
-  timeoutMs: number = 30000,
+  _timeoutMs: number = 30000,
 ): Promise<AIResponse> {
   const maxTokens = request.max_tokens ?? 1024
   const temperature = request.temperature ?? 0.3

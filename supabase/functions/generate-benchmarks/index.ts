@@ -10,7 +10,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const MIN_SAMPLE_SIZE = 10 // Don't publish benchmarks with fewer than 10 projects
-const CURRENT_PERIOD = new Date().toISOString().slice(0, 7).replace(/-/, '-Q') // e.g., '2026-Q1'
+const _CURRENT_PERIOD = new Date().toISOString().slice(0, 7).replace(/-/, '-Q') // e.g., '2026-Q1'
 
 function getCurrentQuarter(): string {
   const now = new Date()

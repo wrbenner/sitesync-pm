@@ -5,7 +5,7 @@
  * and find what human review would miss.
  */
 
-import { readFileSync, existsSync } from 'fs';
+// unused imports removed
 
 export interface Defect {
   severity: 'blocking' | 'major' | 'minor';

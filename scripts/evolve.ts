@@ -11,7 +11,7 @@
  *   npx ts-node scripts/evolve.ts --auto   # Profile and evolve top 3 regressions
  */
 
-import { execSync, spawn } from 'child_process';
+import { spawn } from 'child_process';
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 
 // ─── Types ───
@@ -176,8 +176,8 @@ async function scoreCandidate(
 
 async function mutateCandidates(
   survivors: Candidate[],
-  targetFile: string,
-  targetFunction: string
+  _targetFile: string,
+  _targetFunction: string
 ): Promise<Candidate[]> {
   const mutants: Candidate[] = [];
 
@@ -214,8 +214,8 @@ Output only the improved function code in a code block.`;
 
 async function crossoverCandidates(
   survivors: Candidate[],
-  targetFile: string,
-  targetFunction: string
+  _targetFile: string,
+  _targetFunction: string
 ): Promise<Candidate[]> {
   if (survivors.length < 2) return [];
 

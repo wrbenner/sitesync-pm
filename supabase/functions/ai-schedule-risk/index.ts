@@ -169,7 +169,7 @@ Only include activities with notable risk (probability > 0.3 or on critical path
         throw new Error('No JSON array found in response')
       }
       risks = JSON.parse(jsonMatch[0])
-    } catch (parseError) {
+    } catch (_parseError) {
       console.error('Failed to parse AI response:', responseText)
       throw new HttpError(500, 'Failed to parse risk analysis response')
     }

@@ -110,6 +110,7 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
   }, [projectId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void refresh();
   }, [refresh]);
 

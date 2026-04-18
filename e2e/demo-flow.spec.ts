@@ -11,8 +11,8 @@ import { test, expect } from '@playwright/test'
  */
 
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL || 'https://sitesync-pm.vercel.app'
-const TEST_EMAIL = process.env.TEST_USER_EMAIL || 'demo@sitesync.ai'
-const TEST_PASSWORD = process.env.TEST_USER_PASSWORD || 'SiteSync2026!'
+const _TEST_EMAIL = process.env.TEST_USER_EMAIL || 'demo@sitesync.ai'
+const _TEST_PASSWORD = process.env.TEST_USER_PASSWORD || 'SiteSync2026!'
 
 test.describe('GC Demo Flow — April 15th', () => {
   test.beforeEach(async ({ page }) => {

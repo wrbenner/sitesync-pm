@@ -35,7 +35,7 @@ interface InviteBody {
   token?: string
 }
 
-const INVITE_TTL_SECONDS = 48 * 60 * 60
+const _INVITE_TTL_SECONDS = 48 * 60 * 60
 
 async function signInviteToken(
   secret: string,

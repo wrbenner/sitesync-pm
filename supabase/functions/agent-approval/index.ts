@@ -76,7 +76,7 @@ serve(async (req) => {
     const input = validateInput(raw)
 
     // 4. Verify project membership
-    const role = await verifyProjectMembership(supabase, user.id, input.project_id)
+    const _role = await verifyProjectMembership(supabase, user.id, input.project_id)
 
     // 5. Verify the action exists and belongs to this project
     const { data: action, error: fetchError } = await supabase

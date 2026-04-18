@@ -69,7 +69,7 @@ serve(async (req) => {
         ? Math.round(allLogs.reduce((s: number, l: any) => s + (l.workers_onsite || 0), 0) / allLogs.length) : 0
       const totalHours = allLogs.reduce((s: number, l: any) => s + (l.total_hours || 0), 0)
       const totalIncidents = allLogs.reduce((s: number, l: any) => s + (l.incidents || 0), 0)
-      const pendingCOs = allCOs.filter((co: any) => !['approved', 'rejected', 'void'].includes(co.status)).reduce((s: number, co: any) => s + (co.amount || 0), 0)
+      const _pendingCOs = allCOs.filter((co: any) => !['approved', 'rejected', 'void'].includes(co.status)).reduce((s: number, co: any) => s + (co.amount || 0), 0)
       const criticalInsights = allInsights.filter((i: any) => i.severity === 'critical').length
       const warningInsights = allInsights.filter((i: any) => i.severity === 'warning').length
 

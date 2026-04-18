@@ -11,7 +11,7 @@ import {
   verifyProjectMembership,
   requireUuid,
 } from '../shared/auth.ts'
-import { routeAI, getAvailableProviders, type AIRequest, type AIImage } from '../shared/aiRouter.ts'
+import { routeAI, getAvailableProviders, type AIRequest } from '../shared/aiRouter.ts'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 

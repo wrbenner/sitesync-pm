@@ -11,7 +11,7 @@
  */
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
-import { dirname, join } from 'path';
+import { join } from 'path';
 
 interface FormalProperty {
   id: string;
@@ -54,7 +54,7 @@ function parseFormalProperties(geneFilter?: string): FormalProperty[] {
  * Generate a property test file template for a set of properties.
  */
 function generatePropertyTestFile(gene: string, properties: FormalProperty[]): string {
-  const slug = gene.toLowerCase().replace(/[\s\/]+/g, '-');
+  const slug = gene.toLowerCase().replace(/[\s/]+/g, '-');
 
   const testCases = properties.map(prop => {
     return `  test('${prop.id}: ${prop.description}', () => {
@@ -111,7 +111,7 @@ function writePropertyTests(geneFilter?: string): void {
   console.log(`Found ${properties.length} formal properties across ${byGene.size} genes:\n`);
 
   for (const [gene, props] of byGene) {
-    const slug = gene.toLowerCase().replace(/[\s\/]+/g, '-');
+    const slug = gene.toLowerCase().replace(/[\s/]+/g, '-');
     const testDir = join('src', '__tests__', 'properties');
     const testFile = join(testDir, `${slug}.property.test.ts`);
 

@@ -13,7 +13,6 @@ import {
   parsePagination,
   paginatedResponse,
   parseExpand,
-  getApiVersion,
   apiCorsHeaders,
   RateLimitError,
   type ApiKeyContext,
@@ -178,7 +177,7 @@ async function listProjects(ctx: ApiKeyContext, _m: RegExpMatchArray, _r: Reques
   return jsonResponse(paginatedResponse(data ?? [], limit))
 }
 
-async function getProject(ctx: ApiKeyContext, match: RegExpMatchArray, _r: Request, url: URL) {
+async function getProject(ctx: ApiKeyContext, match: RegExpMatchArray, _r: Request, _url: URL) {
   requireScope(ctx, 'read')
   const projectId = param(match, 1)
   const { data, error } = await ctx.supabase.from('projects').select('*').eq('id', projectId).eq('organization_id', ctx.organizationId).maybeSingle()

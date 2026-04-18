@@ -57,7 +57,7 @@ function contentTypeFor(ext: string): string {
 }
 
 function sanitizeName(name: string): string {
-  return name.replace(/[^\w.\-]+/g, '_').replace(/_+/g, '_').slice(0, 128)
+  return name.replace(/[^\w.-]+/g, '_').replace(/_+/g, '_').slice(0, 128)
 }
 
 serve(async (req) => {

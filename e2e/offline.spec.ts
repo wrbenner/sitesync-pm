@@ -13,7 +13,7 @@ test.describe('Offline Mode', () => {
     await page.waitForTimeout(1000)
 
     // Check for offline indicator (banner or status dot)
-    const offlineIndicator = page.locator('[role="status"]').first()
+    const _offlineIndicator = page.locator('[role="status"]').first()
     // The page should still be usable
     await expect(page.locator('body')).toBeVisible()
 

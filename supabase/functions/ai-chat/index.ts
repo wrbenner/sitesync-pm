@@ -4,7 +4,6 @@ import {
   getCorsHeaders,
   authenticateRequest,
   verifyProjectMembership,
-  requireMinimumRole,
   requireUuid,
   sanitizeForPrompt,
   sanitizeText,

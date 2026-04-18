@@ -140,7 +140,7 @@ function createWorktree(taskId: string, branch: string): string {
   return worktreePath;
 }
 
-function cleanupWorktree(taskId: string) {
+function _cleanupWorktree(taskId: string) {
   const worktreePath = join(CONFIG.worktreeDir, taskId);
   try {
     execSync(`git worktree remove "${worktreePath}" --force 2>/dev/null || true`, { stdio: 'pipe' });
@@ -230,10 +230,10 @@ async function executeAgentTask(task: AgentTask, context?: { filesChanged?: stri
     });
 
     let output = '';
-    let errorOutput = '';
+    let _errorOutput = '';
 
     proc.stdout?.on('data', (d: Buffer) => { output += d.toString(); });
-    proc.stderr?.on('data', (d: Buffer) => { errorOutput += d.toString(); });
+    proc.stderr?.on('data', (d: Buffer) => { _errorOutput += d.toString(); });
 
     proc.on('close', (code: number | null) => {
       const durationMs = Date.now() - startTime;

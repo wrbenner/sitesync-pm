@@ -29,13 +29,13 @@ test.describe('App loads', () => {
 
 test.describe('Sidebar navigation', () => {
   const navItems = [
-    { label: 'Command Center', route: /\#\/dashboard/ },
-    { label: 'RFIs',           route: /\#\/rfis/ },
-    { label: 'Submittals',     route: /\#\/submittals/ },
-    { label: 'Schedule',       route: /\#\/schedule/ },
-    { label: 'Budget',         route: /\#\/budget/ },
-    { label: 'Daily Log',      route: /\#\/daily-log/ },
-    { label: 'Punch List',     route: /\#\/punch-list/ },
+    { label: 'Command Center', route: /#\/dashboard/ },
+    { label: 'RFIs',           route: /#\/rfis/ },
+    { label: 'Submittals',     route: /#\/submittals/ },
+    { label: 'Schedule',       route: /#\/schedule/ },
+    { label: 'Budget',         route: /#\/budget/ },
+    { label: 'Daily Log',      route: /#\/daily-log/ },
+    { label: 'Punch List',     route: /#\/punch-list/ },
   ]
 
   test.beforeEach(async ({ page }) => {

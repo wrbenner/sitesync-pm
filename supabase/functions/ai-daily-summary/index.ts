@@ -174,7 +174,7 @@ Focus on:
         throw new Error('No JSON found in response')
       }
       summaryResult = JSON.parse(jsonMatch[0])
-    } catch (parseError) {
+    } catch (_parseError) {
       console.error('Failed to parse AI response:', responseText)
       throw new HttpError(500, 'Failed to parse summary generation response')
     }

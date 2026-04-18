@@ -4,7 +4,6 @@ import {
   getCorsHeaders,
   authenticateCron,
   errorResponse,
-  HttpError,
 } from '../shared/auth.ts'
 
 // ── Risk Assessment Algorithms (server side) ─────────────────

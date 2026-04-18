@@ -164,7 +164,7 @@ Only include genuine conflicts where timeline or dependency issues exist. Empty 
         throw new Error('No JSON array found in response')
       }
       conflicts = JSON.parse(jsonMatch[0])
-    } catch (parseError) {
+    } catch (_parseError) {
       console.error('Failed to parse AI response:', responseText)
       conflicts = []
     }

@@ -191,6 +191,7 @@ async function handleExchange(
 
   if (!tokenResponse.ok) {
     const errBody = await tokenResponse.text()
+    console.error('Token exchange failure body:', errBody)
     throw new HttpError(502, `Token exchange failed: ${tokenResponse.status}`)
   }
 

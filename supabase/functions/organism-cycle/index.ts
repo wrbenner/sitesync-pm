@@ -678,7 +678,7 @@ async function learn(ctx: CycleContext): Promise<void> {
 
         if ((similarSuccesses ?? 0) >= 3) {
           // Pattern validated enough times — upsert as skill
-          const skillName = `improve-${exp.target_file.replace(/[\/\.]/g, '-')}`
+          const skillName = `improve-${exp.target_file.replace(/[/.]/g, '-')}`
           await ctx.supabase.from('organism_skills').upsert({
             name: skillName,
             description: `Improvements to ${exp.target_file} based on ${similarSuccesses} successful experiments`,
@@ -715,7 +715,7 @@ async function learn(ctx: CycleContext): Promise<void> {
         })
 
         // Update skill failure count if applicable
-        const skillName = `improve-${exp.target_file.replace(/[\/\.]/g, '-')}`
+        const skillName = `improve-${exp.target_file.replace(/[/.]/g, '-')}`
         const { data: skill } = await ctx.supabase
           .from('organism_skills')
           .select('failure_count')

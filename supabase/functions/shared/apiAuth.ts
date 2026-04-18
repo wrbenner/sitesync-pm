@@ -148,7 +148,7 @@ const ENDPOINT_LIMITS: Record<string, number> = {
   'files:upload': 20,
 }
 
-function getEndpointLimit(method: string, path: string): number {
+function _getEndpointLimit(method: string, path: string): number {
   // Check specific endpoint first
   const specific = ENDPOINT_LIMITS[`${method}:${path}`]
   if (specific) return specific
