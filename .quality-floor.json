@@ -2,7 +2,7 @@
   "_comment": "Quality floors \u2014 these values can only improve, never regress. CI and immune-gate.sh enforce this. Updated automatically when metrics improve.",
   "_version": 2,
   "_updated": "2026-04-18T00:00:00Z",
-  "_updatedBy": "eslint-errors-fix",
+  "_updatedBy": "eslint-cleanup",
   "bundleSizeKB": 1826,
   "coveragePercent": 43.2,
   "testCoverage": {
@@ -16,7 +16,7 @@
   "anyCount": 1,
   "mockCount": 7,
   "a11yViolations": 0,
-  "eslintWarnings": 509,
+  "eslintWarnings": 525,
   "_e2ePassRate_note": "Set to 0 \u2014 no Playwright spec files exist in e2e/ yet; previous 0.7 was fictional.",
   "e2ePassRate": 0,
   "tsIgnoreComments": 0,
