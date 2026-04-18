@@ -365,7 +365,7 @@ export const Directory: React.FC = () => {
           {view === 'companies' ? (
             <PermissionGate permission="directory.manage" fallback={<span title="Your role doesn't allow adding companies. Request access from your admin."><Btn icon={<Plus size={14} />} disabled>Add Company</Btn></span>}><Btn icon={<Plus size={14} />} onClick={() => setShowAddCompany(true)}>Add Company</Btn></PermissionGate>
           ) : (
-            <PermissionGate permission="directory.manage" fallback={<span title="Your role doesn't allow adding contacts. Request access from your admin."><Btn icon={<Plus size={14} />} disabled>Add Contact</Btn></span>}><Btn icon={<Plus size={14} />} onClick={() => setShowAdd(true)}>Add Contact</Btn></PermissionGate>
+            <PermissionGate permission="directory.manage" fallback={<span title="Your role doesn't allow adding contacts. Request access from your admin."><Btn icon={<Plus size={14} />} disabled>Add Contact</Btn></span>}><Btn icon={<Plus size={14} />} onClick={() => setShowAdd(true)} data-testid="create-contact-button">Add Contact</Btn></PermissionGate>
           )}
         </div>
       }

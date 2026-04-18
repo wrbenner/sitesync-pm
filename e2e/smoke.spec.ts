@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { PAGE_REGISTRY } from '../audit/registry'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -110,6 +111,42 @@ test.describe('List pages have rows', () => {
       const interactive = page.locator('[role="row"], [role="tab"]')
       await expect(interactive.first()).toBeVisible({ timeout: 10_000 })
       expect(await interactive.count()).toBeGreaterThan(0)
+    })
+  }
+})
+
+// ── 6. Every registered route renders without uncaught errors ────────────────
+// Sourced from audit/registry.ts so new routes are automatically covered.
+
+const ROUTE_SKIP = new Set<string>(['*', '/login', '/signup', '/onboarding'])
+const ERROR_BOUNDARY_RE = /something went wrong|an unexpected error occurred/i
+
+test.describe('Every route renders cleanly', () => {
+  for (const contract of PAGE_REGISTRY) {
+    if (ROUTE_SKIP.has(contract.route)) continue
+    if (contract.status === 'stub') continue
+
+    test(`${contract.route} has no pageerror or console.error`, async ({ page }) => {
+      const pageErrors: string[] = []
+      const consoleErrors: string[] = []
+
+      page.on('pageerror', (err) => pageErrors.push(err.message))
+      page.on('console', (msg) => {
+        if (msg.type() === 'error') consoleErrors.push(msg.text())
+      })
+
+      await page.goto(`#${contract.route}`)
+      await waitForPageContent(page)
+
+      const body = await page.locator('body').innerText()
+      expect(body, `ErrorBoundary on ${contract.route}`).not.toMatch(ERROR_BOUNDARY_RE)
+
+      // Filter known-benign errors from third-party libs
+      const meaningful = consoleErrors.filter(
+        (e) => !/sentry/i.test(e) && !/ReactQueryDevtools/i.test(e) && !/React DevTools/i.test(e),
+      )
+      expect(pageErrors, `pageerror on ${contract.route}:\n${pageErrors.join('\n')}`).toHaveLength(0)
+      expect(meaningful, `console.error on ${contract.route}:\n${meaningful.join('\n')}`).toHaveLength(0)
     })
   }
 })

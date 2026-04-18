@@ -472,7 +472,7 @@ const DailyLogPage: React.FC = () => {
       <PageContainer
         title="Daily Log"
         subtitle="No entries"
-        actions={<PermissionGate permission="daily_log.create"><Btn onClick={() => setShowCreateModal(true)}>New Entry</Btn></PermissionGate>}
+        actions={<PermissionGate permission="daily_log.create"><Btn onClick={() => setShowCreateModal(true)} data-testid="create-daily-log-button">New Entry</Btn></PermissionGate>}
       >
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'], marginBottom: spacing['6'] }}>
           {[

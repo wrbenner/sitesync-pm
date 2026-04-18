@@ -196,7 +196,7 @@ export const Crews: React.FC = () => {
     <PageContainer
       title="Crews"
       subtitle={`${activeCrews.length} active crews \u00B7 ${totalWorkers} workers on site`}
-      actions={<PermissionGate permission="crews.manage" fallback={<span title="Your role doesn't allow adding crews. Request access from your admin."><Btn variant="primary" icon={<Plus size={14} />} disabled>Add Crew</Btn></span>}><Btn variant="primary" icon={<Plus size={14} />} onClick={() => setShowAddCrew(true)}>Add Crew</Btn></PermissionGate>}
+      actions={<PermissionGate permission="crews.manage" fallback={<span title="Your role doesn't allow adding crews. Request access from your admin."><Btn variant="primary" icon={<Plus size={14} />} disabled>Add Crew</Btn></span>}><Btn variant="primary" icon={<Plus size={14} />} onClick={() => setShowAddCrew(true)} data-testid="create-crew-button">Add Crew</Btn></PermissionGate>}
     >
       {pageAlerts.map((alert) => (
         <PredictiveAlertBanner key={alert.id} alert={alert} />

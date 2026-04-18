@@ -519,7 +519,7 @@ const RFIsPage: React.FC = () => {
             When questions arise in the field, create an RFI to get a documented answer
           </p>
           <PermissionGate permission="rfis.create">
-            <Btn onClick={() => setShowCreateModal(true)}>
+            <Btn onClick={() => setShowCreateModal(true)} data-testid="create-rfi-button-empty">
               Create First RFI
             </Btn>
           </PermissionGate>
@@ -582,7 +582,7 @@ const RFIsPage: React.FC = () => {
               <Wand2 size={14} />
               AI Draft RFI
             </button>
-            <Btn onClick={() => setShowCreateModal(true)} aria-label="Create new Request for Information">
+            <Btn onClick={() => setShowCreateModal(true)} aria-label="Create new Request for Information" data-testid="create-rfi-button">
               <Plus size={16} style={{ marginRight: spacing.xs }} />
               New RFI
             </Btn>

@@ -171,7 +171,7 @@ const SubmittalsPage: React.FC = () => {
       <PageContainer
         title="Submittals"
         subtitle="No items"
-        actions={<PermissionGate permission="submittals.create"><Btn onClick={() => setShowCreateModal(true)}>New Submittal</Btn></PermissionGate>}
+        actions={<PermissionGate permission="submittals.create"><Btn onClick={() => setShowCreateModal(true)} data-testid="create-submittal-button">New Submittal</Btn></PermissionGate>}
       >
         <div style={{
           display: 'flex',

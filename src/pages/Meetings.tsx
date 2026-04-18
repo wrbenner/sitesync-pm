@@ -274,7 +274,7 @@ export const Meetings: React.FC = () => {
             </span>
           }
         >
-          <Btn icon={<Plus size={14} />} onClick={() => setShowCreateModal(true)}>
+          <Btn icon={<Plus size={14} />} onClick={() => setShowCreateModal(true)} data-testid="create-meeting-button">
             Schedule Meeting
           </Btn>
         </PermissionGate>

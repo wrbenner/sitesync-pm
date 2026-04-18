@@ -27,3 +27,33 @@ export function useCreateCrew() {
     onError: createOnError('create_crew'),
   })
 }
+
+export function useUpdateCrew() {
+  return useMutation({
+    mutationFn: async (params: { id: string; updates: Record<string, unknown>; projectId: string }) => {
+      const { error } = await from('crews').update(params.updates).eq('id', params.id)
+      if (error) throw error
+      return { projectId: params.projectId }
+    },
+    onSuccess: (result: { projectId: string }) => {
+      invalidateEntity('crew', result.projectId)
+      posthog.capture('crew_updated', { project_id: result.projectId })
+    },
+    onError: createOnError('update_crew'),
+  })
+}
+
+export function useDeleteCrew() {
+  return useMutation({
+    mutationFn: async (params: { id: string; projectId: string }) => {
+      const { error } = await from('crews').delete().eq('id', params.id)
+      if (error) throw error
+      return { projectId: params.projectId }
+    },
+    onSuccess: (result: { projectId: string }) => {
+      invalidateEntity('crew', result.projectId)
+      posthog.capture('crew_deleted', { project_id: result.projectId })
+    },
+    onError: createOnError('delete_crew'),
+  })
+}

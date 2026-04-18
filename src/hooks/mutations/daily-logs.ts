@@ -49,3 +49,20 @@ export function useUpdateDailyLog() {
     errorMessage: 'Failed to update daily log',
   })
 }
+
+export function useDeleteDailyLog() {
+  return useAuditedMutation<{ id: string; projectId: string }, { projectId: string }>({
+    permission: 'daily_log.edit',
+    action: 'delete_daily_log',
+    entityType: 'daily_log',
+    getEntityId: (p) => p.id,
+    mutationFn: async ({ id, projectId }) => {
+      const { error } = await from('daily_logs').delete().eq('id', id)
+      if (error) throw error
+      return { projectId }
+    },
+    analyticsEvent: 'daily_log_deleted',
+    getAnalyticsProps: (p) => ({ project_id: p.projectId }),
+    errorMessage: 'Failed to delete daily log',
+  })
+}

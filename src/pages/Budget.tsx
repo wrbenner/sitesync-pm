@@ -500,7 +500,17 @@ const BudgetPage: React.FC = () => {
     <PageContainer
       title="Budget"
       subtitle={`${fmt(spent)} spent of ${fmt(projectData.totalValue)} total`}
-      actions={<Btn variant="secondary" size="sm" icon={<Download size={14} />} onClick={() => addToast('info', 'Exporting budget data to CSV...')}>Export CSV</Btn>}
+      actions={
+        <div style={{ display: 'flex', gap: spacing['2'] }}>
+          <PermissionGate permission="budget.edit">
+            <Btn variant="primary" size="sm" onClick={() => setAddLineOpen(true)} data-testid="create-budget-item-button">Add Line Item</Btn>
+          </PermissionGate>
+          <PermissionGate permission="budget.edit">
+            <Btn variant="secondary" size="sm" onClick={() => setUploadOpen(true)} data-testid="import-budget-button">Import Budget</Btn>
+          </PermissionGate>
+          <Btn variant="secondary" size="sm" icon={<Download size={14} />} onClick={() => addToast('info', 'Exporting budget data to CSV...')} data-testid="export-budget-button">Export CSV</Btn>
+        </div>
+      }
     >
       <BudgetUpload open={uploadOpen} onClose={() => setUploadOpen(false)} onSuccess={() => setUploadOpen(false)} />
       {addLineOpen && projectId && (

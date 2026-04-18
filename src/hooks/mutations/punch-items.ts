@@ -52,3 +52,20 @@ export function useUpdatePunchItem() {
     errorMessage: 'Failed to update punch item',
   })
 }
+
+export function useDeletePunchItem() {
+  return useAuditedMutation<{ id: string; projectId: string }, { projectId: string }>({
+    permission: 'punch_list.delete',
+    action: 'delete_punch_item',
+    entityType: 'punch_item',
+    getEntityId: (p) => p.id,
+    mutationFn: async ({ id, projectId }) => {
+      const { error } = await from('punch_items').delete().eq('id', id)
+      if (error) throw error
+      return { projectId }
+    },
+    analyticsEvent: 'punch_item_deleted',
+    getAnalyticsProps: (p) => ({ project_id: p.projectId }),
+    errorMessage: 'Failed to delete punch item',
+  })
+}

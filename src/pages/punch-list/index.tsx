@@ -315,7 +315,7 @@ const PunchListPage: React.FC = () => {
       <PageContainer
         title="Punch List"
         subtitle="No items"
-        actions={<PermissionGate permission="punch_list.create" fallback={<span title="Your role doesn't allow creating punch items. Request access from your admin."><Btn disabled>New Item</Btn></span>}><Btn onClick={() => setShowCreateModal(true)}>New Item</Btn></PermissionGate>}
+        actions={<PermissionGate permission="punch_list.create" fallback={<span title="Your role doesn't allow creating punch items. Request access from your admin."><Btn disabled>New Item</Btn></span>}><Btn onClick={() => setShowCreateModal(true)} data-testid="create-punch-item-button">New Item</Btn></PermissionGate>}
       >
         <EmptyState
           icon={CheckSquare}

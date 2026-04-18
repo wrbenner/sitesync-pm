@@ -28,3 +28,40 @@ export function useCreateMeeting() {
     errorMessage: 'Failed to create meeting',
   })
 }
+
+export function useUpdateMeeting() {
+  return useAuditedMutation<{ id: string; updates: Record<string, unknown>; projectId: string }, { projectId: string; id: string }>({
+    permission: 'meetings.create',
+    schema: meetingSchema.partial(),
+    schemaKey: 'updates',
+    action: 'update_meeting',
+    entityType: 'meeting',
+    getEntityId: (p) => p.id,
+    getNewValue: (p) => p.updates,
+    mutationFn: async ({ id, updates, projectId }) => {
+      const { error } = await from('meetings').update(updates).eq('id', id)
+      if (error) throw error
+      return { projectId, id }
+    },
+    analyticsEvent: 'meeting_updated',
+    getAnalyticsProps: (p) => ({ project_id: p.projectId }),
+    errorMessage: 'Failed to update meeting',
+  })
+}
+
+export function useDeleteMeeting() {
+  return useAuditedMutation<{ id: string; projectId: string }, { projectId: string }>({
+    permission: 'meetings.delete',
+    action: 'delete_meeting',
+    entityType: 'meeting',
+    getEntityId: (p) => p.id,
+    mutationFn: async ({ id, projectId }) => {
+      const { error } = await from('meetings').delete().eq('id', id)
+      if (error) throw error
+      return { projectId }
+    },
+    analyticsEvent: 'meeting_deleted',
+    getAnalyticsProps: (p) => ({ project_id: p.projectId }),
+    errorMessage: 'Failed to delete meeting',
+  })
+}
